@@ -15,7 +15,6 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__iterator/iterator_traits.h>
-#include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/disjunction.h>
@@ -34,20 +33,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Iter>
 class __wrap_iter {
 public:
-  typedef _Iter iterator_type;
-  typedef typename iterator_traits<iterator_type>::value_type value_type;
-  typedef typename iterator_traits<iterator_type>::difference_type difference_type;
-  typedef typename iterator_traits<iterator_type>::pointer pointer;
-  typedef typename iterator_traits<iterator_type>::reference reference;
-  typedef typename iterator_traits<iterator_type>::iterator_category iterator_category;
+  typedef typename iterator_traits<_Iter>::value_type value_type;
+  typedef typename iterator_traits<_Iter>::difference_type difference_type;
+  typedef typename iterator_traits<_Iter>::pointer pointer;
+  typedef typename iterator_traits<_Iter>::reference reference;
+  typedef typename iterator_traits<_Iter>::iterator_category iterator_category;
 #if _LIBCPP_STD_VER >= 20
   typedef contiguous_iterator_tag iterator_concept;
 #endif
 
 private:
-  iterator_type __i_;
-
-  friend struct pointer_traits<__wrap_iter<_Iter> >;
+  _Iter __i_;
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
@@ -59,7 +55,9 @@ public:
                 int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter(const __wrap_iter<_OtherIter>& __u) _NOEXCEPT
       : __i_(__u.__i_) {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT { return *__i_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator*() const _NOEXCEPT {
+    return *__i_;
+  }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pointer operator->() const _NOEXCEPT {
     return std::__to_address(__i_);
   }
@@ -82,7 +80,8 @@ public:
     --(*this);
     return __tmp;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter operator+(difference_type __n) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
+  operator+(difference_type __n) const _NOEXCEPT {
     __wrap_iter __w(*this);
     __w += __n;
     return __w;
@@ -91,19 +90,21 @@ public:
     __i_ += __n;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter operator-(difference_type __n) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
+  operator-(difference_type __n) const _NOEXCEPT {
     return *this + (-__n);
   }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter& operator-=(difference_type __n) _NOEXCEPT {
     *this += -__n;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference operator[](difference_type __n) const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 reference
+  operator[](difference_type __n) const _NOEXCEPT {
     return __i_[__n];
   }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i_(__x) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(_Iter __x) _NOEXCEPT : __i_(__x) {}
 
   template <class _Up>
   friend class __wrap_iter;
@@ -205,18 +206,18 @@ private:
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Iter2>
-  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 auto
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 auto
   operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.__i_ - __y.__i_)
 #else
   template <class _Iter2>
-  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
   typename __wrap_iter::difference_type operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
   {
     return __x.__i_ - __y.__i_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
   operator+(typename __wrap_iter::difference_type __n, __wrap_iter __x) _NOEXCEPT {
     __x += __n;
     return __x;
@@ -227,17 +228,6 @@ private:
 template <class _It>
 struct __libcpp_is_contiguous_iterator<__wrap_iter<_It> > : true_type {};
 #endif
-
-template <class _It>
-struct pointer_traits<__wrap_iter<_It> > {
-  typedef __wrap_iter<_It> pointer;
-  typedef typename pointer_traits<_It>::element_type element_type;
-  typedef typename pointer_traits<_It>::difference_type difference_type;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __w) _NOEXCEPT {
-    return std::__to_address(__w.__i_);
-  }
-};
 
 _LIBCPP_END_NAMESPACE_STD
 

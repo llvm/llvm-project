@@ -83,9 +83,9 @@ Derived &ref_cast(Base1 &ref) {
 // CIR-NEXT:   %[[SRC_VPTR_PTR:.*]] = cir.cast bitcast %[[SRC]] : !cir.ptr<!rec_Base1> -> !cir.ptr<!cir.vptr>
 // CIR-NEXT:   %[[SRC_VPTR:.*]] = cir.load{{.*}} %[[SRC_VPTR_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
 // CIR-NEXT:   %[[SUCCESS:.*]] = cir.cmp eq %[[SRC_VPTR]], %[[EXPECTED_VPTR]] : !cir.vptr
-// CIR-NEXT:   %[[FAILED:.*]] = cir.unary(not, %[[SUCCESS]]) : !cir.bool, !cir.bool
+// CIR-NEXT:   %[[FAILED:.*]] = cir.not %[[SUCCESS]] : !cir.bool
 // CIR-NEXT:   cir.if %[[FAILED]] {
-// CIR-NEXT:     cir.call @__cxa_bad_cast() : () -> ()
+// CIR-NEXT:     cir.call @__cxa_bad_cast() {noreturn} : () -> ()
 // CIR-NEXT:     cir.unreachable
 // CIR-NEXT:   }
 // CIR-NEXT:   %{{.+}} = cir.cast bitcast %[[SRC]] : !cir.ptr<!rec_Base1> -> !cir.ptr<!rec_Derived>
@@ -195,7 +195,7 @@ Derived &ref_cast_always_fail(Base2 &ref) {
 
 //      CIR: cir.func {{.*}} @_Z20ref_cast_always_failR5Base2
 //      CIR:   %{{.+}} = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!rec_Base2>>, !cir.ptr<!rec_Base2>
-// CIR-NEXT:   cir.call @__cxa_bad_cast() : () -> ()
+// CIR-NEXT:   cir.call @__cxa_bad_cast() {noreturn} : () -> ()
 // CIR-NEXT:   cir.unreachable
 
 //      LLVM: define {{.*}} ptr @_Z20ref_cast_always_failR5Base2

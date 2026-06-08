@@ -80,7 +80,8 @@ public:
     return nullptr;
   }
 
-  Value *FoldSelect(Value *C, Value *True, Value *False) const override {
+  Value *FoldSelect(Value *C, Value *True, Value *False,
+                    FastMathFlags FMF) const override {
     return nullptr;
   }
 
@@ -113,8 +114,13 @@ public:
     return nullptr;
   }
 
+  Value *FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
+                            FastMathFlags FMF) const override {
+    return nullptr;
+  }
+
   Value *FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
-                             Instruction *FMFSource) const override {
+                             FastMathFlags FMF) const override {
     return nullptr;
   }
 

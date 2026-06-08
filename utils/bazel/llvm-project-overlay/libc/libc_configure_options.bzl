@@ -24,6 +24,7 @@ LIBC_CONFIGURE_OPTIONS = [
     # Documentation in libc/src/string/memory_utils/...
     # "LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY",
     # "LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE",
+    # "LIBC_COPT_MEMCPY_X86_USE_NTA_STORES",
     "LIBC_COPT_MEMCPY_X86_USE_SOFTWARE_PREFETCHING",
     "LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING",
 
@@ -53,4 +54,7 @@ LIBC_CONFIGURE_OPTIONS = [
 
     # Documentation in libc/src/__support/libc_errno.h
     "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE",
+
+    # Documentation in libc/src/__support/time/monotonicity.h
+    "LIBC_COPT_TIMEOUT_ENSURE_MONOTONICITY",
 ]

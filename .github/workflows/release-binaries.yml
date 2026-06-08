@@ -39,9 +39,12 @@ on:
         required: true
         type: string
     secrets:
-      RELEASE_TASKS_USER_TOKEN:
-        description: "Secret used to check user permissions."
-        required: false
+      LLVM_TOKEN_GENERATOR_CLIENT_ID:
+        description: "Client ID for our GitHub App we use for generating access tokens."
+        required: true
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY:
+        description: "Private key for our GitHub App we use for generating access tokens."
+        required: true
 
 
 permissions:
@@ -50,6 +53,9 @@ permissions:
 jobs:
   prepare:
     name: Prepare to build binaries
+    environment:
+      deployment: false
+      name: ${{ case( github.event_name == 'pull_request', null, 'release') }}
     runs-on: ${{ inputs.runs-on }}
     if: github.repository_owner == 'llvm'
     outputs:
@@ -60,40 +66,30 @@ jobs:
       build-flang: ${{ steps.vars.outputs.build-flang }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
+      release-binary-filename-zstd: ${{ steps.vars.outputs.release-binary-filename-zstd }}
       build-runs-on: ${{ steps.vars.outputs.build-runs-on }}
       test-runs-on: ${{ steps.vars.outputs.build-runs-on }}
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
-    # It's good practice to use setup-python, but this is also required on macos-14
-    # due to https://github.com/actions/runner-images/issues/10385
-    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+    - name: Validate Release Version
+      if: inputs.release-version != ''
+      uses: ./.github/workflows/validate-release-version
       with:
-        python-version: '3.14'
-
-    - name: Install Windows ARM64 dependencies
-      if: runner.os == 'Windows' && runner.arch == 'ARM64'
-      run: |
-        # Some of the python modules we install require this package to be installed on the system.
-        vcpkg install openssl:arm64-windows-static-md
-        echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
+        release-version: ${{ inputs.release-version }}
 
     - name: Checkout LLVM
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-
-    - name: Install Dependencies
-      shell: bash
-      run: |
-        pip install --require-hashes -r ./llvm/utils/git/requirements.txt
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+          persist-credentials: false
 
     - name: Check Permissions
       if: github.event_name != 'pull_request'
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
-        USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
-      shell: bash
-      run: |
-        ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
+      uses: ./.github/workflows/require-team-membership
+      with:
+        team-slug: llvm-release-managers
+        LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+        LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
     # The name of the Windows binaries uses the version from source, so we need
     # to fetch it here.
@@ -105,6 +101,7 @@ jobs:
       id: vars
       env:
         LLVM_VERSION_FROM_SOURCE: ${{ steps.version-from-source.outputs.full-no-suffix }}
+        INPUTS_RUNS_ON: ${{ inputs.runs-on }}
       shell: bash
       # In order for the test-release.sh script to run correctly, the LLVM
       # source needs to be at the following location relative to the build dir:
@@ -151,6 +148,7 @@ jobs:
         fi
         echo "release-binary-basename=$release_binary_basename" >> $GITHUB_OUTPUT
         echo "release-binary-filename=$release_binary_basename.tar.xz" >> $GITHUB_OUTPUT
+        echo "release-binary-filename-zstd=$release_binary_basename.tar.zst" >> $GITHUB_OUTPUT
 
         target="$RUNNER_OS-$RUNNER_ARCH"
 
@@ -170,14 +168,14 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_LTO=OFF"
         fi
 
-        case "${{ inputs.runs-on }}" in
+        case "$INPUTS_RUNS_ON" in
           ubuntu-22.04* | windows-2022)
-            build_runs_on="depot-${{ inputs.runs-on }}-16"
+            build_runs_on="depot-$INPUTS_RUNS_ON-16"
             test_runs_on=$build_runs_on
             ;;
           windows-11-arm)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ] || [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
+              build_runs_on="$INPUTS_RUNS_ON"
             else
               build_runs_on="windows-11-arm-16core"
             fi
@@ -185,14 +183,14 @@ jobs:
             ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              build_runs_on="${{ inputs.runs-on }}"
+              build_runs_on="$INPUTS_RUNS_ON"
             else
               build_runs_on="depot-macos-14"
             fi
-            test_runs_on="${{ inputs.runs-on }}"
+            test_runs_on="$INPUTS_RUNS_ON"
             ;;
           *)
-            test_runs_on="${{ inputs.runs-on }}"
+            test_runs_on="$INPUTS_RUNS_ON"
             build_runs_on=$test_runs_on
             ;;
         esac
@@ -230,7 +228,7 @@ jobs:
     # to do that we need to specify a specific python version.  It's also
     # good practice to do this on other OSes so the version of python doesn't
     # get changed unexpectedly.
-    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+    - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
       with:
         python-version: '3.11.9'
 
@@ -246,8 +244,9 @@ jobs:
         git config --global core.autocrlf false
 
     - name: Checkout LLVM
-      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
+        persist-credentials: false
         ref: ${{ needs.prepare.outputs.ref }}
 
     - name: Set Build Prefix
@@ -264,21 +263,27 @@ jobs:
     - name: Configure Linux/MacOS
       id: build
       if: runner.os != 'Windows'
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
+        TARGET_CMAKE_FLAGS: ${{ needs.prepare.outputs.target-cmake-flags }}
       shell: bash
       run: |
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
         # so we need to set some extra cmake flags to disable this.
-        cmake -G Ninja -S llvm -B ${{ steps.setup-stage.outputs.build-prefix }}/build \
-            ${{ needs.prepare.outputs.target-cmake-flags }} \
+        cmake -G Ninja -S llvm -B "$BUILD_PREFIX/build" \
+            $TARGET_CMAKE_FLAGS \
             -C clang/cmake/caches/Release.cmake
 
     - name: Build Linux/MacOS
       if: runner.os != 'Windows'
       shell: bash
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
+        RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
       run: |
-        ninja -v -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-package
-        release_dir=`find ${{ steps.setup-stage.outputs.build-prefix }}/build -iname 'stage2-bins'`
-        mv $release_dir/${{ needs.prepare.outputs.release-binary-filename }} .
+        ninja -v -C "$BUILD_PREFIX/build" stage2-package
+        release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
+        mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
     - name: Build Windows
       id: build-windows
@@ -296,6 +301,14 @@ jobs:
         mv $tarball $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
 
+    - name: Create zstd compressed tarball
+      shell: bash
+      env:
+        RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
+        RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
+      run: |
+        xz -dc "$RELEASE_BINARY_FILENAME" | zstd --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
+
     - name: Generate sha256 digest for binaries
       id: digest
       shell: bash
@@ -303,6 +316,7 @@ jobs:
         RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
         # This will be empty on non-Windows builds.
         WINDOWS_INSTALLER_FILENAME: ${{ steps.build-windows.outputs.windows-installer-filename }}
+        RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
       run: |
           if [ "$RUNNER_OS" = "macOS" ]; then
             # Mac runners don't have sha256sum.
@@ -310,9 +324,14 @@ jobs:
           else
             sha256sum="sha256sum"
           fi
-          echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
+          echo "digest=$(cat $WINDOWS_INSTALLER_FILENAME $RELEASE_BINARY_FILENAME $RELEASE_BINARY_FILENAME_ZSTD | $sha256sum | cut -d ' ' -f 1)" >> $GITHUB_OUTPUT
 
-    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+    - name: Install LLDB test Python dependencies
+      if: runner.os == 'Linux'
+      run: |
+        python -m pip install -r lldb/test/requirements.txt
+
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       id: artifact-upload
       with:
         name: ${{ runner.os }}-${{ runner.arch }}-release-binary
@@ -321,14 +340,17 @@ jobs:
         # The steps.build-windows.* variables will be empty on Linux/MacOS.
         path: |
           ${{ needs.prepare.outputs.release-binary-filename }}
+          ${{ needs.prepare.outputs.release-binary-filename-zstd }}
           ${{ steps.build-windows.outputs.windows-installer-filename }}
 
     - name: Run Tests
       # These almost always fail so don't let them fail the build and prevent the uploads.
       if : runner.os != 'Windows'
       continue-on-error: true
+      env:
+        BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
       run: |
-        ninja -C ${{ steps.setup-stage.outputs.build-prefix }}/build stage2-check-all
+        ninja -C "$BUILD_PREFIX/build" stage2-check-all
 
   upload-release-binaries:
     name: "Upload Release Binaries"
@@ -345,8 +367,9 @@ jobs:
 
     steps:
       - name: Checkout Release Scripts
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          persist-credentials: false
           sparse-checkout: |
             .github/workflows/upload-release-artifact
             llvm/utils/release/github-upload-release.py
@@ -361,4 +384,5 @@ jobs:
           attestation-name: ${{ needs.prepare.outputs.attestation-name }}
           digest: ${{ needs.build-release-package.outputs.digest }}
           upload: ${{ needs.prepare.outputs.upload }}
-          user-token: ${{ secrets.RELEASE_TASKS_USER_TOKEN }}
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}

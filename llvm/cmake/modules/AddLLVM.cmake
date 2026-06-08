@@ -147,6 +147,8 @@ function(llvm_update_pch name)
 endfunction()
 
 function(add_llvm_symbol_exports target_name export_file)
+  cmake_parse_arguments(ARG "NO_TARGET_DEPENDENCY" "OUTPUT_FILE_VAR" "" ${ARGN})
+
   if("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
     set(native_export_file "${target_name}.exports")
     add_custom_command(OUTPUT ${native_export_file}
@@ -239,12 +241,28 @@ function(add_llvm_symbol_exports target_name export_file)
   set_property(DIRECTORY APPEND
     PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${native_export_file})
 
+  if(ARG_OUTPUT_FILE_VAR)
+    set(${ARG_OUTPUT_FILE_VAR}
+      "${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}" PARENT_SCOPE)
+  endif()
+
+  if(ARG_NO_TARGET_DEPENDENCY)
+    return()
+  endif()
+
   add_dependencies(${target_name} ${target_name}_exports)
 
   # Add dependency to *_exports later -- CMake issue 14747
   list(APPEND LLVM_COMMON_DEPENDS ${target_name}_exports)
   set(LLVM_COMMON_DEPENDS ${LLVM_COMMON_DEPENDS} PARENT_SCOPE)
 endfunction(add_llvm_symbol_exports)
+
+function(llvm_set_macho_current_version target major)
+  set_target_properties(${target} PROPERTIES
+    MACHO_COMPATIBILITY_VERSION 1
+    MACHO_CURRENT_VERSION
+      ${major}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
+endfunction()
 
 if (NOT DEFINED LLVM_LINKER_DETECTED AND NOT WIN32)
   # Detect what linker we have here.
@@ -375,7 +393,7 @@ function(add_link_opts target_name)
           set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                        LINK_FLAGS " -Wl,-z,discard-unused=sections")
         endif()
-      elseif(NOT MSVC AND NOT CMAKE_SYSTEM_NAME MATCHES "AIX|OS390")
+      elseif(NOT MSVC AND NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC" AND NOT CMAKE_SYSTEM_NAME MATCHES "AIX|OS390")
         # TODO Revisit this later on z/OS.
         set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                      LINK_FLAGS " -Wl,--gc-sections")
@@ -603,6 +621,11 @@ function(llvm_add_library name)
       message(STATUS "${name} ignored -- Loadable modules not supported on this platform.")
       return()
     endif()
+    # Disable PCH reuse for plugins if PIC is globally disabled, plugins are
+    # always PIC and reusing a non-PIC PCH causes an option mismatch.
+    if(NOT LLVM_ENABLE_PIC)
+      set(ARG_DISABLE_PCH_REUSE TRUE)
+    endif()
   else()
     if(ARG_PLUGIN_TOOL)
       message(WARNING "PLUGIN_TOOL without MODULE doesn't make sense.")
@@ -636,13 +659,16 @@ function(llvm_add_library name)
     # Do add_dependencies(obj) later due to CMake issue 14747.
     list(APPEND objlibs ${obj_name})
 
-    # Bring in the target include directories and link info from our original
-    # target. target_link_libraries propagates transitive dependencies with
-    # proper SYSTEM include handling from IMPORTED targets.
-    # target_include_directories propagates include directories set directly on
-    # the target.
-    target_link_libraries(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},LINK_LIBRARIES>)
-    target_include_directories(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>)
+    # Propagate include directories from our original target.
+    # TODO: Use $<COMPILE_ONLY:${name}> instead of this manual propagation
+    # when minimum required CMake version is 3.27 or higher.
+    target_include_directories(${obj_name} SYSTEM
+      INTERFACE $<TARGET_PROPERTY:${name},INTERFACE_SYSTEM_INCLUDE_DIRECTORIES>
+      )
+    target_include_directories(${obj_name}
+      INTERFACE $<TARGET_PROPERTY:${name},INTERFACE_INCLUDE_DIRECTORIES>
+      PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>
+      )
 
     set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
     if(ARG_DEPENDS)
@@ -788,14 +814,28 @@ function(llvm_add_library name)
         )
     endif()
 
-    # Set SOVERSION on shared libraries that lack explicit SONAME
-    # specifier, on *nix systems that are not Darwin.
-    if(UNIX AND NOT APPLE AND NOT ARG_SONAME)
-      set_target_properties(${name}
-        PROPERTIES
-        # Since 18.1.0, the ABI version is indicated by the major and minor version.
-        SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
-        VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
+    if(NOT APPLE OR LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN)
+      if(ARG_SONAME)
+        get_target_property(output_name ${name} OUTPUT_NAME)
+        if(${output_name} STREQUAL "output_name-NOTFOUND")
+          set(output_name ${name})
+        endif()
+        set(library_name ${output_name}-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
+        set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
+        set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
+        if(UNIX AND NOT CYGWIN)
+          llvm_install_library_symlink(${api_name} ${library_name} SHARED
+            COMPONENT ${name})
+          llvm_install_library_symlink(${output_name} ${library_name} SHARED
+            COMPONENT ${name})
+        endif()
+      elseif(UNIX)
+        set_target_properties(${name}
+          PROPERTIES
+          # Since 18.1.0, the ABI version is indicated by the major and minor version.
+          SOVERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX}
+          VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}${LLVM_VERSION_SUFFIX})
+      endif()
     endif()
   endif()
 
@@ -808,24 +848,6 @@ function(llvm_add_library name)
 
     if (LLVM_EXPORTED_SYMBOL_FILE)
       add_llvm_symbol_exports( ${name} ${LLVM_EXPORTED_SYMBOL_FILE} )
-    endif()
-  endif()
-
-  if(ARG_SHARED)
-    if(NOT APPLE AND ARG_SONAME)
-      get_target_property(output_name ${name} OUTPUT_NAME)
-      if(${output_name} STREQUAL "output_name-NOTFOUND")
-        set(output_name ${name})
-      endif()
-      set(library_name ${output_name}-${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX})
-      set(api_name ${output_name}-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX})
-      set_target_properties(${name} PROPERTIES OUTPUT_NAME ${library_name})
-      if(UNIX AND NOT CYGWIN)
-        llvm_install_library_symlink(${api_name} ${library_name} SHARED
-          COMPONENT ${name})
-        llvm_install_library_symlink(${output_name} ${library_name} SHARED
-          COMPONENT ${name})
-      endif()
     endif()
   endif()
 
@@ -1593,6 +1615,9 @@ macro(llvm_add_tool project name)
     )
     generate_llvm_objects(${name} ${ARGN})
     add_custom_target(${name} DEPENDS llvm-driver)
+    set_target_properties(${name} PROPERTIES
+      LLVM_TOOL_EXECUTABLE
+        "${LLVM_RUNTIME_OUTPUT_INTDIR}/${name}${CMAKE_EXECUTABLE_SUFFIX}")
   else()
     add_llvm_executable(${name} ${ARGN})
 
@@ -1895,7 +1920,7 @@ function(add_unittest test_suite test_name)
   endif()
 
   list(APPEND LLVM_LINK_COMPONENTS Support) # gtest needs it for raw_ostream
-  add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH DISABLE_PCH_REUSE ${ARGN})
+  add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
   get_subproject_title(subproject_title)
   set_target_properties(${test_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
 
@@ -2680,6 +2705,10 @@ function(llvm_setup_rpath name)
   elseif(UNIX)
     set(_build_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}" ${extra_libdir})
     set(_install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}")
+    if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+      list(APPEND _build_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}")
+      list(APPEND _install_rpath "\$ORIGIN/../lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE}")
+    endif()
     if("${CMAKE_SYSTEM_NAME}" MATCHES "(FreeBSD|DragonFly)")
       set_property(TARGET ${name} APPEND_STRING PROPERTY
                    LINK_FLAGS " -Wl,-z,origin ")
@@ -2782,7 +2811,12 @@ function(get_host_tool_path tool_name setting_name exe_var_name target_var_name)
     get_native_tool_path(${tool_name} exe_name)
     set(target_name host_${tool_name})
   else()
-    set(exe_name $<TARGET_FILE:${tool_name}>)
+    # Driver-built tools set this property in llvm_add_tool because their
+    # targets are utilities, not executable targets.
+    get_target_property(exe_name ${tool_name} LLVM_TOOL_EXECUTABLE)
+    if(NOT exe_name)
+      set(exe_name $<TARGET_FILE:${tool_name}>)
+    endif()
     set(target_name ${tool_name})
   endif()
   # Force setting the cache variable because they are only used for being

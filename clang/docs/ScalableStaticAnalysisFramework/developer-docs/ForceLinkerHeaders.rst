@@ -37,26 +37,33 @@ Each registration translation unit defines a ``volatile int`` **anchor symbol**:
 
 .. code-block:: c++
 
-  // In MyExtractor.cpp — next to the registry Add<> object
+  // In MyExtractor.cpp - next to the registry Add<> object in the ``clang::ssaf`` namespace
   // NOLINTNEXTLINE(misc-use-internal-linkage)
-  volatile int SSAFMyExtractorAnchorSource = 0;
+  volatile int MyExtractorAnchorSource = 0;
 
-A **force-linker header** declares the symbol as ``extern`` and reads it into a
-``[[maybe_unused]] static int`` destination:
+For **in-tree** anchors, add a single ``ANCHOR(...)`` entry to
+``BuiltinAnchorSources.def`` (in alphabetical order):
 
 .. code-block:: c++
 
-  // In SSAFBuiltinForceLinker.h
-  extern volatile int SSAFMyExtractorAnchorSource;
-  [[maybe_unused]] static int SSAFMyExtractorAnchorDestination =
-      SSAFMyExtractorAnchorSource;
+  // In clang/include/clang/ScalableStaticAnalysisFramework/BuiltinAnchorSources.def
+  ANCHOR(JSONFormatAnchorSource)
+  ANCHOR(MyExtractorAnchorSource) // <-- Add here, in alphabetical order
+
+``SSAFBuiltinForceLinker.h`` includes this ``.def`` file automatically to
+generate the ``extern`` declarations and the ``AnchorSources`` array — there is
+no need to edit that header directly.
 
 Any translation unit that ``#include``\s this header now has a reference to
-``SSAFMyExtractorAnchorSource``, which forces the linker to pull in
+``MyExtractorAnchorSource``, which forces the linker to pull in
 ``MyExtractor.o`` — and with it, the static ``Add<>`` registration object.
 
 The ``volatile`` qualifier is essential: without it the compiler could
 constant-fold the ``0`` and eliminate the reference entirely.
+
+These anchor symbols must be mutable (not ``const``), because otherwise on MSVC
+``const volatile`` variables would still have **internal linkage** — despite
+that the standard specifies that these should have **external linkage**.
 
 Header hierarchy
 ================
@@ -66,30 +73,33 @@ Header hierarchy
   SSAFForceLinker.h                   (umbrella — include this in binaries)
   └── SSAFBuiltinForceLinker.h        (upstream built-in anchors only)
 
-- ``clang/include/clang/Analysis/Scalable/SSAFBuiltinForceLinker.h`` — anchors for
+- ``clang/include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h`` — anchors for
   upstream-provided (built-in) extractors and formats (e.g. ``JSONFormat``).
-- ``clang/include/clang/Analysis/Scalable/SSAFForceLinker.h`` — umbrella header
+- ``clang/include/clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h`` — umbrella header
   that includes ``SSAFBuiltinForceLinker.h``.  This is the header that
   downstream projects should modify to add their own force-linker includes
   (see :doc:`HowToExtend`).
 
 Include the umbrella header with ``// IWYU pragma: keep`` in any translation
 unit that must guarantee all registrations are active — typically the entry
-point of a binary that uses ``clangAnalysisScalable``:
+point of a binary that uses ``clangScalableStaticAnalysisFrameworkCore``:
 
 .. code-block:: c++
 
   // In ExecuteCompilerInvocation.cpp
-  #include "clang/Analysis/Scalable/SSAFForceLinker.h" // IWYU pragma: keep
+  #include "clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h" // IWYU pragma: keep
 
 Naming convention
 =================
 
-Anchor symbols follow the pattern ``SSAF<Component>AnchorSource`` and
-``SSAF<Component>AnchorDestination``.  For example:
+Anchor symbols follow the pattern ``<Component>AnchorSource`` in the ``clang::ssaf`` namespace.
+For example:
 
-- ``SSAFJSONFormatAnchorSource`` / ``SSAFJSONFormatAnchorDestination``
-- ``SSAFMyExtractorAnchorSource`` / ``SSAFMyExtractorAnchorDestination``
+- ``JSONFormatAnchorSource``
+- ``MyExtractorAnchorSource``
+
+All anchor sources are aggregated into a single ``BuiltinAnchorDestination``
+lambda in the force-linker header (see ``SSAFBuiltinForceLinker.h``).
 
 Considered alternatives
 ***********************
@@ -103,10 +113,10 @@ library, regardless of whether any symbols are referenced:
 .. code-block:: bash
 
   # GNU ld / lld (Linux, BSD)
-  -Wl,--whole-archive -lclangAnalysisScalable -Wl,--no-whole-archive
+  -Wl,--whole-archive -lclangScalableStaticAnalysisFrameworkCore -Wl,--no-whole-archive
 
   # Apple ld
-  -Wl,-force_load,libclangAnalysisScalable.a
+  -Wl,-force_load,libclangScalableStaticAnalysisFrameworkCore.a
 
 Since CMake 3.24, the ``$<LINK_LIBRARY:WHOLE_ARCHIVE,...>`` generator expression
 provides a portable way to do the same:
@@ -114,7 +124,7 @@ provides a portable way to do the same:
 .. code-block:: cmake
 
   target_link_libraries(clang PRIVATE
-    "$<LINK_LIBRARY:WHOLE_ARCHIVE,clangAnalysisScalable>")
+    "$<LINK_LIBRARY:WHOLE_ARCHIVE,clangScalableStaticAnalysisFrameworkCore>")
 
 **Why we did not choose this approach**:
 

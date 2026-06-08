@@ -131,6 +131,8 @@ expand_template(
         "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 0",
         # Only used if LLDB_EMBED_PYTHON_HOME is true
         "#cmakedefine LLDB_PYTHON_HOME R\"(${LLDB_PYTHON_HOME})\"": "#define LLDB_PYTHON_HOME \"\"",
+        "#cmakedefine LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH R\"(${LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH})\"": "/* #undef LLDB_PYTHON_RUNTIME_LIBRARY_BUILD_PATH */",
+        "#cmakedefine01 LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS": "#define LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS 0",
 
         # Unsupported
         "#cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H": "#define CURSES_HAVE_NCURSES_CURSES_H 0",
@@ -138,6 +140,9 @@ expand_template(
 
         # TODO: treesitter support
         "#cmakedefine01 LLDB_ENABLE_TREESITTER": "#define LLDB_ENABLE_TREESITTER 0",
+
+        # Would cause tests to run with MTE.
+        "#cmakedefine01 LLDB_ENABLE_MTE": "#define LLDB_ENABLE_MTE 0",
 
         # Defaults that could be configurable if needed
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
@@ -542,22 +547,27 @@ cc_library(
     srcs = glob(
         [
             "source/Host/common/**/*.cpp",
+            "source/Host/common/**/*.h",
         ],
-        exclude = ["source/Host/common/Editline.cpp"],
+        exclude = [
+            "source/Host/common/Editline.cpp",
+            "source/Host/common/PythonRuntimeLoader.cpp",
+        ],
     ) + select({
         "@platforms//os:linux": glob(
             [
-                "source/Host/posix/**/*.cpp",
                 "source/Host/linux/**/*.cpp",
+                "source/Host/posix/**/*.cpp",
             ],
             exclude = ["source/Host/linux/android/**/*.cpp"],
         ),
-        "@platforms//os:macos": glob(
-            [
-                "source/Host/macosx/cfcpp/*.cpp",
-                "source/Host/posix/**/*.cpp",
-            ],
-        ),
+        "@platforms//os:macos": glob([
+            "source/Host/macosx/**/*.cpp",
+            "source/Host/posix/**/*.cpp",
+        ]),
+        "@platforms//os:windows": glob([
+            "source/Host/windows/**/*.cpp",
+        ]),
     }) + select({
         ":libedit_enabled": ["source/Host/common/Editline.cpp"],
         "//conditions:default": [],
@@ -568,7 +578,9 @@ cc_library(
             "include/lldb/Host/common/*.h",
         ],
         exclude = ["include/lldb/Host/Editline.h"],
-    ) + select({
+    ) + [
+        "include/lldb/Host/windows/ConPTYUtils.h",
+    ] + select({
         "@platforms//os:macos": glob([
             "include/lldb/Host/macosx/*.h",
             "include/lldb/Host/posix/*.h",
@@ -693,6 +705,11 @@ cc_library(
         ],
     ),
     includes = ["include"],
+    textual_hdrs = glob(
+        [
+            "source/Core/**/*.inc",
+        ],
+    ),
     deps = [
         ":BreakpointHeaders",
         ":CoreHeaders",

@@ -221,7 +221,7 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
       if (auto UniqF = MM.getModuleMapFileIDForUniquing(Mod); UniqF.isValid())
         AssignMostImportant(ModuleMaps[UniqF], Reason);
 
-      for (auto *SubM : Mod->submodules())
+      for (Module *SubM : Mod->submodules())
         Q.push(SubM);
     }
   };
@@ -241,35 +241,22 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
     for (const Module *UndeclaredModule : CurrentModule->UndeclaredUses)
       CollectModuleMapsForHierarchy(UndeclaredModule, AR_ImportOrTextualHeader);
 
-    for (auto *M : CurrentModule->submodules())
+    for (Module *M : CurrentModule->submodules())
       Q.push(M);
   }
 
   // Handle textually-included headers that belong to other modules.
+  HS.forEachExistingLocalFileInfo(
+      [&](FileEntryRef File, const HeaderFileInfo &HFI) {
+        if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
+          return; // Modular header, handled in the above module-based loop.
+        if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
+          return; // Non-modular header not included locally is not affecting.
 
-  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
-  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
-
-  if (FilesByUID.size() > HS.header_file_size())
-    FilesByUID.resize(HS.header_file_size());
-
-  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    OptionalFileEntryRef File = FilesByUID[UID];
-    if (!File)
-      continue;
-
-    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI)
-      continue; // We have no information on this being a header file.
-    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
-      continue; // Modular header, handled in the above module-based loop.
-    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
-      continue; // Non-modular header not included locally is not affecting.
-
-    for (const auto &KH : HS.findResolvedModulesForHeader(*File))
-      if (const Module *M = KH.getModule())
-        CollectModuleMapsForHierarchy(M, AR_TextualHeader);
-  }
+        for (const auto &KH : HS.findResolvedModulesForHeader(File))
+          if (const Module *M = KH.getModule())
+            CollectModuleMapsForHierarchy(M, AR_TextualHeader);
+      });
 
   // FIXME: This algorithm is not correct for module map hierarchies where
   // module map file defining a (sub)module of a top-level module X includes
@@ -919,6 +906,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // AST Top-Level Block.
   BLOCK(AST_BLOCK);
+  RECORD(SUBMODULE_METADATA);
   RECORD(TYPE_OFFSET);
   RECORD(DECL_OFFSET);
   RECORD(IDENTIFIER_OFFSET);
@@ -941,6 +929,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(TU_UPDATE_LEXICAL);
   RECORD(SEMA_DECL_REFS);
   RECORD(WEAK_UNDECLARED_IDENTIFIERS);
+  RECORD(EXTNAME_UNDECLARED_IDENTIFIERS);
   RECORD(PENDING_IMPLICIT_INSTANTIATIONS);
   RECORD(UPDATE_VISIBLE);
   RECORD(DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD);
@@ -996,7 +985,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // Submodule Block.
   BLOCK(SUBMODULE_BLOCK);
-  RECORD(SUBMODULE_METADATA);
+  RECORD(SUBMODULE_END);
   RECORD(SUBMODULE_DEFINITION);
   RECORD(SUBMODULE_UMBRELLA_HEADER);
   RECORD(SUBMODULE_HEADER);
@@ -1015,6 +1004,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SUBMODULE_PRIVATE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_INITIALIZERS);
   RECORD(SUBMODULE_EXPORT_AS);
+  RECORD(SUBMODULE_CHILD);
 
   // Comments Block.
   BLOCK(COMMENTS_BLOCK);
@@ -1567,6 +1557,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name raw kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1593,11 +1584,14 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
+        Record.push_back(0);
       } else {
         // If we have calculated signature, there is no need to store
         // the size or timestamp.
-        Record.push_back(M.Signature ? 0 : M.File.getSize());
-        Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.File));
+        Record.push_back(M.Signature ? 0 : M.Size);
+        Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.ModTime));
+
+        Record.push_back(M.FileName.getRawKind());
 
         llvm::append_range(Blob, M.Signature);
 
@@ -1960,7 +1954,7 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
           INPUT_FILE,
           InputFileOffsets.size(),
           (uint64_t)Entry.File.getSize(),
-          (uint64_t)getTimestampForOutput(Entry.File),
+          (uint64_t)getTimestampForOutput(Entry.File.getModificationTime()),
           Entry.BufferOverridden,
           Entry.IsTransient,
           Entry.IsTopLevel,
@@ -2245,46 +2239,36 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     }
   }
 
-  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
-  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
+  HS.forEachExistingLocalFileInfo(
+      [&](FileEntryRef File, const HeaderFileInfo &HFI) {
+        if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
+          return; // Header file info is tracked by the owning module file.
+        if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
+          return; // Header file info is tracked by the including module file.
 
-  if (FilesByUID.size() > HS.header_file_size())
-    FilesByUID.resize(HS.header_file_size());
+        // Massage the file path into an appropriate form.
+        StringRef Filename = File.getName();
+        SmallString<128> FilenameTmp(Filename);
+        if (PreparePathForOutput(FilenameTmp)) {
+          // If we performed any translation on the file name at all, we need to
+          // save this string, since the generator will refer to it later.
+          Filename = StringRef(strdup(FilenameTmp.c_str()));
+          SavedStrings.push_back(Filename.data());
+        }
 
-  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    OptionalFileEntryRef File = FilesByUID[UID];
-    if (!File)
-      continue;
+        bool Included = HFI.IsLocallyIncluded || PP->alreadyIncluded(File);
 
-    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI)
-      continue; // We have no information on this being a header file.
-    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
-      continue; // Header file info is tracked by the owning module file.
-    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
-      continue; // Header file info is tracked by the including module file.
-
-    // Massage the file path into an appropriate form.
-    StringRef Filename = File->getName();
-    SmallString<128> FilenameTmp(Filename);
-    if (PreparePathForOutput(FilenameTmp)) {
-      // If we performed any translation on the file name at all, we need to
-      // save this string, since the generator will refer to it later.
-      Filename = StringRef(strdup(FilenameTmp.c_str()));
-      SavedStrings.push_back(Filename.data());
-    }
-
-    bool Included = HFI->IsLocallyIncluded || PP->alreadyIncluded(*File);
-
-    HeaderFileInfoTrait::key_type Key = {
-      Filename, File->getSize(), getTimestampForOutput(*File)
-    };
-    HeaderFileInfoTrait::data_type Data = {
-      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(*File), {}
-    };
-    Generator.insert(Key, Data, GeneratorTrait);
-    ++NumHeaderSearchEntries;
-  }
+        HeaderFileInfoTrait::key_type Key = {
+            Filename, File.getSize(),
+            getTimestampForOutput(File.getModificationTime())};
+        HeaderFileInfoTrait::data_type Data = {
+            HFI,
+            Included,
+            HS.getModuleMap().findResolvedModulesForHeader(File),
+            {}};
+        Generator.insert(Key, Data, GeneratorTrait);
+        ++NumHeaderSearchEntries;
+      });
 
   // Create the on-disk hash table in a buffer.
   SmallString<4096> TableData;
@@ -2979,16 +2963,6 @@ unsigned ASTWriter::getSubmoduleID(Module *Mod) {
   return ID;
 }
 
-/// Compute the number of modules within the given tree (including the
-/// given module).
-static unsigned getNumberOfModules(Module *Mod) {
-  unsigned ChildModules = 0;
-  for (auto *Submodule : Mod->submodules())
-    ChildModules += getNumberOfModules(Submodule);
-
-  return ChildModules + 1;
-}
-
 void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   // Enter the submodule description block.
   Stream.EnterSubblock(SUBMODULE_BLOCK_ID, /*bits for abbreviations*/5);
@@ -3084,11 +3058,16 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
   unsigned ExportAsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-  // Write the submodule metadata block.
-  RecordData::value_type Record[] = {
-      getNumberOfModules(WritingModule),
-      FirstSubmoduleID - NUM_PREDEF_SUBMODULE_IDS};
-  Stream.EmitRecord(SUBMODULE_METADATA, Record);
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_CHILD));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Child submodule ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));   // Child name
+  unsigned ChildAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+  SmallVector<uint64_t> SubmoduleOffsets;
+  uint64_t SubmoduleOffsetBase = Stream.GetCurrentBitNo();
+
+  unsigned TopLevelID = getSubmoduleID(WritingModule);
 
   // Write all of the submodules.
   std::queue<Module *> Q;
@@ -3097,6 +3076,19 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     Module *Mod = Q.front();
     Q.pop();
     unsigned ID = getSubmoduleID(Mod);
+    if (ID < FirstSubmoduleID) {
+      assert(0 && "Loaded submodule entered WritingModule ?");
+      continue;
+    }
+
+    // Record the local offset of this submodule.
+    unsigned Index = ID - FirstSubmoduleID;
+    if (Index >= SubmoduleOffsets.size())
+      SubmoduleOffsets.resize(Index + 1);
+
+    uint64_t Offset = Stream.GetCurrentBitNo() - SubmoduleOffsetBase;
+    assert((Offset >> 32) == 0 && "Submodule offset too large");
+    SubmoduleOffsets[Index] = Offset;
 
     uint64_t ParentID = 0;
     if (Mod->Parent) {
@@ -3185,7 +3177,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     // Emit the imports.
     if (!Mod->Imports.empty()) {
       RecordData Record;
-      for (auto *I : Mod->Imports)
+      for (Module *I : Mod->Imports)
         Record.push_back(getSubmoduleID(I));
       Stream.EmitRecord(SUBMODULE_IMPORTS, Record);
     }
@@ -3193,7 +3185,7 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     // Emit the modules affecting compilation that were not imported.
     if (!Mod->AffectingClangModules.empty()) {
       RecordData Record;
-      for (auto *I : Mod->AffectingClangModules)
+      for (Module *I : Mod->AffectingClangModules)
         Record.push_back(getSubmoduleID(I));
       Stream.EmitRecord(SUBMODULE_AFFECTING_MODULES, Record);
     }
@@ -3204,8 +3196,8 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
       for (const auto &E : Mod->Exports) {
         // FIXME: This may fail; we don't require that all exported modules
         // are local or imported.
-        Record.push_back(getSubmoduleID(E.getPointer()));
-        Record.push_back(E.getInt());
+        Record.push_back(getSubmoduleID(E.first));
+        Record.push_back(E.second);
       }
       Stream.EmitRecord(SUBMODULE_EXPORTS, Record);
     }
@@ -3255,17 +3247,44 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
       Stream.EmitRecordWithBlob(ExportAsAbbrev, Record, Mod->ExportAsModule);
     }
 
+    // Emit one SUBMODULE_CHILD record per direct child so the reader can
+    // populate PendingSubmodules and demand-load children by name.
+    for (Module *Child : Mod->submodules()) {
+      RecordData::value_type Record[] = {SUBMODULE_CHILD,
+                                         getSubmoduleID(Child)};
+      Stream.EmitRecordWithBlob(ChildAbbrev, Record, Child->Name);
+    }
+
+    // Emit the sentinel signifying the end of this submodule.
+    {
+      RecordData Record;
+      Stream.EmitRecord(SUBMODULE_END, Record);
+    }
+
     // Queue up the submodules of this module.
-    for (auto *M : Mod->submodules())
+    for (Module *M : Mod->submodules())
       Q.push(M);
   }
 
   Stream.ExitBlock();
 
-  assert((NextSubmoduleID - FirstSubmoduleID ==
-          getNumberOfModules(WritingModule)) &&
+  assert((NextSubmoduleID - FirstSubmoduleID == SubmoduleOffsets.size()) &&
          "Wrong # of submodules; found a reference to a non-local, "
          "non-imported submodule?");
+
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_METADATA));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Submodule count
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Base submodule ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Top-level submod ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));   // Submodule offsets
+  unsigned SubmoduleMetadataAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+  RecordData::value_type Record[] = {
+      SUBMODULE_METADATA, SubmoduleOffsets.size(),
+      FirstSubmoduleID - NUM_PREDEF_SUBMODULE_IDS, TopLevelID};
+  Stream.EmitRecordWithBlob(SubmoduleMetadataAbbrev, Record,
+                            bytes(SubmoduleOffsets));
 }
 
 void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
@@ -3369,6 +3388,13 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
   // treated as errors.
   AddSourceLocation(Diag.DiagStatesByLoc.CurDiagStateLoc, Record);
   AddDiagState(Diag.DiagStatesByLoc.CurDiagState, false);
+
+  // Emit the push stack so that unmatched pushes from a preamble can be
+  // restored when the main file is parsed.  Each entry is a DiagState that
+  // was active at the time of a `#pragma diagnostic push`.
+  Record.push_back(Diag.DiagStateOnPushStack.size());
+  for (const auto *State : Diag.DiagStateOnPushStack)
+    AddDiagState(State, false);
 
   Stream.EmitRecord(DIAG_PRAGMA_MAPPINGS, Record);
 }
@@ -3517,12 +3543,6 @@ void ASTWriter::WriteComments(ASTContext &Context) {
   Stream.EnterSubblock(COMMENTS_BLOCK_ID, 3);
   llvm::scope_exit _([this] { Stream.ExitBlock(); });
   if (!PP->getPreprocessorOpts().WriteCommentListToPCH)
-    return;
-
-  // Don't write comments to BMI to reduce the size of BMI.
-  // If language services (e.g., clangd) want such abilities,
-  // we can offer a special option then.
-  if (isWritingStdCXXNamedModules())
     return;
 
   RecordData Record;
@@ -4620,7 +4640,16 @@ void ASTWriter::GenerateSpecializationInfoLookupTable(
     Generator.insert(HashValue, Trait.getData(Specs, ExisitingSpecs), Trait);
   }
 
-  Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
+  // Reduced BMI may not emit everything in the lookup table,
+  // If Reduced BMI **partially** emits some decls,
+  // then the generator may not emit the corresponding entry for the
+  // corresponding name is already there. See
+  // MultiOnDiskHashTableGenerator::insert and
+  // MultiOnDiskHashTableGenerator::emit for details.
+  // So we won't emit the lookup table if we're generating reduced BMI.
+  auto *ToEmitMaybeMergedLookupTable =
+      (!isGeneratingReducedBMI() && Lookups) ? &Lookups->Table : nullptr;
+  Generator.emit(LookupTable, Trait, ToEmitMaybeMergedLookupTable);
 }
 
 uint64_t ASTWriter::WriteSpecializationInfoLookupTable(
@@ -4817,7 +4846,16 @@ void ASTWriter::GenerateNameLookupTable(
   // Create the on-disk hash table. Also emit the existing imported and
   // merged table if there is one.
   auto *Lookups = Chain ? Chain->getLoadedLookupTables(DC) : nullptr;
-  Generator.emit(LookupTable, Trait, Lookups ? &Lookups->Table : nullptr);
+  // Reduced BMI may not emit everything in the lookup table,
+  // If Reduced BMI **partially** emits some decls,
+  // then the generator may not emit the corresponding entry for the
+  // corresponding name is already there. See
+  // MultiOnDiskHashTableGenerator::insert and
+  // MultiOnDiskHashTableGenerator::emit for details.
+  // So we won't emit the lookup table if we're generating reduced BMI.
+  auto *ToEmitMaybeMergedLookupTable =
+      (!isGeneratingReducedBMI() && Lookups) ? &Lookups->Table : nullptr;
+  Generator.emit(LookupTable, Trait, ToEmitMaybeMergedLookupTable);
 
   const auto &ModuleLocalDecls = Trait.getModuleLocalDecls();
   if (!ModuleLocalDecls.empty()) {
@@ -4833,11 +4871,15 @@ void ASTWriter::GenerateNameLookupTable(
                                         ModuleLocalTrait);
     }
 
+    // See the above comment. We won't emit the merged table if we're generating
+    // reduced BMI.
     auto *ModuleLocalLookups =
-        Chain ? Chain->getModuleLocalLookupTables(DC) : nullptr;
-    ModuleLocalLookupGenerator.emit(
-        ModuleLocalLookupTable, ModuleLocalTrait,
-        ModuleLocalLookups ? &ModuleLocalLookups->Table : nullptr);
+        (isGeneratingReducedBMI() && Chain &&
+         Chain->getModuleLocalLookupTables(DC))
+            ? &Chain->getModuleLocalLookupTables(DC)->Table
+            : nullptr;
+    ModuleLocalLookupGenerator.emit(ModuleLocalLookupTable, ModuleLocalTrait,
+                                    ModuleLocalLookups);
   }
 
   const auto &TULocalDecls = Trait.getTULocalDecls();
@@ -4853,9 +4895,13 @@ void ASTWriter::GenerateNameLookupTable(
       TULookupGenerator.insert(Key, TULocalTrait.getData(IDs), TULocalTrait);
     }
 
-    auto *TULocalLookups = Chain ? Chain->getTULocalLookupTables(DC) : nullptr;
-    TULookupGenerator.emit(TULookupTable, TULocalTrait,
-                           TULocalLookups ? &TULocalLookups->Table : nullptr);
+    // See the above comment. We won't emit the merged table if we're generating
+    // reduced BMI.
+    auto *TULocalLookups =
+        (isGeneratingReducedBMI() && Chain && Chain->getTULocalLookupTables(DC))
+            ? &Chain->getTULocalLookupTables(DC)->Table
+            : nullptr;
+    TULookupGenerator.emit(TULookupTable, TULocalTrait, TULocalLookups);
   }
 }
 
@@ -5459,14 +5505,14 @@ const LangOptions &ASTWriter::getLangOpts() const {
   return PP->getLangOpts();
 }
 
-time_t ASTWriter::getTimestampForOutput(const FileEntry *E) const {
-  return IncludeTimestamps ? E->getModificationTime() : 0;
+time_t ASTWriter::getTimestampForOutput(time_t ModTime) const {
+  return IncludeTimestamps ? ModTime : 0;
 }
 
 ASTFileSignature
 ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
                     StringRef OutputFile, Module *WritingModule,
-                    StringRef isysroot, bool ShouldCacheASTInMemory) {
+                    StringRef isysroot) {
   llvm::TimeTraceScope scope("WriteAST", OutputFile);
   WritingAST = true;
 
@@ -5493,12 +5539,6 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
 
   WritingAST = false;
 
-  if (ShouldCacheASTInMemory) {
-    // Construct MemoryBuffer and update buffer manager.
-    ModCache.getInMemoryModuleCache().addBuiltPCM(
-        OutputFile, llvm::MemoryBuffer::getMemBufferCopy(
-                        StringRef(Buffer.begin(), Buffer.size())));
-  }
   return Signature;
 }
 
@@ -5615,10 +5655,46 @@ void ASTWriter::computeNonAffectingInputFiles() {
   FileMgr.trackVFSUsage(false);
 }
 
+void ASTWriter::prepareLazyUpdates() {
+  // In C++20 named modules with reduced BMI, we only apply the update
+  // if these updates are touched.
+  if (!GeneratingReducedBMI)
+    return;
+
+  DeclUpdateMap DeclUpdatesTmp;
+  // Move updates to DeclUpdatesLazy but leave CXXAddedFunctionDefinition as is.
+  // Since added function definition is critical to the AST. If we don't take
+  // care of it, user might meet missing definition error at linking time.
+  // Here we leave all CXXAddedFunctionDefinition unconditionally to avoid
+  // potential issues.
+  // TODO: Try to refine the strategy to handle CXXAddedFunctionDefinition
+  // precisely.
+  for (auto &DeclUpdate : DeclUpdates) {
+    const Decl *D = DeclUpdate.first;
+
+    for (auto &Update : DeclUpdate.second) {
+      DeclUpdateKind Kind = Update.getKind();
+
+      if (Kind == DeclUpdateKind::CXXAddedFunctionDefinition)
+        DeclUpdatesTmp[D].push_back(
+            ASTWriter::DeclUpdate(DeclUpdateKind::CXXAddedFunctionDefinition));
+      else
+        DeclUpdatesLazy[D].push_back(Update);
+    }
+  }
+  DeclUpdates.swap(DeclUpdatesTmp);
+
+  UpdatedDeclContextsLazy.swap(UpdatedDeclContexts);
+  // In reduced BMI, we don't have decls have to emit even if unreferenced.
+  DeclsToEmitEvenIfUnreferenced.clear();
+}
+
 void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
   ASTContext &Context = SemaRef.Context;
 
   bool isModule = WritingModule != nullptr;
+
+  prepareLazyUpdates();
 
   // Set up predefined declaration IDs.
   auto RegisterPredefDecl = [&] (Decl *D, PredefinedDeclIDs ID) {
@@ -6032,6 +6108,22 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     }
   }
 
+  // Write the set of #pragma redefine_extname'd, undeclared identifiers. We
+  // always write the entire table, since later PCH files in a PCH chain are
+  // only interested in the results at the end of the chain.
+  RecordData ExtnameUndeclaredIdentifiers;
+  if (SemaPtr && !isWritingStdCXXNamedModules()) {
+    ASTContext &Context = SemaPtr->Context;
+    ASTRecordWriter ExtnameUndeclaredIdentifiersWriter(
+        Context, *this, ExtnameUndeclaredIdentifiers);
+    for (const auto &[II, AL] : SemaPtr->ExtnameUndeclaredIdentifiers) {
+      ExtnameUndeclaredIdentifiersWriter.AddIdentifierRef(II);
+      ExtnameUndeclaredIdentifiersWriter.AddIdentifierRef(
+          &Context.Idents.get(AL->getLabel()));
+      ExtnameUndeclaredIdentifiersWriter.AddSourceLocation(AL->getLocation());
+    }
+  }
+
   // Form the record of special types.
   RecordData SpecialTypes;
   if (SemaPtr) {
@@ -6116,7 +6208,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
         // relocatable files. We probably should call
         // `PreparePathForOutput(M.FileName)` to properly support relocatable
         // PCHs.
-        StringRef Name = M.isModule() ? M.ModuleName : M.FileName;
+        StringRef Name = M.isModule() ? M.ModuleName : M.FileName.str();
         LE.write<uint16_t>(Name.size());
         Out.write(Name.data(), Name.size());
 
@@ -6178,6 +6270,12 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
   if (!WeakUndeclaredIdentifiers.empty())
     Stream.EmitRecord(WEAK_UNDECLARED_IDENTIFIERS,
                       WeakUndeclaredIdentifiers);
+
+  // Write the record containing #pragma redefine_extname'd undeclared
+  // identifiers.
+  if (!ExtnameUndeclaredIdentifiers.empty())
+    Stream.EmitRecord(EXTNAME_UNDECLARED_IDENTIFIERS,
+                      ExtnameUndeclaredIdentifiers);
 
   if (!WritingModule) {
     // Write the submodules that were imported, if any.
@@ -6250,13 +6348,6 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
       WriteModuleFileExtension(*SemaPtr, *ExtWriter);
 
   return backpatchSignature();
-}
-
-void ASTWriter::EnteringModulePurview() {
-  // In C++20 named modules, all entities before entering the module purview
-  // lives in the GMF.
-  if (GeneratingReducedBMI)
-    DeclUpdatesFromGMF.swap(DeclUpdates);
 }
 
 // Add update records for all mangling numbers and static local numbers.
@@ -6986,13 +7077,7 @@ LocalDeclID ASTWriter::GetDeclRef(const Decl *D) {
     return LocalDeclID();
   }
 
-  // If the DeclUpdate from the GMF gets touched, emit it.
-  if (auto *Iter = DeclUpdatesFromGMF.find(D);
-      Iter != DeclUpdatesFromGMF.end()) {
-    for (DeclUpdate &Update : Iter->second)
-      DeclUpdates[D].push_back(Update);
-    DeclUpdatesFromGMF.erase(Iter);
-  }
+  getLazyUpdates(D);
 
   // If D comes from an AST file, its declaration ID is already known and
   // fixed.
@@ -7047,6 +7132,24 @@ bool ASTWriter::wasDeclEmitted(const Decl *D) const {
           GeneratingReducedBMI) &&
          "The declaration within modules can only be omitted in reduced BMI.");
   return Emitted;
+}
+
+void ASTWriter::getLazyUpdates(const Decl *D) {
+  if (!GeneratingReducedBMI)
+    return;
+
+  if (auto *Iter = DeclUpdatesLazy.find(D); Iter != DeclUpdatesLazy.end()) {
+    for (DeclUpdate &Update : Iter->second)
+      DeclUpdates[D].push_back(Update);
+    DeclUpdatesLazy.erase(Iter);
+  }
+
+  // If the Decl in DeclUpdatesLazy gets touched, emit the update.
+  if (auto *DC = dyn_cast<DeclContext>(D);
+      DC && UpdatedDeclContextsLazy.count(DC)) {
+    UpdatedDeclContexts.insert(DC);
+    UpdatedDeclContextsLazy.remove(DC);
+  }
 }
 
 void ASTWriter::associateDeclWithFile(const Decl *D, LocalDeclID ID) {
@@ -7974,6 +8077,17 @@ void OMPClauseWriter::VisitOMPSizesClause(OMPSizesClause *C) {
   Record.push_back(C->getNumSizes());
   for (Expr *Size : C->getSizesRefs())
     Record.AddStmt(Size);
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
+void OMPClauseWriter::VisitOMPCountsClause(OMPCountsClause *C) {
+  Record.push_back(C->getNumCounts());
+  Record.push_back(C->hasOmpFill());
+  if (C->hasOmpFill())
+    Record.push_back(*C->getOmpFillIndex());
+  Record.AddSourceLocation(C->getOmpFillLoc());
+  for (Expr *Count : C->getCountsRefs())
+    Record.AddStmt(Count);
   Record.AddSourceLocation(C->getLParenLoc());
 }
 

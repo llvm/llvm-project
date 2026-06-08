@@ -28,6 +28,9 @@ ProcessWasm::ProcessWasm(lldb::TargetSP target_sp, ListenerSP listener_sp)
   // Wasm doesn't have any Unix-like signals as a platform concept, but pretend
   // like it does to appease LLDB.
   m_unix_signals_sp = UnixSignals::Create(target_sp->GetArchitecture());
+  // FIXME: LLVM's RuntimeDyld doesn't support the Wasm object format, so we
+  // can't JIT expressions for this target.
+  SetCanJIT(false);
 }
 
 void ProcessWasm::Initialize() {

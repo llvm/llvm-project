@@ -47,13 +47,13 @@ void acc_combined() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHSARG]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -93,13 +93,13 @@ void acc_combined() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHSARG]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -595,13 +595,13 @@ void acc_combined() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -616,7 +616,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -664,13 +664,13 @@ void acc_combined() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -685,7 +685,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -793,7 +793,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -900,7 +900,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -957,7 +957,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1014,7 +1014,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1071,7 +1071,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1178,7 +1178,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1286,7 +1286,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !s64i, !s64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !s64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1332,7 +1332,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1373,13 +1373,13 @@ void acc_combined() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -1393,7 +1393,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1438,7 +1438,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1479,13 +1479,13 @@ void acc_combined() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -1499,7 +1499,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1544,7 +1544,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1647,7 +1647,7 @@ void acc_combined() {
 //
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1692,7 +1692,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1795,7 +1795,7 @@ void acc_combined() {
 //
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1834,7 +1834,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1883,7 +1883,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1922,7 +1922,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -1971,7 +1971,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -2010,7 +2010,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -2059,7 +2059,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -2104,7 +2104,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -2205,7 +2205,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -2250,7 +2250,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }
@@ -2351,7 +2351,7 @@ void acc_combined() {
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
-// CHECK-NEXT: %[[INC:.*]] = cir.unary(inc, %[[ITR_LOAD]]) : !u64i, !u64i
+// CHECK-NEXT: %[[INC:.*]] = cir.inc %[[ITR_LOAD]] : !u64i
 // CHECK-NEXT: cir.store %[[INC]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: }

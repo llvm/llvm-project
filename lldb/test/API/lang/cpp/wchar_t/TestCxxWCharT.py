@@ -48,3 +48,6 @@ class CxxWCharTTestCase(TestBase):
 
         self.expect("frame variable wchar_zero", substrs=["L'\\0'"])
         self.expect("expression wchar_zero", substrs=["L'\\0'"])
+
+        self.expect_var_path("aZero", summary='L"I\\0have\\0zeros"')
+        self.expect_var_path("cZero", summary='L"I"')

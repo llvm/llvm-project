@@ -119,7 +119,7 @@ namespace llvm {
 
 // Command line option to specify the file to read samples from. This is
 // mainly used for debugging.
-static cl::opt<std::string> SampleProfileFile(
+cl::opt<std::string> SampleProfileFile(
     "sample-profile-file", cl::init(""), cl::value_desc("filename"),
     cl::desc("Profile file loaded by -sample-profile"), cl::Hidden);
 
@@ -663,7 +663,7 @@ ErrorOr<uint64_t> SampleProfileLoader::getInstWeight(const Instruction &Inst) {
   // Ignore all intrinsics, phinodes and branch instructions.
   // Branch and phinodes instruction usually contains debug info from sources
   // outside of the residing basic block, thus we ignore them during annotation.
-  if (isa<BranchInst>(Inst) || isa<IntrinsicInst>(Inst) || isa<PHINode>(Inst))
+  if (isa<UncondBrInst, CondBrInst, IntrinsicInst, PHINode>(Inst))
     return std::error_code();
 
   // For non-CS profile, if a direct call/invoke instruction is inlined in
@@ -1687,7 +1687,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
     Instruction *TI = BB->getTerminator();
     if (TI->getNumSuccessors() == 1)
       continue;
-    if (!isa<BranchInst>(TI) && !isa<SwitchInst>(TI) &&
+    if (!isa<CondBrInst>(TI) && !isa<SwitchInst>(TI) &&
         !isa<IndirectBrInst>(TI))
       continue;
 
@@ -1990,14 +1990,13 @@ bool SampleProfileLoader::doInitialization(Module &M,
   if (ProfAccForSymsInList) {
     NamesInProfile.clear();
     GUIDsInProfile.clear();
-    if (auto NameTable = Reader->getNameTable()) {
-      if (FunctionSamples::UseMD5) {
-        for (auto Name : *NameTable)
-          GUIDsInProfile.insert(Name.getHashCode());
-      } else {
-        for (auto Name : *NameTable)
-          NamesInProfile.insert(Name.stringRef());
-      }
+    auto NameTable = Reader->getNameTable();
+    if (FunctionSamples::UseMD5) {
+      for (FunctionId Name : NameTable)
+        GUIDsInProfile.insert(Name.getHashCode());
+    } else {
+      for (FunctionId Name : NameTable)
+        NamesInProfile.insert(Name.stringRef());
     }
     CoverageTracker.setProfAccForSymsInList(true);
   }

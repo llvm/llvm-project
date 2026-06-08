@@ -14,6 +14,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
@@ -145,6 +146,10 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithLaunchArgs) {
   EXPECT_EQ(cr.getOrigin(), ParallelOp::getOperationName());
   EXPECT_EQ(cr.getLaunchArgs().size(), 1u);
   EXPECT_EQ(cr.getLaunchArgs()[0], pw.getResult());
+  EXPECT_TRUE(llvm::isa<IndexType>(pw.getResult().getType()));
+  ASSERT_FALSE(cr.getRegion().empty());
+  EXPECT_TRUE(
+      llvm::isa<IndexType>(cr.getRegion().front().getArgument(0).getType()));
 
   func::ReturnOp::create(rewriter, loc);
 }
@@ -210,6 +215,11 @@ TEST_F(OpenACCUtilsCGTest, buildComputeRegionWithInputArgsToMap) {
     }
   }
   EXPECT_TRUE(foundAddI);
+
+  EXPECT_EQ(cr.getOperand(crBlock.getArgument(0)), deviceBlock->getArgument(0));
+  ASSERT_TRUE(cr.getBlockArg(deviceBlock->getArgument(0)).has_value());
+  EXPECT_EQ(*cr.getBlockArg(deviceBlock->getArgument(0)),
+            crBlock.getArgument(0));
 
   func::ReturnOp::create(rewriter, loc);
 }

@@ -40,11 +40,30 @@ TEST(ScudoReportDeathTest, Generic) {
   EXPECT_DEATH(
       scudo::reportMisalignedPointer(scudo::AllocatorAction::Deallocating, P),
       "Scudo ERROR.*deallocating.*42424242");
+  EXPECT_DEATH(
+      scudo::reportDeallocTypeMismatch(scudo::AllocatorAction::Reallocating, P,
+                                       scudo::Chunk::Origin::New,
+                                       scudo::Chunk::Origin::Memalign),
+      "Scudo ERROR.*reallocating.*42424242.*\\(new vs aligned malloc\\)");
   EXPECT_DEATH(scudo::reportDeallocTypeMismatch(
-                   scudo::AllocatorAction::Reallocating, P, 0, 1),
-               "Scudo ERROR.*reallocating.*42424242");
+                   scudo::AllocatorAction::Deallocating, P,
+                   scudo::Chunk::Origin::Memalign, scudo::Chunk::Origin::New),
+               "Scudo ERROR.*deallocating.*\\(aligned malloc vs new\\)");
+  EXPECT_DEATH(scudo::reportDeallocTypeMismatch(
+                   scudo::AllocatorAction::Deallocating, P,
+                   scudo::Chunk::Origin::Malloc | scudo::Chunk::Origin::Size,
+                   scudo::Chunk::Origin::NewArray | scudo::Chunk::Origin::Size |
+                       scudo::Chunk::Origin::Align),
+               "Scudo ERROR.*deallocating.*\\(sized malloc vs sized aligned "
+               "new\\[\\]\\)");
   EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456),
-               "Scudo ERROR.*42424242.*123.*456");
+               "Scudo ERROR.*42424242.*\\(123 vs 456\\)");
+  EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456, 789),
+               "Scudo ERROR.*42424242.*\\(123 vs 456 or 789\\)");
+  EXPECT_DEATH(
+      scudo::reportDeleteAlignmentMismatch(reinterpret_cast<void *>(0x80),
+                                           0x100),
+      "Scudo ERROR.*invalid aligned delete.*\\(7 bit align vs 8 bit align\\)");
 }
 
 TEST(ScudoReportDeathTest, CSpecific) {
@@ -86,6 +105,9 @@ TEST(ScudoReportDeathTest, Linux) {
   EXPECT_DEATH(scudo::reportMapError(1024U),
                "Scudo ERROR:.*internal map failure \\(error desc=.*\\) "
                "requesting 1KB");
+  EXPECT_DEATH(scudo::reportMapFixedError(0x1000U, 0x2000U),
+               "Scudo ERROR:.*internal map failure using fixed address "
+               "\\(expected: 0x1000 requested: 0x2000\\)");
   errno = ENOMEM;
   EXPECT_DEATH(scudo::reportUnmapError(0x1000U, 100U),
                "Scudo ERROR:.*internal unmap failure \\(error desc=.*\\) Addr "

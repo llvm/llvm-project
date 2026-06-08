@@ -15,6 +15,9 @@ from lit.llvm.subst import FindTool
 
 # Configuration file for the 'lit' test runner.
 
+if lit.util.pythonize_bool(lit_config.params.get("use_normalized_slashes")):
+    config.available_features.add("windows-prefer-forward-slash")
+
 # name: The name of this test suite.
 config.name = "Clang"
 
@@ -118,7 +121,6 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
-    "cir-opt",
     "clang-diff",
     "clang-format",
     "clang-repl",
@@ -145,6 +147,9 @@ tools = [
     "clang-ssaf-linker",
     "clang-ssaf-format",
 ]
+
+if config.clang_enable_cir:
+    tools.append("cir-opt")
 
 if config.clang_examples:
     config.available_features.add("examples")
@@ -226,8 +231,16 @@ def have_host_clang_repl_cuda():
 
     return False
 
-if have_host_jit_feature_support('jit'):
-    config.available_features.add('host-supports-jit')
+
+skip_clang_repl_checks = lit.util.pythonize_bool(
+    lit_config.params.get(
+        "clang_skip_clang_repl_checks",
+        os.environ.get("CLANG_LIT_SKIP_CLANG_REPL_CHECKS", "0"),
+    )
+)
+
+if not skip_clang_repl_checks and have_host_jit_feature_support("jit"):
+    config.available_features.add("host-supports-jit")
 
     if have_host_clang_repl_cuda():
         config.available_features.add('host-supports-cuda')
@@ -267,6 +280,10 @@ if config.clang_staticanalyzer:
 # ClangIR support
 if config.clang_enable_cir:
     config.available_features.add("cir-support")
+
+# SPIRV-Tools validator availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if lit.util.which("spirv-val", config.llvm_tools_dir):
+    config.available_features.add("spirv-val")
 
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
@@ -403,6 +420,13 @@ if config.enable_backtrace:
 if config.enable_threads:
     config.available_features.add("thread_support")
 
+# Add clang resource directory as a substitution
+if config.clang:
+    clang_resource_dir = subprocess.run(
+        [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE, text=True
+    ).stdout.rstrip()
+    config.substitutions.append(("%clang-resource-dir", clang_resource_dir))
+
 # Check if we should allow outputs to console.
 run_console_tests = int(lit_config.params.get("enable_console", "0"))
 if run_console_tests != 0:
@@ -429,6 +453,8 @@ if config.have_llvm_driver:
 if config.clang_enable_cir:
     config.available_features.add("cir-enabled")
 
+if config.use_xcselect:
+    config.available_features.add("xcselect")
 
 # Tests that rely on chmod to restrict file permissions (e.g. write-permission
 # checks) are unreliable when run as root, since root bypasses file permissions.

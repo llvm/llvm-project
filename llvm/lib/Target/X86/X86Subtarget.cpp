@@ -264,8 +264,9 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     FullFS = (Twine(FullFS) + "," + FS).str();
 
   // Disable 64-bit only features in non-64-bit mode.
-  StringRef FeaturesIn64BitOnly[] = {
-      "egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "cf", "zu", "uintr"};
+  StringRef FeaturesIn64BitOnly[] = {"egpr",   "push2pop2", "ppx", "ndd",
+                                     "ccmp",   "nf",        "cf",  "zu",
+                                     "jmpabs", "uintr"};
   if (FullFS.find("-64bit-mode") != std::string::npos)
     for (StringRef F : FeaturesIn64BitOnly)
       FullFS += ",-" + F.str();
@@ -286,6 +287,9 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     reportFatalUsageError("64-bit code requested on a subtarget that doesn't "
                           "support it!");
 
+  if (HasEGPR && !hasSSE1() && isTargetWin64())
+    reportFatalUsageError("EGPR on Windows x64 requires SSE");
+
   // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD, Hurd and for all
   // 64-bit targets.  On Solaris (32-bit), stack alignment is 4 bytes
   // following the i386 psABI, while on Illumos it is always 16 bytes.
@@ -302,6 +306,8 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
     PreferVectorWidth = 128;
   else if (Prefer256Bit)
     PreferVectorWidth = 256;
+
+  HasUserReservedRegisters = ReservedRReg.any();
 }
 
 X86Subtarget &X86Subtarget::initializeSubtargetDependencies(StringRef CPU,

@@ -3961,9 +3961,8 @@ void AffinePrefetchOp::print(OpAsmPrinter &p) {
       (*this)->getAttrOfType<AffineMapAttr>(getMapAttrStrName());
   if (mapAttr)
     p.printAffineMapOfSSAIds(mapAttr, getMapOperands());
-  p << ']' << ", " << (getIsWrite() ? "write" : "read") << ", "
-    << "locality<" << getLocalityHint() << ">, "
-    << (getIsDataCache() ? "data" : "instr");
+  p << ']' << ", " << (getIsWrite() ? "write" : "read") << ", " << "locality<"
+    << getLocalityHint() << ">, " << (getIsDataCache() ? "data" : "instr");
   p.printOptionalAttrDict(
       (*this)->getAttrs(),
       /*elidedAttrs=*/{getMapAttrStrName(), getLocalityHintAttrStrName(),
@@ -4212,8 +4211,9 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
   case arith::AtomicRMWKind::muli:
     return isa<IntegerType>(resultType);
   case arith::AtomicRMWKind::maximumf:
-    return isa<FloatType>(resultType);
+  case arith::AtomicRMWKind::maxnumf:
   case arith::AtomicRMWKind::minimumf:
+  case arith::AtomicRMWKind::minnumf:
     return isa<FloatType>(resultType);
   case arith::AtomicRMWKind::maxs: {
     auto intType = dyn_cast<IntegerType>(resultType);
@@ -4232,12 +4232,11 @@ static bool isResultTypeMatchAtomicRMWKind(Type resultType,
     return intType && intType.isUnsigned();
   }
   case arith::AtomicRMWKind::ori:
-    return isa<IntegerType>(resultType);
   case arith::AtomicRMWKind::andi:
+  case arith::AtomicRMWKind::xori:
     return isa<IntegerType>(resultType);
-  default:
-    return false;
   }
+  llvm_unreachable("Unhandled atomic rmw kind");
 }
 
 LogicalResult AffineParallelOp::verify() {
@@ -5036,9 +5035,11 @@ struct DropUnitExtentBasis
     SmallVector<Value> replacements(delinearizeOp->getNumResults(), nullptr);
     std::optional<Value> zero = std::nullopt;
     Location loc = delinearizeOp->getLoc();
+    Type indexType = delinearizeOp.getLinearIndex().getType();
     auto getZero = [&]() -> Value {
       if (!zero)
-        zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+        zero = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getZeroAttr(indexType));
       return zero.value();
     };
 
@@ -5204,9 +5205,9 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
           "need at least two elements to form the basis product");
 
     Value linearizeWithoutBack = affine::AffineLinearizeIndexOp::create(
-        rewriter, linearizeOp.getLoc(), linearizeOp.getMultiIndex().drop_back(),
-        linearizeOp.getDynamicBasis(), linearizeOp.getStaticBasis().drop_back(),
-        linearizeOp.getDisjoint());
+        rewriter, linearizeOp.getLoc(), linearizeOp.getLinearIndex().getType(),
+        linearizeOp.getMultiIndex().drop_back(), linearizeOp.getDynamicBasis(),
+        linearizeOp.getStaticBasis().drop_back(), linearizeOp.getDisjoint());
     auto delinearizeWithoutSplitPart = affine::AffineDelinearizeIndexOp::create(
         rewriter, delinearizeOp.getLoc(), linearizeWithoutBack,
         delinearizeOp.getDynamicBasis(), basis.drop_back(elemsToSplit),
@@ -5236,6 +5237,14 @@ void affine::AffineDelinearizeIndexOp::getCanonicalizationPatterns(
 // LinearizeIndexOp
 //===----------------------------------------------------------------------===//
 
+/// Infer the index type from a set of multi-index values. Returns the common
+/// type (index or vector<...xindex>), or IndexType if the set is empty.
+static Type inferIndexType(MLIRContext *ctx, ValueRange multiIndex) {
+  if (multiIndex.empty())
+    return IndexType::get(ctx);
+  return multiIndex.front().getType();
+}
+
 void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
                                    OperationState &odsState,
                                    ValueRange multiIndex, ValueRange basis,
@@ -5246,7 +5255,9 @@ void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
   SmallVector<int64_t> staticBasis;
   dispatchIndexOpFoldResults(getAsOpFoldResult(basis), dynamicBasis,
                              staticBasis);
-  build(odsBuilder, odsState, multiIndex, dynamicBasis, staticBasis, disjoint);
+  Type resultType = inferIndexType(odsBuilder.getContext(), multiIndex);
+  build(odsBuilder, odsState, resultType, multiIndex, dynamicBasis, staticBasis,
+        disjoint);
 }
 
 void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
@@ -5259,14 +5270,18 @@ void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
   SmallVector<Value> dynamicBasis;
   SmallVector<int64_t> staticBasis;
   dispatchIndexOpFoldResults(basis, dynamicBasis, staticBasis);
-  build(odsBuilder, odsState, multiIndex, dynamicBasis, staticBasis, disjoint);
+  Type resultType = inferIndexType(odsBuilder.getContext(), multiIndex);
+  build(odsBuilder, odsState, resultType, multiIndex, dynamicBasis, staticBasis,
+        disjoint);
 }
 
 void AffineLinearizeIndexOp::build(OpBuilder &odsBuilder,
                                    OperationState &odsState,
                                    ValueRange multiIndex,
                                    ArrayRef<int64_t> basis, bool disjoint) {
-  build(odsBuilder, odsState, multiIndex, ValueRange{}, basis, disjoint);
+  Type resultType = inferIndexType(odsBuilder.getContext(), multiIndex);
+  build(odsBuilder, odsState, resultType, multiIndex, ValueRange{}, basis,
+        disjoint);
 }
 
 LogicalResult AffineLinearizeIndexOp::verify() {
@@ -5402,7 +5417,8 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
                                          "no unit basis entries to replace");
 
     if (newIndices.empty()) {
-      rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(op, 0);
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, rewriter.getZeroAttr(op.getLinearIndex().getType()));
       return success();
     }
     rewriter.replaceOpWithNewOp<affine::AffineLinearizeIndexOp>(

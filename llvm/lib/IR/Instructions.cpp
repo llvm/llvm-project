@@ -133,7 +133,7 @@ PHINode::PHINode(const PHINode &PN)
   allocHungoffUses(PN.getNumOperands());
   std::copy(PN.op_begin(), PN.op_end(), op_begin());
   copyIncomingBlocks(make_range(PN.block_begin(), PN.block_end()));
-  SubclassOptionalData = PN.SubclassOptionalData;
+  FMF = PN.FMF;
 }
 
 // removeIncomingValue - Remove an incoming value.  This is useful if a
@@ -609,6 +609,22 @@ CallBase *CallBase::removeOperandBundle(CallBase *CB, uint32_t ID,
   return CreateNew ? Create(CB, Bundles, InsertPt) : CB;
 }
 
+CallBase *CallBase::removeOperandBundleAt(CallBase *CB, size_t Offset,
+                                          InsertPosition InsertPt) {
+  auto OpBundleCount = CB->getNumOperandBundles();
+  assert(Offset < OpBundleCount &&
+         "Trying to remove non-existant operand bundle");
+  SmallVector<OperandBundleDef> Bundles;
+  Bundles.reserve(OpBundleCount - 1);
+  size_t I = 0;
+  for (; I != Offset; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  ++I;
+  for (; I != OpBundleCount; ++I)
+    Bundles.emplace_back(CB->getOperandBundleAt(I));
+  return Create(CB, Bundles, InsertPt);
+}
+
 bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
@@ -801,7 +817,7 @@ CallInst::CallInst(const CallInst &CI, AllocInfo AllocInfo)
   std::copy(CI.op_begin(), CI.op_end(), op_begin());
   std::copy(CI.bundle_op_info_begin(), CI.bundle_op_info_end(),
             bundle_op_info_begin());
-  SubclassOptionalData = CI.SubclassOptionalData;
+  FMF = CI.FMF;
 }
 
 CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
@@ -812,7 +828,7 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
                                  Args, OpB, CI->getName(), InsertPt);
   NewCI->setTailCallKind(CI->getTailCallKind());
   NewCI->setCallingConv(CI->getCallingConv());
-  NewCI->SubclassOptionalData = CI->SubclassOptionalData;
+  NewCI->FMF = CI->FMF;
   NewCI->setAttributes(CI->getAttributes());
   NewCI->setDebugLoc(CI->getDebugLoc());
   return NewCI;
@@ -1189,11 +1205,13 @@ UnreachableInst::UnreachableInst(LLVMContext &Context,
 //                        UncondBrInst Implementation
 //===----------------------------------------------------------------------===//
 
-UncondBrInst::UncondBrInst(BasicBlock *IfTrue, InsertPosition InsertBefore)
-    : BranchInst(Type::getVoidTy(IfTrue->getContext()), Instruction::UncondBr,
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
+UncondBrInst::UncondBrInst(BasicBlock *Target, InsertPosition InsertBefore)
+    : BranchInst(Type::getVoidTy(Target->getContext()), Instruction::UncondBr,
                  AllocMarker, InsertBefore) {
-  assert(IfTrue && "Branch destination may not be null!");
-  Op<-1>() = IfTrue;
+  Op<-1>() = Target;
 }
 
 UncondBrInst::UncondBrInst(const UncondBrInst &BI)
@@ -1218,8 +1236,8 @@ CondBrInst::CondBrInst(Value *Cond, BasicBlock *IfTrue, BasicBlock *IfFalse,
                  AllocMarker, InsertBefore) {
   // Assign in order of operand index to make use-list order predictable.
   Op<-3>() = Cond;
-  Op<-2>() = IfFalse;
-  Op<-1>() = IfTrue;
+  Op<-2>() = IfTrue;
+  Op<-1>() = IfFalse;
 #ifndef NDEBUG
   AssertOK();
 #endif
@@ -1242,6 +1260,9 @@ void CondBrInst::swapSuccessors() {
   // expectations.
   swapProfMetadata();
 }
+
+// Suppress deprecation warnings from BranchInst.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 //===----------------------------------------------------------------------===//
 //                        AllocaInst Implementation
@@ -1431,7 +1452,7 @@ AtomicCmpXchgInst::AtomicCmpXchgInst(Value *Ptr, Value *Cmp, Value *NewVal,
 
 void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
                          Align Alignment, AtomicOrdering Ordering,
-                         SyncScope::ID SSID) {
+                         SyncScope::ID SSID, bool Elementwise) {
   assert(Ordering != AtomicOrdering::NotAtomic &&
          "atomicrmw instructions can only be atomic.");
   assert(Ordering != AtomicOrdering::Unordered &&
@@ -1441,6 +1462,7 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
   setOperation(Operation);
   setOrdering(Ordering);
   setSyncScopeID(SSID);
+  setElementwise(Elementwise);
   setAlignment(Alignment);
 
   assert(getOperand(0) && getOperand(1) && "All operands must be non-null!");
@@ -1452,9 +1474,10 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
 
 AtomicRMWInst::AtomicRMWInst(BinOp Operation, Value *Ptr, Value *Val,
                              Align Alignment, AtomicOrdering Ordering,
-                             SyncScope::ID SSID, InsertPosition InsertBefore)
+                             SyncScope::ID SSID, bool Elementwise,
+                             InsertPosition InsertBefore)
     : Instruction(Val->getType(), AtomicRMW, AllocMarker, InsertBefore) {
-  Init(Operation, Ptr, Val, Alignment, Ordering, SSID);
+  Init(Operation, Ptr, Val, Alignment, Ordering, SSID, Elementwise);
 }
 
 StringRef AtomicRMWInst::getOperationName(BinOp Op) {
@@ -1493,6 +1516,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmaximum";
   case AtomicRMWInst::FMinimum:
     return "fminimum";
+  case AtomicRMWInst::FMaximumNum:
+    return "fmaximumnum";
+  case AtomicRMWInst::FMinimumNum:
+    return "fminimumnum";
   case AtomicRMWInst::UIncWrap:
     return "uinc_wrap";
   case AtomicRMWInst::UDecWrap:
@@ -2602,7 +2629,12 @@ UnaryOperator::UnaryOperator(UnaryOps iType, Value *S, Type *Ty,
 
 UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S, const Twine &Name,
                                      InsertPosition InsertBefore) {
-  return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  switch (Op) {
+  case UnaryOps::FNeg:
+    return new FPUnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  default:
+    return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+  }
 }
 
 void UnaryOperator::AssertOK() {
@@ -2708,7 +2740,16 @@ BinaryOperator *BinaryOperator::Create(BinaryOps Op, Value *S1, Value *S2,
                                        InsertPosition InsertBefore) {
   assert(S1->getType() == S2->getType() &&
          "Cannot create binary operator with two operands of differing type!");
-  return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  switch (Op) {
+  case BinaryOps::FAdd:
+  case BinaryOps::FSub:
+  case BinaryOps::FMul:
+  case BinaryOps::FDiv:
+  case BinaryOps::FRem:
+    return new FPBinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  default:
+    return new BinaryOperator(Op, S1, S2, S1->getType(), Name, InsertBefore);
+  }
 }
 
 BinaryOperator *BinaryOperator::CreateNeg(Value *Op, const Twine &Name,
@@ -3242,7 +3283,16 @@ CastInst::getCastOpcode(
       DestTy->getPrimitiveSizeInBits().getFixedValue(); // 0 for ptr
 
   // Run through the possibilities ...
-  if (DestTy->isIntegerTy()) {                      // Casting to integral
+  if (DestTy->isByteTy()) {     // Casting to byte
+    if (SrcTy->isIntegerTy()) { // Casting from integral
+      assert(DestBits == SrcBits && "Illegal cast from integer to byte type");
+      return BitCast;
+    } else if (SrcTy->isPointerTy()) { // Casting from pointer
+      assert(DestBits == SrcBits && "Illegal cast from pointer to byte type");
+      return BitCast;
+    }
+    llvm_unreachable("Illegal cast to byte type");
+  } else if (DestTy->isIntegerTy()) {               // Casting to integral
     if (SrcTy->isIntegerTy()) {                     // Casting from integral
       if (DestBits < SrcBits)
         return Trunc;                               // int -> smaller int
@@ -3374,7 +3424,10 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
     PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
 
     // BitCast implies a no-op cast of type only. No bits change.
-    // However, you can't cast pointers to anything but pointers.
+    // However, you can't cast pointers to anything but pointers/bytes.
+    if ((SrcPtrTy && DstTy->isByteOrByteVectorTy()) ||
+        (SrcTy->isByteOrByteVectorTy() && DstPtrTy))
+      return true;
     if (!SrcPtrTy != !DstPtrTy)
       return false;
 
@@ -3503,15 +3556,12 @@ AddrSpaceCastInst::AddrSpaceCastInst(Value *S, Type *Ty, const Twine &Name,
 //===----------------------------------------------------------------------===//
 
 CmpInst::CmpInst(Type *ty, OtherOps op, Predicate predicate, Value *LHS,
-                 Value *RHS, const Twine &Name, InsertPosition InsertBefore,
-                 Instruction *FlagsSource)
+                 Value *RHS, const Twine &Name, InsertPosition InsertBefore)
     : Instruction(ty, op, AllocMarker, InsertBefore) {
   Op<0>() = LHS;
   Op<1>() = RHS;
   setPredicate(predicate);
   setName(Name);
-  if (FlagsSource)
-    copyIRFlags(FlagsSource);
 }
 
 CmpInst *CmpInst::Create(OtherOps Op, Predicate predicate, Value *S1, Value *S2,
@@ -3809,22 +3859,6 @@ CmpInst::Predicate CmpInst::getFlippedStrictnessPredicate(Predicate pred) {
   llvm_unreachable("Unknown predicate!");
 }
 
-bool CmpInst::isUnsigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_ULT: case ICmpInst::ICMP_ULE: case ICmpInst::ICMP_UGT:
-    case ICmpInst::ICMP_UGE: return true;
-  }
-}
-
-bool CmpInst::isSigned(Predicate predicate) {
-  switch (predicate) {
-    default: return false;
-    case ICmpInst::ICMP_SLT: case ICmpInst::ICMP_SLE: case ICmpInst::ICMP_SGT:
-    case ICmpInst::ICMP_SGE: return true;
-  }
-}
-
 bool ICmpInst::compare(const APInt &LHS, const APInt &RHS,
                        ICmpInst::Predicate Pred) {
   assert(ICmpInst::isIntPredicate(Pred) && "Only for integer predicates!");
@@ -4043,6 +4077,10 @@ CmpPredicate CmpPredicate::get(const CmpInst *Cmp) {
   return Cmp->getPredicate();
 }
 
+CmpPredicate CmpPredicate::getInverse(CmpPredicate P) {
+  return {CmpInst::getInversePredicate(P), P.hasSameSign()};
+}
+
 CmpPredicate CmpPredicate::getSwapped(CmpPredicate P) {
   return {CmpInst::getSwappedPredicate(P), P.hasSameSign()};
 }
@@ -4237,11 +4275,11 @@ void SwitchInstProfUpdateWrapper::setSuccessorWeight(
 SwitchInstProfUpdateWrapper::CaseWeightOpt
 SwitchInstProfUpdateWrapper::getSuccessorWeight(const SwitchInst &SI,
                                                 unsigned idx) {
-  if (MDNode *ProfileData = getBranchWeightMDNode(SI))
-    if (ProfileData->getNumOperands() == SI.getNumSuccessors() + 1)
-      return mdconst::extract<ConstantInt>(ProfileData->getOperand(idx + 1))
-          ->getValue()
-          .getZExtValue();
+  if (MDNode *ProfileData = getValidBranchWeightMDNode(SI)) {
+    SmallVector<uint32_t> Weights;
+    extractFromBranchWeightMD32(ProfileData, Weights);
+    return Weights[idx];
+  }
 
   return std::nullopt;
 }
@@ -4344,16 +4382,35 @@ UnaryOperator *UnaryOperator::cloneImpl() const {
   return Create(getOpcode(), Op<0>());
 }
 
+FPUnaryOperator *FPUnaryOperator::cloneImpl() const {
+  auto *I = static_cast<FPUnaryOperator *>(Create(getOpcode(), Op<0>()));
+  I->FMF = FMF;
+  return I;
+}
+
 BinaryOperator *BinaryOperator::cloneImpl() const {
+  assert(!isa<FPBinaryOperator>(this) &&
+         "Should call FPBinaryOperator::cloneImpl!");
   return Create(getOpcode(), Op<0>(), Op<1>());
 }
 
+FPBinaryOperator *FPBinaryOperator::cloneImpl() const {
+  auto *I =
+      static_cast<FPBinaryOperator *>(Create(getOpcode(), Op<0>(), Op<1>()));
+  I->FMF = FMF;
+  return I;
+}
+
 FCmpInst *FCmpInst::cloneImpl() const {
-  return new FCmpInst(getPredicate(), Op<0>(), Op<1>());
+  auto *I = new FCmpInst(getPredicate(), Op<0>(), Op<1>());
+  I->FMF = FMF;
+  return I;
 }
 
 ICmpInst *ICmpInst::cloneImpl() const {
-  return new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  auto *Result = new ICmpInst(getPredicate(), Op<0>(), Op<1>());
+  Result->setSameSign(hasSameSign());
+  return Result;
 }
 
 ExtractValueInst *ExtractValueInst::cloneImpl() const {
@@ -4392,9 +4449,9 @@ AtomicCmpXchgInst *AtomicCmpXchgInst::cloneImpl() const {
 }
 
 AtomicRMWInst *AtomicRMWInst::cloneImpl() const {
-  AtomicRMWInst *Result =
-      new AtomicRMWInst(getOperation(), getOperand(0), getOperand(1),
-                        getAlign(), getOrdering(), getSyncScopeID());
+  AtomicRMWInst *Result = new AtomicRMWInst(
+      getOperation(), getOperand(0), getOperand(1), getAlign(), getOrdering(),
+      getSyncScopeID(), isElementwise());
   Result->setVolatile(isVolatile());
   return Result;
 }
@@ -4416,19 +4473,27 @@ SExtInst *SExtInst::cloneImpl() const {
 }
 
 FPTruncInst *FPTruncInst::cloneImpl() const {
-  return new FPTruncInst(getOperand(0), getType());
+  auto *I = new FPTruncInst(getOperand(0), getType());
+  I->FMF = FMF;
+  return I;
 }
 
 FPExtInst *FPExtInst::cloneImpl() const {
-  return new FPExtInst(getOperand(0), getType());
+  auto *I = new FPExtInst(getOperand(0), getType());
+  I->FMF = FMF;
+  return I;
 }
 
 UIToFPInst *UIToFPInst::cloneImpl() const {
-  return new UIToFPInst(getOperand(0), getType());
+  auto *Result = new UIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 SIToFPInst *SIToFPInst::cloneImpl() const {
-  return new SIToFPInst(getOperand(0), getType());
+  auto *Result = new SIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 FPToUIInst *FPToUIInst::cloneImpl() const {
@@ -4471,7 +4536,9 @@ CallInst *CallInst::cloneImpl() const {
 }
 
 SelectInst *SelectInst::cloneImpl() const {
-  return SelectInst::Create(getOperand(0), getOperand(1), getOperand(2));
+  auto *I = SelectInst::Create(getOperand(0), getOperand(1), getOperand(2));
+  I->FMF = FMF;
+  return I;
 }
 
 VAArgInst *VAArgInst::cloneImpl() const {

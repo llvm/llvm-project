@@ -40,7 +40,9 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/RecyclingAllocator.h"
+#include "llvm/Support/UndefPoison.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>
@@ -1770,9 +1772,10 @@ public:
   LLVM_ABI SDValue getFreeze(SDValue V);
 
   /// Return a freeze of V if any of the demanded elts may be undef or poison.
-  /// If \p PoisonOnly is true, then only check for poison elements.
-  LLVM_ABI SDValue getFreeze(SDValue V, const APInt &DemandedElts,
-                             bool PoisonOnly = false);
+  /// \p Kind can be used to selectively freeze poison and/or undef bits only.
+  LLVM_ABI SDValue
+  getFreeze(SDValue V, const APInt &DemandedElts,
+            UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison);
 
   /// Return an AssertAlignSDNode.
   LLVM_ABI SDValue getAssertAlign(const SDLoc &DL, SDValue V, Align A);
@@ -2083,9 +2086,14 @@ public:
   /// function mirrors \c llvm::salvageDebugInfo.
   LLVM_ABI void salvageDebugInfo(SDNode &N);
 
+  /// Dump the textual format of this DAG. Nodes are not sorted.
+  /// Note that we overload it instead of using default value so that it is
+  /// convenient to be called from debuggers.
+  LLVM_ABI void dump() const;
+
   /// Dump the textual format of this DAG. Print nodes in sorted orders if \p
   /// Sorted is true.
-  LLVM_ABI void dump(bool Sorted = false) const;
+  LLVM_ABI void dump(bool Sorted) const;
 
   /// In most cases this function returns the ABI alignment for a given type,
   /// except for illegal vector types where the alignment exceeds that of the
@@ -2177,6 +2185,30 @@ public:
   LLVM_ABI KnownBits computeKnownBits(SDValue Op, const APInt &DemandedElts,
                                       unsigned Depth = 0) const;
 
+  /// Determine the possible constant range of an integer or vector of integers.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op, bool ForSigned,
+                                              unsigned Depth = 0) const;
+
+  /// Determine the possible constant range of an integer or vector of integers.
+  /// The DemandedElts argument allows us to only collect the known ranges that
+  /// are shared by the requested vector elements.
+  LLVM_ABI ConstantRange computeConstantRange(SDValue Op,
+                                              const APInt &DemandedElts,
+                                              bool ForSigned,
+                                              unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits().
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, bool ForSigned, unsigned Depth = 0) const;
+
+  /// Combine constant ranges from computeConstantRange() and
+  /// computeKnownBits(). The DemandedElts argument allows us to only collect
+  /// the known ranges that are shared by the requested vector elements.
+  LLVM_ABI ConstantRange computeConstantRangeIncludingKnownBits(
+      SDValue Op, const APInt &DemandedElts, bool ForSigned,
+      unsigned Depth = 0) const;
+
   /// Used to represent the possible overflow behavior of an operation.
   /// Never: the operation cannot overflow.
   /// Always: the operation will always overflow.
@@ -2247,6 +2279,19 @@ public:
     return computeOverflowForMul(IsSigned, N0, N1) == OFK_Never;
   }
 
+  /// Returns true if \p V is an identity element of Opc with Flags.
+  /// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
+  /// checks that V is a right identity.
+  LLVM_ABI bool isIdentityElement(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                                  unsigned OperandNo, unsigned Depth = 0) const;
+
+  /// Returns true if the demanded vector elements of \p V is an identity
+  /// element of Opc with Flags. When OperandNo is 0, it checks that V is a left
+  /// identity. Otherwise, it checks that V is a right identity.
+  LLVM_ABI bool isIdentityElement(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                                  const APInt &DemandedElts, unsigned OperandNo,
+                                  unsigned Depth = 0) const;
+
   /// Test if the given value is known to have exactly one bit set. This differs
   /// from computeKnownBits in that it doesn't necessarily determine which bit
   /// is set. If 'OrZero' is set, then return true if the given value is either
@@ -2303,22 +2348,23 @@ public:
                                               unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits.
-  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(SDValue Op,
-                                                 bool PoisonOnly = false,
-                                                 unsigned Depth = 0) const;
+  /// and, \p Kind can be used to track poison and/or undef bits.
+  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(
+      SDValue Op, UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+      unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison
-  /// and, if \p PoisonOnly is false, does not have undef bits. The DemandedElts
-  /// argument limits the check to the requested vector elements.
-  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(SDValue Op,
-                                                 const APInt &DemandedElts,
-                                                 bool PoisonOnly = false,
-                                                 unsigned Depth = 0) const;
+  /// and, \p Kind can be used to track poison and/or undef bits. The
+  /// DemandedElts argument limits the check to the requested vector elements.
+  LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(
+      SDValue Op, const APInt &DemandedElts,
+      UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+      unsigned Depth = 0) const;
 
   /// Return true if this function can prove that \p Op is never poison.
   bool isGuaranteedNotToBePoison(SDValue Op, unsigned Depth = 0) const {
-    return isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ true, Depth);
+    return isGuaranteedNotToBeUndefOrPoison(Op, UndefPoisonKind::PoisonOnly,
+                                            Depth);
   }
 
   /// Return true if this function can prove that \p Op is never poison. The
@@ -2326,7 +2372,7 @@ public:
   bool isGuaranteedNotToBePoison(SDValue Op, const APInt &DemandedElts,
                                  unsigned Depth = 0) const {
     return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts,
-                                            /*PoisonOnly*/ true, Depth);
+                                            UndefPoisonKind::PoisonOnly, Depth);
   }
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
@@ -2338,10 +2384,10 @@ public:
   /// could still introduce undef or poison even without poison generating flags
   /// which might be on the instruction.  (i.e. could the result of
   /// Op->dropPoisonGeneratingFlags() still create poison or undef)
-  LLVM_ABI bool canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
-                                       bool PoisonOnly = false,
-                                       bool ConsiderFlags = true,
-                                       unsigned Depth = 0) const;
+  LLVM_ABI bool
+  canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
+                         UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+                         bool ConsiderFlags = true, unsigned Depth = 0) const;
 
   /// Return true if Op can create undef or poison from non-undef & non-poison
   /// operands.
@@ -2351,9 +2397,10 @@ public:
   /// could still introduce undef or poison even without poison generating flags
   /// which might be on the instruction.  (i.e. could the result of
   /// Op->dropPoisonGeneratingFlags() still create poison or undef)
-  LLVM_ABI bool canCreateUndefOrPoison(SDValue Op, bool PoisonOnly = false,
-                                       bool ConsiderFlags = true,
-                                       unsigned Depth = 0) const;
+  LLVM_ABI bool
+  canCreateUndefOrPoison(SDValue Op,
+                         UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison,
+                         bool ConsiderFlags = true, unsigned Depth = 0) const;
 
   /// Return true if the specified operand is an ISD::OR or ISD::XOR node
   /// that can be treated as an ISD::ADD node.
@@ -2368,6 +2415,24 @@ public:
   /// equivalence:
   ///     X|Cst == X+Cst iff X&Cst = 0.
   LLVM_ABI bool isBaseWithConstantOffset(SDValue Op) const;
+
+  /// Determine floating-point class information about \p Op. For vectors, the
+  /// known FP classes are those shared by every demanded vector element.
+  /// \p InterestedClasses is a hint for which FP classes we care about;
+  /// the implementation may bail out early if it can determine that
+  /// none of the interested classes are possible.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
+
+  /// Determine floating-point class information about \p Op. The
+  /// DemandedElts argument allows us to only collect the known FP classes
+  /// that are shared by the requested vector elements.
+  /// \p InterestedClasses is a hint for which FP classes we care about.
+  LLVM_ABI KnownFPClass computeKnownFPClass(SDValue Op,
+                                            const APInt &DemandedElts,
+                                            FPClassTest InterestedClasses,
+                                            unsigned Depth = 0) const;
 
   /// Test whether the given SDValue (or all elements of it, if it is a
   /// vector) is known to never be NaN in \p DemandedElts. If \p SNaN is true,
@@ -2394,9 +2459,15 @@ public:
     return isKnownNeverNaN(Op, true, Depth);
   }
 
-  /// Test whether the given floating point SDValue is known to never be
-  /// positive or negative zero.
-  LLVM_ABI bool isKnownNeverZeroFloat(SDValue Op) const;
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero in \p
+  /// DemandedElts.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, const APInt &DemandedElts,
+                                        unsigned Depth = 0) const;
+
+  /// Test whether the given floating point SDValue (or all elements of it, if
+  /// it is a vector) is known to never be interpretable as zero.
+  LLVM_ABI bool isKnownNeverLogicalZero(SDValue Op, unsigned Depth = 0) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
@@ -2672,9 +2743,20 @@ public:
 
   LLVM_ABI bool shouldOptForSize() const;
 
-  /// Get the (commutative) neutral element for the given opcode, if it exists.
-  LLVM_ABI SDValue getNeutralElement(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                     SDNodeFlags Flags);
+  /// Get the (commutative) identity element for the given opcode, if it exists.
+  LLVM_ABI SDValue getIdentityElement(unsigned Opcode, const SDLoc &DL, EVT VT,
+                                      SDNodeFlags Flags);
+
+  /// Get an expression that implements a partial multiply-subtract reduction.
+  /// In practice this means that parts of the expression are negated, e.g.
+  ///
+  ///     partial_reduce_fmls acc, lhs, rhs
+  /// <=> partial_reduce_fmla acc, lhs, -rhs
+  ///
+  ///      partial_reduce_umls acc, lhs, rhs
+  /// <=> -partial_reduce_umla -acc, lhs, rhs
+  LLVM_ABI SDValue getPartialReduceMLS(unsigned Opc, const SDLoc &DL,
+                                       SDValue Acc, SDValue LHS, SDValue RHS);
 
   /// Some opcodes may create immediate undefined behavior when used with some
   /// values (integer division-by-zero for example). Therefore, these operations

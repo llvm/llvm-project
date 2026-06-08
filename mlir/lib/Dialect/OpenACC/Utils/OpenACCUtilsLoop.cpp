@@ -14,7 +14,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -149,15 +148,13 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
 /// Wrap a multi-block region with scf.execute_region.
 scf::ExecuteRegionOp
 wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
-                                         Location loc, RewriterBase &rewriter,
-                                         bool convertFuncReturn) {
+                                         Location loc, RewriterBase &rewriter) {
   SmallVector<Operation *> terminators;
   for (Block &block : region.getBlocks()) {
     if (block.empty())
       continue;
     Operation *term = block.getTerminator();
-    if ((convertFuncReturn && isa<func::ReturnOp>(*term)) ||
-        isa<acc::YieldOp>(*term))
+    if (term->getNumSuccessors() == 0)
       terminators.push_back(term);
   }
   SmallVector<Type> resultTypes;

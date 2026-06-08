@@ -8,5 +8,5 @@
 
 #include "clc/relational/clc_isunordered.h"
 
-#define __CLC_BODY <clc_fdim.inc>
+#define __CLC_BODY "clc_fdim.inc"
 #include "clc/math/gentype.inc"

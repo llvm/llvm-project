@@ -683,8 +683,7 @@ Register ARMFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   if (!isLoadTypeLegal(AI->getType(), VT))
     return Register();
 
-  DenseMap<const AllocaInst*, int>::iterator SI =
-    FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   // This will get lowered later into the correct offsets and registers
   // via rewriteXFrameIndex.
@@ -817,8 +816,7 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
     }
     case Instruction::Alloca: {
       const AllocaInst *AI = cast<AllocaInst>(Obj);
-      DenseMap<const AllocaInst*, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+      auto SI = FuncInfo.StaticAllocaMap.find(AI);
       if (SI != FuncInfo.StaticAllocaMap.end()) {
         Addr.setKind(Address::FrameIndexBase);
         Addr.setFI(SI->second);
@@ -1268,7 +1266,7 @@ static ARMCC::CondCodes getComparePred(CmpInst::Predicate Pred) {
 }
 
 bool ARMFastISel::SelectBranch(const Instruction *I) {
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *TBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
@@ -3035,7 +3033,8 @@ bool ARMFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
 }
 
 Register ARMFastISel::ARMLowerPICELF(const GlobalValue *GV, MVT VT) {
-  bool UseGOT_PREL = !GV->isDSOLocal();
+  // Weak symbols need GOT indirection even when hidden/DSO-local.
+  bool UseGOT_PREL = !GV->isDSOLocal() || GV->isWeakForLinker();
   LLVMContext *Context = &MF->getFunction().getContext();
   unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
   unsigned PCAdj = Subtarget->isThumb() ? 4 : 8;

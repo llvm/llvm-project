@@ -22,6 +22,7 @@ subroutine target_teams_workdistribute()
   ! CHECK: omp.teams
   ! CHECK: omp.parallel
   ! CHECK: omp.distribute
+  ! CHECK-NOT: fir.call @_FortranAAssign
   ! CHECK: omp.wsloop
   ! CHECK: omp.loop_nest
 
@@ -46,7 +47,12 @@ subroutine teams_workdistribute()
 
   y = a * x + y
 
-  ! CHECK: fir.call @_FortranAAssign
+  ! CHECK: omp.teams
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  ! CHECK-NOT: fir.call @_FortranAAssign
+  ! CHECK: omp.wsloop
+  ! CHECK: omp.loop_nest
   y = 2.0_real32
 
   !$omp end teams workdistribute

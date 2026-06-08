@@ -118,7 +118,8 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUIDAssumingExternalLinkage(FProfileName));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(FProfileName)));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
@@ -162,9 +163,7 @@ public:
   }
 };
 
-
-
-extern cl::opt<bool> SampleProfileUseProfi;
+extern LLVM_ABI cl::opt<bool> SampleProfileUseProfi;
 
 static inline bool skipProfileForFunction(const Function &F) {
   return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");

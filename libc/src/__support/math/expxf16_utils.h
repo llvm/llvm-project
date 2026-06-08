@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXPXF16_UTILS_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXPXF16_UTILS_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
@@ -237,5 +241,7 @@ LIBC_INLINE_VAR constexpr cpp::array<float, 32> ONE_OVER_F_F = {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXPXF16_UTILS_H

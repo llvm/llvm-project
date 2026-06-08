@@ -49,7 +49,7 @@ class AllocaInst;
 class AssumptionCache;
 class BlockFrequencyInfo;
 class DominatorTree;
-class BranchInst;
+class CondBrInst;
 class Function;
 class GlobalValue;
 class InstCombiner;
@@ -105,7 +105,7 @@ struct HardwareLoopInfo {
   LLVM_ABI HardwareLoopInfo(Loop *L);
   Loop *L = nullptr;
   BasicBlock *ExitBlock = nullptr;
-  BranchInst *ExitBranch = nullptr;
+  CondBrInst *ExitBranch = nullptr;
   const SCEV *ExitCount = nullptr;
   IntegerType *CountType = nullptr;
   Value *LoopDecrement = nullptr; // Decrement the loop counter by this
@@ -150,22 +150,19 @@ class MemIntrinsicCostAttributes {
   Align Alignment;
 
 public:
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      const Value *Ptr, bool VariableMask,
-                                      Align Alignment,
-                                      const Instruction *I = nullptr)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, const Value *Ptr,
+                             bool VariableMask, Align Alignment,
+                             const Instruction *I = nullptr)
       : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      Align Alignment,
-                                      unsigned AddressSpace = 0)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, Align Alignment,
+                             unsigned AddressSpace = 0)
       : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
         Alignment(Alignment) {}
 
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      bool VariableMask, Align Alignment,
-                                      const Instruction *I = nullptr)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, bool VariableMask,
+                             Align Alignment, const Instruction *I = nullptr)
       : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
@@ -283,6 +280,9 @@ public:
   /// Get the kind of extension that a cast opcode represents.
   LLVM_ABI static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction::CastOps CastOpc);
+  /// Get the cast opcode for an extension kind.
+  LLVM_ABI static Instruction::CastOps
+  getOpcodeForPartialReductionExtendKind(PartialReductionExtendKind Kind);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
@@ -510,14 +510,14 @@ public:
   /// uniformity analysis and assume all values are uniform.
   LLVM_ABI bool hasBranchDivergence(const Function *F = nullptr) const;
 
-  /// Get target-specific uniformity information for an instruction.
+  /// Get target-specific uniformity information for a value.
   /// This allows targets to provide more fine-grained control over
-  /// uniformity analysis by specifying whether specific instructions
+  /// uniformity analysis by specifying whether specific values
   /// should always or never be considered uniform, or require custom
   /// operand-based analysis.
   /// \param V The value to query for uniformity information.
-  /// \return InstructionUniformity.
-  LLVM_ABI InstructionUniformity getInstructionUniformity(const Value *V) const;
+  /// \return ValueUniformity.
+  LLVM_ABI ValueUniformity getValueUniformity(const Value *V) const;
 
   /// Query the target whether the specified address space cast from FromAS to
   /// ToAS is valid.
@@ -751,9 +751,9 @@ public:
   // vectorization should be considered.
   LLVM_ABI unsigned getEpilogueVectorizationMinVF() const;
 
-  /// Query the target whether it would be prefered to create a predicated
+  /// Query the target whether it would be preferred to create a tail-folded
   /// vector loop, which can avoid the need to emit a scalar epilogue loop.
-  LLVM_ABI bool preferPredicateOverEpilogue(TailFoldingInfo *TFI) const;
+  LLVM_ABI bool preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const;
 
   /// Query the target what the preferred style of tail folding is.
   LLVM_ABI TailFoldingStyle getPreferredTailFoldingStyle() const;
@@ -877,7 +877,7 @@ public:
 
   /// Return true if the target can save a compare for loop count, for example
   /// hardware loop saves a compare.
-  LLVM_ABI bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+  LLVM_ABI bool canSaveCmp(Loop *L, CondBrInst **BI, ScalarEvolution *SE,
                            LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
                            TargetLibraryInfo *LibInfo) const;
 
@@ -1036,8 +1036,6 @@ public:
   /// convention.
   LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
 
-  LLVM_ABI bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
-
   /// Identifies if the vector form of the intrinsic has a scalar operand.
   LLVM_ABI bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                    unsigned ScalarOpdIdx) const;
@@ -1070,7 +1068,8 @@ public:
   };
 
   /// Calculates a VectorInstrContext from \p I.
-  static VectorInstrContext getVectorInstrContextHint(const Instruction *I);
+  LLVM_ABI static VectorInstrContext
+  getVectorInstrContextHint(const Instruction *I);
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -1336,6 +1335,16 @@ public:
   /// \return the target-provided register class name
   LLVM_ABI const char *getRegisterClassName(unsigned ClassID) const;
 
+  /// \return the cost of spilling a register in the target-provided register
+  /// class to the stack.
+  LLVM_ABI InstructionCost
+  getRegisterClassSpillCost(unsigned ClassID, TargetCostKind CostKind) const;
+
+  /// \return the cost of reloading a register in the target-provided register
+  /// class from the stack.
+  LLVM_ABI InstructionCost
+  getRegisterClassReloadCost(unsigned ClassID, TargetCostKind CostKind) const;
+
   enum RegisterKind { RGK_Scalar, RGK_FixedWidthVector, RGK_ScalableVector };
 
   /// \return The width of the largest scalar or vector register type.
@@ -1379,9 +1388,12 @@ public:
   /// \param VF Initial estimation of the minimum vector factor.
   /// \param ScalarMemTy Scalar memory type of the store operation.
   /// \param ScalarValTy Scalar type of the stored value.
+  /// \param Alignment Alignment of the store
+  /// \param AddrSpace Address space of the store
   /// Currently only used by the SLP vectorizer.
   LLVM_ABI unsigned getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                      Type *ScalarValTy) const;
+                                      Type *ScalarValTy, Align Alignment,
+                                      unsigned AddrSpace) const;
 
   /// \return True if it should be considered for address type promotion.
   /// \p AllowPromotionWithoutCommonHeader Set true if promoting \p I is
@@ -1925,6 +1937,12 @@ public:
   /// vectorization, false - otherwise.
   LLVM_ABI bool preferAlternateOpcodeVectorization() const;
 
+  /// \returns True if the SLP vectorizer should apply the instruction-count
+  /// check that rejects 2-element vector trees when the vector instruction
+  /// count exceeds the scalar instruction count, false if the target opts out
+  /// of this heuristic.
+  LLVM_ABI bool preferSLPInstCountCheck() const;
+
   /// \returns True if the target prefers reductions of \p Kind to be performed
   /// in the loop.
   LLVM_ABI bool preferInLoopReduction(RecurKind Kind, Type *Ty) const;
@@ -2073,6 +2091,17 @@ public:
   /// Returns true if GEP should not be used to index into vectors for this
   /// target.
   LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
+
+  /// Determine if an instruction with Custom uniformity can be proven uniform
+  /// based on which operands are uniform.
+  ///
+  /// \param I The instruction to check.
+  /// \param UniformArgs A bitvector indicating which operands are known to be
+  ///                    uniform (bit N corresponds to operand N).
+  /// \returns true if the instruction result can be proven uniform given the
+  ///          uniform operands, false otherwise.
+  LLVM_ABI bool isUniform(const Instruction *I,
+                          const SmallBitVector &UniformArgs) const;
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;

@@ -79,7 +79,7 @@ public:
   /// Support LLVM type casting.
   static bool classof(Attribute attr);
 
-  /// Required by DenseMapInfo to create empty and tombstone key.
+  /// Required by DenseMapInfo to create the empty key.
   static TBAANodeAttr getFromOpaquePointer(const void *pointer) {
     return TBAANodeAttr(reinterpret_cast<const ImplType *>(pointer));
   }
