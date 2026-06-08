@@ -28,6 +28,7 @@ public:
   UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
+  /// \return a non-null unique pointer to a UnsafeBufferUsageEntitySummary
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
   extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx);
   void HandleTranslationUnit(ASTContext &Ctx) override;

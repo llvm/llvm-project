@@ -311,6 +311,7 @@ public:
   PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
+  /// \return a non-null unique pointer to a PointerFlowEntitySummary
   std::unique_ptr<PointerFlowEntitySummary>
   extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx,
                        TUSummaryExtractor &Extractor) {

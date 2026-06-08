@@ -20,6 +20,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "gmock/gmock.h"
@@ -1144,17 +1145,14 @@ TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
 
   // BindingDecl may not be fully supported, but should not crash
   llvm::DebugFlag = true;
+  auto DebugFlagReset = llvm::scope_exit([]() { llvm::DebugFlag = false; });
   llvm::setCurrentDebugType("ssaf-analyses");
   testing::internal::CaptureStderr();
 
-  ASSERT_EQ(setUpTest(Code), true);
-
-  std::string Output = testing::internal::GetCapturedStderr();
-  llvm::DebugFlag = false;
-
+  ASSERT_TRUE(setUpTest(Code));
   // Verify the warning was logged
-  EXPECT_NE(Output.find("failed to create EntityId for Decomposition"),
-            std::string::npos);
+  ASSERT_TRUE(StringRef(testing::internal::GetCapturedStderr())
+                  .contains("failed to create EntityId for Decomposition"));
 }
 
 TEST_F(PointerFlowTest, RHSResultsInNoEntityPointerLevel) {
@@ -1170,8 +1168,8 @@ TEST_F(PointerFlowTest, RHSResultsInNoEntityPointerLevel) {
   )cpp"),
             true);
   auto *Sum = getEntitySummary<FunctionDecl>("f");
-  ASSERT_EQ(Sum, nullptr);
+  ASSERT_FALSE(Sum);
   Sum = getEntitySummary<CXXMethodDecl>("g");
-  ASSERT_EQ(Sum, nullptr);
+  ASSERT_FALSE(Sum);
 }
 } // namespace

@@ -20,6 +20,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -575,6 +576,8 @@ TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
 TEST_F(UnsafeBufferUsageTest, DirectNewExpressionArrayAccess) {
   // 'new' not yet supported, but should not crash and should log warning
   llvm::DebugFlag = true;
+  auto DebugFlagReset = llvm::scope_exit([]() { llvm::DebugFlag = false; });
+
   llvm::setCurrentDebugType("ssaf-analyses");
   testing::internal::CaptureStderr();
 
@@ -584,15 +587,12 @@ TEST_F(UnsafeBufferUsageTest, DirectNewExpressionArrayAccess) {
     }
   )cpp"));
 
-  std::string Output = testing::internal::GetCapturedStderr();
-  llvm::DebugFlag = false;
-
   // The only unsafe pointer is unsupported, so no summary should be produced.
-  EXPECT_EQ(getEntitySummary("foo"), nullptr);
+  ASSERT_FALSE(getEntitySummary("foo"));
   // Verify the warning was logged
-  EXPECT_NE(
-      Output.find("attempt to translate CXXNewExpr to EntityPointerLevels"),
-      std::string::npos);
+  EXPECT_TRUE(
+      StringRef(testing::internal::GetCapturedStderr())
+          .contains("attempt to translate CXXNewExpr to EntityPointerLevels"));
 }
 
 } // namespace
