@@ -1039,7 +1039,7 @@ BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
                                          AccessSpecifier Access) {
   QualType ElementTy = getHandleElementType();
   addHandleMember(RC, ResourceDimension::Unknown, IsROV, RawBuffer,
-                  /*IsArrayed=*/false, ElementTy, Access);
+                  /*IsArray=*/false, ElementTy, Access);
   if (HasCounter)
     addCounterHandleMember(RC, IsROV, RawBuffer, ElementTy, Access);
   return *this;
@@ -1047,16 +1047,16 @@ BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addTextureHandle(ResourceClass RC, bool IsROV,
-                                         bool IsArrayed, ResourceDimension RD,
+                                         bool IsArray, ResourceDimension RD,
                                          AccessSpecifier Access) {
-  addHandleMember(RC, RD, IsROV, /*RawBuffer=*/false, IsArrayed,
+  addHandleMember(RC, RD, IsROV, /*RawBuffer=*/false, IsArray,
                   getHandleElementType(), Access);
   return *this;
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSamplerHandle() {
   addHandleMember(ResourceClass::Sampler, ResourceDimension::Unknown,
-                  /*IsROV=*/false, /*RawBuffer=*/false, /*IsArrayed=*/false,
+                  /*IsROV=*/false, /*RawBuffer=*/false, /*IsArray=*/false,
                   getHandleElementType());
   return *this;
 }
@@ -1112,9 +1112,9 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addPrivateNestedRecord(StringRef Name) {
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, ResourceDimension RD, bool IsROV, bool RawBuffer,
-    bool IsArrayed, QualType ElementTy, AccessSpecifier Access) {
+    bool IsArray, QualType ElementTy, AccessSpecifier Access) {
   return addResourceMember("__handle", RC, RD, IsROV, RawBuffer,
-                           /*IsCounter=*/false, IsArrayed, ElementTy, Access);
+                           /*IsCounter=*/false, IsArray, ElementTy, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
@@ -1122,12 +1122,12 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
     AccessSpecifier Access) {
   return addResourceMember("__counter_handle", RC, ResourceDimension::Unknown,
                            IsROV, RawBuffer, /*IsCounter=*/true,
-                           /*IsArrayed=*/false, ElementTy, Access);
+                           /*IsArray=*/false, ElementTy, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
     StringRef MemberName, ResourceClass RC, ResourceDimension RD, bool IsROV,
-    bool RawBuffer, bool IsCounter, bool IsArrayed, QualType ElementTy,
+    bool RawBuffer, bool IsCounter, bool IsArray, QualType ElementTy,
     AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
@@ -1152,8 +1152,8 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
           : nullptr};
   if (IsCounter)
     Attrs.push_back(HLSLIsCounterAttr::CreateImplicit(Ctx));
-  if (IsArrayed)
-    Attrs.push_back(HLSLIsArrayedAttr::CreateImplicit(Ctx));
+  if (IsArray)
+    Attrs.push_back(HLSLIsArrayAttr::CreateImplicit(Ctx));
 
   if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
                                        AttributedResTy))
@@ -1409,13 +1409,13 @@ BuiltinTypeDeclBuilder::addCopyAssignmentOperator(AccessSpecifier Access) {
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim,
-                                                   bool IsArrayed) {
+                                                   bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
 
   uint32_t VecSize = 1;
   if (Dim != ResourceDimension::Unknown)
-    VecSize = getResourceDimensions(Dim) + (IsArrayed ? 1 : 0);
+    VecSize = getResourceDimensions(Dim) + (IsArray ? 1 : 0);
 
   QualType IndexTy = VecSize > 1
                          ? AST.getExtVectorType(AST.UnsignedIntTy, VecSize)
@@ -1451,7 +1451,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
                                                         QualType ReturnType) {
   ASTContext &AST = Record->getASTContext();
   uint32_t VecSize =
-      getResourceDimensions(Dim) + (getResourceAttrs().IsArrayed ? 1 : 0);
+      getResourceDimensions(Dim) + (getResourceAttrs().IsArray ? 1 : 0);
   QualType IntTy = AST.IntTy;
   QualType IndexTy = VecSize > 1 ? AST.getExtVectorType(IntTy, VecSize) : IntTy;
   QualType CoordLevelTy = AST.getExtVectorType(IntTy, VecSize + 1);
@@ -1465,7 +1465,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
   MipsSliceBuilder.addFriend(Record)
       .addHandleMember(getResourceAttrs().ResourceClass, Dim,
                        getResourceAttrs().IsROV, /*RawBuffer=*/false,
-                       getResourceAttrs().IsArrayed, ReturnType,
+                       getResourceAttrs().IsArray, ReturnType,
                        AccessSpecifier::AS_public)
       .addMemberVariable("__level", IntTy, {}, AccessSpecifier::AS_public)
       .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
@@ -1509,7 +1509,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
   MipsBuilder.addFriend(Record)
       .addHandleMember(getResourceAttrs().ResourceClass, Dim,
                        getResourceAttrs().IsROV, /*RawBuffer=*/false,
-                       getResourceAttrs().IsArrayed, ReturnType,
+                       getResourceAttrs().IsArray, ReturnType,
                        AccessSpecifier::AS_public)
       .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
       .addCopyConstructor(AccessSpecifier::AS_protected)
@@ -1561,11 +1561,11 @@ BuiltinTypeDeclBuilder::addMipsMember(ResourceDimension Dim) {
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
-                                              bool IsArrayed) {
+                                              bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 2 : 1);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 2 : 1);
   QualType IntTy = AST.IntTy;
   QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
   QualType LocationTy = AST.getExtVectorType(IntTy, CoordSize);
@@ -1636,15 +1636,14 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim,
-                                         bool IsArrayed) {
+BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 1 : 0);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
   QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
@@ -1687,14 +1686,14 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
-                                             bool IsArrayed) {
+                                             bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 1 : 0);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
   QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
@@ -1741,14 +1740,14 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
-                                             bool IsArrayed) {
+                                             bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 1 : 0);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
   QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
   QualType OffsetFloatTy = AST.getExtVectorType(FloatTy, OffsetSize);
@@ -1801,14 +1800,14 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
-                                              bool IsArrayed) {
+                                              bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 1 : 0);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
   QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
@@ -1841,14 +1840,14 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
-                                            bool IsArrayed) {
+                                            bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = AST.FloatTy;
   QualType SamplerComparisonStateType = lookupBuiltinType(
       SemaRef, "SamplerComparisonState", Record->getDeclContext());
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 1 : 0);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
   QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
@@ -1896,14 +1895,14 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
-                                                     bool IsArrayed) {
+                                                     bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = AST.FloatTy;
   QualType SamplerComparisonStateType = lookupBuiltinType(
       SemaRef, "SamplerComparisonState", Record->getDeclContext());
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 1 : 0);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
   QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;
@@ -2030,8 +2029,7 @@ QualType BuiltinTypeDeclBuilder::getGatherReturnType() {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim,
-                                         bool IsArrayed) {
+BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getGatherReturnType();
@@ -2039,7 +2037,7 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim,
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 1 : 0);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType LocationTy = AST.FloatTy;
   QualType CoordTy = AST.getExtVectorType(LocationTy, CoordSize);
   QualType IntTy = AST.IntTy;
@@ -2085,7 +2083,7 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
-                                            bool IsArrayed) {
+                                            bool IsArray) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = AST.getExtVectorType(AST.FloatTy, 4);
@@ -2093,7 +2091,7 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
   QualType SamplerComparisonStateType = lookupBuiltinType(
       SemaRef, "SamplerComparisonState", Record->getDeclContext());
   uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArrayed ? 1 : 0);
+  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
   QualType FloatTy = AST.FloatTy;
   QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
   QualType IntTy = AST.IntTy;

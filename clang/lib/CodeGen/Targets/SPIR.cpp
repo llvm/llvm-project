@@ -922,7 +922,7 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   IntParams[1] = 2;
 
   // Arrayed
-  IntParams[2] = static_cast<unsigned>(attributes.IsArrayed);
+  IntParams[2] = static_cast<unsigned>(attributes.IsArray);
 
   // MS
   IntParams[3] = 0;

@@ -94,13 +94,13 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
       llvm::dxil::ResourceKind RK = llvm::dxil::ResourceKind::Invalid;
       switch (ResAttrs.ResourceDimension) {
       case llvm::dxil::ResourceDimension::Dim1D:
-        if (ResAttrs.IsArrayed)
+        if (ResAttrs.IsArray)
           RK = llvm::dxil::ResourceKind::Texture1DArray;
         else
           RK = llvm::dxil::ResourceKind::Texture1D;
         break;
       case llvm::dxil::ResourceDimension::Dim2D:
-        if (ResAttrs.IsArrayed)
+        if (ResAttrs.IsArray)
           RK = llvm::dxil::ResourceKind::Texture2DArray;
         else
           RK = llvm::dxil::ResourceKind::Texture2D;
@@ -109,7 +109,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
         RK = llvm::dxil::ResourceKind::Texture3D;
         break;
       case llvm::dxil::ResourceDimension::Cube:
-        if (ResAttrs.IsArrayed)
+        if (ResAttrs.IsArray)
           RK = llvm::dxil::ResourceKind::TextureCubeArray;
         else
           RK = llvm::dxil::ResourceKind::TextureCube;
