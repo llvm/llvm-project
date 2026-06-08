@@ -492,7 +492,7 @@ class DenseMapSynthetic:
         # empty and erased buckets are clear. Read the whole array in one go
         # rather than fetching each word with a separate expression path.
         num_words = (num_buckets + 31) // 32
-        words = used.GetPointeeData(0, num_words).uint32
+        words = used.GetPointeeData(0, num_words).uint32s
         for index in range(num_buckets):
             if (words[index >> 5] >> (index & 31)) & 1:
                 self.child_buckets.append(index)
