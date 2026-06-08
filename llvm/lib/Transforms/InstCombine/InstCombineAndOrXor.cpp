@@ -2382,37 +2382,32 @@ static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   return IC.Builder.CreateBinOp(I->getOpcode(), NewOp0, NewOp1);
 }
 
-// The pattern div_ceil(X, P) * P, where P is a power of 2, lowers to a
-// conditional round-up of the following kind: (X + select(X % Pow2 == 0, 0,
-// Pow2)) & -Pow2. This may be simplified to (X + (Pow2-1)) & -Pow2.
+/// The pattern div_ceil(X, P) * P, where P is a power of 2, lowers to the
+/// following conditional round-up: (X + select(C, 0, Pow2)) & -Pow2, where
+/// C is X % Pow2 == 0. This may be simplified to (X + (Pow2-1)) & -Pow2.
 static Instruction *
 foldRoundUpToPow2Alignment(BinaryOperator &I,
                            InstCombiner::BuilderTy &Builder) {
   const APInt *NegP;
   Value *Add;
-  if (!match(&I, m_And(m_Value(Add), m_APInt(NegP))) ||
-      !NegP->isNegatedPowerOf2())
+  if (!match(&I, m_And(m_Value(Add), m_NegatedPower2(NegP))))
     return nullptr;
 
   Value *X, *Cond;
-  const APInt *T, *F;
-  if (!match(Add, m_c_Add(m_Value(X),
-                          m_Select(m_Value(Cond), m_APInt(T), m_APInt(F)))) ||
-      !Add->hasOneUse())
+  APInt Mask = ~*NegP;
+
+  // Match the pattern. Ensure the true arm of the select is zero, and the false
+  // one is the Pow2.
+  if (!match(Add,
+             m_OneUse(m_c_Add(m_Value(X), m_Select(m_Value(Cond), m_ZeroInt(),
+                                                   m_SpecificInt(-*NegP))))))
     return nullptr;
 
-  CmpPredicate Pred;
-  const APInt &Pow2 = -*NegP;
-  const APInt &Mask = Pow2 - 1;
   // icmp ne should have already been canonicalized to the eq form for this
   // pattern.
-  if (!match(Cond, m_ICmp(Pred, m_And(m_Specific(X), m_SpecificInt(Mask)),
-                          m_Zero())) ||
-      Pred != ICmpInst::ICMP_EQ)
-    return nullptr;
-
-  // Ensure the true arm of the select is zero, and the false one is the Pow2.
-  if (!T->isZero() || *F != Pow2)
+  if (!match(Cond, m_SpecificICmp(ICmpInst::ICMP_EQ,
+                                  m_And(m_Specific(X), m_SpecificInt(Mask)),
+                                  m_Zero())))
     return nullptr;
 
   Type *Ty = I.getType();
