@@ -1997,6 +1997,127 @@ define nofpclass(snan) half @ret__unknown__fdiv_nsz__zero_or_nan(half %unknown, 
   ret half %div
 }
 
+; The fmul demands a nan result, so 0/0 = nan must be preserved. The divisor
+; may be zero, so nsz +0/x -> 0 must NOT fire.
+define half @nsz_pzero_fdiv_maybe_zero(half nofpclass(nan) %x, half %c) {
+; CHECK-LABEL: define half @nsz_pzero_fdiv_maybe_zero(
+; CHECK-SAME: half nofpclass(nan) [[X:%.*]], half [[C:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv nsz half 0.000000e+00, [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[DIV]], [[C]]
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %pzero = call half @returns_pzero()
+  %div = fdiv nsz half %pzero, %x
+  %mul = fmul half %div, %c
+  ret half %mul
+}
+
+; Same, for the +0/x -> copysign(0, x) fold.
+define half @pzero_fdiv_maybe_zero(half nofpclass(nan) %x, half %c) {
+; CHECK-LABEL: define half @pzero_fdiv_maybe_zero(
+; CHECK-SAME: half nofpclass(nan) [[X:%.*]], half [[C:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv half 0.000000e+00, [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[DIV]], [[C]]
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %pzero = call half @returns_pzero()
+  %div = fdiv half %pzero, %x
+  %mul = fmul half %div, %c
+  ret half %mul
+}
+
+; nnan on the fdiv makes 0/0 = nan a poison don't-care, so nsz +0/x -> 0 fires
+; even though the divisor may be zero.
+define half @nsz_nnan_pzero_fdiv_maybe_zero(half nofpclass(nan) %x, half %c) {
+; CHECK-LABEL: define half @nsz_nnan_pzero_fdiv_maybe_zero(
+; CHECK-SAME: half nofpclass(nan) [[X:%.*]], half [[C:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[C]], 0.000000e+00
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %pzero = call half @returns_pzero()
+  %div = fdiv nnan nsz half %pzero, %x
+  %mul = fmul half %div, %c
+  ret half %mul
+}
+
+; Same, for the +0/x -> copysign(0, x) fold.
+define half @nnan_pzero_fdiv_maybe_zero(half nofpclass(nan) %x, half %c) {
+; CHECK-LABEL: define half @nnan_pzero_fdiv_maybe_zero(
+; CHECK-SAME: half nofpclass(nan) [[X:%.*]], half [[C:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
+; CHECK-NEXT:    [[DIV:%.*]] = call nnan half @llvm.copysign.f16(half 0.000000e+00, half [[X]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[DIV]], [[C]]
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %pzero = call half @returns_pzero()
+  %div = fdiv nnan half %pzero, %x
+  %mul = fmul half %div, %c
+  ret half %mul
+}
+
+; Divisor never zero/nan: nsz +0/x -> 0 fires.
+define half @nsz_pzero_fdiv_never_zero(half nofpclass(nan zero) %x, half %c) {
+; CHECK-LABEL: define half @nsz_pzero_fdiv_never_zero(
+; CHECK-SAME: half nofpclass(nan zero) [[X:%.*]], half [[C:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[C]], 0.000000e+00
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %pzero = call half @returns_pzero()
+  %div = fdiv nsz half %pzero, %x
+  %mul = fmul half %div, %c
+  ret half %mul
+}
+
+; Divisor never zero/nan: +0/x -> copysign(0, x) fires.
+define half @pzero_fdiv_never_zero(half nofpclass(nan zero) %x, half %c) {
+; CHECK-LABEL: define half @pzero_fdiv_never_zero(
+; CHECK-SAME: half nofpclass(nan zero) [[X:%.*]], half [[C:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
+; CHECK-NEXT:    [[DIV:%.*]] = call half @llvm.copysign.f16(half 0.000000e+00, half [[X]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[DIV]], [[C]]
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %pzero = call half @returns_pzero()
+  %div = fdiv half %pzero, %x
+  %mul = fmul half %div, %c
+  ret half %mul
+}
+
+; Divisor never zero but may be subnormal; under preservesign a subnormal flushes
+; to zero, so 0/0 = nan and the fold must NOT fire.
+define half @pzero_fdiv_subnormal_preservesign(half nofpclass(nan zero inf) %x, half %c) #0 {
+; CHECK-LABEL: define half @pzero_fdiv_subnormal_preservesign(
+; CHECK-SAME: half nofpclass(nan inf zero) [[X:%.*]], half [[C:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv ninf half 0.000000e+00, [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[DIV]], [[C]]
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %pzero = call half @returns_pzero()
+  %div = fdiv half %pzero, %x
+  %mul = fmul half %div, %c
+  ret half %mul
+}
+
+; Same divisor under the default ieee mode (no flush): fold fires.
+define half @pzero_fdiv_subnormal_ieee(half nofpclass(nan zero inf) %x, half %c) {
+; CHECK-LABEL: define half @pzero_fdiv_subnormal_ieee(
+; CHECK-SAME: half nofpclass(nan inf zero) [[X:%.*]], half [[C:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call half @returns_pzero()
+; CHECK-NEXT:    [[DIV:%.*]] = call half @llvm.copysign.f16(half 0.000000e+00, half [[X]])
+; CHECK-NEXT:    [[MUL:%.*]] = fmul half [[DIV]], [[C]]
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %pzero = call half @returns_pzero()
+  %div = fdiv half %pzero, %x
+  %mul = fmul half %div, %c
+  ret half %mul
+}
+
 define nofpclass(snan) half @ret__unknown__fdiv__pzero_or_nan(half %unknown, half nofpclass(inf sub norm nzero) %pzero.or.nan) {
 ; CHECK-LABEL: define nofpclass(snan) half @ret__unknown__fdiv__pzero_or_nan(
 ; CHECK-SAME: half [[UNKNOWN:%.*]], half nofpclass(inf nzero sub norm) [[PZERO_OR_NAN:%.*]]) {
