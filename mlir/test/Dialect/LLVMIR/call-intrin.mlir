@@ -146,3 +146,16 @@ llvm.func @read_named_register() -> i32 {
       : (!llvm.metadata) -> i32
   llvm.return %r : i32
 }
+
+// -----
+
+llvm.mlir.global internal @metadata_global(0 : i32) : i32
+
+// CHECK-LABEL: define i32 @read_global_ref_metadata()
+// CHECK: call i32 @llvm.read_register.i32(metadata ptr @metadata_global)
+llvm.func @read_global_ref_metadata() -> i32 {
+  %md = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_func<@metadata_global>>
+  %r = llvm.call_intrinsic "llvm.read_register.i32"(%md)
+      : (!llvm.metadata) -> i32
+  llvm.return %r : i32
+}

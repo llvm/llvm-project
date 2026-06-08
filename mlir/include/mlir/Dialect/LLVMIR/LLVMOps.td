@@ -2521,7 +2521,8 @@ def LLVM_MetadataAsValueOp
 
     * `#llvm.md_string<"...">` -> `llvm::MDString`.
     * `#llvm.md_const<...>` -> `llvm::ConstantAsMetadata`.
-    * `#llvm.md_func<@symbol>` -> `llvm::ValueAsMetadata` of a function.
+    * `#llvm.md_func<@symbol>` -> `llvm::ValueAsMetadata` of a function or
+      global value.
     * `#llvm.md_node<...>` -> `llvm::MDNode` over any of the above.
 
     These can be nested arbitrarily to form metadata trees. Lowering to LLVM
@@ -2555,12 +2556,14 @@ def LLVM_MetadataAsValueOp
   ];
 
   let llvmBuilder = [{
-    ::llvm::Metadata *md = convertMetadataAttr(
-        op.getMetadataAttr(), builder, moduleTranslation);
-    if (!md)
-      return ::mlir::emitError(op.getLoc(),
-          "llvm.mlir.metadata_as_value: cannot lower metadata attribute");
-    $res = ::llvm::MetadataAsValue::get(builder.getContext(), md);
+    ::mlir::FailureOr<::llvm::Metadata *> md =
+        moduleTranslation.convertMetadataAttr(op.getMetadataAttr(), [&]() {
+          return ::mlir::emitError(op.getLoc(),
+              "llvm.mlir.metadata_as_value: cannot lower metadata attribute: ");
+        });
+    if (::mlir::failed(md))
+      return ::mlir::failure();
+    $res = ::llvm::MetadataAsValue::get(builder.getContext(), *md);
   }];
 
   let hasFolder = 1;
@@ -2705,13 +2708,13 @@ def LLVM_NamedMetadataOp
     ]
     ```
   }];
-  let arguments = (ins StrAttr:$metadata_name, ArrayAttr:$nodes);
+  let arguments = (ins StrAttr:$metadata_name, LLVM_MDNodeArrayAttr:$nodes);
   let assemblyFormat = [{
     $metadata_name $nodes attr-dict
   }];
 
   let llvmBuilder = [{
-    convertNamedMetadataOp($metadata_name, $nodes, builder, moduleTranslation);
+    return convertNamedMetadataOp(op, moduleTranslation);
   }];
 }
 

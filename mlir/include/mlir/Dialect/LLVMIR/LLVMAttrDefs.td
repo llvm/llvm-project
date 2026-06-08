@@ -1784,6 +1784,10 @@ def LLVM_MDNodeAttr : LLVM_Attr<"MDNode", "md_node"> {
   let assemblyFormat = "`<` (`>`) : ($operands^ `>`)?";
 }
 
+def LLVM_MDNodeArrayAttr
+    : TypedArrayAttrBase<LLVM_MDNodeAttr,
+                         "array of #llvm.md_node attributes">;
+
 def LLVM_AnyMDAttr : AnyAttrOf<[
     LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDFuncAttr, LLVM_MDNodeAttr],
     "LLVM metadata attribute (md_string, md_const, md_func, or md_node)">;

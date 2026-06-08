@@ -5,8 +5,31 @@
 // CHECK: !foo.version = !{![[VERSION:[0-9]+]]}
 // CHECK: !foo.language_version = !{![[LANG:[0-9]+]]}
 // CHECK: !foo.kernel = !{![[KERNEL:[0-9]+]]}
+// CHECK: !foo.global_refs = !{![[GLOBAL_REFS:[0-9]+]]}
 
 llvm.func @my_kernel() {
+  llvm.return
+}
+
+llvm.mlir.global internal @metadata_global(0 : i32) : i32
+
+llvm.func @metadata_alias_target() {
+  llvm.return
+}
+
+llvm.mlir.alias external @metadata_alias : !llvm.func<void ()> {
+  %0 = llvm.mlir.addressof @metadata_alias_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.mlir.ifunc external @metadata_ifunc : !llvm.func<void ()>, !llvm.ptr @metadata_ifunc_resolver
+
+llvm.func @metadata_ifunc_resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.addressof @metadata_ifunc_target : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.func @metadata_ifunc_target() {
   llvm.return
 }
 
@@ -43,3 +66,11 @@ llvm.named_metadata "foo.kernel" [
 // CHECK-DAG: ![[KERNEL]] = !{ptr @my_kernel, ![[EMPTY:[0-9]+]], ![[ARGS:[0-9]+]]}
 // CHECK-DAG: ![[EMPTY]] = !{}
 // CHECK-DAG: ![[ARGS]] = !{![[A0]]}
+
+llvm.named_metadata "foo.global_refs" [
+  #llvm.md_node<
+    #llvm.md_func<@metadata_global>,
+    #llvm.md_func<@metadata_alias>,
+    #llvm.md_func<@metadata_ifunc>>
+]
+// CHECK-DAG: ![[GLOBAL_REFS]] = !{ptr @metadata_global, ptr @metadata_alias, ptr @metadata_ifunc}

@@ -305,6 +305,23 @@ module attributes {} {
 
 // -----
 
+// expected-error @below{{failed to convert named metadata 'bad': expected integer attribute in metadata constant}}
+// expected-error @below{{LLVM Translation failed for operation: llvm.named_metadata}}
+llvm.named_metadata "bad" [
+  #llvm.md_node<#llvm.md_const<"not an integer">>
+]
+
+// -----
+
+llvm.func @bad_metadata_as_value() {
+  // expected-error @below{{llvm.mlir.metadata_as_value: cannot lower metadata attribute: expected integer attribute in metadata constant}}
+  // expected-error @below{{LLVM Translation failed for operation: llvm.mlir.metadata_as_value}}
+  %0 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_const<"not an integer">>
+  llvm.return
+}
+
+// -----
+
 module @does_not_exist {
   // expected-error @below{{resource does not exist}}
   llvm.mlir.global internal constant @constant(dense_resource<test0> : tensor<4xf32>) : !llvm.array<4 x f32>
