@@ -4643,21 +4643,10 @@ LLVM_C_ABI void LLVMSetCurrentDebugLocation2(LLVMBuilderRef Builder,
  * current debug location for the given builder.  If the builder has no current
  * debug location, this function is a no-op.
  *
- * @deprecated LLVMSetInstDebugLocation is deprecated in favor of the more general
- *             LLVMAddMetadataToInst.
- *
  * @see llvm::IRBuilder::SetInstDebugLocation()
  */
 LLVM_C_ABI void LLVMSetInstDebugLocation(LLVMBuilderRef Builder,
                                          LLVMValueRef Inst);
-
-/**
- * Adds the metadata registered with the given builder to the given instruction.
- *
- * @see llvm::IRBuilder::AddMetadataToInst()
- */
-LLVM_C_ABI void LLVMAddMetadataToInst(LLVMBuilderRef Builder,
-                                      LLVMValueRef Inst);
 
 /**
  * Get the dafult floating-point math metadata for a given builder.

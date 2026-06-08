@@ -3507,10 +3507,6 @@ void LLVMSetInstDebugLocation(LLVMBuilderRef Builder, LLVMValueRef Inst) {
   unwrap(Builder)->SetInstDebugLocation(unwrap<Instruction>(Inst));
 }
 
-void LLVMAddMetadataToInst(LLVMBuilderRef Builder, LLVMValueRef Inst) {
-  unwrap(Builder)->AddMetadataToInst(unwrap<Instruction>(Inst));
-}
-
 void LLVMBuilderSetDefaultFPMathTag(LLVMBuilderRef Builder,
                                     LLVMMetadataRef FPMathTag) {
 

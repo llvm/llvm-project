@@ -32758,8 +32758,12 @@ X86TargetLowering::shouldExpandLogicAtomicRMWInIR(
 }
 
 void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
-  IRBuilder<> Builder(AI);
-  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
+  LLVMContext &Ctx = AI->getContext();
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+        I->copyMetadata(*AI, LLVMContext::MD_pcsections);
+      }));
+  Builder.SetInsertPoint(AI);
   Intrinsic::ID IID_C = Intrinsic::not_intrinsic;
   Intrinsic::ID IID_I = Intrinsic::not_intrinsic;
   switch (AI->getOperation()) {
@@ -32779,7 +32783,6 @@ void X86TargetLowering::emitBitTestAtomicRMWIntrinsic(AtomicRMWInst *AI) const {
     break;
   }
   Instruction *I = AI->user_back();
-  LLVMContext &Ctx = AI->getContext();
   Value *Addr = Builder.CreatePointerCast(AI->getPointerOperand(),
                                           PointerType::getUnqual(Ctx));
   Value *Result = nullptr;
@@ -33002,10 +33005,13 @@ static bool shouldExpandCmpArithRMWInIR(const AtomicRMWInst *AI) {
 
 void X86TargetLowering::emitCmpArithAtomicRMWIntrinsic(
     AtomicRMWInst *AI) const {
-  IRBuilder<> Builder(AI);
-  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
-  Instruction *TempI = nullptr;
   LLVMContext &Ctx = AI->getContext();
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      Ctx, ConstantFolder{}, IRBuilderCallbackInserter([&AI](Instruction *I) {
+        I->copyMetadata(*AI, LLVMContext::MD_pcsections);
+      }));
+  Builder.SetInsertPoint(AI);
+  Instruction *TempI = nullptr;
   ICmpInst *ICI = dyn_cast<ICmpInst>(AI->user_back());
   if (!ICI) {
     TempI = AI->user_back();
@@ -33121,8 +33127,12 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
         AI->use_empty())
       return nullptr;
 
-  IRBuilder<> Builder(AI);
-  Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      AI->getContext(), ConstantFolder{},
+      IRBuilderCallbackInserter([&AI](Instruction *I) {
+        I->copyMetadata(*AI, LLVMContext::MD_pcsections);
+      }));
+  Builder.SetInsertPoint(AI);
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.

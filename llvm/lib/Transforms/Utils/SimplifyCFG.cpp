@@ -4013,12 +4013,15 @@ static bool performBranchToCommonDestFolding(CondBrInst *BI, CondBrInst *PBI,
 
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
 
-  IRBuilder<> Builder(PBI);
-  // The builder is used to create instructions to eliminate the branch in BB.
-  // If BB's terminator has !annotation metadata, add it to the new
-  // instructions.
-  Builder.CollectMetadataToCopy(BB->getTerminator(),
-                                {LLVMContext::MD_annotation});
+  IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+      BB->getContext(), ConstantFolder{},
+      IRBuilderCallbackInserter([&BB](Instruction *I) {
+        // The builder is used to create instructions to eliminate the branch in
+        // BB. If BB's terminator has !annotation metadata, add it to the new
+        // instructions.
+        I->copyMetadata(*BB->getTerminator(), LLVMContext::MD_annotation);
+      }));
+  Builder.SetInsertPoint(PBI);
 
   // If we need to invert the condition in the pred block to match, do so now.
   if (InvertPredCond) {
