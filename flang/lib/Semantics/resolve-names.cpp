@@ -42,6 +42,8 @@
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
 #include "flang/Support/default-kinds.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
@@ -269,6 +271,7 @@ public:
   HANDLE_ATTR_CLASS(PrefixSpec::Non_Recursive, NON_RECURSIVE)
   HANDLE_ATTR_CLASS(PrefixSpec::Pure, PURE)
   HANDLE_ATTR_CLASS(PrefixSpec::Recursive, RECURSIVE)
+  HANDLE_ATTR_CLASS(PrefixSpec::Simple, SIMPLE)
   HANDLE_ATTR_CLASS(TypeAttrSpec::BindC, BIND_C)
   HANDLE_ATTR_CLASS(BindAttr::Deferred, DEFERRED)
   HANDLE_ATTR_CLASS(BindAttr::Non_Overridable, NON_OVERRIDABLE)
@@ -496,6 +499,8 @@ public:
     // Result symbol
     Symbol *resultSymbol{nullptr};
     bool inFunctionStmt{false}; // true between Pre/Post of FunctionStmt
+    // re-entrancy guard for CompleteFunctionResultType
+    bool completingType{false};
     // Functions with previous implicitly-typed references get those types
     // checked against their later definitions.
     const DeclTypeSpec *previousImplicitType{nullptr};
@@ -1038,6 +1043,8 @@ public:
   bool Pre(const parser::DeclarationTypeSpec::Class &);
   void Post(const parser::DeclarationTypeSpec::Class &);
   void Post(const parser::DeclarationTypeSpec::Record &);
+  bool Pre(const parser::DeclarationTypeSpec::TypeOf &);
+  bool Pre(const parser::DeclarationTypeSpec::ClassOf &);
   void Post(const parser::DerivedTypeSpec &);
   bool Pre(const parser::DerivedTypeDef &);
   bool Pre(const parser::DerivedTypeStmt &);
@@ -1271,6 +1278,7 @@ private:
       const parser::Name &name, Symbol &symbol, Symbol::Flag flag);
   bool CheckForHostAssociatedImplicit(const parser::Name &);
   bool HasCycle(const Symbol &, const Symbol *interface);
+  bool ResolveTypeOfOrClassOf(const parser::DataRef &, bool isClassOf);
   bool MustBeScalar(const Symbol &symbol) const {
     return mustBeScalar_.find(symbol) != mustBeScalar_.end();
   }
@@ -1411,7 +1419,7 @@ public:
   void Post(const parser::OpenACCBlockConstruct &);
   bool Pre(const parser::OpenACCCombinedConstruct &);
   void Post(const parser::OpenACCCombinedConstruct &);
-  bool Pre(const parser::AccClause::UseDevice &x);
+  void Post(const parser::AccClause::UseDevice &x);
   bool Pre(const parser::AccBeginBlockDirective &x) {
     AddAccSourceRange(x.source);
     return true;
@@ -1473,10 +1481,116 @@ public:
   }
 
   void CopySymbolWithDevice(const parser::Name *name);
+  void CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
+      llvm::ArrayRef<SourceName> componentPath, parser::Designator &designator);
 
 private:
+  Symbol *CopyUseDeviceSymbol(const Symbol &symbol);
   SemanticsContext &context_;
 };
+
+namespace {
+
+void GetUseDeviceDataRefPath(const parser::DataRef &dr,
+    const parser::Name *&baseOut,
+    llvm::SmallVectorImpl<SourceName> &componentsOut) {
+  common::visit(
+      common::visitors{
+          [&](const parser::Name &name) { baseOut = &name; },
+          [&](const common::Indirection<parser::StructureComponent> &sc) {
+            const parser::StructureComponent &comp{sc.value()};
+            GetUseDeviceDataRefPath(comp.Base(), baseOut, componentsOut);
+            componentsOut.push_back(comp.Component().source);
+          },
+          [&](const common::Indirection<parser::ArrayElement> &ae) {
+            GetUseDeviceDataRefPath(ae.value().Base(), baseOut, componentsOut);
+          },
+          [&](const common::Indirection<parser::CoindexedNamedObject> &ci) {
+            GetUseDeviceDataRefPath(std::get<parser::DataRef>(ci.value().t),
+                baseOut, componentsOut);
+          },
+      },
+      dr.u);
+}
+
+void GetUseDeviceStructurePath(const parser::Designator &d,
+    const parser::Name *&baseOut,
+    llvm::SmallVectorImpl<SourceName> &componentsOut) {
+  componentsOut.clear();
+  baseOut = nullptr;
+  if (const auto *dr{std::get_if<parser::DataRef>(&d.u)}) {
+    GetUseDeviceDataRefPath(*dr, baseOut, componentsOut);
+  }
+}
+
+// Point each %component name at the corresponding symbol in the cloned
+// DerivedTypeSpec scope so semantics and lowering see cudaDataAttr::Device.
+static bool RemapUseDeviceComponentNames(parser::DataRef &dr,
+    const DerivedTypeSpec *&currDts, llvm::ArrayRef<SourceName> path,
+    std::size_t &idx) {
+  return common::visit(
+      common::visitors{
+          [&](parser::Name &) { return true; },
+          [&](common::Indirection<parser::StructureComponent> &sc) -> bool {
+            if (!RemapUseDeviceComponentNames(
+                    const_cast<parser::DataRef &>(sc.value().Base()), currDts,
+                    path, idx)) {
+              return false;
+            }
+            if (idx >= path.size()) {
+              return true;
+            }
+            parser::StructureComponent &compStruct{sc.value()};
+            parser::Name &compName{std::get<parser::Name>(compStruct.t)};
+            const semantics::Scope *compTyScope{currDts->GetScope()};
+            Symbol *sym{
+                compTyScope ? compTyScope->FindComponent(path[idx]) : nullptr};
+            if (!sym && compTyScope) {
+              sym = compTyScope->FindComponent(compName.source);
+            }
+            if (!sym) {
+              return false;
+            }
+            compName.symbol = sym;
+            if (const auto *oed{sym->detailsIf<ObjectEntityDetails>()}) {
+              if (const DeclTypeSpec *t{oed->type()}) {
+                if (const DerivedTypeSpec *inner{t->AsDerived()}) {
+                  currDts = inner;
+                }
+              }
+            }
+            ++idx;
+            return true;
+          },
+          [&](common::Indirection<parser::ArrayElement> &ae) -> bool {
+            return RemapUseDeviceComponentNames(
+                const_cast<parser::DataRef &>(ae.value().Base()), currDts, path,
+                idx);
+          },
+          [&](common::Indirection<parser::CoindexedNamedObject> &ci) -> bool {
+            return RemapUseDeviceComponentNames(
+                const_cast<parser::DataRef &>(
+                    std::get<parser::DataRef>(ci.value().t)),
+                currDts, path, idx);
+          },
+      },
+      dr.u);
+}
+
+static void RemapUseDeviceDesignator(parser::Designator &d,
+    const DeclTypeSpec &newVarType, llvm::ArrayRef<SourceName> path) {
+  const DerivedTypeSpec *dts{newVarType.AsDerived()};
+  if (!dts || path.empty()) {
+    return;
+  }
+  std::size_t idx{0};
+  const DerivedTypeSpec *currDts{dts};
+  if (auto *dr{std::get_if<parser::DataRef>(&d.u)}) {
+    (void)RemapUseDeviceComponentNames(*dr, currDts, path, idx);
+  }
+}
+
+} // namespace
 
 bool AccVisitor::NeedsScope(const parser::OpenACCBlockConstruct &x) {
   const auto &beginBlockDir{std::get<parser::AccBeginBlockDirective>(x.t)};
@@ -1506,59 +1620,94 @@ bool AccVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
 }
 
 void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
-  // When CUDA Fortran is enabled together with OpenACC, new
-  // symbols are created for the one appearing in the use_device
-  // clause. These new symbols have the CUDA Fortran device
-  // attribute.
-  if (context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
-      name && name->symbol) {
-    if (Symbol * copy{currScope().CopySymbol(*name->symbol)}) {
-      name->symbol = copy;
+  // New symbols are created for those appearing in the use_device clause.
+  // These new symbols get the CUDA UseDevice attribute so that generic
+  // resolution can distinguish them from true DEVICE variables: UseDevice
+  // actuals are compatible with both host and device dummy arguments.
+  if (name && name->symbol) {
+    Symbol *copy{CopyUseDeviceSymbol(*name->symbol)};
+    if (copy) {
       if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
-        object->set_cudaDataAttr(common::CUDADataAttr::Device);
+        object->set_cudaDataAttr(common::CUDADataAttr::UseDevice);
       }
+      name->symbol = copy;
     }
   }
 }
 
-bool AccVisitor::Pre(const parser::AccClause::UseDevice &x) {
-  for (const auto &accObject : x.v.v) {
-    Walk(accObject);
-    common::visit(
-        common::visitors{
-            [&](const parser::Designator &designator) {
-              if (const auto *name{
-                      parser::GetDesignatorNameIfDataRef(designator)}) {
-                CopySymbolWithDevice(name);
-              } else if (const auto *dataRef{
-                             std::get_if<parser::DataRef>(&designator.u)}) {
-                using ElementIndirection =
-                    common::Indirection<parser::ArrayElement>;
-                using ComponentIndirection =
-                    common::Indirection<parser::StructureComponent>;
-                if (auto *ind{std::get_if<ElementIndirection>(&dataRef->u)}) {
-                  const parser::ArrayElement &arrayElement{ind->value()};
-                  const parser::DataRef &base{arrayElement.Base()};
-                  if (auto *name{std::get_if<parser::Name>(&base.u)}) {
-                    CopySymbolWithDevice(name);
-                  }
-                } else if (auto *ind{std::get_if<ComponentIndirection>(
-                               &dataRef->u)}) {
-                  const parser::StructureComponent &comp{ind->value()};
-                  const parser::DataRef &base{comp.Base()};
-                  if (auto *name{std::get_if<parser::Name>(&base.u)}) {
-                    CopySymbolWithDevice(name);
-                  }
-                }
-              }
-            },
-            [&](const parser::Name &name) {
-              // TODO: common block in use_device?
-            },
-        },
+Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  Symbol *copy{currScope().CopySymbol(ultimate)};
+  if (!copy) {
+    copy = FindInScope(currScope(), ultimate.name());
+  }
+  if (copy && copy->has<HostAssocDetails>()) {
+    if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
+        hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
+      Scope &hostScope{currScope().parent()};
+      if (!FindInScope(hostScope, ultimate.name())) {
+        hostScope.CopySymbol(*copy);
+      }
+    }
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      currScope().erase(copy->name());
+      auto pair{currScope().try_emplace(
+          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  }
+  return copy;
+}
+
+void AccVisitor::CopySymbolWithDeviceStructurePath(const parser::Name *baseName,
+    llvm::ArrayRef<SourceName> componentPath, parser::Designator &designator) {
+  if (!baseName || !baseName->symbol || componentPath.empty()) {
+    return;
+  }
+  Symbol *copy{CopyUseDeviceSymbol(*baseName->symbol)};
+  if (!copy) {
+    return;
+  }
+  baseName->symbol = copy;
+  const DeclTypeSpec *sourceType{copy->GetType()};
+  if (!sourceType || !sourceType->AsDerived()) {
+    return;
+  }
+  if (const DeclTypeSpec *newType{CloneDerivedTypeForUseDevice(
+          currScope(), context_, *sourceType, componentPath)}) {
+    if (auto *object{copy->detailsIf<ObjectEntityDetails>()}) {
+      object->ReplaceType(*newType);
+    }
+    RemapUseDeviceDesignator(designator, *newType, componentPath);
+  }
+}
+
+void AccVisitor::Post(const parser::AccClause::UseDevice &x) {
+  // Run after clause acc-objects are walked so Post(Designator) has resolved
+  // Name::symbol, then fork types and remap %component symbols for CUDA.
+  for (auto &accObject : const_cast<std::list<parser::AccObject> &>(x.v.v)) {
+    common::visit(common::visitors{
+                      [&](parser::Designator &designator) {
+                        const parser::Name *baseName{nullptr};
+                        llvm::SmallVector<SourceName, 4> components;
+                        GetUseDeviceStructurePath(
+                            designator, baseName, components);
+                        if (baseName && baseName->symbol) {
+                          if (components.empty()) {
+                            CopySymbolWithDevice(baseName);
+                          } else {
+                            CopySymbolWithDeviceStructurePath(
+                                baseName, components, designator);
+                          }
+                        }
+                      },
+                      [&](const parser::Name &name) {
+                        // TODO: common block in use_device?
+                      },
+                  },
         accObject.u);
   }
-  return false;
 }
 
 void AccVisitor::Post(const parser::OpenACCBlockConstruct &x) {
@@ -1582,44 +1731,13 @@ public:
   void PushScopeWithSource(
       Scope::Kind kind, parser::CharBlock source, Symbol *symbol = nullptr);
 
-  static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  bool Pre(const parser::OmpBlockConstruct &);
-  void Post(const parser::OmpBlockConstruct &);
   bool Pre(const parser::OmpBeginDirective &x) {
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
-  void Post(const parser::OmpBeginDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
   bool Pre(const parser::OmpEndDirective &x) {
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpEndDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-
-  bool Pre(const parser::OpenMPLoopConstruct &x) {
-    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
-    return true;
-  }
-  void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
-  bool Pre(const parser::OmpBeginLoopDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpBeginLoopDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  bool Pre(const parser::OmpEndLoopDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpEndLoopDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
   void Post(const parser::OmpTypeName &);
@@ -1642,52 +1760,11 @@ public:
     }
   }
 
-  bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OpenMPDeclareSimdConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OmpDeclareVariantDirective &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-
-  bool Pre(const parser::OpenMPDeclareReductionConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
   bool Pre(const parser::OmpMapClause &);
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
-  bool Pre(const parser::OpenMPSectionsConstruct &x) {
-    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
-    return true;
-  }
-  void Post(const parser::OpenMPSectionsConstruct &) { PopScope(); }
-  bool Pre(const parser::OmpBeginSectionsDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpBeginSectionsDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  bool Pre(const parser::OmpEndSectionsDirective &x) {
-    return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  void Post(const parser::OmpEndSectionsDirective &x) {
-    Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
-  }
-  bool Pre(const parser::OpenMPThreadprivate &) {
-    SkipImplicitTyping(true);
-    return true;
-  }
-  void Post(const parser::OpenMPThreadprivate &) { SkipImplicitTyping(false); }
-  bool Pre(const parser::OpenMPDeclareTargetConstruct &x) {
+  bool Pre(const parser::OmpDeclareTargetDirective &x) {
     auto addObjectName{[&](const parser::OmpObject &object) {
       common::visit(
           common::visitors{
@@ -1714,7 +1791,7 @@ public:
     }};
 
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-      if (auto *object{omp::GetArgumentObject(arg)}) {
+      if (auto *object{parser::omp::GetArgumentObject(arg)}) {
         addObjectName(*object);
       }
     }
@@ -1729,46 +1806,6 @@ public:
 
     SkipImplicitTyping(true);
     return true;
-  }
-  void Post(const parser::OpenMPDeclareTargetConstruct &) {
-    SkipImplicitTyping(false);
-  }
-  bool Pre(const parser::OmpAllocateDirective &x) {
-    AddOmpSourceRange(x.source);
-    SkipImplicitTyping(true);
-    return true;
-  }
-  void Post(const parser::OmpAllocateDirective &) {
-    SkipImplicitTyping(false);
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
-    AddOmpSourceRange(x.source);
-    // Without skipping implicit typing, declarative constructs
-    // can implicitly declare variables instead of only using the
-    // ones already declared in the Fortran sources.
-    SkipImplicitTyping(true);
-    declaratives_.push_back(&x);
-    return true;
-  }
-  void Post(const parser::OpenMPDeclarativeConstruct &) {
-    declaratives_.pop_back();
-    SkipImplicitTyping(false);
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OpenMPDepobjConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  void Post(const parser::OpenMPDepobjConstruct &x) {
-    messageHandler().set_currStmtSource(std::nullopt);
-  }
-  bool Pre(const parser::OpenMPAtomicConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
-  void Post(const parser::OpenMPAtomicConstruct &) {
-    messageHandler().set_currStmtSource(std::nullopt);
   }
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
@@ -1795,18 +1832,47 @@ public:
   }
 
   bool Pre(const parser::OmpDirectiveSpecification &x);
-  void Post(const parser::OmpDirectiveSpecification &) {
+
+  bool Pre(const parser::OpenMPDeclarativeConstruct &x) {
+    AddOmpSourceRange(x.source);
+    // Without skipping implicit typing, declarative constructs
+    // can implicitly declare variables instead of only using the
+    // ones already declared in the Fortran sources.
+    SkipImplicitTyping(true);
+    declaratives_.push_back(&x);
+    return true;
+  }
+
+  void Post(const parser::OpenMPDeclarativeConstruct &) {
+    declaratives_.pop_back();
+    SkipImplicitTyping(false);
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
   bool Pre(const parser::OpenMPConstruct &x) {
     // Indicate that the current directive is not a declarative one.
     declaratives_.push_back(nullptr);
+
+    auto name{parser::omp::GetOmpDirectiveName(x)};
+    if (omp::HasDataEnvironment(name.v)) {
+      PushScope(Scope::Kind::OtherConstruct, nullptr);
+    }
+
+    std::optional<parser::CharBlock> source{parser::GetSource(x)};
+    assert(source.has_value() && "Expecting directive source");
+    AddOmpSourceRange(*source);
     return true;
   }
-  void Post(const parser::OpenMPConstruct &) {
+
+  void Post(const parser::OpenMPConstruct &x) {
     // Pop the null pointer.
     declaratives_.pop_back();
+
+    auto name{parser::omp::GetOmpDirectiveName(x)};
+    if (omp::HasDataEnvironment(name.v)) {
+      PopScope();
+    }
+    messageHandler().set_currStmtSource(std::nullopt);
   }
 
 private:
@@ -1820,16 +1886,6 @@ private:
 
   std::vector<const parser::OpenMPDeclarativeConstruct *> declaratives_;
 };
-
-bool OmpVisitor::NeedsScope(const parser::OmpBlockConstruct &x) {
-  switch (x.BeginDir().DirId()) {
-  case llvm::omp::Directive::OMPD_master:
-  case llvm::omp::Directive::OMPD_ordered:
-    return false;
-  default:
-    return true;
-  }
-}
 
 bool OmpVisitor::NeedsScope(const parser::OmpClause &x) {
   // Iterators contain declarations, whose scope extends until the end
@@ -1846,19 +1902,6 @@ void OmpVisitor::PushScopeWithSource(
     Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
   PushScope(kind, symbol);
   currScope().AddSourceRange(source);
-}
-
-bool OmpVisitor::Pre(const parser::OmpBlockConstruct &x) {
-  if (NeedsScope(x)) {
-    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
-  }
-  return true;
-}
-
-void OmpVisitor::Post(const parser::OmpBlockConstruct &x) {
-  if (NeedsScope(x)) {
-    PopScope();
-  }
 }
 
 void OmpVisitor::Post(const parser::OmpTypeName &x) {
@@ -1976,11 +2019,11 @@ parser::CharBlock MakeNameFromOperator(
   case parser::DefinedOperator::IntrinsicOperator::AND:
     return parser::CharBlock{"op.AND", 6};
   case parser::DefinedOperator::IntrinsicOperator::OR:
-    return parser::CharBlock{"op.OR", 6};
+    return parser::CharBlock{"op.OR", 5};
   case parser::DefinedOperator::IntrinsicOperator::EQV:
-    return parser::CharBlock{"op.EQV", 7};
+    return parser::CharBlock{"op.EQV", 6};
   case parser::DefinedOperator::IntrinsicOperator::NEQV:
-    return parser::CharBlock{"op.NEQV", 8};
+    return parser::CharBlock{"op.NEQV", 7};
 
   default:
     context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
@@ -2035,17 +2078,24 @@ void OmpVisitor::ProcessReductionSpecifier(
   // the first, or only, instance with this name). The details then
   // gets stored in the symbol when it's created.
   UserReductionDetails *reductionDetails{&reductionDetailsTemp};
-  Symbol *symbol{currScope().FindSymbol(mangledName)};
+  // Use scope-local lookup to avoid false matches from parent scopes.
+  Symbol *symbol{FindInScope(currScope(), mangledName)};
   if (symbol) {
-    // If we found a symbol, we append the type info to the
-    // existing reductionDetails.
-    reductionDetails = symbol->detailsIf<UserReductionDetails>();
+    if (symbol->detailsIf<UseDetails>()) {
+      // USE-associated reduction: shadow it with a new local declaration.
+      EraseSymbol(*symbol);
+      symbol = nullptr;
+    } else {
+      // If we found a local symbol, we append the type info to the
+      // existing reductionDetails.
+      reductionDetails = symbol->detailsIf<UserReductionDetails>();
 
-    if (!reductionDetails) {
-      context().Say(
-          "Duplicate definition of '%s' in DECLARE REDUCTION"_err_en_US,
-          mangledName);
-      return;
+      if (!reductionDetails) {
+        context().Say(
+            "Duplicate definition of '%s' in DECLARE REDUCTION"_err_en_US,
+            mangledName);
+        return;
+      }
     }
   }
 
@@ -2082,7 +2132,7 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
   }()};
 
   if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
+    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
       if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
         if (auto *symbol{FindInScope(globalScope, *name)}) {
           if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
@@ -2875,6 +2925,7 @@ void FuncResultStack::CompleteFunctionResultType() {
   if (info && &info->scope == &scopeHandler_.currScope() &&
       info->resultSymbol) {
     if (info->parsedType) {
+      auto completingTypeScope{common::ScopedSet(info->completingType, true)};
       scopeHandler_.messageHandler().set_currStmtSource(info->source);
       if (const auto *type{
               scopeHandler_.ProcessTypeSpec(*info->parsedType, true)}) {
@@ -2909,7 +2960,15 @@ void FuncResultStack::CompleteFunctionResultType() {
 void FuncResultStack::CompleteTypeIfFunctionResult(Symbol &symbol) {
   if (FuncInfo * info{Top()}) {
     if (info->resultSymbol == &symbol) {
-      CompleteFunctionResultType();
+      if (info->completingType) {
+        if (!scopeHandler_.context().HasError(symbol)) {
+          scopeHandler_.SayAlreadyDeclared(symbol.name(),
+              info->resultName ? info->resultName->source : symbol.name());
+          scopeHandler_.context().SetError(symbol);
+        }
+      } else {
+        CompleteFunctionResultType();
+      }
     }
   }
 }
@@ -4415,6 +4474,38 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   return scope;
 }
 
+// Map a mangled declare reduction name (e.g., op.+, op.max, op..myop.) back
+// to the Fortran identifier that controls its accessibility in a module scope.
+// Intrinsic operators map to "operator(+)" etc., named functions to "max" etc.,
+// and defined operators to "operator(.myop.)" etc.
+static std::string GetReductionIdentifierName(const SourceName &mangledName) {
+  llvm::StringRef name{mangledName.begin(), mangledName.size()};
+  if (!name.starts_with("op.")) {
+    return {};
+  }
+  llvm::StringRef suffix{name.drop_front(3)};
+  // Intrinsic arithmetic operators: op.+ → operator(+)
+  if (suffix == "+" || suffix == "-" || suffix == "*") {
+    return ("operator(" + suffix + ")").str();
+  }
+  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
+  llvm::StringRef logicalOp{llvm::StringSwitch<llvm::StringRef>(suffix)
+          .Case("AND", ".and.")
+          .Case("OR", ".or.")
+          .Case("EQV", ".eqv.")
+          .Case("NEQV", ".neqv.")
+          .Default("")};
+  if (!logicalOp.empty()) {
+    return ("operator(" + logicalOp + ")").str();
+  }
+  // Defined operators: op..myop. → operator(.myop.)
+  if (suffix.size() > 2 && suffix.front() == '.' && suffix.back() == '.') {
+    return ("operator(" + suffix + ")").str();
+  }
+  // Named functions: op.max → max
+  return suffix.str();
+}
+
 void ModuleVisitor::ApplyDefaultAccess() {
   const auto *moduleDetails{
       DEREF(currScope().symbol()).detailsIf<ModuleDetails>()};
@@ -4434,6 +4525,21 @@ void ModuleVisitor::ApplyDefaultAccess() {
             attr = Attr::PUBLIC;
           } else if (generic->derivedType()->attrs().test(Attr::PRIVATE)) {
             attr = Attr::PRIVATE;
+          }
+        }
+      } else if (symbol.detailsIf<UserReductionDetails>()) {
+        // OpenMP 6.0 §7.6.14: A declare reduction directive that appears in
+        // a module has accessibility as if it were declared as a module entity.
+        // If the corresponding operator/procedure has explicit accessibility,
+        // the reduction inherits it.
+        std::string opName{GetReductionIdentifierName(symbol.name())};
+        if (!opName.empty()) {
+          if (auto *opSym{FindInScope(currScope(), SourceName{opName})}) {
+            if (opSym->attrs().test(Attr::PUBLIC)) {
+              attr = Attr::PUBLIC;
+            } else if (opSym->attrs().test(Attr::PRIVATE)) {
+              attr = Attr::PRIVATE;
+            }
           }
         }
       }
@@ -4694,6 +4800,11 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
       name.symbol = nullptr;
     } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
                entity && !ultimate.has<ProcEntityDetails>()) {
+      if (entity->isDummy()) {
+        Say(name,
+            "Dummy argument '%s' may not be used as a statement function"_err_en_US);
+        return false;
+      }
       resultType = entity->type();
       ultimate.details() = UnknownDetails{}; // will be replaced below
     } else {
@@ -4830,12 +4941,13 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
         }
         // Implicitly USE the cudadevice module by copying its symbols in the
         // current scope.
-        const Scope &cudaDeviceScope{context().GetCUDADeviceScope()};
-        for (auto sym : cudaDeviceScope.GetSymbols()) {
-          if (!currScope().FindSymbol(sym->name())) {
-            auto &localSymbol{MakeSymbol(
-                sym->name(), Attrs{}, UseDetails{sym->name(), *sym})};
-            localSymbol.flags() = sym->flags();
+        if (const Scope *cudaDeviceScope{context().GetCUDADeviceScope()}) {
+          for (auto sym : cudaDeviceScope->GetSymbols()) {
+            if (!currScope().FindSymbol(sym->name())) {
+              auto &localSymbol{MakeSymbol(
+                  sym->name(), Attrs{}, UseDetails{sym->name(), *sym})};
+              localSymbol.flags() = sym->flags();
+            }
           }
         }
       }
@@ -5119,8 +5231,14 @@ void SubprogramVisitor::CreateEntry(
     return static_cast<const parser::Name *>(nullptr);
   }()};
   std::optional<SourceName> distinctResultName;
-  if (resultName && resultName->source != entryName.source) {
-    distinctResultName = resultName->source;
+  if (resultName) {
+    if (resultName->source == entryName.source) {
+      Say(*resultName,
+          "Explicit RESULT('%s') of ENTRY '%s' cannot have the same name as the ENTRY"_err_en_US,
+          resultName->source, entryName.source);
+    } else {
+      distinctResultName = resultName->source;
+    }
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
@@ -5783,7 +5901,7 @@ bool DeclarationVisitor::Pre(const parser::NamedConstantDef &x) {
   auto &symbol{HandleAttributeStmt(Attr::PARAMETER, name)};
   ConvertToObjectEntity(symbol);
   auto *details{symbol.detailsIf<ObjectEntityDetails>()};
-  if (!details || symbol.test(Symbol::Flag::CrayPointer) ||
+  if (!details || IsPointer(symbol) || symbol.test(Symbol::Flag::CrayPointer) ||
       symbol.test(Symbol::Flag::CrayPointee)) {
     SayWithDecl(
         name, symbol, "PARAMETER attribute not allowed on '%s'"_err_en_US);
@@ -6543,6 +6661,168 @@ void DeclarationVisitor::Post(const parser::DeclarationTypeSpec::Record &rec) {
           typeName.source);
     }
   }
+}
+
+// TYPEOF and CLASSOF type specifiers
+bool DeclarationVisitor::ResolveTypeOfOrClassOf(
+    const parser::DataRef &dataRef, bool isClassOf) {
+  const char *specName{isClassOf ? "CLASSOF" : "TYPEOF"};
+
+  if (std::holds_alternative<common::Indirection<parser::CoindexedNamedObject>>(
+          dataRef.u)) {
+    Say(currStmtSource().value(),
+        "The data-ref in %s must not have an image-selector"_err_en_US,
+        specName);
+    return false;
+  }
+
+  const parser::Name *name{ResolveDataRef(dataRef)};
+  if (!name || !name->symbol) {
+    return false;
+  }
+
+  // data-ref shall be a data object, not a procedure or type name.
+  const Symbol &ultimate{name->symbol->GetUltimate()};
+  if (!ultimate.has<ObjectEntityDetails>() &&
+      !ultimate.has<AssocEntityDetails>() && !ultimate.has<EntityDetails>()) {
+    Say(currStmtSource().value(), "'%s' in %s must be a data object"_err_en_US,
+        name->source, specName);
+    return false;
+  }
+
+  // data-ref shall not be a whole assumed-size array.
+  if (!std::holds_alternative<common::Indirection<parser::ArrayElement>>(
+          dataRef.u) &&
+      IsAssumedSizeArray(ultimate)) {
+    Say(currStmtSource().value(),
+        "The data-ref in %s must not be a whole assumed-size array"_err_en_US,
+        specName);
+    return false;
+  }
+
+  // Get the declared type of the referenced object.
+  const DeclTypeSpec *refType{ultimate.GetType()};
+  if (!refType) {
+    Say(currStmtSource().value(),
+        "Referenced object '%s' does not have a declared type"_err_en_US,
+        name->source);
+    return false;
+  }
+
+  // F2023 C713: If the data-ref has the OPTIONAL attribute, it shall not have
+  // a deferred or assumed type parameter.
+  if (ultimate.attrs().test(Attr::OPTIONAL)) {
+    if (auto dyType{evaluate::DynamicType::From(ultimate)};
+        dyType && dyType->HasDeferredOrAssumedTypeParameter()) {
+      Say(currStmtSource().value(),
+          "The OPTIONAL data-ref in %s must not have assumed or deferred type parameters"_err_en_US,
+          specName);
+      return false;
+    }
+  }
+
+  switch (refType->category()) {
+  case DeclTypeSpec::Numeric:
+  case DeclTypeSpec::Logical:
+    if (isClassOf) {
+      Say(currStmtSource().value(),
+          "CLASSOF may not be used with an intrinsic-type object"_err_en_US);
+      return false;
+    }
+    SetDeclTypeSpec(*refType);
+    break;
+  case DeclTypeSpec::Character: {
+    if (isClassOf) {
+      Say(currStmtSource().value(),
+          "CLASSOF may not be used with an intrinsic-type object"_err_en_US);
+      return false;
+    }
+    const auto &charSpec{refType->characterTypeSpec()};
+    if (charSpec.length().isAssumed()) {
+      auto lenExpr{evaluate::NamedEntity{ultimate}.LEN()};
+      if (!lenExpr) {
+        Say(currStmtSource().value(),
+            "Could not determine the length of '%s' in %s"_err_en_US,
+            name->source, specName);
+        return false;
+      }
+      SetDeclTypeSpec(currScope().MakeCharacterType(
+          ParamValue{
+              SomeIntExpr{std::move(*lenExpr)}, common::TypeParamAttr::Len},
+          KindExpr{charSpec.kind()}));
+    } else {
+      SetDeclTypeSpec(*refType);
+    }
+    break;
+  }
+  case DeclTypeSpec::TypeDerived:
+  case DeclTypeSpec::ClassDerived: {
+    const DerivedTypeSpec &derived{refType->derivedTypeSpec()};
+    if (isClassOf && !IsExtensibleType(&derived)) {
+      Say(currStmtSource().value(),
+          "CLASSOF requires a data-ref of extensible type"_err_en_US);
+      return false;
+    }
+    for (const auto &[paramName, paramValue] : derived.parameters()) {
+      if (paramValue.isAssumed()) {
+        Say(currStmtSource().value(),
+            "%s with parameterized derived type that has assumed LEN parameter '%s' is not yet implemented"_todo_en_US,
+            specName, paramName.ToString());
+        return false;
+      }
+    }
+    auto category{
+        isClassOf ? DeclTypeSpec::ClassDerived : DeclTypeSpec::TypeDerived};
+    if (const DeclTypeSpec *extant{
+            currScope().FindInstantiatedDerivedType(derived, category)}) {
+      SetDeclTypeSpec(*extant);
+    } else {
+      DeclTypeSpec &type{
+          currScope().MakeDerivedType(category, DerivedTypeSpec{derived})};
+      DerivedTypeSpec &newDerived{type.derivedTypeSpec()};
+      newDerived.CookParameters(GetFoldingContext());
+      newDerived.EvaluateParameters(context());
+      if (!newDerived.IsForwardReferenced()) {
+        newDerived.Instantiate(currScope());
+      }
+      SetDeclTypeSpec(type);
+    }
+    break;
+  }
+  case DeclTypeSpec::TypeStar:
+    if (isClassOf) {
+      // F2023 C712: CLASSOF shall not be used with assumed-type
+      Say(currStmtSource().value(),
+          "The data-ref in CLASSOF must not be assumed-type"_err_en_US);
+      return false;
+    }
+    // TYPEOF of TYPE(*) is valid, produces TYPE(*)
+    SetDeclTypeSpec(context().globalScope().MakeTypeStarType());
+    break;
+  case DeclTypeSpec::ClassStar:
+    if (!isClassOf) {
+      // F2023 C711: TYPEOF shall not be used with unlimited polymorphic
+      Say(currStmtSource().value(),
+          "The data-ref in TYPEOF must not be unlimited polymorphic"_err_en_US);
+      return false;
+    }
+    // CLASSOF of CLASS(*) is valid, produces CLASS(*)
+    SetDeclTypeSpec(context().globalScope().MakeClassStarType());
+    break;
+  }
+  return true;
+}
+
+bool DeclarationVisitor::Pre(
+    const parser::DeclarationTypeSpec::TypeOf &typeOf) {
+  ResolveTypeOfOrClassOf(typeOf.v.value(), /*isClassOf=*/false);
+  return false;
+}
+
+bool DeclarationVisitor::Pre(
+    const parser::DeclarationTypeSpec::ClassOf &classOf) {
+  ResolveTypeOfOrClassOf(classOf.v.value(), /*isClassOf=*/true);
+  return false;
 }
 
 // The descendents of DerivedTypeDef in the parse tree are visited directly
@@ -9559,7 +9839,8 @@ void ResolveNamesVisitor::HandleProcedureName(
 bool ResolveNamesVisitor::CheckImplicitNoneExternal(
     const SourceName &name, const Symbol &symbol) {
   if (symbol.has<ProcEntityDetails>() && isImplicitNoneExternal() &&
-      !symbol.attrs().test(Attr::EXTERNAL) &&
+      (!symbol.attrs().test(Attr::EXTERNAL) ||
+          symbol.implicitAttrs().test(Attr::EXTERNAL)) &&
       !symbol.attrs().test(Attr::INTRINSIC) && !symbol.HasExplicitInterface()) {
     Say(name,
         "'%s' is an external procedure without the EXTERNAL attribute in a scope with IMPLICIT NONE(EXTERNAL)"_err_en_US);
@@ -9585,7 +9866,7 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
       ConvertToProcEntity(*symbol, name);
       if (auto *details{symbol->detailsIf<ProcEntityDetails>()}) {
         symbol->set(flag);
-        if (IsDummy(*symbol)) {
+        if (IsDummy(*symbol) && !symbol->attrs().test(Attr::EXTERNAL)) {
           SetImplicitAttr(*symbol, Attr::EXTERNAL);
         }
         ApplyImplicitRules(*symbol);
@@ -9819,11 +10100,13 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
 
 void ResolveNamesVisitor::UseCUDABuiltinNames() {
   if (FindCUDADeviceContext(&currScope())) {
-    for (const auto &[name, symbol] : context().GetCUDABuiltinsScope()) {
-      if (!FindInScope(name)) {
-        auto &localSymbol{MakeSymbol(name)};
-        localSymbol.set_details(UseDetails{name, *symbol});
-        localSymbol.flags() = symbol->flags();
+    if (const Scope *cudaBuiltinsScope{context().GetCUDABuiltinsScope()}) {
+      for (const auto &[name, symbol] : *cudaBuiltinsScope) {
+        if (!FindInScope(name)) {
+          auto &localSymbol{MakeSymbol(name)};
+          localSymbol.set_details(UseDetails{name, *symbol});
+          localSymbol.flags() = symbol->flags();
+        }
       }
     }
   }
@@ -10040,13 +10323,27 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         SetBindNameOn(symbol);
       }
     }
-    // Implicitly treat allocatable arrays as managed when feature is enabled.
-    // This is done after all explicit CUDA attributes have been processed.
-    if (context().languageFeatures().IsEnabled(
-            common::LanguageFeature::CudaManaged))
-      if (auto *object{symbol.detailsIf<ObjectEntityDetails>()})
-        if (IsAllocatable(symbol) && !object->cudaDataAttr())
+
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
+        // Implicitly treat allocatable arrays as managed when feature is
+        // enabled. This is done after all explicit CUDA attributes have been
+        // processed. Only applies when CUDA Fortran is enabled; otherwise
+        // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
+        // OpenACC) would incorrectly route every allocatable through the CUDA
+        // Fortran managed descriptor pipeline.
+        if (context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaManaged) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CUDA))
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+        // Implicitly treat allocatable arrays as pinned when feature is
+        // enabled.
+        else if (context().languageFeatures().IsEnabled(
+                     common::LanguageFeature::CudaPinned))
+          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+      }
+    }
   }
   currScope().InstantiateDerivedTypes();
   for (const auto &decl : decls) {
@@ -10286,7 +10583,8 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
       std::holds_alternative<parser::CompilerDirective::Inline>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Prefetch>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::NoInline>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::IVDep>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::Simd>(x.u)) {
     return;
   }
   if (const auto *tkr{
@@ -10377,6 +10675,21 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
           }
         }
       }
+    }
+  } else if (const auto *inlineAlways{
+                 std::get_if<parser::CompilerDirective::InlineAlways>(&x.u)}) {
+    if (!inlineAlways->v.has_value()) {
+      return;
+    }
+
+    Symbol *sym{currScope().symbol()};
+    if (!sym || !sym->has<SubprogramDetails>()) {
+      Say(x.source,
+          "!DIR$ INLINEALWAYS directive with name must appear in a subprogram"_err_en_US);
+    } else if (inlineAlways->v->ToString() != sym->name().ToString()) {
+      context().Warn(common::UsageWarning::IgnoredDirective, x.source,
+          "INLINEALWAYS name '%s' does not match the subprogram name '%s'"_warn_en_US,
+          inlineAlways->v->ToString(), sym->name().ToString());
     }
   } else if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
     Say(x.source, "Unrecognized compiler directive was ignored"_warn_en_US)

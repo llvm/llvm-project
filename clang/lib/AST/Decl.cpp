@@ -51,6 +51,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Visibility.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1993,8 +1994,10 @@ bool NamedDecl::isCXXInstanceMember() const {
 
 template <typename DeclT>
 static SourceLocation getTemplateOrInnerLocStart(const DeclT *decl) {
-  if (decl->getNumTemplateParameterLists() > 0)
-    return decl->getTemplateParameterList(0)->getTemplateLoc();
+  if (ArrayRef<TemplateParameterList *> TPLs =
+          decl->getTemplateParameterLists();
+      !TPLs.empty())
+    return TPLs.front()->getTemplateLoc();
   return decl->getInnerLocStart();
 }
 
@@ -2064,48 +2067,12 @@ SourceLocation DeclaratorDecl::getOuterLocStart() const {
   return getTemplateOrInnerLocStart(this);
 }
 
-// Helper function: returns true if QT is or contains a type
-// having a postfix component.
-static bool typeIsPostfix(QualType QT) {
-  while (true) {
-    const Type* T = QT.getTypePtr();
-    switch (T->getTypeClass()) {
-    default:
-      return false;
-    case Type::Pointer:
-      QT = cast<PointerType>(T)->getPointeeType();
-      break;
-    case Type::BlockPointer:
-      QT = cast<BlockPointerType>(T)->getPointeeType();
-      break;
-    case Type::MemberPointer:
-      QT = cast<MemberPointerType>(T)->getPointeeType();
-      break;
-    case Type::LValueReference:
-    case Type::RValueReference:
-      QT = cast<ReferenceType>(T)->getPointeeType();
-      break;
-    case Type::PackExpansion:
-      QT = cast<PackExpansionType>(T)->getPattern();
-      break;
-    case Type::Paren:
-    case Type::ConstantArray:
-    case Type::DependentSizedArray:
-    case Type::IncompleteArray:
-    case Type::VariableArray:
-    case Type::FunctionProto:
-    case Type::FunctionNoProto:
-      return true;
-    }
-  }
-}
-
 SourceRange DeclaratorDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
     // If the declaration has no name or the type extends past the name take the
     // end location of the type.
-    if (!getDeclName() || typeIsPostfix(TInfo->getType()))
+    if (!getDeclName() || TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getOuterLocStart(), RangeEnd);
@@ -2700,14 +2667,6 @@ bool VarDecl::checkForConstantInitialization(
   return Eval->HasConstantInitialization;
 }
 
-template<typename DeclT>
-static DeclT *getDefinitionOrSelf(DeclT *D) {
-  assert(D);
-  if (auto *Def = D->getDefinition())
-    return Def;
-  return D;
-}
-
 bool VarDecl::isEscapingByref() const {
   return hasAttr<BlocksAttr>() && NonParmVarDeclBits.EscapingByref;
 }
@@ -2749,7 +2708,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
             break;
           VTD = NewVTD;
         }
-        return getDefinitionOrSelf(VTD->getTemplatedDecl());
+        return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
               From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
@@ -2759,27 +2718,14 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
             break;
           VTPSD = NewVTPSD;
         }
-        return getDefinitionOrSelf<VarDecl>(VTPSD);
+        return VTPSD;
       }
     }
   }
 
-  // If this is the pattern of a variable template, find where it was
-  // instantiated from. FIXME: Is this necessary?
-  if (VarTemplateDecl *VarTemplate = VD->getDescribedVarTemplate()) {
-    while (!VarTemplate->isMemberSpecialization()) {
-      auto *NewVT = VarTemplate->getInstantiatedFromMemberTemplate();
-      if (!NewVT)
-        break;
-      VarTemplate = NewVT;
-    }
-
-    return getDefinitionOrSelf(VarTemplate->getTemplatedDecl());
-  }
-
   if (VD == this)
     return nullptr;
-  return getDefinitionOrSelf(const_cast<VarDecl*>(VD));
+  return const_cast<VarDecl *>(VD);
 }
 
 VarDecl *VarDecl::getInstantiatedFromStaticDataMember() const {
@@ -2950,6 +2896,33 @@ VarDecl::setInstantiationOfStaticDataMember(VarDecl *VD,
   assert(getASTContext().getTemplateOrSpecializationInfo(this).isNull() &&
          "Previous template or instantiation?");
   getASTContext().setInstantiatedFromStaticDataMember(this, VD, TSK);
+}
+
+void VarDecl::assignAddressSpace(const ASTContext &Ctxt, LangAS AS) {
+  QualType Type = getType();
+  if (Type.hasAddressSpace())
+    return;
+  if (Type->isDependentType())
+    return;
+  if (Type->isSamplerT() || Type->isVoidType())
+    return;
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this)
+             ? !Type->isArrayType()
+             : !isa<DecayedType>(Type));
+  Type = Ctxt.getAddrSpaceQualType(Type, AS);
+  // Apply any qualifiers (including address space) from the array type to
+  // the element type. This implements C99 6.7.3p8: "If the specification of
+  // an array type includes any type qualifiers, the element type is so
+  // qualified, not the array type."
+  if (Type->isArrayType())
+    Type = QualType(Ctxt.getAsArrayType(Type), 0);
+  setType(Type);
+}
+
+void VarDecl::deduceParmAddressSpace(const ASTContext &Ctxt) {
+  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this));
+  if (Ctxt.getLangOpts().OpenCL)
+    assignAddressSpace(Ctxt, LangAS::opencl_private);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4232,6 +4205,7 @@ bool FunctionDecl::isImplicitlyInstantiable() const {
   case TSK_ExplicitSpecialization:
     return false;
 
+  case TSK_FriendDeclaration:
   case TSK_ImplicitInstantiation:
     return true;
 
@@ -4276,7 +4250,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
   if (isGenericLambdaCallOperatorSpecialization(
           dyn_cast<CXXMethodDecl>(this))) {
     assert(getPrimaryTemplate() && "not a generic lambda call operator?");
-    return getDefinitionOrSelf(getPrimaryTemplate()->getTemplatedDecl());
+    return getPrimaryTemplate()->getTemplatedDecl();
   }
 
   // Check for a declaration of this function that was instantiated from a
@@ -4289,7 +4263,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
     if (ForDefinition &&
         !clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
       return nullptr;
-    return getDefinitionOrSelf(cast<FunctionDecl>(Info->getInstantiatedFrom()));
+    return cast<FunctionDecl>(Info->getInstantiatedFrom());
   }
 
   if (ForDefinition &&
@@ -4306,7 +4280,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
       Primary = NewPrimary;
     }
 
-    return getDefinitionOrSelf(Primary->getTemplatedDecl());
+    return Primary->getTemplatedDecl();
   }
 
   return nullptr;
@@ -4352,12 +4326,21 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
   return nullptr;
 }
 
+const TemplateParameterList *
+FunctionDecl::getTemplateSpecializationParameters() const {
+  if (const auto *Info = getTemplateSpecializationInfo())
+    return Info->TemplateParameters;
+  if (const auto *Info = getDependentSpecializationInfo())
+    return Info->TemplateParameters;
+  return nullptr;
+}
+
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
     TemplateArgumentList *TemplateArgs, void *InsertPos,
-    TemplateSpecializationKind TSK,
+    TemplateSpecializationKind TSK, const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
-    SourceLocation PointOfInstantiation) {
+    SourceLocation PointOfInstantiation, bool AddSpecialization) {
   assert((TemplateOrSpecialization.isNull() ||
           isa<MemberSpecializationInfo *>(TemplateOrSpecialization)) &&
          "Member function is already a specialization");
@@ -4369,21 +4352,23 @@ void FunctionDecl::setFunctionTemplateSpecialization(
          "Member specialization must be an explicit specialization");
   FunctionTemplateSpecializationInfo *Info =
       FunctionTemplateSpecializationInfo::Create(
-          C, this, Template, TSK, TemplateArgs, TemplateArgsAsWritten,
-          PointOfInstantiation,
+          C, this, Template, TSK, TemplateArgs, TemplateParams,
+          TemplateArgsAsWritten, PointOfInstantiation,
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  if (AddSpecialization)
+    Template->addSpecialization(Info, InsertPos);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
     ASTContext &Context, const UnresolvedSetImpl &Templates,
+    const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TemplateArgs) {
   assert(TemplateOrSpecialization.isNull());
   DependentFunctionTemplateSpecializationInfo *Info =
-      DependentFunctionTemplateSpecializationInfo::Create(Context, Templates,
-                                                          TemplateArgs);
+      DependentFunctionTemplateSpecializationInfo::Create(
+          Context, Templates, TemplateParams, TemplateArgs);
   TemplateOrSpecialization = Info;
 }
 
@@ -4396,19 +4381,22 @@ FunctionDecl::getDependentSpecializationInfo() const {
 DependentFunctionTemplateSpecializationInfo *
 DependentFunctionTemplateSpecializationInfo::Create(
     ASTContext &Context, const UnresolvedSetImpl &Candidates,
+    const TemplateParameterList *TemplateParams,
     const TemplateArgumentListInfo *TArgs) {
   const auto *TArgsWritten =
       TArgs ? ASTTemplateArgumentListInfo::Create(Context, *TArgs) : nullptr;
   return new (Context.Allocate(
       totalSizeToAlloc<FunctionTemplateDecl *>(Candidates.size())))
-      DependentFunctionTemplateSpecializationInfo(Candidates, TArgsWritten);
+      DependentFunctionTemplateSpecializationInfo(Candidates, TemplateParams,
+                                                  TArgsWritten);
 }
 
 DependentFunctionTemplateSpecializationInfo::
     DependentFunctionTemplateSpecializationInfo(
         const UnresolvedSetImpl &Candidates,
+        const TemplateParameterList *TemplateParams,
         const ASTTemplateArgumentListInfo *TemplateArgsWritten)
-    : NumCandidates(Candidates.size()),
+    : NumCandidates(Candidates.size()), TemplateParameters(TemplateParams),
       TemplateArgumentsAsWritten(TemplateArgsWritten) {
   std::transform(Candidates.begin(), Candidates.end(), getTrailingObjects(),
                  [](NamedDecl *ND) {
@@ -4513,6 +4501,26 @@ FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
     llvm_unreachable("Function cannot have a template specialization kind");
 }
 
+bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
+  auto HasImplicitAttr = [this](const Attr *A) {
+    return A ? A->isImplicit() : isImplicit();
+  };
+  if (!HasImplicitAttr(getAttr<CUDAHostAttr>()) ||
+      !HasImplicitAttr(getAttr<CUDADeviceAttr>()))
+    return false;
+  auto IsExplicitInstTSK = [](TemplateSpecializationKind TSK) {
+    return TSK == TSK_ExplicitInstantiationDeclaration ||
+           TSK == TSK_ExplicitInstantiationDefinition;
+  };
+  if (IsExplicitInstTSK(getTemplateSpecializationKind()))
+    return true;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(this))
+    if (const auto *Spec =
+            dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent()))
+      return IsExplicitInstTSK(Spec->getTemplateSpecializationKind());
+  return false;
+}
+
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
   if (FunctionTemplateSpecializationInfo *FTSInfo
         = TemplateOrSpecialization.dyn_cast<
@@ -4546,6 +4554,17 @@ bool FunctionDecl::isOutOfLine() const {
   }
 
   return false;
+}
+
+SourceLocation FunctionDecl::getFunctionLocStart() const {
+  if (const TemplateParameterList *TemplateParams =
+          getTemplateSpecializationParameters()) {
+    const ASTContext &Ctx = getASTContext();
+    return Lexer::findNextToken(TemplateParams->getSourceRange().getEnd(),
+                                Ctx.getSourceManager(), Ctx.getLangOpts())
+        ->getLocation();
+  }
+  return getInnerLocStart();
 }
 
 SourceRange FunctionDecl::getSourceRange() const {
@@ -5144,7 +5163,7 @@ EnumDecl *EnumDecl::getTemplateInstantiationPattern() const {
       EnumDecl *ED = getInstantiatedFromMemberEnum();
       while (auto *NewED = ED->getInstantiatedFromMemberEnum())
         ED = NewED;
-      return ::getDefinitionOrSelf(ED);
+      return ED;
     }
   }
 
@@ -5603,14 +5622,19 @@ void ImplicitParamDecl::anchor() {}
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, DeclContext *DC,
                                              SourceLocation IdLoc,
-                                             IdentifierInfo *Id, QualType Type,
+                                             const IdentifierInfo *Id,
+                                             QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  auto *Parm = new (C, DC) ImplicitParamDecl(C, DC, IdLoc, Id, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, QualType Type,
                                              ImplicitParamKind ParamKind) {
-  return new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  auto *Parm = new (C, nullptr) ImplicitParamDecl(C, Type, ParamKind);
+  Parm->deduceParmAddressSpace(C);
+  return Parm;
 }
 
 ImplicitParamDecl *ImplicitParamDecl::CreateDeserialized(ASTContext &C,
@@ -5828,7 +5852,7 @@ TypeAliasDecl *TypeAliasDecl::CreateDeserialized(ASTContext &C,
 SourceRange TypedefDecl::getSourceRange() const {
   SourceLocation RangeEnd = getLocation();
   if (TypeSourceInfo *TInfo = getTypeSourceInfo()) {
-    if (typeIsPostfix(TInfo->getType()))
+    if (TInfo->getType().hasPostfixDeclaratorSyntax())
       RangeEnd = TInfo->getTypeLoc().getSourceRange().getEnd();
   }
   return SourceRange(getBeginLoc(), RangeEnd);

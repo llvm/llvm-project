@@ -20,12 +20,12 @@ namespace llvm {
 extern cl::opt<cl::boolOrDefault> UseLEB128Directives;
 }
 
-MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
+MCAsmInfoXCOFF::MCAsmInfoXCOFF(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   IsAIX = true;
   IsLittleEndian = false;
 
   InternalSymbolPrefix = "L..";
-  PrivateLabelPrefix = "L..";
   SupportsQuotedNames = false;
   if (UseLEB128Directives == cl::BOU_UNSET)
     HasLEB128Directives = false;

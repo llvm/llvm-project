@@ -308,12 +308,12 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     LocalKernelArgs.Tripcount = KernelArgs->Tripcount;
     LocalKernelArgs.Flags = KernelArgs->Flags;
     LocalKernelArgs.DynCGroupMem = 0;
-    LocalKernelArgs.NumTeams[0] = NumTeams;
-    LocalKernelArgs.NumTeams[1] = 1;
-    LocalKernelArgs.NumTeams[2] = 1;
-    LocalKernelArgs.ThreadLimit[0] = ThreadLimit;
-    LocalKernelArgs.ThreadLimit[1] = 1;
-    LocalKernelArgs.ThreadLimit[2] = 1;
+    LocalKernelArgs.UserNumBlocks[0] = NumTeams;
+    LocalKernelArgs.UserNumBlocks[1] = 1;
+    LocalKernelArgs.UserNumBlocks[2] = 1;
+    LocalKernelArgs.UserThreadLimit[0] = ThreadLimit;
+    LocalKernelArgs.UserThreadLimit[1] = 1;
+    LocalKernelArgs.UserThreadLimit[2] = 1;
     return &LocalKernelArgs;
   }
 
@@ -325,8 +325,8 @@ static KernelArgsTy *upgradeKernelArgs(KernelArgsTy *KernelArgs,
     if (Val[2] == 0)
       Val[2] = 1;
   };
-  CorrectMultiDim(KernelArgs->ThreadLimit);
-  CorrectMultiDim(KernelArgs->NumTeams);
+  CorrectMultiDim(KernelArgs->UserThreadLimit);
+  CorrectMultiDim(KernelArgs->UserNumBlocks);
 
   // Version 3 put the implicit argument at the front with no storage.
   if (KernelArgs->Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
@@ -384,7 +384,7 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   bool IsTeams = NumTeams != -1;
   if (!IsTeams)
-    KernelArgs->NumTeams[0] = NumTeams = 1;
+    KernelArgs->UserNumBlocks[0] = NumTeams = 1;
 
   KernelArgsTy LocalKernelArgs;
   UpgradedArgBuffersTy UpgradedBufs;
@@ -509,6 +509,9 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 /// \param DeviceMemory A pointer to an array storing device memory data to move
 ///                     prior to kernel execution.
 /// \param DeviceMemorySize The size of the above device memory data in bytes.
+/// \param ReuseDeviceAlloc Pointer to a device memory allocation that should be
+///                         reused for the replay. If null, the replay will
+///                         allocate the necessary device buffer.
 /// \param TgtArgs An array of pointers of the pre-recorded target kernel
 ///                arguments.
 /// \param TgtOffsets An array of pointers of the pre-recorded target kernel
@@ -521,10 +524,11 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 /// \return OMP_TGT_SUCCESS on success, OMP_TGT_FAIL on failure.
 EXTERN int __tgt_target_kernel_replay(
     ident_t *Loc, int64_t DeviceId, void *HostPtr, void *DeviceMemory,
-    int64_t DeviceMemorySize, const llvm::offloading::EntryTy *Globals,
-    int32_t NumGlobals, void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
-    int32_t NumTeams, int32_t ThreadLimit, uint32_t SharedMemorySize,
-    uint64_t LoopTripCount) {
+    void *ReuseDeviceAlloc, int64_t DeviceMemorySize,
+    const llvm::offloading::EntryTy *Globals, int32_t NumGlobals,
+    void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs, int32_t NumTeams,
+    int32_t ThreadLimit, uint32_t SharedMemorySize, uint64_t LoopTripCount,
+    KernelReplayOutcomeTy *ReplayOutcome) {
   assert(PM && "Runtime not initialized");
   OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
   if (checkDevice(DeviceId, Loc)) {
@@ -543,8 +547,9 @@ EXTERN int __tgt_target_kernel_replay(
   AsyncInfoTy AsyncInfo(*DeviceOrErr);
   int Rc =
       target_replay(Loc, *DeviceOrErr, HostPtr, DeviceMemory, DeviceMemorySize,
-                    Globals, NumGlobals, TgtArgs, TgtOffsets, NumArgs, NumTeams,
-                    ThreadLimit, SharedMemorySize, LoopTripCount, AsyncInfo);
+                    ReuseDeviceAlloc, Globals, NumGlobals, TgtArgs, TgtOffsets,
+                    NumArgs, NumTeams, ThreadLimit, SharedMemorySize,
+                    LoopTripCount, AsyncInfo, ReplayOutcome);
 
   if (Rc == OFFLOAD_SUCCESS)
     Rc = AsyncInfo.synchronize();
@@ -641,6 +646,9 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
 
 EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
                                                              unsigned)) {
+  if (!PM)
+    return;
+
   for (auto &Plugin : PM->plugins())
     if (Plugin.is_initialized())
       Plugin.getRPCServer().registerCallback(Callback);

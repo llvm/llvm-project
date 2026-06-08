@@ -570,14 +570,15 @@ if( MSVC_IDE )
 endif()
 
 # set stack reserved size to ~10MB
+set(_is_exe "$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>")
 if(MSVC)
   # CMake previously automatically set this value for MSVC builds, but the
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}/STACK:10000000")
+  add_link_options("$<${_is_exe}:LINKER:/STACK:10000000>")
 elseif(MINGW OR CYGWIN)
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--stack,16777216")
+  add_link_options("$<${_is_exe}:LINKER:--stack,16777216>")
 
   # Pass -mbig-obj to mingw gas to avoid COFF 2**16 section limit.
   if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -699,7 +700,8 @@ if( MSVC )
     has_msvc_incremental_no_flag("${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_MODULE_LINKER_FLAGS}" NO_INCR_MODULE)
     has_msvc_incremental_no_flag("${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_SHARED_LINKER_FLAGS}" NO_INCR_SHARED)
     if (NO_INCR_EXE AND NO_INCR_MODULE AND NO_INCR_SHARED)
-      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      # The /Brepro flag in `clang-cl` omits the timestamp for .obj files while the linker flag omits the timestamp for .exe and .dll files.
+      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
     else()
       message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
     endif()

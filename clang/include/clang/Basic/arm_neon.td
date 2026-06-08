@@ -1903,6 +1903,14 @@ let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "d
   def UDOT_LANEQ : SOpInst<"vdot_laneq", "..(<<)(<<Q)I", "iUiQiQUi", OP_DOT_LNQ>;
 }
 
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16f32dot,neon" in {
+  def VDOT_F16 : SInst<"vdot_f32", ">>..", "hQh">;
+  def VDOT_LANE_F16 : SInst<"vdot_lane_f32", ">>.qI", "hQh",
+                           [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+  def VDOT_LANEQ_F16 : SInst<"vdot_laneq_f32", ">>.QI", "hQh",
+                            [ImmCheck<3, ImmCheckLaneIndex, 2>]>;
+}
+
 // v8.2-A FP16 fused multiply-add long instructions.
 let ArchGuard = "defined(__aarch64__) || defined(__arm64ec__)", TargetGuard = "fp16fml,neon" in {
   def VFMLAL_LOW  : SInst<"vfmlal_low",  ">>..", "hQh">;
@@ -1927,6 +1935,14 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f16mm,neon" in {
 
 let ArchGuard = "defined(__aarch64__)", TargetGuard = "f8f32mm,neon" in {
   def VMMLA_F32_MF8 : VInst<"vmmla_f32_mf8_fpm", "(>>F)(>>F)..V", "Qm">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16mm,neon" in {
+  def VMMLA_F16_F16 : SInst<"vmmla_f16", "....", "Qh">;
+}
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "f16f32mm,neon" in {
+  def VMMLA_F32_F16 : SInst<"vmmla_f32", ">>..", "Qh">;
 }
 
 let TargetGuard = "i8mm,neon" in {

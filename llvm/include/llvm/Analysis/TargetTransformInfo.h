@@ -150,22 +150,19 @@ class MemIntrinsicCostAttributes {
   Align Alignment;
 
 public:
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      const Value *Ptr, bool VariableMask,
-                                      Align Alignment,
-                                      const Instruction *I = nullptr)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, const Value *Ptr,
+                             bool VariableMask, Align Alignment,
+                             const Instruction *I = nullptr)
       : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      Align Alignment,
-                                      unsigned AddressSpace = 0)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, Align Alignment,
+                             unsigned AddressSpace = 0)
       : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
         Alignment(Alignment) {}
 
-  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
-                                      bool VariableMask, Align Alignment,
-                                      const Instruction *I = nullptr)
+  MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy, bool VariableMask,
+                             Align Alignment, const Instruction *I = nullptr)
       : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
         Alignment(Alignment) {}
 
@@ -1039,8 +1036,6 @@ public:
   /// convention.
   LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
 
-  LLVM_ABI bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
-
   /// Identifies if the vector form of the intrinsic has a scalar operand.
   LLVM_ABI bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                                    unsigned ScalarOpdIdx) const;
@@ -1073,7 +1068,8 @@ public:
   };
 
   /// Calculates a VectorInstrContext from \p I.
-  static VectorInstrContext getVectorInstrContextHint(const Instruction *I);
+  LLVM_ABI static VectorInstrContext
+  getVectorInstrContextHint(const Instruction *I);
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -1940,6 +1936,12 @@ public:
   /// \returns True if target prefers SLP vectorizer with altermate opcode
   /// vectorization, false - otherwise.
   LLVM_ABI bool preferAlternateOpcodeVectorization() const;
+
+  /// \returns True if the SLP vectorizer should apply the instruction-count
+  /// check that rejects 2-element vector trees when the vector instruction
+  /// count exceeds the scalar instruction count, false if the target opts out
+  /// of this heuristic.
+  LLVM_ABI bool preferSLPInstCountCheck() const;
 
   /// \returns True if the target prefers reductions of \p Kind to be performed
   /// in the loop.

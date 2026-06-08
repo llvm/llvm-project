@@ -386,6 +386,18 @@ namespace CopyCtor {
   static_assert(y.a == 42, "");
   static_assert(y.b == 42, ""); // both-error {{constant expression}} \
                                 // both-note {{'b' of union with active member 'a'}}
+
+  /// Non-defaulted copy ctor.
+  union U2 {
+    int a;
+    constexpr U2() : a(100) {}
+    constexpr U2(const U2 &u) {
+      a = 20;
+    };
+  };
+  constexpr U2 u2;
+  constexpr U2 u22(u2);
+  static_assert(u22.a == 20, "");
 }
 
 namespace UnionInBase {
@@ -1041,5 +1053,34 @@ namespace NoTrivialCtor {
     return 10;
   }
   static_assert(foo() == 10);
+}
+
+namespace Revive {
+  struct S { int p; };
+  struct A { S s;};
+  union U { A a; };
+
+  constexpr int g() {
+    U u;
+    u.a.s.p = 3;
+    u.a.~A();
+    u.a.s.p = 4; // Start lifetime of 'a' again.
+    int r = u.a.s.p;
+    u.a.~A();
+    return r;
+  }
+  static_assert(g() == 4);
+
+  constexpr int h() {
+    A a; // both-note {{declared here}}
+    a.s.p = 10;
+
+    a.s.~S();
+    a.s.p = 20; // both-note {{assignment to object outside its lifetime}}
+    int r = a.s.p;
+    return r;
+  }
+  static_assert(h() == 20); // both-error {{not an integral constant expression}} \
+                            // both-note {{in call to}}
 }
 #endif

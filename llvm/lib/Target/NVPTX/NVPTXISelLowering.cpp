@@ -108,6 +108,16 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
+// PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
+// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
+// when they disagree. This flag is an escape hatch to use atom.add anyway,
+// trading correct denormal handling for the speed of the native instruction.
+static cl::opt<bool> AllowFTZAtomics(
+    "nvptx-allow-ftz-atomics", cl::Hidden,
+    cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
+             "FTZ behavior does not match the function's denormal mode."),
+    cl::init(false));
+
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
 static cl::opt<bool> UseApproxLog2F32(
@@ -802,15 +812,21 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
-  setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
+  setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
                      {MVT::i16, MVT::i32, MVT::i64}, Legal);
+  // PTX abs.s is undefined for INT_MIN, so ISD::ABS (which requires
+  // abs(INT_MIN) == INT_MIN) must be expanded. ABS_MIN_POISON matches
+  // PTX abs semantics since INT_MIN input is poison/undefined.
+  setOperationAction(ISD::ABS, {MVT::i16, MVT::i32, MVT::i64}, Expand);
+  setOperationAction(ISD::ABS_MIN_POISON, {MVT::i16, MVT::i32, MVT::i64},
+                     Legal);
 
-  setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i16,
+  setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTLZ_ZERO_POISON}, MVT::i16,
                      Promote);
   setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i32, Legal);
   setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i64, Custom);
 
-  setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
+  setI16x2OperationAction(ISD::ABS_MIN_POISON, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMAX, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::UMIN, MVT::v2i16, Legal, Custom);
@@ -988,6 +1004,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
         MVT::bf16, Custom);
   }
 
+  setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i1, Custom);
   setOperationAction(ISD::FROUND, MVT::f16, Promote);
   setOperationAction(ISD::FROUND, MVT::v2f16, Expand);
   setOperationAction(ISD::FROUND, MVT::v2bf16, Expand);
@@ -1324,15 +1341,6 @@ static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
   return DL.getABITypeAlign(Ty);
 }
 
-static bool shouldConvertToIndirectCall(const CallBase *CB,
-                                        const GlobalAddressSDNode *Func) {
-  if (!Func)
-    return false;
-  if (auto *CalleeFunc = dyn_cast<Function>(Func->getGlobal()))
-    return CB->getFunctionType() != CalleeFunc->getFunctionType();
-  return false;
-}
-
 static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
                                       const DataLayout &DL,
                                       const TargetLowering &TL) {
@@ -1655,9 +1663,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   const auto *Func = dyn_cast<GlobalAddressSDNode>(Callee.getNode());
+  const auto *CalleeF = Func ? dyn_cast<Function>(Func->getGlobal()) : nullptr;
+
   // If the type of the callsite does not match that of the function, convert
   // the callsite to an indirect call.
-  const bool ConvertToIndirectCall = shouldConvertToIndirectCall(CB, Func);
+  const bool ConvertToIndirectCall =
+      CalleeF && CB->getFunctionType() != CalleeF->getFunctionType();
 
   // Both indirect calls and libcalls have nullptr Func. In order to distinguish
   // between them we must rely on the call site value which is valid for
@@ -1694,6 +1705,17 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         NVPTXISD::CallPrototype, dl, MVT::Other,
         {StartChain, DAG.getTargetExternalSymbol(ProtoStr, MVT::i32)});
     CallPrereqs.push_back(PrototypeDeclare);
+  }
+
+  const bool IsUnknownIntrinsic =
+      CalleeF && CalleeF->isIntrinsic() &&
+      CalleeF->getIntrinsicID() == Intrinsic::not_intrinsic;
+  if (IsUnknownIntrinsic) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        "call to unknown intrinsic '" + CalleeF->getName() +
+            "' cannot be lowered by the NVPTX backend",
+        dl.getDebugLoc()));
   }
 
   const unsigned Proto = IsIndirectCall ? UniqueCallSite : 0;
@@ -3470,6 +3492,18 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerINT_TO_FP(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
+    // fptosi/fptoui to i1 truncate toward zero, so the only defined results
+    // are {0,-1} (signed) and {0,1} (unsigned); every other input results in
+    // poison. Thus we can simply lower to `x <= -1.0` or `x >= 1.0`.
+    if (Op.getValueType() == MVT::i1) {
+      SDLoc DL(Op);
+      SDValue X = Op.getOperand(0);
+      bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT;
+      return DAG.getSetCC(
+          DL, MVT::i1, X,
+          DAG.getConstantFP(IsSigned ? -1.0 : 1.0, DL, X.getValueType()),
+          IsSigned ? ISD::SETOLE : ISD::SETOGE);
+    }
     return LowerFP_TO_INT(Op, DAG);
   case ISD::FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
@@ -3486,6 +3520,7 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ROTR:
     return lowerROT(Op, DAG);
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -4699,39 +4734,6 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
-  case Intrinsic::nvvm_atomic_add_gen_f_cta:
-  case Intrinsic::nvvm_atomic_add_gen_f_sys:
-  case Intrinsic::nvvm_atomic_add_gen_i_cta:
-  case Intrinsic::nvvm_atomic_add_gen_i_sys:
-  case Intrinsic::nvvm_atomic_and_gen_i_cta:
-  case Intrinsic::nvvm_atomic_and_gen_i_sys:
-  case Intrinsic::nvvm_atomic_cas_gen_i_cta:
-  case Intrinsic::nvvm_atomic_cas_gen_i_sys:
-  case Intrinsic::nvvm_atomic_dec_gen_i_cta:
-  case Intrinsic::nvvm_atomic_dec_gen_i_sys:
-  case Intrinsic::nvvm_atomic_inc_gen_i_cta:
-  case Intrinsic::nvvm_atomic_inc_gen_i_sys:
-  case Intrinsic::nvvm_atomic_max_gen_i_cta:
-  case Intrinsic::nvvm_atomic_max_gen_i_sys:
-  case Intrinsic::nvvm_atomic_min_gen_i_cta:
-  case Intrinsic::nvvm_atomic_min_gen_i_sys:
-  case Intrinsic::nvvm_atomic_or_gen_i_cta:
-  case Intrinsic::nvvm_atomic_or_gen_i_sys:
-  case Intrinsic::nvvm_atomic_exch_gen_i_cta:
-  case Intrinsic::nvvm_atomic_exch_gen_i_sys:
-  case Intrinsic::nvvm_atomic_xor_gen_i_cta:
-  case Intrinsic::nvvm_atomic_xor_gen_i_sys: {
-    auto &DL = I.getDataLayout();
-    Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = getValueType(DL, I.getType());
-    Info.ptrVal = I.getArgOperand(0);
-    Info.offset = 0;
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
-    Info.align.reset();
-    Infos.push_back(Info);
-    return;
-  }
-
   case Intrinsic::nvvm_prefetch_tensormap: {
     auto &DL = I.getDataLayout();
     Info.opc = ISD::INTRINSIC_VOID;
@@ -5748,15 +5750,12 @@ PerformADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static SDValue
-PerformFADDCombineWithOperands(SDNode *N, SDValue N0, SDValue N1,
-                               TargetLowering::DAGCombinerInfo &DCI,
-                               CodeGenOptLevel OptLevel) {
+SDValue NVPTXTargetLowering::performFADDCombineWithOperands(
+    SDNode *N, SDValue N0, SDValue N1, TargetLowering::DAGCombinerInfo &DCI,
+    CodeGenOptLevel OptLevel) const {
   EVT VT = N0.getValueType();
   if (N0.getOpcode() == ISD::FMUL) {
-    const auto *TLI = static_cast<const NVPTXTargetLowering *>(
-        &DCI.DAG.getTargetLoweringInfo());
-    if (!(TLI->allowFMA(DCI.DAG.getMachineFunction(), OptLevel) ||
+    if (!(allowFMA(DCI.DAG.getMachineFunction(), OptLevel) ||
           (N->getFlags().hasAllowContract() &&
            N0->getFlags().hasAllowContract())))
       return SDValue();
@@ -6133,6 +6132,44 @@ static bool isNonCoalescableBuildVector(const SDValue &BV) {
   return std::abs(Idx0->getSExtValue() - Idx1->getSExtValue()) != 1;
 }
 
+/// Return true if FMUL v2f32 node \p N may be scalarized to fold each lane's
+/// product into a scalar FMA.
+bool NVPTXTargetLowering::mayFoldFMULIntoFMA(SDNode *N, MachineFunction &MF,
+                                             CodeGenOptLevel OptLevel) const {
+  if (N->getOpcode() != ISD::FMUL || N->getValueType(0) != MVT::v2f32)
+    return false;
+  const bool GlobalFMA = allowFMA(MF, OptLevel);
+  if (!N->getFlags().hasAllowContract() && !GlobalFMA)
+    return false;
+
+  const SDNode *FirstFAdd = nullptr;
+  unsigned NumScalarFAdd = 0;
+
+  // Both lanes must feed unique FADDs
+  for (SDNode *EE : N->users()) {
+    if (NumScalarFAdd == 2)
+      return false;
+
+    if (EE->getOpcode() != ISD::EXTRACT_VECTOR_ELT || !EE->hasOneUse() ||
+        !isa<ConstantSDNode>(EE->getOperand(1)))
+      return false;
+
+    const SDNode *const FAdd = *EE->users().begin();
+    if (FAdd->getOpcode() != ISD::FADD ||
+        (!GlobalFMA && !FAdd->getFlags().hasAllowContract()))
+      return false;
+
+    if (!FirstFAdd)
+      FirstFAdd = FAdd;
+    else if (FAdd == FirstFAdd)
+      return false;
+
+    NumScalarFAdd++;
+  }
+
+  return NumScalarFAdd == 2;
+}
+
 /// Scalarize a v2f32 arithmetic node (FADD, FMUL, FSUB, FMA) when at least
 /// one operand is a BUILD_VECTOR that repacks values from non-adjacent register
 /// pairs.  Without this combine the BUILD_VECTOR forces allocation of a
@@ -6156,15 +6193,18 @@ static bool isNonCoalescableBuildVector(const SDValue &BV) {
 ///   r0: f32 = fma a0, t1, c0
 ///   r1: f32 = fma a1, t2, c1
 ///   t4: v2f32 = BUILD_VECTOR r0, r1
-static SDValue PerformScalarizeV2F32Op(SDNode *N,
-                                       TargetLowering::DAGCombinerInfo &DCI) {
+///
+/// Also scalarizes an FMUL when all output lanes feed into scalar FADDs
+/// to enable scalar FMA combining.
+SDValue NVPTXTargetLowering::performScalarizeV2F32Op(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+    CodeGenOptLevel OptLevel) const {
   EVT VT = N->getValueType(0);
   if (VT != MVT::v2f32)
     return SDValue();
 
-  // Only scalarize when at least one operand is a BUILD_VECTOR whose elements
-  // are guaranteed to reside in different register pairs.
-  if (none_of(N->ops(), isNonCoalescableBuildVector))
+  if (none_of(N->ops(), isNonCoalescableBuildVector) &&
+      !mayFoldFMULIntoFMA(N, DCI.DAG.getMachineFunction(), OptLevel))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -6195,27 +6235,27 @@ static SDValue PerformScalarizeV2F32Op(SDNode *N,
   return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Res0, Res1);
 }
 
-/// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
-///
-static SDValue PerformFADDCombine(SDNode *N,
-                                  TargetLowering::DAGCombinerInfo &DCI,
-                                  CodeGenOptLevel OptLevel) {
+/// Target-specific dag combine xforms for ISD::FADD.
+SDValue
+NVPTXTargetLowering::performFADDCombine(SDNode *N,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        CodeGenOptLevel OptLevel) const {
+  if (SDValue Result = performScalarizeV2F32Op(N, DCI, OptLevel))
+    return Result;
+
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
-
-  if (SDValue Result = PerformScalarizeV2F32Op(N, DCI))
-    return Result;
 
   EVT VT = N0.getValueType();
   if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
     return SDValue();
 
   // First try with the default operand order.
-  if (SDValue Result = PerformFADDCombineWithOperands(N, N0, N1, DCI, OptLevel))
+  if (SDValue Result = performFADDCombineWithOperands(N, N0, N1, DCI, OptLevel))
     return Result;
 
   // If that didn't work, try again with the operands commuted.
-  return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
+  return performFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
 }
 
 /// Get 3-input version of a 2-input min/max opcode
@@ -6299,40 +6339,59 @@ static SDValue PerformREMCombine(SDNode *N,
   return SDValue();
 }
 
-// (sign_extend|zero_extend (mul|shl) x, y) -> (mul.wide x, y)
-static SDValue combineMulWide(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                              CodeGenOptLevel OptLevel) {
+// sext (mul.iN nsw x, y)     => mul.wide.sN x, y
+// zext (mul.iN nuw x, y)     => mul.wide.uN x, y
+// sext (shl.iN nsw x, const) => mul.wide.sN x, (1 << const)
+// zext (shl.iN nuw x, const) => mul.wide.uN x, (1 << const)
+static SDValue combineSZExtToMulWide(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     CodeGenOptLevel OptLevel) {
+  assert(N->getOpcode() == ISD::SIGN_EXTEND ||
+         N->getOpcode() == ISD::ZERO_EXTEND);
+
   if (OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
   SDValue Op = N->getOperand(0);
   if (!Op.hasOneUse())
     return SDValue();
+
   EVT ToVT = N->getValueType(0);
   EVT FromVT = Op.getValueType();
   if (!((ToVT == MVT::i32 && FromVT == MVT::i16) ||
         (ToVT == MVT::i64 && FromVT == MVT::i32)))
     return SDValue();
-  if (!(Op.getOpcode() == ISD::MUL ||
-        (Op.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Op.getOperand(1)))))
+
+  bool IsSigned = N->getOpcode() == ISD::SIGN_EXTEND;
+  if ((IsSigned && !Op->getFlags().hasNoSignedWrap()) ||
+      (!IsSigned && !Op->getFlags().hasNoUnsignedWrap()))
     return SDValue();
 
   SDLoc DL(N);
-  unsigned ExtOpcode = N->getOpcode();
-  unsigned Opcode = 0;
-  if (ExtOpcode == ISD::SIGN_EXTEND && Op->getFlags().hasNoSignedWrap())
-    Opcode = NVPTXISD::MUL_WIDE_SIGNED;
-  else if (ExtOpcode == ISD::ZERO_EXTEND && Op->getFlags().hasNoUnsignedWrap())
-    Opcode = NVPTXISD::MUL_WIDE_UNSIGNED;
-  else
-    return SDValue();
+  SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  if (Op.getOpcode() == ISD::SHL) {
+  unsigned MulWideOpcode =
+      IsSigned ? NVPTXISD::MUL_WIDE_SIGNED : NVPTXISD::MUL_WIDE_UNSIGNED;
+  if (Op.getOpcode() == ISD::MUL) {
+    return DCI.DAG.getNode(MulWideOpcode, DL, ToVT, LHS, RHS);
+  } else if (Op.getOpcode() == ISD::SHL && isa<ConstantSDNode>(RHS)) {
     const auto ShiftAmt = Op.getConstantOperandVal(1);
     const auto MulVal = APInt(FromVT.getSizeInBits(), 1) << ShiftAmt;
+
+    // Note that the sext (shl nsw ...) case doesn't work if 1 << const
+    // overflows to a negative value!  The only valid input values in this
+    // case are 0 and -1 (all other values yield poison because of the nsw),
+    // and mul.wide.sN would give us the wrong sign for -1.  We could use
+    // mul.wide.uN, but since this is a weird case anyway, we might as well not
+    // apply this transformation at all.
+    if (IsSigned && MulVal.isNegative())
+      return SDValue();
+
     RHS = DCI.DAG.getConstant(MulVal, DL, FromVT);
+    return DCI.DAG.getNode(MulWideOpcode, DL, ToVT, LHS, RHS);
   }
-  return DCI.DAG.getNode(Opcode, DL, ToVT, Op.getOperand(0), RHS);
+
+  return SDValue();
 }
 
 enum OperandSignedness {
@@ -6616,9 +6675,7 @@ static SDValue PerformSETCCCombine(SDNode *N,
 
 static SDValue PerformEXTRACTCombine(SDNode *N,
                                      TargetLowering::DAGCombinerInfo &DCI) {
-  SDValue Vector = N->getOperand(0);
-  if (Vector->getOpcode() == ISD::FREEZE)
-    Vector = Vector->getOperand(0);
+  SDValue Vector = peekThroughFreeze(N->getOperand(0));
   SDLoc DL(N);
   EVT VectorVT = Vector.getValueType();
   if (Vector->getOpcode() == ISD::LOAD && VectorVT.isSimple() &&
@@ -6672,13 +6729,12 @@ static SDValue PerformEXTRACTCombine(SDNode *N,
 /// Into:
 ///   (NVPTXISD::SRL_CLAMP x, shift_amt) or (NVPTXISD::SHL_CLAMP x, shift_amt)
 ///
-/// These patterns arise from C/C++ code like `shift >= 32 ? 0 : x >> shift`
-/// which guards against undefined behavior. PTX shr/shl instructions clamp
-/// shift amounts >= BitWidth to produce 0 for logical shifts, making the
-/// guard redundant.
+/// These patterns arise from code like `s >= 32 ? 0 : x >> s`. In LLVM,
+/// over-shifting a value results in poison, but PTX shr/shl instructions clamp
+/// the shift amount to BitWidth, making the guard redundant.
 ///
-/// Note: We only handle SRL and SHL, not SRA, because arithmetic right
-/// shifts could produce 0 or -1 when shift >= BitWidth.
+/// Note: We only handle SRL and SHL, not SRA, because arithmetic right shifts
+/// can produce 0 or -1 when shift >= BitWidth.
 /// Note: We don't handle uge or ule. These don't appear because of
 /// canonicalization.
 static SDValue PerformSELECTShiftCombine(SDNode *N,
@@ -6714,11 +6770,21 @@ static SDValue PerformSELECTShiftCombine(SDNode *N,
   if (!MatchedUGT && !MatchedULT)
     return SDValue();
 
+  // In LLVM IR, the shift amount and the value-to-be-shifted are the same
+  // type, whereas in PTX the shift amount is always i32.  Therefore when
+  // shifting types larger than i32, we can only do this transformation if we
+  // know that the upper bits of the shift amount are known zero.
+  SDValue ClampAmt = ShiftOp.getOperand(1);
+  unsigned ClampAmtBits = ClampAmt.getValueSizeInBits();
+  if (ShiftAmt.getValueSizeInBits() > ClampAmtBits &&
+      DCI.DAG.computeKnownBits(ShiftAmt).countMaxActiveBits() > ClampAmtBits)
+    return SDValue();
+
   // Return a clamp shift operation, which has the same semantics as PTX shift.
   unsigned ClampOpc = ShiftOp.getOpcode() == ISD::SRL ? NVPTXISD::SRL_CLAMP
                                                       : NVPTXISD::SHL_CLAMP;
   return DCI.DAG.getNode(ClampOpc, SDLoc(N), ShiftOp.getValueType(),
-                         ShiftOp.getOperand(0), ShiftOp.getOperand(1));
+                         ShiftOp.getOperand(0), ClampAmt);
 }
 
 static SDValue PerformVSELECTCombine(SDNode *N,
@@ -7049,17 +7115,17 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return combineADDRSPACECAST(N, DCI);
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
-    return combineMulWide(N, DCI, OptLevel);
+    return combineSZExtToMulWide(N, DCI, OptLevel);
   case ISD::BUILD_VECTOR:
     return PerformBUILD_VECTORCombine(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT:
     return PerformEXTRACTCombine(N, DCI);
   case ISD::FADD:
-    return PerformFADDCombine(N, DCI, OptLevel);
+    return performFADDCombine(N, DCI, OptLevel);
   case ISD::FMA:
   case ISD::FMUL:
   case ISD::FSUB:
-    return PerformScalarizeV2F32Op(N, DCI);
+    return performScalarizeV2F32Op(N, DCI, OptLevel);
   case ISD::FMAXNUM:
   case ISD::FMINNUM:
   case ISD::FMAXIMUM:
@@ -7419,21 +7485,53 @@ NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
-  if (AI->isFloatingPointOperation()) {
-    if (AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
-      if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
-          STI.getPTXVersion() >= 63)
-        return AtomicExpansionKind::None;
-      if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
-          STI.getPTXVersion() >= 78)
-        return AtomicExpansionKind::None;
-      if (Ty->isFloatTy())
-        return AtomicExpansionKind::None;
-      if (Ty->isDoubleTy() && STI.hasAtomAddF64())
+  // Try to lower LLVM atomicrmw fadd to PTX atomic.add.  This is complicated
+  // by the weird FTZ behavior PTX atom.add has:
+  //   - atom.add.f32 on global memory flushes denormals
+  //   - atom.add.f32 on shared memory does not flush denormals
+  //   - atom.add.f16 and atomic.add.bf16 never flush denormals
+  //
+  // We lower to atom.add only if the function's FTZ behavior matches that of
+  // atom.add; otherwise, we lower to a CAS loop. But we always allow
+  // atomic.add.bf16; even though it never flushes denormals, we never flush
+  // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
+  if (AI->isFloatingPointOperation() &&
+      AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+    const bool FTZ =
+        AI->getFunction()->getDenormalMode(APFloat::IEEEsingle()).Output ==
+        DenormalMode::PreserveSign;
+
+    // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
+    if (Ty->isFloatTy()) {
+      bool UseNative = AllowFTZAtomics;
+      switch (AI->getPointerAddressSpace()) {
+      case llvm::ADDRESS_SPACE_GLOBAL:
+        UseNative |= FTZ;
+        break;
+      case llvm::ADDRESS_SPACE_SHARED:
+      case llvm::ADDRESS_SPACE_SHARED_CLUSTER:
+        UseNative |= !FTZ;
+        break;
+      }
+      if (UseNative)
         return AtomicExpansionKind::None;
     }
-    return AtomicExpansionKind::CmpXChg;
+
+    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
+        STI.getSmVersion() >= 70 && STI.getPTXVersion() >= 63)
+      return AtomicExpansionKind::None;
+
+    if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
+        STI.getPTXVersion() >= 78)
+      return AtomicExpansionKind::None;
+
+    if (Ty->isDoubleTy() && STI.hasAtomAddF64())
+      return AtomicExpansionKind::None;
   }
+
+  // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
+  if (AI->isFloatingPointOperation())
+    return AtomicExpansionKind::CmpXChg;
 
   assert(Ty->isIntegerTy() && "Ty should be integer at this point");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();

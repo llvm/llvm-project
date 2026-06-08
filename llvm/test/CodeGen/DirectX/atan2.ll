@@ -8,8 +8,8 @@ entry:
 ; CHECK: [[DIV:%.+]] = fdiv float %y, %x
 ; EXPCHECK: [[ATAN:%.+]] = call float @llvm.atan.f32(float [[DIV]])
 ; DOPCHECK: [[ATAN:%.+]] = call float @dx.op.unary.f32(i32 17, float [[DIV]])
-; CHECK-DAG: [[ADD_PI:%.+]] = fadd float [[ATAN]], 0x400921FB60000000
-; CHECK-DAG: [[SUB_PI:%.+]] = fsub float [[ATAN]], 0x400921FB60000000
+; CHECK-DAG: [[ADD_PI:%.+]] = fadd float [[ATAN]], f0x40490FDB
+; CHECK-DAG: [[SUB_PI:%.+]] = fsub float [[ATAN]], f0x40490FDB
 ; CHECK-DAG: [[X_LT_0:%.+]] = fcmp olt float %x, 0.000000e+00
 ; CHECK-DAG: [[X_EQ_0:%.+]] = fcmp oeq float %x, 0.000000e+00 
 ; CHECK-DAG: [[Y_GE_0:%.+]] = fcmp oge float %y, 0.000000e+00 
@@ -19,9 +19,9 @@ entry:
 ; CHECK: [[XLT0_AND_YLT0:%.+]] = and i1 [[X_LT_0]], [[Y_LT_0]]
 ; CHECK: [[SELECT_SUB_PI:%.+]] = select i1 [[XLT0_AND_YLT0]], float [[SUB_PI]], float [[SELECT_ADD_PI]]
 ; CHECK: [[XEQ0_AND_YLT0:%.+]] = and i1 [[X_EQ_0]], [[Y_LT_0]]
-; CHECK: [[SELECT_NEGHPI:%.+]] = select i1 [[XEQ0_AND_YLT0]], float 0xBFF921FB60000000, float [[SELECT_SUB_PI]]
+; CHECK: [[SELECT_NEGHPI:%.+]] = select i1 [[XEQ0_AND_YLT0]], float f0xBFC90FDB, float [[SELECT_SUB_PI]]
 ; CHECK: [[XEQ0_AND_YGE0:%.+]] = and i1 [[X_EQ_0]], [[Y_GE_0]]
-; CHECK: [[SELECT_HPI:%.+]] = select i1 [[XEQ0_AND_YGE0]], float 0x3FF921FB60000000, float [[SELECT_NEGHPI]]
+; CHECK: [[SELECT_HPI:%.+]] = select i1 [[XEQ0_AND_YGE0]], float f0x3FC90FDB, float [[SELECT_NEGHPI]]
 ; CHECK: ret float [[SELECT_HPI]]
   %elt.atan2 = call float @llvm.atan2.f32(float %y, float %x)
   ret float %elt.atan2
@@ -32,20 +32,20 @@ entry:
 ; CHECK: [[DIV:%.+]] = fdiv half %y, %x
 ; EXPCHECK: [[ATAN:%.+]] = call half @llvm.atan.f16(half [[DIV]])
 ; DOPCHECK: [[ATAN:%.+]] = call half @dx.op.unary.f16(i32 17, half [[DIV]])
-; CHECK-DAG: [[ADD_PI:%.+]] = fadd half [[ATAN]], 0xH4248
-; CHECK-DAG: [[SUB_PI:%.+]] = fsub half [[ATAN]], 0xH4248
-; CHECK-DAG: [[X_LT_0:%.+]] = fcmp olt half %x, 0xH0000
-; CHECK-DAG: [[X_EQ_0:%.+]] = fcmp oeq half %x, 0xH0000 
-; CHECK-DAG: [[Y_GE_0:%.+]] = fcmp oge half %y, 0xH0000 
-; CHECK-DAG: [[Y_LT_0:%.+]] = fcmp olt half %y, 0xH0000
+; CHECK-DAG: [[ADD_PI:%.+]] = fadd half [[ATAN]], 3.140630e+00
+; CHECK-DAG: [[SUB_PI:%.+]] = fsub half [[ATAN]], 3.140630e+00
+; CHECK-DAG: [[X_LT_0:%.+]] = fcmp olt half %x, 0.000000e+00
+; CHECK-DAG: [[X_EQ_0:%.+]] = fcmp oeq half %x, 0.000000e+00 
+; CHECK-DAG: [[Y_GE_0:%.+]] = fcmp oge half %y, 0.000000e+00 
+; CHECK-DAG: [[Y_LT_0:%.+]] = fcmp olt half %y, 0.000000e+00
 ; CHECK: [[XLT0_AND_YGE0:%.+]] = and i1 [[X_LT_0]], [[Y_GE_0]]
 ; CHECK: [[SELECT_ADD_PI:%.+]] = select i1 [[XLT0_AND_YGE0]], half [[ADD_PI]], half [[ATAN]]
 ; CHECK: [[XLT0_AND_YLT0:%.+]] = and i1 [[X_LT_0]], [[Y_LT_0]]
 ; CHECK: [[SELECT_SUB_PI:%.+]] = select i1 [[XLT0_AND_YLT0]], half [[SUB_PI]], half [[SELECT_ADD_PI]]
 ; CHECK: [[XEQ0_AND_YLT0:%.+]] = and i1 [[X_EQ_0]], [[Y_LT_0]]
-; CHECK: [[SELECT_NEGHPI:%.+]] = select i1 [[XEQ0_AND_YLT0]], half 0xHBE48, half [[SELECT_SUB_PI]]
+; CHECK: [[SELECT_NEGHPI:%.+]] = select i1 [[XEQ0_AND_YLT0]], half -1.570310e+00, half [[SELECT_SUB_PI]]
 ; CHECK: [[XEQ0_AND_YGE0:%.+]] = and i1 [[X_EQ_0]], [[Y_GE_0]]
-; CHECK: [[SELECT_HPI:%.+]] = select i1 [[XEQ0_AND_YGE0]], half 0xH3E48, half [[SELECT_NEGHPI]]
+; CHECK: [[SELECT_HPI:%.+]] = select i1 [[XEQ0_AND_YGE0]], half 1.570310e+00, half [[SELECT_NEGHPI]]
 ; CHECK: ret half [[SELECT_HPI]]
   %elt.atan2 = call half @llvm.atan2.f16(half %y, half %x)
   ret half %elt.atan2
@@ -56,8 +56,8 @@ entry:
 ; Just Expansion, no scalarization or lowering:
 ; EXPCHECK: [[DIV:%.+]] = fdiv <4 x float> %y, %x
 ; EXPCHECK: [[ATAN:%.+]] = call <4 x float> @llvm.atan.v4f32(<4 x float> [[DIV]])
-; EXPCHECK-DAG: [[ADD_PI:%.+]] = fadd <4 x float> [[ATAN]], splat (float 0x400921FB60000000)
-; EXPCHECK-DAG: [[SUB_PI:%.+]] = fsub <4 x float> [[ATAN]], splat (float 0x400921FB60000000)
+; EXPCHECK-DAG: [[ADD_PI:%.+]] = fadd <4 x float> [[ATAN]], splat (float f0x40490FDB)
+; EXPCHECK-DAG: [[SUB_PI:%.+]] = fsub <4 x float> [[ATAN]], splat (float f0x40490FDB)
 ; EXPCHECK-DAG: [[X_LT_0:%.+]] = fcmp olt <4 x float> %x, zeroinitializer
 ; EXPCHECK-DAG: [[X_EQ_0:%.+]] = fcmp oeq <4 x float> %x, zeroinitializer
 ; EXPCHECK-DAG: [[Y_GE_0:%.+]] = fcmp oge <4 x float> %y, zeroinitializer
@@ -67,9 +67,9 @@ entry:
 ; EXPCHECK: [[XLT0_AND_YLT0:%.+]] = and <4 x i1> [[X_LT_0]], [[Y_LT_0]]
 ; EXPCHECK: [[SELECT_SUB_PI:%.+]] = select <4 x i1> [[XLT0_AND_YLT0]], <4 x float> [[SUB_PI]], <4 x float> [[SELECT_ADD_PI]]
 ; EXPCHECK: [[XEQ0_AND_YLT0:%.+]] = and <4 x i1> [[X_EQ_0]], [[Y_LT_0]]
-; EXPCHECK: [[SELECT_NEGHPI:%.+]] = select <4 x i1> [[XEQ0_AND_YLT0]], <4 x float> splat (float 0xBFF921FB60000000), <4 x float> [[SELECT_SUB_PI]]
+; EXPCHECK: [[SELECT_NEGHPI:%.+]] = select <4 x i1> [[XEQ0_AND_YLT0]], <4 x float> splat (float f0xBFC90FDB), <4 x float> [[SELECT_SUB_PI]]
 ; EXPCHECK: [[XEQ0_AND_YGE0:%.+]] = and <4 x i1> [[X_EQ_0]], [[Y_GE_0]]
-; EXPCHECK: [[SELECT_HPI:%.+]] = select <4 x i1> [[XEQ0_AND_YGE0]], <4 x float> splat (float 0x3FF921FB60000000), <4 x float> [[SELECT_NEGHPI]]
+; EXPCHECK: [[SELECT_HPI:%.+]] = select <4 x i1> [[XEQ0_AND_YGE0]], <4 x float> splat (float f0x3FC90FDB), <4 x float> [[SELECT_NEGHPI]]
 ; EXPCHECK: ret <4 x float> [[SELECT_HPI]]
 
 ; Scalarization occurs after expansion, so atan scalarization is tested separately.

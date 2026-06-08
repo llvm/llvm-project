@@ -1,0 +1,14 @@
+{
+  "configuration": {
+    "runtime_prefix": "__custom_",
+    "runtime_prefix.description": "The runtime API prefix."
+  },
+  "instruction_post": {
+    "load": {
+      "enabled": true
+    },
+    "store": {
+      "enabled": true
+    }
+  }
+}

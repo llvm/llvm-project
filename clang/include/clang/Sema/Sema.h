@@ -3599,7 +3599,8 @@ public:
   /// \#pragma redefine_extname before declared.  Used in Solaris system headers
   /// to define functions that occur in multiple standards to call the version
   /// in the currently selected standard.
-  llvm::DenseMap<IdentifierInfo *, AsmLabelAttr *> ExtnameUndeclaredIdentifiers;
+  llvm::MapVector<IdentifierInfo *, AsmLabelAttr *>
+      ExtnameUndeclaredIdentifiers;
 
   /// Set containing all typedefs that are likely unused.
   llvm::SmallSetVector<const TypedefNameDecl *, 4>
@@ -5099,11 +5100,13 @@ public:
   /// otherwise setting numParams to the appropriate value.
   bool CheckRegparmAttr(const ParsedAttr &attr, unsigned &value);
 
-  /// Create an CUDALaunchBoundsAttr attribute.
+  /// Create a CUDALaunchBoundsAttr attribute. By default, the function only
+  /// supports nvptx target architectures and skips MaxBlocks if it is previous
+  /// to sm_90. Use \p IgnoreArch to skip the architecture check.
   CUDALaunchBoundsAttr *CreateLaunchBoundsAttr(const AttributeCommonInfo &CI,
                                                Expr *MaxThreads,
-                                               Expr *MinBlocks,
-                                               Expr *MaxBlocks);
+                                               Expr *MinBlocks, Expr *MaxBlocks,
+                                               bool IgnoreArch = false);
 
   /// AddLaunchBoundsAttr - Adds a launch_bounds attribute to a particular
   /// declaration.
@@ -7260,8 +7263,7 @@ public:
                                SourceLocation TemplateKWLoc, UnqualifiedId &Id,
                                bool HasTrailingLParen, bool IsAddressOfOperand,
                                CorrectionCandidateCallback *CCC = nullptr,
-                               bool IsInlineAsmIdentifier = false,
-                               Token *KeywordReplacement = nullptr);
+                               bool IsInlineAsmIdentifier = false);
 
   /// Decomposes the given name into a DeclarationNameInfo, its location, and
   /// possibly a list of template arguments.
@@ -7595,7 +7597,7 @@ public:
                            SourceLocation RBraceLoc);
 
   ExprResult BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
-                           SourceLocation RBraceLoc);
+                           SourceLocation RBraceLoc, bool IsExplicit);
 
   /// Binary Operators.  'Tok' is the token for the operator.
   ExprResult ActOnBinOp(Scope *S, SourceLocation TokLoc, tok::TokenKind Kind,
@@ -8574,6 +8576,9 @@ public:
 
   /// ActOnCXXBoolLiteral - Parse {true,false} literals.
   ExprResult ActOnCXXBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind);
+
+  /// Build a boolean-typed literal expression.
+  ExprResult BuildBoolLiteral(SourceLocation Loc, bool Value);
 
   /// ActOnCXXNullPtrLiteral - Parse 'nullptr'.
   ExprResult ActOnCXXNullPtrLiteral(SourceLocation Loc);
@@ -11336,10 +11341,6 @@ private:
   /// issuing a diagnostic and returning false if not.
   bool checkMustTailAttr(const Stmt *St, const Attr &MTA);
 
-  /// Check if the given expression contains 'break' or 'continue'
-  /// statement that produces control flow different from GCC.
-  void CheckBreakContinueBinding(Expr *E);
-
   ///@}
 
   //
@@ -11752,7 +11753,7 @@ public:
   TemplateParameterList *MatchTemplateParametersToScopeSpecifier(
       SourceLocation DeclStartLoc, SourceLocation DeclLoc,
       const CXXScopeSpec &SS, TemplateIdAnnotation *TemplateId,
-      ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
+      ArrayRef<TemplateParameterList *> &ParamLists, bool IsFriend,
       bool &IsMemberSpecialization, bool &Invalid,
       bool SuppressDiagnostic = false);
 
@@ -11767,7 +11768,7 @@ public:
       AccessSpecifier AS, SourceLocation ModulePrivateLoc,
       SourceLocation FriendLoc, unsigned NumOuterTemplateParamLists,
       TemplateParameterList **OuterTemplateParamLists,
-      SkipBodyInfo *SkipBody = nullptr);
+      bool IsMemberSpecialization, SkipBodyInfo *SkipBody = nullptr);
 
   /// Translates template arguments as provided by the parser
   /// into template arguments used by semantic analysis.
@@ -11818,8 +11819,7 @@ public:
   DeclResult CheckVarTemplateId(VarTemplateDecl *Template,
                                 SourceLocation TemplateLoc,
                                 SourceLocation TemplateNameLoc,
-                                const TemplateArgumentListInfo &TemplateArgs,
-                                bool SetWrittenArgs);
+                                const TemplateArgumentListInfo &TemplateArgs);
 
   /// Form a reference to the specialization of the given variable template
   /// corresponding to the specified argument list, or a null-but-valid result
@@ -11871,10 +11871,11 @@ public:
     return Arg;
   }
 
-  ExprResult BuildSubstNonTypeTemplateParmExpr(
-      Decl *AssociatedDecl, const NonTypeTemplateParmDecl *NTTP,
-      SourceLocation loc, TemplateArgument Replacement,
-      UnsignedOrNone PackIndex, bool Final);
+  ExprResult
+  BuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl, unsigned Index,
+                                    QualType ParamType, SourceLocation loc,
+                                    TemplateArgument Replacement,
+                                    UnsignedOrNone PackIndex, bool Final);
 
   /// Form a template name from a name that is syntactically required to name a
   /// template, either due to use of the 'template' keyword or because a name in
@@ -11902,7 +11903,7 @@ public:
       Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       SourceLocation ModulePrivateLoc, CXXScopeSpec &SS,
       TemplateIdAnnotation &TemplateId, const ParsedAttributesView &Attr,
-      MultiTemplateParamsArg TemplateParameterLists,
+      MultiTemplateParamsArg &TemplateParameterLists,
       SkipBodyInfo *SkipBody = nullptr);
 
   /// Check the non-type template arguments of a class template
@@ -11975,7 +11976,8 @@ public:
   /// There really isn't any useful analysis we can do here, so we
   /// just store the information.
   bool CheckDependentFunctionTemplateSpecialization(
-      FunctionDecl *FD, const TemplateArgumentListInfo *ExplicitTemplateArgs,
+      FunctionDecl *FD, const TemplateParameterList *TemplateParams,
+      const TemplateArgumentListInfo *ExplicitTemplateArgs,
       LookupResult &Previous);
 
   /// Perform semantic analysis for the given function template
@@ -12001,8 +12003,9 @@ public:
   /// declaration with no explicit template argument list that might be
   /// befriending a function template specialization.
   bool CheckFunctionTemplateSpecialization(
-      FunctionDecl *FD, TemplateArgumentListInfo *ExplicitTemplateArgs,
-      LookupResult &Previous, bool QualifiedFriend = false);
+      FunctionDecl *FD, const TemplateParameterList *TemplateParams,
+      TemplateArgumentListInfo *ExplicitTemplateArgs, LookupResult &Previous,
+      bool QualifiedFriend = false);
 
   /// Perform semantic analysis for the given non-template member
   /// specialization.
@@ -12230,8 +12233,7 @@ public:
   /// doesn't need to live too long. It would be useful if this function
   /// could return a temporary expression.
   ExprResult BuildExpressionFromDeclTemplateArgument(
-      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
-      NamedDecl *TemplateParam = nullptr);
+      const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc);
   ExprResult
   BuildExpressionFromNonTypeTemplateArgument(const TemplateArgument &Arg,
                                              SourceLocation Loc);
@@ -12269,46 +12271,6 @@ public:
     TPL_TemplateParamsEquivalent,
   };
 
-  // A struct to represent the 'new' declaration, which is either itself just
-  // the named decl, or the important information we need about it in order to
-  // do constraint comparisons.
-  class TemplateCompareNewDeclInfo {
-    const NamedDecl *ND = nullptr;
-    const DeclContext *DC = nullptr;
-    const DeclContext *LexicalDC = nullptr;
-    SourceLocation Loc;
-
-  public:
-    TemplateCompareNewDeclInfo(const NamedDecl *ND) : ND(ND) {}
-    TemplateCompareNewDeclInfo(const DeclContext *DeclCtx,
-                               const DeclContext *LexicalDeclCtx,
-                               SourceLocation Loc)
-
-        : DC(DeclCtx), LexicalDC(LexicalDeclCtx), Loc(Loc) {
-      assert(DC && LexicalDC &&
-             "Constructor only for cases where we have the information to put "
-             "in here");
-    }
-
-    // If this was constructed with no information, we cannot do substitution
-    // for constraint comparison, so make sure we can check that.
-    bool isInvalid() const { return !ND && !DC; }
-
-    const NamedDecl *getDecl() const { return ND; }
-
-    bool ContainsDecl(const NamedDecl *ND) const { return this->ND == ND; }
-
-    const DeclContext *getLexicalDeclContext() const {
-      return ND ? ND->getLexicalDeclContext() : LexicalDC;
-    }
-
-    const DeclContext *getDeclContext() const {
-      return ND ? ND->getDeclContext() : DC;
-    }
-
-    SourceLocation getLocation() const { return ND ? ND->getLocation() : Loc; }
-  };
-
   /// Determine whether the given template parameter lists are
   /// equivalent.
   ///
@@ -12333,18 +12295,10 @@ public:
   /// \returns True if the template parameter lists are equal, false
   /// otherwise.
   bool TemplateParameterListsAreEqual(
-      const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
-      const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
+      const Decl *NewInstFrom, TemplateParameterList *New,
+      const Decl *OldInstFrom, TemplateParameterList *Old, bool Complain,
       TemplateParameterListEqualKind Kind,
       SourceLocation TemplateArgLoc = SourceLocation());
-
-  bool TemplateParameterListsAreEqual(
-      TemplateParameterList *New, TemplateParameterList *Old, bool Complain,
-      TemplateParameterListEqualKind Kind,
-      SourceLocation TemplateArgLoc = SourceLocation()) {
-    return TemplateParameterListsAreEqual(nullptr, New, nullptr, Old, Complain,
-                                          Kind, TemplateArgLoc);
-  }
 
   /// Check whether a template can be declared within this scope.
   ///
@@ -12643,10 +12597,9 @@ public:
   ///
   /// \param Loc The source location to use for the resulting template
   /// argument.
-  TemplateArgumentLoc
-  getTrivialTemplateArgumentLoc(const TemplateArgument &Arg, QualType NTTPType,
-                                SourceLocation Loc,
-                                NamedDecl *TemplateParam = nullptr);
+  TemplateArgumentLoc getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
+                                                    QualType NTTPType,
+                                                    SourceLocation Loc);
 
   /// Get a template argument mapping the given template parameter to itself,
   /// e.g. for X in \c template<int X>, this would return an expression template
@@ -13098,7 +13051,7 @@ public:
   void DeclareImplicitDeductionGuides(TemplateDecl *Template,
                                       SourceLocation Loc);
 
-  FunctionTemplateDecl *DeclareAggregateDeductionGuideFromInitList(
+  CXXDeductionGuideDecl *DeclareAggregateDeductionGuideFromInitList(
       TemplateDecl *Template, MutableArrayRef<QualType> ParamTypes,
       SourceLocation Loc);
 
@@ -13272,9 +13225,6 @@ public:
 
       // We are substituting template arguments into a constraint expression.
       ConstraintSubstitution,
-
-      // We are normalizing a constraint expression.
-      ConstraintNormalization,
 
       // Instantiating a Requires Expression parameter clause.
       RequirementParameterInstantiation,
@@ -13494,12 +13444,6 @@ public:
                           ConstraintSubstitution, NamedDecl *Template,
                           SourceRange InstantiationRange);
 
-    struct ConstraintNormalization {};
-    /// \brief Note that we are normalizing a constraint expression.
-    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
-                          ConstraintNormalization, NamedDecl *Template,
-                          SourceRange InstantiationRange);
-
     struct ParameterMappingSubstitution {};
     /// \brief Note that we are subtituting into the parameter mapping of an
     /// atomic constraint during constraint normalization.
@@ -13586,44 +13530,27 @@ public:
   /// Retrieve the template argument list(s) that should be used to
   /// instantiate the definition of the given declaration.
   ///
-  /// \param ND the declaration for which we are computing template
+  /// \param D the declaration for which we are computing template
   /// instantiation arguments.
   ///
-  /// \param DC In the event we don't HAVE a declaration yet, we instead provide
-  ///  the decl context where it will be created.  In this case, the `Innermost`
-  ///  should likely be provided.  If ND is non-null, this is ignored.
+  /// \param Innermost if present, specifies a template argument list for the
+  /// template-like (TemplateDecl or PartialSpec) declaration passed as D.
   ///
-  /// \param Innermost if non-NULL, specifies a template argument list for the
-  /// template declaration passed as ND.
+  /// \param NumLevels if present, specifies the maximum number of template
+  /// levels of the result. This is useful for instantiating a pattern that has
+  /// already had some levels instantiated. In that case, the Template Depth of
+  /// the pattern can be passed here.
   ///
-  /// \param RelativeToPrimary true if we should get the template
-  /// arguments relative to the primary template, even when we're
-  /// dealing with a specialization. This is only relevant for function
-  /// template specializations.
+  /// \param SkipInnerNonInstantiated Skips adding template-like levels to the
+  /// result until hitting the first non-template-like level. This is a
+  /// workaround for dealing with the instantiation of the definition of generic
+  /// lambdas, which currently are eagerly substituted.
   ///
-  /// \param Pattern If non-NULL, indicates the pattern from which we will be
-  /// instantiating the definition of the given declaration, \p ND. This is
-  /// used to determine the proper set of template instantiation arguments for
-  /// friend function template specializations.
-  ///
-  /// \param ForConstraintInstantiation when collecting arguments,
-  /// ForConstraintInstantiation indicates we should continue looking when
-  /// encountering a lambda generic call operator, and continue looking for
-  /// arguments on an enclosing class template.
-  ///
-  /// \param SkipForSpecialization when specified, any template specializations
-  /// in a traversal would be ignored.
-  ///
-  /// \param ForDefaultArgumentSubstitution indicates we should continue looking
-  /// when encountering a specialized member function template, rather than
-  /// returning immediately.
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
-      const NamedDecl *D, const DeclContext *DC = nullptr, bool Final = false,
+      const Decl *D,
       std::optional<ArrayRef<TemplateArgument>> Innermost = std::nullopt,
-      bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
-      bool ForConstraintInstantiation = false,
-      bool SkipForSpecialization = false,
-      bool ForDefaultArgumentSubstitution = false);
+      UnsignedOrNone NumLevels = std::nullopt,
+      bool SkipInnerNonInstantiated = false);
 
   /// RAII object to handle the state changes required to synthesize
   /// a function body.
@@ -13685,6 +13612,9 @@ public:
     }
 
     ~ScopedCodeSynthesisContext() { S.popCodeSynthesisContext(); }
+    ScopedCodeSynthesisContext(const ScopedCodeSynthesisContext &) = delete;
+    ScopedCodeSynthesisContext &
+    operator=(const ScopedCodeSynthesisContext &) = delete;
   };
 
   /// List of active code synthesis contexts.
@@ -14161,6 +14091,8 @@ public:
   public:
     FPFeaturesStateRAII(Sema &S);
     ~FPFeaturesStateRAII();
+    FPFeaturesStateRAII(const FPFeaturesStateRAII &) = delete;
+    FPFeaturesStateRAII &operator=(const FPFeaturesStateRAII &) = delete;
     FPOptionsOverride getOverrides() { return OldOverrides; }
 
   private:
@@ -14245,6 +14177,10 @@ public:
         : TmplAttr(A), Scope(S), NewDecl(D) {}
   };
   typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
+
+  /// Recheck instantiated thread-safety attributes that could not be validated
+  /// on the dependent pattern declaration.
+  bool checkInstantiatedThreadSafetyAttrs(const Decl *D, const Attr *A);
 
   void InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
                         const Decl *Pattern, Decl *Inst,
@@ -15034,14 +14970,13 @@ public:
   // for figuring out the relative 'depth' of the constraint. The depth of the
   // 'primary template' and the 'instantiated from' templates aren't necessarily
   // the same, such as a case when one is a 'friend' defined in a class.
-  bool AreConstraintExpressionsEqual(const NamedDecl *Old,
-                                     const Expr *OldConstr,
-                                     const TemplateCompareNewDeclInfo &New,
-                                     const Expr *NewConstr);
+  bool AreConstraintExpressionsEqual(const Decl *Old, const Expr *OldConstr,
+                                     const Decl *New, const Expr *NewConstr);
 
   // Calculates whether the friend function depends on an enclosing template for
   // the purposes of [temp.friend] p9.
-  bool FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD);
+  bool
+  FriendConstraintsDependOnEnclosingTemplate(const FunctionTemplateDecl *FTD);
 
   /// \brief Ensure that the given template arguments satisfy the constraints
   /// associated with the given template, emitting a diagnostic if they do not.
@@ -15062,9 +14997,18 @@ public:
       SourceRange TemplateIDRange);
 
   bool CheckFunctionTemplateConstraints(SourceLocation PointOfInstantiation,
-                                        FunctionDecl *Decl,
+                                        FunctionTemplateDecl *Template,
                                         ArrayRef<TemplateArgument> TemplateArgs,
                                         ConstraintSatisfaction &Satisfaction);
+
+  // FIXME: Constraints should be always checked before the declaration is
+  // specialized. This function exists to support a workaround for templated
+  // lambdas, where handling the instantiation scope for the captures is not
+  // implemented yet.
+  bool
+  CheckFunctionSpecializationConstraints(SourceLocation PointOfInstantiation,
+                                         FunctionDecl *Decl,
+                                         ConstraintSatisfaction &Satisfaction);
 
   /// \brief Emit diagnostics explaining why a constraint expression was deemed
   /// unsatisfied.
@@ -15146,19 +15090,16 @@ private:
   /// Used by SetupConstraintCheckingTemplateArgumentsAndScope to set up the
   /// LocalInstantiationScope of the current non-lambda function. For lambdas,
   /// use LambdaScopeForCallOperatorInstantiationRAII.
-  bool
-  SetupConstraintScope(FunctionDecl *FD,
-                       std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-                       const MultiLevelTemplateArgumentList &MLTAL,
-                       LocalInstantiationScope &Scope);
+  bool SetupConstraintScope(FunctionDecl *FD,
+                            const MultiLevelTemplateArgumentList &MLTAL,
+                            LocalInstantiationScope &Scope);
 
   /// Used during constraint checking, sets up the constraint template argument
   /// lists, and calls SetupConstraintScope to set up the
   /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
   std::optional<MultiLevelTemplateArgumentList>
   SetupConstraintCheckingTemplateArgumentsAndScope(
-      FunctionDecl *FD, std::optional<ArrayRef<TemplateArgument>> TemplateArgs,
-      LocalInstantiationScope &Scope);
+      FunctionDecl *FD, LocalInstantiationScope &Scope);
 
   ///@}
 

@@ -176,9 +176,9 @@ public:
                                                const MCSubtargetInfo &STI,
                                                const MCRegisterInfo &MRI,
                                                const MCTargetOptions &Options);
-  using MCAsmParserCtorTy = MCTargetAsmParser *(*)(
-      const MCSubtargetInfo &STI, MCAsmParser &P, const MCInstrInfo &MII,
-      const MCTargetOptions &Options);
+  using MCAsmParserCtorTy = MCTargetAsmParser *(*)(const MCSubtargetInfo &STI,
+                                                   MCAsmParser &P,
+                                                   const MCInstrInfo &MII);
   using MCDisassemblerCtorTy = MCDisassembler *(*)(const Target &T,
                                                    const MCSubtargetInfo &STI,
                                                    MCContext &Ctx);
@@ -411,10 +411,7 @@ public:
                              const MCTargetOptions &Options) const {
     if (!MCAsmInfoCtorFn)
       return nullptr;
-    auto *MAI = MCAsmInfoCtorFn(MRI, TheTriple, Options);
-    if (MAI)
-      MAI->setTargetOptions(Options);
-    return MAI;
+    return MCAsmInfoCtorFn(MRI, TheTriple, Options);
   }
 
   /// Create a MCObjectFileInfo implementation for the specified target
@@ -504,11 +501,10 @@ public:
   /// parsing and lexing.
   MCTargetAsmParser *createMCAsmParser(const MCSubtargetInfo &STI,
                                        MCAsmParser &Parser,
-                                       const MCInstrInfo &MII,
-                                       const MCTargetOptions &Options) const {
+                                       const MCInstrInfo &MII) const {
     if (!MCAsmParserCtorFn)
       return nullptr;
-    return MCAsmParserCtorFn(STI, Parser, MII, Options);
+    return MCAsmParserCtorFn(STI, Parser, MII);
   }
 
   /// createAsmPrinter - Create a target specific assembly printer pass.  This
@@ -726,17 +722,6 @@ struct TargetRegistry {
   /// @{
 
   LLVM_ABI static iterator_range<iterator> targets();
-
-  /// lookupTarget - Lookup a target based on a target triple.
-  ///
-  /// \param TripleStr - The triple to use for finding a target.
-  /// \param Error - On failure, an error string describing why no target was
-  /// found.
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  static const Target *lookupTarget(StringRef TripleStr, std::string &Error) {
-    return lookupTarget(Triple(TripleStr), Error);
-  }
 
   /// lookupTarget - Lookup a target based on a target triple.
   ///
@@ -1349,9 +1334,8 @@ template <class MCAsmParserImpl> struct RegisterMCAsmParser {
 
 private:
   static MCTargetAsmParser *Allocator(const MCSubtargetInfo &STI,
-                                      MCAsmParser &P, const MCInstrInfo &MII,
-                                      const MCTargetOptions &Options) {
-    return new MCAsmParserImpl(STI, P, MII, Options);
+                                      MCAsmParser &P, const MCInstrInfo &MII) {
+    return new MCAsmParserImpl(STI, P, MII);
   }
 };
 

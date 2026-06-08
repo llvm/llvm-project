@@ -20,9 +20,10 @@ define i32 @unsigned_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi (add) vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%x.ptr> = getelementptr inbounds nuw ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw ir<%x.ptr>
@@ -93,9 +94,10 @@ define i32 @signed_absolute_difference(ptr noalias %x, ptr noalias %y) {
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.0> = phi (add) vp<[[VP3]]>, vp<[[VP13:%[0-9]+]]> (VF scaled by 1/4)
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%x.ptr> = getelementptr inbounds nuw ir<%x>, vp<[[VP5]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds nuw ir<%x.ptr>

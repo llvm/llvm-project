@@ -4364,7 +4364,7 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // anyone.
   else if (X86::VK16RegClass.contains(DestReg, SrcReg))
     Opc = Subtarget.hasBWI() ? (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVQkk)
-                             : (HasEGPR ? X86::KMOVQkk_EVEX : X86::KMOVWkk);
+                             : (HasEGPR ? X86::KMOVWkk_EVEX : X86::KMOVWkk);
 
   if (!Opc)
     Opc = CopyToFromAsymmetricReg(DestReg, SrcReg, Subtarget);
@@ -6028,7 +6028,7 @@ static bool ExpandMOVImmSExti8(MachineInstrBuilder &MIB,
   // Build CFI if necessary.
   MachineFunction &MF = *MBB.getParent();
   const X86FrameLowering *TFL = Subtarget.getFrameLowering();
-  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
+  bool IsWin64Prologue = MF.getTarget().getMCAsmInfo().usesWindowsCFI();
   bool NeedsDwarfCFI = !IsWin64Prologue && MF.needsFrameMoves();
   bool EmitCFI = !TFL->hasFP(MF) && NeedsDwarfCFI;
   if (EmitCFI) {
@@ -7488,15 +7488,21 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     unsigned Size, Align Alignment, bool AllowCommute, MachineInstr *&CopyMI,
     VirtRegMap *VRM) const {
   bool isSlowTwoMemOps = Subtarget.slowTwoMemOps();
+  bool isSlowIndirectCall = Subtarget.slowIndirectCall();
   unsigned Opc = MI.getOpcode();
 
-  // For CPUs that favor the register form of a call or push,
-  // do not fold loads into calls or pushes, unless optimizing for size
-  // aggressively.
-  if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
+  // For CPUs that favor the register form of a call,
+  // do not fold loads into calls, unless optimizing for size aggressively.
+  if ((isSlowTwoMemOps || isSlowIndirectCall) &&
+      !MF.getFunction().hasMinSize() &&
       (Opc == X86::CALL32r || Opc == X86::CALL64r ||
-       Opc == X86::CALL64r_ImpCall || Opc == X86::PUSH16r ||
-       Opc == X86::PUSH32r || Opc == X86::PUSH64r))
+       Opc == X86::CALL64r_ImpCall))
+    return nullptr;
+
+  // For CPUs that favor the register form of a push,
+  // do not fold loads into pushes, unless optimizing for size aggressively.
+  if (isSlowTwoMemOps && !MF.getFunction().hasMinSize() &&
+      (Opc == X86::PUSH16r || Opc == X86::PUSH32r || Opc == X86::PUSH64r))
     return nullptr;
 
   // Avoid partial and undef register update stalls unless optimizing for size.
@@ -7658,10 +7664,12 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   return nullptr;
 }
 
-MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, int FrameIndex, MachineInstr *&CopyMI,
-    LiveIntervals *LIS, VirtRegMap *VRM) const {
+MachineInstr *
+X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                    ArrayRef<unsigned> Ops, int FrameIndex,
+                                    MachineInstr *&CopyMI, LiveIntervals *LIS,
+                                    VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
   // Check switch flag
   if (NoFusing)
     return nullptr;
@@ -8173,10 +8181,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
   return false;
 }
 
-MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
-    MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-    MachineInstr *&CopyMI, LiveIntervals *LIS) const {
+MachineInstr *
+X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                    ArrayRef<unsigned> Ops,
+                                    MachineInstr &LoadMI, MachineInstr *&CopyMI,
+                                    LiveIntervals *LIS, VirtRegMap *VRM) const {
+  MachineBasicBlock::iterator InsertPt = MI;
 
   // If LoadMI is a masked load, check MI having the same mask.
   const MCInstrDesc &MCID = get(LoadMI.getOpcode());
@@ -8228,8 +8238,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
   if (isLoadFromStackSlot(LoadMI, FrameIndex)) {
     if (isNonFoldablePartialRegisterLoad(LoadMI, MI, MF))
       return nullptr;
-    return foldMemoryOperandImpl(MF, MI, Ops, InsertPt, FrameIndex, CopyMI,
-                                 LIS);
+    return foldMemoryOperandImpl(MF, MI, Ops, FrameIndex, CopyMI, LIS, VRM);
   }
 
   // Check switch flag

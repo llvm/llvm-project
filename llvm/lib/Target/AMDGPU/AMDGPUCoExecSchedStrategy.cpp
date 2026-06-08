@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUCoExecSchedStrategy.h"
+#include "AMDGPUIGroupLP.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -80,7 +81,7 @@ InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
 }
 
 SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
-  for (auto *PrioritySU : PrioritySUs) {
+  for (SUnit *PrioritySU : PrioritySUs) {
     if (!PrioritySU->isTopReady())
       return PrioritySU;
   }
@@ -106,12 +107,8 @@ SUnit *HardwareUnitInfo::getNextTargetSU(bool LookDeep) const {
 }
 
 void HardwareUnitInfo::insert(SUnit *SU, unsigned BlockingCycles) {
-#ifndef NDEBUG
-  bool Inserted = AllSUs.insert(SU);
-  assert(Inserted);
-#else
-  AllSUs.insert(SU);
-#endif
+  if (!AllSUs.insert(SU))
+    llvm_unreachable("HardwareUnit already contains SU!");
 
   TotalCycles += BlockingCycles;
 
@@ -173,7 +170,7 @@ void HardwareUnitInfo::markScheduled(SUnit *SU, unsigned BlockingCycles) {
 
 HardwareUnitInfo *
 CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
-  for (auto &HWUICand : HWUInfo) {
+  for (HardwareUnitInfo &HWUICand : HWUInfo) {
     if (HWUICand.getType() == Flavor) {
       return &HWUICand;
     }
@@ -269,7 +266,8 @@ void CandidateHeuristics::sortHWUIResources() {
       return A.size() < B.size();
 
     // Default to Flavor order
-    return (unsigned)A.getType() < (unsigned)B.getType();
+    return static_cast<unsigned>(A.getType()) <
+           static_cast<unsigned>(B.getType());
   });
 }
 
@@ -410,6 +408,7 @@ AMDGPUCoExecSchedStrategy::AMDGPUCoExecSchedStrategy(
     const MachineSchedContext *C)
     : GCNSchedStrategy(C) {
   SchedStages.push_back(GCNSchedStageID::ILPInitialSchedule);
+  SchedStages.push_back(GCNSchedStageID::RewriteMFMAForm);
   SchedStages.push_back(GCNSchedStageID::PreRARematerialize);
   // Use more accurate GCN pressure trackers.
   UseGCNTrackers = true;
@@ -424,6 +423,7 @@ void AMDGPUCoExecSchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
          "coexec scheduler only supports top-down scheduling");
   RegionPolicy.OnlyTopDown = true;
   RegionPolicy.OnlyBottomUp = false;
+  RegionPolicy.ShouldTrackLaneMasks = true;
 }
 
 void AMDGPUCoExecSchedStrategy::initialize(ScheduleDAGMI *DAG) {
@@ -709,8 +709,10 @@ ScheduleDAGInstrs *
 llvm::createGCNCoExecMachineScheduler(MachineSchedContext *C) {
   LLVM_DEBUG(dbgs() << "AMDGPU coexec preRA scheduler selected for "
                     << C->MF->getName() << '\n');
-  return new GCNScheduleDAGMILive(
+  ScheduleDAGMILive *DAG = new GCNScheduleDAGMILive(
       C, std::make_unique<AMDGPUCoExecSchedStrategy>(C));
+  DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
+  return DAG;
 }
 
 ScheduleDAGInstrs *

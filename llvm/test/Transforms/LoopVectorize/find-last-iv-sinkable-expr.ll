@@ -297,14 +297,14 @@ define i64 @findlast_non_canonical_iv_with_expr(ptr %a, i64 %n) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 10, [[TMP3]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i64> [ <i64 10, i64 12, i64 14, i64 16>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 10, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], 4
@@ -711,11 +711,11 @@ define i64 @findlast_expr_flipped_select_anyof(ptr %a, ptr %b, i64 %rdx.start, i
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[N]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nsw <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 -1, i64 -2, i64 -3>
+; CHECK-NEXT:    [[TMP17:%.*]] = sub nsw <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ [[TMP17]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 9223372036854775807), %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]

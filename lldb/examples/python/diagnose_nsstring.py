@@ -36,7 +36,7 @@ def read_memory(process, location, size):
     return data
 
 
-def diagnose_nsstring_Command_Impl(debugger, command, result, internal_dict):
+def diagnose_nsstring_Command_Impl(debugger, command, exe_ctx, result, internal_dict):
     """
     A command to diagnose the LLDB NSString data formatter
     invoke as
@@ -44,10 +44,9 @@ def diagnose_nsstring_Command_Impl(debugger, command, result, internal_dict):
     e.g.
     (lldb) diagnose-nsstring @"Hello world"
     """
-    target = debugger.GetSelectedTarget()
-    process = target.GetProcess()
-    thread = process.GetSelectedThread()
-    frame = thread.GetSelectedFrame()
+    target = exe_ctx.target
+    process = exe_ctx.process
+    frame = exe_ctx.thread
     if not target.IsValid() or not process.IsValid():
         return "unable to get target/process - cannot proceed"
     options = lldb.SBExpressionOptions()
@@ -214,7 +213,3 @@ def __lldb_init_module(debugger, internal_dict):
     print(
         'The "diagnose-nsstring" command has been installed, type "help diagnose-nsstring" for detailed help.'
     )
-
-
-__lldb_init_module(lldb.debugger, None)
-__lldb_init_module = None

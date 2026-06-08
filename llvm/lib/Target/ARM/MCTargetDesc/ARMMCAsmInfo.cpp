@@ -46,7 +46,9 @@ const MCAsmInfo::AtSpecifier atSpecifiers[] = {
 
 void ARMMCAsmInfoDarwin::anchor() { }
 
-ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
+ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
+                                       const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
@@ -70,7 +72,9 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
 
 void ARMELFMCAsmInfo::anchor() { }
 
-ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
+ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
@@ -114,13 +118,14 @@ void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
 
 void ARMCOFFMCAsmInfoMicrosoft::anchor() { }
 
-ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
+ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
+    const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
   InternalSymbolPrefix = "$M";
-  PrivateLabelPrefix = "$M";
   CommentString = "@";
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
@@ -131,13 +136,13 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
 
-ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
+ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   AlignmentIsInBytes = false;
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
 
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;

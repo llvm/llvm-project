@@ -50,6 +50,7 @@
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include <cassert>
 #include <optional>
 #include <string>
@@ -99,6 +100,11 @@ static cl::opt<bool> DisableConstantHoisting("disable-constant-hoisting",
     cl::Hidden, cl::desc("Disable ConstantHoisting"));
 static cl::opt<bool> DisableCGP("disable-cgp", cl::Hidden,
     cl::desc("Disable Codegen Prepare"));
+
+static cl::opt<bool>
+    TriggerCrash("codegen-pipeline-trigger-crash", cl::init(false), cl::Hidden,
+                 cl::desc("Trigger crash in codegen pipeline"));
+
 static cl::opt<bool> DisableCopyProp("disable-copyprop", cl::Hidden,
     cl::desc("Disable Copy Propagation pass"));
 static cl::opt<bool> DisablePartialLibcallInlining("disable-partial-libcall-inlining",
@@ -810,7 +816,7 @@ void TargetPassConfig::addDebugifyPass() {
 }
 
 void TargetPassConfig::addStripDebugPass() {
-  PM->add(createStripDebugMachineModulePass(/*OnlyDebugified=*/true));
+  PM->add(createStripDebugMachineModuleLegacyPass(/*OnlyDebugified=*/true));
 }
 
 void TargetPassConfig::addCheckDebugPass() {
@@ -912,9 +918,8 @@ void TargetPassConfig::addIRPasses() {
 /// Turn exception handling constructs into something the code generators can
 /// handle.
 void TargetPassConfig::addPassesToHandleExceptions() {
-  const MCAsmInfo *MCAI = TM->getMCAsmInfo();
-  assert(MCAI && "No MCAsmInfo");
-  switch (MCAI->getExceptionHandlingType()) {
+  const MCAsmInfo &MCAI = TM->getMCAsmInfo();
+  switch (MCAI.getExceptionHandlingType()) {
   case ExceptionHandling::SjLj:
     // SjLj piggy-backs on dwarf for this bit. The cleanups done apply to both
     // Dwarf EH prepare needs to be run after SjLj prepare. Otherwise,
@@ -1087,6 +1092,10 @@ bool TargetPassConfig::addISelPasses() {
   addPass(createPreISelIntrinsicLoweringPass());
   addPass(createExpandIRInstsPass(getOptLevel()));
   addIRPasses();
+
+  if (TriggerCrash)
+    addPass(createTriggerCrashFunctionPass());
+
   addCodeGenPrepare();
   addPassesToHandleExceptions();
   addISelPrepare();

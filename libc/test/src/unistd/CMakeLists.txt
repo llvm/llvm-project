@@ -3,6 +3,21 @@ add_custom_target(libc_unistd_unittests)
 add_subdirectory(testdata)
 
 add_libc_unittest(
+  alarm_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    alarm_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.struct_timespec
+    libc.include.unistd
+    libc.src.signal.signal
+    libc.src.time.nanosleep
+    libc.src.unistd.alarm
+)
+
+add_libc_unittest(
   access_test
   SUITE
     libc_unistd_unittests
@@ -314,6 +329,7 @@ add_libc_unittest(
     rmdir_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
     libc.src.errno.errno
     libc.src.sys.stat.mkdir
     libc.src.unistd.rmdir

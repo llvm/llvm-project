@@ -492,17 +492,30 @@ let Predicates = [HasFutureVector] in {
                             "xvrlw $XT, $XA, $XB",
                             [(set v4i32:$XT, (int_ppc_vsx_xvrlw v4i32:$XA,
                                                  v4i32:$XB))]>;
+}
 
   // AES Acceleration Instructions
-  def XXAESENCP : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
-                                    (ins vsrprc:$XAp, vsrprc:$XBp, u2imm:$M),
-                                    "xxaesencp $XTp, $XAp, $XBp, $M", []>;
-  def XXAESDECP : XX3Form_XTABp5_M2<202, (outs vsrprc:$XTp),
-                                    (ins vsrprc:$XAp, vsrprc:$XBp, u2imm:$M),
-                                    "xxaesdecp $XTp, $XAp, $XBp, $M", []>;
-  def XXAESGENLKP : XX3Form_XTBp5_M2<420, (outs vsrprc:$XTp),
-                                     (ins vsrprc:$XBp, u2imm:$M),
-                                     "xxaesgenlkp $XTp, $XBp, $M", []>;
+let Predicates = [HasFutureVector, PairedVectorMemops] in {
+  def XXAESENCP
+      : XX3Form_XTABp5_M2<194, (outs vsrprc:$XTp),
+                          (ins vsrprc:$XAp, vsrprc:$XBp, u2imm:$M),
+                          "xxaesencp $XTp, $XAp, $XBp, $M",
+                          [(set v256i1:$XTp,
+                                (int_ppc_aes_encrypt_paired v256i1:$XAp, v256i1:$XBp, u2imm_timm:$M))]>;
+  def XXAESDECP
+      : XX3Form_XTABp5_M2<202, (outs vsrprc:$XTp),
+                          (ins vsrprc:$XAp, vsrprc:$XBp, u2imm:$M),
+                          "xxaesdecp $XTp, $XAp, $XBp, $M",
+                          [(set v256i1:$XTp,
+                                (int_ppc_aes_decrypt_paired v256i1:$XAp, v256i1:$XBp, u2imm_timm:$M))]>;
+  def XXAESGENLKP
+      : XX3Form_XTBp5_M2<420, (outs vsrprc:$XTp), (ins vsrprc:$XBp, u2imm:$M),
+                         "xxaesgenlkp $XTp, $XBp, $M",
+                         [(set v256i1:$XTp,
+                               (int_ppc_aes_genlastkey_paired v256i1:$XBp, u2imm_timm:$M))]>;
+}
+
+let Predicates = [HasFutureVector] in {
   def XXGFMUL128 : XX3Form_XTAB6_P1<26, (outs vsrc:$XT),
                                     (ins vsrc:$XA, vsrc:$XB, u1imm:$P),
                                     "xxgfmul128 $XT, $XA, $XB, $P", []>;
@@ -621,6 +634,9 @@ def : Pat<(int_ppc_vsx_stxvprl v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRL $XTp,
 def : Pat<(int_ppc_vsx_stxvprll v256i1:$XTp, addr:$RA, i64:$RB), (STXVPRLL $XTp,
                                                                      $RA, $RB)>;
 
+def: Pat<(v16i8 (int_ppc_galois_field_mult v16i8:$XA, v16i8:$XB, u1imm_timm:$IMM)),
+         (COPY_TO_REGCLASS (XXGFMUL128 RCCp.AToVSRC, RCCp.BToVSRC, $IMM), VSRC)>;
+
 // Regular load/store patterns for v256i1 (for ISA Future)
 let Predicates = [HasFutureVector, PairedVectorMemops] in {
   def : Pat<(v256i1 (load iaddrX16:$src)), (LXVP iaddrX16:$src)>;
@@ -682,9 +698,50 @@ let Predicates = [HasFutureVector] in {
             (v16i8 (COPY_TO_REGCLASS (XSREBASE3T3UQM RCCp.AToVSRC, RCCp.BToVSRC), VSRC))>;
 }
 
+// Post Quantum Cryptography Acceleration patterns.
+// Use AddedComplexity to prefer these patterns over AltiVec patterns.
+let Predicates = [HasFutureVector], AddedComplexity = 400 in {
+  // Vector add
+  def : Pat<(v4i32 (add v4i32:$XA, v4i32:$XB)), (v4i32 (XVADDUWM $XA, $XB))>;
+  def : Pat<(v8i16 (add v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVADDUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  // Vector subtract
+  // Don't have a VSX negate instruction so use VNEGW instead.
+  def : Pat<(v4i32 (sub (v4i32 immAllZerosV), v4i32:$vB)), (v4i32 (VNEGW $vB))>;
+  def : Pat<(v4i32 (sub v4i32:$XA, v4i32:$XB)), (v4i32 (XVSUBUWM $XA, $XB))>;
+  def : Pat<(v8i16 (sub v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVSUBUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  // Vector multiply
+  def : Pat<(v4i32 (mul v4i32:$XA, v4i32:$XB)), (v4i32 (XVMULUWM $XA, $XB))>;
+  def : Pat<(v8i16 (mul v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVMULUHM RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  // Vector multiply high intrinsics
+  def : Pat<(v4i32 (int_ppc_altivec_vmulhsw v4i32:$XA, v4i32:$XB)),
+            (v4i32 (XVMULHSW $XA, $XB))>;
+  def : Pat<(v4i32 (int_ppc_altivec_vmulhuw v4i32:$XA, v4i32:$XB)),
+            (v4i32 (XVMULHUW $XA, $XB))>;
+  def : Pat<(v8i16 (int_ppc_altivec_vmulhsh v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVMULHSH RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+  def : Pat<(v8i16 (int_ppc_altivec_vmulhuh v8i16:$XA, v8i16:$XB)),
+            (COPY_TO_REGCLASS (XVMULHUH RCCp.AToVSRC, RCCp.BToVSRC), VSRC)>;
+}
+
 //---------------------------- Instruction aliases ---------------------------//
 // Predicate combinations available:
 // [HasVSX, IsISAFuture]
+
+def : InstAlias<"paddis $RT, $RA, $SI", (PADDIS gprc:$RT, gprc_nor0:$RA,
+                                            s32imm:$SI)>;
+def : InstAlias<"paddis $RT, $RA, $SI", (PADDIS8 g8rc:$RT, g8rc_nox0:$RA,
+                                            s32imm64:$SI)>;
+def : InstAlias<"plis $RT, $SI", (PADDIS gprc:$RT, ZERO, s32imm:$SI)>;
+def : InstAlias<"plis $RT, $SI", (PADDIS8 g8rc:$RT, ZERO8, s32imm64:$SI)>;
+// psubis: subtract immediate from register
+// For assembly: psubis $RT, $RA, $SI -> paddis $RT, $RA, -$SI, 0
+def : InstAlias<"psubis $RT, $RA, $SI", (PADDIS gprc:$RT, gprc_nor0:$RA,
+                                            neg_s32imm:$SI)>;
+def : InstAlias<"psubis $RT, $RA, $SI", (PADDIS8 g8rc:$RT, g8rc_nox0:$RA,
+                                            neg_s32imm64:$SI)>;
 
 let Predicates = [HasFutureVector] in {
   def : InstAlias<"xxaes128encp $XTp, $XAp, $XBp",

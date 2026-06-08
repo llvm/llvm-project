@@ -10,9 +10,6 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "hdr/types/wchar_t.h"
-#include "hdr/types/wctype_t.h"
-#include "src/__support/CPP/array.h"
-#include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 
@@ -25,6 +22,7 @@
 
 #if LIBC_CONF_WCTYPE_MODE == LIBC_WCTYPE_MODE_UTF8
 #include "src/__support/wctype/wctype_classification_utils.h"
+#include "src/__support/wctype/wctype_conversion_utils.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {
@@ -581,85 +579,6 @@ LIBC_INLINE constexpr bool ispunct(wchar_t wch) {
 #endif
 }
 
-struct wctype_mapping {
-  cpp::string_view name;
-  wctype_t desc;
-};
-
-LIBC_INLINE constexpr wctype_t WCTYPE_INVALID = 0;
-LIBC_INLINE constexpr wctype_t WCTYPE_ALNUM = 1;
-LIBC_INLINE constexpr wctype_t WCTYPE_ALPHA = 2;
-LIBC_INLINE constexpr wctype_t WCTYPE_BLANK = 3;
-LIBC_INLINE constexpr wctype_t WCTYPE_CNTRL = 4;
-LIBC_INLINE constexpr wctype_t WCTYPE_DIGIT = 5;
-LIBC_INLINE constexpr wctype_t WCTYPE_GRAPH = 6;
-LIBC_INLINE constexpr wctype_t WCTYPE_LOWER = 7;
-LIBC_INLINE constexpr wctype_t WCTYPE_PRINT = 8;
-LIBC_INLINE constexpr wctype_t WCTYPE_PUNCT = 9;
-LIBC_INLINE constexpr wctype_t WCTYPE_SPACE = 10;
-LIBC_INLINE constexpr wctype_t WCTYPE_UPPER = 11;
-LIBC_INLINE constexpr wctype_t WCTYPE_XDIGIT = 12;
-
-LIBC_INLINE constexpr cpp::array<wctype_mapping, 12> mappings = {{
-    {"alnum", WCTYPE_ALNUM},
-    {"alpha", WCTYPE_ALPHA},
-    {"blank", WCTYPE_BLANK},
-    {"cntrl", WCTYPE_CNTRL},
-    {"digit", WCTYPE_DIGIT},
-    {"graph", WCTYPE_GRAPH},
-    {"lower", WCTYPE_LOWER},
-    {"print", WCTYPE_PRINT},
-    {"punct", WCTYPE_PUNCT},
-    {"space", WCTYPE_SPACE},
-    {"upper", WCTYPE_UPPER},
-    {"xdigit", WCTYPE_XDIGIT},
-}};
-
-LIBC_INLINE constexpr wctype_t wctype(const char *property) {
-  if (!property)
-    return WCTYPE_INVALID;
-
-  cpp::string_view prop(property);
-
-  for (const auto &wc : mappings) {
-    if (wc.name == prop) {
-      return wc.desc;
-    }
-  }
-  return WCTYPE_INVALID;
-}
-
-LIBC_INLINE constexpr int iswctype(wchar_t c, wctype_t desc) {
-  switch (desc) {
-  case WCTYPE_ALNUM:
-    return isalnum(c);
-  case WCTYPE_ALPHA:
-    return isalpha(c);
-  case WCTYPE_BLANK:
-    return isblank(c);
-  case WCTYPE_CNTRL:
-    return iscntrl(c);
-  case WCTYPE_DIGIT:
-    return isdigit(c);
-  case WCTYPE_GRAPH:
-    return isgraph(c);
-  case WCTYPE_LOWER:
-    return islower(c);
-  case WCTYPE_PRINT:
-    return isprint(c);
-  case WCTYPE_PUNCT:
-    return ispunct(c);
-  case WCTYPE_SPACE:
-    return isspace(c);
-  case WCTYPE_UPPER:
-    return isupper(c);
-  case WCTYPE_XDIGIT:
-    return isxdigit(c);
-  default:
-    return 0;
-  }
-}
-
 LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
 #if LIBC_CONF_WCTYPE_MODE != LIBC_WCTYPE_MODE_UTF8
   return ascii::tolower(wch);
@@ -667,8 +586,7 @@ LIBC_INLINE constexpr wchar_t tolower(wchar_t wch) {
   if (static_cast<uint32_t>(wch) < 128) {
     return ascii::tolower(wch);
   }
-  // TODO: Add UTF8 implementation.
-  return wch;
+  return static_cast<wchar_t>(wctype_internal::tolower(wch));
 #endif
 }
 
@@ -679,8 +597,7 @@ LIBC_INLINE constexpr wchar_t toupper(wchar_t wch) {
   if (static_cast<uint32_t>(wch) < 128) {
     return ascii::toupper(wch);
   }
-  // TODO: Add UTF8 implementation.
-  return wch;
+  return static_cast<wchar_t>(wctype_internal::toupper(wch));
 #endif
 }
 

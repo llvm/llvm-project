@@ -538,7 +538,6 @@ def gentbl_sharded_ops(
         gentbl_shard_rule(
             index = i,
             name = name + "__src_shard" + str(i),
-            testonly = test,
             out = out_file,
             sharder = sharder,
             src_file = src_file,

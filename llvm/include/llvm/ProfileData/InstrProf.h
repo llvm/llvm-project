@@ -119,6 +119,9 @@ inline StringRef getInstrProfValueProfMemOpFuncName() {
   return INSTR_PROF_VALUE_PROF_MEMOP_FUNC_STR;
 }
 
+/// Return the prefix of the name of the variables to function as a filter.
+inline StringRef getInstrProfVarPrefix() { return "__prof"; }
+
 /// Return the name prefix of variables containing instrumented function names.
 inline StringRef getInstrProfNameVarPrefix() { return "__profn_"; }
 
@@ -1187,7 +1190,7 @@ const HashT HashType = HashT::MD5;
 inline uint64_t ComputeHash(StringRef K) { return ComputeHash(HashType, K); }
 
 // This structure defines the file header of the LLVM profile
-// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.rst
+// data file in indexed-format. Please update llvm/docs/InstrProfileFormat.md
 // as appropriate when updating the indexed profile format.
 struct Header {
   uint64_t Magic = IndexedInstrProf::Magic;

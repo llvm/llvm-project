@@ -791,18 +791,19 @@ define void @threadlocal_test() {
 }
 
 ; CHECK-LABEL:  llvm.func @coro_id
-define void @coro_id(i32 %0, ptr %1) {
-  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
-  %3 = call token @llvm.coro.id(i32 %0, ptr %1, ptr %1, ptr null)
+define void @coro_id() {
+  %a = alloca [16 x i8]
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
+  %3 = call token @llvm.coro.id(i32 0, ptr %a, ptr null, ptr null)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @coro_begin
-define void @coro_begin(i32 %0, ptr %1) {
-  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
-  %3 = call token @llvm.coro.id(i32 %0, ptr %1, ptr %1, ptr null)
-  ; CHECK: llvm.intr.coro.begin %{{.*}}, %{{.*}} : (!llvm.token, !llvm.ptr) -> !llvm.ptr
-  %4 = call ptr @llvm.coro.begin(token %3, ptr %1)
+define void @coro_begin(ptr %0) {
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
+  %3 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  ; CHECK: llvm.intr.coro.begin %{{.*}}, %{{.*}} : (token, !llvm.ptr) -> !llvm.ptr
+  %4 = call ptr @llvm.coro.begin(token %3, ptr %0)
   ret void
 }
 
@@ -825,17 +826,17 @@ define void @coro_align() {
 
 ; CHECK-LABEL:  llvm.func @coro_save
 define void @coro_save(ptr %0) {
-  ; CHECK: llvm.intr.coro.save %{{.*}} : (!llvm.ptr) -> !llvm.token
+  ; CHECK: llvm.intr.coro.save %{{.*}} : (!llvm.ptr) -> token
   %2 = call token @llvm.coro.save(ptr %0)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @coro_suspend
-define void @coro_suspend(i32 %0, i1 %1, ptr %2) {
-  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
-  %4 = call token @llvm.coro.id(i32 %0, ptr %2, ptr %2, ptr null)
+define void @coro_suspend(i1 %0) {
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
+  %4 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   ; CHECK: llvm.intr.coro.suspend %{{.*}}, %{{.*}} : i8
-  %5 = call i8 @llvm.coro.suspend(token %4, i1 %1)
+  %5 = call i8 @llvm.coro.suspend(token %4, i1 %0)
   ret void
 }
 
@@ -847,11 +848,11 @@ define void @coro_end(ptr %0, i1 %1) {
 }
 
 ; CHECK-LABEL:  llvm.func @coro_free
-define void @coro_free(i32 %0, ptr %1) {
-  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.token
-  %3 = call token @llvm.coro.id(i32 %0, ptr %1, ptr %1, ptr null)
-  ; CHECK: llvm.intr.coro.free %{{.*}}, %{{.*}} : (!llvm.token, !llvm.ptr) -> !llvm.ptr
-  %4 = call ptr @llvm.coro.free(token %3, ptr %1)
+define void @coro_free(ptr %0) {
+  ; CHECK: llvm.intr.coro.id %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : (i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> token
+  %3 = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  ; CHECK: llvm.intr.coro.free %{{.*}}, %{{.*}} : (token, !llvm.ptr) -> !llvm.ptr
+  %4 = call ptr @llvm.coro.free(token %3, ptr %0)
   ret void
 }
 

@@ -11,7 +11,7 @@ define nofpclass(nan) half @ret_phi_if_ret_0(i1 %cond1, i1 %cond2, half %unknown
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[UNKNOWN]], %[[IF]] ], [ 0xH0000, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[UNKNOWN]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret half [[PHI]]
 ;
 entry:
@@ -34,7 +34,7 @@ define nofpclass(nan inf norm sub nzero) half @ret_phi_only_pzero(i1 %cond1, i1 
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
 entry:
   br i1 %cond1, label %if, label %ret
@@ -54,7 +54,7 @@ define nofpclass(inf norm sub zero) half @ret_phi_only_nan(i1 %cond1, i1 %cond2,
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br i1 [[COND1]], label %[[IF:.*]], label %[[RET:.*]]
 ; CHECK:       [[IF]]:
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND2]], half 0xH7E00, half [[UNKNOWN]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND2]], half +qnan, half [[UNKNOWN]]
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[SELECT]], %[[IF]] ], [ poison, %[[ENTRY]] ]
@@ -80,7 +80,7 @@ define nofpclass(nan) half @ret_phi_if_ret_1(i1 %cond1, i1 %cond2, half %unknown
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi half [ 0xH0000, %[[ENTRY]] ], [ [[UNKNOWN]], %[[IF]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi half [ 0.000000e+00, %[[ENTRY]] ], [ [[UNKNOWN]], %[[IF]] ]
 ; CHECK-NEXT:    ret half [[PHI]]
 ;
 entry:
@@ -110,7 +110,7 @@ define nofpclass(nan) half @ret_repeated_switch_pred(i8 %switch.cond, i1 %cond2,
 ; CHECK:       [[DEFAULT]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[RET]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi half [ 0xH0000, %[[IF]] ], [ [[UNKNOWN]], %[[ENTRY]] ], [ [[UNKNOWN]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi half [ 0.000000e+00, %[[IF]] ], [ [[UNKNOWN]], %[[ENTRY]] ], [ [[UNKNOWN]], %[[ENTRY]] ]
 ; CHECK-NEXT:    ret half [[PHI]]
 ;
 entry:
@@ -141,10 +141,10 @@ define nofpclass(nan) half @ret_phi_chain(i1 %cond1, i1 %cond2, i1 %cond3, half 
 ; CHECK:       [[IF0]]:
 ; CHECK-NEXT:    br i1 [[COND2]], label %[[IF1]], label %[[RET:.*]]
 ; CHECK:       [[IF1]]:
-; CHECK-NEXT:    [[PHI0:%.*]] = phi half [ [[UNKNOWN]], %[[IF0]] ], [ 0xH0000, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI0:%.*]] = phi half [ [[UNKNOWN]], %[[IF0]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi half [ [[PHI0]], %[[IF1]] ], [ 0xH0000, %[[IF0]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi half [ [[PHI0]], %[[IF1]] ], [ 0.000000e+00, %[[IF0]] ]
 ; CHECK-NEXT:    ret half [[PHI1]]
 ;
 entry:
@@ -197,7 +197,7 @@ define nofpclass(nan) half @basic_loop_break_mid_loop(i1 %cond1, i1 %cond2, half
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[LOAD:%.*]], %[[LOOP]] ], [ 0xH0000, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[LOAD:%.*]], %[[LOOP]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[LOAD]] = load half, ptr [[P1]], align 2
 ; CHECK-NEXT:    [[BREAK_COND:%.*]] = load i1, ptr [[P0]], align 1
 ; CHECK-NEXT:    br i1 [[BREAK_COND]], label %[[RET:.*]], label %[[LOOP]]
@@ -224,7 +224,7 @@ define nofpclass(inf) half @recurrence(i1 %select.cond, half %unknown, ptr %p0, 
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[LOAD:%.*]], %[[LOOP]] ], [ 0xH0000, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[LOAD:%.*]], %[[LOOP]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[LOAD]] = load half, ptr [[P1]], align 2
 ; CHECK-NEXT:    [[BREAK_COND:%.*]] = load i1, ptr [[P0]], align 1
 ; CHECK-NEXT:    br i1 [[BREAK_COND]], label %[[RET:.*]], label %[[LOOP]]
@@ -249,12 +249,12 @@ define nofpclass(nan) half @path_dependent(i1 %select.cond, half %unknown, half 
 ; CHECK-LABEL: define nofpclass(nan) half @path_dependent(
 ; CHECK-SAME: i1 [[SELECT_COND:%.*]], half [[UNKNOWN:%.*]], half [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[IS_NAN]], label %[[IF:.*]], label %[[RET:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[UNKNOWN]], %[[IF]] ], [ 0xH0000, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[UNKNOWN]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret half [[PHI]]
 ;
 entry:
@@ -274,13 +274,13 @@ define nofpclass(nan) half @path_dependent_wrong(i1 %select.cond, half %unknown,
 ; CHECK-LABEL: define nofpclass(nan) half @path_dependent_wrong(
 ; CHECK-SAME: i1 [[SELECT_COND:%.*]], half [[UNKNOWN:%.*]], half [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[IS_NOT_NAN:%.*]] = fcmp ord half [[X]], 0xH0000
+; CHECK-NEXT:    [[IS_NOT_NAN:%.*]] = fcmp ord half [[X]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[IS_NOT_NAN]], label %[[IF:.*]], label %[[RET:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[SELECT_COND]], half [[X]], half [[UNKNOWN]]
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[SELECT]], %[[IF]] ], [ 0xH0000, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[SELECT]], %[[IF]] ], [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret half [[PHI]]
 ;
 entry:
@@ -301,7 +301,7 @@ define nofpclass(nan) half @diamond_same_select(i1 %select.cond, half %unknown, 
 ; CHECK-LABEL: define nofpclass(nan) half @diamond_same_select(
 ; CHECK-SAME: i1 [[SELECT_COND:%.*]], half [[UNKNOWN:%.*]], half [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[IS_NAN]], label %[[IF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IF]]:
 ; CHECK-NEXT:    br label %[[ENDIF:.*]]
@@ -361,7 +361,7 @@ define nofpclass(nan) half @keep_nan_start_value_multi_use(i1 %cond1, i1 %cond2,
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[LOAD:%.*]], %[[LOOP]] ], [ 0xH7E00, %[[ENTRY]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[LOAD:%.*]], %[[LOOP]] ], [ +qnan, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[LOAD]] = load half, ptr [[P1]], align 2
 ; CHECK-NEXT:    [[BREAK_COND:%.*]] = load i1, ptr [[P0]], align 1
 ; CHECK-NEXT:    br i1 [[BREAK_COND]], label %[[RET:.*]], label %[[LOOP]]
@@ -392,7 +392,7 @@ define nofpclass(nan) half @loop_break_if_nan(ptr %p0) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi half [ [[LOAD:%.*]], %[[LOOP]] ], [ poison, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[LOAD]] = load half, ptr [[P0]], align 2
-; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[LOAD]], 0xH0000
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[LOAD]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[IS_NAN]], label %[[RET:.*]], label %[[LOOP]]
 ; CHECK:       [[RET]]:
 ; CHECK-NEXT:    ret half [[PHI]]
@@ -417,7 +417,7 @@ define nofpclass(nan) half @loop_break_if_nan_abs(ptr %p0) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[LOAD:%.*]] = load half, ptr [[P0]], align 2
-; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[LOAD]], 0xH0000
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[LOAD]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[IS_NAN]], label %[[RET:.*]], label %[[LOOP]]
 ; CHECK:       [[RET]]:
 ; CHECK-NEXT:    ret half poison
@@ -470,7 +470,7 @@ define nofpclass(nan) half @assume_in_loop(half %assumed.nan.in.loop, half %unkn
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP:.*]], label %[[RET:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[LOOP_PHI:%.*]] = phi half [ [[UNKNOWN]], %[[LOOP]] ], [ [[ASSUMED_NAN_IN_LOOP]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[ASSUMED_NAN_IN_LOOP]], 0xH0000
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[ASSUMED_NAN_IN_LOOP]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_NAN]])
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = load i1, ptr [[P1]], align 1
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label %[[RET]], label %[[LOOP]]
@@ -499,7 +499,7 @@ define nofpclass(nan) half @ret_phi_nan_check(half %checked.if.nan, half %unknow
 ; CHECK-LABEL: define nofpclass(nan) half @ret_phi_nan_check(
 ; CHECK-SAME: half [[CHECKED_IF_NAN:%.*]], half [[UNKNOWN:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[CHECKED_IF_NAN]], 0xH0000
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[CHECKED_IF_NAN]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[IS_NAN]], label %[[IF_NAN:.*]], label %[[RET:.*]]
 ; CHECK:       [[IF_NAN]]:
 ; CHECK-NEXT:    br label %[[RET]]
@@ -524,13 +524,13 @@ define nofpclass(nan inf) half @edge_case_if_chain(half %x, i1 %cond, ptr %p0, p
 ; CHECK-LABEL: define nofpclass(nan inf) half @edge_case_if_chain(
 ; CHECK-SAME: half [[X:%.*]], i1 [[COND:%.*]], ptr [[P0:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq half [[X]], 0xH7C00
+; CHECK-NEXT:    [[IS_INF:%.*]] = fcmp oeq half [[X]], +inf
 ; CHECK-NEXT:    br i1 [[IS_INF]], label %[[IS_INF:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[IS_INF]]:
 ; CHECK-NEXT:    [[LOAD0:%.*]] = load half, ptr [[P0]], align 2
 ; CHECK-NEXT:    br label %[[RET:.*]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load half, ptr [[P0]], align 2
 ; CHECK-NEXT:    [[VAL1:%.*]] = select i1 [[COND]], half [[LOAD1]], half [[X]]
 ; CHECK-NEXT:    br i1 [[IS_NAN]], label %[[IS_NAN:.*]], label %[[RET]]
@@ -572,7 +572,7 @@ define nofpclass(nan) half @evaluate_phi_input_at_incoming_edge(half %known.nan.
 ; CHECK-LABEL: define nofpclass(nan) half @evaluate_phi_input_at_incoming_edge(
 ; CHECK-SAME: half [[KNOWN_NAN_IN_BRANCH:%.*]], half [[UNKNOWN:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[KNOWN_NAN_IN_BRANCH]], 0xH0000
+; CHECK-NEXT:    [[IS_NAN:%.*]] = fcmp uno half [[KNOWN_NAN_IN_BRANCH]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[IS_NAN]], label %[[IS_NAN:.*]], label %[[RET:.*]]
 ; CHECK:       [[IS_NAN]]:
 ; CHECK-NEXT:    br label %[[RET]]
@@ -602,19 +602,19 @@ define nofpclass(nan) half @multi_simplify_lost_phi_context_(half %x, half %y, i
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br i1 [[COND0]], label %[[ASSUME_A:.*]], label %[[ASSUME_B:.*]]
 ; CHECK:       [[ASSUME_A]]:
-; CHECK-NEXT:    [[X_IS_NAN:%.*]] = fcmp uno half [[X]], 0xH0000
+; CHECK-NEXT:    [[X_IS_NAN:%.*]] = fcmp uno half [[X]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[X_IS_NAN]])
 ; CHECK-NEXT:    br label %[[A:.*]]
 ; CHECK:       [[A]]:
 ; CHECK-NEXT:    br label %[[RET:.*]]
 ; CHECK:       [[ASSUME_B]]:
-; CHECK-NEXT:    [[Y_IS_NAN:%.*]] = fcmp uno half [[Y]], 0xH0000
+; CHECK-NEXT:    [[Y_IS_NAN:%.*]] = fcmp uno half [[Y]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_IS_NAN]])
 ; CHECK-NEXT:    br label %[[B:.*]]
 ; CHECK:       [[B]]:
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
-; CHECK-NEXT:    ret half 0xH0000
+; CHECK-NEXT:    ret half 0.000000e+00
 ;
 entry:
   br i1 %cond0, label %assume_a, label %assume_b

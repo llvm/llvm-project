@@ -11,7 +11,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Path.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <map>
 #include <optional>
@@ -89,6 +89,8 @@ parseTargetIDWithFormatCheckingOnly(llvm::StringRef TargetID,
 
   while (!Features.empty()) {
     auto Splits = Features.split(':');
+    if (Splits.first.empty())
+      return std::nullopt;
     auto Sign = Splits.first.back();
     auto Feature = Splits.first.drop_back();
     if (Sign != '+' && Sign != '-')

@@ -117,6 +117,21 @@ def OutlineRematerializationOpInterface : OpInterface<"OutlineRematerializationO
     Operations implementing this interface are expected to be memory effect
     free. Their results are typically used for type construction or providing
     metadata (such as shape information for arrays).
+
+    `isRematerializationCandidate` refines whether a particular operation
+    instance participates in rematerialization; `isa<OutlineRematerializationOpInterface>`
+    requires both a registered model and this predicate.
+  }];
+
+  let methods = [
+    InterfaceMethod<"Returns whether this operation instance should be treated "
+                      "as an outline rematerialization candidate.",
+                      "bool", "isRematerializationCandidate", (ins),
+                      /*methodBody=*/"return true;">,
+  ];
+
+  let extraClassOf = [{
+    return $_op.isRematerializationCandidate();
   }];
 
   let verify = [{
