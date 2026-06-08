@@ -3606,6 +3606,9 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
          "Expected OpenMP captured region");
   assert(CGM.getLangOpts().OpenMP && "Expected OpenMP to be enabled");
 
+  if (auto It = LocalDeclMap.find(BD); It != LocalDeclMap.end()) {
+    return MakeAddrLValue(It->second, BD->getType());
+  }
   auto *DD = cast<VarDecl>(BD->getDecomposedDecl());
   Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
   QualType DREType = DD->getType().getNonReferenceType();
@@ -3837,13 +3840,10 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
       if (CapturedStmtInfo &&
           CapturedStmtInfo->getKind() == CapturedRegionKind::CR_OpenMP &&
           CGM.getLangOpts().OpenMP) {
-        auto NameIt = OMPPrivatizedBindingsByName.find(BD->getName());
-        if (NameIt != OMPPrivatizedBindingsByName.end()) {
-          assert(NameIt->second.has_value() &&
-                 "Expected valid binding address");
-          return MakeAddrLValue(*NameIt->second, E->getType(),
+        auto NameIt = OMPPrivatizedBindings.find(BD);
+        if (NameIt != OMPPrivatizedBindings.end())
+          return MakeAddrLValue(NameIt->second, E->getType(),
                                 AlignmentSource::Decl);
-        }
         return EmitOMPCapturedBindingLValue(BD);
       }
       // Non-OpenMP case: lambda capture.

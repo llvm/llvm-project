@@ -1613,6 +1613,22 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     // Silence the warning about unused variable.
     (void)IsRegistered;
 
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(IRef->IgnoreParenImpCasts())) {
+      const ValueDecl *VD = DRE->getDecl();
+      if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(VD)) {
+        if (const Expr *Init = OCED->getInit()) {
+          if (const auto *InnerDRE =
+                  dyn_cast<DeclRefExpr>(Init->IgnoreParenImpCasts())) {
+            if (const auto *BD = dyn_cast<BindingDecl>(InnerDRE->getDecl())) {
+              IsRegistered = PrivateScope.addPrivate(BD, BaseAddr);
+              assert(IsRegistered &&
+                     "private binding already registered as private");
+              (void)IsRegistered;
+            }
+          }
+        }
+      }
+    }
     const auto *LHSVD = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());
     const auto *RHSVD = cast<VarDecl>(cast<DeclRefExpr>(*IRHS)->getDecl());
     QualType Type = PrivateVD->getType();
