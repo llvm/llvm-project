@@ -86,9 +86,9 @@ void genOpenACCRoutineConstruct(
     AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
     const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
-void declareExternalAccModuleDeclareActionRecipes(AbstractConverter &,
-                                                  fir::FirOpBuilder &,
-                                                  const Fortran::semantics::Symbol &);
+void declareExternalAccModuleDeclareActionRecipes(
+    AbstractConverter &, fir::FirOpBuilder &,
+    const Fortran::semantics::Symbol &);
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
 void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,

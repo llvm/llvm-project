@@ -178,12 +178,10 @@ static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
                                               builder.getContext(), clause)));
 }
 
-static mlir::func::FuncOp
-createDeclareFunc(mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder,
-                  mlir::Location loc, llvm::StringRef funcName,
-                  llvm::SmallVector<mlir::Type> argsTy = {},
-                  llvm::SmallVector<mlir::Location> locs = {},
-                  bool linkable = false) {
+static mlir::func::FuncOp createDeclareFunc(
+    mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder, mlir::Location loc,
+    llvm::StringRef funcName, llvm::SmallVector<mlir::Type> argsTy = {},
+    llvm::SmallVector<mlir::Location> locs = {}, bool linkable = false) {
   auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), argsTy, {});
   auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, funcName, funcTy);
   funcOp.setVisibility(linkable ? mlir::SymbolTable::Visibility::Public
@@ -3722,9 +3720,9 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
   std::stringstream registerFuncName;
   registerFuncName << globalOp.getSymName().str()
                    << Fortran::lower::declarePostAllocSuffix.str();
-  auto registerFuncOp = createDeclareFunc(
-      modBuilder, builder, loc, registerFuncName.str(),
-      /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
+  auto registerFuncOp =
+      createDeclareFunc(modBuilder, builder, loc, registerFuncName.str(),
+                        /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
 
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(globalOp.getType()),
@@ -3763,9 +3761,9 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   std::stringstream postDeallocFuncName;
   postDeallocFuncName << globalOp.getSymName().str()
                       << Fortran::lower::declarePostDeallocSuffix.str();
-  auto postDeallocOp = createDeclareFunc(
-      modBuilder, builder, loc, postDeallocFuncName.str(),
-      /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
+  auto postDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, postDeallocFuncName.str(),
+                        /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
 
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(globalOp.getType()),
@@ -4748,8 +4746,7 @@ void Fortran::lower::declareExternalAccModuleDeclareActionRecipes(
   declareExternalRecipe(declarePostAllocSuffix);
   if (ultimate.test(Flag::AccCreate) || ultimate.test(Flag::AccCopyIn) ||
       ultimate.test(Flag::AccCopyInReadOnly) || ultimate.test(Flag::AccCopy) ||
-      ultimate.test(Flag::AccCopyOut) ||
-      ultimate.test(Flag::AccDeviceResident))
+      ultimate.test(Flag::AccCopyOut) || ultimate.test(Flag::AccDeviceResident))
     declareExternalRecipe(declarePostDeallocSuffix);
 }
 

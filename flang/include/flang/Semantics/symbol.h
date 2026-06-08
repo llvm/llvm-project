@@ -32,7 +32,7 @@ class raw_ostream;
 namespace Fortran::parser {
 struct Expr;
 struct OpenMPDeclarativeConstruct;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
