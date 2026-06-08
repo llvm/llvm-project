@@ -15,19 +15,17 @@ define void @test_inttoptr_reuse(ptr %base1, ptr %base2, ptr %base3, i64 %n) {
 ; CHECK-LABEL: @test_inttoptr_reuse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N:%.*]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[BASE1:%.*]], i64 [[LSR_IV]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[BASE2:%.*]], i64 [[LSR_IV]]
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[BASE3:%.*]], i64 [[LSR_IV]]
-; CHECK-NEXT:    [[TMP:%.*]] = inttoptr i64 [[LSR_IV]] to ptr
-; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp eq ptr [[TMP1]], [[TMP]]
+; CHECK-NEXT:    [[CMP_EXIT:%.*]] = icmp eq i64 [[TMP0]], [[LSR_IV]]
 ; CHECK-NEXT:    br i1 [[CMP_EXIT]], label [[CHECK:%.*]], label [[BODY:%.*]]
 ; CHECK:       check:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne ptr [[TMP1]], [[TMP]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne ptr [[TMP1]], [[TMP]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i64 [[TMP0]], [[LSR_IV]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i64 [[TMP0]], [[LSR_IV]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP3]]
 ; CHECK-NEXT:    br i1 [[SEL]], label [[BODY]], label [[EXIT:%.*]]
 ; CHECK:       body:
