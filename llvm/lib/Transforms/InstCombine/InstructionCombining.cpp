@@ -1312,10 +1312,10 @@ static Value *foldVecCmpEqOnHalfElementSize(Instruction &I,
                                             InstCombiner::BuilderTy &Builder) {
   // Check pattern existance
   Value *L, *R;
-  CmpPredicate Pred;
   ArrayRef<int> Mask;
 
-  auto Equal = m_SExtOrSelf(m_ICmp(Pred, m_Value(L), m_Value(R)));
+  auto Equal =
+      m_SExtOrSelf(m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(L), m_Value(R)));
   auto Shuffle = m_SExtOrSelf(m_Shuffle(Equal, m_Poison(), m_Mask(Mask)));
   auto And = m_SExtOrSelf(m_c_And(Equal, Shuffle));
   auto Select = m_SExtOrSelf(m_Select(Equal, Shuffle, m_Zero()));
@@ -1326,9 +1326,6 @@ static Value *foldVecCmpEqOnHalfElementSize(Instruction &I,
   if (!match(&I, And) &&
       !(match(&I, Select) && isGuaranteedNotToBeUndefOrPoison(L) &&
         isGuaranteedNotToBeUndefOrPoison(R)))
-    return nullptr;
-
-  if (Pred != CmpInst::ICMP_EQ)
     return nullptr;
 
   auto *OldVecType = cast<FixedVectorType>(L->getType());
@@ -1353,7 +1350,7 @@ static Value *foldVecCmpEqOnHalfElementSize(Instruction &I,
       VectorType::get(NewElementType, OldElementCount / 2, false);
   Value *BitCastL = Builder.CreateBitCast(L, NewVecType);
   Value *BitCastR = Builder.CreateBitCast(R, NewVecType);
-  Value *Cmp = Builder.CreateICmp(Pred, BitCastL, BitCastR);
+  Value *Cmp = Builder.CreateICmp(CmpInst::ICMP_EQ, BitCastL, BitCastR);
   Value *SExt = Builder.CreateSExt(Cmp, NewVecType);
   Value *BitCastCmp = Builder.CreateBitCast(SExt, OldVecType);
 
@@ -1385,16 +1382,15 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
                                             InstCombiner::BuilderTy &Builder) {
   // Check pattern existance
   Value *A, *B, *Greater1, *Greater2;
-  CmpPredicate PredEq;
   ArrayRef<int> MaskLower, MaskUpper1, MaskUpper2;
 
   auto GreaterLower = m_SExtOrSelf(m_Shuffle(m_SExtOrSelf(m_Value(Greater1)),
                                              m_Poison(), m_Mask(MaskLower)));
   auto GreaterUpper = m_SExtOrSelf(m_Shuffle(m_SExtOrSelf(m_Value(Greater2)),
                                              m_Poison(), m_Mask(MaskUpper1)));
-  auto EqUpper = m_SExtOrSelf(
-      m_Shuffle(m_SExtOrSelf(m_c_ICmp(PredEq, m_Value(A), m_Value(B))),
-                m_Poison(), m_Mask(MaskUpper2)));
+  auto EqUpper = m_SExtOrSelf(m_Shuffle(
+      m_SExtOrSelf(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(A), m_Value(B))),
+      m_Poison(), m_Mask(MaskUpper2)));
   auto OrAnd = m_SExtOrSelf(
       m_c_Or(m_SExtOrSelf(m_c_And(GreaterLower, EqUpper)), GreaterUpper));
   auto OrSelect = m_SExtOrSelf(m_c_Or(
@@ -1408,8 +1404,7 @@ static Value *foldVecCmpGtOnHalfElementSize(Instruction &I,
         isGuaranteedNotToBeUndefOrPoison(B)))
     return nullptr;
 
-  if (Greater1 != Greater2 || MaskUpper1 != MaskUpper2 ||
-      PredEq != ICmpInst::ICMP_EQ)
+  if (Greater1 != Greater2 || MaskUpper1 != MaskUpper2)
     return nullptr;
 
   auto *OldVecType = cast<FixedVectorType>(A->getType());
