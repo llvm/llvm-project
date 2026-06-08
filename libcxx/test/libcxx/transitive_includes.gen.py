@@ -21,7 +21,7 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import public_headers
 
 import re
 
@@ -68,10 +68,6 @@ else:
         print(
             f"""\
 //--- {header}.sh.cpp
-{lit_header_restrictions.get(header, '')}
-
-// TODO: Fix this test to make it work with localization or wide characters disabled
-// UNSUPPORTED: no-localization, no-wide-characters, no-threads, no-filesystem, libcpp-has-no-experimental-tzdb
 
 // When built with modules, this test doesn't work because --trace-includes doesn't
 // report the stack of includes correctly.
