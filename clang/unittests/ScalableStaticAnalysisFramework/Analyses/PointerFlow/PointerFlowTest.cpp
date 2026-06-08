@@ -13,9 +13,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityName.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
@@ -968,13 +966,12 @@ TEST_F(PointerFlowTest, ArrayOfStructInitList) {
 }
 
 TEST_F(PointerFlowTest, ScalarPointerBraceInit) {
-  ASSERT_EQ(setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     int *q;
     void foo() {
       int *p{q};
     }
-  )cpp"),
-            true);
+  )cpp"));
 
   auto *Sum = getEntitySummary("foo");
 
@@ -983,15 +980,14 @@ TEST_F(PointerFlowTest, ScalarPointerBraceInit) {
 }
 
 TEST_F(PointerFlowTest, EmptyInitsScalarInt) {
-  ASSERT_EQ(setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void foo() {
       int x{};
       int y = {};
       int *p{};
       int *q = {};
     }
-  )cpp"),
-            true);
+  )cpp"));
 
   auto *Sum = getEntitySummary("foo");
 
@@ -1000,14 +996,41 @@ TEST_F(PointerFlowTest, EmptyInitsScalarInt) {
 }
 
 TEST_F(PointerFlowTest, EmptyInitsUnion) {
-  ASSERT_EQ(setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     union U { int x; int *p; };
     void foo() {
       U u{};
       U uu = {};
     }
-  )cpp"),
-            true);
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
+TEST_F(PointerFlowTest, EmptyInitsStruct) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    struct S { int x; int *p; };
+    void foo() {
+      S s{};
+      S ss = {};
+    }
+  )cpp"));
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_EQ(Sum, nullptr);
+}
+
+TEST_F(PointerFlowTest, EmptyInitsClass) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    class C { public: int x; int *p; };
+    void foo() {
+      C c{};
+      C cc = {};
+    }
+  )cpp"));
 
   auto *Sum = getEntitySummary("foo");
 
