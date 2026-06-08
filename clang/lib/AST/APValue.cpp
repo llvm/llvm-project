@@ -506,8 +506,8 @@ static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
 /// ^^reflection-name it is interpreted as such; the identifier is looked up
 /// and the representation of R is determined as follows:
 /// - if lookup finds a type alias A, R represents the type the underlying
-///   entity of A if A was introduced by the declaration of a template parameter;
-///   otherwise, R represents A.
+///   entity of A if A was introduced by the declaration of a template
+///   parameter; otherwise, R represents A.
 
 /// [expr.reflect] p6, Given reflect-expression R of the form ^^type-id,
 /// if type-id is neither a placeholder type nor
@@ -527,8 +527,7 @@ static bool isTypeAliasAsReflectionName(QualType QT) {
 }
 
 /// Unwrap reflected type for profiling
-static void profileTypeReflection(llvm::FoldingSetNodeID &ID,
-                                          QualType QT) {
+static void profileTypeReflection(llvm::FoldingSetNodeID &ID, QualType QT) {
   // TODO(Reflection)
 
   if (isTypeAliasAsReflectionName(QT)) {
