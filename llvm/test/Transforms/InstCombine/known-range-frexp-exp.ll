@@ -6,7 +6,8 @@ define i32 @frexp_f32_clamp_min(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
-; CHECK-NEXT:    ret i32 [[EXP]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i32 @llvm.smax.i32(i32 [[EXP]], i32 -148)
+; CHECK-NEXT:    ret i32 [[CLAMP]]
 ;
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %x)
   %exp = extractvalue { float, i32 } %frexp, 1
@@ -19,7 +20,8 @@ define i16 @frexp_f32_clamp_min_i16(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i16 } @llvm.frexp.f32.i16(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i16 } [[FREXP]], 1
-; CHECK-NEXT:    ret i16 [[EXP]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i16 @llvm.smax.i16(i16 [[EXP]], i16 -148)
+; CHECK-NEXT:    ret i16 [[CLAMP]]
 ;
   %frexp = call { float, i16 } @llvm.frexp.f32.i16(float %x)
   %exp = extractvalue { float, i16 } %frexp, 1
@@ -46,7 +48,8 @@ define i32 @frexp_f32_clamp_max(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
-; CHECK-NEXT:    ret i32 [[EXP]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i32 @llvm.smin.i32(i32 [[EXP]], i32 128)
+; CHECK-NEXT:    ret i32 [[CLAMP]]
 ;
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %x)
   %exp = extractvalue { float, i32 } %frexp, 1
@@ -73,7 +76,8 @@ define i32 @frexp_f32_clamp_min_no_denormal(float nofpclass(sub) %x) {
 ; CHECK-SAME: float nofpclass(sub) [[X:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
-; CHECK-NEXT:    ret i32 [[EXP]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i32 @llvm.smax.i32(i32 [[EXP]], i32 -125)
+; CHECK-NEXT:    ret i32 [[CLAMP]]
 ;
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %x)
   %exp = extractvalue { float, i32 } %frexp, 1
@@ -100,7 +104,8 @@ define <2 x i32> @frexp_v2f32_clamp_min(<2 x float> %x) {
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { <2 x float>, <2 x i32> } [[FREXP]], 1
-; CHECK-NEXT:    ret <2 x i32> [[EXP]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[EXP]], <2 x i32> splat (i32 -148))
+; CHECK-NEXT:    ret <2 x i32> [[CLAMP]]
 ;
   %frexp = call { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float> %x)
   %exp = extractvalue { <2 x float>, <2 x i32> } %frexp, 1
@@ -114,7 +119,8 @@ define i32 @frexp_f64_clamp_min(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { double, i32 } [[FREXP]], 1
-; CHECK-NEXT:    ret i32 [[EXP]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i32 @llvm.smax.i32(i32 [[EXP]], i32 -1073)
+; CHECK-NEXT:    ret i32 [[CLAMP]]
 ;
   %frexp = call { double, i32 } @llvm.frexp.f32.i32(double %x)
   %exp = extractvalue { double, i32 } %frexp, 1
@@ -127,10 +133,25 @@ define i32 @frexp_f64_clamp_max(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    [[FREXP:%.*]] = call { double, i32 } @llvm.frexp.f64.i32(double [[X]])
 ; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { double, i32 } [[FREXP]], 1
-; CHECK-NEXT:    ret i32 [[EXP]]
+; CHECK-NEXT:    [[CLAMP:%.*]] = call i32 @llvm.smin.i32(i32 [[EXP]], i32 1024)
+; CHECK-NEXT:    ret i32 [[CLAMP]]
 ;
   %frexp = call { double, i32 } @llvm.frexp.f32.i32(double %x)
   %exp = extractvalue { double, i32 } %frexp, 1
   %clamp = call i32 @llvm.smin.i32(i32 %exp, i32 1024)
+  ret i32 %clamp
+}
+
+; %x cannot be nan or inf, so the frexp exponent range is well-defined.
+define i32 @frexp_f32_clamp_min_no_nan_inf(float nofpclass(nan inf) %x) {
+; CHECK-LABEL: define i32 @frexp_f32_clamp_min_no_nan_inf(
+; CHECK-SAME: float nofpclass(nan inf) [[X:%.*]]) {
+; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
+; CHECK-NEXT:    [[EXP:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
+; CHECK-NEXT:    ret i32 [[EXP]]
+;
+  %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %x)
+  %exp = extractvalue { float, i32 } %frexp, 1
+  %clamp = call i32 @llvm.smax.i32(i32 %exp, i32 -148)
   ret i32 %clamp
 }
