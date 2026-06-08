@@ -251,6 +251,7 @@ zircon/*
 | {doc}`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>` | Yes |
 | {doc}`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>` |  |
 | {doc}`llvm-redundant-casting <llvm/redundant-casting>` | Yes |
+| {doc}`llvm-regex <llvm/regex>` | No |
 | {doc}`llvm-twine-local <llvm/twine-local>` | Yes |
 | {doc}`llvm-type-switch-case-types <llvm/type-switch-case-types>` | Yes |
 | {doc}`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>` | Yes |
