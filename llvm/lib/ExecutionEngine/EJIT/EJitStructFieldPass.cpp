@@ -120,6 +120,10 @@ static Constant *createConstantFromMemory(const void *addr, Type *Ty,
     if (byteSize <= 8) {
       uint64_t raw = 0;
       std::memcpy(&raw, addr, byteSize);
+      // On big-endian targets, memcpy places bytes at the MSB end of raw.
+      // Shift them down so APInt sees the correct numeric value.
+      if (!DL.isLittleEndian())
+        raw >>= (8 - byteSize) * 8;
       val = APInt(byteSize * 8, raw);
     }
     return ConstantInt::get(Ty, val);
