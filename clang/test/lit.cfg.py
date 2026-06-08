@@ -420,6 +420,13 @@ if config.enable_backtrace:
 if config.enable_threads:
     config.available_features.add("thread_support")
 
+# Add clang resource directory as a substitution
+if config.clang:
+    clang_resource_dir = subprocess.run(
+        [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE, text=True
+    ).stdout.rstrip()
+    config.substitutions.append(("%clang-resource-dir", clang_resource_dir))
+
 # Check if we should allow outputs to console.
 run_console_tests = int(lit_config.params.get("enable_console", "0"))
 if run_console_tests != 0:

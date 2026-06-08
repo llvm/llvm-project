@@ -2050,10 +2050,6 @@ struct CSEDenseMapInfo {
            isa<ShuffleVectorInst>(I) || isa<GetElementPtrInst>(I);
   }
 
-  static inline Instruction *getEmptyKey() {
-    return DenseMapInfo<Instruction *>::getEmptyKey();
-  }
-
   static unsigned getHashValue(const Instruction *I) {
     assert(canHandle(I) && "Unknown instruction!");
     return hash_combine(I->getOpcode(),
@@ -2061,8 +2057,6 @@ struct CSEDenseMapInfo {
   }
 
   static bool isEqual(const Instruction *LHS, const Instruction *RHS) {
-    if (LHS == getEmptyKey() || RHS == getEmptyKey())
-      return LHS == RHS;
     return LHS->isIdenticalTo(RHS);
   }
 };
@@ -6371,7 +6365,7 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
   return false;
 }
 
-VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
+VPSingleDefRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
                                                       VFRange &Range) {
   auto *I = VPI->getUnderlyingInstr();
   bool IsUniform = LoopVectorizationPlanner::getDecisionAndClampRange(
@@ -6429,9 +6423,14 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
   assert((Range.Start.isScalar() || !IsUniform || !IsPredicated ||
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
-  auto *Recipe =
-      new VPReplicateRecipe(I, VPI->operandsWithoutMask(), IsUniform,
-                            BlockInMask, *VPI, *VPI, VPI->getDebugLoc());
+  if (IsUniform) {
+    return VPBuilder::createSingleScalarOp(
+        VPI->getOpcode(), VPI->operandsWithoutMask(), BlockInMask, *VPI, *VPI,
+        VPI->getDebugLoc(), I);
+  }
+  auto *Recipe = new VPReplicateRecipe(I, VPI->operandsWithoutMask(),
+                                       /*IsSingleScalar=*/false, BlockInMask,
+                                       *VPI, *VPI, VPI->getDebugLoc());
   return Recipe;
 }
 
@@ -6732,7 +6731,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
       if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
               VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
-              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R))
+              VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
+          (isa<VPInstructionWithType>(R) &&
+           Instruction::isCast(cast<VPInstructionWithType>(R).getOpcode()) &&
+           vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
       if (!VPI->getUnderlyingValue())
@@ -7015,7 +7017,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       }
 
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
-                      PhiR->getFastMathFlags());
+                      PhiR->getFastMathFlagsOrNone());
       FinalReductionResult = Builder.createNaryOp(
           VPInstruction::ComputeReductionResult, {ReductionOp}, Flags, ExitDL);
       if (ExtendOpc != Instruction::CastOpsEnd)
@@ -7053,7 +7055,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
          !RecurrenceDescriptor::isFindLastRecurrenceKind(RK))) {
       VPBuilder PHBuilder(Plan->getVectorPreheader());
       VPValue *Iden = Plan->getOrAddLiveIn(
-          getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlags()));
+          getRecurrenceIdentity(RK, PhiTy, PhiR->getFastMathFlagsOrNone()));
       auto *ScaleFactorVPV = Plan->getConstantInt(32, 1);
       VPValue *StartV = PHBuilder.createNaryOp(
           VPInstruction::ReductionStartVector,
@@ -7626,7 +7628,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
             [[maybe_unused]] auto StartValueIsIdentity = [&] {
               Value *IdentityValue = getRecurrenceIdentity(
                   PhiR->getRecurrenceKind(), ResumeV->getType(),
-                  PhiR->getFastMathFlags());
+                  PhiR->getFastMathFlagsOrNone());
               auto *StartValue = dyn_cast<VPIRValue>(VPI->getOperand(0));
               return StartValue && StartValue->getValue() == IdentityValue;
             };

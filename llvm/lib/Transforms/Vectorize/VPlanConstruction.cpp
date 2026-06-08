@@ -117,7 +117,7 @@ void PlainCFGBuilder::fixHeaderPhis() {
     assert(Phi->getNumOperands() == 2 &&
            "header phi must have exactly 2 operands");
     for (BasicBlock *Pred : predecessors(Phi->getParent()))
-      PhiR->addOperand(
+      PhiR->addIncoming(
           getOrCreateVPOperand(Phi->getIncomingValueForBlock(Pred)));
   }
 }
@@ -244,7 +244,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
               getOrCreateVPOperand(Phi->getIncomingValue(I));
         }
         for (VPBlockBase *Pred : VPBB->getPredecessors())
-          NewR->addOperand(
+          cast<VPPhi>(NewR)->addIncoming(
               VPPredToIncomingValue.lookup(Pred->getExitingBasicBlock()));
       }
     } else {
@@ -371,7 +371,7 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
       assert(PhiR->getNumOperands() == 0 &&
              "no phi operands should be added yet");
       for (BasicBlock *Pred : predecessors(EB->getIRBasicBlock()))
-        PhiR->addOperand(
+        PhiR->addIncoming(
             getOrCreateVPOperand(Phi.getIncomingValueForBlock(Pred)));
     }
   }
@@ -591,7 +591,7 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy,
     auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
         {ResumeFromVectorLoop, VectorPhiR->getOperand(0)},
         VectorPhiR->getDebugLoc());
-    cast<VPIRPhi>(&ScalarPhiR)->addOperand(ResumePhiR);
+    cast<VPIRPhi>(&ScalarPhiR)->addIncoming(ResumePhiR);
   }
 }
 
@@ -1108,10 +1108,10 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
 
       if (IsFPRecurrence) {
         FastMathFlags CurFMF =
-            cast<VPRecipeWithIRFlags>(CurrentLink)->getFastMathFlags();
+            cast<VPRecipeWithIRFlags>(CurrentLink)->getFastMathFlagsOrNone();
         if (match(CurrentLink, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
           CurFMF |= cast<VPRecipeWithIRFlags>(CurrentLink->getOperand(0))
-                        ->getFastMathFlags();
+                        ->getFastMathFlagsOrNone();
         FMFs &= CurFMF;
       }
 
@@ -1460,7 +1460,7 @@ static void insertCheckBlockBeforeVectorLoop(VPlan &Plan,
     auto *Phi = cast<VPPhi>(&R);
     assert(Phi->getNumIncoming() == NumPreds - 1 &&
            "must have incoming values for all predecessors");
-    Phi->addOperand(Phi->getOperand(NumPreds - 2));
+    Phi->addIncoming(Phi->getOperand(NumPreds - 2));
   }
 }
 
@@ -1893,7 +1893,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
-    MaskPHI->addOperand(MaskSelect);
+    MaskPHI->addIncoming(MaskSelect);
 
     // Replace select for data.
     VPValue *DataSelect =

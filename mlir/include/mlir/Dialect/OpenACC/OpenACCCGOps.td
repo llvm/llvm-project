@@ -18,6 +18,7 @@
 
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
+include "mlir/IR/CommonAttrConstraints.td"
 
 // This file is intended to be included from OpenACCOps.td, which provides
 // the necessary includes and definitions. The operations defined here use
@@ -127,6 +128,46 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
   let assemblyFormat = [{
     $srcMemref `into` $destMemref $reductionOperator `:` type($destMemref) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// acc.reduction_accumulate
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ReductionAccumulateOp
+    : OpenACC_Op<"reduction_accumulate", []> {
+  let summary = "Accumulate an SSA value into a reduction variable";
+  let description = [{
+    Accumulates a scalar SSA value into a pointer-like reduction variable.
+
+    Example:
+    ```mlir
+    %private = memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>} : memref<i32>
+    memref.store %c0, %private[] : memref<i32>
+    %partial = scf.parallel (%iv) = (%c0) to (%cN) step (%c1) init (%c0) -> i32 {
+      %v = memref.load %data[%iv] : memref<Nxi32>
+      scf.reduce(%v : i32) {
+      ^bb0(%lhs: i32, %rhs: i32):
+        %sum = arith.addi %lhs, %rhs : i32
+        scf.reduce.return %sum : i32
+      }
+    } {acc.par_dims = #acc<par_dims[thread_x]>}
+    acc.reduction_accumulate (%partial) to (%private) <add>
+        : (i32) -> (memref<i32>) {par_dims = #acc<par_dims[thread_x]>}
+    acc.reduction_combine %private into %shared <add> : memref<i32>
+        {acc.par_dims = #acc<par_dims[thread_x]>}
+    ```
+  }];
+  let arguments = (ins AnyTypeOf<[AnyInteger, AnyFloat, AnyComplex]>:$value,
+                       Arg<OpenACC_PointerLikeType,
+                           "Reduction variable to update",
+                           [MemRead, MemWrite]>:$memref,
+                       OpenACC_ReductionOperatorAttr:$reductionOperator,
+                       OpenACC_GPUParallelDimsAttr:$par_dims);
+  let assemblyFormat = [{
+    `(` $value `)` `to` `(` $memref `)` $reductionOperator `:` `(` type($value) `)` `->` `(` type($memref) `)` attr-dict
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
