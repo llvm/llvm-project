@@ -69,7 +69,14 @@ class VPPredicator {
     return EdgeMaskCache[{Src, Dst}] = Mask;
   }
 
-  DenseMap<const VPBasicBlock *, VPBasicBlock::iterator> InsertPoints;
+  /// Returns where to insert new masks in \p VPBB.
+  VPBasicBlock::iterator getMaskInsertPoint(VPBasicBlock *VPBB) {
+    if (VPValue *Mask = getBlockInMask(VPBB))
+      if (VPRecipeBase *MaskR = Mask->getDefiningRecipe())
+        if (MaskR->getParent() == VPBB) // In-mask may be the IDom's.
+          return std::next(MaskR->getIterator());
+    return VPBB->getFirstNonPhi();
+  }
 
 public:
   VPPredicator(VPlan &Plan) : VPDT(Plan), VPPDT(Plan) {}
@@ -137,12 +144,6 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // Start inserting after the block's phis, which be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
-
-  // Keep track of where in VPBB we are inserting the masks into.
-  scope_exit UpdateInsertPoint([this, &VPBB]() {
-    assert(!InsertPoints.contains(VPBB) && "InsertPoint clobbered?");
-    InsertPoints[VPBB] = Builder.getInsertPoint();
-  });
 
   // Reuse the mask of the immediate dominator if the VPBB post-dominates the
   // immediate dominator.
@@ -233,7 +234,8 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  Builder.setInsertPoint(VPBB, InsertPoints[VPBB]);
+  Builder.setInsertPoint(VPBB, getMaskInsertPoint(VPBB));
+
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
     Phis.push_back(cast<VPPhi>(&R));
