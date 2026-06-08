@@ -463,7 +463,7 @@ Attribute Changes in Clang
   however there are no concrete plans to do so at the moment.
 
 * The ``modular_format`` attribute now supports the ``fixed`` aspect for C
-  N1169 fixed-point ``printf`` specifiers.
+  ISO 18037 fixed-point ``printf`` specifiers.
 
 Improvements to Clang's diagnostics
 -----------------------------------

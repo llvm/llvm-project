@@ -2852,7 +2852,7 @@ For example:
 
     The following aspects are currently supported:
 
-    - ``fixed``: The call has a C N1169 fixed-point argument.
+    - ``fixed``: The call has a C ISO 18037 fixed-point argument.
     - ``float``: The call has a floating-point argument.
 
 
