@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import math
 import os
@@ -9,13 +11,26 @@ import lit.Test
 import lit.TestRunner
 import lit.util
 from .base import TestFormat
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
+
+# Can't import unconditionally due to circular dependency
+if TYPE_CHECKING:
+    from lit.LitConfig import LitConfig
+    from lit.TestingConfig import TestingConfig
 
 kIsWindows = sys.platform in ["win32", "cygwin"]
 
 
 class GoogleTest(TestFormat):
-    def __init__(self, test_sub_dirs, test_suffix, run_under=[], test_prefix=None):
-        self.seen_executables = set()
+    def __init__(
+        self,
+        test_sub_dirs: str,
+        test_suffix: str,
+        run_under: str | list[str] = [],
+        test_prefix: str | None = None,
+    ) -> None:
+        self.seen_executables: set[str] = set()
         self.test_sub_dirs = str(test_sub_dirs).split(";")
 
         # On Windows, assume tests will also end in '.exe'.
@@ -28,7 +43,9 @@ class GoogleTest(TestFormat):
         self.test_prefixes = {test_prefix} if test_prefix else None
         self.run_under = run_under
 
-    def get_num_tests(self, path, litConfig, localConfig):
+    def get_num_tests(
+        self, path: str, litConfig: LitConfig, localConfig: TestingConfig
+    ) -> int | None:
         list_test_cmd = self.prepareCmd(
             [path, "--gtest_list_tests", "--gtest_filter=-*DISABLED_*"]
         )
@@ -47,7 +64,13 @@ class GoogleTest(TestFormat):
             )
         )
 
-    def getTestsInDirectory(self, testSuite, path_in_suite, litConfig, localConfig):
+    def getTestsInDirectory(
+        self,
+        testSuite: lit.Test.TestSuite,
+        path_in_suite: tuple[str, ...],
+        litConfig: LitConfig,
+        localConfig: TestingConfig,
+    ) -> Iterator[lit.Test.Test]:
         init_shard_size = 512  # number of tests in a shard
         core_count = lit.util.usable_core_count()
         source_path = testSuite.getSourcePath(path_in_suite)
@@ -141,7 +164,9 @@ class GoogleTest(TestFormat):
                         testSuite, testPath, localConfig, file_path=execpath
                     )
 
-    def execute(self, test, litConfig):
+    def execute(
+        self, test: lit.Test.Test, litConfig: LitConfig
+    ) -> tuple[lit.Test.ResultCode, str]:
         if test.gtest_json_file is None:
             return lit.Test.FAIL, ""
 
@@ -181,7 +206,7 @@ class GoogleTest(TestFormat):
         if litConfig.noExecute:
             return lit.Test.PASS, ""
 
-        def get_shard_header(shard_env):
+        def get_shard_header(shard_env: dict[str, str]) -> str:
             shard_envs = " ".join([k + "=" + v for k, v in shard_env.items()])
             return f"Script(shard):\n--\n%s %s\n--\n" % (shard_envs, " ".join(cmd))
 
@@ -210,8 +235,8 @@ class GoogleTest(TestFormat):
         if exitCode == 0:
             return lit.Test.PASS, ""
 
-        def get_test_stdout(test_name):
-            res = []
+        def get_test_stdout(test_name: str) -> str:
+            res: list[str] = []
             header = f"[ RUN      ] " + test_name
             footer = f"[  FAILED  ] " + test_name
             in_range = False
@@ -263,7 +288,7 @@ class GoogleTest(TestFormat):
 
         return lit.Test.FAIL, output
 
-    def prepareCmd(self, cmd):
+    def prepareCmd(self, cmd: list[str]) -> list[str]:
         """Insert interpreter if needed.
 
         It inserts the python exe into the command if cmd[0] ends in .py or caller
@@ -282,8 +307,10 @@ class GoogleTest(TestFormat):
         return cmd
 
     @staticmethod
-    def post_process_shard_results(selected_tests, discovered_tests):
-        def remove_gtest(tests):
+    def post_process_shard_results(
+        selected_tests: list[lit.Test.Test], discovered_tests: list[lit.Test.Test]
+    ) -> tuple[list[lit.Test.Test], list[lit.Test.Test]]:
+        def remove_gtest(tests: list[lit.Test.Test]) -> list[lit.Test.Test]:
             return [t for t in tests if t.gtest_json_file is None]
 
         discovered_tests = remove_gtest(discovered_tests)
