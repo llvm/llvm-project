@@ -58,6 +58,9 @@ def lto_emit_asm : Flag<["--"], "lto-emit-asm">, Flags<[WrapperOnlyOption]>,
 def u : JoinedOrSeparate<["-"], "u">, HelpText<"Force undefined symbol during linking">;
 def undefined : JoinedOrSeparate<["--"], "undefined">, Alias<u>;
 
+def z : JoinedOrSeparate<["-"], "z">, MetaVarName<"<keyword>">,
+  HelpText<"Forwarded to 'nvlink' (e.g. -z relro / -z now)">;
+
 def O : Joined<["--", "-"], "plugin-opt=O">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<O0, O1, O2, or O3>">,
   HelpText<"Optimization level for LTO">;

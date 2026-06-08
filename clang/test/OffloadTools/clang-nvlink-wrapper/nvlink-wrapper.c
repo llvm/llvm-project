@@ -47,6 +47,14 @@ int baz() { return y + x; }
 // ARGS: nvlink{{.*}} -arch sm_52 -foo -o a.out [[INPUT:.+]].cubin
 
 //
+// Check that '-z <keyword>' is forwarded to 'nvlink' as a unit and that the
+// keyword is not mistaken for an input file.
+//
+// RUN: clang-nvlink-wrapper --dry-run --assume-device-object -arch sm_52 %t-u.o \
+// RUN:   -z relro -z now -o a.out 2>&1 | FileCheck %s --check-prefix=ZOPT
+// ZOPT: nvlink{{.*}} -arch sm_52 -z relro -z now -o a.out [[INPUT:.+]].cubin
+
+//
 // Check the symbol resolution for static archives. We expect to only link
 // `libx.a` and `liby.a` because extern weak symbols do not extract and `libz.a`
 // is not used at all.
