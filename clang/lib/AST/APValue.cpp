@@ -501,7 +501,6 @@ static void profileIntValue(llvm::FoldingSetNodeID &ID, const llvm::APInt &V) {
     ID.AddInteger((uint32_t)V.extractBitsAsZExtValue(std::min(32u, N - I), I));
 }
 
-
 /// [expr.reflect] p5, if a reflect-expression R matches the form
 /// ^^reflection-name it is interpreted as such; the identifier is looked up
 /// and the representation of R is determined as follows:
