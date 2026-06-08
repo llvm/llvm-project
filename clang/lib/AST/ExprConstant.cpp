@@ -21102,6 +21102,65 @@ public:
     case Builtin::BI__builtin_operator_delete:
       return HandleOperatorDeleteCall(Info, E);
 
+    case Builtin::BIstdc_memreverse8:
+    case Builtin::BI__builtin_stdc_memreverse8: {
+      APSInt N;
+      if (!EvaluateInteger(E->getArg(0), N, Info))
+        return false;
+      uint64_t NElems = N.getZExtValue();
+
+      LValue Ptr;
+      if (!EvaluatePointer(E->getArg(1), Ptr, Info))
+        return false;
+
+      if (!Ptr.checkNullPointerForFoldAccess(Info, E, AK_Assign) ||
+          Ptr.Designator.Invalid)
+        return false;
+
+      QualType CharTy = Ptr.Designator.getType(Info.Ctx);
+      if (CharTy->isIncompleteType()) {
+        Info.FFDiag(E, diag::note_constexpr_ltor_incomplete_type) << CharTy;
+        return false;
+      }
+      if (!isOneByteCharacterType(CharTy)) {
+        Info.FFDiag(E, diag::note_constexpr_memchr_unsupported)
+            << Info.Ctx.BuiltinInfo.getQuotedName(E->getBuiltinCallee())
+            << CharTy;
+        return false;
+      }
+
+      uint64_t RemainingElems = Ptr.Designator.validIndexAdjustments().second;
+      if (NElems > RemainingElems) {
+        uint64_t ArrayIndex =
+            Ptr.Designator.MostDerivedIsArrayElement
+                ? Ptr.Designator.Entries.back().getAsArrayIndex()
+                : (uint64_t)Ptr.Designator.IsOnePastTheEnd;
+        APSInt Index = APSInt::get(ArrayIndex + NElems - 1);
+        Ptr.Designator.diagnosePointerArithmetic(Info, E, Index);
+        return false;
+      }
+
+      if (NElems <= 1)
+        return true;
+
+      LValue Lo = Ptr;
+      LValue Hi = Ptr;
+      if (!HandleLValueArrayAdjustment(Info, E, Hi, CharTy, NElems - 1))
+        return false;
+
+      for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
+        APValue LoVal, HiVal;
+        if (!handleLValueToRValueConversion(Info, E, CharTy, Lo, LoVal) ||
+            !handleLValueToRValueConversion(Info, E, CharTy, Hi, HiVal) ||
+            !handleAssignment(Info, E, Lo, CharTy, HiVal) ||
+            !handleAssignment(Info, E, Hi, CharTy, LoVal) ||
+            !HandleLValueArrayAdjustment(Info, E, Lo, CharTy, 1) ||
+            !HandleLValueArrayAdjustment(Info, E, Hi, CharTy, -1))
+          return false;
+      }
+      return true;
+    }
+
     default:
       return false;
     }

@@ -2058,6 +2058,76 @@ static bool isOneByteCharacterType(QualType T) {
   return T->isCharType() || T->isChar8Type();
 }
 
+// stdc_memreverse8(size_t N, unsigned char *P)
+static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const CallExpr *Call) {
+  Pointer Ptr = S.Stk.pop<Pointer>().expand();
+
+  uint64_t NElems;
+  if (!popToUInt64(S, Call->getArg(0), NElems))
+    return false;
+
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Assign;
+    return false;
+  }
+
+  if (Ptr.isDummy() || !Ptr.isBlockPointer() || !Ptr.isLive())
+    return false;
+
+  QualType ElemTy = Ptr.getFieldDesc()->isArray()
+                        ? Ptr.getFieldDesc()->getElemQualType()
+                        : Ptr.getFieldDesc()->getType();
+  if (ElemTy->isIncompleteType()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_ltor_incomplete_type)
+        << ElemTy;
+    return false;
+  }
+  if (!isOneByteCharacterType(ElemTy)) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memchr_unsupported)
+        << S.getASTContext().BuiltinInfo.getQuotedName(Call->getBuiltinCallee())
+        << ElemTy;
+    return false;
+  }
+
+  size_t BaseIdx = Ptr.getIndex();
+  size_t ArraySize = Ptr.getNumElems();
+  size_t RemainingElems = ArraySize - BaseIdx;
+  if (NElems > RemainingElems) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+        << (int64_t)(BaseIdx + NElems - 1) << /*isArray=*/0
+        << (uint64_t)ArraySize;
+    return false;
+  }
+
+  if (NElems <= 1)
+    return true;
+
+  PrimType ElemT = *S.getContext().classify(ElemTy);
+
+  for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
+    Pointer LoPtr = Ptr.atIndex(BaseIdx + I);
+    Pointer HiPtr = Ptr.atIndex(BaseIdx + NElems - 1 - I);
+
+    if (!CheckLoad(S, OpPC, LoPtr, AK_Read) ||
+        !CheckLoad(S, OpPC, HiPtr, AK_Read))
+      return false;
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
+      T LoVal = LoPtr.deref<T>();
+      LoPtr.deref<T>() = HiPtr.deref<T>();
+      HiPtr.deref<T>() = LoVal;
+      LoPtr.initialize();
+      HiPtr.initialize();
+    });
+  }
+  return true;
+}
+
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
@@ -5084,6 +5154,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_memreverse8u32:
   case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
+
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BI__builtin_stdc_memreverse8:
+    return interp__builtin_stdc_memreverse8(S, OpPC, Frame, Call);
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
