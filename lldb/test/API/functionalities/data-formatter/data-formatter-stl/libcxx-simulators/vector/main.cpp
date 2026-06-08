@@ -1,14 +1,5 @@
 #include <stddef.h>
 
-#define LLDB_TEST_VECTOR_WITHOUT_LAYOUT_DATA_MEMBER 0
-#define LLDB_TEST_VECTOR_WITH_POINTER_LAYOUT 1
-#define LLDB_TEST_VECTOR_WITH_SIZE_LAYOUT 2
-#define LLDB_TEST_VECTOR_WITH_LAYOUT_MISSING_DATA_MEMBERS 3
-
-#ifndef LLDB_TEST_CASE
-#error LLDB_TEST_CASE must be defined as an integer
-#endif
-
 namespace std {
 inline namespace __LegacyLayout {
 template <typename T> class vector {
