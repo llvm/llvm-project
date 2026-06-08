@@ -110,6 +110,82 @@ Operation *cir::CIRDialect::materializeConstant(mlir::OpBuilder &builder,
                                  mlir::cast<mlir::TypedAttr>(value));
 }
 
+static bool isOpenCLVersionAttrName(StringRef attrName) {
+  return attrName == CIRDialect::getOpenCLVersionAttrName() ||
+         attrName == CIRDialect::getOpenCLCXXVersionAttrName();
+}
+
+static LogicalResult verifyOpenCLVersionAttrPlacement(Operation *op,
+                                                      NamedAttribute attr) {
+  StringRef attrName = attr.getName().getValue();
+  if (!isOpenCLVersionAttrName(attrName) || isa<ModuleOp>(op))
+    return success();
+
+  return op->emitError() << attrName
+                         << " attribute must be attached to a module";
+}
+
+static bool areOpenCLVersionsCompatible(cir::OpenCLVersionAttr openCLVersion,
+                                        cir::OpenCLVersionAttr cxxVersion) {
+  return (openCLVersion.getMajor() == 2 && openCLVersion.getMinor() == 0 &&
+          cxxVersion.getMajor() == 1 && cxxVersion.getMinor() == 0) ||
+         (openCLVersion.getMajor() == 3 && openCLVersion.getMinor() == 0 &&
+          cxxVersion.getMajor() == 2021 && cxxVersion.getMinor() == 0);
+}
+
+static LogicalResult verifyOpenCLCXXVersion(ModuleOp module,
+                                            cir::OpenCLVersionAttr cxxVersion) {
+  Attribute openCLAttr =
+      module->getAttr(CIRDialect::getOpenCLVersionAttrName());
+  if (!openCLAttr)
+    return module.emitError()
+           << "module attribute '" << CIRDialect::getOpenCLCXXVersionAttrName()
+           << "' requires the companion attribute '"
+           << CIRDialect::getOpenCLVersionAttrName() << "'";
+
+  auto openCLVersion = dyn_cast<cir::OpenCLVersionAttr>(openCLAttr);
+  if (!openCLVersion)
+    return success();
+
+  if (!areOpenCLVersionsCompatible(openCLVersion, cxxVersion))
+    return module.emitError("incompatible OpenCL and C++ for OpenCL versions");
+
+  return success();
+}
+
+LogicalResult cir::CIRDialect::verifyOperationAttribute(Operation *op,
+                                                        NamedAttribute attr) {
+  StringRef attrName = attr.getName().getValue();
+  if (!isOpenCLVersionAttrName(attrName))
+    return success();
+
+  if (failed(verifyOpenCLVersionAttrPlacement(op, attr)))
+    return failure();
+
+  auto version = dyn_cast<cir::OpenCLVersionAttr>(attr.getValue());
+  if (!version) {
+    return op->emitError() << "expected " << attrName
+                           << " to be #cir.cl.version";
+  }
+
+  if (attrName == getOpenCLCXXVersionAttrName())
+    return verifyOpenCLCXXVersion(cast<ModuleOp>(op), version);
+
+  return success();
+}
+
+LogicalResult cir::CIRDialect::verifyRegionArgAttribute(
+    Operation *op, unsigned /*regionIndex*/, unsigned /*argIndex*/,
+    NamedAttribute attr) {
+  return verifyOpenCLVersionAttrPlacement(op, attr);
+}
+
+LogicalResult cir::CIRDialect::verifyRegionResultAttribute(
+    Operation *op, unsigned /*regionIndex*/, unsigned /*resultIndex*/,
+    NamedAttribute attr) {
+  return verifyOpenCLVersionAttrPlacement(op, attr);
+}
+
 //===----------------------------------------------------------------------===//
 // Helpers
 //===----------------------------------------------------------------------===//
