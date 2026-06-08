@@ -157,6 +157,38 @@ define <32 x i16> @one_pmulhu_512_commute(<32 x i16> %a0) {
   ret <32 x i16> %1
 }
 
+; A splat-of-one with a poison lane still matches m_One() (poison lanes are
+; ignored), so it folds to zero. This is a valid refinement: the poison lane can
+; be instantiated to 0, which produces a 0 result.
+
+define <8 x i16> @one_poison_pmulhu_128(<8 x i16> %a0) {
+; CHECK-LABEL: @one_poison_pmulhu_128(
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+;
+  %1 = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %a0, <8 x i16> <i16 1, i16 poison, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  ret <8 x i16> %1
+}
+
+define <8 x i16> @one_poison_pmulhu_128_commute(<8 x i16> %a0) {
+; CHECK-LABEL: @one_poison_pmulhu_128_commute(
+; CHECK-NEXT:    ret <8 x i16> zeroinitializer
+;
+  %1 = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> <i16 1, i16 poison, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>, <8 x i16> %a0)
+  ret <8 x i16> %1
+}
+
+; A splat-of-one with an undef lane does NOT match m_One() (only poison lanes are
+; ignored), so the intrinsic is preserved.
+
+define <8 x i16> @one_undef_pmulhu_128(<8 x i16> %a0) {
+; CHECK-LABEL: @one_undef_pmulhu_128(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> [[A0:%.*]], <8 x i16> <i16 1, i16 undef, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+; CHECK-NEXT:    ret <8 x i16> [[TMP1]]
+;
+  %1 = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %a0, <8 x i16> <i16 1, i16 undef, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>)
+  ret <8 x i16> %1
+}
+
 ;
 ; Constant Folding
 ;
