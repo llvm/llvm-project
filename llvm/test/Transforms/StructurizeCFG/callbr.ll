@@ -7,7 +7,7 @@
 ; unconditional branch as the only instruction) is interposed with a bypass
 ; block (via SplitCallBrEdge) so the targets are not direct successors of the
 ; immutable callbr; the bypasses then converge into a Flow block whose
-; "callbr.sel" phis recover, as data, which target the callbr selected, and a
+; "island.sel" phis recover, as data, which target the callbr selected, and a
 ; ladder of 2-way Flow branches re-dispatches to the targets.  Loop back-edges
 ; among the targets are routed so the normal loop machinery closes the loop. The
 ; callbr terminator itself is never rewritten.
@@ -27,9 +27,9 @@ define void @callbr_simple() {
 ; CHECK:       [[INDIRECT]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[FALLTHROUGH]] ], [ false, %[[INDIRECT]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FALLTHROUGH]] ], [ false, %[[INDIRECT]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -82,25 +82,25 @@ define void @callbr_many_indirect(i1 %c) {
 ; CHECK:       [[I3]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[I0]] ], [ false, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
-; CHECK-NEXT:    [[CALLBR_SEL1:%.*]] = phi i1 [ false, %[[FT]] ], [ true, %[[I0]] ], [ false, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
-; CHECK-NEXT:    [[CALLBR_SEL2:%.*]] = phi i1 [ false, %[[FT]] ], [ false, %[[I0]] ], [ true, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
-; CHECK-NEXT:    [[CALLBR_SEL3:%.*]] = phi i1 [ false, %[[FT]] ], [ false, %[[I0]] ], [ false, %[[I1]] ], [ true, %[[I2]] ], [ false, %[[I3]] ]
-; CHECK-NEXT:    [[CALLBR_SEL3_INV:%.*]] = xor i1 [[CALLBR_SEL3]], true
-; CHECK-NEXT:    [[CALLBR_SEL2_INV:%.*]] = xor i1 [[CALLBR_SEL2]], true
-; CHECK-NEXT:    [[CALLBR_SEL1_INV:%.*]] = xor i1 [[CALLBR_SEL1]], true
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW4:.*]], label %[[FLOW8:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[I0]] ], [ false, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
+; CHECK-NEXT:    [[ISLAND_SEL1:%.*]] = phi i1 [ false, %[[FT]] ], [ true, %[[I0]] ], [ false, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
+; CHECK-NEXT:    [[ISLAND_SEL2:%.*]] = phi i1 [ false, %[[FT]] ], [ false, %[[I0]] ], [ true, %[[I1]] ], [ false, %[[I2]] ], [ false, %[[I3]] ]
+; CHECK-NEXT:    [[ISLAND_SEL3:%.*]] = phi i1 [ false, %[[FT]] ], [ false, %[[I0]] ], [ false, %[[I1]] ], [ true, %[[I2]] ], [ false, %[[I3]] ]
+; CHECK-NEXT:    [[ISLAND_SEL3_INV:%.*]] = xor i1 [[ISLAND_SEL3]], true
+; CHECK-NEXT:    [[ISLAND_SEL2_INV:%.*]] = xor i1 [[ISLAND_SEL2]], true
+; CHECK-NEXT:    [[ISLAND_SEL1_INV:%.*]] = xor i1 [[ISLAND_SEL1]], true
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW4:.*]], label %[[FLOW8:.*]]
 ; CHECK:       [[FLOW4]]:
-; CHECK-NEXT:    br i1 [[CALLBR_SEL1_INV]], label %[[FLOW5:.*]], label %[[FLOW9:.*]]
+; CHECK-NEXT:    br i1 [[ISLAND_SEL1_INV]], label %[[FLOW5:.*]], label %[[FLOW9:.*]]
 ; CHECK:       [[FLOW8]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[FLOW5]]:
-; CHECK-NEXT:    br i1 [[CALLBR_SEL2_INV]], label %[[FLOW6:.*]], label %[[FLOW10:.*]]
+; CHECK-NEXT:    br i1 [[ISLAND_SEL2_INV]], label %[[FLOW6:.*]], label %[[FLOW10:.*]]
 ; CHECK:       [[FLOW9]]:
 ; CHECK-NEXT:    br label %[[FLOW8]]
 ; CHECK:       [[FLOW6]]:
-; CHECK-NEXT:    br i1 [[CALLBR_SEL3_INV]], label %[[FLOW7:.*]], label %[[FLOW11:.*]]
+; CHECK-NEXT:    br i1 [[ISLAND_SEL3_INV]], label %[[FLOW7:.*]], label %[[FLOW11:.*]]
 ; CHECK:       [[FLOW10]]:
 ; CHECK-NEXT:    br label %[[FLOW9]]
 ; CHECK:       [[FLOW7]]:
@@ -133,9 +133,9 @@ define void @callbr_shared_target() {
 ; CHECK-NEXT:    callbr void asm "", "!i"()
 ; CHECK-NEXT:            to label %[[ENTRY_TARGET_FT:.*]] [label %[[ENTRY_TARGET_FT1:.*]]]
 ; CHECK:       [[FLOW:.*]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_FT]] ], [ false, %[[ENTRY_TARGET_FT1]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW2:.*]], label %[[FT:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_FT]] ], [ false, %[[ENTRY_TARGET_FT1]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW2:.*]], label %[[FT:.*]]
 ; CHECK:       [[FLOW2]]:
 ; CHECK-NEXT:    br label %[[FT]]
 ; CHECK:       [[FT]]:
@@ -184,10 +184,10 @@ define void @callbr_multi_indirect_one_trivial(i1 %c, i1 %d) {
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    br label %[[FLOW8]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_FALLTHROUGH]] ], [ false, %[[ENTRY_TARGET_INDIRECT0]] ], [ false, %[[INDIRECT1]] ]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_FALLTHROUGH]] ], [ false, %[[ENTRY_TARGET_INDIRECT0]] ], [ false, %[[INDIRECT1]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, %[[ENTRY_TARGET_FALLTHROUGH]] ], [ true, %[[ENTRY_TARGET_INDIRECT0]] ], [ false, %[[INDIRECT1]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW4:.*]], label %[[FLOW6]]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW4:.*]], label %[[FLOW6]]
 ; CHECK:       [[FLOW4]]:
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FALLTHROUGH]], label %[[EXIT]]
 ; CHECK:       [[FLOW8]]:
@@ -287,6 +287,68 @@ exit:
   ret void
 }
 
+; Two unreachable targets: both stay direct dead lanes (out of the ladder) and
+; reconverge at the exit, giving it three predecessors.
+define void @callbr_two_unreachable_targets() {
+; CHECK-LABEL: define void @callbr_two_unreachable_targets() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[LIVE:.*]] [label %[[DEAD1:.*]], label %[[DEAD2:.*]]]
+; CHECK:       [[LIVE]]:
+; CHECK-NEXT:    br label %[[FLOW:.*]]
+; CHECK:       [[DEAD1]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[DEAD2]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  callbr void asm "", "!i,!i"() to label %live [label %dead1, label %dead2]
+live:
+  br label %exit
+dead1:
+  call void @llvm.amdgcn.unreachable()
+  br label %exit
+dead2:
+  call void @llvm.amdgcn.unreachable()
+  br label %exit
+exit:
+  ret void
+}
+
+; Every target is unreachable: there is nothing to dispatch, so no ladder is
+; built and the callbr is left untouched with both dead lanes direct.
+define void @callbr_all_targets_unreachable() {
+; CHECK-LABEL: define void @callbr_all_targets_unreachable() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    callbr void asm "", "!i"()
+; CHECK-NEXT:            to label %[[DEAD0:.*]] [label %[[DEAD1:.*]]]
+; CHECK:       [[DEAD0]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[DEAD1]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.unreachable()
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  callbr void asm "", "!i"() to label %dead0 [label %dead1]
+dead0:
+  call void @llvm.amdgcn.unreachable()
+  br label %exit
+dead1:
+  call void @llvm.amdgcn.unreachable()
+  br label %exit
+exit:
+  ret void
+}
+
 ; ===== callbr nested in / surrounded by non-callbr control flow =====
 
 ; Callbr nested in non-callbr: non-callbr is transformed
@@ -308,9 +370,9 @@ define void @callbr_in_non_callbr(i1 %c) {
 ; CHECK:       [[NOCALLBR]]:
 ; CHECK-NEXT:    br label %[[FLOW2]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[FALLTHROUGH]] ], [ false, %[[INDIRECT]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW1:.*]], label %[[FLOW3:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FALLTHROUGH]] ], [ false, %[[INDIRECT]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[FLOW3:.*]]
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    br label %[[FLOW3]]
 ; CHECK:       [[FLOW3]]:
@@ -407,9 +469,9 @@ define void @callbr_nested_in_non_callbr(i1 %c, i1 %d, i1 %e, i1 %f) {
 ; CHECK:       [[FLOW2]]:
 ; CHECK-NEXT:    br label %[[FLOW6]]
 ; CHECK:       [[FLOW3]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[CALLBR_TARGET_FALLTHROUGH]] ], [ false, %[[CALLBR_TARGET_INDIRECT]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW4]], label %[[FLOW5]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CALLBR_TARGET_FALLTHROUGH]] ], [ false, %[[CALLBR_TARGET_INDIRECT]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW4]], label %[[FLOW5]]
 ; CHECK:       [[FLOW6]]:
 ; CHECK-NEXT:    br label %[[RET]]
 ; CHECK:       [[RET]]:
@@ -461,9 +523,9 @@ define void @callbr_regions_around(i1 %c, i1 %d, i1 %e) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW1]]
 ; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW2:.*]], label %[[POST:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW2:.*]], label %[[POST:.*]]
 ; CHECK:       [[FLOW2]]:
 ; CHECK-NEXT:    br label %[[POST]]
 ; CHECK:       [[POST]]:
@@ -526,9 +588,9 @@ define void @callbr_pred_from_subregion(i1 %c, i1 %d) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[CONT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CONT]] ], [ false, %[[IND]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -727,10 +789,10 @@ define void @callbr_targets_chain(i1 %c, i1 %d) {
 ; CHECK:       [[T2]]:
 ; CHECK-NEXT:    br label %[[FLOW8]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_T0]] ], [ false, %[[ENTRY_TARGET_T1]] ], [ false, %[[ENTRY_TARGET_T2]] ]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_T0]] ], [ false, %[[ENTRY_TARGET_T1]] ], [ false, %[[ENTRY_TARGET_T2]] ]
 ; CHECK-NEXT:    [[ISLAND_SEL1]] = phi i1 [ false, %[[ENTRY_TARGET_T0]] ], [ true, %[[ENTRY_TARGET_T1]] ], [ false, %[[ENTRY_TARGET_T2]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW3]], label %[[FLOW5]]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW3]], label %[[FLOW5]]
 ; CHECK:       [[FLOW3]]:
 ; CHECK-NEXT:    br label %[[FLOW5]]
 ; CHECK:       [[EXIT]]:
@@ -782,9 +844,9 @@ define void @callbr_as_region_exit(i1 %c) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[CONT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CONT]] ], [ false, %[[IND]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
@@ -876,9 +938,9 @@ define void @callbr_target_is_callbr() {
 ; CHECK:       [[IND0]]:
 ; CHECK-NEXT:    br label %[[FLOW2:.*]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[FT1]] ], [ false, %[[IND1]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW1:.*]], label %[[FLOW3:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT1]] ], [ false, %[[IND1]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[FLOW3:.*]]
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    br label %[[FLOW3]]
 ; CHECK:       [[FLOW3]]:
@@ -919,9 +981,9 @@ define i32 @callbr_phi_uses_return_value(i1 %c) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW1:.*]], label %[[JOIN:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[JOIN:.*]]
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
@@ -983,9 +1045,9 @@ define void @callbr_self_loop_fallthrough(i1 %c) {
 ; CHECK-NEXT:    callbr void asm "", "!i"()
 ; CHECK-NEXT:            to label %[[CB_TARGET_CB:.*]] [label %[[IND:.*]]]
 ; CHECK:       [[FLOW2:.*]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_CB]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW3:.*]], label %[[CB]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_CB]] ], [ false, %[[IND]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW3:.*]], label %[[CB]]
 ; CHECK:       [[FLOW3]]:
 ; CHECK-NEXT:    br label %[[EXIT1:.*]]
 ; CHECK:       [[EXIT1]]:
@@ -1048,9 +1110,9 @@ define void @callbr_self_loop_exit_is_ret(i1 %c) {
 ; CHECK-NEXT:    callbr void asm "", "!i"()
 ; CHECK-NEXT:            to label %[[CB_TARGET_CB:.*]] [label %[[CB_TARGET_RET:.*]]]
 ; CHECK:       [[FLOW:.*]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_CB]] ], [ false, %[[CB_TARGET_RET]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[RET:.*]], label %[[CB]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_CB]] ], [ false, %[[CB_TARGET_RET]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[RET:.*]], label %[[CB]]
 ; CHECK:       [[RET]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[CB_TARGET_CB]]:
@@ -1134,9 +1196,9 @@ define void @callbr_exit_is_loop_header(i1 %c) {
 ; CHECK:       [[FLOW3:.*]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_OUT]] ], [ false, %[[BODY]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW3]], label %[[FLOW4]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_OUT]] ], [ false, %[[BODY]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW3]], label %[[FLOW4]]
 ; CHECK:       [[OUT]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[CB_TARGET_OUT]]:
@@ -1171,7 +1233,7 @@ define void @callbr_latch_separate_header(i1 %c) {
 ; CHECK:       [[FLOW]]:
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[FLOW4]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[CALLBR_SEL_INV:%.*]], %[[FLOW2:.*]] ], [ true, %[[HEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[ISLAND_SEL_INV:%.*]], %[[FLOW2:.*]] ], [ true, %[[HEADER]] ]
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[FLOW5:.*]], label %[[HEADER]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
@@ -1179,8 +1241,8 @@ define void @callbr_latch_separate_header(i1 %c) {
 ; CHECK:       [[OUT]]:
 ; CHECK-NEXT:    br label %[[FLOW2]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_HEADER]] ], [ false, %[[OUT]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV]] = xor i1 [[CALLBR_SEL]], true
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_HEADER]] ], [ false, %[[OUT]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV]] = xor i1 [[ISLAND_SEL]], true
 ; CHECK-NEXT:    br label %[[FLOW4]]
 ; CHECK:       [[FLOW5]]:
 ; CHECK-NEXT:    ret void
@@ -1216,9 +1278,9 @@ define void @callbr_inside_loop(i1 %c) {
 ; CHECK:       [[IND]]:
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV:%.*]] = xor i1 [[CALLBR_SEL]], true
-; CHECK-NEXT:    br i1 [[CALLBR_SEL_INV]], label %[[FLOW1:.*]], label %[[LATCH:.*]]
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[FT]] ], [ false, %[[IND]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[LATCH:.*]]
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[FLOW2]]:
@@ -1296,14 +1358,14 @@ define void @callbr_inner_latch_nested_loop(i1 %c, i1 %d) {
 ; CHECK:       [[FLOW]]:
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[FLOW4]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[CALLBR_SEL_INV:%.*]], %[[FLOW2:.*]] ], [ true, %[[INNER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[ISLAND_SEL_INV:%.*]], %[[FLOW2:.*]] ], [ true, %[[INNER]] ]
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[FLOW5:.*]], label %[[INNER]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
 ; CHECK-NEXT:            to label %[[CB_TARGET_INNER:.*]] [label %[[CB_TARGET_INNER_EXIT:.*]]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[CALLBR_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_INNER]] ], [ false, %[[CB_TARGET_INNER_EXIT]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV]] = xor i1 [[CALLBR_SEL]], true
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_INNER]] ], [ false, %[[CB_TARGET_INNER_EXIT]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV]] = xor i1 [[ISLAND_SEL]], true
 ; CHECK-NEXT:    br label %[[FLOW4]]
 ; CHECK:       [[FLOW5]]:
 ; CHECK-NEXT:    br i1 [[D_INV]], label %[[EXIT:.*]], label %[[OUTER]]
@@ -1343,15 +1405,15 @@ define void @callbr_two_backedges(i1 %c, i1 %d) {
 ; CHECK:       [[FLOW]]:
 ; CHECK-NEXT:    br label %[[CB:.*]]
 ; CHECK:       [[FLOW4]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ [[CALLBR_SEL:%.*]], %[[FLOW2:.*]] ], [ true, %[[INNER]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[CALLBR_SEL_INV:%.*]], %[[FLOW2]] ], [ true, %[[INNER]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ [[ISLAND_SEL:%.*]], %[[FLOW2:.*]] ], [ true, %[[INNER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[ISLAND_SEL_INV:%.*]], %[[FLOW2]] ], [ true, %[[INNER]] ]
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[FLOW5:.*]], label %[[INNER]]
 ; CHECK:       [[CB]]:
 ; CHECK-NEXT:    callbr void asm "", "!i"()
 ; CHECK-NEXT:            to label %[[CB_TARGET_INNER:.*]] [label %[[CB_TARGET_OUTER:.*]]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    [[CALLBR_SEL]] = phi i1 [ true, %[[CB_TARGET_INNER]] ], [ false, %[[CB_TARGET_OUTER]] ]
-; CHECK-NEXT:    [[CALLBR_SEL_INV]] = xor i1 [[CALLBR_SEL]], true
+; CHECK-NEXT:    [[ISLAND_SEL]] = phi i1 [ true, %[[CB_TARGET_INNER]] ], [ false, %[[CB_TARGET_OUTER]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV]] = xor i1 [[ISLAND_SEL]], true
 ; CHECK-NEXT:    br label %[[FLOW4]]
 ; CHECK:       [[FLOW5]]:
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[INNER_EXIT:.*]], label %[[OUTER]]
