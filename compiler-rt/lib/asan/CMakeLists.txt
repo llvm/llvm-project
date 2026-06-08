@@ -12,6 +12,7 @@ set(ASAN_SOURCES
   asan_fuchsia.cpp
   asan_globals.cpp
   asan_globals_win.cpp
+  asan_hsa_allocator.cpp
   asan_hsa_linux.cpp
   asan_interceptors.cpp
   asan_interceptors_memintrinsics.cpp
@@ -81,6 +82,7 @@ SET(ASAN_HEADERS
   asan_fake_stack.h
   asan_flags.h
   asan_flags.inc
+  asan_hsa_allocator.h
   asan_hsa_linux.h
   asan_init_version.h
   asan_interceptors.h
