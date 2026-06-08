@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_STRINGMAP_H
 #define LLVM_ADT_STRINGMAP_H
 
+#include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/AllocatorBase.h"
@@ -30,7 +31,7 @@ template <typename ValueTy> class StringMapKeyIterator;
 
 /// StringMapImpl - This is the base class of StringMap that is shared among
 /// all of its instantiations.
-class StringMapImpl {
+class StringMapImpl : public DebugEpochBase {
 protected:
   // Array of NumBuckets pointers to entries, null pointers are holes.
   // TheTable[NumBuckets] contains a sentinel value for easy iteration. Followed
@@ -116,6 +117,8 @@ public:
   [[nodiscard]] LLVM_ABI static uint32_t hash(StringRef Key);
 
   void swap(StringMapImpl &Other) {
+    incrementEpoch();
+    Other.incrementEpoch();
     std::swap(TheTable, Other.TheTable);
     std::swap(NumBuckets, Other.NumBuckets);
     std::swap(NumItems, Other.NumItems);
@@ -220,13 +223,15 @@ public:
   using const_iterator = StringMapIterBase<ValueTy, true>;
   using iterator = StringMapIterBase<ValueTy, false>;
 
-  [[nodiscard]] iterator begin() { return iterator(TheTable, NumBuckets != 0); }
-  [[nodiscard]] iterator end() { return iterator(TheTable + NumBuckets); }
+  [[nodiscard]] iterator begin() {
+    return iterator(this, TheTable, NumBuckets != 0);
+  }
+  [[nodiscard]] iterator end() { return iterator(this, TheTable + NumBuckets); }
   [[nodiscard]] const_iterator begin() const {
-    return const_iterator(TheTable, NumBuckets != 0);
+    return const_iterator(this, TheTable, NumBuckets != 0);
   }
   [[nodiscard]] const_iterator end() const {
-    return const_iterator(TheTable + NumBuckets);
+    return const_iterator(this, TheTable + NumBuckets);
   }
 
   [[nodiscard]] iterator_range<StringMapKeyIterator<ValueTy>> keys() const {
@@ -240,7 +245,7 @@ public:
     int Bucket = FindKey(Key, FullHashValue);
     if (Bucket == -1)
       return end();
-    return iterator(TheTable + Bucket);
+    return iterator(this, TheTable + Bucket);
   }
 
   [[nodiscard]] const_iterator find(StringRef Key) const {
@@ -252,7 +257,7 @@ public:
     int Bucket = FindKey(Key, FullHashValue);
     if (Bucket == -1)
       return end();
-    return const_iterator(TheTable + Bucket);
+    return const_iterator(this, TheTable + Bucket);
   }
 
   /// lookup - Return the entry for the specified key, or a default
@@ -324,6 +329,7 @@ public:
     if (Bucket && Bucket != getTombstoneVal())
       return false; // Already exists in map.
 
+    incrementEpoch();
     if (Bucket == getTombstoneVal())
       --NumTombstones;
     Bucket = KeyValue;
@@ -389,8 +395,9 @@ public:
     unsigned BucketNo = LookupBucketFor(Key, FullHashValue);
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
     if (Bucket && Bucket != getTombstoneVal())
-      return {iterator(TheTable + BucketNo), false}; // Already exists in map.
+      return {iterator(this, TheTable + BucketNo), false}; // Already in map.
 
+    incrementEpoch();
     if (Bucket == getTombstoneVal())
       --NumTombstones;
     Bucket =
@@ -399,11 +406,12 @@ public:
     assert(NumItems + NumTombstones <= NumBuckets);
 
     BucketNo = RehashTable(BucketNo);
-    return {iterator(TheTable + BucketNo), true};
+    return {iterator(this, TheTable + BucketNo), true};
   }
 
   // clear - Empties out the StringMap
   void clear() {
+    incrementEpoch();
     if (empty())
       return;
 
@@ -426,13 +434,25 @@ public:
 
   void erase(iterator I) {
     MapEntryTy &V = *I;
+    incrementEpoch();
     remove(&V);
     V.Destroy(getAllocator());
+  }
+
+  bool erase(StringRef Key) {
+    iterator I = find(Key);
+    if (I == end())
+      return false;
+    erase(I);
+    return true;
   }
 
   /// Remove entries that match the given predicate. \p Pred is invoked with a
   /// reference to each live entry and must not access the map being modified.
   /// This is the safe replacement for erase-while-iterating.
+  ///
+  /// Returns whether anything was removed. If so, all iterators and references
+  /// into the map are invalidated.
   template <typename Predicate> bool remove_if(Predicate Pred) {
     bool Removed = false;
     for (StringMapEntryBase *&Bucket : buckets()) {
@@ -447,19 +467,17 @@ public:
         Removed = true;
       }
     }
+    if (Removed)
+      incrementEpoch();
     return Removed;
-  }
-
-  bool erase(StringRef Key) {
-    iterator I = find(Key);
-    if (I == end())
-      return false;
-    erase(I);
-    return true;
   }
 };
 
-template <typename ValueTy, bool IsConst> class StringMapIterBase {
+template <typename ValueTy, bool IsConst>
+class StringMapIterBase : DebugEpochBase::HandleBase {
+  friend class StringMapIterBase<ValueTy, true>;
+  friend class StringMapIterBase<ValueTy, false>;
+
   StringMapEntryBase **Ptr = nullptr;
 
 public:
@@ -472,20 +490,31 @@ public:
 
   StringMapIterBase() = default;
 
-  explicit StringMapIterBase(StringMapEntryBase **Bucket, bool Advance = false)
-      : Ptr(Bucket) {
+  explicit StringMapIterBase(const DebugEpochBase *Epoch,
+                             StringMapEntryBase **Bucket, bool Advance = false)
+      : DebugEpochBase::HandleBase(Epoch), Ptr(Bucket) {
     if (Advance)
       AdvancePastEmptyBuckets();
   }
 
+  // Converting ctor from non-const to const iterators. SFINAE'd out for const
+  // sources so it doesn't shadow the implicit copy constructor.
+  template <bool IsConstSrc,
+            typename = std::enable_if_t<!IsConstSrc && IsConst>>
+  StringMapIterBase(const StringMapIterBase<ValueTy, IsConstSrc> &I)
+      : DebugEpochBase::HandleBase(I), Ptr(I.Ptr) {}
+
   [[nodiscard]] reference operator*() const {
+    assert(isHandleInSync() && "invalid iterator access!");
     return *static_cast<value_type *>(*Ptr);
   }
   [[nodiscard]] pointer operator->() const {
+    assert(isHandleInSync() && "invalid iterator access!");
     return static_cast<value_type *>(*Ptr);
   }
 
   StringMapIterBase &operator++() { // Preincrement
+    assert(isHandleInSync() && "invalid iterator access!");
     ++Ptr;
     AdvancePastEmptyBuckets();
     return *this;
@@ -497,14 +526,12 @@ public:
     return Tmp;
   }
 
-  template <bool ToConst,
-            typename = typename std::enable_if<!IsConst && ToConst>::type>
-  operator StringMapIterBase<ValueTy, ToConst>() const {
-    return StringMapIterBase<ValueTy, ToConst>(Ptr);
-  }
-
   friend bool operator==(const StringMapIterBase &LHS,
                          const StringMapIterBase &RHS) {
+    assert((!LHS.getEpochAddress() || LHS.isHandleInSync()) &&
+           "handle not in sync!");
+    assert((!RHS.getEpochAddress() || RHS.isHandleInSync()) &&
+           "handle not in sync!");
     return LHS.Ptr == RHS.Ptr;
   }
 
