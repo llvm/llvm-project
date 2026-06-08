@@ -2928,6 +2928,18 @@ void class_specific_operator_delete_use_after_free() {
   (void)p->X;                                       // expected-note {{later used here}}
 }
 
+struct ClassSpecificNew {
+  int X;
+  static void *operator new(std::size_t);
+  static void operator delete(void *);
+};
+
+void class_specific_operator_new_use_after_free() {
+  ClassSpecificNew *p = new ClassSpecificNew; // expected-warning {{allocated object does not live long enough}}
+  delete p;                                   // expected-note {{freed here}}
+  (void)p->X;                                 // expected-note {{later used here}}
+}
+
 struct PointerFieldHolder {
   MyObj *Ptr;
 };
