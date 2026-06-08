@@ -50,10 +50,10 @@ void checkCV() {
 
   //  types different (static sized)
   {
-    std::span<const int, 3> s1{arr};           // a span<const int> pointing at int.
-    std::span<volatile int, 3> s2{arr};        // a span<volatile int> pointing at int.
-    std::span<volatile int, 3> s3{arr};        // a span<volatile int> pointing at const int.
-    std::span<const volatile int, 3> s4{arr};  // a span<const volatile int> pointing at int.
+    std::span<const int, 3> s1{arr};          // a span<const int> pointing at int.
+    std::span<volatile int, 3> s2{arr};       // a span<volatile int> pointing at int.
+    std::span<volatile int, 3> s3{arr};       // a span<volatile int> pointing at const int.
+    std::span<const volatile int, 3> s4{arr}; // a span<const volatile int> pointing at int.
   }
 }
 
