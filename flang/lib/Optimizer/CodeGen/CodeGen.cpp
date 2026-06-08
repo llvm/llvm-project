@@ -4658,11 +4658,11 @@ struct ShapeShiftOpConversion : public fir::FIROpConversion<fir::ShapeShiftOp> {
         mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
     // Pack extent operands only; lower bounds are not part of the LLVM shape
     // bundle consumed by fir.shape_extents.
-    for (auto [i, extent] : llvm::enumerate(adaptor.getPairs())) {
-      if (i & 1)
+    for (auto [i, pair] : llvm::enumerate(adaptor.getPairs())) {
+      if (!(i & 1))
         continue;
       mlir::Value extentI64 =
-          integerCast(loc, rewriter, i64Ty, extent, /*fold=*/true);
+          integerCast(loc, rewriter, i64Ty, pair, /*fold=*/true);
       structVal = mlir::LLVM::InsertValueOp::create(rewriter, loc, structVal,
                                                     extentI64, i / 2);
     }

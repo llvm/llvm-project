@@ -339,12 +339,6 @@ bool FIRToMemRef::materializeShapeExtents(
     return true;
   }
 
-  if (auto extentsOp = shapeVal.getDefiningOp<fir::ShapeExtentsOp>()) {
-    shapeVec.append(extentsOp.getExtents().begin(),
-                    extentsOp.getExtents().end());
-    return true;
-  }
-
   if (mlir::isa<fir::ShapeType, fir::ShapeShiftType>(shapeVal.getType())) {
     auto extentsOp = fir::ShapeExtentsOp::create(rewriter, loc, shapeVal);
     shapeVec.append(extentsOp.getExtents().begin(),
