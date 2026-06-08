@@ -2176,6 +2176,10 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   }];
 }
 
+def SaturationModeSatfiniteOrNone :
+  ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr,
+                [SaturationModeNone, SaturationModeFinite]>]>;
+
 class NVVM_ConvertToFP16x2Op_Base <string srcTypeStr, Type srcStorageType, string dstTypeStr, list<Type> supportedTypes, int needVerify = 0>
 : NVVM_SingleResultIntrinsicOp<"convert." # !tolower(srcTypeStr) # "x2.to." # !tolower(dstTypeStr) # "x2", [], "$dst"> {
   let summary = "Convert a pair of " # !tolower(srcTypeStr) # " inputs to " # !tolower(dstTypeStr) # "x2";
@@ -2208,7 +2212,7 @@ class NVVM_ConvertToFP16x2Op_Base <string srcTypeStr, Type srcStorageType, strin
     (ins srcStorageType:$src,
          Optional<I16>:$scaleFactor,
          TypeAttrOf<AnyTypeOf<supportedTypes>>:$srcType,
-         DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+         DefaultValuedAttr<SaturationModeSatfiniteOrNone, "SaturationMode::NONE">:$sat,
          DefaultValuedAttr<BoolAttr, "false">:$relu));
   let assemblyFormat = 
     !if(!eq(dstTypeStr, "F16"),
@@ -2399,7 +2403,7 @@ def NVVM_ConvertS2F6x2ToBF16x2Op : NVVM_SingleResultIntrinsicOp<"convert.s2f6x2.
   let results = (outs VectorOfLengthAndType<[2], [BF16]>:$dst);
   let arguments = (ins VectorOfLengthAndType<[2], [I8]>:$src,
       Optional<I16>:$scaleFactor,
-      DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+      DefaultValuedAttr<SaturationModeSatfiniteOrNone, "SaturationMode::NONE">:$sat,
       DefaultValuedAttr<BoolAttr, "false">:$relu);
   let assemblyFormat =
       "$src (`,` $scaleFactor^)? attr-dict `:` type($src) `->` type($dst)";

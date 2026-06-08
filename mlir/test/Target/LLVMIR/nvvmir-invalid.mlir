@@ -265,6 +265,38 @@ llvm.func @nvvm_cvt_f8x2_to_bf16x2_ue8m0_invalid_relu(%src : vector<2xi8>) {
 
 // -----
 
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f6x2_to_bf16x2_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f4x2_to_bf16x2_invalid_sat(%src : i8) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f4x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : i8 (f4E2M1FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_s2f6x2_to_bf16x2_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.s2f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : vector<2xi8> -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_cvt_f6x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
   // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f6E2M3FN type or f6E3M2FN type}}
   %res = nvvm.convert.f6x2.to.f16x2 %src : vector<2xi8> (f8E4M3FN) -> vector<2xf16>
