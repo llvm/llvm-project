@@ -15,15 +15,6 @@ using namespace llvm;
 
 /// Pre-RA scheduling ///
 
-// Options needed for testing.
-// TopRegionSUs is the number of SUs that are considered to be part of the
-// "top" of a region. Liveness reduction is not done in regions smaller than
-// this. The idea is to prioritize latency more after branches and help
-// liveness only when the decoder is ahead of execution anyway.
-static cl::opt<unsigned> TopRegionSUs("top-region", cl::Hidden, cl::init(36));
-static cl::opt<bool> DisableLatency("disable-latency", cl::Hidden,
-                                    cl::init(false));
-
 static bool isRegDef(const MachineOperand &MO) {
   return MO.isReg() && MO.isDef();
 }
@@ -125,6 +116,12 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
 void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock::iterator End,
                                            unsigned NumRegionInstrs) {
+  // TopRegionSUs is the number of SUs that is considered to be part of the
+  // "top" of a region. Liveness reduction is not done in regions smaller than
+  // this. The idea is to prioritize latency more after branches and help
+  // liveness only when the decoder is ahead of execution anyway.
+  static const unsigned TopRegionSUs = 36;
+
   // Avoid setting up the register pressure tracker unless needed to save
   // compile time.
   RegionPolicy.ShouldTrackPressure = NumRegionInstrs > TopRegionSUs;
@@ -149,13 +146,10 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   if (RegionPolicy.ShouldTrackPressure)
     LivenessHeightCutOff = DAGHeight / (DAG->SUnits.size() < 50 ? 4 : 2);
 
-  if (DisableLatency)
-    RegionPolicy.DisableLatencyHeuristic = true;
-  else
-    // Disable latency reduction if region has many SUs relative to the
-    // overall height.
-    RegionPolicy.DisableLatencyHeuristic =
-        DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
+  // Disable latency reduction if region has many SUs relative to the
+  // overall height.
+  RegionPolicy.DisableLatencyHeuristic =
+    DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
 }
 
 void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
