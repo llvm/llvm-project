@@ -439,7 +439,7 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &S
                                        const DominatorTree *DT,
                                        const TargetLibraryInfo *TLI) {
   if (isDereferenceableAndAlignedPointer(
-          V, Alignment, Size, SimplifyQuery(DL, TLI, DT, AC, ScanFrom, AC))) {
+          V, Alignment, Size, SimplifyQuery(DL, TLI, DT, AC, ScanFrom))) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
     // load.
     if (!ScanFrom || !suppressSpeculativeLoadForSanitizers(*ScanFrom))
