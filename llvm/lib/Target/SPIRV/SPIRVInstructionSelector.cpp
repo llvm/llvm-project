@@ -2324,13 +2324,15 @@ bool SPIRVInstructionSelector::selectInterlockedAdd(Register ResVReg,
   Register Value = I.getOperand(3).getReg();
 
   SPIRV::StorageClass::StorageClass SC = GR.getPointerStorageClass(Ptr);
+  assert((SC == SPIRV::StorageClass::Workgroup ||
+          SC == SPIRV::StorageClass::StorageBuffer) &&
+         "InterlockedAdd requires Workgroup or StorageBuffer storage class");
   uint32_t Scope = static_cast<uint32_t>(SC == SPIRV::StorageClass::Workgroup
                                              ? SPIRV::Scope::Workgroup
                                              : SPIRV::Scope::Device);
   Register ScopeReg = buildI32Constant(Scope, I);
 
-  uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC)) |
-                    static_cast<uint32_t>(SPIRV::MemorySemantics::None);
+  uint32_t MemSem = static_cast<uint32_t>(getMemSemanticsForStorageClass(SC));
   Register MemSemReg = buildI32Constant(MemSem, I);
 
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAtomicIAdd))
