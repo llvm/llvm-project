@@ -73,9 +73,11 @@ CBufferMetadata::get(Module &M, llvm::function_ref<bool(Type *)> IsPadding) {
 }
 
 // Removes the provided global variables from the compiler used list.
-// This needs to be implemented here because using the llvm::removeFromUsedList function
-// from LLVMTransformUtils would create a cyclic dependency.
-static void removeFromCompilerUsedList(Module &M, SmallPtrSet<GlobalVariable *, 8> &GlobalToRemove) {
+// This needs to be implemented here because using the llvm::removeFromUsedList
+// function from LLVMTransformUtils would create a cyclic dependency.
+static void
+removeFromCompilerUsedList(Module &M,
+                           SmallPtrSet<GlobalVariable *, 8> &GlobalToRemove) {
   GlobalVariable *UsedListGV = M.getNamedGlobal("llvm.compiler.used");
   if (!UsedListGV || !UsedListGV->hasInitializer())
     return;
@@ -90,19 +92,19 @@ static void removeFromCompilerUsedList(Module &M, SmallPtrSet<GlobalVariable *, 
   }
 
   if (!NewInit.empty()) {
-    Type *ArrayEltTy = cast<ArrayType>(UsedListGV->getValueType())->getElementType();
+    Type *ArrayEltTy =
+        cast<ArrayType>(UsedListGV->getValueType())->getElementType();
     ArrayType *ATy = ArrayType::get(ArrayEltTy, NewInit.size());
-    GlobalVariable *NewUsedListGV =
-        new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
-                           ConstantArray::get(ATy, NewInit), "", UsedListGV,
-                           UsedListGV->getThreadLocalMode(), UsedListGV->getAddressSpace());
+    GlobalVariable *NewUsedListGV = new GlobalVariable(
+        M, ATy, false, GlobalValue::AppendingLinkage,
+        ConstantArray::get(ATy, NewInit), "", UsedListGV,
+        UsedListGV->getThreadLocalMode(), UsedListGV->getAddressSpace());
     NewUsedListGV->setSection(UsedListGV->getSection());
     NewUsedListGV->takeName(UsedListGV);
   }
 
   UsedListGV->eraseFromParent();
 }
-
 
 void CBufferMetadata::removeCBufferGlobalsFromUseList(Module &M) {
   if (Mappings.empty())
