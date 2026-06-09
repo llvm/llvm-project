@@ -15,10 +15,10 @@ define ptr addrspace(1) @test_basic(ptr addrspace(1) %obj,
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: # EH_LABEL
 ; CHECK-NEXT:    callq some_call@PLT
 ; CHECK-NEXT:  .Ltmp3:
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: # EH_LABEL
 ; CHECK-NEXT:  # %bb.1: # %invoke_safepoint_normal_dest
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    addq $24, %rsp
@@ -26,7 +26,7 @@ define ptr addrspace(1) @test_basic(ptr addrspace(1) %obj,
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %exceptional_return
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  .Ltmp2:
+; CHECK-NEXT:  .Ltmp2: # EH_LABEL
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -64,17 +64,17 @@ define ptr addrspace(1) @test_result(ptr addrspace(1) %obj,
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movq %rdi, (%rsp)
-; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:  .Ltmp4: # EH_LABEL
 ; CHECK-NEXT:    callq some_other_call@PLT
 ; CHECK-NEXT:  .Ltmp7:
-; CHECK-NEXT:  .Ltmp5:
+; CHECK-NEXT:  .Ltmp5: # EH_LABEL
 ; CHECK-NEXT:  # %bb.1: # %normal_return
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_2: # %exceptional_return
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp6:
+; CHECK-NEXT:  .Ltmp6: # EH_LABEL
 ; CHECK-NEXT:    movq (%rsp), %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -104,22 +104,19 @@ exceptional_return:
 define ptr addrspace(1) @test_same_val(i1 %cond, ptr addrspace(1) %val1, ptr addrspace(1) %val2, ptr addrspace(1) %val3)
 ; CHECK-LABEL: test_same_val:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    subq $16, %rsp
+; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    testb $1, %bl
+; CHECK-NEXT:    movl %edi, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    je .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %left
 ; CHECK-NEXT:    movq %rsi, (%rsp)
 ; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:  .Ltmp11:
+; CHECK-NEXT:  .Ltmp11: # EH_LABEL
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq some_call@PLT
 ; CHECK-NEXT:  .Ltmp14:
-; CHECK-NEXT:  .Ltmp12:
+; CHECK-NEXT:  .Ltmp12: # EH_LABEL
 ; CHECK-NEXT:  # %bb.2: # %left.relocs
 ; CHECK-NEXT:    movq (%rsp), %rax
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
@@ -127,32 +124,32 @@ define ptr addrspace(1) @test_same_val(i1 %cond, ptr addrspace(1) %val1, ptr add
 ; CHECK-NEXT:  .LBB2_3: # %right
 ; CHECK-NEXT:    movq %rdx, (%rsp)
 ; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:  .Ltmp8:
+; CHECK-NEXT:  .Ltmp8: # EH_LABEL
 ; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    callq some_call@PLT
 ; CHECK-NEXT:  .Ltmp15:
-; CHECK-NEXT:  .Ltmp9:
+; CHECK-NEXT:  .Ltmp9: # EH_LABEL
 ; CHECK-NEXT:  # %bb.4: # %right.relocs
 ; CHECK-NEXT:    movq (%rsp), %rcx
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:  .LBB2_5: # %normal_return
-; CHECK-NEXT:    testb $1, %bl
+; CHECK-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 4-byte Reload
+; CHECK-NEXT:    testb $1, %dl
 ; CHECK-NEXT:    cmoveq %rcx, %rax
-; CHECK-NEXT:  .LBB2_6: # %normal_return
-; CHECK-NEXT:    addq $16, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB2_9: # %exceptional_return.right
+; CHECK-NEXT:  .LBB2_8: # %exceptional_return.right
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:  .Ltmp10:
-; CHECK-NEXT:    movq (%rsp), %rax
-; CHECK-NEXT:    jmp .LBB2_6
+; CHECK-NEXT:  .Ltmp10: # EH_LABEL
+; CHECK-NEXT:    jmp .LBB2_7
+; CHECK-NEXT:  .LBB2_6: # %exceptional_return.left
+; CHECK-NEXT:  .Ltmp13: # EH_LABEL
 ; CHECK-NEXT:  .LBB2_7: # %exceptional_return.left
-; CHECK-NEXT:  .Ltmp13:
 ; CHECK-NEXT:    movq (%rsp), %rax
-; CHECK-NEXT:    jmp .LBB2_6
+; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
   gc "statepoint-example" personality ptr @"personality_function" {
 entry:
   br i1 %cond, label %left, label %right
@@ -199,10 +196,10 @@ define ptr addrspace(1) @test_null_undef(ptr addrspace(1) %val1)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp16:
+; CHECK-NEXT:  .Ltmp16: # EH_LABEL
 ; CHECK-NEXT:    callq some_call@PLT
 ; CHECK-NEXT:  .Ltmp19:
-; CHECK-NEXT:  .Ltmp17:
+; CHECK-NEXT:  .Ltmp17: # EH_LABEL
 ; CHECK-NEXT:  .LBB3_1: # %normal_return
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
@@ -210,7 +207,7 @@ define ptr addrspace(1) @test_null_undef(ptr addrspace(1) %val1)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_2: # %exceptional_return
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp18:
+; CHECK-NEXT:  .Ltmp18: # EH_LABEL
 ; CHECK-NEXT:    jmp .LBB3_1
        gc "statepoint-example" personality ptr @"personality_function" {
 entry:
@@ -235,10 +232,10 @@ define ptr addrspace(1) @test_alloca_and_const(ptr addrspace(1) %val1)
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp20:
+; CHECK-NEXT:  .Ltmp20: # EH_LABEL
 ; CHECK-NEXT:    callq some_call@PLT
 ; CHECK-NEXT:  .Ltmp23:
-; CHECK-NEXT:  .Ltmp21:
+; CHECK-NEXT:  .Ltmp21: # EH_LABEL
 ; CHECK-NEXT:  # %bb.1: # %normal_return
 ; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
 ; CHECK-NEXT:    popq %rcx
@@ -246,7 +243,7 @@ define ptr addrspace(1) @test_alloca_and_const(ptr addrspace(1) %val1)
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB4_2: # %exceptional_return
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:  .Ltmp22:
+; CHECK-NEXT:  .Ltmp22: # EH_LABEL
 ; CHECK-NEXT:    movl $15, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

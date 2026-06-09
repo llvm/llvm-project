@@ -89,101 +89,103 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-LABEL: loop_shared_header:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movl $1, %ebx
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_12
-; CHECK-NEXT:  # %bb.1: # %if.end19
-; CHECK-NEXT:    movl (%rax), %r12d
-; CHECK-NEXT:    leal (,%r12,4), %ebp
-; CHECK-NEXT:    movl %ebp, %r15d
-; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    movq %r15, %rdi
-; CHECK-NEXT:    callq cli_calloc@PLT
-; CHECK-NEXT:    movq %rax, %r14
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_12
-; CHECK-NEXT:  # %bb.2: # %if.end50
-; CHECK-NEXT:    # implicit-def: $rsi
-; CHECK-NEXT:    movq %r14, %rdi
-; CHECK-NEXT:    movq %r15, %rdx
-; CHECK-NEXT:    callq memcpy@PLT
-; CHECK-NEXT:    cmpl $4, %ebp
-; CHECK-NEXT:    jb .LBB1_19
-; CHECK-NEXT:  # %bb.3: # %shared_preheader
-; CHECK-NEXT:    movb $32, %cl
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    jmp .LBB1_4
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_15: # %merge_predecessor_split
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    movb $32, %cl
-; CHECK-NEXT:  .LBB1_4: # %outer_loop_header
-; CHECK-NEXT:    # =>This Loop Header: Depth=1
-; CHECK-NEXT:    # Child Loop BB1_8 Depth 2
-; CHECK-NEXT:    testl %r12d, %r12d
-; CHECK-NEXT:    je .LBB1_5
-; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_8: # %shared_loop_header
-; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
-; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    testq %r14, %r14
-; CHECK-NEXT:    jne .LBB1_18
-; CHECK-NEXT:  # %bb.9: # %inner_loop_body
-; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=2
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB1_8
-; CHECK-NEXT:  # %bb.10: # %if.end96.i
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    cmpl $3, %r12d
-; CHECK-NEXT:    jae .LBB1_11
-; CHECK-NEXT:  # %bb.13: # %if.end287.i
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    # implicit-def: $cl
-; CHECK-NEXT:    jne .LBB1_4
-; CHECK-NEXT:  # %bb.14: # %if.end308.i
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB1_15
-; CHECK-NEXT:  # %bb.16: # %if.end335.i
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
+; CHECK-NEXT:    subq $24, %rsp
+; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne .LBB1_4
-; CHECK-NEXT:  # %bb.17: # %merge_other
-; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    # implicit-def: $cl
-; CHECK-NEXT:    jmp .LBB1_4
-; CHECK-NEXT:  .LBB1_5: # %while.cond.us1412.i
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB1_7
-; CHECK-NEXT:  # %bb.6: # %while.cond.us1412.i
-; CHECK-NEXT:    decb %cl
-; CHECK-NEXT:    jne .LBB1_12
-; CHECK-NEXT:  .LBB1_7: # %if.end41.us1436.i
-; CHECK-NEXT:  .LBB1_11: # %if.then99.i
+; CHECK-NEXT:    jne .LBB1_13
+; CHECK-NEXT:  # %bb.1: # %if.end19
+; CHECK-NEXT:    movl (%rax), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    leal (,%rax,4), %ebp
+; CHECK-NEXT:    movl %ebp, %ebx
+; CHECK-NEXT:    movl $1, %esi
+; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    callq cli_calloc@PLT
+; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    je .LBB1_3
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    jmp .LBB1_13
+; CHECK-NEXT:  .LBB1_3: # %if.end50
+; CHECK-NEXT:    # implicit-def: $rsi
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    movq %rbx, %rdx
+; CHECK-NEXT:    callq memcpy@PLT
+; CHECK-NEXT:    cmpl $4, %ebp
+; CHECK-NEXT:    jb .LBB1_20
+; CHECK-NEXT:  # %bb.4: # %shared_preheader
+; CHECK-NEXT:    movb $32, %dil
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-NEXT:    jmp .LBB1_5
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB1_16: # %merge_predecessor_split
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
+; CHECK-NEXT:    movb $32, %dil
+; CHECK-NEXT:  .LBB1_5: # %outer_loop_header
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB1_9 Depth 2
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    je .LBB1_6
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB1_9: # %shared_loop_header
+; CHECK-NEXT:    # Parent Loop BB1_5 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    jne .LBB1_19
+; CHECK-NEXT:  # %bb.10: # %inner_loop_body
+; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=2
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    je .LBB1_9
+; CHECK-NEXT:  # %bb.11: # %if.end96.i
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
+; CHECK-NEXT:    cmpl $3, %esi
+; CHECK-NEXT:    jae .LBB1_12
+; CHECK-NEXT:  # %bb.14: # %if.end287.i
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    # implicit-def: $dil
+; CHECK-NEXT:    jne .LBB1_5
+; CHECK-NEXT:  # %bb.15: # %if.end308.i
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    je .LBB1_16
+; CHECK-NEXT:  # %bb.17: # %if.end335.i
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
+; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    jne .LBB1_5
+; CHECK-NEXT:  # %bb.18: # %merge_other
+; CHECK-NEXT:    # in Loop: Header=BB1_5 Depth=1
+; CHECK-NEXT:    # implicit-def: $dil
+; CHECK-NEXT:    jmp .LBB1_5
+; CHECK-NEXT:  .LBB1_6: # %while.cond.us1412.i
+; CHECK-NEXT:    xorl %ecx, %ecx
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    jne .LBB1_8
+; CHECK-NEXT:  # %bb.7: # %while.cond.us1412.i
+; CHECK-NEXT:    decb %dil
+; CHECK-NEXT:    jne .LBB1_13
+; CHECK-NEXT:  .LBB1_8: # %if.end41.us1436.i
+; CHECK-NEXT:  .LBB1_12: # %if.then99.i
 ; CHECK-NEXT:    movq .str.6@GOTPCREL(%rip), %rdi
-; CHECK-NEXT:    xorl %ebx, %ebx
 ; CHECK-NEXT:    # implicit-def: $esi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq cli_dbgmsg@PLT
-; CHECK-NEXT:  .LBB1_12: # %cleanup
-; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  .LBB1_13: # %cleanup
+; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_18: # %wunpsect.exit.thread.loopexit389
-; CHECK-NEXT:  .LBB1_19: # %wunpsect.exit.thread.loopexit391
+; CHECK-NEXT:  .LBB1_19: # %wunpsect.exit.thread.loopexit389
+; CHECK-NEXT:  .LBB1_20: # %wunpsect.exit.thread.loopexit391
 entry:
   %0 = load i32, ptr undef, align 4
   %mul = shl nsw i32 %0, 2

@@ -152,9 +152,9 @@ extern void use_dot_vector(struct Array *data);
 //      O3-DEBUG: Function: do_work
 // O3-DEBUG-NEXT: Offset: [SP-8], Type: Spill, Align: 16, Size: 8
 // O3-DEBUG-NEXT: Offset: [SP-16], Type: Spill, Align: 8, Size: 8
-// O3-DEBUG-NEXT: Offset: [SP-24], Type: Spill, Align: 16, Size: 8
-// O3-DEBUG-NEXT: Offset: [SP-32], Type: Spill, Align: 8, Size: 8
-// O3-DEBUG-NEXT: Offset: [SP-40], Type: Spill, Align: 16, Size: 8
+//      O3-DEBUG: Offset: [SP-24], Type: Spill, Align: 8, Size: 8
+//      O3-DEBUG: Offset: [SP-32], Type: Spill, Align: 8, Size: 8
+//      O3-DEBUG: Offset: [SP-40], Type: Spill, Align: 8, Size: 8
 int do_work(struct Array *A, struct Array *B, struct Result *out) {
   if (!A || !B)
     return -1;

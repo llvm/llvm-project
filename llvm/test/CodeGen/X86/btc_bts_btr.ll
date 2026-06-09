@@ -845,22 +845,22 @@ define void @btr_64_dont_fold(ptr %x, i64 %n) {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $1, %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    shldl %cl, %edx, %esi
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    shldl %cl, %edx, %eax
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB33_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB33_2:
-; X86-NEXT:    notl %esi
+; X86-NEXT:    notl %eax
 ; X86-NEXT:    notl %edx
-; X86-NEXT:    andl %edx, (%eax)
-; X86-NEXT:    andl %esi, 4(%eax)
+; X86-NEXT:    andl %edx, (%esi)
+; X86-NEXT:    andl %eax, 4(%esi)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -887,20 +887,20 @@ define void @bts_64_dont_fold(ptr %x, i64 %n) {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $1, %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    shldl %cl, %edx, %esi
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    shldl %cl, %edx, %eax
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB34_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB34_2:
-; X86-NEXT:    orl %edx, (%eax)
-; X86-NEXT:    orl %esi, 4(%eax)
+; X86-NEXT:    orl %edx, (%esi)
+; X86-NEXT:    orl %eax, 4(%esi)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
@@ -926,20 +926,20 @@ define void @btc_64_dont_fold(ptr %x, i64 %n) {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    .cfi_offset %esi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl $1, %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    shldl %cl, %edx, %esi
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    shldl %cl, %edx, %eax
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB35_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB35_2:
-; X86-NEXT:    xorl %edx, (%eax)
-; X86-NEXT:    xorl %esi, 4(%eax)
+; X86-NEXT:    xorl %edx, (%esi)
+; X86-NEXT:    xorl %eax, 4(%esi)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl

@@ -484,11 +484,11 @@ define i16 @use_in_diff_bb() nounwind {
 ; X86-NEXT:    testb %cl, %cl
 ; X86-NEXT:    jne .LBB17_4
 ; X86-NEXT:  # %bb.3:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    calll foo@PLT
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl (%esp), %eax # 4-byte Reload
+; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:  .LBB17_4:
 ; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -511,11 +511,11 @@ define i16 @use_in_diff_bb() nounwind {
 ; X64-NEXT:    testb %cl, %cl
 ; X64-NEXT:    jne .LBB17_4
 ; X64-NEXT:  # %bb.3:
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movl %eax, %ebx
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl %eax, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    callq foo@PLT
-; X64-NEXT:    movl %ebx, %eax
-; X64-NEXT:    popq %rbx
+; X64-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Reload
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB17_4:
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax

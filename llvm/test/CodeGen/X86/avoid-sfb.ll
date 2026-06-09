@@ -731,142 +731,94 @@ if.end:                                           ; preds = %if.then, %entry
 define void @test_limit_one_pred(ptr noalias %s1, ptr nocapture %s2, i32 %x, ptr nocapture %s3, ptr nocapture readonly %s4, i32 %x2) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_limit_one_pred:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %r15
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    pushq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset %rbx, -40
-; CHECK-NEXT:    .cfi_offset %r12, -32
-; CHECK-NEXT:    .cfi_offset %r14, -24
-; CHECK-NEXT:    .cfi_offset %r15, -16
-; CHECK-NEXT:    movq %r8, %r12
-; CHECK-NEXT:    movq %rcx, %r15
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    movl %r9d, 12(%rdi)
 ; CHECK-NEXT:    cmpl $18, %edx
 ; CHECK-NEXT:    jl .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    movl %edx, 4(%r14)
-; CHECK-NEXT:    movq %r14, %rdi
+; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
+; CHECK-NEXT:    movl %edx, 4(%rdi)
+; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:  .LBB10_2: # %if.end
-; CHECK-NEXT:    movups (%r12), %xmm0
-; CHECK-NEXT:    movups %xmm0, (%r15)
-; CHECK-NEXT:    movq (%r14), %rax
-; CHECK-NEXT:    movq %rax, (%rbx)
-; CHECK-NEXT:    movl 8(%r14), %eax
-; CHECK-NEXT:    movl %eax, 8(%rbx)
-; CHECK-NEXT:    movl 12(%r14), %eax
-; CHECK-NEXT:    movl %eax, 12(%rbx)
-; CHECK-NEXT:    addq $8, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 40
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  .LBB10_2: # %if.end
+; CHECK-NEXT:    movups (%r8), %xmm0
+; CHECK-NEXT:    movups %xmm0, (%rcx)
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    movq %rax, (%rsi)
+; CHECK-NEXT:    movl 8(%rdi), %eax
+; CHECK-NEXT:    movl %eax, 8(%rsi)
+; CHECK-NEXT:    movl 12(%rdi), %eax
+; CHECK-NEXT:    movl %eax, 12(%rsi)
 ; CHECK-NEXT:    retq
 ;
 ; DISABLED-LABEL: test_limit_one_pred:
 ; DISABLED:       # %bb.0: # %entry
-; DISABLED-NEXT:    pushq %r15
-; DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; DISABLED-NEXT:    pushq %r14
-; DISABLED-NEXT:    .cfi_def_cfa_offset 24
-; DISABLED-NEXT:    pushq %r12
-; DISABLED-NEXT:    .cfi_def_cfa_offset 32
-; DISABLED-NEXT:    pushq %rbx
-; DISABLED-NEXT:    .cfi_def_cfa_offset 40
-; DISABLED-NEXT:    pushq %rax
-; DISABLED-NEXT:    .cfi_def_cfa_offset 48
-; DISABLED-NEXT:    .cfi_offset %rbx, -40
-; DISABLED-NEXT:    .cfi_offset %r12, -32
-; DISABLED-NEXT:    .cfi_offset %r14, -24
-; DISABLED-NEXT:    .cfi_offset %r15, -16
-; DISABLED-NEXT:    movq %r8, %r15
-; DISABLED-NEXT:    movq %rcx, %r14
-; DISABLED-NEXT:    movq %rsi, %rbx
-; DISABLED-NEXT:    movq %rdi, %r12
 ; DISABLED-NEXT:    movl %r9d, 12(%rdi)
 ; DISABLED-NEXT:    cmpl $18, %edx
 ; DISABLED-NEXT:    jl .LBB10_2
 ; DISABLED-NEXT:  # %bb.1: # %if.then
-; DISABLED-NEXT:    movl %edx, 4(%r12)
-; DISABLED-NEXT:    movq %r12, %rdi
+; DISABLED-NEXT:    subq $40, %rsp
+; DISABLED-NEXT:    .cfi_def_cfa_offset 48
+; DISABLED-NEXT:    movl %edx, 4(%rdi)
+; DISABLED-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; DISABLED-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; DISABLED-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; DISABLED-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; DISABLED-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; DISABLED-NEXT:    callq bar@PLT
-; DISABLED-NEXT:  .LBB10_2: # %if.end
-; DISABLED-NEXT:    movups (%r15), %xmm0
-; DISABLED-NEXT:    movups %xmm0, (%r14)
-; DISABLED-NEXT:    movups (%r12), %xmm0
-; DISABLED-NEXT:    movups %xmm0, (%rbx)
-; DISABLED-NEXT:    addq $8, %rsp
-; DISABLED-NEXT:    .cfi_def_cfa_offset 40
-; DISABLED-NEXT:    popq %rbx
-; DISABLED-NEXT:    .cfi_def_cfa_offset 32
-; DISABLED-NEXT:    popq %r12
-; DISABLED-NEXT:    .cfi_def_cfa_offset 24
-; DISABLED-NEXT:    popq %r14
-; DISABLED-NEXT:    .cfi_def_cfa_offset 16
-; DISABLED-NEXT:    popq %r15
+; DISABLED-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; DISABLED-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; DISABLED-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; DISABLED-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; DISABLED-NEXT:    addq $40, %rsp
 ; DISABLED-NEXT:    .cfi_def_cfa_offset 8
+; DISABLED-NEXT:  .LBB10_2: # %if.end
+; DISABLED-NEXT:    movups (%r8), %xmm0
+; DISABLED-NEXT:    movups %xmm0, (%rcx)
+; DISABLED-NEXT:    movups (%rdi), %xmm0
+; DISABLED-NEXT:    movups %xmm0, (%rsi)
 ; DISABLED-NEXT:    retq
 ;
 ; AVX-LABEL: test_limit_one_pred:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %r15
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    pushq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 24
-; AVX-NEXT:    pushq %r12
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 40
-; AVX-NEXT:    pushq %rax
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    .cfi_offset %rbx, -40
-; AVX-NEXT:    .cfi_offset %r12, -32
-; AVX-NEXT:    .cfi_offset %r14, -24
-; AVX-NEXT:    .cfi_offset %r15, -16
-; AVX-NEXT:    movq %r8, %r12
-; AVX-NEXT:    movq %rcx, %r15
-; AVX-NEXT:    movq %rsi, %rbx
-; AVX-NEXT:    movq %rdi, %r14
 ; AVX-NEXT:    movl %r9d, 12(%rdi)
 ; AVX-NEXT:    cmpl $18, %edx
 ; AVX-NEXT:    jl .LBB10_2
 ; AVX-NEXT:  # %bb.1: # %if.then
-; AVX-NEXT:    movl %edx, 4(%r14)
-; AVX-NEXT:    movq %r14, %rdi
+; AVX-NEXT:    subq $40, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 48
+; AVX-NEXT:    movl %edx, 4(%rdi)
+; AVX-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; AVX-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX-NEXT:    callq bar@PLT
-; AVX-NEXT:  .LBB10_2: # %if.end
-; AVX-NEXT:    vmovups (%r12), %xmm0
-; AVX-NEXT:    vmovups %xmm0, (%r15)
-; AVX-NEXT:    movq (%r14), %rax
-; AVX-NEXT:    movq %rax, (%rbx)
-; AVX-NEXT:    movl 8(%r14), %eax
-; AVX-NEXT:    movl %eax, 8(%rbx)
-; AVX-NEXT:    movl 12(%r14), %eax
-; AVX-NEXT:    movl %eax, 12(%rbx)
-; AVX-NEXT:    addq $8, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 40
-; AVX-NEXT:    popq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    popq %r12
-; AVX-NEXT:    .cfi_def_cfa_offset 24
-; AVX-NEXT:    popq %r14
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    popq %r15
+; AVX-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; AVX-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; AVX-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; AVX-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; AVX-NEXT:    addq $40, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:  .LBB10_2: # %if.end
+; AVX-NEXT:    vmovups (%r8), %xmm0
+; AVX-NEXT:    vmovups %xmm0, (%rcx)
+; AVX-NEXT:    movq (%rdi), %rax
+; AVX-NEXT:    movq %rax, (%rsi)
+; AVX-NEXT:    movl 8(%rdi), %eax
+; AVX-NEXT:    movl %eax, 8(%rsi)
+; AVX-NEXT:    movl 12(%rdi), %eax
+; AVX-NEXT:    movl %eax, 12(%rsi)
 ; AVX-NEXT:    retq
 entry:
   %d = getelementptr inbounds %struct.S, ptr %s1, i64 0, i32 3

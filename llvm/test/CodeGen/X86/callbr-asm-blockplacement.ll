@@ -24,11 +24,11 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  # %bb.1: # %bb5
 ; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    movslq %edi, %rbp
-; CHECK-NEXT:    leaq (,%rbp,8), %rax
+; CHECK-NEXT:    movslq %edi, %r13
+; CHECK-NEXT:    leaq (,%r13,8), %rax
 ; CHECK-NEXT:    leaq global(%rax,%rax,2), %r14
 ; CHECK-NEXT:    leaq global+4(%rax,%rax,2), %r15
-; CHECK-NEXT:    xorl %r13d, %r13d
+; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %bb8
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -40,10 +40,10 @@ define i32 @foo(i32 %arg, ptr %arg3) nounwind {
 ; CHECK-NEXT:    callq hoge@PLT
 ; CHECK-NEXT:    movq %r15, %rdi
 ; CHECK-NEXT:    callq hoge@PLT
-; CHECK-NEXT:    testb %r13b, %r13b
+; CHECK-NEXT:    testb %bpl, %bpl
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %bb15
-; CHECK-NEXT:    leaq (%rbp,%rbp,2), %rax
+; CHECK-NEXT:    leaq (%r13,%r13,2), %rax
 ; CHECK-NEXT:    movq %r12, global+16(,%rax,8)
 ; CHECK-NEXT:    movabsq $-2305847407260205056, %r14 # imm = 0xDFFFFC0000000000
 ; CHECK-NEXT:    #APP

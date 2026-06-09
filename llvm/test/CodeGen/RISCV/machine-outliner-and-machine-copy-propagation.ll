@@ -163,10 +163,14 @@ declare void @exit(i32 signext) noreturn
 ; RV64I-NEXT:    lui a1, 524288
 ; RV64I-NEXT:    mv a0, s0
 ; RV64I-NEXT:    call ngt
-; RV64I-NEXT:    li s1, -1
-; RV64I-NEXT:    bne a0, s1, .LBB4_9
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    bne a0, a1, .LBB4_9
 ; RV64I-NEXT:  # %bb.4: # %if.end12
-; RV64I-NEXT:    call t0, OUTLINED_FUNCTION_0
+; RV64I-NEXT:    lui s0, 524288
+; RV64I-NEXT:    addiw s0, s0, -1
+; RV64I-NEXT:    lui a0, 524288
+; RV64I-NEXT:    li s1, -1
+; RV64I-NEXT:    mv a1, s0
 ; RV64I-NEXT:    call nle
 ; RV64I-NEXT:    bne a0, s1, .LBB4_9
 ; RV64I-NEXT:  # %bb.5: # %if.end16

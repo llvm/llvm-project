@@ -3436,22 +3436,22 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset s0, -16
 ; CHECK-NOV-NEXT:    .cfi_offset s1, -24
 ; CHECK-NOV-NEXT:    .cfi_offset s2, -32
-; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    mv s1, a1
 ; CHECK-NOV-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOV-NEXT:    call __extendhfsf2
 ; CHECK-NOV-NEXT:    call __fixsfti
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv s1, a1
-; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
+; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
 ; CHECK-NOV-NEXT:    call __extendhfsf2
 ; CHECK-NOV-NEXT:    call __fixsfti
-; CHECK-NOV-NEXT:    mv a2, s1
-; CHECK-NOV-NEXT:    blez s1, .LBB26_2
+; CHECK-NOV-NEXT:    mv a2, s2
+; CHECK-NOV-NEXT:    blez s2, .LBB26_2
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    li a2, 1
 ; CHECK-NOV-NEXT:  .LBB26_2: # %entry
 ; CHECK-NOV-NEXT:    slti a3, a1, 1
-; CHECK-NOV-NEXT:    slti a4, s1, 1
+; CHECK-NOV-NEXT:    slti a4, s2, 1
 ; CHECK-NOV-NEXT:    blez a1, .LBB26_4
 ; CHECK-NOV-NEXT:  # %bb.3: # %entry
 ; CHECK-NOV-NEXT:    li a1, 1
@@ -3502,22 +3502,22 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    .cfi_offset s0, -16
 ; CHECK-V-NEXT:    .cfi_offset s1, -24
 ; CHECK-V-NEXT:    .cfi_offset s2, -32
-; CHECK-V-NEXT:    mv s2, a1
+; CHECK-V-NEXT:    mv s1, a1
 ; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2
 ; CHECK-V-NEXT:    call __fixsfti
 ; CHECK-V-NEXT:    mv s0, a0
-; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    fmv.w.x fa0, s2
+; CHECK-V-NEXT:    mv s2, a1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2
 ; CHECK-V-NEXT:    call __fixsfti
-; CHECK-V-NEXT:    mv a2, s1
-; CHECK-V-NEXT:    blez s1, .LBB26_2
+; CHECK-V-NEXT:    mv a2, s2
+; CHECK-V-NEXT:    blez s2, .LBB26_2
 ; CHECK-V-NEXT:  # %bb.1: # %entry
 ; CHECK-V-NEXT:    li a2, 1
 ; CHECK-V-NEXT:  .LBB26_2: # %entry
 ; CHECK-V-NEXT:    slti a4, a1, 1
-; CHECK-V-NEXT:    slti a3, s1, 1
+; CHECK-V-NEXT:    slti a3, s2, 1
 ; CHECK-V-NEXT:    blez a1, .LBB26_4
 ; CHECK-V-NEXT:  # %bb.3: # %entry
 ; CHECK-V-NEXT:    li a1, 1

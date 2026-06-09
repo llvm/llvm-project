@@ -182,6 +182,8 @@ public:
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
   }
+
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
 };
 
 } // End llvm namespace

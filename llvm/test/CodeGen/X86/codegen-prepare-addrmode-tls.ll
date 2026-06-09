@@ -13,66 +13,76 @@ declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull)
 define i32 @func_local_tls(i32 %arg0, i64 %arg1) nounwind {
 ; NOPIC-LABEL: func_local_tls:
 ; NOPIC:       # %bb.0: # %entry
-; NOPIC-NEXT:    pushq %rbp
-; NOPIC-NEXT:    pushq %rbx
-; NOPIC-NEXT:    pushq %rax
-; NOPIC-NEXT:    movl %fs:foo_local@TPOFF, %ebp
+; NOPIC-NEXT:    movl %fs:foo_local@TPOFF, %ecx
 ; NOPIC-NEXT:    testl %edi, %edi
-; NOPIC-NEXT:    movl %ebp, %eax
-; NOPIC-NEXT:    jne .LBB0_2
-; NOPIC-NEXT:  # %bb.1: # %if.then
+; NOPIC-NEXT:    movl %ecx, %eax
+; NOPIC-NEXT:    je .LBB0_1
+; NOPIC-NEXT:  # %bb.2: # %if.end
+; NOPIC-NEXT:    addl %ecx, %eax
+; NOPIC-NEXT:    retq
+; NOPIC-NEXT:  .LBB0_1: # %if.then
+; NOPIC-NEXT:    pushq %rbx
+; NOPIC-NEXT:    subq $16, %rsp
 ; NOPIC-NEXT:    movq %rsi, %rbx
+; NOPIC-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; NOPIC-NEXT:    callq effect@PLT
+; NOPIC-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
 ; NOPIC-NEXT:    movl %fs:foo_local@TPOFF+168(,%rbx,4), %eax
-; NOPIC-NEXT:  .LBB0_2: # %if.end
-; NOPIC-NEXT:    addl %ebp, %eax
-; NOPIC-NEXT:    addq $8, %rsp
+; NOPIC-NEXT:    addq $16, %rsp
 ; NOPIC-NEXT:    popq %rbx
-; NOPIC-NEXT:    popq %rbp
+; NOPIC-NEXT:    addl %ecx, %eax
 ; NOPIC-NEXT:    retq
 ;
 ; PIC-LABEL: func_local_tls:
 ; PIC:       # %bb.0: # %entry
-; PIC-NEXT:    pushq %rbp
+; PIC-NEXT:    movl %fs:.Lfoo_local$local@TPOFF, %ecx
+; PIC-NEXT:    testl %edi, %edi
+; PIC-NEXT:    movl %ecx, %eax
+; PIC-NEXT:    je .LBB0_1
+; PIC-NEXT:  # %bb.2: # %if.end
+; PIC-NEXT:    addl %ecx, %eax
+; PIC-NEXT:    retq
+; PIC-NEXT:  .LBB0_1: # %if.then
 ; PIC-NEXT:    pushq %r14
 ; PIC-NEXT:    pushq %rbx
-; PIC-NEXT:    movl %fs:.Lfoo_local$local@TPOFF, %ebp
-; PIC-NEXT:    testl %edi, %edi
-; PIC-NEXT:    movl %ebp, %eax
-; PIC-NEXT:    jne .LBB0_2
-; PIC-NEXT:  # %bb.1: # %if.then
-; PIC-NEXT:    movq %rsi, %rbx
+; PIC-NEXT:    pushq %rax
 ; PIC-NEXT:    movq %fs:0, %rax
-; PIC-NEXT:    leaq .Lfoo_local$local@TPOFF(%rax), %r14
+; PIC-NEXT:    leaq .Lfoo_local$local@TPOFF(%rax), %rbx
+; PIC-NEXT:    movq %rsi, %r14
+; PIC-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; PIC-NEXT:    callq effect@PLT
-; PIC-NEXT:    movl 168(%r14,%rbx,4), %eax
-; PIC-NEXT:  .LBB0_2: # %if.end
-; PIC-NEXT:    addl %ebp, %eax
+; PIC-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
+; PIC-NEXT:    movl 168(%rbx,%r14,4), %eax
+; PIC-NEXT:    addq $8, %rsp
 ; PIC-NEXT:    popq %rbx
 ; PIC-NEXT:    popq %r14
-; PIC-NEXT:    popq %rbp
+; PIC-NEXT:    addl %ecx, %eax
 ; PIC-NEXT:    retq
 ;
 ; TLSDESC-LABEL: func_local_tls:
 ; TLSDESC:       # %bb.0: # %entry
-; TLSDESC-NEXT:    pushq %rbp
+; TLSDESC-NEXT:    movl %fs:.Lfoo_local$local@TPOFF, %ecx
+; TLSDESC-NEXT:    testl %edi, %edi
+; TLSDESC-NEXT:    movl %ecx, %eax
+; TLSDESC-NEXT:    je .LBB0_1
+; TLSDESC-NEXT:  # %bb.2: # %if.end
+; TLSDESC-NEXT:    addl %ecx, %eax
+; TLSDESC-NEXT:    retq
+; TLSDESC-NEXT:  .LBB0_1: # %if.then
 ; TLSDESC-NEXT:    pushq %r14
 ; TLSDESC-NEXT:    pushq %rbx
-; TLSDESC-NEXT:    movl %fs:.Lfoo_local$local@TPOFF, %ebp
-; TLSDESC-NEXT:    testl %edi, %edi
-; TLSDESC-NEXT:    movl %ebp, %eax
-; TLSDESC-NEXT:    jne .LBB0_2
-; TLSDESC-NEXT:  # %bb.1: # %if.then
-; TLSDESC-NEXT:    movq %rsi, %rbx
+; TLSDESC-NEXT:    pushq %rax
 ; TLSDESC-NEXT:    movq %fs:0, %rax
-; TLSDESC-NEXT:    leaq .Lfoo_local$local@TPOFF(%rax), %r14
+; TLSDESC-NEXT:    leaq .Lfoo_local$local@TPOFF(%rax), %rbx
+; TLSDESC-NEXT:    movq %rsi, %r14
+; TLSDESC-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; TLSDESC-NEXT:    callq effect@PLT
-; TLSDESC-NEXT:    movl 168(%r14,%rbx,4), %eax
-; TLSDESC-NEXT:  .LBB0_2: # %if.end
-; TLSDESC-NEXT:    addl %ebp, %eax
+; TLSDESC-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
+; TLSDESC-NEXT:    movl 168(%rbx,%r14,4), %eax
+; TLSDESC-NEXT:    addq $8, %rsp
 ; TLSDESC-NEXT:    popq %rbx
 ; TLSDESC-NEXT:    popq %r14
-; TLSDESC-NEXT:    popq %rbp
+; TLSDESC-NEXT:    addl %ecx, %eax
 ; TLSDESC-NEXT:    retq
 entry:
   %addr = tail call ptr @llvm.threadlocal.address.p0(ptr @foo_local)
@@ -98,32 +108,35 @@ if.end:
 define i32 @func_nonlocal_tls(i32 %arg0, i64 %arg1) nounwind {
 ; NOPIC-LABEL: func_nonlocal_tls:
 ; NOPIC:       # %bb.0: # %entry
-; NOPIC-NEXT:    pushq %rbp
+; NOPIC-NEXT:    movq foo_nonlocal@GOTTPOFF(%rip), %rdx
+; NOPIC-NEXT:    movl %fs:(%rdx), %ecx
+; NOPIC-NEXT:    testl %edi, %edi
+; NOPIC-NEXT:    movl %ecx, %eax
+; NOPIC-NEXT:    je .LBB1_1
+; NOPIC-NEXT:  # %bb.2: # %if.end
+; NOPIC-NEXT:    addl %ecx, %eax
+; NOPIC-NEXT:    retq
+; NOPIC-NEXT:  .LBB1_1: # %if.then
 ; NOPIC-NEXT:    pushq %r14
 ; NOPIC-NEXT:    pushq %rbx
-; NOPIC-NEXT:    movq foo_nonlocal@GOTTPOFF(%rip), %r14
-; NOPIC-NEXT:    movl %fs:(%r14), %ebp
-; NOPIC-NEXT:    testl %edi, %edi
-; NOPIC-NEXT:    movl %ebp, %eax
-; NOPIC-NEXT:    jne .LBB1_2
-; NOPIC-NEXT:  # %bb.1: # %if.then
+; NOPIC-NEXT:    pushq %rax
 ; NOPIC-NEXT:    movq %rsi, %rbx
+; NOPIC-NEXT:    movl %ecx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; NOPIC-NEXT:    movq %rdx, %r14
 ; NOPIC-NEXT:    callq effect@PLT
+; NOPIC-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %ecx # 4-byte Reload
 ; NOPIC-NEXT:    movl %fs:168(%r14,%rbx,4), %eax
-; NOPIC-NEXT:  .LBB1_2: # %if.end
-; NOPIC-NEXT:    addl %ebp, %eax
+; NOPIC-NEXT:    addq $8, %rsp
 ; NOPIC-NEXT:    popq %rbx
 ; NOPIC-NEXT:    popq %r14
-; NOPIC-NEXT:    popq %rbp
+; NOPIC-NEXT:    addl %ecx, %eax
 ; NOPIC-NEXT:    retq
 ;
 ; PIC-LABEL: func_nonlocal_tls:
 ; PIC:       # %bb.0: # %entry
 ; PIC-NEXT:    pushq %rbp
-; PIC-NEXT:    pushq %r15
 ; PIC-NEXT:    pushq %r14
 ; PIC-NEXT:    pushq %rbx
-; PIC-NEXT:    pushq %rax
 ; PIC-NEXT:    movq %rsi, %rbx
 ; PIC-NEXT:    movl %edi, %ebp
 ; PIC-NEXT:    data16
@@ -132,46 +145,49 @@ define i32 @func_nonlocal_tls(i32 %arg0, i64 %arg1) nounwind {
 ; PIC-NEXT:    data16
 ; PIC-NEXT:    rex64
 ; PIC-NEXT:    callq __tls_get_addr@PLT
-; PIC-NEXT:    movq %rax, %r14
-; PIC-NEXT:    movl (%rax), %r15d
+; PIC-NEXT:    movq %rax, %rcx
+; PIC-NEXT:    movl (%rax), %edx
 ; PIC-NEXT:    testl %ebp, %ebp
-; PIC-NEXT:    movl %r15d, %eax
+; PIC-NEXT:    movl %edx, %eax
 ; PIC-NEXT:    jne .LBB1_2
 ; PIC-NEXT:  # %bb.1: # %if.then
+; PIC-NEXT:    movq %rcx, %r14
+; PIC-NEXT:    movl %edx, %ebp
 ; PIC-NEXT:    callq effect@PLT
+; PIC-NEXT:    movl %ebp, %edx
 ; PIC-NEXT:    movl 168(%r14,%rbx,4), %eax
 ; PIC-NEXT:  .LBB1_2: # %if.end
-; PIC-NEXT:    addl %r15d, %eax
-; PIC-NEXT:    addq $8, %rsp
+; PIC-NEXT:    addl %edx, %eax
 ; PIC-NEXT:    popq %rbx
 ; PIC-NEXT:    popq %r14
-; PIC-NEXT:    popq %r15
 ; PIC-NEXT:    popq %rbp
 ; PIC-NEXT:    retq
 ;
 ; TLSDESC-LABEL: func_nonlocal_tls:
 ; TLSDESC:       # %bb.0: # %entry
-; TLSDESC-NEXT:    pushq %rbp
 ; TLSDESC-NEXT:    pushq %r14
 ; TLSDESC-NEXT:    pushq %rbx
+; TLSDESC-NEXT:    pushq %rax
 ; TLSDESC-NEXT:    leaq foo_nonlocal@tlsdesc(%rip), %rax
 ; TLSDESC-NEXT:    callq *foo_nonlocal@tlscall(%rax)
-; TLSDESC-NEXT:    movl %fs:(%rax), %ebp
+; TLSDESC-NEXT:    movl %fs:(%rax), %edx
 ; TLSDESC-NEXT:    testl %edi, %edi
-; TLSDESC-NEXT:    movl %ebp, %ecx
+; TLSDESC-NEXT:    movl %edx, %ecx
 ; TLSDESC-NEXT:    jne .LBB1_2
 ; TLSDESC-NEXT:  # %bb.1: # %if.then
-; TLSDESC-NEXT:    movq %rsi, %rbx
 ; TLSDESC-NEXT:    addq %fs:0, %rax
+; TLSDESC-NEXT:    movq %rsi, %rbx
 ; TLSDESC-NEXT:    movq %rax, %r14
+; TLSDESC-NEXT:    movl %edx, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; TLSDESC-NEXT:    callq effect@PLT
+; TLSDESC-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %edx # 4-byte Reload
 ; TLSDESC-NEXT:    movl 168(%r14,%rbx,4), %ecx
 ; TLSDESC-NEXT:  .LBB1_2: # %if.end
-; TLSDESC-NEXT:    addl %ebp, %ecx
+; TLSDESC-NEXT:    addl %edx, %ecx
 ; TLSDESC-NEXT:    movl %ecx, %eax
+; TLSDESC-NEXT:    addq $8, %rsp
 ; TLSDESC-NEXT:    popq %rbx
 ; TLSDESC-NEXT:    popq %r14
-; TLSDESC-NEXT:    popq %rbp
 ; TLSDESC-NEXT:    retq
 entry:
   %addr = tail call ptr @llvm.threadlocal.address.p0(ptr @foo_nonlocal)

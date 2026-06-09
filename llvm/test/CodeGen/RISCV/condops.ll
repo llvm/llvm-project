@@ -4101,44 +4101,42 @@ define i64 @setune_64(float %a, float %b, i64 %rs1, i64 %rs2) {
 define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, i16 signext %3) nounwind {
 ; RV32I-LABEL: numsignbits:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; RV32I-NEXT:    mv s0, a3
 ; RV32I-NEXT:    beqz a0, .LBB60_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv s0, a2
+; RV32I-NEXT:    mv a3, a2
 ; RV32I-NEXT:  .LBB60_2:
 ; RV32I-NEXT:    beqz a1, .LBB60_4
 ; RV32I-NEXT:  # %bb.3:
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv a0, a3
+; RV32I-NEXT:    sw a3, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call bat
-; RV32I-NEXT:  .LBB60_4:
-; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    lw a3, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:  .LBB60_4:
+; RV32I-NEXT:    mv a0, a3
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: numsignbits:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi sp, sp, -16
-; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    mv s0, a3
 ; RV64I-NEXT:    beqz a0, .LBB60_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv s0, a2
+; RV64I-NEXT:    mv a3, a2
 ; RV64I-NEXT:  .LBB60_2:
 ; RV64I-NEXT:    beqz a1, .LBB60_4
 ; RV64I-NEXT:  # %bb.3:
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv a0, a3
+; RV64I-NEXT:    sd a3, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call bat
-; RV64I-NEXT:  .LBB60_4:
-; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    ld a3, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:  .LBB60_4:
+; RV64I-NEXT:    mv a0, a3
 ; RV64I-NEXT:    ret
 ;
 ; RV32XVENTANACONDOPS-LABEL: numsignbits:
@@ -4147,8 +4145,8 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32XVENTANACONDOPS-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32XVENTANACONDOPS-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32XVENTANACONDOPS-NEXT:    vt.maskc a2, a2, a0
-; RV32XVENTANACONDOPS-NEXT:    vt.maskcn s0, a3, a0
-; RV32XVENTANACONDOPS-NEXT:    or s0, s0, a2
+; RV32XVENTANACONDOPS-NEXT:    vt.maskcn a0, a3, a0
+; RV32XVENTANACONDOPS-NEXT:    or s0, a0, a2
 ; RV32XVENTANACONDOPS-NEXT:    beqz a1, .LBB60_2
 ; RV32XVENTANACONDOPS-NEXT:  # %bb.1:
 ; RV32XVENTANACONDOPS-NEXT:    mv a0, s0
@@ -4166,8 +4164,8 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64XVENTANACONDOPS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64XVENTANACONDOPS-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64XVENTANACONDOPS-NEXT:    vt.maskc a2, a2, a0
-; RV64XVENTANACONDOPS-NEXT:    vt.maskcn s0, a3, a0
-; RV64XVENTANACONDOPS-NEXT:    or s0, s0, a2
+; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a0, a3, a0
+; RV64XVENTANACONDOPS-NEXT:    or s0, a0, a2
 ; RV64XVENTANACONDOPS-NEXT:    beqz a1, .LBB60_2
 ; RV64XVENTANACONDOPS-NEXT:  # %bb.1:
 ; RV64XVENTANACONDOPS-NEXT:    mv a0, s0
@@ -4181,20 +4179,19 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ;
 ; RV64XTHEADCONDMOV-LABEL: numsignbits:
 ; RV64XTHEADCONDMOV:       # %bb.0:
-; RV64XTHEADCONDMOV-NEXT:    addi sp, sp, -16
-; RV64XTHEADCONDMOV-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64XTHEADCONDMOV-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; RV64XTHEADCONDMOV-NEXT:    mv s0, a2
-; RV64XTHEADCONDMOV-NEXT:    th.mveqz s0, a3, a0
+; RV64XTHEADCONDMOV-NEXT:    th.mveqz a2, a3, a0
 ; RV64XTHEADCONDMOV-NEXT:    beqz a1, .LBB60_2
 ; RV64XTHEADCONDMOV-NEXT:  # %bb.1:
-; RV64XTHEADCONDMOV-NEXT:    mv a0, s0
+; RV64XTHEADCONDMOV-NEXT:    addi sp, sp, -16
+; RV64XTHEADCONDMOV-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64XTHEADCONDMOV-NEXT:    mv a0, a2
+; RV64XTHEADCONDMOV-NEXT:    sd a2, 0(sp) # 8-byte Folded Spill
 ; RV64XTHEADCONDMOV-NEXT:    call bat
-; RV64XTHEADCONDMOV-NEXT:  .LBB60_2:
-; RV64XTHEADCONDMOV-NEXT:    mv a0, s0
+; RV64XTHEADCONDMOV-NEXT:    ld a2, 0(sp) # 8-byte Folded Reload
 ; RV64XTHEADCONDMOV-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64XTHEADCONDMOV-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64XTHEADCONDMOV-NEXT:    addi sp, sp, 16
+; RV64XTHEADCONDMOV-NEXT:  .LBB60_2:
+; RV64XTHEADCONDMOV-NEXT:    mv a0, a2
 ; RV64XTHEADCONDMOV-NEXT:    ret
 ;
 ; RV32ZICOND-LABEL: numsignbits:
@@ -4203,8 +4200,8 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32ZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ZICOND-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32ZICOND-NEXT:    czero.eqz a2, a2, a0
-; RV32ZICOND-NEXT:    czero.nez s0, a3, a0
-; RV32ZICOND-NEXT:    or s0, s0, a2
+; RV32ZICOND-NEXT:    czero.nez a0, a3, a0
+; RV32ZICOND-NEXT:    or s0, a0, a2
 ; RV32ZICOND-NEXT:    beqz a1, .LBB60_2
 ; RV32ZICOND-NEXT:  # %bb.1:
 ; RV32ZICOND-NEXT:    mv a0, s0
@@ -4222,8 +4219,8 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64ZICOND-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64ZICOND-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64ZICOND-NEXT:    czero.eqz a2, a2, a0
-; RV64ZICOND-NEXT:    czero.nez s0, a3, a0
-; RV64ZICOND-NEXT:    or s0, s0, a2
+; RV64ZICOND-NEXT:    czero.nez a0, a3, a0
+; RV64ZICOND-NEXT:    or s0, a0, a2
 ; RV64ZICOND-NEXT:    beqz a1, .LBB60_2
 ; RV64ZICOND-NEXT:  # %bb.1:
 ; RV64ZICOND-NEXT:    mv a0, s0

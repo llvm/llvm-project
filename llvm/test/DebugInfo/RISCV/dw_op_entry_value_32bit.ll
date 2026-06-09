@@ -14,7 +14,7 @@
 ;; Confirm that info from callSites attribute is used as entry_value in DIExpression.
 
 ;; Test riscv32:
-; CHECK32: $x10 = nsw ADD $x11, killed renamable $x10
+; CHECK32: renamable $x10 = nsw ADD renamable $x11, killed renamable $x10
 ; CHECK32-NEXT: DBG_VALUE $x10, $noreg, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1)
 
 ; ModuleID = 'm.c'

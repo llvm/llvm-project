@@ -284,16 +284,17 @@ return:
 define ptr @baz_illegal_tailc(ptr %ret_val, ptr %arg) nounwind {
 ; CHECK-LABEL: baz_illegal_tailc:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    testq %rdi, %rdi
 ; CHECK-NEXT:    je LBB7_2
 ; CHECK-NEXT:  ## %bb.1: ## %if.then
-; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movq %rax, (%rsp) ## 8-byte Spill
+; CHECK-NEXT:    movq (%rsp), %rdi ## 8-byte Reload
 ; CHECK-NEXT:    callq _baz
+; CHECK-NEXT:    movq (%rsp), %rax ## 8-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:  LBB7_2: ## %return
-; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
   %cmp = icmp eq ptr %ret_val, null
@@ -315,9 +316,9 @@ define ptr @memset_illegal_tailc(ptr %arg, i64 %sz, ptr %ret_val_1, ptr %ret_val
 ; CHECK-NEXT:    je LBB8_2
 ; CHECK-NEXT:  ## %bb.1: ## %if.then
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rcx, %rbx
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    xorl %esi, %esi
+; CHECK-NEXT:    movq %rcx, %rbx
 ; CHECK-NEXT:    callq _memset
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    popq %rbx
@@ -339,16 +340,17 @@ return:
 define ptr @strcpy_illegal_tailc(ptr %dest, i64 %sz, ptr readonly returned %src) nounwind {
 ; CHECK-LABEL: strcpy_illegal_tailc:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rdx, %rbx
+; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    testq %rsi, %rsi
 ; CHECK-NEXT:    je LBB9_2
 ; CHECK-NEXT:  ## %bb.1: ## %if.then
-; CHECK-NEXT:    movq %rbx, %rsi
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    movq %rax, (%rsp) ## 8-byte Spill
 ; CHECK-NEXT:    callq _strcpy
+; CHECK-NEXT:    movq (%rsp), %rax ## 8-byte Reload
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:  LBB9_2: ## %return
-; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    retq
 entry:
   %cmp = icmp eq i64 %sz, 0

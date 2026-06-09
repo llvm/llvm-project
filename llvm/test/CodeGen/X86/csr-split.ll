@@ -132,66 +132,62 @@ return:                                           ; preds = %if.end, %entry, %if
 define dso_local ptr @test3(ptr nocapture %p1, i8 zeroext %p2) local_unnamed_addr  {
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %r14
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    .cfi_def_cfa_offset 24
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 32
-; X64-NEXT:    .cfi_offset %rbx, -24
-; X64-NEXT:    .cfi_offset %r14, -16
-; X64-NEXT:    movq (%rdi), %rbx
-; X64-NEXT:    testq %rbx, %rbx
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    testq %rax, %rax
 ; X64-NEXT:    je .LBB2_2
 ; X64-NEXT:  # %bb.1: # %land.rhs
-; X64-NEXT:    movq %rdi, %r14
-; X64-NEXT:    movzbl %sil, %esi
-; X64-NEXT:    movq %rbx, %rdi
-; X64-NEXT:    callq bar@PLT
-; X64-NEXT:    movq %rax, (%r14)
-; X64-NEXT:  .LBB2_2: # %land.end
-; X64-NEXT:    movq %rbx, %rax
-; X64-NEXT:    addq $8, %rsp
-; X64-NEXT:    .cfi_def_cfa_offset 24
-; X64-NEXT:    popq %rbx
+; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    popq %r14
+; X64-NEXT:    subq $16, %rsp
+; X64-NEXT:    .cfi_def_cfa_offset 32
+; X64-NEXT:    .cfi_offset %rbx, -16
+; X64-NEXT:    movzbl %sil, %esi
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rax, %rdi
+; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    movq %rax, %rcx
+; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; X64-NEXT:    movq %rcx, (%rbx)
+; X64-NEXT:    addq $16, %rsp
+; X64-NEXT:    .cfi_def_cfa_offset 16
+; X64-NEXT:    popq %rbx
 ; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    .cfi_restore %rbx
+; X64-NEXT:  .LBB2_2: # %land.end
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test3:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    pushl %eax
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl (%edi), %esi
-; X86-NEXT:    testl %esi, %esi
+; X86-NEXT:    .cfi_offset %esi, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    je .LBB2_2
 ; X86-NEXT:  # %bb.1: # %land.rhs
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset 8
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    pushl %edx
+; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    calll bar@PLT
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    .cfi_adjust_cfa_offset -16
-; X86-NEXT:    movl %eax, (%edi)
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    movl %ecx, (%esi)
 ; X86-NEXT:  .LBB2_2: # %land.end
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    popl %esi
+; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 entry:

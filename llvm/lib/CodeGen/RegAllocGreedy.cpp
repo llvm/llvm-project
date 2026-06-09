@@ -115,11 +115,6 @@ CSRFirstTimeCost("regalloc-csr-first-time-cost",
               cl::desc("Cost for first time use of callee-saved register."),
               cl::init(0), cl::Hidden);
 
-static cl::opt<unsigned> CSRCostScale(
-    "regalloc-csr-cost-scale",
-    cl::desc("Scale for the callee-saved register cost, in percentage."),
-    cl::init(80), cl::Hidden);
-
 static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
     cl::desc("growRegion() does not scale with the number of BB edges, so "
@@ -2418,43 +2413,22 @@ void RAGreedy::aboutToRemoveInterval(const LiveInterval &LI) {
 }
 
 void RAGreedy::initializeCSRCost() {
-  if (!CSRCostScale.getNumOccurrences() &&
-      (CSRFirstTimeCost.getNumOccurrences() || TRI->getCSRCost())) {
-    // We should deprecate the usage of CSRFirstTimeCost!
-    // We use the command-line option if it is explicitly set, otherwise use the
-    // larger one out of the command-line option and the value reported by TRI.
-    CSRCost = BlockFrequency(
-        CSRFirstTimeCost.getNumOccurrences()
-            ? CSRFirstTimeCost
-            : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRCost()));
-    if (!CSRCost.getFrequency())
-      return;
-
-    // Raw cost is relative to Entry == 2^14; scale it appropriately.
-    uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
-    if (!ActualEntry) {
-      CSRCost = BlockFrequency(0);
-      return;
-    }
-    uint64_t FixedEntry = 1 << 14;
-    if (ActualEntry < FixedEntry) {
-      CSRCost *= BranchProbability(ActualEntry, FixedEntry);
-    } else if (ActualEntry <= UINT32_MAX) {
-      // Invert the fraction and divide.
-      CSRCost /= BranchProbability(FixedEntry, ActualEntry);
-    } else {
-      // Can't use BranchProbability in general, since it takes 32-bit numbers.
-      CSRCost =
-          BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
-    }
-  } else {
-    uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
-    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost() * EntryFreq);
-    if (CSRCostScale < 100)
-      CSRCost *= BranchProbability(CSRCostScale, 100);
-    else
-      CSRCost /= BranchProbability(100, CSRCostScale);
+  unsigned BaseCost = CSRFirstTimeCost.getNumOccurrences()
+                          ? CSRFirstTimeCost
+                          : TRI->getCSRFirstUseCost(*MF);
+  if (!BaseCost) {
+    CSRCost = BlockFrequency(0);
+    return;
   }
+
+  uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
+  CSRCost = BlockFrequency(BaseCost * EntryFreq);
+
+  unsigned Scale = TRI->getCSRCostScale(*MF);
+  if (Scale < 100)
+    CSRCost *= BranchProbability(Scale, 100);
+  else if (Scale > 100)
+    CSRCost /= BranchProbability(100, Scale);
 }
 
 /// Collect the hint info for \p Reg.

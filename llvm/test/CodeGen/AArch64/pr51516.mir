@@ -5,10 +5,10 @@
 # of ADDXri is killed by the STRXui in this block.
 
 # CHECK-LABEL: name: test
-# CHECK: bb.17:
-# CHECK:   STRXui
-# CHECK:   LDRXui
-# CHECK: bb.18:
+# CHECK: bb.9:
+# CHECK:   ADDXri
+# CHECK:   STRXui %{{[0-9]+}}, %stack.1
+# CHECK: bb.10:
 
 ---
 name:            test
