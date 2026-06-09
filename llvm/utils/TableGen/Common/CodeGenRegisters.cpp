@@ -1381,7 +1381,7 @@ CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
 
   // None exists, synthesize one.
   std::string Name = Parts.front()->getName();
-  const unsigned UnknownSize = (uint16_t)-1;
+  const unsigned UnknownSize = (uint32_t)-1;
 
   for (const CodeGenSubRegIndex *Part : ArrayRef(Parts).drop_front()) {
     Name += '_';
