@@ -236,6 +236,16 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              bool useInBoundsInsteadOfMasking = false,
                              ArrayRef<bool> inputScalableVecDims = {});
 
+/// Creates a TransferReadOp with explicit \p indices and \p permutationMap.
+/// The in_bounds attribute is inferred from the permutation map: dimension i
+/// is in-bounds when the map result is an AffineDimExpr pointing to a static
+/// memref dimension divisible by the vector size, or an AffineConstantExpr.
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             ArrayRef<Value> indices,
+                             const VectorType &vecToReadTy,
+                             AffineMap permutationMap,
+                             std::optional<Value> padValue = std::nullopt);
+
 /// Create a TransferWriteOp of `vecToStore` into `dest`.
 ///
 /// If the shape of the vector to write differs from the destination shape,
@@ -248,6 +258,15 @@ Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
                                     Value vecToStore, Value dest,
                                     SmallVector<Value> writeIndices = {},
                                     bool useInBoundsInsteadOfMasking = false);
+
+/// Creates a TransferWriteOp with explicit \p indices and \p permutationMap.
+/// The in_bounds attribute is inferred from the permutation map: dimension i
+/// is in-bounds when the map result is an AffineDimExpr pointing to a static
+/// memref dimension divisible by the vector size.
+Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
+                                    Value vecToStore, Value dest,
+                                    ArrayRef<Value> indices,
+                                    AffineMap permutationMap);
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:

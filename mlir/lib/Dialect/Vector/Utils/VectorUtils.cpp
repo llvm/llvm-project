@@ -478,6 +478,40 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       ->getResult(0);
 }
 
+/// Compute the in_bounds attribute for a transfer op given its permutation map
+/// and the memref being accessed. Dimension i is in-bounds when the map result
+/// is an AffineDimExpr pointing to a static memref dimension divisible by the
+/// vector size, or an AffineConstantExpr (broadcast).
+static SmallVector<bool> computeInBoundsFromPermutationMap(
+    AffineMap permutationMap, VectorType vectorType, MemRefType memrefType) {
+  SmallVector<bool> inBounds(vectorType.getRank(), false);
+  for (unsigned i = 0; i < (unsigned)vectorType.getRank(); ++i) {
+    AffineExpr expr = permutationMap.getResult(i);
+    if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
+      unsigned memDim = dimExpr.getPosition();
+      if (!memrefType.isDynamicDim(memDim) &&
+          memrefType.getDimSize(memDim) % vectorType.getDimSize(i) == 0)
+        inBounds[i] = true;
+    } else if (isa<AffineConstantExpr>(expr)) {
+      inBounds[i] = true;
+    }
+  }
+  return inBounds;
+}
+
+Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
+                                     Value source, ArrayRef<Value> indices,
+                                     const VectorType &vecToReadTy,
+                                     AffineMap permutationMap,
+                                     std::optional<Value> padValue) {
+  auto memrefType = cast<MemRefType>(source.getType());
+  SmallVector<bool> inBounds = computeInBoundsFromPermutationMap(
+      permutationMap, vecToReadTy, memrefType);
+  return vector::TransferReadOp::create(builder, loc, vecToReadTy, source,
+                                        indices, padValue, permutationMap,
+                                        inBounds);
+}
+
 Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
                                             Value vecToStore, Value dest,
                                             SmallVector<Value> writeIndices,
@@ -559,6 +593,18 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   Value maskForWrite =
       builder.createOrFold<vector::CreateMaskOp>(loc, writeMaskType, maskSizes);
   return mlir::vector::maskOperation(builder, write, maskForWrite);
+}
+
+Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
+                                            Value vecToStore, Value dest,
+                                            ArrayRef<Value> indices,
+                                            AffineMap permutationMap) {
+  auto memrefType = cast<MemRefType>(dest.getType());
+  VectorType vecType = cast<VectorType>(vecToStore.getType());
+  SmallVector<bool> inBounds =
+      computeInBoundsFromPermutationMap(permutationMap, vecType, memrefType);
+  return vector::TransferWriteOp::create(builder, loc, vecToStore, dest,
+                                         indices, permutationMap, inBounds);
 }
 
 LogicalResult
