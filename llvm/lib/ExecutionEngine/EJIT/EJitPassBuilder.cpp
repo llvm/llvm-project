@@ -10,24 +10,20 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/DemandedBits.h"
+#include "llvm/Analysis/LastRunTrackingAnalysis.h"
+#include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/Analysis/PhiValues.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
-#include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/DemandedBits.h"
-#include "llvm/Analysis/InlineSizeEstimatorAnalysis.h"
-#include "llvm/Analysis/LastRunTrackingAnalysis.h"
-#include "llvm/Analysis/LazyValueInfo.h"
-#include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassInstrumentation.h"
 
@@ -44,19 +40,18 @@ void ejit::EJitPassBuilder::registerFunctionAnalyses(
   FAM.registerPass([&] { return TypeBasedAA(); });
 
   FAM.registerPass([&] { return AssumptionAnalysis(); });
-  FAM.registerPass([&] { return BlockFrequencyAnalysis(); });
-  FAM.registerPass([&] { return BranchProbabilityAnalysis(); });
   FAM.registerPass([&] { return DemandedBitsAnalysis(); });
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
-  FAM.registerPass([&] { return InlineSizeEstimatorAnalysis(); });
-  FAM.registerPass([&] { return LastRunTrackingAnalysis(); });
   FAM.registerPass([&] { return LazyValueAnalysis(); });
   FAM.registerPass([&] { return LoopAnalysis(); });
+  // LastRunTrackingAnalysis needed by SimplifyCFG pass infrastructure.
+  FAM.registerPass([&] { return LastRunTrackingAnalysis(); });
+  // InlineSizeEstimatorAnalysis and PhiValuesAnalysis intentionally not
+  // registered: not used by any pass in the JIT pipeline.
   FAM.registerPass([&] { return MemoryDependenceAnalysis(); });
   FAM.registerPass([&] { return MemorySSAAnalysis(); });
   FAM.registerPass([&] { return OptimizationRemarkEmitterAnalysis(); });
   FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
-  FAM.registerPass([&] { return PhiValuesAnalysis(); });
   FAM.registerPass([&] { return PostDominatorTreeAnalysis(); });
   FAM.registerPass([&] { return ScalarEvolutionAnalysis(); });
   FAM.registerPass([&] { return TargetIRAnalysis(); });

@@ -52,19 +52,43 @@ void *EJitCache::getOrNull(uint32_t cacheKey) {
 
 bool EJitCache::put(uint32_t cacheKey, void *funcPtr,
                     size_t codeSize,
-                    const std::set<std::string> &periodDeps) {
+                    ArrayRef<std::string> periodDeps) {
   std::unique_lock<decltype(mutex_)> lock(mutex_);
 
   if (codeSize > maxSingleFuncSize_)
     return false;
+
+  // If the same cacheKey already exists, clean up the old entry before
+  // inserting the new one. This handles the rare race where two async
+  // compilations produce the same key.
+  auto [it, inserted] = cache_.try_emplace(cacheKey);
+  if (!inserted) {
+    currentTotalSize_ -= it->second.codeSize;
+    // Remove old LRU node so the key doesn't appear twice in the list.
+    auto lruIt = lruIter_.find(cacheKey);
+    if (lruIt != lruIter_.end()) {
+      lruList_.erase(lruIt->second);
+      lruIter_.erase(lruIt);
+    }
+    // Remove old period dependencies from the index.
+    for (const auto &dep : it->second.periodDeps) {
+      auto pit = periodIndex_.find(dep);
+      if (pit != periodIndex_.end()) {
+        pit->second.erase(cacheKey);
+        if (pit->second.empty())
+          periodIndex_.erase(pit);
+      }
+    }
+  }
 
   while (!cache_.empty() &&
          (cache_.size() >= maxEntries_ ||
           currentTotalSize_ + codeSize > maxTotalSize_))
     evictLRU();
 
-  Entry entry{cacheKey, funcPtr, codeSize, getTimestamp(), periodDeps};
-  cache_[cacheKey] = entry;
+  it->second = {funcPtr, codeSize, getTimestamp(),
+                SmallVector<std::string, 4>(periodDeps.begin(),
+                                            periodDeps.end())};
   currentTotalSize_ += codeSize;
 
   lruList_.push_front(cacheKey);

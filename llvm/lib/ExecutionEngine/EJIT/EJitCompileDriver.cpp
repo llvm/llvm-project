@@ -135,9 +135,9 @@ void *EJitCompileDriver::getOrCompile(
   // Getting the actual machine code size from LLJIT/JITLink requires
   // instrumenting the memory manager. For now, bitcode size serves as an
   // approximation for cache eviction decisions.
-  std::set<std::string> periodDeps;
+  SmallVector<std::string, 4> periodDeps;
   for (unsigned i = 0; i < count; ++i)
-    periodDeps.insert(dims[i].first + "=" + std::to_string(dims[i].second));
+    periodDeps.push_back(dims[i].first + "=" + std::to_string(dims[i].second));
 
   cache_.put(cacheKey, funcPtr, bitcode.size(), periodDeps);
 

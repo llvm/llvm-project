@@ -12,6 +12,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include <cassert>
 #include <cstring>
 
 using namespace llvm;
@@ -19,21 +20,8 @@ using namespace llvm::ejit;
 
 #define DEBUG_TYPE "ejit-struct-field"
 
-namespace {
-
-struct GVPeriodInfo {
-  std::string periodName;
-  bool isArray;
-  size_t arraySize;
-};
-
-//===----------------------------------------------------------------------===//
-// Module-level metadata helpers
-//===----------------------------------------------------------------------===//
-
-static void buildGVPeriodMap(
-    Module &M,
-    DenseMap<const GlobalVariable *, GVPeriodInfo> &gvMap) {
+void EJitStructFieldPass::initFromModule(Module &M) {
+  // Build GV period map.
   for (GlobalVariable &GV : M.globals()) {
     MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
     if (!MD)
@@ -55,26 +43,16 @@ static void buildGVPeriodMap(
           if (auto *CI = mdconst::dyn_extract<ConstantInt>(Sub->getOperand(2)))
             sz = CI->getZExtValue();
         if (PN)
-          gvMap[&GV] = {PN->getString().str(), true, sz};
+          gvPeriodMap_[&GV] = {PN->getString().str(), true, sz};
       } else if (Tag->getString() == TAG_EJIT_PERIOD) {
         auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
         std::string pn = PN ? PN->getString().str() : "";
-        gvMap[&GV] = {pn, false, 0};
+        gvPeriodMap_[&GV] = {pn, false, 0};
       }
     }
-  }
-}
 
-using MayConstOffsetMap =
-    DenseMap<const GlobalVariable *, SmallVector<uint64_t, 4>>;
-
-/// Build a GV-level map of may_const field byte offsets (v1.7 fallback for
-/// when optimization passes drop per-load !ejit.may_const metadata).
-static void buildMayConstFieldMap(Module &M, MayConstOffsetMap &map) {
-  for (GlobalVariable &GV : M.globals()) {
-    MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
-    if (!MD)
-      continue;
+    // Build may_const field offset map (v1.7 fallback for when
+    // optimization passes drop per-load !ejit.may_const metadata).
     SmallVector<uint64_t, 4> offsets;
     for (const MDOperand &Op : MD->operands()) {
       auto *Sub = dyn_cast<MDNode>(Op.get());
@@ -87,8 +65,10 @@ static void buildMayConstFieldMap(Module &M, MayConstOffsetMap &map) {
         offsets.push_back(CI->getZExtValue());
     }
     if (!offsets.empty())
-      map[&GV] = std::move(offsets);
+      mayConstFieldMap_[&GV] = std::move(offsets);
   }
+
+  mapsBuilt_ = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -224,9 +204,6 @@ static Constant *createConstantFromMemory(const void *addr, Type *Ty,
 // Load replacement helpers — one per access pattern
 //===----------------------------------------------------------------------===//
 
-using GVPeriodMap =
-    DenseMap<const GlobalVariable *, GVPeriodInfo>;
-
 /// Pattern 1: load directly from a GlobalVariable (scalar static variable).
 static Constant *
 tryReplaceDirectGV(LoadInst *LI, const GlobalVariable *GV,
@@ -342,8 +319,6 @@ tryReplaceIndirect(LoadInst *LI, const Value *PtrOp,
   return createConstantFromMemory(fieldAddr, LI->getType(), DL);
 }
 
-} // anonymous namespace
-
 //===----------------------------------------------------------------------===//
 // Public interface
 //===----------------------------------------------------------------------===//
@@ -354,14 +329,13 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
   if (!M)
     return PreservedAnalyses::all();
 
+  assert(mapsBuilt_ && "EJitStructFieldPass::initFromModule() must be "
+                       "called before run()");
+
   const DataLayout &DL = M->getDataLayout();
 
-  // 1. Build module-level metadata maps (once per function).
-  GVPeriodMap gvPeriodMap;
-  buildGVPeriodMap(*M, gvPeriodMap);
-
-  MayConstOffsetMap mayConstFieldMap;
-  buildMayConstFieldMap(*M, mayConstFieldMap);
+  // 1. Use cached module-level metadata maps (built once per module by
+  //    initFromModule(), reused across all function runs).
 
   // 2. Scan all loads and collect replacements.
   struct Replacement { LoadInst *LI; Constant *ConstVal; };
@@ -373,7 +347,7 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
       if (!LI)
         continue;
 
-      if (!isMayConstLoad(LI, mayConstFieldMap, DL))
+      if (!isMayConstLoad(LI, mayConstFieldMap_, DL))
         continue;
 
       Value *PtrOp = LI->getPointerOperand();
@@ -383,15 +357,15 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
 
       // Pattern 1: direct GlobalVariable load (scalar static variable).
       if (auto *GV = dyn_cast<GlobalVariable>(PtrOp->stripPointerCasts()))
-        C = tryReplaceDirectGV(LI, GV, gvPeriodMap, registry_, DL);
+        C = tryReplaceDirectGV(LI, GV, gvPeriodMap_, registry_, DL);
 
       // Pattern 2: GEP-based access (array or struct field).
       if (!C)
-        C = tryReplaceDirectGEP(LI, PtrOp, gvPeriodMap, registry_, DL);
+        C = tryReplaceDirectGEP(LI, PtrOp, gvPeriodMap_, registry_, DL);
 
       // Pattern 3: indirect pointer access (pointer-type period variable).
       if (!C)
-        C = tryReplaceIndirect(LI, PtrOp, gvPeriodMap, registry_, DL);
+        C = tryReplaceIndirect(LI, PtrOp, gvPeriodMap_, registry_, DL);
 
       if (C)
         replacements.push_back({LI, C});

@@ -137,6 +137,7 @@ void EJitOptimizer::runInstCombine(Module &M) {
 
 void EJitOptimizer::runStructFieldPass(Module &M) {
   EJitStructFieldPass structField(registry_);
+  structField.initFromModule(M);
   for (Function &F : M.functions())
     if (!F.isDeclaration())
       structField.run(F, FAM_);

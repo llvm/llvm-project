@@ -99,9 +99,9 @@ void EJitAsyncCompiler::compileOne(const CompileRequest &req) {
       syncCompiler_->compile(*workerEngine_, req.bitcodeData, req.ctx);
 
   if (result.funcPtr) {
-    std::set<std::string> deps;
+    SmallVector<std::string, 4> deps;
     for (auto &dim : req.ctx.dimensions)
-      deps.insert(dim.periodName + "=" + std::to_string(dim.cellIdx));
+      deps.push_back(dim.periodName + "=" + std::to_string(dim.cellIdx));
     cache_.put(req.ctx.cacheKey, result.funcPtr, result.codeSize, deps);
   }
 }

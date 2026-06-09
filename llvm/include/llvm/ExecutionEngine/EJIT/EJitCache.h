@@ -10,6 +10,8 @@
 #define LLVM_EXECUTIONENGINE_EJIT_EJITCACHE_H
 
 #include "llvm/ExecutionEngine/EJIT/EJitBareMetal.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include <cstddef>
 #include <cstdint>
 #include <list>
@@ -34,11 +36,10 @@ public:
   using MutexType = std::shared_mutex;
 #endif
   struct Entry {
-    uint32_t cacheKey;
     void *funcPtr;
     size_t codeSize;
     uint64_t lastAccessTime;
-    std::set<std::string> periodDeps;
+    SmallVector<std::string, 4> periodDeps; // 0-4 typical, avoids heap alloc
   };
 
   struct Stats {
@@ -58,7 +59,8 @@ public:
 
   /// Insert a compiled function into the cache.
   bool put(uint32_t cacheKey, void *funcPtr,
-           size_t codeSize, const std::set<std::string> &periodDeps = {});
+           size_t codeSize,
+           ArrayRef<std::string> periodDeps = {});
 
   /// Invalidate all entries that depend on a specific period/cell.
   void invalidateByPeriod(const std::string &periodName, uint8_t cellIdx);
