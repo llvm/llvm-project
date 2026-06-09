@@ -17,19 +17,20 @@
 #include "orc-rt/Service.h"
 #include "orc-rt/sps-ci/NativeDylibManagerSPSCI.h"
 
-#include <mutex>
-#include <unordered_map>
-
 namespace orc_rt {
 
 class Session;
 
-/// Dylib loading / unloading / symbol lookup service.
+/// Dylib loading / symbol lookup service.
 ///
-/// Any dynamic libraries loaded through this service that are not manually
-/// unloaded will be automatically unloaded at shutdown time in LIFO order.
+/// Libraries loaded through this service are automatically unloaded in LIFO
+/// order at session shutdown via Session::addOnShutdown callbacks registered
+/// from load().
 class NativeDylibManager : public Service {
 public:
+  enum LookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
+  using SymbolLookupSet = std::vector<std::pair<std::string, LookupFlags>>;
+
   /// Create a NativeDylibManager, adding associated symbols to the given
   /// SimpleSymbolTable (typically the BootstrapInfo table).
   static Expected<std::unique_ptr<NativeDylibManager>>
@@ -53,23 +54,23 @@ public:
 
   /// Load the given library.
   ///
-  /// Returns an Expected handle.
+  /// Returns an Expected handle. On success, registers a Session shutdown
+  /// callback to unload the library.
   using OnLoadCompleteFn = move_only_function<void(Expected<void *>)>;
   void load(OnLoadCompleteFn &&OnComplete, std::string Path);
 
-  /// Unload the given library handle.
+  /// Lookup addresses of the given symbols in the given library.
   ///
-  /// Returns an error on failure.
-  using OnUnloadCompleteFn = move_only_function<void(Error)>;
-  void unload(OnUnloadCompleteFn &&OnComplete, void *Handle);
-
-  /// Lookup addresses of the given symbols.
-  ///
-  /// Returns a sequence of addresses.
+  /// Each entry in Symbols pairs a name with a flag indicating whether the
+  /// symbol is required or weakly referenced. A missing required symbol is
+  /// reported as an empty optional in the result vector; a missing
+  /// weakly-referenced symbol is reported as a present optional with a zero
+  /// (nullptr) address. This matches the resolve semantics of
+  /// llvm::orc::rt_bootstrap::SimpleExecutorDylibManager.
   using OnLookupCompleteFn =
-      move_only_function<void(Expected<std::vector<void *>>)>;
+      move_only_function<void(Expected<std::vector<std::optional<void *>>>)>;
   void lookup(OnLookupCompleteFn &&OnLookupComplete, void *Handle,
-              std::vector<std::string> Names);
+              SymbolLookupSet Symbols);
 
   void onDetach(Service::OnCompleteFn OnComplete,
                 bool ShutdownRequested) override;
@@ -79,14 +80,6 @@ private:
   NativeDylibManager(Session &S) : S(S) {}
 
   Session &S;
-
-  struct LoadInfo {
-    size_t Ordinal = 0;
-    size_t RefCount = 0;
-  };
-
-  std::mutex M;
-  std::unordered_map<void *, LoadInfo> LoadInfos;
 };
 
 } // namespace orc_rt

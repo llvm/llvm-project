@@ -14,7 +14,7 @@
 // CHECK-SAME: "-o" "[[IMG_DEV_A_803:.*out]]" [[OBJ_DEV_A_803]]
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa"
-// CHECK-SAME: "-emit-obj"
+// CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: {{.*}} "-o" [[OBJ_DEV_A_900:".*o"]] "-x" "hip"

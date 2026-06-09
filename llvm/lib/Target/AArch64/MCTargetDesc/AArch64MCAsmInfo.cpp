@@ -147,7 +147,6 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32,
   AssemblerDialect = AsmWriterVariant == Default ? Apple : AsmWriterVariant;
 
   InternalSymbolPrefix = "L";
-  PrivateLabelPrefix = "L";
   SeparatorString = "%%";
   CommentString = ";";
   CalleeSaveStackSlotSize = 8;
@@ -222,7 +221,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
 
   CommentString = "//";
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
   Data32bitsDirective = "\t.word\t";
@@ -265,7 +263,6 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF(
     const MCTargetOptions &Options)
     : MCAsmInfoMicrosoft(Options) {
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
   Data32bitsDirective = "\t.word\t";
@@ -296,7 +293,6 @@ bool AArch64MCAsmInfoMicrosoftCOFF::evaluateAsRelocatableImpl(
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF(const MCTargetOptions &Options)
     : MCAsmInfoGNUCOFF(Options) {
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
 
   Data16bitsDirective = "\t.hword\t";
   Data32bitsDirective = "\t.word\t";

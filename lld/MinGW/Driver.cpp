@@ -44,6 +44,7 @@
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
+#include <stack>
 
 using namespace lld;
 using namespace llvm::opt;
@@ -576,6 +577,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   StringRef prefix = "";
   bool isStatic = false;
+  struct PushPopState {
+    StringRef prefix;
+    bool isStatic;
+  };
+  std::stack<PushPopState, std::vector<PushPopState>> pushPopStates;
   for (auto *a : args) {
     switch (a->getOption().getID()) {
     case OPT_INPUT:
@@ -603,6 +609,18 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       break;
     case OPT_Bdynamic:
       isStatic = false;
+      break;
+    case OPT_push_state:
+      pushPopStates.push({prefix, isStatic});
+      break;
+    case OPT_pop_state:
+      if (pushPopStates.empty()) {
+        error("unbalanced --push-state/--pop-state");
+        break;
+      }
+      prefix = pushPopStates.top().prefix;
+      isStatic = pushPopStates.top().isStatic;
+      pushPopStates.pop();
       break;
     }
   }

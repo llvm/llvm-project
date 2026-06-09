@@ -98,7 +98,7 @@ define half @test_ret_f16() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0xH0000
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(f16) = G_FCONSTANT half 0.000000e+00
   ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:i32(i32) = G_ANYEXT [[C]](f16)
   ; CHECK-NEXT:   RETURN [[ANYEXT]](i32), implicit-def $arguments
   ret half 0.0
@@ -131,7 +131,7 @@ define %externref @test_ret_externref() {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.ref_ptr
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p10) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (p10) from %ir.ref_ptr)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p10) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p10) from %ir.ref_ptr)
   ; CHECK-NEXT:   RETURN [[LOAD]](p10), implicit-def $arguments
   %ref_ptr = alloca %externref
   %ref = load %externref, ptr %ref_ptr
@@ -145,7 +145,7 @@ define %funcref @test_ret_funcref() {
   ; CHECK-NEXT:   liveins: $arguments
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.ref_ptr
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p20) = G_LOAD [[FRAME_INDEX]](p0) :: (dereferenceable load (p20) from %ir.ref_ptr)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p20) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p20) from %ir.ref_ptr)
   ; CHECK-NEXT:   RETURN [[LOAD]](p20), implicit-def $arguments
   %ref_ptr = alloca %funcref
   %ref = load %funcref, ptr %ref_ptr

@@ -633,7 +633,7 @@ public:
 
 protected:
   // Check whether a given line is LBR sample
-  static bool isLBRSample(StringRef Line);
+  static bool isLBRSample(StringRef Line, bool CheckLineStart);
   // Check whether a given line is MMAP event
   static bool isMMapEvent(StringRef Line);
   // Update base address based on mmap events

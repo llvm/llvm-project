@@ -138,6 +138,18 @@ const FileAction *ProcessLaunchInfo::GetFileActionForFD(int fd) const {
   return nullptr;
 }
 
+bool ProcessLaunchInfo::IsFDRedirected(int fd) const {
+  if (GetFileActionForFD(fd))
+    return true;
+  for (size_t i = 0; i < GetNumFileActions(); ++i) {
+    const FileAction *act = GetFileActionAtIndex(i);
+    if (act->GetAction() == FileAction::eFileActionDuplicate &&
+        act->GetActionArgument() == fd)
+      return true;
+  }
+  return false;
+}
+
 const FileSpec &ProcessLaunchInfo::GetWorkingDirectory() const {
   return m_working_dir;
 }
@@ -232,7 +244,8 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
 #ifdef _WIN32
-  if (llvm::Error Err = m_pty->OpenPseudoConsole())
+  if (llvm::Error Err = m_pty->OpenPseudoConsole(m_stdio_window_size.cols,
+                                                 m_stdio_window_size.rows))
     return Err;
   return llvm::Error::success();
 #else

@@ -65,15 +65,17 @@ static bool Jmp(InterpState &S, CodePtr &PC, int32_t Offset) {
 static bool Jt(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (S.Stk.pop<bool>()) {
     PC += Offset;
+    return S.noteStep(PC);
   }
-  return S.noteStep(PC);
+  return true;
 }
 
 static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (!S.Stk.pop<bool>()) {
     PC += Offset;
+    return S.noteStep(PC);
   }
-  return S.noteStep(PC);
+  return true;
 }
 
 static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
@@ -154,6 +156,7 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
 
   if (const auto *VarD = dyn_cast<VarDecl>(VD);
       VarD && VarD->getType().isConstQualified() &&
+      (VarD->isConstexpr() || !VarD->getType()->isArrayType()) &&
       !VarD->getAnyInitializer()) {
     diagnoseMissingInitializer(S, OpPC, VD);
     return;
@@ -251,7 +254,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
 
     assert(NumArgs >= Func->getNumWrittenParams());
     NumVarArgs = NumArgs - (Func->getNumWrittenParams() +
-                            isa<CXXOperatorCallExpr>(CallSite));
+                            (isa<CXXOperatorCallExpr>(CallSite) &&
+                             Func->hasImplicitThisParam()));
     for (unsigned I = 0; I != NumVarArgs; ++I) {
       const Expr *A = Args[NumArgs - 1 - I];
       popArg(S, A);
@@ -397,7 +401,8 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
 
   const auto *VD = Ptr.getDeclDesc()->asValueDecl();
-  diagnoseNonConstVariable(S, OpPC, VD);
+  if (!Ptr.isConstexprUnknown() || !S.checkingPotentialConstantExpression())
+    diagnoseNonConstVariable(S, OpPC, VD);
   return false;
 }
 
@@ -660,8 +665,15 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
                            const Block *B, AccessKinds AK) {
-  if (Extern && S.checkingPotentialConstantExpression())
-    return false;
+  if (S.checkingPotentialConstantExpression()) {
+    // Extern and static member declarations might be initialized later.
+    if (Extern)
+      return false;
+
+    if (const VarDecl *VD = B->getDescriptor()->asVarDecl();
+        VD && VD->isStaticDataMember())
+      return false;
+  }
 
   const Descriptor *Desc = B->getDescriptor();
 
@@ -832,6 +844,34 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (isConstexprUnknown(Ptr))
     return false;
+
+  if (!Ptr.isArrayRoot()) {
+    // According to GCC info page:
+    //
+    // 6.28 Compound Literals
+    //
+    // As an optimization, G++ sometimes gives array compound literals
+    // longer lifetimes: when the array either appears outside a function or
+    // has a const-qualified type. If foo and its initializer had elements
+    // of type char *const rather than char *, or if foo were a global
+    // variable, the array would have static storage duration. But it is
+    // probably safest just to avoid the use of array compound literals in
+    // C++ code.
+    //
+    // Obey that rule by checking constness for converted array types.
+    const Descriptor *Desc = Ptr.getFieldDesc();
+    if (const auto *CLE =
+            dyn_cast_if_present<CompoundLiteralExpr>(Desc->asExpr())) {
+      if (QualType CLETy = CLE->getType();
+          CLETy->isArrayType() && !CLETy.isConstant(S.getASTContext())) {
+        S.FFDiag(S.Current->getLocation(OpPC),
+                 diag::note_invalid_subexpr_in_const_expr)
+            << S.Current->getRange(OpPC);
+        S.Note(CLE->getExprLoc(), diag::note_declared_at);
+        return false;
+      }
+    }
+  }
   return true;
 }
 
@@ -904,11 +944,11 @@ static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
-    if (!CheckExtern(S, OpPC, Ptr))
-      return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!IsCtorDtor && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
+      return false;
+    if (!CheckMutable(S, OpPC, Ptr))
       return false;
   }
   return true;
@@ -1539,15 +1579,18 @@ bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
     return true;
   }
 
-  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
-    return false;
-  if (!CheckDowncast(S, OpPC, Ptr, Off))
+  if (isConstexprUnknown(Ptr))
     return false;
 
   if (!Ptr.getFieldDesc()->isRecord()) {
     S.Stk.push<Pointer>(Ptr);
     return true;
   }
+
+  if (!CheckSubobject(S, OpPC, Ptr, CSK_Derived))
+    return false;
+  if (!CheckDowncast(S, OpPC, Ptr, Off))
+    return false;
 
   const Record *TargetRecord = Ptr.atFieldSub(Off).getRecord();
   assert(TargetRecord);
@@ -1680,13 +1723,14 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
         << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-    return false;
   }
   return true;
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
-  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
+  const FunctionDecl *Definition;
+  if (!Func->getDecl()->getBody(Definition))
+    return;
   if (!Definition)
     return;
 
@@ -1708,7 +1752,8 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     if (!(S.Current->getFunction() &&
           S.Current->getFunction()->isLambdaStaticInvoker() &&
           Func->isLambdaCallOperator())) {
-      if (!CheckInvoke(S, OpPC, ThisPtr))
+      if (!CheckInvoke(S, OpPC, ThisPtr,
+                       Func->isConstructor() || Func->isDestructor()))
         return false;
     }
 
@@ -1781,6 +1826,14 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
       if (!CheckInvoke(S, OpPC, ThisPtr,
                        Func->isConstructor() || Func->isDestructor()))
         return cleanup();
+
+      if (Func->isCopyOrMoveOperator() || Func->isCopyOrMoveConstructor()) {
+        const Pointer &RVOPtr =
+            S.Stk.peek<Pointer>(ThisOffset - align(sizeof(Pointer)));
+        if (!CheckInvoke(S, OpPC, RVOPtr, /*IsCtorDtor=*/true))
+          return cleanup();
+      }
+
       if (!Func->isConstructor() && !Func->isDestructor() &&
           !CheckActive(S, OpPC, ThisPtr, AK_MemberCall))
         return false;
@@ -1865,6 +1918,21 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
   return DynamicDecl != nullptr;
 }
 
+bool CheckDynamicCast(InterpState &S, CodePtr OpPC) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+
+  if (!Ptr.isConstexprUnknown())
+    return true;
+
+  QualType T = Ptr.getType();
+  const Expr *E = S.Current->getExpr(OpPC);
+  APValue V = Ptr.toAPValue(S.getASTContext());
+  QualType TT = S.getASTContext().getLValueReferenceType(T);
+  S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+      << AK_DynamicCast << V.getAsString(S.getASTContext(), TT);
+  return false;
+}
+
 bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize) {
   assert(Func->hasThisPointer());
@@ -1938,6 +2006,12 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
         Overrider->getReturnType()->getPointeeType();
     QualType InitialPointeeType =
         InitialFunction->getReturnType()->getPointeeType();
+
+    // Nothing to do if the types already match.
+    if (S.getASTContext().hasSimilarType(InitialPointeeType,
+                                         OverriderPointeeType))
+      return true;
+
     // We've called Overrider above, but calling code expects us to return what
     // InitialFunction returned. According to the rules for covariant return
     // types, what InitialFunction returns needs to be a base class of what
@@ -2083,8 +2157,9 @@ static void setLifeStateRecurse(const Pointer &Ptr, Lifetime L) {
 
   if (const Descriptor *FieldDesc = Ptr.getFieldDesc();
       FieldDesc->isCompositeArray()) {
-    // No endLifetime() for array roots.
-    assert(Ptr.getLifetime() == Lifetime::Started);
+    // No endLifetime() for primitive array roots.
+    if (Ptr.getFieldDesc()->isPrimitiveArray())
+      assert(Ptr.getLifetime() == Lifetime::Started);
     for (unsigned I = 0; I != FieldDesc->getNumElems(); ++I)
       setLifeStateRecurse(Ptr.atIndex(I).narrow(), L);
     return;
@@ -2389,6 +2464,16 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
 
   if (!P.isBlockPointer())
     return false;
+
+  if (P.isConstexprUnknown()) {
+    QualType DynamicType = P.getType();
+    const Expr *E = S.Current->getExpr(OpPC);
+    APValue V = P.toAPValue(S.getASTContext());
+    QualType TT = S.getASTContext().getLValueReferenceType(DynamicType);
+    S.FFDiag(E, diag::note_constexpr_polymorphic_unknown_dynamic_type)
+        << AK_TypeId << V.getAsString(S.getASTContext(), TT);
+    return false;
+  }
 
   // Pick the most-derived type.
   CanQualType T = P.getDeclPtr().getType()->getCanonicalTypeUnqualified();

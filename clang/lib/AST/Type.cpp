@@ -14,6 +14,7 @@
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -2937,8 +2938,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType.hasAddressDiscriminatedPointerAuth())
     return false;
 
-  // As an extension, Clang treats vector types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+  // As an extension, Clang treats vector and matrix types as Scalar types.
+  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() ||
+      CanonicalType->isMatrixType())
     return true;
 
   // Mfloat8 type is a special case as it not scalar, but is still trivially
@@ -5337,6 +5339,16 @@ NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
   return std::nullopt;
 }
 
+void AttributedType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                             Kind attrKind, QualType modified,
+                             QualType equivalent, const Attr *attr) {
+  ID.AddInteger(attrKind);
+  ID.AddPointer(modified.getAsOpaquePtr());
+  ID.AddPointer(equivalent.getAsOpaquePtr());
+  if (attr)
+    attr->Profile(ID, Ctx);
+}
+
 bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
   if (!isIntegralType(Ctx) || isEnumeralType())
     return false;
@@ -5555,6 +5567,41 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   }
 
   return DK_none;
+}
+
+static bool
+requiresBuiltinLaunderImpl(const ASTContext &Context, QualType Ty,
+                           llvm::SmallPtrSetImpl<const Decl *> &Seen) {
+  if (const auto *Arr = Context.getAsArrayType(Ty))
+    Ty = Context.getBaseElementType(Arr);
+
+  if (const auto *AttrTy = Ty->getAs<AttributedType>())
+    Ty = AttrTy->getModifiedType();
+
+  assert(!Ty->isIncompleteType() &&
+         "Incomplete types cannot be evaluated for laundering");
+
+  const auto *Record = Ty->getAsCXXRecordDecl();
+  if (!Record)
+    return false;
+
+  // We've already checked this type, or are in the process of checking it.
+  if (!Seen.insert(Record).second)
+    return false;
+
+  if (Record->isDynamicClass())
+    return true;
+
+  for (FieldDecl *F : Record->fields()) {
+    if (requiresBuiltinLaunderImpl(Context, F->getType(), Seen))
+      return true;
+  }
+  return false;
+}
+
+bool QualType::requiresBuiltinLaunder(const ASTContext &Context) const {
+  llvm::SmallPtrSet<const Decl *, 16> Seen;
+  return requiresBuiltinLaunderImpl(Context, *this, Seen);
 }
 
 bool MemberPointerType::isSugared() const {

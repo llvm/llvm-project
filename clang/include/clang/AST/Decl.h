@@ -1728,6 +1728,10 @@ public:
   /// This can only be called for declarations where hasInit() is true.
   CharUnits getFlexibleArrayInitChars(const ASTContext &Ctx) const;
 
+  /// Apply a deduced address space, if one isn't already set.
+  void assignAddressSpace(const ASTContext &Ctxt, LangAS AS);
+  void deduceParmAddressSpace(const ASTContext &Ctxt);
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
@@ -1762,16 +1766,7 @@ enum class ImplicitParamKind {
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
-public:
-  /// Create implicit parameter.
-  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
-                                   SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T, ImplicitParamKind ParamKind);
-  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
-                                   ImplicitParamKind ParamKind);
-
-  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
-
+protected:
   ImplicitParamDecl(ASTContext &C, DeclContext *DC, SourceLocation IdLoc,
                     const IdentifierInfo *Id, QualType Type,
                     ImplicitParamKind ParamKind)
@@ -1789,6 +1784,16 @@ public:
     setImplicit();
   }
 
+public:
+  /// Create implicit parameter.
+  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation IdLoc,
+                                   const IdentifierInfo *Id, QualType T,
+                                   ImplicitParamKind ParamKind);
+  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
+                                   ImplicitParamKind ParamKind);
+
+  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
   /// Returns the implicit parameter kind.
   ImplicitParamKind getParameterKind() const {
     return static_cast<ImplicitParamKind>(NonParmVarDeclBits.ImplicitParamKind);
@@ -2117,34 +2122,6 @@ private:
   /// the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
 
-  /// Specify that this function declaration is actually a function
-  /// template specialization.
-  ///
-  /// \param C the ASTContext.
-  ///
-  /// \param Template the function template that this function template
-  /// specialization specializes.
-  ///
-  /// \param TemplateArgs the template arguments that produced this
-  /// function template specialization from the template.
-  ///
-  /// \param InsertPos If non-NULL, the position in the function template
-  /// specialization set where the function template specialization data will
-  /// be inserted.
-  ///
-  /// \param TSK the kind of template specialization this is.
-  ///
-  /// \param TemplateArgsAsWritten location info of template arguments.
-  ///
-  /// \param PointOfInstantiation point at which the function template
-  /// specialization was first instantiated.
-  void setFunctionTemplateSpecialization(
-      ASTContext &C, FunctionTemplateDecl *Template,
-      TemplateArgumentList *TemplateArgs, void *InsertPos,
-      TemplateSpecializationKind TSK,
-      const TemplateArgumentListInfo *TemplateArgsAsWritten,
-      SourceLocation PointOfInstantiation);
-
   /// Specify that this record is an instantiation of the
   /// member function FD.
   void setInstantiationOfMemberFunction(ASTContext &C, FunctionDecl *FD,
@@ -2239,6 +2216,8 @@ public:
       return FPT->getEllipsisLoc();
     return SourceLocation();
   }
+
+  SourceLocation getFunctionLocStart() const;
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
@@ -3065,8 +3044,13 @@ public:
   const ASTTemplateArgumentListInfo*
   getTemplateSpecializationArgsAsWritten() const;
 
+  /// Returns the template parameter list for an explicit specialization.
+  const TemplateParameterList *getTemplateSpecializationParameters() const;
+
   /// Specify that this function declaration is actually a function
   /// template specialization.
+  ///
+  /// \param C the ASTContext.
   ///
   /// \param Template the function template that this function template
   /// specialization specializes.
@@ -3080,25 +3064,30 @@ public:
   ///
   /// \param TSK the kind of template specialization this is.
   ///
+  /// \param TemplateParams the template parameters if this is an explicit
+  /// specialization.
+  ///
   /// \param TemplateArgsAsWritten location info of template arguments.
   ///
   /// \param PointOfInstantiation point at which the function template
   /// specialization was first instantiated.
+  ///
+  /// \param AddSpecialization whether to add this specialization to the
+  /// template's specialization set.
+  ///
   void setFunctionTemplateSpecialization(
-      FunctionTemplateDecl *Template, TemplateArgumentList *TemplateArgs,
-      void *InsertPos,
-      TemplateSpecializationKind TSK = TSK_ImplicitInstantiation,
-      TemplateArgumentListInfo *TemplateArgsAsWritten = nullptr,
-      SourceLocation PointOfInstantiation = SourceLocation()) {
-    setFunctionTemplateSpecialization(getASTContext(), Template, TemplateArgs,
-                                      InsertPos, TSK, TemplateArgsAsWritten,
-                                      PointOfInstantiation);
-  }
+      ASTContext &C, FunctionTemplateDecl *Template,
+      TemplateArgumentList *TemplateArgs, void *InsertPos,
+      TemplateSpecializationKind TSK,
+      const TemplateParameterList *TemplateParams,
+      const TemplateArgumentListInfo *TemplateArgsAsWritten,
+      SourceLocation PointOfInstantiation, bool AddSpecialization);
 
   /// Specifies that this function declaration is actually a
   /// dependent function template specialization.
   void setDependentTemplateSpecialization(
       ASTContext &Context, const UnresolvedSetImpl &Templates,
+      const TemplateParameterList *TemplateParams,
       const TemplateArgumentListInfo *TemplateArgs);
 
   DependentFunctionTemplateSpecializationInfo *
@@ -3117,6 +3106,10 @@ public:
   /// represents.
   void setTemplateSpecializationKind(TemplateSpecializationKind TSK,
                         SourceLocation PointOfInstantiation = SourceLocation());
+
+  /// True if both __host__ and __device__ are implicit attributes and this is
+  /// (or is a member of) an explicit template instantiation.
+  bool isImplicitHDExplicitInstantiation() const;
 
   /// Retrieve the (first) point of instantiation of a function template
   /// specialization or a member of a class template specialization.

@@ -91,6 +91,8 @@ public:
                    raw_pwrite_stream &OS);
   ~GOFFObjectWriter() override;
 
+  void reset() override;
+
   void setRootSD(MCSectionGOFF *RootSD) { this->RootSD = RootSD; }
 
   // Implementation of the MCObjectWriter interface.

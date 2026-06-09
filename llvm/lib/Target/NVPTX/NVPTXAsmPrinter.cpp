@@ -111,6 +111,30 @@ static StringRef getSamplerName(const Value &V) {
   return V.getName();
 }
 
+/// Emits initial debug location directive.
+static void emitInitialRawDwarfLocDirective(const MachineFunction &MF,
+                                            DwarfDebug *DD,
+                                            MCStreamer &OutStreamer) {
+  if (!DD)
+    return;
+
+  assert(OutStreamer.hasRawTextSupport() && "Expected assembly output mode.");
+  // This is NVPTX specific and it's unclear why.
+  // PR51079: If we have code without debug information we need to give up.
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  if (!SP)
+    return;
+  assert(SP->getUnit());
+  // NoDebug and DebugDirectivesOnly do not require emitting the initial loc
+  // directive. NoDebug does not require any debug directives and the initial
+  // loc directive is not needed for DebugDirectivesOnly as it is redundant
+  // assuming this is a non-empty function.
+  if (SP->getUnit()->isDebugDirectivesOnly() || SP->getUnit()->isNoDebug())
+    return;
+
+  (void)DD->emitInitialLocDirective(MF, /*CUID=*/0);
+}
+
 /// discoverDependentGlobals - Return a set of GlobalVariables on which \p V
 /// depends.
 static void
@@ -375,11 +399,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   setAndEmitFunctionVirtualRegisters(*MF);
   encodeDebugInfoRegisterNumbers(*MF);
   // Emit initial .loc debug directive for correct relocation symbol data.
-  if (const DISubprogram *SP = MF->getFunction().getSubprogram()) {
-    assert(SP->getUnit());
-    if (!SP->getUnit()->isDebugDirectivesOnly())
-      emitInitialRawDwarfLocDirective(*MF);
-  }
+  emitInitialRawDwarfLocDirective(*MF, getDwarfDebug(), *OutStreamer);
 }
 
 bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
@@ -1669,6 +1689,13 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
         AggBuffer->addZeros(AllocSize);
         break;
       }
+      // A symbol-relative integer whose offset is applied outside the
+      // ptrtoint, e.g. add(ptrtoint(@g), C). It can't fold to a ConstantInt
+      // because it references a symbol; emit it through lowerConstantForGV, the
+      // same path scalar symbol-relative integer globals use.
+      AggBuffer->addSymbol(Cexpr, Cexpr);
+      AggBuffer->addZeros(AllocSize);
+      break;
     }
     llvm_unreachable("unsupported integer const type");
     break;
@@ -1695,9 +1722,14 @@ void NVPTXAsmPrinter::bufferLEByte(const Constant *CPV, int Bytes,
   case Type::FixedVectorTyID:
   case Type::StructTyID: {
     if (isa<ConstantAggregate>(CPV) || isa<ConstantDataSequential>(CPV)) {
+      // bufferAggregateConstant doesn't emit tail-padding, i.e. it writes
+      // `store_size` bytes, not `alloc_size` bytes.  Do it ourselves here.
+      unsigned StartPos = AggBuffer->getCurpos();
       bufferAggregateConstant(CPV, AggBuffer);
-      if (Bytes > AllocSize)
-        AggBuffer->addZeros(Bytes - AllocSize);
+      unsigned Written = AggBuffer->getCurpos() - StartPos;
+      unsigned SlotSize = std::max<int>(Bytes, AllocSize);
+      if (SlotSize > Written)
+        AggBuffer->addZeros(SlotSize - Written);
     } else if (isa<ConstantAggregateZero>(CPV))
       AggBuffer->addZeros(Bytes);
     else
@@ -1715,8 +1747,11 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
   const DataLayout &DL = getDataLayout();
 
   auto ExtendBuffer = [](APInt Val, AggBuffer *Buffer) {
-    for (unsigned I : llvm::seq(Val.getBitWidth() / 8))
-      Buffer->addByte(Val.extractBitsAsZExtValue(8, I * 8));
+    unsigned NumBytes = divideCeil(Val.getBitWidth(), 8);
+    for (unsigned I : llvm::seq(NumBytes)) {
+      unsigned NumBits = std::min(8u, Val.getBitWidth() - I * 8);
+      Buffer->addByte(Val.extractBitsAsZExtValue(NumBits, I * 8));
+    }
   };
 
   // Integer or floating point vector splats.

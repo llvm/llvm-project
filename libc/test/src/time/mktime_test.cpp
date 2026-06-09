@@ -227,94 +227,6 @@ TEST(LlvmLibcMkTime, InvalidYear) {
                tm_data);
 }
 
-TEST(LlvmLibcMkTime, InvalidEndOf32BitEpochYear) {
-  if (sizeof(time_t) != 4)
-    return;
-  {
-    // 2038-01-19 03:14:08 tests overflow of the second in 2038.
-    struct tm tm_data{.tm_sec = 8,
-                      .tm_min = 14,
-                      .tm_hour = 3,
-                      .tm_mday = 19,
-                      .tm_mon = Month::JANUARY,
-                      .tm_year = tm_year(2038),
-                      .tm_wday = 0,
-                      .tm_yday = 0,
-                      .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
-  }
-
-  {
-    // 2038-01-19 03:15:07 tests overflow of the minute in 2038.
-    struct tm tm_data{.tm_sec = 7,
-                      .tm_min = 15,
-                      .tm_hour = 3,
-                      .tm_mday = 19,
-                      .tm_mon = Month::JANUARY,
-                      .tm_year = tm_year(2038),
-                      .tm_wday = 0,
-                      .tm_yday = 0,
-                      .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
-  }
-
-  {
-    // 2038-01-19 04:14:07 tests overflow of the hour in 2038.
-    struct tm tm_data{.tm_sec = 7,
-                      .tm_min = 14,
-                      .tm_hour = 4,
-                      .tm_mday = 19,
-                      .tm_mon = Month::JANUARY,
-                      .tm_year = tm_year(2038),
-                      .tm_wday = 0,
-                      .tm_yday = 0,
-                      .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
-  }
-
-  {
-    // 2038-01-20 03:14:07 tests overflow of the day in 2038.
-    struct tm tm_data{.tm_sec = 7,
-                      .tm_min = 14,
-                      .tm_hour = 3,
-                      .tm_mday = 20,
-                      .tm_mon = Month::JANUARY,
-                      .tm_year = tm_year(2038),
-                      .tm_wday = 0,
-                      .tm_yday = 0,
-                      .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
-  }
-
-  {
-    // 2038-02-19 03:14:07 tests overflow of the month in 2038.
-    struct tm tm_data{.tm_sec = 7,
-                      .tm_min = 14,
-                      .tm_hour = 3,
-                      .tm_mday = 19,
-                      .tm_mon = Month::FEBRUARY,
-                      .tm_year = tm_year(2038),
-                      .tm_wday = 0,
-                      .tm_yday = 0,
-                      .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
-  }
-
-  {
-    // 2039-01-19 03:14:07 tests overflow of the year.
-    struct tm tm_data{.tm_sec = 7,
-                      .tm_min = 14,
-                      .tm_hour = 3,
-                      .tm_mday = 19,
-                      .tm_mon = Month::JANUARY,
-                      .tm_year = tm_year(2039),
-                      .tm_wday = 0,
-                      .tm_yday = 0,
-                      .tm_isdst = 0};
-    EXPECT_THAT(LIBC_NAMESPACE::mktime(&tm_data), Fails<time_t>(EOVERFLOW));
-  }
-}
-
 TEST(LlvmLibcMkTime, InvalidMonths) {
   {
     // -1 month from 1970-01-01 00:00:00 returns 1969-12-01 00:00:00.
@@ -621,8 +533,6 @@ TEST(LlvmLibcMkTime, EndOf32BitEpochYear) {
 }
 
 TEST(LlvmLibcMkTime, Max64BitYear) {
-  if (sizeof(time_t) == 4)
-    return;
   {
     // Mon Jan 1 12:50:50 2170 (200 years from 1970),
     struct tm tm_data{.tm_sec = 50,

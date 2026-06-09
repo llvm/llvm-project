@@ -133,11 +133,12 @@ public:
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops, MachineInstr &LoadMI,
-                        MachineInstr *&CopyMI,
-                        LiveIntervals *LIS = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineInstr &LoadMI,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -338,7 +339,8 @@ public:
   /// Return true if moving \p From down to \p To won't cause any physical
   /// register reads or writes to be clobbered and no visible side effects are
   /// affected. From and To must be in the same block.
-  static bool isSafeToMove(const MachineInstr &From, const MachineInstr &To);
+  static bool isSafeToMove(const MachineInstr &From,
+                           const MachineBasicBlock::iterator &To);
 
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);

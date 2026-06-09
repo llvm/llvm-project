@@ -94,9 +94,9 @@ define void @scev_expand_vscale_mul(ptr %dst, i64 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop.preheader>:
-; CHECK-NEXT:    IR   %0 = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    IR   %1 = shl nuw i64 %0, 2
-; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, ir<%1>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = vscale i64
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = shl nuw vp<[[VP2]]>, ir<2>
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%n>, vp<[[VP3]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
 ; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ;
@@ -111,6 +111,36 @@ loop:
   %iv.next = add nuw i64 %iv, 1
   %cmp.loop = icmp ult i64 %iv.next, %n
   br i1 %cmp.loop, label %loop, label %exit, !llvm.loop !0
+
+exit:
+  ret void
+}
+
+define void @scev_expand_udiv(ptr %dst, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'scev_expand_udiv'
+; CHECK:  VPlan 'Final VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  Live-in ir<%div> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop.preheader>:
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult ir<%div>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
+;
+entry:
+  %div = udiv i64 %n, 3
+  %cmp = icmp ne i64 %div, 0
+  br i1 %cmp, label %loop.preheader, label %exit
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %loop.preheader ], [ %iv.next, %loop ]
+  %gep = getelementptr i8, ptr %dst, i64 %iv
+  store i8 0, ptr %gep
+  %iv.next = add nuw i64 %iv, 1
+  %cmp.loop = icmp ult i64 %iv.next, %div
+  br i1 %cmp.loop, label %loop, label %exit
 
 exit:
   ret void

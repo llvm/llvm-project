@@ -554,7 +554,7 @@ They are only supported in C++. ``__char8_t`` is not available.
 Vectors and Extended Vectors
 ============================
 
-Supports the GCC, OpenCL, AltiVec, NEON and SVE vector extensions.
+Supports the GCC, OpenCL, AltiVec, NEON, SVE and RVV vector extensions.
 
 OpenCL vector types are created using the ``ext_vector_type`` attribute.  It
 supports the ``V.xyzw`` syntax and other tidbits as seen in OpenCL.  An example
@@ -702,36 +702,45 @@ The table below shows the support for each operation by vector extension.  A
 dash indicates that an operation is not accepted according to a corresponding
 specification.
 
-============================== ======= ======= ============= ======= =====
-         Operator              OpenCL  AltiVec     GCC        NEON    SVE
-============================== ======= ======= ============= ======= =====
-[]                               yes     yes       yes         yes    yes
-unary operators +, --            yes     yes       yes         yes    yes
-++, -- --                        yes     yes       yes         no     no
-+,--,*,/,%                       yes     yes       yes         yes    yes
-bitwise operators &,|,^,~        yes     yes       yes         yes    yes
->>,<<                            yes     yes       yes         yes    yes
-!, &&, ||                        yes     --        yes         yes    yes
-==, !=, >, <, >=, <=             yes     yes       yes         yes    yes
-=                                yes     yes       yes         yes    yes
-?: [#]_                          yes     --        yes         yes    yes
-sizeof                           yes     yes       yes         yes    yes [#]_
-C-style cast                     yes     yes       yes         no     no
-reinterpret_cast                 yes     no        yes         no     no
-static_cast                      yes     no        yes         no     no
-const_cast                       no      no        no          no     no
-address &v[i]                    no      no        no [#]_     no     no
-============================== ======= ======= ============= ======= =====
+============================== ======= ======= ============= ======= ============ ===========
+         Operator              OpenCL  AltiVec     GCC        NEON    SVE          RVV
+============================== ======= ======= ============= ======= ============ ===========
+[]                               yes     yes       yes         yes    yes          yes
+unary operators +, --            yes     yes       yes         yes    yes          yes
+++, -- --                        yes     yes       yes         no     no           no
++,--,*,/,%                       yes     yes       yes         yes    yes          yes
+bitwise operators &,|,^,~        yes     yes       yes         yes    yes          yes
+>>,<<                            yes     yes       yes         yes    yes          yes
+!, &&, ||                        yes     --        yes         yes    yes          yes
+==, !=, >, <, >=, <=             yes     yes       yes         yes    yes          yes
+=                                yes     yes       yes         yes    yes          yes
+?: [#]_                          yes     --        yes         yes    yes          yes
+sizeof                           yes     yes       yes         yes    yes [#vls]_  yes [#vls]_
+C-style cast                     yes     yes       yes         no     no           yes
+reinterpret_cast                 yes     no        yes         no     no           yes
+static_cast                      yes     no        yes         no     no           yes
+const_cast                       no      no        no          no     no           no
+address &v[i]                    no      no        no [#]_     no     no           no
+============================== ======= ======= ============= ======= ============ ===========
+
+Both SVE and RVV define sizeless vector types which cannot be used in globals,
+structs, unions, or arrays.  Both provide an attribute (``arm_sve_vector_bits``
+and ``riscv_rvv_vector_bits`` respectively) to create fixed-length
+vector-length-specific (VLS) variants that remove these restrictions.  Using
+these attributes requires the command line option ``-msve-vector-bits=<N>`` or
+``-mrvv-vector-bits=<N>`` respectively.  For SVE, the operators above are
+supported on both sizeless and VLS types.  For RVV, the operators are only
+supported on VLS types.
 
 See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convertvector`.
 
 .. [#] ternary operator(?:) has different behaviors depending on the condition
   operand's vector type. If the condition is a GNU vector (i.e., ``__vector_size__``),
-  a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
-  conversions (that is, != 0).
+  a NEON vector, an SVE vector or an RVV vector, it's only available in C++
+  and uses normal bool conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
   And it selects based on the signedness of the condition operands (OpenCL v1.1 s6.3.9).
-.. [#] sizeof can only be used on vector length specific SVE types.
+.. [#vls] sizeof can only be used on vector length specific SVE and RVV types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
    not implemented otherwise.
@@ -894,6 +903,8 @@ T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Co
                                                 the first argument is 0 and an optional second argument is provided,
                                                 the second argument is returned. It is undefined behaviour if the
                                                 first argument is 0 and no second argument is provided.
+T __builtin_elementwise_clmul(T x, T y)         perform a carry-less multiplication of x and y, returning the least    integer types
+                                                significant bits of the wide result.
 ============================================== ====================================================================== =========================================
 
 
@@ -5250,6 +5261,8 @@ builtin function, and are named with a ``__opencl_`` prefix. The macros
 and ``__OPENCL_MEMORY_SCOPE_SUB_GROUP`` are provided, with values
 corresponding to the enumerators of OpenCL's ``memory_scope`` enumeration.)
 
+.. _langext-__scoped_atomic:
+
 __scoped_atomic builtins
 ------------------------
 
@@ -5744,6 +5757,32 @@ Given a wave-uniform bitmask, ``__builtin_amdgcn_inverse_ballot_w{32,64}(mask)``
 returns the bit at the position of the current lane. It is almost equivalent to
 ``(mask & (1 << lane_id)) != 0``, except that its behavior is only defined if
 the given mask has the same value for all active lanes of the current wave.
+
+
+__builtin_amdgcn_av_{load,store}_b128
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Signature:
+
+.. code-block:: c
+
+    typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u;
+
+    v4u __builtin_amdgcn_av_load_b128(v4u *src, int scope);
+
+    void __builtin_amdgcn_av_store_b128(v4u *dst, v4u data, int scope);
+
+Load or store a vector of 4 unsigned integers from or to memory with cache
+behavior specified by ``scope``, which is one of the ``__MEMORY_SCOPE_*`` macros
+defined for :ref:`scoped atomic builtins<langext-__c11_atomic>`.
+
+The pointer argument must point to the global or generic address space.
+
+These builtins are supported on gfx9, gfx10, gfx11, and gfx12 targets.
+
+They map to the LLVM intrinsics ``llvm.amdgcn.av.load.b128`` and
+``llvm.amdgcn.av.store.b128`` documented in `User Guide for AMDGPU Backend
+<https://llvm.org/docs/AMDGPUUsage.html>`_.
 
 ARM/AArch64 Language Extensions
 -------------------------------

@@ -64,44 +64,12 @@ struct RemoveEmptyKernelEnvironment
     if (!block.empty())
       return failure();
 
-    // Conservatively disable canonicalization of empty acc.kernel_environment
-    // operations if the wait operands in the kernel_environment cannot be fully
-    // represented by acc.wait operation.
-
-    // Disable canonicalization if device type is not the default
-    if (auto deviceTypeAttr = op.getWaitOperandsDeviceTypeAttr()) {
-      for (auto attr : deviceTypeAttr) {
-        if (auto dtAttr = mlir::dyn_cast<acc::DeviceTypeAttr>(attr)) {
-          if (dtAttr.getValue() != mlir::acc::DeviceType::None)
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if any wait segment has a devnum
-    if (auto hasDevnumAttr = op.getHasWaitDevnumAttr()) {
-      for (auto attr : hasDevnumAttr) {
-        if (auto boolAttr = mlir::dyn_cast<mlir::BoolAttr>(attr)) {
-          if (boolAttr.getValue())
-            return failure();
-        }
-      }
-    }
-
-    // Disable canonicalization if there are multiple wait segments
-    if (auto segmentsAttr = op.getWaitOperandsSegmentsAttr()) {
-      if (segmentsAttr.size() > 1)
-        return failure();
-    }
-
     // Remove empty kernel environment.
     // Preserve synchronization by creating acc.wait operation if needed.
     if (!op.getWaitOperands().empty() || op.getWaitOnlyAttr())
-      rewriter.replaceOpWithNewOp<acc::WaitOp>(op, op.getWaitOperands(),
-                                               /*asyncOperand=*/Value(),
-                                               /*waitDevnum=*/Value(),
-                                               /*async=*/nullptr,
-                                               /*ifCond=*/Value());
+      rewriter.replaceOpWithNewOp<acc::WaitOp>(
+          op, op.getWaitOperands(), /*asyncOperand=*/Value(),
+          op.getWaitDevnum(), /*async=*/nullptr, /*ifCond=*/Value());
     else
       rewriter.eraseOp(op);
 
@@ -304,31 +272,108 @@ void KernelEnvironmentOp::getCanonicalizationPatterns(
   results.add<RemoveEmptyKernelEnvironment>(context);
 }
 
+/// Extract async for `clauseDeviceType`. Returns true if a clause was found.
+template <typename ComputeConstructT>
+static bool
+extractAsyncClause(ComputeConstructT computeConstruct,
+                   DeviceType clauseDeviceType, MLIRContext *context,
+                   std::optional<Value> &asyncOperand, UnitAttr &asyncOnly) {
+  if (computeConstruct.hasAsyncOnly(clauseDeviceType)) {
+    asyncOnly = UnitAttr::get(context);
+    return true;
+  }
+  if (Value asyncValue = computeConstruct.getAsyncValue(clauseDeviceType)) {
+    asyncOperand = asyncValue;
+    return true;
+  }
+  return false;
+}
+
+/// Extract wait for `clauseDeviceType`. Returns true if a clause was found.
+template <typename ComputeConstructT>
+static bool extractWaitClause(ComputeConstructT computeConstruct,
+                              DeviceType clauseDeviceType, MLIRContext *context,
+                              std::optional<Value> &waitDevnum,
+                              SmallVectorImpl<Value> &waitOperands,
+                              UnitAttr &waitOnly) {
+  if (computeConstruct.hasWaitOnly(clauseDeviceType)) {
+    waitOnly = UnitAttr::get(context);
+    return true;
+  }
+  Value devnum = computeConstruct.getWaitDevnum(clauseDeviceType);
+  auto waitValues = computeConstruct.getWaitValues(clauseDeviceType);
+  if (!devnum && waitValues.empty())
+    return false;
+  if (devnum)
+    waitDevnum = devnum;
+  waitOperands.append(waitValues.begin(), waitValues.end());
+  return true;
+}
+
+template <typename ComputeConstructT>
+static void populateKernelEnvironmentAsyncWait(
+    ComputeConstructT computeConstruct, DeviceType deviceType,
+    std::optional<Value> &asyncOperand, UnitAttr &asyncOnly,
+    std::optional<Value> &waitDevnum, SmallVectorImpl<Value> &waitOperands,
+    UnitAttr &waitOnly) {
+  MLIRContext *context = computeConstruct->getContext();
+
+  // Prefer device_type-specific clauses, then default ones.
+  if (!extractAsyncClause(computeConstruct, deviceType, context, asyncOperand,
+                          asyncOnly)) {
+    if (deviceType != DeviceType::None)
+      extractAsyncClause(computeConstruct, DeviceType::None, context,
+                         asyncOperand, asyncOnly);
+  }
+
+  if (!extractWaitClause(computeConstruct, deviceType, context, waitDevnum,
+                         waitOperands, waitOnly)) {
+    if (deviceType != DeviceType::None)
+      extractWaitClause(computeConstruct, DeviceType::None, context, waitDevnum,
+                        waitOperands, waitOnly);
+  }
+}
+
 template <typename ComputeConstructT>
 KernelEnvironmentOp
 KernelEnvironmentOp::createAndPopulate(ComputeConstructT computeConstruct,
+                                       DeviceType deviceType,
                                        OpBuilder &builder) {
+  std::optional<Value> asyncOperand;
+  UnitAttr asyncOnly = nullptr;
+  std::optional<Value> waitDevnum;
+  SmallVector<Value> waitOperands;
+  UnitAttr waitOnly = nullptr;
+  populateKernelEnvironmentAsyncWait(computeConstruct, deviceType, asyncOperand,
+                                     asyncOnly, waitDevnum, waitOperands,
+                                     waitOnly);
+
   auto kernelEnvironment = KernelEnvironmentOp::create(
       builder, computeConstruct->getLoc(),
-      computeConstruct.getDataClauseOperands(),
-      computeConstruct.getAsyncOperands(),
-      computeConstruct.getAsyncOperandsDeviceTypeAttr(),
-      computeConstruct.getAsyncOnlyAttr(), computeConstruct.getWaitOperands(),
-      computeConstruct.getWaitOperandsSegmentsAttr(),
-      computeConstruct.getWaitOperandsDeviceTypeAttr(),
-      computeConstruct.getHasWaitDevnumAttr(),
-      computeConstruct.getWaitOnlyAttr());
+      computeConstruct.getDataClauseOperands(), asyncOperand.value_or(Value()),
+      asyncOnly, waitDevnum.value_or(Value()), waitOperands, waitOnly);
   Block &block = kernelEnvironment.getRegion().emplaceBlock();
   builder.setInsertionPointToStart(&block);
   return kernelEnvironment;
 }
 
 template KernelEnvironmentOp
-KernelEnvironmentOp::createAndPopulate<ParallelOp>(ParallelOp, OpBuilder &);
+KernelEnvironmentOp::createAndPopulate<ParallelOp>(ParallelOp, DeviceType,
+                                                   OpBuilder &);
 template KernelEnvironmentOp
-KernelEnvironmentOp::createAndPopulate<KernelsOp>(KernelsOp, OpBuilder &);
+KernelEnvironmentOp::createAndPopulate<KernelsOp>(KernelsOp, DeviceType,
+                                                  OpBuilder &);
 template KernelEnvironmentOp
-KernelEnvironmentOp::createAndPopulate<SerialOp>(SerialOp, OpBuilder &);
+KernelEnvironmentOp::createAndPopulate<SerialOp>(SerialOp, DeviceType,
+                                                 OpBuilder &);
+
+LogicalResult KernelEnvironmentOp::verify() {
+  if (getAsyncOnly() && getAsyncOperand())
+    return emitError("async-only cannot appear with async operand");
+  if (getWaitOnly() && (!getWaitOperands().empty() || getWaitDevnum()))
+    return emitError("wait-only cannot appear with wait operands or devnum");
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // FirstprivateMapInitialOp
@@ -420,6 +465,23 @@ LogicalResult ReductionCombineRegionOp::verify() {
       return emitOpError("region must be terminated by acc.yield with no "
                          "operands");
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReductionAccumulateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateOp::verify() {
+  Type valueType = getValue().getType();
+  auto ptrLikeTy = cast<PointerLikeType>(getMemref().getType());
+  Type elementType = ptrLikeTy.getElementType();
+  if (!elementType)
+    return emitOpError("pointer-like destination must have an element type");
+  if (elementType != valueType)
+    return emitOpError("pointer-like element type must match value type");
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
   return success();
 }
 
@@ -684,6 +746,8 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, regionArgs))
     return failure();
+  ComputeRegionOp::ensureTerminator(*body, parser.getBuilder(),
+                                    result.location);
 
   const size_t numLaunchOperands = launchOperands.size();
   const size_t numInputOperands = inputOperands.size();

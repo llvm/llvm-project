@@ -925,12 +925,12 @@ TEST(ToolChainTest, NestedConfigFile) {
   FS->addFile("/home/test/bin/platform.cfg", 0,
               llvm::MemoryBuffer::getMemBuffer("--sysroot=/platform-bin\n"));
 
-  SmallString<128> ClangExecutable("/home/test/bin/clang");
-  FS->makeAbsolute(ClangExecutable);
+  SmallString<128> DriverExecutable("/home/test/bin/clang");
+  FS->makeAbsolute(DriverExecutable);
 
   // User file is absent - use system definitions.
   {
-    Driver TheDriver(ClangExecutable, "arm-linux-gnueabi", Diags,
+    Driver TheDriver(DriverExecutable, "arm-linux-gnueabi", Diags,
                      "clang LLVM compiler", FS);
     std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
         {"/home/test/bin/clang", "--config", "root.cfg",
@@ -944,7 +944,7 @@ TEST(ToolChainTest, NestedConfigFile) {
   FS->addFile("/home/test/sdk/platform.cfg", 0,
               llvm::MemoryBuffer::getMemBuffer("--sysroot=/platform-user\n"));
   {
-    Driver TheDriver(ClangExecutable, "arm-linux-gnueabi", Diags,
+    Driver TheDriver(DriverExecutable, "arm-linux-gnueabi", Diags,
                      "clang LLVM compiler", FS);
     std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(
         {"/home/test/bin/clang", "--config", "root.cfg",

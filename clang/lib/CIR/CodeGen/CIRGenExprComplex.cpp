@@ -86,8 +86,7 @@ public:
     return Visit(pe->getReplacement());
   }
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
-    cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoawaitExpr");
-    return {};
+    return cgf.emitCoawaitExpr(*s).getComplexValue();
   }
   mlir::Value VisitCoyieldExpr(CoyieldExpr *s) {
     cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoyieldExpr");
@@ -201,11 +200,11 @@ public:
     return Visit(die->getExpr());
   }
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e) {
-    CIRGenFunction::RunCleanupsScope scope(cgf);
+    CIRGenFunction::FullExprCleanupScope scope(cgf, e->getSubExpr());
     mlir::Value complexVal = Visit(e->getSubExpr());
     // Defend against dominance problems caused by jumps out of expression
     // evaluation through the shared cleanup block.
-    scope.forceCleanup({&complexVal});
+    scope.exit({&complexVal});
     return complexVal;
   }
   mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
@@ -334,7 +333,7 @@ mlir::Value ComplexExprEmitter::emitLoadOfLValue(LValue lv,
                                                  SourceLocation loc) {
   assert(lv.isSimple() && "non-simple complex l-value?");
   if (lv.getType()->isAtomicType())
-    cgf.cgm.errorNYI(loc, "emitLoadOfLValue with Atomic LV");
+    return cgf.emitAtomicLoad(lv, loc).getComplexValue();
 
   const Address srcAddr = lv.getAddress();
   return builder.createLoad(cgf.getLoc(loc), srcAddr, lv.isVolatileQualified());
@@ -346,8 +345,7 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
                                             LValue lv, bool isInit) {
   if (lv.getType()->isAtomicType() ||
       (!isInit && cgf.isLValueSuitableForInlineAtomic(lv))) {
-    cgf.cgm.errorNYI(loc, "StoreOfComplex with Atomic LV");
-    return;
+    return cgf.emitAtomicStore(RValue::getComplex(val), lv, isInit);
   }
 
   const Address destAddr = lv.getAddress();
@@ -359,8 +357,10 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
 //===----------------------------------------------------------------------===//
 
 mlir::Value ComplexExprEmitter::VisitExpr(Expr *e) {
-  cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitExpr");
-  return {};
+  cgf.cgm.errorUnsupported(e, "complex expression");
+  mlir::Type complexTy = cgf.convertType(e->getType());
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  return builder.getConstant(loc, cir::PoisonAttr::get(complexTy));
 }
 
 mlir::Value
@@ -415,8 +415,12 @@ mlir::Value ComplexExprEmitter::emitComplexToComplexCast(mlir::Value val,
     return val;
 
   // Get the src/dest element type.
-  QualType srcElemTy = srcType->castAs<ComplexType>()->getElementType();
-  QualType destElemTy = destType->castAs<ComplexType>()->getElementType();
+  QualType srcElemTy = srcType.getAtomicUnqualifiedType()
+                           ->castAs<ComplexType>()
+                           ->getElementType();
+  QualType destElemTy = destType.getAtomicUnqualifiedType()
+                            ->castAs<ComplexType>()
+                            ->getElementType();
 
   cir::CastKind castOpKind;
   if (srcElemTy->isFloatingType() && destElemTy->isFloatingType())
@@ -452,20 +456,19 @@ mlir::Value ComplexExprEmitter::emitScalarToComplexCast(mlir::Value val,
 
 mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
                                          QualType destTy) {
+  destTy = destTy.getAtomicUnqualifiedType();
   switch (ck) {
   case CK_Dependent:
     llvm_unreachable("dependent type must be resolved before the CIR codegen");
 
+  // Atomic to non-atomic casts may be more than a no-op for some platforms
+  // and for some types.
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
   case CK_NoOp:
   case CK_LValueToRValue:
   case CK_UserDefinedConversion:
     return Visit(op);
-
-  case CK_AtomicToNonAtomic:
-  case CK_NonAtomicToAtomic: {
-    cgf.cgm.errorNYI("ComplexExprEmitter::emitCast Atmoic");
-    return {};
-  }
 
   case CK_LValueBitCast: {
     LValue origLV = cgf.emitLValue(op);
@@ -592,12 +595,28 @@ mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e,
     op = cgf.emitPromotedComplexExpr(e->getSubExpr(), promotionType);
   else
     op = Visit(e->getSubExpr());
-  return builder.createMinus(cgf.getLoc(e->getExprLoc()), op);
+
+  // Negate each component of the complex value.
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+  mlir::Value real = builder.createComplexReal(loc, op);
+  mlir::Value imag = builder.createComplexImag(loc, op);
+
+  mlir::Value resultReal;
+  mlir::Value resultImag;
+  if (cir::isFPOrVectorOfFPType(real.getType())) {
+    resultReal = builder.createFNeg(loc, real);
+    resultImag = builder.createFNeg(loc, imag);
+  } else {
+    resultReal = builder.createMinus(loc, real);
+    resultImag = builder.createMinus(loc, imag);
+  }
+
+  return builder.createComplexCreate(loc, resultReal, resultImag);
 }
 
 mlir::Value ComplexExprEmitter::VisitUnaryNot(const UnaryOperator *e) {
   mlir::Value op = Visit(e->getSubExpr());
-  return builder.createNot(op);
+  return builder.createComplexConj(cgf.getLoc(e->getExprLoc()), op);
 }
 
 mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
@@ -608,17 +627,23 @@ mlir::Value ComplexExprEmitter::emitBinAdd(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
     return cir::ComplexAddOp::create(builder, op.loc, op.lhs, op.rhs);
 
+  auto createAdd = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
+    return cir::isFPOrVectorOfFPType(a.getType())
+               ? builder.createFAdd(loc, a, b)
+               : builder.createAdd(loc, a, b);
+  };
+
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
     mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
-    mlir::Value newReal = builder.createAdd(op.loc, real, op.rhs);
+    mlir::Value newReal = createAdd(op.loc, real, op.rhs);
     return builder.createComplexCreate(op.loc, newReal, imag);
   }
 
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
   mlir::Value real = builder.createComplexReal(op.loc, op.rhs);
   mlir::Value imag = builder.createComplexImag(op.loc, op.rhs);
-  mlir::Value newReal = builder.createAdd(op.loc, op.lhs, real);
+  mlir::Value newReal = createAdd(op.loc, op.lhs, real);
   return builder.createComplexCreate(op.loc, newReal, imag);
 }
 
@@ -630,17 +655,23 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
       mlir::isa<cir::ComplexType>(op.rhs.getType()))
     return cir::ComplexSubOp::create(builder, op.loc, op.lhs, op.rhs);
 
+  auto createSub = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
+    return cir::isFPOrVectorOfFPType(a.getType())
+               ? builder.createFSub(loc, a, b)
+               : builder.createSub(loc, a, b);
+  };
+
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
     mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
-    mlir::Value newReal = builder.createSub(op.loc, real, op.rhs);
+    mlir::Value newReal = createSub(op.loc, real, op.rhs);
     return builder.createComplexCreate(op.loc, newReal, imag);
   }
 
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
   mlir::Value real = builder.createComplexReal(op.loc, op.rhs);
   mlir::Value imag = builder.createComplexImag(op.loc, op.rhs);
-  mlir::Value newReal = builder.createSub(op.loc, op.lhs, real);
+  mlir::Value newReal = createSub(op.loc, op.lhs, real);
   return builder.createComplexCreate(op.loc, newReal, imag);
 }
 
@@ -673,19 +704,25 @@ mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
                                      rangeKind);
   }
 
+  auto createMul = [&](mlir::Location loc, mlir::Value a, mlir::Value b) {
+    return cir::isFPOrVectorOfFPType(a.getType())
+               ? builder.createFMul(loc, a, b)
+               : builder.createMul(loc, a, b);
+  };
+
   if (mlir::isa<cir::ComplexType>(op.lhs.getType())) {
     mlir::Value real = builder.createComplexReal(op.loc, op.lhs);
     mlir::Value imag = builder.createComplexImag(op.loc, op.lhs);
-    mlir::Value newReal = builder.createMul(op.loc, real, op.rhs);
-    mlir::Value newImag = builder.createMul(op.loc, imag, op.rhs);
+    mlir::Value newReal = createMul(op.loc, real, op.rhs);
+    mlir::Value newImag = createMul(op.loc, imag, op.rhs);
     return builder.createComplexCreate(op.loc, newReal, newImag);
   }
 
   assert(mlir::isa<cir::ComplexType>(op.rhs.getType()));
   mlir::Value real = builder.createComplexReal(op.loc, op.rhs);
   mlir::Value imag = builder.createComplexImag(op.loc, op.rhs);
-  mlir::Value newReal = builder.createMul(op.loc, op.lhs, real);
-  mlir::Value newImag = builder.createMul(op.loc, op.lhs, imag);
+  mlir::Value newReal = createMul(op.loc, op.lhs, real);
+  mlir::Value newImag = createMul(op.loc, op.lhs, imag);
   return builder.createComplexCreate(op.loc, newReal, newImag);
 }
 
@@ -810,15 +847,10 @@ ComplexExprEmitter::emitBinOps(const BinaryOperator *e, QualType promotionTy) {
 LValue ComplexExprEmitter::emitCompoundAssignLValue(
     const CompoundAssignOperator *e,
     mlir::Value (ComplexExprEmitter::*func)(const BinOpInfo &), RValue &value) {
-  QualType lhsTy = e->getLHS()->getType();
+  QualType lhsTy = e->getLHS()->getType().getAtomicUnqualifiedType();
   QualType rhsTy = e->getRHS()->getType();
   SourceLocation exprLoc = e->getExprLoc();
   mlir::Location loc = cgf.getLoc(exprLoc);
-
-  if (lhsTy->getAs<AtomicType>()) {
-    cgf.cgm.errorNYI("emitCompoundAssignLValue AtmoicType");
-    return {};
-  }
 
   BinOpInfo opInfo{loc};
   opInfo.fpFeatures = e->getFPFeaturesInEffect(cgf.getLangOpts());
@@ -1087,8 +1119,24 @@ mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
                                                      LValue lv) {
   mlir::Value inVal = emitLoadOfComplex(lv, e->getExprLoc());
   mlir::Location loc = getLoc(e->getExprLoc());
-  mlir::Value incVal = e->isIncrementOp() ? builder.createInc(loc, inVal)
-                                          : builder.createDec(loc, inVal);
+
+  // Increment/decrement only the real component of the complex value.
+  mlir::Value real = builder.createComplexReal(loc, inVal);
+  mlir::Value imag = builder.createComplexImag(loc, inVal);
+
+  mlir::Value resultReal;
+  if (cir::isFPOrVectorOfFPType(real.getType())) {
+    auto fpType = mlir::cast<cir::FPTypeInterface>(real.getType());
+    mlir::Value amount = builder.getConstFP(
+        loc, real.getType(), llvm::APFloat(fpType.getFloatSemantics(), 1));
+    resultReal = e->isIncrementOp() ? builder.createFAdd(loc, real, amount)
+                                    : builder.createFSub(loc, real, amount);
+  } else {
+    resultReal = e->isIncrementOp() ? builder.createInc(loc, real)
+                                    : builder.createDec(loc, real);
+  }
+
+  mlir::Value incVal = builder.createComplexCreate(loc, resultReal, imag);
 
   // Store the updated result through the lvalue.
   emitStoreOfComplex(loc, incVal, lv, /*isInit=*/false);

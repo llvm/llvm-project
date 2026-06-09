@@ -57,9 +57,17 @@ ScriptedThread::Create(ScriptedProcess &process,
   }
 
   ExecutionContext exe_ctx(process);
+  // The legacy thread-spawn path (no script_object) needs to instantiate a
+  // *thread* Python class whose name comes from the process plugin, not the
+  // process's own class name. Build a thread-specific metadata for that case;
+  // when script_object is non-null the class name is unused so we just forward
+  // the process's metadata.
+  ScriptedMetadata thread_metadata =
+      script_object ? process.m_scripted_metadata
+                    : ScriptedMetadata(thread_class_name,
+                                       process.m_scripted_metadata.GetArgsSP());
   auto obj_or_err = scripted_thread_interface->CreatePluginObject(
-      thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
-      script_object);
+      thread_metadata, exe_ctx, script_object);
 
   if (!obj_or_err) {
     llvm::consumeError(obj_or_err.takeError());
@@ -94,7 +102,7 @@ const char *ScriptedThread::GetName() {
   std::optional<std::string> thread_name = GetInterface()->GetName();
   if (!thread_name)
     return nullptr;
-  return ConstString(thread_name->c_str()).AsCString(nullptr);
+  return ConstString(*thread_name).AsCString(nullptr);
 }
 
 const char *ScriptedThread::GetQueueName() {
@@ -102,7 +110,7 @@ const char *ScriptedThread::GetQueueName() {
   std::optional<std::string> queue_name = GetInterface()->GetQueue();
   if (!queue_name)
     return nullptr;
-  return ConstString(queue_name->c_str()).AsCString(nullptr);
+  return ConstString(*queue_name).AsCString(nullptr);
 }
 
 void ScriptedThread::WillResume(StateType resume_state) {}
@@ -174,8 +182,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
         LLVM_PRETTY_FUNCTION,
         llvm::Twine(
             "StackFrame array size (" + llvm::Twine(arr_size) +
-            llvm::Twine(
-                ") is greater than maximum authorized for a StackFrameList."))
+            ") is greater than maximum authorized for a StackFrameList.")
             .str(),
         error, LLDBLog::Thread);
 
@@ -265,8 +272,10 @@ bool ScriptedThread::LoadArtificialStackFrames() {
       if (!frame_from_script_obj_or_err) {
         return ScriptedInterface::ErrorWithMessage<bool>(
             LLVM_PRETTY_FUNCTION,
-            llvm::Twine("Couldn't add artificial frame (" + llvm::Twine(idx) +
-                        llvm::Twine(") to ScriptedThread StackFrameList."))
+            llvm::Twine(
+                "Couldn't add artificial frame (" + llvm::Twine(idx) +
+                llvm::Twine(") to ScriptedThread StackFrameList: ") +
+                llvm::toString(frame_from_script_obj_or_err.takeError()))
                 .str(),
             error, LLDBLog::Thread);
       } else {
@@ -316,7 +325,7 @@ bool ScriptedThread::CalculateStopInfo() {
     ProcessSP proc = GetProcess();
     if (BreakpointSiteSP bp_site_sp =
             proc->GetBreakpointSiteList().FindByAddress(pc))
-      if (proc->IsBreakpointSiteEnabled(*bp_site_sp))
+      if (proc->IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
         SetThreadStoppedAtUnexecutedBP(pc);
   }
 

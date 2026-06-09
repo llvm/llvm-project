@@ -957,7 +957,8 @@ static unsigned getLoadPredicatedOpcode(unsigned Opcode) {
 
 MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-    MachineInstr &LoadMI, MachineInstr *&CopyMI, LiveIntervals *LIS) const {
+    MachineInstr &LoadMI, MachineInstr *&CopyMI, LiveIntervals *LIS,
+    VirtRegMap *VRM) const {
   MachineBasicBlock::iterator InsertPt = MI;
   // For now, only handle RISCV::PseudoCCMOVGPR.
   if (MI.getOpcode() != RISCV::PseudoCCMOVGPR)
@@ -3041,8 +3042,14 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM6_PLUS1:
           Ok = Imm >= 1 && Imm <= 64;
           break;
+        case RISCVOp::OPERAND_UIMM7_EQ_XLEN:
+          Ok = Imm == STI.getXLen();
+          break;
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;
+          break;
+        case RISCVOp::OPERAND_UIMM9_YBNDSWI:
+          Ok = RISCV::isValidYBNDSWImm(Imm);
           break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
@@ -3068,6 +3075,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_SIMM(8)
         CASE_OPERAND_SIMM(10)
         CASE_OPERAND_SIMM(11)
+        CASE_OPERAND_SIMM(12)
         CASE_OPERAND_SIMM(26)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
@@ -4192,16 +4200,16 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case CASE_RVV_OPCODE(VAADD_VV):
   case CASE_RVV_OPCODE(VAADDU_VV):
   case CASE_RVV_OPCODE(VSMUL_VV):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, MF2):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M1):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M2):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M4):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4_VV, M8):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, MF2):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M1):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M2):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M4):
-  case CASE_RVV_OPCODE_LMUL(VDOTA4U_VV, M8):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, MF2):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, M1):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, M2):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, M4):
+  case CASE_RVV_OPCODE_LMUL(VDOT4A_VV, M8):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, MF2):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, M1):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, M2):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, M4):
+  case CASE_RVV_OPCODE_LMUL(VDOT4AU_VV, M8):
     // Operands 2 and 3 are commutable.
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case CASE_VFMA_SPLATS(FMADD):
@@ -4952,7 +4960,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
                             Register DestReg, uint32_t Amount,
                             MachineInstr::MIFlag Flag) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (llvm::has_single_bit<uint32_t>(Amount)) {
+  if (llvm::has_single_bit(Amount)) {
     uint32_t ShiftAmount = Log2_32(Amount);
     if (ShiftAmount == 0)
       return;
@@ -4987,7 +4995,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(DestReg, RegState::Kill)
         .addReg(DestReg)
         .setMIFlag(Flag);
-  } else if (llvm::has_single_bit<uint32_t>(Amount - 1)) {
+  } else if (llvm::has_single_bit(Amount - 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(Amount - 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
@@ -4998,7 +5006,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else if (llvm::has_single_bit<uint32_t>(Amount + 1)) {
+  } else if (llvm::has_single_bit(Amount + 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(Amount + 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
@@ -5471,8 +5479,8 @@ bool RISCVInstrInfo::requiresNTLHint(const MachineInstr &MI) const {
 }
 
 bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
-                                  const MachineInstr &To) {
-  assert(From.getParent() == To.getParent());
+                                  const MachineBasicBlock::iterator &To) {
+  assert(To == From.getParent()->end() || From.getParent() == To->getParent());
   SmallVector<Register> PhysUses, PhysDefs;
   for (const MachineOperand &MO : From.all_uses())
     if (MO.getReg().isPhysical())
@@ -5481,7 +5489,7 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
     if (MO.getReg().isPhysical())
       PhysDefs.push_back(MO.getReg());
   bool SawStore = false;
-  for (auto II = std::next(From.getIterator()); II != To.getIterator(); II++) {
+  for (auto II = std::next(From.getIterator()); II != To; II++) {
     for (Register PhysReg : PhysUses)
       if (II->definesRegister(PhysReg, nullptr))
         return false;

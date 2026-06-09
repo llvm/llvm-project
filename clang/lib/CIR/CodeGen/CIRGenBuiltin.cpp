@@ -884,6 +884,16 @@ decodeFixedType(CIRGenFunction &cgf,
   switch (descriptor.Kind) {
   case IITDescriptor::Void:
     return cir::VoidType::get(context);
+  case IITDescriptor::Half:
+    return cir::FP16Type::get(context);
+  case IITDescriptor::BFloat:
+    return cir::BF16Type::get(context);
+  case IITDescriptor::Float:
+    return cir::SingleType::get(context);
+  case IITDescriptor::Double:
+    return cir::DoubleType::get(context);
+  case IITDescriptor::Quad:
+    return cir::FP128Type::get(context);
   // If the intrinsic expects unsigned integers, the signedness is corrected in
   // correctIntegerSignedness()
   case IITDescriptor::Integer:
@@ -945,22 +955,13 @@ static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
   using namespace llvm::Intrinsic;
 
   SmallVector<IITDescriptor, 8> table;
-  getIntrinsicInfoTableEntries(id, table);
+  auto [tableRef, _, isVarArg] = getIntrinsicInfoTableEntries(id, table);
 
-  ArrayRef<IITDescriptor> tableRef = table;
   mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
 
   SmallVector<mlir::Type, 8> argTypes;
-  bool isVarArg = false;
-  while (!tableRef.empty()) {
-    llvm::Intrinsic::IITDescriptor::IITDescriptorKind kind =
-        tableRef.front().Kind;
-    if (kind == IITDescriptor::VarArg) {
-      isVarArg = true;
-      break; // VarArg is last
-    }
+  while (!tableRef.empty())
     argTypes.push_back(decodeFixedType(cgf, tableRef, context));
-  }
 
   // CIR convention: no explicit void return type
   if (isa<cir::VoidType>(resultTy))
@@ -1086,14 +1087,33 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       return RValue::get(nullptr);
 
     mlir::Value argValue = emitCheckedArgForAssume(e->getArg(0));
-    cir::AssumeOp::create(builder, loc, argValue);
+    cir::AssumeOp::create(builder, loc, argValue, cir::AssumeBundleKind::None,
+                          mlir::ValueRange{});
     return RValue::get(nullptr);
   }
 
   case Builtin::BI__builtin_assume_separate_storage: {
     mlir::Value value0 = emitScalarExpr(e->getArg(0));
     mlir::Value value1 = emitScalarExpr(e->getArg(1));
-    cir::AssumeSepStorageOp::create(builder, loc, value0, value1);
+    mlir::Value cond = builder.getBool(true, loc);
+    cir::AssumeOp::create(builder, loc, cond,
+                          cir::AssumeBundleKind::SeparateStorage,
+                          mlir::ValueRange{value0, value1});
+    return RValue::get(nullptr);
+  }
+
+  case Builtin::BI__builtin_assume_dereferenceable: {
+    mlir::Value ptrValue = emitScalarExpr(e->getArg(0));
+    mlir::Value sizeValue = emitScalarExpr(e->getArg(1));
+    // The `dereferenceable` operand bundle expects a pointer-sized unsigned
+    // integer; widen/narrow as needed.
+    mlir::Type uintPtrTy = convertType(getContext().getUIntPtrType());
+    if (sizeValue.getType() != uintPtrTy)
+      sizeValue = builder.createIntCast(sizeValue, uintPtrTy);
+    mlir::Value cond = builder.getBool(true, loc);
+    cir::AssumeOp::create(builder, loc, cond,
+                          cir::AssumeBundleKind::Dereferenceable,
+                          mlir::ValueRange{ptrValue, sizeValue});
     return RValue::get(nullptr);
   }
 
@@ -1151,7 +1171,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIconjf:
   case Builtin::BIconjl: {
     mlir::Value complex = emitComplexExpr(e->getArg(0));
-    mlir::Value conj = builder.createNot(complex);
+    mlir::Value conj = builder.createComplexConj(loc, complex);
     return RValue::getComplex(conj);
   }
 
@@ -1931,7 +1951,18 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     cir::UnreachableOp::create(builder, loc);
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_launder:
+  case Builtin::BI__builtin_launder: {
+    const Expr *arg = e->getArg(0);
+    QualType argTy = arg->getType()->getPointeeType();
+    mlir::Value ptr = emitScalarExpr(arg);
+
+    if (cgm.getCodeGenOpts().StrictVTablePointers &&
+        argTy.requiresBuiltinLaunder(cgm.getASTContext())) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      ptr = cir::LaunderOp::create(builder, loc, ptr).getResult();
+    }
+    return RValue::get(ptr);
+  }
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
   case Builtin::BI__sync_fetch_and_or:
@@ -2058,7 +2089,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__sync_lock_release_4:
   case Builtin::BI__sync_lock_release_8:
   case Builtin::BI__sync_lock_release_16:
-  case Builtin::BI__sync_synchronize:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__sync_synchronize: {
+    // We assume this is supposed to correspond to a C++0x-style
+    // sequentially-consistent fence (i.e. this is only usable for
+    // synchronization, not device I/O or anything like that). This intrinsic
+    // is really badly designed in the sense that in theory, there isn't
+    // any way to safely use it... but in practice, it mostly works
+    // to use it with non-atomic loads and stores to get acquire/release
+    // semantics.
+    cir::AtomicFenceOp::create(
+        builder, getLoc(e->getSourceRange()),
+        cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::System));
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_nontemporal_load:
   case Builtin::BI__builtin_nontemporal_store:
   case Builtin::BI__c11_atomic_is_lock_free:
@@ -2136,10 +2182,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     Address resultPtr = emitPointerWithAlignment(resultArg);
 
     // Extend each operand to the encompassing type, if necessary.
-    if (x.getType() != encompassingCIRTy)
-      x = builder.createCast(cir::CastKind::integral, x, encompassingCIRTy);
-    if (y.getType() != encompassingCIRTy)
-      y = builder.createCast(cir::CastKind::integral, y, encompassingCIRTy);
+    if (x.getType() != encompassingCIRTy) {
+      x = builder.createCast(mlir::isa<cir::BoolType>(x.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral,
+                             x, encompassingCIRTy);
+    }
+
+    if (y.getType() != encompassingCIRTy) {
+      y = builder.createCast(mlir::isa<cir::BoolType>(y.getType())
+                                 ? cir::CastKind::bool_to_int
+                                 : cir::CastKind::integral,
+                             y, encompassingCIRTy);
+    }
 
     // Perform the operation on the extended values.
     mlir::Location loc = getLoc(e->getSourceRange());
@@ -2391,6 +2446,17 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_printf:
   case Builtin::BIprintf:
+    if (getTarget().getTriple().isNVPTX() ||
+        getTarget().getTriple().isAMDGCN() ||
+        (getTarget().getTriple().isSPIRV() &&
+         getTarget().getTriple().getVendor() == llvm::Triple::AMD)) {
+      if (getTarget().getTriple().isNVPTX())
+        return RValue::get(emitNVPTXDevicePrintfCallExpr(e));
+      if ((getTarget().getTriple().isAMDGCN() ||
+           getTarget().getTriple().isSPIRV()) &&
+          getLangOpts().HIP)
+        return errorBuiltinNYI(*this, e, builtinID);
+    }
     break;
   case Builtin::BI__builtin_canonicalize:
   case Builtin::BI__builtin_canonicalizef:
@@ -2427,12 +2493,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   StringRef prefix =
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
   if (!prefix.empty()) {
-    intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix.data(), name);
+    intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix, name);
     // NOTE we don't need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
     // MS builtins via ALL_MS_LANGUAGES and are filtered earlier.
     if (intrinsicID == Intrinsic::not_intrinsic)
-      intrinsicID = Intrinsic::getIntrinsicForMSBuiltin(prefix.data(), name);
+      intrinsicID = Intrinsic::getIntrinsicForMSBuiltin(prefix, name);
   }
 
   if (intrinsicID != Intrinsic::not_intrinsic) {
@@ -2441,7 +2507,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     getContext().GetBuiltinType(builtinID, error, &iceArguments);
     assert(error == ASTContext::GE_None && "Should not codegen an error");
 
-    llvm::StringRef name = llvm::Intrinsic::getName(intrinsicID);
+    StringRef name = Intrinsic::getName(intrinsicID);
     // cir::LLVMIntrinsicCallOp expects intrinsic name to not have prefix
     // "llvm." For example, `llvm.nvvm.barrier0` should be passed as
     // `nvvm.barrier0`.
@@ -2607,8 +2673,10 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::amdgcn:
     return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
+    return std::nullopt;
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
+    return cgf->emitNVPTXBuiltinExpr(builtinID, e);
   case llvm::Triple::wasm32:
   case llvm::Triple::wasm64:
   case llvm::Triple::hexagon:
@@ -2709,7 +2777,42 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
                                                   cir::IntType resType,
                                                   mlir::Value emittedE,
                                                   bool isDynamic) {
-  assert(!cir::MissingFeatures::opCallImplicitObjectSizeArgs());
+  // If this is a pass_object_size parameter, load the implicit size arg.
+  //
+  // BOS type compatibility: a pass_object_size annotation with one type can
+  // satisfy a __builtin_object_size query with a different type when the
+  // annotated type is a safe approximation.  Type 0 (max, whole object) is
+  // an overestimate for type 1 (max, closest surrounding subobject), and
+  // type 3 (min, closest surrounding subobject) is an underestimate for
+  // type 2 (min, whole object).
+  enum BOSType {
+    MaxWholeObject = 0,
+    MaxSubobject = 1,
+    MinWholeObject = 2,
+    MinSubobject = 3,
+  };
+  if (auto *dre = dyn_cast<DeclRefExpr>(e->IgnoreParenImpCasts())) {
+    auto *param = dyn_cast<ParmVarDecl>(dre->getDecl());
+    auto *objSizeAttr = dre->getDecl()->getAttr<PassObjectSizeAttr>();
+    if (param && objSizeAttr) {
+      auto from = objSizeAttr->getType();
+      bool compatible = from == static_cast<int>(type) ||
+                        (from == MaxWholeObject && type == MaxSubobject) ||
+                        (from == MinSubobject && type == MinWholeObject);
+      if (compatible) {
+        const ImplicitParamDecl *sizeDecl = sizeArguments.lookup(param);
+        assert(sizeDecl && "expected pass_object_size implicit param");
+
+        DeclMapTy::iterator declIter = localDeclMap.find(sizeDecl);
+        assert(declIter != localDeclMap.end());
+        Address addr = declIter->second;
+
+        return emitLoadOfScalar(addr, /*volatile=*/false,
+                                getContext().getSizeType(), e->getBeginLoc(),
+                                LValueBaseInfo(AlignmentSource::Decl));
+      }
+    }
+  }
 
   // LLVM can't handle type=3 appropriately, and __builtin_object_size shouldn't
   // evaluate e for side-effects. In either case, just like original LLVM

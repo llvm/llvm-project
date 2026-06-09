@@ -30,7 +30,7 @@
 using namespace clang;
 using namespace ssaf;
 
-LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MockSerializationFormat::FormatInfo>)
+LLVM_DEFINE_REGISTRY(llvm::Registry<MockSerializationFormat::FormatInfo>)
 
 MockSerializationFormat::MockSerializationFormat() {
   for (const auto &FormatInfoEntry : llvm::Registry<FormatInfo>::entries()) {
@@ -160,8 +160,6 @@ llvm::Error MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
   return llvm::Error::success();
 }
 
-// NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int SSAFMockSerializationFormatAnchorSource = 0;
 static SerializationFormatRegistry::Add<MockSerializationFormat>
     RegisterFormat("MockSerializationFormat",
                    "A serialization format for testing");

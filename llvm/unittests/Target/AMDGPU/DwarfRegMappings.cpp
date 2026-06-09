@@ -12,7 +12,7 @@
 
 using namespace llvm;
 
-TEST(AMDGPU, TestWave64DwarfRegMapping) {
+TEST_F(AMDGPUTestBase, TestWave64DwarfRegMapping) {
   for (auto Triple :
        {"amdgcn-amd-", "amdgcn-amd-amdhsa", "amdgcn-amd-amdpal"}) {
     auto TM = createAMDGPUTargetMachine(Triple, "gfx1010", "+wavefrontsize64");
@@ -52,7 +52,7 @@ TEST(AMDGPU, TestWave64DwarfRegMapping) {
   }
 }
 
-TEST(AMDGPU, TestWave32DwarfRegMapping) {
+TEST_F(AMDGPUTestBase, TestWave32DwarfRegMapping) {
   for (auto Triple :
        {"amdgcn-amd-", "amdgcn-amd-amdhsa", "amdgcn-amd-amdpal"}) {
     auto TM = createAMDGPUTargetMachine(Triple, "gfx1010", "+wavefrontsize32");

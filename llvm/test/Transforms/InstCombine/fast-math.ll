@@ -5,7 +5,7 @@
 ; 1.2f and 2.3f is supposed to be fold.
 define float @fold(float %a) {
 ; CHECK-LABEL: @fold(
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast float [[A:%.*]], 0x4006147AE0000000
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast float [[A:%.*]], 2.760000e+00
 ; CHECK-NEXT:    ret float [[MUL1]]
 ;
   %mul = fmul fast float %a, 0x3FF3333340000000
@@ -17,8 +17,8 @@ define float @fold(float %a) {
 ; fixed FP mode.
 define float @notfold(float %a) {
 ; CHECK-LABEL: @notfold(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[A:%.*]], 0x3FF3333340000000
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul nnan float [[MUL]], 0x4002666660000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[A:%.*]], 1.200000e+00
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul nnan float [[MUL]], 2.300000e+00
 ; CHECK-NEXT:    ret float [[MUL1]]
 ;
   %mul = fmul fast float %a, 0x3FF3333340000000
@@ -28,7 +28,7 @@ define float @notfold(float %a) {
 
 define float @fold2(float %a) {
 ; CHECK-LABEL: @fold2(
-; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast float [[A:%.*]], 0x4006147AE0000000
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast float [[A:%.*]], 2.760000e+00
 ; CHECK-NEXT:    ret float [[MUL1]]
 ;
   %mul = fmul float %a, 0x3FF3333340000000
@@ -559,7 +559,7 @@ define <2 x float> @fneg2_vec_poison(<2 x float> %x) {
 ; X/C1 / C2 => X * (1/(C2*C1))
 define float @fdiv1(float %x) {
 ; CHECK-LABEL: @fdiv1(
-; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast float [[X:%.*]], 0x3FD7303B60000000
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast float [[X:%.*]], f0x3EB981DB
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
   %div = fdiv fast float %x, 0x3FF3333340000000
@@ -573,7 +573,7 @@ define float @fdiv1(float %x) {
 ; X*C1 / C2 => X * (C1/C2)
 define float @fdiv2(float %x) {
 ; CHECK-LABEL: @fdiv2(
-; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast float [[X:%.*]], 0x3FE0B21660000000
+; CHECK-NEXT:    [[DIV1:%.*]] = fmul fast float [[X:%.*]], f0x3F0590B3
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
   %mul = fmul float %x, 0x3FF3333340000000
@@ -599,8 +599,8 @@ define <2 x float> @fdiv2_vec(<2 x float> %x) {
 ;
 define float @fdiv3(float %x) {
 ; CHECK-LABEL: @fdiv3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], 0x3FDBD37A80000000
-; CHECK-NEXT:    [[DIV1:%.*]] = fdiv fast float [[TMP1]], 0x47EFFFFFE0000000
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul fast float [[X:%.*]], f0x3EDE9BD4
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv fast float [[TMP1]], f0x7F7FFFFF
 ; CHECK-NEXT:    ret float [[DIV1]]
 ;
   %div = fdiv fast float %x, 0x47EFFFFFE0000000
@@ -611,8 +611,8 @@ define float @fdiv3(float %x) {
 ; "X*C1 / C2 => X * (C1/C2)" is disabled if C1/C2 is a denormal
 define float @fdiv4(float %x) {
 ; CHECK-LABEL: @fdiv4(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], 0x47EFFFFFE0000000
-; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[MUL]], 0x3FC99999A0000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X:%.*]], f0x7F7FFFFF
+; CHECK-NEXT:    [[DIV:%.*]] = fdiv float [[MUL]], 2.000000e-01
 ; CHECK-NEXT:    ret float [[DIV]]
 ;
   %mul = fmul float %x, 0x47EFFFFFE0000000
