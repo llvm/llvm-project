@@ -64,6 +64,23 @@ module acc_declare
 ! CHECK: acc.declare_exit token(%[[TOKEN]]) dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: acc.delete accPtr(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
 
+  subroutine acc_declare_present_host_and_comp(host, coeffs)
+    type :: dt_box
+      real :: buf(10, 2)
+    end type
+    type(dt_box), intent(in) :: host
+    real, intent(in) :: coeffs(10)
+    !$acc declare present(host, host%buf, coeffs)
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_present_host_and_comp(
+! CHECK-SAME: %[[ARGHOST:.*]]: !fir.ref<!fir.type<_QMacc_declare{{.*}}Tdt_box{{.*}}>> {fir.bindc_name = "host"},
+! CHECK-SAME: %[[ARGCOEFF:.*]]: !fir.ref<!fir.array<10xf32>> {fir.bindc_name = "coeffs"})
+! CHECK-DAG: acc.present{{.*}}name = "host"
+! CHECK-DAG: acc.present{{.*}}name = "host%buf"
+! CHECK-DAG: acc.present{{.*}}name = "coeffs"
+! CHECK: acc.declare_enter dataOperands(%{{.*}}, %{{.*}}, %{{.*}} :
+
   subroutine acc_declare_copyin()
     integer :: a(100), b(10), i
     !$acc declare copyin(a) copyin(readonly: b)
@@ -401,14 +418,14 @@ end module
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
-! CHECK-LABEL: func.func private @_QMacc_declare_allocatable_testEdata1_acc_declare_post_alloc() {
+! CHECK-LABEL: func.func @_QMacc_declare_allocatable_testEdata1_acc_declare_post_alloc() attributes {acc.declare_action} {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_allocatable_testEdata1) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:         %[[CREATE_DESC:.*]] = acc.create varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {implicit = true, name = "data1", structured = false}
 ! CHECK:         acc.declare_enter dataOperands(%[[CREATE_DESC]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK:         return
 ! CHECK:       }
 
-! CHECK-LABEL: func.func private @_QMacc_declare_allocatable_testEdata1_acc_declare_post_dealloc() {
+! CHECK-LABEL: func.func @_QMacc_declare_allocatable_testEdata1_acc_declare_post_dealloc() attributes {acc.declare_action} {
 ! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_allocatable_testEdata1) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)   -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {dataClause = #acc<data_clause acc_create>, implicit = true, name = "data1", structured = false}
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVPTR]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)

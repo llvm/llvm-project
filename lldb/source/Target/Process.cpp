@@ -53,6 +53,7 @@
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/StructuredDataPlugin.h"
@@ -70,14 +71,27 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace std::chrono;
+
+void Process::DelayedBreakpointCache::Enqueue(lldb::BreakpointSiteSP site,
+                                              BreakpointAction action) {
+  auto [previous, inserted] = m_site_to_action.insert({site, action});
+  // New site or already enqueued for the same action.
+  if (inserted || previous->second == action)
+    return;
+  // Previously enqueued for the opposite action, don't update the site.
+  m_site_to_action.erase(previous);
+  assert(site->m_enabled == (action == BreakpointAction::Enable));
+}
 
 class ProcessOptionValueProperties
     : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
@@ -322,6 +336,12 @@ bool ProcessProperties::GetStopOnExec() const {
       idx, g_process_properties[idx].default_uint_value != 0);
 }
 
+bool ProcessProperties::GetUseDelayedBreakpoints() const {
+  const uint32_t idx = ePropertyUseDelayedBreakpoints;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
+}
+
 std::chrono::seconds ProcessProperties::GetUtilityExpressionTimeout() const {
   const uint32_t idx = ePropertyUtilityExpressionTimeout;
   uint64_t value = GetPropertyAtIndexAs<uint64_t>(
@@ -340,6 +360,13 @@ bool ProcessProperties::GetSteppingRunsAllThreads() const {
   const uint32_t idx = ePropertySteppingRunsAllThreads;
   return GetPropertyAtIndexAs<bool>(
       idx, g_process_properties[idx].default_uint_value != 0);
+}
+
+Args ProcessProperties::GetAlwaysRunThreadNames() const {
+  Args args;
+  const uint32_t idx = ePropertyAlwaysRunThreadNames;
+  m_collection_sp->GetPropertyAtIndexAsArgs(idx, args);
+  return args;
 }
 
 bool ProcessProperties::GetOSPluginReportsAllThreads() const {
@@ -384,7 +411,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               ListenerSP listener_sp,
                               const FileSpec *crash_file_path,
                               bool can_connect) {
-  static uint32_t g_process_unique_id = 0;
+  static std::atomic<uint32_t> g_process_unique_id{0};
 
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
@@ -1253,10 +1280,14 @@ StateType Process::GetState() {
   if (!m_current_private_state_thread_sp)
     return eStateUnloaded;
 
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return GetPrivateState();
+
   if (CurrentThreadPosesAsPrivateStateThread())
     return GetPrivateState();
-  else
-    return GetPublicState();
+
+  return GetPublicState();
 }
 
 void Process::SetPublicState(StateType new_state, bool restarted) {
@@ -1539,8 +1570,8 @@ Process::GetBreakpointSiteList() const {
 
 void Process::DisableAllBreakpointSites() {
   m_breakpoint_site_list.ForEach([this](BreakpointSite *bp_site) -> void {
-    //        bp_site->SetEnabled(true);
-    DisableBreakpointSite(bp_site);
+    llvm::consumeError(ExecuteBreakpointSiteAction(
+        *bp_site, BreakpointAction::Disable, /*forbid_delay=*/false));
   });
 }
 
@@ -1557,8 +1588,9 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
-    if (bp_site_sp->IsEnabled())
-      error = DisableBreakpointSite(bp_site_sp.get());
+    if (IsBreakpointSiteEnabled(*bp_site_sp))
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1567,17 +1599,73 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   return error;
 }
 
+llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
+                                                 BreakpointAction action,
+                                                 bool forbid_delay) {
+  // Breakpoints immediately affect running processes, so do not delay them.
+  forbid_delay |= StateIsRunningState(GetPrivateState());
+
+  if (forbid_delay)
+    if (llvm::Error E = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Breakpoints), std::move(E),
+          "eager breakpoint requested, but failed to flush breakpoints: {0}");
+
+  auto site_sp = site.shared_from_this();
+  std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
+
+  // Ignore requests that won't change the Site status.
+  if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
+    return llvm::Error::success();
+
+  if (!forbid_delay && ShouldUseDelayedBreakpoints()) {
+    m_delayed_breakpoints.Enqueue(site_sp, action);
+    return llvm::Error::success();
+  }
+
+  m_delayed_breakpoints.RemoveSite(site_sp);
+  guard.unlock();
+
+  switch (action) {
+  case BreakpointAction::Enable:
+    return EnableBreakpointSite(site_sp.get()).takeError();
+  case BreakpointAction::Disable:
+    return DisableBreakpointSite(site_sp.get()).takeError();
+  }
+
+  llvm_unreachable("Unhandled BreakpointAction");
+}
+
 Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   Status error;
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
-    if (!bp_site_sp->IsEnabled())
-      error = EnableBreakpointSite(bp_site_sp.get());
+    if (!IsBreakpointSiteEnabled(*bp_site_sp))
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Enable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
   }
   return error;
+}
+
+bool Process::IsBreakpointSiteEnabled(const BreakpointSite &site) {
+  std::lock_guard<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
+
+  // `site` won't be mutated, but the cache stores mutable pointers.
+  auto it = m_delayed_breakpoints.m_site_to_action.find(
+      const_cast<BreakpointSite &>(site).shared_from_this());
+
+  // If no actions are delayed, use the current state of the site.
+  if (it == m_delayed_breakpoints.m_site_to_action.end())
+    return site.m_enabled;
+
+  return it->second == BreakpointAction::Enable;
+}
+
+bool Process::IsBreakpointSitePhysicallyEnabled(const BreakpointSite &site) {
+  return site.m_enabled;
 }
 
 static bool ShouldShowError(Process &process) {
@@ -1638,6 +1726,35 @@ static addr_t ComputeConstituentLoadAddress(BreakpointLocation &constituent,
   return resolved_address.GetOpcodeLoadAddress(&target);
 }
 
+llvm::Error Process::FlushDelayedBreakpoints() {
+  std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
+
+  // Clear the cache in m_delayed_breakpoints so it can't affect the actual
+  // enabling of breakpoints. For example, if `EnableSoftwareBreakpoint` is
+  // called outside of FlushDelayedBreakpoints, it needs to check the delayed
+  // breakpoints and possibly early return. However, when called from
+  // FlushDelayedBreakpoints, the queue better be empty so that no early returns
+  // take place.
+  auto site_to_action = std::move(m_delayed_breakpoints.m_site_to_action);
+  m_delayed_breakpoints.m_site_to_action.clear();
+
+  guard.unlock();
+  // Use a copy of the cache so that iteration is safe.
+  return UpdateBreakpointSites(site_to_action);
+}
+
+llvm::Error Process::UpdateBreakpointSites(
+    const BreakpointSiteToActionMap &site_to_action) {
+  llvm::Error error = llvm::Error::success();
+  for (auto [site, action] : site_to_action) {
+    Status new_error = action == BreakpointAction::Enable
+                           ? EnableBreakpointSite(site.get())
+                           : DisableBreakpointSite(site.get());
+    error = llvm::joinErrors(std::move(error), new_error.takeError());
+  }
+  return error;
+}
+
 lldb::break_id_t
 Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
                               bool use_hardware) {
@@ -1657,7 +1774,14 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
 
   BreakpointSiteSP bp_site_sp(
       new BreakpointSite(constituent, load_addr, use_hardware));
-  Status error = EnableBreakpointSite(bp_site_sp.get());
+
+  bool bp_from_address =
+      constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
+      BreakpointResolver::ResolverTy::AddressResolver;
+  bool forbid_delay = use_hardware || bp_from_address;
+
+  auto error = Status::FromError(ExecuteBreakpointSiteAction(
+      *bp_site_sp, BreakpointAction::Enable, forbid_delay));
   if (error.Success()) {
     constituent->SetBreakpointSite(bp_site_sp);
     return m_breakpoint_site_list.Add(bp_site_sp);
@@ -1682,7 +1806,8 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      DisableBreakpointSite(bp_site_sp.get());
+      llvm::consumeError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
@@ -1732,7 +1857,7 @@ Status Process::EnableSoftwareBreakpoint(BreakpointSite *bp_site) {
   LLDB_LOGF(
       log, "Process::EnableSoftwareBreakpoint (site_id = %d) addr = 0x%" PRIx64,
       bp_site->GetID(), (uint64_t)bp_addr);
-  if (bp_site->IsEnabled()) {
+  if (IsBreakpointSiteEnabled(*bp_site)) {
     LLDB_LOGF(
         log,
         "Process::EnableSoftwareBreakpoint (site_id = %d) addr = 0x%" PRIx64
@@ -1776,7 +1901,7 @@ Status Process::EnableSoftwareBreakpoint(BreakpointSite *bp_site) {
                          error) == bp_opcode_size) {
           if (::memcmp(bp_opcode_bytes, verify_bp_opcode_bytes,
                        bp_opcode_size) == 0) {
-            bp_site->SetEnabled(true);
+            SetBreakpointSiteEnabled(*bp_site);
             bp_site->SetType(BreakpointSite::eSoftware);
             LLDB_LOGF(log,
                       "Process::EnableSoftwareBreakpoint (site_id = %d) "
@@ -1818,7 +1943,7 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
   if (bp_site->IsHardware()) {
     error =
         Status::FromErrorString("Breakpoint site is a hardware breakpoint.");
-  } else if (bp_site->IsEnabled()) {
+  } else if (IsBreakpointSiteEnabled(*bp_site)) {
     const size_t break_op_size = bp_site->GetByteSize();
     const uint8_t *const break_op = bp_site->GetTrapOpcodeBytes();
     if (break_op_size > 0) {
@@ -1860,7 +1985,7 @@ Status Process::DisableSoftwareBreakpoint(BreakpointSite *bp_site) {
             if (::memcmp(bp_site->GetSavedOpcodeBytes(), verify_opcode,
                          break_op_size) == 0) {
               // SUCCESS
-              bp_site->SetEnabled(false);
+              SetBreakpointSiteEnabled(*bp_site, false);
               LLDB_LOGF(log,
                         "Process::DisableSoftwareBreakpoint (site_id = %d) "
                         "addr = 0x%" PRIx64 " -- SUCCESS",
@@ -1948,6 +2073,19 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                           llvm::MutableArrayRef<uint8_t> buffer) {
+  llvm::SmallVector<Range<lldb::addr_t, size_t>> fixed_ranges;
+  fixed_ranges.reserve(ranges.size());
+  for (const Range<lldb::addr_t, size_t> &range : ranges)
+    fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
+                              range.GetByteSize());
+  if (!GetDisableMemoryCache())
+    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
+  return DoReadMemoryRanges(fixed_ranges, buffer);
+}
+
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+Process::DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                            llvm::MutableArrayRef<uint8_t> buffer) {
   auto total_ranges_len = llvm::sum_of(
       llvm::map_range(ranges, [](auto range) { return range.size; }));
   // If the buffer is not large enough, this is a programmer error.
@@ -3425,6 +3563,9 @@ Status Process::PrivateResume() {
             "Process::PrivateResume PreResumeActions failed, not resuming.");
       } else {
         m_mod_id.BumpResumeID();
+        if (auto E = FlushDelayedBreakpoints())
+          LLDB_LOG_ERROR(log, std::move(E),
+                         "Failed to update some delayed breakpoints: {0}");
         error = DoResume(direction);
         if (error.Success()) {
           DidResume();
@@ -3631,6 +3772,10 @@ Status Process::Detach(bool keep_stopped) {
 
     m_thread_list.DiscardThreadPlans();
     DisableAllBreakpointSites();
+    if (auto error = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Process), std::move(error),
+          "Failed to update some delayed breakpoints during detach: {0}");
 
     error = DoDetach(keep_stopped);
     if (error.Success()) {
@@ -3700,6 +3845,10 @@ Status Process::DestroyImpl(bool force_kill) {
       // doing this now.
       m_thread_list.DiscardThreadPlans();
       DisableAllBreakpointSites();
+      if (auto error = FlushDelayedBreakpoints())
+        LLDB_LOG_ERROR(
+            GetLog(LLDBLog::Process), std::move(error),
+            "Failed to update some delayed breakpoints during destroy: {0}");
     }
 
     error = DoDestroy();
@@ -3943,6 +4092,15 @@ bool Process::PrivateStateThread::StartupThread() {
 
 bool Process::PrivateStateThread::IsOnThread(const HostThread &thread) const {
   return m_private_state_thread.EqualsThread(thread);
+}
+
+ProcessRunLock &Process::PrivateStateThread::GetRunLock() {
+  Policy policy = PolicyStack::Get().Current();
+  if (policy.view == Policy::View::Private)
+    return m_private_run_lock;
+  if (IsOnThread(Host::GetCurrentThread()))
+    return m_private_run_lock;
+  return m_public_run_lock;
 }
 
 bool Process::StartPrivateStateThread(
@@ -4200,14 +4358,12 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_local bool PrivateStateThreadGuard::g_is_private_state_thread = false;
-
 thread_result_t Process::RunPrivateStateThread(bool is_override) {
   // Override PSTs exist solely to service RunThreadPlan expression evaluation.
   // They must see parent frames, not provider-augmented frames.
-  std::optional<PrivateStateThreadGuard> pst_guard;
+  std::optional<PolicyStack::Guard> policy_guard;
   if (is_override)
-    pst_guard.emplace();
+    policy_guard.emplace(Policy::PrivateState());
 
   bool control_only = true;
 
@@ -4474,7 +4630,10 @@ bool Process::ProcessEventData::ForwardEventToPendingListeners(
 
   // For state changed events, if the update state is zero, we are handling
   // this on the private state thread.  We should wait for the public event.
-  return m_update_state == 1;
+  // After the primary listener processes it in DoOnRemoval, m_update_state
+  // is incremented from 1 to 2, which is when we forward to pending
+  // (secondary) listeners.
+  return m_update_state > 1;
 }
 
 void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
@@ -4491,12 +4650,14 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
   // pulled off of the private process event queue, and then any number of
   // times, first when it gets pulled off of the public event queue, then other
   // times when we're pretending that this is where we stopped at the end of
-  // expression evaluation.  m_update_state is used to distinguish these three
-  // cases; it is 0 when we're just pulling it off for private handling, and >
-  // 1 for expression evaluation, and we don't want to do the breakpoint
-  // command handling then.
+  // expression evaluation.  m_update_state is used to distinguish these
+  // cases; it is 0 when we're just pulling it off for private handling, 1
+  // when the primary public listener consumes it, and > 1 after that (e.g.
+  // secondary listeners or expression evaluation) where we don't want to
+  // redo the breakpoint command handling or stop hooks.
   if (m_update_state != 1)
     return;
+  m_update_state++;
 
   process_sp->SetPublicState(
       m_state, Process::ProcessEventData::GetRestartedFromEvent(event_ptr));
@@ -4800,151 +4961,6 @@ void Process::STDIOReadThreadBytesReceived(void *baton, const void *src,
   Process *process = (Process *)baton;
   process->AppendSTDOUT(static_cast<const char *>(src), src_len);
 }
-
-class IOHandlerProcessSTDIO : public IOHandler {
-public:
-  IOHandlerProcessSTDIO(Process *process, int write_fd)
-      : IOHandler(process->GetTarget().GetDebugger(),
-                  IOHandler::Type::ProcessIO),
-        m_process(process),
-        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
-        m_write_file(write_fd, File::eOpenOptionWriteOnly, false) {
-    m_pipe.CreateNew();
-  }
-
-  ~IOHandlerProcessSTDIO() override = default;
-
-  void SetIsRunning(bool running) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(!running);
-    m_is_running = running;
-  }
-
-  // Each IOHandler gets to run until it is done. It should read data from the
-  // "in" and place output into "out" and "err and return when done.
-  void Run() override {
-    if (!m_read_file.IsValid() || !m_write_file.IsValid() ||
-        !m_pipe.CanRead() || !m_pipe.CanWrite()) {
-      SetIsDone(true);
-      return;
-    }
-
-    SetIsDone(false);
-    const int read_fd = m_read_file.GetDescriptor();
-    Terminal terminal(read_fd);
-    TerminalState terminal_state(terminal, false);
-    // FIXME: error handling?
-    llvm::consumeError(terminal.SetCanonical(false));
-    llvm::consumeError(terminal.SetEcho(false));
-// FD_ZERO, FD_SET are not supported on windows
-#ifndef _WIN32
-    const int pipe_read_fd = m_pipe.GetReadFileDescriptor();
-    SetIsRunning(true);
-    while (true) {
-      {
-        std::lock_guard<std::mutex> guard(m_mutex);
-        if (GetIsDone())
-          break;
-      }
-
-      SelectHelper select_helper;
-      select_helper.FDSetRead(read_fd);
-      select_helper.FDSetRead(pipe_read_fd);
-      Status error = select_helper.Select();
-
-      if (error.Fail())
-        break;
-
-      char ch = 0;
-      size_t n;
-      if (select_helper.FDIsSetRead(read_fd)) {
-        n = 1;
-        if (m_read_file.Read(&ch, n).Success() && n == 1) {
-          if (m_write_file.Write(&ch, n).Fail() || n != 1)
-            break;
-        } else
-          break;
-      }
-
-      if (select_helper.FDIsSetRead(pipe_read_fd)) {
-        // Consume the interrupt byte
-        if (llvm::Expected<size_t> bytes_read = m_pipe.Read(&ch, 1)) {
-          if (ch == 'q')
-            break;
-          if (ch == 'i')
-            if (StateIsRunningState(m_process->GetState()))
-              m_process->SendAsyncInterrupt();
-        } else {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Process), bytes_read.takeError(),
-                         "Pipe read failed: {0}");
-        }
-      }
-    }
-    SetIsRunning(false);
-#endif
-  }
-
-  void Cancel() override {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(true);
-    // Only write to our pipe to cancel if we are in
-    // IOHandlerProcessSTDIO::Run(). We can end up with a python command that
-    // is being run from the command interpreter:
-    //
-    // (lldb) step_process_thousands_of_times
-    //
-    // In this case the command interpreter will be in the middle of handling
-    // the command and if the process pushes and pops the IOHandler thousands
-    // of times, we can end up writing to m_pipe without ever consuming the
-    // bytes from the pipe in IOHandlerProcessSTDIO::Run() and end up
-    // deadlocking when the pipe gets fed up and blocks until data is consumed.
-    if (m_is_running) {
-      char ch = 'q'; // Send 'q' for quit
-      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
-                       "Pipe write failed: {0}");
-      }
-    }
-  }
-
-  bool Interrupt() override {
-    // Do only things that are safe to do in an interrupt context (like in a
-    // SIGINT handler), like write 1 byte to a file descriptor. This will
-    // interrupt the IOHandlerProcessSTDIO::Run() and we can look at the byte
-    // that was written to the pipe and then call
-    // m_process->SendAsyncInterrupt() from a much safer location in code.
-    if (m_active) {
-      char ch = 'i'; // Send 'i' for interrupt
-      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
-    } else {
-      // This IOHandler might be pushed on the stack, but not being run
-      // currently so do the right thing if we aren't actively watching for
-      // STDIN by sending the interrupt to the process. Otherwise the write to
-      // the pipe above would do nothing. This can happen when the command
-      // interpreter is running and gets a "expression ...". It will be on the
-      // IOHandler thread and sending the input is complete to the delegate
-      // which will cause the expression to run, which will push the process IO
-      // handler, but not run it.
-
-      if (StateIsRunningState(m_process->GetState())) {
-        m_process->SendAsyncInterrupt();
-        return true;
-      }
-    }
-    return false;
-  }
-
-  void GotEOF() override {}
-
-protected:
-  Process *m_process;
-  NativeFile m_read_file;  // Read from this file (usually actual STDIN for LLDB
-  NativeFile m_write_file; // Write to this file (usually the primary pty for
-                           // getting io to debuggee)
-  Pipe m_pipe;
-  std::mutex m_mutex;
-  bool m_is_running = false;
-};
 
 void Process::SetSTDIOFileDescriptor(int fd) {
   // First set up the Read Thread for reading/handling process I/O
@@ -5396,12 +5412,13 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     // still succeed.
     bool miss_first_event = true;
 #endif
+    bool pending_stop_on_vfork_done = false;
 
     // If we spawned an override PST, mark the current (original) PST so
     // GetStackFrameList returns parent frames during event processing.
-    std::optional<PrivateStateThreadGuard> private_state_thread_guard;
+    std::optional<PolicyStack::Guard> policy_guard;
     if (backup_private_state_thread)
-      private_state_thread_guard.emplace();
+      policy_guard.emplace(Policy::PrivateState());
 
     while (true) {
       // We usually want to resume the process if we get to the top of the
@@ -5556,13 +5573,71 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
                 do_resume = false;
                 handle_running_event = true;
               } else {
-                const bool handle_interrupts = true;
-                return_value = *HandleStoppedEvent(
-                    expr_thread_id, thread_plan_sp, thread_plan_restorer,
-                    event_sp, event_to_broadcast_sp, options,
-                    handle_interrupts);
-                if (return_value == eExpressionThreadVanished)
-                  keep_going = false;
+                // Check for fork/vfork/vforkdone stop reasons. DidFork /
+                // DidVFork / DidVForkDone have already been called by
+                // PerformAction (via DoOnRemoval).
+                bool handled_fork = false;
+                if (ThreadSP fork_thread_sp =
+                        GetThreadList().FindThreadByID(expr_thread_id)) {
+                  if (StopInfoSP stop_info_sp = fork_thread_sp->GetStopInfo()) {
+                    StopReason reason = stop_info_sp->GetStopReason();
+                    if (reason == eStopReasonFork ||
+                        reason == eStopReasonVFork ||
+                        reason == eStopReasonVForkDone) {
+                      handled_fork = true;
+                      if (reason == eStopReasonFork &&
+                          options.GetStopOnFork()) {
+                        // Fork + stop-on-fork: DidFork already ran via
+                        // PerformAction. Parent breakpoints are unaffected.
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): stopped for "
+                                       "fork, stop-on-fork is set.");
+                        return_value = eExpressionInterrupted;
+                      } else if (reason == eStopReasonVFork &&
+                                 options.GetStopOnFork()) {
+                        // VFork + stop-on-fork: DidVFork already disabled
+                        // software breakpoints (parent and child share
+                        // address space). Interrupting now would leave the
+                        // user with non-functional breakpoints. Defer the
+                        // stop until vforkdone, when DidVForkDone restores
+                        // breakpoint state.
+                        LLDB_LOGF(log,
+                                  "Process::RunThreadPlan(): got vfork with "
+                                  "stop-on-fork, deferring stop to "
+                                  "vforkdone.");
+                        pending_stop_on_vfork_done = true;
+                        keep_going = true;
+                        do_resume = true;
+                        handle_running_event = true;
+                      } else if (reason == eStopReasonVForkDone &&
+                                 pending_stop_on_vfork_done) {
+                        // Deferred vfork stop: the vfork cycle has
+                        // completed. DidVForkDone has re-enabled software
+                        // breakpoints and decremented
+                        // m_vfork_in_progress_count.
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): vfork cycle "
+                                       "complete, stop-on-fork is set.");
+                        pending_stop_on_vfork_done = false;
+                        return_value = eExpressionInterrupted;
+                      } else {
+                        LLDB_LOGF(log, "Process::RunThreadPlan(): got fork "
+                                       "event, continuing.");
+                        keep_going = true;
+                        do_resume = true;
+                        handle_running_event = true;
+                      }
+                    }
+                  }
+                }
+
+                if (!handled_fork) {
+                  const bool handle_interrupts = true;
+                  return_value = *HandleStoppedEvent(
+                      expr_thread_id, thread_plan_sp, thread_plan_restorer,
+                      event_sp, event_to_broadcast_sp, options,
+                      handle_interrupts);
+                  if (return_value == eExpressionThreadVanished)
+                    keep_going = false;
+                }
               }
             } break;
 
@@ -5745,7 +5820,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
       }
     } // END WAIT LOOP
 
-    private_state_thread_guard.reset();
+    policy_guard.reset();
 
     // If we had to start up a temporary private state thread to run this
     // thread plan, shut it down now.
@@ -5956,7 +6031,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-void Process::GetStatus(Stream &strm) {
+void Process::GetStatus(Stream &strm, bool is_verbose) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {
     if (state == eStateExited) {
@@ -5968,8 +6043,11 @@ void Process::GetStatus(Stream &strm) {
     } else {
       if (state == eStateConnected)
         strm.Printf("Connected to remote target.\n");
-      else
+      else {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
+        if (auto core_args = GetCoreFileArgs(); core_args && is_verbose)
+          core_args->Format(strm);
+      }
     }
   } else {
     strm.Printf("Process %" PRIu64 " is running.\n", GetID());
@@ -6088,6 +6166,7 @@ void Process::Flush() {
   m_extended_thread_stop_id = 0;
   m_queue_list.Clear();
   m_queue_list_stop_id = 0;
+  GetTarget().GetDebugger().FlushStatusLine();
 }
 
 lldb::addr_t Process::GetCodeAddressMask() {
@@ -6346,12 +6425,12 @@ size_t Process::AddImageToken(lldb::addr_t image_ptr) {
 lldb::addr_t Process::GetImagePtrFromToken(size_t token) const {
   if (token < m_image_tokens.size())
     return m_image_tokens[token];
-  return LLDB_INVALID_IMAGE_TOKEN;
+  return LLDB_INVALID_ADDRESS;
 }
 
 void Process::ResetImageToken(size_t token) {
   if (token < m_image_tokens.size())
-    m_image_tokens[token] = LLDB_INVALID_IMAGE_TOKEN;
+    m_image_tokens[token] = LLDB_INVALID_ADDRESS;
 }
 
 Address

@@ -223,7 +223,7 @@
 // NAMESPACE-ELEMENT-MISSING-NAME-NEXT: failed to read BuildNamespaceName from field 'name': expected JSON string
 
 // ============================================================================
-// entityNameFromJSON() errors
+// luEntityNameFromJSON() errors
 // ============================================================================
 
 // RUN: not clang-ssaf-format --type lu %S/Inputs/entity-name-missing-usr.json 2>&1 \
@@ -257,7 +257,7 @@
 // ENTITY-NAME-MISSING-NAMESPACE-NEXT: failed to read NestedBuildNamespace from field 'namespace': expected JSON array
 
 // ============================================================================
-// entityIdTableEntryFromJSON() errors
+// luEntityIdTableEntryFromJSON() errors
 // ============================================================================
 
 // RUN: not clang-ssaf-format --type lu %S/Inputs/id-table-entry-missing-id.json 2>&1 \
@@ -288,7 +288,7 @@
 // ID-TABLE-ENTRY-ID-NOT-UINT64-NEXT: failed to read EntityId from field 'id': expected JSON number (unsigned 64-bit integer)
 
 // ============================================================================
-// entityIdTableFromJSON() errors
+// luEntityIdTableFromJSON() errors
 // ============================================================================
 
 // RUN: not clang-ssaf-format --type lu %S/Inputs/id-table-not-array.json 2>&1 \

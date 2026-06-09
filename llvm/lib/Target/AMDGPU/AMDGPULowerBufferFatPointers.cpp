@@ -975,13 +975,13 @@ bool LegalizeBufferContentTypesVisitor::visitLoadImpl(
     Type *ElemTy = AT->getElementType();
     if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
         ElemTy->isVectorTy()) {
-      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
+      TypeSize ElemAllocSize = DL.getTypeAllocSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= visitLoadImpl(OrigLI, ElemTy, AggIdxs,
-                                 AggByteOff + I * ElemStoreSize.getFixedValue(),
+                                 AggByteOff + I * ElemAllocSize.getFixedValue(),
                                  Result, Name + Twine(I));
         AggIdxs.pop_back();
       }
@@ -1095,14 +1095,14 @@ std::pair<bool, bool> LegalizeBufferContentTypesVisitor::visitStoreImpl(
     Type *ElemTy = AT->getElementType();
     if (!ElemTy->isSingleValueType() || !DL.typeSizeEqualsStoreSize(ElemTy) ||
         ElemTy->isVectorTy()) {
-      TypeSize ElemStoreSize = DL.getTypeStoreSize(ElemTy);
+      TypeSize ElemAllocSize = DL.getTypeAllocSize(ElemTy);
       bool Changed = false;
       for (auto I : llvm::iota_range<uint32_t>(0, AT->getNumElements(),
                                                /*Inclusive=*/false)) {
         AggIdxs.push_back(I);
         Changed |= std::get<0>(visitStoreImpl(
             OrigSI, ElemTy, AggIdxs,
-            AggByteOff + I * ElemStoreSize.getFixedValue(), Name + Twine(I)));
+            AggByteOff + I * ElemAllocSize.getFixedValue(), Name + Twine(I)));
         AggIdxs.pop_back();
       }
       return std::make_pair(Changed, /*ModifiedInPlace=*/false);

@@ -5,7 +5,7 @@
 
 define i32 @f(ptr %p, i32 %n) {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @f(
-; CHECK-SAME: ptr readonly captures(none) [[P:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SKIP:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    br i1 [[SKIP]], label %[[EXIT:.*]], label %[[VECTOR_SCEVCHECK:.*]]

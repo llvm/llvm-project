@@ -38,6 +38,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
@@ -75,6 +76,7 @@
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/UndefPoison.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <algorithm>
 #include <cassert>
@@ -92,7 +94,7 @@ static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
 
 /// Maximum number of instructions to check between assume and context
 /// instruction.
-static constexpr unsigned MaxInstrsToCheckForFree = 16;
+static constexpr unsigned MaxInstrsToCheckForFree = 32;
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -607,40 +609,39 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
 }
 
 static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
-  SmallVector<const Instruction *, 16> WorkSet(1, I);
-  SmallPtrSet<const Instruction *, 32> Visited;
-  SmallPtrSet<const Instruction *, 16> EphValues;
-
   // The instruction defining an assumption's condition itself is always
   // considered ephemeral to that assumption (even if it has other
   // non-ephemeral users). See r246696's test case for an example.
   if (is_contained(I->operands(), E))
     return true;
 
-  while (!WorkSet.empty()) {
-    const Instruction *V = WorkSet.pop_back_val();
-    if (!Visited.insert(V).second)
-      continue;
+  const auto *EI = dyn_cast<Instruction>(E);
+  if (!EI)
+    return false;
 
-    // If all uses of this value are ephemeral, then so is this value.
-    if (all_of(V->users(), [&](const User *U) {
-          return EphValues.count(cast<Instruction>(U));
-        })) {
-      if (V == E)
-        return true;
+  if (EI == I)
+    return true;
 
-      if (V == I || (!V->mayHaveSideEffects() && !V->isTerminator())) {
-        EphValues.insert(V);
-
-        for (const Use &U : V->operands()) {
-          if (const auto *I = dyn_cast<Instruction>(U.get()))
-            WorkSet.push_back(I);
-        }
+  SmallPtrSet<const Instruction *, 16> Visited;
+  SmallVector<const Instruction *, 16> WorkList;
+  Visited.insert(EI);
+  WorkList.push_back(EI);
+  bool ReachesI = false;
+  while (!WorkList.empty()) {
+    const Instruction *V = WorkList.pop_back_val();
+    for (const User *U : V->users()) {
+      const auto *UI = cast<Instruction>(U);
+      if (UI == I) {
+        ReachesI = true;
+        continue;
       }
+      if (UI->mayHaveSideEffects() || UI->isTerminator())
+        return false;
+      if (Visited.insert(UI).second)
+        WorkList.push_back(UI);
     }
   }
-
-  return false;
+  return ReachesI;
 }
 
 // Is this an intrinsic that cannot be speculated but also cannot trap?
@@ -704,43 +705,47 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
   // Helper to check if there are any calls in the range that may free memory.
-  auto hasNoFreeCalls = [](auto Range) {
-    for (const auto &[Idx, I] : enumerate(Range)) {
-      if (Idx > MaxInstrsToCheckForFree)
+  unsigned NumChecked = 0;
+  auto hasNoFreeInRange = [&NumChecked](auto Range) {
+    for (const Instruction &I : Range) {
+      if (NumChecked++ > MaxInstrsToCheckForFree)
         return false;
-      if (const auto *CB = dyn_cast<CallBase>(&I))
+
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (!CB->hasFnAttr(Attribute::NoFree))
           return false;
+      } else if (I.maySynchronize())
+        return false;
     }
     return true;
   };
 
-  // Make sure the current function cannot arrange for another thread to free on
-  // its behalf.
-  if (!CtxI->getFunction()->hasNoSync())
-    return false;
-
-  // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
   BasicBlock::const_iterator CtxIter = CtxI->getIterator();
-  if (CtxBB != AssumeBB) {
-    if (CtxBB->getSinglePredecessor() != AssumeBB)
-      return false;
-
-    if (!hasNoFreeCalls(make_range(CtxBB->begin(), CtxIter)))
-      return false;
-
-    CtxIter = AssumeBB->end();
-  } else {
+  if (CtxBB == AssumeBB) {
     // Same block case: check that Assume comes before CtxI.
-    if (!Assume->comesBefore(CtxI))
+    if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
+    return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
   }
 
-  // Check if there are any calls between Assume and CtxIter that may free
-  // memory.
-  return hasNoFreeCalls(make_range(Assume->getIterator(), CtxIter));
+  // Handle chain of single-predecessor blocks.
+  const BasicBlock *CurBB = CtxBB;
+  while (true) {
+    if (CurBB == AssumeBB)
+      return hasNoFreeInRange(
+          make_range(Assume->getIterator(), AssumeBB->end()));
+
+    const BasicBlock *PredBB = CurBB->getSinglePredecessor();
+    if (!PredBB)
+      return false;
+
+    if (!hasNoFreeInRange(make_range(CurBB->begin(),
+                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
+      return false;
+    CurBB = PredBB;
+  }
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -829,32 +834,25 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (!V->getType()->isPointerTy())
-        continue;
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[Elem.Index])) {
-        if (RK.WasOn != V)
-          continue;
-        bool AssumeImpliesNonNull = [&]() {
-          if (RK.AttrKind == Attribute::NonNull)
-            return true;
+      bool AssumeImpliesNonNull = [&]() {
+        auto OBU = I->getOperandBundleAt(Elem.Index);
+        switch (getBundleAttrFromOBU(OBU)) {
+        case BundleAttr::Dereferenceable: {
+          auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+          return Ptr == V && Count && *Count != 0 &&
+                 !NullPointerIsDefined(Q.CxtI->getFunction(),
+                                       V->getType()->getPointerAddressSpace());
+        }
 
-          if (RK.AttrKind == Attribute::Dereferenceable) {
-            if (NullPointerIsDefined(Q.CxtI->getFunction(),
-                                     V->getType()->getPointerAddressSpace()))
-              return false;
-            assert(RK.IRArgValue &&
-                   "Dereferenceable attribute without IR argument?");
+        case BundleAttr::NonNull:
+          return getAssumeNonNullInfo(OBU).Ptr == V;
 
-            auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
-            return CI && !CI->isZero();
-          }
-
+        default:
           return false;
-        }();
-        if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q.CxtI, Q.DT))
-          return true;
-      }
+        }
+      }();
+      if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q))
+        return true;
       continue;
     }
 
@@ -868,7 +866,7 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
     if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_V, m_Value(RHS))))
       continue;
 
-    if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (cmpExcludesZero(Pred, RHS) && isValidAssumeForContext(I, Q))
       return true;
   }
 
@@ -1090,17 +1088,14 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (!V->getType()->isPointerTy())
-        continue;
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[Elem.Index])) {
-        // Allow AllowEphemerals in isValidAssumeForContext, as the CxtI might
-        // be the producer of the pointer in the bundle. At the moment, align
-        // assumptions aren't optimized away.
-        if (RK.WasOn == V && RK.AttrKind == Attribute::Alignment &&
-            isPowerOf2_64(RK.ArgValue) &&
-            isValidAssumeForContext(I, Q.CxtI, Q.DT, /*AllowEphemerals*/ true))
-          Known.Zero.setLowBits(Log2_64(RK.ArgValue));
+      if (auto OBU = I->getOperandBundleAt(Elem.Index);
+          getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
+        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+        if (Ptr != V || !Alignment || !Offset || !isPowerOf2_64(*Alignment))
+          continue;
+        auto AlignVal = MinAlign(*Offset, *Alignment);
+        if (isValidAssumeForContext(I, Q))
+          Known.Zero.setLowBits(Log2_64(AlignVal));
       }
       continue;
     }
@@ -1111,14 +1106,14 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
 
     Value *Arg = I->getArgOperand(0);
 
-    if (Arg == V && isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+    if (Arg == V && isValidAssumeForContext(I, Q)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
       (void)BitWidth;
       Known.setAllOnes();
       return;
     }
     if (match(Arg, m_Not(m_Specific(V))) &&
-        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+        isValidAssumeForContext(I, Q)) {
       assert(BitWidth == 1 && "assume operand is not i1?");
       (void)BitWidth;
       Known.setAllZero();
@@ -1126,7 +1121,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     }
     auto *Trunc = dyn_cast<TruncInst>(Arg);
     if (Trunc && Trunc->getOperand(0) == V &&
-        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+        isValidAssumeForContext(I, Q)) {
       if (Trunc->hasNoUnsignedWrap()) {
         Known = KnownBits::makeConstant(APInt(BitWidth, 1));
         return;
@@ -1143,7 +1138,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
     if (!Cmp)
       continue;
 
-    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (!isValidAssumeForContext(I, Q))
       continue;
 
     computeKnownBitsFromICmpCond(V, Cmp, Known, Q, /*Invert=*/false);
@@ -1637,6 +1632,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
       Known.Zero.setLowBits(C->countr_zero());
+
+    // shl X, sub(Y, xor(ctlz(X, true), BitWidth-1)) shifts X so that its MSB
+    // lands at bit Y, when BitWidth is a power of 2.
+    const APInt *YC;
+    Value *X = I->getOperand(0);
+    if (isPowerOf2_32(BitWidth) &&
+        match(I->getOperand(1),
+              m_Sub(m_APInt(YC), m_Xor(m_Ctlz(m_Specific(X), m_One()),
+                                       m_SpecificInt(BitWidth - 1)))) &&
+        YC->ult(BitWidth - 1)) {
+      unsigned Y = YC->getZExtValue();
+      Known.One.setBit(Y);
+      Known.Zero.setBitsFrom(Y + 1);
+    }
     break;
   }
   case Instruction::LShr: {
@@ -2082,18 +2091,12 @@ static void computeKnownBitsFromOperator(const Operator *I,
         if (!match(I->getOperand(2), m_APInt(SA)))
           break;
 
-        // Normalize to funnel shift left.
-        uint64_t ShiftAmt = SA->urem(BitWidth);
-        if (II->getIntrinsicID() == Intrinsic::fshr)
-          ShiftAmt = BitWidth - ShiftAmt;
-
         KnownBits Known3(BitWidth);
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known3, Q, Depth + 1);
-
-        Known2 <<= ShiftAmt;
-        Known3 >>= BitWidth - ShiftAmt;
-        Known = Known2.unionWith(Known3);
+        Known = II->getIntrinsicID() == Intrinsic::fshl
+                    ? KnownBits::fshl(Known2, Known3, *SA)
+                    : KnownBits::fshr(Known2, Known3, *SA);
         break;
       }
       case Intrinsic::clmul:
@@ -2641,8 +2644,7 @@ static bool isImpliedToBeAPowerOfTwoFromCond(const Value *V, bool OrZero,
                                              bool CondIsTrue) {
   CmpPredicate Pred;
   const APInt *RHSC;
-  if (!match(Cond, m_ICmp(Pred, m_Intrinsic<Intrinsic::ctpop>(m_Specific(V)),
-                          m_APInt(RHSC))))
+  if (!match(Cond, m_ICmp(Pred, m_Ctpop(m_Specific(V)), m_APInt(RHSC))))
     return false;
   if (!CondIsTrue)
     Pred = ICmpInst::getInversePredicate(Pred);
@@ -2676,7 +2678,7 @@ bool llvm::isKnownToBeAPowerOfTwo(const Value *V, bool OrZero,
       CallInst *I = cast<CallInst>(AssumeVH);
       if (isImpliedToBeAPowerOfTwoFromCond(V, OrZero, I->getArgOperand(0),
                                            /*CondIsTrue=*/true) &&
-          isValidAssumeForContext(I, Q.CxtI, Q.DT))
+          isValidAssumeForContext(I, Q))
         return true;
     }
   }
@@ -3547,7 +3549,8 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     if (I->getType()->isPointerTy()) {
       if (Call->isReturnNonNull())
         return true;
-      if (const auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
+      if (const auto *RP = getArgumentAliasingToReturnedPointer(
+              Call, /*MustPreserveOffset=*/true))
         return isKnownNonZero(RP, Q, Depth);
     } else {
       if (MDNode *Ranges = Q.IIQ.getMetadata(Call, LLVMContext::MD_range))
@@ -4124,7 +4127,7 @@ static bool isKnownNonEqualFromContext(const Value *V1, const Value *V2,
     if (isImpliedCondition(I->getArgOperand(0), ICmpInst::ICMP_NE, V1, V2, Q.DL,
                            /*LHSIsTrue=*/true, Depth)
             .value_or(false) &&
-        isValidAssumeForContext(I, Q.CxtI, Q.DT))
+        isValidAssumeForContext(I, Q))
       return true;
   }
 
@@ -4897,7 +4900,7 @@ static KnownFPClass computeKnownFPClassFromContext(const Value *V,
     assert(I->getIntrinsicID() == Intrinsic::assume &&
            "must be an assume intrinsic");
 
-    if (!isValidAssumeForContext(I, Q.CxtI, Q.DT))
+    if (!isValidAssumeForContext(I, Q))
       continue;
 
     computeKnownFPClassFromCond(V, I->getArgOperand(0),
@@ -6879,38 +6882,38 @@ uint64_t llvm::GetStringLength(const Value *V, unsigned CharSize) {
 
 const Value *
 llvm::getArgumentAliasingToReturnedPointer(const CallBase *Call,
-                                           bool MustPreserveNullness) {
+                                           bool MustPreserveOffset) {
   assert(Call &&
          "getArgumentAliasingToReturnedPointer only works on nonnull calls");
   if (const Value *RV = Call->getReturnedArgOperand())
     return RV;
   // This can be used only as a aliasing property.
   if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-          Call, MustPreserveNullness))
+          Call, MustPreserveOffset))
     return Call->getArgOperand(0);
   return nullptr;
 }
 
 bool llvm::isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-    const CallBase *Call, bool MustPreserveNullness) {
+    const CallBase *Call, bool MustPreserveOffset) {
   switch (Call->getIntrinsicID()) {
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
   case Intrinsic::aarch64_irg:
   case Intrinsic::aarch64_tagp:
   // The amdgcn_make_buffer_rsrc function does not alter the address of the
-  // input pointer (and thus preserve null-ness for the purposes of escape
-  // analysis, which is where the MustPreserveNullness flag comes in to play).
-  // However, it will not necessarily map ptr addrspace(N) null to ptr
-  // addrspace(8) null, aka the "null descriptor", which has "all loads return
-  // 0, all stores are dropped" semantics. Given the context of this intrinsic
-  // list, no one should be relying on such a strict interpretation of
-  // MustPreserveNullness (and, at time of writing, they are not), but we
-  // document this fact out of an abundance of caution.
+  // input pointer (and thus preserves the byte offset, which is the property
+  // the MustPreserveOffset flag selects). However, it will not necessarily
+  // map ptr addrspace(N) null to ptr addrspace(8) null, aka the "null
+  // descriptor", which has "all loads return 0, all stores are dropped"
+  // semantics. Given the context of this intrinsic list, no one should be
+  // relying on such a strict bit-exact null mapping (and, at time of
+  // writing, they are not), but we document this fact out of an abundance
+  // of caution.
   case Intrinsic::amdgcn_make_buffer_rsrc:
     return true;
   case Intrinsic::ptrmask:
-    return !MustPreserveNullness;
+    return !MustPreserveOffset;
   case Intrinsic::threadlocal_address:
     // The underlying variable changes with thread ID. The Thread ID may change
     // at coroutine suspend points.
@@ -6981,7 +6984,8 @@ const Value *llvm::getUnderlyingObject(const Value *V, unsigned MaxLookup) {
         // because it should be in sync with CaptureTracking. Not using it may
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
-        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, false)) {
+        if (auto *RP = getArgumentAliasingToReturnedPointer(
+                Call, /*MustPreserveOffset=*/false)) {
           V = RP;
           continue;
         }
@@ -7295,9 +7299,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     if (mustSuppressSpeculation(*LI))
       return false;
     const DataLayout &DL = LI->getDataLayout();
-    return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
-                                              LI->getType(), LI->getAlign(), DL,
-                                              CtxI, AC, DT, TLI);
+    return isDereferenceableAndAlignedPointer(
+        LI->getPointerOperand(), LI->getType(), LI->getAlign(),
+        SimplifyQuery(DL, TLI, DT, AC, CtxI));
   }
   case Instruction::Call: {
     auto *CI = dyn_cast<const CallInst>(Inst);
@@ -7377,7 +7381,7 @@ llvm::computeConstantRangeIncludingKnownBits(const WithCache<const Value *> &V,
                                              const SimplifyQuery &SQ) {
   ConstantRange CR1 =
       ConstantRange::fromKnownBits(V.getKnownBits(SQ), ForSigned);
-  ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ.IIQ.UseInstrInfo);
+  ConstantRange CR2 = computeConstantRange(V, ForSigned, SQ);
   ConstantRange::PreferredRangeType RangeType =
       ForSigned ? ConstantRange::Signed : ConstantRange::Unsigned;
   return CR1.intersectWith(CR2, RangeType);
@@ -7637,20 +7641,6 @@ static bool shiftAmountKnownInRange(const Value *ShiftAmount) {
   });
 
   return Safe;
-}
-
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-
-static bool includesPoison(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
-}
-
-static bool includesUndef(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
 }
 
 static bool canCreateUndefOrPoison(const Operator *Op, UndefPoisonKind Kind,
@@ -9213,10 +9203,9 @@ SelectPatternResult llvm::matchSelectPattern(Value *V, Value *&LHS, Value *&RHS,
   Value *TrueVal = SI->getTrueValue();
   Value *FalseVal = SI->getFalseValue();
 
-  return llvm::matchDecomposedSelectPattern(
-      CmpI, TrueVal, FalseVal, LHS, RHS,
-      isa<FPMathOperator>(SI) ? SI->getFastMathFlags() : FastMathFlags(),
-      CastOp, Depth);
+  return llvm::matchDecomposedSelectPattern(CmpI, TrueVal, FalseVal, LHS, RHS,
+                                            SI->getFastMathFlagsOrNone(),
+                                            CastOp, Depth);
 }
 
 SelectPatternResult llvm::matchDecomposedSelectPattern(
@@ -9670,12 +9659,12 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
     // further constraint the constant ranges. At the moment this leads to
     // several regressions related to not transforming `multi_use(A + C0) eq/ne
     // C1` (see discussion: D58633).
-    ConstantRange LCR = computeConstantRange(
-        L1, ICmpInst::isSigned(LPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
-        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
-    ConstantRange RCR = computeConstantRange(
-        R1, ICmpInst::isSigned(RPred), /* UseInstrInfo=*/true, /*AC=*/nullptr,
-        /*CxtI=*/nullptr, /*DT=*/nullptr, MaxAnalysisRecursionDepth - 1);
+    SimplifyQuery SQ(DL);
+    ConstantRange LCR = computeConstantRange(L1, ICmpInst::isSigned(LPred), SQ,
+                                             MaxAnalysisRecursionDepth - 1);
+    ConstantRange RCR = computeConstantRange(R1, ICmpInst::isSigned(RPred), SQ,
+                                             MaxAnalysisRecursionDepth - 1);
+
     // Even if L1/R1 are not both constant, we can still sometimes deduce
     // relationship from a single constant. For example X u> Y implies X != 0.
     if (auto R = isImpliedCondCommonOperandWithCR(LPred, LCR, RPred, RCR))
@@ -9860,15 +9849,11 @@ llvm::isImpliedCondition(const Value *LHS, CmpPredicate RHSPred,
 
   // Both LHS and RHS are icmps.
   if (RHSOp0->getType()->getScalarType()->isIntOrPtrTy()) {
-    if (const auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
-      return isImpliedCondICmps(LHSCmp->getCmpPredicate(),
-                                LHSCmp->getOperand(0), LHSCmp->getOperand(1),
-                                RHSPred, RHSOp0, RHSOp1, DL, LHSIsTrue);
-    const Value *V;
-    if (match(LHS, m_NUWTrunc(m_Value(V))))
-      return isImpliedCondICmps(CmpInst::ICMP_NE, V,
-                                ConstantInt::get(V->getType(), 0), RHSPred,
-                                RHSOp0, RHSOp1, DL, LHSIsTrue);
+    CmpPredicate LHSPred;
+    Value *LHSOp0, *LHSOp1;
+    if (match(LHS, m_ICmpLike(LHSPred, m_Value(LHSOp0), m_Value(LHSOp1))))
+      return isImpliedCondICmps(LHSPred, LHSOp0, LHSOp1, RHSPred, RHSOp0,
+                                RHSOp1, DL, LHSIsTrue);
   } else {
     assert(RHSOp0->getType()->isFPOrFPVectorTy() &&
            "Expected floating point type only!");
@@ -9906,10 +9891,11 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     InvertRHS = true;
   }
 
-  if (const ICmpInst *RHSCmp = dyn_cast<ICmpInst>(RHS)) {
-    if (auto Implied = isImpliedCondition(
-            LHS, RHSCmp->getCmpPredicate(), RHSCmp->getOperand(0),
-            RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
+  CmpPredicate RHSPred;
+  Value *RHSOp0, *RHSOp1;
+  if (match(RHS, m_ICmpLike(RHSPred, m_Value(RHSOp0), m_Value(RHSOp1)))) {
+    if (auto Implied = isImpliedCondition(LHS, RHSPred, RHSOp0, RHSOp1, DL,
+                                          LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
   }
@@ -9917,15 +9903,6 @@ std::optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
     if (auto Implied = isImpliedCondition(
             LHS, RHSCmp->getPredicate(), RHSCmp->getOperand(0),
             RHSCmp->getOperand(1), DL, LHSIsTrue, Depth))
-      return InvertRHS ? !*Implied : *Implied;
-    return std::nullopt;
-  }
-
-  const Value *V;
-  if (match(RHS, m_NUWTrunc(m_Value(V)))) {
-    if (auto Implied = isImpliedCondition(LHS, CmpInst::ICMP_NE, V,
-                                          ConstantInt::get(V->getType(), 0), DL,
-                                          LHSIsTrue, Depth))
       return InvertRHS ? !*Implied : *Implied;
     return std::nullopt;
   }
@@ -10416,9 +10393,7 @@ static void setLimitForFPToI(const Instruction *I, APInt &Lower, APInt &Upper) {
 }
 
 ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
-                                         bool UseInstrInfo, AssumptionCache *AC,
-                                         const Instruction *CtxI,
-                                         const DominatorTree *DT,
+                                         const SimplifyQuery &SQ,
                                          unsigned Depth) {
   assert(V->getType()->isIntOrIntVectorTy() && "Expected integer instruction");
 
@@ -10429,23 +10404,26 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     return C->toConstantRange();
 
   unsigned BitWidth = V->getType()->getScalarSizeInBits();
-  InstrInfoQuery IIQ(UseInstrInfo);
   ConstantRange CR = ConstantRange::getFull(BitWidth);
   if (auto *BO = dyn_cast<BinaryOperator>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
     // TODO: Return ConstantRange.
-    setLimitsForBinOp(*BO, Lower, Upper, IIQ, ForSigned);
+    setLimitsForBinOp(*BO, Lower, Upper, SQ.IIQ, ForSigned);
     CR = ConstantRange::getNonEmpty(Lower, Upper);
   } else if (auto *II = dyn_cast<IntrinsicInst>(V))
-    CR = getRangeForIntrinsic(*II, UseInstrInfo);
+    CR = getRangeForIntrinsic(*II, SQ.IIQ.UseInstrInfo);
   else if (auto *SI = dyn_cast<SelectInst>(V)) {
-    ConstantRange CRTrue = computeConstantRange(
-        SI->getTrueValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
-    ConstantRange CRFalse = computeConstantRange(
-        SI->getFalseValue(), ForSigned, UseInstrInfo, AC, CtxI, DT, Depth + 1);
+    ConstantRange CRTrue =
+        computeConstantRange(SI->getTrueValue(), ForSigned, SQ, Depth + 1);
+    ConstantRange CRFalse =
+        computeConstantRange(SI->getFalseValue(), ForSigned, SQ, Depth + 1);
     CR = CRTrue.unionWith(CRFalse);
-    CR = CR.intersectWith(getRangeForSelectPattern(*SI, IIQ));
+    CR = CR.intersectWith(getRangeForSelectPattern(*SI, SQ.IIQ));
+  } else if (auto *TI = dyn_cast<TruncInst>(V)) {
+    ConstantRange SrcCR =
+        computeConstantRange(TI->getOperand(0), ForSigned, SQ, Depth + 1);
+    CR = SrcCR.truncate(BitWidth);
   } else if (isa<FPToUIInst>(V) || isa<FPToSIInst>(V)) {
     APInt Lower = APInt(BitWidth, 0);
     APInt Upper = APInt(BitWidth, 0);
@@ -10457,7 +10435,7 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       CR = *Range;
 
   if (auto *I = dyn_cast<Instruction>(V)) {
-    if (auto *Range = IIQ.getMetadata(I, LLVMContext::MD_range))
+    if (auto *Range = SQ.IIQ.getMetadata(I, LLVMContext::MD_range))
       CR = CR.intersectWith(getConstantRangeFromMetadata(*Range));
 
     Value *FrexpSrc;
@@ -10471,9 +10449,6 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
       // It should be possible to implement this for any type, but this logic
       // only computes the range assuming standard subnormal handling.
       if (APFloat::isIEEELikeFP(FltSem)) {
-        const DataLayout &DL = I->getFunction()->getDataLayout();
-        SimplifyQuery SQ(DL, nullptr, DT, AC, CtxI, UseInstrInfo);
-
         KnownFPClass KnownSrc =
             computeKnownFPClass(FrexpSrc, fcSubnormal, SQ, Depth + 1);
 
@@ -10493,18 +10468,18 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
     }
   }
 
-  if (CtxI && AC) {
+  if (SQ.CxtI && SQ.AC) {
     // Try to restrict the range based on information from assumptions.
-    for (auto &AssumeVH : AC->assumptionsFor(V)) {
+    for (auto &AssumeVH : SQ.AC->assumptionsFor(V)) {
       if (!AssumeVH)
         continue;
       CallInst *I = cast<CallInst>(AssumeVH);
-      assert(I->getParent()->getParent() == CtxI->getParent()->getParent() &&
+      assert(I->getParent()->getParent() == SQ.CxtI->getParent()->getParent() &&
              "Got assumption for the wrong function!");
       assert(I->getIntrinsicID() == Intrinsic::assume &&
              "must be an assume intrinsic");
 
-      if (!isValidAssumeForContext(I, CtxI, DT))
+      if (!isValidAssumeForContext(I, SQ))
         continue;
       Value *Arg = I->getArgOperand(0);
       ICmpInst *Cmp = dyn_cast<ICmpInst>(Arg);
@@ -10513,10 +10488,10 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         continue;
       // TODO: Set "ForSigned" parameter via Cmp->isSigned()?
       ConstantRange RHS =
-          computeConstantRange(Cmp->getOperand(1), /* ForSigned */ false,
-                               UseInstrInfo, AC, I, DT, Depth + 1);
+          computeConstantRange(Cmp->getOperand(1), /*ForSigned=*/false,
+                               SQ.getWithInstruction(I), Depth + 1);
       CR = CR.intersectWith(
-          ConstantRange::makeAllowedICmpRegion(Cmp->getPredicate(), RHS));
+          ConstantRange::makeAllowedICmpRegion(Cmp->getCmpPredicate(), RHS));
     }
   }
 
@@ -10641,7 +10616,7 @@ void llvm::findValuesAffectedByCondition(
         }
       }
 
-      if (HasRHSC && match(A, m_Intrinsic<Intrinsic::ctpop>(m_Value(X))))
+      if (HasRHSC && match(A, m_Ctpop(m_Value(X))))
         AddAffected(X);
     } else if (match(V, m_FCmp(Pred, m_Value(A), m_Value(B)))) {
       AddCmpOperands(A, B);

@@ -63,8 +63,14 @@ function(runtime_register_component name)
   set_property(GLOBAL APPEND PROPERTY SUB_COMPONENTS ${name})
 endfunction()
 
-find_package(LLVM PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-find_package(Clang PATHS "${LLVM_BINARY_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+set(llvm_search_paths "${LLVM_BINARY_DIR}")
+set(clang_search_paths "${LLVM_BINARY_DIR}")
+if(LLVM_BINARY_DIR)
+  list(APPEND llvm_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+  list(APPEND clang_search_paths "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang")
+endif()
+find_package(LLVM PATHS ${llvm_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+find_package(Clang PATHS ${clang_search_paths} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
 set(LLVM_THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../third-party")
 
@@ -223,7 +229,7 @@ set(LLVM_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE}")
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang")
   set(option_prefix "")
-  if (CMAKE_C_SIMULATE_ID MATCHES "MSVC")
+  if (CMAKE_C_COMPILER_FRONTEND_VARIANT MATCHES "MSVC")
     set(option_prefix "/clang:")
   endif()
   set(print_target_triple ${CMAKE_C_COMPILER} ${option_prefix}--target=${LLVM_DEFAULT_TARGET_TRIPLE} ${option_prefix}-print-target-triple)
@@ -268,6 +274,21 @@ cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_DIR)
 cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_PATH)
 cmake_path(NORMAL_PATH RUNTIMES_OUTPUT_RESOURCE_LIB_DIR)
 cmake_path(NORMAL_PATH RUNTIMES_INSTALL_RESOURCE_LIB_PATH)
+
+
+# Code for Fortran support.
+#
+# Currently, only flang-rt and openmp contain Fortran sources. We assume that
+# none of the public CMake variables defined in config-Fortran are used unless
+# we enable one of these runtimes. Other runtimes would make used of undefined
+# variables.
+#
+# config-Fortran.cmake makes use of
+# RUNTIMES_OUTPUT_RESOURCE_DIR, RUNTIMES_INSTALL_RESOURCE_PATH,
+# hence must be included after those variables are defined.
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+  include(config-Fortran)
+endif ()
 
 
 option(LLVM_INCLUDE_TESTS "Generate build targets for the runtimes unit tests." ON)

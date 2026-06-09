@@ -306,7 +306,7 @@ def anyimm3: PatLeaf<(i32 AnyImm3:$Addr)>;
 def f32ImmPred : PatLeaf<(f32 fpimm:$F)>;
 def f64ImmPred : PatLeaf<(f64 fpimm:$F)>;
 def f32zero: PatLeaf<(f32 fpimm:$F), [{
-  return N->isExactlyValue(APFloat::getZero(APFloat::IEEEsingle(), false));
+  return N->isPosZero();
 }]>;
 
 // This complex pattern is really only to detect various forms of
@@ -530,17 +530,22 @@ def: Pat<(i64 (bitconvert F64:$v)), (I64:$v)>;
 def: Pat<(f64 (bitconvert I64:$v)), (F64:$v)>;
 
 // Bit convert 32- and 64-bit types.
-// All of these are bitcastable to one another: i32, v2i16, v4i8.
+// All of these are bitcastable to one another: i32, f32, v2i16, v4i8.
 defm: NopCast_pat<i32,   v2i16, IntRegs>;
 defm: NopCast_pat<i32,    v4i8, IntRegs>;
 defm: NopCast_pat<v2i16,  v4i8, IntRegs>;
-// All of these are bitcastable to one another: i64, v2i32, v4i16, v8i8.
+defm: NopCast_pat<f32,   v2i16, IntRegs>;
+defm: NopCast_pat<f32,    v4i8, IntRegs>;
+// All of these are bitcastable to one another: i64, f64, v2i32, v4i16, v8i8.
 defm: NopCast_pat<i64,   v2i32, DoubleRegs>;
 defm: NopCast_pat<i64,   v4i16, DoubleRegs>;
 defm: NopCast_pat<i64,    v8i8, DoubleRegs>;
 defm: NopCast_pat<v2i32, v4i16, DoubleRegs>;
 defm: NopCast_pat<v2i32,  v8i8, DoubleRegs>;
 defm: NopCast_pat<v4i16,  v8i8, DoubleRegs>;
+defm: NopCast_pat<f64,   v2i32, DoubleRegs>;
+defm: NopCast_pat<f64,   v4i16, DoubleRegs>;
+defm: NopCast_pat<f64,    v8i8, DoubleRegs>;
 
 
 // --(3) Extend/truncate/saturate ----------------------------------------
@@ -1747,9 +1752,17 @@ def n8_0ImmPred: PatLeaf<(i32 imm), [{
   return -255 <= V && V <= 0;
 }]>;
 
+def mulnsw : PatFrag<(ops node:$lhs, node:$rhs),
+                     (mul node:$lhs, node:$rhs), [{
+  return N->getFlags().hasNoSignedWrap();
+}]>;
+
 // Change the sign of the immediate for Rd=-mpyi(Rs,#u8)
 def: Pat<(mul I32:$Rs, n8_0ImmPred:$n8),
          (M2_mpysin I32:$Rs, (NegImm8 imm:$n8))>;
+
+def: Pat<(v2i32 (mulnsw (sext V2I16:$Rs), (sext V2I16:$Rt))),
+         (M2_vmpy2s_s0 V2I16:$Rs, V2I16:$Rt)>;
 
 def: Pat<(add Sext64:$Rs, I64:$Rt),
          (A2_addsp (LoReg Sext64:$Rs), I64:$Rt)>;

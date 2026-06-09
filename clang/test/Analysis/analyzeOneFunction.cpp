@@ -4,7 +4,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s \
 // RUN:   -analyze-function="c:@S@Window@F@overloaded#I#"
 
-// RUN: %clang_extdef_map %s | FileCheck %s
+// RUN: %clang_extdef_map %s -- | FileCheck %s
 // CHECK-DAG: 27:c:@S@Window@F@overloaded#I#
 // CHECK-DAG: 27:c:@S@Window@F@overloaded#C#
 // CHECK-DAG: 27:c:@S@Window@F@overloaded#d#

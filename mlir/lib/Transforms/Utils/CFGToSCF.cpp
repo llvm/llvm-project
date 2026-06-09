@@ -404,9 +404,6 @@ struct ReturnLikeOpEquivalence : public llvm::DenseMapInfo<Operation *> {
   static bool isEqual(const Operation *lhs, const Operation *rhs) {
     if (lhs == rhs)
       return true;
-    if (lhs == getTombstoneKey() || lhs == getEmptyKey() ||
-        rhs == getTombstoneKey() || rhs == getEmptyKey())
-      return false;
     return OperationEquivalence::isEquivalentTo(
         const_cast<Operation *>(lhs), const_cast<Operation *>(rhs),
         OperationEquivalence::ignoreValueEquivalence, nullptr,

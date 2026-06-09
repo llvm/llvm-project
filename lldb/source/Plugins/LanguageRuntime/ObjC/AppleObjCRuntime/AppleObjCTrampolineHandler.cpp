@@ -94,8 +94,6 @@ __lldb_objc_find_implementation_for_selector (void *object,
                                               int is_stret,
                                               int is_super,
                                               int is_super2,
-                                              int is_fixup,
-                                              int is_fixed,
                                               int debug)
 {
   struct __lldb_imp_return_struct {
@@ -122,9 +120,9 @@ __lldb_objc_find_implementation_for_selector (void *object,
   if (debug)
     printf ("\n*** Called with obj: %p sel: %p is_str_ptr: %d "
             "is_stret: %d is_super: %d, "
-            "is_super2: %d, is_fixup: %d, is_fixed: %d\n",
+            "is_super2: %d\n",
              object, sel, is_str_ptr, is_stret,
-             is_super, is_super2, is_fixup, is_fixed);
+             is_super, is_super2);
 
   if (is_str_ptr) {
     if (debug)
@@ -140,6 +138,10 @@ __lldb_objc_find_implementation_for_selector (void *object,
     } else {
       return_struct.class_addr = ((__lldb_objc_super *) object)->class_ptr;
     }
+#if defined(__arm64e__)
+    return_struct.class_addr =
+      __builtin_ptrauth_strip(return_struct.class_addr, /*ptrauth_key_asda*/ 2);
+#endif
     if (debug)
       printf("*** Super, class addr: %p\n", return_struct.class_addr);
   } else {
@@ -163,19 +165,8 @@ __lldb_objc_find_implementation_for_selector (void *object,
     }
   }
 
-  if (is_fixup) {
-    if (is_fixed) {
-        return_struct.sel_addr = ((__lldb_msg_ref *) sel)->sel;
-    } else {
-      char *sel_name = (char *) ((__lldb_msg_ref *) sel)->sel;
-      return_struct.sel_addr = sel_getUid (sel_name);
-      if (debug)
-        printf ("\n*** Got fixed up selector: %p for name %s.\n",
-                return_struct.sel_addr, sel_name);
-    }
-  } else {
-    return_struct.sel_addr = sel;
-  }
+  return_struct.sel_addr = sel;
+
 )";
 
 AppleObjCTrampolineHandler::AppleObjCVTables::VTableRegion::VTableRegion(
@@ -511,44 +502,15 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::IsAddressInVTables(
 
 const AppleObjCTrampolineHandler::DispatchFunction
     AppleObjCTrampolineHandler::g_dispatch_functions[] = {
-        // NAME                              STRET  SUPER  SUPER2  FIXUP TYPE
-        {"objc_msgSend", false, false, false, DispatchFunction::eFixUpNone},
-        {"objc_msgSend_fixup", false, false, false,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSend_fixedup", false, false, false,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSend_stret", true, false, false,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSend_stret_fixup", true, false, false,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSend_stret_fixedup", true, false, false,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSend_fpret", false, false, false,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSend_fpret_fixup", false, false, false,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSend_fpret_fixedup", false, false, false,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSend_fp2ret", false, false, true,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSend_fp2ret_fixup", false, false, true,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSend_fp2ret_fixedup", false, false, true,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSendSuper", false, true, false, DispatchFunction::eFixUpNone},
-        {"objc_msgSendSuper_stret", true, true, false,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSendSuper2", false, true, true, DispatchFunction::eFixUpNone},
-        {"objc_msgSendSuper2_fixup", false, true, true,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSendSuper2_fixedup", false, true, true,
-         DispatchFunction::eFixUpFixed},
-        {"objc_msgSendSuper2_stret", true, true, true,
-         DispatchFunction::eFixUpNone},
-        {"objc_msgSendSuper2_stret_fixup", true, true, true,
-         DispatchFunction::eFixUpToFix},
-        {"objc_msgSendSuper2_stret_fixedup", true, true, true,
-         DispatchFunction::eFixUpFixed},
+        // NAME                              STRET  SUPER  SUPER2
+        {"objc_msgSend", false, false, false},
+        {"objc_msgSend_stret", true, false, false},
+        {"objc_msgSend_fpret", false, false, false},
+        {"objc_msgSend_fp2ret", false, false, true},
+        {"objc_msgSendSuper", false, true, false},
+        {"objc_msgSendSuper_stret", true, true, false},
+        {"objc_msgSendSuper2", false, true, true},
+        {"objc_msgSendSuper2_stret", true, true, true},
 };
 
 // This is the table of ObjC "accelerated dispatch" functions.  They are a set
@@ -793,8 +755,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
   ThreadPlanSP ret_plan_sp;
   lldb::addr_t curr_pc = thread.GetRegisterContext()->GetPC();
 
-  DispatchFunction vtable_dispatch = {"vtable", false, false, false,
-                                      DispatchFunction::eFixUpFixed};
+  DispatchFunction vtable_dispatch = {"vtable", false, false, false};
   // The selector specific stubs are a wrapper for objc_msgSend.  They don't get
   // passed a SEL, but instead the selector string is encoded in the stub
   // name, in the form:
@@ -1038,8 +999,6 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       //                                                          int is_stret,
       //                                                          int is_super,
       //                                                          int is_super2,
-      //                                                          int is_fixup,
-      //                                                          int is_fixed,
       //                                                          int debug)
       // If we don't have an actual SEL, but rather a string version of the
       // selector WE injected, set is_str_ptr to true, and sel to the address
@@ -1080,25 +1039,6 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
         flag_value.GetScalar() = 0;
       dispatch_values.PushValue(flag_value);
 
-      switch (this_dispatch->fixedup) {
-      case DispatchFunction::eFixUpNone:
-        flag_value.GetScalar() = 0;
-        dispatch_values.PushValue(flag_value);
-        dispatch_values.PushValue(flag_value);
-        break;
-      case DispatchFunction::eFixUpFixed:
-        flag_value.GetScalar() = 1;
-        dispatch_values.PushValue(flag_value);
-        flag_value.GetScalar() = 1;
-        dispatch_values.PushValue(flag_value);
-        break;
-      case DispatchFunction::eFixUpToFix:
-        flag_value.GetScalar() = 1;
-        dispatch_values.PushValue(flag_value);
-        flag_value.GetScalar() = 0;
-        dispatch_values.PushValue(flag_value);
-        break;
-      }
       if (log && log->GetVerbose())
         flag_value.GetScalar() = 1;
       else

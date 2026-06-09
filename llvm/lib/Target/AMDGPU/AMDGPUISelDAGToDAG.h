@@ -74,6 +74,7 @@ public:
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
   void SelectVectorShuffle(SDNode *N);
+  bool isSDWAOperand(const SDNode *N) const;
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
@@ -154,7 +155,8 @@ private:
   bool SelectBUFSOffset(SDValue Addr, SDValue &SOffset) const;
 
   bool SelectFlatOffsetImpl(SDNode *N, SDValue Addr, SDValue &VAddr,
-                            SDValue &Offset, uint64_t FlatVariant) const;
+                            SDValue &Offset,
+                            AMDGPU::FlatAddrSpace FlatVariant) const;
   bool SelectFlatOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
                         SDValue &Offset) const;
   bool SelectGlobalOffset(SDNode *N, SDValue Addr, SDValue &VAddr,

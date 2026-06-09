@@ -1134,6 +1134,11 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
+  /// Returns true if the type uses postfix declarator syntax, i.e. the
+  /// declarator component appears after the name (arrays, functions).
+  /// Looks through pointer-like types to the pointee.
+  bool hasPostfixDeclaratorSyntax() const;
+
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -1154,6 +1159,10 @@ public:
 
   /// Returns true if it is a OverflowBehaviorType of Trap kind.
   bool isTrapType() const;
+
+  /// Returns true if this type requires laundering by checking if it is a
+  /// dynamic class type, or contains a subobject which is a dynamic class type.
+  bool requiresBuiltinLaunder(const ASTContext &Context) const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -1962,7 +1971,7 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    static constexpr unsigned NumOfBuiltinTypeBits = 9;
+    static constexpr unsigned NumOfBuiltinTypeBits = 10;
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
@@ -2217,6 +2226,9 @@ protected:
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
+  static constexpr unsigned TemplateTypeParmTypeDepthBits = 15;
+  static constexpr unsigned TemplateTypeParmTypeIndexBits = 16;
+
   class TemplateTypeParmTypeBitfields {
     friend class TemplateTypeParmType;
 
@@ -2224,14 +2236,14 @@ protected:
     unsigned : NumTypeBits;
 
     /// The depth of the template parameter.
-    unsigned Depth : 15;
+    unsigned Depth : TemplateTypeParmTypeDepthBits;
 
     /// Whether this is a template parameter pack.
     LLVM_PREFERRED_TYPE(bool)
     unsigned ParameterPack : 1;
 
     /// The index of the template parameter.
-    unsigned Index : 16;
+    unsigned Index : TemplateTypeParmTypeIndexBits;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
@@ -6729,18 +6741,13 @@ public:
   /// \returns the top-level nullability, if present.
   static NullabilityKindOrNone stripOuterNullability(QualType &T);
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, getAttrKind(), ModifiedType, EquivalentType, Attribute);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
-                      QualType modified, QualType equivalent,
-                      const Attr *attr) {
-    ID.AddInteger(attrKind);
-    ID.AddPointer(modified.getAsOpaquePtr());
-    ID.AddPointer(equivalent.getAsOpaquePtr());
-    ID.AddPointer(attr);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      Kind attrKind, QualType modified, QualType equivalent,
+                      const Attr *attr);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Attributed;
@@ -7053,6 +7060,8 @@ class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
                  (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
         TTPDecl(TTPDecl) {
     assert(!TTPDecl == Canon.isNull());
+    assert(D < (1 << TemplateTypeParmTypeDepthBits) && "Depth too large");
+    assert(I < (1 << TemplateTypeParmTypeIndexBits) && "Index too large");
     TemplateTypeParmTypeBits.Depth = D;
     TemplateTypeParmTypeBits.Index = I;
     TemplateTypeParmTypeBits.ParameterPack = PP;

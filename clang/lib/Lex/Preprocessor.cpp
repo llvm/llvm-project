@@ -357,19 +357,18 @@ void Preprocessor::PrintStats() {
                << llvm::capacity_in_bytes(CommentHandlers) << "\n";
 }
 
-Preprocessor::macro_iterator
-Preprocessor::macro_begin(bool IncludeExternalMacros) const {
+llvm::iterator_range<Preprocessor::macro_iterator>
+Preprocessor::macros(bool IncludeExternalMacros) const {
   if (IncludeExternalMacros && ExternalSource &&
       !ReadMacrosFromExternalSource) {
     ReadMacrosFromExternalSource = true;
     ExternalSource->ReadDefinedMacros();
   }
-
   // Make sure we cover all macros in visible modules.
   for (const ModuleMacro &Macro : ModuleMacros)
     CurSubmoduleState->Macros.try_emplace(Macro.II);
 
-  return CurSubmoduleState->Macros.begin();
+  return CurSubmoduleState->Macros;
 }
 
 size_t Preprocessor::getTotalMemory() const {
@@ -384,17 +383,6 @@ size_t Preprocessor::getTotalMemory() const {
     + llvm::capacity_in_bytes(CommentHandlers);
 }
 
-Preprocessor::macro_iterator
-Preprocessor::macro_end(bool IncludeExternalMacros) const {
-  if (IncludeExternalMacros && ExternalSource &&
-      !ReadMacrosFromExternalSource) {
-    ReadMacrosFromExternalSource = true;
-    ExternalSource->ReadDefinedMacros();
-  }
-
-  return CurSubmoduleState->Macros.end();
-}
-
 /// Compares macro tokens with a specified token value sequence.
 static bool MacroDefinitionEquals(const MacroInfo *MI,
                                   ArrayRef<TokenValue> Tokens) {
@@ -407,10 +395,9 @@ StringRef Preprocessor::getLastMacroWithSpelling(
                                     ArrayRef<TokenValue> Tokens) const {
   SourceLocation BestLocation;
   StringRef BestSpelling;
-  for (Preprocessor::macro_iterator I = macro_begin(), E = macro_end();
-       I != E; ++I) {
-    const MacroDirective::DefInfo
-      Def = I->second.findDirectiveAtLoc(Loc, SourceMgr);
+  for (const auto &M : macros()) {
+    const MacroDirective::DefInfo Def =
+        M.second.findDirectiveAtLoc(Loc, SourceMgr);
     if (!Def || !Def.getMacroInfo())
       continue;
     if (!Def.getMacroInfo()->isObjectLike())
@@ -423,7 +410,7 @@ StringRef Preprocessor::getLastMacroWithSpelling(
         (Location.isValid() &&
          SourceMgr.isBeforeInTranslationUnit(BestLocation, Location))) {
       BestLocation = Location;
-      BestSpelling = I->first->getName();
+      BestSpelling = M.first->getName();
     }
   }
   return BestSpelling;
@@ -930,23 +917,6 @@ bool Preprocessor::HandleIdentifier(Token &Identifier) {
     return hadModuleLoaderFatalFailure();
   }
 
-  // If this is the 'import' contextual keyword following an '@', note
-  // that the next token indicates a module name.
-  //
-  // Note that we do not treat 'import' as a contextual
-  // keyword when we're in a caching lexer, because caching lexers only get
-  // used in contexts where import declarations are disallowed.
-  //
-  // Likewise if this is the standard C++ import keyword.
-  if (((LastTokenWasAt && II.isImportKeyword()) ||
-       Identifier.is(tok::kw_import)) &&
-      !InMacroArgs &&
-      (!DisableMacroExpansion || MacroExpansionInDirectivesOverride) &&
-      CurLexerCallback != CLK_CachingLexer) {
-    ModuleImportLoc = Identifier.getLocation();
-    IsAtImport = true;
-    CurLexerCallback = CLK_LexAfterModuleImport;
-  }
   return true;
 }
 
@@ -1046,7 +1016,6 @@ void Preprocessor::Lex(Token &Result) {
     CheckPointCounter = 0;
   }
 
-  LastTokenWasAt = Result.is(tok::at);
   if (Result.isNot(tok::kw_export))
     LastExportKeyword.startToken();
 
@@ -1385,8 +1354,7 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
       CurPPLexer->ParsingFilename,
       Result.getIdentifierInfo()->isImportKeyword());
 
-  std::optional<Token> NextTok =
-      CurLexer ? CurLexer->peekNextPPToken() : CurTokenLexer->peekNextPPToken();
+  std::optional<Token> NextTok = peekNextPPToken();
   if (!NextTok)
     return false;
 
@@ -1398,7 +1366,6 @@ bool Preprocessor::HandleModuleContextualKeyword(Token &Result) {
                          tok::header_name)) {
       Result.setKind(tok::kw_import);
       ModuleImportLoc = Result.getLocation();
-      IsAtImport = false;
       return true;
     }
   }
@@ -1455,77 +1422,6 @@ void Preprocessor::EnterModuleSuffixTokenStream(ArrayRef<Token> Toks) {
   CurTokenLexer->setLexingCXXModuleDirective();
 }
 
-/// Lex a token following the 'import' contextual keyword.
-///
-///     pp-import: [C++20]
-///           import header-name pp-import-suffix[opt] ;
-///           import header-name-tokens pp-import-suffix[opt] ;
-/// [ObjC]    @ import module-name ;
-/// [Clang]   import module-name ;
-///
-///     header-name-tokens:
-///           string-literal
-///           < [any sequence of preprocessing-tokens other than >] >
-///
-///     module-name:
-///           module-name-qualifier[opt] identifier
-///
-///     module-name-qualifier
-///           module-name-qualifier[opt] identifier .
-///
-/// We respond to a pp-import by importing macros from the named module.
-bool Preprocessor::LexAfterModuleImport(Token &Result) {
-  // Figure out what kind of lexer we actually have.
-  recomputeCurLexerKind();
-
-  SmallVector<Token, 32> Suffix;
-  SmallVector<IdentifierLoc, 3> Path;
-  Lex(Result);
-  if (LexModuleNameContinue(Result, ModuleImportLoc, Suffix, Path,
-                            /*AllowMacroExpansion=*/true,
-                            /*IsPartition=*/false))
-    return CollectPPImportSuffixAndEnterStream(Suffix);
-
-  ModuleNameLoc *NameLoc = ModuleNameLoc::Create(*this, Path);
-  Suffix.clear();
-  Suffix.emplace_back();
-  Suffix.back().setKind(tok::annot_module_name);
-  Suffix.back().setAnnotationRange(NameLoc->getRange());
-  Suffix.back().setAnnotationValue(static_cast<void *>(NameLoc));
-  Suffix.push_back(Result);
-
-  // Consume the pp-import-suffix and expand any macros in it now, if we're not
-  // at the semicolon already.
-  SourceLocation SemiLoc = Result.getLocation();
-  if (Suffix.back().isNot(tok::semi)) {
-    if (Suffix.back().isNot(tok::eof))
-      CollectPPImportSuffix(Suffix);
-    if (Suffix.back().isNot(tok::semi)) {
-      // This is not an import after all.
-      EnterModuleSuffixTokenStream(Suffix);
-      return false;
-    }
-    SemiLoc = Suffix.back().getLocation();
-  }
-
-  Module *Imported = nullptr;
-  if (getLangOpts().Modules) {
-    Imported = TheModuleLoader.loadModule(ModuleImportLoc, Path, Module::Hidden,
-                                          /*IsInclusionDirective=*/false);
-    if (Imported)
-      makeModuleVisible(Imported, SemiLoc);
-  }
-
-  if (Callbacks)
-    Callbacks->moduleImport(ModuleImportLoc, Path, Imported);
-
-  if (!Suffix.empty()) {
-    EnterModuleSuffixTokenStream(Suffix);
-    return false;
-  }
-  return true;
-}
-
 void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
                                      bool IncludeExports) {
   CurSubmoduleState->VisibleModules.setVisible(
@@ -1541,7 +1437,7 @@ void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
 
   // Add this module to the imports list of the currently-built submodule.
   if (!BuildingSubmoduleStack.empty() && M != BuildingSubmoduleStack.back().M)
-    BuildingSubmoduleStack.back().M->Imports.insert(M);
+    BuildingSubmoduleStack.back().M->Imports.push_back(M);
 }
 
 bool Preprocessor::FinishLexStringLiteral(Token &Result, std::string &String,
@@ -1832,6 +1728,17 @@ void Preprocessor::createPreprocessingRecord() {
 
   Record = new PreprocessingRecord(getSourceManager());
   addPPCallbacks(std::unique_ptr<PPCallbacks>(Record));
+}
+
+void Preprocessor::removePPCallbacks() {
+  auto IsPreserved = [&](PPCallbacks *C) {
+    return C == Record || C == DirTracer;
+  };
+  SmallVector<PPCallbacks *, 2> Released;
+  PPCallbacks::releaseIfPreserved(Callbacks, IsPreserved, Released);
+  Callbacks.reset();
+  for (auto *P : Released)
+    addPPCallbacks(std::unique_ptr<PPCallbacks>(P));
 }
 
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {

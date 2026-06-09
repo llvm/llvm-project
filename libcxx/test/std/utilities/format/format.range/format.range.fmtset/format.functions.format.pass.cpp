@@ -12,6 +12,9 @@
 
 // XFAIL: availability-fp_to_chars-missing
 
+// Missing mkstemp
+// XFAIL: LLVM-LIBC-FIXME
+
 // <format>
 
 // template<ranges::input_range R, class charT>

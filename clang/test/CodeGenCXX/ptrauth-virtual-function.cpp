@@ -5,18 +5,18 @@
 
 // CHECK: %[[CLASS_B1:.*]] = type { ptr }
 
-// CHECK: @_ZTV2B1 = unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI2B1, ptr ptrauth (ptr @_ZN2B12m0Ev, i32 0, i64 58196, ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV2B1, i32 0, i32 0, i32 2))] }, align 8
+// CHECK: @_ZTV2B1 = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI2B1, ptr ptrauth (ptr @_ZN2B12m0Ev, i32 0, i64 58196, ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV2B1, i32 0, i32 0, i32 2))] }, align 8
 
 // CHECK: @g_B1 = global %class.B1 { ptr ptrauth (ptr getelementptr inbounds inrange(-16, 8) ({ [3 x ptr] }, ptr @_ZTV2B1, i32 0, i32 0, i32 2), i32 2) }, align 8
 
-// CHECK: @_ZTV2B0 = unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr @_ZTI2B0,
+// CHECK: @_ZTV2B0 = constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr @_ZTI2B0,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2B02m0Ev, i32 0, i64 53119, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV2B0, i32 0, i32 0, i32 2)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2B02m1Ev, i32 0, i64 15165, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV2B0, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2B02m2Ev, i32 0, i64 43073, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV2B0, i32 0, i32 0, i32 4)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2B0D1Ev, i32 0, i64 25525, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV2B0, i32 0, i32 0, i32 5)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2B0D0Ev, i32 0, i64 21295, ptr getelementptr inbounds ({ [7 x ptr] }, ptr @_ZTV2B0, i32 0, i32 0, i32 6))] }, align 8
 
-// CHECK: @_ZTV2D0 = unnamed_addr constant { [9 x ptr] } { [9 x ptr] [ptr null, ptr @_ZTI2D0,
+// CHECK: @_ZTV2D0 = constant { [9 x ptr] } { [9 x ptr] [ptr null, ptr @_ZTI2D0,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D02m0Ev, i32 0, i64 53119, ptr getelementptr inbounds ({ [9 x ptr] }, ptr @_ZTV2D0, i32 0, i32 0, i32 2)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZTch0_h4_N2D02m1Ev, i32 0, i64 15165, ptr getelementptr inbounds ({ [9 x ptr] }, ptr @_ZTV2D0, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2B02m2Ev, i32 0, i64 43073, ptr getelementptr inbounds ({ [9 x ptr] }, ptr @_ZTV2D0, i32 0, i32 0, i32 4)),
@@ -25,7 +25,7 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D02m1Ev, i32 0, i64 35045, ptr getelementptr inbounds ({ [9 x ptr] }, ptr @_ZTV2D0, i32 0, i32 0, i32 7)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D02m3Ev, i32 0, i64 10565, ptr getelementptr inbounds ({ [9 x ptr] }, ptr @_ZTV2D0, i32 0, i32 0, i32 8))] }, align 8
 
-// CHECK: @_ZTV2D1 = unnamed_addr constant { [8 x ptr] } { [8 x ptr] [ptr null, ptr @_ZTI2D1,
+// CHECK: @_ZTV2D1 = constant { [8 x ptr] } { [8 x ptr] [ptr null, ptr @_ZTI2D1,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D12m0Ev, i32 0, i64 53119, ptr getelementptr inbounds ({ [8 x ptr] }, ptr @_ZTV2D1, i32 0, i32 0, i32 2)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZTch0_h4_N2D12m1Ev, i32 0, i64 15165, ptr getelementptr inbounds ({ [8 x ptr] }, ptr @_ZTV2D1, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2B02m2Ev, i32 0, i64 43073, ptr getelementptr inbounds ({ [8 x ptr] }, ptr @_ZTV2D1, i32 0, i32 0, i32 4)),
@@ -33,7 +33,7 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D1D0Ev, i32 0, i64 21295, ptr getelementptr inbounds ({ [8 x ptr] }, ptr @_ZTV2D1, i32 0, i32 0, i32 6)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D12m1Ev, i32 0, i64 52864, ptr getelementptr inbounds ({ [8 x ptr] }, ptr @_ZTV2D1, i32 0, i32 0, i32 7))] }, align 8
 
-// CHECK: @_ZTV2D2 = unnamed_addr constant { [9 x ptr], [8 x ptr] } { [9 x ptr] [ptr null, ptr @_ZTI2D2,
+// CHECK: @_ZTV2D2 = constant { [9 x ptr], [8 x ptr] } { [9 x ptr] [ptr null, ptr @_ZTI2D2,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D22m0Ev, i32 0, i64 53119, ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, i32 0, i32 2)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZTch0_h4_N2D22m1Ev, i32 0, i64 15165, ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2B02m2Ev, i32 0, i64 43073, ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, i32 0, i32 4)),
@@ -49,7 +49,7 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZThn16_N2D2D0Ev, i32 0, i64 21295, ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, i32 1, i32 6)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZThn16_N2D22m1Ev, i32 0, i64 52864, ptr getelementptr inbounds ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, i32 1, i32 7))] }, align 8
 
-// CHECK: @_ZTV2D3 = unnamed_addr constant { [7 x ptr], [7 x ptr], [11 x ptr] } { [7 x ptr] [ptr inttoptr (i64 32 to ptr), ptr null, ptr @_ZTI2D3,
+// CHECK: @_ZTV2D3 = constant { [7 x ptr], [7 x ptr], [11 x ptr] } { [7 x ptr] [ptr inttoptr (i64 32 to ptr), ptr null, ptr @_ZTI2D3,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D32m0Ev, i32 0, i64 44578, ptr getelementptr inbounds ({ [7 x ptr], [7 x ptr], [11 x ptr] }, ptr @_ZTV2D3, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D32m1Ev, i32 0, i64 30766, ptr getelementptr inbounds ({ [7 x ptr], [7 x ptr], [11 x ptr] }, ptr @_ZTV2D3, i32 0, i32 0, i32 4)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2D3D1Ev, i32 0, i64 57279, ptr getelementptr inbounds ({ [7 x ptr], [7 x ptr], [11 x ptr] }, ptr @_ZTV2D3, i32 0, i32 0, i32 5)),
@@ -66,7 +66,7 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZTv0_n48_N2D3D1Ev, i32 0, i64 25525, ptr getelementptr inbounds ({ [7 x ptr], [7 x ptr], [11 x ptr] }, ptr @_ZTV2D3, i32 0, i32 2, i32 9)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZTv0_n48_N2D3D0Ev, i32 0, i64 21295, ptr getelementptr inbounds ({ [7 x ptr], [7 x ptr], [11 x ptr] }, ptr @_ZTV2D3, i32 0, i32 2, i32 10))] }, align 8
 
-// CHECK: @_ZTC2D30_2V0 = unnamed_addr constant { [7 x ptr], [11 x ptr] } { [7 x ptr] [ptr inttoptr (i64 32 to ptr), ptr null, ptr @_ZTI2V0,
+// CHECK: @_ZTC2D30_2V0 = constant { [7 x ptr], [11 x ptr] } { [7 x ptr] [ptr inttoptr (i64 32 to ptr), ptr null, ptr @_ZTI2V0,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2V02m0Ev, i32 0, i64 44578, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC2D30_2V0, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2V02m1Ev, i32 0, i64 30766, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC2D30_2V0, i32 0, i32 0, i32 4)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2V0D1Ev, i32 0, i64 57279, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC2D30_2V0, i32 0, i32 0, i32 5)),
@@ -78,7 +78,7 @@
 // CHECK-SAME: ptr ptrauth (ptr @_ZTv0_n48_N2V0D1Ev, i32 0, i64 25525, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC2D30_2V0, i32 0, i32 1, i32 9)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZTv0_n48_N2V0D0Ev, i32 0, i64 21295, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC2D30_2V0, i32 0, i32 1, i32 10))] }, align 8
 
-// CHECK: @_ZTC2D316_2V1 = unnamed_addr constant { [7 x ptr], [11 x ptr] } { [7 x ptr] [ptr inttoptr (i64 16 to ptr), ptr null, ptr @_ZTI2V1,
+// CHECK: @_ZTC2D316_2V1 = constant { [7 x ptr], [11 x ptr] } { [7 x ptr] [ptr inttoptr (i64 16 to ptr), ptr null, ptr @_ZTI2V1,
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2V12m0Ev, i32 0, i64 49430, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC2D316_2V1, i32 0, i32 0, i32 3)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2V12m1Ev, i32 0, i64 57119, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC2D316_2V1, i32 0, i32 0, i32 4)),
 // CHECK-SAME: ptr ptrauth (ptr @_ZN2V1D1Ev, i32 0, i64 60799, ptr getelementptr inbounds ({ [7 x ptr], [11 x ptr] }, ptr @_ZTC2D316_2V1, i32 0, i32 0, i32 5)),

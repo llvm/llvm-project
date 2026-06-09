@@ -759,7 +759,7 @@ Status PlatformDarwinKernel::GetSharedModuleKext(
 
   // Treat the file's path as a kext bundle ID (e.g.
   // "com.apple.driver.AppleIRController") and search our kext index.
-  ConstString kext_bundle(platform_file.GetPath().c_str());
+  ConstString kext_bundle(platform_file.GetPath());
   // First look through the kext bundles that had a dsym next to them
   if (m_name_to_kext_path_map_with_dsyms.count(kext_bundle) > 0) {
     for (BundleIDToKextIterator it = m_name_to_kext_path_map_with_dsyms.begin();

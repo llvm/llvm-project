@@ -250,14 +250,12 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     Stream &ostrm = result.GetOutputStream();
 
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
-    if (target) {
+    if (target)
       platform_sp = target->GetPlatform();
-    }
-    if (!platform_sp) {
+    if (!platform_sp)
       platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
-    }
     if (platform_sp) {
       platform_sp->GetStatus(ostrm);
       result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -297,7 +295,7 @@ protected:
           result.AppendError(error.AsCString());
         }
       } else {
-        result.AppendErrorWithFormat("%s\n", error.AsCString());
+        result.AppendErrorWithFormat("%s", error.AsCString());
       }
     } else {
       result.AppendError("no platform is currently selected\n");
@@ -394,6 +392,7 @@ protected:
       if (m_option_working_dir.GetOptionValue().OptionWasSet())
         platform_sp->SetWorkingDirectory(
             m_option_working_dir.GetOptionValue().GetCurrentValue());
+      result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       result.AppendError("no platform is currently selected");
     }
@@ -833,8 +832,8 @@ public:
             remote_file_path, local_file_path);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormatv("get-file failed: {0}",
-                                        error.AsCString());
+        result.AppendErrorWithFormatv("get-file failed: {0}",
+                                      error.AsCString());
       }
     } else {
       result.AppendError("no platform currently selected\n");
@@ -879,9 +878,8 @@ public:
                                         remote_file_path.c_str(), size);
         result.SetStatus(eReturnStatusSuccessFinishResult);
       } else {
-        result.AppendMessageWithFormatv(
-            "Error getting file size of {0} (remote)",
-            remote_file_path.c_str());
+        result.AppendErrorWithFormatv("failed to get file size of {0} (remote)",
+                                      remote_file_path.c_str());
       }
     } else {
       result.AppendError("no platform currently selected\n");
@@ -1071,11 +1069,9 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
-    PlatformSP platform_sp;
-    if (target) {
-      platform_sp = target->GetPlatform();
-    }
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    PlatformSP platform_sp = target->GetPlatform();
     if (!platform_sp) {
       platform_sp = GetDebugger().GetPlatformList().GetSelectedPlatform();
     }
@@ -1083,7 +1079,6 @@ protected:
     if (platform_sp) {
       Status error;
       const size_t argc = args.GetArgumentCount();
-      Target *target = m_exe_ctx.GetTargetPtr();
       Module *exe_module = target->GetExecutableModulePointer();
       if (exe_module) {
         m_options.launch_info.GetExecutableFile() = exe_module->GetFileSpec();
@@ -1119,7 +1114,7 @@ protected:
         Debugger &debugger = GetDebugger();
 
         if (argc == 0) {
-          // If no arguments were given to the command, use target.run-args.
+          // If no arguments were given to the command, use target->run-args.
           Args target_run_args;
           target->GetRunArguments(target_run_args);
           m_options.launch_info.GetArguments().AppendArguments(target_run_args);
@@ -1152,6 +1147,7 @@ protected:
         if (rebroadcast_first_stop) {
           assert(first_stop_event_sp);
           process_sp->BroadcastEvent(first_stop_event_sp);
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return;
         }
 
@@ -1184,6 +1180,8 @@ protected:
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return;
         }
+        if (result.GetStatus() != eReturnStatusFailed)
+          result.SetStatus(eReturnStatusSuccessFinishNoResult);
       } else {
         result.AppendError("'platform process launch' uses the current target "
                            "file and arguments, or the executable and its "
@@ -1220,7 +1218,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1242,8 +1240,8 @@ protected:
                                    m_options.show_args, m_options.verbose);
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat(
-              "no process found with pid = %" PRIu64 "\n", pid);
+          result.AppendErrorWithFormat("no process found with pid = %" PRIu64,
+                                       pid);
         }
       } else {
         ProcessInstanceInfoList proc_infos;
@@ -1300,6 +1298,7 @@ protected:
                 ostrm, platform_sp->GetUserIDResolver(), m_options.show_args,
                 m_options.verbose);
           }
+          result.SetStatus(eReturnStatusSuccessFinishResult);
         }
       }
     } else {
@@ -1466,7 +1465,7 @@ public:
 
 protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
-    Target *target = GetDebugger().GetSelectedTarget().get();
+    Target *target = GetTarget();
     PlatformSP platform_sp;
     if (target) {
       platform_sp = target->GetPlatform();
@@ -1502,6 +1501,8 @@ protected:
               ostrm.EOL();
             }
           }
+          if (result.GetStatus() != eReturnStatusFailed)
+            result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           // Not connected...
           result.AppendErrorWithFormatv("not connected to '{0}'",

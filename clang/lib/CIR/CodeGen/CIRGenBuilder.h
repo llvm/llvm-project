@@ -179,20 +179,15 @@ public:
   }
 
   /// Get a CIR record kind from a AST declaration tag.
-  cir::RecordType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
-    switch (kind) {
-    case clang::TagTypeKind::Class:
-      return cir::RecordType::Class;
-    case clang::TagTypeKind::Struct:
-      return cir::RecordType::Struct;
-    case clang::TagTypeKind::Union:
-      return cir::RecordType::Union;
-    case clang::TagTypeKind::Interface:
-      llvm_unreachable("interface records are NYI");
-    case clang::TagTypeKind::Enum:
-      llvm_unreachable("enums are not records");
-    }
-    llvm_unreachable("Unsupported record kind");
+  /// Returns true if the tag kind represents a C++ class (as opposed to a
+  /// plain struct).
+  static bool tagKindIsClass(const clang::TagTypeKind kind) {
+    return kind == clang::TagTypeKind::Class;
+  }
+
+  /// Returns true if the tag kind is a union.
+  static bool tagKindIsUnion(const clang::TagTypeKind kind) {
+    return kind == clang::TagTypeKind::Union;
   }
 
   /// Get a CIR named record type.
@@ -203,12 +198,12 @@ public:
                                              bool packed, bool padded,
                                              llvm::StringRef name) {
     const auto nameAttr = getStringAttr(name);
-    auto kind = cir::RecordType::RecordKind::Struct;
     assert(!cir::MissingFeatures::astRecordDeclAttr());
 
-    // Create or get the record.
-    auto type =
-        getType<cir::RecordType>(members, nameAttr, packed, padded, kind);
+    // Create or get the struct type (named anonymous struct helper — always
+    // struct, never class or union at this call site).
+    auto type = cir::StructType::get(getContext(), members, nameAttr, packed,
+                                     padded, /*is_class=*/false);
 
     // If we found an existing type, verify that either it is incomplete or
     // it matches the requested attributes.
@@ -228,16 +223,16 @@ public:
                                         bool padded = false,
                                         llvm::StringRef name = "");
 
-  /// Get an incomplete CIR struct type. If we have a complete record
+  /// Get an incomplete CIR record type. If we have a complete record
   /// declaration, we may create an incomplete type and then add the
   /// members, so \p rd here may be complete.
   cir::RecordType getIncompleteRecordTy(llvm::StringRef name,
                                         const clang::RecordDecl *rd) {
     const mlir::StringAttr nameAttr = getStringAttr(name);
-    cir::RecordType::RecordKind kind = cir::RecordType::RecordKind::Struct;
-    if (rd)
-      kind = getRecordKind(rd->getTagKind());
-    return getType<cir::RecordType>(nameAttr, kind);
+    if (rd && tagKindIsUnion(rd->getTagKind()))
+      return cir::UnionType::get(getContext(), nameAttr);
+    bool is_class = rd && tagKindIsClass(rd->getTagKind());
+    return cir::StructType::get(getContext(), nameAttr, is_class);
   }
 
   //
@@ -437,12 +432,12 @@ public:
   // Fetch the type representing a pointer to unsigned int8 values.
   cir::PointerType getUInt8PtrTy() { return typeCache.uInt8PtrTy; }
 
-  /// Get a CIR anonymous record type.
-  cir::RecordType getAnonRecordTy(llvm::ArrayRef<mlir::Type> members,
+  /// Get a CIR anonymous struct type.
+  cir::StructType getAnonRecordTy(llvm::ArrayRef<mlir::Type> members,
                                   bool packed = false, bool padded = false) {
     assert(!cir::MissingFeatures::astRecordDeclAttr());
-    auto kind = cir::RecordType::RecordKind::Struct;
-    return getType<cir::RecordType>(members, packed, padded, kind);
+    return cir::StructType::get(getContext(), members, packed, padded,
+                                /*is_class=*/false);
   }
 
   //===--------------------------------------------------------------------===//
@@ -472,61 +467,17 @@ public:
   //===--------------------------------------------------------------------===//
   // UnaryOp creation helpers
   //===--------------------------------------------------------------------===//
-  mlir::Value createNeg(mlir::Value value) {
+  mlir::Value createNeg(mlir::Location loc, mlir::Value value,
+                        bool nsw = false) {
 
     if (auto intTy = mlir::dyn_cast<cir::IntType>(value.getType())) {
       // Source is a unsigned integer: first cast it to signed.
       if (intTy.isUnsigned())
         value = createIntCast(value, getSIntNTy(intTy.getWidth()));
-      return createMinus(value.getLoc(), value);
+      return createMinus(loc, value, nsw);
     }
 
     llvm_unreachable("negation for the given type is NYI");
-  }
-
-  mlir::Value createFNeg(mlir::Value value) {
-    assert(mlir::isa<cir::FPTypeInterface>(value.getType()) &&
-           "Non-fp input type!");
-
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return createMinus(value.getLoc(), value);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // BinaryOp creation helpers
-  //===--------------------------------------------------------------------===//
-  mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::SubOp::create(*this, loc, lhs, rhs);
-  }
-
-  mlir::Value createFAdd(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::AddOp::create(*this, loc, lhs, rhs);
-  }
-
-  mlir::Value createFMul(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::MulOp::create(*this, loc, lhs, rhs);
-  }
-  mlir::Value createFDiv(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
-    assert(!cir::MissingFeatures::metaDataNode());
-    assert(!cir::MissingFeatures::fpConstraints());
-    assert(!cir::MissingFeatures::fastMathFlags());
-
-    return cir::DivOp::create(*this, loc, lhs, rhs);
   }
 
   //===--------------------------------------------------------------------===//
@@ -690,6 +641,29 @@ public:
   Address createComplexImagPtr(mlir::Location loc, Address addr) {
     return Address{createComplexImagPtr(loc, addr.getPointer()),
                    addr.getAlignment()};
+  }
+
+  using CIRBaseBuilderTy::createGetMember;
+  Address createGetMember(mlir::Location loc, Address base,
+                          llvm::StringRef name, unsigned index) {
+    auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
+
+    assert(index < recordTy.getMembers().size() &&
+           "member index out of bounds");
+    mlir::Type memberTy = recordTy.getMembers()[index];
+    mlir::Type memberPtrTy = getPointerTo(memberTy);
+
+    auto moduleOp =
+        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+    mlir::DataLayout layout(moduleOp);
+    auto memberOffset =
+        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+
+    mlir::Value memberPtr =
+        createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);
+    return Address(memberPtr, memberTy,
+                   base.getAlignment().alignmentAtOffset(memberOffset),
+                   base.isKnownNonNull());
   }
 
   cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,

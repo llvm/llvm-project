@@ -22,6 +22,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
@@ -31,8 +32,9 @@ CIRGenFunction::AutoVarEmission
 CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
                                   mlir::OpBuilder::InsertPoint ip) {
   QualType ty = d.getType();
-  if (ty.getAddressSpace() != LangAS::Default)
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
+  assert(
+      ty.getAddressSpace() == LangAS::Default ||
+      (ty.getAddressSpace() == LangAS::opencl_private && getLangOpts().OpenCL));
 
   mlir::Location loc = getLoc(d.getSourceRange());
   bool nrvo =
@@ -203,7 +205,7 @@ static void emitStoresForConstant(CIRGenModule &cgm, const VarDecl &d,
   // The address is usually and alloca, but there is at least one case where
   // emitAutoVarInit is called from the OpenACC codegen with an address that
   // is not an alloca.
-  auto allocaOp = addr.getDefiningOp<cir::AllocaOp>();
+  cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
   if (allocaOp)
     allocaOp.setInitAttr(mlir::UnitAttr::get(&cgm.getMLIRContext()));
 
@@ -303,9 +305,9 @@ void CIRGenFunction::emitAutoVarInit(
     if (!emission.wasEmittedAsOffloadClause()) {
       // In case lv has uses it means we indeed initialized something
       // out of it while trying to build the expression, mark it as such.
-      mlir::Value val = lv.getAddress().getPointer();
-      assert(val && "Should have an address");
-      auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
+      Address addr = lv.getAddress();
+      assert(addr.isValid() && "Should have an address");
+      cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
       assert(allocaOp && "Address should come straight out of the alloca");
 
       if (!allocaOp.use_empty())
@@ -371,8 +373,7 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
       return;
     }
 
-    cir::GlobalLinkageKind linkage =
-        cgm.getCIRLinkageVarDefinition(&d, /*IsConstant=*/false);
+    cir::GlobalLinkageKind linkage = cgm.getCIRLinkageVarDefinition(&d);
 
     // FIXME: We need to force the emission/use of a guard variable for
     // some variables even if we can constant-evaluate them because
@@ -451,6 +452,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
 
   cir::GlobalOp gv = builder.createVersionedGlobal(
       getModule(), getLoc(d.getLocation()), name, lty, false, linkage);
+  insertGlobalSymbol(gv);
   // TODO(cir): infer visibility from linkage in global op builder.
   gv.setVisibility(getMLIRVisibilityFromCIRLinkage(linkage));
   gv.setInitialValueAttr(init);
@@ -460,7 +462,7 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
     gv.setComdat(true);
 
   if (d.getTLSKind())
-    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: TLS");
+    setTLSMode(gv, d);
 
   setGVProperties(gv, &d);
 
@@ -487,10 +489,10 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   }
 
   GlobalDecl gd;
-  if (isa<CXXConstructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ constructors static var context");
-  else if (isa<CXXDestructorDecl>(dc))
-    errorNYI(d.getSourceRange(), "C++ destructors static var context");
+  if (const auto *cd = dyn_cast<CXXConstructorDecl>(dc))
+    gd = GlobalDecl(cd, Ctor_Base);
+  else if (const auto *dd = dyn_cast<CXXDestructorDecl>(dc))
+    gd = GlobalDecl(dd, Dtor_Base);
   else if (const auto *fd = dyn_cast<FunctionDecl>(dc))
     gd = GlobalDecl(fd);
   else {
@@ -546,6 +548,7 @@ Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
     cir::GlobalOp gv = builder.createVersionedGlobal(
         getModule(), getLoc(d.getLocation()), name, ty, isConstant,
         cir::GlobalLinkageKind::PrivateLinkage);
+    insertGlobalSymbol(gv);
     // TODO(cir): infer visibility from linkage in global op builder.
     gv.setVisibility(getMLIRVisibilityFromCIRLinkage(
         cir::GlobalLinkageKind::PrivateLinkage));
@@ -628,7 +631,8 @@ cir::GlobalOp CIRGenFunction::addInitializerToStaticVarDecl(
     // We have a constant initializer, but a nontrivial destructor. We still
     // need to perform a guarded "initialization" in order to register the
     // destructor.
-    cgm.errorNYI(d.getSourceRange(), "C++ guarded init");
+    emitCXXGuardedInit(d, gv, /*performInit=*/false);
+    gvAddr.setStaticLocal(true);
   }
 
   return gv;
@@ -642,7 +646,8 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   cir::GlobalOp globalOp = cgm.getOrCreateStaticVarDecl(d, linkage);
   // TODO(cir): we should have a way to represent global ops as values without
   // having to emit a get global op. Sometimes these emissions are not used.
-  mlir::Value addr = builder.createGetGlobal(globalOp);
+  mlir::Value addr =
+      builder.createGetGlobal(globalOp, d.getTLSKind() != VarDecl::TLS_None);
   auto getAddrOp = addr.getDefiningOp<cir::GetGlobalOp>();
   assert(getAddrOp && "expected cir::GetGlobalOp");
 
@@ -677,7 +682,7 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   // There are a lot of attributes that need to be handled here. Until
   // we start to support them, we just report an error if there are any.
   if (d.hasAttr<AnnotateAttr>())
-    cgm.errorNYI(d.getSourceRange(), "emitStaticVarDecl: Global annotations");
+    cgm.addGlobalAnnotations(&d, var);
   if (d.getAttr<PragmaClangBSSSectionAttr>())
     cgm.errorNYI(d.getSourceRange(),
                  "emitStaticVarDecl: CIR global BSS section attribute");
@@ -832,6 +837,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
 
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }
+  case Decl::ExplicitInstantiation:
   case Decl::StaticAssert: // static_assert(X, ""); [C++0x]
   case Decl::Label:        // __label__ x;
   case Decl::Import:
@@ -896,7 +902,7 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
     QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
     assert(!cir::MissingFeatures::generateDebugInfo());
     if (ty->isVariablyModifiedType())
-      cgm.errorNYI(d.getSourceRange(), "emitDecl: variably modified type");
+      emitVariablyModifiedType(ty);
     return;
   }
   case Decl::ImplicitConceptSpecialization:
@@ -1071,6 +1077,17 @@ void CIRGenFunction::pushIrregularPartialArrayCleanup(mlir::Value arrayBegin,
       destroyer);
 }
 
+/// pushEHDestroyIfNeeded - Push the standard destructor for the given type as
+/// an EH-only cleanup. If EH cleanup is not needed, just return.
+void CIRGenFunction::pushEHDestroyIfNeeded(QualType::DestructionKind dtorKind,
+                                           Address addr, QualType type) {
+  if (!needsEHCleanup(dtorKind))
+    return;
+
+  assert(!cir::MissingFeatures::useEHCleanupForArray());
+  pushDestroy(EHCleanup, addr, type, getDestroyer(dtorKind));
+}
+
 /// Push the standard destructor for the given type as
 /// at least a normal cleanup.
 void CIRGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
@@ -1112,15 +1129,10 @@ void CIRGenFunction::pushLifetimeExtendedDestroy(CleanupKind cleanupKind,
     return;
   }
 
-  // Classic codegen also uses pushDestroyAndDeferDeactivation here to push an
-  // EH cleanup that protects the temporary during the rest of the full
-  // expression, then deactivates it when the full expression ends. Deferred
-  // deactivation is being implemented now, but it wasn't when this code was
-  // implemented. This will be updated in a separate change.
-  if (getLangOpts().Exceptions) {
-    cgm.errorNYI("lifetime-extended cleanup with exceptions enabled");
-    return;
-  }
+  // Add the cleanup to the EHStack. After the full-expr, this would be
+  // deactivated before being popped from the stack.
+  pushDestroyAndDeferDeactivation(cleanupKind, addr, type, destroyer,
+                                  useEHCleanupForArray);
 
   assert(!cir::MissingFeatures::useEHCleanupForArray());
 
@@ -1135,10 +1147,8 @@ void CIRGenFunction::pushPendingCleanupToEHStack(
   if (entry.activeFlag.isValid()) {
     EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
     scope.setActiveFlag(entry.activeFlag);
-    if (scope.isNormalCleanup())
-      scope.setTestFlagInNormalCleanup();
-    if (scope.isEHCleanup())
-      scope.setTestFlagInEHCleanup();
+    scope.setTestFlagInNormalCleanup(scope.isNormalCleanup());
+    scope.setTestFlagInEHCleanup(scope.isEHCleanup());
   }
 }
 

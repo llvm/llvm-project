@@ -96,7 +96,7 @@ class CXXOperatorCallExpr final : public CallExpr {
   CXXOperatorCallExpr(OverloadedOperatorKind OpKind, Expr *Fn,
                       ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
                       SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
-                      ADLCallKind UsesADL);
+                      ADLCallKind UsesADL, bool IsReversed);
 
   CXXOperatorCallExpr(unsigned NumArgs, bool HasFPFeatures, EmptyShell Empty);
 
@@ -105,7 +105,7 @@ public:
   Create(const ASTContext &Ctx, OverloadedOperatorKind OpKind, Expr *Fn,
          ArrayRef<Expr *> Args, QualType Ty, ExprValueKind VK,
          SourceLocation OperatorLoc, FPOptionsOverride FPFeatures,
-         ADLCallKind UsesADL = NotADL);
+         ADLCallKind UsesADL = NotADL, bool IsReversed = false);
 
   static CXXOperatorCallExpr *CreateEmpty(const ASTContext &Ctx,
                                           unsigned NumArgs, bool HasFPFeatures,
@@ -141,6 +141,9 @@ public:
     }
   }
   bool isComparisonOp() const { return isComparisonOp(getOperator()); }
+
+  /// Whether this is a C++20 rewritten reversed operator.
+  bool isReversed() const { return CXXOperatorCallExprBits.IsReversed; }
 
   /// Is this written as an infix binary operator?
   bool isInfixBinaryOp() const;
@@ -4668,12 +4671,12 @@ class SubstNonTypeTemplateParmExpr : public Expr {
   /// The associated declaration and a flag indicating if it was a reference
   /// parameter. For class NTTPs, we can't determine that based on the value
   /// category alone.
-  llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndRef;
+  llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
+
+  QualType ParamType;
 
   unsigned Index : 15;
   unsigned PackIndex : 15;
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned Final : 1;
 
   explicit SubstNonTypeTemplateParmExpr(EmptyShell Empty)
       : Expr(SubstNonTypeTemplateParmExprClass, Empty) {}
@@ -4681,13 +4684,13 @@ class SubstNonTypeTemplateParmExpr : public Expr {
 public:
   SubstNonTypeTemplateParmExpr(QualType Ty, ExprValueKind ValueKind,
                                SourceLocation Loc, Expr *Replacement,
-                               Decl *AssociatedDecl, unsigned Index,
-                               UnsignedOrNone PackIndex, bool RefParam,
+                               Decl *AssociatedDecl, QualType ParamType,
+                               unsigned Index, UnsignedOrNone PackIndex,
                                bool Final)
       : Expr(SubstNonTypeTemplateParmExprClass, Ty, ValueKind, OK_Ordinary),
-        Replacement(Replacement),
-        AssociatedDeclAndRef(AssociatedDecl, RefParam), Index(Index),
-        PackIndex(PackIndex.toInternalRepresentation()), Final(Final) {
+        Replacement(Replacement), AssociatedDeclAndFinal(AssociatedDecl, Final),
+        ParamType(ParamType), Index(Index),
+        PackIndex(PackIndex.toInternalRepresentation()) {
     assert(AssociatedDecl != nullptr);
     SubstNonTypeTemplateParmExprBits.NameLoc = Loc;
     setDependence(computeDependence(this));
@@ -4703,7 +4706,9 @@ public:
 
   /// A template-like entity which owns the whole pattern being substituted.
   /// This will own a set of template parameters.
-  Decl *getAssociatedDecl() const { return AssociatedDeclAndRef.getPointer(); }
+  Decl *getAssociatedDecl() const {
+    return AssociatedDeclAndFinal.getPointer();
+  }
 
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getParameter()->getIndex()`.
@@ -4715,14 +4720,12 @@ public:
 
   // This substitution is Final, which means the substitution is fully
   // sugared: it doesn't need to be resugared later.
-  bool getFinal() const { return Final; }
+  bool getFinal() const { return AssociatedDeclAndFinal.getInt(); }
 
   NonTypeTemplateParmDecl *getParameter() const;
 
-  bool isReferenceParameter() const { return AssociatedDeclAndRef.getInt(); }
-
   /// Determine the substituted type of the template parameter.
-  QualType getParameterType(const ASTContext &Ctx) const;
+  QualType getParameterType() const { return ParamType; }
 
   static bool classof(const Stmt *s) {
     return s->getStmtClass() == SubstNonTypeTemplateParmExprClass;
@@ -5180,10 +5183,6 @@ public:
   }
 
   ArrayRef<Expr *> getInitExprs() const { return getTrailingObjects(NumExprs); }
-
-  ArrayRef<Expr *> getUserSpecifiedInitExprs() {
-    return getTrailingObjects(NumUserSpecifiedExprs);
-  }
 
   ArrayRef<Expr *> getUserSpecifiedInitExprs() const {
     return getTrailingObjects(NumUserSpecifiedExprs);

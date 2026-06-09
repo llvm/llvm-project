@@ -224,6 +224,16 @@ end
 * `BYTE` as synonym for `INTEGER(KIND=1)`; but not when spelled `TYPE(BYTE)`.
 * When kind-param is used for REAL literals, allow a matching exponent letter
 * Quad precision REAL literals with `Q`
+* The `ISO_C_BINDING` module exports the named constants `c_float128` and
+  `c_float128_complex` (both with the value 16), the kind parameter for
+  128-bit (quad precision) real and complex C interoperable types. These
+  extensions are gfortran-compatible.
+* The `ISO_C_BINDING` module exports the named constants `c_float16` and
+  `c_float16_complex` (both with the value 2), the kind parameter for
+  16-bit (half precision) real and complex C interoperable types,
+  corresponding to C `_Float16` (ISO/IEC TS 18661-3). `REAL(KIND=2)` and
+  `COMPLEX(KIND=2)` are accordingly accepted as interoperable types. These
+  extensions are gfortran-compatible.
 * `X` prefix/suffix as synonym for `Z` on hexadecimal literals
 * `B`, `O`, `Z`, and `X` accepted as suffixes as well as prefixes
 * Support for using bare `L` in FORMAT statement
@@ -238,6 +248,7 @@ end
 * `ASSIGN` statement, assigned `GO TO`, and assigned format
 * `PAUSE` statement
 * Hollerith literals and edit descriptors
+* Binary logical edit descriptor B (1/0 vs T/F)
 * `NAMELIST` allowed in the execution part
 * Omitted colons on type declaration statements with attributes
 * COMPLEX constructor expression, e.g. `(x+y,z)`
@@ -345,6 +356,19 @@ end
   with bounds remapping.
 * The `CONTIGUOUS` attribute can be redundantly applied to simply
   contiguous objects, including scalars, with a portability warning.
+* `IS_CONTIGUOUS` is always true when its argument is a named constant
+  (`PARAMETER`) or a subobject of a named constant, even when the standard's
+  rules in F2023 8.5.7 would otherwise classify the subobject as non-contiguous
+  (for example, a strided section like `a(::2)`).  This happens because Flang
+  constant-folds an array section of a named constant into a fresh constant array
+  containing only the selected elements, and that fresh array is trivially
+  contiguous.  When `-pedantic` is enabled, Flang emits the
+  `-Wconstant-is-contiguous` warning at each such call.  For example:
+```fortran
+integer, parameter :: a(5) = [1,2,3,4,5]
+print *, is_contiguous(a(::2))                   ! prints T in Flang
+```
+  Other compilers may report `a(::2)` as non-contiguous.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
   when their calls must nonetheless be distinguishable.
@@ -437,6 +461,15 @@ end
 * A `NAMELIST` input group may omit its trailing `/` character if
   it is followed by another `NAMELIST` input group.
 * A `NAMELIST` input group may begin with either `&` or `$`.
+* In `NAMELIST` input, a `!` character is accepted as terminating the
+  current value and introducing a comment even when it is not preceded
+  by a value separator.  For example, `name=0.01!comment` is accepted
+  as if it had been written `name=0.01 !comment`.  F2023 13.11.3.6 p.1
+  requires a value separator (blank, comma, slash, or end of record)
+  before a `!` comment introducer in namelist input, but gfortran,
+  ifx, and classic nvfortran all accept this form as a widely-used
+  extension.  Inside a character literal constant the `!` is taken
+  literally as required by the standard.
 * A comma (or semicolon in `DECIMAL='COMMA'` or `DC` mode) in a
   fixed-width numeric input field terminates the field rather than
   signaling an invalid character error.
@@ -527,6 +560,14 @@ end program
 * Default exponent of zero, e.g. `3.14159E`, on a READ from a
   fixed-width input field.  Includes the case with only an
   exponent letter for compatibility with other compilers.
+* Allow a data object or function pointer as the `C_LOC()`
+  argument (not just pointers/targets). The compiler will not
+  reason about aliases created through non-target non-pointer
+  arguments and code generated using such aliases may exhibit
+  unexpected behavior. This is for compatibility with
+  legacy code; legacy code should be updated to be correct.
+  This could be removed at any time.
+  [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported
 

@@ -588,6 +588,26 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
   }];
 }
 
+class LLVM_CastOpWithFastMathFlag<string mnemonic, string instName, Type type,
+                  Type resultType, list<Trait> traits = []> :
+    LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
+    LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType);"> {
+  let arguments = (
+    ins type:$arg,
+    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+  let results = (outs resultType:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$arg (`fastmath` `` $fastmathFlags^)? "
+                       "attr-dict `:` type($arg) `to` type($res)";
+  string llvmInstName = instName;
+  string mlirBuilder = [{
+    auto op = $_qualCppClassName::create($_builder,
+      $_location, $_resultType, $arg);
+    moduleImport.setFastmathFlagsAttr(inst, op);
+    $res = op;
+  }];
+}
+
 class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<DereferenceableOpInterface>], traits)> {
@@ -699,10 +719,10 @@ def LLVM_FPToSIOp : LLVM_CastOp<"fptosi", "FPToSI",
 def LLVM_FPToUIOp : LLVM_CastOp<"fptoui", "FPToUI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<AnySignlessInteger>>;
-def LLVM_FPExtOp : LLVM_CastOp<"fpext", "FPExt",
+def LLVM_FPExtOp : LLVM_CastOpWithFastMathFlag<"fpext", "FPExt",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
-def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
+def LLVM_FPTruncOp : LLVM_CastOpWithFastMathFlag<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 
@@ -2118,15 +2138,14 @@ def LLVM_NoneTokenOp
     : LLVM_Op<"mlir.none", [Pure]> {
   let summary = "Defines a value containing an empty token to LLVM type.";
   let description = [{
-    Unlike LLVM IR, MLIR does not have first-class token values. They must be
-    explicitly created as SSA values using `llvm.mlir.none`. This operation has
-    no operands or attributes, and returns a none token value of a wrapped LLVM IR
-    pointer type.
+    MLIR does not have a way to spell the LLVM IR `none` token literal. This
+    operation produces a builtin `!token` SSA value that lowers to
+    `llvm::ConstantTokenNone` in LLVM IR.
 
     Examples:
 
     ```mlir
-    %0 = llvm.mlir.none : !llvm.token
+    %0 = llvm.mlir.none : !token
     ```
   }];
 
@@ -2134,7 +2153,7 @@ def LLVM_NoneTokenOp
     $res = llvm::ConstantTokenNone::get(builder.getContext());
   }];
 
-  let results = (outs LLVM_TokenType:$res);
+  let results = (outs Token:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "attr-dict `:` type($res)";
 }
@@ -2480,6 +2499,71 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
   }];
 
   let hasVerifier = 1;
+}
+
+//===--------------------------------------------------------------------===//
+// MetadataAsValueOp
+//===--------------------------------------------------------------------===//
+
+def LLVM_MetadataAsValueOp
+    : LLVM_Op<"mlir.metadata_as_value", [Pure, ConstantLike]> {
+  let summary =
+      "Wraps an LLVM `metadata` constant so it can be used as an SSA value.";
+  let description = [{
+    Materializes an `!llvm.metadata` SSA value that mirrors LLVM IR's
+    `llvm::MetadataAsValue`: a wrapper that lifts an arbitrary
+    `llvm::Metadata` node into the value domain so it can be used as an
+    operand to instructions that take `metadata` arguments (for example the
+    constrained floating-point intrinsics or `llvm.read_register`).
+
+    The wrapped metadata is described by the `metadata` attribute, which
+    must be one of the LLVM dialect's metadata-attribute classes:
+
+    * `#llvm.md_string<"...">` -> `llvm::MDString`.
+    * `#llvm.md_const<...>` -> `llvm::ConstantAsMetadata`.
+    * `#llvm.md_func<@symbol>` -> `llvm::ValueAsMetadata` of a function.
+    * `#llvm.md_node<...>` -> `llvm::MDNode` over any of the above.
+
+    These can be nested arbitrarily to form metadata trees. Lowering to LLVM
+    IR materialises the corresponding `llvm::Metadata` via the dialect's
+    metadata-attribute converter and wraps the result with
+    `llvm::MetadataAsValue::get(ctx, md)`.
+
+    Example:
+
+    ```mlir
+    // Rounding-mode operand of a constrained-FP intrinsic:
+    %rm = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+        : !llvm.metadata
+    // Named-register metadata for llvm.read_register:
+    %nr = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+        : !llvm.metadata
+    ```
+  }];
+
+  let arguments = (ins LLVM_AnyMDAttr:$metadata);
+  let results = (outs LLVM_MetadataType:$res);
+
+  let assemblyFormat = "$metadata attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Attribute":$metadata), [{
+      build($_builder, $_state,
+            ::mlir::LLVM::LLVMMetadataType::get($_builder.getContext()),
+            metadata);
+    }]>,
+  ];
+
+  let llvmBuilder = [{
+    ::llvm::Metadata *md = convertMetadataAttr(
+        op.getMetadataAttr(), builder, moduleTranslation);
+    if (!md)
+      return ::mlir::emitError(op.getLoc(),
+          "llvm.mlir.metadata_as_value: cannot lower metadata attribute");
+    $res = ::llvm::MetadataAsValue::get(builder.getContext(), md);
+  }];
+
+  let hasFolder = 1;
 }
 
 //===--------------------------------------------------------------------===//

@@ -620,18 +620,33 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
   if (!Diag.hasSourceManager())
     return Result;
 
-  const auto &SM = Diag.getSourceManager();
-  // If we are in a system header, we ignore it. We look at the diagnostic class
-  // because we also want to ignore extensions and warnings in -Werror and
-  // -pedantic-errors modes, which *map* warnings/extensions to errors.
-  //
   // We check both the location-specific state and the ForceSystemWarnings
   // override. In some cases (like template instantiations from system modules),
   // the location-specific state might have suppression enabled, but the
   // engine might have an override (e.g. AllowWarningInSystemHeaders) to show
   // the warning.
   if (State->SuppressSystemWarnings && !Diag.getForceSystemWarnings() &&
-      Loc.isValid() && SM.isInSystemHeader(SM.getExpansionLoc(Loc))) {
+      shouldSuppressAsSystemWarning(DiagID, Loc, Diag)) {
+    return diag::Severity::Ignored;
+  }
+
+  // Clang-diagnostics pragmas always take precedence over suppression mapping.
+  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
+    return diag::Severity::Ignored;
+
+  return Result;
+}
+
+bool DiagnosticIDs::shouldSuppressAsSystemWarning(
+    unsigned DiagID, SourceLocation Loc, const DiagnosticsEngine &Diag) const {
+  if (!Loc.isValid())
+    return false;
+
+  bool IsCustomDiag = DiagnosticIDs::IsCustomDiag(DiagID);
+  const auto &SM = Diag.getSourceManager();
+
+  // If we are in a system header, we ignore it.
+  if (SM.isInSystemHeader(SM.getExpansionLoc(Loc))) {
     bool ShowInSystemHeader = true;
     if (IsCustomDiag)
       ShowInSystemHeader =
@@ -640,25 +655,22 @@ DiagnosticIDs::getDiagnosticSeverity(unsigned DiagID, SourceLocation Loc,
       ShowInSystemHeader = Rec->WarnShowInSystemHeader;
 
     if (!ShowInSystemHeader)
-      return diag::Severity::Ignored;
+      return true;
   }
-  // We also ignore warnings due to system macros. As above, we respect the
-  // ForceSystemWarnings override.
-  if (State->SuppressSystemWarnings && !Diag.getForceSystemWarnings() &&
-      Loc.isValid()) {
-
+  // We also ignore warnings due to system macros.
+  if (Loc.isValid()) {
     bool ShowInSystemMacro = true;
+
+    // FIXME: Respect the "show in system macro" information in the
+    // CustomDiagInfo (which is currently ignored).
+
     if (const StaticDiagInfoRec *Rec = GetDiagInfo(DiagID))
       ShowInSystemMacro = Rec->WarnShowInSystemMacro;
 
     if (!ShowInSystemMacro && SM.isInSystemMacro(Loc))
-      return diag::Severity::Ignored;
+      return true;
   }
-  // Clang-diagnostics pragmas always take precedence over suppression mapping.
-  if (!Mapping.isPragma() && Diag.isSuppressedViaMapping(DiagID, Loc))
-    return diag::Severity::Ignored;
-
-  return Result;
+  return false;
 }
 
 DiagnosticIDs::Class DiagnosticIDs::getDiagClass(unsigned DiagID) const {

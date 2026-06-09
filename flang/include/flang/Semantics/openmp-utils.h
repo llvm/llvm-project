@@ -22,7 +22,9 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 
 #include <memory>
 #include <optional>
@@ -86,25 +88,33 @@ SourcedActionStmt GetActionStmt(const parser::Block &block);
 std::string ThisVersion(unsigned version);
 std::string TryVersion(unsigned version);
 
-const parser::Designator *GetDesignatorFromObj(const parser::OmpObject &object);
-const parser::DataRef *GetDataRefFromObj(const parser::OmpObject &object);
-const parser::ArrayElement *GetArrayElementFromObj(
-    const parser::OmpObject &object);
-const Symbol *GetObjectSymbol(const parser::OmpObject &object);
-std::optional<parser::CharBlock> GetObjectSource(
-    const parser::OmpObject &object);
-const Symbol *GetArgumentSymbol(const parser::OmpArgument &argument);
-const parser::OmpObject *GetArgumentObject(const parser::OmpArgument &argument);
+const Symbol *GetObjectSymbol(
+    const parser::OmpObject &object, bool ultimate = false);
+const Symbol *GetArgumentSymbol(
+    const parser::OmpArgument &argument, bool ultimate = false);
 
 bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsTypeParamInquiry(const Symbol &sym);
+bool IsComplexPart(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
 bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
+
+bool IsExtendedListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsLocatorListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsVariableListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
+
+const Symbol *GetHostSymbol(const Symbol &sym);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
@@ -130,6 +140,26 @@ std::optional<int64_t> GetIntValueFromExpr(
   return std::nullopt;
 }
 
+// There are several clauses that take an optional, compile-time
+// constant bool argument. Those clauses are stored as std::optional, e.g.
+// OmpClause::ReverseOffload -> std::optional<OmpReverseOffloadClause>.
+// Retrieve the logical value if present.
+template <typename ClauseTy>
+std::optional<bool> GetLogicalArgument(
+    const std::optional<ClauseTy> &maybeClause, SemanticsContext &semaCtx) {
+  if (maybeClause) {
+    // Scalar<Logical<Constant<common::Indirection<Expr>>>>
+    auto &parserExpr{parser::UnwrapRef<parser::Expr>(*maybeClause)};
+    evaluate::ExpressionAnalyzer ea{semaCtx};
+    if (auto &&maybeExpr{ea.Analyze(parserExpr)}) {
+      if (auto v{GetLogicalValue(*maybeExpr)}) {
+        return *v;
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
@@ -142,7 +172,26 @@ bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
 
+enum struct ListItemKind : uint32_t {
+  Depend,
+  DirectiveName,
+  DirectiveSpecification,
+  Extended,
+  IntegerExpression,
+  Interop,
+  Locator,
+  Operation,
+  Parameter,
+  ProcedureArgument,
+  Variable,
+};
+
+std::optional<ListItemKind> GetArgumentListItemKind(
+    llvm::omp::Clause clause, unsigned version);
+
 bool IsLoopTransforming(llvm::omp::Directive dir);
+bool HasDataEnvironment(llvm::omp::Directive dir);
+
 bool IsFullUnroll(const parser::OmpDirectiveSpecification &spec);
 
 inline bool IsDoConcurrentLegal(unsigned version) {
@@ -157,7 +206,7 @@ struct LoopControl {
   LoopControl(const parser::LoopControl::Bounds &x);
   LoopControl(const parser::ConcurrentControl &x);
 
-  const Symbol *iv{nullptr};
+  const parser::Name &iv;
   WithSource<MaybeExpr> lbound, ubound, step;
 
 private:
@@ -241,6 +290,15 @@ std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<int64_t> first, std::optional<int64_t> count);
 std::optional<int64_t> GetMinimumSequenceCount(
     std::optional<std::pair<int64_t, int64_t>> range);
+
+/// Collect the set of DO loops present in the source code that are directly
+/// affected by the given loop construct. This does not include any DO loops
+/// that are affected by any construct nested in `x`.
+/// Returns std::nullopt if `x` or code nested in `x` was malformed in a
+/// way that prevented the function from returning an accurate result.
+std::optional<std::vector<const parser::DoConstruct *>> CollectAffectedDoLoops(
+    const parser::OpenMPLoopConstruct &x, unsigned version,
+    SemanticsContext *semaCtx = nullptr);
 
 struct LoopSequence {
   LoopSequence(const parser::ExecutionPartConstruct &root, unsigned version,
@@ -342,6 +400,37 @@ private:
   std::vector<LoopSequence> children_;
   SemanticsContext *semaCtx_{nullptr};
 };
+
+// ---------------------------------------------------------------------------
+// Trait-matching helpers shared between metadirective lowering and
+// declare-variant semantic recording.
+// ---------------------------------------------------------------------------
+
+/// Map a parsed trait-set name to the corresponding LLVM OMP TraitSet enum.
+llvm::omp::TraitSet MapTraitSet(parser::OmpTraitSetSelectorName::Value name);
+
+/// Map a parsed trait-selector name (plus its containing set) to the
+/// corresponding LLVM OMP TraitSelector enum.
+llvm::omp::TraitSelector MapTraitSelector(
+    const parser::OmpTraitSelectorName &name, llvm::omp::TraitSet set);
+
+/// Try to constant-fold a user condition expression to a boolean.
+std::optional<bool> EvaluateUserCondition(
+    SemanticsContext &semaCtx, const parser::ScalarExpr &scalarExpr);
+
+/// Extract the optional score value from trait properties.
+llvm::APInt *GetTraitScore(
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    SemanticsContext &semaCtx, std::optional<llvm::APInt> &scoreStorage);
+
+/// Collect trait property names (vendor, kind, arch, isa, etc.) into a VMI.
+/// Non-name properties (clause, extension) are silently skipped; the caller is
+/// responsible for diagnosing them before invoking this function.
+void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
+    llvm::omp::TraitSet set, llvm::omp::TraitSelector selector,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    llvm::APInt *scorePtr);
+
 } // namespace omp
 } // namespace Fortran::semantics
 

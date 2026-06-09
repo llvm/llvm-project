@@ -538,6 +538,14 @@ def TuningSlowTwoMemOps : SubtargetFeature<"slow-two-mem-ops",
                                      "SlowTwoMemOps", "true",
                                      "Two memory operand instructions are slow">;
 
+// On some processors, indirect calls from memory (CALL [mem]) are slow
+// compared to loading the address first and using a register indirect call.
+// This avoids folding loads into indirect call instructions, but does not
+// affect PUSH from memory folding.
+def TuningSlowIndirectCall : SubtargetFeature<"slow-indirect-call",
+                                     "SlowIndirectCall", "true",
+                                     "Indirect calls from memory are slow">;
+
 // True if the LEA instruction inputs have to be ready at address generation
 // (AG) time.
 def TuningLEAUsesAG : SubtargetFeature<"lea-uses-ag", "LeaUsesAG", "true",
@@ -846,6 +854,9 @@ include "X86SchedIceLake.td"
 include "X86SchedAlderlakeP.td"
 include "X86SchedLunarlakeP.td"
 include "X86SchedSapphireRapids.td"
+include "X86ScheduleC864GM4.td"
+include "X86ScheduleC864GM7.td"
+
 
 //===----------------------------------------------------------------------===//
 // X86 Processor Feature Lists
@@ -1643,7 +1654,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN4Features =
     !listconcat(ZN3Features, ZN4AdditionalFeatures);
 
-  list<SubtargetFeature> ZN5Tuning = ZN4Tuning;
+  list<SubtargetFeature> ZN5AdditionalTuning = [TuningSlowIndirectCall];
+  list<SubtargetFeature> ZN5Tuning =
+    !listconcat(ZN4Tuning, ZN5AdditionalTuning);
   list<SubtargetFeature> ZN5AdditionalFeatures = [FeatureMOVDIRI,
                                                   FeatureMOVDIR64B,
                                                   FeatureVP2INTERSECT,
@@ -1653,7 +1666,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN5Features =
     !listconcat(ZN4Features, ZN5AdditionalFeatures);
 
-  list<SubtargetFeature> ZN6Tuning = ZN5Tuning;
+  list<SubtargetFeature> ZN6Tuning =
+    !listremove(ZN5Tuning, [TuningSlowIndirectCall]);
   list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXNECONVERT,
@@ -1661,6 +1675,84 @@ def ProcessorFeatures {
                                                   ];
   list<SubtargetFeature> ZN6Features =
     !listconcat(ZN5Features, ZN6AdditionalFeatures);
+
+  // Hygon Processors common ISAs
+  list<SubtargetFeature> C864GM4Features = [FeatureADX,
+                                            FeatureAES,
+                                            FeatureAVX2,
+                                            FeatureBMI,
+                                            FeatureBMI2,
+                                            FeatureCLFLUSHOPT,
+                                            FeatureCLZERO,
+                                            FeatureCMOV,
+                                            FeatureCRC32,
+                                            FeatureCX16,
+                                            FeatureF16C,
+                                            FeatureFMA,
+                                            FeatureFSGSBase,
+                                            FeatureFXSR,
+                                            FeatureLAHFSAHF64,
+                                            FeatureLZCNT,
+                                            FeatureMMX,
+                                            FeatureMOVBE,
+                                            FeatureMWAITX,
+                                            FeatureNOPL,
+                                            FeaturePCLMUL,
+                                            FeaturePOPCNT,
+                                            FeaturePRFCHW,
+                                            FeatureRDRAND,
+                                            FeatureRDSEED,
+                                            FeatureSHA,
+                                            FeatureSSE4A,
+                                            FeatureX86_64,
+                                            FeatureX87,
+                                            FeatureXSAVE,
+                                            FeatureXSAVEC,
+                                            FeatureXSAVEOPT,
+                                            FeatureXSAVES];
+  list<SubtargetFeature> C864GM4Tuning = [TuningFastLZCNT,
+                                          TuningFastBEXTR,
+                                          TuningFast15ByteNOP,
+                                          TuningFastScalarFSQRT,
+                                          TuningFastVectorFSQRT,
+                                          TuningFastScalarShiftMasks,
+                                          TuningFastVariablePerLaneShuffle,
+                                          TuningFastMOVBE,
+                                          TuningFastImm16,
+                                          TuningSlowDivide64,
+                                          TuningSlowSHLD,
+                                          TuningSBBDepBreaking,
+                                          TuningInsertVZEROUPPER,
+                                          TuningAllowLight256Bit];
+
+  // C86-4G-M6: same features as M4; kept separate for future differentiation
+  list<SubtargetFeature> C864GM6Features = C864GM4Features;
+  list<SubtargetFeature> C864GM6Tuning = C864GM4Tuning;
+  
+  // C86-4G-M7
+  list<SubtargetFeature> C864GM7AdditionalFeatures = [FeatureAVX512,
+                                                      FeatureBF16,
+                                                      FeatureBITALG,
+                                                      FeatureBWI,
+                                                      FeatureCDI,
+                                                      FeatureCLWB,
+                                                      FeatureDQI,
+                                                      FeatureGFNI,
+                                                      FeatureIFMA,
+                                                      FeatureVAES,
+                                                      FeatureVBMI,
+                                                      FeatureVBMI2,
+                                                      FeatureVLX,
+                                                      FeatureVNNI,
+                                                      FeatureVPCLMULQDQ,
+                                                      FeatureVPOPCNTDQ,
+                                                      FeatureWBNOINVD];
+  list<SubtargetFeature> C864GM7Features =
+    !listconcat(C864GM4Features, C864GM7AdditionalFeatures);
+
+  list<SubtargetFeature> C864GM7AdditionalTuning = [TuningBranchFusion];
+  list<SubtargetFeature> C864GM7Tuning =
+    !listconcat(C864GM4Tuning, C864GM7AdditionalTuning);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2025,6 +2117,15 @@ def : ProcModel<"znver5", Znver4Model, ProcessorFeatures.ZN5Features,
                 ProcessorFeatures.ZN5Tuning>;
 def : ProcModel<"znver6", Znver4Model, ProcessorFeatures.ZN6Features,
                 ProcessorFeatures.ZN6Tuning>;
+
+// Hygon CPUs.
+
+foreach P = ["c86-4g-m4", "c86-4g-m6"] in {
+def : ProcModel<P, C864GM4Model, ProcessorFeatures.C864GM4Features,
+                ProcessorFeatures.C864GM4Tuning>;
+}
+def : ProcModel<"c86-4g-m7", C864GM7Model, ProcessorFeatures.C864GM7Features,
+                ProcessorFeatures.C864GM7Tuning>;
 
 def : Proc<"geode",           [FeatureX87, FeatureCX8, FeatureMMX, FeaturePRFCHW],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;

@@ -111,14 +111,14 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // EXTENDED-LABEL: // LLT Objects.
 // EXTENDED-NEXT:  enum {
+// EXTENDED-NEXT:    GILLT_s32,
 // EXTENDED-NEXT:    GILLT_i32,
-// EXTENDED-NEXT:    GILLT_f32,
 // EXTENDED-NEXT:    GILLT_p0s32,
 // EXTENDED-NEXT:  };
 // EXTENDED-NEXT:  const static size_t NumTypeObjects = 3;
 // EXTENDED-NEXT:  const static LLT TypeObjects[] = {
+// EXTENDED-NEXT:    LLT::scalar(32),
 // EXTENDED-NEXT:    LLT(LLT::Kind::INTEGER, ElementCount::getFixed(0), 32),
-// EXTENDED-NEXT:    LLT(LLT::Kind::FLOAT, ElementCount::getFixed(0), 32, LLT::FpSemantics::S_IEEEsingle),
 // EXTENDED-NEXT:    LLT::pointer(0, 32),
 // EXTENDED-NEXT:  };
 
@@ -185,9 +185,9 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:  };
 
 // CHECK-LABEL:  bool MyTargetInstructionSelector::testMOPredicate_MO(unsigned PredicateID, const MachineOperand & MO, const MatcherState &State) const {
-// CHECK-NEXT:    const auto &Operands = State.RecordedOperands; 
+// CHECK-NEXT:    const auto &Operands = State.RecordedOperands;
 // CHECK-NEXT:    Register Reg = MO.getReg();
-// CHECK-NEXT:    (void)Operands; 
+// CHECK-NEXT:    (void)Operands;
 // CHECK-NEXT:    (void)Reg;
 // CHECK-NEXT:    switch (PredicateID) {
 // CHECK-NEXT:    case GICXXPred_MO_Predicate_leaf: {
@@ -513,8 +513,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00C:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 21 //
 // R00C:       // Label [[PREV_NUM]]: @[[PREV]]
 //
-// R00C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 0 //
-// R00C-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HasA),
+// R00C-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HasA), // Rule ID 0 //
 // R00N-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // R00N-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
 // R00N-NEXT:    // MIs[0] DstI[dst]
@@ -570,7 +569,7 @@ def : Pat<(frag GPR32:$src1, complex:$src2, complex:$src3),
 // R00O-NEXT:  GIM_Reject,
 // R00O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R00O-NEXT:  GIM_Reject,
-// R00O-NEXT:  }; // Size: 1926 bytes
+// R00O-NEXT:  }; // Size: 1930 bytes
 
 def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, GPR32:$src4),
                  [(set GPR32:$dst,
@@ -585,7 +584,7 @@ def INSNBOB : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3, G
 // R01O:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
 // R01O:       // Label [[CASE_INTRINSIC_NUM]]: @[[CASE_INTRINSIC]]
 //
-// R01N:       GIM_Try, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), // Rule ID 0 //
+// R01N:       GIM_Try_CheckFeatures, /*On fail goto*//*Label [[PREV_NUM:[0-9]+]]*/ GIMT_Encode4([[PREV:[0-9]+]]), GIMT_Encode2(GIFBS_HasA), // Rule ID 0 //
 // R01N:       // Label [[PREV_NUM]]: @[[PREV]]
 //
 // R01C-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), // Rule ID 1 //
@@ -817,8 +816,7 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 
 //===- Test a nested instruction match. -----------------------------------===//
 //
-// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// NOOPT-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HasA),
+// NOOPT-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HasA),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
@@ -854,8 +852,7 @@ def : Pat<(not GPR32:$Wm), (ORN R0, GPR32:$Wm)>;
 
 // We also get a second rule by commutativity.
 //
-// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// NOOPT-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HasA),
+// NOOPT-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HasA),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
@@ -896,24 +893,24 @@ def MULADD : I<(outs GPR32:$dst), (ins GPR32:$src1, GPR32:$src2, GPR32:$src3),
 
 //===- Test a simple pattern with a PatLeaf and a predicate. ---------===//
 //
-// NOOPT-NEXT:     /*  882 */ GIM_Try, /*On fail goto*//*Label 13*/ GIMT_Encode4(924), // Rule ID 24 //
-// NOOPT-NEXT:     /*  887 */   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
-// NOOPT-NEXT:     /*  890 */   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
-// NOOPT-NEXT:     /*  894 */   // MIs[0] DstI[dst]
-// NOOPT-NEXT:     /*  894 */   GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
-// NOOPT-NEXT:     /*  897 */   GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
-// NOOPT-NEXT:     /*  901 */   // MIs[0] src1
-// NOOPT-NEXT:     /*  901 */   GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
-// NOOPT-NEXT:     /*  904 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/1, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
-// NOOPT-NEXT:     /*  909 */   // MIs[0] src2
-// NOOPT-NEXT:     /*  909 */   GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
-// NOOPT-NEXT:     /*  912 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/2, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
-// NOOPT-NEXT:     /*  917 */   // (sub:{ *:[i32] } GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src1, GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src2)  =>  (INSN5:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
-// NOOPT-NEXT:     /*  917 */   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::INSN5),
-// NOOPT-NEXT:     /*  922 */   GIR_RootConstrainSelectedInstOperands,
-// NOOPT-NEXT:     /*  923 */   // GIR_Coverage, 24,
-// NOOPT-NEXT:     /*  923 */   GIR_Done,
-// NOOPT-NEXT:     /*  924 */ // Label 13: @924
+// NOOPT-NEXT:     /*  879 */ GIM_Try, /*On fail goto*//*Label 13*/ GIMT_Encode4(921), // Rule ID 24 //
+// NOOPT-NEXT:     /*  884 */   GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
+// NOOPT-NEXT:     /*  887 */   GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
+// NOOPT-NEXT:     /*  891 */   // MIs[0] DstI[dst]
+// NOOPT-NEXT:     /*  891 */   GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// NOOPT-NEXT:     /*  894 */   GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
+// NOOPT-NEXT:     /*  898 */   // MIs[0] src1
+// NOOPT-NEXT:     /*  898 */   GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
+// NOOPT-NEXT:     /*  901 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/1, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
+// NOOPT-NEXT:     /*  906 */   // MIs[0] src2
+// NOOPT-NEXT:     /*  906 */   GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// NOOPT-NEXT:     /*  909 */   GIM_CheckLeafOperandPredicate, /*MI*/0, /*MO*/2, /*Predicate*/GIMT_Encode2(GICXXPred_MO_Predicate_leaf),
+// NOOPT-NEXT:     /*  914 */   // (sub:{ *:[i32] } GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src1, GPR32:{ *:[i32] }<<P:Predicate_leaf>>:$src2)  =>  (INSN5:{ *:[i32] } GPR32:{ *:[i32] }:$src1, GPR32:{ *:[i32] }:$src2)
+// NOOPT-NEXT:     /*  914 */   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::INSN5),
+// NOOPT-NEXT:     /*  919 */   GIR_RootConstrainSelectedInstOperands,
+// NOOPT-NEXT:     /*  920 */   // GIR_Coverage, 24,
+// NOOPT-NEXT:     /*  920 */   GIR_Done,
+// NOOPT-NEXT:     /*  921 */ // Label 13: @921
 
 def leaf: PatLeaf<(i32 GPR32:$src), [{ return true; // C++ code }]> {
   let GISelLeafPredicateCode = [{ return true; }];
@@ -1201,8 +1198,7 @@ def : Pat<(add i32:$src1, i32:$src2),
 
 //===- Test another simple pattern with regclass operands. ----------------===//
 //
-// NOOPT-NEXT:  GIM_Try, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]),
-// NOOPT-NEXT:    GIM_CheckFeatures, GIMT_Encode2(GIFBS_HasA_HasB_HasC),
+// NOOPT-NEXT:  GIM_Try_CheckFeatures, /*On fail goto*//*Label [[LABEL_NUM:[0-9]+]]*/ GIMT_Encode4([[LABEL:[0-9]+]]), GIMT_Encode2(GIFBS_HasA_HasB_HasC),
 // NOOPT-NEXT:    GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // NOOPT-NEXT:    GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // NOOPT-NEXT:    // MIs[0] DstI[dst]
@@ -1292,5 +1288,5 @@ def BR : I<(outs), (ins unknown:$target),
             [(br bb:$target)]>;
 
 // NOOPT-NEXT:    GIM_Reject,
-// NOOPT-NEXT:  }; // Size: 1501 bytes
+// NOOPT-NEXT:  }; // Size: 1497 bytes
 // NOOPT-NEXT:  return MatchTable0;

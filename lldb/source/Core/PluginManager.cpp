@@ -76,15 +76,50 @@ private:
 
 typedef llvm::SmallDenseMap<FileSpec, PluginInfo> DynamicPluginMap;
 
-static std::recursive_mutex &GetPluginMapMutex() {
-  static std::recursive_mutex g_plugin_map_mutex;
-  return g_plugin_map_mutex;
+namespace {
+enum class PluginLifecycle { Uninitialized, Initialized, Terminated };
+
+struct PluginRegistry {
+  std::recursive_mutex mutex;
+  DynamicPluginMap map;
+
+  void Initialize() {
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    lifecycle = PluginLifecycle::Initialized;
+  }
+
+  void Terminate() {
+    std::lock_guard<std::recursive_mutex> guard(mutex);
+    lifecycle = PluginLifecycle::Terminated;
+    map.clear();
+  }
+
+  // Only after Terminate() is a leftover PluginInstances registration a bug;
+  // exiting in any other state (e.g. `import lldb`, which never calls
+  // Terminate()) is supported and leaves plugins registered.
+  bool IsTerminated() const { return lifecycle == PluginLifecycle::Terminated; }
+
+private:
+  PluginLifecycle lifecycle = PluginLifecycle::Uninitialized;
+};
+} // namespace
+
+// Never destroyed: at static-destruction time the PluginInstances containers
+// (separate statics, arbitrary teardown order) still call IsTerminated(), and
+// the map's PluginInfo terminate callbacks must not run when the containers
+// they unregister from may already be gone. Terminate() clears the map
+// explicitly while everything is alive. The static pointer keeps it reachable,
+// so this is not a LeakSanitizer leak.
+static PluginRegistry &GetPluginRegistry() {
+  static PluginRegistry *g_registry = new PluginRegistry();
+  return *g_registry;
 }
 
-static DynamicPluginMap &GetPluginMap() {
-  static DynamicPluginMap g_plugin_map;
-  return g_plugin_map;
+static std::recursive_mutex &GetPluginMapMutex() {
+  return GetPluginRegistry().mutex;
 }
+
+static DynamicPluginMap &GetPluginMap() { return GetPluginRegistry().map; }
 
 static bool PluginIsLoaded(const FileSpec &plugin_file_spec) {
   std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
@@ -234,6 +269,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
 }
 
 void PluginManager::Initialize() {
+  GetPluginRegistry().Initialize();
+
   static const bool find_directories = true;
   static const bool find_files = true;
   static const bool find_other = true;
@@ -256,10 +293,7 @@ void PluginManager::Initialize() {
   }
 }
 
-void PluginManager::Terminate() {
-  std::lock_guard<std::recursive_mutex> guard(GetPluginMapMutex());
-  GetPluginMap().clear();
-}
+void PluginManager::Terminate() { GetPluginRegistry().Terminate(); }
 
 llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
   static PluginNamespace PluginNamespaces[] = {
@@ -494,6 +528,9 @@ template <typename Callback> struct PluginInstance {
 template <typename Instance> class PluginInstances {
 public:
   ~PluginInstances() {
+    // Only meaningful after a real teardown; see PluginRegistry::IsTerminated.
+    if (!GetPluginRegistry().IsTerminated())
+      return;
 #ifndef NDEBUG
     for (const auto &instance : m_instances)
       llvm::errs() << llvm::formatv("Use `image lookup -va {0:x}` to find out "
@@ -571,13 +608,13 @@ public:
   // Note that this is a copy of the internal state so modifications
   // to the returned instances will not be reflected back to instances
   // stored by the PluginInstances object.
-  llvm::SmallVector<Instance> GetSnapshot() const {
+  llvm::SmallVector<Instance> GetSnapshot(bool enabled_only = true) const {
     std::lock_guard<std::mutex> guard(m_mutex);
 
     llvm::SmallVector<Instance> enabled_instances;
     enabled_instances.reserve(m_instances.size());
     for (const auto &instance : m_instances) {
-      if (instance.enabled)
+      if (!enabled_only || instance.enabled)
         enabled_instances.push_back(instance);
     }
     return enabled_instances;
@@ -590,17 +627,33 @@ public:
         [&](const Instance &instance) { return count++ == idx; });
   }
 
-  std::optional<Instance> GetInstanceForName(llvm::StringRef name) {
+  std::optional<Instance> GetInstanceForName(llvm::StringRef name,
+                                             bool enabled_only = true) {
     if (name.empty())
       return std::nullopt;
 
-    return FindEnabledInstance(
-        [&](const Instance &instance) { return instance.name == name; });
+    auto predicate = [&](const Instance &instance) {
+      return instance.name == name;
+    };
+    if (enabled_only)
+      return FindEnabledInstance(predicate);
+
+    return FindInstance(predicate);
   }
 
   std::optional<Instance>
   FindEnabledInstance(std::function<bool(const Instance &)> predicate) const {
     for (const auto &instance : GetSnapshot()) {
+      if (predicate(instance))
+        return instance;
+    }
+    return std::nullopt;
+  }
+
+  std::optional<Instance>
+  FindInstance(std::function<bool(const Instance &)> predicate) const {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    for (const auto &instance : m_instances) {
       if (predicate(instance))
         return instance;
     }
@@ -1859,8 +1912,16 @@ struct InstrumentationRuntimeInstance
   InstrumentationRuntimeGetType get_type_callback = nullptr;
 };
 
-typedef PluginInstances<InstrumentationRuntimeInstance>
-    InstrumentationRuntimeInstances;
+struct InstrumentationRuntimeInstances
+    : public PluginInstances<InstrumentationRuntimeInstance> {
+
+  InstrumentationRuntimeGetType GetTypeCallbackForName(llvm::StringRef name,
+                                                       bool enabled_only) {
+    if (auto instance = GetInstanceForName(name, enabled_only))
+      return instance->get_type_callback;
+    return nullptr;
+  }
+};
 
 static InstrumentationRuntimeInstances &GetInstrumentationRuntimeInstances() {
   static InstrumentationRuntimeInstances g_instances;
@@ -1881,8 +1942,9 @@ bool PluginManager::UnregisterPlugin(
 }
 
 llvm::SmallVector<InstrumentationRuntimeCallbacks>
-PluginManager::GetInstrumentationRuntimeCallbacks() {
-  auto instances = GetInstrumentationRuntimeInstances().GetSnapshot();
+PluginManager::GetInstrumentationRuntimeCallbacks(bool enabled_only) {
+  auto instances =
+      GetInstrumentationRuntimeInstances().GetSnapshot(enabled_only);
   llvm::SmallVector<InstrumentationRuntimeCallbacks> result;
   result.reserve(instances.size());
   for (auto &instance : instances)
@@ -2462,9 +2524,29 @@ llvm::SmallVector<RegisteredPluginInfo>
 PluginManager::GetInstrumentationRuntimePluginInfo() {
   return GetInstrumentationRuntimeInstances().GetPluginInfoForAllInstances();
 }
-bool PluginManager::SetInstrumentationRuntimePluginEnabled(llvm::StringRef name,
-                                                           bool enable) {
-  return GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable);
+
+llvm::StringRef PluginManager::PluginDomainKindToStr(PluginDomainKind kind) {
+  switch (kind) {
+  case ePluginDomainKindGlobal:
+    return "global";
+  case ePluginDomainKindDebugger:
+    return "debugger";
+  case ePluginDomainKindTarget:
+    return "target";
+  }
+  llvm_unreachable("unhandled PluginDomainKind");
+}
+
+llvm::Error PluginManager::SetInstrumentationRuntimePluginEnabled(
+    llvm::StringRef name, bool enable, Debugger &requesting_debugger,
+    PluginDomainKind domain) {
+  if (domain != lldb::ePluginDomainKindGlobal)
+    return llvm::createStringErrorV("{} domain is not supported",
+                                    PluginDomainKindToStr(domain));
+  if (!GetInstrumentationRuntimeInstances().SetInstanceEnabled(name, enable))
+    return llvm::createStringError("plugin could not be found");
+
+  return llvm::Error::success();
 }
 
 llvm::SmallVector<RegisteredPluginInfo>

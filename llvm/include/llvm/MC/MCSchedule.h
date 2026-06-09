@@ -32,6 +32,12 @@ class MCInst;
 class MCInstrDesc;
 class InstrItineraryData;
 
+namespace cl {
+class OptionCategory;
+}
+
+extern cl::OptionCategory MCScheduleOptions;
+
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
   const char *Name;
@@ -419,6 +425,11 @@ struct MCSchedModel {
   /// Returns the bypass delay cycle for the maximum latency write cycle
   LLVM_ABI static unsigned getBypassDelayCycles(const MCSubtargetInfo &STI,
                                                 const MCSchedClassDesc &SCDesc);
+
+  /// Return the buffer size of the resource. If a positive scale factor
+  /// is provided and the original buffer size is > 1, the size is scaled
+  /// accordingly.
+  LLVM_ABI int getResourceBufferSize(unsigned ProcResourceIdx) const;
 
   /// Returns the default initialized model.
   LLVM_ABI static const MCSchedModel Default;
