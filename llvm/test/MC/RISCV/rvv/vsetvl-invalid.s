@@ -33,8 +33,8 @@
 # CHECK: vsetivli a1, 0x10, 0x38
 .insn 4, 0xc38875d7
 
-# CHECK: vsetivli a1, 0x10, 0x103
-.insn 4, 0xd03875d7
+# CHECK: vsetivli a1, 0x10, 0x203
+.insn 4, 0xe03875d7
 
 # CHECK: vsetivli a1, 0x10, e8, mf4, tu, mu
 .insn 4, 0xc06875d7
