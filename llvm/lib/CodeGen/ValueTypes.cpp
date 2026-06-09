@@ -252,6 +252,29 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   default:
     if (HandleUnknown) return MVT(MVT::Other);
     llvm_unreachable("Unknown type!");
+  case Type::PointerTyID: {
+    if (HandleUnknown)
+      return MVT(MVT::Other);
+    // A pointer normally cannot be lowered to a value type without a
+    // DataLayout, so it is an "unknown" type here. The exception is the
+    // WebAssembly reference types: EVT::getTypeForEVT maps MVT::externref /
+    // MVT::funcref to opaque pointers in address spaces 10 and 20, and that
+    // mapping has to be invertible so that DataLayout-free EVT helpers can
+    // recover the element type of an <N x externref> / <N x funcref> vector
+    // during type legalization instead of crashing.
+    //
+    // Address spaces 10 and 20 are not reserved for WebAssembly, but a target
+    // only reaches this code with such a pointer if it first produced an
+    // externref/funcref MVT, which only WebAssembly does.
+    switch (cast<PointerType>(Ty)->getAddressSpace()) {
+    case 10:
+      return MVT(MVT::externref);
+    case 20:
+      return MVT(MVT::funcref);
+    default:
+      llvm_unreachable("Unknown type!");
+    }
+  }
   case Type::VoidTyID:
     return MVT::isVoid;
   case Type::ByteTyID:
