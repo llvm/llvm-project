@@ -923,61 +923,61 @@ bool LoopInterchangeLegality::isLoopStructureUnderstood() {
       dyn_cast<CondBrInst>(InnerLoopLatch->getTerminator());
   if (!InnerLoopLatchBI)
     return false;
-  if (CmpInst *InnerLoopCmp =
-          dyn_cast<CmpInst>(InnerLoopLatchBI->getCondition())) {
-    Value *Op0 = InnerLoopCmp->getOperand(0);
-    Value *Op1 = InnerLoopCmp->getOperand(1);
 
-    // LHS and RHS of the inner loop exit condition, e.g.,
-    // in "for(int j=0;j<i;j++)", LHS is j and RHS is i.
-    Value *Left = nullptr;
-    Value *Right = nullptr;
-
-    // Check if V only involves inner loop induction variable.
-    // Return true if V is InnerInduction, or a cast from
-    // InnerInduction, or a binary operator that involves
-    // InnerInduction and a constant.
-    std::function<bool(Value *)> IsPathToInnerIndVar;
-    IsPathToInnerIndVar = [this, &IsPathToInnerIndVar](const Value *V) -> bool {
-      if (llvm::is_contained(InnerLoopInductions, V))
-        return true;
-      if (isa<Constant>(V))
-        return true;
-      const Instruction *I = dyn_cast<Instruction>(V);
-      if (!I)
-        return false;
-      if (isa<CastInst>(I))
-        return IsPathToInnerIndVar(I->getOperand(0));
-      if (isa<BinaryOperator>(I))
-        return IsPathToInnerIndVar(I->getOperand(0)) &&
-               IsPathToInnerIndVar(I->getOperand(1));
-      return false;
-    };
-
-    // In case of multiple inner loop indvars, it is okay if LHS and RHS
-    // are both inner indvar related variables.
-    if (IsPathToInnerIndVar(Op0) && IsPathToInnerIndVar(Op1))
-      return true;
-
-    // Otherwise we check if the cmp instruction compares an inner indvar
-    // related variable (Left) with a outer loop invariant (Right).
-    if (IsPathToInnerIndVar(Op0) && !isa<Constant>(Op0)) {
-      Left = Op0;
-      Right = Op1;
-    } else if (IsPathToInnerIndVar(Op1) && !isa<Constant>(Op1)) {
-      Left = Op1;
-      Right = Op0;
-    }
-
-    if (Left == nullptr)
-      return false;
-
-    const SCEV *S = SE->getSCEV(Right);
-    if (!SE->isLoopInvariant(S, OuterLoop))
-      return false;
-  } else {
+  CmpInst *InnerLoopCmp = dyn_cast<CmpInst>(InnerLoopLatchBI->getCondition());
+  if (!InnerLoopCmp)
     return false;
+
+  Value *Op0 = InnerLoopCmp->getOperand(0);
+  Value *Op1 = InnerLoopCmp->getOperand(1);
+
+  // LHS and RHS of the inner loop exit condition, e.g.,
+  // in "for(int j=0;j<i;j++)", LHS is j and RHS is i.
+  Value *Left = nullptr;
+  Value *Right = nullptr;
+
+  // Check if V only involves inner loop induction variable.
+  // Return true if V is InnerInduction, or a cast from
+  // InnerInduction, or a binary operator that involves
+  // InnerInduction and a constant.
+  std::function<bool(Value *)> IsPathToInnerIndVar;
+  IsPathToInnerIndVar = [this, &IsPathToInnerIndVar](const Value *V) -> bool {
+    if (llvm::is_contained(InnerLoopInductions, V))
+      return true;
+    if (isa<Constant>(V))
+      return true;
+    const Instruction *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return false;
+    if (isa<CastInst>(I))
+      return IsPathToInnerIndVar(I->getOperand(0));
+    if (isa<BinaryOperator>(I))
+      return IsPathToInnerIndVar(I->getOperand(0)) &&
+             IsPathToInnerIndVar(I->getOperand(1));
+    return false;
+  };
+
+  // In case of multiple inner loop indvars, it is okay if LHS and RHS
+  // are both inner indvar related variables.
+  if (IsPathToInnerIndVar(Op0) && IsPathToInnerIndVar(Op1))
+    return true;
+
+  // Otherwise we check if the cmp instruction compares an inner indvar
+  // related variable (Left) with a outer loop invariant (Right).
+  if (IsPathToInnerIndVar(Op0) && !isa<Constant>(Op0)) {
+    Left = Op0;
+    Right = Op1;
+  } else if (IsPathToInnerIndVar(Op1) && !isa<Constant>(Op1)) {
+    Left = Op1;
+    Right = Op0;
   }
+
+  if (Left == nullptr)
+    return false;
+
+  const SCEV *S = SE->getSCEV(Right);
+  if (!SE->isLoopInvariant(S, OuterLoop))
+    return false;
 
   return true;
 }
