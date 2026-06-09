@@ -1531,23 +1531,8 @@ llvm::DIType *CGDebugInfo::CreatePointerLikeType(llvm::dwarf::Tag Tag,
       CGM.getTarget().getDWARFAddressSpace(
           CGM.getTypes().getTargetAddressSpace(PointeeTy));
 
-  const BTFTagAttributedType *BTFAttrTy;
-  if (auto *Atomic = PointeeTy->getAs<AtomicType>())
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Atomic->getValueType());
-  else
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(PointeeTy);
   SmallVector<llvm::Metadata *, 4> Annots;
-  while (BTFAttrTy) {
-    StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
-    if (!Tag.empty()) {
-      llvm::Metadata *Ops[2] = {
-          llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_type_tag")),
-          llvm::MDString::get(CGM.getLLVMContext(), Tag)};
-      Annots.insert(Annots.begin(),
-                    llvm::MDNode::get(CGM.getLLVMContext(), Ops));
-    }
-    BTFAttrTy = dyn_cast<BTFTagAttributedType>(BTFAttrTy->getWrappedType());
-  }
+  CollectBTFTypeTagAnnotations(PointeeTy, Annots);
 
   llvm::DINodeArray Annotations = nullptr;
   if (Annots.size() > 0)
@@ -1780,8 +1765,19 @@ llvm::DIType *CGDebugInfo::CreateType(const TypedefType *Ty,
   SourceLocation Loc = Ty->getDecl()->getLocation();
 
   uint32_t Align = getDeclAlignIfRequired(Ty->getDecl(), CGM.getContext());
-  // Typedefs are derived from some other type.
-  llvm::DINodeArray Annotations = CollectBTFDeclTagAnnotations(Ty->getDecl());
+
+  // Typedefs are derived from some other type. Collect both btf_decl_tag
+  // annotations on the typedef declaration and btf_type_tag annotations on
+  // the (possibly non-pointer) underlying type, e.g.
+  //   typedef struct foo __attribute__((btf_type_tag("tag"))) foo_t;
+  SmallVector<llvm::Metadata *, 4> Annots;
+  llvm::DINodeArray Annotations;
+  CollectBTFTypeTagAnnotations(Ty->getDecl()->getUnderlyingType(), Annots);
+  if (llvm::DINodeArray DeclTags = CollectBTFDeclTagAnnotations(Ty->getDecl()))
+    for (llvm::Metadata *MD : DeclTags->operands())
+      Annots.push_back(MD);
+  if (!Annots.empty())
+    Annotations = DBuilder.getOrCreateArray(Annots);
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   const DeclContext *DC = Ty->getDecl()->getDeclContext();
@@ -2856,6 +2852,27 @@ llvm::DINodeArray CGDebugInfo::CollectBTFDeclTagAnnotations(const Decl *D) {
     Annotations.push_back(llvm::MDNode::get(CGM.getLLVMContext(), Ops));
   }
   return DBuilder.getOrCreateArray(Annotations);
+}
+
+void CGDebugInfo::CollectBTFTypeTagAnnotations(
+    QualType Ty, SmallVectorImpl<llvm::Metadata *> &Annotations) {
+  const BTFTagAttributedType *BTFAttrTy;
+  if (auto *Atomic = Ty->getAs<AtomicType>())
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Atomic->getValueType());
+  else
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(Ty);
+
+  while (BTFAttrTy) {
+    StringRef Tag = BTFAttrTy->getAttr()->getBTFTypeTag();
+    if (!Tag.empty()) {
+      llvm::Metadata *Ops[2] = {
+          llvm::MDString::get(CGM.getLLVMContext(), StringRef("btf_type_tag")),
+          llvm::MDString::get(CGM.getLLVMContext(), Tag)};
+      Annotations.insert(Annotations.begin(),
+                         llvm::MDNode::get(CGM.getLLVMContext(), Ops));
+    }
+    BTFAttrTy = dyn_cast<BTFTagAttributedType>(BTFAttrTy->getWrappedType());
+  }
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateVTablePtrType(llvm::DIFile *Unit) {

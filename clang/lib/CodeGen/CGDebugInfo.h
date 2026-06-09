@@ -349,6 +349,11 @@ private:
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
+  /// A helper function to collect debug info for btf_type_tag annotations.
+  void
+  CollectBTFTypeTagAnnotations(QualType Ty,
+                               SmallVectorImpl<llvm::Metadata *> &Annotations);
+
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,
                                 uint64_t offsetInBits, uint32_t AlignInBits,
