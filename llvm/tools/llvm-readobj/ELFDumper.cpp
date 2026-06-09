@@ -694,7 +694,7 @@ private:
           (IsEnum && (Value & EnumMask) == Flag.Value)) {
         if (!Str.empty())
           Str += ", ";
-        Str += Flag.AltName;
+        Str += Flag.getAltName();
       }
     }
     return Str;
@@ -1469,10 +1469,10 @@ static std::string getGNUFlags(unsigned EOSAbi, unsigned EMachine,
     // Find the flag in the known flags list.
     auto I = llvm::find_if(FlagsList, [=](const EnumEntry<unsigned> &E) {
       // Flags with empty names are not printed in GNU style output.
-      return E.Value == Flag && !E.AltName.empty();
+      return E.Value == Flag && !E.getAltName().empty();
     });
     if (I != FlagsList.end()) {
-      Str += I->AltName;
+      Str += I->getAltName();
       continue;
     }
 
@@ -2320,7 +2320,7 @@ void printFlags(T Value, ArrayRef<EnumEntry<TFlag>> Flags, raw_ostream &OS) {
       SetFlags.push_back(Flag);
 
   for (const EnumEntry<TFlag> &Flag : SetFlags)
-    OS << Flag.Name << " ";
+    OS << Flag.getName() << " ";
 }
 
 template <class ELFT>
@@ -2625,7 +2625,7 @@ static Error checkHashTable(const ELFDumper<ELFT> &Dumper,
     return createError("the hash table at 0x" + Twine::utohexstr(SecOffset) +
                        " is not supported: it contains non-standard 8 "
                        "byte entries on " +
-                       It->AltName + " platform");
+                       It->getAltName() + " platform");
   }
 
   auto MakeError = [&](const Twine &Msg = "") {
@@ -3679,7 +3679,7 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
               "ABI Version:", std::to_string(e.e_ident[ELF::EI_ABIVERSION]));
 
   if (const EnumEntry<unsigned> *E = getObjectFileEnumEntry(e.e_type)) {
-    Str = E->AltName.str();
+    Str = E->getAltName().str();
   } else {
     if (e.e_type >= ET_LOPROC)
       Str = "Processor Specific: (" + utohexstr(e.e_type, /*LowerCase=*/true) + ")";
@@ -7524,7 +7524,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
 
     std::string TypeStr;
     if (const EnumEntry<unsigned> *Ent = getObjectFileEnumEntry(E.e_type)) {
-      TypeStr = Ent->Name.str();
+      TypeStr = Ent->getName().str();
     } else {
       if (E.e_type >= ET_LOPROC)
         TypeStr = "Processor Specific";
@@ -7928,7 +7928,7 @@ void JSONELFDumper<ELFT>::printAuxillaryDynamicTableEntryInfo(
     ListScope L(this->W, "Flags");
     for (const auto &Flag : Flags) {
       if (Flag.Value != 0 && (Value & Flag.Value) == Flag.Value)
-        this->W.printString(Flag.Name);
+        this->W.printString(Flag.getName());
     }
   };
   switch (Entry.getTag()) {

@@ -59,7 +59,7 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
 
 template <typename T>
 static bool compEnumNames(const EnumEntry<T> &lhs, const EnumEntry<T> &rhs) {
-  return lhs.Name < rhs.Name;
+  return lhs.getName() < rhs.getName();
 }
 
 template <typename T, typename TFlag>
@@ -88,7 +88,7 @@ static std::string getFlagNames(CodeViewRecordIO &IO, T Value,
     else
       FlagLabel += (" | ");
 
-    FlagLabel += (Flag.Name.str() + " (0x" + utohexstr(Flag.Value) + ")");
+    FlagLabel += (Flag.getName().str() + " (0x" + utohexstr(Flag.Value) + ")");
   }
 
   if (!FlagLabel.empty()) {
@@ -107,7 +107,7 @@ static StringRef getEnumName(CodeViewRecordIO &IO, T Value,
   StringRef Name;
   for (const auto &EnumItem : EnumValues) {
     if (EnumItem.Value == Value) {
-      Name = EnumItem.Name;
+      Name = EnumItem.getName();
       break;
     }
   }

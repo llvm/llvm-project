@@ -80,7 +80,7 @@ void ScalarEnumerationTraits<SymbolKind>::enumeration(IO &io,
                                                       SymbolKind &Value) {
   auto SymbolNames = getSymbolTypeNames();
   for (const auto &E : SymbolNames)
-    io.enumCase(Value, E.Name, E.Value);
+    io.enumCase(Value, E.getName(), E.Value);
   io.enumFallback<yaml::Hex16>(Value);
 }
 
@@ -88,7 +88,7 @@ void ScalarBitSetTraits<CompileSym2Flags>::bitset(IO &io,
                                                   CompileSym2Flags &Flags) {
   auto FlagNames = getCompileSym2FlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<CompileSym2Flags>(E.Value));
+    io.bitSetCase(Flags, E.getName(), static_cast<CompileSym2Flags>(E.Value));
   }
 }
 
@@ -96,35 +96,35 @@ void ScalarBitSetTraits<CompileSym3Flags>::bitset(IO &io,
                                                   CompileSym3Flags &Flags) {
   auto FlagNames = getCompileSym3FlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<CompileSym3Flags>(E.Value));
+    io.bitSetCase(Flags, E.getName(), static_cast<CompileSym3Flags>(E.Value));
   }
 }
 
 void ScalarBitSetTraits<ExportFlags>::bitset(IO &io, ExportFlags &Flags) {
   auto FlagNames = getExportSymFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<ExportFlags>(E.Value));
+    io.bitSetCase(Flags, E.getName(), static_cast<ExportFlags>(E.Value));
   }
 }
 
 void ScalarBitSetTraits<PublicSymFlags>::bitset(IO &io, PublicSymFlags &Flags) {
   auto FlagNames = getPublicSymFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<PublicSymFlags>(E.Value));
+    io.bitSetCase(Flags, E.getName(), static_cast<PublicSymFlags>(E.Value));
   }
 }
 
 void ScalarBitSetTraits<LocalSymFlags>::bitset(IO &io, LocalSymFlags &Flags) {
   auto FlagNames = getLocalFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<LocalSymFlags>(E.Value));
+    io.bitSetCase(Flags, E.getName(), static_cast<LocalSymFlags>(E.Value));
   }
 }
 
 void ScalarBitSetTraits<ProcSymFlags>::bitset(IO &io, ProcSymFlags &Flags) {
   auto FlagNames = getProcSymFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<ProcSymFlags>(E.Value));
+    io.bitSetCase(Flags, E.getName(), static_cast<ProcSymFlags>(E.Value));
   }
 }
 
@@ -132,14 +132,15 @@ void ScalarBitSetTraits<FrameProcedureOptions>::bitset(
     IO &io, FrameProcedureOptions &Flags) {
   auto FlagNames = getFrameProcSymFlagNames();
   for (const auto &E : FlagNames) {
-    io.bitSetCase(Flags, E.Name, static_cast<FrameProcedureOptions>(E.Value));
+    io.bitSetCase(Flags, E.getName(),
+                  static_cast<FrameProcedureOptions>(E.Value));
   }
 }
 
 void ScalarEnumerationTraits<CPUType>::enumeration(IO &io, CPUType &Cpu) {
   auto CpuNames = getCPUTypeNames();
   for (const auto &E : CpuNames) {
-    io.enumCase(Cpu, E.Name, static_cast<CPUType>(E.Value));
+    io.enumCase(Cpu, E.getName(), static_cast<CPUType>(E.Value));
   }
 }
 
@@ -171,7 +172,7 @@ void ScalarEnumerationTraits<RegisterId>::enumeration(IO &io, RegisterId &Reg) {
     RegNames = getRegisterNames(*CpuType);
 
   for (const auto &E : RegNames) {
-    io.enumCase(Reg, E.Name, static_cast<RegisterId>(E.Value));
+    io.enumCase(Reg, E.getName(), static_cast<RegisterId>(E.Value));
   }
   io.enumFallback<Hex16>(Reg);
 }
@@ -180,7 +181,7 @@ void ScalarEnumerationTraits<TrampolineType>::enumeration(
     IO &io, TrampolineType &Tramp) {
   auto TrampNames = getTrampolineNames();
   for (const auto &E : TrampNames) {
-    io.enumCase(Tramp, E.Name, static_cast<TrampolineType>(E.Value));
+    io.enumCase(Tramp, E.getName(), static_cast<TrampolineType>(E.Value));
   }
 }
 
@@ -188,7 +189,7 @@ void ScalarEnumerationTraits<ThunkOrdinal>::enumeration(IO &io,
                                                         ThunkOrdinal &Ord) {
   auto ThunkNames = getThunkOrdinalNames();
   for (const auto &E : ThunkNames) {
-    io.enumCase(Ord, E.Name, static_cast<ThunkOrdinal>(E.Value));
+    io.enumCase(Ord, E.getName(), static_cast<ThunkOrdinal>(E.Value));
   }
 }
 
@@ -196,7 +197,7 @@ void ScalarEnumerationTraits<FrameCookieKind>::enumeration(
     IO &io, FrameCookieKind &FC) {
   auto ThunkNames = getFrameCookieKindNames();
   for (const auto &E : ThunkNames) {
-    io.enumCase(FC, E.Name, static_cast<FrameCookieKind>(E.Value));
+    io.enumCase(FC, E.getName(), static_cast<FrameCookieKind>(E.Value));
   }
 }
 
@@ -204,7 +205,7 @@ void ScalarEnumerationTraits<JumpTableEntrySize>::enumeration(
     IO &io, JumpTableEntrySize &FC) {
   auto ThunkNames = getJumpTableEntrySizeNames();
   for (const auto &E : ThunkNames) {
-    io.enumCase(FC, E.Name, static_cast<JumpTableEntrySize>(E.Value));
+    io.enumCase(FC, E.getName(), static_cast<JumpTableEntrySize>(E.Value));
   }
 }
 

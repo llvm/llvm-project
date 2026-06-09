@@ -200,7 +200,7 @@ public:
     uint8_t Type = getELFType();
     for (const auto &EE : ElfSymbolTypes) {
       if (EE.Value == Type) {
-        return EE.AltName;
+        return EE.getAltName();
       }
     }
     return "";

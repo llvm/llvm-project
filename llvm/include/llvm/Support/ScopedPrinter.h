@@ -25,7 +25,23 @@
 namespace llvm {
 
 template <typename T> struct EnumEntry {
-  StringRef Name;
+private:
+  const char *NameData;
+  const char *AltNameData;
+
+public:
+  T Value;
+
+private:
+  uint16_t NameLength;
+  uint16_t AltNameLength;
+
+  template <size_t N> static constexpr uint16_t literalLength() {
+    static_assert(N - 1 <= UINT16_MAX, "EnumEntry names must fit in uint16_t");
+    return N - 1;
+  }
+
+public:
   // While Name suffices in most of the cases, in certain cases
   // GNU style and LLVM style of ELFDumper do not
   // display same string for same enum. The AltName if initialized appropriately
@@ -33,12 +49,29 @@ template <typename T> struct EnumEntry {
   // Example:
   // "EM_X86_64" string on LLVM style for Elf_Ehdr->e_machine corresponds to
   // "Advanced Micro Devices X86-64" on GNU style
-  StringRef AltName;
-  T Value;
-  constexpr EnumEntry(StringRef N, StringRef A, T V)
-      : Name(N), AltName(A), Value(V) {}
-  constexpr EnumEntry(StringRef N, T V) : Name(N), AltName(N), Value(V) {}
+  template <size_t N, size_t A>
+  constexpr EnumEntry(const char (&Name)[N], const char (&AltName)[A], T Value)
+      : NameData(Name), AltNameData(AltName), Value(Value),
+        NameLength(literalLength<N>()), AltNameLength(literalLength<A>()) {}
+
+  template <size_t N>
+  constexpr EnumEntry(const char (&Name)[N], T Value)
+      : NameData(Name), AltNameData(nullptr), Value(Value),
+        NameLength(literalLength<N>()), AltNameLength(0) {}
+
+  constexpr StringRef getName() const {
+    return StringRef(NameData, NameLength);
+  }
+
+  constexpr StringRef getAltName() const {
+    return AltNameData ? StringRef(AltNameData, AltNameLength) : getName();
+  }
 };
+
+static_assert(sizeof(EnumEntry<uint32_t>) == 2 * sizeof(const char *) +
+                                                 sizeof(uint32_t) +
+                                                 2 * sizeof(uint16_t),
+              "EnumEntry<uint32_t> must remain compact");
 
 struct HexNumber {
   // To avoid sign-extension we have to explicitly cast to the appropriate
@@ -103,7 +136,7 @@ template <typename T, typename TEnum>
 std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   for (const EnumEntry<TEnum> &EnumItem : EnumValues)
     if (EnumItem.Value == Value)
-      return std::string(EnumItem.AltName);
+      return std::string(EnumItem.getAltName());
   return utohexstr(Value, true);
 }
 
@@ -114,7 +147,7 @@ template <typename T, typename TEnum>
 StringRef enumToStringRef(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   for (const EnumEntry<TEnum> &EnumItem : EnumValues)
     if (EnumItem.Value == Value)
-      return EnumItem.AltName;
+      return EnumItem.getAltName();
   return "";
 }
 
@@ -166,7 +199,7 @@ public:
     bool Found = false;
     for (const auto &EnumItem : EnumValues) {
       if (EnumItem.Value == Value) {
-        Name = EnumItem.Name;
+        Name = EnumItem.getName();
         Found = true;
         break;
       }
@@ -198,7 +231,7 @@ public:
       bool IsEnum = (Flag.Value & EnumMask) != TFlag{};
       if ((!IsEnum && (Value & Flag.Value) == Flag.Value) ||
           (IsEnum && (Value & EnumMask) == Flag.Value)) {
-        SetFlags.emplace_back(Flag.Name, Flag.Value);
+        SetFlags.emplace_back(Flag.getName(), Flag.Value);
       }
     }
 

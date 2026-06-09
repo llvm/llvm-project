@@ -333,7 +333,7 @@ StringRef SourceInfo::getSectionName(SourceInfo::SectionType Type) {
   auto V = to_underlying(Type);
   if (!isValidSectionType(V))
     return StringRef();
-  return getSectionTypes()[V].Name;
+  return getSectionTypes()[V].getName();
 }
 
 static const EnumEntry<SourceInfo::Contents::CompressionType>

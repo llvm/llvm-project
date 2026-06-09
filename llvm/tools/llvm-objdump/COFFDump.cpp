@@ -86,7 +86,7 @@ static void printOptionalEnumName(T Value,
                                   ArrayRef<EnumEntry<TEnum>> EnumValues) {
   for (const EnumEntry<TEnum> &I : EnumValues)
     if (I.Value == Value) {
-      outs() << "\t(" << I.Name << ')';
+      outs() << "\t(" << I.getName() << ')';
       return;
     }
 }

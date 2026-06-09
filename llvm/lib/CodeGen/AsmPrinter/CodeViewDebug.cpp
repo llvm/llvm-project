@@ -3192,7 +3192,7 @@ void CodeViewDebug::endCVSubsection(MCSymbol *EndLabel) {
 static StringRef getSymbolName(SymbolKind SymKind) {
   for (const EnumEntry<SymbolKind> &EE : getSymbolTypeNames())
     if (EE.Value == SymKind)
-      return EE.Name;
+      return EE.getName();
   return "";
 }
 
