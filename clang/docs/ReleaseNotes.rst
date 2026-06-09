@@ -839,6 +839,30 @@ Windows Support
 - ``-fmacro-prefix-map=`` (``-ffile-prefix-map=``) now affects an anonymous namespace hash generation
   for the MSVC targets and allows deterministic symbol mangling for reproducible builds.
 
+- Added the ``-fwinx64-eh-unwind=`` flag to select the x64 Windows unwind info
+  version (``v1``, ``v2-best-effort``, ``v2-required``, or ``v3``). The legacy
+  ``-fwinx64-eh-unwindv2=`` flag is deprecated; it is still accepted and mapped
+  onto the new flag as follows:
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Legacy ``-fwinx64-eh-unwindv2=``
+       - New ``-fwinx64-eh-unwind=``
+     * - ``disabled``
+       - ``v1`` (default; no flag forwarded)
+     * - ``best-effort``
+       - ``v2-best-effort``
+     * - ``required``
+       - ``v2-required``
+
+  The MSVC-compatible ``/d2epilogunwind`` and ``/d2epilogunwindrequirev2``
+  options map to ``v2-best-effort`` and ``v2-required`` respectively.
+
+- When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
+  automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
+  explicit unwind version was specified.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
