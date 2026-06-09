@@ -47,7 +47,7 @@ TEST(Report, DescribeMop) {
   InternalScopedString s;
   DescribeMop(&mop, /*first=*/true, s);
   __sanitizer::internal_snprintf(expected, sizeof(expected),
-                                 "  Write of size 4 at %s by thread T1",
+                                 "Write of size 4 at %s by thread T1",
                                  addr_str);
   EXPECT_STREQ(expected, s.data());
 
@@ -55,7 +55,7 @@ TEST(Report, DescribeMop) {
   mop.write = false;
   DescribeMop(&mop, /*first=*/false, s);
   __sanitizer::internal_snprintf(expected, sizeof(expected),
-                                 "  Previous read of size 4 at %s by thread T1",
+                                 "Previous read of size 4 at %s by thread T1",
                                  addr_str);
   EXPECT_STREQ(expected, s.data());
 
@@ -64,9 +64,9 @@ TEST(Report, DescribeMop) {
   mop.atomic = true;
   mop.tid = kMainTid;
   DescribeMop(&mop, /*first=*/true, s);
-  __sanitizer::internal_snprintf(
-      expected, sizeof(expected),
-      "  Atomic write of size 4 at %s by main thread", addr_str);
+  __sanitizer::internal_snprintf(expected, sizeof(expected),
+                                 "Atomic write of size 4 at %s by main thread",
+                                 addr_str);
   EXPECT_STREQ(expected, s.data());
 }
 
@@ -78,12 +78,12 @@ TEST(Report, DescribeLocationStackAndTls) {
   InternalScopedString s;
   // Stack/TLS locations carry no following stack trace.
   EXPECT_FALSE(DescribeLocation(&loc, s));
-  EXPECT_STREQ("  Location is stack of thread T2.", s.data());
+  EXPECT_STREQ("Location is stack of thread T2.", s.data());
 
   loc.type = ReportLocationTLS;
   s.clear();
   EXPECT_FALSE(DescribeLocation(&loc, s));
-  EXPECT_STREQ("  Location is TLS of thread T2.", s.data());
+  EXPECT_STREQ("Location is TLS of thread T2.", s.data());
 }
 
 TEST(Report, DescribeLocationHeap) {
@@ -99,7 +99,7 @@ TEST(Report, DescribeLocationHeap) {
   char expected[128];
   __sanitizer::internal_snprintf(
       expected, sizeof(expected),
-      "  Location is heap block of size 16 at %s allocated by thread T3:",
+      "Location is heap block of size 16 at %s allocated by thread T3:",
       addr_str);
 
   InternalScopedString s;
@@ -117,13 +117,13 @@ TEST(Report, DescribeLocationFD) {
   InternalScopedString s;
   loc.fd_closed = false;
   EXPECT_TRUE(DescribeLocation(&loc, s));
-  EXPECT_STREQ("  Location is file descriptor 7 created by main thread at:",
+  EXPECT_STREQ("Location is file descriptor 7 created by main thread at:",
                s.data());
 
   s.clear();
   loc.fd_closed = true;
   EXPECT_TRUE(DescribeLocation(&loc, s));
-  EXPECT_STREQ("  Location is file descriptor 7 destroyed by main thread at:",
+  EXPECT_STREQ("Location is file descriptor 7 destroyed by main thread at:",
                s.data());
 }
 
@@ -136,7 +136,7 @@ TEST(Report, DescribeMutex) {
   FormatPtr(addr_str, sizeof(addr_str), rm.addr);
   char expected[128];
   __sanitizer::internal_snprintf(expected, sizeof(expected),
-                                 "  Mutex M5 (%s) created at:", addr_str);
+                                 "Mutex M5 (%s) created at:", addr_str);
 
   InternalScopedString s;
   DescribeMutex(&rm, s);
@@ -156,8 +156,7 @@ TEST(Report, DescribeThread) {
   InternalScopedString s;
   // A regular thread is followed by its creation stack.
   EXPECT_TRUE(DescribeThread(&rt, s));
-  EXPECT_STREQ("  Thread T1 (tid=42, running) created by main thread",
-               s.data());
+  EXPECT_STREQ("Thread T1 (tid=42, running) created by main thread", s.data());
 
   // A name is included and " at:" is appended when a stack is present.
   s.clear();
@@ -168,7 +167,7 @@ TEST(Report, DescribeThread) {
   rt.stack = &stack;
   EXPECT_TRUE(DescribeThread(&rt, s));
   EXPECT_STREQ(
-      "  Thread T1 'worker' (tid=42, finished) created by main thread at:",
+      "Thread T1 'worker' (tid=42, finished) created by main thread at:",
       s.data());
 
   // GCD worker threads have no following stack.
@@ -178,8 +177,7 @@ TEST(Report, DescribeThread) {
   rt.stack = nullptr;
   rt.thread_type = ThreadType::Worker;
   EXPECT_FALSE(DescribeThread(&rt, s));
-  EXPECT_STREQ("  Thread T1 (tid=42, running) is a GCD worker thread",
-               s.data());
+  EXPECT_STREQ("Thread T1 (tid=42, running) is a GCD worker thread", s.data());
 }
 
 }  // namespace __tsan

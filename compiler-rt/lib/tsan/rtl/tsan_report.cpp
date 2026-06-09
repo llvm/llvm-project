@@ -142,16 +142,15 @@ static const char *ExternalMopDesc(bool first, bool write) {
 void DescribeMop(const ReportMop* mop, bool first, InternalScopedString& s) {
   char thrbuf[kThreadBufSize];
   if (mop->external_tag == kExternalTagNone) {
-    s.AppendF("  %s of size %d at %p by %s",
+    s.AppendF("%s of size %d at %p by %s",
               MopDesc(first, mop->write, mop->atomic), mop->size,
               (void*)mop->addr, thread_name(thrbuf, mop->tid));
   } else {
     const char *object_type = GetObjectTypeFromTag(mop->external_tag);
     if (object_type == nullptr)
         object_type = "external object";
-    s.AppendF("  %s access of %s at %p by %s",
-              ExternalMopDesc(first, mop->write), object_type, (void*)mop->addr,
-              thread_name(thrbuf, mop->tid));
+    s.AppendF("%s access of %s at %p by %s", ExternalMopDesc(first, mop->write),
+              object_type, (void*)mop->addr, thread_name(thrbuf, mop->tid));
   }
 }
 
@@ -160,7 +159,7 @@ static void PrintMop(const ReportMop* mop, bool first) {
   Printf("%s", d.Access());
   InternalScopedString s;
   DescribeMop(mop, first, s);
-  Printf("%s", s.data());
+  Printf("  %s", s.data());
   PrintMutexSet(mop->mset);
   Printf(":\n");
   Printf("%s", d.Default());
@@ -175,33 +174,33 @@ bool DescribeLocation(const ReportLocation* loc, InternalScopedString& s) {
   if (loc->type == ReportLocationGlobal) {
     const DataInfo &global = loc->global;
     if (global.size != 0)
-      s.AppendF("  Location is global '%s' of size %zu at %p (%s+0x%zx)",
+      s.AppendF("Location is global '%s' of size %zu at %p (%s+0x%zx)",
                 global.name, global.size, reinterpret_cast<void*>(global.start),
                 StripModuleName(global.module), global.module_offset);
     else
-      s.AppendF("  Location is global '%s' at %p (%s+0x%zx)", global.name,
+      s.AppendF("Location is global '%s' at %p (%s+0x%zx)", global.name,
                 reinterpret_cast<void*>(global.start),
                 StripModuleName(global.module), global.module_offset);
   } else if (loc->type == ReportLocationHeap) {
     const char *object_type = GetObjectTypeFromTag(loc->external_tag);
     if (!object_type) {
-      s.AppendF("  Location is heap block of size %zu at %p allocated by %s:",
+      s.AppendF("Location is heap block of size %zu at %p allocated by %s:",
                 loc->heap_chunk_size,
                 reinterpret_cast<void*>(loc->heap_chunk_start),
                 thread_name(thrbuf, loc->tid));
     } else {
       s.AppendF(
-          "  Location is %s of size %zu at %p allocated by %s:", object_type,
+          "Location is %s of size %zu at %p allocated by %s:", object_type,
           loc->heap_chunk_size, reinterpret_cast<void*>(loc->heap_chunk_start),
           thread_name(thrbuf, loc->tid));
     }
     print_stack = true;
   } else if (loc->type == ReportLocationStack) {
-    s.AppendF("  Location is stack of %s.", thread_name(thrbuf, loc->tid));
+    s.AppendF("Location is stack of %s.", thread_name(thrbuf, loc->tid));
   } else if (loc->type == ReportLocationTLS) {
-    s.AppendF("  Location is TLS of %s.", thread_name(thrbuf, loc->tid));
+    s.AppendF("Location is TLS of %s.", thread_name(thrbuf, loc->tid));
   } else if (loc->type == ReportLocationFD) {
-    s.AppendF("  Location is file descriptor %d %s by %s at:", loc->fd,
+    s.AppendF("Location is file descriptor %d %s by %s at:", loc->fd,
               loc->fd_closed ? "destroyed" : "created",
               thread_name(thrbuf, loc->tid));
     print_stack = true;
@@ -214,7 +213,7 @@ static void PrintLocation(const ReportLocation* loc) {
   Printf("%s", d.Location());
   InternalScopedString s;
   bool print_stack = DescribeLocation(loc, s);
-  Printf("%s", s.data());
+  Printf("  %s", s.data());
   // Locations with a following stack are separated from it by a single
   // newline; the others provide their own trailing blank line.
   Printf(print_stack ? "\n" : "\n\n");
@@ -236,7 +235,7 @@ static void PrintMutexShortWithAddress(const ReportMutex *rm,
 }
 
 void DescribeMutex(const ReportMutex* rm, InternalScopedString& s) {
-  s.AppendF("  Mutex M%u (%p) created at:", rm->id,
+  s.AppendF("Mutex M%u (%p) created at:", rm->id,
             reinterpret_cast<void*>(rm->addr));
 }
 
@@ -245,7 +244,7 @@ static void PrintMutex(const ReportMutex *rm) {
   Printf("%s", d.Mutex());
   InternalScopedString s;
   DescribeMutex(rm, s);
-  Printf("%s\n", s.data());
+  Printf("  %s\n", s.data());
   Printf("%s", d.Default());
   PrintStack(rm->stack);
 }
@@ -254,7 +253,7 @@ static void PrintMutex(const ReportMutex *rm) {
 // a stack trace should follow (false for GCD worker threads).
 bool DescribeThread(const ReportThread* rt, InternalScopedString& s) {
   char thrbuf[kThreadBufSize];
-  s.AppendF("  Thread T%d", rt->id);
+  s.AppendF("Thread T%d", rt->id);
   if (rt->name && rt->name[0] != '\0')
     s.AppendF(" '%s'", rt->name);
   const char *thread_status = rt->running ? "running" : "finished";
@@ -277,7 +276,7 @@ static void PrintThread(const ReportThread* rt) {
   Printf("%s", d.ThreadDescription());
   InternalScopedString s;
   bool print_stack = DescribeThread(rt, s);
-  Printf("%s", s.data());
+  Printf("  %s", s.data());
   // A thread with a following stack is separated from it by a single newline;
   // otherwise we emit the trailing blank line here.
   Printf(print_stack ? "\n" : "\n\n");

@@ -59,15 +59,15 @@ __tsan_on_report(void *report) {
   char buf[256];
 
   // Two mops: idx 0 is described as the primary access ("Write"); idx 1 is
-  // described as the secondary access ("Previous write"). Output starts with
-  // two spaces of indent.
+  // described as the secondary access ("Previous write"). The description
+  // is unindented (no leading whitespace).
   __tsan_describe_mop(report, 0, buf, sizeof(buf));
   fprintf(stderr, "mop0: [%s]\n", buf);
-  // CHECK: mop0: [{{ +}}Write of size 8 at 0x{{[0-9a-f]+}} by thread T1]
+  // CHECK: mop0: [Write of size 8 at 0x{{[0-9a-f]+}} by thread T1]
 
   __tsan_describe_mop(report, 1, buf, sizeof(buf));
   fprintf(stderr, "mop1: [%s]\n", buf);
-  // CHECK: mop1: [{{ +}}Previous write of size 8 at 0x{{[0-9a-f]+}} by main thread]
+  // CHECK: mop1: [Previous write of size 8 at 0x{{[0-9a-f]+}} by main thread]
 
   // Location is a global; describe_loc returns 0 (no stack follows).
   if (loc_count > 0) {
@@ -95,7 +95,7 @@ __tsan_on_report(void *report) {
   // CHECK: thread1: [{{.*}}Thread T0{{.*}}]
 
   // Truncation: outlen = 8 leaves room for 7 chars of description + null.
-  // Description starts with "  Write" so we expect strlen == 7.
+  // Description starts with "Write o" so we expect strlen == 7.
   char tiny[8];
   memset(tiny, 'X', sizeof(tiny));
   __tsan_describe_mop(report, 0, tiny, sizeof(tiny));
