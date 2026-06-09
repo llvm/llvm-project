@@ -640,9 +640,6 @@ def ConvertGpuOpsToLLVMSPVOps : Pass<"convert-gpu-to-llvm-spv", "gpu::GPUModuleO
     Option<"use64bitIndex", "use-64bit-index",
            "bool", /*default=*/"false",
            "Use 64-bit integers to convert index types">,
-    Option<"convertMathToOCL", "convert-math-to-ocl",
-           "bool", /*default=*/"false",
-           "Convert supported Math ops to OCL intrinsics.">
   ];
 }
 

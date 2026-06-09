@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -split-input-file -convert-math-to-xevm | FileCheck %s -check-prefixes='CHECK,CHECK-NO-OCL' 
-// RUN: mlir-opt %s -split-input-file -convert-math-to-xevm='convert-to-ocl=true' | FileCheck %s -check-prefixes='CHECK,CHECK-OCL' 
+// RUN: mlir-opt %s -split-input-file -convert-math-to-xevm='convert-to-ocl=true convert-arith=true' | FileCheck %s -check-prefixes='CHECK,CHECK-OCL' 
 
 module @test_module {
   // CHECK-OCL: llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_copysignf(f32, f32) -> f32
@@ -38,6 +38,37 @@ module @test_module {
     // CHECK-OCL: llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_powd(%{{.*}}, %{{.*}}) : (f64, f64) -> f64
     // CHECK-NO-OCL: math.powf
     func.return %result1, %result2, %result3 : f64, f64, f64
+  }
+}
+
+// -----
+
+module @test_module {
+// CHECK-OCL-DAG:     llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_expm1f(f32)
+// CHECK-NO-OCL-NOT:  llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_expm1f(f32)
+// CHECK-LABEL: func.func @expm1_vector
+  func.func @expm1_vector(%arg0: memref<32xvector<4xf32>>,
+                          %arg1: memref<32xvector<4xf32>>,
+                          %idx : index) {
+    // CHECK: %[[ARG0:.*]] = memref.load %arg0
+    %v = memref.load %arg0[%idx] : memref<32xvector<4xf32>>
+    // CHECK-OCL: %[[EXT_0:.*]] = llvm.extractelement %[[ARG0]]
+    // CHECK-OCL: %[[VAL_0:.*]] = llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_expm1f(%[[EXT_0]])
+    // CHECK-OCL: llvm.insertelement %[[VAL_0]]
+    // CHECK-OCL: %[[EXT_1:.*]] = llvm.extractelement %[[ARG0]]
+    // CHECK-OCL: %[[VAL_1:.*]] = llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_expm1f(%[[EXT_1]])
+    // CHECK-OCL: llvm.insertelement %[[VAL_1]]
+    // CHECK-OCL: %[[EXT_2:.*]] = llvm.extractelement %[[ARG0]]
+    // CHECK-OCL: %[[VAL_2:.*]] = llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_expm1f(%[[EXT_2]])
+    // CHECK-OCL: llvm.insertelement %[[VAL_2]]
+    // CHECK-OCL: %[[EXT_3:.*]] = llvm.extractelement %[[ARG0]]
+    // CHECK-OCL: %[[VAL_3:.*]] = llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_expm1f(%[[EXT_3]])
+    // CHECK-OCL: %[[INS:.*]] = llvm.insertelement %[[VAL_3]]
+    // CHECK-NO-OCL: %[[INS:.*]] = math.expm1 %[[ARG0]]
+    %e = math.expm1 %v : vector<4xf32>
+    // CHECK: memref.store %[[INS]], %arg1
+    memref.store %e, %arg1[%idx] : memref<32xvector<4xf32>>
+    return
   }
 }
 
@@ -467,5 +498,21 @@ module @test_module {
     // CHECK-OCL: llvm.fptrunc %{{.*}} : f32 to bf16
     // CHECK-NO-OCL: math.erfc
     func.return %resultf16, %resultbf16 : f16, bf16
+  }
+}
+
+// -----
+
+module @test_module {
+  // CHECK-DAG: llvm.func @_Z{{.*}}__spirv_ocl_native_divideff(f32, f32) -> f32
+  // CHECK-OCL-DAG: llvm.func spir_funccc @_Z{{.*}}__spirv_ocl_sqrtf(f32) -> f32
+  // CHECK-LABEL: func @math_sqrt_div
+  func.func @math_sqrt_div(%arg : f32) -> f32 {
+    %sqrt = math.sqrt %arg : f32
+    // CHECK-OCL: llvm.call spir_funccc @_Z{{.*}}__spirv_ocl_sqrtf(%{{.*}}) : (f32) -> f32
+    // CHECK-NO-OCL: math.sqrt
+    %result = arith.divf %arg, %sqrt fastmath<afn> : f32
+    // CHECK: llvm.call @_Z{{.*}}__spirv_ocl_native_divideff(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+    func.return %result : f32
   }
 }

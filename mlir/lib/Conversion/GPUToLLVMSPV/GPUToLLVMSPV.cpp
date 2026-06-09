@@ -15,7 +15,6 @@
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/MathToXeVM/MathToXeVM.h"
 #include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
@@ -499,8 +498,7 @@ struct GPUToLLVMSPVConversionPass final
                         gpu::ShuffleOp, gpu::SubgroupIdOp, gpu::SubgroupSizeOp,
                         gpu::ThreadIdOp, gpu::PrintfOp>();
 
-    populateGpuToLLVMSPVConversionPatterns(converter, patterns,
-                                           convertMathToOCL);
+    populateGpuToLLVMSPVConversionPatterns(converter, patterns);
     populateGpuMemorySpaceAttributeConversions(converter);
     patterns.add<GPUPrintfOpToLLVMCallLowering>(converter, /*addressSpace=*/2,
                                                 LLVM::cconv::CConv::SPIR_FUNC,
@@ -528,8 +526,7 @@ gpuAddressSpaceToOCLAddressSpace(gpu::AddressSpace addressSpace) {
 } // namespace
 
 void populateGpuToLLVMSPVConversionPatterns(
-    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns,
-    bool convertMathToOCL) {
+    const LLVMTypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<GPUBarrierConversion, GPUReturnOpLowering, GPUShuffleConversion,
                GPUSubgroupOpConversion<gpu::LaneIdOp>,
                GPUSubgroupOpConversion<gpu::NumSubgroupsOp>,
@@ -556,9 +553,6 @@ void populateGpuToLLVMSPVConversionPatterns(
           /*kernelClusterSizeAttributeName=*/{}, LLVM::CConv::SPIR_KERNEL,
           LLVM::CConv::SPIR_FUNC,
           /*encodeWorkgroupAttributionsAsArguments=*/true});
-  if (convertMathToOCL) {
-    populateMathToScalarOCLExtSetConversionPatterns(typeConverter, patterns, 1);
-  }
 }
 
 void populateGpuMemorySpaceAttributeConversions(TypeConverter &typeConverter) {
