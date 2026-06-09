@@ -419,6 +419,12 @@ macro(construct_compiler_rt_default_triple)
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "i386")
   endif()
 
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgpu|amdgcn")
+    set(COMPILER_RT_TARGET_AMDGPU TRUE)
+  else()
+    set(COMPILER_RT_TARGET_AMDGPU FALSE)
+  endif()
+
   # If we are directly targeting a GPU we need to check that the compiler is
   # compatible and pass some default arguments.
   if(COMPILER_RT_DEFAULT_TARGET_ONLY)
