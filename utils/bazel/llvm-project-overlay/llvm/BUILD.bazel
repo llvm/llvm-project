@@ -1873,6 +1873,17 @@ cc_library(
 )
 
 cc_library(
+    name = "TransformUtilsModuleUtilsHeader",
+    hdrs = ["include/llvm/Transforms/Utils/ModuleUtils.h"],
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+    deps = [
+        ":Support",
+        ":ir_headers",
+    ],
+)
+
+cc_library(
     name = "FrontendHLSL",
     srcs = glob([
         "lib/Frontend/HLSL/*.cpp",
@@ -1886,6 +1897,7 @@ cc_library(
         ":Core",
         ":MC",
         ":Support",
+        ":TransformUtilsModuleUtilsHeader",
     ],
 )
 
@@ -4998,7 +5010,6 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
-        ":Analysis",
         ":AsmParser",
         ":BitWriter",
         ":Core",
@@ -5251,7 +5262,6 @@ cc_binary(
     copts = llvm_copts,
     stamp = 0,
     deps = [
-        ":Analysis",
         ":BitReader",
         ":Core",
         ":Support",
