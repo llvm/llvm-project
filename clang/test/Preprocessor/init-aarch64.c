@@ -393,6 +393,7 @@
 // AARCH64-NEXT: #define __USER_LABEL_PREFIX__
 // AARCH64-NEXT: #define __VERSION__ "{{.*}}"
 // AARCH64-NEXT: #define __WCHAR_MAX__ 4294967295U
+// AARCH64-NEXT: #define __WCHAR_NATIVE_TYPE__ unsigned int
 // AARCH64-NEXT: #define __WCHAR_TYPE__ unsigned int
 // AARCH64-NEXT: #define __WCHAR_UNSIGNED__ 1
 // AARCH64-NEXT: #define __WCHAR_WIDTH__ 32

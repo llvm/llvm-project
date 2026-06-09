@@ -312,6 +312,13 @@ Non-comprehensive list of changes in this release
 - ``typeid`` on references and pointers of ``final`` types no longer emits a
   vtable lookup at runtime.
 
+- Added a new predefined macro ``__WCHAR_NATIVE_TYPE__``, expanding to the
+  platform's native type for ``wchar_t`` (the type ``wchar_t`` would have
+  without ``-fshort-wchar``). It matches ``__WCHAR_TYPE__`` unless
+  ``-fshort-wchar`` is in effect, letting code detect when ``wchar_t`` is
+  different from its native type.
+
+
 - Updated support for Unicode from 15.1 to 18.0.
 
 New Compiler Flags
