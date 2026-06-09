@@ -257,6 +257,9 @@ class ProcWriteResources<list<ProcResourceKind> resources> {
   /// relatively to the cycle in which the instruction is issued
   /// (assuming no stalls inbetween).
   list<int> AcquireAtCycles = [];
+  // Allow a processor to mark some scheduling classes as blocking a ProcResourceKind
+  // for a number of cycles, without requiring the ProcResourceKind to be unbuffered.
+  list<int> RepeatRate = [];
   int Latency = 1;
   int NumMicroOps = 1;
   bit BeginGroup = false;

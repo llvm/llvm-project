@@ -121,6 +121,7 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   void expandProcResources(ConstRecVec &PRVec,
                            std::vector<int64_t> &ReleaseAtCycles,
                            std::vector<int64_t> &AcquireAtCycles,
+                           std::vector<int64_t> &RepeatRates,
                            const CodeGenProcModel &ProcModel);
   void genSchedClassTables(const CodeGenProcModel &ProcModel,
                            SchedClassTables &SchedTables);
@@ -980,7 +981,8 @@ SubtargetEmitter::findReadAdvance(const CodeGenSchedRW &SchedRead,
 // resource groups and super resources that cover them.
 void SubtargetEmitter::expandProcResources(
     ConstRecVec &PRVec, std::vector<int64_t> &ReleaseAtCycles,
-    std::vector<int64_t> &AcquireAtCycles, const CodeGenProcModel &PM) {
+    std::vector<int64_t> &AcquireAtCycles, std::vector<int64_t> &RepeatRates,
+    const CodeGenProcModel &PM) {
   assert(PRVec.size() == ReleaseAtCycles.size() && "failed precondition");
   for (unsigned I = 0, E = PRVec.size(); I != E; ++I) {
     const Record *PRDef = PRVec[I];
@@ -1002,6 +1004,7 @@ void SubtargetEmitter::expandProcResources(
         PRVec.push_back(SuperDef);
         ReleaseAtCycles.push_back(ReleaseAtCycles[I]);
         AcquireAtCycles.push_back(AcquireAtCycles[I]);
+        RepeatRates.push_back(RepeatRates[I]);
         SubDef = SuperDef;
       }
     }
@@ -1017,6 +1020,7 @@ void SubtargetEmitter::expandProcResources(
         PRVec.push_back(PR);
         ReleaseAtCycles.push_back(ReleaseAtCycles[I]);
         AcquireAtCycles.push_back(AcquireAtCycles[I]);
+        RepeatRates.push_back(RepeatRates[I]);
       }
     }
   }
@@ -1148,6 +1152,9 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
         std::vector<int64_t> AcquireAtCycles =
             WriteRes->getValueAsListOfInts("AcquireAtCycles");
 
+        std::vector<int64_t> RepeatRates =
+            WriteRes->getValueAsListOfInts("RepeatRate");
+
         // Check consistency of the two vectors carrying the start and
         // stop cycles of the resources.
         if (!ReleaseAtCycles.empty() &&
@@ -1173,6 +1180,16 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
                   .concat(Twine(PRVec.size())));
         }
 
+        if (!RepeatRates.empty() && RepeatRates.size() != PRVec.size()) {
+          PrintFatalError(
+              WriteRes->getLoc(),
+              Twine("Inconsistent repeat rates: size(RepeatRate) != "
+                    "size(ProcResources): ")
+                  .concat(Twine(RepeatRates.size()))
+                  .concat(" vs ")
+                  .concat(Twine(PRVec.size())));
+        }
+
         if (ReleaseAtCycles.empty()) {
           // If ReleaseAtCycles is not provided, default to one cycle
           // per resource.
@@ -1185,10 +1202,20 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
           AcquireAtCycles.resize(PRVec.size(), 0);
         }
 
-        assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
+        if (RepeatRates.empty()) {
+          // If RepeatRate is not provided, default to 0 (no repeat rate
+          // constraint).
+          RepeatRates.resize(PRVec.size(), 0);
+        }
 
-        expandProcResources(PRVec, ReleaseAtCycles, AcquireAtCycles, ProcModel);
         assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
+        assert(RepeatRates.size() == ReleaseAtCycles.size());
+
+        expandProcResources(PRVec, ReleaseAtCycles, AcquireAtCycles,
+                            RepeatRates, ProcModel);
+
+        assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
+        assert(RepeatRates.size() == ReleaseAtCycles.size());
 
         for (unsigned PRIdx = 0, PREnd = PRVec.size(); PRIdx != PREnd;
              ++PRIdx) {
@@ -1197,6 +1224,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
           assert(WPREntry.ProcResourceIdx && "Bad ProcResourceIdx");
           WPREntry.ReleaseAtCycle = ReleaseAtCycles[PRIdx];
           WPREntry.AcquireAtCycle = AcquireAtCycles[PRIdx];
+          WPREntry.RepeatRate = RepeatRates[PRIdx];
           if (AcquireAtCycles[PRIdx] > ReleaseAtCycles[PRIdx]) {
             PrintFatalError(
                 WriteRes->getLoc(),
@@ -1206,6 +1234,11 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
           if (AcquireAtCycles[PRIdx] < 0) {
             PrintFatalError(WriteRes->getLoc(),
                             Twine("Invalid value: AcquireAtCycle "
+                                  "must be a non-negative value."));
+          }
+          if (RepeatRates[PRIdx] < 0) {
+            PrintFatalError(WriteRes->getLoc(),
+                            Twine("Invalid value: RepeatRate "
                                   "must be a non-negative value."));
           }
           // If this resource is already used in this sequence, add the current
@@ -1336,16 +1369,17 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
 void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
                                             raw_ostream &OS) {
   // Emit global WriteProcResTable.
-  OS << "\n// {ProcResourceIdx, ReleaseAtCycle, AcquireAtCycle}\n"
+  OS << "\n// {ProcResourceIdx, ReleaseAtCycle, AcquireAtCycle, RepeatRate}\n"
      << "extern const llvm::MCWriteProcResEntry " << Target
      << "WriteProcResTable[] = {\n"
-     << "  { 0,  0,  0 }, // Invalid\n";
+     << "  { 0,  0,  0, 0 }, // Invalid\n";
   for (unsigned WPRIdx = 1, WPREnd = SchedTables.WriteProcResources.size();
        WPRIdx != WPREnd; ++WPRIdx) {
     MCWriteProcResEntry &WPREntry = SchedTables.WriteProcResources[WPRIdx];
     OS << "  {" << format("%2d", WPREntry.ProcResourceIdx) << ", "
        << format("%2d", WPREntry.ReleaseAtCycle) << ",  "
-       << format("%2d", WPREntry.AcquireAtCycle) << "}";
+       << format("%2d", WPREntry.AcquireAtCycle) << ",  "
+       << format("%2d", WPREntry.RepeatRate) << "}";
     if (WPRIdx + 1 < WPREnd)
       OS << ',';
     OS << " // #" << WPRIdx << '\n';

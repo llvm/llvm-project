@@ -88,8 +88,8 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
            "`llvm-exegesis` does not handle AcquireAtCycle > 0");
     if (ProcResDesc->SubUnitsIdxBegin == nullptr) {
       // This is a ProcResUnit.
-      Result.push_back(
-          {WPR->ProcResourceIdx, WPR->ReleaseAtCycle, WPR->AcquireAtCycle});
+      Result.push_back({WPR->ProcResourceIdx, WPR->ReleaseAtCycle,
+                        WPR->AcquireAtCycle, WPR->RepeatRate});
       ProcResUnitUsage[WPR->ProcResourceIdx] += WPR->ReleaseAtCycle;
     } else {
       // This is a ProcResGroup. First see if it contributes any cycles or if
@@ -107,7 +107,7 @@ getNonRedundantWriteProcRes(const MCSchedClassDesc &SCDesc,
       // The ProcResGroup contributes `RemainingCycles` cycles of its own.
       Result.push_back({WPR->ProcResourceIdx,
                         static_cast<uint16_t>(std::round(RemainingCycles)),
-                        WPR->AcquireAtCycle});
+                        WPR->AcquireAtCycle, WPR->RepeatRate});
       // Spread the remaining cycles over all subunits.
       for (const auto *SubResIdx = ProcResDesc->SubUnitsIdxBegin;
            SubResIdx != ProcResDesc->SubUnitsIdxBegin + ProcResDesc->NumUnits;

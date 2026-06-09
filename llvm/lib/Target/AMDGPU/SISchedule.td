@@ -79,6 +79,27 @@ def WriteSFPU : SchedWrite;
 // F16 or F32 pseudo scalar transcendental instructions
 def WritePseudoScalarTrans : SchedWrite;
 
+// RepeatRate = 2 variants
+def Trans32Repeat2 : SchedWrite;
+def Write64BitRepeat2 : SchedWrite;
+def Write32BitRepeat2 : SchedWrite;
+def WriteDPPRepeat2 : SchedWrite;
+def WriteSwapRepeat2 : SchedWrite;
+
+// RepeatRate = 4 variants
+def IntMulRepeat4 : SchedWrite;
+def Write32BitRepeat4 : SchedWrite;
+
+// RepeatRate = 8 variants
+def Write32BitRepeat8 : SchedWrite;
+
+// RepeatRate = 16 variants
+def Write32BitRepeat16 : SchedWrite;
+
+// RepeatRate = 32 variants
+def Trans64Repeat32 : SchedWrite;
+def DoubleRepeat32 : SchedWrite;
+
 // Some instructions have multiple explicit defs. If we provide actual 
 // SchedWrites for each of the explicit defs, then the instruction will 
 // be encoded as having multiple MicroOps. The scheduler treats instructions
@@ -510,6 +531,37 @@ def WriteWMMAScale_16X16X128_F8F6F4 : SchedWriteVariant<[
 
 multiclass GFX125xCommonWriteRes {
 
+// RepeatRate = 2 variants
+let RepeatRate = [2, 0] in {
+def : HWWriteRes<Trans32Repeat2,    [HWTransVALU, HWRC], 8>;
+def : HWWriteRes<Write64BitRepeat2, [HWVALU, HWRC],      6>;
+def : HWWriteRes<Write32BitRepeat2, [HWVALU, HWRC],      5>;
+def : HWWriteRes<WriteDPPRepeat2,   [HWVALU, HWRC],      5>;
+def : HWWriteRes<WriteSwapRepeat2,  [HWVALU, HWRC],      5>;
+}
+
+// RepeatRate = 4 variants
+let RepeatRate = [4, 0] in {
+def : HWWriteRes<IntMulRepeat4,     [HWVALU, HWRC], 8>;
+def : HWWriteRes<Write32BitRepeat4, [HWVALU, HWRC], 5>;
+}
+
+// RepeatRate = 8 variants
+let RepeatRate = [8, 0] in {
+def : HWWriteRes<Write32BitRepeat8, [HWVALU, HWRC], 5>;
+}
+
+// RepeatRate = 16 variants
+let RepeatRate = [16, 0] in {
+def : HWWriteRes<Write32BitRepeat16, [HWVALU, HWRC], 5>;
+}
+
+// RepeatRate = 32 variants
+let RepeatRate = [32, 0, 0] in
+def : HWWriteRes<Trans64Repeat32, [HWVALU, HWTransVALU, HWRC], 38>;
+let RepeatRate = [32, 0] in
+def : HWWriteRes<DoubleRepeat32,  [HWVALU, HWRC],              37>;
+
 let ReleaseAtCycles = [8] in
 def : HWWriteRes<WriteXDL2PassWMMA, [HWXDL], 8>;
 let ReleaseAtCycles = [16] in
@@ -548,6 +600,177 @@ def : HWWriteRes<WriteVALUDummy, [HWVALU],  5>;
 def : HWWriteRes<WriteSALUDummy, [HWSALU],  2>;
 }
 
+// VALU RepeatRate = 2 instructions
+// F32 transcendentals
+def : InstRW<[Trans32Repeat2], (instregex "^V_EXP_F32_e(32|64)$",
+                                          "^V_LOG_F32_e(32|64)$",
+                                          "^V_RCP_F32_e(32|64)$",
+                                          "^V_RCP_IFLAG_F32_e(32|64)$",
+                                          "^V_RSQ_F32_e(32|64)$",
+                                          "^V_SQRT_F32_e(32|64)$",
+                                          "^V_SIN_F32_e(32|64)$",
+                                          "^V_COS_F32_e(32|64)$")>;
+// BF16 transcendentals
+def : InstRW<[Trans32Repeat2], (instregex "^V_EXP_BF16_e(32|64)$",
+                                          "^V_LOG_BF16_e(32|64)$",
+                                          "^V_RCP_BF16_e(32|64)$",
+                                          "^V_RSQ_BF16_e(32|64)$",
+                                          "^V_SQRT_BF16_e(32|64)$",
+                                          "^V_SIN_BF16_e(32|64)$",
+                                          "^V_COS_BF16_e(32|64)$")>;
+// F16 transcendentals
+def : InstRW<[Trans32Repeat2], (instregex "^V_EXP_F16_e(32|64)$",
+                                          "^V_LOG_F16_e(32|64)$",
+                                          "^V_RCP_F16_e(32|64)$",
+                                          "^V_RSQ_F16_e(32|64)$",
+                                          "^V_SQRT_F16_e(32|64)$",
+                                          "^V_SIN_F16_e(32|64)$",
+                                          "^V_COS_F16_e(32|64)$")>;
+// TANH instructions
+def : InstRW<[Trans32Repeat2], (instregex "^V_TANH_BF16_e(32|64)$",
+                                          "^V_TANH_F16_e(32|64)$",
+                                          "^V_TANH_F32_e(32|64)$")>;
+// 64-bit shifts and moves
+def : InstRW<[Write64BitRepeat2], (instregex "^V_LSHLREV_B64_e64$",
+                                             "^V_LSHRREV_B64_e64$",
+                                             "^V_ASHRREV_I64_e64$",
+                                             "^V_MOV_B64_e(32|64)$",
+                                             "^V_TRIG_PREOP_F64_e64$")>;
+
+def : InstRW<[Write32BitRepeat2],  (instregex "^V_LSHL_ADD_U64_e64$")>;
+
+// 64-bit integer comparisons
+def : InstRW<[Write64BitRepeat2], (instregex "^V_CMP_EQ_I64_e(32|64)$",
+                                             "^V_CMP_LE_I64_e(32|64)$",
+                                             "^V_CMP_GE_I64_e(32|64)$",
+                                             "^V_CMP_NE_I64_e(32|64)$",
+                                             "^V_CMP_EQ_U64_e(32|64)$",
+                                             "^V_CMP_LE_U64_e(32|64)$",
+                                             "^V_CMP_GE_U64_e(32|64)$",
+                                             "^V_CMP_NE_U64_e(32|64)$")>;
+// 64-bit add
+def : InstRW<[Write64BitRepeat2], (instregex "^V_ADD_U64_e(32|64)$")>;
+
+// VALU RepeatRate = 4 instructions
+// Integer multiply
+def : InstRW<[IntMulRepeat4], (instregex "^V_MUL_LO_U32_e64$",
+                                         "^V_MUL_HI_U32_e64$",
+                                         "^V_MUL_HI_I32_e64$",
+                                         "^V_MAD_U32_e64$",
+                                         "^V_MAD_NC_U64_U32_e64$",
+                                         "^V_MAD_NC_I64_I32_e64$")>;
+def : InstRW<[IntMulRepeat4, WriteSALUDummy], (instregex "^V_MAD_CO_U64_U32_e64_gfx12$",
+                                                         "^V_MAD_CO_I64_I32_e64_gfx12$")>;
+// SAD instructions
+def : InstRW<[IntMulRepeat4], (instregex "^V_QSAD_PK_U16_U8_e64$",
+                                         "^V_MQSAD_PK_U16_U8_e64$",
+                                         "^V_MQSAD_U32_U8_e64$")>;
+// V_CVT_SCALE_PK8 instructions
+def : InstRW<[Write32BitRepeat4], (instregex "^V_CVT_SCALE_PK8_F16_FP8_e64$",
+                                             "^V_CVT_SCALE_PK8_BF16_FP8_e64$",
+                                             "^V_CVT_SCALE_PK8_F16_BF8_e64$",
+                                             "^V_CVT_SCALE_PK8_BF16_BF8_e64$",
+                                             "^V_CVT_SCALE_PK8_F32_FP8_e64$",
+                                             "^V_CVT_SCALE_PK8_F32_BF8_e64$",
+                                             "^V_CVT_SCALE_PK8_F16_FP4_e64$",
+                                             "^V_CVT_SCALE_PK8_BF16_FP4_e64$",
+                                             "^V_CVT_SCALE_PK8_F32_FP4_e64$")>;
+// V_CVT_SCALEF32_PK8 instructions
+def : InstRW<[Write32BitRepeat4], (instregex "^V_CVT_SCALEF32_PK8_BF8_BF16_e64$",
+                                             "^V_CVT_SCALEF32_PK8_FP8_BF16_e64$",
+                                             "^V_CVT_SCALEF32_PK8_BF8_F16_e64$",
+                                             "^V_CVT_SCALEF32_PK8_FP8_F16_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK8_BF8_BF16_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK8_FP8_BF16_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK8_BF8_F16_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK8_FP8_F16_e64$",
+                                             "^V_CVT_SCALEF32_PK8_BF8_F32_e64$",
+                                             "^V_CVT_SCALEF32_PK8_FP8_F32_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK8_BF8_F32_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK8_FP8_F32_e64$")>;
+// V_PERM_PK16 instructions
+def : InstRW<[Write32BitRepeat4], (instregex "^V_PERM_PK16_B4_U4_e64$",
+                                             "^V_PERM_PK16_B6_U4_e64$",
+                                             "^V_PERM_PK16_B8_U4_e64$")>;
+
+// VALU RepeatRate = 8 instructions
+// V_CVT_SCALEF32_PK16 instructions
+def : InstRW<[Write32BitRepeat8], (instregex "^V_CVT_SCALEF32_2XPK16_BF6_F32_e64$",
+                                             "^V_CVT_SCALEF32_2XPK16_FP6_F32_e64$",
+                                             "^V_CVT_SCALEF32_PK16_BF6_BF16_e64$",
+                                             "^V_CVT_SCALEF32_PK16_FP6_BF16_e64$",
+                                             "^V_CVT_SCALEF32_PK16_BF6_F16_e64$",
+                                             "^V_CVT_SCALEF32_PK16_FP6_F16_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK16_BF6_BF16_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK16_FP6_BF16_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK16_BF6_F16_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK16_FP6_F16_e64$",
+                                             "^V_CVT_SCALEF32_PK16_BF6_F32_e64$",
+                                             "^V_CVT_SCALEF32_PK16_FP6_F32_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK16_BF6_F32_e64$",
+                                             "^V_CVT_SCALEF32_SR_PK16_FP6_F32_e64$")>;
+// V_CVT_SCALE_PK16 instructions
+def : InstRW<[Write32BitRepeat8], (instregex "^V_CVT_SCALE_PK16_BF16_BF6_e64$",
+                                             "^V_CVT_SCALE_PK16_F16_BF6_e64$",
+                                             "^V_CVT_SCALE_PK16_F32_BF6_e64$",
+                                             "^V_CVT_SCALE_PK16_BF16_FP6_e64$",
+                                             "^V_CVT_SCALE_PK16_F16_FP6_e64$",
+                                             "^V_CVT_SCALE_PK16_F32_FP6_e64$")>;
+
+// VALU RepeatRate = 16 instructions
+// V_CVT_SCALEF32_PK32 instructions
+def : InstRW<[Write32BitRepeat16], (instregex "^V_CVT_SCALEF32_PK32_BF16_BF6_e64$",
+                                              "^V_CVT_SCALEF32_PK32_BF6_BF16_e64$",
+                                              "^V_CVT_SCALEF32_PK32_BF16_FP6_e64$",
+                                              "^V_CVT_SCALEF32_PK32_FP6_BF16_e64$",
+                                              "^V_CVT_SCALEF32_PK32_F16_BF6_e64$",
+                                              "^V_CVT_SCALEF32_PK32_BF6_F16_e64$",
+                                              "^V_CVT_SCALEF32_PK32_F16_FP6_e64$",
+                                              "^V_CVT_SCALEF32_PK32_FP6_F16_e64$",
+                                              "^V_CVT_SCALEF32_PK32_F32_BF6_e64$",
+                                              "^V_CVT_SCALEF32_PK32_F32_FP6_e64$")>;
+
+// VALU RepeatRate = 32 instructions
+// F64 transcendentals
+def : InstRW<[Trans64Repeat32], (instregex "^V_RCP_F64_e(32|64)$",
+                                           "^V_RSQ_F64_e(32|64)$",
+                                           "^V_SQRT_F64_e(32|64)$")>;
+// 64-bit integer operations
+def : InstRW<[DoubleRepeat32], (instregex "^V_MUL_U64_e32$",
+                                          "^V_MAX_U64_e64$",
+                                          "^V_MAX_I64_e64$",
+                                          "^V_MIN_U64_e64$",
+                                          "^V_MIN_I64_e64$")>;
+// F64 comparisons
+def : InstRW<[DoubleRepeat32], (instregex "^V_CMP_EQ_F64_e(32|64)$",
+                                          "^V_CMP_LE_F64_e(32|64)$",
+                                          "^V_CMP_GE_F64_e(32|64)$")>;
+// F64 conversions
+def : InstRW<[DoubleRepeat32], (instregex "^V_CVT_I32_F64_e(32|64)$",
+                                          "^V_CVT_F64_I32_e(32|64)$",
+                                          "^V_CVT_F32_F64_e(32|64)$",
+                                          "^V_CVT_F64_F32_e(32|64)$",
+                                          "^V_CVT_U32_F64_e(32|64)$",
+                                          "^V_CVT_F64_U32_e(32|64)$")>;
+// F64 rounding and frexp
+def : InstRW<[DoubleRepeat32], (instregex "^V_TRUNC_F64_e(32|64)$",
+                                          "^V_CEIL_F64_e(32|64)$",
+                                          "^V_RNDNE_F64_e(32|64)$",
+                                          "^V_FLOOR_F64_e(32|64)$",
+                                          "^V_FREXP_EXP_I32_F64_e(32|64)$",
+                                          "^V_FREXP_MANT_F64_e(32|64)$")>;
+// F64 arithmetic
+def : InstRW<[DoubleRepeat32], (instregex "^V_FRACT_F64_e(32|64)$",
+                                          "^V_FMA_F64_e64$",
+                                          "^V_DIV_FIXUP_F64_e64$",
+                                          "^V_DIV_FMAS_F64_e64$",
+                                          "^V_ADD_F64_e64$",
+                                          "^V_MUL_F64_e64$",
+                                          "^V_MIN_NUM_F64_e64$",
+                                          "^V_MAX_NUM_F64_e64$",
+                                          "^V_LDEXP_F64_e64$",
+                                          "^V_MINIMUM_F64_e64$",
+                                          "^V_MAXIMUM_F64_e64$")>;
 } // End GFX125xCommonWriteRes
 
 let SchedModel = GFX1250SpeedModel in {
@@ -559,4 +782,6 @@ def : HWWriteRes<WriteDouble,            [HWVALU, HWRC],   37>;
 def : HWWriteRes<WriteDoubleAdd,         [HWVALU, HWRC],   37>;
 def : HWWriteRes<WriteDoubleCvt,         [HWVALU, HWRC],   37>;
 def : HWWriteRes<WriteTrans64,           [HWVALU, HWTransVALU, HWRC], 38>;
+
+
 } // SchedModel = GFX1250SpeedModel
