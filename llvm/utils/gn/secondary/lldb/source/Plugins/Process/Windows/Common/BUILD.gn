@@ -26,7 +26,6 @@ static_library("Common") {
   ]
   sources = [
     "DebuggerThread.cpp",
-    "IOHandlerProcessSTDIOWindows.cpp",
     "LocalDebugDelegate.cpp",
     "NativeProcessWindows.cpp",
     "NativeRegisterContextWindows.cpp",

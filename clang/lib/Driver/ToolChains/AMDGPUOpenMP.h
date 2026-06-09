@@ -60,9 +60,6 @@ public:
   getDeviceLibs(const llvm::opt::ArgList &Args,
                 const Action::OffloadKind DeviceOffloadKind) const override;
 
-  /// OpenMP uses LTO by default to link device bitcode.
-  LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
-
   const ToolChain &HostTC;
 };
 
