@@ -45,8 +45,7 @@ TEST_F(LlvmLibcSendRecvMmsgTest, SendRecvMmsgSucceedsWithSocketPair) {
   struct iovec send_msg_vec[MESSAGES_COUNT] = {};
   struct mmsghdr send_msg_hdr[MESSAGES_COUNT] = {};
   for (size_t i = 0; i < MESSAGES_COUNT; ++i) {
-    send_msg_vec[i].iov_base =
-        reinterpret_cast<void *>(const_cast<char *>(TEST_MESSAGES[i]));
+    send_msg_vec[i].iov_base = const_cast<char *>(TEST_MESSAGES[i]);
     send_msg_vec[i].iov_len = LIBC_NAMESPACE::strlen(TEST_MESSAGES[i]) + 1;
     send_msg_hdr[i].msg_hdr.msg_iov = &send_msg_vec[i];
     send_msg_hdr[i].msg_hdr.msg_iovlen = 1;
@@ -54,7 +53,7 @@ TEST_F(LlvmLibcSendRecvMmsgTest, SendRecvMmsgSucceedsWithSocketPair) {
 
   ASSERT_THAT(
       LIBC_NAMESPACE::sendmmsg(sockpair[0], send_msg_hdr, MESSAGES_COUNT, 0),
-      Succeeds(static_cast<int>(MESSAGES_COUNT)));
+      Succeeds<int>(MESSAGES_COUNT));
 
   for (size_t i = 0; i < MESSAGES_COUNT; ++i) {
     ASSERT_EQ(static_cast<size_t>(send_msg_hdr[i].msg_len),
@@ -65,7 +64,7 @@ TEST_F(LlvmLibcSendRecvMmsgTest, SendRecvMmsgSucceedsWithSocketPair) {
   struct iovec recv_msg_vec[MESSAGES_COUNT] = {};
   struct mmsghdr recv_msg_hdr[MESSAGES_COUNT] = {};
   for (size_t i = 0; i < MESSAGES_COUNT; ++i) {
-    recv_msg_vec[i].iov_base = reinterpret_cast<void *>(recv_buffers[i]);
+    recv_msg_vec[i].iov_base = recv_buffers[i];
     recv_msg_vec[i].iov_len = sizeof(recv_buffers[i]);
     recv_msg_hdr[i].msg_hdr.msg_iov = &recv_msg_vec[i];
     recv_msg_hdr[i].msg_hdr.msg_iovlen = 1;
@@ -78,7 +77,7 @@ TEST_F(LlvmLibcSendRecvMmsgTest, SendRecvMmsgSucceedsWithSocketPair) {
 
   ASSERT_THAT(LIBC_NAMESPACE::recvmmsg(sockpair[1], recv_msg_hdr,
                                        MESSAGES_COUNT, 0, nullptr),
-              Succeeds(static_cast<int>(MESSAGES_COUNT)));
+              Succeeds<int>(MESSAGES_COUNT));
 
   for (size_t i = 0; i < MESSAGES_COUNT; ++i) {
     ASSERT_EQ(static_cast<size_t>(recv_msg_hdr[i].msg_len),
