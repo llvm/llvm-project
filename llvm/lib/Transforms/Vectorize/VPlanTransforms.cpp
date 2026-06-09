@@ -4648,9 +4648,9 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
              "VecOp of predicated reduction must be select");
       VPBuilder Builder(Cast);
       FastMathFlags FMFs =
-        Red->getChainOp()->getScalarType()->isFloatingPointTy()
-        ? Red->getFastMathFlagsOrNone()
-        : FastMathFlags();
+          Red->getChainOp()->getScalarType()->isFloatingPointTy()
+              ? Red->getFastMathFlagsOrNone()
+              : FastMathFlags();
       auto *NewSelect =
           Builder.createSelect(HeaderMask, Cast->getOperand(0),
                                new VPIRValue(getRecurrenceIdentity(
