@@ -7303,9 +7303,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     if (mustSuppressSpeculation(*LI))
       return false;
     const DataLayout &DL = LI->getDataLayout();
-    return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
-                                              LI->getType(), LI->getAlign(), DL,
-                                              CtxI, AC, DT, TLI);
+    return isDereferenceableAndAlignedPointer(
+        LI->getPointerOperand(), LI->getType(), LI->getAlign(),
+        SimplifyQuery(DL, TLI, DT, AC, CtxI));
   }
   case Instruction::Call: {
     auto *CI = dyn_cast<const CallInst>(Inst);
