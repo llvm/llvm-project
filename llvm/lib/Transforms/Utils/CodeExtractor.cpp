@@ -1220,10 +1220,7 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
   for (unsigned i = 0, e = TI->getNumSuccessors(); i < e; ++i) {
     BlockNode ExitNode(i);
     uint64_t ExitFreq = ExitWeights.lookup(TI->getSuccessor(i)).getFrequency();
-    if (ExitFreq != 0)
-      BranchDist.addExit(ExitNode, ExitFreq);
-    else
-      EdgeProbabilities[i] = BranchProbability::getZero();
+    BranchDist.addExit(ExitNode, ExitFreq);
   }
 
   // Check for no total weight.

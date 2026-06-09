@@ -159,12 +159,6 @@ Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-expandload.ll
 Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-load.ll
 Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-store.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
-Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
-Transforms/TailCallElim/accum_recursion.ll
-Transforms/TailCallElim/basic.ll
-Transforms/TailCallElim/debugloc.ll
-Transforms/TailCallElim/dropping_debugloc_acc_rec_inst_rnew.ll
-Transforms/TailCallElim/inf-recursion.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
