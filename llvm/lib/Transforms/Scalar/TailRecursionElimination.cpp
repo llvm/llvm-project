@@ -433,7 +433,7 @@ class TailRecursionEliminator {
   // Keep track of the sum of frequencies of blocks that have calls eliminated
   // so we can synthesize branch weights later that require information on
   // recursion frequency.
-  uint64_t EliminateBlocksFrequencySum;
+  uint64_t EliminateBlocksFrequencySum = 0;
 
   // The below are shared state needed when performing accumulator recursion.
   // There values should be populated by insertAccumulator the first time we
