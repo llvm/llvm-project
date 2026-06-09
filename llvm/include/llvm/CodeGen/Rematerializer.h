@@ -98,10 +98,11 @@ public:
   /// A rematerializable register defined by a single machine instruction.
   ///
   /// A rematerializable register has a set of dependencies, which correspond
-  /// to the unique read register operands of its defining instruction.
-  /// They are identified by their machine operand index, and can themselves be
-  /// rematerializable. Operand indices corresponding to unrematerializable
-  /// dependencies are managed by and queried from the rematerializer.
+  /// to the unique read register operands of its defining instruction and which
+  /// can themselves be rematerializable. Operand indices corresponding to
+  /// unrematerializable dependencies are managed by and queried from the
+  /// rematerializer, whereas rematerializable ones are part of this struct and
+  /// identified through their register index.
   ///
   /// A rematerializable register also has an arbitrary number of users in an
   /// arbitrary number of regions, potentially including its own defining
@@ -119,21 +120,9 @@ public:
     using RegionUsers = SmallDenseSet<MachineInstr *, 4>;
     /// Uses of the register, mapped by region.
     SmallDenseMap<unsigned, RegionUsers, 2> Uses;
-
-    /// A read register operand of \p DefMI that is rematerializable (according
-    /// to the rematerializer).
-    struct Dependency {
-      /// The register's machine operand index in \p DefMI.
-      unsigned MOIdx;
-      /// The corresponding register's index in the rematerializer.
-      RegisterIdx RegIdx;
-
-      Dependency(unsigned MOIdx, RegisterIdx RegIdx)
-          : MOIdx(MOIdx), RegIdx(RegIdx) {}
-    };
     /// This register's rematerializable dependencies, one per unique
     /// rematerializable register operand.
-    SmallVector<Dependency, 2> Dependencies;
+    SmallVector<RegisterIdx, 2> Dependencies;
 
     /// Returns the rematerializable register from its defining instruction.
     Register getDefReg() const {
@@ -250,12 +239,12 @@ public:
   /// register.
   bool isRematerializedRegister(RegisterIdx RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
-    return RegIdx >= UnrematableOprds.size();
+    return RegIdx >= UnrematableDeps.size();
   }
   /// Returns the origin index of rematerializable register \p RegIdx.
   RegisterIdx getOriginOf(RegisterIdx RematRegIdx) const {
     assert(isRematerializedRegister(RematRegIdx) && "not a rematerialization");
-    return Origins[RematRegIdx - UnrematableOprds.size()];
+    return Origins[RematRegIdx - UnrematableDeps.size()];
   }
   /// If \p RegIdx is a rematerialization, returns its origin's index. If it is
   /// an original register's index, returns the same index.
@@ -264,10 +253,11 @@ public:
       return getOriginOf(RegIdx);
     return RegIdx;
   }
-  /// Returns operand indices corresponding to unrematerializable operands for
-  /// any register \p RegIdx.
-  ArrayRef<unsigned> getUnrematableOprds(RegisterIdx RegIdx) const {
-    return UnrematableOprds[getOriginOrSelf(RegIdx)];
+  /// Returns unreamaterializable read lanes of register operands for
+  /// register \p RegIdx.
+  ArrayRef<std::pair<Register, LaneBitmask>>
+  getUnrematableDeps(RegisterIdx RegIdx) const {
+    return UnrematableDeps[getOriginOrSelf(RegIdx)];
   }
 
   /// If \p MI's first operand defines a register and that register is a
@@ -363,7 +353,7 @@ public:
   /// be guaranteed to have enough space for an extra element.
   RegisterIdx rematerializeReg(RegisterIdx RegIdx, unsigned UseRegion,
                                MachineBasicBlock::iterator InsertPos,
-                               SmallVectorImpl<Reg::Dependency> &&Dependencies);
+                               SmallVectorImpl<RegisterIdx> &&Dependencies);
 
   /// Re-creates a previously deleted register \p RegIdx before \p InsertPos,
   /// which must be in the register's original defining region. \p DefReg must
@@ -401,6 +391,12 @@ public:
   /// Uses according to its current live interval.
   bool isMOIdenticalAtUses(MachineOperand &MO, ArrayRef<SlotIndex> Uses) const;
 
+  /// Determines whether lanes \p Mask of register \p Reg habe the same value at
+  /// all \p Uses as at \p RefSlot. This implies that it is also available at
+  /// all \p Uses according to its current live interval.
+  bool isRegIdenticalAtUses(Register Reg, LaneBitmask Mask, SlotIndex RefSlot,
+                            ArrayRef<SlotIndex> Uses) const;
+
   /// Finds the closest rematerialization of register \p RegIdx in region \p
   /// Region that exists before slot \p Before. If no such rematerialization
   /// exists, returns \ref Rematerializer::NoReg.
@@ -437,11 +433,11 @@ private:
   /// deleted. Indices inside this vector serve as handles for rematerializable
   /// registers.
   SmallVector<Reg> Regs;
-  /// For each original register, stores indices of its read register operands
-  /// which are unrematerializable. This doesn't change after the initial
-  /// collection period, so the size of the vector indicates the number of
-  /// original registers.
-  SmallVector<SmallVector<unsigned, 2>> UnrematableOprds;
+  /// For each original register, stores unrematerializable read lanes of
+  /// register operands. This doesn't change after the initial collection
+  /// period, so the size of the vector indicates the number of original
+  /// registers.
+  SmallVector<SmallVector<std::pair<Register, LaneBitmask>, 2>> UnrematableDeps;
   /// Indicates the original register index of each rematerialization, in the
   /// order in which they are created. The size of the vector indicates the
   /// total number of rematerializations ever created, including those that were
@@ -463,9 +459,8 @@ private:
   DenseSet<RegisterIdx> LISUpdates;
 
   /// Common post-processing step after creating a new register \p RematRegIdx
-  /// at \p InsertPos based on register \p ModelRegIdx.
-  void postRematerialization(RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx,
-                             MachineBasicBlock::iterator InsertPos);
+  /// based on register \p ModelRegIdx.
+  void postRematerialization(RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx);
 
   /// During the analysis phase, creates a \ref Rematerializer::Reg object for
   /// virtual register \p VirtRegIdx if it is rematerializable. \p MIRegion maps
