@@ -413,6 +413,60 @@ static void removeRedundantBitcasts(Module &M, PointeeTypeMap &PTM) {
   }
 }
 
+static void normalizeArrayGlobalGEPs(Module &M) {
+  Type *I64Ty = Type::getInt64Ty(M.getContext());
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    SmallVector<GetElementPtrInst *, 8> ToFix;
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+          if (GEP->getNumIndices() != 1)
+            continue;
+          auto *GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
+          if (!GV)
+            continue;
+          auto *AT = dyn_cast<ArrayType>(GV->getValueType());
+          if (!AT)
+            continue;
+          if (GEP->getSourceElementType() == AT)
+            continue;
+          ToFix.push_back(GEP);
+        }
+
+    for (auto *GEP : ToFix) {
+      auto *GV = cast<GlobalVariable>(GEP->getPointerOperand());
+      auto *AT = cast<ArrayType>(GV->getValueType());
+      Type *ElemTy = AT->getElementType();
+      Type *SrcTy = GEP->getSourceElementType();
+      Value *Idx = GEP->idx_begin()->get();
+
+      Value *ElemIdx = nullptr;
+      if (SrcTy == ElemTy) {
+        ElemIdx = Idx;
+      } else {
+        uint64_t SrcSize = M.getDataLayout().getTypeAllocSize(SrcTy);
+        uint64_t ElemSize = M.getDataLayout().getTypeAllocSize(ElemTy);
+        auto *CI = dyn_cast<ConstantInt>(Idx);
+        if (!CI || ElemSize == 0)
+          continue;
+        uint64_t ByteOff = CI->getZExtValue() * SrcSize;
+        if (ByteOff % ElemSize != 0)
+          continue;
+        ElemIdx = ConstantInt::get(I64Ty, ByteOff / ElemSize);
+      }
+
+      auto *NewGEP = GetElementPtrInst::Create(
+          AT, GV, {ConstantInt::get(I64Ty, 0), ElemIdx}, "",
+          GEP->getIterator());
+      NewGEP->setIsInBounds(GEP->isInBounds());
+      GEP->replaceAllUsesWith(NewGEP);
+      GEP->eraseFromParent();
+    }
+  }
+}
+
 std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
   SmallVector<char, 0> Buf;
   {
@@ -439,6 +493,8 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
 
     // Lower ConstantExpr operands to real instructions before enumeration.
     lowerConstantExprs(M);
+
+    normalizeArrayGlobalGEPs(M);
 
     // Fix kernel argument metadata to match actual pointee types.
     fixKernelArgMetadata(M, PTM);
