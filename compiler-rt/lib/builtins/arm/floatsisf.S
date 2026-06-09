@@ -82,7 +82,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_i2f)
   // enough to need rounding at all, so all the exact cases _and_ half the
   // inexact ones will benefit from the saving.
   add     r0, r1, r2, lsr #8    // r0 is now sign+exp+mant, unrounded
-  lsls.N  r3, r2, #25           // .N to make sure it's assembled as 16-bit
+  lsls.n  r3, r2, #25           // .N to make sure it's assembled as 16-bit
   bxcc    lr
   // Now if we didn't take the return, we must definitely round up, and
   // conditionally round to even.
