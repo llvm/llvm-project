@@ -2341,14 +2341,20 @@ defm assume_nothrow_exception_dtor: BoolFOption<"assume-nothrow-exception-dtor",
   LangOpts<"AssumeNothrowExceptionDtor">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume that exception objects' destructors are non-throwing">,
   NegFlag<SetFalse>>;
-def winx64_eh_unwindv2
-    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+def winx64_eh_unwind_EQ
+    : Joined<["-"], "fwinx64-eh-unwind=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Generate unwind v2 (epilog) information for x64 Windows">,
-      Values<"disabled,best-effort,required">,
-      NormalizedValues<["Disabled", "BestEffort", "Required"]>,
-      NormalizedValuesScope<"llvm::WinX64EHUnwindV2Mode">,
-      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwindV2">, "Disabled">;
+      HelpText<"Set x64 Windows unwind info version">,
+      Values<"v1,v2-best-effort,v2-required,v3">,
+      NormalizedValues<["V1", "V2BestEffort", "V2Required", "V3"]>,
+      NormalizedValuesScope<"llvm::WinX64EHUnwindMode">,
+      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwind">, "Default">;
+// Legacy flag — driver only, not passed to cc1. The driver translates it.
+def winx64_eh_unwindv2_EQ
+    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+    Visibility<[ClangOption]>,
+      HelpText<"(Legacy) Generate unwind v2 (epilog) information for x64 Windows">,
+      Values<"disabled,best-effort,required">;
 def win_cfg_mechanism
     : Joined<["-"], "fwin-cfg-mechanism=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
