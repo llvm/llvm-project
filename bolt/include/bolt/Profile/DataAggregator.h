@@ -88,6 +88,7 @@ private:
     uint64_t From;
     uint64_t To;
     bool Mispred;
+    bool IsReturn;
   };
   friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
 
