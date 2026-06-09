@@ -192,7 +192,7 @@ ParseResult Parse(llvm::ArrayRef<uint8_t> bytes, bool is_arm = false,
   DataExtractor data(bytes.data(), bytes.size(), lldb::eByteOrderLittle,
                      /*addr_size=*/8);
   ParseResult result;
-  result.ok = ParseTrieEntries(data, /*offset=*/0, is_arm, text_seg_base_addr,
+  result.ok = ParseTrieEntries(data, is_arm, text_seg_base_addr,
                                result.resolver_addresses, result.reexports,
                                result.ext_symbols);
   return result;
