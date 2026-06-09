@@ -550,6 +550,13 @@ public:
   /// \return true if the finalize function has already run
   LLVM_ABI bool isFinalized();
 
+  /// Return the runtime function name for \p FnID.
+  LLVM_ABI StringRef getRuntimeFunctionName(omp::RuntimeFunction FnID) const;
+
+  /// Return the runtime function type for \p FnID.
+  LLVM_ABI FunctionType *
+  getRuntimeFunctionType(omp::RuntimeFunction FnID) const;
+
   /// Add attributes known for \p FnID to \p Fn.
   LLVM_ABI void addAttributes(omp::RuntimeFunction FnID, Function &Fn);
 
