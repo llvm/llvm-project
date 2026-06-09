@@ -665,7 +665,7 @@ struct HasSetterField {
   }
   void reset() {
     MyObj obj;
-    field = new LifetimeBoundCtor(obj); // expected-warning {{address of stack memory escapes to a field}}
+    field = new LifetimeBoundCtor(obj); // expected-warning {{stack memory associated with local variable 'obj' escapes to the field 'field' which will dangle}}
   }
 };
 

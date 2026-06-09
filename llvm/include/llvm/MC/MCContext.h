@@ -457,8 +457,8 @@ public:
 
   /// Get or create a symbol for a basic block. For non-always-emit symbols,
   /// this behaves like createTempSymbol, except that it uses the
-  /// PrivateLabelPrefix instead of the InternalSymbolPrefix. When AlwaysEmit is
-  /// true, behaves like getOrCreateSymbol, prefixed with PrivateLabelPrefix.
+  /// InternalSymbolPrefix. When AlwaysEmit is true, behaves like
+  /// getOrCreateSymbol, prefixed with InternalSymbolPrefix.
   LLVM_ABI MCSymbol *createBlockSymbol(const Twine &Name,
                                        bool AlwaysEmit = false);
 

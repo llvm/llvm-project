@@ -676,8 +676,17 @@ void HexagonDAGToDAGISel::SelectIntrinsicWChain(SDNode *N) {
 }
 
 void HexagonDAGToDAGISel::SelectIntrinsicWOChain(SDNode *N) {
-  unsigned IID = N->getConstantOperandVal(0);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(0))->getZExtValue();
   unsigned Bits;
+
+  // On v79 and above, IEEE HVX instructions are no longer present.
+  // The related intrinsics must be translated to QFloat implicitly in order
+  // to provide backward compatibility.
+  if (HST->useHVXV79Ops() && isIEEEHVXIntrinsic(IID)) {
+    translateIEEEIntrinsicToQFloat(N, IID);
+    return;
+  }
+
   switch (IID) {
   case Intrinsic::hexagon_S2_vsplatrb:
     Bits = 8;
@@ -1315,7 +1324,7 @@ void HexagonDAGToDAGISel::ppHoistZextI1(std::vector<SDNode*> &&Nodes) {
       if (!UVT.isSimple() || !UVT.isInteger() || UVT.getSimpleVT() == MVT::i1)
         continue;
       // Do not generate select for all i1 vector type.
-      if (UVT.isVector() && UVT.getVectorElementType() == MVT::i1)
+      if (UVT.isVectorOf(MVT::i1))
         continue;
       if (isMemOPCandidate(N, U))
         continue;

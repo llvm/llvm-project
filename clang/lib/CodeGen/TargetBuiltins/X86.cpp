@@ -161,9 +161,8 @@ static Value *EmitX86ExpandLoad(CodeGenFunction &CGF,
   Value *MaskVec = getMaskVecValue(
       CGF, Ops[2], cast<FixedVectorType>(ResultTy)->getNumElements());
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_expandload,
-                                           ResultTy);
-  return CGF.Builder.CreateCall(F, { Ptr, MaskVec, Ops[1] });
+  return CGF.Builder.CreateMaskedExpandLoad(ResultTy, Ptr, MaybeAlign(),
+                                            MaskVec, Ops[1]);
 }
 
 static Value *EmitX86CompressExpand(CodeGenFunction &CGF,
@@ -186,9 +185,8 @@ static Value *EmitX86CompressStore(CodeGenFunction &CGF,
 
   Value *MaskVec = getMaskVecValue(CGF, Ops[2], ResultTy->getNumElements());
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_compressstore,
-                                           ResultTy);
-  return CGF.Builder.CreateCall(F, { Ops[1], Ptr, MaskVec });
+  return CGF.Builder.CreateMaskedCompressStore(Ops[1], Ptr, MaybeAlign(),
+                                               MaskVec);
 }
 
 static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
@@ -1024,14 +1022,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   }
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
-    RawAddress Tmp = CreateMemTemp(E->getArg(0)->getType());
+    RawAddress Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     Builder.CreateStore(Ops[0], Tmp);
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_ldmxcsr),
                               Tmp.getPointer());
   }
   case X86::BI_mm_getcsr:
   case X86::BI__builtin_ia32_stmxcsr: {
-    RawAddress Tmp = CreateMemTemp(E->getType());
+    RawAddress Tmp = CreateMemTempWithoutCast(E->getType());
     Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_stmxcsr),
                        Tmp.getPointer());
     return Builder.CreateLoad(Tmp, "stmxcsr");

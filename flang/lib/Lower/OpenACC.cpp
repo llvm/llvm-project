@@ -178,19 +178,22 @@ static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
                                               builder.getContext(), clause)));
 }
 
-static mlir::func::FuncOp
-createDeclareFunc(mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder,
-                  mlir::Location loc, llvm::StringRef funcName,
-                  llvm::SmallVector<mlir::Type> argsTy = {},
-                  llvm::SmallVector<mlir::Location> locs = {}) {
+static mlir::func::FuncOp createDeclareFunc(
+    mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder, mlir::Location loc,
+    llvm::StringRef funcName, llvm::SmallVector<mlir::Type> argsTy = {},
+    llvm::SmallVector<mlir::Location> locs = {}, bool linkable = false) {
   auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), argsTy, {});
   auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, funcName, funcTy);
-  funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  funcOp.setVisibility(linkable ? mlir::SymbolTable::Visibility::Public
+                                : mlir::SymbolTable::Visibility::Private);
   builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), argsTy,
                       locs);
   builder.setInsertionPointToEnd(&funcOp.getRegion().back());
   mlir::func::ReturnOp::create(builder, loc);
   builder.setInsertionPointToStart(&funcOp.getRegion().back());
+  if (linkable)
+    funcOp->setAttr(mlir::acc::getDeclareActionAttrName(),
+                    mlir::UnitAttr::get(modBuilder.getContext()));
   return funcOp;
 }
 
@@ -1070,6 +1073,7 @@ getReductionOperator(const Fortran::parser::ReductionOperator &op,
       converter.getLoweringOptions().getFPMaxminBehavior();
   switch (op.v) {
   case Fortran::parser::ReductionOperator::Operator::Plus:
+  case Fortran::parser::ReductionOperator::Operator::Minus:
     return mlir::acc::ReductionOperator::AccAdd;
   case Fortran::parser::ReductionOperator::Operator::Multiply:
     return mlir::acc::ReductionOperator::AccMul;
@@ -3717,7 +3721,8 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
   registerFuncName << globalOp.getSymName().str()
                    << Fortran::lower::declarePostAllocSuffix.str();
   auto registerFuncOp =
-      createDeclareFunc(modBuilder, builder, loc, registerFuncName.str());
+      createDeclareFunc(modBuilder, builder, loc, registerFuncName.str(),
+                        /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
 
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(globalOp.getType()),
@@ -3757,7 +3762,8 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   postDeallocFuncName << globalOp.getSymName().str()
                       << Fortran::lower::declarePostDeallocSuffix.str();
   auto postDeallocOp =
-      createDeclareFunc(modBuilder, builder, loc, postDeallocFuncName.str());
+      createDeclareFunc(modBuilder, builder, loc, postDeallocFuncName.str(),
+                        /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
 
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(globalOp.getType()),
@@ -4606,9 +4612,28 @@ genACC(Fortran::lower::AbstractConverter &converter,
             converter.getSymbolMap().lookupSymbol(symbol)) {
       // For simple variables, rebind the symbol directly.
       fir::ExtendedValue hostExv = converter.getSymbolExtendedValue(symbol);
-      fir::ExtendedValue cacheExv =
-          fir::substBase(hostExv, cacheOp.getAccVar());
-      converter.bindSymbol(symbol, cacheExv);
+      mlir::Value accVar = cacheOp.getAccVar();
+      if (mlir::isa<fir::BaseBoxType>(accVar.getType())) {
+        // acc.cache produces the cache descriptor; its eventual extents and
+        // strides are decided later by cache materialization, which may stage
+        // the section into packed or unpacked storage depending on the bounds
+        // and access pattern. We therefore cannot know the cached shape/strides
+        // here and must not re-impose the host array's shape on the descriptor.
+        // Re-declare with the original lower bounds only (lowered to a
+        // fir.shift, no extents): the resulting fir.rebox then preserves
+        // whatever extents and strides the materialized descriptor carries,
+        // rather than reshaping it back to the host's contiguous layout.
+        llvm::SmallVector<mlir::Value> lbounds =
+            fir::factory::getNonDefaultLowerBounds(builder, operandLocation,
+                                                   hostExv);
+        converter.bindSymbol(symbol, fir::BoxValue(accVar, lbounds,
+                                                   /*explicitParams=*/{},
+                                                   /*explicitExtents=*/{}));
+      } else {
+        // Raw reference (e.g. a contiguous, default-lower-bound array): the
+        // cached reads use the constant-stride path, so keep the host shape.
+        converter.bindSymbol(symbol, fir::substBase(hostExv, accVar));
+      }
     } else {
       // Derived type component reference.
       assert(designator && "expected designator for non-symbol cache operand");
@@ -4693,6 +4718,36 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
           [&](const Fortran::parser::OpenACCRoutineConstruct &x) {},
       },
       accDeclConstruct.u);
+}
+
+void Fortran::lower::declareExternalAccModuleDeclareActionRecipes(
+    AbstractConverter &converter, fir::FirOpBuilder &builder,
+    const Fortran::semantics::Symbol &sym) {
+  using Flag = Fortran::semantics::Symbol::Flag;
+  const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+  if (!ultimate.test(Flag::AccDeclareAction))
+    return;
+
+  mlir::ModuleOp module = builder.getModule();
+  mlir::Location loc = converter.genLocation(sym.name());
+  std::string prefix = converter.mangleName(ultimate);
+
+  auto declareExternalRecipe = [&](llvm::StringRef suffix) {
+    std::string name = prefix + suffix.str();
+    if (module.lookupSymbol<mlir::func::FuncOp>(name))
+      return;
+    auto funcTy = mlir::FunctionType::get(builder.getContext(), {}, {});
+    mlir::OpBuilder modBuilder(module.getBodyRegion());
+    modBuilder.setInsertionPointToEnd(module.getBody());
+    auto funcOp = mlir::func::FuncOp::create(modBuilder, loc, name, funcTy);
+    funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  };
+
+  declareExternalRecipe(declarePostAllocSuffix);
+  if (ultimate.test(Flag::AccCreate) || ultimate.test(Flag::AccCopyIn) ||
+      ultimate.test(Flag::AccCopyInReadOnly) || ultimate.test(Flag::AccCopy) ||
+      ultimate.test(Flag::AccCopyOut) || ultimate.test(Flag::AccDeviceResident))
+    declareExternalRecipe(declarePostDeallocSuffix);
 }
 
 void Fortran::lower::attachDeclarePostAllocAction(

@@ -275,6 +275,9 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
         bool IsIndirect = !Callee || Callee->isDeclaration();
         Info.HasIndirectCall |= IsIndirect;
 
+        bool IsChainCall = MI.getOpcode() == AMDGPU::SI_TCRETURN_CHAIN;
+        Info.HasNonChainIndirectCall |= (!IsChainCall && IsIndirect);
+
         // In object linking mode the linker has the full cross-TU view. It
         // propagates resource usage across both direct calls to external
         // declarations and true indirect calls. Skip the compile-time

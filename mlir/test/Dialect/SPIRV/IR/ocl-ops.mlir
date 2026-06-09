@@ -521,6 +521,26 @@ func.func @rintvec(%arg0 : vector<3xf16>) -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.trunc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func.func @trunc(
+func.func @trunc(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.trunc {{%.*}} : f32
+  %0 = spirv.CL.trunc %arg0 : f32
+  return
+}
+
+// CHECK-LABEL: func.func @truncvec(
+func.func @truncvec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.CL.trunc {{%.*}} : vector<3xf16>
+  %0 = spirv.CL.trunc %arg0 : vector<3xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.CL.printf
 //===----------------------------------------------------------------------===//
 // CHECK-LABEL: func.func @printf(
@@ -612,6 +632,22 @@ func.func @cosh(%arg0 : vector<4xf16>) -> () {
 
 // -----
 
+func.func @erfc(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.erfc {{%.*}} : f32
+  %2 = spirv.CL.erfc %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @erfc(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.erfc {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.erfc %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
 func.func @asin(%arg0 : f32) -> () {
   // CHECK: spirv.CL.asin {{%.*}} : f32
   %2 = spirv.CL.asin %arg0 : f32
@@ -671,6 +707,22 @@ func.func @acosh(%arg0 : f32) -> () {
 func.func @acosh(%arg0 : vector<4xf16>) -> () {
   // CHECK: spirv.CL.acosh {{%.*}} : vector<4xf16>
   %2 = spirv.CL.acosh %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+func.func @cbrt(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.cbrt {{%.*}} : f32
+  %2 = spirv.CL.cbrt %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @cbrt(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.cbrt {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.cbrt %arg0 : vector<4xf16>
   return
 }
 

@@ -2699,3 +2699,120 @@ omitting them will work fine; these numbers are always base 16.
 
 The length of the payload is not provided.  A reliable, 8-bit clean,
 transport layer is assumed.
+
+## Accelerator Packets
+
+The packets below support debugging hardware accelerators (e.g. GPUs,
+FPGAs) alongside the native host process via accelerator plugins installed
+in lldb-server.
+
+An accelerator plugin drives the client by returning a list of
+`AcceleratorActions` (currently just breakpoints to set in the native
+process). The client can receive `AcceleratorActions` at two points:
+
+1. Once, in response to the `jAcceleratorPluginInitialize` packet sent when
+   the native process is launched or attached.
+2. In response to a `jAcceleratorPluginBreakpointHit` packet, when a
+   breakpoint the plugin previously requested is hit. The hit response may
+   carry a further set of `AcceleratorActions`.
+
+Each set of `AcceleratorActions` is tagged with a `plugin_name` and an
+`identifier` that is unique within that plugin, so the client can ignore a
+set it has already processed if the same actions are delivered again.
+
+### jAcceleratorPluginInitialize
+
+This packet requests initialization data from all accelerator plugins
+installed in lldb-server. Accelerator plugins allow lldb-server to support
+debugging of hardware accelerators (e.g. GPUs, FPGAs) alongside the native
+host process.
+
+This packet requires the `accelerator-plugins+` feature from `qSupported`.
+It should be sent early in the session, after `qSupported` but before
+launching or attaching to an inferior process. If the hardware accelerator
+is not present, launching or attaching to the accelerator debug session
+will fail.
+
+```
+LLDB SENDS:    jAcceleratorPluginInitialize
+STUB REPLIES:  [<accelerator_action>,...]
+```
+
+Each `accelerator_action` is a JSON object with the following required fields:
+
+| Key            | Type    | Description |
+|----------------|---------|-------------|
+| `plugin_name`  | string  | Unique name identifying the accelerator plugin (e.g. `"mock"`, `"amdgpu"`). Each installed plugin has a globally unique name. |
+| `session_name` | string  | Human-readable label for the accelerator target, stored on the Target object to distinguish it from the CPU target (e.g. `"AMD GPU Session"`). May be empty. |
+| `identifier`   | integer | Identifier for this action, unique within the scope of its `plugin_name`. To refer to a specific action, use the combination of `plugin_name` and `identifier`. |
+
+There can be multiple accelerator plugins installed, each with a globally
+unique `plugin_name`. The response is a JSON array with one entry per
+installed plugin.
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginInitialize
+STUB REPLIES:  [{"plugin_name":"amdgpu","session_name":"AMD GPU Session","identifier":0}]
+```
+
+If no accelerator plugins are installed, the server does not advertise the
+`accelerator-plugins+` feature and this packet should not be sent.
+
+Each `accelerator_action` may include a `breakpoints` array requesting
+breakpoints to be set in the native process. The client sets each of these
+as an internal breakpoint and sends a `jAcceleratorPluginBreakpointHit`
+packet when one is hit. Each breakpoint object has the following fields:
+
+| Key            | Type    | Description |
+|----------------|---------|-------------|
+| `identifier`   | integer | Identifier for this breakpoint, unique within the plugin. It is echoed back in the `jAcceleratorPluginBreakpointHit` packet so the plugin knows which breakpoint was hit. |
+| `by_name`      | object  | Set the breakpoint by function name. Contains `function_name` (string) and an optional `shlib` (string) to scope the breakpoint to a single shared library. |
+| `by_address`   | object  | Set the breakpoint by load address. Contains `load_address` (integer). |
+| `symbol_names` | array   | Symbol names whose load addresses the client should resolve and deliver in the `jAcceleratorPluginBreakpointHit` packet when this breakpoint is hit. May be empty. |
+
+Exactly one of `by_name` or `by_address` must be provided for each
+breakpoint.
+
+In future patches, each `accelerator_action` will include additional fields
+such as connection info for secondary debug sessions and synchronization
+options.
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.
+
+### jAcceleratorPluginBreakpointHit
+
+Sent by the client when a breakpoint requested by an accelerator plugin
+is hit in the native process. This packet requires the
+`accelerator-plugins+` feature from `qSupported`.
+
+```
+LLDB SENDS:    jAcceleratorPluginBreakpointHit:<json>
+STUB REPLIES:  <json_response>
+```
+
+The request JSON has the following fields:
+
+| Key             | Type   | Description |
+|-----------------|--------|-------------|
+| `plugin_name`   | string | Name of the plugin that requested the breakpoint. |
+| `breakpoint`    | object | The `AcceleratorBreakpointInfo` that was hit, including its `identifier`. |
+| `symbol_values` | array  | Array of `{"name": "<name>", "value": <addr>}`, one entry for each name in the breakpoint's `symbol_names`. `value` is the resolved load address, or `null` if the client could not find the symbol or convert it to a load address. |
+
+The response JSON has the following fields:
+
+| Key                  | Type | Description |
+|----------------------|------|-------------|
+| `disable_bp`         | bool   | If true, the client should disable this breakpoint. |
+| `auto_resume_native` | bool   | If true, the native process should automatically resume after handling the hit. |
+| `actions`            | object | Optional `AcceleratorActions` for the client to perform. |
+
+Example:
+```
+LLDB SENDS:    jAcceleratorPluginBreakpointHit:{"plugin_name":"mock","breakpoint":{"identifier":1,"symbol_names":[]},"symbol_values":[]}
+STUB REPLIES:  {"disable_bp":true,"auto_resume_native":false,"actions":{"plugin_name":"mock","session_name":"","identifier":2,"breakpoints":[{"identifier":2,"by_name":{"function_name":"exit"},"symbol_names":[]}]}}
+```
+
+**Priority To Implement:** Required for hardware accelerator debugging
+support. Not needed for non-hardware-accelerator debugging.

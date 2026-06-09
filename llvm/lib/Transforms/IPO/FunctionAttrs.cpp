@@ -86,6 +86,7 @@ STATISTIC(NumNoUndefReturn, "Number of function returns marked noundef");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 STATISTIC(NumNoFree, "Number of functions marked as nofree");
+STATISTIC(NumNoFreeArg, "Number of arguments marked as nofree");
 STATISTIC(NumWillReturn, "Number of functions marked as willreturn");
 STATISTIC(NumNoSync, "Number of functions marked as nosync");
 STATISTIC(NumCold, "Number of functions marked as cold");
@@ -853,10 +854,27 @@ struct GraphTraits<ArgumentGraph *> : public GraphTraits<ArgumentGraphNode *> {
   static ChildIteratorType nodes_end(ArgumentGraph *AG) { return AG->end(); }
 };
 
+struct ArgAccessProperties {
+  bool IsRead = false;
+  bool IsWrite = false;
+  bool IsFree = false;
+
+  static ArgAccessProperties all() { return {true, true, true}; }
+
+  bool hasAll() const { return IsRead && IsWrite && IsFree; }
+
+  ArgAccessProperties &operator|=(const ArgAccessProperties &Other) {
+    IsRead |= Other.IsRead;
+    IsWrite |= Other.IsWrite;
+    IsFree |= Other.IsFree;
+    return *this;
+  }
+};
+
 } // end namespace llvm
 
 /// Returns Attribute::None, Attribute::ReadOnly or Attribute::ReadNone.
-static Attribute::AttrKind
+static ArgAccessProperties
 determinePointerAccessAttrs(Argument *A,
                             const SmallPtrSet<Argument *, 8> &SCCNodes) {
   SmallVector<Use *, 32> Worklist;
@@ -864,10 +882,9 @@ determinePointerAccessAttrs(Argument *A,
 
   // inalloca arguments are always clobbered by the call.
   if (A->hasInAllocaAttr() || A->hasPreallocatedAttr())
-    return Attribute::None;
+    return ArgAccessProperties::all();
 
-  bool IsRead = false;
-  bool IsWrite = false;
+  ArgAccessProperties Props;
 
   for (Use &U : A->uses()) {
     Visited.insert(&U);
@@ -875,127 +892,81 @@ determinePointerAccessAttrs(Argument *A,
   }
 
   while (!Worklist.empty()) {
-    if (IsWrite && IsRead)
+    if (Props.hasAll())
       // No point in searching further..
-      return Attribute::None;
+      return Props;
 
     Use *U = Worklist.pop_back_val();
     Instruction *I = cast<Instruction>(U->getUser());
+    if (isa<ReturnInst>(I))
+      continue;
 
-    switch (I->getOpcode()) {
-    case Instruction::BitCast:
-    case Instruction::GetElementPtr:
-    case Instruction::PHI:
-    case Instruction::Select:
-    case Instruction::AddrSpaceCast:
-      // The original value is not read/written via this if the new value isn't.
+    UseCaptureInfo Info = DetermineUseCaptureKind(*U, A);
+
+    // FIXME: This should really be part of CaptureTracking, but keep it here
+    // for now due to interference with isEscapeSource().
+    if (auto *CB = dyn_cast<CallBase>(I))
+      if (CB->onlyReadsMemory())
+        Info.UseCC &= CaptureComponents::Address;
+
+    if (capturesAnyProvenance(Info.UseCC)) {
+      // Handle indirect access via captured provenance.
+      if (!capturesReadProvenanceOnly(Info.UseCC))
+        return ArgAccessProperties::all();
+      Props.IsRead = true;
+    }
+
+    if (capturesAnyProvenance(Info.ResultCC)) {
       for (Use &UU : I->uses())
         if (Visited.insert(&UU).second)
           Worklist.push_back(&UU);
-      break;
+    }
 
-    case Instruction::Call:
-    case Instruction::Invoke: {
-      CallBase &CB = cast<CallBase>(*I);
-      if (CB.isCallee(U)) {
-        IsRead = true;
-        // Note that indirect calls do not capture, see comment in
-        // CaptureTracking for context
+    if (auto *CB = dyn_cast<CallBase>(I)) {
+      if (CB->isCallee(U)) {
+        Props.IsRead = true;
         continue;
       }
 
       // Given we've explicitly handled the callee operand above, what's left
       // must be a data operand (e.g. argument or operand bundle)
-      const unsigned UseIndex = CB.getDataOperandNo(U);
+      const unsigned UseIndex = CB->getDataOperandNo(U);
 
-      // Some intrinsics (for instance ptrmask) do not capture their results,
-      // but return results thas alias their pointer argument, and thus should
-      // be handled like GEP or addrspacecast above.
-      if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
-              &CB, /*MustPreserveOffset=*/false)) {
-        for (Use &UU : CB.uses())
-          if (Visited.insert(&UU).second)
-            Worklist.push_back(&UU);
-      } else if (capturesAnyProvenance(CB.getCaptureInfo(UseIndex))) {
-        if (!CB.onlyReadsMemory())
-          // If the callee can save a copy into other memory, then simply
-          // scanning uses of the call is insufficient.  We have no way
-          // of tracking copies of the pointer through memory to see
-          // if a reloaded copy is written to, thus we must give up.
-          return Attribute::None;
-        // Push users for processing once we finish this one
-        if (!I->getType()->isVoidTy())
-          for (Use &UU : I->uses())
-            if (Visited.insert(&UU).second)
-              Worklist.push_back(&UU);
-      }
-
-      ModRefInfo ArgMR = CB.getMemoryEffects().getModRef(IRMemLocation::ArgMem);
+      ModRefInfo ArgMR =
+          CB->getMemoryEffects().getModRef(IRMemLocation::ArgMem);
       if (isNoModRef(ArgMR))
         continue;
 
-      if (Function *F = CB.getCalledFunction())
-        if (CB.isArgOperand(U) && UseIndex < F->arg_size() &&
+      if (Function *F = CB->getCalledFunction())
+        if (CB->isArgOperand(U) && UseIndex < F->arg_size() &&
             SCCNodes.count(F->getArg(UseIndex)))
           // This is an argument which is part of the speculative SCC.  Note
           // that only operands corresponding to formal arguments of the callee
           // can participate in the speculation.
-          break;
+          continue;
 
       // The accessors used on call site here do the right thing for calls and
       // invokes with operand bundles.
-      if (CB.doesNotAccessMemory(UseIndex)) {
-        /* nop */
-      } else if (!isModSet(ArgMR) || CB.onlyReadsMemory(UseIndex)) {
-        IsRead = true;
-      } else if (!isRefSet(ArgMR) ||
-                 CB.dataOperandHasImpliedAttr(UseIndex, Attribute::WriteOnly)) {
-        IsWrite = true;
-      } else {
-        return Attribute::None;
+      if (isRefSet(ArgMR) && !CB->onlyWritesMemory(UseIndex))
+        Props.IsRead = true;
+      if (isModSet(ArgMR) && !CB->onlyReadsMemory(UseIndex)) {
+        Props.IsWrite = true;
+        if (CB->isArgOperand(U) && !CB->hasFnAttr(Attribute::NoFree) &&
+            !CB->paramHasAttr(UseIndex, Attribute::NoFree))
+          Props.IsFree = true;
       }
-      break;
-    }
+    } else {
+      // Ignore value operand for stores.
+      if (isa<StoreInst>(I) &&
+          StoreInst::getPointerOperandIndex() != U->getOperandNo())
+        continue;
 
-    case Instruction::Load:
-      // Volatile and ordered atomic accesses are modelled as reading and
-      // writing the location.
-      if (!cast<LoadInst>(I)->isUnordered())
-        return Attribute::None;
-
-      IsRead = true;
-      break;
-
-    case Instruction::Store:
-      if (cast<StoreInst>(I)->getValueOperand() == *U)
-        // untrackable capture
-        return Attribute::None;
-
-      // Volatile and ordered atomic accesses are modelled as reading and
-      // writing the location.
-      if (!cast<StoreInst>(I)->isUnordered())
-        return Attribute::None;
-
-      IsWrite = true;
-      break;
-
-    case Instruction::ICmp:
-    case Instruction::Ret:
-      break;
-
-    default:
-      return Attribute::None;
+      Props.IsRead |= I->mayReadFromMemory();
+      Props.IsWrite |= I->mayWriteToMemory();
     }
   }
 
-  if (IsWrite && IsRead)
-    return Attribute::None;
-  else if (IsRead)
-    return Attribute::ReadOnly;
-  else if (IsWrite)
-    return Attribute::WriteOnly;
-  else
-    return Attribute::ReadNone;
+  return Props;
 }
 
 /// Deduce returned attributes for the SCC.
@@ -1100,15 +1071,30 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
   return Changed;
 }
 
-static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
-  assert((R == Attribute::ReadOnly || R == Attribute::ReadNone ||
-          R == Attribute::WriteOnly)
-         && "Must be an access attribute.");
+static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   assert(A && "Argument must not be null.");
 
+  bool Changed = false;
+  if (!Props.IsFree && !A->hasAttribute(Attribute::NoFree)) {
+    ++NumNoFreeArg;
+    A->addAttr(Attribute::NoFree);
+    Changed = true;
+  }
+
+  if (Props.IsRead && Props.IsWrite)
+    return Changed;
+
+  Attribute::AttrKind Attr;
+  if (Props.IsRead)
+    Attr = Attribute::ReadOnly;
+  else if (Props.IsWrite)
+    Attr = Attribute::WriteOnly;
+  else
+    Attr = Attribute::ReadNone;
+
   // If the argument already has the attribute, nothing needs to be done.
-  if (A->hasAttribute(R))
-      return false;
+  if (A->hasAttribute(Attr))
+    return false;
 
   // Otherwise, remove potentially conflicting attribute, add the new one,
   // and update statistics.
@@ -1116,12 +1102,12 @@ static bool addAccessAttr(Argument *A, Attribute::AttrKind R) {
   A->removeAttr(Attribute::ReadOnly);
   A->removeAttr(Attribute::ReadNone);
   // Remove conflicting writable attribute.
-  if (R == Attribute::ReadNone || R == Attribute::ReadOnly)
+  if (Attr == Attribute::ReadNone || Attr == Attribute::ReadOnly)
     A->removeAttr(Attribute::Writable);
-  A->addAttr(R);
-  if (R == Attribute::ReadOnly)
+  A->addAttr(Attr);
+  if (Attr == Attribute::ReadOnly)
     ++NumReadOnlyArg;
-  else if (R == Attribute::WriteOnly)
+  else if (Attr == Attribute::WriteOnly)
     ++NumWriteOnlyArg;
   else
     ++NumReadNoneArg;
@@ -1256,10 +1242,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
   auto DetermineAccessAttrsForSingleton = [](Argument *A) {
     SmallPtrSet<Argument *, 8> Self;
     Self.insert(A);
-    Attribute::AttrKind R = determinePointerAccessAttrs(A, Self);
-    if (R != Attribute::None)
-      return addAccessAttr(A, R);
-    return false;
+    return addAccessAttrs(A, determinePointerAccessAttrs(A, Self));
   };
 
   // Check each function in turn, determining which pointer arguments are not
@@ -1424,29 +1407,18 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     // Also, a readonly/readnone pointer may be returned, but returning a
     // pointer is capturing it.
 
-    auto meetAccessAttr = [](Attribute::AttrKind A, Attribute::AttrKind B) {
-      if (A == B)
-        return A;
-      if (A == Attribute::ReadNone)
-        return B;
-      if (B == Attribute::ReadNone)
-        return A;
-      return Attribute::None;
-    };
-
-    Attribute::AttrKind AccessAttr = Attribute::ReadNone;
+    ArgAccessProperties Props;
     for (ArgumentGraphNode *N : ArgumentSCC) {
       Argument *A = N->Definition;
-      Attribute::AttrKind K = determinePointerAccessAttrs(A, ArgumentSCCNodes);
-      AccessAttr = meetAccessAttr(AccessAttr, K);
-      if (AccessAttr == Attribute::None)
+      Props |= determinePointerAccessAttrs(A, ArgumentSCCNodes);
+      if (Props.hasAll())
         break;
     }
 
-    if (AccessAttr != Attribute::None) {
+    if (!Props.hasAll()) {
       for (ArgumentGraphNode *N : ArgumentSCC) {
         Argument *A = N->Definition;
-        if (addAccessAttr(A, AccessAttr))
+        if (addAccessAttrs(A, Props))
           Changed.insert(A->getParent());
       }
     }
