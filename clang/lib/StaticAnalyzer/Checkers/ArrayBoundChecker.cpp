@@ -705,7 +705,7 @@ void ArrayBoundChecker::performCheck(const Expr *E, CheckerContext &C) const {
         // nicer to say "tainted index".
         const char *OffsetName = "offset";
         if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
-          if (isTainted(State, ASE->getIdx(), C.getLocationContext()))
+          if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
             OffsetName = "index";
 
         Messages Msgs =

@@ -138,7 +138,6 @@
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
-#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
@@ -151,6 +150,7 @@
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
@@ -196,6 +196,10 @@ static cl::opt<bool> EnablePostPGOLoopRotation(
     "enable-post-pgo-loop-rotation", cl::init(true), cl::Hidden,
     cl::desc("Run the loop rotation transformation after PGO instrumentation"));
 
+static cl::opt<bool>
+    TriggerCrash("opt-pipeline-trigger-crash", cl::init(false), cl::Hidden,
+                 cl::desc("Trigger crash in optimization pipeline"));
+
 static cl::opt<bool> EnableGlobalAnalyses(
     "enable-global-analyses", cl::init(true), cl::Hidden,
     cl::desc("Enable inter-procedural analyses"));
@@ -212,7 +216,7 @@ static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
 
 static cl::opt<bool>
-    EnableLoopInterchange("enable-loopinterchange", cl::init(false), cl::Hidden,
+    EnableLoopInterchange("enable-loopinterchange", cl::init(true), cl::Hidden,
                           cl::desc("Enable the LoopInterchange Pass"));
 
 static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
@@ -425,16 +429,14 @@ static void instructionCountersPass(ModulePassManager &MPM,
   if (AreStatisticsEnabled()) {
     MPM.addPass(
         createModuleToFunctionPassAdaptor(InstCountPass(IsPreOptimization)));
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        FunctionPropertiesStatisticsPass(IsPreOptimization)));
   }
 }
 
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
-  if (AreStatisticsEnabled()) {
-    MPM.addPass(
-        createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
-  }
 }
 
 // Helper to check if the current compilation phase is preparing for LTO
@@ -835,7 +837,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 void PassBuilder::addRequiredLTOPreLinkPasses(ModulePassManager &MPM) {
   MPM.addPass(CanonicalizeAliasesPass());
   MPM.addPass(NameAnonGlobalPass());
-  MPM.addPass(AssignGUIDPass());
 }
 
 void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
@@ -1093,7 +1094,6 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   if (!UseCtxProfile.empty() && Phase == ThinOrFullLTOPhase::ThinLTOPostLink) {
     MPM.addPass(GlobalOptPass());
     MPM.addPass(GlobalDCEPass());
-    MPM.addPass(AssignGUIDPass());
     MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/false));
   }
 
@@ -1279,8 +1279,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // In pre-link, we just want the instrumented IR. We use the contextual
     // profile in the post-thinlink phase.
     // The instrumentation will be removed in post-thinlink after IPO.
+    // FIXME(mtrofin): move AssignGUIDPass if there is agreement to use this
+    // mechanism for GUIDs.
+    MPM.addPass(AssignGUIDPass());
     if (IsCtxProfUse) {
-      MPM.addPass(AssignGUIDPass());
       MPM.addPass(PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true));
       return MPM;
     }
@@ -1292,7 +1294,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // unnecessary to collect profiles for non-prevailing copies.
     MPM.addPass(NoinlineNonPrevailing());
     addPostPGOLoopRotation(MPM, Level);
-    MPM.addPass(AssignGUIDPass());
     MPM.addPass(PGOCtxProfLoweringPass());
   } else if (IsColdFuncOnlyInstrGen) {
     addPGOInstrPasses(MPM, Level, /* RunProfileGen */ true, /* IsCS */ false,
@@ -1374,7 +1375,16 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // NOTE: we are very late in the pipeline, and we don't have any LICM
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
-    FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+
+    // We also turn on struct to vector canonicalization here, which allows
+    // converting allocas of homogeneous structs into vector allocas when the
+    // allocas' users are all memory intrinsics. This allows promotion in some
+    // cases because structs cannot promote to SSA values, but vectors can. We
+    // only turn this on after memcpyopt runs because this might hinder
+    // memcpyopt's optimizations if done before. Look at the documentation for
+    // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
+    FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
+                                     /*AggregateToVector=*/true)));
   }
 
   if (!isFullLTOPostLink(LTOPhase)) {
@@ -1466,7 +1476,16 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // NOTE: we are very late in the pipeline, and we don't have any LICM
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
-    FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+
+    // We also turn on struct to vector canonicalization here, which allows
+    // converting allocas of homogeneous structs into vector allocas when the
+    // allocas' users are all memory intrinsics. This allows promotion in some
+    // cases because structs cannot promote to SSA values, but vectors can. We
+    // only turn this on after memcpyopt runs because this might hinder
+    // memcpyopt's optimizations if done before. Look at the documentation for
+    // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
+    FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
+                                     /*AggregateToVector=*/true)));
   }
 
   FPM.addPass(InferAlignmentPass());
@@ -1709,8 +1728,6 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (PTO.DevirtualizeSpeculatively && LTOPhase == ThinOrFullLTOPhase::None) {
     // TODO: explore a better pipeline configuration that can improve
     // compilation time overhead.
-    // FIXME: move this earlier (lots of pass ordering tests will need fixing)
-    MPM.addPass(AssignGUIDPass());
     MPM.addPass(WholeProgramDevirtPass(
         /*ExportSummary*/ nullptr,
         /*ImportSummary*/ nullptr,
@@ -1759,6 +1776,9 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
+
+  if (TriggerCrash)
+    MPM.addPass(createModuleToFunctionPassAdaptor(TriggerCrashFunctionPass()));
 
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));

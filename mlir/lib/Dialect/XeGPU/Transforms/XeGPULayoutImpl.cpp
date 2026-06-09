@@ -236,9 +236,11 @@ static void propagateRegionResultsToYieldOperands(
 
 // Propagate layout from region arguments to region op's init operands. This
 // sets the temporary layout for region arguments and init operands.
-static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
+LogicalResult
+xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
+                                  xegpu::GetLayoutFnTy getLayoutOfValue) {
   // Iterate all regions of the region op. For each block argument that has a
-  // layout (determined from its use points), trace back to find the
+  // layout (obtained via `getLayoutOfValue`), trace back to find the
   // corresponding init operand of the regionOp and set the layout on it.
   // This works generically for scf.for, scf.while, and other
   // RegionBranchOpInterface ops.
@@ -249,7 +251,7 @@ static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
     // the induction variable is a block arg but not a successor input.
     ValueRange successorInputs = regionOp.getSuccessorInputs(regionSuccessor);
     for (auto [inputIdx, regionArg] : llvm::enumerate(successorInputs)) {
-      auto layout = getLayoutFromUsePoints(regionArg);
+      auto layout = getLayoutOfValue(regionArg);
       if (!layout)
         continue;
 
@@ -270,6 +272,7 @@ static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
       }
     }
   }
+  return success();
 }
 
 // Prerequisite for Layout Recovery
@@ -305,7 +308,8 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
   auto processFunc = [&](Region &body, StringRef funcName) {
     walkRegionBackward(body, [&](Operation *op) {
       if (auto regionOp = dyn_cast<mlir::RegionBranchOpInterface>(op)) {
-        propagateRegionArgsToInits(regionOp);
+        (void)xegpu::propagateRegionArgsToInits(regionOp,
+                                                getLayoutFromUsePoints);
       } else if (auto yieldOp =
                      dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
         propagateRegionResultsToYieldOperands(yieldOp);
@@ -1387,9 +1391,9 @@ template <typename RankedTy>
 static xegpu::LayoutAttr getDefaultLaneLayout2DBlockIo(
     RankedTy ty, const xegpu::uArch::uArch *uArch,
     std::optional<unsigned> packingSize = std::nullopt, bool vnni = false) {
-  // Expecting a 1D or 2D vector.
-  assert(((ty.getRank() == 1 && !vnni) || ty.getRank() == 2) &&
-         "Expected 1D non-vnni or 2D vector.");
+  // Expecting at least 1D vector. For rank > 2, leading dims are batch dims.
+  assert(((ty.getRank() >= 1 && !vnni) || ty.getRank() >= 2) &&
+         "Expected at least 1D non-vnni or 2D vector.");
   // Expecting int or float element type.
   assert(ty.getElementType().isIntOrFloat() &&
          "Expected int or float element type.");
@@ -1463,11 +1467,13 @@ getDpasInstDataVectors(VectorType aTy, VectorType bTy, VectorType cdTy,
         dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
             xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
 
-  const unsigned dataALen = aTy.getShape().front();
+  // M dimension is the second-to-last dim of A (handles batch dims).
+  const unsigned dataALen = aTy.getShape()[aTy.getRank() - 2];
   auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
   const int maxALen =
       xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
 
+  // N dimension is the last dim of B.
   const unsigned dataBLen = bTy.getShape().back();
   auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
   const int maxBLen =
@@ -1656,7 +1662,7 @@ createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
               xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
 
   int64_t rank = matrixLayout.getRank();
-  assert(rank == 2 && "dpas layouts must be two dimensions");
+  assert(rank >= 2 && "dpas layouts must be at least two dimensions");
 
   SmallVector<int64_t> sgLayout = matrixLayout.getEffectiveSgLayoutAsInt();
   SmallVector<int64_t> sgData = matrixLayout.getEffectiveSgDataAsInt();

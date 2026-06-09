@@ -11,6 +11,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::hlsl;
@@ -69,6 +70,22 @@ CBufferMetadata::get(Module &M, llvm::function_ref<bool(Type *)> IsPadding) {
   }
 
   return Result;
+}
+
+void CBufferMetadata::removeCBufferGlobalsFromUseList(Module &M) {
+
+  SmallPtrSet<GlobalVariable *, 8> CBGlobals;
+  for (const hlsl::CBufferMapping &Mapping : Mappings)
+    CBGlobals.insert(Mapping.Handle);
+
+  llvm::removeFromUsedLists(M, [&](Constant *C) -> bool {
+    if (auto *GV = dyn_cast<GlobalVariable>(C))
+      return CBGlobals.contains(GV);
+    return false;
+  });
+
+  for (GlobalVariable *HandleGV : CBGlobals)
+    HandleGV->removeDeadConstantUsers();
 }
 
 void CBufferMetadata::eraseFromModule() {
