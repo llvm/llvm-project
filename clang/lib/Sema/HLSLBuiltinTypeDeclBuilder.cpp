@@ -1038,8 +1038,8 @@ BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
                                          bool RawBuffer, bool HasCounter,
                                          AccessSpecifier Access) {
   QualType ElementTy = getHandleElementType();
-  addHandleMember(RC, ResourceDimension::Unknown, IsROV, RawBuffer,
-                  /*IsArray=*/false, ElementTy, Access);
+  addHandleMember(RC, ResourceDimension::Unknown, IsROV, RawBuffer, ElementTy,
+                  Access);
   if (HasCounter)
     addCounterHandleMember(RC, IsROV, RawBuffer, ElementTy, Access);
   return *this;
@@ -1047,17 +1047,16 @@ BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
 
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addTextureHandle(ResourceClass RC, bool IsROV,
-                                         bool IsArray, ResourceDimension RD,
+                                         ResourceDimension RD,
                                          AccessSpecifier Access) {
-  addHandleMember(RC, RD, IsROV, /*RawBuffer=*/false, IsArray,
-                  getHandleElementType(), Access);
+  addHandleMember(RC, RD, IsROV, /*RawBuffer=*/false, getHandleElementType(),
+                  Access);
   return *this;
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSamplerHandle() {
   addHandleMember(ResourceClass::Sampler, ResourceDimension::Unknown,
-                  /*IsROV=*/false, /*RawBuffer=*/false, /*IsArray=*/false,
-                  getHandleElementType());
+                  /*IsROV=*/false, /*RawBuffer=*/false, getHandleElementType());
   return *this;
 }
 
@@ -1112,22 +1111,22 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addPrivateNestedRecord(StringRef Name) {
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addHandleMember(
     ResourceClass RC, ResourceDimension RD, bool IsROV, bool RawBuffer,
-    bool IsArray, QualType ElementTy, AccessSpecifier Access) {
+    QualType ElementTy, AccessSpecifier Access) {
   return addResourceMember("__handle", RC, RD, IsROV, RawBuffer,
-                           /*IsCounter=*/false, IsArray, ElementTy, Access);
+                           /*IsCounter=*/false, ElementTy, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
     ResourceClass RC, bool IsROV, bool RawBuffer, QualType ElementTy,
     AccessSpecifier Access) {
   return addResourceMember("__counter_handle", RC, ResourceDimension::Unknown,
-                           IsROV, RawBuffer, /*IsCounter=*/true,
-                           /*IsArray=*/false, ElementTy, Access);
+                           IsROV, RawBuffer,
+                           /*IsCounter=*/true, ElementTy, Access);
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
     StringRef MemberName, ResourceClass RC, ResourceDimension RD, bool IsROV,
-    bool RawBuffer, bool IsCounter, bool IsArray, QualType ElementTy,
+    bool RawBuffer, bool IsCounter, QualType ElementTy,
     AccessSpecifier Access) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
@@ -1152,8 +1151,6 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
           : nullptr};
   if (IsCounter)
     Attrs.push_back(HLSLIsCounterAttr::CreateImplicit(Ctx));
-  if (IsArray)
-    Attrs.push_back(HLSLIsArrayAttr::CreateImplicit(Ctx));
 
   if (CreateHLSLAttributedResourceType(SemaRef, Ctx.HLSLResourceTy, Attrs,
                                        AttributedResTy))
@@ -1408,14 +1405,13 @@ BuiltinTypeDeclBuilder::addCopyAssignmentOperator(AccessSpecifier Access) {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim,
-                                                   bool IsArray) {
+BuiltinTypeDeclBuilder::addArraySubscriptOperators(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
 
   uint32_t VecSize = 1;
   if (Dim != ResourceDimension::Unknown)
-    VecSize = getResourceDimensions(Dim) + (IsArray ? 1 : 0);
+    VecSize = getResourceDimensions(Dim);
 
   QualType IndexTy = VecSize > 1
                          ? AST.getExtVectorType(AST.UnsignedIntTy, VecSize)
@@ -1450,8 +1446,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
 CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
                                                         QualType ReturnType) {
   ASTContext &AST = Record->getASTContext();
-  uint32_t VecSize =
-      getResourceDimensions(Dim) + (getResourceAttrs().IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType IntTy = AST.IntTy;
   QualType IndexTy = VecSize > 1 ? AST.getExtVectorType(IntTy, VecSize) : IntTy;
   QualType CoordLevelTy = AST.getExtVectorType(IntTy, VecSize + 1);
@@ -1464,8 +1459,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsSliceType(ResourceDimension Dim,
   BuiltinTypeDeclBuilder MipsSliceBuilder(SemaRef, MipsSliceRecord);
   MipsSliceBuilder.addFriend(Record)
       .addHandleMember(getResourceAttrs().ResourceClass, Dim,
-                       getResourceAttrs().IsROV, /*RawBuffer=*/false,
-                       getResourceAttrs().IsArray, ReturnType,
+                       getResourceAttrs().IsROV, false, ReturnType,
                        AccessSpecifier::AS_public)
       .addMemberVariable("__level", IntTy, {}, AccessSpecifier::AS_public)
       .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
@@ -1508,8 +1502,7 @@ CXXRecordDecl *BuiltinTypeDeclBuilder::addMipsType(ResourceDimension Dim,
   BuiltinTypeDeclBuilder MipsBuilder(SemaRef, MipsRecord);
   MipsBuilder.addFriend(Record)
       .addHandleMember(getResourceAttrs().ResourceClass, Dim,
-                       getResourceAttrs().IsROV, /*RawBuffer=*/false,
-                       getResourceAttrs().IsArray, ReturnType,
+                       getResourceAttrs().IsROV, false, ReturnType,
                        AccessSpecifier::AS_public)
       .addDefaultHandleConstructor(AccessSpecifier::AS_protected)
       .addCopyConstructor(AccessSpecifier::AS_protected)
@@ -1560,15 +1553,13 @@ BuiltinTypeDeclBuilder::addMipsMember(ResourceDimension Dim) {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim,
-                                              bool IsArray) {
+BuiltinTypeDeclBuilder::addTextureLoadMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 2 : 1);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
-  QualType LocationTy = AST.getExtVectorType(IntTy, CoordSize);
+  QualType OffsetTy = AST.getExtVectorType(IntTy, VecSize);
+  QualType LocationTy = AST.getExtVectorType(IntTy, VecSize + 1);
   QualType ReturnType = getHandleElementType();
 
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
@@ -1636,24 +1627,23 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
+BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T Sample(SamplerState s, float2 location)
   BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
                    PH::LastStmt, PH::_1)
@@ -1663,8 +1653,8 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
   // T Sample(SamplerState s, float2 location, int2 offset)
   BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Location", Float2Ty)
+      .addParam("Offset", Int2Ty)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
                    PH::LastStmt, PH::_1, PH::_2)
@@ -1674,8 +1664,8 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
   // T Sample(SamplerState s, float2 location, int2 offset, float clamp)
   return BuiltinTypeMethodBuilder(*this, "Sample", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Location", Float2Ty)
+      .addParam("Offset", Int2Ty)
       .addParam("Clamp", FloatTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample", ReturnType, PH::Handle,
@@ -1685,25 +1675,23 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim, bool IsArray) {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
-                                             bool IsArray) {
+BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleBias(SamplerState s, float2 location, float bias)
   BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("Bias", FloatTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
@@ -1714,9 +1702,9 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
   // T SampleBias(SamplerState s, float2 location, float bias, int2 offset)
   BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("Bias", FloatTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Offset", Int2Ty)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
@@ -1727,9 +1715,9 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
   // float clamp)
   return BuiltinTypeMethodBuilder(*this, "SampleBias", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("Bias", FloatTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Offset", Int2Ty)
       .addParam("Clamp", FloatTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_bias", ReturnType,
@@ -1739,28 +1727,25 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim,
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
-                                             bool IsArray) {
+BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
-  QualType OffsetFloatTy = AST.getExtVectorType(FloatTy, OffsetSize);
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy)
   BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("DDX", OffsetFloatTy)
-      .addParam("DDY", OffsetFloatTy)
+      .addParam("Location", Float2Ty)
+      .addParam("DDX", Float2Ty)
+      .addParam("DDY", Float2Ty)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
@@ -1771,10 +1756,10 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
   // int2 offset)
   BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("DDX", OffsetFloatTy)
-      .addParam("DDY", OffsetFloatTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Location", Float2Ty)
+      .addParam("DDX", Float2Ty)
+      .addParam("DDY", Float2Ty)
+      .addParam("Offset", Int2Ty)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3, PH::_4)
@@ -1785,10 +1770,10 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
   // int2 offset, float clamp)
   return BuiltinTypeMethodBuilder(*this, "SampleGrad", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
-      .addParam("DDX", OffsetFloatTy)
-      .addParam("DDY", OffsetFloatTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Location", Float2Ty)
+      .addParam("DDX", Float2Ty)
+      .addParam("DDY", Float2Ty)
+      .addParam("Offset", Int2Ty)
       .addParam("Clamp", FloatTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_grad", ReturnType,
@@ -1799,25 +1784,23 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim,
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
-                                              bool IsArray) {
+BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getHandleElementType();
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleLevel(SamplerState s, float2 location, float lod)
   BuiltinTypeMethodBuilder(*this, "SampleLevel", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("LOD", FloatTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_level", ReturnType,
@@ -1828,9 +1811,9 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
   // T SampleLevel(SamplerState s, float2 location, float lod, int2 offset)
   return BuiltinTypeMethodBuilder(*this, "SampleLevel", ReturnType)
       .addParam("Sampler", SamplerStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("LOD", FloatTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Offset", Int2Ty)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_level", ReturnType,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
@@ -1839,25 +1822,23 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim,
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
-                                            bool IsArray) {
+BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = AST.FloatTy;
   QualType SamplerComparisonStateType = lookupBuiltinType(
       SemaRef, "SamplerComparisonState", Record->getDeclContext());
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value)
   BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("CompareValue", FloatTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType, PH::Handle,
@@ -1869,9 +1850,9 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
   // int2 offset)
   BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("CompareValue", FloatTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Offset", Int2Ty)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType, PH::Handle,
                    PH::LastStmt, PH::_1, PH::_2, PH::_3)
@@ -1882,9 +1863,9 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
   // int2 offset, float clamp)
   return BuiltinTypeMethodBuilder(*this, "SampleCmp", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("CompareValue", FloatTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Offset", Int2Ty)
       .addParam("Clamp", FloatTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_cmp", ReturnType, PH::Handle,
@@ -1894,26 +1875,24 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim,
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
-                                                     bool IsArray) {
+BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = AST.FloatTy;
   QualType SamplerComparisonStateType = lookupBuiltinType(
       SemaRef, "SamplerComparisonState", Record->getDeclContext());
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
   // compare_value)
   BuiltinTypeMethodBuilder(*this, "SampleCmpLevelZero", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("CompareValue", FloatTy)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_cmp_level_zero", ReturnType,
@@ -1925,9 +1904,9 @@ BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim,
   // compare_value, int2 offset)
   return BuiltinTypeMethodBuilder(*this, "SampleCmpLevelZero", ReturnType)
       .addParam("Sampler", SamplerComparisonStateType)
-      .addParam("Location", CoordTy)
+      .addParam("Location", Float2Ty)
       .addParam("CompareValue", FloatTy)
-      .addParam("Offset", OffsetTy)
+      .addParam("Offset", Int2Ty)
       .accessHandleFieldOnResource(PH::_0)
       .callBuiltin("__builtin_hlsl_resource_sample_cmp_level_zero", ReturnType,
                    PH::Handle, PH::LastStmt, PH::_1, PH::_2, PH::_3)
@@ -2029,19 +2008,18 @@ QualType BuiltinTypeDeclBuilder::getGatherReturnType() {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
+BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getGatherReturnType();
 
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType LocationTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(LocationTy, CoordSize);
+  QualType Float2Ty = AST.getExtVectorType(LocationTy, VecSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType OffsetTy = AST.getExtVectorType(IntTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // Overloads for Gather, GatherRed, GatherGreen, GatherBlue, GatherAlpha
@@ -2059,7 +2037,7 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
     // ret GatherVariant(SamplerState s, float2 location)
     BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
         .addParam("Sampler", SamplerStateType)
-        .addParam("Location", CoordTy)
+        .addParam("Location", Float2Ty)
         .accessHandleFieldOnResource(PH::_0)
         .callBuiltin("__builtin_hlsl_resource_gather", ReturnType, PH::Handle,
                      PH::LastStmt, PH::_1,
@@ -2069,7 +2047,7 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
     // ret GatherVariant(SamplerState s, float2 location, int2 offset)
     BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
         .addParam("Sampler", SamplerStateType)
-        .addParam("Location", CoordTy)
+        .addParam("Location", Float2Ty)
         .addParam("Offset", OffsetTy)
         .accessHandleFieldOnResource(PH::_0)
         .callBuiltin("__builtin_hlsl_resource_gather", ReturnType, PH::Handle,
@@ -2082,20 +2060,18 @@ BuiltinTypeDeclBuilder::addGatherMethods(ResourceDimension Dim, bool IsArray) {
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
-                                            bool IsArray) {
+BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = AST.getExtVectorType(AST.FloatTy, 4);
 
   QualType SamplerComparisonStateType = lookupBuiltinType(
       SemaRef, "SamplerComparisonState", Record->getDeclContext());
-  uint32_t OffsetSize = getResourceDimensions(Dim);
-  uint32_t CoordSize = OffsetSize + (IsArray ? 1 : 0);
+  uint32_t VecSize = getResourceDimensions(Dim);
   QualType FloatTy = AST.FloatTy;
-  QualType CoordTy = AST.getExtVectorType(FloatTy, CoordSize);
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
   QualType IntTy = AST.IntTy;
-  QualType OffsetTy = AST.getExtVectorType(IntTy, OffsetSize);
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // Overloads for GatherCmp, GatherCmpRed, GatherCmpGreen, GatherCmpBlue,
@@ -2115,7 +2091,7 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
     // compare_value)
     BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
         .addParam("Sampler", SamplerComparisonStateType)
-        .addParam("Location", CoordTy)
+        .addParam("Location", Float2Ty)
         .addParam("CompareValue", FloatTy)
         .accessHandleFieldOnResource(PH::_0)
         .callBuiltin("__builtin_hlsl_resource_gather_cmp", ReturnType,
@@ -2127,9 +2103,9 @@ BuiltinTypeDeclBuilder::addGatherCmpMethods(ResourceDimension Dim,
     // compare_value, int2 offset)
     BuiltinTypeMethodBuilder(*this, V.Name, ReturnType)
         .addParam("Sampler", SamplerComparisonStateType)
-        .addParam("Location", CoordTy)
+        .addParam("Location", Float2Ty)
         .addParam("CompareValue", FloatTy)
-        .addParam("Offset", OffsetTy)
+        .addParam("Offset", Int2Ty)
         .accessHandleFieldOnResource(PH::_0)
         .callBuiltin("__builtin_hlsl_resource_gather_cmp", ReturnType,
                      PH::Handle, PH::LastStmt, PH::_1, PH::_2,

@@ -254,27 +254,26 @@ static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
 /// Set up common members and attributes for texture types
 static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
                                                ResourceClass RC, bool IsROV,
-                                               bool IsArrayed,
                                                ResourceDimension Dim) {
   return BuiltinTypeDeclBuilder(S, Decl)
-      .addTextureHandle(RC, IsROV, IsArrayed, Dim)
-      .addTextureLoadMethods(Dim, IsArrayed)
-      .addArraySubscriptOperators(Dim, IsArrayed)
+      .addTextureHandle(RC, IsROV, Dim)
+      .addTextureLoadMethods(Dim)
+      .addArraySubscriptOperators(Dim)
       .addMipsMember(Dim)
       .addDefaultHandleConstructor()
       .addCopyConstructor()
       .addCopyAssignmentOperator()
       .addStaticInitializationFunctions(false)
-      .addSampleMethods(Dim, IsArrayed)
-      .addSampleBiasMethods(Dim, IsArrayed)
-      .addSampleGradMethods(Dim, IsArrayed)
-      .addSampleLevelMethods(Dim, IsArrayed)
-      .addSampleCmpMethods(Dim, IsArrayed)
-      .addSampleCmpLevelZeroMethods(Dim, IsArrayed)
+      .addSampleMethods(Dim)
+      .addSampleBiasMethods(Dim)
+      .addSampleGradMethods(Dim)
+      .addSampleLevelMethods(Dim)
+      .addSampleCmpMethods(Dim)
+      .addSampleCmpLevelZeroMethods(Dim)
       .addCalculateLodMethods(Dim)
       .addGetDimensionsMethods(Dim)
-      .addGatherMethods(Dim, IsArrayed)
-      .addGatherCmpMethods(Dim, IsArrayed);
+      .addGatherMethods(Dim)
+      .addGatherCmpMethods(Dim);
 }
 
 // Add a partial specialization for a template. The `TextureTemplate` is
@@ -674,7 +673,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
 
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArrayed=*/false, ResourceDimension::Dim2D)
+                     ResourceDimension::Dim2D)
         .completeDefinition();
   });
 
@@ -682,7 +681,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
       *SemaPtr, HLSLNamespace, Decl->getDescribedClassTemplate());
   onCompletion(PartialSpec, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     /*IsArrayed=*/false, ResourceDimension::Dim2D)
+                     ResourceDimension::Dim2D)
         .completeDefinition();
   });
 }
