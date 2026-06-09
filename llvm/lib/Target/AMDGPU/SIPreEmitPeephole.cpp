@@ -28,9 +28,23 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
+
+static cl::opt<bool> EnableWMMAReuseBits(
+    "amdgpu-set-wmma-reuse-bits", cl::init(true), cl::ReallyHidden,
+    cl::desc("Set WMMA source-operand reuse bits when a nearby WMMA reuses the "
+             "same A or B source registers"));
+
+static cl::opt<unsigned> WMMAReuseLookahead(
+    "amdgpu-wmma-reuse-lookahead", cl::init(1), cl::ReallyHidden,
+    cl::desc("Number of subsequent WMMAs to consider when looking for a reuse "
+             "of a WMMA's A/B source registers. The source-operand cache is "
+             "only a few entries deep, so reuse beyond the very next WMMA "
+             "rarely survives; keeping this small avoids pinning more "
+             "high-temporality entries than the cache can hold."));
 
 namespace {
 
@@ -80,6 +94,9 @@ private:
   // appropriate source modifers and operands into the unpacked instructions.
   void addOperandAndMods(MachineInstrBuilder &NewMI, unsigned SrcMods,
                          bool IsHiBits, const MachineOperand &SrcMO);
+  // Set the matrix_a_reuse / matrix_b_reuse bits on the WMMA W1 if its A or B
+  // source registers are reused by one of the next few WMMAs.
+  bool setWMMAReuseBits(MachineInstr &W1) const;
 
 public:
   bool run(MachineFunction &MF, MachineLoopInfo *MLI);
@@ -778,6 +795,78 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
+bool SIPreEmitPeephole::setWMMAReuseBits(MachineInstr &W1) const {
+  unsigned Opc = W1.getOpcode();
+  if (!AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_a_reuse) &&
+      !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::matrix_b_reuse))
+    return false;
+
+  // Returns true if WMMA MI reads Reg as its A (src0) or B (src1) source.
+  auto WMMAReadsAB = [&](MachineInstr &MI, Register Reg) {
+    for (AMDGPU::OpName Name : {AMDGPU::OpName::src0, AMDGPU::OpName::src1}) {
+      const MachineOperand *MO = TII->getNamedOperand(MI, Name);
+      if (MO && MO->isReg() && MO->getReg() == Reg)
+        return true;
+    }
+    return false;
+  };
+
+  // The A operand corresponds to src0 and the B operand to src1.
+  struct ReuseCand {
+    AMDGPU::OpName BitName;
+    AMDGPU::OpName SrcName;
+    const char *DebugName;
+  };
+  static constexpr ReuseCand Cands[] = {
+      {AMDGPU::OpName::matrix_a_reuse, AMDGPU::OpName::src0, "matrix_a_reuse"},
+      {AMDGPU::OpName::matrix_b_reuse, AMDGPU::OpName::src1, "matrix_b_reuse"}};
+
+  MachineBasicBlock &MBB = *W1.getParent();
+  bool Changed = false;
+  for (const ReuseCand &C : Cands) {
+    MachineOperand *Bit = TII->getNamedOperand(W1, C.BitName);
+    // Never clear a bit the frontend already requested; only set it.
+    if (Bit->getImm() != 0)
+      continue;
+    MachineOperand *Src = TII->getNamedOperand(W1, C.SrcName);
+    if (!Src->isReg())
+      continue;
+    Register Reg = Src->getReg();
+    if (!Reg.isValid())
+      continue;
+
+    // Scan forward for a WMMA that reuses Reg as an A or B source. The
+    // source-operand cache is only a few entries deep and a high-temporality
+    // entry survives only while few other entries are sticky.
+    unsigned WMMASeen = 0;
+    for (MachineBasicBlock::iterator
+             It = std::next(MachineBasicBlock::iterator(W1)),
+             End = MBB.end();
+         It != End; ++It) {
+      MachineInstr &MI = *It;
+      if (MI.isDebugInstr())
+        continue;
+      // Any redefinition of Reg before the reuse breaks the chain. A WMMA
+      // that reuses Reg as an A/B source does not modify it, so checking
+      // this first keeps the reuse test below simple.
+      if (MI.modifiesRegister(Reg, TRI))
+        break;
+      bool IsWMMA = SIInstrInfo::isWMMA(MI);
+      if (IsWMMA && WMMAReadsAB(MI, Reg)) {
+        LLVM_DEBUG(dbgs() << "Setting " << C.DebugName << " on " << W1
+                          << "  reused by " << MI);
+        Bit->setImm(1);
+        Changed = true;
+        break;
+      }
+      if (IsWMMA && ++WMMASeen >= WMMAReuseLookahead)
+        break;
+    }
+  }
+
+  return Changed;
+}
+
 bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -786,6 +875,10 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   bool Changed = false;
 
   MF.RenumberBlocks();
+
+  // WMMA source-operand reuse bits only exist on gfx1250.
+  bool DoWMMAReuse = EnableWMMAReuseBits && ST.hasGFX1250Insts();
+  bool HasVGPRIdxMode = ST.hasVGPRIndexMode();
 
   for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator TermI = MBB.getFirstTerminator();
@@ -803,7 +896,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
       }
     }
 
-    if (!ST.hasVGPRIndexMode())
+    if (!DoWMMAReuse && !HasVGPRIdxMode)
       continue;
 
     MachineInstr *SetGPRMI = nullptr;
@@ -814,7 +907,14 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
     // and limit the distance to 20 instructions for compile time purposes.
     // Note: this needs to work on bundles as S_SET_GPR_IDX* instructions
     // may be bundled with the instructions they modify.
+    // The same walk sets the WMMA source-operand reuse bits.
     for (auto &MI : make_early_inc_range(MBB.instrs())) {
+      if (DoWMMAReuse && SIInstrInfo::isWMMA(MI))
+        Changed |= setWMMAReuseBits(MI);
+
+      if (!HasVGPRIdxMode)
+        continue;
+
       if (Count == Threshold)
         SetGPRMI = nullptr;
       else
