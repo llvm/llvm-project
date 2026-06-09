@@ -1877,7 +1877,7 @@ cc_library(
     srcs = glob([
         "lib/Frontend/HLSL/*.cpp",
     ]) + [
-        "include/llvm/Transforms/Utils/ModuleUtils.h"
+        "include/llvm/Transforms/Utils/ModuleUtils.h",
     ],
     hdrs = glob([
         "include/llvm/Frontend/HLSL/*.h",
