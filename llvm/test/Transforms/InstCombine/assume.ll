@@ -121,6 +121,77 @@ entry:
   ret void
 }
 
+define void @align_with_constant_offset_0(ptr %ptr) {
+; DEFAULT-LABEL: @align_with_constant_offset_0(
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @align_with_constant_offset_0(
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16, i64 0) ]
+; BUNDLES-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 0) ]
+  ret void
+}
+
+define void @align_with_constant_offset_1(ptr %ptr) {
+; CHECK-LABEL: @align_with_constant_offset_1(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 9
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 1) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  %ptr2 = getelementptr i8, ptr %ptr, i64 9
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8, i64 1) ]
+  ret void
+}
+
+define void @align_with_constant_offset_4(ptr %ptr) {
+; CHECK-LABEL: @align_with_constant_offset_4(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 4) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  %ptr2 = getelementptr i8, ptr %ptr, i64 4
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8, i64 4) ]
+  ret void
+}
+
+define void @align_with_constant_offset_8(ptr %ptr) {
+; DEFAULT-LABEL: @align_with_constant_offset_8(
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 8) ]
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @align_with_constant_offset_8(
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16, i64 8) ]
+; BUNDLES-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 8) ]
+  ret void
+}
+
+define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
+; DEFAULT-LABEL: @align_with_variable_offset(
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 [[OFFSET:%.*]]) ]
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @align_with_variable_offset(
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16, i64 [[OFFSET:%.*]]) ]
+; BUNDLES-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8, i64 %offset) ]
+  ret void
+}
+
 define void @redundant_align() {
 ; CHECK-LABEL: @redundant_align(
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()
@@ -130,6 +201,14 @@ define void @redundant_align() {
   %ptr = call ptr @get_ptr()
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 8) ]
+  ret void
+}
+
+define void @non_power_of_two_align(ptr %ptr) {
+; CHECK-LABEL: @non_power_of_two_align(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3) ]
   ret void
 }
 

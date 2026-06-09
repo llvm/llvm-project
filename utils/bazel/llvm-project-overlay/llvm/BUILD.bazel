@@ -4164,7 +4164,7 @@ cc_library(
 
 cc_library(
     name = "DTLTO",
-    srcs = ["lib/DTLTO/DTLTO.cpp"],
+    srcs = glob(["lib/DTLTO/*.cpp"]),
     hdrs = ["include/llvm/DTLTO/DTLTO.h"],
     copts = llvm_copts,
     deps = [
@@ -4704,6 +4704,16 @@ config_setting(
 )
 
 cc_library(
+    name = "libpfm_system",
+    linkopts = ["-lpfm"],
+    tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+cc_library(
     name = "maybe_pfm",
     # We want dependencies of this library to have -DHAVE_LIBPFM conditionally
     # defined, so we set `defines` instead of `copts`.
@@ -4713,8 +4723,8 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = select({
-        ":pfm_external": ["@pfm//:pfm_external"],
-        ":pfm_system": ["@pfm//:pfm_system"],
+        ":pfm_external": ["@pfm"],
+        ":pfm_system": [":libpfm_system"],
         "//conditions:default": [],
     }),
 )
@@ -5611,6 +5621,9 @@ cc_binary(
         "tools/llvm-lto2/*.cpp",
     ]),
     copts = llvm_copts,
+    defines = [
+        "LLVM_BUILD_STATIC",  # Provided by add_llvm_tool
+    ],
     stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
@@ -5618,6 +5631,7 @@ cc_binary(
         ":BitReader",
         ":CodeGen",
         ":Core",
+        ":DTLTO",
         ":LTO",
         ":Passes",
         ":Plugins",
@@ -6828,15 +6842,13 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
-cc_binary(
-    name = "llvm-readtapi",
-    testonly = True,
+cc_library(
+    name = "llvm-readtapi-lib",
     srcs = glob([
         "tools/llvm-readtapi/*.cpp",
         "tools/llvm-readtapi/*.h",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":BinaryFormat",
         ":Object",
@@ -6846,6 +6858,13 @@ cc_binary(
         ":TextAPI",
         ":TextAPIBinaryReader",
     ],
+)
+
+llvm_driver_cc_binary(
+    name = "llvm-readtapi",
+    testonly = True,
+    stamp = 0,
+    deps = [":llvm-readtapi-lib"],
 )
 
 gentbl_cc_library(

@@ -96,13 +96,6 @@ namespace llvm {
 
   template <>
   struct DenseMapInfo<PPRegion> {
-    static inline PPRegion getEmptyKey() {
-      return PPRegion(llvm::sys::fs::UniqueID(0, 0), unsigned(-1), 0);
-    }
-    static inline PPRegion getTombstoneKey() {
-      return PPRegion(llvm::sys::fs::UniqueID(0, 0), unsigned(-2), 0);
-    }
-
     static unsigned getHashValue(const PPRegion &S) {
       llvm::FoldingSetNodeID ID;
       const llvm::sys::fs::UniqueID &UniqueID = S.getUniqueID();

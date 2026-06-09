@@ -384,12 +384,6 @@ bool SelectionDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset the target options before resetting the optimization
-  // level below.
-  // FIXME: This is a horrible hack and should be processed via
-  // codegen looking at the optimization level explicitly when
-  // it wants to look at it.
-  Selector->TM.resetTargetOptions(MF.getFunction());
   // Reset OptLevel to None for optnone functions.
   CodeGenOptLevel NewOptLevel = skipFunction(MF.getFunction())
                                     ? CodeGenOptLevel::None
@@ -457,12 +451,6 @@ SelectionDAGISelPass::run(MachineFunction &MF,
   // we change the optimisation level.
   MF.setUseDebugInstrRef(MF.shouldUseDebugInstrRef());
 
-  // Reset the target options before resetting the optimization
-  // level below.
-  // FIXME: This is a horrible hack and should be processed via
-  // codegen looking at the optimization level explicitly when
-  // it wants to look at it.
-  Selector->TM.resetTargetOptions(MF.getFunction());
   // Reset OptLevel to None for optnone functions.
   // TODO: Add a function analysis to handle this.
   Selector->MF = &MF;

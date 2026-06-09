@@ -678,7 +678,7 @@ public:
         mlir::Location loc = cgf.getLoc(e->getSourceRange());
         mlir::Value numElts = cgf.getVLASize(vla).numElts;
         if (!e->isIncrementOp())
-          numElts = cgf.getBuilder().createNeg(numElts, /*nsw=*/true);
+          numElts = cgf.getBuilder().createNeg(loc, numElts, /*nsw=*/true);
         assert(!cir::MissingFeatures::sanitizers());
         value = cgf.getBuilder().createPtrStride(loc, value, numElts);
       } else {
@@ -704,9 +704,12 @@ public:
 
       if (mlir::isa<cir::SingleType, cir::DoubleType, cir::LongDoubleType>(
               value.getType())) {
-        // Create the inc/dec operation.
-        // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
-        value = emitIncOrDec(e, value);
+        mlir::Location loc = cgf.getLoc(e->getExprLoc());
+        auto fpType = mlir::cast<cir::FPTypeInterface>(value.getType());
+        mlir::Value amount = builder.getConstFP(
+            loc, value.getType(), llvm::APFloat(fpType.getFloatSemantics(), 1));
+        value = e->isIncrementOp() ? builder.createFAdd(loc, value, amount)
+                                   : builder.createFSub(loc, value, amount);
       } else {
         cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fp type");
         return {};
@@ -795,6 +798,11 @@ public:
     else
       operand = Visit(e->getSubExpr());
 
+    mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
+
+    if (cir::isFPOrVectorOfFPType(operand.getType()))
+      return builder.createOrFold<cir::FNegOp>(loc, operand);
+
     // TODO(cir): We might have to change this to support overflow trapping.
     //            Classic codegen routes unary minus through emitSub to ensure
     //            that the overflow behavior is handled correctly.
@@ -802,10 +810,7 @@ public:
                cgf.getLangOpts().getSignedOverflowBehavior() !=
                    LangOptions::SOB_Defined;
 
-    // NOTE: LLVM codegen will lower this directly to either a FNeg
-    // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-    return builder.createOrFold<cir::MinusOp>(
-        cgf.getLoc(e->getSourceRange().getBegin()), operand, nsw);
+    return builder.createOrFold<cir::MinusOp>(loc, operand, nsw);
   }
 
   mlir::Value emitIncOrDec(const UnaryOperator *e, mlir::Value input,
@@ -1429,6 +1434,13 @@ public:
     return {};
   }
 
+  mlir::Value convertVec3AndVec4(CIRGenBuilderTy &builder, mlir::Location loc,
+                                 mlir::Value src, unsigned numElementsDst) {
+    static constexpr int64_t mask[] = {0, 1, 2, -1};
+    return builder.createVecShuffle(
+        loc, src, llvm::ArrayRef<int64_t>(mask, numElementsDst));
+  }
+
   // Create cast instructions for converting MLIR value \p Src to MLIR type \p
   // DstTy. \p Src has the same size as \p DstTy. Both are single value types
   // but could be scalar or vectors of different lengths, and either can be
@@ -1515,10 +1527,12 @@ public:
     // to vec4 if the original type is not vec4, then a shuffle vector to
     // get a vec3.
     if (numElementsSrc != 3 && numElementsDst == 3) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "ScalarExprEmitter: VisitAsTypeExpr numElemsSrc != 3, "
-                       "numElemsDst = 3");
-      return {};
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+      auto dstElemTy = cast<cir::VectorType>(dstTy).getElementType();
+      auto dstVec4Ty = cir::VectorType::get(dstElemTy, 4);
+      src = createCastsForTypeOfSameSize(src, dstVec4Ty);
+      src = convertVec3AndVec4(builder, loc, src, 3);
+      return src;
     }
 
     return createCastsForTypeOfSameSize(src, dstTy);
@@ -1894,7 +1908,7 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
 
   // If this is subtraction, negate the index.
   if (isSubtraction)
-    index = cgf.getBuilder().createNeg(index);
+    index = cgf.getBuilder().createNeg(cgf.getLoc(op.e->getExprLoc()), index);
 
   assert(!cir::MissingFeatures::sanitizers());
 
@@ -1981,18 +1995,29 @@ mlir::Value ScalarExprEmitter::emitMul(const BinOpInfo &ops) {
                             cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitDiv(const BinOpInfo &ops) {
-  return cir::DivOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+    return builder.createFDiv(loc, ops.lhs, ops.rhs);
+  }
+  return cir::DivOp::create(builder, loc, cgf.convertType(ops.fullType),
+                            ops.lhs, ops.rhs);
 }
 mlir::Value ScalarExprEmitter::emitRem(const BinOpInfo &ops) {
-  return cir::RemOp::create(builder, cgf.getLoc(ops.loc),
-                            cgf.convertType(ops.fullType), ops.lhs, ops.rhs);
+  const mlir::Location loc = cgf.getLoc(ops.loc);
+  if (cir::isFPOrVectorOfFPType(ops.lhs.getType())) {
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, ops.fpFeatures);
+    return builder.createFRem(loc, ops.lhs, ops.rhs);
+  }
+  return cir::RemOp::create(builder, loc, cgf.convertType(ops.fullType),
+                            ops.lhs, ops.rhs);
 }
 
 mlir::Value ScalarExprEmitter::emitAdd(const BinOpInfo &ops) {
   if (mlir::isa<cir::PointerType>(ops.lhs.getType()) ||
       mlir::isa<cir::PointerType>(ops.rhs.getType()))
-    return emitPointerArithmetic(cgf, ops, /*isSubtraction=*/false);
+    return emitPointerArithmetic(cgf, ops, /*isSubtraction=*/
+                                 false);
 
   const mlir::Location loc = cgf.getLoc(ops.loc);
   if (!isIntegerVectorBinOp(ops.lhs.getType()) &&

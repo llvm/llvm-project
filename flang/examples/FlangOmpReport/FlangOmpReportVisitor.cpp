@@ -137,8 +137,7 @@ void OpenMPCounterVisitor::Post(
 }
 void OpenMPCounterVisitor::Post(
     const OmpDeviceTypeClause::DeviceTypeDescription &c) {
-  clauseDetails +=
-      "type=" + std::string{OmpDeviceTypeClause::EnumToString(c)} + ";";
+  clauseDetails += "type=" + std::string{common::EnumToString(c)} + ";";
 }
 void OpenMPCounterVisitor::Post(
     const OmpDefaultmapClause::ImplicitBehavior &c) {
