@@ -202,9 +202,6 @@ getBestVariantMatchForContext(const SmallVectorImpl<VariantMatchInfo> &VMIs,
 } // namespace omp
 
 template <> struct DenseMapInfo<omp::TraitProperty> {
-  static inline omp::TraitProperty getEmptyKey() {
-    return omp::TraitProperty(-1);
-  }
   static unsigned getHashValue(omp::TraitProperty val) {
     return std::hash<unsigned>{}(unsigned(val));
   }

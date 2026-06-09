@@ -3632,7 +3632,7 @@ bool BinaryFunction::validateCFG() const {
   return true;
 }
 
-void BinaryFunction::fixBranches(DataflowInfoManager *DIM) {
+void BinaryFunction::fixBranches() {
   assert(isSimple() && "Expected function with valid CFG.");
 
   auto &MIB = BC.MIB;
@@ -3691,7 +3691,7 @@ void BinaryFunction::fixBranches(DataflowInfoManager *DIM) {
 
       // Reverse branch condition and swap successors.
       auto swapSuccessors = [&]() {
-        if (!MIB->isReversibleBranch(*CondBranch, DIM)) {
+        if (!MIB->isReversibleBranch(*CondBranch)) {
           if (opts::Verbosity) {
             BC.outs() << "BOLT-INFO: unable to swap successors in " << *this
                       << '\n';
@@ -3701,8 +3701,7 @@ void BinaryFunction::fixBranches(DataflowInfoManager *DIM) {
         std::swap(TSuccessor, FSuccessor);
         BB->swapConditionalSuccessors();
         auto L = BC.scopeLock();
-        MIB->reverseBranchCondition(BB, *CondBranch, TSuccessor->getLabel(),
-                                    Ctx, DIM);
+        MIB->reverseBranchCondition(*CondBranch, TSuccessor->getLabel(), Ctx);
         return true;
       };
 
