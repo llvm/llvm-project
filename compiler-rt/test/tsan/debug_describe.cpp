@@ -16,7 +16,7 @@ int __tsan_get_report_data(void *report, const char **description, int *count,
                            int *mutex_count, int *thread_count,
                            int *unique_tid_count, void **sleep_trace,
                            unsigned long trace_size);
-int __tsan_describe_mop(void *report, unsigned long idx, int first, char *out,
+int __tsan_describe_mop(void *report, unsigned long idx, char *out,
                         unsigned long outlen);
 int __tsan_describe_loc(void *report, unsigned long idx, char *out,
                         unsigned long outlen);
@@ -58,13 +58,14 @@ __tsan_on_report(void *report) {
 
   char buf[256];
 
-  // Two mops: idx 0 with first=1 ("Write"), idx 1 with first=0 ("Previous
-  // write"). Output starts with two spaces of indent.
-  __tsan_describe_mop(report, 0, /*first=*/1, buf, sizeof(buf));
+  // Two mops: idx 0 is described as the primary access ("Write"); idx 1 is
+  // described as the secondary access ("Previous write"). Output starts with
+  // two spaces of indent.
+  __tsan_describe_mop(report, 0, buf, sizeof(buf));
   fprintf(stderr, "mop0: [%s]\n", buf);
   // CHECK: mop0: [{{ +}}Write of size 8 at 0x{{[0-9a-f]+}} by thread T1]
 
-  __tsan_describe_mop(report, 1, /*first=*/0, buf, sizeof(buf));
+  __tsan_describe_mop(report, 1, buf, sizeof(buf));
   fprintf(stderr, "mop1: [%s]\n", buf);
   // CHECK: mop1: [{{ +}}Previous write of size 8 at 0x{{[0-9a-f]+}} by main thread]
 
@@ -97,13 +98,13 @@ __tsan_on_report(void *report) {
   // Description starts with "  Write" so we expect strlen == 7.
   char tiny[8];
   memset(tiny, 'X', sizeof(tiny));
-  __tsan_describe_mop(report, 0, /*first=*/1, tiny, sizeof(tiny));
+  __tsan_describe_mop(report, 0, tiny, sizeof(tiny));
   fprintf(stderr, "tiny strlen=%zu\n", strlen(tiny));
   // CHECK: tiny strlen=7
 
   // outlen = 0 must not write anything (sentinel preserved).
   char sentinel[4] = {'A', 'B', 'C', 'D'};
-  __tsan_describe_mop(report, 0, /*first=*/1, sentinel, 0);
+  __tsan_describe_mop(report, 0, sentinel, 0);
   fprintf(stderr, "sentinel: %c%c%c%c\n", sentinel[0], sentinel[1], sentinel[2],
           sentinel[3]);
   // CHECK: sentinel: ABCD

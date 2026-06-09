@@ -319,14 +319,11 @@ void *SANITIZER_CDECL __tsan_get_current_report();
 /// \param report Opaque pointer to the current report.
 /// \param idx Index of the memory operation (same indexing as
 ///            __tsan_get_report_mop).
-/// \param first Non-zero if this is the first / primary memory operation
-///              in the report; controls "Write" vs "Previous write" wording.
 /// \param out Buffer to write the description into.
 /// \param outlen Capacity of <c>out</c> in bytes.
 /// \returns Returns 1 on success, 0 on failure.
 int SANITIZER_CDECL __tsan_describe_mop(void *report, unsigned long idx,
-                                        int first, char *out,
-                                        unsigned long outlen);
+                                        char *out, unsigned long outlen);
 
 /// Writes a single-line, uncolored description of a location in the report
 /// into <c>out</c>.

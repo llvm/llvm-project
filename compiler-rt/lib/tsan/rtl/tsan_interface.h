@@ -188,8 +188,7 @@ int __tsan_get_report_unique_tid(void *report, uptr idx, int *tid);
 // describe_thread variants return whether a stack trace logically follows
 // the description; describe_mop and describe_mutex return 1 on success.
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_describe_mop(void* report, uptr idx, int first, char* out,
-                        uptr outlen);
+int __tsan_describe_mop(void* report, uptr idx, char* out, uptr outlen);
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_describe_loc(void* report, uptr idx, char* out, uptr outlen);
 SANITIZER_INTERFACE_ATTRIBUTE

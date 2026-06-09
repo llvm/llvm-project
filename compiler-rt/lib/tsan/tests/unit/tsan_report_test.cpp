@@ -12,9 +12,7 @@
 // uncolored, newline-free description strings shared with the PrintX path.
 //
 // NOTE: The exact string format asserted in these tests is not a stable
-// contract. These checks just pin down the current output so the DescribeX /
-// PrintX split stays in sync; if the report wording changes, update the
-// expected strings here to match.
+// contract.
 //
 //===----------------------------------------------------------------------===//
 #include "tsan_report.h"
@@ -29,8 +27,8 @@ namespace __tsan {
 // so the expected strings here track whatever zero-padding the platform's
 // printf applies (e.g. glibc and Darwin both pad to 12 hex digits while
 // some libcs print minimal width).
-static void FormatPtr(char *out, uptr size, uptr addr) {
-  __sanitizer::internal_snprintf(out, size, "%p", (void *)addr);
+static void FormatPtr(char* out, uptr size, uptr addr) {
+  __sanitizer::internal_snprintf(out, size, "%p", (void*)addr);
 }
 
 TEST(Report, DescribeMop) {
@@ -56,9 +54,9 @@ TEST(Report, DescribeMop) {
   s.clear();
   mop.write = false;
   DescribeMop(&mop, /*first=*/false, s);
-  __sanitizer::internal_snprintf(
-      expected, sizeof(expected),
-      "  Previous read of size 4 at %s by thread T1", addr_str);
+  __sanitizer::internal_snprintf(expected, sizeof(expected),
+                                 "  Previous read of size 4 at %s by thread T1",
+                                 addr_str);
   EXPECT_STREQ(expected, s.data());
 
   s.clear();
