@@ -59,6 +59,7 @@ FunctionPass *createNVPTXIRPeepholePass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
 MachineFunctionPass *createNVPTXForwardParamsPass();
+MachineFunctionPass *createNVPTXForwardKernelParamsPass();
 
 void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
@@ -74,6 +75,7 @@ void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
 void initializeNVPTXSetByValParamAlignLegacyPassPass(PassRegistry &);
 void initializeNVPTXProxyRegErasurePass(PassRegistry &);
 void initializeNVPTXForwardParamsPassPass(PassRegistry &);
+void initializeNVPTXForwardKernelParamsPassPass(PassRegistry &);
 void initializeNVVMIntrRangePass(PassRegistry &);
 void initializeNVVMReflectPass(PassRegistry &);
 void initializeNVPTXAAWrapperPassPass(PassRegistry &);

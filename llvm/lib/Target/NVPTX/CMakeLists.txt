@@ -19,6 +19,7 @@ set(NVPTXCodeGen_sources
   NVPTXAtomicLower.cpp
   NVPTXCtorDtorLowering.cpp
   NVPTXDwarfDebug.cpp
+  NVPTXForwardKernelParams.cpp
   NVPTXForwardParams.cpp
   NVPTXFrameLowering.cpp
   NVPTXGenericToNVVM.cpp

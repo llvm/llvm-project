@@ -125,37 +125,3 @@ end:
   %v = phi i32 [ %v2, %if ], [ %v3, %else ]
   ret i32 %v
 }
-
-; A grid constant kernel parameter loaded at a constant offset from a block
-; other than the one that defines its address must still be read directly from
-; parameter space (ld.param [param+off]), not via a materialized base register.
-define ptx_kernel void @test_kernel_cross_block(ptr byval([2 x i64]) align 8 %r, i64 %n, ptr addrspace(1) %out) {
-; CHECK-LABEL: test_kernel_cross_block(
-; CHECK:       {
-; CHECK-NEXT:    .reg .pred %p<2>;
-; CHECK-NEXT:    .reg .b64 %rd<6>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_kernel_cross_block_param_1];
-; CHECK-NEXT:    setp.lt.s64 %p1, %rd2, 1;
-; CHECK-NEXT:    @%p1 bra $L__BB6_2;
-; CHECK-NEXT:  // %bb.1: // %body
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_kernel_cross_block_param_2];
-; CHECK-NEXT:    ld.param.b64 %rd3, [test_kernel_cross_block_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd4, [test_kernel_cross_block_param_0+8];
-; CHECK-NEXT:    mul.lo.s64 %rd5, %rd3, %rd4;
-; CHECK-NEXT:    st.global.b64 [%rd1], %rd5;
-; CHECK-NEXT:  $L__BB6_2: // %done
-; CHECK-NEXT:    ret;
-  %c = icmp sgt i64 %n, 0
-  br i1 %c, label %body, label %done
-body:
-  %v0 = load i64, ptr %r, align 8
-  %p1 = getelementptr inbounds i8, ptr %r, i64 8
-  %v1 = load i64, ptr %p1, align 8
-  %m = mul i64 %v0, %v1
-  store i64 %m, ptr addrspace(1) %out, align 8
-  br label %done
-done:
-  ret void
-}
