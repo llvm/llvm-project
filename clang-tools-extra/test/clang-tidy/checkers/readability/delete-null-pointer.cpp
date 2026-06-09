@@ -156,3 +156,32 @@ void g() {
     delete p6;
   }
 }
+
+struct X {};
+X *makeX();
+struct Y {};
+Y *makeY();
+
+void conditionVariable() {
+  if (X *x = makeX())
+    delete x;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
+
+  // CHECK-FIXES: if (X *x = makeX())
+  // CHECK-FIXES-NEXT: delete x;
+
+  if (X *x = makeX(); x)
+    delete x;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
+
+  // CHECK-FIXES: if (X *x = makeX(); x)
+  // CHECK-FIXES-NEXT: delete x;
+
+  X *x = makeX();
+  if (Y *y = makeY(); x)
+    delete x;
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
+
+  // CHECK-FIXES: if (Y *y = makeY(); x)
+  // CHECK-FIXES-NEXT: delete x;
+}

@@ -714,6 +714,10 @@ Changes in existing checks
   - Correctly detecting ``this`` usage when a generic lambda calls an overloaded
     member function.
 
+- Improved :doc:`readability-delete-null-pointer
+  <clang-tidy/checks/readability/delete-null-pointer>` check by avoiding invalid
+  fix-its for ``if`` statements with condition variables or initializers.
+
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:
 
