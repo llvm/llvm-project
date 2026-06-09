@@ -1116,8 +1116,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                       MVT::v64f32, MVT::v128f32},
                      Custom);
 
-  // Custom lowering for tcgen05.st vector operands and the st.async mbarrier
-  // i128 (.b128) operand. MVT::i8 is needed for the st.async.release b8
+  // Custom lowering for tcgen05.st vector operands and the st.async
+  // i128 (.b128) operand. MVT::i8 is needed for the st.async.{sys,gpu} b8
   // variant.
   setOperationAction(ISD::INTRINSIC_VOID,
                      {MVT::i8, MVT::v2i32, MVT::v4i32, MVT::v8i32, MVT::v16i32,

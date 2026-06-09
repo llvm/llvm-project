@@ -3898,9 +3898,8 @@ is `0`, a regular ``st.async`` is emitted. When it is `1`, a
 ``multimem.st.async`` is emitted and the `%dest_addr` operand must be a 
 multimem address.
 
-The store operation is treated as a strong memory operation with ``.release`` 
-semantics. The effects of prior stores from the current thread are made visible 
-to some operations in other threads in the scope.
+The store carries ``.release`` semantics — prior stores from the current thread 
+are made visible to other threads in the scope.
 
 The scope of this operation can be ``sys`` or ``gpu``.
 
