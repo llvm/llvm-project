@@ -1122,10 +1122,10 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     if (RC.RSI.isSimple())
       RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RCName << ", " << RCBitsName << ", "
-       << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
-       << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
-       << RegSize << ", " << static_cast<unsigned>(RC.CopyCost) << ", "
-       << (RC.Allocatable ? "true" : "false") << ", "
+       << RegClassStrings.get(RC.getName()) << ", " << RegSize << ", "
+       << RC.getOrder().size() << ", " << RCBitsSize << ", "
+       << RC.getQualifiedIdName() << ", " << static_cast<unsigned>(RC.CopyCost)
+       << ", " << (RC.Allocatable ? "true" : "false") << ", "
        << (RC.getBaseClassOrder() ? "true" : "false") << " },\n";
   }
 
@@ -1357,7 +1357,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   OS << "static const TargetRegisterInfo::SubRegCoveredBits " << TargetName
      << "SubRegIdxRangeTable[] = {\n";
   for (unsigned M = 0; M < NumModes; ++M) {
-    OS << "  { " << (uint16_t)-1 << ", " << (uint16_t)-1 << " },\n";
+    OS << "  { " << (uint32_t)-1 << ", " << (uint32_t)-1 << " },\n";
     for (const auto &Idx : SubRegIndices) {
       const SubRegRange &Range = Idx.Range.get(M);
       OS << "  { " << Range.Offset << ", " << Range.Size << " },\t// "
