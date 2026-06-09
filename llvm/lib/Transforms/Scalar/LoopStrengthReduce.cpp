@@ -5253,8 +5253,8 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
       if (OtherLU.Formulae.empty())
         continue;
       // Can't merge if LU's offsets aren't legal for OtherLU
-      if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset,
-                      OtherLU.Kind, OtherLU.AccessTy, ThisF))
+      if (!isLegalUse(TTI, LU.MinOffset, LU.MaxOffset, OtherLU.Kind,
+                      OtherLU.AccessTy, ThisF))
         continue;
       // We can merge with uses that have the same initial formula. We allow
       // merging of uses with different Kind and AccessTy which means that the
