@@ -120,8 +120,7 @@ public:
 
   /// Retrieve variable names for the given values.
   static SmallVector<std::string>
-  getVariableNames(ArrayRef<Value> values,
-                   acc::OpenACCSupport &accSupport) {
+  getVariableNames(ArrayRef<Value> values, acc::OpenACCSupport &accSupport) {
     SmallVector<std::string> names;
     names.reserve(values.size());
     for (Value value : values)
