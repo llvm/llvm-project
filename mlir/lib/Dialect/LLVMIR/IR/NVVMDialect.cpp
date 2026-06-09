@@ -3473,13 +3473,12 @@ mlir::NVVM::IDArgPair NVVM::BarrierArriveOp::getIntrinsicIDAndArgs(
   llvm::Value *barrierId = thisOp.getBarrierId()
                                ? mt.lookupValue(thisOp.getBarrierId())
                                : builder.getInt32(0);
+  llvm::Value *numThreads = mt.lookupValue(thisOp.getNumberOfThreads());
   llvm::Intrinsic::ID id =
       thisOp.getAligned()
           ? llvm::Intrinsic::nvvm_barrier_cta_arrive_aligned_count
           : llvm::Intrinsic::nvvm_barrier_cta_arrive_count;
-  llvm::SmallVector<llvm::Value *> args = {
-      barrierId, mt.lookupValue(thisOp.getNumberOfThreads())};
-  return {id, std::move(args)};
+  return {id, {barrierId, numThreads}};
 }
 
 mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
