@@ -4378,7 +4378,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   // Increase the cost for half and bfloat types if not architecturally
   // supported.
   if (ISD == ISD::FADD || ISD == ISD::FSUB || ISD == ISD::FMUL ||
-      ISD == ISD::FDIV || ISD == ISD::FREM)
+      ISD == ISD::FDIV || ISD == ISD::FREM) {
     if (auto PromotedCost = getFP16BF16PromoteCost(
             Ty, CostKind, Op1Info, Op2Info, /*IncludeTrunc=*/true,
             // There is not native support for fdiv/frem even with +sve-b16b16.
@@ -4388,6 +4388,11 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                             Op1Info, Op2Info);
             }))
       return *PromotedCost;
+
+    // fp128 all go via libcalls
+    if (Ty->getScalarType()->isFP128Ty())
+      return CostKind == TTI::TCK_CodeSize ? 1 : 10 * LT.first;
+  }
 
   // If the operation is a widening instruction (smull or umull) and both
   // operands are extends the cost can be cheaper by considering that the
