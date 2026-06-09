@@ -424,7 +424,7 @@ macro(construct_compiler_rt_default_triple)
   if(COMPILER_RT_DEFAULT_TARGET_ONLY)
 
     # Pass the necessary flags to make flag detection work.
-    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    if(COMPILER_RT_TARGET_AMDGPU)
       set(COMPILER_RT_GPU_BUILD ON)
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx|spirv64")
       set(COMPILER_RT_GPU_BUILD ON)

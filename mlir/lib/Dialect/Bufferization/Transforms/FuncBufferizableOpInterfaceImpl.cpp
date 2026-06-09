@@ -54,8 +54,8 @@ void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
 static mlir::Attribute
 getDefaultMemorySpace(const BufferizationOptions &options,
                       TensorLikeType type) {
-  if (auto tensorType = dyn_cast<TensorType>(type)) {
-    return *options.defaultMemorySpaceFn(tensorType);
+  if (isa<TensorType>(type)) {
+    return *options.defaultMemorySpaceFn(type);
   }
   return nullptr;
 }
@@ -73,7 +73,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
   // Note: For builtin tensors there is additional logic related to layout.
   if (auto tensorType = dyn_cast<TensorType>(type)) {
     BufferLikeType memrefType = options.functionArgTypeConverterFn(
-        type, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
+        type, *options.defaultMemorySpaceFn(type), funcOp, options);
 
     auto layoutAttr = funcOp.getArgAttrOfType<MemRefLayoutAttrInterface>(
         index, BufferizationDialect::kBufferLayoutAttrName);
