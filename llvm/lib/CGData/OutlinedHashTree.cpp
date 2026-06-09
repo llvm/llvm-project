@@ -13,14 +13,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CGData/OutlinedHashTree.h"
+#include "llvm/CGData/OutlinedHashTreeRecord.h"
 
 #define DEBUG_TYPE "outlined-hash-tree"
 
 using namespace llvm;
 
-void OutlinedHashTree::walkGraph(NodeCallbackFn CallbackNode,
-                                 EdgeCallbackFn CallbackEdge,
-                                 bool SortedWalk) const {
+void MutableOutlinedHashTree::walkGraph(NodeCallbackFn CallbackNode,
+                                        EdgeCallbackFn CallbackEdge,
+                                        bool SortedWalk) const {
   SmallVector<const HashNode *> Stack;
   Stack.emplace_back(getRoot());
 
@@ -48,7 +49,7 @@ void OutlinedHashTree::walkGraph(NodeCallbackFn CallbackNode,
   }
 }
 
-size_t OutlinedHashTree::size(bool GetTerminalCountOnly) const {
+size_t MutableOutlinedHashTree::size(bool GetTerminalCountOnly) const {
   size_t Size = 0;
   walkGraph([&Size, GetTerminalCountOnly](const HashNode *N) {
     Size += (N && (!GetTerminalCountOnly || N->Terminals));
@@ -56,7 +57,7 @@ size_t OutlinedHashTree::size(bool GetTerminalCountOnly) const {
   return Size;
 }
 
-size_t OutlinedHashTree::depth() const {
+size_t MutableOutlinedHashTree::depth() const {
   size_t Size = 0;
   DenseMap<const HashNode *, size_t> DepthMap;
   walkGraph([&Size, &DepthMap](
@@ -68,7 +69,7 @@ size_t OutlinedHashTree::depth() const {
   return Size;
 }
 
-void OutlinedHashTree::insert(const HashSequencePair &SequencePair) {
+void MutableOutlinedHashTree::insert(const HashSequencePair &SequencePair) {
   auto &[Sequence, Count] = SequencePair;
   HashNode *Current = getRoot();
 
@@ -87,7 +88,7 @@ void OutlinedHashTree::insert(const HashSequencePair &SequencePair) {
     Current->Terminals = Current->Terminals.value_or(0) + Count;
 }
 
-void OutlinedHashTree::merge(const OutlinedHashTree *Tree) {
+void MutableOutlinedHashTree::merge(const MutableOutlinedHashTree *Tree) {
   HashNode *Dst = getRoot();
   const HashNode *Src = Tree->getRoot();
   SmallVector<std::pair<HashNode *, const HashNode *>> Stack;
@@ -117,12 +118,46 @@ void OutlinedHashTree::merge(const OutlinedHashTree *Tree) {
 
 std::optional<unsigned>
 OutlinedHashTree::find(const HashSequence &Sequence) const {
-  const HashNode *Current = getRoot();
+  HashNodeCursor Cursor = getRootCursor();
   for (stable_hash StableHash : Sequence) {
-    const auto I = Current->Successors.find(StableHash);
-    if (I == Current->Successors.end())
+    auto Next = Cursor.getSuccessor(*this, StableHash);
+    if (!Next)
       return 0;
-    Current = I->second.get();
+    Cursor = *Next;
   }
-  return Current->Terminals;
+  return Cursor.getTerminals(*this);
+}
+
+OutlinedHashTree::HashNodeCursor OutlinedHashTree::getRootCursor() const {
+  if (isReadInPlace())
+    // root block at region offset 0
+    return HashNodeCursor(uint64_t(0));
+  return HashNodeCursor(&Root);
+}
+
+std::optional<OutlinedHashTree::HashNodeCursor>
+OutlinedHashTree::HashNodeCursor::getSuccessor(const OutlinedHashTree &Tree,
+                                               stable_hash H) const {
+  if (Tree.isReadInPlace()) {
+    if (auto SuccessorOffset = OutlinedHashTreeRecord::readSuccessor(
+            Tree.BlockBase + BlockOffset, H))
+      return HashNodeCursor(*SuccessorOffset);
+    return std::nullopt;
+  }
+  auto It = Node->Successors.find(H);
+  if (It == Node->Successors.end())
+    return std::nullopt;
+  return HashNodeCursor(It->second.get());
+}
+
+std::optional<unsigned> OutlinedHashTree::HashNodeCursor::getTerminals(
+    const OutlinedHashTree &Tree) const {
+  if (Tree.isReadInPlace()) {
+    unsigned T =
+        OutlinedHashTreeRecord::readTerminals(Tree.BlockBase + BlockOffset);
+    if (!T)
+      return std::nullopt;
+    return T;
+  }
+  return Node->Terminals;
 }

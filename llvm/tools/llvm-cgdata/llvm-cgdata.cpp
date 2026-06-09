@@ -126,7 +126,9 @@ static int convert_main(int argc, const char *argv[]) {
   CodeGenDataWriter Writer;
   auto Reader = ReaderOrErr->get();
   if (Reader->hasOutlinedHashTree()) {
-    OutlinedHashTreeRecord Record(Reader->releaseOutlinedHashTree());
+    auto Tree = OutlinedHashTreeRecord::createInMemory(
+        Reader->releaseOutlinedHashTree());
+    OutlinedHashTreeRecord Record(std::move(Tree));
     Writer.addRecord(Record);
   }
   if (Reader->hasStableFunctionMap()) {
@@ -260,7 +262,9 @@ static int show_main(int argc, const char *argv[]) {
     OS << "Version: " << Reader->getVersion() << "\n";
 
   if (Reader->hasOutlinedHashTree()) {
-    auto Tree = Reader->releaseOutlinedHashTree();
+    // Whole-tree stats need the in-memory form.
+    auto Tree = OutlinedHashTreeRecord::createInMemory(
+        Reader->releaseOutlinedHashTree());
     OS << "Outlined hash tree:\n";
     OS << "  Total Node Count: " << Tree->size() << "\n";
     OS << "  Terminal Node Count: " << Tree->size(/*GetTerminalCountOnly=*/true)
