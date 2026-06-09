@@ -361,3 +361,92 @@ spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
   %2 = spirv.GL.Atan %arg0 : f32
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FSign
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fsign_scalar
+spirv.func @fsign_scalar(%arg0: f32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // CHECK: %[[MONE:.*]] = llvm.mlir.constant(-1.000000e+00 : f32) : f32
+  // CHECK: %[[GT:.*]] = llvm.fcmp "ogt" %{{.*}}, %[[ZERO]] : f32
+  // CHECK: %[[LT:.*]] = llvm.fcmp "olt" %{{.*}}, %[[ZERO]] : f32
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[LT]], %[[MONE]], %[[ZERO]] : i1, f32
+  // CHECK: llvm.select %[[GT]], %[[ONE]], %[[SEL0]] : i1, f32
+  %0 = spirv.GL.FSign %arg0 : f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fsign_vector
+spirv.func @fsign_vector(%arg0: vector<4xf32>) "None" {
+  // CHECK: %[[GT:.*]] = llvm.fcmp "ogt" %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: %[[LT:.*]] = llvm.fcmp "olt" %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[LT]], %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xf32>
+  // CHECK: llvm.select %[[GT]], %{{.*}}, %[[SEL0]] : vector<4xi1>, vector<4xf32>
+  %0 = spirv.GL.FSign %arg0 : vector<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.SSign
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ssign_scalar
+spirv.func @ssign_scalar(%arg0: i32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[MONE:.*]] = llvm.mlir.constant(-1 : i32) : i32
+  // CHECK: %[[GT:.*]] = llvm.icmp "sgt" %{{.*}}, %[[ZERO]] : i32
+  // CHECK: %[[LT:.*]] = llvm.icmp "slt" %{{.*}}, %[[ZERO]] : i32
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[LT]], %[[MONE]], %[[ZERO]] : i1, i32
+  // CHECK: llvm.select %[[GT]], %[[ONE]], %[[SEL0]] : i1, i32
+  %0 = spirv.GL.SSign %arg0 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @ssign_vector
+spirv.func @ssign_vector(%arg0: vector<4xi32>) "None" {
+  // CHECK: %[[GT:.*]] = llvm.icmp "sgt" %{{.*}}, %{{.*}} : vector<4xi32>
+  // CHECK: %[[LT:.*]] = llvm.icmp "slt" %{{.*}}, %{{.*}} : vector<4xi32>
+  // CHECK: %[[SEL0:.*]] = llvm.select %[[LT]], %{{.*}}, %{{.*}} : vector<4xi1>, vector<4xi32>
+  // CHECK: llvm.select %[[GT]], %{{.*}}, %[[SEL0]] : vector<4xi1>, vector<4xi32>
+  %0 = spirv.GL.SSign %arg0 : vector<4xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Fract
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fract
+spirv.func @fract(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: %[[FLOOR:.*]] = llvm.intr.floor(%{{.*}}) : (f32) -> f32
+  // CHECK: llvm.fsub %{{.*}}, %[[FLOOR]] : f32
+  %0 = spirv.GL.Fract %arg0 : f32
+  // CHECK: %[[FLOORV:.*]] = llvm.intr.floor(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  // CHECK: llvm.fsub %{{.*}}, %[[FLOORV]] : vector<3xf16>
+  %1 = spirv.GL.Fract %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.FMix
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fmix_scalar
+spirv.func @fmix_scalar(%x: f32, %y: f32, %a: f32) "None" {
+  // CHECK: %[[DIFF:.*]] = llvm.fsub %{{.*}}, %{{.*}} : f32
+  // CHECK: llvm.intr.fma(%{{.*}}, %[[DIFF]], %{{.*}}) : (f32, f32, f32) -> f32
+  %0 = spirv.GL.FMix %x : f32, %y : f32, %a : f32 -> f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fmix_vector
+spirv.func @fmix_vector(%x: vector<4xf32>, %y: vector<4xf32>, %a: vector<4xf32>) "None" {
+  // CHECK: %[[DIFF:.*]] = llvm.fsub %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: llvm.intr.fma(%{{.*}}, %[[DIFF]], %{{.*}}) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %0 = spirv.GL.FMix %x : vector<4xf32>, %y : vector<4xf32>, %a : vector<4xf32> -> vector<4xf32>
+  spirv.Return
+}

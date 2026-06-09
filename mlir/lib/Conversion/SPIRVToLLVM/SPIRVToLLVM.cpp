@@ -118,6 +118,21 @@ static Value createFPConstant(Location loc, Type srcType, Type dstType,
                                   rewriter.getFloatAttr(floatType, value));
 }
 
+/// Creates `llvm.mlir.constant` with an integer scalar or vector value.
+static Value createIntConstant(Location loc, Type srcType, Type dstType,
+                               PatternRewriter &rewriter, int64_t value) {
+  if (auto vecType = dyn_cast<VectorType>(srcType)) {
+    auto intType = cast<IntegerType>(vecType.getElementType());
+    return LLVM::ConstantOp::create(
+        rewriter, loc, dstType,
+        SplatElementsAttr::get(vecType,
+                               rewriter.getIntegerAttr(intType, value)));
+  }
+  auto intType = cast<IntegerType>(srcType);
+  return LLVM::ConstantOp::create(rewriter, loc, dstType,
+                                  rewriter.getIntegerAttr(intType, value));
+}
+
 /// Utility function for bitfield ops:
 ///   - `BitFieldInsert`
 ///   - `BitFieldSExtract`
@@ -921,6 +936,123 @@ public:
   }
 };
 
+/// Converts `spirv.SNegate` to `0 - x`.
+class SNegatePattern : public SPIRVToLLVMConversion<spirv::SNegateOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SNegateOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SNegateOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value zero = createIntConstant(loc, srcType, dstType, rewriter, 0);
+    rewriter.replaceOpWithNewOp<LLVM::SubOp>(op, dstType, zero,
+                                             adaptor.getOperand());
+    return success();
+  }
+};
+
+/// Converts `spirv.VectorTimesScalar` to a broadcast of the scalar followed by
+/// an `llvm.fmul`.
+class VectorTimesScalarPattern
+    : public SPIRVToLLVMConversion<spirv::VectorTimesScalarOp> {
+public:
+  using SPIRVToLLVMConversion<
+      spirv::VectorTimesScalarOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::VectorTimesScalarOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    unsigned numElements = cast<VectorType>(srcType).getNumElements();
+    Value broadcasted = broadcast(op.getLoc(), adaptor.getScalar(), numElements,
+                                  *getTypeConverter(), rewriter);
+    rewriter.replaceOpWithNewOp<LLVM::FMulOp>(op, dstType, adaptor.getVector(),
+                                              broadcasted);
+    return success();
+  }
+};
+
+/// Converts `spirv.FMod` to `x - y * floor(x / y)`. The SPIR-V op requires the
+/// result to take the sign of the divisor, whereas `llvm.frem` keeps the sign
+/// of the dividend, so `frem` cannot be used directly.
+class FModPattern : public SPIRVToLLVMConversion<spirv::FModOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::FModOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::FModOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getOperand1();
+    Value rhs = adaptor.getOperand2();
+    Value div = LLVM::FDivOp::create(rewriter, loc, dstType, lhs, rhs);
+    Value floored = LLVM::FFloorOp::create(rewriter, loc, dstType, div);
+    Value scaled = LLVM::FMulOp::create(rewriter, loc, dstType, rhs, floored);
+    rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, dstType, lhs, scaled);
+    return success();
+  }
+};
+
+/// Converts `spirv.SMod` to a signed remainder corrected to take the sign of
+/// the divisor. `llvm.srem` keeps the sign of the dividend, so the result is
+/// adjusted by adding the divisor when the remainder is non-zero and its sign
+/// differs from the divisor's.
+class SModPattern : public SPIRVToLLVMConversion<spirv::SModOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::SModOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::SModOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value lhs = adaptor.getOperand1();
+    Value rhs = adaptor.getOperand2();
+    Type i1Type = rewriter.getI1Type();
+    Type cmpType = isa<VectorType>(srcType)
+                       ? cast<Type>(VectorType::get(
+                             cast<VectorType>(srcType).getShape(), i1Type))
+                       : i1Type;
+
+    Value rem = LLVM::SRemOp::create(rewriter, loc, dstType, lhs, rhs);
+    Value zero = createIntConstant(loc, srcType, dstType, rewriter, 0);
+
+    Value remNonZero = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                            LLVM::ICmpPredicate::ne, rem, zero);
+    Value remNeg = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                        LLVM::ICmpPredicate::slt, rem, zero);
+    Value rhsNeg = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                        LLVM::ICmpPredicate::slt, rhs, zero);
+    Value signMismatch =
+        LLVM::XOrOp::create(rewriter, loc, cmpType, remNeg, rhsNeg);
+    Value needsAdjust =
+        LLVM::AndOp::create(rewriter, loc, cmpType, remNonZero, signMismatch);
+
+    Value adjusted = LLVM::AddOp::create(rewriter, loc, dstType, rem, rhs);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, needsAdjust,
+                                                adjusted, rem);
+    return success();
+  }
+};
+
 /// Converts `spirv.Load` and `spirv.Store` to LLVM dialect.
 template <typename SPIRVOp>
 class LoadStorePattern : public SPIRVToLLVMConversion<SPIRVOp> {
@@ -1564,6 +1696,102 @@ public:
   }
 };
 
+/// Converts `spirv.GL.FSign`/`spirv.GL.SSign` to a `sign(x)` sequence that maps
+/// the operand to -1/0/1 using two comparisons and two selects. The `isFloat`
+/// flag selects between floating-point and integer comparisons/constants.
+template <typename SPIRVOp, bool isFloat>
+class SignPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = this->getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value operand = adaptor.getOperand();
+    Type i1Type = rewriter.getI1Type();
+    Type cmpType = isa<VectorType>(srcType)
+                       ? cast<Type>(VectorType::get(
+                             cast<VectorType>(srcType).getShape(), i1Type))
+                       : i1Type;
+
+    Value zero, one, minusOne, gt, lt;
+    if constexpr (isFloat) {
+      zero = createFPConstant(loc, srcType, dstType, rewriter, 0.0);
+      one = createFPConstant(loc, srcType, dstType, rewriter, 1.0);
+      minusOne = createFPConstant(loc, srcType, dstType, rewriter, -1.0);
+      gt = LLVM::FCmpOp::create(rewriter, loc, cmpType,
+                                LLVM::FCmpPredicate::ogt, operand, zero);
+      lt = LLVM::FCmpOp::create(rewriter, loc, cmpType,
+                                LLVM::FCmpPredicate::olt, operand, zero);
+    } else {
+      zero = createIntConstant(loc, srcType, dstType, rewriter, 0);
+      one = createIntConstant(loc, srcType, dstType, rewriter, 1);
+      minusOne = createIntConstant(loc, srcType, dstType, rewriter, -1);
+      gt = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                LLVM::ICmpPredicate::sgt, operand, zero);
+      lt = LLVM::ICmpOp::create(rewriter, loc, cmpType,
+                                LLVM::ICmpPredicate::slt, operand, zero);
+    }
+
+    Value negOrZero =
+        LLVM::SelectOp::create(rewriter, loc, dstType, lt, minusOne, zero);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, dstType, gt, one,
+                                                negOrZero);
+    return success();
+  }
+};
+
+/// Converts `spirv.GL.Fract` to `x - floor(x)`.
+class FractPattern : public SPIRVToLLVMConversion<spirv::GLFractOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLFractOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLFractOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value operand = adaptor.getOperand();
+    Value floored = LLVM::FFloorOp::create(rewriter, loc, dstType, operand);
+    rewriter.replaceOpWithNewOp<LLVM::FSubOp>(op, dstType, operand, floored);
+    return success();
+  }
+};
+
+/// Converts `spirv.GL.FMix`/`spirv.CL.mix` to `fma(a, y - x, x)`, the linear
+/// blend `x * (1 - a) + y * a`. Operands are taken positionally because the GL
+/// and CL ops name their third operand differently (`a` vs. `z`).
+template <typename SPIRVOp>
+class MixPattern : public SPIRVToLLVMConversion<SPIRVOp> {
+public:
+  using SPIRVToLLVMConversion<SPIRVOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(SPIRVOp op, typename SPIRVOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto dstType = this->getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value x = adaptor.getOperands()[0];
+    Value y = adaptor.getOperands()[1];
+    Value a = adaptor.getOperands()[2];
+    Value diff = LLVM::FSubOp::create(rewriter, loc, dstType, y, x);
+    rewriter.replaceOpWithNewOp<LLVM::FMAOp>(op, dstType, a, diff, x);
+    return success();
+  }
+};
+
 class VariablePattern : public SPIRVToLLVMConversion<spirv::VariableOp> {
 public:
   using SPIRVToLLVMConversion<spirv::VariableOp>::SPIRVToLLVMConversion;
@@ -1824,7 +2052,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SDivOp, LLVM::SDivOp>,
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
-      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>,
+      DirectConversionPattern<spirv::UModOp, LLVM::URemOp>, SNegatePattern,
+      VectorTimesScalarPattern, FModPattern, SModPattern,
 
       // Bitwise ops
       BitFieldInsertPattern, BitFieldUExtractPattern, BitFieldSExtractPattern,
@@ -1917,6 +2146,9 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
       InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern,
+      SignPattern<spirv::GLFSignOp, /*isFloat=*/true>,
+      SignPattern<spirv::GLSSignOp, /*isFloat=*/false>, FractPattern,
+      MixPattern<spirv::GLFMixOp>,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,
@@ -1950,6 +2182,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::CLSMinOp, LLVM::SMinOp>,
       DirectConversionPattern<spirv::CLUMaxOp, LLVM::UMaxOp>,
       DirectConversionPattern<spirv::CLUMinOp, LLVM::UMinOp>,
+      MixPattern<spirv::CLMixOp>,
 
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,

@@ -233,3 +233,92 @@ spirv.func @srem_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
   %0 = spirv.SRem %arg0, %arg1 : vector<4xi32>
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.SNegate
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @snegate_scalar
+spirv.func @snegate_scalar(%arg0: i32) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : i32
+  %0 = spirv.SNegate %arg0 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @snegate_vector
+spirv.func @snegate_vector(%arg0: vector<4xi32>) "None" {
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+  // CHECK: llvm.sub %[[ZERO]], %{{.*}} : vector<4xi32>
+  %0 = spirv.SNegate %arg0 : vector<4xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.VectorTimesScalar
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @vector_times_scalar
+spirv.func @vector_times_scalar(%vector: vector<4xf32>, %scalar: f32) "None" {
+  // CHECK: %[[UNDEF:.*]] = llvm.mlir.poison : vector<4xf32>
+  // CHECK: llvm.insertelement %{{.*}}, %[[UNDEF]]
+  // CHECK-COUNT-2: llvm.insertelement
+  // CHECK: %[[BCAST:.*]] = llvm.insertelement
+  // CHECK: llvm.fmul %{{.*}}, %[[BCAST]] : vector<4xf32>
+  %0 = spirv.VectorTimesScalar %vector, %scalar : (vector<4xf32>, f32) -> vector<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.FMod
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @fmod_scalar
+spirv.func @fmod_scalar(%arg0: f32, %arg1: f32) "None" {
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %{{.*}}, %{{.*}} : f32
+  // CHECK: %[[FLOOR:.*]] = llvm.intr.floor(%[[DIV]]) : (f32) -> f32
+  // CHECK: %[[MUL:.*]] = llvm.fmul %{{.*}}, %[[FLOOR]] : f32
+  // CHECK: llvm.fsub %{{.*}}, %[[MUL]] : f32
+  %0 = spirv.FMod %arg0, %arg1 : f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @fmod_vector
+spirv.func @fmod_vector(%arg0: vector<4xf32>, %arg1: vector<4xf32>) "None" {
+  // CHECK: %[[DIV:.*]] = llvm.fdiv %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: %[[FLOOR:.*]] = llvm.intr.floor(%[[DIV]]) : (vector<4xf32>) -> vector<4xf32>
+  // CHECK: %[[MUL:.*]] = llvm.fmul %{{.*}}, %[[FLOOR]] : vector<4xf32>
+  // CHECK: llvm.fsub %{{.*}}, %[[MUL]] : vector<4xf32>
+  %0 = spirv.FMod %arg0, %arg1 : vector<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.SMod
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @smod_scalar
+spirv.func @smod_scalar(%arg0: i32, %arg1: i32) "None" {
+  // CHECK: %[[REM:.*]] = llvm.srem %{{.*}}, %{{.*}} : i32
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[NZ:.*]] = llvm.icmp "ne" %[[REM]], %[[ZERO]] : i32
+  // CHECK: %[[RNEG:.*]] = llvm.icmp "slt" %[[REM]], %[[ZERO]] : i32
+  // CHECK: %[[DNEG:.*]] = llvm.icmp "slt" %{{.*}}, %[[ZERO]] : i32
+  // CHECK: %[[XOR:.*]] = llvm.xor %[[RNEG]], %[[DNEG]] : i1
+  // CHECK: %[[ADJ:.*]] = llvm.and %[[NZ]], %[[XOR]] : i1
+  // CHECK: %[[ADD:.*]] = llvm.add %[[REM]], %{{.*}} : i32
+  // CHECK: llvm.select %[[ADJ]], %[[ADD]], %[[REM]] : i1, i32
+  %0 = spirv.SMod %arg0, %arg1 : i32
+  spirv.Return
+}
+
+// CHECK-LABEL: @smod_vector
+spirv.func @smod_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) "None" {
+  // CHECK: %[[REM:.*]] = llvm.srem %{{.*}}, %{{.*}} : vector<4xi32>
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(dense<0> : vector<4xi32>) : vector<4xi32>
+  // CHECK: %[[NZ:.*]] = llvm.icmp "ne" %[[REM]], %[[ZERO]] : vector<4xi32>
+  // CHECK: %[[ADD:.*]] = llvm.add %[[REM]], %{{.*}} : vector<4xi32>
+  // CHECK: llvm.select %{{.*}}, %[[ADD]], %[[REM]] : vector<4xi1>, vector<4xi32>
+  %0 = spirv.SMod %arg0, %arg1 : vector<4xi32>
+  spirv.Return
+}
