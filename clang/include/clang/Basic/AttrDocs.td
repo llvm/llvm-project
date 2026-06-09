@@ -158,7 +158,7 @@ On MachO platforms, this attribute also does not control the order of initializa
 across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
-other language modes. Currently, this attribute is not implemented on z/OS.
+other language modes.
   }];
 }
 
@@ -9314,8 +9314,8 @@ def HLSLMatrixLayoutDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "row_major, column_major";
   let Content = [{
-The ``row_major`` and ``column_major`` keywords specify the memory layout 
-of an HLSL matrix type. 
+The ``row_major`` and ``column_major`` keywords specify the memory layout
+of an HLSL matrix type.
 
 * ``row_major``: Matrices are stored in memory row-by-row.
 * ``column_major``: Matrices are stored in memory column-by-column (default).
@@ -10053,5 +10053,67 @@ exception and what cleanup actions to perform. It effectively colors the
 language-agnostic unwinding mechanism with language-specific semantics, enabling
 different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
+  }];
+}
+
+def SentinelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sentinel`` attribute can be applied to variadic functions and pointers to
+variadic functions, to diagnose each function call that does not pass a
+sentinel value (a null pointer constant) as the last argument to the function
+call. The attribute accepts two optional arguments: the first argument is the
+position of the expected sentinel value, starting from the last parameter. The
+second argument describes whether the last fixed parameter is treated as a
+valid sentinel value when set to '1'.
+All arguments described above defaults to '0' when elided.
+The attribute is also supported with blocks and in Objective-C.
+
+.. code-block:: c
+
+  void foo(const char*, ...) __attribute__((sentinel));
+  void bar(int, ...) __attribute__((sentinel(1)));
+  void baz(const char*, const char*, ...) __attribute__((sentinel(0, 1)));
+
+  void example() {
+    foo("Example", (void*)0);
+    foo("Another", "example", NULL);
+    foo("Missing", "sentinel"); // Not OK
+
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
+    bar(1, 2, 3, 4, NULL);      // Not OK
+
+    baz("Test", "with", "multiple", "args", NULL);
+    baz("One", NULL);           // OK: last fixed parameter is a valid sentinel
+
+    void (*ptr) (int arg, ...) __attribute__ ((__sentinel__));
+    ptr(1, 2, 3, NULL);
+  }
+
+.. code-block:: c++
+
+  struct Ty {
+      int value;
+
+      template<typename T>
+      auto&& foo(T&& val, ...) __attribute__((sentinel(1))) {
+          return std::forward<T>(val);
+      }
+
+      template<class Self>
+      auto&& bar(this Self&& self, ...) __attribute__((sentinel(1))) {
+          return std::forward<Self>(self).value;
+      }
+  };
+
+  void example2() {
+      auto sty = Ty{};
+      sty.foo(1, nullptr, 3);
+      sty.bar(1, nullptr, 3);
+
+      auto lmbd = [](int a, ...) __attribute__((sentinel)) {};
+      lmbd(1, 2, nullptr);
+  }
   }];
 }

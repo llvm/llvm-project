@@ -259,6 +259,28 @@ static constexpr FeatureBitset FeaturesZNVER6 =
     FeaturesZNVER5 | FeatureAVXVNNIINT8 | FeatureAVX512FP16 | FeatureAVXIFMA |
     FeatureAVXNECONVERT;
 
+// Hygon architecture processors.
+constexpr FeatureBitset FeaturesC86_4G_M4 =
+    FeatureX87 | FeatureADX | FeatureAES | FeatureAVX | FeatureAVX2 |
+    FeatureBMI | FeatureBMI2 | FeatureCLFLUSHOPT | FeatureCLZERO |
+    FeatureCMPXCHG8B | FeatureCMPXCHG16B | FeatureCRC32 | Feature64BIT |
+    FeatureF16C | FeatureFMA | FeatureFSGSBASE | FeatureFXSR | FeatureLZCNT |
+    FeatureMMX | FeatureMOVBE | FeatureMWAITX | FeaturePCLMUL | FeaturePOPCNT |
+    FeaturePRFCHW | FeatureRDRND | FeatureRDSEED | FeatureSAHF | FeatureSHA |
+    FeatureSSE | FeatureSSE2 | FeatureSSE3 | FeatureSSSE3 | FeatureSSE4_1 |
+    FeatureSSE4_2 | FeatureSSE4_A | FeatureXSAVE | FeatureXSAVEC |
+    FeatureXSAVEOPT | FeatureXSAVES;
+
+static constexpr FeatureBitset FeaturesC86_4G_M6 = FeaturesC86_4G_M4;
+
+static constexpr FeatureBitset FeaturesC86_4G_M7 =
+    FeaturesC86_4G_M4 | FeatureAVX512BF16 | FeatureAVX512BITALG |
+    FeatureAVX512BW | FeatureAVX512CD | FeatureAVX512DQ | FeatureAVX512F |
+    FeatureAVX512IFMA | FeatureAVX512VBMI | FeatureAVX512VBMI2 |
+    FeatureAVX512VL | FeatureAVX512VNNI | FeatureAVX512VPOPCNTDQ | FeatureCLWB |
+    FeatureCMOV | FeatureGFNI | FeatureVAES | FeatureVPCLMULQDQ |
+    FeatureWBNOINVD;
+
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
 // 1. Copy the mangling from the original CPU_SPEICIFC MACROs. If no, assign
@@ -445,6 +467,10 @@ constexpr ProcInfo Processors[] = {
   { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
   { {"znver5"}, CK_ZNVER5, FEATURE_AVX512VP2INTERSECT, FeaturesZNVER5, '\0', false },
   { {"znver6"}, CK_ZNVER6, FEATURE_AVX512FP16, FeaturesZNVER6, '\0', false },
+  // Hygon processors.
+  { {"c86-4g-m4"}, CK_C86_4G_M4, FEATURE_AVX2, FeaturesC86_4G_M4 , '\0', false },
+  { {"c86-4g-m6"}, CK_C86_4G_M6, FEATURE_AVX2, FeaturesC86_4G_M6 , '\0', false },
+  { {"c86-4g-m7"}, CK_C86_4G_M7, FEATURE_AVX512VBMI2, FeaturesC86_4G_M7 , '\0', false },
   // Generic 64-bit processor.
   { {"x86-64"}, CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false },
   { {"x86-64-v2"}, CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false },

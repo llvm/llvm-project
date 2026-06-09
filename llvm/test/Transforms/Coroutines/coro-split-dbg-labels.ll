@@ -76,7 +76,7 @@ coro_Suspend:                                     ; preds = %for.cond, %if.then,
 ; CHECK-NEXT:        #dbg_label(![[RESUME_1:[0-9]+]], !{{[0-9]+}})
 
 ; Check that the destroy function contains the `#dbg_label` instructions.
-; CHECK-LABEL:   define internal fastcc void @f.destroy({{.*}}) #1 !dbg !38 {
+; CHECK-LABEL:   define internal void @f.destroy({{.*}}) #1 !dbg !38 {
 ; CHECK:         resume.0:        ; preds = %resume.entry
 ; CHECK-NEXT:        #dbg_label(![[DESTROY_0:[0-9]+]], !{{[0-9]+}})
 ; CHECK:         resume.1:        ; preds = %resume.entry

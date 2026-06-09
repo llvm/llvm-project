@@ -465,7 +465,7 @@ void OmpStructureChecker::CheckIterationVariables(
     if (llvm::omp::isDataSharingAttributeClause(clauseId, version)) {
       for (const parser::OmpObject &object :
           parser::omp::GetOmpObjectList(clause)->v) {
-        if (const Symbol *symbol{GetObjectSymbol(object)}) {
+        if (const Symbol *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
           auto maybeSource{parser::omp::GetObjectSource(object)};
           assert(maybeSource && "Expecting object source");
           dsa.insert(
@@ -722,6 +722,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   SymbolSourceMap symbols;
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, objects, "LINEAR");
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
   CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_linear);
@@ -818,9 +819,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           "The list item `%s` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute"_err_en_US,
           symbol->name());
     }
-    if (FindCommonBlockContaining(*symbol)) {
+    if (symbol->has<CommonBlockDetails>()) {
       context_.Say(source,
-          "'%s' is a common block name and must not appear in an LINEAR clause"_err_en_US,
+          "'%s' is a common block name and must not appear in a LINEAR clause"_err_en_US,
           symbol->name());
     }
   }
