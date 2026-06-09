@@ -36,6 +36,113 @@ static bool legalizeFreeze(Instruction &I,
   return true;
 }
 
+// Upcasts a global constant whose element type is i8 (e.g. switch lookup
+// tables emitted by SimplifyCFG) to a wider integer element type that DXIL
+// supports. The new global is cached in ReplacedValues so that dependent GEP
+// and load legalization can rebuild against it.
+static GlobalVariable *
+upcastI8ArrayGlobal(GlobalVariable *GV,
+                    DenseMap<Value *, Value *> &ReplacedValues) {
+  if (auto It = ReplacedValues.find(GV); It != ReplacedValues.end())
+    return dyn_cast<GlobalVariable>(It->second);
+
+  auto *ArrTy = dyn_cast<ArrayType>(GV->getValueType());
+  if (!ArrTy || !ArrTy->getArrayElementType()->isIntegerTy(8) ||
+      !GV->hasInitializer())
+    return nullptr;
+
+  LLVMContext &Ctx = GV->getContext();
+
+  // Determine the widened element type (smallest cast applied to the loaded
+  // value) and whether the consumer sign-extends. Default to i32.
+  Type *WiderType = nullptr;
+  bool IsSigned = false;
+  auto ConsiderLoad = [&](LoadInst *Load) {
+    for (User *LU : Load->users()) {
+      auto *Cast = dyn_cast<CastInst>(LU);
+      if (!Cast)
+        continue;
+      Type *Ty = Cast->getType();
+      if (!Ty->isIntegerTy())
+        continue;
+      if (!WiderType ||
+          Ty->getPrimitiveSizeInBits() < WiderType->getPrimitiveSizeInBits())
+        WiderType = Ty;
+      if (isa<SExtInst>(Cast))
+        IsSigned = true;
+    }
+  };
+  for (User *U : GV->users()) {
+    if (auto *Load = dyn_cast<LoadInst>(U))
+      ConsiderLoad(Load);
+    else if (auto *GEP = dyn_cast<GEPOperator>(U))
+      for (User *GU : GEP->users())
+        if (auto *Load = dyn_cast<LoadInst>(GU))
+          ConsiderLoad(Load);
+  }
+  if (!WiderType)
+    WiderType = Type::getInt32Ty(Ctx);
+
+  unsigned NumElems = ArrTy->getNumElements();
+  unsigned WiderBits = WiderType->getIntegerBitWidth();
+  ArrayType *NewArrTy = ArrayType::get(WiderType, NumElems);
+  Constant *Init = GV->getInitializer();
+  SmallVector<Constant *> Elements;
+  Elements.reserve(NumElems);
+  for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+    auto *Elem = cast<ConstantInt>(Init->getAggregateElement(Idx));
+    APInt Val = IsSigned ? Elem->getValue().sext(WiderBits)
+                         : Elem->getValue().zext(WiderBits);
+    Elements.push_back(ConstantInt::get(WiderType, Val));
+  }
+  Constant *NewInit = ConstantArray::get(NewArrTy, Elements);
+
+  auto *NewGV = new GlobalVariable(
+      *GV->getParent(), NewArrTy, GV->isConstant(), GV->getLinkage(), NewInit,
+      Twine(GV->getName()) + ".legalized", nullptr, GV->getThreadLocalMode(),
+      GV->getAddressSpace());
+  NewGV->setUnnamedAddr(GV->getUnnamedAddr());
+  NewGV->setAlignment(GV->getAlign());
+
+  ReplacedValues[GV] = NewGV;
+  return NewGV;
+}
+
+// Rebuilds a GEP that indexes into an array of i8 (e.g. switch lookup tables
+// emitted by SimplifyCFG) against an upcast, DXIL-legal base, preserving the
+// original (possibly non-constant) indices.
+static bool legalizeI8ArrayGEP(GetElementPtrInst *GEP, IRBuilder<> &Builder,
+                               SmallVectorImpl<Instruction *> &ToRemove,
+                               DenseMap<Value *, Value *> &ReplacedValues) {
+  Value *BasePtr = GEP->getPointerOperand();
+  Value *NewBasePtr = nullptr;
+  if (ReplacedValues.count(BasePtr))
+    NewBasePtr = ReplacedValues[BasePtr];
+  else if (auto *GV = dyn_cast<GlobalVariable>(BasePtr))
+    NewBasePtr = upcastI8ArrayGlobal(GV, ReplacedValues);
+  if (!NewBasePtr)
+    return false;
+
+  Type *NewSrcTy = nullptr;
+  if (auto *NewGV = dyn_cast<GlobalVariable>(NewBasePtr))
+    NewSrcTy = NewGV->getValueType();
+  else if (auto *NewAI = dyn_cast<AllocaInst>(NewBasePtr))
+    NewSrcTy = NewAI->getAllocatedType();
+  if (!NewSrcTy)
+    return false;
+
+  SmallVector<Value *> Indices;
+  for (Value *Idx : GEP->indices())
+    Indices.push_back(ReplacedValues.count(Idx) ? ReplacedValues[Idx] : Idx);
+
+  Value *NewGEP = Builder.CreateGEP(NewSrcTy, NewBasePtr, Indices,
+                                    GEP->getName(), GEP->getNoWrapFlags());
+  ReplacedValues[GEP] = NewGEP;
+  GEP->replaceAllUsesWith(NewGEP);
+  ToRemove.push_back(GEP);
+  return true;
+}
+
 static bool fixI8UseChain(Instruction &I,
                           SmallVectorImpl<Instruction *> &ToRemove,
                           DenseMap<Value *, Value *> &ReplacedValues) {
@@ -212,9 +319,16 @@ static bool fixI8UseChain(Instruction &I,
       Cast->replaceAllUsesWith(AdjustedCast);
   }
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    Type *SrcTy = GEP->getSourceElementType();
+    bool IsI8Array =
+        SrcTy->isArrayTy() && SrcTy->getArrayElementType()->isIntegerTy(8);
     if (!GEP->getType()->isPointerTy() ||
-        !GEP->getSourceElementType()->isIntegerTy(8))
+        (!IsI8Array && !SrcTy->isIntegerTy(8)))
       return false;
+
+    // Handle GEPs indexing into an array of i8
+    if (IsI8Array)
+      return legalizeI8ArrayGEP(GEP, Builder, ToRemove, ReplacedValues);
 
     Value *BasePtr = GEP->getPointerOperand();
     if (ReplacedValues.count(BasePtr))
@@ -525,6 +639,14 @@ public:
 
       for (auto *Inst : reverse(ToRemove))
         Inst->eraseFromParent();
+
+      // Erase any original globals that were replaced with a legalized version
+      // and are now dead.
+      for (auto &[Old, New] : ReplacedValues) {
+        if (auto *GV = dyn_cast<GlobalVariable>(Old))
+          if (GV->use_empty())
+            GV->eraseFromParent();
+      }
     }
     return MadeChange;
   }
