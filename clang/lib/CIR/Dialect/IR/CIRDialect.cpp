@@ -3436,15 +3436,21 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
 
   SmallVector<mlir::Attribute, 16> elements(vecSize);
   bool isIntAttr = vecSize && mlir::isa<cir::IntAttr>(lhsVecElhs[0]);
+  bool isUnsignedInt =
+      isIntAttr && mlir::cast<cir::IntType>(inputElemTy).isUnsigned();
   for (uint64_t i = 0; i < vecSize; i++) {
     mlir::Attribute lhsAttr = lhsVecElhs[i];
     mlir::Attribute rhsAttr = rhsVecElhs[i];
-    int cmpResult = 0;
+    bool cmpResult = false;
     switch (opKind) {
     case cir::CmpOpKind::lt: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3453,8 +3459,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::le: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() <=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() <=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() <=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3463,8 +3473,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::gt: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3473,8 +3487,12 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::ge: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        if (isUnsignedInt)
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getUInt() >=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getUInt();
+        else
+          cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() >=
+                      mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() >=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3483,8 +3501,8 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::eq: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() ==
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getValue() ==
+                    mlir::cast<cir::IntAttr>(rhsAttr).getValue();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() ==
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3493,8 +3511,8 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     case cir::CmpOpKind::ne: {
       if (isIntAttr) {
-        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getSInt() !=
-                    mlir::cast<cir::IntAttr>(rhsAttr).getSInt();
+        cmpResult = mlir::cast<cir::IntAttr>(lhsAttr).getValue() !=
+                    mlir::cast<cir::IntAttr>(rhsAttr).getValue();
       } else {
         cmpResult = mlir::cast<cir::FPAttr>(lhsAttr).getValue() !=
                     mlir::cast<cir::FPAttr>(rhsAttr).getValue();
@@ -3517,7 +3535,9 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
     }
     }
 
-    elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);
+    // Vector comparison results are 0 (false) or -1 / all-ones (true).
+    elements[i] =
+        cir::IntAttr::get(getType().getElementType(), cmpResult ? -1LL : 0LL);
   }
 
   return cir::ConstVectorAttr::get(
