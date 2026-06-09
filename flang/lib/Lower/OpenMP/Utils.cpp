@@ -15,6 +15,8 @@
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
@@ -1240,6 +1242,46 @@ makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
   }
 
   return dynamicCond;
+}
+
+// ---------------------------------------------------------------------------
+// FlangOMPContext — shared OMPContext for metadirective variant-matching
+// ---------------------------------------------------------------------------
+
+static llvm::Triple getOffloadTargetTriple(mlir::ModuleOp module) {
+  auto iface =
+      llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
+  auto targetTriples = iface.getTargetTriples();
+  if (!targetTriples.empty())
+    if (auto tripleAttr =
+            llvm::dyn_cast<mlir::StringAttr>(targetTriples.front()))
+      return llvm::Triple(tripleAttr.getValue());
+  return llvm::Triple();
+}
+
+bool FlangOMPContext::isDeviceCompilation(mlir::ModuleOp module) {
+  return llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation())
+      .getIsTargetDevice();
+}
+
+FlangOMPContext::FlangOMPContext(
+    mlir::ModuleOp module,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits)
+    // No specific device is selected during variant matching; use an unknown
+    // device number so OMPContext does not inadvertently describe the host
+    // device (which would cause target-device selectors to match incorrectly).
+    : OMPContext(isDeviceCompilation(module), fir::getTargetTriple(module),
+                 getOffloadTargetTriple(module),
+                 /*DeviceNum=*/-1),
+      targetFeatures(fir::getTargetFeatures(module)) {
+  for (llvm::omp::TraitProperty trait : constructTraits)
+    addTrait(trait);
+}
+
+bool FlangOMPContext::matchesISATrait(llvm::StringRef rawString) const {
+  if (!targetFeatures || targetFeatures.nullOrEmpty())
+    return false;
+  return targetFeatures.contains(("+" + rawString).str());
 }
 
 } // namespace omp
