@@ -706,7 +706,7 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
   // Helper to check if there are any calls in the range that may free memory.
   unsigned NumChecked = 0;
   auto hasNoFreeInRange = [&NumChecked](auto Range) {
-    for (const auto &[Idx, I] : enumerate(Range)) {
+    for (const Instruction &I : Range) {
       if (NumChecked++ > MaxInstrsToCheckForFree)
         return false;
 
