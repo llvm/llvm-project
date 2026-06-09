@@ -394,6 +394,103 @@ bool ProcessGDBRemote::ParsePythonTargetDefinition(
   return false;
 }
 
+static bool ParseMemoryRegionInfoJSON(StructuredData::Object *json,
+                                      MemoryRegionInfo &ri,
+                                      uint32_t page_size) {
+  ri.Clear();
+  if (!json || !json->GetAsArray())
+    return false;
+  bool returnval = true;
+  json->GetAsArray()->ForEach(
+      [&ri, page_size, &returnval](StructuredData::Object *obj) -> bool {
+        StructuredData::Dictionary *dict = obj->GetAsDictionary();
+        if (!dict)
+          returnval = false;
+
+        if (!dict->HasKey("start") || !dict->HasKey("size") ||
+            !dict->HasKey("permissions"))
+          returnval = false;
+
+        ri.GetRange().SetRangeBase(
+            dict->GetValueForKey("start")->GetUnsignedIntegerValue());
+        ri.GetRange().SetByteSize(
+            dict->GetValueForKey("size")->GetUnsignedIntegerValue());
+        llvm::StringRef permissions =
+            dict->GetValueForKey("permissions")->GetStringValue();
+        if (permissions.contains('r'))
+          ri.SetReadable(eLazyBoolYes);
+        else
+          ri.SetReadable(eLazyBoolNo);
+
+        if (permissions.contains('w'))
+          ri.SetWritable(eLazyBoolYes);
+        else
+          ri.SetWritable(eLazyBoolNo);
+
+        if (permissions.contains('x'))
+          ri.SetExecutable(eLazyBoolYes);
+        else
+          ri.SetExecutable(eLazyBoolNo);
+
+        if (!permissions.empty())
+          ri.SetMapped(eLazyBoolYes);
+        else
+          ri.SetMapped(eLazyBoolNo);
+
+        if (dict->HasKey("flags")) {
+          dict->GetValueForKey("flags")->GetAsArray()->ForEach(
+              [&ri](StructuredData::Object *obj) -> bool {
+                if (!obj->GetAsString())
+                  return true;
+                if (obj->GetAsString()->GetValue() == "mt")
+                  ri.SetMemoryTagged(eLazyBoolYes);
+                if (obj->GetAsString()->GetValue() == "ss")
+                  ri.SetIsShadowStack(eLazyBoolYes);
+                return true;
+              });
+        }
+
+        if (dict->HasKey("name") && dict->GetValueForKey("name")->GetAsString())
+          ri.SetName(dict->GetValueForKey("name")
+                         ->GetAsString()
+                         ->GetValue()
+                         .str()
+                         .c_str());
+
+        if (dict->HasKey("dirty_pages") &&
+            dict->GetValueForKey("dirty_pages")->GetAsArray()) {
+          std::vector<addr_t> dirty_pages;
+          dict->GetValueForKey("dirty_pages")
+              ->GetAsArray()
+              ->ForEach([&dirty_pages](StructuredData::Object *obj) -> bool {
+                if (!obj->GetAsUnsignedInteger())
+                  return true;
+                dirty_pages.push_back(
+                    obj->GetAsUnsignedInteger()->GetUnsignedIntegerValue());
+                return true;
+              });
+        }
+
+        if (dict->HasKey("types")) {
+          dict->GetValueForKey("types")->GetAsArray()->ForEach(
+              [&ri](StructuredData::Object *obj) -> bool {
+                if (!obj->GetAsString())
+                  return true;
+                if (obj->GetAsString()->GetValue() == "stack")
+                  ri.SetIsStackMemory(eLazyBoolYes);
+                return true;
+              });
+        }
+
+        if (page_size != 0)
+          ri.SetPageSize(page_size);
+
+        return true;
+      });
+
+  return true;
+}
+
 static size_t SplitCommaSeparatedRegisterNumberString(
     const llvm::StringRef &comma_separated_register_numbers,
     std::vector<uint32_t> &regnums, int base) {
@@ -2172,6 +2269,8 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   static constexpr llvm::StringLiteral g_key_queue_serial_number("qserialnum");
   static constexpr llvm::StringLiteral g_key_registers("registers");
   static constexpr llvm::StringLiteral g_key_memory("memory");
+  static constexpr llvm::StringLiteral g_key_memory_region_info(
+      "memory-region-info");
   static constexpr llvm::StringLiteral g_key_description("description");
   static constexpr llvm::StringLiteral g_key_signal("signal");
   static constexpr llvm::StringLiteral g_key_added_binaries("added-binaries");
@@ -2304,6 +2403,10 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
           return true; // Keep iterating through all array items
         });
       }
+    } else if (key == g_key_memory_region_info) {
+      MemoryRegionInfo ri;
+      if (ParseMemoryRegionInfoJSON(object, ri, m_gdb_comm.GetRemotePageSize()))
+        m_memory_region_info_cache.AddRegion(ri);
     } else if (key == g_key_signal)
       signo = object->GetUnsignedIntegerValue(LLDB_INVALID_SIGNAL_NUMBER);
     else if (key == g_key_added_binaries) {
@@ -2489,6 +2592,17 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
               m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
           }
         }
+      } else if (key.compare("memory-region-info") == 0) {
+        StringExtractor json_extractor(value);
+        std::string json;
+        // Now convert the HEX bytes into a string value.
+        json_extractor.GetHexByteString(json);
+        MemoryRegionInfo ri;
+        StructuredData::ObjectSP json_sp = StructuredData::ParseJSON(json);
+        if (ParseMemoryRegionInfoJSON(json_sp.get(), ri,
+                                      m_gdb_comm.GetRemotePageSize())) {
+          m_memory_region_info_cache.AddRegion(ri);
+        }
       } else if (key.compare("watch") == 0 || key.compare("rwatch") == 0 ||
                  key.compare("awatch") == 0) {
         // Support standard GDB remote stop reply packet 'TAAwatch:addr'
@@ -2561,7 +2675,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         // Now convert the HEX bytes into a string value.
         json_extractor.GetHexByteString(json);
 
-        // This JSON contains detailed information about binares.
+        // This JSON contains detailed information about binaries.
         detailed_binaries_info = StructuredData::ParseJSON(json);
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;

@@ -19,7 +19,7 @@ class TestRegion(object):
                 + ",".join([format(a, "x") for a in self.dirty_pages])
                 + ";"
             )
-        return f"start:{self.start_addr:x};size:{self.size};permissions:r;{dirty_pages}"
+        return f"start:{self.start_addr:x};size:{self.size:x};permissions:r;{dirty_pages}"
 
     def expected_command_output(self):
         if self.dirty_pages is None:

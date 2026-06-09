@@ -252,6 +252,7 @@ class ReverseTestBase(GDBProxyTestBase):
                     "mecount",
                     "medata",
                     "memory",
+                    "memory-region-info",
                 ]:
                     continue
                 raise ValueError(f"Unknown stop key '{key}' in {reply}")

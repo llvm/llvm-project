@@ -40,6 +40,7 @@
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Memory.h"
+#include "lldb/Target/MemoryRegionInfoCache.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
@@ -363,6 +364,7 @@ class Process : public std::enable_shared_from_this<Process>,
   friend class Target;
   friend class ThreadList;
   friend class MemoryCache;
+  friend class MemoryRegionInfoCache;
 
 public:
   /// Broadcaster event bits definitions.
@@ -3539,6 +3541,8 @@ protected:
   Predicate<uint32_t> m_iohandler_sync;
   MemoryCache m_memory_cache;
   AllocatedMemoryCache m_allocated_memory_cache;
+  MemoryRegionInfoCache m_memory_region_info_cache;
+
   bool m_should_detach; /// Should we detach if the process object goes away
                         /// with an explicit call to Kill or Detach?
   LanguageRuntimeCollection m_language_runtimes;

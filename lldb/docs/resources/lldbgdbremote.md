@@ -787,6 +787,22 @@ JSON and uses JSON arrays where applicable. The JSON output looks like:
           {"address":140734799804592,"bytes":"c8f8bf5fff7f0000c9a59e8cff7f0000"},
           {"address":140734799804616,"bytes":"00000000000000000100000000000000"}
         ]
+        [
+          {
+            "memory-region-info": {
+              "start": 6096306176,
+              "size": 557056,
+              "permissions": "rw",
+              "flags": [],
+              "dirty_pages": [
+                6096830464
+              ],
+              "types": [
+                "stack"
+              ]
+            }
+          }
+        ]
       }
     ]
 ```
@@ -818,6 +834,22 @@ An expedited register may have an empty string as its value (`"21":""`)
 which indicates that the register cannot be read at this current
 stop point, and lldb should not try to read the register value with
 a separate `p` read-register request, it will not succeed.
+
+`jThreadsInfo` is an array of thread-specific information, but some
+things we expedite are usually not thread-specific; this packet
+could have been structured as a Dictionary with a `threads` array
+and separate keys for non-thread specific things like this.
+
+`memory-region-info` is an array of memory region information; a
+thread may want to provide region information about both the program
+counter and the stack pointer.  Note that the keys in `memory-region-info`
+like `dirty_pages` and `types` are significant in their presence
+or absence.  If a stub can correctly identify which pages of memory
+have been modified (are dirty), it can include `"dirty_pages":[]`
+to indicate that no pages in this VM region are dirty.  This is
+different than the absence of the `dirty_pages` key, which means
+that this stub cannot provide information about pages of memory
+being modified or not.
 
 **Priority To Implement:** Low
 
@@ -1510,9 +1542,9 @@ tuples to return are:
                    the file while for anonymous regions it have to be the name
                    associated to the region if that is available.
 * `flags:<flags-string>;` - where `<flags-string>` is a space separated string
-                            of flag names. Currently the only supported flag
-                            is `mt` for AArch64 memory tagging. lldb will
-                            ignore any other flags in this field.
+                            of flag names. Currently supported flags are
+                            `mt` for AArch64 memory tagging, and
+                            `ss` for shadow stack.
 * `type:[<type>][,<type>];` - memory types that apply to this region, e.g.
                               `stack` for stack memory.
 * `error:<ascii-byte-error-string>;` - where `<ascii-byte-error-string>` is
@@ -2357,6 +2389,12 @@ following keys and values:
   being added at this stop are provided.  The value is asciihex
   encoded JSON.  It must be asciihex encoded in case a filename
   includes one of the gdb RSP packet metacharacters or a semicolon.
+* `memory-region-info`: An array of memory region informations for 
+  this thread's stack region may be expedited.  This will be an 
+  asciihex encoded JSON reply with the same key-values that appear 
+  in the jThreadsInfo `memory-region-info` entry.  A stub may want to
+  expedite the memory region of the stack and the pc, so this is
+  an array of memory regions.
 
 ### Best Practices
 

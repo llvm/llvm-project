@@ -3024,6 +3024,31 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
       }
     }
 
+    DNBRegisterValue sp_regval;
+    if (DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                      GENERIC_REGNUM_SP, &sp_regval)) {
+      uint64_t sp = INVALID_NUB_ADDRESS;
+      if (sp_regval.value.uint64 != INVALID_NUB_ADDRESS) {
+        if (sp_regval.info.size == 4)
+          sp = sp_regval.value.uint32;
+        else if (sp_regval.info.size == 8)
+          sp = sp_regval.value.uint64;
+        if (sp != INVALID_NUB_ADDRESS) {
+          if (JSONGenerator::ObjectSP obj_sp =
+                  DNBProcessMemoryRegionInfo(pid, sp)) {
+            JSONGenerator::ArraySP containing_arr_sp =
+                std::make_shared<JSONGenerator::Array>();
+            containing_arr_sp->AddItem(obj_sp);
+            ostrm << "memory-region-info:";
+            std::ostringstream json_strm;
+            containing_arr_sp->Dump(json_strm);
+            append_hexified_string(ostrm, json_strm.str());
+            ostrm << ';';
+          }
+        }
+      }
+    }
+
     return SendPacket(ostrm.str());
   }
   return SendErrorPacket("E51");
@@ -5894,8 +5919,28 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
             thread_dict_sp->AddItem("detailed-binaries-info",
                                     detailed_binary_infos);
         }
-      }
 
+        DNBRegisterValue sp_regval;
+        if (DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                          GENERIC_REGNUM_SP, &sp_regval)) {
+          nub_addr_t sp = INVALID_NUB_ADDRESS;
+          if (sp_regval.value.uint64 != INVALID_NUB_ADDRESS) {
+            if (sp_regval.info.size == 4)
+              sp = sp_regval.value.uint32;
+            else if (sp_regval.info.size == 8)
+              sp = sp_regval.value.uint64;
+          }
+          if (sp != INVALID_NUB_ADDRESS) {
+            if (JSONGenerator::ObjectSP obj_sp =
+                    DNBProcessMemoryRegionInfo(pid, sp)) {
+              JSONGenerator::ArraySP containing_arr_sp =
+                  std::make_shared<JSONGenerator::Array>();
+              containing_arr_sp->AddItem(obj_sp);
+              thread_dict_sp->AddItem("memory-region-info", containing_arr_sp);
+            }
+          }
+        }
+      }
       threads_array_sp->AddItem(thread_dict_sp);
     }
   }

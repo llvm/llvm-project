@@ -1389,6 +1389,45 @@ int DNBProcessMemoryRegionInfo(nub_process_t pid, nub_addr_t addr,
   return -1;
 }
 
+JSONGenerator::ObjectSP DNBProcessMemoryRegionInfo(nub_process_t pid,
+                                                   nub_addr_t addr) {
+  JSONGenerator::DictionarySP result_sp;
+  DNBRegionInfo ri;
+  if (DNBProcessMemoryRegionInfo(pid, addr, &ri) == -1)
+    return result_sp;
+
+  result_sp = std::make_shared<JSONGenerator::Dictionary>();
+  result_sp->AddIntegerItem("start", ri.addr);
+  result_sp->AddIntegerItem("size", ri.size);
+  std::string permissions;
+  if (ri.permissions & eMemoryPermissionsReadable)
+    permissions += 'r';
+  if (ri.permissions & eMemoryPermissionsWritable)
+    permissions += 'w';
+  if (ri.permissions & eMemoryPermissionsExecutable)
+    permissions += 'x';
+  result_sp->AddStringItem("permissions", permissions);
+
+  JSONGenerator::ArraySP flags_sp = std::make_shared<JSONGenerator::Array>();
+  for (std::string flag : ri.flags)
+    flags_sp->AddItem(std::make_shared<JSONGenerator::String>(flag));
+  result_sp->AddItem("flags", flags_sp);
+
+  JSONGenerator::ArraySP dirty_pages_sp =
+      std::make_shared<JSONGenerator::Array>();
+  for (nub_addr_t dirty_page : ri.dirty_pages)
+    dirty_pages_sp->AddItem(
+        std::make_shared<JSONGenerator::Integer>(dirty_page));
+  result_sp->AddItem("dirty_pages", dirty_pages_sp);
+
+  JSONGenerator::ArraySP vm_types_sp = std::make_shared<JSONGenerator::Array>();
+  for (std::string vmtype : ri.vm_types)
+    vm_types_sp->AddItem(std::make_shared<JSONGenerator::String>(vmtype));
+  result_sp->AddItem("types", vm_types_sp);
+
+  return result_sp;
+}
+
 nub_bool_t DNBProcessGetMemoryTags(nub_process_t pid, nub_addr_t addr,
                                    nub_size_t size,
                                    std::vector<uint8_t> &tags) {
