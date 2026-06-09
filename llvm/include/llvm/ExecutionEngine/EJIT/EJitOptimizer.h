@@ -32,9 +32,9 @@ public:
   /// Run the full JIT specialization pipeline:
   ///   1. Parameter substitution (ejit_period_arr_ind → constants)
   ///   2. InstCombine (fold GEP chains from substituted params)
-  ///   3. StructFieldPass (may_const loads → constants)
-  ///   4. Core optimization pipeline (L1/L2/L3)
-  ///   5. Cleanup passes (only for L2/L3 which may expose new loads)
+  ///   3. Inline (L2+: expand callee bodies so may_const GEPs are traceable)
+  ///   4. StructFieldPass (may_const loads → runtime constants)
+  ///   5. Core optimization pipeline (L1/L2/L3)
   void runPipeline(Module &M, const SpecializationContext &ctx);
 
   /// Clear all cached analysis results. Must be called between compilations
