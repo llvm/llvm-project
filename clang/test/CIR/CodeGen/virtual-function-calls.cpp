@@ -13,8 +13,8 @@ struct A {
 // This should initialize the vtable pointer.
 A::A() {}
 
-// CIR: !rec_A = !cir.record<struct "A" {!cir.vptr}>
-// CIR: !rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR: !rec_A = !cir.struct<"A" {!cir.vptr}>
+// CIR: !rec_anon_struct = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
 
 // CIR: cir.global "private" external @_ZTV1A : !rec_anon_struct
 
@@ -117,4 +117,3 @@ void call_virtual_fn_in_cleanup_scope() {
 // OGCG:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
 // OGCG:   call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef signext 99)
 // OGCG:   call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])
-  

@@ -228,26 +228,6 @@ public:
 namespace llvm {
 
 template<> struct DenseMapInfo<clang::CodeGen::TBAAAccessInfo> {
-  static clang::CodeGen::TBAAAccessInfo getEmptyKey() {
-    unsigned UnsignedKey = DenseMapInfo<unsigned>::getEmptyKey();
-    return clang::CodeGen::TBAAAccessInfo(
-      static_cast<clang::CodeGen::TBAAAccessKind>(UnsignedKey),
-      DenseMapInfo<MDNode *>::getEmptyKey(),
-      DenseMapInfo<MDNode *>::getEmptyKey(),
-      DenseMapInfo<uint64_t>::getEmptyKey(),
-      DenseMapInfo<uint64_t>::getEmptyKey());
-  }
-
-  static clang::CodeGen::TBAAAccessInfo getTombstoneKey() {
-    unsigned UnsignedKey = DenseMapInfo<unsigned>::getTombstoneKey();
-    return clang::CodeGen::TBAAAccessInfo(
-      static_cast<clang::CodeGen::TBAAAccessKind>(UnsignedKey),
-      DenseMapInfo<MDNode *>::getTombstoneKey(),
-      DenseMapInfo<MDNode *>::getTombstoneKey(),
-      DenseMapInfo<uint64_t>::getTombstoneKey(),
-      DenseMapInfo<uint64_t>::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const clang::CodeGen::TBAAAccessInfo &Val) {
     auto KindValue = static_cast<unsigned>(Val.Kind);
     return DenseMapInfo<unsigned>::getHashValue(KindValue) ^
