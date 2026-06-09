@@ -119,8 +119,7 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
 
 template <std::size_t _Size, class MaybeTimeout>
 static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
-  static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
-  uint64_t __value = [__val]() -> uint64_t {
+  std::uint64_t __value = [__val]() -> std::uint64_t {
     if constexpr (_Size == 4) {
       std::uint32_t __result;
       std::memcpy(&__result, __val, _Size);
@@ -172,7 +171,6 @@ extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value)
 
 template <std::size_t _Size, class MaybeTimeout>
 static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
-  static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
   auto __timeout_us = [&] {
     if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
       return uint32_t(0);
@@ -180,17 +178,23 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, May
       return std::max(static_cast<uint32_t>(maybe_timeout_ns / 1000), uint32_t(1));
     }
   }();
-  if constexpr (_Size == 4) {
-    alignas(uint32_t) char buffer[_Size];
-    std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
-    __ulock_wait(
-        UL_COMPARE_AND_WAIT, const_cast<void*>(__ptr), *reinterpret_cast<uint32_t const*>(&buffer), __timeout_us);
-  } else {
-    alignas(uint64_t) char buffer[_Size];
-    std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
-    __ulock_wait(
-        UL_COMPARE_AND_WAIT64, const_cast<void*>(__ptr), *reinterpret_cast<uint64_t const*>(&buffer), __timeout_us);
-  }
+
+  std::uint64_t __value = [__val]() -> std::uint64_t {
+    if constexpr (_Size == 4) {
+      std::uint32_t __result;
+      std::memcpy(&__result, __val, _Size);
+      return __result;
+    } else if constexpr (_Size == 8) {
+      std::uint64_t __result;
+      std::memcpy(&__result, __val, _Size);
+      return __result;
+    } else {
+      static_assert(false, "Can only wait on 8 bytes or 4 bytes value");
+    }
+  }();
+
+  __ulock_wait(
+      _Size == 4 ? UL_COMPARE_AND_WAIT : UL_COMPARE_AND_WAIT64, const_cast<void*>(__ptr), __value, __timeout_us);
 }
 
 template <std::size_t _Size>
