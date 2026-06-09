@@ -6,7 +6,18 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @pred_store_v2i8(<vscale x 16 x i1> %pred, ptr %addr) #0 {
 ; CHECK-LABEL: pred_store_v2i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str p0, [x0]
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    str p0, [sp, #7, mul vl]
+; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
+; CHECK-NEXT:    mov z1.s, z0.s[2]
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    stur b1, [x0, #1]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bitcast = bitcast <vscale x 16 x i1> %pred to <vscale x 2 x i8>
   %extract = tail call <2 x i8> @llvm.vector.extract.v2i8.nxv2i8(<vscale x 2 x i8> %bitcast, i64 0)
@@ -17,7 +28,26 @@ define void @pred_store_v2i8(<vscale x 16 x i1> %pred, ptr %addr) #0 {
 define void @pred_store_v4i8(<vscale x 16 x i1> %pred, ptr %addr) #1 {
 ; CHECK-LABEL: pred_store_v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str p0, [x0]
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    str p0, [sp, #7, mul vl]
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
+; CHECK-NEXT:    mov w8, v0.s[2]
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    mov z2.s, z0.s[4]
+; CHECK-NEXT:    mov z0.s, z0.s[6]
+; CHECK-NEXT:    mov v1.h[1], w8
+; CHECK-NEXT:    fmov w8, s2
+; CHECK-NEXT:    mov v1.h[2], w8
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov v1.h[3], w8
+; CHECK-NEXT:    st1b { z1.h }, p0, [x0]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bitcast = bitcast <vscale x 16 x i1> %pred to <vscale x 2 x i8>
   %extract = tail call <4 x i8> @llvm.vector.extract.v4i8.nxv2i8(<vscale x 2 x i8> %bitcast, i64 0)
@@ -28,7 +58,16 @@ define void @pred_store_v4i8(<vscale x 16 x i1> %pred, ptr %addr) #1 {
 define void @pred_store_v8i8(<vscale x 16 x i1> %pred, ptr %addr) #2 {
 ; CHECK-LABEL: pred_store_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str p0, [x0]
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    str p0, [sp, #7, mul vl]
+; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
+; CHECK-NEXT:    st1b { z0.d }, p1, [x0]
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %bitcast = bitcast <vscale x 16 x i1> %pred to <vscale x 2 x i8>
   %extract = tail call <8 x i8> @llvm.vector.extract.v8i8.nxv2i8(<vscale x 2 x i8> %bitcast, i64 0)
@@ -174,9 +213,11 @@ define void @pred_store_v2i8_multiuse(<vscale x 16 x i1> %pred, ptr %addr) #0 {
 ; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
 ; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
-; CHECK-NEXT:    uzp1 v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    // fake_use: $d0
-; CHECK-NEXT:    str p0, [x0]
+; CHECK-NEXT:    uzp1 v1.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // fake_use: $d1
+; CHECK-NEXT:    mov z1.s, z0.s[2]
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    stur b1, [x0, #1]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
