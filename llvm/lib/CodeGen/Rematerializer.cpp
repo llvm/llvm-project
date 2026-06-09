@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/Rematerializer.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -281,23 +280,22 @@ void Rematerializer::deleteRegIfUnused(RegisterIdx RootIdx) {
   // Traverse the root's dependency DAG depth-first to find the set of registers
   // we can delete and a legal order to delete them in.
   SmallVector<RegisterIdx, 4> DepDAG{RootIdx};
-  SmallSetVector<RegisterIdx, 8> DeleteOrder;
-  DeleteOrder.insert(RootIdx);
+  SmallVector<RegisterIdx, 8> DeleteOrder{RootIdx};
   do {
     // A deleted register's dependencies may be deletable too.
     const Reg &DeleteReg = getReg(DepDAG.pop_back_val());
     for (const Reg::Dependency &Dep : DeleteReg.Dependencies) {
-      // All dependencies loose a user (the deleted register).
+      // All dependencies lose a user (the deleted register).
       Reg &DepReg = Regs[Dep.RegIdx];
       DepReg.eraseUser(DeleteReg.DefMI, DeleteReg.DefRegion);
       if (DepReg.Uses.empty()) {
-        DeleteOrder.insert(Dep.RegIdx);
+        DeleteOrder.push_back(Dep.RegIdx);
         DepDAG.push_back(Dep.RegIdx);
       }
     }
   } while (!DepDAG.empty());
 
-  for (RegisterIdx RegIdx : reverse(DeleteOrder)) {
+  for (RegisterIdx RegIdx : DeleteOrder) {
     Reg &DeleteReg = Regs[RegIdx];
 
     // It is possible that the defined register we are deleting doesn't have an
@@ -322,7 +320,7 @@ void Rematerializer::deleteRegIfUnused(RegisterIdx RootIdx) {
 }
 
 void Rematerializer::deleteReg(RegisterIdx RegIdx) {
-  noteRegDeleted(RegIdx);
+  noteRegWillBeDeleted(RegIdx);
 
   Reg &DeleteReg = Regs[RegIdx];
   assert(DeleteReg.DefMI && "register was already deleted");
@@ -533,17 +531,14 @@ RegisterIdx Rematerializer::rematerializeReg(
   return NewRegIdx;
 }
 
-void Rematerializer::recreateReg(
-    RegisterIdx RegIdx, unsigned DefRegion,
-    MachineBasicBlock::iterator InsertPos, Register DefReg,
-    SmallVectorImpl<Reg::Dependency> &&Dependencies) {
+void Rematerializer::recreateReg(RegisterIdx RegIdx,
+                                 MachineBasicBlock::iterator InsertPos,
+                                 Register DefReg) {
   assert(RegToIdx.contains(DefReg) && "unknown defined register");
   assert(RegToIdx.at(DefReg) == RegIdx && "incorrect defined register");
   assert(!getReg(RegIdx).DefMI && "register is still alive");
 
   Reg &OriginReg = Regs[RegIdx];
-  OriginReg.DefRegion = DefRegion;
-  OriginReg.Dependencies = std::move(Dependencies);
 
   // Re-establish the link between origin and rematerialization if necessary.
   const bool RecreateOriginalReg = isOriginalRegister(RegIdx);
@@ -563,7 +558,8 @@ void Rematerializer::recreateReg(
   }
   const MachineInstr &ModelDefMI = *getReg(ModelRegIdx).DefMI;
 
-  TII.reMaterialize(*RegionMBB[DefRegion], InsertPos, DefReg, 0, ModelDefMI);
+  TII.reMaterialize(*RegionMBB[OriginReg.DefRegion], InsertPos, DefReg, 0,
+                    ModelDefMI);
   OriginReg.DefMI = &*std::prev(InsertPos);
   postRematerialization(ModelRegIdx, RegIdx, InsertPos);
   LLVM_DEBUG(dbgs() << "** Recreated " << printID(RegIdx) << " as "
@@ -762,56 +758,75 @@ Printable Rematerializer::printUser(const MachineInstr *MI,
   });
 }
 
-Rollbacker::RollbackInfo::RollbackInfo(const Rematerializer &Remater,
-                                       RegisterIdx RegIdx) {
-  const Rematerializer::Reg &Reg = Remater.getReg(RegIdx);
-  DefReg = Reg.getDefReg();
-  DefRegion = Reg.DefRegion;
-  Dependencies = Reg.Dependencies;
-
-  InsertPos = std::next(Reg.DefMI->getIterator());
-  if (InsertPos != Reg.DefMI->getParent()->end())
-    NextRegIdx = Remater.getDefRegIdx(*InsertPos);
-  else
-    NextRegIdx = Rematerializer::NoReg;
-}
-
 void Rollbacker::rematerializerNoteRegCreated(const Rematerializer &Remater,
                                               RegisterIdx RegIdx) {
   if (RollingBack)
     return;
+  assert(Remater.isRematerializedRegister(RegIdx) && "only remats are created");
   Rematerializations[Remater.getOriginOf(RegIdx)].insert(RegIdx);
 }
 
-void Rollbacker::rematerializerNoteRegDeleted(const Rematerializer &Remater,
-                                              RegisterIdx RegIdx) {
-  if (RollingBack || Remater.isRematerializedRegister(RegIdx))
+void Rollbacker::rematerializerNoteRegWillBeDeleted(
+    const Rematerializer &Remater, RegisterIdx RegIdx) {
+  if (RollingBack)
     return;
-  DeadRegs.try_emplace(RegIdx, Remater, RegIdx);
+
+  // Find a valid re-creation position after the register's definition.
+  MachineInstr *DefMI = Remater.getReg(RegIdx).DefMI;
+  MachineBasicBlock *ParentMBB = DefMI->getParent();
+  MachineBasicBlock::iterator ValidPos = std::next(DefMI->getIterator());
+  while (ValidPos != ParentMBB->end() && isRollbackableMI(*ValidPos, Remater))
+    ValidPos = std::next(ValidPos);
+
+  if (Remater.isRematerializedRegister(RegIdx)) {
+    // Rematerializations will not be re-created. Previously deleted registers
+    // that reference this register's defining instruction as their re-creation
+    // position should instead be re-created at a valid position after the
+    // deleted MI.
+    invalidatePosition(DefMI, ValidPos);
+    return;
+  }
+
+  // Original registers can be re-created. Add a re-creation position for the
+  // definition of the rematerializable register.
+  DeadRegs.push_back(DeadReg(RegIdx, Remater));
+  const InsertBeforePos InsertPos = makePos(ValidPos, ParentMBB);
+  PosToIdx[InsertPos].insert(Positions.size());
+  Positions.push_back(InsertPos);
 }
 
 void Rollbacker::rollback(Rematerializer &Remater) {
   RollingBack = true;
 
-  // Re-create deleted registers.
-  for (auto &[RegIdx, Info] : DeadRegs) {
-    assert(!Remater.getReg(RegIdx).isAlive() && "register should be dead");
+  // As we re-create registers, map deleted definitions to re-created ones. This
+  // allows to replace invalid re-creation positions that reference deleted
+  // definitions to valid new positions while restoring original MI order.
+  DenseMap<MachineInstr *, MachineInstr *> Replacements;
+  unsigned PositionIndex = Positions.size();
 
-    // The MI that was originally just after the MI defining the register we
-    // are trying to re-create may have been deleted. In such cases, we can
-    // re-create at that MI's own insert position (and apply the same logic
-    // recursively).
-    MachineBasicBlock::iterator InsertPos = Info.InsertPos;
-    RegisterIdx NextRegIdx = Info.NextRegIdx;
-    while (NextRegIdx != Rematerializer::NoReg) {
-      const auto *NextRegRollback = DeadRegs.find(NextRegIdx);
-      if (NextRegRollback == DeadRegs.end())
-        break;
-      InsertPos = NextRegRollback->second.InsertPos;
-      NextRegIdx = NextRegRollback->second.NextRegIdx;
+  // Re-create deleted registers in reverse order of deletion. Related registers
+  // are deleted in reverse def-use order so this ensures we re-create registers
+  // in def-use order. This also ensures that re-creation positions that became
+  // invalid due to later MI deletions can be corrected as we go.
+  for (const DeadReg &Reg : reverse(DeadRegs)) {
+    assert(!Remater.getReg(Reg.Idx).isAlive() && "register should be dead");
+
+    // Determine re-creation position for the register's definition.
+    MachineBasicBlock::iterator InsertPosition;
+    const auto [Ptr, IsMBB] = Positions[--PositionIndex];
+    if (IsMBB) {
+      InsertPosition = static_cast<MachineBasicBlock *>(Ptr)->end();
+    } else {
+      MachineInstr *InsertBeforeMI = static_cast<MachineInstr *>(Ptr);
+      InsertBeforeMI = Replacements.lookup_or(InsertBeforeMI, InsertBeforeMI);
+      InsertPosition = InsertBeforeMI->getIterator();
     }
-    Remater.recreateReg(RegIdx, Info.DefRegion, InsertPos, Info.DefReg,
-                        std::move(Info.Dependencies));
+
+    Remater.recreateReg(Reg.Idx, InsertPosition, Reg.DefReg);
+
+    const Rematerializer::Reg &RecreateReg = Remater.getReg(Reg.Idx);
+    assert(!Replacements.contains(Reg.DefMI) && "duplicate deleted MI");
+    Replacements[Reg.DefMI] = RecreateReg.DefMI;
   }
 
   // Rollback rematerializations.
@@ -828,6 +843,38 @@ void Rollbacker::rollback(Rematerializer &Remater) {
 
   Remater.updateLiveIntervals();
   DeadRegs.clear();
+  Positions.clear();
+  PosToIdx.clear();
   Rematerializations.clear();
   RollingBack = false;
+}
+
+bool Rollbacker::isRollbackableMI(const MachineInstr &MI,
+                                  const Rematerializer &Remater) const {
+  RegisterIdx RegIdx = Remater.getDefRegIdx(MI);
+  if (RegIdx == Rematerializer::NoReg ||
+      !Remater.isRematerializedRegister(RegIdx))
+    return false;
+  // It is possible that the MI defines a rematerializable register that was not
+  // recorded if the rollbacker was attached to the rematerializer after the
+  // rematerialization happened. In such cases the MI won't be rolled back.
+  auto RematsOf = Rematerializations.find(Remater.getOriginOf(RegIdx));
+  if (RematsOf == Rematerializations.end())
+    return false;
+  return RematsOf->getSecond().contains(RegIdx);
+}
+
+void Rollbacker::invalidatePosition(MachineInstr *MI,
+                                    MachineBasicBlock::iterator It) {
+  const InsertBeforePos MIPos = makePos(MI),
+                        NewPos = makePos(It, MI->getParent());
+  auto MIIndices = PosToIdx.find(MIPos);
+  if (MIIndices == PosToIdx.end())
+    return;
+  assert(!MIIndices->getSecond().empty() && "no index hold position");
+  for (unsigned I : MIIndices->getSecond())
+    Positions[I] = NewPos;
+  PosToIdx.try_emplace(NewPos).first->getSecond().insert_range(
+      MIIndices->getSecond());
+  PosToIdx.erase(MIPos);
 }
