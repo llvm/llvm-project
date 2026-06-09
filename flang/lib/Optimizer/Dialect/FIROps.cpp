@@ -271,11 +271,15 @@ void fir::AllocaOp::handleBlockArgument(const mlir::MemorySlot &slot,
   // no-ops like fir.declare (i.e., to replace the FIR specific
   // isSlotOrDeclaredSlot).
   for (mlir::Operation *user : getOperation()->getUsers())
-    if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(user))
+    if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(user)) {
+      // Inlined dummy scopes may not dominate block-argument debug values.
+      if (declareOp.getDummyScope())
+        continue;
       fir::DeclareValueOp::create(
           builder, declareOp.getLoc(), argument, declareOp.getDummyScope(),
           declareOp.getUniqNameAttr(), declareOp.getFortranAttrsAttr(),
           declareOp.getDataAttrAttr(), declareOp.getDummyArgNoAttr());
+    }
 }
 
 std::optional<mlir::PromotableAllocationOpInterface>
