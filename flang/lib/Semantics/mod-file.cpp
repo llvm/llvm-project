@@ -412,23 +412,19 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
       // that `use`s this module recovers the directive from the .mod file.
       // Common-block names must be wrapped in slashes when reparsed.
       if (symbol.test(Symbol::Flag::OmpGroupPrivate)) {
-        os << "!$omp groupprivate(";
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_groupprivate, version))
+           << "(";
         if (symbol.detailsIf<CommonBlockDetails>())
           os << '/' << symbol.name() << '/';
         else
           os << symbol.name();
         os << ")";
-        if (auto deviceType{decls->ompGroupprivateDeviceType()}) {
-          switch (*deviceType) {
-          case common::OmpDeviceType::Any:
-            break;
-          case common::OmpDeviceType::Host:
-            os << " device_type(host)";
-            break;
-          case common::OmpDeviceType::Nohost:
-            os << " device_type(nohost)";
-            break;
-          }
+        if (const OmpClauseSet & gp{decls->ompGroupprivate()}; gp.count()) {
+          os << " ";
+          decls->printClauseSet(
+              os, gp, parser::CharBlock{}, decls->ompGroupprivateDeviceType());
         }
         os << "\n";
       }

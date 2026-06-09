@@ -76,6 +76,9 @@ public:
     ompDeviceType_ = device;
   }
 
+  const OmpClauseSet &ompGroupprivate() const { return ompGroupprivate_; }
+  void set_ompGroupprivate(OmpClauseSet clauses) { ompGroupprivate_ = clauses; }
+
   const std::optional<common::OmpDeviceType> &
   ompGroupprivateDeviceType() const {
     return ompGroupprivateDeviceType_;
@@ -84,8 +87,11 @@ public:
     ompGroupprivateDeviceType_ = device;
   }
 
+  // \p deviceType overrides the DEVICE_TYPE clause value to print (used for
+  // GROUPPRIVATE); when absent the DECLARE_TARGET device_type is used.
   void printClauseSet(llvm::raw_ostream &os, const OmpClauseSet &clauses,
-      parser::CharBlock name = parser::CharBlock{}) const;
+      parser::CharBlock name = parser::CharBlock{},
+      std::optional<common::OmpDeviceType> deviceType = std::nullopt) const;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const WithOmpDeclarative &);
 
@@ -107,8 +113,10 @@ private:
   // The argument to DEVICE_TYPE clause. Only needed when the clause is
   // present in the ompDeclTarget_ set.
   std::optional<common::OmpDeviceType> ompDeviceType_;
+  // The set of clauses on a GROUPPRIVATE directive declaring this symbol.
+  OmpClauseSet ompGroupprivate_;
   // The argument to a DEVICE_TYPE clause on a GROUPPRIVATE directive declaring
-  // this symbol. Absent means the spec default (any).
+  // this symbol. Only needed when the clause is present in ompGroupprivate_.
   std::optional<common::OmpDeviceType> ompGroupprivateDeviceType_;
 };
 

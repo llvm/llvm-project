@@ -20,7 +20,6 @@
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/LangOptions.h"
 #include <iosfwd>
-#include <optional>
 #include <set>
 #include <string>
 #include <vector>

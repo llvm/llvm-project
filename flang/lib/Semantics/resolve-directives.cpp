@@ -2195,13 +2195,13 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
   // OpenMP 6.0 allows an optional device_type clause on groupprivate. Record it
   // on each listed object's ultimate symbol so lowering and .mod emission can
   // read it. An absent clause means the spec default (any).
-  std::optional<common::OmpDeviceType> device;
   if (auto *devClause{
           parser::omp::FindClause(x.v, llvm::omp::Clause::OMPC_device_type)}) {
-    device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
-  }
-
-  if (device) {
+    unsigned version{context_.langOptions().OpenMPVersion};
+    common::OmpDeviceType device{
+        parser::UnwrapRef<common::OmpDeviceType>(*devClause)};
+    WithOmpDeclarative::OmpClauseSet clauses;
+    clauses.set(llvm::omp::Clause::OMPC_device_type);
     for (const parser::OmpArgument &arg : x.v.Arguments().v) {
       if (const parser::OmpObject *object{
               parser::omp::GetArgumentObject(arg)}) {
@@ -2210,7 +2210,9 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
               [&](auto &d) {
                 using TypeD = llvm::remove_cvref_t<decltype(d)>;
                 if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
-                  d.set_ompGroupprivateDeviceType(*device);
+                  d.set_version(version);
+                  d.set_ompGroupprivate(clauses);
+                  d.set_ompGroupprivateDeviceType(device);
                 }
               },
               const_cast<Symbol &>(sym->GetUltimate()).details());

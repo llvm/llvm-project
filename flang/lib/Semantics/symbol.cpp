@@ -71,7 +71,8 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
 }
 
 void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
-    const OmpClauseSet &clauses, parser::CharBlock name) const {
+    const OmpClauseSet &clauses, parser::CharBlock name,
+    std::optional<common::OmpDeviceType> deviceType) const {
   auto toLower = parser::ToLowerCaseLetters;
 
   size_t idx{0}, size{clauses.count()};
@@ -81,9 +82,11 @@ void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
     case llvm::omp::Clause::OMPC_atomic_default_mem_order:
       os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
       break;
-    case llvm::omp::Clause::OMPC_device_type:
-      os << "(" << toLower(EnumToString(*ompDeviceType())) << ')';
+    case llvm::omp::Clause::OMPC_device_type: {
+      common::OmpDeviceType dt{deviceType ? *deviceType : *ompDeviceType()};
+      os << '(' << toLower(EnumToString(dt)) << ')';
       break;
+    }
     case llvm::omp::Clause::OMPC_enter:
     case llvm::omp::Clause::OMPC_link:
       if (!name.empty()) {
@@ -114,6 +117,12 @@ llvm::raw_ostream &operator<<(
   if (const OmpClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
     os << " OmpDeclareTargetFlags:(";
     x.printClauseSet(os, dtgt);
+    os << ')';
+  }
+  if (const OmpClauseSet & gp{x.ompGroupprivate()}; gp.count()) {
+    os << " OmpGroupprivateFlags:(";
+    x.printClauseSet(
+        os, gp, parser::CharBlock{}, x.ompGroupprivateDeviceType());
     os << ')';
   }
   return os;
