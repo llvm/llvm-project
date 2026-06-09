@@ -2,7 +2,7 @@
 
 include "reg-with-subregs-common.td"
 
-// CHECK-LABEL: OPC_CheckOpcode, TARGET_VAL(ISD::EXTRACT_SUBVECTOR),
+// CHECK-LABEL: OPC_CheckOpcodeISD_EXTRACT_SUBVECTOR,
 // CHECK: OPC_CheckChild1Integer, 0,
 // CHECK: OPC_EmitIntegerI32_2,
 def : Pat<(v2i32 (extract_subvector v32i32:$src, (i32 0))),
