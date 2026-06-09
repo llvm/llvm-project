@@ -60,7 +60,7 @@ LIBC_INLINE unsigned exp_exceptions(T x, unsigned rounding_mode) {
     return FE_INVALID;
   if (x_bits.is_inf_or_nan() || x_bits.is_zero())
     return 0;
-  FPbits::StorageType x_u = x_bits.uintval();
+  FPBits::StorageType x_u = x_bits.uintval();
   if (x_u >= exp_internal::Bounds<T>::UPPER && x_bits.is_pos())
     return (rounding_mode == FE_TONEAREST || rounding_mode == FE_UPWARD)
                ? (FE_OVERFLOW | FE_INEXACT)
