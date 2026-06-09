@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=aarch64-windows-msvc -mattr=+sve < %s -o - | FileCheck -check-prefixes=SVE,SVEWINDOWS %s
 ; RUN: llc -mtriple=aarch64-windows-msvc < %s -o - | FileCheck -check-prefixes=WINDOWS %s
 
-; GISEL:       warning: Instruction selection used fallback path for testExpbf16
 
 define double @testExp(double %val, i32 %a) {
 ; SVE-LABEL: testExp:
@@ -293,9 +292,12 @@ define bfloat @testExpbf16(bfloat %val, i32 %a) {
 ; GISEL-NEXT:    bl ldexpf
 ; GISEL-NEXT:    fmov w9, s0
 ; GISEL-NEXT:    mov w8, #32767 // =0x7fff
+; GISEL-NEXT:    fcmp s0, #0.0
 ; GISEL-NEXT:    ubfx w10, w9, #16, #1
 ; GISEL-NEXT:    add w8, w9, w8
-; GISEL-NEXT:    add w8, w10, w8
+; GISEL-NEXT:    orr w9, w9, #0x400000
+; GISEL-NEXT:    add w8, w8, w10
+; GISEL-NEXT:    csel w8, w9, w8, vs
 ; GISEL-NEXT:    lsr w8, w8, #16
 ; GISEL-NEXT:    fmov s0, w8
 ; GISEL-NEXT:    // kill: def $h0 killed $h0 killed $s0

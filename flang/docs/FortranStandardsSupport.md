@@ -36,7 +36,7 @@ status of all important Fortran 2023 features. The table entries are based on th
 |------------------------------------------------------------|--------|---------------------------------------------------------|
 | Allow longer statement lines and overall statement length  | Y      | |
 | Automatic allocation of lengths of character variables     | N      | |
-| The specifiers typeof and classof                          | N      | |
+| The specifiers typeof and classof                          | Y      | |
 | Conditional expressions and arguments                      | N      | |
 | More use of boz constants                                  | P      | All usages other than enum are supported |
 | Intrinsics for extracting tokens from a string             | Y      | |

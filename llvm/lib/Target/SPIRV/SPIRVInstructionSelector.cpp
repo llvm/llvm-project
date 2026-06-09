@@ -210,6 +210,8 @@ private:
                          MachineInstr &I) const;
   bool selectSplatVector(Register ResVReg, SPIRVTypeInst ResType,
                          MachineInstr &I) const;
+  bool selectConcatVectors(Register ResVReg, SPIRVTypeInst ResType,
+                           MachineInstr &I) const;
 
   bool selectCmp(Register ResVReg, SPIRVTypeInst ResType,
                  unsigned comparisonOpcode, MachineInstr &I) const;
@@ -1015,6 +1017,8 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectBuildVector(ResVReg, ResType, I);
   case TargetOpcode::G_SPLAT_VECTOR:
     return selectSplatVector(ResVReg, ResType, I);
+  case TargetOpcode::G_CONCAT_VECTORS:
+    return selectConcatVectors(ResVReg, ResType, I);
 
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     MachineBasicBlock &BB = *I.getParent();
@@ -1030,6 +1034,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   }
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMCPY:
+  case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMSET:
     return selectMemOperation(ResVReg, I);
 
@@ -2263,6 +2268,13 @@ bool SPIRVInstructionSelector::selectCopyMemorySized(MachineInstr &I,
 
 bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
                                                   MachineInstr &I) const {
+  // Zero-sized memcpy/memmove/memset are no-ops.
+  Register SizeReg = I.getOperand(2).getReg();
+  if (MachineInstr *SizeDef = getDefInstrMaybeConstant(SizeReg, MRI);
+      SizeDef && SizeDef->getOpcode() == TargetOpcode::G_CONSTANT &&
+      getIConstVal(SizeReg, MRI) == 0)
+    return true;
+
   Register SrcReg = I.getOperand(1).getReg();
   if (I.getOpcode() == TargetOpcode::G_MEMSET) {
     Register VarReg = getOrCreateMemSetGlobal(I);
@@ -3963,6 +3975,27 @@ bool SPIRVInstructionSelector::selectSplatVector(Register ResVReg,
                  .addUse(GR.getSPIRVTypeID(ResType));
   for (unsigned i = 0; i < N; ++i)
     MIB.addUse(OpReg);
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectConcatVectors(Register ResVReg,
+                                                   SPIRVTypeInst ResType,
+                                                   MachineInstr &I) const {
+  // Implement G_CONCAT_VECTORS using OpCompositeConstruct, which allows vector
+  // constituents that share the result's component type to be
+  // concatenated in operand order.
+  if (ResType->getOpcode() != SPIRV::OpTypeVector)
+    report_fatal_error(
+        "Cannot select G_CONCAT_VECTORS with a non-vector result");
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                     TII.get(SPIRV::OpCompositeConstruct))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType));
+  for (unsigned OpIdx = I.getNumExplicitDefs();
+       OpIdx < I.getNumExplicitOperands(); ++OpIdx)
+    MIB.addUse(I.getOperand(OpIdx).getReg());
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
 }
@@ -6688,10 +6721,12 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         return true;
       }
       MachineInstrBuilder MIB3 =
-          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpConstantNull))
+          BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpUndef))
               .addDef(ResVReg)
               .addUse(GR.getSPIRVTypeID(ResType));
       GR.add(ConstVal, MIB3);
+      GR.recordFunctionPointer(&MIB3.getInstr()->getOperand(0),
+                               cast<Function>(GV));
       MIB3.constrainAllUses(TII, TRI, RBI);
       return true;
     }

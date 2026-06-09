@@ -303,7 +303,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
       .legalIf(vectorElementCountIsLessThanOrEqualTo(1, MaxVectorSize));
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE})
       .unsupportedIf(LegalityPredicates::any(typeIs(0, p9), typeIs(1, p9)))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allPtrs)));
 

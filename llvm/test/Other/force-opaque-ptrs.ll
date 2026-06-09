@@ -74,13 +74,13 @@ define void @remangle_intrinsic() {
 ; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.stacksave.p0()
 ; CHECK-NEXT:    call void @llvm.stackprotector(ptr null, ptr [[A]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.expandload.v2i64(ptr null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca ptr
   call ptr @llvm.stacksave()
   call void @llvm.stackprotector(ptr null, ptr %a)
-  call <2 x i64> @llvm.masked.expandload.v2i64(ptr null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
+  call <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr null, <2 x i1> zeroinitializer, <2 x i64> zeroinitializer)
   ret void
 }
 
@@ -93,4 +93,4 @@ define ptr @constexpr_gep() {
 
 declare ptr @llvm.stacksave()
 declare void @llvm.stackprotector(ptr, ptr)
-declare <2 x i64> @llvm.masked.expandload.v2i64(ptr, <2 x i1>, <2 x i64>)
+declare <2 x i64> @llvm.masked.expandload.v2i64.p0(ptr, <2 x i1>, <2 x i64>)

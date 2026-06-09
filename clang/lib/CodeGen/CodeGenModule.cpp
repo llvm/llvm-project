@@ -246,6 +246,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   case llvm::Triple::systemz: {
     bool SoftFloat = CodeGenOpts.FloatABI == "soft";
     bool HasVector = !SoftFloat && Target.getABI() == "vector";
+    if (Triple.getOS() == llvm::Triple::ZOS)
+      return createSystemZ_ZOS_TargetCodeGenInfo(CGM, HasVector, SoftFloat);
     return createSystemZTargetCodeGenInfo(CGM, HasVector, SoftFloat);
   }
 
@@ -2264,6 +2266,7 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
                                         CodeGenModule &CGM) {
   const Decl *D = GD.getDecl();
   return !CGM.getModuleNameHash().empty() && isa<FunctionDecl>(D) &&
+         !D->hasAttr<AsmLabelAttr>() &&
          (CGM.getFunctionLinkage(GD) == llvm::GlobalValue::InternalLinkage);
 }
 

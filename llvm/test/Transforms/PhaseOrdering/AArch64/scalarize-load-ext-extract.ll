@@ -3,7 +3,7 @@
 
 define noundef i32 @load_ext_extract(ptr %src) {
 ; CHECK-LABEL: define noundef range(i32 0, 1021) i32 @load_ext_extract(
-; CHECK-SAME: ptr readonly captures(none) [[SRC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[SRC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[TMP14]], i64 0
