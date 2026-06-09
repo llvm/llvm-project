@@ -715,7 +715,6 @@ int CompactUnwinder_arm64<A>::stepWithCompactEncodingFrame(
     registers.setIP(linkRegister);
   }
 
-
   return UNW_STEP_SUCCESS;
 }
 #endif // _LIBUNWIND_TARGET_AARCH64

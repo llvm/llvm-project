@@ -1911,30 +1911,34 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
     encoding = pageIndex.encoding(low);
     rangeStart = pageIndex.functionOffset(low) + sects.dso_base;
 
-    // If UNWIND_IS_NOT_FUNCTION_START is set, walk backwards to find the actual function start.
+    // If UNWIND_IS_NOT_FUNCTION_START is set, walk backwards to find the actual
+    // function start.
     funcStart = rangeStart;
     if (encoding & UNWIND_IS_NOT_FUNCTION_START) {
       uint32_t backIndex = low;
       do {
         --backIndex;
-      } while (backIndex > 0 && (pageIndex.encoding(backIndex) & UNWIND_IS_NOT_FUNCTION_START));
+      } while (backIndex > 0 &&
+               (pageIndex.encoding(backIndex) & UNWIND_IS_NOT_FUNCTION_START));
       funcStart = pageIndex.functionOffset(backIndex) + sects.dso_base;
     }
 
     if (pc < funcStart) {
       if (log)
-        fprintf(
-            stderr,
-            "\tpc not in table, pc=0x%llX, funcStart=0x%llX, rangeStart=0x%llX, funcEnd=0x%llX\n",
-            (uint64_t) pc, (uint64_t) funcStart, (uint64_t) rangeStart, (uint64_t) funcEnd);
+        fprintf(stderr,
+                "\tpc not in table, pc=0x%llX, funcStart=0x%llX, "
+                "rangeStart=0x%llX, funcEnd=0x%llX\n",
+                (uint64_t)pc, (uint64_t)funcStart, (uint64_t)rangeStart,
+                (uint64_t)funcEnd);
       return false;
     }
     if (pc > funcEnd) {
       if (log)
-        fprintf(
-            stderr,
-            "\tpc not in table, pc=0x%llX, funcStart=0x%llX, rangeStart=0x%llX, funcEnd=0x%llX\n",
-            (uint64_t) pc, (uint64_t) funcStart, (uint64_t) rangeStart, (uint64_t) funcEnd);
+        fprintf(stderr,
+                "\tpc not in table, pc=0x%llX, funcStart=0x%llX, "
+                "rangeStart=0x%llX, funcEnd=0x%llX\n",
+                (uint64_t)pc, (uint64_t)funcStart, (uint64_t)rangeStart,
+                (uint64_t)funcEnd);
       return false;
     }
   } else if (pageKind == UNWIND_SECOND_LEVEL_COMPRESSED) {
@@ -1968,8 +1972,8 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
         high = mid;
       }
     }
-    rangeStart = pageIndex.functionOffset(low) + firstLevelFunctionOffset
-                                                              + sects.dso_base;
+    rangeStart = pageIndex.functionOffset(low) + firstLevelFunctionOffset +
+                 sects.dso_base;
     if (low < last)
       funcEnd =
           pageIndex.functionOffset(low + 1) + firstLevelFunctionOffset
@@ -1985,31 +1989,35 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
             sectionHeader.commonEncodingsArraySectionOffset() +
             encIdx * sizeof(uint32_t));
       } else {
-        uint16_t pageEncIdx = encIdx - (uint16_t)sectionHeader.commonEncodingsArrayCount();
+        uint16_t pageEncIdx =
+            encIdx - (uint16_t)sectionHeader.commonEncodingsArrayCount();
         return _addressSpace.get32(secondLevelAddr +
-                                    pageHeader.encodingsPageOffset() +
-                                    pageEncIdx * sizeof(uint32_t));
+                                   pageHeader.encodingsPageOffset() +
+                                   pageEncIdx * sizeof(uint32_t));
       }
     };
 
     encoding = encodingAtIndex(low);
 
-    // If UNWIND_IS_NOT_FUNCTION_START is set, walk backwards to find the actual function start.
+    // If UNWIND_IS_NOT_FUNCTION_START is set, walk backwards to find the actual
+    // function start.
     funcStart = rangeStart;
     if (encoding & UNWIND_IS_NOT_FUNCTION_START) {
       uint32_t backIndex = low;
       do {
         --backIndex;
-      } while (backIndex > 0 && (encodingAtIndex(backIndex) & UNWIND_IS_NOT_FUNCTION_START));
-      funcStart = pageIndex.functionOffset(backIndex) + firstLevelFunctionOffset
-                                                        + sects.dso_base;
+      } while (backIndex > 0 &&
+               (encodingAtIndex(backIndex) & UNWIND_IS_NOT_FUNCTION_START));
+      funcStart = pageIndex.functionOffset(backIndex) +
+                  firstLevelFunctionOffset + sects.dso_base;
     }
 
     if (pc < funcStart) {
       _LIBUNWIND_DEBUG_LOG("malformed __unwind_info, pc=0x%llX "
                            "not in second level compressed unwind table. "
                            "funcStart=0x%llX, rangeStart=0x%llX",
-                            (uint64_t) pc, (uint64_t) funcStart, (uint64_t) rangeStart);
+                           (uint64_t)pc, (uint64_t)funcStart,
+                           (uint64_t)rangeStart);
       return false;
     }
     if (pc > funcEnd) {
@@ -2096,8 +2104,8 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
                     "encoding=0x%08X, lsda=0x%08llX for funcStart=0x%llX\n",
             (uint64_t) pc, encoding, (uint64_t) lsda, (uint64_t) funcStart);
 
-  // For ARM64 PAuth_LR frames, start_ip should be the pacibsppc address (rangeStart).
-  // For all other cases, start_ip should be the function start.
+    // For ARM64 PAuth_LR frames, start_ip should be the pacibsppc address
+    // (rangeStart). For all other cases, start_ip should be the function start.
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   if ((encoding & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_FRAME_PAUTH_LR) {
     _info.start_ip = rangeStart;
