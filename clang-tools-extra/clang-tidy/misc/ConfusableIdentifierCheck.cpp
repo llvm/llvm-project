@@ -13,12 +13,23 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ConvertUTF.h"
 
+#include <cstdint>
+
 namespace {
 // Preprocessed version of
 // https://www.unicode.org/Public/security/latest/confusables.txt
 //
-// This contains a sorted array of { UTF32 codepoint; UTF32 values[N];}
+// This contains a sorted array of code points and slices into a shared UTF-8
+// replacement array.
+struct ConfusableEntry {
+  llvm::UTF32 CodePoint;
+  uint16_t Offset;
+  uint16_t Length;
+};
+static_assert(sizeof(ConfusableEntry) == 8);
+
 #include "Confusables.inc"
+static_assert(sizeof(ConfusableReplacementData) <= 1ULL << 16);
 } // namespace
 
 namespace clang::tidy::misc {
@@ -63,26 +74,14 @@ static SmallString<64U> skeleton(StringRef Name) {
       break;
     }
 
-    const StringRef Key(Prev, Curr - Prev);
-    auto *Where = llvm::lower_bound(ConfusableEntries, CodePoint,
-                                    [](decltype(ConfusableEntries[0]) X,
-                                       UTF32 Y) { return X.codepoint < Y; });
-    if (Where == std::end(ConfusableEntries) || CodePoint != Where->codepoint) {
+    auto *Where = llvm::lower_bound(
+        ConfusableEntries, CodePoint,
+        [](const ConfusableEntry &X, UTF32 Y) { return X.CodePoint < Y; });
+    if (Where == std::end(ConfusableEntries) || CodePoint != Where->CodePoint) {
       Skeleton.append(Prev, Curr);
     } else {
-      UTF8 Buffer[32];
-      UTF8 *BufferStart = std::begin(Buffer);
-      UTF8 *IBuffer = BufferStart;
-      const UTF32 *ValuesStart = std::begin(Where->values);
-      const UTF32 *ValuesEnd = llvm::find(Where->values, '\0');
-      if (ConvertUTF32toUTF8(&ValuesStart, ValuesEnd, &IBuffer,
-                             std::end(Buffer),
-                             strictConversion) != conversionOK) {
-        errs() << "Unicode conversion issue\n";
-        break;
-      }
-      Skeleton.append(reinterpret_cast<char *>(BufferStart),
-                      reinterpret_cast<char *>(IBuffer));
+      Skeleton.append(
+          StringRef(ConfusableReplacementData + Where->Offset, Where->Length));
     }
   }
   return Skeleton;
