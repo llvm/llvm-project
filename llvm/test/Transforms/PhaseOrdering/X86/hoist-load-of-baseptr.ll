@@ -18,7 +18,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O1-SAME: ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O1-NEXT:  [[ENTRY:.*]]:
 ; O1-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
-; O1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
+; O1-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8, !nonnull [[META0:![0-9]+]]
 ; O1-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; O1:       [[FOR_COND1_PREHEADER]]:
 ; O1-NEXT:    [[I_06:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INC7:%.*]], %[[FOR_COND_CLEANUP3:.*]] ]
@@ -28,23 +28,22 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O1:       [[FOR_COND_CLEANUP3]]:
 ; O1-NEXT:    [[INC7]] = add nuw nsw i64 [[I_06]], 1
 ; O1-NEXT:    [[EXITCOND7_NOT:%.*]] = icmp eq i64 [[INC7]], 100
-; O1-NEXT:    br i1 [[EXITCOND7_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP0:![0-9]+]]
+; O1-NEXT:    br i1 [[EXITCOND7_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP1:![0-9]+]]
 ; O1:       [[FOR_BODY4]]:
 ; O1-NEXT:    [[J_05:%.*]] = phi i64 [ [[INC5:%.*]], %[[FOR_BODY4]] ], [ 0, %[[FOR_COND1_PREHEADER]] ]
 ; O1-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[J_05]]
-; O1-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ADD_PTR_I]]) ]
-; O1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
+; O1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
 ; O1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
-; O1-NEXT:    store i32 [[INC]], ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA2]]
+; O1-NEXT:    store i32 [[INC]], ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA3]]
 ; O1-NEXT:    [[INC5]] = add nuw i64 [[J_05]], 1
 ; O1-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC5]], [[NUMELEMS]]
-; O1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4]], !llvm.loop [[LOOP6:![0-9]+]]
+; O1-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4]], !llvm.loop [[LOOP7:![0-9]+]]
 ;
 ; O2-LABEL: define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(
 ; O2-SAME: ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O2-NEXT:  [[ENTRY:.*]]:
 ; O2-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
-; O2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
+; O2-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8, !nonnull [[META0:![0-9]+]]
 ; O2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEMS]], 8
 ; O2-NEXT:    [[N_VEC:%.*]] = and i64 [[NUMELEMS]], -8
 ; O2-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[NUMELEMS]], [[N_VEC]]
@@ -57,17 +56,16 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2:       [[VECTOR_BODY]]:
 ; O2-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], [ 0, %[[FOR_BODY4_PREHEADER]] ]
 ; O2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[INDEX]]
-; O2-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP1]]) ]
 ; O2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
-; O2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
-; O2-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA0]]
+; O2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
+; O2-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA1]]
 ; O2-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; O2-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_LOAD8]], splat (i32 1)
-; O2-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP1]], align 4, !tbaa [[INT_TBAA0]]
-; O2-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP2]], align 4, !tbaa [[INT_TBAA0]]
+; O2-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP1]], align 4, !tbaa [[INT_TBAA1]]
+; O2-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP2]], align 4, !tbaa [[INT_TBAA1]]
 ; O2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; O2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; O2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; O2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; O2:       [[MIDDLE_BLOCK]]:
 ; O2-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4_PREHEADER9]]
 ; O2:       [[FOR_BODY4_PREHEADER9]]:
@@ -78,23 +76,22 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2:       [[FOR_COND_CLEANUP3]]:
 ; O2-NEXT:    [[INC7]] = add nuw nsw i64 [[I_06]], 1
 ; O2-NEXT:    [[EXITCOND7_NOT:%.*]] = icmp eq i64 [[INC7]], 100
-; O2-NEXT:    br i1 [[EXITCOND7_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP8:![0-9]+]]
+; O2-NEXT:    br i1 [[EXITCOND7_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER]], !llvm.loop [[LOOP9:![0-9]+]]
 ; O2:       [[FOR_BODY4]]:
 ; O2-NEXT:    [[J_05:%.*]] = phi i64 [ [[INC5:%.*]], %[[FOR_BODY4]] ], [ [[J_05_PH]], %[[FOR_BODY4_PREHEADER9]] ]
 ; O2-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[J_05]]
-; O2-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ADD_PTR_I]]) ]
-; O2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA0]]
+; O2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA1]]
 ; O2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
-; O2-NEXT:    store i32 [[INC]], ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA0]]
+; O2-NEXT:    store i32 [[INC]], ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA1]]
 ; O2-NEXT:    [[INC5]] = add nuw i64 [[J_05]], 1
 ; O2-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC5]], [[NUMELEMS]]
-; O2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4]], !llvm.loop [[LOOP9:![0-9]+]]
+; O2-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND_CLEANUP3]], label %[[FOR_BODY4]], !llvm.loop [[LOOP10:![0-9]+]]
 ;
 ; O3-LABEL: define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(
 ; O3-SAME: ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[DATA:%.*]], i64 noundef [[NUMELEMS:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O3-NEXT:  [[ENTRY:.*:]]
 ; O3-NEXT:    [[CMP24_NOT:%.*]] = icmp eq i64 [[NUMELEMS]], 0
-; O3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8
+; O3-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATA]], align 8, !nonnull [[META0:![0-9]+]]
 ; O3-NEXT:    br i1 [[CMP24_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_COND1_PREHEADER_US_PREHEADER:.*]]
 ; O3:       [[FOR_COND1_PREHEADER_US_PREHEADER]]:
 ; O3-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[NUMELEMS]], 8
@@ -107,17 +104,16 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O3:       [[VECTOR_BODY]]:
 ; O3-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], [ 0, %[[FOR_COND1_PREHEADER_US]] ]
 ; O3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[INDEX]]
-; O3-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP1]]) ]
 ; O3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
-; O3-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
-; O3-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA0]]
+; O3-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA1:![0-9]+]]
+; O3-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA1]]
 ; O3-NEXT:    [[TMP3:%.*]] = add nsw <4 x i32> [[WIDE_LOAD]], splat (i32 1)
 ; O3-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[WIDE_LOAD9]], splat (i32 1)
-; O3-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP1]], align 4, !tbaa [[INT_TBAA0]]
-; O3-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP2]], align 4, !tbaa [[INT_TBAA0]]
+; O3-NEXT:    store <4 x i32> [[TMP3]], ptr [[TMP1]], align 4, !tbaa [[INT_TBAA1]]
+; O3-NEXT:    store <4 x i32> [[TMP4]], ptr [[TMP2]], align 4, !tbaa [[INT_TBAA1]]
 ; O3-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; O3-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; O3-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; O3-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; O3:       [[MIDDLE_BLOCK]]:
 ; O3-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]], label %[[FOR_BODY4_US_PREHEADER]]
 ; O3:       [[FOR_BODY4_US_PREHEADER]]:
@@ -126,17 +122,16 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O3:       [[FOR_BODY4_US]]:
 ; O3-NEXT:    [[J_05_US:%.*]] = phi i64 [ [[INC5_US:%.*]], %[[FOR_BODY4_US]] ], [ [[J_05_US_PH]], %[[FOR_BODY4_US_PREHEADER]] ]
 ; O3-NEXT:    [[ADD_PTR_I_US:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[J_05_US]]
-; O3-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ADD_PTR_I_US]]) ]
-; O3-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ADD_PTR_I_US]], align 4, !tbaa [[INT_TBAA0]]
+; O3-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ADD_PTR_I_US]], align 4, !tbaa [[INT_TBAA1]]
 ; O3-NEXT:    [[INC_US:%.*]] = add nsw i32 [[TMP6]], 1
-; O3-NEXT:    store i32 [[INC_US]], ptr [[ADD_PTR_I_US]], align 4, !tbaa [[INT_TBAA0]]
+; O3-NEXT:    store i32 [[INC_US]], ptr [[ADD_PTR_I_US]], align 4, !tbaa [[INT_TBAA1]]
 ; O3-NEXT:    [[INC5_US]] = add nuw i64 [[J_05_US]], 1
 ; O3-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC5_US]], [[NUMELEMS]]
-; O3-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]], label %[[FOR_BODY4_US]], !llvm.loop [[LOOP8:![0-9]+]]
+; O3-NEXT:    br i1 [[EXITCOND_NOT]], label %[[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]], label %[[FOR_BODY4_US]], !llvm.loop [[LOOP9:![0-9]+]]
 ; O3:       [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]:
 ; O3-NEXT:    [[INC7_US]] = add nuw nsw i64 [[I_06_US]], 1
 ; O3-NEXT:    [[EXITCOND8_NOT:%.*]] = icmp eq i64 [[INC7_US]], 100
-; O3-NEXT:    br i1 [[EXITCOND8_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER_US]], !llvm.loop [[LOOP9:![0-9]+]]
+; O3-NEXT:    br i1 [[EXITCOND8_NOT]], label %[[FOR_COND_CLEANUP]], label %[[FOR_COND1_PREHEADER_US]], !llvm.loop [[LOOP10:![0-9]+]]
 ; O3:       [[FOR_COND_CLEANUP]]:
 ; O3-NEXT:    ret void
 ;
@@ -243,33 +238,36 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 !16 = !{!17, !4, i64 0}
 !17 = !{!"_ZTSNSt12_Vector_baseIiSaIiEE17_Vector_impl_dataE", !4, i64 0, !4, i64 8, !4, i64 16}
 ;.
-; O1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
-; O1: [[META1]] = !{!"llvm.loop.mustprogress"}
-; O1: [[INT_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-; O1: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
-; O1: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
-; O1: [[META5]] = !{!"Simple C++ TBAA"}
-; O1: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]]}
+; O1: [[META0]] = !{}
+; O1: [[LOOP1]] = distinct !{[[LOOP1]], [[META2:![0-9]+]]}
+; O1: [[META2]] = !{!"llvm.loop.mustprogress"}
+; O1: [[INT_TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+; O1: [[META4]] = !{!"int", [[META5:![0-9]+]], i64 0}
+; O1: [[META5]] = !{!"omnipotent char", [[META6:![0-9]+]], i64 0}
+; O1: [[META6]] = !{!"Simple C++ TBAA"}
+; O1: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]]}
 ;.
-; O2: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
-; O2: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
-; O2: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
-; O2: [[META3]] = !{!"Simple C++ TBAA"}
-; O2: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
-; O2: [[META5]] = !{!"llvm.loop.mustprogress"}
-; O2: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; O2: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
-; O2: [[LOOP8]] = distinct !{[[LOOP8]], [[META5]]}
-; O2: [[LOOP9]] = distinct !{[[LOOP9]], [[META5]], [[META7]], [[META6]]}
+; O2: [[META0]] = !{}
+; O2: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+; O2: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
+; O2: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+; O2: [[META4]] = !{!"Simple C++ TBAA"}
+; O2: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
+; O2: [[META6]] = !{!"llvm.loop.mustprogress"}
+; O2: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
+; O2: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
+; O2: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]]}
+; O2: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]], [[META8]], [[META7]]}
 ;.
-; O3: [[INT_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
-; O3: [[META1]] = !{!"int", [[META2:![0-9]+]], i64 0}
-; O3: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
-; O3: [[META3]] = !{!"Simple C++ TBAA"}
-; O3: [[LOOP4]] = distinct !{[[LOOP4]], [[META5:![0-9]+]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
-; O3: [[META5]] = !{!"llvm.loop.mustprogress"}
-; O3: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; O3: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
-; O3: [[LOOP8]] = distinct !{[[LOOP8]], [[META5]], [[META7]], [[META6]]}
-; O3: [[LOOP9]] = distinct !{[[LOOP9]], [[META5]]}
+; O3: [[META0]] = !{}
+; O3: [[INT_TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
+; O3: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
+; O3: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
+; O3: [[META4]] = !{!"Simple C++ TBAA"}
+; O3: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
+; O3: [[META6]] = !{!"llvm.loop.mustprogress"}
+; O3: [[META7]] = !{!"llvm.loop.isvectorized", i32 1}
+; O3: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
+; O3: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]], [[META8]], [[META7]]}
+; O3: [[LOOP10]] = distinct !{[[LOOP10]], [[META6]]}
 ;.

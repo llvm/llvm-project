@@ -532,8 +532,6 @@ define i1 @nonnull5(ptr %a) {
   ret i1 %rval
 }
 
-declare ptr @get_ptr()
-
 define void @nonnull_on_call() {
 ; CHECK-LABEL: @nonnull_on_call(
 ; CHECK-NEXT:    [[PTR:%.*]] = call nonnull ptr @get_ptr()
