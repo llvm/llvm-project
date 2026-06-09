@@ -298,6 +298,12 @@ New checks
 
   Finds lambda expressions with a redundant empty parameter list and removes it.
 
+- New :doc:`readability-redundant-nested-if
+  <clang-tidy/checks/readability/redundant-nested-if>` check.
+
+  Finds nested ``if`` statements that can be merged into a single ``if`` by
+  combining conditions with ``&&``.
+
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
 
@@ -341,7 +347,7 @@ Changes in existing checks
 - Improved :doc:`altera-id-dependent-backward-branch
   <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing false
   positives when ordinary variable or field assignments are used in loop
-  conditions.
+  conditions and note locations for inferred ID-dependent fields.
 
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>`:

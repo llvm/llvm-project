@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -555,6 +556,10 @@ public:
 char AArch64DAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+
+AArch64DAGToDAGISelPass::AArch64DAGToDAGISelPass(AArch64TargetMachine &TM)
+    : SelectionDAGISelPass(
+          std::make_unique<AArch64DAGToDAGISel>(TM, TM.getOptLevel())) {}
 
 /// addBitcastHints - This method adds bitcast hints to the operands of a node
 /// to help instruction selector determine which operands are in Neon registers.
@@ -7715,6 +7720,13 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
   return MemVT;
 }
 
+/// Builds an integer vector type large enough to hold \p NumVec instances
+/// of \p VecVT.
+static EVT getMultipleVectorType(LLVMContext &Ctx, EVT VecVT, unsigned NumVec) {
+  return EVT::getVectorVT(Ctx, VecVT.getScalarType().changeTypeToInteger(),
+                          VecVT.getVectorElementCount() * NumVec);
+}
+
 /// Return the EVT of the data associated to a memory operation in \p
 /// Root. If such EVT cannot be retrieved, it returns an invalid EVT.
 static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
@@ -7789,6 +7801,22 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
   case Intrinsic::aarch64_sve_st4q:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(6)->getValueType(0), /*NumVec=*/4);
+  case Intrinsic::aarch64_sve_ld1_pn_x2:
+  case Intrinsic::aarch64_sve_ldnt1_pn_x2:
+    return getMultipleVectorType(Ctx, Root->getValueType(0),
+                                 /*NumVec=*/2);
+  case Intrinsic::aarch64_sve_ld1_pn_x4:
+  case Intrinsic::aarch64_sve_ldnt1_pn_x4:
+    return getMultipleVectorType(Ctx, Root->getValueType(0),
+                                 /*NumVec=*/4);
+  case Intrinsic::aarch64_sve_st1_pn_x2:
+  case Intrinsic::aarch64_sve_stnt1_pn_x2:
+    return getMultipleVectorType(Ctx, Root->getOperand(2).getValueType(),
+                                 /*NumVec=*/2);
+  case Intrinsic::aarch64_sve_st1_pn_x4:
+  case Intrinsic::aarch64_sve_stnt1_pn_x4:
+    return getMultipleVectorType(Ctx, Root->getOperand(2).getValueType(),
+                                 /*NumVec=*/4);
   case Intrinsic::aarch64_sve_ld1udq:
   case Intrinsic::aarch64_sve_st1dq:
     return EVT(MVT::nxv1i64);
