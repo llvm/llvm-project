@@ -90,6 +90,28 @@ static_assert(!std::is_invocable_v<decltype(std::views::enumerate), NotInvocable
 
 static_assert(std::is_same_v<decltype(std::ranges::views::enumerate), decltype(std::views::enumerate)>);
 
+struct MoveOnlyView : std::ranges::view_base {
+  constexpr explicit MoveOnlyView(int* b, int* e) : begin_(b), end_(e) {}
+  MoveOnlyView(const MoveOnlyView&)            = delete;
+  MoveOnlyView& operator=(const MoveOnlyView&) = delete;
+  constexpr MoveOnlyView(MoveOnlyView&& other) noexcept
+      : begin_(std::exchange(other.begin_, nullptr)), end_(std::exchange(other.end_, nullptr)) {}
+  MoveOnlyView& operator=(MoveOnlyView&&) = default;
+
+  constexpr int* begin() const { return begin_; }
+  constexpr int* end() const { return end_; }
+
+  int* begin_ = nullptr;
+  int* end_   = nullptr;
+};
+
+static_assert(std::ranges::view<MoveOnlyView>);
+static_assert(!std::copy_constructible<MoveOnlyView>);
+static_assert(!std::is_invocable_v<decltype(std::views::enumerate), MoveOnlyView&>);
+static_assert(!std::is_invocable_v<decltype(std::views::enumerate), const MoveOnlyView&>);
+static_assert(std::is_invocable_v<decltype(std::views::enumerate), MoveOnlyView>);
+static_assert(!std::is_invocable_v<decltype(std::views::enumerate), const MoveOnlyView>);
+
 constexpr bool test() {
   // Test `views::enumerate_view(v)`
   {
@@ -125,6 +147,19 @@ constexpr bool test() {
 
     std::same_as<Result> decltype(auto) result = sv | std::views::enumerate;
     compareViews(result, {{0, 'b'}, {1, 'a'}, {2, 'b'}, {3, 'a'}, {4, 'z'}, {5, 'm'}, {6, 't'}});
+  }
+
+  {
+    int buff[]{2, 3, 5, 7};
+    using Result = std::ranges::enumerate_view<MoveOnlyView>;
+    {
+      std::same_as<Result> decltype(auto) result = std::views::enumerate(MoveOnlyView(buff, buff + 4));
+      compareViews(std::move(result), {{0, 2}, {1, 3}, {2, 5}, {3, 7}});
+    }
+    {
+      std::same_as<Result> decltype(auto) result = MoveOnlyView(buff, buff + 4) | std::views::enumerate;
+      compareViews(std::move(result), {{0, 2}, {1, 3}, {2, 5}, {3, 7}});
+    }
   }
 
   return true;

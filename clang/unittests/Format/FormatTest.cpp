@@ -3139,14 +3139,18 @@ TEST_F(FormatTest, FormatsLabels) {
                "}");
   verifyFormat("{\n"
                "  some_code();\n"
-               "test_label: { some_other_code(); }\n"
+               "test_label:\n"
+               "  {\n"
+               "    some_other_code();\n"
+               "  }\n"
                "}");
   verifyFormat("{\n"
                "  some_code();\n"
-               "test_label: {\n"
-               "  some_other_code();\n"
-               "  some_other_code();\n"
-               "}\n"
+               "test_label:\n"
+               "  {\n"
+               "    some_other_code();\n"
+               "    some_other_code();\n"
+               "  }\n"
                "}");
   verifyFormat("{\n"
                "L0:\n"
@@ -3155,10 +3159,11 @@ TEST_F(FormatTest, FormatsLabels) {
                "  g();\n"
                "}");
   verifyFormat("{\n"
-               "[[foo]] L1: {\n"
-               "[[bar]] [[baz]] L2:\n"
-               "  g();\n"
-               "}\n"
+               "[[foo]] L1:\n"
+               "  {\n"
+               "  [[bar]] [[baz]] L2:\n"
+               "    g();\n"
+               "  }\n"
                "}");
   verifyFormat("{\n"
                "[[foo]] L1:\n"
@@ -3166,6 +3171,18 @@ TEST_F(FormatTest, FormatsLabels) {
                "  {\n"
                "  [[bar]] [[baz]] L2:\n"
                "    g();\n"
+               "  }\n"
+               "}");
+  verifyFormat("void func() {\n"
+               "label:\n"
+               "  {\n"
+               "    // Block\n"
+               "  }\n"
+               "}");
+  verifyFormat("void func() {\n"
+               "label: // Comment\n"
+               "  {\n"
+               "    // Block\n"
                "  }\n"
                "}");
 
@@ -3196,7 +3213,10 @@ TEST_F(FormatTest, FormatsLabels) {
                Style);
   verifyFormat("{\n"
                "  some_code();\n"
-               "test_label: { some_other_code(); }\n"
+               "test_label:\n"
+               "  {\n"
+               "    some_other_code();\n"
+               "  }\n"
                "}",
                Style);
   verifyFormat("{\n"
@@ -3331,17 +3351,17 @@ TEST_F(FormatTest, FormatsLabels) {
   verifyFormat("{\n"
                "  some_code();\n"
                "test_label:\n"
-               "{\n"
-               "  some_other_code();\n"
-               "}\n"
+               "  {\n"
+               "    some_other_code();\n"
+               "  }\n"
                "}",
                Style);
   verifyFormat("{\n"
                "[[foo]] L1:\n"
-               "{\n"
-               "[[bar]] [[baz]] L2:\n"
-               "  g();\n"
-               "}\n"
+               "  {\n"
+               "  [[bar]] [[baz]] L2:\n"
+               "    g();\n"
+               "  }\n"
                "}",
                Style);
 }
@@ -5947,22 +5967,33 @@ TEST_F(FormatTest, HashInMacroDefinition) {
   verifyFormat("#define A(c) uR#c");
   verifyFormat("#define A(c) UR#c");
   verifyFormat("#define A(c) u8R#c");
-  verifyFormat("#define A \\\n  b #c;", getLLVMStyleWithColumns(11));
+
+  auto Style = getLLVMStyleWithColumns(11);
+  verifyFormat("#define A \\\n  b #c;", Style);
   verifyFormat("#define A  \\\n"
                "  {        \\\n"
                "    f(#c); \\\n"
                "  }",
-               getLLVMStyleWithColumns(11));
+               Style);
 
+  Style.ColumnLimit = 22;
   verifyFormat("#define A(X)         \\\n"
                "  void function##X()",
-               getLLVMStyleWithColumns(22));
-
+               Style);
   verifyFormat("#define A(a, b, c)   \\\n"
                "  void a##b##c()",
-               getLLVMStyleWithColumns(22));
+               Style);
+  verifyFormat("#define A void # ## #", Style);
 
-  verifyFormat("#define A void # ## #", getLLVMStyleWithColumns(22));
+  Style.ColumnLimit = 60;
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat(
+      "#define MACRO(Name) \\\n"
+      "  struct LongPrefix##Name##LongSuffix< \\\n"
+      "      VeryLongTemplateArgument> {};",
+      "#define MACRO(Name) \\\n"
+      "  struct LongPrefix##Name##LongSuffix<VeryLongTemplateArgument> {};",
+      Style);
 
   verifyFormat("{\n"
                "  {\n"
@@ -10594,6 +10625,172 @@ TEST_F(FormatTest, ReturnTypeBreakingStyle) {
   verifyFormat("void foo (int a, int b);", Style);
 }
 
+TEST_F(FormatTest, BreakBeforeReturnType) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_All;
+
+  verifyFormat("static inline\n"
+               "void myfun(void);",
+               Style);
+  verifyFormat("static\n"
+               "int x(void);",
+               Style);
+
+  verifyFormat("void f(void);", Style);
+  verifyFormat("int g(int a);", Style);
+
+  // Constructors and destructors are not affected.
+  verifyFormat("class C {\n"
+               "  explicit C(int);\n"
+               "  virtual ~C();\n"
+               "};",
+               Style);
+
+  verifyFormat("__attribute__((always_inline)) static inline\n"
+               "void f(void);",
+               Style);
+  verifyFormat("static __forceinline\n"
+               "void f(void);",
+               Style);
+  verifyFormat("export\n"
+               "int f();",
+               Style);
+  verifyFormat(
+      "__attribute__((section(\".init\"), always_inline)) static inline\n"
+      "int boot(void);",
+      Style);
+  verifyFormat("[[nodiscard]] static constexpr\n"
+               "int f();",
+               Style);
+  verifyFormat("static\n"
+               "const struct foo *g(void);",
+               Style);
+  verifyFormat("class A {\n"
+               "  friend\n"
+               "  int f();\n"
+               "};",
+               Style);
+
+  verifyFormat("static int x = 0;", Style);
+  verifyFormat("static const char *msg;", Style);
+
+  verifyFormat("static\n"
+               "auto f() -> int;",
+               Style);
+
+  Style.ColumnLimit = 50;
+  verifyFormat("__attribute__((always_inline)) static inline\n"
+               "int do_thing(int a, int b, int c);",
+               Style);
+  Style.ColumnLimit = 80;
+
+  verifyFormat("static inline\n"
+               "int compute(int x) {\n"
+               "  ++x;\n"
+               "  return x;\n"
+               "}",
+               Style);
+
+  Style.BreakAfterReturnType = FormatStyle::RTBS_All;
+  verifyFormat("static inline\n"
+               "void\n"
+               "f(void);",
+               Style);
+  Style.BreakAfterReturnType = FormatStyle::RTBS_None;
+
+  Style.BreakAfterAttributes = FormatStyle::ABS_Always;
+  verifyFormat("[[nodiscard]]\n"
+               "static\n"
+               "int f();",
+               Style);
+  Style.BreakAfterAttributes = FormatStyle::ABS_Leave;
+
+  Style.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
+  verifyFormat("template <typename T>\n"
+               "static inline\n"
+               "T f();",
+               Style);
+  verifyFormat("template <typename T>\n"
+               "  requires Foo<T>\n"
+               "static inline\n"
+               "T f();",
+               Style);
+  Style.BreakTemplateDeclarations = FormatStyle::BTDS_Leave;
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_AllDefinitions;
+  verifyFormat("class A {\n"
+               "  static inline int member();\n"
+               "  static inline\n"
+               "  int member_def() {\n"
+               "    return 0;\n"
+               "  }\n"
+               "};\n"
+               "static inline int top_decl();\n"
+               "static inline\n"
+               "int top_defn() {\n"
+               "  ++x;\n"
+               "  return 0;\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_TopLevel;
+  verifyFormat("class A {\n"
+               "  static inline int member();\n"
+               "  static inline int member_def() { return 0; }\n"
+               "};\n"
+               "static inline\n"
+               "int top_decl();\n"
+               "static inline\n"
+               "int top_defn() {\n"
+               "  ++x;\n"
+               "  return 0;\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_TopLevelDefinitions;
+  verifyFormat("class A {\n"
+               "  static inline int member();\n"
+               "  static inline int member_def() { return 0; }\n"
+               "};\n"
+               "static inline int top_decl();\n"
+               "static inline\n"
+               "int top_defn() {\n"
+               "  ++x;\n"
+               "  return 0;\n"
+               "}",
+               Style);
+
+  Style.BreakBeforeReturnType = FormatStyle::BBRTS_All;
+
+  Style.AttributeMacros = {"__always_inline"};
+  verifyFormat("__always_inline\n"
+               "void f(void);",
+               Style);
+
+  Style.AttributeMacros = {"__always_inline", "LIBC_INLINE"};
+  verifyFormat("LIBC_INLINE static __always_inline\n"
+               "int compute(int x);",
+               Style);
+
+  Style.AttributeMacros = {"ATTRIBUTE_PRINTF"};
+  verifyFormat("ATTRIBUTE_PRINTF(1, 2) static\n"
+               "void log(const char *fmt, ...);",
+               Style);
+
+  // Same identifier: unconfigured -> not a specifier; configured -> specifier.
+  Style.AttributeMacros = {};
+  verifyFormat("FOO static void f(void);", Style);
+  Style.AttributeMacros = {"FOO"};
+  verifyFormat("FOO static\n"
+               "void f(void);",
+               Style);
+
+  Style.AttributeMacros = {"LIBC_INLINE"};
+  verifyFormat("[[nodiscard]] __attribute__((pure)) LIBC_INLINE static\n"
+               "int hash(int k);",
+               Style);
+}
+
 TEST_F(FormatTest, AlwaysBreakBeforeMultilineStrings) {
   FormatStyle NoBreak = getLLVMStyle();
   NoBreak.AlwaysBreakBeforeMultilineStrings = false;
@@ -14093,18 +14290,16 @@ TEST_F(FormatTest, HandlesIncludeDirectives) {
   verifyFormat("#define F __has_include_next(<a/b>)");
 
   // Protocol buffer definition or missing "#".
-  verifyFormat("import \"aaaaaaaaaaaaaaaaa/aaaaaaaaaaaaaaa\";",
-               getLLVMStyleWithColumns(30));
+  constexpr StringRef Code("import \"aaaaaaaaaaaaaaaaa/aaaaaaaaaaaaaaa\";");
+  auto Style = getLLVMStyleWithColumns(30);
+  verifyFormat(Code, Style);
+  Style.Language = FormatStyle::LK_Proto;
+  verifyFormat(Code, Style);
 
-  FormatStyle Style = getLLVMStyle();
+  Style.Language = FormatStyle::LK_Cpp;
   Style.AlwaysBreakBeforeMultilineStrings = true;
   Style.ColumnLimit = 0;
   verifyFormat("#import \"abc.h\"", Style);
-
-  // But 'import' might also be a regular C++ namespace.
-  verifyFormat("import::SomeFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-               "                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
-  verifyFormat("import::Bar foo(val ? 2 : 1);");
 }
 
 //===----------------------------------------------------------------------===//
@@ -18572,7 +18767,10 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
                "}",
                CaseStyle);
   verifyFormat("switch (x) {\n"
-               "goto_label: { break; }\n"
+               "goto_label:\n"
+               "  {\n"
+               "    break;\n"
+               "  }\n"
                "default : {\n"
                "  break;\n"
                "}\n"
@@ -22318,6 +22516,7 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("#define a\\\n /**/}");
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
+  verifyNoCrash("operator foo *;");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
@@ -24601,9 +24800,7 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle();
 
   verifyFormat("export import foo;", Style);
-  verifyFormat("export import foo:bar;", Style);
   verifyFormat("export import foo.bar;", Style);
-  verifyFormat("export import foo.bar:baz;", Style);
   verifyFormat("export import :bar;", Style);
   verifyFormat("export module foo:bar;", Style);
   verifyFormat("export module foo;", Style);
@@ -24631,7 +24828,6 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
 
   verifyFormat("import bar;", Style);
   verifyFormat("import foo.bar;", Style);
-  verifyFormat("import foo:bar;", Style);
   verifyFormat("import :bar;", Style);
   verifyFormat("import /* module partition */ :bar;", Style);
   verifyFormat("import <ctime>;", Style);
@@ -24647,11 +24843,10 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
                "}",
                Style);
 
-  verifyFormat("module :private;", Style);
+  verifyFormat("module : private;", Style);
   verifyFormat("import <foo/bar.h>;", Style);
   verifyFormat("import foo...bar;", Style);
   verifyFormat("import ..........;", Style);
-  verifyFormat("module foo:private;", Style);
   verifyFormat("import a", Style);
   verifyFormat("module a", Style);
   verifyFormat("export import a", Style);
@@ -24661,8 +24856,25 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("module", Style);
   verifyFormat("export", Style);
 
+  verifyFormat("import <Foo/Bar> /* comment */;", Style);
+  verifyFormat("import <Foo/Bar>; // Trailing comment", Style);
+
+  Style.ColumnLimit = 10;
+  verifyFormat("import Foo.Bar;", Style);
+  verifyFormat("export import Foo.Bar;", Style);
+  verifyFormat("export module Foo.Bar;", Style);
+  verifyFormat("export module Foo.Bar:Baz;", Style);
+  verifyFormat("import <Foo/Bar> /* comment */;", Style);
+  verifyFormat("import <Foo/Bar>; // Trailing comment", Style);
+
+  // Somewhat gracefully handle import in pre-C++20 code.
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");
   verifyFormat("_world->import<engine_module>();");
+
+  // But 'import' might also be a regular C++ namespace.
+  verifyFormat("import::SomeFunction(aaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "                     aaaaaaaaaaaaaaaaaaaaaaaaaaaaa);");
+  verifyFormat("import::Bar foo(val ? 2 : 1);");
 }
 
 TEST_F(FormatTest, CoroutineForCoawait) {

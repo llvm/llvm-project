@@ -300,7 +300,8 @@ void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
 void NVPTXPassConfig::addAddressSpaceInferencePasses() {
   // NVPTXLowerArgs emits alloca for byval parameters which can often
   // be eliminated by SROA.
-  addPass(createSROAPass());
+  addPass(createSROAPass(/*PreserveCFG=*/true,
+                         /*AggregateToVector=*/true));
   addPass(createNVPTXLowerAllocaPass());
   // TODO: Consider running InferAddressSpaces during opt, earlier in the
   // compilation flow.
@@ -358,6 +359,9 @@ void NVPTXPassConfig::addIRPasses() {
   addPass(createNVPTXAssignValidGlobalNamesPass());
   addPass(createGenericToNVVMLegacyPass());
 
+  // Lower variadic calls before address space inference.
+  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
+
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
   if (getNVPTXTargetMachine().getDrvInterface() == NVPTX::CUDA)
@@ -370,7 +374,6 @@ void NVPTXPassConfig::addIRPasses() {
   }
 
   addPass(createAtomicExpandLegacyPass());
-  addPass(createExpandVariadicsPass(ExpandVariadicsMode::Lowering));
   addPass(createNVPTXCtorDtorLoweringLegacyPass());
 
   // === LSR and other generic IR passes ===
@@ -391,7 +394,8 @@ void NVPTXPassConfig::addIRPasses() {
     addEarlyCSEOrGVNPass();
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
-    addPass(createSROAPass());
+    addPass(createSROAPass(/*PreserveCFG=*/true,
+                           /*AggregateToVector=*/true));
     addPass(createNVPTXTagInvariantLoadsPass());
     if (!DisableNVPTXIRPeephole)
       addPass(createNVPTXIRPeepholePass());

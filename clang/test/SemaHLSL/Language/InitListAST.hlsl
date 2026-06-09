@@ -147,8 +147,8 @@ TwoInts case6(TwoFloats TF4) {
 // conversions from a collection of scalar values, and structures.
 // CHECK-LABEL: Dumping case7
 // CHECK: VarDecl {{.*}} used D1 'Doggo' nrvo cinit
-// CHECK-NEXT: InitListExpr {{.*}} 'Doggo'
-// CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'Doggo' explicit
+// CHECK-NEXT: InitListExpr {{.*}} 'int4':'vector<int, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'int' lvalue .Z {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoInts' lvalue ParmVar {{.*}} 'TI1' 'TwoInts'
@@ -166,8 +166,8 @@ TwoInts case6(TwoFloats TF4) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <IntegralToFloating>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'Val' 'int'
-// CHECK-NEXT: InitListExpr {{.*}} 'float4[2]'
-// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'float4[2]' implicit
+// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .X {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue ParmVar {{.*}} 'TF1' 'TwoFloats'
@@ -180,7 +180,7 @@ TwoInts case6(TwoFloats TF4) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .Y {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue ParmVar {{.*}} 'TF2' 'TwoFloats'
-// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .X {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue ParmVar {{.*}} 'TF3' 'TwoFloats'
@@ -203,8 +203,8 @@ Doggo case7(TwoInts TI1, TwoInts TI2, int Val, TwoFloats TF1, TwoFloats TF2,
 // significantly different element types and grouping.
 // CHECK-LABEL: Dumping case8
 // CHECK: VarDecl {{.*}} used A1 'AnimalBits' nrvo cinit
-// CHECK-NEXT: InitListExpr {{.*}} 'AnimalBits'
-// CHECK-NEXT: InitListExpr {{.*}} 'int[4]'
+// CHECK-NEXT: InitListExpr {{.*}} 'AnimalBits' explicit
+// CHECK-NEXT: InitListExpr {{.*}} 'int[4]' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'int' lvalue vectorcomponent
 // CHECK-NEXT: MemberExpr {{.*}} 'int4':'vector<int, 4>' lvalue .LegState {{.*}}
@@ -233,7 +233,7 @@ Doggo case7(TwoInts TI1, TwoInts TI2, int Val, TwoFloats TF1, TwoFloats TF2,
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .HairCount {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
-// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
@@ -266,7 +266,7 @@ Doggo case7(TwoInts TI1, TwoInts TI2, int Val, TwoFloats TF1, TwoFloats TF2,
 // CHECK-NEXT: DeclRefExpr {{.*}} 'Doggo' lvalue ParmVar {{.*}} 'D1' 'Doggo'
 // CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 0
 // CHECK-NEXT: IntegerLiteral {{.*}} '__size_t':'unsigned long' 3
-// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>'
+// CHECK-NEXT: InitListExpr {{.*}} 'float4':'vector<float, 4>' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float' lvalue vectorcomponent
 // CHECK-NEXT: ArraySubscriptExpr {{.*}} 'float4':'vector<float, 4>' lvalue
@@ -836,8 +836,8 @@ Zoo case9(Doggo D1, AnimalBits A1) {
 // Case 10: Initialize an object with a base class from two objects.
 // CHECK-LABEL: Dumping case10
 // CHECK: | `-VarDecl {{.*}} used FF1 'FourFloats' nrvo cinit
-// CHECK-NEXT: InitListExpr {{.*}} 'FourFloats'
-// CHECK-NEXT: InitListExpr {{.*}} 'TwoFloats'
+// CHECK-NEXT: InitListExpr {{.*}} 'FourFloats' explicit
+// CHECK-NEXT: InitListExpr {{.*}} 'TwoFloats' implicit
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float' <LValueToRValue>
 // CHECK-NEXT: MemberExpr {{.*}} 'float' lvalue .X {{.*}}
 // CHECK-NEXT: DeclRefExpr {{.*}} 'TwoFloats' lvalue ParmVar {{.*}} 'TF1' 'TwoFloats'

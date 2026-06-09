@@ -23,4 +23,6 @@ define void @a(%"T2") !dbg !6 {
 ; This DICompositeType refers to !5 in type-mapping-bug3.ll
 !5 = !DICompositeType(tag: DW_TAG_structure_type, flags: DIFlagFwdDecl, identifier: "SHARED")
 
-!6 = distinct !DISubprogram(unit: !2)
+!6 = distinct !DISubprogram(unit: !2, type: !8)
+!7 = !{null}
+!8 = !DISubroutineType(types: !7)

@@ -71,3 +71,27 @@ __device__ void test_div_fmas_f64(double* out, double a, double b, double c, int
 __device__ void test_ds_swizzle(int* out, int a) {
   *out = __builtin_amdgcn_ds_swizzle(a, 32);
 }
+
+// CIR-LABEL: @_Z13test_readlanePiii
+// CIR: cir.call_llvm_intrinsic "amdgcn.readlane" {{.*}} : (!s32i, !s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z13test_readlanePiii
+// LLVM: call{{.*}} i32 @llvm.amdgcn.readlane.i32(i32 %{{.*}}, i32 %{{.*}})
+__device__ void test_readlane(int* out, int a, int b) {
+  *out = __builtin_amdgcn_readlane(a, b);
+}
+
+// CIR-LABEL: @_Z18test_readfirstlanePii
+// CIR: cir.call_llvm_intrinsic "amdgcn.readfirstlane" {{.*}} : (!s32i) -> !s32i
+// LLVM: define{{.*}} void @_Z18test_readfirstlanePii
+// LLVM: call{{.*}} i32 @llvm.amdgcn.readfirstlane.i32(i32 %{{.*}})
+__device__ void test_readfirstlane(int* out, int a) {
+  *out = __builtin_amdgcn_readfirstlane(a);
+}
+
+// CIR-LABEL: @_Z17test_dispatch_ptr
+// CIR: %{{.*}} = cir.call_llvm_intrinsic "amdgcn.dispatch.ptr" : () -> !cir.ptr<!void, target_address_space(4)>
+// LLVM-LABEL: @_Z17test_dispatch_ptr
+// LLVM: call{{.*}} ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+__device__ void test_dispatch_ptr(__attribute__((address_space(4))) void ** out) {
+  *out = (__attribute__((address_space(4))) void *)__builtin_amdgcn_dispatch_ptr();
+}

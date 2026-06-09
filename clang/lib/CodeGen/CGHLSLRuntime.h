@@ -79,6 +79,7 @@ namespace CodeGen {
 class CodeGenModule;
 class CodeGenFunction;
 class LValue;
+class AggValueSlot;
 
 class CGHLSLOffsetInfo {
   SmallVector<uint32_t> Offsets;
@@ -299,7 +300,12 @@ public:
   std::optional<LValue>
   emitResourceArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  CodeGenFunction &CGF);
-  bool emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr, CodeGenFunction &CGF);
+
+  bool emitGlobalResourceArray(CodeGenFunction &CGF, const Expr *E,
+                               AggValueSlot &DestSlot);
+  std::optional<LValue>
+  emitGlobalResourceArrayAsLValue(CodeGenFunction &CGF,
+                                  const VarDecl *ArrayDecl, SourceLocation Loc);
 
   std::optional<LValue> emitBufferArraySubscriptExpr(
       const ArraySubscriptExpr *E, CodeGenFunction &CGF,
@@ -348,6 +354,11 @@ private:
                              const clang::DeclaratorDecl *Decl,
                              HLSLAppliedSemanticAttr *Semantic,
                              std::optional<unsigned> Index);
+
+  bool initializeGlobalResourceArray(CodeGenFunction &CGF,
+                                     const VarDecl *ArrayDecl,
+                                     SourceLocation Loc,
+                                     AggValueSlot &DestSlot);
 
   llvm::Triple::ArchType getArch();
 

@@ -37,6 +37,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <cassert>
 #include <numeric>
 #include <optional>
 
@@ -4945,9 +4946,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_MEMSET:
   case G_MEMCPY:
   case G_MEMMOVE:
-    return lowerMemCpyFamily(MI);
   case G_MEMCPY_INLINE:
-    return lowerMemcpyInline(MI);
+    return lowerMemCpyFamily(MI);
   case G_ZEXT:
   case G_SEXT:
   case G_ANYEXT:
@@ -4969,7 +4969,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return Legalized;
   }
   case G_SMULFIX:
-    return lowerSmulfix(MI);
+  case G_UMULFIX:
+    return lowerMulfix(MI);
   }
 }
 
@@ -7115,19 +7116,23 @@ void LegalizerHelper::multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
   SmallVector<Register, 4> Factors;
 
   for (DstIdx = 1; DstIdx < DstParts; DstIdx++) {
-    // Collect low parts of muls for DstIdx.
-    for (unsigned i = DstIdx + 1 < SrcParts ? 0 : DstIdx - SrcParts + 1;
-         i <= std::min(DstIdx, SrcParts - 1); ++i) {
-      MachineInstrBuilder Mul =
-          B.buildMul(NarrowTy, Src1Regs[DstIdx - i], Src2Regs[i]);
-      Factors.push_back(Mul.getReg(0));
-    }
     // Collect high parts of muls from previous DstIdx.
     for (unsigned i = DstIdx < SrcParts ? 0 : DstIdx - SrcParts;
          i <= std::min(DstIdx - 1, SrcParts - 1); ++i) {
       MachineInstrBuilder Umulh =
           B.buildUMulH(NarrowTy, Src1Regs[DstIdx - 1 - i], Src2Regs[i]);
       Factors.push_back(Umulh.getReg(0));
+    }
+    // Collect low parts of muls for DstIdx. Visit the diagonal starting with
+    // the low Src1 part, so multiply-add selectors can use it as the first
+    // accumulated cross product.
+    unsigned LowStart = DstIdx + 1 < SrcParts ? 0 : DstIdx - SrcParts + 1;
+    unsigned LowEnd = std::min(DstIdx, SrcParts - 1);
+    for (unsigned RevI = LowEnd + 1; RevI != LowStart; --RevI) {
+      unsigned i = RevI - 1;
+      MachineInstrBuilder Mul =
+          B.buildMul(NarrowTy, Src1Regs[DstIdx - i], Src2Regs[i]);
+      Factors.push_back(Mul.getReg(0));
     }
     // Add CarrySum from additions calculated for previous DstIdx.
     if (DstIdx != 1) {
@@ -10656,8 +10661,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerVAArg(MachineInstr &MI) {
   return Legalized;
 }
 
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerSmulfix(MachineInstr &MI) {
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
+  [[maybe_unused]] unsigned OpCode = MI.getOpcode();
+  assert((OpCode == TargetOpcode::G_SMULFIX ||
+          OpCode == TargetOpcode::G_UMULFIX) &&
+         "Operator must be either G_SMULFIX or G_UMULFIX!");
   auto [Dst, LHS, RHS] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Dst);
   unsigned Scale = MI.getOperand(3).getImm();
@@ -10668,13 +10676,25 @@ LegalizerHelper::lowerSmulfix(MachineInstr &MI) {
     return Legalized;
   }
 
+  // TODO: Port other lowerng paths from SelectionDAG.
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
-  auto SExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
-  auto SExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
-  auto Mul = MIRBuilder.buildMul(WideTy, SExtLHS, SExtRHS);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
-  auto Shifted = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
-  MIRBuilder.buildTrunc(Dst, Shifted);
+  MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX) {
+    ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+  } else {
+    ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
+    ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+  }
+
+  auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
+  if (MI.getOpcode() == TargetOpcode::G_SMULFIX)
+    Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
+  else
+    Shift = MIRBuilder.buildLShr(WideTy, Mul, ShiftAmt);
+
+  MIRBuilder.buildTrunc(Dst, Shift);
 
   MI.eraseFromParent();
   return Legalized;
@@ -10903,46 +10923,6 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerMemcpyInline(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_MEMCPY_INLINE);
-
-  auto [Dst, Src, Len] = MI.getFirst3Regs();
-
-  const auto *MMOIt = MI.memoperands_begin();
-  const MachineMemOperand *MemOp = *MMOIt;
-  bool IsVolatile = MemOp->isVolatile();
-
-  // See if this is a constant length copy
-  auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
-  // FIXME: support dynamically sized G_MEMCPY_INLINE
-  assert(LenVRegAndVal &&
-         "inline memcpy with dynamic size is not yet supported");
-  uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
-  if (KnownLen == 0) {
-    MI.eraseFromParent();
-    return Legalized;
-  }
-
-  const auto &DstMMO = **MI.memoperands_begin();
-  const auto &SrcMMO = **std::next(MI.memoperands_begin());
-  Align DstAlign = DstMMO.getBaseAlign();
-  Align SrcAlign = SrcMMO.getBaseAlign();
-
-  return lowerMemcpyInline(MI, Dst, Src, KnownLen, DstAlign, SrcAlign,
-                           IsVolatile);
-}
-
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerMemcpyInline(MachineInstr &MI, Register Dst, Register Src,
-                                   uint64_t KnownLen, Align DstAlign,
-                                   Align SrcAlign, bool IsVolatile) {
-  assert(MI.getOpcode() == TargetOpcode::G_MEMCPY_INLINE);
-  return lowerMemcpy(MI, Dst, Src, KnownLen,
-                     std::numeric_limits<uint64_t>::max(), DstAlign, SrcAlign,
-                     IsVolatile);
-}
-
-LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
                              uint64_t KnownLen, uint64_t Limit, Align DstAlign,
                              Align SrcAlign, bool IsVolatile) {
@@ -11161,8 +11141,9 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   const unsigned Opc = MI.getOpcode();
   // This combine is fairly complex so it's not written with a separate
   // matcher function.
-  assert((Opc == TargetOpcode::G_MEMCPY || Opc == TargetOpcode::G_MEMMOVE ||
-          Opc == TargetOpcode::G_MEMSET) &&
+  assert((Opc == TargetOpcode::G_MEMCPY ||
+          Opc == TargetOpcode::G_MEMCPY_INLINE ||
+          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET) &&
          "Expected memcpy like instruction");
 
   auto MMOIt = MI.memoperands_begin();
@@ -11180,8 +11161,12 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
 
   // See if this is a constant length copy
   auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
-  if (!LenVRegAndVal)
+  if (!LenVRegAndVal) {
+    // FIXME: support dynamically sized G_MEMCPY_INLINE
+    assert(Opc != TargetOpcode::G_MEMCPY_INLINE &&
+           "inline memcpy with dynamic size is not yet supported");
     return UnableToLegalize;
+  }
   uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
 
   if (KnownLen == 0) {
@@ -11189,15 +11174,17 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
     return Legalized;
   }
 
-  if (MaxLen && KnownLen > MaxLen)
+  if (Opc != TargetOpcode::G_MEMCPY_INLINE && MaxLen && KnownLen > MaxLen)
     return UnableToLegalize;
 
   bool IsVolatile = MemOp->isVolatile();
-  if (Opc == TargetOpcode::G_MEMCPY) {
+  if (Opc == TargetOpcode::G_MEMCPY || Opc == TargetOpcode::G_MEMCPY_INLINE) {
     auto &MF = *MI.getParent()->getParent();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();
     bool OptSize = shouldLowerMemFuncForSize(MF);
-    uint64_t Limit = TLI.getMaxStoresPerMemcpy(OptSize);
+    uint64_t Limit = Opc == TargetOpcode::G_MEMCPY_INLINE
+                         ? std::numeric_limits<uint64_t>::max()
+                         : TLI.getMaxStoresPerMemcpy(OptSize);
     return lowerMemcpy(MI, Dst, Src, KnownLen, Limit, DstAlign, SrcAlign,
                        IsVolatile);
   }

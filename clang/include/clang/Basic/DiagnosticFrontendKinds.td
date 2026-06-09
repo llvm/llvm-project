@@ -45,8 +45,8 @@ def note_fe_backend_plugin: Note<"%0">, BackendInfo;
 
 def err_target_spirv_requires_vulkan : Error<
     "SPIR-V target requires a Vulkan environment">;
-def err_target_spirv_requires_shader_stage : Error<
-    "SPIR-V target requires a valid shader stage environment">;
+def err_target_spirv_invalid_shader_stage : Error<
+    "SPIR-V target requires a valid shader stage or no environment">;
 
 def warn_fe_override_module : Warning<
     "overriding the module target triple with %0">,

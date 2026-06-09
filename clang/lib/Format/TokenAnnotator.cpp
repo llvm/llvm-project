@@ -1399,11 +1399,7 @@ private:
         }
         break;
       }
-      if (Line.First->isOneOf(Keywords.kw_module, Keywords.kw_import) ||
-          Line.First->startsSequence(tok::kw_export, Keywords.kw_module) ||
-          Line.First->startsSequence(tok::kw_export, Keywords.kw_import)) {
-        Tok->setType(TT_ModulePartitionColon);
-      } else if (Line.First->is(tok::kw_asm)) {
+      if (Line.First->is(tok::kw_asm)) {
         Tok->setType(TT_InlineASMColon);
       } else if (Contexts.back().ColonIsDictLiteral || Style.isProto()) {
         Tok->setType(TT_DictLiteral);
@@ -1708,7 +1704,8 @@ private:
           break;
         if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator, tok::comma,
                               tok::arrow) ||
-            Previous->isPointerOrReference() ||
+            (!Previous->isTypeFinalized() &&
+             Previous->isPointerOrReference()) ||
             // User defined literal.
             Previous->TokenText.starts_with("\"\"")) {
           Previous->setType(TT_OverloadedOperator);
@@ -2704,6 +2701,7 @@ private:
 
     // int a or auto a.
     if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto) &&
+        !PreviousNotConst->endsSequence(Keywords.kw_import, tok::kw_export) &&
         PreviousNotConst->isNot(TT_StatementAttributeLikeMacro)) {
       return true;
     }
@@ -4062,6 +4060,67 @@ bool TokenAnnotator::mustBreakForReturnType(const AnnotatedLine &Line) const {
   return false;
 }
 
+bool TokenAnnotator::mustBreakBeforeReturnType(
+    const AnnotatedLine &Line) const {
+  assert(Line.MightBeFunctionDecl);
+
+  switch (Style.BreakBeforeReturnType) {
+  case FormatStyle::BBRTS_None:
+    return false;
+  case FormatStyle::BBRTS_All:
+    return true;
+  case FormatStyle::BBRTS_TopLevel:
+    return Line.Level == 0;
+  case FormatStyle::BBRTS_AllDefinitions:
+    return Line.mightBeFunctionDefinition();
+  case FormatStyle::BBRTS_TopLevelDefinitions:
+    return Line.Level == 0 && Line.mightBeFunctionDefinition();
+  }
+
+  return false;
+}
+
+static FormatToken *findReturnTypeStart(const AnnotatedLine &Line) {
+  auto *Tok = Line.getFirstNonComment();
+  if (!Tok)
+    return nullptr;
+
+  if (Tok->is(tok::kw_template)) {
+    auto *Opener = Tok->Next;
+    while (Opener && Opener->isNot(TT_TemplateOpener))
+      Opener = Opener->Next;
+    if (!Opener || !Opener->MatchingParen)
+      return nullptr;
+    Tok = Opener->MatchingParen->Next;
+  }
+
+  if (Tok && Tok->is(TT_RequiresClause)) {
+    while (Tok && !Tok->ClosesRequiresClause)
+      Tok = Tok->Next;
+    if (Tok)
+      Tok = Tok->Next;
+  }
+
+  while (Tok) {
+    if (isReturnTypePrefixSpecifier(*Tok) ||
+        Tok->isOneOf(tok::kw___attribute, tok::kw___declspec,
+                     TT_AttributeMacro)) {
+      auto *Next = Tok->Next;
+      if (Next && Next->is(tok::l_paren) && Next->MatchingParen)
+        Tok = Next->MatchingParen->Next;
+      else
+        Tok = Next;
+      continue;
+    }
+    if (Tok->is(TT_AttributeLSquare) && Tok->MatchingParen) {
+      Tok = Tok->MatchingParen->Next;
+      continue;
+    }
+    break;
+  }
+  return Tok;
+}
+
 void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   if (Line.Computed)
     return;
@@ -4180,6 +4239,17 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
   }
 
+  if (Line.MightBeFunctionDecl && LineIsFunctionDeclaration &&
+      mustBreakBeforeReturnType(Line)) {
+    if (auto *ReturnTypeStart = findReturnTypeStart(Line);
+        ReturnTypeStart && ReturnTypeStart != FirstNonComment &&
+        ReturnTypeStart->isNoneOf(TT_FunctionDeclarationName,
+                                  TT_CtorDtorDeclName, tok::tilde)) {
+      ReturnTypeStart->MustBreakBefore = true;
+      Line.ReturnTypeWrapped = true;
+    }
+  }
+
   if (First->is(TT_ElseLBrace)) {
     First->CanBreakBefore = true;
     First->MustBreakBefore = true;
@@ -4241,7 +4311,8 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
     }
 
     Current->CanBreakBefore =
-        Current->MustBreakBefore || canBreakBefore(Line, *Current);
+        !Line.IsModuleOrImportDecl &&
+        (Current->MustBreakBefore || canBreakBefore(Line, *Current));
 
     if (Current->is(TT_FunctionDeclarationLParen)) {
       InParameterList = true;
@@ -5157,23 +5228,19 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (!BeforeLeft || BeforeLeft->is(tok::kw_export))) {
       return true;
     }
-    // Space between `module :` and `import :`.
-    if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
-        Right.is(TT_ModulePartitionColon)) {
+    // Space between `import :`.
+    if (Left.is(Keywords.kw_import) && Right.is(TT_ModulePartitionColon))
       return true;
-    }
 
     if (Right.is(TT_AfterPPDirective))
       return true;
 
-    // No space between import foo:bar but keep a space between import :bar;
+    // No space between `module foo:bar`.
     if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
       return false;
     // No space between :bar;
-    if (Left.is(TT_ModulePartitionColon) &&
-        Right.isOneOf(tok::identifier, tok::kw_private)) {
+    if (Left.is(TT_ModulePartitionColon) && Right.is(tok::identifier))
       return false;
-    }
     if (Left.is(tok::ellipsis) && Right.is(tok::identifier) &&
         Line.First->is(Keywords.kw_import)) {
       return false;
@@ -6425,6 +6492,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
             !(Right.Next &&
               Right.Next->isOneOf(TT_FunctionDeclarationName, tok::kw_const)));
   }
+  if (Left.is(tok::hashhash) || Right.is(tok::hashhash))
+    return false;
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName,
                     TT_ClassHeadName, TT_QtProperty, tok::kw_operator)) {
     return true;

@@ -582,20 +582,6 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   auto &F = MF.getFunction();
   const auto &TM = static_cast<const AArch64TargetMachine &>(MF.getTarget());
 
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
-
-  auto OptLevel = MF.getTarget().getOptLevel();
-  auto EnableGlobalISelAtO = TM.getEnableGlobalISelAtO();
-
-  // GlobalISel is currently only enabled when the opt level is less than or
-  // equal to EnableGlobalISelAt or it was explicitly enabled via the CLI. If we
-  // encounter this check, we know GlobalISel was enabled. If not by these two,
-  // it must have been used as part of the SDAG pipeline to use GlobalISel for
-  // optnone.
-  if (static_cast<unsigned>(OptLevel) > EnableGlobalISelAtO && !GlobalISelFlag)
-    return !F.hasOptNone();
-
   if (!EnableSVEGISel && (F.getReturnType()->isScalableTy() ||
                           llvm::any_of(F.args(), [](const Argument &A) {
                             return A.getType()->isScalableTy();
@@ -613,7 +599,12 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
       Attrs.hasStreamingCompatibleInterface())
     return true;
 
-  return false;
+  auto OptLevel = MF.getTarget().getOptLevel();
+  bool IsGlobalISelPreferred =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false) ||
+      static_cast<unsigned>(OptLevel) <= TM.getEnableGlobalISelAtO() ||
+      F.hasOptNone();
+  return !IsGlobalISelPreferred;
 }
 
 void AArch64CallLowering::saveVarArgRegisters(

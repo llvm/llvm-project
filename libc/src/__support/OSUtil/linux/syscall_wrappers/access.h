@@ -25,10 +25,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> access(const char *path, int mode) {
-#ifdef SYS_access
-  int ret = syscall_impl<int>(SYS_access, path, mode);
-#elif defined(SYS_faccessat)
+#ifdef SYS_faccessat
   int ret = syscall_impl<int>(SYS_faccessat, AT_FDCWD, path, mode, 0);
+#elif defined(SYS_access)
+  int ret = syscall_impl<int>(SYS_access, path, mode);
 #else
 #error "access and faccessat syscalls not available."
 #endif

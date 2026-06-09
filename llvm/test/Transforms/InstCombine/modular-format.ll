@@ -98,8 +98,22 @@ define void @test_partial_aspects(i32 %arg) {
 
 declare void @partial_aspects(ptr, ...) #4
 
+;; The first argument index is 0 (e.g. vsnprintf). We cannot optimize it, so
+;; no transformation occurs and it shouldn't crash.
+define void @test_zero_first_arg(ptr %ap) {
+; CHECK-LABEL: @test_zero_first_arg(
+; CHECK-NEXT:    call void @zero_first_arg(ptr nonnull @.str.float, ptr [[AP:%.*]])
+; CHECK-NEXT:    ret void
+;
+  call void @zero_first_arg(ptr @.str.float, ptr %ap)
+  ret void
+}
+
+declare void @zero_first_arg(ptr, ptr) #5
+
 attributes #0 = { "modular-format"="printf,1,2,basic_mod,basic_impl" }
 attributes #1 = { "modular-format"="printf,1,2,float_present_mod,basic_impl,float" }
 attributes #2 = { "modular-format"="printf,1,2,unknown_aspects_mod,basic_impl,unknown1,unknown2" }
 attributes #3 = { "modular-format"="printf,2,3,first_arg_idx_mod,basic_impl,float" }
 attributes #4 = { "modular-format"="printf,1,2,multiple_aspects_mod,basic_impl,float,unknown" }
+attributes #5 = { "modular-format"="printf,1,0,zero_first_arg_mod,basic_impl,float" }

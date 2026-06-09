@@ -365,4 +365,54 @@ TEST(NamelistTests, NanInputAmbiguity) {
   EXPECT_EQ(got, expect);
 }
 
+// Tests that '!' terminates a NAMELIST value even without a preceding
+// value separator (extension matching gfortran, ifx, and classic nvfortran).
+TEST(NamelistTests, BangAsValueSeparator) {
+  OwningPtr<Descriptor> iDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{0})};
+  OwningPtr<Descriptor> rDesc{
+      MakeArray<TypeCategory::Real, static_cast<int>(sizeof(float))>(
+          std::vector<int>{}, std::vector<float>{0.f})};
+  OwningPtr<Descriptor> lDesc{
+      MakeArray<TypeCategory::Logical, static_cast<int>(sizeof(std::uint8_t))>(
+          std::vector<int>{}, std::vector<std::uint8_t>{0})};
+  OwningPtr<Descriptor> zDesc{
+      MakeArray<TypeCategory::Complex, static_cast<int>(sizeof(float))>(
+          std::vector<int>{}, std::vector<std::complex<float>>{{0.f, 0.f}})};
+  OwningPtr<Descriptor> cDesc{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{}, std::vector<std::string>{"        "}, 8)};
+  const NamelistGroup::Item items[]{{"i", *iDesc}, {"r", *rDesc}, {"l", *lDesc},
+      {"z", *zDesc}, {"c", *cDesc}};
+  const NamelistGroup group{"nml", 5, items};
+  // No space before any '!' — the '!' must still terminate each value
+  // and start a comment that runs to end of record.  Inside the character
+  // literal the '!' is preserved verbatim.
+  static char t1[]{"&nml i=42!comment       "
+                   " r=0.01!comment         "
+                   " l=.true.!comment       "
+                   " z=(1.,2.)!comment      "
+                   " c='a!b'!comment        "
+                   " /                      "};
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  SubscriptValue shape{6};
+  internalDesc.Establish(1, 24, t1, 1, &shape, CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk)
+      << "namelist input with '!' immediately after value";
+  EXPECT_EQ(*iDesc->ZeroBasedIndexedElement<int>(0), 42);
+  EXPECT_FLOAT_EQ(*rDesc->ZeroBasedIndexedElement<float>(0), 0.01f);
+  EXPECT_NE(*lDesc->ZeroBasedIndexedElement<std::uint8_t>(0), 0);
+  EXPECT_FLOAT_EQ(
+      zDesc->ZeroBasedIndexedElement<std::complex<float>>(0)->real(), 1.f);
+  EXPECT_FLOAT_EQ(
+      zDesc->ZeroBasedIndexedElement<std::complex<float>>(0)->imag(), 2.f);
+  std::string gotC{
+      cDesc->ZeroBasedIndexedElement<char>(0), cDesc->ElementBytes()};
+  EXPECT_EQ(gotC, "a!b     ");
+}
+
 // TODO: Internal NAMELIST error tests

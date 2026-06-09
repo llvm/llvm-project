@@ -44,11 +44,13 @@ public:
   /// 80x25. Also sets up the associated STDIN/STDOUT pipes and responds to
   /// the cursor-position query that ConPTY emits at startup.
   ///
+  /// \param req_cols, req_rows Optional terminal dimensions.
+  ///
   /// \return
   ///     An llvm::Error if the ConPTY could not be created, or if ConPTY is
   ///     not available on this version of Windows, llvm::Error::success()
   ///     otherwise.
-  llvm::Error OpenPseudoConsole();
+  llvm::Error OpenPseudoConsole(uint16_t req_cols = 0, uint16_t req_rows = 0);
 
   /// Creates a pair of anonymous pipes to use for stdio instead of a ConPTY.
   ///
@@ -68,6 +70,10 @@ public:
   /// end) that were passed to CreateProcessW. Must be called after a successful
   /// CreateProcessW to avoid keeping the pipes alive indefinitely.
   void CloseAnonymousPipes();
+
+  /// Closes any open ConPTY/pipe handles and resets internal state to a
+  /// freshly-constructed PseudoConsole.
+  void Reset();
 
   /// Returns whether the ConPTY and its pipes are currently open and valid.
   bool IsConnected() const;
@@ -128,12 +134,14 @@ public:
   void SetStopping(bool value) { m_stopping = value; };
 
 protected:
-  HANDLE m_conpty_handle = ((HANDLE)(long long)-1);
-  HANDLE m_conpty_output = ((HANDLE)(long long)-1);
-  HANDLE m_conpty_input = ((HANDLE)(long long)-1);
+  HANDLE m_conpty_handle = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_conpty_output = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_conpty_input = reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   // Pipe mode: child-side handles passed to CreateProcessW, closed after launch
-  HANDLE m_pipe_child_stdin = ((HANDLE)(long long)-1);
-  HANDLE m_pipe_child_stdout = ((HANDLE)(long long)-1);
+  HANDLE m_pipe_child_stdin =
+      reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
+  HANDLE m_pipe_child_stdout =
+      reinterpret_cast<HANDLE>(static_cast<intptr_t>(-1));
   Mode m_mode = Mode::None;
   std::mutex m_mutex{};
   std::condition_variable m_cv{};

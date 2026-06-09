@@ -300,3 +300,30 @@ void FastMathFlags::print(raw_ostream &O) const {
       O << " afn";
   }
 }
+
+FastMathFlags &FPMathOperator::getFastMathFlagsImpl() {
+  auto *I = cast<Instruction>(this);
+
+  if (FastMathFlagsStorage *Op = dyn_cast<FPUnaryOperator>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPBinaryOperator>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPTruncInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPExtInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FCmpInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<PHINode>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<SelectInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<CallInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<UIToFPInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<SIToFPInst>(I))
+    return Op->FMF;
+
+  llvm_unreachable("Unknown FPMathOperator!");
+}

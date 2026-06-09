@@ -139,9 +139,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO())
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -347,12 +346,12 @@ ToolChain::RuntimeLibType
 Fuchsia::GetRuntimeLibType(const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt")
-      getDriver().Diag(clang::diag::err_drv_invalid_rtlib_name)
-          << A->getAsString(Args);
+    if (Value != "compiler-rt" && Value != "platform")
+      getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
+          << Value << "Fuchsia";
   }
 
-  return ToolChain::RLT_CompilerRT;
+  return ToolChain::GetRuntimeLibType(Args);
 }
 
 ToolChain::CXXStdlibType Fuchsia::GetCXXStdlibType(const ArgList &Args) const {
@@ -473,8 +472,11 @@ void Fuchsia::AddCXXStdlibLibArgs(const ArgList &Args,
   }
 }
 
-SanitizerMask Fuchsia::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask
+Fuchsia::getSupportedSanitizers(StringRef BoundArch,
+                                Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::HWAddress;
   Res |= SanitizerKind::PointerCompare;

@@ -398,6 +398,9 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // classes will be resolved in the order defined by this value, with lower values
   // taking precedence over higher ones. Ties are resolved by enumeration order.
   int BaseClassOrder = ?;
+
+  // Stack ID to use for spill slots of this register class.
+  int SpillStackID = 0;
 }
 
 // The memberList in a RegisterClass is a dag of set operations. TableGen
@@ -551,7 +554,7 @@ class SubtargetFeature<string n, string f, string v, string d,
   // Implies - Features that this feature implies are present. If one of those
   // features isn't set, then this one shouldn't be set either.
   //
-  list<SubtargetFeature> Implies = i;
+  list<SubtargetFeature> Implies = !sort(f, i, f.Name);
 }
 
 /// Specifies a Subtarget feature that this instruction is deprecated on.

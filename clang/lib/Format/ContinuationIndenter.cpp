@@ -1528,8 +1528,26 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
       State.Stack.size() > 1) {
     if (Current.closesBlockOrBlockTypeList(Style))
       return State.Stack[State.Stack.size() - 2].NestedBlockIndent;
-    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit))
+    if (Current.MatchingParen && Current.MatchingParen->is(BK_BracedInit)) {
+      // The brace should line up with the start of the line in this case. The
+      // stack depth is checked to make sure that the brace is at the top
+      // level. It should contain the levels for the top, the assignment if
+      // there is an equal sign, and the braces.
+      //
+      // SomeStruct //
+      //     s = {
+      //         "xxxxxxxxxxxxx",
+      // };
+      if ((State.Stack.size() == 2 &&
+           Current.MatchingParen->getPreviousNonComment() &&
+           Current.MatchingParen->getPreviousNonComment()->is(
+               TT_StartOfName)) ||
+          (State.Stack.size() == 3 &&
+           State.Stack[1].Precedence == prec::Assignment)) {
+        return State.FirstIndent;
+      }
       return State.Stack[State.Stack.size() - 2].LastSpace;
+    }
     return State.FirstIndent;
   }
   // Indent a closing parenthesis at the previous level if followed by a semi,
@@ -1579,7 +1597,7 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
   // in ProtoBuf:
   //   optional int32 b = 2 [(foo_options) = {aaaaaaaaaaaaaaaaaaa: 123,
   //                                          bbbbbbbbbbbbbbbbbbbbbbbb:"baz"}];
-  // For Verilog, a quote following a brace is treated as an identifier.  And
+  // For Verilog, a quote preceding a brace is treated as an identifier.  And
   // Both braces and colons get annotated as TT_DictLiteral.  So we have to
   // check.
   if (Current.is(tok::identifier) && Current.Next &&
@@ -1654,7 +1672,9 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
                                     TT_JavaAnnotation,
                                     TT_LeadingJavaAnnotation))) ||
       (!Style.IndentWrappedFunctionNames &&
-       NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName))) {
+       NextNonComment->isOneOf(tok::kw_operator, TT_FunctionDeclarationName)) ||
+      (State.Line->ReturnTypeWrapped && PreviousNonComment &&
+       isReturnTypePrefixSpecifier(*PreviousNonComment))) {
     return std::max(IndentationAndAlignment(CurrentState.LastSpace),
                     CurrentState.Indent);
   }
@@ -1979,6 +1999,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
     NewParenState.UnindentOperator = false;
     NewParenState.NoLineBreak =
         NewParenState.NoLineBreak || CurrentState.NoLineBreakInOperand;
+    NewParenState.Precedence = PrecedenceLevel;
 
     // Don't propagate AvoidBinPacking into subexpressions of arg/param lists.
     if (PrecedenceLevel > prec::Comma)

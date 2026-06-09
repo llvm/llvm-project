@@ -166,14 +166,24 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
 }
 
-// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+// Returns true if VT is a P extension packed SIMD type.
 bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
   if (!HasStdExtP)
     return false;
 
-  if (is64Bit())
-    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
-  return VT == MVT::v4i8 || VT == MVT::v2i16;
+  // RV32 supports 32-bit and 64-bit vectors. RV64 only support 64-bit vectors.
+  if (!is64Bit() && (VT == MVT::v4i8 || VT == MVT::v2i16))
+    return true;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+}
+
+// Returns true if VT is a P extension packed double-wide SIMD type.
+bool RISCVSubtarget::isPExtPackedDoubleType(MVT VT) const {
+  if (!HasStdExtP || is64Bit())
+    return false;
+
+  return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {

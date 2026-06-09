@@ -292,12 +292,22 @@ static constexpr unsigned NumberOfOMPAllocateClauseModifiers =
 
 /// Contains 'interop' data for 'append_args' and 'init' clauses.
 class Expr;
+/// One entry of a prefer_type list. Each pref-spec carries an optional fr()
+/// foreign-runtime-id expression and zero or more attr() ext-string-literal
+/// expressions. Fr is nullptr for attr-only specs.
+struct OMPInteropPref final {
+  OMPInteropPref(Expr *Fr, llvm::SmallVector<Expr *, 2> Attrs)
+      : Fr(Fr), Attrs(std::move(Attrs)) {}
+  Expr *Fr = nullptr;
+  llvm::SmallVector<Expr *, 2> Attrs;
+};
 struct OMPInteropInfo final {
   OMPInteropInfo(bool IsTarget = false, bool IsTargetSync = false)
       : IsTarget(IsTarget), IsTargetSync(IsTargetSync) {}
   bool IsTarget;
   bool IsTargetSync;
-  llvm::SmallVector<Expr *, 4> PreferTypes;
+  bool HasPreferAttrs = false;
+  llvm::SmallVector<OMPInteropPref, 4> Prefs;
 };
 
 OpenMPDefaultClauseVariableCategory
