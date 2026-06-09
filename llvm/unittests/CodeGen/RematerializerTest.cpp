@@ -186,6 +186,11 @@ body:             |
 #define EXPECT_NUM_USERS(RegIdx, N)                                            \
   EXPECT_EQ(RW.getNumUsers(RegIdx), static_cast<unsigned>(N))
 
+/// Expects that register RegIdx in the rematerializer has a total of N
+/// dependencies.
+#define EXPECT_NUM_DEPENDENCIES(RegIdx, N)                                     \
+  EXPECT_EQ(RW->getReg(RegIdx).Dependencies.size(), static_cast<unsigned>(N))
+
 /// Expects that register RegIdx in the rematerializer has no users.
 #define EXPECT_NO_USERS(RegIdx) EXPECT_NUM_USERS(RegIdx, 0)
 
@@ -503,21 +508,217 @@ TEST_F(RematerializerTest, SubRegRematSupport) {
     Rematerializer::DependencyReuseInfo DRI;
 
     const unsigned MBB0 = 0, MBB1 = 1;
-    const RegisterIdx Cst2 = 0;
+    const RegisterIdx Cst01 = 0, Cst2 = 1, Cst99 = 2;
 
-    // - %01 is not rematerializable because it has multiplie definitions.
     // - %34 is not rematerializable because it is defined over multiple
     // regions.
     // - %56 is not rematerializable because the second defining MI is
     // unrematerializable due to the implicit def.
     // - %78 is not rematerializable because it is read by an MI not defining it
     // before its last definition.
-    // - %99 is not rematerializable because it has multiplie definitions.
+    EXPECT_EQ(RW->getNumRegs(), 3U);
 
-    RegisterIdx RematCst2 = RW->rematerializeToRegion(Cst2, MBB1, DRI);
-    RW.moveMIs(MBB0, MBB1, 1);
+    auto CheckBasicRemat = [&](RegisterIdx RegIdx,
+                               unsigned NumExpectDefs) -> void {
+      Rematerializer::DependencyReuseInfo DRI;
+      EXPECT_EQ(RW->getReg(RegIdx).Defs.size(), NumExpectDefs);
+      const RegisterIdx Remat = RW->rematerializeToRegion(RegIdx, MBB1, DRI);
+      RW.moveMIs(MBB0, MBB1, NumExpectDefs);
+      ASSERT_REGION_SIZES();
+      EXPECT_REMAT(Remat, RegIdx, MBB1, 1);
+    };
+
+    CheckBasicRemat(Cst01, 2);
+    CheckBasicRemat(Cst2, 1);
+    CheckBasicRemat(Cst99, 2);
+  });
+}
+
+/// Checks that the user transfer logic works correctly when different defining
+/// MIs of the same rematerializable register start dependening on different
+/// versions (original and rematerialized) of the same register.
+TEST_F(RematerializerTest, SubRegUserTransfer) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    undef %01.sub0:sreg_64 = S_MOV_B32 0
+    %01.sub1:sreg_64 = S_MOV_B32 1    
+    
+  bb.1:
+    undef %23.sub0:sreg_64 = S_MOV_B32 %01.sub0
+    %23.sub1:sreg_64 = S_MOV_B32 %01.sub1
+    S_NOP 0, implicit %23
+  
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+    Rollbacker Rollback;
+    RW->addListener(&Rollback);
+
+    const unsigned MBB1 = 1;
+    const RegisterIdx Cst01 = 0, Cst23 = 1;
+    EXPECT_EQ(RW->getReg(Cst01).Defs.size(), 2U);
+    EXPECT_EQ(RW->getReg(Cst23).Defs.size(), 2U);
+    MachineInstr *Cst23FirstDef = RW->getReg(Cst23).Defs[0];
+    MachineInstr *Cst23SecondDef = RW->getReg(Cst23).Defs[1];
+
+    // Create a rematerialization of %01 just before %23.
+    const RegisterIdx RematCst01 =
+        RW->rematerializeToPos(Cst01, MBB1, Cst23FirstDef, DRI);
+    EXPECT_NUM_USERS(Cst01, 2);
+    EXPECT_NUM_USERS(RematCst01, 0);
+    EXPECT_NUM_USERS(Cst23, 1);
+    EXPECT_NUM_DEPENDENCIES(Cst23, 1);
+
+    // Have the first def of %23 use the rematerialization of %01 (the second
+    // def still uses %01). This transfers a user to the rematerialization of
+    // %01 and adds the rematerialization of %01 as a rematerializable
+    // dependency to %23.
+    RW->transferUser(Cst01, RematCst01, MBB1, *Cst23FirstDef);
+    EXPECT_NUM_USERS(Cst01, 1);
+    EXPECT_NUM_USERS(RematCst01, 1);
+    EXPECT_NUM_USERS(Cst23, 1);
+    EXPECT_NUM_DEPENDENCIES(Cst23, 2);
+
+    // Have the second def of %23 use the rematerialization of %01 as well. This
+    // transfers a user to the rematerialization of %01 and removes %01 as a
+    // rematerializable dependency of %23.
+    RW->transferUser(Cst01, RematCst01, MBB1, *Cst23SecondDef);
+    EXPECT_NUM_USERS(Cst01, 0);
+    EXPECT_NUM_USERS(RematCst01, 2);
+    EXPECT_NUM_DEPENDENCIES(Cst23, 1);
+
+    // Rollback should restore everything to its original state.
+    Rollback.rollback(*RW);
+    EXPECT_NUM_USERS(Cst01, 2);
+    EXPECT_NUM_USERS(RematCst01, 0);
+    EXPECT_NUM_USERS(Cst23, 1);
+    EXPECT_NUM_DEPENDENCIES(Cst23, 1);
+  });
+}
+
+TEST_F(RematerializerTest, SubRegRollback) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    undef %01.sub0:sreg_64 = S_MOV_B32 0
+    %unremat0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
+    %01.sub1:sreg_64 = S_MOV_B32 1    
+    %unremat1:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
+  
+  bb.1:
+    undef %23.sub0:sreg_64 = S_MOV_B32 2
+    %23.sub1:sreg_64 = S_MOV_B32 3
+
+  bb.2:
+    undef %45.sub0:sreg_64 = S_MOV_B32 4
+    undef %67.sub0:sreg_64 = S_MOV_B32 6
+    %45.sub1:sreg_64 = S_MOV_B32 5
+    %67.sub1:sreg_64 = S_MOV_B32 7
+
+  bb.3:
+    S_NOP 0, implicit %01, implicit %23, implicit %45, implicit %67
+    S_NOP 0, implicit %unremat0, implicit %unremat1 
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+    Rollbacker Rollback;
+    RW->addListener(&Rollback);
+
+    const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2, MBB3 = 3;
+    const RegisterIdx Cst01 = 0, Cst23 = 1, Cst45 = 2, Cst67 = 3;
+
+    EXPECT_EQ(RW->getReg(Cst01).Defs.size(), 2U);
+    EXPECT_EQ(RW->getReg(Cst23).Defs.size(), 2U);
+    EXPECT_EQ(RW->getReg(Cst45).Defs.size(), 2U);
+    EXPECT_EQ(RW->getReg(Cst67).Defs.size(), 2U);
+
+    auto GetNextMI = [&](MachineInstr *MI) -> MachineInstr * {
+      return &*std::next(MI->getIterator());
+    };
+
+    auto GetDefMI = [&](RegisterIdx RegIdx, unsigned DefIdx) -> MachineInstr * {
+      return RW->getReg(RegIdx).Defs[DefIdx];
+    };
+
+    // Rematerialize and rollback %01.
+    MachineInstr *Unremat0 = GetNextMI(GetDefMI(Cst01, 0));
+    MachineInstr *Unremat1 = GetNextMI(GetDefMI(Cst01, 1));
+    const RegisterIdx RematCst01 =
+        RW->rematerializeToRegion(Cst01, MBB3, DRI.clear());
+    RW.moveMIs(MBB0, MBB3, 2);
     ASSERT_REGION_SIZES();
-    EXPECT_REMAT(RematCst2, Cst2, MBB1, 1);
+    EXPECT_REMAT(RematCst01, Cst01, MBB3, 1);
+
+    // Rollback must re-create MIs in the same order.
+    Rollback.rollback(*RW);
+    RW.moveMIs(MBB3, MBB0, 2);
+    ASSERT_REGION_SIZES();
+    EXPECT_EQ(Unremat0, GetNextMI(GetDefMI(Cst01, 0)));
+    EXPECT_EQ(Unremat1, GetNextMI(GetDefMI(Cst01, 1)));
+
+    // Rematerialize and rollback %23.
+    MachineBasicBlock::iterator EndOfMBB1 =
+        std::next(GetDefMI(Cst23, 1)->getIterator());
+    const RegisterIdx RematCst23 =
+        RW->rematerializeToRegion(Cst23, MBB3, DRI.clear());
+    RW.moveMIs(MBB1, MBB3, 2);
+    ASSERT_REGION_SIZES();
+    EXPECT_REMAT(RematCst23, Cst23, MBB3, 1);
+
+    // Rollback must re-create MIs in the same order.
+    Rollback.rollback(*RW);
+    RW.moveMIs(MBB3, MBB1, 2);
+    ASSERT_REGION_SIZES();
+    MachineInstr *Cst23Def0 = GetDefMI(Cst23, 0);
+    MachineInstr *Cst23Def1 = GetDefMI(Cst23, 1);
+    EXPECT_EQ(Cst23Def1, GetNextMI(Cst23Def0));
+    EXPECT_EQ(EndOfMBB1, std::next(Cst23Def1->getIterator()));
+
+    // Rematerialize and rollback %45 and %67.
+    MachineBasicBlock::iterator EndOfMBB2 =
+        std::next(GetDefMI(Cst67, 1)->getIterator());
+    const RegisterIdx RematCst45 =
+        RW->rematerializeToRegion(Cst45, MBB3, DRI.clear());
+    const RegisterIdx RematCst67 =
+        RW->rematerializeToRegion(Cst67, MBB3, DRI.clear());
+    RW.moveMIs(MBB2, MBB3, 4);
+    ASSERT_REGION_SIZES();
+    EXPECT_REMAT(RematCst45, Cst45, MBB3, 1);
+    EXPECT_REMAT(RematCst67, Cst67, MBB3, 1);
+
+    // Rollback must re-create MIs in the same order.
+    Rollback.rollback(*RW);
+    RW.moveMIs(MBB3, MBB2, 4);
+    ASSERT_REGION_SIZES();
+    MachineInstr *Cst45Def0 = GetDefMI(Cst45, 0);
+    MachineInstr *Cst67Def0 = GetDefMI(Cst67, 0);
+    MachineInstr *Cst45Def1 = GetDefMI(Cst45, 1);
+    MachineInstr *Cst67Def1 = GetDefMI(Cst67, 1);
+    EXPECT_EQ(Cst67Def0, GetNextMI(Cst45Def0));
+    EXPECT_EQ(Cst45Def1, GetNextMI(Cst67Def0));
+    EXPECT_EQ(Cst67Def1, GetNextMI(Cst45Def1));
+    EXPECT_EQ(EndOfMBB2, std::next(Cst67Def1->getIterator()));
+  });
+}
+
+/// Checks that instructions which use a rematerializable register as their
+/// first operand (here the KILL pseudo) are not treated as defining
+/// instructions for that register.
+TEST_F(RematerializerTest, FirstOperandNotDef) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    undef %0.sub0:sgpr_64 = S_MOV_B32 0
+    KILL %0
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+
+    const RegisterIdx Cst0 = 0;
+    EXPECT_EQ(RW->getNumRegs(), 1U);
+    EXPECT_EQ(RW->getReg(Cst0).Defs.size(), 1U);
+    EXPECT_NUM_USERS(Cst0, 1);
   });
 }
 
@@ -616,8 +817,9 @@ TEST_F(RematerializerTest, DeadDefCascadeDeletion) {
 
         Rematerializer::DependencyReuseInfo DRI;
         const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2;
-        const RegisterIdx Cst1Die = 1, AddDie = 2, Cst2 = 3, Add = 4;
-        ASSERT_EQ(RW->getNumRegs(), 5U);
+        const RegisterIdx Cst1Die = 1, AddDie = 2, MultidefDontDie = 3,
+                          Cst2 = 4, Add = 5;
+        ASSERT_EQ(RW->getNumRegs(), 6U);
 
         // Rematerialize %addDie along with %cst0Die right after %cst2.
         RW->rematerializeToRegion(AddDie, MBB1, DRI.reuse(Cst1Die));
@@ -625,7 +827,8 @@ TEST_F(RematerializerTest, DeadDefCascadeDeletion) {
 
         // %cst2 and %add are moved to their using region.
         RW->rematerializeToRegion(Cst2, MBB2, DRI.clear());
-        RW->rematerializeToRegion(Add, MBB2, DRI.clear());
+        RW->rematerializeToRegion(Add, MBB2,
+                                  DRI.clear().reuse(MultidefDontDie));
         RW.moveMIs(MBB1, MBB2, 2);
 
         // The rematerialization of %add makes %multidef.sub1 become a dead def.
@@ -643,7 +846,8 @@ TEST_F(RematerializerTest, DeadDefCascadeDeletion) {
         // deleted. It should be re-created at the beginning of its block, as it
         // was initially.
         Rollback.rollback(*RW);
-        EXPECT_EQ(RW->getReg(Cst2).DefMI, &*RW.MF.getBlockNumbered(1)->begin());
+        EXPECT_EQ(RW->getReg(Cst2).getFirstDef(),
+                  &*RW.MF.getBlockNumbered(1)->begin());
         RW.moveMIs(MBB2, MBB1, 2);
         ASSERT_REGION_SIZES();
       },
@@ -761,10 +965,10 @@ TEST_F(RematerializerTest, RollbackInvalidInsertPos) {
       RW.moveMIs(MBB1, MBB0, 3);
       ASSERT_REGION_SIZES();
 
-      MachineInstr *DefCst0 = RW->getReg(Cst0).DefMI;
-      MachineInstr *DefCst1 = RW->getReg(Cst1).DefMI;
-      MachineInstr *DefCst2 = RW->getReg(Cst2).DefMI;
-      MachineInstr *DefCst3 = RW->getReg(Cst3).DefMI;
+      MachineInstr *DefCst0 = RW->getReg(Cst0).getFirstDef();
+      MachineInstr *DefCst1 = RW->getReg(Cst1).getFirstDef();
+      MachineInstr *DefCst2 = RW->getReg(Cst2).getFirstDef();
+      MachineInstr *DefCst3 = RW->getReg(Cst3).getFirstDef();
       EXPECT_EQ(GetNextMI(DefCst0), DefCst1);
       EXPECT_EQ(GetNextMI(DefCst1), DefCst2);
       EXPECT_EQ(GetNextMI(DefCst2), DefCst3);
@@ -844,22 +1048,25 @@ TEST_F(RematerializerTest, RollbackNextPosIsRemat) {
     // This rematerialization is created right after %2, which is later
     // rematerialized. It is *not* recorded by the rollbacker.
     RegisterIdx RematCst0 = RW->rematerializeToRegion(Cst0, MBB1, DRI.clear());
-    ExpectSeq(RW->getReg(Cst2).DefMI, RW->getReg(RematCst0).DefMI);
-    ExpectSeq(RW->getReg(RematCst0).DefMI, Nop1);
+    ExpectSeq(RW->getReg(Cst2).getFirstDef(),
+              RW->getReg(RematCst0).getFirstDef());
+    ExpectSeq(RW->getReg(RematCst0).getFirstDef(), Nop1);
 
     RW->addListener(&Rollback);
 
     // This rematerialization is created right after %3, which is later
     // rematerialized. It is recorded by the rollbacker.
     RegisterIdx RematCst1 = RW->rematerializeToRegion(Cst1, MBB2, DRI.clear());
-    ExpectSeq(RW->getReg(Cst3).DefMI, RW->getReg(RematCst1).DefMI);
-    ExpectSeq(RW->getReg(RematCst1).DefMI, Nop2);
+    ExpectSeq(RW->getReg(Cst3).getFirstDef(),
+              RW->getReg(RematCst1).getFirstDef());
+    ExpectSeq(RW->getReg(RematCst1).getFirstDef(), Nop2);
 
     RegisterIdx RematCst2 = RW->rematerializeToRegion(Cst2, MBB3, DRI.clear());
     RegisterIdx RematCst3 = RW->rematerializeToRegion(Cst3, MBB3, DRI.clear());
 
-    ExpectSeq(RW->getReg(RematCst2).DefMI, RW->getReg(RematCst3).DefMI);
-    ExpectSeq(RW->getReg(RematCst3).DefMI, Nop3);
+    ExpectSeq(RW->getReg(RematCst2).getFirstDef(),
+              RW->getReg(RematCst3).getFirstDef());
+    ExpectSeq(RW->getReg(RematCst3).getFirstDef(), Nop3);
 
     // After rollback, %2 and %3 should be re-created at the beginning of their
     // respective original region.
@@ -867,11 +1074,12 @@ TEST_F(RematerializerTest, RollbackNextPosIsRemat) {
 
     // The rematerialization of %0 was not recorded so isn't rolled back, %2 is
     // re-created right before it.
-    ExpectSeq(RW->getReg(Cst2).DefMI, RW->getReg(RematCst0).DefMI);
-    ExpectSeq(RW->getReg(RematCst0).DefMI, Nop1);
+    ExpectSeq(RW->getReg(Cst2).getFirstDef(),
+              RW->getReg(RematCst0).getFirstDef());
+    ExpectSeq(RW->getReg(RematCst0).getFirstDef(), Nop1);
 
     // The rematerialization of %1 was recorded so is rolled back, %3 is
     // re-created before the S_NOP in its region.
-    ExpectSeq(RW->getReg(Cst3).DefMI, Nop2);
+    ExpectSeq(RW->getReg(Cst3).getFirstDef(), Nop2);
   });
 }

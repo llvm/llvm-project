@@ -28,11 +28,14 @@ namespace llvm {
 ///
 /// At the moment this supports rematerializing registers that meet all of the
 /// following constraints.
-/// 1. The register is virtual and has a single defining instruction.
-/// 2. The single defining instruction is deemed rematerializable by the TII and
-///    doesn't have any physical register use that is both non-constant and
+/// 1. The register is virtual.
+/// 2. The register is defined within a single region---potentially over
+///    multiple MIs---and isn't used by a MI that is not defining part of the
+///    register before its last defining MI.
+/// 3. All defining instructions are deemed rematerializable by the TII and
+///    don't have any physical register use that is both non-constant and
 ///    non-ignorable.
-/// 3. The register has at least one non-debug use that is inside or at a region
+/// 4. The register has at least one non-debug use that is inside or at a region
 ///    boundary (see below for what we consider to be a region).
 ///
 /// Rematerializable registers (represented by \ref Rematerializer::Reg) form a
@@ -88,47 +91,59 @@ namespace llvm {
 /// In its nomenclature, the rematerializer differentiates between "original
 /// registers" (registers that were present when it analyzed the function) and
 /// rematerializations of these original registers. Rematerializations have an
-/// "origin" which is the index of the original regiser they were rematerialized
-/// from (transitivity applies; a rematerialization and all of its own
-/// rematerializations have the same origin). Semantically, only original
-/// registers have rematerializations.
+/// "origin" which is the index of the original register they were
+/// rematerialized from (transitivity applies; a rematerialization and all of
+/// its own rematerializations have the same origin). Semantically, only
+/// original registers have rematerializations.
+///
+/// Dealing with sub-registers is complicated, we have to handle dead-defs,
+/// undef flags, and connected components
 class Rematerializer {
 public:
   /// Index type for rematerializable registers.
   using RegisterIdx = unsigned;
 
-  /// A rematerializable register defined by a single machine instruction.
+  /// A rematerializable register, potentially defined by multiple instructions.
   ///
   /// A rematerializable register has a set of dependencies, which correspond
-  /// to the unique read register operands of its defining instruction and which
-  /// can themselves be rematerializable. Operand indices corresponding to
-  /// unrematerializable dependencies are managed by and queried from the
-  /// rematerializer, whereas rematerializable ones are part of this struct and
-  /// identified through their register index.
+  /// to the unique read register operands of its defining instruction(s) and
+  /// which can themselves be rematerializable. Operands of defining
+  /// instructions corresponding to unrematerializable dependencies are managed
+  /// by and queried from the rematerializer, whereas rematerializable ones are
+  /// part of this struct and identified through their register index.
   ///
   /// A rematerializable register also has an arbitrary number of users in an
   /// arbitrary number of regions, potentially including its own defining
   /// region. When rematerializations lead to operand changes in users, a
   /// register may find itself without any user left, at which point the
-  /// rematerializer deletes it (setting its defining MI to nullptr).
+  /// rematerializer deletes it (emptying \ref Reg::Defs).
   struct Reg {
-    /// Single MI defining the rematerializable register.
-    MachineInstr *DefMI;
-    /// Defining region of \p DefMI.
+    /// All instructions that define the register, in program order.
+    SmallVector<MachineInstr *, 1> Defs;
+    /// Defining region of the register.
     unsigned DefRegion;
     /// The rematerializable register's lane bitmask.
     LaneBitmask Mask;
 
     using RegionUsers = SmallDenseSet<MachineInstr *, 4>;
-    /// Uses of the register, mapped by region.
+    /// Uses of the register, mapped by region. Users that also define a part of
+    /// the register are considered defs and not accounted for here.
     SmallDenseMap<unsigned, RegionUsers, 2> Uses;
+
     /// This register's rematerializable dependencies, one per unique
-    /// rematerializable register operand.
+    /// rematerializable register operand over all definitions.
     SmallVector<RegisterIdx, 2> Dependencies;
 
-    /// Returns the rematerializable register from its defining instruction.
+    MachineInstr *getFirstDef() const { return Defs.front(); }
+    MachineInstr *getLastDef() const { return Defs.back(); }
+
+    /// Returns the rematerializable register from one of its defining
+    /// instructions.
     Register getDefReg() const {
-      assert(DefMI && "defining instruction was deleted");
+      const MachineInstr *DefMI = getFirstDef();
+      assert(DefMI && "defining instruction(s) were deleted");
+      if (!DefMI->getOperand(0).isDef())
+        dbgs() << *DefMI;
       assert(DefMI->getOperand(0).isDef() && "not a register def");
       return DefMI->getOperand(0).getReg();
     }
@@ -143,17 +158,28 @@ public:
       return Uses.size() > 1 || Uses.begin()->first != DefRegion;
     }
 
+    /// Returns the index of \p DefMI in the register's definitions order.
+    /// Returns the number of definitions if \p DefMI is not a definition of the
+    /// register.
+    unsigned getDefIdx(MachineInstr *DefMI) const {
+      return std::distance(Defs.begin(), find(Defs, DefMI));
+    }
+
     /// Returns the first and last user of the register in region \p UseRegion.
     /// If the register has no user in the region, returns a pair of nullptr's.
     std::pair<MachineInstr *, MachineInstr *>
     getRegionUseBounds(unsigned UseRegion, const LiveIntervals &LIS) const;
 
-    bool isAlive() const { return DefMI; }
+    bool isAlive() const { return !Defs.empty(); }
 
   private:
     void addUser(MachineInstr *MI, unsigned Region);
     void addUsers(const RegionUsers &NewUsers, unsigned Region);
     void eraseUser(MachineInstr *MI, unsigned Region);
+
+    /// Erases user \p MI from region \p Region if it exists. Returns whether \p
+    /// MI was actually deleted.
+    bool tryEraseUser(MachineInstr *MI, unsigned Region);
 
     friend Rematerializer;
   };
@@ -371,11 +397,15 @@ public:
                                MachineBasicBlock::iterator InsertPos,
                                SmallVectorImpl<RegisterIdx> &&Dependencies);
 
-  /// Re-creates a previously deleted register \p RegIdx before \p InsertPos,
-  /// which must be in the register's original defining region. \p DefReg must
-  /// be the original virtual register that \p RegIdx used to define.
-  /// Dependencies are assumed to already exist in the MIR.
-  void recreateReg(RegisterIdx RegIdx, MachineBasicBlock::iterator InsertPos,
+  /// Re-creates each defining instruction of a previously deleted register \p
+  /// RegIdx before each position in \p Positions (one position per defining
+  /// instruction, in the same order). Positions must be in the same region as
+  /// the deleted register, and earlier than all uses of the register in the
+  /// region. \p DefReg must be the original virtual register that \p RegIdx
+  /// used to define. Rematerializable dependencies are assumed to already exist
+  /// in the MIR.
+  void recreateReg(RegisterIdx RegIdx,
+                   ArrayRef<MachineBasicBlock::iterator> Positions,
                    Register DefReg);
 
   /// Transfers all users of register \p FromRegIdx in region \p UseRegion to \p
@@ -417,7 +447,8 @@ public:
 
   Printable printDependencyDAG(RegisterIdx RootIdx) const;
   Printable printID(RegisterIdx RegIdx) const;
-  Printable printRematReg(RegisterIdx RegIdx, bool SkipRegions = false) const;
+  Printable printRematReg(RegisterIdx RegIdx, bool SkipRegions = false,
+                          unsigned DefIdx = 0) const;
   Printable printRegUsers(RegisterIdx RegIdx) const;
   Printable printUser(const MachineInstr *MI,
                       std::optional<unsigned> UseRegion = std::nullopt) const;
@@ -483,7 +514,7 @@ private:
   void postRematerialization(RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx);
 
   /// Common pre-processing step before deleting a register \p DeleteRegIdx. The
-  /// register's defining instruction must still be alive.
+  /// register must still have alive definitions.
   void preDeletion(RegisterIdx DeleteRegIdx);
 
   /// Extends \p LI over \p Mask to be live at \p UdeIdx.
@@ -518,8 +549,7 @@ private:
 
   /// Determines whether \p MI is considered rematerializable. This further
   /// restricts constraints imposed by the TII on rematerializable instructions,
-  /// requiring for example that the defined register is virtual and only
-  /// defined once.
+  /// requiring for example that the defined register is virtual.
   bool isMIRematerializable(const MachineInstr &MI) const;
 
   /// Implementation of \ref Rematerializer::transferUser that doesn't update
@@ -561,14 +591,14 @@ private:
     RegisterIdx Idx;
     /// Original register.
     Register DefReg;
-    /// Original definition of the register. The underlying MI no longer exist
-    /// at rollback time, but may be referenced as re-creation position for
+    /// Original definitions of the register. The underlying MIs no longer exist
+    /// at rollback time, but may be referenced as re-creation positions for
     /// previously deleted registers.
-    MachineInstr *DefMI;
+    SmallVector<MachineInstr *, 1> Defs;
 
     DeadReg(RegisterIdx Idx, const Rematerializer &Remater)
         : Idx(Idx), DefReg(Remater.getReg(Idx).getDefReg()),
-          DefMI(Remater.getReg(Idx).DefMI) {}
+          Defs(Remater.getReg(Idx).Defs) {}
   };
 
   /// An insertion position in the MIR. The pointer should be interpreted as:
@@ -579,8 +609,9 @@ private:
   /// Original registers that have been deleted, in order of deletion.
   SmallVector<DeadReg> DeadRegs;
   /// Re-creation positions for all original registers that have been deleted,
-  /// in register deletion order. A position is either a MachineInstr* that
-  /// existed in the MIR at the time the rollbacker was attached to the
+  /// one per defining instruction, in program order for any given register and
+  /// in register deletion order overall. A position is either a MachineInstr*
+  /// that existed in the MIR at the time the rollbacker was attached to the
   /// rematerializer, or a MachineBasicBlock*.
   SmallVector<InsertBeforePos> Positions;
   /// Maps all re-creation positions that exist in \ref Positions to the indices
