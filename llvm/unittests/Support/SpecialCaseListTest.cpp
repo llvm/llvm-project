@@ -419,7 +419,7 @@ TEST_F(SpecialCaseListTest, FileIdx) {
 #ifdef _WIN32
 TEST_F(SpecialCaseListTest, CanonicalizePathsOnWindows) {
   std::unique_ptr<SpecialCaseList> SCL =
-      makeSpecialCaseList("#!canonical-paths\n"
+      makeSpecialCaseList("#!special-case-list-v4\n"
                           "\n"
                           "src:*foo/bar*\n"
                           "src:*foo\\\\baz\n"
@@ -432,6 +432,7 @@ TEST_F(SpecialCaseListTest, CanonicalizePathsOnWindows) {
   // The canonicalization only applies to files
   EXPECT_TRUE(SCL->inSection("", "fun", "hi\\bye", "category"));
 }
+
 #endif
 
 } // namespace

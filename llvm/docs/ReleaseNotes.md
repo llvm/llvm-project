@@ -292,9 +292,9 @@ Makes programs 10x faster by doing Special New Thing.
   a zero input results in poison.
 
 * (Sanitizer Special Case Lists)[https://clang.llvm.org/docs/SanitizerSpecialCaseList.html]
-  may now be prefixed with ``#!canonical-paths`` to specify that filename patterns
-  should be matched against canonicalized paths, without leading dots or slashes
-  and (on Windows only) without any backslashes.
+  version 4 (indicated by ``#!special-case-list-v4``) now specifies that filename
+  patterns should be matched against canonicalized paths, without leading dots or
+  slashes and (on Windows only) without any backslashes.
 
 
 * Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that

@@ -330,7 +330,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     Buffer = Buffer.ltrim(" \t\r\n");
   }
 
-  CanonicalizePaths = Buffer.consume_front("#!canonical-paths\n");
+  CanonicalizePaths = Version > 3;
 
   // In https://reviews.llvm.org/D154014 we added glob support and planned
   // to remove regex support in patterns. We temporarily support the

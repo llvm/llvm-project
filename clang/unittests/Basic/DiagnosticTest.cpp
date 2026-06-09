@@ -417,7 +417,7 @@ TEST_F(SuppressionMappingTest, ParsingRespectsOtherWarningOpts) {
 
 #ifdef _WIN32
 TEST_F(SuppressionMappingTest, CanonicalizesSlashesOnWindows) {
-  llvm::StringLiteral SuppressionMappingFile = R"(#!canonical-paths
+  llvm::StringLiteral SuppressionMappingFile = R"(#!special-case-list-v4
   [unused]
   src:*clang/*
   src:*clang/lib/Sema/*=emit

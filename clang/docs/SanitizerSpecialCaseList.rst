@@ -238,14 +238,11 @@ tool-specific docs.
   file separators, and writing patterns to match both variants can be
   inconvenient.
   
-  If the special case list file begins with ``#!canonical-paths``, then paths
+  File path canonicalization is supported in version 4 or later (indicated by
+  starting the file with ``#!special-case-list-v4``). In this version, paths
   will be canonicalized before patterns are matched against them. This involves
   stripping any leading dots and slashes, and (on Windows only) converting all
   backslashes to forward slashes.
-
-  If the file uses both ``#!special-case-list-v1`` and ``#!canonical-paths``,
-  then they should occupy the first two lines, and ``#!canonical-paths`` must
-  appear on the second line.
 
 ``mainfile`` is similar to applying ``-fno-sanitize=`` to a set of files but
 does not need plumbing into the build system. This works well for internal
