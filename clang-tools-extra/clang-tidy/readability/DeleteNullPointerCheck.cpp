@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -52,9 +53,6 @@ void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
   auto Diag = diag(
       IfWithDelete->getBeginLoc(),
       "'if' statement is unnecessary; deleting null pointer has no effect");
-  if (IfWithDelete->hasElseStorage())
-    return;
-  // FIXME: generate fixit for this case.
 
   const std::optional<Token> PrevTok = utils::lexer::getPreviousToken(
       IfWithDelete->getThen()->getBeginLoc(), *Result.SourceManager,
@@ -64,6 +62,19 @@ void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
 
   Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
       IfWithDelete->getBeginLoc(), PrevTok->getLocation()));
+
+  if (IfWithDelete->hasElseStorage()) {
+    const auto *ElseCompound = dyn_cast<CompoundStmt>(IfWithDelete->getElse());
+    if (Compound && ElseCompound) {
+      Diag << FixItHint::CreateRemoval(
+          CharSourceRange::getTokenRange(Compound->getLBracLoc()));
+      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+          Compound->getRBracLoc(), ElseCompound->getLBracLoc()));
+      Diag << FixItHint::CreateRemoval(
+          CharSourceRange::getTokenRange(ElseCompound->getRBracLoc()));
+    }
+    return;
+  }
 
   if (Compound) {
     Diag << FixItHint::CreateRemoval(

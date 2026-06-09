@@ -125,7 +125,8 @@ void f() {
   char *c2;
   if (c2) {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'if' statement is unnecessary;
-    // CHECK-FIXES: } else {
+    // CHECK-FIXES-NOT: if (c2) {
+    // CHECK-FIXES: delete c2;
     // CHECK-FIXES: c2 = c;
     delete c2;
   } else {
@@ -155,4 +156,18 @@ void g() {
     int x = 5;
     delete p6;
   }
+}
+
+void h() {
+  int *p7 = nullptr;
+  // #7
+  if (p7) {
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
+    delete p7;
+  } else {
+    p7 = new int(42);
+  }
+  // CHECK-FIXES: // #7
+  // CHECK-FIXES: delete p7;
+  // CHECK-FIXES: p7 = new int(42);
 }
