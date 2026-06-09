@@ -555,15 +555,22 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
     # response when it arrives. An optional timeout for the response may be passed.
     # If allow_failure is passed, then the result may instead be a str containing the fail reason if the request failed.
     def _communicate_request(
-        self, command: str, arguments=None, timeout: float = 60.0, allow_failure=False
+        self, command: str, arguments=None, timeout: float = 60.0
+    ) -> Dict:
+        req_id = self.send_message(self.make_request(command, arguments))
+        response = self._await_response(req_id, timeout)
+        if not response["success"]:
+            raise DebuggerException(
+                f"received failure response for command {command}: {response['message']}"
+            )
+        return response["body"]
+
+    def _communicate_fallible_request(
+        self, command: str, arguments=None, timeout: float = 60.0
     ) -> Union[Dict, str]:
         req_id = self.send_message(self.make_request(command, arguments))
         response = self._await_response(req_id, timeout)
         if not response["success"]:
-            if not allow_failure:
-                raise DebuggerException(
-                    f"received failure response for command {command}"
-                )
             return response["message"]
         return response["body"]
 
@@ -1013,12 +1020,53 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
             stop_reason=reason,
         )
 
-    def collect_watches(self, step: StepIR, watches: List[str]):
+    def collect_watches(
+        self, step: StepIR, watches: List[str], scope_watches: List[str]
+    ):
         """Evaluates the provided watches and stores their evaluation results (ValueIR) in the provided step."""
         frame_idx = 0
-        if not watches:
+        if not watches and not scope_watches:
             return
         active_exprs = set(watches)
+        active_scopes = set(scope_watches)
+        frame_loc = step.frames[frame_idx].loc
+        frame_id = self._debugger_state.frame_map[frame_idx]
+        frame_scopes = self._communicate_request("scopes", {"frameId": frame_id})
+        for scope in frame_scopes["scopes"]:
+            scope_name = scope["name"]
+            if scope_name not in active_scopes:
+                continue
+            scope_vars_ref = scope["variablesReference"]
+            scope_vars = self._communicate_request(
+                "variables", {"variablesReference": scope_vars_ref}
+            )
+            assert isinstance(scope_vars, dict)
+            scope_var_values = {}
+            # Evaluate all scope variables.
+            for var in scope_vars["variables"]:
+                result = var["value"]
+                # Check to see whether this variable is in-scope yet.
+                # FIXME: This is just the best solution I can see right now, but we may want better in
+                # future (especially for languages with non-C-like declaration/scoping semantics).
+                if "declarationLocationReference" in var:
+                    declaration_loc = self._communicate_request(
+                        "locations",
+                        {"locationReference": var["declarationLocationReference"]},
+                    )
+                    if declaration_loc["line"] >= frame_loc.lineno:
+                        continue
+                value = self._evaluate_result_value(
+                    var["evaluateName"], result, var.get("type")
+                )
+                self._evaluate_subvariables(value, var["variablesReference"])
+                scope_var_values[value.expression] = value
+            step.scope_watches[scope_name] = list(scope_var_values.keys())
+            for var_name in sorted(step.scope_watches[scope_name]):
+                step.watches[var_name] = scope_var_values[var_name]
+            for expr in list(active_exprs):
+                if expr in scope_var_values:
+                    active_exprs.remove(expr)
+
         for expr in active_exprs:
             step.watches[expr] = self.evaluate_expression(expr, frame_idx)
 
@@ -1036,7 +1084,9 @@ class DAP(DebuggerBase, metaclass=abc.ABCMeta):
 
     @staticmethod
     @abc.abstractmethod
-    def _evaluate_result_value(expression: str, result_string: str) -> ValueIR:
+    def _evaluate_result_value(
+        expression: str, result_string: str, type_string: Optional[str]
+    ) -> ValueIR:
         """For the result of an "evaluate" message, return a ValueIR. Implementation must be debugger-specific."""
 
     # For the given `value` and associated `variables_reference`, recursively requests "variables" information for all

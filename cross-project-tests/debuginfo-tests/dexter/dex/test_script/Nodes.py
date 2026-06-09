@@ -18,14 +18,7 @@ from dex.utils.Exceptions import Error
 
 
 def setup_yaml_parser(loader):
-    reg_classes = [
-        Where,
-        Value,
-        DexRange,
-        Label,
-        Then,
-        Address,
-    ]
+    reg_classes = [Where, Value, DexRange, Label, Then, Address, ValueAll]
     for c in reg_classes:
         c.register_yaml(loader)
 
@@ -156,9 +149,13 @@ class Expect:
         excluding any subvalues (i.e. struct members), or None if there is no valid result for this ValueIR.
         """
 
-    @abc.abstractmethod
-    def get_watched_expr(self) -> str:
-        """Returns the list of expressions that this Expect wants to evaluate."""
+    def get_watched_expr(self) -> Optional[str]:
+        """Returns the expression that this Expect wants to evaluate."""
+        return None
+
+    def get_watched_scope(self) -> Optional[str]:
+        """Returns the scope that this Expect wants to evaluate."""
+        return None
 
 
 class Value(Expect):
@@ -192,6 +189,34 @@ class Value(Expect):
     def register_yaml(loader):
         yaml.add_constructor("!value", Value.constructor, loader)
         yaml.add_representer(Value, Value.representer)
+
+
+class ValueAll(Expect):
+    def __init__(self, scope_name: str):
+        self.scope_name = scope_name
+
+    def __repr__(self):
+        return f"ValueAll({self.scope_name})"
+
+    @staticmethod
+    def get_variable_result(value: ValueIR) -> Optional[str]:
+        return Value.get_variable_result(value)
+
+    def get_watched_scope(self) -> Optional[str]:
+        return self.scope_name
+
+    @staticmethod
+    def constructor(loader, node):
+        return ValueAll(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!value/all", data.scope_name)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!value/all", ValueAll.constructor, loader)
+        yaml.add_representer(ValueAll, ValueAll.representer)
 
 
 ##############
