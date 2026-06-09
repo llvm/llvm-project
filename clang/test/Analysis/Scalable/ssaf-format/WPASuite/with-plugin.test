@@ -1,0 +1,132 @@
+// Tests for clang-ssaf-format --type wpa that require the example plugin.
+
+// REQUIRES: plugins
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Read errors
+// ============================================================================
+
+// 'result' field is absent; the deserializer lookup succeeds but the field
+// check fires before the deserializer is called.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/result-entry-missing-result-field.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=NO-RESULT-FIELD
+// NO-RESULT-FIELD:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}result-entry-missing-result-field.json'
+// NO-RESULT-FIELD-NEXT: reading WPA results from field 'results'
+// NO-RESULT-FIELD-NEXT: reading WPA result entry from index '1'
+// NO-RESULT-FIELD-NEXT: failed to read AnalysisResult from field 'result': expected JSON object
+
+// 'result' is a string, not an object.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/result-entry-result-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=RESULT-NOT-OBJ
+// RESULT-NOT-OBJ:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}result-entry-result-not-object.json'
+// RESULT-NOT-OBJ-NEXT: reading WPA results from field 'results'
+// RESULT-NOT-OBJ-NEXT: reading WPA result entry from index '2'
+// RESULT-NOT-OBJ-NEXT: failed to read AnalysisResult from field 'result': expected JSON object
+
+// ============================================================================
+// TagsAnalysisResult deserializer errors
+// ============================================================================
+
+// Deserializer returns an error (tags field has wrong type).
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/result-entry-deserializer-error.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DESER-ERR
+// DESER-ERR:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}result-entry-deserializer-error.json'
+// DESER-ERR-NEXT: reading WPA results from field 'results'
+// DESER-ERR-NEXT: reading WPA result entry from index '2'
+// DESER-ERR-NEXT: missing or invalid field 'tags'
+
+// 'tags' field is absent.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/tags-result-missing-tags.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=TAGS-MISSING
+// TAGS-MISSING:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}tags-result-missing-tags.json'
+// TAGS-MISSING-NEXT: reading WPA results from field 'results'
+// TAGS-MISSING-NEXT: reading WPA result entry from index '1'
+// TAGS-MISSING-NEXT: missing or invalid field 'tags'
+
+// tags element is not a string.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/tags-result-bad-element.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=TAGS-BAD-ELEM
+// TAGS-BAD-ELEM:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}tags-result-bad-element.json'
+// TAGS-BAD-ELEM-NEXT: reading WPA results from field 'results'
+// TAGS-BAD-ELEM-NEXT: reading WPA result entry from index '0'
+// TAGS-BAD-ELEM-NEXT: tags element at index 2 is not a string
+
+// Duplicate analysis name in results array.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/duplicate-analysis-name.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUPLICATE
+// DUPLICATE:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}duplicate-analysis-name.json'
+// DUPLICATE-NEXT: reading WPA results from field 'results'
+// DUPLICATE-NEXT: failed to insert WPA result at index '1': encountered duplicate 'AnalysisName(TagsAnalysisResult)'
+
+// ============================================================================
+// PairsAnalysisResult deserializer errors
+// ============================================================================
+
+// 'pair_counts' field has wrong type.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/pairs-result-bad-pair-counts.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-BAD-FIELD
+// PAIRS-BAD-FIELD:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}pairs-result-bad-pair-counts.json'
+// PAIRS-BAD-FIELD-NEXT: reading WPA results from field 'results'
+// PAIRS-BAD-FIELD-NEXT: reading WPA result entry from index '1'
+// PAIRS-BAD-FIELD-NEXT: missing or invalid field 'pair_counts'
+
+// pair_counts element is not an object.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/pairs-result-entry-not-object.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-NOT-OBJ
+// PAIRS-NOT-OBJ:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}pairs-result-entry-not-object.json'
+// PAIRS-NOT-OBJ-NEXT: reading WPA results from field 'results'
+// PAIRS-NOT-OBJ-NEXT: reading WPA result entry from index '0'
+// PAIRS-NOT-OBJ-NEXT: pair_counts element at index 1 is not an object
+
+// Missing 'entity_id' in pair_counts entry.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/pairs-result-missing-entity-id.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-NO-EID
+// PAIRS-NO-EID:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}pairs-result-missing-entity-id.json'
+// PAIRS-NO-EID-NEXT: reading WPA results from field 'results'
+// PAIRS-NO-EID-NEXT: reading WPA result entry from index '0'
+// PAIRS-NO-EID-NEXT: missing or invalid 'entity_id' field at index 2
+
+// 'count' field has wrong type.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/pairs-result-bad-count.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=PAIRS-BAD-COUNT
+// PAIRS-BAD-COUNT:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}pairs-result-bad-count.json'
+// PAIRS-BAD-COUNT-NEXT: reading WPA results from field 'results'
+// PAIRS-BAD-COUNT-NEXT: reading WPA result entry from index '0'
+// PAIRS-BAD-COUNT-NEXT: missing or invalid 'count' field at index 2
+
+// ============================================================================
+// TagsPairsAnalysisResult deserializer errors
+// ============================================================================
+
+// Missing 'max_pairs_per_entity' field.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/tagspairs-result-missing-field.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=TPAIRS-MISSING
+// TPAIRS-MISSING:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}tagspairs-result-missing-field.json'
+// TPAIRS-MISSING-NEXT: reading WPA results from field 'results'
+// TPAIRS-MISSING-NEXT: reading WPA result entry from index '2'
+// TPAIRS-MISSING-NEXT: missing or invalid 'max_pairs_per_entity'
+
+// 'unique_tag_count' is a string, not an integer.
+// RUN: not %clang-ssaf-format-with-plugin --type wpa %S/Inputs/tagspairs-result-bad-field-type.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=TPAIRS-BAD-TYPE
+// TPAIRS-BAD-TYPE:      clang-ssaf-format: error: reading WPASuite from file '{{.*}}tagspairs-result-bad-field-type.json'
+// TPAIRS-BAD-TYPE-NEXT: reading WPA results from field 'results'
+// TPAIRS-BAD-TYPE-NEXT: reading WPA result entry from index '1'
+// TPAIRS-BAD-TYPE-NEXT: missing or invalid 'unique_tag_count'
+
+// ============================================================================
+// Round-trip tests
+// ============================================================================
+
+// RUN: %clang-ssaf-format-with-plugin --type wpa %S/Inputs/rt-empty.json -o %t/rt-empty.json
+// RUN: diff %S/Inputs/rt-empty.json %t/rt-empty.json
+
+// RUN: %clang-ssaf-format-with-plugin --type wpa %S/Inputs/rt-multiple-results.json -o %t/rt-multiple-results.json
+// RUN: diff %S/Inputs/rt-multiple-results.json %t/rt-multiple-results.json
+
+// All three analysis result types with multiple entity IDs.
+// RUN: %clang-ssaf-format-with-plugin --type wpa %S/Inputs/rt-all-results.json -o %t/rt-all-results.json
+// RUN: diff %S/Inputs/rt-all-results.json %t/rt-all-results.json

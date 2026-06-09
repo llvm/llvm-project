@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 | FileCheck %s
 ; Make sure we vectorize with debugging turned on.
 
 source_filename = "test/Transforms/LoopVectorize/dbg.value.ll"
@@ -9,13 +9,12 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @C = global [1024 x i32] zeroinitializer, align 16, !dbg !9
 ; CHECK-LABEL: @test(
 
-; Function Attrs: nounwind ssp uwtable
 define i32 @test() #0 !dbg !15 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 0, metadata !19, metadata !21), !dbg !22
   br label %for.body, !dbg !22
 
-for.body:                                         ; preds = %for.body, %entry
+for.body:
   ;CHECK: load <4 x i32>
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %arrayidx = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %indvars.iv, !dbg !23
@@ -31,19 +30,12 @@ for.body:                                         ; preds = %for.body, %entry
   %exitcond = icmp ne i32 %lftr.wideiv, 1024, !dbg !22
   br i1 %exitcond, label %for.body, label %for.end, !dbg !22
 
-for.end:                                          ; preds = %for.body
+for.end:
   ret i32 0, !dbg !25
 }
 
-; Function Attrs: nounwind readnone
 
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-
-; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind ssp uwtable "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { nounwind readnone }
+attributes #0 = { "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
 
 !llvm.dbg.cu = !{!11}
 !llvm.module.flags = !{!14}

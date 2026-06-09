@@ -18,15 +18,25 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SmallSet.h"
 
 namespace fir::acc {
+namespace detail {
 
-mlir::Value ReductionInitOpFortranObjectViewModel::getViewSource(
-    mlir::Operation *op, mlir::OpResult resultView) const {
+void verifyFortranObjectViewResult(mlir::Operation *op,
+                                   mlir::OpResult resultView) {
   assert(resultView.getOwner() == op && "result value must be the op's result");
-  assert(op->getNumResults() == 1 &&
-         "definition of acc.reduction_init changed");
+  assert(op->getNumResults() == 1 && "only expected single-result");
+}
+
+} // namespace detail
+
+template <>
+mlir::Value
+AccFortranObjectViewModel<mlir::acc::ReductionInitOp>::getViewSource(
+    mlir::Operation *op, mlir::OpResult resultView) const {
+  detail::verifyFortranObjectViewResult(op, resultView);
   auto iface = mlir::cast<mlir::RegionBranchOpInterface>(op);
   llvm::SmallVector<mlir::Value, 1> resultValues;
   iface.getPredecessorValues(mlir::RegionSuccessor::parent(), /*index=*/0,
@@ -45,11 +55,12 @@ mlir::Value ReductionInitOpFortranObjectViewModel::getViewSource(
   return passThroughValue;
 }
 
-std::optional<std::int64_t>
-ReductionInitOpFortranObjectViewModel::getViewOffset(
+template <>
+mlir::Value
+AccFortranObjectViewModel<mlir::acc::UnwrapPrivateOp>::getViewSource(
     mlir::Operation *op, mlir::OpResult resultView) const {
-  assert(resultView.getOwner() == op && "result value must be the op's result");
-  return 0;
+  detail::verifyFortranObjectViewResult(op, resultView);
+  return mlir::cast<mlir::acc::UnwrapPrivateOp>(op).getViewSource();
 }
 
 template <>
@@ -120,6 +131,17 @@ bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
   if (auto dataAttr = cuf::getDataAttr(op))
     return cuf::isDeviceDataAttribute(dataAttr.getValue());
   return false;
+}
+
+bool OutlineRematerializationModel<
+    fir::ConvertOp>::isRematerializationCandidate(mlir::Operation *op) const {
+  auto convertOp = mlir::cast<fir::ConvertOp>(op);
+  mlir::Type inTy = convertOp.getValue().getType();
+  mlir::Type outTy = convertOp.getType();
+  // Only pointer-to-integer-like converts are rematerialization candidates so
+  // that addresses stay live-in instead of the scalar values.
+  return fir::ConvertOp::isPointerCompatible(inTy) &&
+         fir::ConvertOp::isIntegerCompatible(outTy);
 }
 
 // Helper to recursively process address-of operations in derived type
@@ -216,6 +238,23 @@ void IndirectGlobalAccessModel<fir::TypeDescOp>::getReferencedSymbols(
 }
 
 template <>
+void IndirectGlobalAccessModel<fir::UseStmtOp>::getReferencedSymbols(
+    mlir::Operation *op, llvm::SmallVectorImpl<mlir::SymbolRefAttr> &symbols,
+    mlir::SymbolTable *symbolTable) const {
+  auto useStmtOp = mlir::cast<fir::UseStmtOp>(op);
+  if (auto onlySymbols = useStmtOp.getOnlySymbols()) {
+    for (auto attr : *onlySymbols)
+      if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(attr))
+        symbols.push_back(symRef);
+  }
+  if (auto renames = useStmtOp.getRenames()) {
+    for (auto attr : *renames)
+      if (auto renameAttr = mlir::dyn_cast<fir::UseRenameAttr>(attr))
+        symbols.push_back(renameAttr.getSymbol());
+  }
+}
+
+template <>
 bool OperationMoveModel<mlir::acc::LoopOp>::canMoveFromDescendant(
     mlir::Operation *op, mlir::Operation *descendant,
     mlir::Operation *candidate) const {
@@ -254,5 +293,55 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
   }
   return true;
 }
+
+// Return true iff 'candidate' can be hoisted out of 'op',
+// which is an OpenACC compute operation (e.g. kernels, parallel, etc.).
+template <typename Op>
+bool OperationMoveModel<Op>::canMoveOutOf(mlir::Operation *op,
+                                          mlir::Operation *candidate) const {
+  // In general, some movement out of the compute operations is allowed,
+  // so return true if candidate is nullptr.
+  if (!candidate)
+    return true;
+
+  // Hoist operations with trivial type operands and results.
+  return llvm::all_of(candidate->getOperands(),
+                      [](mlir::Value operand) {
+                        return fir::isa_trivial(operand.getType());
+                      }) &&
+         llvm::all_of(candidate->getResults(), [](mlir::Value result) {
+           return fir::isa_trivial(result.getType());
+         });
+}
+
+template <>
+bool OperationMoveModel<mlir::acc::KernelsOp>::canMoveFromDescendant(
+    mlir::Operation *op, mlir::Operation *descendant,
+    mlir::Operation *candidate) const {
+  return true;
+}
+
+template bool OperationMoveModel<mlir::acc::KernelsOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
+
+template <>
+bool OperationMoveModel<mlir::acc::ParallelOp>::canMoveFromDescendant(
+    mlir::Operation *op, mlir::Operation *descendant,
+    mlir::Operation *candidate) const {
+  return true;
+}
+
+template bool OperationMoveModel<mlir::acc::ParallelOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
+
+template <>
+bool OperationMoveModel<mlir::acc::SerialOp>::canMoveFromDescendant(
+    mlir::Operation *op, mlir::Operation *descendant,
+    mlir::Operation *candidate) const {
+  return true;
+}
+
+template bool OperationMoveModel<mlir::acc::SerialOp>::canMoveOutOf(
+    mlir::Operation *op, mlir::Operation *candidate) const;
 
 } // namespace fir::acc

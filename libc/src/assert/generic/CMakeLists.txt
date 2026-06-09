@@ -8,5 +8,5 @@ add_entrypoint_object(
   DEPENDS
     libc.include.assert
     libc.src.__support.OSUtil.osutil
-    libc.src.stdlib.abort
+    libc.src.stdlib.abort_utils
 )

@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
@@ -304,10 +305,8 @@ public:
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
+
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
@@ -468,6 +467,16 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
 }
 
 LangAS
+AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place , use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
+}
+
+LangAS
 AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                   const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
@@ -511,7 +520,8 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
     return IsOneAs ? "wavefront-one-as" : "wavefront";
   case SyncScope::HIPCluster:
   case SyncScope::ClusterScope:
-    return IsOneAs ? "cluster-one-as" : "cluster";
+    assert(!IsOneAs && "OpenCL does not have cluster scope");
+    return "cluster";
   case SyncScope::HIPWorkgroup:
   case SyncScope::OpenCLWorkGroup:
   case SyncScope::WorkgroupScope:

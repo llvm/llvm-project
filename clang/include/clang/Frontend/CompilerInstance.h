@@ -17,6 +17,7 @@
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -167,13 +168,10 @@ class CompilerInstance : public ModuleLoader {
   /// Should we delete the BuiltModules when we're done?
   bool DeleteBuiltModules = true;
 
-  /// The location of the module-import keyword for the last module
-  /// import.
-  SourceLocation LastModuleImportLoc;
-
-  /// The result of the last module import.
-  ///
-  ModuleLoadResult LastModuleImportResult;
+  /// Cache of module import results keyed by import location.
+  /// It is important to eliminate redundant diagnostics
+  /// when both the preprocessor and parser see the same import declaration.
+  llvm::SmallDenseMap<SourceLocation, ModuleLoadResult, 4> ModuleImportResults;
 
   /// Whether we should (re)build the global module index once we
   /// have finished with this translation unit.
@@ -218,6 +216,13 @@ public:
 
   /// @name High-Level Operations
   /// @{
+
+  // FIXME: Add a static InitializeProcess() method to consolidate process-level
+  // setup that is currently scattered across tool entry points (cc1_main,
+  // clang-repl, libclang, etc.). This would include things like AsmParsers and
+  // install_fatal_error_handler.
+  // These are process-global, so a single static method would allow clang-based
+  // tools to share them without duplication.
 
   /// ExecuteAction - Execute the provided action against the compiler's
   /// CompilerInvocation object.
@@ -746,11 +751,6 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ContextHash);
-  std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().computeContextHash());
-  }
-
   /// Create the AST context.
   void createASTContext();
 
@@ -805,7 +805,7 @@ public:
   std::unique_ptr<raw_pwrite_stream> createDefaultOutputFile(
       bool Binary = true, StringRef BaseInput = "", StringRef Extension = "",
       bool RemoveFileOnSignal = true, bool CreateMissingDirectories = false,
-      bool ForceUseTemporary = false);
+      bool ForceUseTemporary = false, bool SetOnlyIfDifferent = false);
 
   /// Create a new output file, optionally deriving the output path name, and
   /// add it to the list of tracked output files.
@@ -813,9 +813,17 @@ public:
   /// \return - Null on error.
   std::unique_ptr<raw_pwrite_stream>
   createOutputFile(StringRef OutputPath, bool Binary, bool RemoveFileOnSignal,
-                   bool UseTemporary, bool CreateMissingDirectories = false);
+                   bool UseTemporary, bool CreateMissingDirectories = false,
+                   bool SetOnlyIfDifferent = false);
 
 private:
+  /// Prepare the CompilerInstance for executing a frontend action.
+  ///
+  /// Called by ExecuteAction. Consolidates instance-level setup that was
+  /// previously duplicated across tool entry points (cc1_main,
+  /// clang-repl/Interpreter, etc.).
+  void PrepareForExecution();
+
   /// Create a new output file and add it to the list of tracked output files.
   ///
   /// If \p OutputPath is empty, then createOutputFile will derive an output
@@ -836,7 +844,7 @@ private:
   Expected<std::unique_ptr<raw_pwrite_stream>>
   createOutputFileImpl(StringRef OutputPath, bool Binary,
                        bool RemoveFileOnSignal, bool UseTemporary,
-                       bool CreateMissingDirectories);
+                       bool CreateMissingDirectories, bool SetOnlyIfDifferent);
 
 public:
   std::unique_ptr<raw_pwrite_stream> createNullOutputFile();
@@ -872,7 +880,7 @@ public:
 
   void createASTReader();
 
-  bool loadModuleFile(StringRef FileName,
+  bool loadModuleFile(ModuleFileName FileName,
                       serialization::ModuleFile *&LoadedModuleFile);
 
   /// Configuration object for making the result of \c cloneForModuleCompile()
@@ -941,12 +949,14 @@ public:
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
-  /// provided by the importing compiler instance. Returns true if the module
-  /// was built without errors.
+  /// provided by the importing compiler instance. Returns the PCM file in
+  /// a buffer.
   // FIXME: This should be private, but it's called from static non-member
   // functions in the implementation file.
-  bool compileModule(SourceLocation ImportLoc, StringRef ModuleName,
-                     StringRef ModuleFileName, CompilerInstance &Instance);
+  std::unique_ptr<llvm::MemoryBuffer> compileModule(SourceLocation ImportLoc,
+                                                    StringRef ModuleName,
+                                                    StringRef ModuleFileName,
+                                                    CompilerInstance &Instance);
 
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,

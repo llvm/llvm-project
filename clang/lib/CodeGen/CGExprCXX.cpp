@@ -267,7 +267,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     if (OCE->isAssignmentOp()) {
       if (TrivialAssignment) {
-        TrivialAssignmentRHS = EmitLValue(CE->getArg(1));
+        TrivialAssignmentRHS = EmitCheckedLValue(CE->getArg(1), TCK_Load);
       } else {
         RtlArgs = &RtlArgStorage;
         EmitCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
@@ -537,7 +537,6 @@ static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
       break;
     std::pair<CharUnits, CharUnits> LastStore = Stores.pop_back_val();
     CharUnits LastStoreOffset = LastStore.first;
-    CharUnits LastStoreSize = LastStore.second;
 
     CharUnits SplitBeforeOffset = LastStoreOffset;
     CharUnits SplitBeforeSize = VBPtrOffset - SplitBeforeOffset;
@@ -546,7 +545,7 @@ static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,
       Stores.emplace_back(SplitBeforeOffset, SplitBeforeSize);
 
     CharUnits SplitAfterOffset = VBPtrOffset + VBPtrWidth;
-    CharUnits SplitAfterSize = LastStoreSize - SplitAfterOffset;
+    CharUnits SplitAfterSize = NVSize - SplitAfterOffset;
     assert(!SplitAfterSize.isNegative() && "negative store size!");
     if (!SplitAfterSize.isZero())
       Stores.emplace_back(SplitAfterOffset, SplitAfterSize);
@@ -1202,6 +1201,12 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/ true,
                                CCE->requiresZeroInitialization());
+    if (getContext().getTargetInfo().emitVectorDeletingDtors(
+            getContext().getLangOpts())) {
+      CXXDestructorDecl *Dtor = Ctor->getParent()->getDestructor();
+      if (Dtor && Dtor->isVirtual())
+        CGM.requireVectorDestructorDefinition(Ctor->getParent());
+    }
     return;
   }
 
@@ -1715,6 +1720,18 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   llvm::Instruction *cleanupDominator = nullptr;
   if (E->getOperatorDelete() &&
       !E->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
+    // A potentially-throwing constructor inside __try requires C++ object
+    // unwinding, which is incompatible with SEH.
+    if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry()) {
+      if (const auto *ConstructExpr = E->getConstructExpr()) {
+        const auto *FPT = ConstructExpr->getConstructor()
+                              ->getType()
+                              ->castAs<FunctionProtoType>();
+        if (!FPT->isNothrow())
+          getContext().getDiagnostics().Report(E->getBeginLoc(),
+                                               diag::err_seh_object_unwinding);
+      }
+    }
     EnterNewDeleteCleanup(*this, E, TypeIdentityArg, allocation, allocSize,
                           allocAlign, allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();

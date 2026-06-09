@@ -4,8 +4,8 @@
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !void = !cir.void
-!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
-!rec_exception = !cir.record<struct "std::exception" {!s32i}>
+!rec_SomeClass = !cir.struct<"SomeClass" {!s32i}>
+!rec_exception = !cir.struct<"std::exception" {!s32i}>
 
 // Test a simple try with no handlers and no throwing calls.
 cir.func @test_try_no_handlers() {
@@ -186,7 +186,7 @@ cir.func @test_try_catch_with_cleanup() {
 // CHECK:         cir.br ^[[TRY_EXIT:bb[0-9]+]]
 //
 // CHECK:       ^[[INNER_UNWIND]]:
-// CHECK:         %[[INNER_EH:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         %[[INNER_EH:.*]] = cir.eh.initiate : !cir.eh_token
 // CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[INNER_EH]] : !cir.eh_token)
 //
 // CHECK:       ^[[EH_CLEANUP]](%[[EH_CT:.*]]: !cir.eh_token):
@@ -721,6 +721,55 @@ cir.func @test_try_multiple_typed_and_catch_all() {
 // CHECK:       ^[[CONTINUE]]:
 // CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
 // CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test try-catch with an indirect (virtual) call in the try body.
+// The indirect call should become an indirect try_call.
+cir.func @test_try_indirect_call(%arg0 : !cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>)>>,
+                                  %arg1 : !cir.ptr<!rec_SomeClass>) {
+  cir.scope {
+    cir.try {
+      cir.call %arg0(%arg1) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>)>>, !cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_indirect_call
+// CHECK-SAME:    (%[[FPTR:.*]]: !cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>)>>, %[[OBJ:.*]]: !cir.ptr<!rec_SomeClass>)
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+//
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call %[[FPTR]](%[[OBJ]]) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]] : (!cir.ptr<!cir.func<(!cir.ptr<!rec_SomeClass>)>>, !cir.ptr<!rec_SomeClass>) -> ()
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOK:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EH_TOK]] : !cir.eh_token)
+//
+// CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[CATCH_ALL]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^[[SCOPE_EXIT:bb[0-9]+]]
+// CHECK:       ^[[SCOPE_EXIT]]:
 // CHECK:         cir.return
 
 cir.func private @mayThrow()

@@ -11,7 +11,7 @@
 // while in explicit casts, the implicitly-inserted implicit casts are marked with 'part_of_explicit_cast'
 
 unsigned char implicitcast_0(unsigned int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} implicitcast_0 'unsigned char (unsigned int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} implicitcast_0 'unsigned char (unsigned int)' external-linkage{{$}}
   // CHECK: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned char' <IntegralCast>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned int' <LValueToRValue>{{$}}
   // CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'unsigned int' lvalue ParmVar {{.*}} 'x' 'unsigned int'{{$}}
@@ -19,7 +19,7 @@ unsigned char implicitcast_0(unsigned int x) {
 }
 
 signed char implicitcast_1(unsigned int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} implicitcast_1 'signed char (unsigned int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} implicitcast_1 'signed char (unsigned int)' external-linkage{{$}}
   // CHECK: ImplicitCastExpr {{.*}} <col:{{.*}}> 'signed char' <IntegralCast>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned int' <LValueToRValue>{{$}}
   // CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'unsigned int' lvalue ParmVar {{.*}} 'x' 'unsigned int'{{$}}
@@ -27,7 +27,7 @@ signed char implicitcast_1(unsigned int x) {
 }
 
 unsigned char implicitcast_2(signed int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} implicitcast_2 'unsigned char (int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} implicitcast_2 'unsigned char (int)' external-linkage{{$}}
   // CHECK: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned char' <IntegralCast>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'int' <LValueToRValue>{{$}}
   // CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'int' lvalue ParmVar {{.*}} 'x' 'int'{{$}}
@@ -35,7 +35,7 @@ unsigned char implicitcast_2(signed int x) {
 }
 
 signed char implicitcast_3(signed int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} implicitcast_3 'signed char (int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} implicitcast_3 'signed char (int)' external-linkage{{$}}
   // CHECK: ImplicitCastExpr {{.*}} <col:{{.*}}> 'signed char' <IntegralCast>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'int' <LValueToRValue>{{$}}
   // CHECK-NEXT: DeclRefExpr {{.*}} <col:{{.*}}> 'int' lvalue ParmVar {{.*}} 'x' 'int'{{$}}
@@ -45,7 +45,7 @@ signed char implicitcast_3(signed int x) {
 //----------------------------------------------------------------------------//
 
 unsigned char cstylecast_0(unsigned int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cstylecast_0 'unsigned char (unsigned int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cstylecast_0 'unsigned char (unsigned int)' external-linkage{{$}}
   // CHECK: CStyleCastExpr {{.*}} <col:{{.*}}> 'unsigned char' <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -54,7 +54,7 @@ unsigned char cstylecast_0(unsigned int x) {
 }
 
 signed char cstylecast_1(unsigned int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cstylecast_1 'signed char (unsigned int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cstylecast_1 'signed char (unsigned int)' external-linkage{{$}}
   // CHECK: CStyleCastExpr {{.*}} <col:{{.*}}> 'signed char' <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'signed char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -63,7 +63,7 @@ signed char cstylecast_1(unsigned int x) {
 }
 
 unsigned char cstylecast_2(signed int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cstylecast_2 'unsigned char (int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cstylecast_2 'unsigned char (int)' external-linkage{{$}}
   // CHECK: CStyleCastExpr {{.*}} <col:{{.*}}> 'unsigned char' <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -72,7 +72,7 @@ unsigned char cstylecast_2(signed int x) {
 }
 
 signed char cstylecast_3(signed int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cstylecast_3 'signed char (int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cstylecast_3 'signed char (int)' external-linkage{{$}}
   // CHECK: CStyleCastExpr {{.*}} <col:{{.*}}> 'signed char' <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'signed char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -83,7 +83,7 @@ signed char cstylecast_3(signed int x) {
 //----------------------------------------------------------------------------//
 
 unsigned char cxxstaticcast_0(unsigned int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxstaticcast_0 'unsigned char (unsigned int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxstaticcast_0 'unsigned char (unsigned int)' external-linkage{{$}}
   // CHECK: CXXStaticCastExpr {{.*}} <col:{{.*}}> 'unsigned char' static_cast<unsigned char> <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -92,7 +92,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 signed char cxxstaticcast_1(unsigned int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxstaticcast_1 'signed char (unsigned int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxstaticcast_1 'signed char (unsigned int)' external-linkage{{$}}
   // CHECK: CXXStaticCastExpr {{.*}} <col:{{.*}}> 'signed char' static_cast<signed char> <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'signed char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -101,7 +101,7 @@ signed char cxxstaticcast_1(unsigned int x) {
 }
 
 unsigned char cxxstaticcast_2(signed int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxstaticcast_2 'unsigned char (int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxstaticcast_2 'unsigned char (int)' external-linkage{{$}}
   // CHECK: CXXStaticCastExpr {{.*}} <col:{{.*}}> 'unsigned char' static_cast<unsigned char> <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'unsigned char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -110,7 +110,7 @@ unsigned char cxxstaticcast_2(signed int x) {
 }
 
 signed char cxxstaticcast_3(signed int x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxstaticcast_3 'signed char (int)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxstaticcast_3 'signed char (int)' external-linkage{{$}}
   // CHECK: CXXStaticCastExpr {{.*}} <col:{{.*}}> 'signed char' static_cast<signed char> <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'signed char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -126,7 +126,7 @@ using UnsignedInt = unsigned int;
 using SignedInt = signed int;
 
 UnsignedChar cxxfunctionalcast_0(UnsignedInt x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxfunctionalcast_0 'UnsignedChar (UnsignedInt)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxfunctionalcast_0 'UnsignedChar (UnsignedInt)' external-linkage{{$}}
   // CHECK: CXXFunctionalCastExpr {{.*}} <col:{{.*}}> 'UnsignedChar':'unsigned char' functional cast to UnsignedChar <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'UnsignedChar':'unsigned char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'UnsignedInt':'unsigned int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -135,7 +135,7 @@ UnsignedChar cxxfunctionalcast_0(UnsignedInt x) {
 }
 
 SignedChar cxxfunctionalcast_1(UnsignedInt x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxfunctionalcast_1 'SignedChar (UnsignedInt)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxfunctionalcast_1 'SignedChar (UnsignedInt)' external-linkage{{$}}
   // CHECK: CXXFunctionalCastExpr {{.*}} <col:{{.*}}> 'SignedChar':'signed char' functional cast to SignedChar <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'SignedChar':'signed char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'UnsignedInt':'unsigned int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -144,7 +144,7 @@ SignedChar cxxfunctionalcast_1(UnsignedInt x) {
 }
 
 UnsignedChar cxxfunctionalcast_2(SignedInt x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxfunctionalcast_2 'UnsignedChar (SignedInt)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxfunctionalcast_2 'UnsignedChar (SignedInt)' external-linkage{{$}}
   // CHECK: CXXFunctionalCastExpr {{.*}} <col:{{.*}}> 'UnsignedChar':'unsigned char' functional cast to UnsignedChar <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'UnsignedChar':'unsigned char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'SignedInt':'int' <LValueToRValue> part_of_explicit_cast{{$}}
@@ -153,7 +153,7 @@ UnsignedChar cxxfunctionalcast_2(SignedInt x) {
 }
 
 SignedChar cxxfunctionalcast_3(SignedInt x) {
-  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxfunctionalcast_3 'SignedChar (SignedInt)'{{$}}
+  // CHECK: FunctionDecl {{.*}} <{{.*}}, line:{{.*}}> line:{{.*}} cxxfunctionalcast_3 'SignedChar (SignedInt)' external-linkage{{$}}
   // CHECK: CXXFunctionalCastExpr {{.*}} <col:{{.*}}> 'SignedChar':'signed char' functional cast to SignedChar <NoOp>{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'SignedChar':'signed char' <IntegralCast> part_of_explicit_cast{{$}}
   // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:{{.*}}> 'SignedInt':'int' <LValueToRValue> part_of_explicit_cast{{$}}

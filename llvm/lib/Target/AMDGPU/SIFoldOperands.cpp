@@ -740,8 +740,20 @@ bool SIFoldOperandsImpl::updateOperand(FoldCandidate &Fold) const {
   if (New->getReg().isPhysical()) {
     Old.substPhysReg(New->getReg(), *TRI);
   } else {
+    Register OldReg = Old.getReg();
     Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
     Old.setIsUndef(New->isUndef());
+
+    // If MI is in a BUNDLE, also update header's matching implicit use.
+    if (MI->isBundledWithPred()) {
+      MachineInstr &Header = *getBundleStart(MI->getIterator());
+      for (MachineOperand &MO : Header.operands()) {
+        if (MO.getReg() == OldReg) {
+          MO.setReg(New->getReg());
+          MO.setSubReg(New->getSubReg());
+        }
+      }
+    }
   }
   return true;
 }
@@ -1501,6 +1513,14 @@ void SIFoldOperandsImpl::foldOperand(
 static bool evalBinaryInstruction(unsigned Opcode, int32_t &Result,
                                   uint32_t LHS, uint32_t RHS) {
   switch (Opcode) {
+  case AMDGPU::S_ADD_I32:
+  case AMDGPU::S_ADD_U32:
+    Result = LHS + RHS;
+    return true;
+  case AMDGPU::S_SUB_I32:
+  case AMDGPU::S_SUB_U32:
+    Result = LHS - RHS;
+    return true;
   case AMDGPU::V_AND_B32_e64:
   case AMDGPU::V_AND_B32_e32:
   case AMDGPU::S_AND_B32:
@@ -1621,6 +1641,18 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return true;
   }
 
+  // S_SUB_* is not commutable, so handle it before the commutability gate.
+  // Only `x - 0 -> copy x` is valid; `0 - x` is a negation, not a copy.
+  if (Opc == AMDGPU::S_SUB_I32 || Opc == AMDGPU::S_SUB_U32) {
+    if (Src1Imm && static_cast<int32_t>(*Src1Imm) == 0) {
+      // y = sub x, 0 => y = copy x
+      MI->removeOperand(Src1Idx);
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
+      return true;
+    }
+    return false;
+  }
+
   if (!MI->isCommutable())
     return false;
 
@@ -1631,6 +1663,16 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   }
 
   int32_t Src1Val = static_cast<int32_t>(*Src1Imm);
+  if (Opc == AMDGPU::S_ADD_I32 || Opc == AMDGPU::S_ADD_U32) {
+    if (Src1Val == 0) {
+      // y = add x, 0 => y = copy x
+      MI->removeOperand(Src1Idx);
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
+      return true;
+    }
+    return false;
+  }
+
   if (Opc == AMDGPU::V_OR_B32_e64 ||
       Opc == AMDGPU::V_OR_B32_e32 ||
       Opc == AMDGPU::S_OR_B32) {
@@ -1640,7 +1682,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
       TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
     } else if (Src1Val == -1) {
       // y = or x, -1 => y = v_mov_b32 -1
-      MI->removeOperand(Src1Idx);
+      MI->removeOperand(Src0Idx);
       TII->mutateAndCleanupImplicit(
           *MI, TII->get(getMovOpc(Opc == AMDGPU::S_OR_B32)));
     } else
@@ -2154,7 +2196,7 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
       MRI->getVRegDef(DefSrcReg.isVirtual() ? DefSrcReg : ClampSrc->getReg());
 
   // The type of clamp must be compatible.
-  if (TII->getClampMask(*Def) != TII->getClampMask(MI))
+  if (!SIInstrInfo::hasSameClamp(*Def, MI))
     return false;
 
   if (Def->mayRaiseFPException())

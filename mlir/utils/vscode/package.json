@@ -2,7 +2,7 @@
   "name": "vscode-mlir",
   "displayName": "MLIR",
   "description": "MLIR Language Extension",
-  "version": "0.0.14",
+  "version": "0.0.16",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://mlir.llvm.org/",
   "icon": "icon.png",
@@ -40,7 +40,7 @@
   "dependencies": {
     "base64-js": "^1.5.1",
     "chokidar": "3.5.2",
-    "minimatch": "^3.0.5",
+    "minimatch": "^3.1.5",
     "semver": "^7.5.2",
     "vscode-languageclient": "^8.0.2-next.5"
   },
@@ -154,6 +154,12 @@
       "type": "object",
       "title": "MLIR",
       "properties": {
+        "mlir.enable": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the MLIR language server (mlir-lsp-server)."
+        },
         "mlir.server_path": {
           "scope": "resource",
           "type": "string",
@@ -163,6 +169,12 @@
           "scope": "resource",
           "type": "array",
           "description": "A list of additional arguments for mlir-lsp-server executable. E.g. --log=verbose."
+        },
+        "mlir.pdll_enable": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the MLIR PDLL language server (mlir-pdll-lsp-server)."
         },
         "mlir.pdll_server_path": {
           "scope": "resource",
@@ -178,6 +190,12 @@
           "scope": "resource",
           "type": "array",
           "description": "A list of additional arguments for pdll-lsp-server executable. E.g. --log=verbose."
+        },
+        "mlir.tablegen_enable": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the MLIR TableGen language server (tblgen-lsp-server)."
         },
         "mlir.tablegen_server_path": {
           "scope": "resource",

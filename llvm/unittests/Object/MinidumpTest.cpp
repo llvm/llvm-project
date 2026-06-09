@@ -164,8 +164,13 @@ TEST(MinidumpFile, create_ErrorCases) {
                                             // Stream
       'C', 'P', 'U', 'I', 'N', 'F', 'O'};
   EXPECT_THAT_EXPECTED(create(DuplicateStream), Failed<BinaryError>());
+}
 
-  std::vector<uint8_t> DenseMapInfoConflict{
+// A stream type equal to the value DenseMapInfo<StreamType> historically
+// reserved as its empty key (-1) used to be rejected. DenseMap no longer
+// reserves that value, so such a stream is now handled like any other.
+TEST(MinidumpFile, StreamTypeReservedDenseMapKey) {
+  std::vector<uint8_t> Data{
       // Header
       'M', 'D', 'M', 'P', 0x93, 0xa7, 0, 0, // Signature, Version
       1, 0, 0, 0,                           // NumberOfStreams,
@@ -177,7 +182,13 @@ TEST(MinidumpFile, create_ErrorCases) {
       0x2c, 0, 0, 0,                        // RVA
                                             // Stream
       'C', 'P', 'U', 'I', 'N', 'F', 'O'};
-  EXPECT_THAT_EXPECTED(create(DenseMapInfoConflict), Failed<BinaryError>());
+  auto ExpectedFile = create(Data);
+  ASSERT_THAT_EXPECTED(ExpectedFile, Succeeded());
+  const MinidumpFile &File = **ExpectedFile;
+  ASSERT_EQ(1u, File.streams().size());
+  const Directory &Stream0 = File.streams()[0];
+  EXPECT_EQ(StreamType(0xffffffff), Stream0.Type);
+  EXPECT_EQ("CPUINFO", toStringRef(File.getRawStream(Stream0)));
 }
 
 TEST(MinidumpFile, IngoresDummyStreams) {

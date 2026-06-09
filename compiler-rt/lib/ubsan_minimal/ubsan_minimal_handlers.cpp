@@ -3,12 +3,24 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#ifdef KERNEL_USE
+#if defined(KERNEL_USE)
 extern "C" void ubsan_message(const char *msg);
 static void message(const char *msg) { ubsan_message(msg); }
+#elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+#include <stdio.h>
+template <typename... Args>
+static void message(const char *msg, Args &&...args) {
+  fprintf(stderr, msg, args...);
+}
+#elif SANITIZER_SPIRV
+extern "C" int printf(const char *fmt, ...);
+template <typename... Args>
+static void message(const char *msg, Args &&...args) {
+  printf(msg, args...);
+}
 #else
+#include <unistd.h>
 static void message(const char *msg) { (void)write(2, msg, strlen(msg)); }
 #endif
 
@@ -62,8 +74,18 @@ static void format_msg(const char *kind, uintptr_t caller, char *buf,
   *buf = '\0';
 }
 
-SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
-                             uintptr_t caller) {
+static void format(const char *kind, uintptr_t caller) {
+#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+  (void)format_msg;
+  message("ubsan: %s by %p\n", kind, reinterpret_cast<void *>(caller));
+#else
+  char msg_buf[128];
+  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
+  message(msg_buf);
+#endif
+}
+
+[[gnu::cold]] static void report_error(const char *kind, uintptr_t caller) {
   if (caller == 0)
     return;
   while (true) {
@@ -95,17 +117,20 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
     }
     __sanitizer::atomic_store_relaxed(&caller_pcs[sz], caller);
 
-    char msg_buf[128];
-    format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
-    message(msg_buf);
+    format(kind, caller);
   }
+}
+
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
+                             uintptr_t caller) {
+  report_error(kind, caller);
 }
 
 #if PRESERVE_HANDLERS
 SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_preserve,
                              const char *kind, uintptr_t caller)
 [[clang::preserve_all]] {
-  // Additional indirecton so the user can override this with their own
+  // Additional indirection so the user can override this with their own
   // preserve_all function. This would allow, e.g., a function that reports the
   // first error only, so for all subsequent calls we can skip the register save
   // / restore.
@@ -127,6 +152,10 @@ static void abort_with_message(const char *kind, uintptr_t caller) {
   if (&android_set_abort_message)
     android_set_abort_message(msg_buf);
   abort();
+}
+#elif SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+static void abort_with_message(const char *kind, uintptr_t caller) {
+  __builtin_verbose_trap("ubsan", "unrecoverable error");
 }
 #else
 static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }

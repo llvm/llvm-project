@@ -9,6 +9,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfTargetDoesNotSupportThreads()
 @skipIfAsan
 class TestExitDuringExpression(TestBase):
     NO_DEBUG_INFO_TESTCASE = True

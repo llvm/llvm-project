@@ -132,7 +132,7 @@ declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @foo(ptr noundef nonnull align 8 dereferenceable(24) noalias %vec) #0 {
 ; CHECK-LABEL: define void @foo(
-; CHECK-SAME: ptr noalias noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8, !tbaa [[ANYPTR_TBAA0:![0-9]+]]
@@ -272,7 +272,7 @@ declare void @abort()
 
 define void @loop_with_signed_induction(ptr noundef nonnull align 8 dereferenceable(24) %vec) {
 ; CHECK-LABEL: define void @loop_with_signed_induction(
-; CHECK-SAME: ptr noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CHECK-SAME: ptr nofree noundef nonnull readonly align 8 captures(none) dereferenceable(24) [[VEC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[_M_FINISH_I_I:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[_M_FINISH_I_I]], align 8, !tbaa [[ANYPTR_TBAA0]]
@@ -346,7 +346,7 @@ for.end:
 
 define void @monkey(ptr noundef %arr, i32 noundef %len) {
 ; CHECK-LABEL: define void @monkey(
-; CHECK-SAME: ptr noundef captures(none) [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr nofree noundef captures(none) [[ARR:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt i32 [[LEN]], 1
 ; CHECK-NEXT:    br i1 [[CMP8]], label %[[FOR_BODY4_PREHEADER:.*]], label %[[FOR_COND_CLEANUP:.*]]

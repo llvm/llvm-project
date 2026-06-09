@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/roundevenbf16.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/roundevenbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(bfloat16, roundevenbf16, (bfloat16 x)) {
-  return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
+  return math::roundevenbf16(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

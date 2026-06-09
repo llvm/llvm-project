@@ -12,7 +12,7 @@ typedef struct {
   unsigned still_more_bits : 7;
 } A;
 
-// CIR-DAG:  !rec_A = !cir.record<struct "A" packed padded {!s8i, !s8i, !s8i, !u16i, !cir.array<!u8i x 3>}>
+// CIR-DAG:  !rec_A = !cir.struct<"A" packed padded {!s8i, !s8i, !s8i, !u16i, !cir.array<!u8i x 3>}>
 // CIR-DAG:  #bfi_more_bits = #cir.bitfield_info<name = "more_bits", storage_type = !u16i, size = 4, offset = 3, is_signed = false>
 // LLVM-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
 // OGCG-DAG: %struct.A = type <{ i8, i8, i8, i16, [3 x i8] }>
@@ -23,7 +23,7 @@ typedef struct {
   int c;
 } D;
 
-// CIR-DAG:  !rec_D = !cir.record<struct "D" {!u16i, !s32i}>
+// CIR-DAG:  !rec_D = !cir.struct<"D" {!u16i, !s32i}>
 // LLVM-DAG: %struct.D = type { i16, i32 }
 // OGCG-DAG: %struct.D = type { i16, i32 }
 
@@ -36,7 +36,7 @@ typedef struct {
   unsigned f; // type other than int above, not a bitfield
 } S;
 // CIR-DAG:  #bfi_c = #cir.bitfield_info<name = "c", storage_type = !u64i, size = 17, offset = 32, is_signed = true>
-// CIR-DAG:  !rec_S = !cir.record<struct "S" {!u64i, !u16i, !u32i}>
+// CIR-DAG:  !rec_S = !cir.struct<"S" {!u64i, !u16i, !u32i}>
 // LLVM-DAG: %struct.S = type { i64, i16, i32 }
 // OGCG-DAG: %struct.S = type { i64, i16, i32 }
 
@@ -45,7 +45,7 @@ typedef struct {
   unsigned b;
 } T;
 
-// CIR-DAG:  !rec_T = !cir.record<struct "T" {!u8i, !u32i}>
+// CIR-DAG:  !rec_T = !cir.struct<"T" {!u8i, !u32i}>
 // LLVM-DAG: %struct.T = type { i8, i32 }
 // OGCG-DAG: %struct.T = type { i8, i32 }
 
@@ -67,7 +67,7 @@ typedef struct {
     int l: 14;
 } U;
 
-// CIR-DAG:  !rec_U = !cir.record<struct "U" packed {!s8i, !s8i, !s8i, !u8i, !u64i}>
+// CIR-DAG:  !rec_U = !cir.struct<"U" packed {!s8i, !s8i, !s8i, !u8i, !u64i}>
 // LLVM-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 // OGCG-DAG: %struct.U = type <{ i8, i8, i8, i8, i64 }>
 
@@ -77,7 +77,7 @@ typedef struct{
     int c: 30;
 } Clip;
 
-// CIR-DAG: !rec_Clip = !cir.record<struct "Clip" {!cir.array<!u8i x 3>, !s8i, !u32i}>
+// CIR-DAG: !rec_Clip = !cir.struct<"Clip" {!cir.array<!u8i x 3>, !s8i, !u32i}>
 // LLVM-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 // OGCG-DAG: %struct.Clip = type { [3 x i8], i8, i32 }
 
@@ -104,7 +104,7 @@ int load_field(S* s) {
 // LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 // LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
 // LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
-// LLVM:   [[TMP3:%.*]] = getelementptr %struct.S, ptr [[TMP2]], i32 0, i32 0
+// LLVM:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP2]], i32 0, i32 0
 // LLVM:   [[TMP4:%.*]] = load i64, ptr [[TMP3]], align 4
 // LLVM:   [[TMP5:%.*]] = shl i64 [[TMP4]], 15
 // LLVM:   [[TMP6:%.*]] = ashr i64 [[TMP5]], 47
@@ -131,7 +131,7 @@ unsigned int load_field_unsigned(A* s) {
 //LLVM: define dso_local i32 @load_field_unsigned
 //LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 //LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-//LLVM:   [[TMP2:%.*]] = getelementptr %struct.A, ptr [[TMP1]], i32 0, i32 3
+//LLVM:   [[TMP2:%.*]] = getelementptr inbounds nuw %struct.A, ptr [[TMP1]], i32 0, i32 3
 //LLVM:   [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 1
 //LLVM:   [[TMP4:%.*]] = lshr i16 [[TMP3]], 3
 //LLVM:   [[TMP5:%.*]] = and i16 [[TMP4]], 15
@@ -158,7 +158,7 @@ void store_field() {
 
 // LLVM: define dso_local void @store_field()
 // LLVM:   [[TMP0:%.*]] = alloca %struct.S, i64 1, align 4
-// LLVM:   [[TMP1:%.*]] = getelementptr %struct.S, ptr [[TMP0]], i32 0, i32 1
+// LLVM:   [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 1
 // LLVM:   [[TMP2:%.*]] = load i16, ptr [[TMP1]], align 4
 // LLVM:   [[TMP3:%.*]] = and i16 [[TMP2]], -32768
 // LLVM:   [[TMP4:%.*]] = or i16 [[TMP3]], 3
@@ -186,12 +186,12 @@ void store_bitfield_to_bitfield() {
 
 // LLVM: define dso_local void @store_bitfield_to_bitfield()
 // LLVM:  [[TMP0:%.*]] = alloca %struct.S, i64 1, align 4
-// LLVM:  [[TMP1:%.*]] = getelementptr %struct.S, ptr [[TMP0]], i32 0, i32 0
+// LLVM:  [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 0
 // LLVM:  [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
 // LLVM:  [[TMP3:%.*]] = shl i64 [[TMP2]], 15
 // LLVM:  [[TMP4:%.*]] = ashr i64 [[TMP3]], 47
 // LLVM:  [[TMP5:%.*]] = trunc i64 [[TMP4]] to i32
-// LLVM:  [[TMP6:%.*]] = getelementptr %struct.S, ptr [[TMP0]], i32 0, i32 0
+// LLVM:  [[TMP6:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 0
 // LLVM:  [[TMP7:%.*]] = zext i32 [[TMP5]] to i64
 // LLVM:  [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 4
 // LLVM:  [[TMP9:%.*]] = and i64 [[TMP7]], 15
@@ -238,7 +238,7 @@ void get_volatile(V* v) {
 // LLVM: define dso_local void @get_volatile
 // LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 // LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// LLVM:   [[TMP2:%.*]] = getelementptr %struct.V, ptr [[TMP1]], i32 0, i32 0
+// LLVM:   [[TMP2:%.*]] = getelementptr inbounds nuw %struct.V, ptr [[TMP1]], i32 0, i32 0
 // LLVM:   [[TMP3:%.*]] = load volatile i64, ptr [[TMP2]], align 4
 // LLVM:   [[TMP4:%.*]] = and i64 [[TMP3]], -1095216660481
 // LLVM:   [[TMP5:%.*]] = or i64 [[TMP4]], 12884901888
@@ -265,7 +265,7 @@ void set_volatile(V* v) {
 // LLVM: define dso_local void @set_volatile
 // LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 // LLVM:   [[TMP1:%.*]] = load ptr, ptr [[TMP0]], align 8
-// LLVM:   [[TMP2:%.*]] = getelementptr %struct.V, ptr [[TMP1]], i32 0, i32 0
+// LLVM:   [[TMP2:%.*]] = getelementptr inbounds nuw %struct.V, ptr [[TMP1]], i32 0, i32 0
 // LLVM:   [[TMP3:%.*]] = load volatile i64, ptr [[TMP2]], align 4
 // LLVM:   [[TMP4:%.*]] = and i64 [[TMP3]], -1095216660481
 // LLVM:   [[TMP5:%.*]] = or i64 [[TMP4]], 12884901888
@@ -288,11 +288,11 @@ void unOp(S* s) {
 // CIR:   [[TMP1:%.*]] = cir.load align(8) [[TMP0]] : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
 // CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "d"} : !cir.ptr<!rec_S> -> !cir.ptr<!u64i>
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_d, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
-// CIR:   [[TMP4:%.*]] = cir.unary(inc, [[TMP3]]) nsw : !s32i, !s32i
+// CIR:   [[TMP4:%.*]] = cir.inc nsw [[TMP3]] : !s32i
 // CIR:   cir.set_bitfield align(4) (#bfi_d, [[TMP2]] : !cir.ptr<!u64i>, [[TMP4]] : !s32i)
 
 // LLVM: define {{.*@unOp}}
-// LLVM:   [[TMP0:%.*]] = getelementptr %struct.S, ptr [[LOAD0:%.*]], i32 0, i32 0
+// LLVM:   [[TMP0:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[LOAD0:%.*]], i32 0, i32 0
 // LLVM:   [[TMP1:%.*]] = load i64, ptr [[TMP0]], align 4
 // LLVM:   [[TMP2:%.*]] = shl i64 [[TMP1]], 13
 // LLVM:   [[TMP3:%.*]] = ashr i64 [[TMP2]], 62
@@ -340,7 +340,7 @@ void binOp(S* s) {
 
 // LLVM: define {{.*@binOp}}
 // LLVM:   [[TMP0:%.*]] = load ptr, ptr {{.*}}, align 8
-// LLVM:   [[TMP1:%.*]] = getelementptr %struct.S, ptr [[TMP0]], i32 0, i32 0
+// LLVM:   [[TMP1:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP0]], i32 0, i32 0
 // LLVM:   [[TMP2:%.*]] = load i64, ptr [[TMP1]], align 4
 // LLVM:   [[TMP3:%.*]] = shl i64 [[TMP2]], 13
 // LLVM:   [[TMP4:%.*]] = ashr i64 [[TMP3]], 62

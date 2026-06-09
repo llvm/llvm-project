@@ -13,14 +13,14 @@ struct A {
 // This should initialize the vtable pointer.
 A::A() {}
 
-// CIR: !rec_A = !cir.record<struct "A" {!cir.vptr}>
-// CIR: !rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 3>}>
+// CIR: !rec_A = !cir.struct<"A" {!cir.vptr}>
+// CIR: !rec_anon_struct = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 3>}>
 
 // CIR: cir.global "private" external @_ZTV1A : !rec_anon_struct
 
 // LLVM: @_ZTV1A = external global { [3 x ptr] }
 
-// OGCG: @_ZTV1A = external unnamed_addr constant { [3 x ptr] }
+// OGCG: @_ZTV1A = external constant { [3 x ptr] }
 
 // CIR: cir.func{{.*}} @_ZN1AC2Ev(%arg0: !cir.ptr<!rec_A> {{.*}})
 // CIR:    %[[THIS_ADDR:.*]] = cir.alloca !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>, ["this", init]
@@ -79,3 +79,41 @@ void f1(A *a) {
 // OGCG:   %[[FN_PTR_PTR:.*]] = getelementptr inbounds ptr, ptr %[[VPTR]], i64 0
 // OGCG:   %[[FN_PTR:.*]] = load ptr, ptr %[[FN_PTR_PTR]]
 // OGCG:   call void %[[FN_PTR]](ptr {{.*}} %[[A]], i8 {{.*}} 99)
+
+struct B {
+  ~B();
+  virtual void f(char);
+};
+
+void call_virtual_fn_in_cleanup_scope() {
+  B b;
+  b.f('c');
+}
+
+// CIR: cir.func {{.*}} @_Z32call_virtual_fn_in_cleanup_scopev()
+// CIR:   %[[B:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["b", init]
+// CIR:   cir.call @_ZN1BC2Ev(%[[B]])
+// CIR:   cir.cleanup.scope {
+// CIR:    %[[C_LITERAL:.*]] = cir.const #cir.int<99> : !s8i
+// CIR:    cir.call @_ZN1B1fEc(%[[B]], %[[C_LITERAL]]) : (!cir.ptr<!rec_B> {{.*}}, !s8i {{.*}}) -> ()
+// CIR:    cir.yield
+// CIR:   } cleanup  normal {
+// CIR:    cir.call @_ZN1BD1Ev(%[[B]]) nothrow : (!cir.ptr<!rec_B> {{.*}}) -> ()
+// CIR:    cir.yield
+// CIR:   }
+
+// LLVM: define {{.*}} void @_Z32call_virtual_fn_in_cleanup_scopev()
+// LLVM:   %[[B:.*]] = alloca %struct.B
+// LLVM:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
+// LLVM:   br label %[[CLEANUP_SCOPE:.*]]
+// LLVM: [[CLEANUP_SCOPE]]:
+// LLVM:    call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef 99)
+// LLVM:    br label %[[NORMAL_CLEANUP:.*]]
+// LLVM: [[NORMAL_CLEANUP]]:
+// LLVM:    call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])
+
+// OGCG: define {{.*}} void @_Z32call_virtual_fn_in_cleanup_scopev()
+// OGCG:   %[[B:.*]] = alloca %struct.B, align 8
+// OGCG:   call void @_ZN1BC2Ev(ptr {{.*}} %[[B]])
+// OGCG:   call void @_ZN1B1fEc(ptr {{.*}} %[[B]], i8 noundef signext 99)
+// OGCG:   call void @_ZN1BD1Ev(ptr {{.*}} %[[B]])

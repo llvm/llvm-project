@@ -1,6 +1,5 @@
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes/cmake/Modules")
 include(WarningFlags)
-
 function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
   cmake_parse_arguments(ARG "" "" "COMPILE_OPTIONS;SOURCES" ${ARGN})
 
@@ -17,6 +16,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
   add_dependencies(${LIB_OBJ_NAME}
     sycl-headers
     LLVMOffload
+    LLVMObject
   )
 
   target_include_directories(${LIB_OBJ_NAME}
@@ -24,6 +24,7 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
       ${CMAKE_CURRENT_SOURCE_DIR}
       ${LIBSYCL_BUILD_INCLUDE_DIR}
       $<TARGET_PROPERTY:LLVMOffload,INTERFACE_INCLUDE_DIRECTORIES>
+      ${LLVM_MAIN_INCLUDE_DIR}
   )
 
   set_target_properties(${LIB_TARGET_NAME}
@@ -68,6 +69,8 @@ function(add_sycl_rt_library LIB_TARGET_NAME LIB_OBJ_NAME LIB_OUTPUT_NAME)
       ${CMAKE_DL_LIBS}
       ${CMAKE_THREAD_LIBS_INIT}
       LLVMOffload
+      LLVMObject
+      LLVMSupport
   )
 
   set_target_properties(${LIB_TARGET_NAME}
@@ -82,28 +85,33 @@ endfunction(add_sycl_rt_library)
 
 set(LIBSYCL_SOURCES
     "context.cpp"
+    "event.cpp"
     "exception.cpp"
     "exception_list.cpp"
     "device.cpp"
     "device_selector.cpp"
     "platform.cpp"
     "queue.cpp"
+    "usm_functions.cpp"
     "detail/context_impl.cpp"
+    "detail/event_impl.cpp"
+    "detail/device_image_wrapper.cpp"
     "detail/device_impl.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
+    "detail/program_manager.cpp"
     "detail/queue_impl.cpp"
     "detail/offload/offload_utils.cpp"
     "detail/offload/offload_topology.cpp"
 )
 
 add_sycl_rt_library(${LIBSYCL_LIB_NAME}
-  sycl_object
+  ${LIBSYCL_OBJ_TARGET}
   ${LIBSYCL_SHARED_OUTPUT_NAME}
   SOURCES
     ${LIBSYCL_SOURCES})
 
 install(TARGETS ${LIBSYCL_RT_LIBS}
-  ARCHIVE DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
-  LIBRARY DESTINATION "lib${LLVM_LIBDIR_SUFFIX}" COMPONENT libsycl
+  ARCHIVE DESTINATION ${LIBSYCL_INSTALL_LIBRARY_DIR} COMPONENT libsycl
+  LIBRARY DESTINATION ${LIBSYCL_INSTALL_LIBRARY_DIR} COMPONENT libsycl
   RUNTIME DESTINATION "bin" COMPONENT libsycl)

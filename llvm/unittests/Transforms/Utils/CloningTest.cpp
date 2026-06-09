@@ -780,11 +780,13 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "my_operator", scope: !1, unit: !0, retainedNodes: !{!4})
+    !3 = distinct !DISubprogram(name: "my_operator", scope: !1, type: !8, unit: !0, retainedNodes: !{!4})
     !4 = !DILocalVariable(name: "awaitables", scope: !3)
-    !5 = distinct !DISubprogram(name: "test", scope: !3, unit: !0)
+    !5 = distinct !DISubprogram(name: "test", scope: !3, type: !8, unit: !0)
     !6 = !DILocation(line: 55, column: 15, scope: !3, inlinedAt: !7)
     !7 = distinct !DILocation(line: 73, column: 14, scope: !5)
+    !8 = !DISubroutineType(types: !9)
+    !9 = !{null}
   )";
 
   LLVMContext Context;
@@ -827,8 +829,8 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, enums: !{!14})
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !1, unit: !0, retainedNodes: !9)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !1, unit: !0, retainedNodes: !{!5})
+    !3 = distinct !DISubprogram(name: "test", scope: !1, type: !31, unit: !0, retainedNodes: !9)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !1, type: !31, unit: !0, retainedNodes: !{!5})
     !5 = !DILocalVariable(name: "awaitables", scope: !4, type: !23)
     !6 = distinct !DILexicalBlock(scope: !4, file: !1, line: 1)
     !7 = !DILocation(line: 1, scope: !6, inlinedAt: !8)
@@ -849,6 +851,8 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
     !28 = !DILocalVariable(name: "ptr", scope: !3, type: !27)
     !29 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !27)
     !30 = !DILocalVariable(name: "const_ptr", scope: !3, type: !29)
+    !31 = !DISubroutineType(types: !32)
+    !32 = !{null}
   )";
 
   LLVMContext Context;
@@ -963,12 +967,14 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5})
+    !3 = distinct !DISubprogram(name: "test", scope: !0, type: !9, unit: !0)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, type: !9, unit: !0, retainedNodes: !{!5})
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = distinct !DILexicalBlock(scope: !4, file: !1, line: 1)
     !7 = !DILocation(line: 1, scope: !6, inlinedAt: !8)
     !8 = !DILocation(line: 10, scope: !3)
+    !9 = !DISubroutineType(types: !10)
+    !10 = !{null}
   )";
 
   LLVMContext Context;
@@ -1009,12 +1015,14 @@ TEST(CloneFunction, CloneFunctionToDifferentModule) {
     !llvm.module.flags = !{!0}
     !llvm.dbg.cu = !{!2, !6}
     !0 = !{i32 1, !"Debug Info Version", i32 3}
-    !1 = distinct !DISubprogram(unit: !2)
+    !1 = distinct !DISubprogram(type: !7, unit: !2)
     !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
     !3 = !DIFile(filename: "foo.c", directory: "/tmp")
-    !4 = distinct !DISubprogram(unit: !2)
+    !4 = distinct !DISubprogram(type: !7, unit: !2)
     !5 = !DILocation(line: 4, scope: !1)
     !6 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
+    !7 = !DISubroutineType(types: !8)
+    !8 = !{null}
   )";
   StringRef DeclAssembly = R"(
     declare void @foo()
@@ -1333,13 +1341,15 @@ TEST_F(CloneInstruction, cloneKeyInstructions) {
     !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
     !1 = !DIFile(filename: "test.cpp",  directory: "")
     !2 = !{i32 1, !"Debug Info Version", i32 3}
-    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0, keyInstructions: true)
-    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
+    !3 = distinct !DISubprogram(name: "test", scope: !0, type: !10, unit: !0, keyInstructions: true)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, type: !10, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
     !5 = !DILocalVariable(name: "awaitables", scope: !4)
     !6 = !DILocation(line: 1, scope: !4, inlinedAt: !8, atomGroup: 1, atomRank: 1)
     !7 = !DILocation(line: 2, scope: !3, atomGroup: 1, atomRank: 1)
     !8 = !DILocation(line: 3, scope: !3, atomGroup: 1, atomRank: 1)
     !9 = !DILocation(line: 4, scope: !3, atomGroup: 2, atomRank: 1)
+    !10 = !DISubroutineType(types: !11)
+    !11 = !{null}
   )");
 
   ASSERT_FALSE(verifyModule(*M, &errs()));

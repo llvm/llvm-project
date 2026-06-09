@@ -30,7 +30,7 @@ define amdgpu_kernel void @buffer_load_lds_reassociate_offsets(ptr addrspace(1) 
 ; CHECK-NEXT:    s_mov_b32 m0, 0
 ; CHECK-NEXT:    v_add_u32_e32 v0, 0x842, v0
 ; CHECK-NEXT:    buffer_load_dwordx4 v1, s[8:11], 0 offen lds
-; CHECK-NEXT:    s_add_i32 m0, 0, 0x420
+; CHECK-NEXT:    s_movk_i32 m0, 0x420
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    buffer_load_dwordx4 v0, s[8:11], 0 offen lds
 ; CHECK-NEXT:    s_endpgm

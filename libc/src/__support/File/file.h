@@ -12,11 +12,14 @@
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/off_t.h"
+#include "hdr/types/wchar_t.h"
+#include "hdr/types/wint_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/threads/mutex.h"
+#include "src/__support/wchar/mbstate.h"
 
 #include <stddef.h>
 
@@ -39,7 +42,20 @@ struct FileIOResult {
 // suitable for their platform.
 class File {
 public:
+  static void add_file(File *f);
+  static void remove_file(File *f);
+  static File *get_first_file();
+  static void lock_list();
+  static void unlock_list();
+
+  static File *list_all;
+  static Mutex list_lock;
+
+  File *get_next() const { return next; }
+
   static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
+
+  enum class Orientation { UNORIENTED, BYTE, WIDE };
 
   using LockFunc = void(File *);
   using UnlockFunc = void(File *);
@@ -91,8 +107,9 @@ private:
 
   // For files which are readable, we should be able to support one ungetc
   // operation even if |buf| is nullptr. So, in the constructor of File, we
-  // set |buf| to point to this buffer character.
-  uint8_t ungetc_buf;
+  // set |buf| to point to this buffer character. It needs to be at least 4
+  // bytes so we can store a widechar.
+  uint8_t ungetc_buf[4];
 
   uint8_t *buf;   // Pointer to the stream buffer for buffered streams
   size_t bufsize; // Size of the buffer pointed to by |buf|.
@@ -119,6 +136,9 @@ private:
 
   bool eof;
   bool err;
+
+  Orientation orientation;
+  internal::mbstate mbstate;
 
   // This is a convenience RAII class to lock and unlock file objects.
   class FileLock {
@@ -159,9 +179,11 @@ public:
       : platform_write(wf), platform_read(rf), platform_seek(sf),
         platform_close(cf), mutex(/*timed=*/false, /*recursive=*/false,
                                   /*robust=*/false, /*pshared=*/false),
-        ungetc_buf(0), buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
+        ungetc_buf{}, buf(buffer), bufsize(buffer_size), bufmode(buffer_mode),
         own_buf(owned), mode(modeflags), pos(0), prev_op(FileOp::NONE),
-        read_limit(0), eof(false), err(false) {
+        read_limit(0), eof(false), err(false),
+        orientation(Orientation::UNORIENTED), mbstate(), prev(nullptr),
+        next(nullptr) {
     adjust_buf();
   }
 
@@ -202,6 +224,27 @@ public:
   int ungetc(int c) {
     FileLock lock(this);
     return ungetc_unlocked(c);
+  }
+
+  FileIOResult write_unlocked(const wchar_t *ws, size_t len);
+
+  FileIOResult write(const wchar_t *ws, size_t len) {
+    FileLock l(this);
+    return write_unlocked(ws, len);
+  }
+
+  FileIOResult read_unlocked(wchar_t *ws, size_t len);
+
+  FileIOResult read(wchar_t *ws, size_t len) {
+    FileLock l(this);
+    return read_unlocked(ws, len);
+  }
+
+  ErrorOr<wint_t> ungetwc_unlocked(wint_t wc);
+
+  ErrorOr<wint_t> ungetwc(wint_t wc) {
+    FileLock lock(this);
+    return ungetwc_unlocked(wc);
   }
 
   // Does the following:
@@ -279,11 +322,32 @@ public:
     return iseof_unlocked();
   }
 
+  Orientation get_orientation_unlocked() const { return orientation; }
+
+  Orientation get_orientation() {
+    FileLock l(this);
+    return get_orientation_unlocked();
+  }
+
+  Orientation try_set_orientation_unlocked(Orientation o) {
+    if (orientation == Orientation::UNORIENTED)
+      orientation = o;
+    return orientation;
+  }
+
+  Orientation try_set_orientation(Orientation o) {
+    FileLock l(this);
+    return try_set_orientation_unlocked(o);
+  }
+
   // Returns an bit map of flags corresponding to enumerations of
   // OpenMode, ContentType and CreateType.
   static ModeFlags mode_flags(const char *mode);
 
 private:
+  FileIOResult write_unlocked_impl(const void *data, size_t len);
+  FileIOResult read_unlocked_impl(void *data, size_t len);
+
   FileIOResult write_unlocked_lbf(const uint8_t *data, size_t len);
   FileIOResult write_unlocked_fbf(const uint8_t *data, size_t len);
   FileIOResult write_unlocked_nbf(const uint8_t *data, size_t len);
@@ -308,24 +372,23 @@ private:
       // 3. If user wants _IONBF, then the buffer is ignored for writing.
       // So, all of the above cases, having a single ungetc buffer does not
       // affect the behavior experienced by the user.
-      buf = &ungetc_buf;
-      bufsize = 1;
+      buf = ungetc_buf;
+      bufsize = sizeof(ungetc_buf);
       own_buf = false; // We shouldn't call free on |buf| when closing the file.
     }
   }
+
+  File *prev;
+  File *next;
 };
 
-// The implementaiton of this function is provided by the platform_file
+// The implementation of this function is provided by the platform_file
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
 
 // The platform_file library should implement it if it relevant for that
 // platform.
 int get_fileno(File *f);
-
-extern File *stdin;
-extern File *stdout;
-extern File *stderr;
 
 } // namespace LIBC_NAMESPACE_DECL
 

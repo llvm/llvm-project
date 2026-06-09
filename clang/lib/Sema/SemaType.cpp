@@ -1041,8 +1041,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       case TypeSpecifierWidth::LongLong:
         Result = Context.LongLongTy;
 
-        // 'long long' is a C99 or C++11 feature.
-        if (!S.getLangOpts().C99) {
+        if (S.getLangOpts().OpenCL) {
+          // OpenCL v3.0 s6.3.4: 'long long' is a reserved data type.
+          S.Diag(DS.getTypeSpecWidthLoc(), diag::warn_opencl_longlong);
+        } else if (!S.getLangOpts().C99) {
+          // 'long long' is a C99 or C++11 feature.
           if (S.getLangOpts().CPlusPlus)
             S.Diag(DS.getTypeSpecWidthLoc(),
                    S.getLangOpts().CPlusPlus11 ?
@@ -1066,8 +1069,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       case TypeSpecifierWidth::LongLong:
         Result = Context.UnsignedLongLongTy;
 
-        // 'long long' is a C99 or C++11 feature.
-        if (!S.getLangOpts().C99) {
+        if (S.getLangOpts().OpenCL) {
+          // OpenCL v3.0 s6.3.4: 'long long' is a reserved data type.
+          S.Diag(DS.getTypeSpecWidthLoc(), diag::warn_opencl_longlong);
+        } else if (!S.getLangOpts().C99) {
+          // 'long long' is a C99 or C++11 feature.
           if (S.getLangOpts().CPlusPlus)
             S.Diag(DS.getTypeSpecWidthLoc(),
                    S.getLangOpts().CPlusPlus11 ?
@@ -1338,14 +1344,14 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
         declarator.setInvalidType(true);
       }
     }
-    Result = S.Context.getAutoType(QualType(), AutoKW,
-                                   /*IsDependent*/ false, /*IsPack=*/false,
+    Result = S.Context.getAutoType(DeducedKind::Undeduced, QualType(), AutoKW,
                                    TypeConstraintConcept, TemplateArgs);
     break;
   }
 
   case DeclSpec::TST_auto_type:
-    Result = Context.getAutoType(QualType(), AutoTypeKeyword::GNUAutoType, false);
+    Result = Context.getAutoType(DeducedKind::Undeduced, QualType(),
+                                 AutoTypeKeyword::GNUAutoType);
     break;
 
   case DeclSpec::TST_unknown_anytype:
@@ -2288,6 +2294,12 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
         return QualType();
       }
       if (ConstVal == 0 && !T.isWebAssemblyReferenceType()) {
+        if (getLangOpts().OpenCL) {
+          Diag(ArraySize->getBeginLoc(), diag::err_typecheck_zero_array_size)
+              << 3 << ArraySize->getSourceRange();
+          return QualType();
+        }
+
         // GCC accepts zero sized static arrays. We allow them when
         // we're not in a SFINAE context.
         Diag(ArraySize->getBeginLoc(),
@@ -4401,7 +4413,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   }
 
   // Determine whether we should infer _Nonnull on pointer types.
-  std::optional<NullabilityKind> inferNullability;
+  NullabilityKindOrNone inferNullability = std::nullopt;
   bool inferNullabilityCS = false;
   bool inferNullabilityInnerOnly = false;
   bool inferNullabilityInnerOnlyComplete = false;
@@ -9099,9 +9111,29 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
-    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
     case ParsedAttr::AT_AddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
+      attr.setUsedAsTypeAttr();
+      break;
+    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
+      HandleAddressSpaceTypeAttribute(type, attr, state);
+      if (state.getDeclarator().getContext() == DeclaratorContext::Prototype) {
+        if (state.getSema().getLangOpts().getHLSLVersion() <
+            LangOptions::HLSL_202x)
+          state.getSema().Diag(attr.getLoc(), diag::warn_hlsl_groupshared_202x);
+
+        // Note: we don't check for the usage of HLSLParamModifiers in/out/inout
+        // here because the check in the AT_HLSLParamModifier case is sufficient
+        // regardless of the order of groupshared or in/out/inout specified in
+        // the parameter. And checking there produces a better error message.
+      }
+      attr.setUsedAsTypeAttr();
+      break;
+    case ParsedAttr::AT_HLSLRowMajor:
+    case ParsedAttr::AT_HLSLColumnMajor:
+      if (Attr *A =
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
+        type = state.getAttributedType(A, type, type);
       attr.setUsedAsTypeAttr();
       break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
@@ -9192,6 +9224,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::AT_HLSLParamModifier: {
       HandleHLSLParamModifierAttr(state, type, attr, state.getSema());
+      if (attrs.hasAttribute(ParsedAttr::AT_HLSLGroupSharedAddressSpace)) {
+        state.getSema().Diag(attr.getLoc(), diag::err_hlsl_attr_incompatible)
+            << attr << "'groupshared'";
+        attr.setInvalid();
+        return;
+      }
       attr.setUsedAsTypeAttr();
       break;
     }
@@ -9310,6 +9348,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
     }
     case ParsedAttr::AT_HLSLResourceClass:
+    case ParsedAttr::AT_HLSLResourceDimension:
     case ParsedAttr::AT_HLSLROV:
     case ParsedAttr::AT_HLSLRawBuffer:
     case ParsedAttr::AT_HLSLContainedType: {
@@ -9984,7 +10023,7 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   // parameter object. This rule makes no difference before C++20 so we apply
   // it unconditionally.
   if (const auto *SNTTPE = dyn_cast<SubstNonTypeTemplateParmExpr>(IDExpr))
-    return SNTTPE->getParameterType(Context);
+    IDExpr = SNTTPE->getReplacement();
 
   //     - if e is an unparenthesized id-expression or an unparenthesized class
   //       member access (5.2.5), decltype(e) is the type of the entity named

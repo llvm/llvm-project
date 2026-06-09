@@ -635,6 +635,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     Diags.Report(diag::err_drv_argument_not_allowed_with) << "-fsycl-is-device"
                                                           << "-fsycl-is-host";
 
+  // SYCL requires C++; reject C inputs on both device and host.
+  if ((LangOpts.SYCLIsDevice || LangOpts.SYCLIsHost) && !LangOpts.CPlusPlus)
+    Diags.Report(diag::err_drv_argument_not_allowed_with)
+        << GetInputKindName(IK) << "-fsycl";
+
   if (Args.hasArg(OPT_fgnu89_inline) && LangOpts.CPlusPlus)
     Diags.Report(diag::err_drv_argument_not_allowed_with)
         << "-fgnu89-inline" << GetInputKindName(IK);
@@ -2557,6 +2562,10 @@ void CompilerInvocationBase::GenerateDiagnosticArgs(
     if (Prefix != "expected")
       GenerateArg(Consumer, OPT_verify_EQ, Prefix);
 
+  if (Opts.VerifyDirectives) {
+    GenerateArg(Consumer, OPT_verify_directives);
+  }
+
   DiagnosticLevelMask VIU = Opts.getVerifyIgnoreUnexpected();
   if (VIU == DiagnosticLevelMask::None) {
     // This is the default, don't generate anything.
@@ -2655,6 +2664,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
 
   Opts.VerifyDiagnostics = Args.hasArg(OPT_verify) || Args.hasArg(OPT_verify_EQ);
+  Opts.VerifyDirectives = Args.hasArg(OPT_verify_directives);
   Opts.VerifyPrefixes = Args.getAllArgValues(OPT_verify_EQ);
   if (Args.hasArg(OPT_verify))
     Opts.VerifyPrefixes.push_back("expected");
@@ -3286,6 +3296,12 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
 
   Opts.DashX = DashX;
 
+  // CIR is a source-level frontend pipeline. When the input is already LLVM IR
+  // (e.g. during the backend phase of OpenMP offloading), the standard LLVM
+  // backend should be used instead.
+  if (Opts.UseClangIRPipeline && DashX.getLanguage() == Language::LLVM_IR)
+    Opts.UseClangIRPipeline = false;
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
@@ -3786,7 +3802,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_ftrapv);
     GenerateArg(Consumer, OPT_ftrapv_handler, Opts.OverflowHandler);
   } else if (Opts.SignedOverflowBehavior == LangOptions::SOB_Defined) {
-    GenerateArg(Consumer, OPT_fwrapv);
+    if (!Opts.MSVCCompat)
+      GenerateArg(Consumer, OPT_fwrapv);
+  } else if (Opts.MSVCCompat) {
+    GenerateArg(Consumer, OPT_fno_wrapv);
   }
   if (Opts.PointerOverflowDefined)
     GenerateArg(Consumer, OPT_fwrapv_pointer);
@@ -4201,9 +4220,9 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     // Set the handler, if one is specified.
     Opts.OverflowHandler =
         std::string(Args.getLastArgValue(OPT_ftrapv_handler));
-  }
-  else if (Args.hasArg(OPT_fwrapv))
+  } else if (Args.hasFlag(OPT_fwrapv, OPT_fno_wrapv, Opts.MSVCCompat)) {
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Defined);
+  }
   if (Args.hasArg(OPT_fwrapv_pointer))
     Opts.PointerOverflowDefined = true;
 
@@ -5105,6 +5124,13 @@ bool CompilerInvocation::CreateFromArgsImpl(
   // Set the triple of the host for OpenMP device compile.
   if (LangOpts.OpenMPIsTargetDevice)
     Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+
+  // Set the default and host triples for SYCL device compilation.
+  if (LangOpts.SYCLIsDevice) {
+    if (!Args.hasArg(options::OPT_triple))
+      Res.getTargetOpts().Triple = "spirv64-unknown-unknown";
+    Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
+  }
 
   ParseCodeGenArgs(Res.getCodeGenOpts(), Args, DashX, Diags, T,
                    Res.getFrontendOpts().OutputFile, LangOpts);

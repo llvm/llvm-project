@@ -1,6 +1,5 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s modernize-use-nodiscard %t -- \
-// RUN:   -config="{CheckOptions: {modernize-use-nodiscard.ReplacementString: 'NO_DISCARD'}}" \
-// RUN:   -- -isystem %clang_tidy_headers
+// RUN:   -config="{CheckOptions: {modernize-use-nodiscard.ReplacementString: 'NO_DISCARD'}}"
 #include <string>
 
 namespace std {
@@ -24,6 +23,12 @@ typedef unsigned &my_unsigned_reference;
 typedef const unsigned &my_unsigned_const_reference;
 
 struct NO_DISCARD NoDiscardStruct{};
+
+template <typename T>
+struct NO_DISCARD NoDiscardTemplate {};
+
+using NoDiscardTemplateAlias = NoDiscardTemplate<int>;
+typedef NoDiscardTemplate<int> NoDiscardTemplateTypedef;
 
 class Foo {
 public:
@@ -165,6 +170,20 @@ public:
 
     // Do not add ``[[nodiscard]]`` to functions returning types marked [[nodiscard]].
     NoDiscardStruct f50() const;
+
+    // Do not add ``[[nodiscard]]`` to functions returning class template
+    // specializations whose primary template is marked [[nodiscard]].
+    NoDiscardTemplate<int> f51() const;
+
+    NoDiscardTemplateAlias f52() const;
+
+    NoDiscardTemplateTypedef f53() const;
+
+    const NoDiscardTemplate<int> f54() const;
+
+    const NoDiscardTemplate<int> &f55() const;
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f55' should be marked NO_DISCARD [modernize-use-nodiscard]
+    // CHECK-FIXES: NO_DISCARD const NoDiscardTemplate<int> &f55() const;
 };
 
 // Do not add ``[[nodiscard]]`` to Lambda.

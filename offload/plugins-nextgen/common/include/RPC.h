@@ -23,6 +23,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <thread>
 
@@ -45,7 +46,7 @@ public:
   RPCServerTy(plugin::GenericPluginTy &Plugin);
 
   /// Deinitialize the associated memory and resources.
-  llvm::Error shutDown();
+  llvm::Error shutDown(plugin::GenericPluginTy &Plugin);
 
   /// Initialize the worker thread.
   llvm::Error startThread();
@@ -70,6 +71,10 @@ public:
 
   /// Register a custom callback for the RPC server to manage.
   void registerCallback(RPCServerCallbackTy FnPtr);
+
+  /// Set the sleep/wake functions for interrupt-driven RPC serving.
+  void setSleepFunction(std::function<void()> Sleep,
+                        std::function<void()> Wake);
 
 private:
   /// Array from this device's identifier to its attached devices.
@@ -114,13 +119,20 @@ private:
     /// A reference to the associated generic device for the buffer.
     llvm::ArrayRef<plugin::GenericDeviceTy *> Devices;
 
+    // Sleep and wake functions to handle when the server is idle.
+    std::function<void()> SleepFunction;
+    std::function<void()> WakeFunction;
+
     /// Initialize the worker thread to run in the background.
     ServerThread(void *Buffers[], plugin::GenericDeviceTy *Devices[],
                  size_t Length, std::mutex &BufferMutex,
                  llvm::SmallSetVector<RPCServerCallbackTy, 0> &Callbacks)
         : Running(false), NumUsers(0), CV(), Mutex(), BufferMutex(BufferMutex),
           Callbacks(Callbacks), Buffers(Buffers, Length),
-          Devices(Devices, Length) {}
+          Devices(Devices, Length), SleepFunction([]() {
+            std::this_thread::sleep_for(std::chrono::microseconds(250));
+          }),
+          WakeFunction([]() {}) {}
 
     ~ServerThread() { assert(!Running && "Thread not shut down explicitly\n"); }
 

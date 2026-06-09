@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/types/size_t.h"
+#include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
 #include "src/__support/alloc-checker.h"
@@ -510,5 +511,358 @@ TEST(LlvmLibcFileTest, WriteSplit) {
   static constexpr size_t WR_EXPECTED = AVAIL - (sizeof(data) - 1);
   ASSERT_EQ(WR_EXPECTED, f->write(data2, sizeof(data2) - 1).value);
   EXPECT_TRUE(f->error());
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, WideCharOrientation) {
+  constexpr size_t FILE_BUFFER_SIZE = 512;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w+");
+
+  f->write(L"A", 1);
+
+  auto write_res = f->write("B", 1);
+  EXPECT_EQ(write_res.value, size_t(0));
+  EXPECT_TRUE(f->error());
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, ByteCharOrientation) {
+  constexpr size_t FILE_BUFFER_SIZE = 512;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w+");
+
+  f->write("A", 1);
+
+  auto write_res = f->write(L"B", 1);
+  EXPECT_EQ(write_res.value, size_t(0));
+  EXPECT_TRUE(f->error());
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, Ungetwc) {
+  constexpr size_t FILE_BUFFER_SIZE = 512;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w+");
+
+  f->write(L"A", 1);
+  f->flush();
+  f->seek(0, SEEK_SET);
+
+  wchar_t ws_out[2];
+  auto read_res = f->read(ws_out, 1);
+  ASSERT_EQ(read_res.value, size_t(1));
+  EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'A'));
+
+  auto unget_res = f->ungetwc(L'B');
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'B'));
+  auto read_res2 = f->read(ws_out, 1);
+
+  ASSERT_EQ(read_res2.value, size_t(1));
+  EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'B'));
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, WideStringIO) {
+  constexpr size_t FILE_BUFFER_SIZE = 100;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w+");
+  ASSERT_FALSE(f == nullptr);
+
+  const wchar_t *ws = L"Hello, World!";
+  size_t len = 13;
+
+  auto write_res = f->write(ws, len);
+  ASSERT_FALSE(write_res.has_error());
+  EXPECT_EQ(write_res.value, len);
+
+  ASSERT_EQ(f->flush(), 0); // Ensure everything is written to StringFile
+
+  ASSERT_EQ(f->seek(0, SEEK_SET).value(), 0);
+
+  wchar_t read_buf[20];
+  auto read_res = f->read(read_buf, len);
+  ASSERT_FALSE(read_res.has_error());
+  EXPECT_EQ(read_res.value, len);
+
+  for (size_t i = 0; i < len; ++i) {
+    EXPECT_EQ(static_cast<uint32_t>(read_buf[i]), static_cast<uint32_t>(ws[i]));
+  }
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, TrySetOrientation) {
+  constexpr size_t FILE_BUFFER_SIZE = 100;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "r+");
+  ASSERT_FALSE(f == nullptr);
+
+  EXPECT_EQ(static_cast<uint32_t>(f->get_orientation()),
+            static_cast<uint32_t>(File::Orientation::UNORIENTED));
+
+  EXPECT_EQ(
+      static_cast<uint32_t>(f->try_set_orientation(File::Orientation::WIDE)),
+      static_cast<uint32_t>(File::Orientation::WIDE));
+  EXPECT_EQ(static_cast<uint32_t>(f->get_orientation()),
+            static_cast<uint32_t>(File::Orientation::WIDE));
+
+  EXPECT_EQ(
+      static_cast<uint32_t>(f->try_set_orientation(File::Orientation::BYTE)),
+      static_cast<uint32_t>(File::Orientation::WIDE)); // Cannot change
+  EXPECT_EQ(static_cast<uint32_t>(f->get_orientation()),
+            static_cast<uint32_t>(File::Orientation::WIDE));
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, UngetwcMultiByte) {
+  constexpr size_t FILE_BUFFER_SIZE = 512;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w+");
+
+  f->write(L"€", 1);
+  f->flush();
+  f->seek(0, SEEK_SET);
+
+  wchar_t ws_out[2];
+  auto read_res = f->read(ws_out, 1);
+  ASSERT_EQ(read_res.value, size_t(1));
+  EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'€'));
+
+  auto unget_res = f->ungetwc(L'¢');
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'¢'));
+
+  auto read_res2 = f->read(ws_out, 1);
+  ASSERT_EQ(read_res2.value, size_t(1));
+  EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'¢'));
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, UngetwcUnbufferedMultiByte) {
+  StringFile *f = new_string_file(nullptr, 0, _IONBF, true, "w+");
+  ASSERT_FALSE(f == nullptr);
+
+  f->write(L"€", 1);
+  f->seek(0, SEEK_SET);
+
+  wchar_t ws_out[2];
+  auto read_res = f->read(ws_out, 1);
+  ASSERT_EQ(read_res.value, size_t(1));
+  EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'€'));
+
+  auto unget_res = f->ungetwc(L'¢');
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(L'¢'));
+
+  auto read_res2 = f->read(ws_out, 1);
+  ASSERT_EQ(read_res2.value, size_t(1));
+  EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'¢'));
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, WideStringIO_Multibyte) {
+  constexpr size_t FILE_BUFFER_SIZE = 100;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w+");
+  ASSERT_FALSE(f == nullptr);
+
+  const wchar_t *ws = L"Hello € World!";
+  size_t len = 14;
+
+  auto write_res = f->write(ws, len);
+  ASSERT_FALSE(write_res.has_error());
+  EXPECT_EQ(write_res.value, len);
+
+  ASSERT_EQ(f->flush(), 0);
+
+  ASSERT_EQ(f->seek(0, SEEK_SET).value(), 0);
+
+  wchar_t read_buf[20];
+  auto read_res = f->read(read_buf, len);
+  ASSERT_FALSE(read_res.has_error());
+  EXPECT_EQ(read_res.value, len);
+
+  for (size_t i = 0; i < len; ++i) {
+    EXPECT_EQ(static_cast<uint32_t>(read_buf[i]), static_cast<uint32_t>(ws[i]));
+  }
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, SeekResetsMbstate) {
+  constexpr size_t FILE_BUFFER_SIZE = 100;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "r+");
+  ASSERT_FALSE(f == nullptr);
+
+  f->reset_and_fill("\xE2\x82", 2);
+
+  wchar_t ws_out[1];
+  auto read_res = f->read(ws_out, 1);
+  EXPECT_EQ(read_res.value, size_t(0));
+  EXPECT_TRUE(f->error());
+
+  f->reset_and_fill("A", 1);
+  f->seek(0, SEEK_SET);
+  f->clearerr();
+
+  auto read_res2 = f->read(ws_out, 1);
+  EXPECT_EQ(read_res2.value, size_t(1));
+  EXPECT_EQ(static_cast<uint32_t>(ws_out[0]), static_cast<uint32_t>(L'A'));
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, ReadWideNotStopAtNewline) {
+  constexpr size_t FILE_BUFFER_SIZE = 100;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w+");
+  ASSERT_FALSE(f == nullptr);
+
+  const wchar_t *ws = L"Hello\nWorld!";
+  size_t len = 12;
+
+  auto write_res = f->write(ws, len);
+  ASSERT_FALSE(write_res.has_error());
+  EXPECT_EQ(write_res.value, len);
+
+  ASSERT_EQ(f->flush(), 0);
+  ASSERT_EQ(f->seek(0, SEEK_SET).value(), 0);
+
+  wchar_t read_buf[20];
+  auto read_res = f->read(read_buf, len);
+  ASSERT_FALSE(read_res.has_error());
+  // Should NOT stop at newline, so should read all 12 characters.
+  EXPECT_EQ(read_res.value, len);
+  EXPECT_EQ(static_cast<uint32_t>(read_buf[5]), static_cast<uint32_t>(L'\n'));
+  EXPECT_EQ(static_cast<uint32_t>(read_buf[11]), static_cast<uint32_t>(L'!'));
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, UngetwcWEOF) {
+  constexpr size_t FILE_BUFFER_SIZE = 100;
+  char file_buffer[FILE_BUFFER_SIZE];
+  StringFile *f =
+      new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "r+");
+  ASSERT_FALSE(f == nullptr);
+
+  EXPECT_EQ(static_cast<uint32_t>(f->get_orientation()),
+            static_cast<uint32_t>(File::Orientation::UNORIENTED));
+
+  auto unget_res = f->ungetwc(WEOF);
+  ASSERT_TRUE(unget_res.has_value());
+  EXPECT_EQ(static_cast<uint32_t>(unget_res.value()),
+            static_cast<uint32_t>(WEOF));
+
+  EXPECT_EQ(static_cast<uint32_t>(f->get_orientation()),
+            static_cast<uint32_t>(File::Orientation::UNORIENTED));
+
+  ASSERT_EQ(f->close(), 0);
+}
+
+// A File subclass with a platform_write that simulates short writes.
+// This models the behavior of write(2) on pipes, sockets, or FIFOs where
+// the kernel may write fewer bytes than requested.
+class ShortWriteFile : public File {
+  static constexpr size_t SIZE = 512;
+  size_t pos;
+  char str[SIZE] = {0};
+  size_t max_write;
+
+  static FileIOResult short_write(LIBC_NAMESPACE::File *f, const void *data,
+                                  size_t len) {
+    ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
+    // Simulate a short write: write at most max_write bytes per call.
+    size_t to_write = len < sf->max_write ? len : sf->max_write;
+    for (size_t i = 0; i < to_write && sf->pos < SIZE; ++i, ++sf->pos)
+      sf->str[sf->pos] = reinterpret_cast<const char *>(data)[i];
+    return to_write;
+  }
+
+  static FileIOResult short_read(LIBC_NAMESPACE::File *f, void *data,
+                                 size_t len) {
+    ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
+    size_t i = 0;
+    for (i = 0; i < len && sf->pos < SIZE; ++i)
+      reinterpret_cast<char *>(data)[i] = sf->str[sf->pos + i];
+    sf->pos += i;
+    return i;
+  }
+
+  static ErrorOr<off_t> short_seek(LIBC_NAMESPACE::File *f, off_t offset,
+                                   int whence) {
+    ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
+    if (whence == SEEK_SET)
+      sf->pos = offset;
+    if (whence == SEEK_CUR)
+      sf->pos += offset;
+    if (whence == SEEK_END)
+      sf->pos = SIZE + offset;
+    return sf->pos;
+  }
+
+  static int short_close(LIBC_NAMESPACE::File *f) {
+    delete reinterpret_cast<ShortWriteFile *>(f);
+    return 0;
+  }
+
+public:
+  explicit ShortWriteFile(char *buffer, size_t buflen, int bufmode, bool owned,
+                          ModeFlags modeflags, size_t max_write_bytes)
+      : LIBC_NAMESPACE::File(&short_write, &short_read, &short_seek,
+                             &short_close, reinterpret_cast<uint8_t *>(buffer),
+                             buflen, bufmode, owned, modeflags),
+        pos(0), max_write(max_write_bytes) {}
+
+  void reset() { pos = 0; }
+  size_t get_pos() const { return pos; }
+  char *get_str() { return str; }
+};
+
+// Verify that a short platform_write of a multi-byte UTF-8 character is
+// detected and reported as a failure. POSIX write(2) may perform short
+// writes on pipes, sockets, and FIFOs, so a 3-byte character could have
+// only 2 bytes accepted by the kernel.
+TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
+  LIBC_NAMESPACE::AllocChecker ac;
+  // Unbuffered so writes go directly to platform_write, limited to 2 bytes.
+  ShortWriteFile *f = new (ac) ShortWriteFile(
+      nullptr, 0, _IONBF, true, LIBC_NAMESPACE::File::mode_flags("w"),
+      /*max_write_bytes=*/2);
+  ASSERT_FALSE(f == nullptr);
+
+  // € (U+20AC) encodes to 3 UTF-8 bytes: 0xE2 0x82 0xAC.
+  // With max_write=2, only 2 of the 3 bytes will be accepted.
+  const wchar_t euro = L'€';
+  auto result = f->write(&euro, 1);
+
+  // The incomplete character must not be counted as written.
+  EXPECT_TRUE(result.has_error());
+  EXPECT_EQ(result.value, size_t(0));
+
+  // The error indicator on the stream should be set.
+  EXPECT_TRUE(f->error());
+
   ASSERT_EQ(f->close(), 0);
 }

@@ -129,10 +129,6 @@ public:
                                                 bool IsRelatedToDecl,
                                                 ASTContext &Ctx) = 0;
 
-  virtual void handleUnsafeOperationInStringView(const Stmt *Operation,
-                                                 bool IsRelatedToDecl,
-                                                 ASTContext &Ctx) = 0;
-
   /// Invoked when a fix is suggested against a variable. This function groups
   /// all variables that must be fixed together (i.e their types must be changed
   /// to the same target type to prevent type mismatches) into a single fixit.
@@ -205,7 +201,10 @@ bool anyConflict(const llvm::SmallVectorImpl<FixItHint> &FixIts,
                  const SourceManager &SM);
 } // namespace internal
 
-std::set<const Expr *> findUnsafePointers(const FunctionDecl *FD);
+/// \return true iff `N` is an unsafe buffer usage and populates the unsafe
+/// pointers in `UnsafePointers`
+bool matchUnsafePointers(const DynTypedNode &N, ASTContext &Ctx,
+                         std::set<const Expr *> &UnsafePointers);
 } // end namespace clang
 
 #endif /* LLVM_CLANG_ANALYSIS_ANALYSES_UNSAFEBUFFERUSAGE_H */

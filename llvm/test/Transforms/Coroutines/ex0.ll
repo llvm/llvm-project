@@ -1,4 +1,4 @@
-; First example from Doc/Coroutines.rst (two block loop)
+; First example from Doc/Coroutines.md (two block loop)
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -preserve-alignment-assumptions-during-inlining=false -S | FileCheck %s
 
 define ptr @f(i32 %n) presplitcoroutine {

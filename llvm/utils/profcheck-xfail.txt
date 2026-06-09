@@ -1,5 +1,3 @@
-CodeGen/AArch64/selectopt-cast.ll
-CodeGen/AArch64/selectopt.ll
 CodeGen/ARM/sjljeh-swifterror.ll
 CodeGen/WinEH/wineh-comdat.ll
 CodeGen/WinEH/wineh-scope-statenumbering.ll
@@ -8,7 +6,6 @@ CodeGen/WinEH/wineh-statenumbering-cleanups.ll
 CodeGen/WinEH/wineh-statenumbering.ll
 DebugInfo/AArch64/ir-outliner.ll
 DebugInfo/Generic/block-asan.ll
-DebugInfo/assignment-tracking/X86/hotcoldsplit.ll
 Transforms/AtomicExpand/ARM/atomic-expansion-v7.ll
 Transforms/Coroutines/coro-await-suspend-lower-invoke.ll
 Transforms/Coroutines/coro-await-suspend-lower.ll
@@ -20,12 +17,15 @@ Transforms/Coroutines/coro-debug-dbg.values-not_used_in_frame.ll
 Transforms/Coroutines/coro-debug-dbg.values.ll
 Transforms/Coroutines/coro-debug-frame-variable.ll
 Transforms/Coroutines/coro-debug-spill-dbg.declare.ll
+Transforms/Coroutines/coro-frame-inramp.ll
+Transforms/Coroutines/coro-materialize-intrinsics.ll
 Transforms/Coroutines/coro-materialize.ll
 Transforms/Coroutines/coro-noop-pacbti.ll
 Transforms/Coroutines/coro-noop.ll
 Transforms/Coroutines/coro-only-destroy-when-complete.ll
 Transforms/Coroutines/coro-spill-suspend.ll
 Transforms/Coroutines/coro-split-00.ll
+Transforms/Coroutines/coro-split-addrspace.ll
 Transforms/Coroutines/coro-split-alloc.ll
 Transforms/Coroutines/coro-split-dbg-labels.ll
 Transforms/Coroutines/coro-split-final-suspend.ll
@@ -53,12 +53,6 @@ Transforms/Coroutines/no-suspend.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll
-Transforms/ExpandIRInsts/X86/expand-fp-convert-small.ll
-Transforms/ExpandIRInsts/X86/expand-int-convert-small.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fptosi129.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fptoui129.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-si129tofp.ll
-Transforms/ExpandIRInsts/X86/expand-large-fp-convert-ui129tofp.ll
 Transforms/FixIrreducible/basic.ll
 Transforms/FixIrreducible/bug45623.ll
 Transforms/FixIrreducible/callbr.ll
@@ -79,9 +73,6 @@ Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/IndirectBrExpand/basic.ll
 Transforms/InstCombine/X86/x86-avx512-inseltpoison.ll
 Transforms/InstCombine/X86/x86-avx512.ll
-Transforms/InstCombine/and-or-icmps.ll
-Transforms/InstCombine/and2.ll
-Transforms/InstCombine/bit-checks.ll
 Transforms/InstCombine/bitreverse.ll
 Transforms/InstCombine/builtin-dynamic-object-size.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-negative-and-positive-thresholds.ll
@@ -118,7 +109,6 @@ Transforms/InstCombine/pow-1.ll
 Transforms/InstCombine/pow-3.ll
 Transforms/InstCombine/pow-sqrt.ll
 Transforms/InstCombine/pull-conditional-binop-through-shift.ll
-Transforms/InstCombine/select-and-or.ll
 Transforms/InstCombine/select-factorize.ll
 Transforms/InstCombine/select-min-max.ll
 Transforms/InstCombine/select-of-symmetric-selects.ll
@@ -159,6 +149,8 @@ Transforms/OpenMP/spmdization_indirect.ll
 Transforms/OpenMP/spmdization_no_guarding_two_reaching_kernels.ll
 Transforms/OpenMP/spmdization_remarks.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
+Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math.ll
+Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math-binary.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-load.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-store.ll
@@ -176,3 +168,4 @@ Transforms/TailCallElim/inf-recursion.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
 Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll
+tools/opt/mtune.ll

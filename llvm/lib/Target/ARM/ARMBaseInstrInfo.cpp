@@ -567,7 +567,7 @@ bool ARMBaseInstrInfo::isPredicable(const MachineInstr &MI) const {
   if ((MI.getDesc().TSFlags & ARMII::DomainMask) == ARMII::DomainNEON)
     return false;
 
-  // Make indirect control flow changes unpredicable when SLS mitigation is
+  // Make indirect control flow changes unpredictable when SLS mitigation is
   // enabled.
   const ARMSubtarget &ST = MF->getSubtarget<ARMSubtarget>();
   if (ST.hardenSlsRetBr() && isIndirectControlFlowNotComingBack(MI))
@@ -605,7 +605,7 @@ template <> bool IsCPSRDead<MachineInstr>(const MachineInstr *MI) {
 unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
-  const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+  const MCAsmInfo &MAI = MF->getTarget().getMCAsmInfo();
 
   const MCInstrDesc &MCID = MI.getDesc();
 
@@ -618,7 +618,7 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     // example.
     return MCID.getSize();
   case TargetOpcode::BUNDLE:
-    return getInstBundleLength(MI);
+    return getInstBundleSize(MI);
   case TargetOpcode::COPY:
     if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
       return 4;
@@ -637,23 +637,12 @@ unsigned ARMBaseInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case ARM::INLINEASM:
   case ARM::INLINEASM_BR: {
     // If this machine instr is an inline asm, measure it.
-    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+    unsigned Size = getInlineAsmLength(MI.getOperand(0).getSymbolName(), MAI);
     if (!MF->getInfo<ARMFunctionInfo>()->isThumbFunction())
       Size = alignTo(Size, 4);
     return Size;
   }
   }
-}
-
-unsigned ARMBaseInstrInfo::getInstBundleLength(const MachineInstr &MI) const {
-  unsigned Size = 0;
-  MachineBasicBlock::const_instr_iterator I = MI.getIterator();
-  MachineBasicBlock::const_instr_iterator E = MI.getParent()->instr_end();
-  while (++I != E && I->isInsideBundle()) {
-    assert(!I->isBundle() && "No nested bundle!");
-    Size += getInstSizeInBytes(*I);
-  }
-  return Size;
 }
 
 void ARMBaseInstrInfo::copyFromCPSR(MachineBasicBlock &MBB,
@@ -893,7 +882,7 @@ ARMBaseInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   // VMOVRRD is also a copy instruction but it requires
   // special way of handling. It is more complex copy version
   // and since that we are not considering it. For recognition
-  // of such instruction isExtractSubregLike MI interface fuction
+  // of such instruction isExtractSubregLike MI interface function
   // could be used.
   // VORRq is considered as a move only if two inputs are
   // the same register.
@@ -1661,7 +1650,8 @@ static unsigned duplicateCPV(MachineFunction &MF, unsigned &CPI) {
 void ARMBaseInstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator I,
                                      Register DestReg, unsigned SubIdx,
-                                     const MachineInstr &Orig) const {
+                                     const MachineInstr &Orig,
+                                     LaneBitmask UsedLanes) const {
   unsigned Opcode = Orig.getOpcode();
   switch (Opcode) {
   default: {
@@ -1854,7 +1844,7 @@ bool ARMBaseInstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
 
 /// shouldScheduleLoadsNear - This is a used by the pre-regalloc scheduler to
 /// determine (in conjunction with areLoadsFromSameBasePtr) if two loads should
-/// be scheduled togther. On some targets if two loads are loading from
+/// be scheduled together. On some targets if two loads are loading from
 /// addresses in the same cache line, it's better if they are scheduled
 /// together. This function takes two integers that represent the load offsets
 /// from the common base address. It returns true if it decides it's desirable
@@ -1980,7 +1970,7 @@ isProfitableToIfCvt(MachineBasicBlock &TBB,
 
   // In thumb code we often end up trading one branch for a IT block, and
   // if we are cloning the instruction can increase code size. Prevent
-  // blocks with multiple predecesors from being ifcvted to prevent this
+  // blocks with multiple predecessors from being ifcvted to prevent this
   // cloning.
   if (Subtarget.isThumb2() && TBB.getParent()->getFunction().hasMinSize()) {
     if (TBB.pred_size() != 1 || FBB.pred_size() != 1)
@@ -2012,7 +2002,7 @@ isProfitableToIfCvt(MachineBasicBlock &TBB,
       // discount it from PredCost.
       PredCost -= 1 * ScalingUpFactor;
     }
-    // The total cost is the cost of each path scaled by their probabilites
+    // The total cost is the cost of each path scaled by their probabilities
     unsigned TUnpredCost = Probability.scale(TUnpredCycles * ScalingUpFactor);
     unsigned FUnpredCost = Probability.getCompl().scale(FUnpredCycles * ScalingUpFactor);
     UnpredCost = TUnpredCost + FUnpredCost;
@@ -2227,7 +2217,7 @@ ARMBaseInstrInfo::optimizeSelect(MachineInstr &MI,
   SeenMIs.erase(DefMI);
 
   // If MI is inside a loop, and DefMI is outside the loop, then kill flags on
-  // DefMI would be invalid when tranferred inside the loop.  Checking for a
+  // DefMI would be invalid when transferred inside the loop.  Checking for a
   // loop is expensive, but at least remove kill flags if they are in different
   // BBs.
   if (DefMI->getParent() != MI.getParent())
@@ -2494,7 +2484,7 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       return true;
     }
 
-    // Otherwise, pull as much of the immedidate into this ADDri/SUBri
+    // Otherwise, pull as much of the immediate into this ADDri/SUBri
     // as possible.
     unsigned RotAmt = ARM_AM::getSOImmValRotate(Offset);
     unsigned ThisImmVal = Offset & llvm::rotr<uint32_t>(0xFF, RotAmt);
@@ -4835,7 +4825,7 @@ bool
 ARMBaseInstrInfo::isFpMLxInstruction(unsigned Opcode, unsigned &MulOpc,
                                      unsigned &AddSubOpc,
                                      bool &NegAcc, bool &HasLane) const {
-  DenseMap<unsigned, unsigned>::const_iterator I = MLxEntryMap.find(Opcode);
+  auto I = MLxEntryMap.find(Opcode);
   if (I == MLxEntryMap.end())
     return false;
 
@@ -6307,7 +6297,7 @@ void ARMBaseInstrInfo::saveLROnStack(MachineBasicBlock &MBB,
   int LROffset = Auth ? Align - 4 : Align;
   CFIBuilder.buildOffset(ARM::LR, -LROffset);
   if (Auth) {
-    // Add a CFI for the location of the return adddress PAC.
+    // Add a CFI for the location of the return address PAC.
     CFIBuilder.buildOffset(ARM::RA_AUTH_CODE, -Align);
   }
 }
@@ -6388,7 +6378,7 @@ void ARMBaseInstrInfo::buildOutlinedFrame(
       Et = std::prev(MBB.end());
 
     // We have to save and restore LR, we need to add it to the liveins if it
-    // is not already part of the set.  This is suffient since outlined
+    // is not already part of the set.  This is sufficient since outlined
     // functions only have one block.
     if (!MBB.isLiveIn(ARM::LR))
       MBB.addLiveIn(ARM::LR);

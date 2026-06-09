@@ -27,10 +27,10 @@ using namespace llvm;
 using namespace llvm::orc;
 
 Expected<std::unique_ptr<DefinitionGenerator>>
-loadDylib(ExecutionSession &ES, StringRef RemotePath) {
-  if (auto Handle = ES.getExecutorProcessControl().getDylibMgr().loadDylib(
-          RemotePath.data()))
-    return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, *Handle);
+loadDylib(ExecutionSession &ES, DylibManager &DylibMgr, StringRef RemotePath) {
+  if (auto Handle = DylibMgr.loadDylib(RemotePath.data()))
+    return std::make_unique<EPCDynamicLibrarySearchGenerator>(ES, DylibMgr,
+                                                              *Handle);
   else
     return Handle.takeError();
 }
@@ -130,7 +130,6 @@ launchLocalExecutor(StringRef ExecutablePath) {
 
   auto EPC = SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      SimpleRemoteEPC::Setup(),
       FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
   if (!EPC)
     return EPC.takeError();
@@ -201,8 +200,7 @@ connectTCPSocket(StringRef NetworkAddress) {
     return CreateErr(toString(SockFD.takeError()));
 
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt),
-      SimpleRemoteEPC::Setup(), *SockFD);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(std::nullopt), *SockFD);
 }
 
 #endif

@@ -86,6 +86,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_INTEL_memory_access_aliasing},
     {"SPV_INTEL_joint_matrix",
      SPIRV::Extension::Extension::SPV_INTEL_joint_matrix},
+    {"SPV_INTEL_masked_gather_scatter",
+     SPIRV::Extension::Extension::SPV_INTEL_masked_gather_scatter},
     {"SPV_KHR_16bit_storage",
      SPIRV::Extension::Extension::SPV_KHR_16bit_storage},
     {"SPV_KHR_device_group", SPIRV::Extension::Extension::SPV_KHR_device_group},
@@ -174,7 +176,11 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_EXT_image_raw10_raw12",
      SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12},
     {"SPV_INTEL_unstructured_loop_controls",
-     SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls}};
+     SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls},
+    {"SPV_AMD_weak_linkage", SPIRV::Extension::Extension::SPV_AMD_weak_linkage},
+    {"SPV_KHR_abort", SPIRV::Extension::Extension::SPV_KHR_abort},
+    {"SPV_KHR_poison_freeze",
+     SPIRV::Extension::Extension::SPV_KHR_poison_freeze}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue, ExtensionSet &Vals) {

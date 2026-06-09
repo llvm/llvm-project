@@ -15,8 +15,10 @@ define <2 x float> @ucvt(<2 x i32> %a) nounwind readnone ssp sanitize_memory {
 ; CHECK-SAME: <2 x i32> [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[VCVT_I:%.*]] = uitofp <2 x i32> [[A]] to <2 x float>
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[VCVT_I]]
 ;
   %vcvt.i = uitofp <2 x i32> %a to <2 x float>
@@ -28,8 +30,10 @@ define <2 x float> @scvt(<2 x i32> %a) nounwind readnone ssp sanitize_memory {
 ; CHECK-SAME: <2 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[VCVT_I:%.*]] = sitofp <2 x i32> [[A]] to <2 x float>
-; CHECK-NEXT:    store <2 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x float> [[VCVT_I]]
 ;
   %vcvt.i = sitofp <2 x i32> %a to <2 x float>
@@ -41,8 +45,10 @@ define <4 x float> @ucvtq(<4 x i32> %a) nounwind readnone ssp sanitize_memory {
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[VCVT_I:%.*]] = uitofp <4 x i32> [[A]] to <4 x float>
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[VCVT_I]]
 ;
   %vcvt.i = uitofp <4 x i32> %a to <4 x float>
@@ -54,8 +60,10 @@ define <4 x float> @scvtq(<4 x i32> %a) nounwind readnone ssp sanitize_memory {
 ; CHECK-SAME: <4 x i32> [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i32>
 ; CHECK-NEXT:    [[VCVT_I:%.*]] = sitofp <4 x i32> [[A]] to <4 x float>
-; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <4 x float> [[VCVT_I]]
 ;
   %vcvt.i = sitofp <4 x i32> %a to <4 x float>
