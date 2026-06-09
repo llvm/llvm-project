@@ -182,6 +182,58 @@ namespace {
   };
 } // end anonymous namespace
 
+static bool hasLocalComdatReferences(Value *V, Comdat *ParentComdat) {
+  auto *C = dyn_cast<Constant>(V);
+  if (!C || isa<ConstantData>(C))
+    return false;
+
+  if (auto *GV = dyn_cast<GlobalValue>(C))
+    return GV->hasLocalLinkage() && GV->getComdat() == ParentComdat;
+
+  if (auto *BBAddr = dyn_cast<BlockAddress>(C))
+    return BBAddr->getFunction()->hasLocalLinkage() &&
+           BBAddr->getFunction()->getComdat() == ParentComdat;
+
+  for (auto *Operand : C->operand_values()) {
+    if (hasLocalComdatReferences(Operand, ParentComdat))
+      return true;
+  }
+
+  return false;
+}
+
+static bool hasLocalComdatReferences(Function *F) {
+  auto *Comdat = F->getComdat();
+  // A non-comdat function cannot legally use globals
+  // with comdat and local linkage.
+  if (!Comdat)
+    return false;
+
+  auto HasLocalComdat = false;
+  for (auto *GO : Comdat->getUsers()) {
+    if (GO->hasLocalLinkage()) {
+      HasLocalComdat = true;
+      break;
+    }
+  }
+
+  // We cannot legally have references to comdat globals with local linkage if
+  // there are none in the current comdat.
+  if (!HasLocalComdat)
+    return false;
+
+  for (auto &BB : *F) {
+    for (auto &I : BB) {
+      for (auto *V : I.operand_values()) {
+        if (hasLocalComdatReferences(V, Comdat))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 static IntrinsicInst *getConvergenceEntry(BasicBlock &BB) {
   BasicBlock::iterator It = BB.getFirstNonPHIIt();
   while (It != BB.end()) {
@@ -2709,6 +2761,15 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
       }
     }
   }
+
+  // If we inline a function from another comdat group and the callee has
+  // references to global values that have both local linkage and comdat, we
+  // would retain references to those values from outside the comdat group. If
+  // the comdat group gets subsequently dropped, we would get a linker error.
+  if (Caller->getComdat() != CalledFunc->getComdat() &&
+      hasLocalComdatReferences(CalledFunc))
+    return InlineResult::failure(
+        "reference to object with local linkage and COMDAT inside function");
 
   return InlineResult::success();
 }
