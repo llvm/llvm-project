@@ -44,8 +44,9 @@ enum SDTC : uint8_t {
   SDTCisSameSizeAs,
 };
 
-enum SDNF {
+enum SDNF : uint8_t {
   SDNFIsStrictFP,
+  SDNFIsMemOperand,
 };
 
 struct VTByHwModePair {
@@ -68,33 +69,46 @@ struct SDTypeConstraint {
 using SDNodeTSFlags = uint32_t;
 
 struct SDNodeDesc {
+  uint16_t NameOffset;
+  uint8_t TSFlags;
+  uint8_t Flags;
+
+  bool hasFlag(SDNF Flag) const { return Flags & (1 << Flag); }
+};
+
+static_assert(sizeof(SDNodeDesc) == 4,
+              "Keep target SDNode descriptions compact");
+
+struct SDNodeVerifyDesc {
   uint16_t NumResults;
   int16_t NumOperands;
   uint32_t Properties;
-  uint32_t Flags;
-  SDNodeTSFlags TSFlags;
-  unsigned NameOffset;
   unsigned ConstraintOffset;
   unsigned ConstraintCount;
 
   bool hasProperty(SDNP Property) const { return Properties & (1 << Property); }
+};
 
-  bool hasFlag(SDNF Flag) const { return Flags & (1 << Flag); }
+static_assert(sizeof(SDNodeVerifyDesc) == 16,
+              "Keep target SDNode verification descriptions compact");
+
+struct SDNodeVerifyInfo {
+  const SDNodeVerifyDesc *Descs;
+  const VTByHwModePair *VTByHwModeTable;
+  const SDTypeConstraint *Constraints;
 };
 
 class SDNodeInfo final {
   unsigned NumOpcodes;
   const SDNodeDesc *Descs;
   StringTable Names;
-  const VTByHwModePair *VTByHwModeTable;
-  const SDTypeConstraint *Constraints;
+  const SDNodeVerifyInfo *VerifyInfo;
 
 public:
   constexpr SDNodeInfo(unsigned NumOpcodes, const SDNodeDesc *Descs,
-                       StringTable Names, const VTByHwModePair *VTByHwModeTable,
-                       const SDTypeConstraint *Constraints)
+                       StringTable Names, const SDNodeVerifyInfo *VerifyInfo)
       : NumOpcodes(NumOpcodes), Descs(Descs), Names(Names),
-        VTByHwModeTable(VTByHwModeTable), Constraints(Constraints) {}
+        VerifyInfo(VerifyInfo) {}
 
   /// Returns true if there is a generated description for a node with the given
   /// target-specific opcode.
@@ -109,11 +123,26 @@ public:
     return Descs[Opcode - ISD::BUILTIN_OP_END];
   }
 
+#ifndef NDEBUG
+  /// Returns the verification description of a node with the given opcode.
+  const SDNodeVerifyDesc &getVerifyDesc(unsigned Opcode) const {
+    assert(hasDesc(Opcode));
+    assert(VerifyInfo);
+    return VerifyInfo->Descs[Opcode - ISD::BUILTIN_OP_END];
+  }
+
   /// Returns operand constraints for a node with the given opcode.
   ArrayRef<SDTypeConstraint> getConstraints(unsigned Opcode) const {
-    const SDNodeDesc &Desc = getDesc(Opcode);
-    return ArrayRef(&Constraints[Desc.ConstraintOffset], Desc.ConstraintCount);
+    const SDNodeVerifyDesc &Desc = getVerifyDesc(Opcode);
+    return ArrayRef(&VerifyInfo->Constraints[Desc.ConstraintOffset],
+                    Desc.ConstraintCount);
   }
+
+  const VTByHwModePair *getVTByHwModeTable() const {
+    assert(VerifyInfo);
+    return VerifyInfo->VTByHwModeTable;
+  }
+#endif
 
   /// Returns the name of the given target-specific opcode, suitable for
   /// debug printing.
@@ -123,6 +152,9 @@ public:
 
   LLVM_ABI void verifyNode(const SelectionDAG &DAG, const SDNode *N) const;
 };
+
+static_assert(sizeof(SDNodeInfo) == 5 * sizeof(void *),
+              "Keep target SDNode information compact");
 
 } // namespace llvm
 
