@@ -688,8 +688,9 @@ TEST_F(UnsafeBufferUsageTest, CXXScalarValueInitExpr) {
 }
 
 // Robustness test: unsupported constructs will not cause crash
-TEST_F(UnsafeBufferUsageTest, DirectNewExpressionArrayAccess) {
-  // 'new' not yet supported, but should not crash and should log warning
+TEST_F(UnsafeBufferUsageTest, StmtExprArrayAccess) {
+  // GNU statement expressions are not supported, but should not crash and
+  // should log a warning.
   llvm::SaveAndRestore<bool> DebugFlag(llvm::DebugFlag, true);
 
   llvm::setCurrentDebugType("ssaf-analyses");
@@ -697,7 +698,7 @@ TEST_F(UnsafeBufferUsageTest, DirectNewExpressionArrayAccess) {
 
   ASSERT_TRUE(setUpTest(R"cpp(
     void foo(int i) {
-      (new int[2])[i];
+      ({ int *p = 0; p; })[i];
     }
   )cpp"));
 
@@ -706,7 +707,7 @@ TEST_F(UnsafeBufferUsageTest, DirectNewExpressionArrayAccess) {
   // Verify the warning was logged
   EXPECT_TRUE(
       StringRef(testing::internal::GetCapturedStderr())
-          .contains("attempt to translate CXXNewExpr to EntityPointerLevels"));
+          .contains("attempt to translate StmtExpr to EntityPointerLevels"));
 }
 
 } // namespace

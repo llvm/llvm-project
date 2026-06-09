@@ -1208,7 +1208,7 @@ TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
     }
   )cpp";
 
-  // BindingDecl may not be fully supported, but should not crash
+  // BindingDecl may not be fully supported, but should not crash.
   llvm::SaveAndRestore<bool> DebugFlag(llvm::DebugFlag, true);
   llvm::setCurrentDebugType("ssaf-analyses");
   testing::internal::CaptureStderr();
@@ -1220,7 +1220,7 @@ TEST_F(PointerFlowTest, StructuredBindingWithPointers) {
 }
 
 TEST_F(PointerFlowTest, RHSResultsInNoEntityPointerLevel) {
-  ASSERT_EQ(setUpTest(R"cpp(
+  ASSERT_TRUE(setUpTest(R"cpp(
     void f() {
       int *p = new int[10];
       const char *q = "hello";
@@ -1229,12 +1229,9 @@ TEST_F(PointerFlowTest, RHSResultsInNoEntityPointerLevel) {
       int *p;
       void g() { p = (int *)this; }
     };
-  )cpp"),
-            true);
-  auto *Sum = getEntitySummary<FunctionDecl>("f");
-  ASSERT_FALSE(Sum);
-  Sum = getEntitySummary<CXXMethodDecl>("g");
-  ASSERT_FALSE(Sum);
+  )cpp"));
+  ASSERT_FALSE(getEntitySummary<FunctionDecl>("f"));
+  ASSERT_FALSE(getEntitySummary<CXXMethodDecl>("g"));
 }
 
 } // namespace
