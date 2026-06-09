@@ -3134,6 +3134,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
           [&](const parser::Name &name) { // common block
             ResolveOmpCommonBlock(name, ompFlag);
           },
+          [&](const parser::OmpLocator &ref) {
+            // Do nothing here.
+          },
           [&](const parser::OmpObject::Invalid &invalid) {
             switch (invalid.v) {
               SWITCH_COVERS_ALL_CASES

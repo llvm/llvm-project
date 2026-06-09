@@ -121,6 +121,21 @@ std::string TryVersion(unsigned version) {
   return "try -fopenmp-version=" + std::to_string(version);
 }
 
+static const Symbol *GetFunctionReferenceSymbol(
+    const parser::FunctionReference &ref) {
+  auto &proc{std::get<parser::ProcedureDesignator>(ref.v.t)};
+  return common::visit(
+      common::visitors{
+          [](const parser::Name &x) { return x.symbol; },
+          [](const parser::ProcComponentRef &x) {
+            return parser::UnwrapRef<parser::StructureComponent>(x.v)
+                .Component()
+                .symbol;
+          },
+      },
+      proc.u);
+}
+
 const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
   // Some symbols may be missing if the resolution failed, e.g. when an
   // undeclared name is used with implicit none.
@@ -137,16 +152,28 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
     } else {
       return last.symbol;
     }
+  } else if (auto *locator{std::get_if<parser::OmpLocator>(&object.u)}) {
+    const Symbol *sym = common::visit( //
+        common::visitors{
+            [](const parser::OmpReservedIdentifier &x) { return x.v.symbol; },
+            [](const parser::FunctionReference &x) {
+              return GetFunctionReferenceSymbol(x);
+            },
+        },
+        locator->u);
+    if (sym && ultimate) {
+      return &sym->GetUltimate();
+    } else {
+      return sym;
+    }
   }
   return nullptr;
 }
 
 const Symbol *GetArgumentSymbol(
     const parser::OmpArgument &argument, bool ultimate) {
-  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
-    if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-      return GetObjectSymbol(*object, ultimate);
-    }
+  if (auto *object{GetArgumentObject(argument)}) {
+    return GetObjectSymbol(*object, ultimate);
   }
   return nullptr;
 }
@@ -233,17 +260,21 @@ bool IsExtendedListItem(
   if (IsVariableListItem(object, semaCtx)) {
     return true;
   }
-  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
-    return IsProcedure(*sym);
+  if (!std::holds_alternative<parser::OmpLocator>(object.u)) {
+    if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+      return IsProcedure(*sym);
+    }
   }
   return false;
 }
 
 bool IsLocatorListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
-  if (IsVariableListItem(object, semaCtx)) {
+  if (IsVariableListItem(object, semaCtx) ||
+      std::holds_alternative<parser::OmpLocator>(object.u)) {
     return true;
   }
+  // A statement function call may look like an array element access.
   if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
     evaluate::ExpressionAnalyzer ea(*semaCtx);
     auto restorer{ea.GetContextualMessages().DiscardMessages()};
@@ -445,6 +476,9 @@ std::optional<bool> IsContiguous(
             if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
               return ContiguousHelper{semaCtx}.Visit(*maybeExpr);
             }
+            return std::optional<bool>{};
+          },
+          [&](const parser::OmpLocator &) {
             return std::optional<bool>{};
           },
           [&](const parser::OmpObject::Invalid &) {

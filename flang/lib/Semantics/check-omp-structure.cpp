@@ -414,12 +414,18 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
       }
     }
   }
+
   evaluate::ExpressionAnalyzer ea{context_};
   auto restore{ea.AllowWholeAssumedSizeArray(true)};
   common::visit( //
       common::visitors{
           [&](auto &&s) { ea.Analyze(s); },
-          [&](const parser::OmpObject::Invalid &invalid) {},
+          [&](const parser::OmpLocator &x) {
+            if (auto *ref{std::get_if<parser::FunctionReference>(&x.u)}) {
+              ea.Analyze(*ref);
+            }
+          },
+          [&](const parser::OmpObject::Invalid &) {},
       },
       object.u);
 }
@@ -614,6 +620,16 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
         return false;
       },
       DEREF(unit.symbol()).details());
+}
+
+void OmpStructureChecker::Enter(const parser::OmpLocator &x) {
+  if (auto *reserved{parser::Unwrap<parser::OmpReservedIdentifier>(x.u)}) {
+    std::string name{parser::ToLowerCaseLetters(reserved->v.source.ToString())};
+    if (!llvm::is_contained(llvm::omp::getReservedLocatorNames(), name)) {
+      context_.Say(reserved->v.source, "'%s' is not a valid locator"_err_en_US,
+          parser::ToUpperCaseLetters(name));
+    }
+  }
 }
 
 void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
@@ -1676,7 +1692,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
   common::visit( //
       common::visitors{
           [&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
-          [&](const parser::OmpObject::Invalid &invalid) {},
+          [&](const parser::OmpLocator &) {},
+          [&](const parser::OmpObject::Invalid &) {},
       },
       object.u);
 }
@@ -1693,10 +1710,10 @@ void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
       x.v.DirName().source, llvm::omp::Directive::OMPD_groupprivate);
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    auto *locator{std::get_if<parser::OmpLocator>(&arg.u)};
+    auto *object{std::get_if<parser::OmpObject>(&arg.u)};
     const Symbol *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
 
-    if (!locator || !sym ||
+    if (!object || !sym ||
         (!IsVariableListItem(*sym) && !IsCommonBlock(*sym))) {
       context_.Say(arg.source,
           "GROUPPRIVATE argument should be a variable or a named common block"_err_en_US);
@@ -3666,7 +3683,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
                       }
                     }
                   },
-                  [&](const parser::OmpObject::Invalid &invalid) {},
+                  [&](const parser::OmpLocator &) {},
+                  [&](const parser::OmpObject::Invalid &) {},
               },
               ompObject.u);
         }
