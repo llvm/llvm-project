@@ -98,6 +98,10 @@ def err_drv_sycl_requires_dynamic_crt : Error<
   "SYCL requires dynamic C++ runtime (/MD or /MDd); "
   "static C++ runtime (/MT or /MTd) is not supported">;
 
+def err_drv_no_sycl_device_lib : Error<
+  "cannot find expected SYCL device library '%0'; pass '--no-offloadlib' to "
+  "build without the SYCL device libraries">;
+
 def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
                                  "is required for SPIR-V compilation. "
                                  "It can be obtained from your system package "

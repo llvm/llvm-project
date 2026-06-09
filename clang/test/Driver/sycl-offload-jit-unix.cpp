@@ -7,8 +7,11 @@
 // The test also checks if SYCL header include paths are added to the SYCL host and device compilation.
 
 // Check LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON case: library is in lib/<triple>/
-// RUN: rm -rf %t && mkdir -p %t/bin %t/lib/x86_64-unknown-linux-gnu
+// RUN: rm -rf %t && mkdir -p %t/bin %t/lib/x86_64-unknown-linux-gnu %t/lib
 // RUN: touch %t/lib/x86_64-unknown-linux-gnu/libLLVMSYCL.so
+// Dummy device lib required: test uses full -fsycl (not --no-offloadlib) to verify RT lib
+// detection; --no-offloadlib also suppresses SYCLRTLibPath detection, which this test checks.
+// RUN: touch %t/lib/libsycl-crt.bc
 // RUN: ln -s %clang %t/bin/clang
 // RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
@@ -19,6 +22,9 @@
 // Check LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF case: library is in lib/ (no triple subdir)
 // RUN: rm -rf %t && mkdir -p %t/bin %t/lib
 // RUN: touch %t/lib/libLLVMSYCL.so
+// Dummy device lib required: test uses full -fsycl (not --no-offloadlib) to verify RT lib
+// detection; --no-offloadlib also suppresses SYCLRTLibPath detection, which this test checks.
+// RUN: touch %t/lib/libsycl-crt.bc
 // RUN: ln -s %clang %t/bin/clang
 // RUN: %t/bin/clang -### -no-canonical-prefixes --target=x86_64-unknown-linux-gnu -fsycl %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-LSYCL-FLAT %s
