@@ -67,7 +67,6 @@
 
 #  if defined(_LIBCPP_USE_OS_SYNC)
 #    include <os/os_sync_wait_on_address.h>
-#    include <time.h>
 #  endif
 
 #elif defined(__Fuchsia__)
@@ -138,8 +137,16 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, May
   if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
     os_sync_wait_on_address(const_cast<void*>(__ptr), __value, _Size, OS_SYNC_WAIT_ON_ADDRESS_NONE);
   } else {
+    // os_sync_wait_on_address_with_timeout returns EINVAL on a 0-ns timeout, so clamp to 1ns
+    // when an already-expired deadline produced a zero-duration timeout.
+    uint64_t __timeout_ns = std::max<uint64_t>(maybe_timeout_ns, 1);
     os_sync_wait_on_address_with_timeout(
-        const_cast<void*>(__ptr), __value, _Size, OS_SYNC_WAIT_ON_ADDRESS_NONE, CLOCK_MONOTONIC_RAW, maybe_timeout_ns);
+        const_cast<void*>(__ptr),
+        __value,
+        _Size,
+        OS_SYNC_WAIT_ON_ADDRESS_NONE,
+        OS_CLOCK_MACH_ABSOLUTE_TIME,
+        __timeout_ns);
   }
 }
 
