@@ -622,7 +622,9 @@ public:
     __annotate_new(0);
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~deque() {
+  _LIBCPP_HIDE_FROM_ABI ~deque() { __dtor_logic(); }
+
+  _LIBCPP_HIDE_FROM_ABI void __dtor_logic() _NOEXCEPT {
     clear();
     __annotate_delete();
     typename __map::iterator __i = __map_.begin();
@@ -646,8 +648,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v, const allocator_type& __a)
       : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
     __annotate_new(0);
-    if (__n > 0)
+    if (__n > 0) {
+      auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
       __append(__n, __v);
+      __guard.__complete();
+    }
   }
 
   template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
@@ -659,14 +664,15 @@ public:
   template <_ContainerCompatibleRange<_Tp> _Range>
   _LIBCPP_HIDE_FROM_ABI deque(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
       : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
+    auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       __append_with_size(ranges::begin(__range), ranges::distance(__range));
-
     } else {
       for (auto&& __e : __range) {
         emplace_back(std::forward<decltype(__e)>(__e));
       }
     }
+    __guard.__complete();
   }
 #  endif
 
@@ -1312,8 +1318,11 @@ deque(from_range_t, _Range&&, _Alloc = _Alloc()) -> deque<ranges::range_value_t<
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n) : __start_(0), __size_(0) {
   __annotate_new(0);
-  if (__n > 0)
+  if (__n > 0) {
+    auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
     __append(__n);
+    __guard.__complete();
+  }
 }
 
 #  if _LIBCPP_STD_VER >= 14
@@ -1321,23 +1330,31 @@ template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n, const _Allocator& __a)
     : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
   __annotate_new(0);
-  if (__n > 0)
+  if (__n > 0) {
+    auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
     __append(__n);
+    __guard.__complete();
+  }
 }
 #  endif
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n, const value_type& __v) : __start_(0), __size_(0) {
   __annotate_new(0);
-  if (__n > 0)
+  if (__n > 0) {
+    auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
     __append(__n, __v);
+    __guard.__complete();
+  }
 }
 
 template <class _Tp, class _Allocator>
 template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> >
 deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l) : __start_(0), __size_(0) {
   __annotate_new(0);
+  auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
   __append(__f, __l);
+  __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1345,7 +1362,9 @@ template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIt
 deque<_Tp, _Allocator>::deque(_InputIter __f, _InputIter __l, const allocator_type& __a)
     : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
   __annotate_new(0);
+  auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
   __append(__f, __l);
+  __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1355,14 +1374,18 @@ deque<_Tp, _Allocator>::deque(const deque& __c)
       __size_(0),
       __alloc_(__map_.__get_allocator()) {
   __annotate_new(0);
+  auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
   __append(__c.begin(), __c.end());
+  __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(const deque& __c, const __type_identity_t<allocator_type>& __a)
     : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
   __annotate_new(0);
+  auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
   __append(__c.begin(), __c.end());
+  __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1379,14 +1402,18 @@ deque<_Tp, _Allocator>& deque<_Tp, _Allocator>::operator=(const deque& __c) {
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(initializer_list<value_type> __il) : __start_(0), __size_(0) {
   __annotate_new(0);
+  auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
   __append(__il.begin(), __il.end());
+  __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(initializer_list<value_type> __il, const allocator_type& __a)
     : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
   __annotate_new(0);
+  auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
   __append(__il.begin(), __il.end());
+  __guard.__complete();
 }
 
 template <class _Tp, class _Allocator>
@@ -1413,7 +1440,9 @@ inline deque<_Tp, _Allocator>::deque(deque&& __c, const __type_identity_t<alloca
     __start_ = 0;
     __size() = 0;
     typedef move_iterator<iterator> _Ip;
+    auto __guard = std::__make_exception_guard([&] { __dtor_logic(); });
     assign(_Ip(__c.begin()), _Ip(__c.end()));
+    __guard.__complete();
   }
 }
 
