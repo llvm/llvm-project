@@ -695,18 +695,21 @@ define double @fmul_a_pow_2_i_ldexp_a_i_afn_f64(double %a, i32 %i) {
   ret double %2
 }
 
+; Negative test: Vector base
 define <4 x float> @pow_2_i_ldexp_1_i_afn_v4f32(i32 %i) {
 ; CHECK-LABEL: @pow_2_i_ldexp_1_i_afn_v4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call afn <4 x float> @llvm.ldexp.v4f32.i32(<4 x float> splat (float 1.000000e+00), i32 [[I:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call afn <4 x float> @llvm.powi.v4f32.i32(<4 x float> splat (float 2.000000e+00), i32 [[I:%.*]])
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call afn <4 x float> @llvm.powi.v4f32.i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, i32 %i)
   ret <4 x float> %1
 }
 
+; Negative test: Vector base
 define <4 x float> @pow_2_i_ldexp_a_i_afn_v4f32(<4 x float> %a, i32 %i) {
 ; CHECK-LABEL: @pow_2_i_ldexp_a_i_afn_v4f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc <4 x float> @llvm.ldexp.v4f32.i32(<4 x float> [[A:%.*]], i32 [[I:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc afn <4 x float> @llvm.powi.v4f32.i32(<4 x float> splat (float 2.000000e+00), i32 [[I:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <4 x float> [[A:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %1 = call afn reassoc <4 x float> @llvm.powi.v4f32.i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, i32 %i)
@@ -714,9 +717,11 @@ define <4 x float> @pow_2_i_ldexp_a_i_afn_v4f32(<4 x float> %a, i32 %i) {
   ret <4 x float> %2
 }
 
+; Negative test: Vector base
 define <4 x double> @pow_2_i_ldexp_a_i_afn_v4f64(<4 x double> %a, i32 %i) {
 ; CHECK-LABEL: @pow_2_i_ldexp_a_i_afn_v4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc <4 x double> @llvm.ldexp.v4f64.i32(<4 x double> [[A:%.*]], i32 [[I:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc afn <4 x double> @llvm.powi.v4f64.i32(<4 x double> splat (double 2.000000e+00), i32 [[I:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <4 x double> [[A:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret <4 x double> [[TMP1]]
 ;
   %1 = call afn reassoc <4 x double> @llvm.powi.v4f64.i32(<4 x double> <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>, i32 %i)
