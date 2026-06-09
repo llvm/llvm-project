@@ -41,7 +41,7 @@ void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
 
 /// Generate a node in \p Bldr for an iteration statement using ObjC
 /// for-loop iterator.
-static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
+static void populateObjCForDestinationSet(ExplodedNode *Pred,
                                           SValBuilder &svalBuilder,
                                           const ObjCForCollectionStmt *S,
                                           ConstCFGElementRef elem,
@@ -49,34 +49,32 @@ static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
                                           unsigned NumVisitedCurrent,
                                           NodeBuilder &Bldr, bool hasElements) {
 
-  for (ExplodedNode *Pred : dstLocation) {
-    ProgramStateRef state = Pred->getState();
-    const StackFrame *SF = Pred->getStackFrame();
+  ProgramStateRef state = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
 
-    ProgramStateRef nextState =
-        ExprEngine::setWhetherHasMoreIteration(state, S, SF, hasElements);
+  ProgramStateRef nextState =
+      ExprEngine::setWhetherHasMoreIteration(state, S, SF, hasElements);
 
-    if (auto MV = elementV.getAs<loc::MemRegionVal>())
-      if (const auto *R = dyn_cast<TypedValueRegion>(MV->getRegion())) {
-        // FIXME: The proper thing to do is to really iterate over the
-        //  container.  We will do this with dispatch logic to the store.
-        //  For now, just 'conjure' up a symbolic value.
-        QualType T = R->getValueType();
-        assert(Loc::isLocType(T));
+  if (auto MV = elementV.getAs<loc::MemRegionVal>())
+    if (const auto *R = dyn_cast<TypedValueRegion>(MV->getRegion())) {
+      // FIXME: The proper thing to do is to really iterate over the
+      //  container.  We will do this with dispatch logic to the store.
+      //  For now, just 'conjure' up a symbolic value.
+      QualType T = R->getValueType();
+      assert(Loc::isLocType(T));
 
-        SVal V;
-        if (hasElements) {
-          SymbolRef Sym = SymMgr.conjureSymbol(elem, SF, T, NumVisitedCurrent);
-          V = svalBuilder.makeLoc(Sym);
-        } else {
-          V = svalBuilder.makeIntVal(0, T);
-        }
-
-        nextState = nextState->bindLoc(elementV, V, SF);
+      SVal V;
+      if (hasElements) {
+        SymbolRef Sym = SymMgr.conjureSymbol(elem, SF, T, NumVisitedCurrent);
+        V = svalBuilder.makeLoc(Sym);
+      } else {
+        V = svalBuilder.makeIntVal(0, T);
       }
 
-    Bldr.generateNode(S, Pred, nextState);
-  }
+      nextState = nextState->bindLoc(elementV, V, SF);
+    }
+
+  Bldr.generateNode(S, Pred, nextState);
 }
 
 void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
@@ -129,16 +127,16 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   evalLocation(DstLocation, S, elem, Pred, state, elementV, false);
 
   for (ExplodedNode *dstLocation : DstLocation) {
-    ExplodedNodeSet DstLocationSingleton{dstLocation}, Tmp;
+    ExplodedNodeSet Tmp;
     NodeBuilder Bldr(dstLocation, Tmp, *currBldrCtx);
 
     if (!isContainerNull)
-      populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S,
+      populateObjCForDestinationSet(dstLocation, svalBuilder, S,
                                     elemRef, elementV, SymMgr,
                                     getNumVisitedCurrent(), Bldr,
                                     /*hasElements=*/true);
 
-    populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S, elemRef,
+    populateObjCForDestinationSet(dstLocation, svalBuilder, S, elemRef,
                                   elementV, SymMgr, getNumVisitedCurrent(),
                                   Bldr,
                                   /*hasElements=*/false);
