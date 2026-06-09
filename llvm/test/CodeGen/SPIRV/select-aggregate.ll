@@ -1,10 +1,9 @@
-; A `select` between aggregate (array/struct) values whose arms are not both
-; composite constants -- one or both arms are loaded, or are themselves a
-; select -- used to crash in SPIRVEmitIntrinsics ("illegal aggregate intrinsic
-; user", or the verifier's "Select values must have same type as select
-; instruction"). Check that such selects are lowered to a valid OpSelect over
-; the composite type. The all-constant case is covered by
-; select-composite-constant.ll.
+; SPIRVEmitIntrinsics rewrites aggregate (array/struct) SSA values to i32
+; value-ids. A select takes its result type from its arms, so rewriting an arm
+; without updating the select leaves it with i32 operands under an aggregate
+; result type, which is invalid. Check that these selects lower to a valid
+; OpSelect over the composite type; select-composite-constant.ll covers the
+; all-constant case.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
