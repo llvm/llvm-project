@@ -705,18 +705,13 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   if (llvm::isa<CXXRecordDecl>(rd)) {
     baseTy = *ty;
     // A record needs a distinct base-subobject type when its tail padding can
-    // be reused by an enclosing [[no_unique_address]] field.  For a
-    // struct/class that happens when the non-virtual size differs from the
-    // complete size; for a union it happens when the data size differs from
-    // the complete size (a union has reusable tail padding when one of its
-    // members is a [[no_unique_address]] field with tail padding of its own).
-    CharUnits baseSize = rd->isUnion()
-                             ? lowering.astRecordLayout.getDataSize()
-                             : lowering.astRecordLayout.getNonVirtualSize();
-    // A union whose data size is zero consists entirely of
-    // [[no_unique_address]] empty members.  There is no actual data to expose
-    // via a base subobject, so leave baseTy pointing at the complete type.
-    if (!baseSize.isZero() && baseSize != lowering.astRecordLayout.getSize()) {
+    // be reused by an enclosing [[no_unique_address]] field, i.e. when the
+    // non-virtual size differs from the complete size.  This matches classic
+    // CodeGen and covers unions too: a union's non-virtual size already tracks
+    // its reusable tail padding (and stays at the minimum union size when the
+    // union is empty, so a zero-data union does not spuriously qualify).
+    if (lowering.astRecordLayout.getNonVirtualSize() !=
+        lowering.astRecordLayout.getSize()) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
       baseLowering.lower(/*nonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
@@ -726,9 +721,11 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       // TODO(cir): add something like addRecordTypeName
 
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
-      // on both of them with the same index.  Unions are exempt: every union
-      // field maps to index 0, and a union's data-size base layout may need to
-      // be packed even when its complete layout is not (and vice versa).
+      // on both of them with the same index.  Unions are exempt: CIR derives a
+      // union's packedness from its layout size, which is the data size for the
+      // base subobject but the full size for the complete object, so the two
+      // can legitimately disagree.  (Classic CodeGen derives both from the data
+      // size and so needs no such exemption.)
       assert((rd->isUnion() || lowering.packed == baseLowering.packed) &&
              "Non-virtual and complete types must agree on packedness");
     }
@@ -885,7 +882,7 @@ void CIRRecordLowering::lowerUnion(bool nonVirtualBaseType) {
       fieldTypes.push_back(fieldType);
   }
 
-  if (!storageType || layoutSize.isZero()) {
+  if (!storageType) {
     appendPaddingBytes(layoutSize);
     return;
   }

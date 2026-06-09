@@ -57,6 +57,8 @@ struct Outer {
 // LLVM-DAG: %struct.OuterZeroData = type { %union.UnionZeroDataSize, i8 }
 // LLVM-DAG: %union.UnionZeroDataSize = type { i32 }
 // LLVM-DAG: @ozd = {{(dso_local )?}}global %struct.OuterZeroData zeroinitializer, align 4
+// LLVM-DAG: %struct.OuterAllEmpty = type { i8 }
+// LLVM-DAG: @oae = {{(dso_local )?}}global %struct.OuterAllEmpty zeroinitializer, align 1
 // OGCG-DAG: %struct.OuterUnion = type { %union.UnionForNUA, i32 }
 // OGCG-DAG: %union.UnionForNUA = type { i64 }
 // OGCG-DAG: %struct.OuterFinal = type { %struct.FinalForNUA, i8 }
@@ -72,6 +74,8 @@ struct Outer {
 // OGCG-DAG: %struct.OuterZeroData = type { %union.UnionZeroDataSize, i8 }
 // OGCG-DAG: %union.UnionZeroDataSize = type { i32 }
 // OGCG-DAG: @ozd = {{(dso_local )?}}global %struct.OuterZeroData zeroinitializer, align 4
+// OGCG-DAG: %struct.OuterAllEmpty = type { i8 }
+// OGCG-DAG: @oae = {{(dso_local )?}}global %struct.OuterAllEmpty zeroinitializer, align 1
 
 // LLVM-LABEL: define {{.*}} void @_ZN5OuterC2ERK6Middlec(
 // LLVM:         %[[GEP:.*]] = getelementptr inbounds nuw %struct.Outer, ptr %{{.+}}, i32 0, i32 0
@@ -177,6 +181,27 @@ struct OuterZeroData {
 };
 
 OuterZeroData ozd;
+
+// A union whose members are all [[no_unique_address]] empty types has data
+// size 0, but its non-virtual size stays at the 1-byte minimum, so the gate
+// does not fire and it needs no distinct base-subobject type.
+struct EmptyA {};
+struct EmptyB {};
+
+union UnionAllEmpty {
+  [[no_unique_address]] EmptyA a;
+  [[no_unique_address]] EmptyB b;
+};
+
+struct OuterAllEmpty {
+  [[no_unique_address]] UnionAllEmpty u;
+  bool flag;
+};
+
+OuterAllEmpty oae;
+
+// CIR-NUA-DAG: !rec_OuterAllEmpty = !cir.struct<"OuterAllEmpty" {!cir.bool}>
+// CIR-NUA-DAG: cir.global external @oae = #cir.zero : !rec_OuterAllEmpty
 
 // CIR-NUA-DAG: !rec_UnionZeroDataSize = !cir.union<"UnionZeroDataSize" {!rec_EmptyForNUA, !s32i}>
 // CIR-NUA-DAG: !rec_OuterZeroData = !cir.struct<"OuterZeroData" {!rec_UnionZeroDataSize, !cir.bool}>
