@@ -36,11 +36,13 @@
 enum VendorSignatures {
   SIG_INTEL = 0x756e6547, // Genu
   SIG_AMD = 0x68747541,   // Auth
+  SIG_HYGON = 0x6f677948, // Hygo
 };
 
 enum ProcessorVendors {
   VENDOR_INTEL = 1,
   VENDOR_AMD,
+  VENDOR_HYGON,
   VENDOR_OTHER,
   VENDOR_MAX
 };
@@ -66,6 +68,7 @@ enum ProcessorTypes {
   INTEL_GRANDRIDGE,
   INTEL_CLEARWATERFOREST,
   AMDFAM1AH,
+  HYGONFAM18H,
   CPU_TYPE_MAX
 };
 
@@ -108,6 +111,9 @@ enum ProcessorSubtypes {
   AMDFAM1AH_ZNVER6,
   INTEL_COREI7_DIAMONDRAPIDS,
   INTEL_COREI7_NOVALAKE,
+  HYGONFAM18H_C86_4G_M4,
+  HYGONFAM18H_C86_4G_M6,
+  HYGONFAM18H_C86_4G_M7,
   CPU_SUBTYPE_MAX
 };
 
@@ -872,6 +878,47 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   return CPU;
 }
 
+static const char *
+getHygonProcessorTypeAndSubtype(unsigned Family, unsigned Model,
+                                const unsigned *Features,
+                                struct __processor_model *CpuModel) {
+  const char *CPU = 0;
+
+  enum ProcessorTypes Type = CPU_TYPE_MAX;
+  enum ProcessorSubtypes Subtype = CPU_SUBTYPE_MAX;
+
+  switch (Family) {
+  case 24:
+    switch (Model) {
+    case 4:
+      CPU = "c86-4g-m4";
+      Type = HYGONFAM18H;
+      Subtype = HYGONFAM18H_C86_4G_M4;
+      break; // c86-4g-m4
+    case 6:
+      CPU = "c86-4g-m6";
+      Type = HYGONFAM18H;
+      Subtype = HYGONFAM18H_C86_4G_M6;
+      break; // c86-4g-m6
+    case 7:
+      CPU = "c86-4g-m7";
+      Type = HYGONFAM18H;
+      Subtype = HYGONFAM18H_C86_4G_M7;
+      break; // c86-4g-m7
+    }
+    break; // Hygon Family 18H
+  default:
+    break; // Unknown Hygon CPU.
+  }
+
+  if (Type != CPU_TYPE_MAX)
+    CpuModel->__cpu_type = Type;
+  if (Subtype != CPU_SUBTYPE_MAX)
+    CpuModel->__cpu_subtype = Subtype;
+
+  return CPU;
+}
+
 #undef testFeature
 
 static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
@@ -1235,6 +1282,9 @@ int CONSTRUCTOR_ATTRIBUTE __cpu_indicator_init(void) {
     // Get CPU type.
     getAMDProcessorTypeAndSubtype(Family, Model, &Features[0], &__cpu_model);
     __cpu_model.__cpu_vendor = VENDOR_AMD;
+  } else if (Vendor == SIG_HYGON) {
+    getHygonProcessorTypeAndSubtype(Family, Model, &Features[0], &__cpu_model);
+    __cpu_model.__cpu_vendor = VENDOR_HYGON;
   } else
     __cpu_model.__cpu_vendor = VENDOR_OTHER;
 

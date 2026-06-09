@@ -204,6 +204,14 @@ define void @redundant_align() {
   ret void
 }
 
+define void @non_power_of_two_align(ptr %ptr) {
+; CHECK-LABEL: @non_power_of_two_align(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3) ]
+  ret void
+}
+
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 
 define i32 @foo2(ptr %a) #0 {
@@ -1209,6 +1217,41 @@ define i1 @neg_assume_trunc_eq_one(i8 %x) {
   call void @llvm.assume(i1 %a)
   %q = icmp eq i8 %x, 1
   ret i1 %q
+}
+
+define void @assume_dereferenceable_0(ptr %ptr) {
+; CHECK-LABEL: @assume_dereferenceable_0(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %ptr, i64 0) ]
+  ret void
+}
+
+define void @assume_dereferenceable_1(ptr %ptr) {
+; CHECK-LABEL: @assume_dereferenceable_1(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR:%.*]], i64 1) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %ptr, i64 1) ]
+  ret void
+}
+
+define void @assume_dereferenceable_variable(ptr %ptr, i64 %count) {
+; CHECK-LABEL: @assume_dereferenceable_variable(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR:%.*]], i64 [[COUNT:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %ptr, i64 %count) ]
+  ret void
+}
+
+define void @assume_dereferenceable_variable_on_nullptr(i64 %count) {
+; CHECK-LABEL: @assume_dereferenceable_variable_on_nullptr(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 [[COUNT:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr null, i64 %count) ]
+  ret void
 }
 
 declare void @use(i1)

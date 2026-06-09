@@ -7,7 +7,7 @@ add_flang_library(HLFIRTransforms
   InlineElementals.cpp
   InlineHLFIRAssign.cpp
   SeparateAllocatableAssign.cpp
-  InlineHLFIRCopyIn.cpp
+  InlineHLFIRCopy.cpp
   LowerHLFIRIntrinsics.cpp
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp

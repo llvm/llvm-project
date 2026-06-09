@@ -152,8 +152,8 @@ def OpenACC_ReductionAccumulateOp
         scf.reduce.return %sum : i32
       }
     } {acc.par_dims = #acc<par_dims[thread_x]>}
-    acc.reduction_accumulate (%partial) to (%private) <add>
-        : (i32) -> (memref<i32>) {par_dims = #acc<par_dims[thread_x]>}
+    acc.reduction_accumulate %partial to %private <add>
+        : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
     acc.reduction_combine %private into %shared <add> : memref<i32>
         {acc.par_dims = #acc<par_dims[thread_x]>}
     ```
@@ -165,7 +165,7 @@ def OpenACC_ReductionAccumulateOp
                        OpenACC_ReductionOperatorAttr:$reductionOperator,
                        OpenACC_GPUParallelDimsAttr:$par_dims);
   let assemblyFormat = [{
-    `(` $value `)` `to` `(` $memref `)` $reductionOperator `:` `(` type($value) `)` `->` `(` type($memref) `)` attr-dict
+    $value `to` $memref $reductionOperator `:` type($value) `->` type($memref) attr-dict
   }];
   let hasVerifier = 1;
 }

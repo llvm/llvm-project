@@ -34,7 +34,7 @@ TEST(DXCFile, ParseEmptyParts) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
 Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
   Version:
     Major:           1
@@ -83,7 +83,7 @@ Parts:
   // should result in the same final output.
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
 Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
   Version:
     Major:           1
@@ -117,7 +117,7 @@ TEST(RootSignature, ParseRootFlags) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-    Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+    Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                       0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
     Version:
       Major:           1
@@ -157,7 +157,7 @@ TEST(RootSignature, HeaderData) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -209,7 +209,7 @@ TEST(RootSignature, ParseRootConstants) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -261,7 +261,7 @@ TEST(RootSignature, ParseRootDescriptorsV10) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -278,9 +278,9 @@ TEST(RootSignature, ParseRootDescriptorsV10) {
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 44
-      Parameters:         
-      - ParameterType: CBV 
-        ShaderVisibility: Domain 
+      Parameters:
+      - ParameterType: CBV
+        ShaderVisibility: Domain
         Descriptor:
           ShaderRegister: 31
           RegisterSpace: 32
@@ -312,7 +312,7 @@ TEST(RootSignature, ParseRootDescriptorsV11) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -329,7 +329,7 @@ TEST(RootSignature, ParseRootDescriptorsV11) {
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 48
-      Parameters:         
+      Parameters:
       - ParameterType: CBV
         ShaderVisibility: Domain
         Descriptor:
@@ -364,7 +364,7 @@ TEST(RootSignature, ParseDescriptorTableV10) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -381,7 +381,7 @@ TEST(RootSignature, ParseDescriptorTableV10) {
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 64
-      Parameters:         
+      Parameters:
       - ParameterType: DescriptorTable
         ShaderVisibility: Domain
         Table:
@@ -420,7 +420,7 @@ TEST(RootSignature, ParseDescriptorTableV11) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
   Header:
-      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5, 
+      Hash:            [ 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F, 0x5,
                         0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1 ]
       Version:
         Major:           1
@@ -437,7 +437,7 @@ TEST(RootSignature, ParseDescriptorTableV11) {
       RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 68
-      Parameters:         
+      Parameters:
       - ParameterType: DescriptorTable
         ShaderVisibility: Domain
         Table:
@@ -477,7 +477,7 @@ TEST(RootSignature, ParseStaticSamplers) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
 Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
   Version:
     Major:           1
@@ -494,8 +494,8 @@ Parts:
       NumStaticSamplers: 1
       StaticSamplersOffset: 24
       Parameters: []
-      Samplers: 
-        - Filter: MinLinearMagMipPoint 
+      Samplers:
+        - Filter: MinLinearMagMipPoint
           AddressU: Wrap
           AddressV: Mirror
           AddressW: MirrorOnce
@@ -505,7 +505,7 @@ Parts:
           BorderColor: TransparentBlack
           MinLOD: 4.56
           MaxLOD: 8.90
-          ShaderRegister: 31 
+          ShaderRegister: 31
           RegisterSpace: 32
           ShaderVisibility:  Mesh
       AllowInputAssemblerInputLayout: true
@@ -536,7 +536,7 @@ TEST(RootSignature, ParseStaticSamplersV13) {
   // First read a fully explicit yaml with all sizes and offsets provided
   ASSERT_TRUE(convert(Storage, R"(--- !dxcontainer
 Header:
-  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
                      0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
   Version:
     Major:           1
@@ -553,8 +553,8 @@ Parts:
       NumStaticSamplers: 1
       StaticSamplersOffset: 24
       Parameters: []
-      Samplers: 
-        - ShaderRegister: 31 
+      Samplers:
+        - ShaderRegister: 31
           RegisterSpace: 32
           ShaderVisibility:  All
           SAMPLER_FLAG_UINT_BORDER_COLOR: true
@@ -821,6 +821,26 @@ Parts:
       0x00, 0x66, 0x64, 0x5F, 0x7A, 0x73, 0x2E, 0x74, 0x65, 0x73, 0x74, 0x2E,
       0x74, 0x6D, 0x70, 0x2E, 0x64, 0x78, 0x6F, 0x5F, 0x66, 0x64, 0x00, 0x00};
 
-  EXPECT_EQ(Storage.size(), 324u);
-  EXPECT_TRUE(memcmp(Buffer, Storage.data(), 324u) == 0);
+  constexpr size_t BufferSize = 324;
+  constexpr size_t ZlibPayloadStart = 192;
+  constexpr size_t ZlibPayloadEnd = 236;
+
+  ASSERT_EQ(Storage.size(), BufferSize);
+  // Compare everything before the zlib-compressed payload
+  EXPECT_EQ(memcmp(Buffer, Storage.data(), ZlibPayloadStart), 0);
+  // Compare everything after the zlib-compressed payload (Args section, etc.)
+  EXPECT_EQ(memcmp(Buffer + ZlibPayloadEnd, Storage.data() + ZlibPayloadEnd,
+                   BufferSize - ZlibPayloadEnd),
+            0);
+
+  // Verify that the zlib-compressed payload successfully decompresses to the
+  // expected content
+  DXContainer C =
+      llvm::cantFail(DXContainer::create(MemoryBufferRef(Storage, "")));
+  const std::optional<mcdxbc::SourceInfo> &SRCI = C.getSourceInfo();
+  ASSERT_TRUE(SRCI.has_value());
+  EXPECT_EQ(SRCI->Contents.Entries.size(), 3u);
+  EXPECT_EQ(SRCI->Contents.Entries[0].FileContent, "smoke_source");
+  EXPECT_EQ(SRCI->Contents.Entries[1].FileContent, "inc2_source");
+  EXPECT_EQ(SRCI->Contents.Entries[2].FileContent, "inc1_source");
 }

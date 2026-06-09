@@ -56,6 +56,29 @@ define i32 @select_clz_to_ctz_constant_for_zero(i32 %a) {
   ret i32 %cond
 }
 
+; The zero case selects the constant 32 (defined), but the ctlz has
+; is_zero_poison=true. The result cttz must use is_zero_poison=false, otherwise
+; the a==0 case becomes poison instead of 32. The extra use of the ctlz blocks
+; the standalone xor->cttz rewrite so the select reaches foldSelectCtlzToCttz.
+define i32 @select_clz_to_ctz_constant_for_zero_poison_flag(i32 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_constant_for_zero_poison_flag(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A]], [[SUB]]
+; CHECK-NEXT:    [[LZ:%.*]] = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[AND]], i1 true)
+; CHECK-NEXT:    call void @use(i32 [[LZ]])
+; CHECK-NEXT:    [[COND:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[A]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 0, %a
+  %and = and i32 %sub, %a
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %and, i1 true)
+  call void @use(i32 %lz)
+  %tobool = icmp eq i32 %a, 0
+  %sub1 = xor i32 %lz, 31
+  %cond = select i1 %tobool, i32 32, i32 %sub1
+  ret i32 %cond
+}
+
 define <2 x i32> @select_clz_to_ctz_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_vec(
 ; CHECK-NEXT:    [[COND:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[A:%.*]], i1 true)

@@ -303,7 +303,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder(G_UNMERGE_VALUES)
       .legalIf(vectorElementCountIsLessThanOrEqualTo(1, MaxVectorSize));
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE})
+  getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE})
       .unsupportedIf(LegalityPredicates::any(typeIs(0, p9), typeIs(1, p9)))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allPtrs)));
 
@@ -401,6 +401,18 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalForCartesianProduct(allPtrs, allIntScalars)
       .legalIf(
           all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
+
+  getActionDefinitionsBuilder(G_PTRMASK)
+      .legalForCartesianProduct(allPtrs, allIntScalars)
+      .legalIf(
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)))
+      .legalIf([](const LegalityQuery &Query) {
+        const LLT PtrTy = Query.Types[0];
+        const LLT MaskTy = Query.Types[1];
+        return PtrTy.isPointerVector() && MaskTy.isVector() &&
+               !MaskTy.isPointer() &&
+               PtrTy.getNumElements() == MaskTy.getNumElements();
+      });
 
   // ST.canDirectlyComparePointers() for pointer args is supported in
   // legalizeCustom().

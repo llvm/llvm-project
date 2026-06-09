@@ -535,6 +535,7 @@ CodeGenIntrinsic::getValueAsIRMemLocation(const Record *R) const {
   StringRef Name = R->getName();
   IRMemLocation Loc =
       StringSwitch<IRMemLocation>(Name)
+          .Case("ArgMem", IRMemLocation::ArgMem)
           .Case("TargetMem0", IRMemLocation::TargetMem0)
           .Case("TargetMem1", IRMemLocation::TargetMem1)
           .Case("InaccessibleMem", IRMemLocation::InaccessibleMem)

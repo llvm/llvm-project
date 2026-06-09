@@ -262,7 +262,7 @@ const char *ARMAsmBackend::reasonForFixupRelaxation(const MCFixup &Fixup,
     break;
   }
   case ARM::fixup_bf_branch:
-    return checkPCRelOffset(Value, 0, 30);
+    return checkPCRelOffset(Value, 2, 30);
   case ARM::fixup_bf_target:
     return checkPCRelOffset(Value, -0x10000, +0xfffe);
   case ARM::fixup_bfl_target:

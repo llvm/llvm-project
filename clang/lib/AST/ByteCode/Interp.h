@@ -260,7 +260,10 @@ PRESERVE_NONE bool Ret(InterpState &S, CodePtr &PC) {
   const T &Ret = S.Stk.pop<T>();
 
   assert(S.Current);
+
+#ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+#endif
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
 
@@ -280,7 +283,10 @@ PRESERVE_NONE bool Ret(InterpState &S, CodePtr &PC) {
 }
 
 PRESERVE_NONE inline bool RetVoid(InterpState &S, CodePtr &PC) {
+
+#ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+#endif
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
@@ -2205,6 +2211,8 @@ bool Store(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
+  if (!Ptr.canDeref(Name))
+    return false;
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   Ptr.deref<T>() = Value;
@@ -2216,6 +2224,8 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
+    return false;
+  if (!Ptr.canDeref(Name))
     return false;
   if (Ptr.canBeInitialized())
     Ptr.initialize();
@@ -3271,7 +3281,7 @@ inline bool DoShiftAP(InterpState &S, CodePtr OpPC, const APSInt &LHS,
       return false;
     return DoShiftAP<LT, RT,
                      Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
-        S, OpPC, LHS, -RHS, Result);
+        S, OpPC, LHS, -(RHS.extend(RHS.getBitWidth() + 1)), Result);
   }
 
   if (!CheckShift<Dir>(S, OpPC, static_cast<LT>(LHS), static_cast<RT>(RHS),

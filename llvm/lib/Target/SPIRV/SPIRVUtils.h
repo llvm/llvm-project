@@ -334,6 +334,15 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
 
+// Create a stack slot in the entry block of F for a value of the given type.
+AllocaInst *createVariable(Function &F, Type *Type);
+
+// Create a value in BB set to the value associated with the branch the block
+// terminator will take.
+Value *
+createExitVariable(BasicBlock *BB,
+                   const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue);
+
 // Check for peeled array structs and recursively reconstitute them. In HLSL
 // CBuffers, arrays may have padding between the elements, but not after the
 // last element. To represent this in LLVM IR an array [N x T] will be
@@ -532,6 +541,8 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
+#define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
+
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,

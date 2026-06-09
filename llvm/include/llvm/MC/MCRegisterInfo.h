@@ -42,10 +42,10 @@ public:
   const iterator RegsBegin;
   const uint8_t *const RegSet;
   const uint32_t NameIdx;
+  const uint32_t RegSizeInBits;
   const uint16_t RegsSize;
   const uint16_t RegSetSize;
   const uint16_t ID;
-  const uint16_t RegSizeInBits;
   const uint8_t CopyCost;
   const bool Allocatable;
   const bool BaseClass;

@@ -78,10 +78,10 @@ public:
   bool replaceWithFinalIfReductionStore(VPInstruction *VPI,
                                         VPBuilder &FinalRedStoresBuilder);
 
-  /// Build a replicating or single-scalar recipe for \p VPI. If it is
-  /// predicated, add the mask as last operand. Range.End may be decreased to
-  /// ensure same recipe behavior  from \p Range.Start to \p Range.End.
-  VPSingleDefRecipe *handleReplication(VPInstruction *VPI, VFRange &Range);
+  /// Build a VPReplicationRecipe for \p VPI. If it is predicated, add the mask
+  /// as last operand. Range.End may be decreased to ensure same recipe behavior
+  /// from \p Range.Start to \p Range.End.
+  VPReplicateRecipe *handleReplication(VPInstruction *VPI, VFRange &Range);
 };
 } // end namespace llvm
 

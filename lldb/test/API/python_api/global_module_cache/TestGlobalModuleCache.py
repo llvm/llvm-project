@@ -99,6 +99,14 @@ class GlobalModuleCacheTestCase(TestBase):
         self.copy_to_main(two_print_path, main_c_path)
 
         self.build(dictionary={"C_SOURCES": main_c_path, "EXE": "a.out"})
+
+        # Force a different mtime for the new binary to avoid cache collision
+        # if the build happened in the same second as the first build.
+        new_a_out = os.path.join(self.getBuildDir(), "a.out")
+        if os.path.exists(new_a_out):
+            future_time = time.time() + 2
+            os.utime(new_a_out, (future_time, future_time))
+
         error = lldb.SBError()
         if one_debugger:
             if one_target:

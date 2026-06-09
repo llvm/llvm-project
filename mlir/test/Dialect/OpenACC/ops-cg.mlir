@@ -286,8 +286,8 @@ func.func @parallel_reduction_pattern(%data: memref<8xi32>, %shared: memref<i32>
       scf.reduce.return %sum : i32
     }
   } {acc.par_dims = #acc<par_dims[thread_x]>}
-  acc.reduction_accumulate (%partial) to (%private) <add>
-      : (i32) -> (memref<i32>) {par_dims = #acc<par_dims[thread_x]>}
+  acc.reduction_accumulate %partial to %private <add>
+      : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
   acc.reduction_combine %private into %shared <add> : memref<i32>
       {acc.par_dims = #acc<par_dims[thread_x]>}
   return
@@ -295,28 +295,28 @@ func.func @parallel_reduction_pattern(%data: memref<8xi32>, %shared: memref<i32>
 // CHECK: memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>}
 // CHECK: scf.parallel
 // CHECK: scf.reduce
-// CHECK: acc.reduction_accumulate(%{{.*}}) to(%{{.*}}) <add> : (i32) -> (memref<i32>) {par_dims = #acc<par_dims[thread_x]>}
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
 // CHECK: acc.reduction_combine %{{.*}} into %{{.*}} <add> : memref<i32> {acc.par_dims = #acc<par_dims[thread_x]>}
 
 // -----
 
 // CHECK-LABEL: func @reduction_accumulate_thread_x
 func.func @reduction_accumulate_thread_x(%partial: f32, %private: memref<f32>) {
-  acc.reduction_accumulate (%partial) to (%private) <add>
-      : (f32) -> (memref<f32>) {par_dims = #acc<par_dims[thread_x]>}
+  acc.reduction_accumulate %partial to %private <add>
+      : f32 -> memref<f32> {par_dims = #acc<par_dims[thread_x]>}
   return
 }
-// CHECK: acc.reduction_accumulate(%{{.*}}) to(%{{.*}}) <add> : (f32) -> (memref<f32>) {par_dims = #acc<par_dims[thread_x]>}
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : f32 -> memref<f32> {par_dims = #acc<par_dims[thread_x]>}
 
 // -----
 
 // CHECK-LABEL: func @reduction_accumulate_block_thread
 func.func @reduction_accumulate_block_thread(%partial: i32, %private: memref<i32>) {
-  acc.reduction_accumulate (%partial) to (%private) <add>
-      : (i32) -> (memref<i32>) {par_dims = #acc<par_dims[block_x, thread_x]>}
+  acc.reduction_accumulate %partial to %private <add>
+      : i32 -> memref<i32> {par_dims = #acc<par_dims[block_x, thread_x]>}
   return
 }
-// CHECK: acc.reduction_accumulate(%{{.*}}) to(%{{.*}}) <add> : (i32) -> (memref<i32>) {par_dims = #acc<par_dims[block_x, thread_x]>}
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : i32 -> memref<i32> {par_dims = #acc<par_dims[block_x, thread_x]>}
 
 // -----
 

@@ -49,3 +49,25 @@ llvm.func @convert_f4x2_to_f16x2(%src : i8) {
   %res2 = nvvm.convert.f4x2.to.f16x2 %src {relu = true} : i8 (f4E2M1FN)-> vector<2xf16>
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @convert_f4x2_to_bf16x2
+llvm.func @convert_f4x2_to_bf16x2(%src : i8, %scale_factor : i16) {
+  // CHECK: %[[res1:.*]] = zext i8 %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m1x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %[[res1]], i16 32639)
+  %res1 = nvvm.convert.f4x2.to.bf16x2 %src : i8 (f4E2M1FN) -> vector<2xbf16>
+  // CHECK: %[[res2:.*]] = zext i8 %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m1x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %[[res2]], i16 32639)
+  %res2 = nvvm.convert.f4x2.to.bf16x2 %src {relu = true} : i8 (f4E2M1FN) -> vector<2xbf16>
+  // CHECK: %[[res3:.*]] = zext i8 %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m1x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %[[res3]], i16 32639)
+  %res3 = nvvm.convert.f4x2.to.bf16x2 %src {sat = #nvvm.sat_mode<satfinite>} : i8 (f4E2M1FN) -> vector<2xbf16>
+  // CHECK: %[[res4:.*]] = zext i8 %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m1x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %[[res4]], i16 32639)
+  %res4 = nvvm.convert.f4x2.to.bf16x2 %src {relu = true, sat = #nvvm.sat_mode<satfinite>} : i8 (f4E2M1FN) -> vector<2xbf16>
+  // CHECK: %[[res5:.*]] = zext i8 %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m1x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %[[res5]], i16 %{{.*}})
+  %res5 = nvvm.convert.f4x2.to.bf16x2 %src, %scale_factor : i8 (f4E2M1FN) -> vector<2xbf16>
+  llvm.return
+}

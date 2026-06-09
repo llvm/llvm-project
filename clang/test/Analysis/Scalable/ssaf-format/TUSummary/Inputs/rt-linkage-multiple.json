@@ -1,0 +1,50 @@
+{
+  "data": [],
+  "id_table": [
+    {
+      "id": 1,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@bar"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@baz"
+      }
+    },
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@foo"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "None"
+      }
+    },
+    {
+      "id": 1,
+      "linkage": {
+        "type": "Internal"
+      }
+    },
+    {
+      "id": 2,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  }
+}

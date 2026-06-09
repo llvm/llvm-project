@@ -6,8 +6,11 @@
 
 ; RUN: not llc -O0 -mtriple=spirv64-- %t/store-vector.ll -o /dev/null 2>&1 | FileCheck --check-prefix=FAIL-STORE-VEC %s
 
+; RUN: not llc -O0 -mtriple=spirv %t/store-ptr-vulkan.ll -o /dev/null 2>&1 | FileCheck --check-prefix=FAIL-STORE-PTR %s
+
 ; FAIL-LOAD-VEC: error:{{.*}}atomic load is only allowed for integer or floating point types
 ; FAIL-STORE-VEC: error:{{.*}}atomic store is only allowed for integer or floating point types
+; FAIL-STORE-PTR: error:{{.*}}atomic store is only allowed for pointer types for physical addressing model
 
 ;--- load-vector.ll
 define <2 x i32> @load_vector_acquire(ptr addrspace(1) %ptr) {
@@ -18,5 +21,11 @@ define <2 x i32> @load_vector_acquire(ptr addrspace(1) %ptr) {
 ;--- store-vector.ll
 define void @store_vector_release(ptr addrspace(1) %ptr, <2 x i32> %val) {
   store atomic <2 x i32> %val, ptr addrspace(1) %ptr release, align 8
+  ret void
+}
+
+;--- store-ptr-vulkan.ll
+define void @store_vector_release(ptr addrspace(1) %ptr, ptr addrspace(1) %val) {
+  store atomic ptr addrspace(1) %val, ptr addrspace(1) %ptr monotonic, align 8
   ret void
 }

@@ -85,7 +85,6 @@ public:
   virtual ~State();
 
   virtual const Frame *getCurrentFrame() = 0;
-  virtual const Frame *getBottomFrame() const = 0;
   virtual unsigned getCallStackDepth() = 0;
   virtual bool stepsLeft() const = 0;
 

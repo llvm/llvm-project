@@ -1821,17 +1821,6 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   }
 }
 
-InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
-                                                   VPCostContext &Ctx) const {
-  // TODO: Compute cost for VPInstructions without underlying values.
-  if (!getUnderlyingValue())
-    return 0;
-  assert(Instruction::isCast(getOpcode()) &&
-         "only casts have underlying values currently");
-  return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                    Ctx);
-}
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
@@ -3519,6 +3508,8 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  VPValue *RdxStart =
+      getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1));
 
   switch (ExpressionType) {
   case ExpressionTypes::NegatedExtendedReduction:
@@ -3539,13 +3530,13 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       << *Ext0->getScalarType();
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << ")";
     break;
   }
   case ExpressionTypes::ExtNegatedMulAccReduction: {
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    RdxStart->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
@@ -3563,14 +3554,14 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       << *Ext1->getScalarType() << ")";
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << "))";
     break;
   }
   case ExpressionTypes::MulAccReduction:
   case ExpressionTypes::ExtMulAccReduction: {
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    RdxStart->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
@@ -3598,7 +3589,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     }
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << ")";
     break;

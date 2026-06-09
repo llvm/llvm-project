@@ -414,7 +414,7 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_implicit_value: // 0x9e ULEB128 size followed by block of that size
                              // (DWARF4)
   {
-    uint64_t block_len = data.Skip_LEB128(&offset);
+    uint64_t block_len = data.GetULEB128(&offset);
     offset += block_len;
     return offset - data_offset;
   }

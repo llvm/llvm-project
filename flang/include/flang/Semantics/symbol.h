@@ -32,7 +32,7 @@ class raw_ostream;
 namespace Fortran::parser {
 struct Expr;
 struct OpenMPDeclarativeConstruct;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -889,6 +889,8 @@ public:
       AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
+      // OpenACC declare on allocatable/pointer needs cross-TU action recipes
+      AccDeclareAction,
       // OpenACC data-movement attribute
       AccDevice, AccHost, AccSelf,
       // OpenACC miscellaneous flags
@@ -1218,6 +1220,12 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
 }
 
 inline const DeclTypeSpec *Symbol::GetType() const { return GetTypeImpl(); }
+
+// Defined here, where Symbol is a complete type, so that it can be inlined
+// into FortranEvaluate without that library needing to link FortranSemantics.
+inline const Scope *DerivedTypeSpec::GetScope() const {
+  return scope_ ? scope_ : typeSymbol_.scope();
+}
 
 // Sets and maps keyed by Symbols
 

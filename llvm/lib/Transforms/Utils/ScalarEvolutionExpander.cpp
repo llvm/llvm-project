@@ -2449,7 +2449,8 @@ struct SCEVFindUnsafe {
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      if (!SE.isKnownNonZero(D->getRHS())) {
+      if (!SE.isKnownNonZero(D->getRHS()) ||
+          !SE.isGuaranteedNotToBePoison(D->getRHS())) {
         IsUnsafe = true;
         return false;
       }
