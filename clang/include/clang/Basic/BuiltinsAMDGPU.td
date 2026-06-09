@@ -377,7 +377,7 @@ def __builtin_amdgcn_perm : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned i
 // GFX9+ only builtins.
 //===----------------------------------------------------------------------===//
 
-def __builtin_amdgcn_fmed3h : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "flat-global-insts">;
+def __builtin_amdgcn_fmed3h : AMDGPUBuiltin<"__fp16(__fp16, __fp16, __fp16)", [Const], "gfx9-insts">;
 
 def __builtin_amdgcn_global_atomic_fadd_f64 : AMDGPUBuiltin<"double(double address_space<1> *, double)", [], "gfx90a-insts">;
 def __builtin_amdgcn_global_atomic_fadd_f32 : AMDGPUBuiltin<"float(float address_space<1> *, float)", [], "atomic-fadd-rtn-insts">;
