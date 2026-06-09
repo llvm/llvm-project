@@ -244,7 +244,7 @@ public:
 
       bool VisitVarDecl(VarDecl *V) override {
         auto *Init = V->getInit();
-        if (Init && V->isLocalVarDecl())
+        if (V->isLocalVarDecl())
           Checker->visitVarDecl(V, Init, DeclWithIssue);
         return true;
       }
@@ -329,7 +329,7 @@ public:
 
     std::optional<bool> IsUncountedPtr = isUnsafePtr(V->getType());
     if (IsUncountedPtr && *IsUncountedPtr) {
-      if (isPtrOriginSafe(V, Value, DeclWithIssue))
+      if (Value && isPtrOriginSafe(V, Value, DeclWithIssue))
         return;
       reportBug(V, Value, nullptr, DeclWithIssue);
     }
@@ -500,10 +500,6 @@ public:
   }
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrOrOSPtrType(type);
-  }
-  bool isSafeExpr(const Expr *E) const final {
-    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
-           isa<ObjCMessageExpr>(E);
   }
   bool isSafeDecl(const Decl *D) const final {
     // Treat NS/CF globals in system header as immortal.

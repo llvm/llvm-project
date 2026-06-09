@@ -349,6 +349,15 @@ public:
     if (isFunctionPointer())
       return Fn.Func->getDecl()->getType();
 
+    if (isRoot() && BS.Base == Offset) {
+      // If this pointer points to the root of a declaration, try to consult
+      // the ValueDecl directly, since that has a type with more information,
+      // e.g. the correct ElaboratedTypeKeyword.
+      if (const ValueDecl *VD = getDeclDesc()->asValueDecl())
+        return VD->getType();
+      return getDeclDesc()->getType();
+    }
+
     if (inPrimitiveArray() && Offset != BS.Base) {
       // Unfortunately, complex and vector types are not array types in clang,
       // but they are for us.
@@ -360,7 +369,7 @@ public:
         return CT->getElementType();
     }
 
-    return getFieldDesc()->getDataElemType();
+    return getFieldDesc()->getType();
   }
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -843,7 +852,8 @@ public:
   /// Compute an integer that can be used to compare this pointer to
   /// another one. This is usually NOT the same as the pointer offset
   /// regarding the AST record layout.
-  size_t computeOffsetForComparison(const ASTContext &ASTCtx) const;
+  std::optional<size_t>
+  computeOffsetForComparison(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;
@@ -902,8 +912,18 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   if (P.isArrayElement()) {
     if (P.isOnePastEnd())
       OS << " one-past-the-end";
-    else
-      OS << " index " << P.getIndex();
+    else {
+      OS << ' ';
+      std::string Indices;
+      llvm::raw_string_ostream SS(Indices);
+      Pointer K = P;
+      while (K.isArrayElement()) {
+        SS << ']' << K.expand().getIndex() << '[';
+        K = K.expand().getArray();
+      }
+      std::reverse(Indices.begin(), Indices.end());
+      OS << Indices;
+    }
   } else if (P.isArrayRoot())
     OS << " arrayroot";
 
@@ -911,6 +931,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
     OS << " dummy";
   if (!P.isLive())
     OS << " dead";
+  if (P.isBaseClass())
+    OS << " base-class";
   return OS;
 }
 

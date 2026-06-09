@@ -144,5 +144,1104 @@ entry:
   ret i64 %0
 }
 
+define i32 @all_true_big_v32i16(<32 x i16> %v) {
+; CHECK-LABEL: all_true_big_v32i16:
+; CHECK:         .functype all_true_big_v32i16 (v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push22=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push21=, $4=, $pop22
+; CHECK-NEXT:    i16x8.eq $push8=, $0, $pop21
+; CHECK-NEXT:    i16x8.eq $push7=, $1, $4
+; CHECK-NEXT:    i8x16.shuffle $push9=, $pop8, $pop7, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push3=, 7
+; CHECK-NEXT:    i8x16.shl $push10=, $pop9, $pop3
+; CHECK-NEXT:    i32.const $push20=, 7
+; CHECK-NEXT:    i8x16.shr_s $push11=, $pop10, $pop20
+; CHECK-NEXT:    i8x16.all_true $push12=, $pop11
+; CHECK-NEXT:    i16x8.eq $push1=, $2, $4
+; CHECK-NEXT:    i16x8.eq $push0=, $3, $4
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push19=, 7
+; CHECK-NEXT:    i8x16.shl $push4=, $pop2, $pop19
+; CHECK-NEXT:    i32.const $push18=, 7
+; CHECK-NEXT:    i8x16.shr_s $push5=, $pop4, $pop18
+; CHECK-NEXT:    i8x16.all_true $push6=, $pop5
+; CHECK-NEXT:    i32.and $push13=, $pop12, $pop6
+; CHECK-NEXT:    i32.const $push14=, -1
+; CHECK-NEXT:    i32.xor $push15=, $pop13, $pop14
+; CHECK-NEXT:    i32.const $push16=, 1
+; CHECK-NEXT:    i32.and $push17=, $pop15, $pop16
+; CHECK-NEXT:    return $pop17
+  %1 = icmp eq <32 x i16> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, -1
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @all_true_big_v64i16(<64 x i16> %v) {
+; CHECK-LABEL: all_true_big_v64i16:
+; CHECK:         .functype all_true_big_v64i16 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push41=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push40=, $8=, $pop41
+; CHECK-NEXT:    i16x8.eq $push8=, $0, $pop40
+; CHECK-NEXT:    i16x8.eq $push7=, $1, $8
+; CHECK-NEXT:    i8x16.shuffle $push9=, $pop8, $pop7, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push3=, 7
+; CHECK-NEXT:    i8x16.shl $push10=, $pop9, $pop3
+; CHECK-NEXT:    i32.const $push39=, 7
+; CHECK-NEXT:    i8x16.shr_s $push11=, $pop10, $pop39
+; CHECK-NEXT:    i8x16.all_true $push12=, $pop11
+; CHECK-NEXT:    i16x8.eq $push1=, $2, $8
+; CHECK-NEXT:    i16x8.eq $push0=, $3, $8
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push38=, 7
+; CHECK-NEXT:    i8x16.shl $push4=, $pop2, $pop38
+; CHECK-NEXT:    i32.const $push37=, 7
+; CHECK-NEXT:    i8x16.shr_s $push5=, $pop4, $pop37
+; CHECK-NEXT:    i8x16.all_true $push6=, $pop5
+; CHECK-NEXT:    i32.and $push13=, $pop12, $pop6
+; CHECK-NEXT:    i16x8.eq $push15=, $4, $8
+; CHECK-NEXT:    i16x8.eq $push14=, $5, $8
+; CHECK-NEXT:    i8x16.shuffle $push16=, $pop15, $pop14, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push36=, 7
+; CHECK-NEXT:    i8x16.shl $push17=, $pop16, $pop36
+; CHECK-NEXT:    i32.const $push35=, 7
+; CHECK-NEXT:    i8x16.shr_s $push18=, $pop17, $pop35
+; CHECK-NEXT:    i8x16.all_true $push19=, $pop18
+; CHECK-NEXT:    i32.and $push20=, $pop13, $pop19
+; CHECK-NEXT:    i16x8.eq $push22=, $6, $8
+; CHECK-NEXT:    i16x8.eq $push21=, $7, $8
+; CHECK-NEXT:    i8x16.shuffle $push23=, $pop22, $pop21, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push34=, 7
+; CHECK-NEXT:    i8x16.shl $push24=, $pop23, $pop34
+; CHECK-NEXT:    i32.const $push33=, 7
+; CHECK-NEXT:    i8x16.shr_s $push25=, $pop24, $pop33
+; CHECK-NEXT:    i8x16.all_true $push26=, $pop25
+; CHECK-NEXT:    i32.and $push27=, $pop20, $pop26
+; CHECK-NEXT:    i32.const $push28=, -1
+; CHECK-NEXT:    i32.xor $push29=, $pop27, $pop28
+; CHECK-NEXT:    i64.extend_i32_u $push30=, $pop29
+; CHECK-NEXT:    i64.const $push31=, 1
+; CHECK-NEXT:    i64.and $push32=, $pop30, $pop31
+; CHECK-NEXT:    return $pop32
+  %1 = icmp eq <64 x i16> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, -1
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @all_true_big_v32i32(<32 x i32> %v) {
+; CHECK-LABEL: all_true_big_v32i32:
+; CHECK:         .functype all_true_big_v32i32 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push54=, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push53=, $8=, $pop54
+; CHECK-NEXT:    i32x4.eq $push21=, $0, $pop53
+; CHECK-NEXT:    i32x4.eq $push20=, $1, $8
+; CHECK-NEXT:    i8x16.shuffle $push22=, $pop21, $pop20, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push52=, $2, $8
+; CHECK-NEXT:    local.tee $push51=, $1=, $pop52
+; CHECK-NEXT:    i32x4.extract_lane $push23=, $pop51, 0
+; CHECK-NEXT:    i8x16.replace_lane $push24=, $pop22, 8, $pop23
+; CHECK-NEXT:    i32x4.extract_lane $push25=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push26=, $pop24, 9, $pop25
+; CHECK-NEXT:    i32x4.extract_lane $push27=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push28=, $pop26, 10, $pop27
+; CHECK-NEXT:    i32x4.extract_lane $push29=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push30=, $pop28, 11, $pop29
+; CHECK-NEXT:    i32x4.eq $push50=, $3, $8
+; CHECK-NEXT:    local.tee $push49=, $1=, $pop50
+; CHECK-NEXT:    i32x4.extract_lane $push31=, $pop49, 0
+; CHECK-NEXT:    i8x16.replace_lane $push32=, $pop30, 12, $pop31
+; CHECK-NEXT:    i32x4.extract_lane $push33=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push34=, $pop32, 13, $pop33
+; CHECK-NEXT:    i32x4.extract_lane $push35=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push36=, $pop34, 14, $pop35
+; CHECK-NEXT:    i32x4.extract_lane $push37=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push38=, $pop36, 15, $pop37
+; CHECK-NEXT:    i8x16.all_true $push39=, $pop38
+; CHECK-NEXT:    i32x4.eq $push1=, $4, $8
+; CHECK-NEXT:    i32x4.eq $push0=, $5, $8
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push48=, $6, $8
+; CHECK-NEXT:    local.tee $push47=, $1=, $pop48
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $pop47, 0
+; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop2, 8, $pop3
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop4, 9, $pop5
+; CHECK-NEXT:    i32x4.extract_lane $push7=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push8=, $pop6, 10, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push9=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push10=, $pop8, 11, $pop9
+; CHECK-NEXT:    i32x4.eq $push46=, $7, $8
+; CHECK-NEXT:    local.tee $push45=, $8=, $pop46
+; CHECK-NEXT:    i32x4.extract_lane $push11=, $pop45, 0
+; CHECK-NEXT:    i8x16.replace_lane $push12=, $pop10, 12, $pop11
+; CHECK-NEXT:    i32x4.extract_lane $push13=, $8, 1
+; CHECK-NEXT:    i8x16.replace_lane $push14=, $pop12, 13, $pop13
+; CHECK-NEXT:    i32x4.extract_lane $push15=, $8, 2
+; CHECK-NEXT:    i8x16.replace_lane $push16=, $pop14, 14, $pop15
+; CHECK-NEXT:    i32x4.extract_lane $push17=, $8, 3
+; CHECK-NEXT:    i8x16.replace_lane $push18=, $pop16, 15, $pop17
+; CHECK-NEXT:    i8x16.all_true $push19=, $pop18
+; CHECK-NEXT:    i32.and $push40=, $pop39, $pop19
+; CHECK-NEXT:    i32.const $push41=, -1
+; CHECK-NEXT:    i32.xor $push42=, $pop40, $pop41
+; CHECK-NEXT:    i32.const $push43=, 1
+; CHECK-NEXT:    i32.and $push44=, $pop42, $pop43
+; CHECK-NEXT:    return $pop44
+  %1 = icmp eq <32 x i32> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, -1
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @all_true_big_v64i32(<64 x i32> %v) {
+; CHECK-LABEL: all_true_big_v64i32:
+; CHECK:         .functype all_true_big_v64i32 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push105=, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push104=, $16=, $pop105
+; CHECK-NEXT:    i32x4.eq $push21=, $0, $pop104
+; CHECK-NEXT:    i32x4.eq $push20=, $1, $16
+; CHECK-NEXT:    i8x16.shuffle $push22=, $pop21, $pop20, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push103=, $2, $16
+; CHECK-NEXT:    local.tee $push102=, $1=, $pop103
+; CHECK-NEXT:    i32x4.extract_lane $push23=, $pop102, 0
+; CHECK-NEXT:    i8x16.replace_lane $push24=, $pop22, 8, $pop23
+; CHECK-NEXT:    i32x4.extract_lane $push25=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push26=, $pop24, 9, $pop25
+; CHECK-NEXT:    i32x4.extract_lane $push27=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push28=, $pop26, 10, $pop27
+; CHECK-NEXT:    i32x4.extract_lane $push29=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push30=, $pop28, 11, $pop29
+; CHECK-NEXT:    i32x4.eq $push101=, $3, $16
+; CHECK-NEXT:    local.tee $push100=, $1=, $pop101
+; CHECK-NEXT:    i32x4.extract_lane $push31=, $pop100, 0
+; CHECK-NEXT:    i8x16.replace_lane $push32=, $pop30, 12, $pop31
+; CHECK-NEXT:    i32x4.extract_lane $push33=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push34=, $pop32, 13, $pop33
+; CHECK-NEXT:    i32x4.extract_lane $push35=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push36=, $pop34, 14, $pop35
+; CHECK-NEXT:    i32x4.extract_lane $push37=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push38=, $pop36, 15, $pop37
+; CHECK-NEXT:    i8x16.all_true $push39=, $pop38
+; CHECK-NEXT:    i32x4.eq $push1=, $4, $16
+; CHECK-NEXT:    i32x4.eq $push0=, $5, $16
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push99=, $6, $16
+; CHECK-NEXT:    local.tee $push98=, $1=, $pop99
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $pop98, 0
+; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop2, 8, $pop3
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop4, 9, $pop5
+; CHECK-NEXT:    i32x4.extract_lane $push7=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push8=, $pop6, 10, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push9=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push10=, $pop8, 11, $pop9
+; CHECK-NEXT:    i32x4.eq $push97=, $7, $16
+; CHECK-NEXT:    local.tee $push96=, $1=, $pop97
+; CHECK-NEXT:    i32x4.extract_lane $push11=, $pop96, 0
+; CHECK-NEXT:    i8x16.replace_lane $push12=, $pop10, 12, $pop11
+; CHECK-NEXT:    i32x4.extract_lane $push13=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push14=, $pop12, 13, $pop13
+; CHECK-NEXT:    i32x4.extract_lane $push15=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push16=, $pop14, 14, $pop15
+; CHECK-NEXT:    i32x4.extract_lane $push17=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push18=, $pop16, 15, $pop17
+; CHECK-NEXT:    i8x16.all_true $push19=, $pop18
+; CHECK-NEXT:    i32.and $push40=, $pop39, $pop19
+; CHECK-NEXT:    i32x4.eq $push42=, $8, $16
+; CHECK-NEXT:    i32x4.eq $push41=, $9, $16
+; CHECK-NEXT:    i8x16.shuffle $push43=, $pop42, $pop41, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push95=, $10, $16
+; CHECK-NEXT:    local.tee $push94=, $1=, $pop95
+; CHECK-NEXT:    i32x4.extract_lane $push44=, $pop94, 0
+; CHECK-NEXT:    i8x16.replace_lane $push45=, $pop43, 8, $pop44
+; CHECK-NEXT:    i32x4.extract_lane $push46=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push47=, $pop45, 9, $pop46
+; CHECK-NEXT:    i32x4.extract_lane $push48=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push49=, $pop47, 10, $pop48
+; CHECK-NEXT:    i32x4.extract_lane $push50=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push51=, $pop49, 11, $pop50
+; CHECK-NEXT:    i32x4.eq $push93=, $11, $16
+; CHECK-NEXT:    local.tee $push92=, $1=, $pop93
+; CHECK-NEXT:    i32x4.extract_lane $push52=, $pop92, 0
+; CHECK-NEXT:    i8x16.replace_lane $push53=, $pop51, 12, $pop52
+; CHECK-NEXT:    i32x4.extract_lane $push54=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push55=, $pop53, 13, $pop54
+; CHECK-NEXT:    i32x4.extract_lane $push56=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push57=, $pop55, 14, $pop56
+; CHECK-NEXT:    i32x4.extract_lane $push58=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push59=, $pop57, 15, $pop58
+; CHECK-NEXT:    i8x16.all_true $push60=, $pop59
+; CHECK-NEXT:    i32.and $push61=, $pop40, $pop60
+; CHECK-NEXT:    i32x4.eq $push63=, $12, $16
+; CHECK-NEXT:    i32x4.eq $push62=, $13, $16
+; CHECK-NEXT:    i8x16.shuffle $push64=, $pop63, $pop62, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push91=, $14, $16
+; CHECK-NEXT:    local.tee $push90=, $1=, $pop91
+; CHECK-NEXT:    i32x4.extract_lane $push65=, $pop90, 0
+; CHECK-NEXT:    i8x16.replace_lane $push66=, $pop64, 8, $pop65
+; CHECK-NEXT:    i32x4.extract_lane $push67=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push68=, $pop66, 9, $pop67
+; CHECK-NEXT:    i32x4.extract_lane $push69=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push70=, $pop68, 10, $pop69
+; CHECK-NEXT:    i32x4.extract_lane $push71=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push72=, $pop70, 11, $pop71
+; CHECK-NEXT:    i32x4.eq $push89=, $15, $16
+; CHECK-NEXT:    local.tee $push88=, $16=, $pop89
+; CHECK-NEXT:    i32x4.extract_lane $push73=, $pop88, 0
+; CHECK-NEXT:    i8x16.replace_lane $push74=, $pop72, 12, $pop73
+; CHECK-NEXT:    i32x4.extract_lane $push75=, $16, 1
+; CHECK-NEXT:    i8x16.replace_lane $push76=, $pop74, 13, $pop75
+; CHECK-NEXT:    i32x4.extract_lane $push77=, $16, 2
+; CHECK-NEXT:    i8x16.replace_lane $push78=, $pop76, 14, $pop77
+; CHECK-NEXT:    i32x4.extract_lane $push79=, $16, 3
+; CHECK-NEXT:    i8x16.replace_lane $push80=, $pop78, 15, $pop79
+; CHECK-NEXT:    i8x16.all_true $push81=, $pop80
+; CHECK-NEXT:    i32.and $push82=, $pop61, $pop81
+; CHECK-NEXT:    i32.const $push83=, -1
+; CHECK-NEXT:    i32.xor $push84=, $pop82, $pop83
+; CHECK-NEXT:    i64.extend_i32_u $push85=, $pop84
+; CHECK-NEXT:    i64.const $push86=, 1
+; CHECK-NEXT:    i64.and $push87=, $pop85, $pop86
+; CHECK-NEXT:    return $pop87
+  %1 = icmp eq <64 x i32> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, -1
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @all_true_big_v32i64(<32 x i64> %v) {
+; CHECK-LABEL: all_true_big_v32i64:
+; CHECK:         .functype all_true_big_v32i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push86=, 0, 0
+; CHECK-NEXT:    local.tee $push85=, $16=, $pop86
+; CHECK-NEXT:    i64x2.eq $push29=, $0, $pop85
+; CHECK-NEXT:    i64x2.eq $push28=, $1, $16
+; CHECK-NEXT:    i8x16.shuffle $push30=, $pop29, $pop28, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push84=, $2, $16
+; CHECK-NEXT:    local.tee $push83=, $1=, $pop84
+; CHECK-NEXT:    i32x4.extract_lane $push31=, $pop83, 0
+; CHECK-NEXT:    i8x16.replace_lane $push32=, $pop30, 4, $pop31
+; CHECK-NEXT:    i32x4.extract_lane $push33=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push34=, $pop32, 5, $pop33
+; CHECK-NEXT:    i64x2.eq $push82=, $3, $16
+; CHECK-NEXT:    local.tee $push81=, $1=, $pop82
+; CHECK-NEXT:    i32x4.extract_lane $push35=, $pop81, 0
+; CHECK-NEXT:    i8x16.replace_lane $push36=, $pop34, 6, $pop35
+; CHECK-NEXT:    i32x4.extract_lane $push37=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push38=, $pop36, 7, $pop37
+; CHECK-NEXT:    i64x2.eq $push80=, $4, $16
+; CHECK-NEXT:    local.tee $push79=, $1=, $pop80
+; CHECK-NEXT:    i32x4.extract_lane $push39=, $pop79, 0
+; CHECK-NEXT:    i8x16.replace_lane $push40=, $pop38, 8, $pop39
+; CHECK-NEXT:    i32x4.extract_lane $push41=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push42=, $pop40, 9, $pop41
+; CHECK-NEXT:    i64x2.eq $push78=, $5, $16
+; CHECK-NEXT:    local.tee $push77=, $1=, $pop78
+; CHECK-NEXT:    i32x4.extract_lane $push43=, $pop77, 0
+; CHECK-NEXT:    i8x16.replace_lane $push44=, $pop42, 10, $pop43
+; CHECK-NEXT:    i32x4.extract_lane $push45=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push46=, $pop44, 11, $pop45
+; CHECK-NEXT:    i64x2.eq $push76=, $6, $16
+; CHECK-NEXT:    local.tee $push75=, $1=, $pop76
+; CHECK-NEXT:    i32x4.extract_lane $push47=, $pop75, 0
+; CHECK-NEXT:    i8x16.replace_lane $push48=, $pop46, 12, $pop47
+; CHECK-NEXT:    i32x4.extract_lane $push49=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push50=, $pop48, 13, $pop49
+; CHECK-NEXT:    i64x2.eq $push74=, $7, $16
+; CHECK-NEXT:    local.tee $push73=, $1=, $pop74
+; CHECK-NEXT:    i32x4.extract_lane $push51=, $pop73, 0
+; CHECK-NEXT:    i8x16.replace_lane $push52=, $pop50, 14, $pop51
+; CHECK-NEXT:    i32x4.extract_lane $push53=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push54=, $pop52, 15, $pop53
+; CHECK-NEXT:    i8x16.all_true $push55=, $pop54
+; CHECK-NEXT:    i64x2.eq $push1=, $8, $16
+; CHECK-NEXT:    i64x2.eq $push0=, $9, $16
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push72=, $10, $16
+; CHECK-NEXT:    local.tee $push71=, $9=, $pop72
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $pop71, 0
+; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop2, 4, $pop3
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop4, 5, $pop5
+; CHECK-NEXT:    i64x2.eq $push70=, $11, $16
+; CHECK-NEXT:    local.tee $push69=, $9=, $pop70
+; CHECK-NEXT:    i32x4.extract_lane $push7=, $pop69, 0
+; CHECK-NEXT:    i8x16.replace_lane $push8=, $pop6, 6, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push9=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push10=, $pop8, 7, $pop9
+; CHECK-NEXT:    i64x2.eq $push68=, $12, $16
+; CHECK-NEXT:    local.tee $push67=, $9=, $pop68
+; CHECK-NEXT:    i32x4.extract_lane $push11=, $pop67, 0
+; CHECK-NEXT:    i8x16.replace_lane $push12=, $pop10, 8, $pop11
+; CHECK-NEXT:    i32x4.extract_lane $push13=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push14=, $pop12, 9, $pop13
+; CHECK-NEXT:    i64x2.eq $push66=, $13, $16
+; CHECK-NEXT:    local.tee $push65=, $9=, $pop66
+; CHECK-NEXT:    i32x4.extract_lane $push15=, $pop65, 0
+; CHECK-NEXT:    i8x16.replace_lane $push16=, $pop14, 10, $pop15
+; CHECK-NEXT:    i32x4.extract_lane $push17=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push18=, $pop16, 11, $pop17
+; CHECK-NEXT:    i64x2.eq $push64=, $14, $16
+; CHECK-NEXT:    local.tee $push63=, $9=, $pop64
+; CHECK-NEXT:    i32x4.extract_lane $push19=, $pop63, 0
+; CHECK-NEXT:    i8x16.replace_lane $push20=, $pop18, 12, $pop19
+; CHECK-NEXT:    i32x4.extract_lane $push21=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push22=, $pop20, 13, $pop21
+; CHECK-NEXT:    i64x2.eq $push62=, $15, $16
+; CHECK-NEXT:    local.tee $push61=, $16=, $pop62
+; CHECK-NEXT:    i32x4.extract_lane $push23=, $pop61, 0
+; CHECK-NEXT:    i8x16.replace_lane $push24=, $pop22, 14, $pop23
+; CHECK-NEXT:    i32x4.extract_lane $push25=, $16, 2
+; CHECK-NEXT:    i8x16.replace_lane $push26=, $pop24, 15, $pop25
+; CHECK-NEXT:    i8x16.all_true $push27=, $pop26
+; CHECK-NEXT:    i32.and $push56=, $pop55, $pop27
+; CHECK-NEXT:    i32.const $push57=, -1
+; CHECK-NEXT:    i32.xor $push58=, $pop56, $pop57
+; CHECK-NEXT:    i32.const $push59=, 1
+; CHECK-NEXT:    i32.and $push60=, $pop58, $pop59
+; CHECK-NEXT:    return $pop60
+  %1 = icmp eq <32 x i64> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, -1
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @all_true_big_v64i64(<64 x i64> %v) {
+; CHECK-LABEL: all_true_big_v64i64:
+; CHECK:         .functype all_true_big_v64i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push169=, 0, 0
+; CHECK-NEXT:    local.tee $push168=, $32=, $pop169
+; CHECK-NEXT:    i64x2.eq $push29=, $0, $pop168
+; CHECK-NEXT:    i64x2.eq $push28=, $1, $32
+; CHECK-NEXT:    i8x16.shuffle $push30=, $pop29, $pop28, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push167=, $2, $32
+; CHECK-NEXT:    local.tee $push166=, $1=, $pop167
+; CHECK-NEXT:    i32x4.extract_lane $push31=, $pop166, 0
+; CHECK-NEXT:    i8x16.replace_lane $push32=, $pop30, 4, $pop31
+; CHECK-NEXT:    i32x4.extract_lane $push33=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push34=, $pop32, 5, $pop33
+; CHECK-NEXT:    i64x2.eq $push165=, $3, $32
+; CHECK-NEXT:    local.tee $push164=, $1=, $pop165
+; CHECK-NEXT:    i32x4.extract_lane $push35=, $pop164, 0
+; CHECK-NEXT:    i8x16.replace_lane $push36=, $pop34, 6, $pop35
+; CHECK-NEXT:    i32x4.extract_lane $push37=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push38=, $pop36, 7, $pop37
+; CHECK-NEXT:    i64x2.eq $push163=, $4, $32
+; CHECK-NEXT:    local.tee $push162=, $1=, $pop163
+; CHECK-NEXT:    i32x4.extract_lane $push39=, $pop162, 0
+; CHECK-NEXT:    i8x16.replace_lane $push40=, $pop38, 8, $pop39
+; CHECK-NEXT:    i32x4.extract_lane $push41=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push42=, $pop40, 9, $pop41
+; CHECK-NEXT:    i64x2.eq $push161=, $5, $32
+; CHECK-NEXT:    local.tee $push160=, $1=, $pop161
+; CHECK-NEXT:    i32x4.extract_lane $push43=, $pop160, 0
+; CHECK-NEXT:    i8x16.replace_lane $push44=, $pop42, 10, $pop43
+; CHECK-NEXT:    i32x4.extract_lane $push45=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push46=, $pop44, 11, $pop45
+; CHECK-NEXT:    i64x2.eq $push159=, $6, $32
+; CHECK-NEXT:    local.tee $push158=, $1=, $pop159
+; CHECK-NEXT:    i32x4.extract_lane $push47=, $pop158, 0
+; CHECK-NEXT:    i8x16.replace_lane $push48=, $pop46, 12, $pop47
+; CHECK-NEXT:    i32x4.extract_lane $push49=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push50=, $pop48, 13, $pop49
+; CHECK-NEXT:    i64x2.eq $push157=, $7, $32
+; CHECK-NEXT:    local.tee $push156=, $1=, $pop157
+; CHECK-NEXT:    i32x4.extract_lane $push51=, $pop156, 0
+; CHECK-NEXT:    i8x16.replace_lane $push52=, $pop50, 14, $pop51
+; CHECK-NEXT:    i32x4.extract_lane $push53=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push54=, $pop52, 15, $pop53
+; CHECK-NEXT:    i8x16.all_true $push55=, $pop54
+; CHECK-NEXT:    i64x2.eq $push1=, $8, $32
+; CHECK-NEXT:    i64x2.eq $push0=, $9, $32
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push155=, $10, $32
+; CHECK-NEXT:    local.tee $push154=, $9=, $pop155
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $pop154, 0
+; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop2, 4, $pop3
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop4, 5, $pop5
+; CHECK-NEXT:    i64x2.eq $push153=, $11, $32
+; CHECK-NEXT:    local.tee $push152=, $9=, $pop153
+; CHECK-NEXT:    i32x4.extract_lane $push7=, $pop152, 0
+; CHECK-NEXT:    i8x16.replace_lane $push8=, $pop6, 6, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push9=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push10=, $pop8, 7, $pop9
+; CHECK-NEXT:    i64x2.eq $push151=, $12, $32
+; CHECK-NEXT:    local.tee $push150=, $9=, $pop151
+; CHECK-NEXT:    i32x4.extract_lane $push11=, $pop150, 0
+; CHECK-NEXT:    i8x16.replace_lane $push12=, $pop10, 8, $pop11
+; CHECK-NEXT:    i32x4.extract_lane $push13=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push14=, $pop12, 9, $pop13
+; CHECK-NEXT:    i64x2.eq $push149=, $13, $32
+; CHECK-NEXT:    local.tee $push148=, $9=, $pop149
+; CHECK-NEXT:    i32x4.extract_lane $push15=, $pop148, 0
+; CHECK-NEXT:    i8x16.replace_lane $push16=, $pop14, 10, $pop15
+; CHECK-NEXT:    i32x4.extract_lane $push17=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push18=, $pop16, 11, $pop17
+; CHECK-NEXT:    i64x2.eq $push147=, $14, $32
+; CHECK-NEXT:    local.tee $push146=, $9=, $pop147
+; CHECK-NEXT:    i32x4.extract_lane $push19=, $pop146, 0
+; CHECK-NEXT:    i8x16.replace_lane $push20=, $pop18, 12, $pop19
+; CHECK-NEXT:    i32x4.extract_lane $push21=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push22=, $pop20, 13, $pop21
+; CHECK-NEXT:    i64x2.eq $push145=, $15, $32
+; CHECK-NEXT:    local.tee $push144=, $9=, $pop145
+; CHECK-NEXT:    i32x4.extract_lane $push23=, $pop144, 0
+; CHECK-NEXT:    i8x16.replace_lane $push24=, $pop22, 14, $pop23
+; CHECK-NEXT:    i32x4.extract_lane $push25=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push26=, $pop24, 15, $pop25
+; CHECK-NEXT:    i8x16.all_true $push27=, $pop26
+; CHECK-NEXT:    i32.and $push56=, $pop55, $pop27
+; CHECK-NEXT:    i64x2.eq $push58=, $16, $32
+; CHECK-NEXT:    i64x2.eq $push57=, $17, $32
+; CHECK-NEXT:    i8x16.shuffle $push59=, $pop58, $pop57, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push143=, $18, $32
+; CHECK-NEXT:    local.tee $push142=, $9=, $pop143
+; CHECK-NEXT:    i32x4.extract_lane $push60=, $pop142, 0
+; CHECK-NEXT:    i8x16.replace_lane $push61=, $pop59, 4, $pop60
+; CHECK-NEXT:    i32x4.extract_lane $push62=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push63=, $pop61, 5, $pop62
+; CHECK-NEXT:    i64x2.eq $push141=, $19, $32
+; CHECK-NEXT:    local.tee $push140=, $9=, $pop141
+; CHECK-NEXT:    i32x4.extract_lane $push64=, $pop140, 0
+; CHECK-NEXT:    i8x16.replace_lane $push65=, $pop63, 6, $pop64
+; CHECK-NEXT:    i32x4.extract_lane $push66=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push67=, $pop65, 7, $pop66
+; CHECK-NEXT:    i64x2.eq $push139=, $20, $32
+; CHECK-NEXT:    local.tee $push138=, $9=, $pop139
+; CHECK-NEXT:    i32x4.extract_lane $push68=, $pop138, 0
+; CHECK-NEXT:    i8x16.replace_lane $push69=, $pop67, 8, $pop68
+; CHECK-NEXT:    i32x4.extract_lane $push70=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push71=, $pop69, 9, $pop70
+; CHECK-NEXT:    i64x2.eq $push137=, $21, $32
+; CHECK-NEXT:    local.tee $push136=, $9=, $pop137
+; CHECK-NEXT:    i32x4.extract_lane $push72=, $pop136, 0
+; CHECK-NEXT:    i8x16.replace_lane $push73=, $pop71, 10, $pop72
+; CHECK-NEXT:    i32x4.extract_lane $push74=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push75=, $pop73, 11, $pop74
+; CHECK-NEXT:    i64x2.eq $push135=, $22, $32
+; CHECK-NEXT:    local.tee $push134=, $9=, $pop135
+; CHECK-NEXT:    i32x4.extract_lane $push76=, $pop134, 0
+; CHECK-NEXT:    i8x16.replace_lane $push77=, $pop75, 12, $pop76
+; CHECK-NEXT:    i32x4.extract_lane $push78=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push79=, $pop77, 13, $pop78
+; CHECK-NEXT:    i64x2.eq $push133=, $23, $32
+; CHECK-NEXT:    local.tee $push132=, $9=, $pop133
+; CHECK-NEXT:    i32x4.extract_lane $push80=, $pop132, 0
+; CHECK-NEXT:    i8x16.replace_lane $push81=, $pop79, 14, $pop80
+; CHECK-NEXT:    i32x4.extract_lane $push82=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push83=, $pop81, 15, $pop82
+; CHECK-NEXT:    i8x16.all_true $push84=, $pop83
+; CHECK-NEXT:    i32.and $push85=, $pop56, $pop84
+; CHECK-NEXT:    i64x2.eq $push87=, $24, $32
+; CHECK-NEXT:    i64x2.eq $push86=, $25, $32
+; CHECK-NEXT:    i8x16.shuffle $push88=, $pop87, $pop86, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push131=, $26, $32
+; CHECK-NEXT:    local.tee $push130=, $9=, $pop131
+; CHECK-NEXT:    i32x4.extract_lane $push89=, $pop130, 0
+; CHECK-NEXT:    i8x16.replace_lane $push90=, $pop88, 4, $pop89
+; CHECK-NEXT:    i32x4.extract_lane $push91=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push92=, $pop90, 5, $pop91
+; CHECK-NEXT:    i64x2.eq $push129=, $27, $32
+; CHECK-NEXT:    local.tee $push128=, $9=, $pop129
+; CHECK-NEXT:    i32x4.extract_lane $push93=, $pop128, 0
+; CHECK-NEXT:    i8x16.replace_lane $push94=, $pop92, 6, $pop93
+; CHECK-NEXT:    i32x4.extract_lane $push95=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push96=, $pop94, 7, $pop95
+; CHECK-NEXT:    i64x2.eq $push127=, $28, $32
+; CHECK-NEXT:    local.tee $push126=, $9=, $pop127
+; CHECK-NEXT:    i32x4.extract_lane $push97=, $pop126, 0
+; CHECK-NEXT:    i8x16.replace_lane $push98=, $pop96, 8, $pop97
+; CHECK-NEXT:    i32x4.extract_lane $push99=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push100=, $pop98, 9, $pop99
+; CHECK-NEXT:    i64x2.eq $push125=, $29, $32
+; CHECK-NEXT:    local.tee $push124=, $9=, $pop125
+; CHECK-NEXT:    i32x4.extract_lane $push101=, $pop124, 0
+; CHECK-NEXT:    i8x16.replace_lane $push102=, $pop100, 10, $pop101
+; CHECK-NEXT:    i32x4.extract_lane $push103=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push104=, $pop102, 11, $pop103
+; CHECK-NEXT:    i64x2.eq $push123=, $30, $32
+; CHECK-NEXT:    local.tee $push122=, $9=, $pop123
+; CHECK-NEXT:    i32x4.extract_lane $push105=, $pop122, 0
+; CHECK-NEXT:    i8x16.replace_lane $push106=, $pop104, 12, $pop105
+; CHECK-NEXT:    i32x4.extract_lane $push107=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push108=, $pop106, 13, $pop107
+; CHECK-NEXT:    i64x2.eq $push121=, $31, $32
+; CHECK-NEXT:    local.tee $push120=, $32=, $pop121
+; CHECK-NEXT:    i32x4.extract_lane $push109=, $pop120, 0
+; CHECK-NEXT:    i8x16.replace_lane $push110=, $pop108, 14, $pop109
+; CHECK-NEXT:    i32x4.extract_lane $push111=, $32, 2
+; CHECK-NEXT:    i8x16.replace_lane $push112=, $pop110, 15, $pop111
+; CHECK-NEXT:    i8x16.all_true $push113=, $pop112
+; CHECK-NEXT:    i32.and $push114=, $pop85, $pop113
+; CHECK-NEXT:    i32.const $push115=, -1
+; CHECK-NEXT:    i32.xor $push116=, $pop114, $pop115
+; CHECK-NEXT:    i64.extend_i32_u $push117=, $pop116
+; CHECK-NEXT:    i64.const $push118=, 1
+; CHECK-NEXT:    i64.and $push119=, $pop117, $pop118
+; CHECK-NEXT:    return $pop119
+  %1 = icmp eq <64 x i64> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, -1
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @any_true_big_v32i16(<32 x i16> %v) {
+; CHECK-LABEL: any_true_big_v32i16:
+; CHECK:         .functype any_true_big_v32i16 (v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push20=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push19=, $4=, $pop20
+; CHECK-NEXT:    i16x8.eq $push8=, $0, $pop19
+; CHECK-NEXT:    i16x8.eq $push7=, $1, $4
+; CHECK-NEXT:    i8x16.shuffle $push9=, $pop8, $pop7, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push3=, 7
+; CHECK-NEXT:    i8x16.shl $push10=, $pop9, $pop3
+; CHECK-NEXT:    i32.const $push18=, 7
+; CHECK-NEXT:    i8x16.shr_s $push11=, $pop10, $pop18
+; CHECK-NEXT:    v128.any_true $push12=, $pop11
+; CHECK-NEXT:    i16x8.eq $push1=, $2, $4
+; CHECK-NEXT:    i16x8.eq $push0=, $3, $4
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push17=, 7
+; CHECK-NEXT:    i8x16.shl $push4=, $pop2, $pop17
+; CHECK-NEXT:    i32.const $push16=, 7
+; CHECK-NEXT:    i8x16.shr_s $push5=, $pop4, $pop16
+; CHECK-NEXT:    v128.any_true $push6=, $pop5
+; CHECK-NEXT:    i32.or $push13=, $pop12, $pop6
+; CHECK-NEXT:    i32.const $push14=, 1
+; CHECK-NEXT:    i32.and $push15=, $pop13, $pop14
+; CHECK-NEXT:    return $pop15
+  %1 = icmp eq <32 x i16> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, 0
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @any_true_big_v64i16(<64 x i16> %v) {
+; CHECK-LABEL: any_true_big_v64i16:
+; CHECK:         .functype any_true_big_v64i16 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push39=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push38=, $8=, $pop39
+; CHECK-NEXT:    i16x8.eq $push8=, $0, $pop38
+; CHECK-NEXT:    i16x8.eq $push7=, $1, $8
+; CHECK-NEXT:    i8x16.shuffle $push9=, $pop8, $pop7, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push3=, 7
+; CHECK-NEXT:    i8x16.shl $push10=, $pop9, $pop3
+; CHECK-NEXT:    i32.const $push37=, 7
+; CHECK-NEXT:    i8x16.shr_s $push11=, $pop10, $pop37
+; CHECK-NEXT:    v128.any_true $push12=, $pop11
+; CHECK-NEXT:    i16x8.eq $push1=, $2, $8
+; CHECK-NEXT:    i16x8.eq $push0=, $3, $8
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push36=, 7
+; CHECK-NEXT:    i8x16.shl $push4=, $pop2, $pop36
+; CHECK-NEXT:    i32.const $push35=, 7
+; CHECK-NEXT:    i8x16.shr_s $push5=, $pop4, $pop35
+; CHECK-NEXT:    v128.any_true $push6=, $pop5
+; CHECK-NEXT:    i32.or $push13=, $pop12, $pop6
+; CHECK-NEXT:    i16x8.eq $push15=, $4, $8
+; CHECK-NEXT:    i16x8.eq $push14=, $5, $8
+; CHECK-NEXT:    i8x16.shuffle $push16=, $pop15, $pop14, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push34=, 7
+; CHECK-NEXT:    i8x16.shl $push17=, $pop16, $pop34
+; CHECK-NEXT:    i32.const $push33=, 7
+; CHECK-NEXT:    i8x16.shr_s $push18=, $pop17, $pop33
+; CHECK-NEXT:    v128.any_true $push19=, $pop18
+; CHECK-NEXT:    i32.or $push20=, $pop13, $pop19
+; CHECK-NEXT:    i16x8.eq $push22=, $6, $8
+; CHECK-NEXT:    i16x8.eq $push21=, $7, $8
+; CHECK-NEXT:    i8x16.shuffle $push23=, $pop22, $pop21, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30
+; CHECK-NEXT:    i32.const $push32=, 7
+; CHECK-NEXT:    i8x16.shl $push24=, $pop23, $pop32
+; CHECK-NEXT:    i32.const $push31=, 7
+; CHECK-NEXT:    i8x16.shr_s $push25=, $pop24, $pop31
+; CHECK-NEXT:    v128.any_true $push26=, $pop25
+; CHECK-NEXT:    i32.or $push27=, $pop20, $pop26
+; CHECK-NEXT:    i64.extend_i32_u $push28=, $pop27
+; CHECK-NEXT:    i64.const $push29=, 1
+; CHECK-NEXT:    i64.and $push30=, $pop28, $pop29
+; CHECK-NEXT:    return $pop30
+  %1 = icmp eq <64 x i16> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, 0
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @any_true_big_v32i32(<32 x i32> %v) {
+; CHECK-LABEL: any_true_big_v32i32:
+; CHECK:         .functype any_true_big_v32i32 (v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push52=, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push51=, $8=, $pop52
+; CHECK-NEXT:    i32x4.eq $push21=, $0, $pop51
+; CHECK-NEXT:    i32x4.eq $push20=, $1, $8
+; CHECK-NEXT:    i8x16.shuffle $push22=, $pop21, $pop20, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push50=, $2, $8
+; CHECK-NEXT:    local.tee $push49=, $1=, $pop50
+; CHECK-NEXT:    i32x4.extract_lane $push23=, $pop49, 0
+; CHECK-NEXT:    i8x16.replace_lane $push24=, $pop22, 8, $pop23
+; CHECK-NEXT:    i32x4.extract_lane $push25=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push26=, $pop24, 9, $pop25
+; CHECK-NEXT:    i32x4.extract_lane $push27=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push28=, $pop26, 10, $pop27
+; CHECK-NEXT:    i32x4.extract_lane $push29=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push30=, $pop28, 11, $pop29
+; CHECK-NEXT:    i32x4.eq $push48=, $3, $8
+; CHECK-NEXT:    local.tee $push47=, $1=, $pop48
+; CHECK-NEXT:    i32x4.extract_lane $push31=, $pop47, 0
+; CHECK-NEXT:    i8x16.replace_lane $push32=, $pop30, 12, $pop31
+; CHECK-NEXT:    i32x4.extract_lane $push33=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push34=, $pop32, 13, $pop33
+; CHECK-NEXT:    i32x4.extract_lane $push35=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push36=, $pop34, 14, $pop35
+; CHECK-NEXT:    i32x4.extract_lane $push37=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push38=, $pop36, 15, $pop37
+; CHECK-NEXT:    v128.any_true $push39=, $pop38
+; CHECK-NEXT:    i32x4.eq $push1=, $4, $8
+; CHECK-NEXT:    i32x4.eq $push0=, $5, $8
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push46=, $6, $8
+; CHECK-NEXT:    local.tee $push45=, $1=, $pop46
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $pop45, 0
+; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop2, 8, $pop3
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop4, 9, $pop5
+; CHECK-NEXT:    i32x4.extract_lane $push7=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push8=, $pop6, 10, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push9=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push10=, $pop8, 11, $pop9
+; CHECK-NEXT:    i32x4.eq $push44=, $7, $8
+; CHECK-NEXT:    local.tee $push43=, $8=, $pop44
+; CHECK-NEXT:    i32x4.extract_lane $push11=, $pop43, 0
+; CHECK-NEXT:    i8x16.replace_lane $push12=, $pop10, 12, $pop11
+; CHECK-NEXT:    i32x4.extract_lane $push13=, $8, 1
+; CHECK-NEXT:    i8x16.replace_lane $push14=, $pop12, 13, $pop13
+; CHECK-NEXT:    i32x4.extract_lane $push15=, $8, 2
+; CHECK-NEXT:    i8x16.replace_lane $push16=, $pop14, 14, $pop15
+; CHECK-NEXT:    i32x4.extract_lane $push17=, $8, 3
+; CHECK-NEXT:    i8x16.replace_lane $push18=, $pop16, 15, $pop17
+; CHECK-NEXT:    v128.any_true $push19=, $pop18
+; CHECK-NEXT:    i32.or $push40=, $pop39, $pop19
+; CHECK-NEXT:    i32.const $push41=, 1
+; CHECK-NEXT:    i32.and $push42=, $pop40, $pop41
+; CHECK-NEXT:    return $pop42
+  %1 = icmp eq <32 x i32> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, 0
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @any_true_big_v64i32(<64 x i32> %v) {
+; CHECK-LABEL: any_true_big_v64i32:
+; CHECK:         .functype any_true_big_v64i32 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push103=, 0, 0, 0, 0
+; CHECK-NEXT:    local.tee $push102=, $16=, $pop103
+; CHECK-NEXT:    i32x4.eq $push21=, $0, $pop102
+; CHECK-NEXT:    i32x4.eq $push20=, $1, $16
+; CHECK-NEXT:    i8x16.shuffle $push22=, $pop21, $pop20, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push101=, $2, $16
+; CHECK-NEXT:    local.tee $push100=, $1=, $pop101
+; CHECK-NEXT:    i32x4.extract_lane $push23=, $pop100, 0
+; CHECK-NEXT:    i8x16.replace_lane $push24=, $pop22, 8, $pop23
+; CHECK-NEXT:    i32x4.extract_lane $push25=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push26=, $pop24, 9, $pop25
+; CHECK-NEXT:    i32x4.extract_lane $push27=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push28=, $pop26, 10, $pop27
+; CHECK-NEXT:    i32x4.extract_lane $push29=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push30=, $pop28, 11, $pop29
+; CHECK-NEXT:    i32x4.eq $push99=, $3, $16
+; CHECK-NEXT:    local.tee $push98=, $1=, $pop99
+; CHECK-NEXT:    i32x4.extract_lane $push31=, $pop98, 0
+; CHECK-NEXT:    i8x16.replace_lane $push32=, $pop30, 12, $pop31
+; CHECK-NEXT:    i32x4.extract_lane $push33=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push34=, $pop32, 13, $pop33
+; CHECK-NEXT:    i32x4.extract_lane $push35=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push36=, $pop34, 14, $pop35
+; CHECK-NEXT:    i32x4.extract_lane $push37=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push38=, $pop36, 15, $pop37
+; CHECK-NEXT:    v128.any_true $push39=, $pop38
+; CHECK-NEXT:    i32x4.eq $push1=, $4, $16
+; CHECK-NEXT:    i32x4.eq $push0=, $5, $16
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push97=, $6, $16
+; CHECK-NEXT:    local.tee $push96=, $1=, $pop97
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $pop96, 0
+; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop2, 8, $pop3
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop4, 9, $pop5
+; CHECK-NEXT:    i32x4.extract_lane $push7=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push8=, $pop6, 10, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push9=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push10=, $pop8, 11, $pop9
+; CHECK-NEXT:    i32x4.eq $push95=, $7, $16
+; CHECK-NEXT:    local.tee $push94=, $1=, $pop95
+; CHECK-NEXT:    i32x4.extract_lane $push11=, $pop94, 0
+; CHECK-NEXT:    i8x16.replace_lane $push12=, $pop10, 12, $pop11
+; CHECK-NEXT:    i32x4.extract_lane $push13=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push14=, $pop12, 13, $pop13
+; CHECK-NEXT:    i32x4.extract_lane $push15=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push16=, $pop14, 14, $pop15
+; CHECK-NEXT:    i32x4.extract_lane $push17=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push18=, $pop16, 15, $pop17
+; CHECK-NEXT:    v128.any_true $push19=, $pop18
+; CHECK-NEXT:    i32.or $push40=, $pop39, $pop19
+; CHECK-NEXT:    i32x4.eq $push42=, $8, $16
+; CHECK-NEXT:    i32x4.eq $push41=, $9, $16
+; CHECK-NEXT:    i8x16.shuffle $push43=, $pop42, $pop41, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push93=, $10, $16
+; CHECK-NEXT:    local.tee $push92=, $1=, $pop93
+; CHECK-NEXT:    i32x4.extract_lane $push44=, $pop92, 0
+; CHECK-NEXT:    i8x16.replace_lane $push45=, $pop43, 8, $pop44
+; CHECK-NEXT:    i32x4.extract_lane $push46=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push47=, $pop45, 9, $pop46
+; CHECK-NEXT:    i32x4.extract_lane $push48=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push49=, $pop47, 10, $pop48
+; CHECK-NEXT:    i32x4.extract_lane $push50=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push51=, $pop49, 11, $pop50
+; CHECK-NEXT:    i32x4.eq $push91=, $11, $16
+; CHECK-NEXT:    local.tee $push90=, $1=, $pop91
+; CHECK-NEXT:    i32x4.extract_lane $push52=, $pop90, 0
+; CHECK-NEXT:    i8x16.replace_lane $push53=, $pop51, 12, $pop52
+; CHECK-NEXT:    i32x4.extract_lane $push54=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push55=, $pop53, 13, $pop54
+; CHECK-NEXT:    i32x4.extract_lane $push56=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push57=, $pop55, 14, $pop56
+; CHECK-NEXT:    i32x4.extract_lane $push58=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push59=, $pop57, 15, $pop58
+; CHECK-NEXT:    v128.any_true $push60=, $pop59
+; CHECK-NEXT:    i32.or $push61=, $pop40, $pop60
+; CHECK-NEXT:    i32x4.eq $push63=, $12, $16
+; CHECK-NEXT:    i32x4.eq $push62=, $13, $16
+; CHECK-NEXT:    i8x16.shuffle $push64=, $pop63, $pop62, 0, 4, 8, 12, 16, 20, 24, 28, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i32x4.eq $push89=, $14, $16
+; CHECK-NEXT:    local.tee $push88=, $1=, $pop89
+; CHECK-NEXT:    i32x4.extract_lane $push65=, $pop88, 0
+; CHECK-NEXT:    i8x16.replace_lane $push66=, $pop64, 8, $pop65
+; CHECK-NEXT:    i32x4.extract_lane $push67=, $1, 1
+; CHECK-NEXT:    i8x16.replace_lane $push68=, $pop66, 9, $pop67
+; CHECK-NEXT:    i32x4.extract_lane $push69=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push70=, $pop68, 10, $pop69
+; CHECK-NEXT:    i32x4.extract_lane $push71=, $1, 3
+; CHECK-NEXT:    i8x16.replace_lane $push72=, $pop70, 11, $pop71
+; CHECK-NEXT:    i32x4.eq $push87=, $15, $16
+; CHECK-NEXT:    local.tee $push86=, $16=, $pop87
+; CHECK-NEXT:    i32x4.extract_lane $push73=, $pop86, 0
+; CHECK-NEXT:    i8x16.replace_lane $push74=, $pop72, 12, $pop73
+; CHECK-NEXT:    i32x4.extract_lane $push75=, $16, 1
+; CHECK-NEXT:    i8x16.replace_lane $push76=, $pop74, 13, $pop75
+; CHECK-NEXT:    i32x4.extract_lane $push77=, $16, 2
+; CHECK-NEXT:    i8x16.replace_lane $push78=, $pop76, 14, $pop77
+; CHECK-NEXT:    i32x4.extract_lane $push79=, $16, 3
+; CHECK-NEXT:    i8x16.replace_lane $push80=, $pop78, 15, $pop79
+; CHECK-NEXT:    v128.any_true $push81=, $pop80
+; CHECK-NEXT:    i32.or $push82=, $pop61, $pop81
+; CHECK-NEXT:    i64.extend_i32_u $push83=, $pop82
+; CHECK-NEXT:    i64.const $push84=, 1
+; CHECK-NEXT:    i64.and $push85=, $pop83, $pop84
+; CHECK-NEXT:    return $pop85
+  %1 = icmp eq <64 x i32> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, 0
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+define i32 @any_true_big_v32i64(<32 x i64> %v) {
+; CHECK-LABEL: any_true_big_v32i64:
+; CHECK:         .functype any_true_big_v32i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push84=, 0, 0
+; CHECK-NEXT:    local.tee $push83=, $16=, $pop84
+; CHECK-NEXT:    i64x2.eq $push29=, $0, $pop83
+; CHECK-NEXT:    i64x2.eq $push28=, $1, $16
+; CHECK-NEXT:    i8x16.shuffle $push30=, $pop29, $pop28, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push82=, $2, $16
+; CHECK-NEXT:    local.tee $push81=, $1=, $pop82
+; CHECK-NEXT:    i32x4.extract_lane $push31=, $pop81, 0
+; CHECK-NEXT:    i8x16.replace_lane $push32=, $pop30, 4, $pop31
+; CHECK-NEXT:    i32x4.extract_lane $push33=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push34=, $pop32, 5, $pop33
+; CHECK-NEXT:    i64x2.eq $push80=, $3, $16
+; CHECK-NEXT:    local.tee $push79=, $1=, $pop80
+; CHECK-NEXT:    i32x4.extract_lane $push35=, $pop79, 0
+; CHECK-NEXT:    i8x16.replace_lane $push36=, $pop34, 6, $pop35
+; CHECK-NEXT:    i32x4.extract_lane $push37=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push38=, $pop36, 7, $pop37
+; CHECK-NEXT:    i64x2.eq $push78=, $4, $16
+; CHECK-NEXT:    local.tee $push77=, $1=, $pop78
+; CHECK-NEXT:    i32x4.extract_lane $push39=, $pop77, 0
+; CHECK-NEXT:    i8x16.replace_lane $push40=, $pop38, 8, $pop39
+; CHECK-NEXT:    i32x4.extract_lane $push41=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push42=, $pop40, 9, $pop41
+; CHECK-NEXT:    i64x2.eq $push76=, $5, $16
+; CHECK-NEXT:    local.tee $push75=, $1=, $pop76
+; CHECK-NEXT:    i32x4.extract_lane $push43=, $pop75, 0
+; CHECK-NEXT:    i8x16.replace_lane $push44=, $pop42, 10, $pop43
+; CHECK-NEXT:    i32x4.extract_lane $push45=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push46=, $pop44, 11, $pop45
+; CHECK-NEXT:    i64x2.eq $push74=, $6, $16
+; CHECK-NEXT:    local.tee $push73=, $1=, $pop74
+; CHECK-NEXT:    i32x4.extract_lane $push47=, $pop73, 0
+; CHECK-NEXT:    i8x16.replace_lane $push48=, $pop46, 12, $pop47
+; CHECK-NEXT:    i32x4.extract_lane $push49=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push50=, $pop48, 13, $pop49
+; CHECK-NEXT:    i64x2.eq $push72=, $7, $16
+; CHECK-NEXT:    local.tee $push71=, $1=, $pop72
+; CHECK-NEXT:    i32x4.extract_lane $push51=, $pop71, 0
+; CHECK-NEXT:    i8x16.replace_lane $push52=, $pop50, 14, $pop51
+; CHECK-NEXT:    i32x4.extract_lane $push53=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push54=, $pop52, 15, $pop53
+; CHECK-NEXT:    v128.any_true $push55=, $pop54
+; CHECK-NEXT:    i64x2.eq $push1=, $8, $16
+; CHECK-NEXT:    i64x2.eq $push0=, $9, $16
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push70=, $10, $16
+; CHECK-NEXT:    local.tee $push69=, $9=, $pop70
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $pop69, 0
+; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop2, 4, $pop3
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop4, 5, $pop5
+; CHECK-NEXT:    i64x2.eq $push68=, $11, $16
+; CHECK-NEXT:    local.tee $push67=, $9=, $pop68
+; CHECK-NEXT:    i32x4.extract_lane $push7=, $pop67, 0
+; CHECK-NEXT:    i8x16.replace_lane $push8=, $pop6, 6, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push9=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push10=, $pop8, 7, $pop9
+; CHECK-NEXT:    i64x2.eq $push66=, $12, $16
+; CHECK-NEXT:    local.tee $push65=, $9=, $pop66
+; CHECK-NEXT:    i32x4.extract_lane $push11=, $pop65, 0
+; CHECK-NEXT:    i8x16.replace_lane $push12=, $pop10, 8, $pop11
+; CHECK-NEXT:    i32x4.extract_lane $push13=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push14=, $pop12, 9, $pop13
+; CHECK-NEXT:    i64x2.eq $push64=, $13, $16
+; CHECK-NEXT:    local.tee $push63=, $9=, $pop64
+; CHECK-NEXT:    i32x4.extract_lane $push15=, $pop63, 0
+; CHECK-NEXT:    i8x16.replace_lane $push16=, $pop14, 10, $pop15
+; CHECK-NEXT:    i32x4.extract_lane $push17=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push18=, $pop16, 11, $pop17
+; CHECK-NEXT:    i64x2.eq $push62=, $14, $16
+; CHECK-NEXT:    local.tee $push61=, $9=, $pop62
+; CHECK-NEXT:    i32x4.extract_lane $push19=, $pop61, 0
+; CHECK-NEXT:    i8x16.replace_lane $push20=, $pop18, 12, $pop19
+; CHECK-NEXT:    i32x4.extract_lane $push21=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push22=, $pop20, 13, $pop21
+; CHECK-NEXT:    i64x2.eq $push60=, $15, $16
+; CHECK-NEXT:    local.tee $push59=, $16=, $pop60
+; CHECK-NEXT:    i32x4.extract_lane $push23=, $pop59, 0
+; CHECK-NEXT:    i8x16.replace_lane $push24=, $pop22, 14, $pop23
+; CHECK-NEXT:    i32x4.extract_lane $push25=, $16, 2
+; CHECK-NEXT:    i8x16.replace_lane $push26=, $pop24, 15, $pop25
+; CHECK-NEXT:    v128.any_true $push27=, $pop26
+; CHECK-NEXT:    i32.or $push56=, $pop55, $pop27
+; CHECK-NEXT:    i32.const $push57=, 1
+; CHECK-NEXT:    i32.and $push58=, $pop56, $pop57
+; CHECK-NEXT:    return $pop58
+  %1 = icmp eq <32 x i64> %v, zeroinitializer
+  %2 = bitcast <32 x i1> %1 to i32
+  %3 = icmp ne i32 %2, 0
+  %conv3 = zext i1 %3 to i32
+  ret i32 %conv3
+}
+
+define i64 @any_true_big_v64i64(<64 x i64> %v) {
+; CHECK-LABEL: any_true_big_v64i64:
+; CHECK:         .functype any_true_big_v64i64 (v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128, v128) -> (i64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const $push167=, 0, 0
+; CHECK-NEXT:    local.tee $push166=, $32=, $pop167
+; CHECK-NEXT:    i64x2.eq $push29=, $0, $pop166
+; CHECK-NEXT:    i64x2.eq $push28=, $1, $32
+; CHECK-NEXT:    i8x16.shuffle $push30=, $pop29, $pop28, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push165=, $2, $32
+; CHECK-NEXT:    local.tee $push164=, $1=, $pop165
+; CHECK-NEXT:    i32x4.extract_lane $push31=, $pop164, 0
+; CHECK-NEXT:    i8x16.replace_lane $push32=, $pop30, 4, $pop31
+; CHECK-NEXT:    i32x4.extract_lane $push33=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push34=, $pop32, 5, $pop33
+; CHECK-NEXT:    i64x2.eq $push163=, $3, $32
+; CHECK-NEXT:    local.tee $push162=, $1=, $pop163
+; CHECK-NEXT:    i32x4.extract_lane $push35=, $pop162, 0
+; CHECK-NEXT:    i8x16.replace_lane $push36=, $pop34, 6, $pop35
+; CHECK-NEXT:    i32x4.extract_lane $push37=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push38=, $pop36, 7, $pop37
+; CHECK-NEXT:    i64x2.eq $push161=, $4, $32
+; CHECK-NEXT:    local.tee $push160=, $1=, $pop161
+; CHECK-NEXT:    i32x4.extract_lane $push39=, $pop160, 0
+; CHECK-NEXT:    i8x16.replace_lane $push40=, $pop38, 8, $pop39
+; CHECK-NEXT:    i32x4.extract_lane $push41=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push42=, $pop40, 9, $pop41
+; CHECK-NEXT:    i64x2.eq $push159=, $5, $32
+; CHECK-NEXT:    local.tee $push158=, $1=, $pop159
+; CHECK-NEXT:    i32x4.extract_lane $push43=, $pop158, 0
+; CHECK-NEXT:    i8x16.replace_lane $push44=, $pop42, 10, $pop43
+; CHECK-NEXT:    i32x4.extract_lane $push45=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push46=, $pop44, 11, $pop45
+; CHECK-NEXT:    i64x2.eq $push157=, $6, $32
+; CHECK-NEXT:    local.tee $push156=, $1=, $pop157
+; CHECK-NEXT:    i32x4.extract_lane $push47=, $pop156, 0
+; CHECK-NEXT:    i8x16.replace_lane $push48=, $pop46, 12, $pop47
+; CHECK-NEXT:    i32x4.extract_lane $push49=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push50=, $pop48, 13, $pop49
+; CHECK-NEXT:    i64x2.eq $push155=, $7, $32
+; CHECK-NEXT:    local.tee $push154=, $1=, $pop155
+; CHECK-NEXT:    i32x4.extract_lane $push51=, $pop154, 0
+; CHECK-NEXT:    i8x16.replace_lane $push52=, $pop50, 14, $pop51
+; CHECK-NEXT:    i32x4.extract_lane $push53=, $1, 2
+; CHECK-NEXT:    i8x16.replace_lane $push54=, $pop52, 15, $pop53
+; CHECK-NEXT:    v128.any_true $push55=, $pop54
+; CHECK-NEXT:    i64x2.eq $push1=, $8, $32
+; CHECK-NEXT:    i64x2.eq $push0=, $9, $32
+; CHECK-NEXT:    i8x16.shuffle $push2=, $pop1, $pop0, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push153=, $10, $32
+; CHECK-NEXT:    local.tee $push152=, $9=, $pop153
+; CHECK-NEXT:    i32x4.extract_lane $push3=, $pop152, 0
+; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop2, 4, $pop3
+; CHECK-NEXT:    i32x4.extract_lane $push5=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop4, 5, $pop5
+; CHECK-NEXT:    i64x2.eq $push151=, $11, $32
+; CHECK-NEXT:    local.tee $push150=, $9=, $pop151
+; CHECK-NEXT:    i32x4.extract_lane $push7=, $pop150, 0
+; CHECK-NEXT:    i8x16.replace_lane $push8=, $pop6, 6, $pop7
+; CHECK-NEXT:    i32x4.extract_lane $push9=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push10=, $pop8, 7, $pop9
+; CHECK-NEXT:    i64x2.eq $push149=, $12, $32
+; CHECK-NEXT:    local.tee $push148=, $9=, $pop149
+; CHECK-NEXT:    i32x4.extract_lane $push11=, $pop148, 0
+; CHECK-NEXT:    i8x16.replace_lane $push12=, $pop10, 8, $pop11
+; CHECK-NEXT:    i32x4.extract_lane $push13=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push14=, $pop12, 9, $pop13
+; CHECK-NEXT:    i64x2.eq $push147=, $13, $32
+; CHECK-NEXT:    local.tee $push146=, $9=, $pop147
+; CHECK-NEXT:    i32x4.extract_lane $push15=, $pop146, 0
+; CHECK-NEXT:    i8x16.replace_lane $push16=, $pop14, 10, $pop15
+; CHECK-NEXT:    i32x4.extract_lane $push17=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push18=, $pop16, 11, $pop17
+; CHECK-NEXT:    i64x2.eq $push145=, $14, $32
+; CHECK-NEXT:    local.tee $push144=, $9=, $pop145
+; CHECK-NEXT:    i32x4.extract_lane $push19=, $pop144, 0
+; CHECK-NEXT:    i8x16.replace_lane $push20=, $pop18, 12, $pop19
+; CHECK-NEXT:    i32x4.extract_lane $push21=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push22=, $pop20, 13, $pop21
+; CHECK-NEXT:    i64x2.eq $push143=, $15, $32
+; CHECK-NEXT:    local.tee $push142=, $9=, $pop143
+; CHECK-NEXT:    i32x4.extract_lane $push23=, $pop142, 0
+; CHECK-NEXT:    i8x16.replace_lane $push24=, $pop22, 14, $pop23
+; CHECK-NEXT:    i32x4.extract_lane $push25=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push26=, $pop24, 15, $pop25
+; CHECK-NEXT:    v128.any_true $push27=, $pop26
+; CHECK-NEXT:    i32.or $push56=, $pop55, $pop27
+; CHECK-NEXT:    i64x2.eq $push58=, $16, $32
+; CHECK-NEXT:    i64x2.eq $push57=, $17, $32
+; CHECK-NEXT:    i8x16.shuffle $push59=, $pop58, $pop57, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push141=, $18, $32
+; CHECK-NEXT:    local.tee $push140=, $9=, $pop141
+; CHECK-NEXT:    i32x4.extract_lane $push60=, $pop140, 0
+; CHECK-NEXT:    i8x16.replace_lane $push61=, $pop59, 4, $pop60
+; CHECK-NEXT:    i32x4.extract_lane $push62=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push63=, $pop61, 5, $pop62
+; CHECK-NEXT:    i64x2.eq $push139=, $19, $32
+; CHECK-NEXT:    local.tee $push138=, $9=, $pop139
+; CHECK-NEXT:    i32x4.extract_lane $push64=, $pop138, 0
+; CHECK-NEXT:    i8x16.replace_lane $push65=, $pop63, 6, $pop64
+; CHECK-NEXT:    i32x4.extract_lane $push66=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push67=, $pop65, 7, $pop66
+; CHECK-NEXT:    i64x2.eq $push137=, $20, $32
+; CHECK-NEXT:    local.tee $push136=, $9=, $pop137
+; CHECK-NEXT:    i32x4.extract_lane $push68=, $pop136, 0
+; CHECK-NEXT:    i8x16.replace_lane $push69=, $pop67, 8, $pop68
+; CHECK-NEXT:    i32x4.extract_lane $push70=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push71=, $pop69, 9, $pop70
+; CHECK-NEXT:    i64x2.eq $push135=, $21, $32
+; CHECK-NEXT:    local.tee $push134=, $9=, $pop135
+; CHECK-NEXT:    i32x4.extract_lane $push72=, $pop134, 0
+; CHECK-NEXT:    i8x16.replace_lane $push73=, $pop71, 10, $pop72
+; CHECK-NEXT:    i32x4.extract_lane $push74=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push75=, $pop73, 11, $pop74
+; CHECK-NEXT:    i64x2.eq $push133=, $22, $32
+; CHECK-NEXT:    local.tee $push132=, $9=, $pop133
+; CHECK-NEXT:    i32x4.extract_lane $push76=, $pop132, 0
+; CHECK-NEXT:    i8x16.replace_lane $push77=, $pop75, 12, $pop76
+; CHECK-NEXT:    i32x4.extract_lane $push78=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push79=, $pop77, 13, $pop78
+; CHECK-NEXT:    i64x2.eq $push131=, $23, $32
+; CHECK-NEXT:    local.tee $push130=, $9=, $pop131
+; CHECK-NEXT:    i32x4.extract_lane $push80=, $pop130, 0
+; CHECK-NEXT:    i8x16.replace_lane $push81=, $pop79, 14, $pop80
+; CHECK-NEXT:    i32x4.extract_lane $push82=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push83=, $pop81, 15, $pop82
+; CHECK-NEXT:    v128.any_true $push84=, $pop83
+; CHECK-NEXT:    i32.or $push85=, $pop56, $pop84
+; CHECK-NEXT:    i64x2.eq $push87=, $24, $32
+; CHECK-NEXT:    i64x2.eq $push86=, $25, $32
+; CHECK-NEXT:    i8x16.shuffle $push88=, $pop87, $pop86, 0, 8, 16, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i64x2.eq $push129=, $26, $32
+; CHECK-NEXT:    local.tee $push128=, $9=, $pop129
+; CHECK-NEXT:    i32x4.extract_lane $push89=, $pop128, 0
+; CHECK-NEXT:    i8x16.replace_lane $push90=, $pop88, 4, $pop89
+; CHECK-NEXT:    i32x4.extract_lane $push91=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push92=, $pop90, 5, $pop91
+; CHECK-NEXT:    i64x2.eq $push127=, $27, $32
+; CHECK-NEXT:    local.tee $push126=, $9=, $pop127
+; CHECK-NEXT:    i32x4.extract_lane $push93=, $pop126, 0
+; CHECK-NEXT:    i8x16.replace_lane $push94=, $pop92, 6, $pop93
+; CHECK-NEXT:    i32x4.extract_lane $push95=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push96=, $pop94, 7, $pop95
+; CHECK-NEXT:    i64x2.eq $push125=, $28, $32
+; CHECK-NEXT:    local.tee $push124=, $9=, $pop125
+; CHECK-NEXT:    i32x4.extract_lane $push97=, $pop124, 0
+; CHECK-NEXT:    i8x16.replace_lane $push98=, $pop96, 8, $pop97
+; CHECK-NEXT:    i32x4.extract_lane $push99=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push100=, $pop98, 9, $pop99
+; CHECK-NEXT:    i64x2.eq $push123=, $29, $32
+; CHECK-NEXT:    local.tee $push122=, $9=, $pop123
+; CHECK-NEXT:    i32x4.extract_lane $push101=, $pop122, 0
+; CHECK-NEXT:    i8x16.replace_lane $push102=, $pop100, 10, $pop101
+; CHECK-NEXT:    i32x4.extract_lane $push103=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push104=, $pop102, 11, $pop103
+; CHECK-NEXT:    i64x2.eq $push121=, $30, $32
+; CHECK-NEXT:    local.tee $push120=, $9=, $pop121
+; CHECK-NEXT:    i32x4.extract_lane $push105=, $pop120, 0
+; CHECK-NEXT:    i8x16.replace_lane $push106=, $pop104, 12, $pop105
+; CHECK-NEXT:    i32x4.extract_lane $push107=, $9, 2
+; CHECK-NEXT:    i8x16.replace_lane $push108=, $pop106, 13, $pop107
+; CHECK-NEXT:    i64x2.eq $push119=, $31, $32
+; CHECK-NEXT:    local.tee $push118=, $32=, $pop119
+; CHECK-NEXT:    i32x4.extract_lane $push109=, $pop118, 0
+; CHECK-NEXT:    i8x16.replace_lane $push110=, $pop108, 14, $pop109
+; CHECK-NEXT:    i32x4.extract_lane $push111=, $32, 2
+; CHECK-NEXT:    i8x16.replace_lane $push112=, $pop110, 15, $pop111
+; CHECK-NEXT:    v128.any_true $push113=, $pop112
+; CHECK-NEXT:    i32.or $push114=, $pop85, $pop113
+; CHECK-NEXT:    i64.extend_i32_u $push115=, $pop114
+; CHECK-NEXT:    i64.const $push116=, 1
+; CHECK-NEXT:    i64.and $push117=, $pop115, $pop116
+; CHECK-NEXT:    return $pop117
+  %1 = icmp eq <64 x i64> %v, zeroinitializer
+  %2 = bitcast <64 x i1> %1 to i64
+  %3 = icmp ne i64 %2, 0
+  %conv3 = zext i1 %3 to i64
+  ret i64 %conv3
+}
+
+
 attributes #0 = { "target-features"="+atomics" }
 
