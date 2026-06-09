@@ -6465,8 +6465,7 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     }
   });
 
-  // Thread the wrapper into EmitBlockCallExpr so it can be applied after
-  // EmitCallArgs inside that function.
+  // Builtins never have block type.
   if (E->getCallee()->getType()->isBlockPointerType())
     return EmitBlockCallExpr(E, CallOrInvoke, ReturnSlotWrapper);
 
@@ -6496,8 +6495,6 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
   if (callee.isPseudoDestructor())
     return EmitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
 
-  // For the regular call path, thread the wrapper through to EmitCall so it
-  // is applied just after EmitCallArgs inside that function.
   return EmitCall(E->getCallee()->getType(), callee, E,
                   /*Chain=*/nullptr, CallOrInvoke, /*ResolvedFnInfo=*/nullptr,
                   ReturnSlotWrapper);

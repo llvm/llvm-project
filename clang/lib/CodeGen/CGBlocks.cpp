@@ -1236,7 +1236,7 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
 
   CGCallee Callee(CGCalleeInfo(), Func, PointerAuth);
 
-  // And call the block, applying the wrapper (if any) after EmitCallArgs above.
+  // And call the block.
   auto doEmitCall = [&](ReturnValueSlot Slot) {
     return EmitCall(FnInfo, Callee, Slot, Args, CallOrInvoke);
   };

@@ -334,17 +334,10 @@ RValue AggExprEmitter::withReturnValueSlot(
     RetAddr = Dest.getAddress();
   else
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
-  if (NoCopy && RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
-    llvm::Type *SRetPtrTy =
-        llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
-    RetAddr = RetAddr.withPointer(
-        CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
-        RetAddr.isKnownNonNull());
-  }
-  if (!NoCopy && RetAddr.isValid()) {
+  if (!NoCopy && RetAddr.isValid() &&
+      CGF.EmitLifetimeStart(RetAddr.getBasePointer())) {
     // n.b. If not copying, the caller often already emitted the lifetime start,
-    // so emitting it again is unnecessary.
-    CGF.EmitLifetimeStart(RetAddr.getBasePointer());
+    // so emitting it again is unnecessary, though would be semantically valid.
     LifetimeStartInst =
         cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
     assert(LifetimeStartInst->getIntrinsicID() ==
@@ -354,6 +347,13 @@ RValue AggExprEmitter::withReturnValueSlot(
     CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
         NormalEHLifetimeMarker, RetAddr);
     LifetimeEndBlock = CGF.EHStack.stable_begin();
+  }
+  if (NoCopy && RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
+    llvm::Type *SRetPtrTy =
+        llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
+    RetAddr = RetAddr.withPointer(
+        CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
+        RetAddr.isKnownNonNull());
   }
   RValue Src =
       EmitCall(ReturnValueSlot(RetAddr, Dest.isVolatile(), IsResultUnused,

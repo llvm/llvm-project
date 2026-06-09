@@ -4578,7 +4578,6 @@ public:
   //                         Scalar Expression Emission
   //===--------------------------------------------------------------------===//
 
-  // Defined in CGCall.h (shared with CGObjCRuntime.h).
   using ReturnSlotFn = CodeGen::ReturnSlotFn;
 
   /// EmitCall - Generate a call of the given function, expecting the given
