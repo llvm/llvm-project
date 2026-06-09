@@ -270,7 +270,7 @@ LLVMInitializeAArch64Target() {
   initializeLDTLSCleanupPass(PR);
   initializeMachineKCFILegacyPass(PR);
   initializeMachineSMEABIPass(PR);
-  initializeAArch64SRLTDefineSuperRegsPass(PR);
+  initializeAArch64SRLTDefineSuperRegsLegacyPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
   initializeAArch64SpeculationHardeningPass(PR);
