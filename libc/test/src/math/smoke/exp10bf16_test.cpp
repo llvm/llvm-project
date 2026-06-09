@@ -8,7 +8,6 @@
 
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/exp10bf16.h"
-#include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
