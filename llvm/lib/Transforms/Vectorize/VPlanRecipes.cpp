@@ -387,7 +387,7 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
   }
 }
 
-FastMathFlags VPIRFlags::getFastMathFlags() const {
+FastMathFlags VPIRFlags::getFastMathFlagsOrNone() const {
   assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
           OpType == OperationType::ReductionOp ||
           OpType == OperationType::Other) &&
@@ -723,7 +723,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
                   OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
-    return Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlags(), Name);
+    return Builder.CreateSelectFMF(Cond, Op1, Op2, getFastMathFlagsOrNone(),
+                                   Name);
   }
   case VPInstruction::ActiveLaneMask: {
     // Get first lane of vector induction variable.
@@ -853,7 +854,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (State.VF.isScalar())
       return State.get(getOperand(0), true);
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-    Builder.setFastMathFlags(getFastMathFlags());
+    Builder.setFastMathFlags(getFastMathFlagsOrNone());
     // If this start vector is scaled then it should produce a vector with fewer
     // elements than the VF.
     ElementCount VF = State.VF.divideCoefficientBy(
@@ -876,7 +877,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
       RdxParts[Part] = State.get(getOperand(Part), IsInLoop);
 
     IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-    Builder.setFastMathFlags(getFastMathFlags());
+    Builder.setFastMathFlags(getFastMathFlagsOrNone());
 
     // Reduce multiple operands into one.
     Value *ReducedPartRdx = RdxParts[0];
@@ -1513,7 +1514,7 @@ void VPInstruction::execute(VPTransformState &State) {
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
   if (hasFastMathFlags())
-    State.Builder.setFastMathFlags(getFastMathFlags());
+    State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *GeneratedValue = generate(State);
   if (!hasResult())
     return;
@@ -2207,7 +2208,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
   IntrinsicCostAttributes CostAttrs(
-      ID, RetTy, Arguments, ParamTys, R.getFastMathFlags(),
+      ID, RetTy, Arguments, ParamTys, R.getFastMathFlagsOrNone(),
       dyn_cast_or_null<IntrinsicInst>(R.getUnderlyingValue()),
       InstructionCost::getInvalid());
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);
@@ -2566,7 +2567,7 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     break;
   case OperationType::FCmp:
     O << " " << CmpInst::getPredicateName(getPredicate());
-    getFastMathFlags().print(O);
+    getFastMathFlagsOrNone().print(O);
     break;
   case OperationType::DisjointOp:
     if (DisjointFlags.IsDisjoint)
@@ -2589,7 +2590,7 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
       O << " nsw";
     break;
   case OperationType::FPMathOp:
-    getFastMathFlags().print(O);
+    getFastMathFlagsOrNone().print(O);
     break;
   case OperationType::GEPOp: {
     GEPNoWrapFlags Flags = getGEPNoWrapFlags();
@@ -2613,7 +2614,7 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     if (isReductionOrdered())
       O << ", ordered";
     O << ")";
-    getFastMathFlags().print(O);
+    getFastMathFlagsOrNone().print(O);
     break;
   }
   case OperationType::Other:
@@ -2935,7 +2936,7 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  State.Builder.setFastMathFlags(getFastMathFlags());
+  State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
 
   /// Compute scalar induction steps. \p ScalarIV is the scalar induction
   /// variable on which to base the steps, \p Step is the size of the step.
@@ -3195,14 +3196,15 @@ void VPReductionRecipe::execute(VPTransformState &State) {
          "In-loop AnyOf reductions aren't currently supported");
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  State.Builder.setFastMathFlags(getFastMathFlags());
+  State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *NewVecOp = State.get(getVecOp());
   if (VPValue *Cond = getCondOp()) {
     Value *NewCond = State.get(Cond, State.VF.isScalar());
     VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
     Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
 
-    Value *Start = getRecurrenceIdentity(Kind, ElementTy, getFastMathFlags());
+    Value *Start =
+        getRecurrenceIdentity(Kind, ElementTy, getFastMathFlagsOrNone());
     if (State.VF.isVector())
       Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Start);
 
@@ -3254,7 +3256,7 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(Builder);
-  Builder.setFastMathFlags(getFastMathFlags());
+  Builder.setFastMathFlags(getFastMathFlagsOrNone());
 
   RecurKind Kind = getRecurrenceKind();
   Value *Prev = State.get(getChainOp(), /*IsScalar*/ true);
@@ -3288,7 +3290,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   Type *ElementTy = this->getScalarType();
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
-  FastMathFlags FMFs = getFastMathFlags();
+  FastMathFlags FMFs = getFastMathFlagsOrNone();
   std::optional<FastMathFlags> OptionalFMF =
       ElementTy->isFloatingPointTy() ? std::make_optional(FMFs) : std::nullopt;
 
@@ -3423,8 +3425,9 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
           Opcode, getOperand(0)->getScalarType(), nullptr, RedTy, VF,
           TargetTransformInfo::getPartialReductionExtendKind(ExtR->getOpcode()),
           TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
-          RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
-                                     : std::nullopt);
+          RedTy->isFloatingPointTy()
+              ? std::optional{RedR->getFastMathFlagsOrNone()}
+              : std::nullopt);
     else if (!RedTy->isFloatingPointTy())
       // TTI::getExtendedReductionCost only supports integer types.
       return Ctx.TTI.getExtendedReductionCost(
@@ -3463,8 +3466,9 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
           TargetTransformInfo::getPartialReductionExtendKind(
               Ext1R->getOpcode()),
           Mul->getOpcode(), Ctx.CostKind,
-          RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
-                                     : std::nullopt);
+          RedTy->isFloatingPointTy()
+              ? std::optional{RedR->getFastMathFlagsOrNone()}
+              : std::nullopt);
     }
     assert(Opcode != Instruction::FSub && "Only integer types are supported");
     return Ctx.TTI.getMulAccReductionCost(
@@ -3504,6 +3508,8 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  VPValue *RdxStart =
+      getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1));
 
   switch (ExpressionType) {
   case ExpressionTypes::NegatedExtendedReduction:
@@ -3524,13 +3530,13 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       << *Ext0->getScalarType();
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << ")";
     break;
   }
   case ExpressionTypes::ExtNegatedMulAccReduction: {
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    RdxStart->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
@@ -3548,14 +3554,14 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       << *Ext1->getScalarType() << ")";
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << "))";
     break;
   }
   case ExpressionTypes::MulAccReduction:
   case ExpressionTypes::ExtMulAccReduction: {
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    RdxStart->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
@@ -3583,7 +3589,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     }
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << ")";
     break;

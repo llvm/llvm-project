@@ -359,7 +359,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
         UndefMask.setBits(BitPosition, BitPosition + SrcBitSize);
         if (isa<PoisonValue>(Element))
           PoisonMask.setBits(BitPosition, BitPosition + SrcBitSize);
-        SrcValue = APInt::getZero(DstBitSize);
+        SrcValue = APInt::getZero(SrcBitSize);
       } else {
         auto *Src = dyn_cast<ConstantInt>(Element);
         if (!Src)

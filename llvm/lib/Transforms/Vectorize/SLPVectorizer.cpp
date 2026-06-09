@@ -2436,6 +2436,12 @@ public:
   /// single store only.
   bool canVectorStoreInsertValue(const TreeEntry *E) const;
 
+  /// \returns the source vector type for an InsertElement/InsertValue
+  /// buildvector node \p E: the inserted vector type for insertelement, or a
+  /// vector of the inserted scalar type wide enough to cover the highest
+  /// inserted index for insertvalue.
+  FixedVectorType *getInsertBuildVectorSrcTy(const TreeEntry *E) const;
+
   /// \returns True if the VectorizableTree is both tiny and not fully
   /// vectorizable. We do not vectorize such trees.
   bool isTreeTinyAndNotFullyVectorizable(bool ForReduction = false) const;
@@ -6474,12 +6480,6 @@ private:
   /// A DenseMapInfo implementation for holding DenseMaps and DenseSets of
   /// sorted SmallVectors of unsigned.
   struct OrdersTypeDenseMapInfo {
-    static OrdersType getEmptyKey() {
-      OrdersType V;
-      V.push_back(~1U);
-      return V;
-    }
-
     static unsigned getHashValue(const OrdersType &V) {
       return static_cast<unsigned>(hash_combine_range(V));
     }
@@ -6534,11 +6534,6 @@ private:
 template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
   using FirstInfo = DenseMapInfo<BoUpSLP::TreeEntry *>;
   using SecondInfo = DenseMapInfo<unsigned>;
-  static BoUpSLP::EdgeInfo getEmptyKey() {
-    return BoUpSLP::EdgeInfo(FirstInfo::getEmptyKey(),
-                             SecondInfo::getEmptyKey());
-  }
-
   static unsigned getHashValue(const BoUpSLP::EdgeInfo &Val) {
     return detail::combineHashValue(FirstInfo::getHashValue(Val.UserTE),
                                     SecondInfo::getHashValue(Val.EdgeIdx));
@@ -9293,6 +9288,14 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                "Expected exactly 2 entries.");
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
           TreeEntry &OpTE = *VectorizableTree[P.first];
+          // The order of an operand that has both reordered and reused scalars
+          // cannot be absorbed into the split node cleanly: clearing the
+          // reorder indices while keeping the reuse mask (or vice versa)
+          // desyncs the split node scalars from the operand effective order.
+          // Skip reordering for such operands.
+          if (OpTE.State != TreeEntry::SplitVectorize &&
+              !OpTE.ReorderIndices.empty() && !OpTE.ReuseShuffleIndices.empty())
+            continue;
           OrdersType Order = OpTE.ReorderIndices;
           if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
             if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
@@ -10842,13 +10845,19 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     return TreeEntry::NeedToGather;
   }
   case Instruction::InsertValue:
-    // Handle only simple insertvalue with one index and non-vector.
+    // Handle only simple insertvalue building a homogeneous aggregate from
+    // scalars: exactly one index and an inserted value whose type is a valid
+    // vector element type. Vectors and aggregates (structs/arrays) are
+    // rejected, since the inserted operand type is later widened into the
+    // result FixedVectorType.
     // TODO: Support more complex insertvalues.
     if (any_of(VL,
                [](Value *V) {
                  auto *IV = dyn_cast<InsertValueInst>(V);
-                 return IV && (IV->getNumIndices() != 1 ||
-                               IV->getOperand(1)->getType()->isVectorTy());
+                 return IV &&
+                        (IV->getNumIndices() != 1 ||
+                         !::isValidElementType(IV->getOperand(1)->getType()) ||
+                         IV->getOperand(1)->getType()->isVectorTy());
                }) ||
         none_of(VL, [](Value *V) {
           auto *IV = dyn_cast<InsertValueInst>(V);
@@ -13551,6 +13560,22 @@ bool BoUpSLP::canVectorStoreInsertValue(const TreeEntry *E) const {
       return false;
   }
   return HasStore;
+}
+
+FixedVectorType *BoUpSLP::getInsertBuildVectorSrcTy(const TreeEntry *E) const {
+  Value *VL0 = E->getMainOp();
+  if (E->getOpcode() == Instruction::InsertElement)
+    return cast<FixedVectorType>(VL0->getType());
+  assert(E->getOpcode() == Instruction::InsertValue &&
+         "Expected InsertElement or InsertValue node.");
+  unsigned MaxIdx = E->Scalars.size() - 1;
+  for (Value *V : E->Scalars) {
+    auto *I = dyn_cast<InsertValueInst>(V);
+    if (!I)
+      continue;
+    MaxIdx = std::max(MaxIdx, I->getIndices().front());
+  }
+  return cast<FixedVectorType>(getWidenedType(getValueType(VL0), MaxIdx + 1));
 }
 
 bool BoUpSLP::canReuseExtract(ArrayRef<Value *> VL,
@@ -17160,20 +17185,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   case Instruction::InsertElement: {
     assert(E->ReuseShuffleIndices.empty() &&
            "Unique insertelements only are expected.");
-    FixedVectorType *SrcVecTy = nullptr;
-    if (ShuffleOrOp == Instruction::InsertElement) {
-      SrcVecTy = cast<FixedVectorType>(VL0->getType());
-    } else {
-      unsigned MaxIdx = VL.size() - 1;
-      for (Value *V : VL) {
-        auto *I = dyn_cast<InsertValueInst>(V);
-        if (!I)
-          continue;
-        MaxIdx = std::max(MaxIdx, I->getIndices().front());
-      }
-      SrcVecTy =
-          cast<FixedVectorType>(getWidenedType(getValueType(VL0), MaxIdx + 1));
-    }
+    FixedVectorType *SrcVecTy = getInsertBuildVectorSrcTy(E);
     unsigned const NumElts = getNumElements(SrcVecTy);
     unsigned const NumScalars = VL.size();
 
@@ -17279,7 +17291,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     }
     if (ShuffleOrOp == Instruction::InsertValue &&
         !canVectorStoreInsertValue(E)) {
-      Align VecAlign = DL->getPrefTypeAlign(VecTy);
+      // Match the stack slot alignment used during codegen (see the store +
+      // load roundtrip in vectorizeTree()): the slot holds both the source
+      // vector and the original aggregate.
+      Align VecAlign = std::max(DL->getPrefTypeAlign(SrcVecTy),
+                                DL->getPrefTypeAlign(VL0->getType()));
       Cost += TTI->getMemoryOpCost(Instruction::Store, SrcVecTy, VecAlign,
                                    /*AddressSpace=*/0, CostKind) +
               TTI->getMemoryOpCost(Instruction::Load, VL0->getType(), VecAlign,
@@ -23394,20 +23410,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         return !is_contained(E->Scalars, cast<Instruction>(V)->getOperand(0));
       }));
       const unsigned NumScalars = E->Scalars.size();
-      FixedVectorType *SrcVecTy = nullptr;
-      if (ShuffleOrOp == Instruction::InsertElement) {
-        SrcVecTy = cast<FixedVectorType>(VL0->getType());
-      } else {
-        unsigned MaxIdx = NumScalars - 1;
-        for (Value *V : E->Scalars) {
-          auto *I = dyn_cast<InsertValueInst>(V);
-          if (!I)
-            continue;
-          MaxIdx = std::max(MaxIdx, I->getIndices().front());
-        }
-        SrcVecTy = cast<FixedVectorType>(
-            getWidenedType(getValueType(VL0), MaxIdx + 1));
-      }
+      FixedVectorType *SrcVecTy = getInsertBuildVectorSrcTy(E);
       const unsigned NumElts = getNumElements(SrcVecTy);
 
       unsigned Offset = *getElementIndex(VL0);
@@ -26365,6 +26368,20 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
        I = I->getNextNode()) {
     ArrayRef<ScheduleBundle *> Bundles = BS->getScheduleBundles(I);
     if (!Bundles.empty()) {
+      // An instruction that is modeled as a copyable element in some node may
+      // also be used directly by another node that was registered only after
+      // this instruction's dependencies were last computed. The deferred
+      // copyable-operand recomputation (RecalcCopyableOperandDeps) is consumed
+      // at the next bundle scheduling, which clears the operand's dependencies
+      // before that node joins the tree, so the recomputation misses the
+      // direct def-use edge and the count stays too low. The scheduler would
+      // then decrement the instruction more times than its dependency count,
+      // tripping the unscheduled-deps assertion. The whole tree is registered
+      // now, so clear and recompute such dependencies against the full tree.
+      if (ScheduleData *SD = BS->getScheduleData(I);
+          SD && SD->hasValidDependencies() &&
+          !BS->getScheduleCopyableData(I).empty())
+        SD->clearDirectDependencies();
       for (ScheduleBundle *Bundle : Bundles) {
         Bundle->setSchedulingPriority(Idx++);
         if (const TreeEntry *TE = Bundle->getTreeEntry();
@@ -31475,6 +31492,12 @@ bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,
   }
   LLVM_DEBUG(dbgs() << "SLP: array mappable to vector: " << *IVI << "\n");
   // Aggregate value is unlikely to be processed in vector register.
+  // Try to vectorize the insertvalue chain itself (rebuilding the aggregate
+  // from a vector) only for struct aggregates: getContainedTypes() returns the
+  // per-field types for a struct, but returns the aggregate type itself as a
+  // single element for arrays and other aggregates, so the size check below
+  // fails for them and they fall back to vectorizing the scalar operands.
+  // TODO: Extend the vectorized-store path to array aggregates.
   Type *BVType = BuildVectorInsts.front()->getType();
   ArrayRef<Type *> ContainedTypes = getContainedTypes(BVType);
   if (ContainedTypes.size() == BuildVectorInsts.size() &&

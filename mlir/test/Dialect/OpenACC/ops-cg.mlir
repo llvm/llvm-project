@@ -270,6 +270,56 @@ func.func @compute_region_all_fields(%data: memref<1024xf32>,
 
 // -----
 
+// CHECK-LABEL: func @parallel_reduction_pattern
+func.func @parallel_reduction_pattern(%data: memref<8xi32>, %shared: memref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  %private = memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>} : memref<i32>
+  memref.store %c0_i32, %private[] : memref<i32>
+  %partial = scf.parallel (%iv) = (%c0) to (%c8) step (%c1) init (%c0_i32) -> i32 {
+    %v = memref.load %data[%iv] : memref<8xi32>
+    scf.reduce(%v : i32) {
+    ^bb0(%lhs: i32, %rhs: i32):
+      %sum = arith.addi %lhs, %rhs : i32
+      scf.reduce.return %sum : i32
+    }
+  } {acc.par_dims = #acc<par_dims[thread_x]>}
+  acc.reduction_accumulate %partial to %private <add>
+      : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
+  acc.reduction_combine %private into %shared <add> : memref<i32>
+      {acc.par_dims = #acc<par_dims[thread_x]>}
+  return
+}
+// CHECK: memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>}
+// CHECK: scf.parallel
+// CHECK: scf.reduce
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
+// CHECK: acc.reduction_combine %{{.*}} into %{{.*}} <add> : memref<i32> {acc.par_dims = #acc<par_dims[thread_x]>}
+
+// -----
+
+// CHECK-LABEL: func @reduction_accumulate_thread_x
+func.func @reduction_accumulate_thread_x(%partial: f32, %private: memref<f32>) {
+  acc.reduction_accumulate %partial to %private <add>
+      : f32 -> memref<f32> {par_dims = #acc<par_dims[thread_x]>}
+  return
+}
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : f32 -> memref<f32> {par_dims = #acc<par_dims[thread_x]>}
+
+// -----
+
+// CHECK-LABEL: func @reduction_accumulate_block_thread
+func.func @reduction_accumulate_block_thread(%partial: i32, %private: memref<i32>) {
+  acc.reduction_accumulate %partial to %private <add>
+      : i32 -> memref<i32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+  return
+}
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : i32 -> memref<i32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+
+// -----
+
 // CHECK-LABEL: func @compute_region_with_results
 func.func @compute_region_with_results() -> i32 {
   %w0 = acc.par_width {par_dim = #acc.par_dim<thread_x>}

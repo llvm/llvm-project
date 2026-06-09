@@ -811,12 +811,6 @@ namespace llvm {
 /// Allow hashing of lattice anchors and program points.
 template <>
 struct DenseMapInfo<mlir::ProgramPoint> {
-  static mlir::ProgramPoint getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::ProgramPoint(
-        (mlir::Block *)pointer,
-        mlir::Block::iterator((mlir::Operation *)pointer));
-  }
   static unsigned getHashValue(mlir::ProgramPoint pp) {
     return hash_combine(pp.getBlock(), pp.getPoint().getNodePtr());
   }
