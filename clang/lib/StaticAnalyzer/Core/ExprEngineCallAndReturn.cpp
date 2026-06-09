@@ -1313,11 +1313,11 @@ void ExprEngine::VisitReturnStmt(const ReturnStmt *RS, ExplodedNode *Pred,
   ExplodedNodeSet dstPreVisit;
   getCheckerManager().runCheckersForPreStmt(dstPreVisit, Pred, RS, *this);
 
-  NodeBuilder B(dstPreVisit, Dst, *currBldrCtx);
-
   if (RS->getRetValue()) {
     for (ExplodedNode *N : dstPreVisit) {
-      B.generateNode(RS, N, N->getState());
+      Dst.insert(Engine.makePostStmtNode(RS, N->getState(), N));
     }
+  } else {
+    Dst.insert(dstPreVisit);
   }
 }
