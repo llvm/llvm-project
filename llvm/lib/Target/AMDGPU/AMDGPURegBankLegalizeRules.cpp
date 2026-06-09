@@ -2172,6 +2172,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr32}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_s_quadmask}, Standard)
+      .Uni(S32, {{Sgpr32}, {IntrId, SgprB32_ReadFirstLane}})
+      .Div(S32, {{Sgpr32ToVgprDst}, {IntrId, SgprB32_ReadFirstLane}})
+      .Uni(S64, {{Sgpr64}, {IntrId, SgprB64_ReadFirstLane}})
+      .Div(S64, {{Sgpr64ToVgprDst}, {IntrId, SgprB64_ReadFirstLane}});
+
   // TODO: Add handling for GFX90A+ which should use VGPRs instead of AGPRs.
   bool HasGFX90AInsts = ST->hasGFX90AInsts();
   addRulesForIOpcs({amdgcn_mfma_f32_32x32x1f32,  amdgcn_mfma_f32_16x16x1f32,
