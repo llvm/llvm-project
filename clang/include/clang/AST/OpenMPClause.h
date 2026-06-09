@@ -9013,10 +9013,10 @@ public:
     ArrayRef<unsigned> Ends = getAttrEnds();
     return llvm::map_range(llvm::seq<unsigned>(0, N), [=](unsigned I) {
       unsigned Start = (I == 0) ? 0 : Ends[I - 1];
-      return PrefView{const_cast<Expr *>(E[1 + I]),
-                      ArrayRef<Expr *>(const_cast<Expr **>(E) + varlist_size() +
-                                           Start,
-                                       Ends[I] - Start)};
+      return PrefView{
+          const_cast<Expr *>(E[1 + I]),
+          ArrayRef<Expr *>(const_cast<Expr **>(E) + varlist_size() + Start,
+                           Ends[I] - Start)};
     });
   }
 

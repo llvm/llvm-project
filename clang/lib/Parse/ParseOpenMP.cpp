@@ -3846,7 +3846,8 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
           PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
                                                /*DiscardedValue=*/false);
           if (PTExpr.isUsable()) {
-            InteropInfo.Prefs.emplace_back(PTExpr.get(), llvm::SmallVector<Expr *, 2>{});
+            InteropInfo.Prefs.emplace_back(PTExpr.get(),
+                                           llvm::SmallVector<Expr *, 2>{});
           } else {
             HasError = true;
             SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,
