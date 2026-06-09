@@ -156,7 +156,8 @@ bool IsCommonBlock(const Symbol &sym) {
 }
 
 bool IsVariableListItem(const Symbol &sym) {
-  return evaluate::IsVariable(sym) || sym.attrs().test(Attr::POINTER);
+  return evaluate::IsVariable(sym) || IsCommonBlock(sym) ||
+      sym.attrs().test(Attr::POINTER);
 }
 
 bool IsExtendedListItem(const Symbol &sym) {
@@ -174,6 +175,14 @@ bool IsTypeParamInquiry(const Symbol &sym) {
           [&](auto &&) { return false; },
       },
       sym.details());
+}
+
+bool IsComplexPart(const Symbol &sym) {
+  if (auto *misc{sym.detailsIf<MiscDetails>()}) {
+    return misc->kind() == MiscDetails::Kind::ComplexPartRe ||
+        misc->kind() == MiscDetails::Kind::ComplexPartIm;
+  }
+  return false;
 }
 
 bool IsStructureComponent(const Symbol &sym) {
@@ -215,6 +224,38 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
   if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)};
       sym && IsAssumedSizeArray(*sym)) {
     return !GetArrayElementFromObj(object);
+  }
+  return false;
+}
+
+bool IsExtendedListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsVariableListItem(object, semaCtx)) {
+    return true;
+  }
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+    return IsProcedure(*sym);
+  }
+  return false;
+}
+
+bool IsLocatorListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsVariableListItem(object, semaCtx)) {
+    return true;
+  }
+  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    return IsVarOrFunctionRef(ea.Analyze(*desg));
+  }
+  return false;
+}
+
+bool IsVariableListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+    return IsVariableListItem(*sym);
   }
   return false;
 }
@@ -554,6 +595,188 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
           },
       },
       instance.u);
+}
+
+/// For clauses that take argument lists, return the type of the argument
+/// list item. For other clauses return std::nullopt.
+std::optional<ListItemKind> GetArgumentListItemKind(
+    llvm::omp::Clause clause, unsigned version) {
+  switch (clause) {
+  case llvm::omp::Clause::OMPC_absent:
+    if (version >= 51) {
+      return ListItemKind::DirectiveName;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_adjust_args:
+    if (version >= 61) {
+      return ListItemKind::ProcedureArgument;
+    }
+    if (version >= 51) {
+      return ListItemKind::Parameter;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_affinity:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_aligned:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_allocate:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_append_args:
+    if (version >= 51) {
+      return ListItemKind::Operation;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_apply:
+    if (version >= 60) {
+      return ListItemKind::DirectiveSpecification;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_contains:
+    if (version >= 51) {
+      return ListItemKind::DirectiveName;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_copyin:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_copyprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_counts:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_depend:
+    if (version >= 61) {
+      return ListItemKind::Depend;
+    }
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_enter:
+    if (version >= 52) {
+      return ListItemKind::Extended;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_exclusive:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_firstprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_from:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_has_device_addr:
+    if (version >= 51) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_in_reduction:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_inclusive:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_induction:
+    if (version >= 60) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_interop:
+    if (version >= 60) {
+      return ListItemKind::Interop;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_is_device_ptr:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_lastprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_linear:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_link:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_local:
+    if (version >= 60) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_map:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_nontemporal:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_num_threads:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_permutation:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_private:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_reduction:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_shared:
+    return ListItemKind::Variable;
+  // TODO 6.1
+  // case llvm::omp::Clause::OMPC_shift:
+  //   if (version >= 61) {
+  //     return ListItemKind::IntegerExpression;
+  //   }
+  //   break;
+  case llvm::omp::Clause::OMPC_sizes:
+    if (version >= 51) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_task_reduction:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_to:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Extended;
+  case llvm::omp::Clause::OMPC_uniform:
+    if (version >= 50) {
+      return ListItemKind::Parameter;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_use_device_addr:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_use_device_ptr:
+    return ListItemKind::Variable;
+  default:
+    break;
+  }
+  return std::nullopt;
 }
 
 bool IsLoopTransforming(llvm::omp::Directive dir) {

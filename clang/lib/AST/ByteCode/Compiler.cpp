@@ -5418,6 +5418,11 @@ bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
   if (!D)
     return false;
 
+  // FIXME: Would be nice if we didn't allocate the descriptor at all in this
+  // case.
+  if (D->hasTrivialDtor())
+    return true;
+
   Scope::Local Local = this->createLocal(D);
   Locals.insert({VD, Local});
   VarScope->addForScopeKind(Local, ScopeKind::Block);
