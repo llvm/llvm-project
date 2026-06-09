@@ -264,6 +264,12 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   `__builtin_stdc_memreverse8` / `stdc_memreverse8` (in-place byte
   reversal of a byte array) and `stdc_memreverse8u{8,16,32,64}` (byte-swap
   of an exact-width unsigned integer value, usable in constant expressions).
+- Implemented the C2y `<stdbit.h>` endian-aware 8-bit load functions
+  (`stdc_load8_le`, `stdc_load8_be`, `stdc_load8_aligned_le`,
+  `stdc_load8_aligned_be`, and their signed counterparts) with constexpr
+  evaluation support. These functions read N bytes from a
+  `const unsigned char *` and assemble them into an integer using
+  little-endian or big-endian byte order.
 
 #### C23 Feature Support
 
