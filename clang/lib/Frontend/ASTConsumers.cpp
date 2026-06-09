@@ -13,6 +13,7 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -142,18 +143,18 @@ namespace {
   };
 
   class ASTDeclNodeLister : public ASTConsumer,
-                     public RecursiveASTVisitor<ASTDeclNodeLister> {
+                            public DynamicRecursiveASTVisitor {
   public:
     ASTDeclNodeLister(raw_ostream *Out = nullptr)
-        : Out(Out ? *Out : llvm::outs()) {}
+        : Out(Out ? *Out : llvm::outs()) {
+      ShouldWalkTypesOfTypeLocs = false;
+    }
 
     void HandleTranslationUnit(ASTContext &Context) override {
       TraverseDecl(Context.getTranslationUnitDecl());
     }
 
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    bool VisitNamedDecl(NamedDecl *D) {
+    bool VisitNamedDecl(NamedDecl *D) override {
       D->printQualifiedName(Out);
       Out << '\n';
       return true;
