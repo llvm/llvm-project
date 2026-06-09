@@ -21,7 +21,8 @@ define i64 @vector_loop_with_remaining_iterations(ptr %src, ptr noalias %dst, i3
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], i64 [[INDEX]], i32 0, i64 3
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.vector.deinterleave4.v64i8(<64 x i8> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[STRIDED_VEC]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP6]])
@@ -101,7 +102,8 @@ define i64 @main_vector_loop_fixed_with_no_remaining_iterations(ptr %src, ptr no
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr { [4 x i8] }, ptr [[SRC]], i64 [[INDEX]], i32 0, i64 3
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.vector.deinterleave4.v64i8(<64 x i8> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i8> [[STRIDED_VEC]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i32> @llvm.umin.v16i32(<16 x i32> [[TMP3]], <16 x i32> [[TMP6]])
@@ -179,7 +181,8 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 6
 ; CHECK-NEXT:    [[GEP_J:%.*]] = getelementptr i64, ptr [[J]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[GEP_J]], align 8
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC1]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc <4 x i64> [[STRIDED_VEC]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP5]], i64 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i16> [[TMP5]], i64 1

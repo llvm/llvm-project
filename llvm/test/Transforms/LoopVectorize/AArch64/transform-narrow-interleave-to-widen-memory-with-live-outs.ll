@@ -32,7 +32,8 @@ define i64 @test_wide_op_live_out_constant_store_group(ptr noalias %res, ptr noa
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[RES]], i64 [[INDEX]]
-; VF4-NEXT:    store <8 x i64> zeroinitializer, ptr [[TMP0]], align 8
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> zeroinitializer, <4 x i64> zeroinitializer)
+; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP0]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; VF4-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -71,11 +72,11 @@ define i64 @test_wide_op_live_out(ptr noalias %res, ptr noalias %A) {
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[A]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
-; VF2-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
-; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = call { <2 x i64>, <2 x i64> } @llvm.vector.deinterleave2.v4i64(<4 x i64> [[WIDE_VEC]])
+; VF2-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC1]], 0
+; VF2-NEXT:    [[TMP5:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[STRIDED_VEC1]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[RES]], i64 [[INDEX]]
-; VF2-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i64> [[STRIDED_VEC]], <2 x i64> [[STRIDED_VEC1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> [[STRIDED_VEC]], <2 x i64> [[TMP5]])
 ; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -97,11 +98,11 @@ define i64 @test_wide_op_live_out(ptr noalias %res, ptr noalias %A) {
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[A]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP0]], align 8
-; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; VF4-NEXT:    [[STRIDED_VEC1:%.*]] = call { <4 x i64>, <4 x i64> } @llvm.vector.deinterleave2.v8i64(<8 x i64> [[WIDE_VEC]])
+; VF4-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC1]], 0
+; VF4-NEXT:    [[TMP2:%.*]] = extractvalue { <4 x i64>, <4 x i64> } [[STRIDED_VEC1]], 1
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[RES]], i64 [[INDEX]]
-; VF4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[STRIDED_VEC]], <4 x i64> [[STRIDED_VEC1]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x i64> [[TMP2]], <8 x i64> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> [[STRIDED_VEC]], <4 x i64> [[TMP2]])
 ; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
@@ -147,7 +148,8 @@ define i64 @test_wide_load_live_out_constant_store_group(ptr noalias %res, ptr n
 ; VF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 8
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[RES]], i64 [[INDEX]]
-; VF2-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP1]], align 8
+; VF2-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x i64> @llvm.vector.interleave2.v4i64(<2 x i64> zeroinitializer, <2 x i64> zeroinitializer)
+; VF2-NEXT:    store <4 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -168,7 +170,8 @@ define i64 @test_wide_load_live_out_constant_store_group(ptr noalias %res, ptr n
 ; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[RES]], i64 [[INDEX]]
-; VF4-NEXT:    store <8 x i64> zeroinitializer, ptr [[TMP1]], align 8
+; VF4-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <8 x i64> @llvm.vector.interleave2.v8i64(<4 x i64> zeroinitializer, <4 x i64> zeroinitializer)
+; VF4-NEXT:    store <8 x i64> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; VF4-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF4-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

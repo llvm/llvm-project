@@ -449,8 +449,10 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST1-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 3
 ; COST1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
 ; COST1-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
-; COST1-NEXT:    store <48 x i8> zeroinitializer, ptr [[TMP3]], align 1
-; COST1-NEXT:    store <48 x i8> zeroinitializer, ptr [[TMP4]], align 1
+; COST1-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <48 x i8> @llvm.vector.interleave3.v48i8(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
+; COST1-NEXT:    store <48 x i8> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 1
+; COST1-NEXT:    [[INTERLEAVED_VEC1:%.*]] = call <48 x i8> @llvm.vector.interleave3.v48i8(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
+; COST1-NEXT:    store <48 x i8> [[INTERLEAVED_VEC1]], ptr [[TMP4]], align 1
 ; COST1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; COST1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; COST1-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
@@ -516,7 +518,8 @@ define void @interleave_group(ptr %dst) #1 {
 ; COST10-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; COST10-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; COST10-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
-; COST10-NEXT:    store <48 x i8> zeroinitializer, ptr [[TMP1]], align 1
+; COST10-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <48 x i8> @llvm.vector.interleave3.v48i8(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
+; COST10-NEXT:    store <48 x i8> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 1
 ; COST10-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; COST10-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; COST10-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]

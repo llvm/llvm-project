@@ -16,20 +16,44 @@ define void @same_op2(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC]], 1
 ; CHECK-NEXT:    [[WIDE_VEC15:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC15:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC15]])
+; CHECK-NEXT:    [[TMP17:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC15]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC15]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_VEC18:%.*]] = load <8 x float>, ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC17:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC18]])
+; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC17]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC17]], 1
 ; CHECK-NEXT:    [[WIDE_VEC21:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC19:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC21]])
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC19]], 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC19]], 1
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[TMP10]], [[TMP8]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP12]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_VEC24:%.*]] = load <8 x float>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC21:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC24]])
+; CHECK-NEXT:    [[TMP18:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC21]], 0
+; CHECK-NEXT:    [[TMP19:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC21]], 1
 ; CHECK-NEXT:    [[WIDE_VEC27:%.*]] = load <8 x float>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <8 x float> [[WIDE_VEC18]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <8 x float> [[WIDE_VEC24]], [[TMP7]]
+; CHECK-NEXT:    [[STRIDED_VEC23:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC27]])
+; CHECK-NEXT:    [[TMP20:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC23]], 0
+; CHECK-NEXT:    [[TMP21:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC23]], 1
+; CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[TMP18]], [[TMP14]]
+; CHECK-NEXT:    [[TMP23:%.*]] = fadd fast <4 x float> [[TMP20]], [[TMP15]]
+; CHECK-NEXT:    [[TMP24:%.*]] = fmul fast <4 x float> [[TMP11]], [[TMP16]]
+; CHECK-NEXT:    [[TMP25:%.*]] = fmul fast <4 x float> [[TMP13]], [[TMP7]]
+; CHECK-NEXT:    [[TMP26:%.*]] = fadd fast <4 x float> [[TMP19]], [[TMP24]]
+; CHECK-NEXT:    [[TMP27:%.*]] = fadd fast <4 x float> [[TMP21]], [[TMP25]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = tail call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[TMP22]], <4 x float> [[TMP26]])
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC]], ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <8 x float> [[WIDE_VEC21]], [[WIDE_VEC15]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC30:%.*]] = fadd fast <8 x float> [[WIDE_VEC27]], [[TMP8]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC30:%.*]] = tail call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[TMP23]], <4 x float> [[TMP27]])
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC30]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 576
@@ -118,8 +142,7 @@ define void @same_op2_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -128,16 +151,34 @@ define void @same_op2_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC]], 1
 ; CHECK-NEXT:    [[WIDE_VEC13:%.*]] = load <8 x float>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC13:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC13]])
+; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC13]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC13]], 1
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x float> [[TMP11]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP24:%.*]] = fmul fast <4 x float> [[TMP23]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_VEC16:%.*]] = load <8 x float>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC15:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC16]])
+; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC15]], 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC15]], 1
 ; CHECK-NEXT:    [[WIDE_VEC19:%.*]] = load <8 x float>, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <8 x float> [[WIDE_VEC]], [[TMP1]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <8 x float> [[WIDE_VEC16]], [[TMP8]]
+; CHECK-NEXT:    [[STRIDED_VEC17:%.*]] = tail call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC19]])
+; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC17]], 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC17]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = fadd fast <4 x float> [[TMP13]], [[TMP9]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fadd fast <4 x float> [[TMP15]], [[TMP24]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fmul fast <4 x float> [[TMP12]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP20:%.*]] = fmul fast <4 x float> [[TMP8]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP21:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP19]]
+; CHECK-NEXT:    [[TMP22:%.*]] = fadd fast <4 x float> [[TMP16]], [[TMP20]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = tail call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[TMP17]], <4 x float> [[TMP21]])
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC]], ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <8 x float> [[WIDE_VEC13]], [[TMP2]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC22:%.*]] = fadd fast <8 x float> [[WIDE_VEC19]], [[TMP9]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC22:%.*]] = tail call <8 x float> @llvm.vector.interleave2.v8f32(<4 x float> [[TMP18]], <4 x float> [[TMP22]])
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC22]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 576
@@ -226,12 +267,29 @@ define void @same_op3(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x float>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = tail call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC16:%.*]] = load <12 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC15:%.*]] = tail call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> [[WIDE_VEC16]])
+; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC15]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC15]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC15]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <4 x float> [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC20:%.*]] = load <12 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <12 x float> [[WIDE_VEC16]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <12 x float> [[WIDE_VEC20]], [[TMP3]]
+; CHECK-NEXT:    [[STRIDED_VEC17:%.*]] = tail call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> [[WIDE_VEC20]])
+; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC17]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC17]], 1
+; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC17]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast <4 x float> [[TMP11]], [[TMP9]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul fast <4 x float> [[TMP7]], [[TMP3]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fadd fast <4 x float> [[TMP12]], [[TMP15]]
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul fast <4 x float> [[TMP8]], [[TMP10]]
+; CHECK-NEXT:    [[TMP18:%.*]] = fadd fast <4 x float> [[TMP13]], [[TMP17]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = tail call <12 x float> @llvm.vector.interleave3.v12f32(<4 x float> [[TMP14]], <4 x float> [[TMP16]], <4 x float> [[TMP18]])
 ; CHECK-NEXT:    store <12 x float> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 384
@@ -320,17 +378,30 @@ define void @same_op3_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <12 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = tail call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP7]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC14:%.*]] = load <12 x float>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <12 x float> [[WIDE_VEC]], [[TMP2]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <12 x float> [[WIDE_VEC14]], [[TMP4]]
+; CHECK-NEXT:    [[STRIDED_VEC13:%.*]] = tail call { <4 x float>, <4 x float>, <4 x float> } @llvm.vector.deinterleave3.v12f32(<12 x float> [[WIDE_VEC14]])
+; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC13]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC13]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractvalue { <4 x float>, <4 x float>, <4 x float> } [[STRIDED_VEC13]], 2
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <4 x float> [[TMP8]], [[TMP6]]
+; CHECK-NEXT:    [[TMP16:%.*]] = fmul fast <4 x float> [[TMP4]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd fast <4 x float> [[TMP9]], [[TMP16]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul fast <4 x float> [[TMP5]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd fast <4 x float> [[TMP10]], [[TMP14]]
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = tail call <12 x float> @llvm.vector.interleave3.v12f32(<4 x float> [[TMP11]], <4 x float> [[TMP13]], <4 x float> [[TMP15]])
 ; CHECK-NEXT:    store <12 x float> [[INTERLEAVED_VEC]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 384
