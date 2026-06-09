@@ -212,6 +212,7 @@ add_libc_unittest(
     sendrecvmmsg_test.cpp
   DEPENDS
     libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_iovec
     libc.hdr.types.struct_mmsghdr
     libc.hdr.types.struct_timespec
     libc.src.errno.errno

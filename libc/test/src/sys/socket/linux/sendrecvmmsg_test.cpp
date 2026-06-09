@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/sys_socket_macros.h"
+#include "hdr/types/struct_iovec.h"
 #include "hdr/types/struct_mmsghdr.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/CPP/scope.h"
