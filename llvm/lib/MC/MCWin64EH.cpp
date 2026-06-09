@@ -579,16 +579,22 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
                           Twine(EpilogInfos.size()));
 
   // --- Inheritance decisions ---
-  // An epilog can use the inherited (3-byte) descriptor when FirstOp,
-  // NumberOfOps, NeedsLarge, and relative IP offsets all match the previous
-  // epilog.
-  for (unsigned I = 1; I < EpilogInfos.size(); ++I) {
-    auto &Prev = EpilogInfos[I - 1];
+  // Per the V3 spec, an epilog descriptor with NumberOfOps == 0 inherits its
+  // effective NumberOfOps, FirstOp, IpOffsetOfLastInstruction, and IP offset
+  // array from the first preceding descriptor with NumberOfOps != 0 (the
+  // "base"), not necessarily the immediately preceding descriptor. An epilog
+  // can therefore use the inherited (3-byte) descriptor when FirstOp,
+  // NumberOfOps, NeedsLarge, and relative IP offsets all match that base.
+  for (unsigned I = 1, Base = 0; I < EpilogInfos.size(); ++I) {
+    auto &BaseEI = EpilogInfos[Base];
     auto &Curr = EpilogInfos[I];
-    if (Curr.FirstOp == Prev.FirstOp && Curr.NumberOfOps == Prev.NumberOfOps &&
-        Curr.NeedsLarge == Prev.NeedsLarge &&
-        EpilogIpOffsetsMatch(*Curr.Epilog, *Prev.Epilog, OS->getAssembler()))
+    if (Curr.FirstOp == BaseEI.FirstOp &&
+        Curr.NumberOfOps == BaseEI.NumberOfOps &&
+        Curr.NeedsLarge == BaseEI.NeedsLarge &&
+        EpilogIpOffsetsMatch(*Curr.Epilog, *BaseEI.Epilog, OS->getAssembler()))
       Curr.Inherited = true;
+    else
+      Base = I; // Curr is a full descriptor; it becomes the new base.
   }
 
   // --- Compute payload sizes ---
@@ -707,8 +713,14 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
 
     // FlagsAndNumOps: bits [2:0] = flags, bits [7:3] = NumberOfOps.
     // For inherited descriptors, NumberOfOps = 0.
+    //
+    // Per the V3 spec, Flags bits 0 and 1 are NOT inherited by a descriptor
+    // with NumberOfOps == 0; the producer must replicate them so they have the
+    // same value as the base descriptor's. Since inheritance requires a
+    // matching NeedsLarge value, EI.NeedsLarge already equals the base's, so we
+    // emit EPILOG_INFO_LARGE for inherited descriptors too.
     uint8_t EpiFlags = 0;
-    if (EI.NeedsLarge && !EI.Inherited)
+    if (EI.NeedsLarge)
       EpiFlags |= Win64EH::EPILOG_INFO_LARGE;
     uint8_t EpiNumOps = EI.Inherited ? 0 : EI.NumberOfOps;
     Streamer.emitInt8((EpiNumOps << 3) | EpiFlags);

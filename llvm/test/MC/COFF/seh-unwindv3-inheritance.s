@@ -73,7 +73,7 @@ different_numops:
     .seh_endepilogue
     retq
 .L_DIFFOPS_ELSE:
-    // Epilog 1: partial ΓÇö only dealloc, no pop
+    // Epilog 1: partial -> only dealloc, no pop
     .seh_startepilogue
     .seh_stackalloc 32
     addq    $32, %rsp
@@ -87,7 +87,7 @@ different_numops:
 // CHECK:          NumberOfOps: 2
 // CHECK:          FirstOp: 0x0
 // CHECK:        }
-// Epilog 1: different NumberOfOps ΓÇö gets its own full descriptor, not inherited
+// Epilog 1: different NumberOfOps -> gets its own full descriptor, not inherited
 // CHECK:        Epilog [1] {
 // CHECK:          NumberOfOps: 1
 // CHECK:          FirstOp: 0x0
@@ -130,8 +130,67 @@ different_wods:
 // CHECK:          NumberOfOps: 1
 // CHECK:          PUSH Reg=RDI
 // CHECK:        }
-// Epilog 1: PUSH RBX ΓÇö different FirstOp, so NOT inherited
+// Epilog 1: PUSH RBX -> different FirstOp, so NOT inherited
 // CHECK:        Epilog [1] {
 // CHECK:          NumberOfOps: 1
 // CHECK:          PUSH Reg=RBX
+// CHECK:        }
+
+// --- Test 4: two identical LARGE mirror epilogs -> second inherits ---
+// Each epilog has 260 NOPs between its two unwind ops, pushing the IP
+// offsets past 255 so EPILOG_INFO_LARGE is required. The two epilogs are
+// byte-identical, so the second is encoded as an inherited (NumberOfOps == 0)
+// descriptor. Per the V3 spec, Flags bits 0 and 1 are not inherited and the
+// producer must replicate them, so the inherited descriptor must still carry
+// the Large flag.
+large_inherit:
+    .seh_proc large_inherit
+    .seh_unwindversion 3
+    .seh_pushreg %rbx
+    pushq   %rbx
+    .seh_stackalloc 32
+    subq    $32, %rsp
+    .seh_endprologue
+    callq   c
+    testl   %eax, %eax
+    jle     .L_LARGE_INHERIT_ELSE
+    // Epilog 0: large mirror
+    .seh_startepilogue
+    .seh_stackalloc 32
+    addq    $32, %rsp
+    .rept 260
+    nop
+    .endr
+    .seh_pushreg %rbx
+    popq    %rbx
+    .seh_endepilogue
+    retq
+.L_LARGE_INHERIT_ELSE:
+    // Epilog 1: identical large mirror
+    .seh_startepilogue
+    .seh_stackalloc 32
+    addq    $32, %rsp
+    .rept 260
+    nop
+    .endr
+    .seh_pushreg %rbx
+    popq    %rbx
+    .seh_endepilogue
+    retq
+    .seh_endproc
+// CHECK-LABEL:  StartAddress: large_inherit
+// CHECK:        NumberOfEpilogs: 2
+// CHECK:        Epilog [0] {
+// CHECK:          Flags [ (0x2)
+// CHECK-NEXT:       Large (0x2)
+// CHECK-NEXT:     ]
+// CHECK:          NumberOfOps: 2
+// CHECK:        }
+// Epilog 1 inherits, but must still carry the Large flag in its own byte.
+// CHECK:        Epilog [1] {
+// CHECK:          Flags [ (0x2)
+// CHECK-NEXT:       Large (0x2)
+// CHECK-NEXT:     ]
+// CHECK:          NumberOfOps: 0
+// CHECK:          (inherits
 // CHECK:       ]

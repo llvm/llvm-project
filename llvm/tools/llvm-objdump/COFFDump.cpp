@@ -836,9 +836,9 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
         WithColor::warning(errs())
             << "first epilog cannot inherit (NumberOfOps=0)\n";
       } else {
-        // Surface the values inherited from the previous epilog so a
+        // Surface the values inherited from the base epilog so a
         // reader can see what the unwinder will actually execute.
-        outs() << format("      (inherits from previous epilog: FirstOp=0x%X, "
+        outs() << format("      (inherits from base epilog: FirstOp=0x%X, "
                          "IpOfLast=+0x%X, %u ops)\n",
                          Epi.FirstOp,
                          static_cast<unsigned>(Epi.IpOffsetOfLastInstruction),

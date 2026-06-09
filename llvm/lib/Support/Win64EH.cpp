@@ -250,6 +250,11 @@ Win64EH::decodeUnwindInfoV3(ArrayRef<uint8_t> Data) {
 
   // Read epilog descriptors
   int32_t PrevResolvedOffset = 0;
+  // Index of the most recent full descriptor (NumberOfOps != 0). Per the V3
+  // spec, a descriptor with NumberOfOps == 0 inherits its effective fields
+  // from the first *preceding* descriptor with NumberOfOps != 0, which is not
+  // necessarily the immediately preceding descriptor.
+  int BaseEpilogIdx = -1;
   for (unsigned I = 0; I < Info.NumberOfEpilogs; ++I) {
     DecodedEpilogV3 Epi;
     if (Offset >= PayloadEnd)
@@ -277,26 +282,24 @@ Win64EH::decodeUnwindInfoV3(ArrayRef<uint8_t> Data) {
 
     // Inherited descriptors (NumberOfOps == 0) are only 3 bytes:
     // FlagsAndNumOps(1) + EpilogOffset(2). They have no FirstOp,
-    // IpOffsetOfLastInstruction, or IP offset fields appended; instead,
-    // the previous epilog's Flags bits 0 and 1, FirstOp,
-    // IpOffsetOfLastInstruction, and IP offset array are inherited.
+    // IpOffsetOfLastInstruction, or IP offset fields appended; instead, the
+    // effective NumberOfOps, FirstOp, IpOffsetOfLastInstruction, and IP offset
+    // array are inherited from the first preceding descriptor with
+    // NumberOfOps != 0 (the "base"). Per the V3 spec, Flags bits 0 and 1 are
+    // NOT inherited: the producer is required to replicate them into this
+    // record, so we keep the value read from this descriptor's own flags byte.
     //
-    // If this is the first epilog there is no previous descriptor to
-    // inherit from — the record is malformed. We leave the extended fields
-    // zero-initialized so callers can still see the (broken) header and
-    // EpilogOffset; downstream consumers (e.g. the dumpers) surface a
-    // warning when they encounter NumberOfOps == 0 at index 0.
+    // If there is no preceding base descriptor to inherit from — the record is
+    // malformed. We leave the extended fields zero-initialized so callers can
+    // still see the (broken) header and EpilogOffset; downstream consumers
+    // (e.g. the dumpers) surface a warning when they encounter NumberOfOps == 0
+    // at index 0.
     if (Epi.NumberOfOps == 0) {
-      if (!Info.Epilogs.empty()) {
-        const DecodedEpilogV3 &Prev = Info.Epilogs.back();
-        // Flags bits 0 (EPILOG_INFO_PARENT_FRAGMENT_TRANSFER) and 1
-        // (EPILOG_INFO_LARGE) are inherited from the previous epilog; any
-        // bits present in this descriptor's own flags byte at those
-        // positions are ignored. Bit 2 (reserved) keeps its raw read value.
-        Epi.Flags = (Epi.Flags & uint8_t{0xFC}) | (Prev.Flags & uint8_t{0x03});
-        Epi.FirstOp = Prev.FirstOp;
-        Epi.IpOffsetOfLastInstruction = Prev.IpOffsetOfLastInstruction;
-        Epi.IpOffsets = Prev.IpOffsets;
+      if (BaseEpilogIdx >= 0) {
+        const DecodedEpilogV3 &Base = Info.Epilogs[BaseEpilogIdx];
+        Epi.FirstOp = Base.FirstOp;
+        Epi.IpOffsetOfLastInstruction = Base.IpOffsetOfLastInstruction;
+        Epi.IpOffsets = Base.IpOffsets;
       } else {
         Epi.FirstOp = 0;
         Epi.IpOffsetOfLastInstruction = 0;
@@ -345,6 +348,9 @@ Win64EH::decodeUnwindInfoV3(ArrayRef<uint8_t> Data) {
       }
     }
 
+    // This is a full descriptor (NumberOfOps != 0); it becomes the base that
+    // subsequent inherited descriptors reference.
+    BaseEpilogIdx = Info.Epilogs.size();
     Info.Epilogs.push_back(std::move(Epi));
   }
 
