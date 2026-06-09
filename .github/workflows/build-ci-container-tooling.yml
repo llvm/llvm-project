@@ -66,6 +66,7 @@ jobs:
           dockerfile: .github/workflows/containers/github-action-ci-tooling/Dockerfile
           target: ci-container-${{ matrix.target || format('code-{0}', matrix.container-name) }}
           test-command: ${{ matrix.test-command }}
+          context: ${{ matrix.context }}
 
   push-ci-container:
     if: github.event_name == 'push'
