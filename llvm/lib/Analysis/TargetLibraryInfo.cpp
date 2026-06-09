@@ -1243,99 +1243,313 @@ void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 
-static const VecDesc VecFuncs_Accelerate[] = {
+namespace {
+
+enum class VecFuncTable : uint8_t {
+  Accelerate,
+  DarwinLibSystemM,
+  LIBMVEC_X86,
+  LIBMVEC_AARCH64,
+  MASSV,
+  SVML,
+  SLEEFGNUABI_VF2,
+  SLEEFGNUABI_VF4,
+  SLEEFGNUABI_VFScalable,
+  SLEEFGNUABI_VFScalableRISCV,
+  ArmPL,
+  AMDLIBM,
+  Count,
+};
+
+struct VecDescInit {
+  static constexpr uint8_t ScalableMask = 1U << 7;
+  static constexpr uint8_t MaskedMask = 1U << 6;
+  static constexpr uint8_t VectorizationFactorMask = MaskedMask - 1;
+
+  uint16_t ScalarFnNameOffset;
+  uint16_t VectorFnNameOffset;
+  uint16_t VABIPrefixOffset;
+  uint8_t EncodedVectorizationFactor;
+  uint8_t EncodedCC;
+
+  static StringRef getString(const char *Strings, uint16_t Offset) {
+    return StringRef(Strings + Offset + 1,
+                     static_cast<uint8_t>(Strings[Offset]));
+  }
+
+  VecDesc expand(const char *SharedStrings, const char *VectorStrings) const {
+    return {
+        getString(SharedStrings, ScalarFnNameOffset),
+        getString(VectorStrings, VectorFnNameOffset),
+        ElementCount::get(EncodedVectorizationFactor & VectorizationFactorMask,
+                          EncodedVectorizationFactor & ScalableMask),
+        static_cast<bool>(EncodedVectorizationFactor & MaskedMask),
+        getString(SharedStrings, VABIPrefixOffset),
+        EncodedCC ? std::optional<CallingConv::ID>(EncodedCC - 1)
+                  : std::nullopt};
+  }
+};
+
+static_assert(sizeof(VecDescInit) == 8);
+
+template <typename Fn> constexpr void forEachVecFunc(Fn &&F) {
 #define TLI_DEFINE_ACCELERATE_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
+  F(VecFuncTable::Accelerate, SCAL, VEC, VF, false, VABI_PREFIX, std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ACCELERATE_VECFUNCS
-};
 
-static const VecDesc VecFuncs_DarwinLibSystemM[] = {
 #define TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
+  F(VecFuncTable::DarwinLibSystemM, SCAL, VEC, VF, false, VABI_PREFIX,         \
+    std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_DARWIN_LIBSYSTEM_M_VECFUNCS
-};
 
-static const VecDesc VecFuncs_LIBMVEC_X86[] = {
 #define TLI_DEFINE_LIBMVEC_X86_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
+  F(VecFuncTable::LIBMVEC_X86, SCAL, VEC, VF, false, VABI_PREFIX, std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_LIBMVEC_X86_VECFUNCS
-};
 
-static const VecDesc VecFuncs_LIBMVEC_AARCH64[] = {
 #define TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+  F(VecFuncTable::LIBMVEC_AARCH64, SCAL, VEC, VF, MASK, VABI_PREFIX, CC);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_LIBMVEC_AARCH64_VECFUNCS
-};
 
-static const VecDesc VecFuncs_MASSV[] = {
 #define TLI_DEFINE_MASSV_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
+  F(VecFuncTable::MASSV, SCAL, VEC, VF, false, VABI_PREFIX, std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_MASSV_VECFUNCS
-};
 
-static const VecDesc VecFuncs_SVML[] = {
 #define TLI_DEFINE_SVML_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
+  F(VecFuncTable::SVML, SCAL, VEC, VF, false, VABI_PREFIX, std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SVML_VECFUNCS
-};
 
-static const VecDesc VecFuncs_SLEEFGNUABI_VF2[] = {
 #define TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
+  F(VecFuncTable::SLEEFGNUABI_VF2, SCAL, VEC, VF, false, VABI_PREFIX,          \
+    std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF2_VECFUNCS
-};
-static const VecDesc VecFuncs_SLEEFGNUABI_VF4[] = {
+
 #define TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, VABI_PREFIX)                         \
-  {SCAL, VEC, VF, /* MASK = */ false, VABI_PREFIX, /* CC = */ std::nullopt},
+  F(VecFuncTable::SLEEFGNUABI_VF4, SCAL, VEC, VF, false, VABI_PREFIX,          \
+    std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_VF4_VECFUNCS
-};
-static const VecDesc VecFuncs_SLEEFGNUABI_VFScalable[] = {
+
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  F(VecFuncTable::SLEEFGNUABI_VFScalable, SCAL, VEC, VF, MASK, VABI_PREFIX,    \
+    std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS
-};
 
-static const VecDesc VecFuncs_SLEEFGNUABI_VFScalableRISCV[] = {
 #define TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  F(VecFuncTable::SLEEFGNUABI_VFScalableRISCV, SCAL, VEC, VF, MASK,            \
+    VABI_PREFIX, std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_SLEEFGNUABI_SCALABLE_VECFUNCS_RISCV
-};
 
-static const VecDesc VecFuncs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX, CC)               \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, CC},
+  F(VecFuncTable::ArmPL, SCAL, VEC, VF, MASK, VABI_PREFIX, CC);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ARMPL_VECFUNCS
-};
 
-const VecDesc VecFuncs_AMDLIBM[] = {
 #define TLI_DEFINE_AMDLIBM_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
-  {SCAL, VEC, VF, MASK, VABI_PREFIX, /* CC = */ std::nullopt},
+  F(VecFuncTable::AMDLIBM, SCAL, VEC, VF, MASK, VABI_PREFIX, std::nullopt);
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_AMDLIBM_VECFUNCS
+}
+
+static constexpr size_t NumVecFuncTables =
+    static_cast<size_t>(VecFuncTable::Count);
+
+static constexpr size_t NumVecFuncs = [] {
+  size_t Count = 0;
+  forEachVecFunc([&](auto, const auto &, const auto &, auto, auto, const auto &,
+                     auto) { ++Count; });
+  return Count;
+}();
+
+static constexpr size_t MaxVecFuncSharedStringBytes = [] {
+  size_t Size = 0;
+  forEachVecFunc([&](auto, const auto &ScalarFnName, const auto &, auto, auto,
+                     const auto &VABIPrefix, auto) {
+    Size += sizeof(ScalarFnName) + sizeof(VABIPrefix);
+  });
+  return Size;
+}();
+
+static constexpr size_t NumVecFuncVectorStringBytes = [] {
+  size_t Size = 0;
+  forEachVecFunc([&](auto, const auto &, const auto &VectorFnName, auto, auto,
+                     const auto &, auto) { Size += sizeof(VectorFnName); });
+  return Size;
+}();
+
+static constexpr bool VecFuncValuesFit = [] {
+  bool Fit = true;
+  size_t PreviousTable = 0;
+  forEachVecFunc([&](VecFuncTable Table, const auto &, const auto &,
+                     ElementCount VectorizationFactor, auto, const auto &,
+                     std::optional<CallingConv::ID> CC) {
+    size_t TableIndex = static_cast<size_t>(Table);
+    Fit &= TableIndex >= PreviousTable;
+    Fit &= VectorizationFactor.getKnownMinValue() <=
+           VecDescInit::VectorizationFactorMask;
+    Fit &= !CC || *CC < UINT8_MAX;
+    PreviousTable = TableIndex;
+  });
+  return Fit;
+}();
+
+static_assert(VecFuncValuesFit);
+
+template <size_t MaxBytes> struct VecFuncStrings {
+  static_assert(MaxBytes <= UINT16_MAX);
+
+  char Strings[MaxBytes] = {};
+  size_t Size = 0;
+
+  template <size_t NameSize>
+  constexpr uint16_t append(const char (&Name)[NameSize]) {
+    static_assert(NameSize - 1 <= UINT8_MAX);
+    assert(Size + NameSize <= MaxBytes);
+    uint16_t Offset = Size;
+    Strings[Size++] = NameSize - 1;
+    for (size_t I = 0; I != NameSize - 1; ++I)
+      Strings[Size++] = Name[I];
+    return Offset;
+  }
+
+  template <size_t NameSize>
+  constexpr uint16_t insert(const char (&Name)[NameSize]) {
+    for (size_t Offset = 0; Offset != Size;
+         Offset += static_cast<uint8_t>(Strings[Offset]) + 1) {
+      if (static_cast<uint8_t>(Strings[Offset]) == NameSize - 1) {
+        size_t I = 0;
+        while (I != NameSize - 1 && Strings[Offset + I + 1] == Name[I])
+          ++I;
+        if (I == NameSize - 1)
+          return Offset;
+      }
+    }
+    return append(Name);
+  }
 };
+
+static constexpr size_t NumVecFuncSharedStringBytes = [] {
+  VecFuncStrings<MaxVecFuncSharedStringBytes> Strings;
+  forEachVecFunc([&](auto, const auto &ScalarFnName, const auto &, auto, auto,
+                     const auto &VABIPrefix, auto) {
+    Strings.insert(ScalarFnName);
+    Strings.insert(VABIPrefix);
+  });
+  return Strings.Size;
+}();
+
+static_assert(NumVecFuncSharedStringBytes <= UINT16_MAX);
+static_assert(NumVecFuncVectorStringBytes <= UINT16_MAX);
+static_assert(NumVecFuncs <= UINT16_MAX);
+
+template <size_t NumDescriptors, size_t NumSharedStringBytes,
+          size_t NumVectorStringBytes>
+struct VecFuncStorage {
+  VecDescInit Descriptors[NumDescriptors];
+  char SharedStrings[NumSharedStringBytes];
+  char VectorStrings[NumVectorStringBytes];
+  uint16_t TableOffsets[NumVecFuncTables + 1];
+};
+
+static constexpr auto VectorFunctionStorage = [] {
+  VecFuncStorage<NumVecFuncs, NumVecFuncSharedStringBytes,
+                 NumVecFuncVectorStringBytes>
+      Storage{};
+  VecFuncStrings<MaxVecFuncSharedStringBytes> SharedStrings;
+  VecFuncStrings<NumVecFuncVectorStringBytes> VectorStrings;
+  size_t DescriptorIndex = 0;
+  size_t NextTable = 0;
+
+  forEachVecFunc([&](VecFuncTable Table, const auto &ScalarFnName,
+                     const auto &VectorFnName, ElementCount VectorizationFactor,
+                     bool Masked, const auto &VABIPrefix,
+                     std::optional<CallingConv::ID> CC) {
+    size_t TableIndex = static_cast<size_t>(Table);
+    while (NextTable <= TableIndex)
+      Storage.TableOffsets[NextTable++] = DescriptorIndex;
+
+    unsigned MinVF = VectorizationFactor.getKnownMinValue();
+    Storage.Descriptors[DescriptorIndex++] = {
+        SharedStrings.insert(ScalarFnName), VectorStrings.append(VectorFnName),
+        SharedStrings.insert(VABIPrefix),
+        static_cast<uint8_t>(
+            MinVF |
+            (VectorizationFactor.isScalable() ? VecDescInit::ScalableMask : 0) |
+            (Masked ? VecDescInit::MaskedMask : 0)),
+        static_cast<uint8_t>(CC ? *CC + 1 : 0)};
+  });
+
+  while (NextTable <= NumVecFuncTables)
+    Storage.TableOffsets[NextTable++] = DescriptorIndex;
+  assert(DescriptorIndex == NumVecFuncs);
+  assert(SharedStrings.Size == NumVecFuncSharedStringBytes);
+  assert(VectorStrings.Size == NumVecFuncVectorStringBytes);
+  for (size_t I = 0; I != NumVecFuncSharedStringBytes; ++I)
+    Storage.SharedStrings[I] = SharedStrings.Strings[I];
+  for (size_t I = 0; I != NumVecFuncVectorStringBytes; ++I)
+    Storage.VectorStrings[I] = VectorStrings.Strings[I];
+  return Storage;
+}();
+
+static_assert(VectorFunctionStorage.TableOffsets[NumVecFuncTables] ==
+              NumVecFuncs);
+static constexpr size_t VecFuncStoragePayloadSize =
+    NumVecFuncs * sizeof(VecDescInit) + NumVecFuncSharedStringBytes +
+    NumVecFuncVectorStringBytes + sizeof(VectorFunctionStorage.TableOffsets);
+static_assert(sizeof(VectorFunctionStorage) ==
+              (VecFuncStoragePayloadSize +
+               alignof(decltype(VectorFunctionStorage)) - 1) /
+                  alignof(decltype(VectorFunctionStorage)) *
+                  alignof(decltype(VectorFunctionStorage)));
+
+} // namespace
 
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
     enum VectorLibrary VecLib, const llvm::Triple &TargetTriple) {
+  auto AddVectorizableFunctions = [this](VecFuncTable Table) {
+    size_t TableIndex = static_cast<size_t>(Table);
+    size_t Begin = VectorFunctionStorage.TableOffsets[TableIndex];
+    size_t End = VectorFunctionStorage.TableOffsets[TableIndex + 1];
+    VectorDescs.reserve(VectorDescs.size() + End - Begin);
+    ScalarDescs.reserve(ScalarDescs.size() + End - Begin);
+    for (const VecDescInit &Fn :
+         ArrayRef(VectorFunctionStorage.Descriptors + Begin, End - Begin)) {
+      VecDesc Expanded = Fn.expand(VectorFunctionStorage.SharedStrings,
+                                   VectorFunctionStorage.VectorStrings);
+      VectorDescs.push_back(Expanded);
+      ScalarDescs.push_back(Expanded);
+    }
+    llvm::sort(VectorDescs, compareByScalarFnName);
+    llvm::sort(ScalarDescs, compareByVectorFnName);
+  };
+
   switch (VecLib) {
   case VectorLibrary::Accelerate: {
-    addVectorizableFunctions(VecFuncs_Accelerate);
+    AddVectorizableFunctions(VecFuncTable::Accelerate);
     break;
   }
   case VectorLibrary::DarwinLibSystemM: {
-    addVectorizableFunctions(VecFuncs_DarwinLibSystemM);
+    AddVectorizableFunctions(VecFuncTable::DarwinLibSystemM);
     break;
   }
   case VectorLibrary::LIBMVEC: {
@@ -1344,21 +1558,21 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
       break;
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
-      addVectorizableFunctions(VecFuncs_LIBMVEC_X86);
+      AddVectorizableFunctions(VecFuncTable::LIBMVEC_X86);
       break;
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
-      addVectorizableFunctions(VecFuncs_LIBMVEC_AARCH64);
+      AddVectorizableFunctions(VecFuncTable::LIBMVEC_AARCH64);
       break;
     }
     break;
   }
   case VectorLibrary::MASSV: {
-    addVectorizableFunctions(VecFuncs_MASSV);
+    AddVectorizableFunctions(VecFuncTable::MASSV);
     break;
   }
   case VectorLibrary::SVML: {
-    addVectorizableFunctions(VecFuncs_SVML);
+    AddVectorizableFunctions(VecFuncTable::SVML);
     break;
   }
   case VectorLibrary::SLEEFGNUABI: {
@@ -1367,12 +1581,12 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
       break;
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
-      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VF2);
-      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VF4);
-      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VFScalable);
+      AddVectorizableFunctions(VecFuncTable::SLEEFGNUABI_VF2);
+      AddVectorizableFunctions(VecFuncTable::SLEEFGNUABI_VF4);
+      AddVectorizableFunctions(VecFuncTable::SLEEFGNUABI_VFScalable);
       break;
     case llvm::Triple::riscv64:
-      addVectorizableFunctions(VecFuncs_SLEEFGNUABI_VFScalableRISCV);
+      AddVectorizableFunctions(VecFuncTable::SLEEFGNUABI_VFScalableRISCV);
       break;
     }
     break;
@@ -1383,13 +1597,13 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
       break;
     case llvm::Triple::aarch64:
     case llvm::Triple::aarch64_be:
-      addVectorizableFunctions(VecFuncs_ArmPL);
+      AddVectorizableFunctions(VecFuncTable::ArmPL);
       break;
     }
     break;
   }
   case VectorLibrary::AMDLIBM: {
-    addVectorizableFunctions(VecFuncs_AMDLIBM);
+    AddVectorizableFunctions(VecFuncTable::AMDLIBM);
     break;
   }
   case VectorLibrary::NoLibrary:
