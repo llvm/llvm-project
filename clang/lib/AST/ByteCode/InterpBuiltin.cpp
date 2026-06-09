@@ -6708,15 +6708,21 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   if (DestDesc->isPrimitiveArray()) {
     if (!SrcDesc->isPrimitiveArray())
       return false;
+    // For floating types, check the actual QualType so we don't accidentally
+    // mix up semantics.
+    if (SrcDesc->getPrimType() == PT_Float) {
+      if (!S.getASTContext().hasSimilarType(SrcDesc->getElemQualType(),
+                                            DestDesc->getElemQualType()))
+        return false;
+    }
+
     assert(SrcDesc->isPrimitiveArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    assert(SrcDesc->getPrimType() == DestDesc->getPrimType());
     PrimType ET = DestDesc->getPrimType();
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
-      Pointer DestElem = Dest.atIndex(I);
-      TYPE_SWITCH(ET, {
-        DestElem.deref<T>() = Src.elem<T>(I);
-        DestElem.initialize();
-      });
+      TYPE_SWITCH(ET, { Dest.elem<T>(I) = Src.elem<T>(I); });
+      Dest.initializeElement(I);
     }
     return true;
   }
