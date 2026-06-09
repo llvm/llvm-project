@@ -336,7 +336,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   if (Header.consume_front("#!special-case-list-v"))
     consumeUnsignedInteger(Header, 10, Version);
 
-  bool CanonicalizeSlashes = Version > 3;
+  bool CanonicalizeSlashes =
+      Version > 3 && llvm::sys::path::is_separator('\\');
 
   // In https://reviews.llvm.org/D154014 we added glob support and planned
   // to remove regex support in patterns. We temporarily support the
@@ -393,10 +394,10 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     }
 
     auto [Pattern, Category] = Postfix.split("=");
+    bool IsPath = llvm::is_contained(PathPrefixes, Prefix);
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
-        Category, UseGlobs,
-        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix),
-        CanonicalizeSlashes && llvm::is_contained(PathPrefixes, Prefix));
+        Category, UseGlobs, RemoveDotSlash && IsPath,
+        CanonicalizeSlashes && IsPath);
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =

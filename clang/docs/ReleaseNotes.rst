@@ -971,8 +971,8 @@ Sanitizers
 - Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
   suppression mappings (``--warning-suppression-mappings``) now recognize version
   4 of the Special Case List format (indicated by ``#!special-case-list-v4``),
-  which specifies that filename patterns should be matched against canonicalized
-  paths (without leading dots or slashes, and on Windows, without backslashes).
+  which canonicalizes path separators by converting backslashes to forward slashes
+  on Windows hosts.
 
 Python Binding Changes
 ----------------------
