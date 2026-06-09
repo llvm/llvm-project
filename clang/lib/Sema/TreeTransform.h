@@ -14555,9 +14555,8 @@ TreeTransform<Derived>::TransformCXXNamedCastExpr(CXXNamedCastExpr *E) {
   if (SubExpr.isInvalid())
     return ExprError();
 
-  if (!getDerived().AlwaysRebuild() &&
-      Type == E->getTypeInfoAsWritten() &&
-      SubExpr.get() == E->getSubExpr())
+  if (!getDerived().AlwaysRebuild() && Type == E->getTypeInfoAsWritten() &&
+      SubExpr.get() == E->getSubExpr() && !isa<CXXThisExpr>(SubExpr.get()))
     return E;
   return getDerived().RebuildCXXNamedCastExpr(
       E->getOperatorLoc(), E->getStmtClass(), E->getAngleBrackets().getBegin(),
