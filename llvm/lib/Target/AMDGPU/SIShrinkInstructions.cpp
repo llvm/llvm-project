@@ -1038,11 +1038,15 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
-      if (TII->isVOPC(Op32)) {
+      const MachineOperand *SDst =
+          TII->getNamedOperand(MI, AMDGPU::OpName::sdst);
+
+      // VOPCX (nosdst) instructions have no sdst operand; their operand 0 is
+      // src0. Skip the VCC-hint logic below for them and fall through to
+      // shrink directly.
+      if (SDst && TII->isVOPC(Op32)) {
         MachineOperand &Op0 = MI.getOperand(0);
         if (Op0.isReg()) {
-          // Exclude VOPCX instructions as these don't explicitly write a
-          // dst.
           Register DstReg = Op0.getReg();
           if (DstReg.isVirtual()) {
             // VOPC instructions can only write to the VCC register. We can't
@@ -1079,9 +1083,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       }
 
       // Check for the bool flag output for instructions like V_ADD_I32_e64.
-      const MachineOperand *SDst = TII->getNamedOperand(MI,
-                                                        AMDGPU::OpName::sdst);
-
       if (SDst) {
         bool Next = false;
 
