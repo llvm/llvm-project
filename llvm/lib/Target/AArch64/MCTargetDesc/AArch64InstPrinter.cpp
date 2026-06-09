@@ -421,11 +421,11 @@ static bool isTblTbxInstruction(unsigned Opcode, StringRef &Layout,
 
 struct LdStNInstrDesc {
   unsigned Opcode;
-  char Mnemonic[6];
-  char Layout[6];
-  int ListOperand;
-  bool HasLane;
-  int NaturalOffset;
+  char Mnemonic[5];
+  char Layout[5];
+  uint8_t ListOperand : 2;
+  uint8_t HasLane : 1;
+  uint8_t NaturalOffset;
 };
 
 static const LdStNInstrDesc LdStNInstInfo[] = {
@@ -827,7 +827,7 @@ void AArch64AppleInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       } else {
         assert(LdStDesc->NaturalOffset && "no offset on post-inc instruction?");
         O << ", ";
-        markup(O, Markup::Immediate) << "#" << LdStDesc->NaturalOffset;
+        markup(O, Markup::Immediate) << "#" << int(LdStDesc->NaturalOffset);
       }
     }
 
