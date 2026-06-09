@@ -10135,7 +10135,7 @@ entry:
   ret <2 x i64> %B
 }
 
-; 23-bit sdiv, can use expandDivRem24Impl
+; 23-bit sdiv, can use expandDivRem23Impl
 define amdgpu_kernel void @sdiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
 ; GFX6-LABEL: sdiv23:
 ; GFX6:       ; %bb.0:
@@ -10196,31 +10196,44 @@ define amdgpu_kernel void @sdiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
   ret void
 }
 
-; 24-bit sdiv, can use expandDivRem24Impl
+; 24-bit sdiv, cannot use expandDivRem23Impl
 define amdgpu_kernel void @sdiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
 ; GFX6-LABEL: sdiv24:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; GFX6-NEXT:    s_bfe_i32 s5, s5, 0x180000
-; GFX6-NEXT:    v_cvt_f32_i32_e32 v0, s5
-; GFX6-NEXT:    s_bfe_i32 s4, s4, 0x180000
-; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s4
-; GFX6-NEXT:    s_xor_b32 s4, s4, s5
-; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
-; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
-; GFX6-NEXT:    s_or_b32 s6, s4, 1
-; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
-; GFX6-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX6-NEXT:    v_mad_f32 v1, -v2, v0, v1
-; GFX6-NEXT:    v_cvt_i32_f32_e32 v2, v2
-; GFX6-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v1|, |v0|
-; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX6-NEXT:    s_cselect_b32 s4, s6, 0
+; GFX6-NEXT:    s_bfe_i32 s4, s3, 0x180000
+; GFX6-NEXT:    s_abs_i32 s5, s4
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s5
+; GFX6-NEXT:    s_sub_i32 s3, 0, s5
+; GFX6-NEXT:    s_bfe_i32 s6, s2, 0x180000
+; GFX6-NEXT:    s_abs_i32 s7, s6
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX6-NEXT:    s_xor_b32 s4, s6, s4
+; GFX6-NEXT:    s_ashr_i32 s4, s4, 31
 ; GFX6-NEXT:    s_mov_b32 s2, -1
-; GFX6-NEXT:    v_add_i32_e32 v0, vcc, s4, v2
+; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_lo_u32 v1, s3, v0
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    v_mul_hi_u32 v1, v0, v1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; GFX6-NEXT:    v_mul_hi_u32 v0, s7, v0
+; GFX6-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX6-NEXT:    s_mul_i32 s6, s6, s5
+; GFX6-NEXT:    s_sub_i32 s6, s7, s6
+; GFX6-NEXT:    s_sub_i32 s7, s6, s5
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
+; GFX6-NEXT:    s_cmp_ge_u32 s6, s5
+; GFX6-NEXT:    s_cselect_b64 vcc, -1, 0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX6-NEXT:    s_cselect_b32 s6, s7, s6
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
+; GFX6-NEXT:    s_cmp_ge_u32 s6, s5
+; GFX6-NEXT:    s_cselect_b64 vcc, -1, 0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX6-NEXT:    v_xor_b32_e32 v0, s4, v0
+; GFX6-NEXT:    v_subrev_i32_e32 v0, vcc, s4, v0
 ; GFX6-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -10233,21 +10246,34 @@ define amdgpu_kernel void @sdiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_bfe_i32 s3, s3, 0x180000
-; GFX9-NEXT:    v_cvt_f32_i32_e32 v0, s3
+; GFX9-NEXT:    s_abs_i32 s4, s3
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s4
+; GFX9-NEXT:    s_sub_i32 s5, 0, s4
 ; GFX9-NEXT:    s_bfe_i32 s2, s2, 0x180000
-; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s2
+; GFX9-NEXT:    s_xor_b32 s3, s2, s3
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX9-NEXT:    s_abs_i32 s2, s2
+; GFX9-NEXT:    s_ashr_i32 s3, s3, 31
+; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX9-NEXT:    s_mul_i32 s5, s5, s6
+; GFX9-NEXT:    s_mul_hi_u32 s5, s6, s5
+; GFX9-NEXT:    s_add_i32 s6, s6, s5
+; GFX9-NEXT:    s_mul_hi_u32 s5, s2, s6
+; GFX9-NEXT:    s_mul_i32 s6, s5, s4
+; GFX9-NEXT:    s_sub_i32 s2, s2, s6
+; GFX9-NEXT:    s_add_i32 s7, s5, 1
+; GFX9-NEXT:    s_sub_i32 s6, s2, s4
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s4
+; GFX9-NEXT:    s_cselect_b32 s5, s7, s5
+; GFX9-NEXT:    s_cselect_b32 s2, s6, s2
+; GFX9-NEXT:    s_add_i32 s6, s5, 1
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s4
+; GFX9-NEXT:    s_cselect_b32 s2, s6, s5
 ; GFX9-NEXT:    s_xor_b32 s2, s2, s3
-; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
-; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
-; GFX9-NEXT:    s_or_b32 s4, s2, 1
-; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
-; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX9-NEXT:    v_mad_f32 v2, -v3, v0, v2
-; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
-; GFX9-NEXT:    v_cmp_ge_f32_e64 s[2:3], |v2|, |v0|
-; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GFX9-NEXT:    s_cselect_b32 s2, s4, 0
-; GFX9-NEXT:    v_add_u32_e32 v0, s2, v3
+; GFX9-NEXT:    s_sub_i32 s2, s2, s3
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    global_store_byte_d16_hi v1, v0, s[0:1] offset:2
 ; GFX9-NEXT:    global_store_short v1, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -10256,15 +10282,15 @@ define amdgpu_kernel void @sdiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
   ret void
 }
 
-; 23-bit udiv, can use expandDivRem24Impl
-define amdgpu_kernel void @udiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
-; GFX6-LABEL: udiv23:
+; 22-bit udiv, can use expandDivRem23Impl
+define amdgpu_kernel void @udiv22(ptr addrspace(1) %out, i22 %x, i22 %y) {
+; GFX6-LABEL: udiv22:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_and_b32 s3, s3, 0x7fffff
+; GFX6-NEXT:    s_and_b32 s3, s3, 0x3fffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s3
-; GFX6-NEXT:    s_and_b32 s2, s2, 0x7fffff
+; GFX6-NEXT:    s_and_b32 s2, s2, 0x3fffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
@@ -10277,18 +10303,18 @@ define amdgpu_kernel void @udiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
 ; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v3, vcc
 ; GFX6-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    v_bfe_u32 v0, v0, 16, 7
+; GFX6-NEXT:    v_bfe_u32 v0, v0, 16, 6
 ; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
 ; GFX6-NEXT:    s_endpgm
 ;
-; GFX9-LABEL: udiv23:
+; GFX9-LABEL: udiv22:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s3, s3, 0x7fffff
+; GFX9-NEXT:    s_and_b32 s3, s3, 0x3fffff
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
-; GFX9-NEXT:    s_and_b32 s2, s2, 0x7fffff
+; GFX9-NEXT:    s_and_b32 s2, s2, 0x3fffff
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -10298,15 +10324,91 @@ define amdgpu_kernel void @udiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, v0
 ; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v4, vcc
 ; GFX9-NEXT:    global_store_short v3, v0, s[0:1]
-; GFX9-NEXT:    v_and_b32_e32 v0, 0x7fffff, v0
+; GFX9-NEXT:    v_and_b32_e32 v0, 0x3fffff, v0
 ; GFX9-NEXT:    global_store_byte_d16_hi v3, v0, s[0:1] offset:2
+; GFX9-NEXT:    s_endpgm
+  %r = udiv i22 %x, %y
+  store i22 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; 23-bit udiv, cannot use expandDivRem23Impl
+define amdgpu_kernel void @udiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
+; GFX6-LABEL: udiv23:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_and_b32 s4, s3, 0x7fffff
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s4
+; GFX6-NEXT:    s_sub_i32 s3, 0, s4
+; GFX6-NEXT:    s_and_b32 s5, s2, 0x7fffff
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_lo_u32 v1, s3, v0
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    v_mul_hi_u32 v1, v0, v1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; GFX6-NEXT:    v_mul_hi_u32 v0, s5, v0
+; GFX6-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX6-NEXT:    s_mul_i32 s6, s6, s4
+; GFX6-NEXT:    s_sub_i32 s5, s5, s6
+; GFX6-NEXT:    s_sub_i32 s6, s5, s4
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
+; GFX6-NEXT:    s_cmp_ge_u32 s5, s4
+; GFX6-NEXT:    s_cselect_b64 vcc, -1, 0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX6-NEXT:    s_cselect_b32 s5, s6, s5
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
+; GFX6-NEXT:    s_cmp_ge_u32 s5, s4
+; GFX6-NEXT:    s_cselect_b64 vcc, -1, 0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX6-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX6-NEXT:    s_waitcnt expcnt(0)
+; GFX6-NEXT:    v_bfe_u32 v0, v0, 16, 7
+; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
+; GFX6-NEXT:    s_endpgm
+;
+; GFX9-LABEL: udiv23:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_and_b32 s3, s3, 0x7fffff
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
+; GFX9-NEXT:    s_sub_i32 s4, 0, s3
+; GFX9-NEXT:    s_and_b32 s2, s2, 0x7fffff
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX9-NEXT:    s_mul_i32 s4, s4, s5
+; GFX9-NEXT:    s_mul_hi_u32 s4, s5, s4
+; GFX9-NEXT:    s_add_i32 s5, s5, s4
+; GFX9-NEXT:    s_mul_hi_u32 s4, s2, s5
+; GFX9-NEXT:    s_mul_i32 s5, s4, s3
+; GFX9-NEXT:    s_sub_i32 s2, s2, s5
+; GFX9-NEXT:    s_add_i32 s6, s4, 1
+; GFX9-NEXT:    s_sub_i32 s5, s2, s3
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
+; GFX9-NEXT:    s_cselect_b32 s4, s6, s4
+; GFX9-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX9-NEXT:    s_add_i32 s5, s4, 1
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
+; GFX9-NEXT:    s_cselect_b32 s2, s5, s4
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    s_and_b32 s2, s2, 0x7fffff
+; GFX9-NEXT:    global_store_short v1, v0, s[0:1]
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    global_store_byte_d16_hi v1, v0, s[0:1] offset:2
 ; GFX9-NEXT:    s_endpgm
   %r = udiv i23 %x, %y
   store i23 %r, ptr addrspace(1) %out
   ret void
 }
 
-; 24-bit udiv, cannot use expandDivRem24Impl
+; 24-bit udiv, cannot use expandDivRem23Impl
 define amdgpu_kernel void @udiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
 ; GFX6-LABEL: udiv24:
 ; GFX6:       ; %bb.0:
