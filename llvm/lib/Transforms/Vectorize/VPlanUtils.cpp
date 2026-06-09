@@ -946,6 +946,7 @@ VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
     auto *NAry = cast<SCEVNAryExpr>(S);
     unsigned Opcode =
         S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
+    // Iterate in reverse so that constants are emitted last.
     SmallVector<VPValue *, 2> Ops;
     for (const SCEVUse &Op : reverse(NAry->operands())) {
       VPValue *OpV = tryToExpand(Op);
