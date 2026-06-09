@@ -924,6 +924,28 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     int64_t Val = IM->getValue();
     const std::string &Str = IM->getString();
     const ValueTypeByHwMode &VTBH = IM->getVT();
+    if (VTBH.isSimple()) {
+      MVT VT = VTBH.getSimple();
+      if ((VT == MVT::i32 && Val >= -1 && Val <= 8) ||
+          (VT == MVT::i64 && Val >= -1 && Val <= 7)) {
+        OS << "OPC_EmitIntegerI" << VT.getSizeInBits();
+        if (Val < 0)
+          OS << "Neg1";
+        else
+          OS << '_' << Val;
+        OS << ',';
+        if (!OmitComments) {
+          OS << " // #" << IM->getResultNo() << " = ";
+          if (!Str.empty())
+            OS << Str;
+          else
+            OS << Val;
+        }
+        OS << '\n';
+        return 1;
+      }
+    }
+
     unsigned TypeBytes = 0;
     if (VTBH.isSimple()) {
       MVT VT = VTBH.getSimple();

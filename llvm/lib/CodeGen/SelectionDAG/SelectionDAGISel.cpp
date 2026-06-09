@@ -3997,6 +3997,36 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
       continue;
     }
+    case OPC_EmitIntegerI32Neg1:
+    case OPC_EmitIntegerI32_0:
+    case OPC_EmitIntegerI32_1:
+    case OPC_EmitIntegerI32_2:
+    case OPC_EmitIntegerI32_3:
+    case OPC_EmitIntegerI32_4:
+    case OPC_EmitIntegerI32_5:
+    case OPC_EmitIntegerI32_6:
+    case OPC_EmitIntegerI32_7:
+    case OPC_EmitIntegerI32_8:
+    case OPC_EmitIntegerI64Neg1:
+    case OPC_EmitIntegerI64_0:
+    case OPC_EmitIntegerI64_1:
+    case OPC_EmitIntegerI64_2:
+    case OPC_EmitIntegerI64_3:
+    case OPC_EmitIntegerI64_4:
+    case OPC_EmitIntegerI64_5:
+    case OPC_EmitIntegerI64_6:
+    case OPC_EmitIntegerI64_7: {
+      bool IsI32 = Opcode <= OPC_EmitIntegerI32_8;
+      unsigned FirstOpcode =
+          IsI32 ? OPC_EmitIntegerI32Neg1 : OPC_EmitIntegerI64Neg1;
+      MVT::SimpleValueType VT = IsI32 ? MVT::i32 : MVT::i64;
+      int64_t Val = static_cast<int64_t>(Opcode - FirstOpcode) - 1;
+      RecordedNodes.emplace_back(
+          CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
+                                    /*isTarget=*/true),
+          nullptr);
+      continue;
+    }
     case OPC_EmitInteger:
     case OPC_EmitIntegerI8:
     case OPC_EmitIntegerI16:
