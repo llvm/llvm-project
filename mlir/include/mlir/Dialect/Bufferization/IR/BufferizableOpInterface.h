@@ -267,11 +267,11 @@ struct BufferizationOptions {
                                    func::FuncOp, const BufferizationOptions &)>;
   /// Tensor -> MemRef type conversion.
   /// Parameters: tensor type, memory space, bufferization options
-  using UnknownTypeConverterFn = std::function<BaseMemRefType(
-      TensorType, Attribute memorySpace, const BufferizationOptions &)>;
+  using UnknownTypeConverterFn = std::function<BufferLikeType(
+      TensorLikeType, Attribute memorySpace, const BufferizationOptions &)>;
   // Produce a MemorySpace attribute from a tensor type
   using DefaultMemorySpaceFn =
-      std::function<std::optional<Attribute>(TensorType t)>;
+      std::function<std::optional<Attribute>(TensorLikeType t)>;
 
   BufferizationOptions();
 
@@ -340,7 +340,7 @@ struct BufferizationOptions {
   ///
   /// By default, if tensor is a (builtin) tensor type, it is converted to a
   /// memref type with a fully dynamic layout map; if tensor is a (generic)
-  /// tensor-like type, it is converted using TensorLikeType::getBufferType().
+  /// tensor-like type, it is converted using unknownTypeConverterFn.
   ///
   /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
   FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;
@@ -362,7 +362,7 @@ struct BufferizationOptions {
   // Returning std::nullopt will cause bufferization to fail (useful to indicate
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
-      [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
+      [](TensorLikeType t) -> std::optional<Attribute> { return Attribute(); };
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.
