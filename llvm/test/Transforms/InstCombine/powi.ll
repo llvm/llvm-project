@@ -662,35 +662,64 @@ define float @pow_2_i_ldexp_1_i_afn_f32(i32 %i) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call afn float @llvm.ldexp.f32.i32(float 1.000000e+00, i32 [[I:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
-  %1 = tail call afn float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
+  %1 = call afn float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
   ret float %1
 }
 
-define float @fmul_a_pow_2_i_ldexp_1_a_afn_f32(float %a, i32 %i) {
-; CHECK-LABEL: @fmul_a_pow_2_i_ldexp_1_a_afn_f32(
+define float @fmul_a_pow_2_i_ldexp_a_i_afn_f32(float %a, i32 %i) {
+; CHECK-LABEL: @fmul_a_pow_2_i_ldexp_a_i_afn_f32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.ldexp.f32.i32(float [[A:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
-  %1 = tail call afn reassoc float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
+  %1 = call afn reassoc float @llvm.powi.f32.i32(float 2.000000e+00, i32 %i)
   %2 = fmul reassoc float %a, %1
   ret float %2
 }
 
-define double @pow_2_i_ldexp_1_a_afn_f64(i32 %i) {
-; CHECK-LABEL: @pow_2_i_ldexp_1_a_afn_f64(
+define double @pow_2_i_ldexp_1_i_afn_f64(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_i_afn_f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call afn double @llvm.ldexp.f64.i32(double 1.000000e+00, i32 [[I:%.*]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
-  %1 = tail call afn double @llvm.powi.f64.i32(double 2.000000e+00, i32 %i)
+  %1 = call afn double @llvm.powi.f64.i32(double 2.000000e+00, i32 %i)
   ret double %1
 }
 
-define double @fmul_a_pow_2_i_ldexp_1_a_afn_f64(double %a, i32 %i) {
-; CHECK-LABEL: @fmul_a_pow_2_i_ldexp_1_a_afn_f64(
+define double @fmul_a_pow_2_i_ldexp_a_i_afn_f64(double %a, i32 %i) {
+; CHECK-LABEL: @fmul_a_pow_2_i_ldexp_a_i_afn_f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc double @llvm.ldexp.f64.i32(double [[A:%.*]], i32 [[I:%.*]])
 ; CHECK-NEXT:    ret double [[TMP1]]
 ;
-  %1 = tail call afn reassoc double @llvm.powi.f64.i32(double 2.000000e+00, i32 %i)
+  %1 = call afn reassoc double @llvm.powi.f64.i32(double 2.000000e+00, i32 %i)
   %2 = fmul reassoc double %a, %1
   ret double %2
+}
+
+define <4 x float> @pow_2_i_ldexp_1_i_afn_v4f32(i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_1_i_afn_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call afn <4 x float> @llvm.ldexp.v4f32.i32(<4 x float> splat (float 1.000000e+00), i32 [[I:%.*]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = call afn <4 x float> @llvm.powi.v4f32.i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, i32 %i)
+  ret <4 x float> %1
+}
+
+define <4 x float> @pow_2_i_ldexp_a_i_afn_v4f32(<4 x float> %a, i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_a_i_afn_v4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc <4 x float> @llvm.ldexp.v4f32.i32(<4 x float> [[A:%.*]], i32 [[I:%.*]])
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = call afn reassoc <4 x float> @llvm.powi.v4f32.i32(<4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>, i32 %i)
+  %2 = fmul reassoc <4 x float> %a, %1
+  ret <4 x float> %2
+}
+
+define <4 x double> @pow_2_i_ldexp_a_i_afn_v4f64(<4 x double> %a, i32 %i) {
+; CHECK-LABEL: @pow_2_i_ldexp_a_i_afn_v4f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc <4 x double> @llvm.ldexp.v4f64.i32(<4 x double> [[A:%.*]], i32 [[I:%.*]])
+; CHECK-NEXT:    ret <4 x double> [[TMP1]]
+;
+  %1 = call afn reassoc <4 x double> @llvm.powi.v4f64.i32(<4 x double> <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+00>, i32 %i)
+  %2 = fmul reassoc <4 x double> %a, %1
+  ret <4 x double> %2
 }
