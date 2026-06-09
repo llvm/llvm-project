@@ -414,9 +414,10 @@ private:
     // predicate checks exactly that.
     if (!I->hasOneUse()) {
       for (Use &U : I->uses()) {
-        // For most instruction, evaluating them in a different type will change
-        // the type of all operands. This is not the case for select conditions.
-        // Make sure we don't retain an extra use via the select condition.
+        // For most instructions, evaluating them in a different type will
+        // change the type of all operands. This is not the case for select
+        // conditions. Make sure we don't retain an extra use via the select
+        // condition.
         if (isa<SelectInst>(U.getUser()) && U.getOperandNo() == 0)
           return false;
 
