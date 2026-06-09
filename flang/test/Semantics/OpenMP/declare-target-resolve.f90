@@ -45,7 +45,7 @@ subroutine f03
 end
 
 subroutine f04
-  real :: a
+  integer :: a
 !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
   !$omp declare target(bar)
   a = bar
@@ -54,10 +54,31 @@ subroutine f04
 end subroutine
 
 subroutine f05
-  real :: a
+  integer :: a
 !ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
   !$omp declare target link(bar)
 !ERROR: 'bar' is not a callable procedure
   a = bar(a)
 end subroutine
 
+subroutine f06
+!ERROR: The entity with PARAMETER attribute is used in a DECLARE TARGET directive [-Wopenmp-usage]
+  !$omp declare target(bar)
+  parameter (bar = 1)
+end
+
+subroutine f07
+  !$omp declare target(bar)
+  save :: bar
+  integer :: a
+!ERROR: 'bar' is not a callable procedure
+  a = bar(a)
+end
+
+subroutine f08
+!ERROR: A variable that appears in a DECLARE TARGET directive must be declared in the scope of a module or have the SAVE attribute, either explicitly or implicitly
+  !$omp declare target(bar)
+  dimension bar(1:10)
+  integer :: a
+  a = bar(a)
+end

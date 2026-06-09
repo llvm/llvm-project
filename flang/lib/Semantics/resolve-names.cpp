@@ -9744,6 +9744,34 @@ void ResolveNamesVisitor::HandleCall(
   }
 }
 
+/// Assuming that 'symbol' was implicitly declared, check if it has not
+/// been encountered in any explicit declarative or executable statement
+/// that would alter its implicit declaration.
+static bool IsPristineImplicit(const Symbol &symbol) {
+  // The symbol should be implicit.
+  if (!symbol.test(Symbol::Flag::Implicit)) {
+    return false;
+  }
+  // That should be the only flag.
+  if (symbol.flags().count() != 1) {
+    return false;
+  }
+  // There should be no attributes.
+  if (symbol.attrs().count() != 0) {
+    return false;
+  }
+  // There should be no initializer or shape.
+  if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (object->init()) {
+      return false;
+    }
+    if (object->shape().Rank()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void ResolveNamesVisitor::HandleProcedureName(
     Symbol::Flag flag, const parser::Name &name) {
   CHECK(flag == Symbol::Flag::Function || flag == Symbol::Flag::Subroutine);
@@ -9760,10 +9788,8 @@ void ResolveNamesVisitor::HandleProcedureName(
   // by an explcit declaration. Make sure the symbol is still implicit
   // before doing anything.
   if (WasDeclaredByOmpDeclareTarget(symbol)) {
-    bool isImplicit{symbol->test(Symbol::Flag::Implicit)};
     bool inEquivalence{FindEquivalenceSet(*symbol) != nullptr};
-    bool inCommonBlock{symbol->test(Symbol::Flag::InCommonBlock)};
-    if (isImplicit && !inEquivalence && !inCommonBlock) {
+    if (IsPristineImplicit(*symbol) && !inEquivalence) {
       // Implicit declaration of a symbol caused by being on a declare_target
       // should only declare it as an object, not a procedure. This is because
       // the 'x' in declare_target(x) looks like a use of a variable, not a
