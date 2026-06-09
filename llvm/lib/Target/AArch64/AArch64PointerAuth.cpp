@@ -82,8 +82,11 @@ static void emitPACCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
 
   CFIInstBuilder CFIBuilder(MBB, MBBI, Flags);
-  MFnI.branchProtectionPAuthLR() ? CFIBuilder.buildNegateRAStateWithPC()
-                                 : CFIBuilder.buildNegateRAState();
+  if (MFnI.branchProtectionPAuthLR()) {
+    CFIBuilder.buildNegateRAStateWithPC();
+  } else if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+    CFIBuilder.buildNegateRAState();
+  }
 }
 
 void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
