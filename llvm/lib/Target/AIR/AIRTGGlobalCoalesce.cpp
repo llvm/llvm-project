@@ -56,6 +56,7 @@ static bool eraseDeadThreadgroupGlobals(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
     if (GV.getAddressSpace() != metal::AS::Threadgroup)
       continue;
+    GV.removeDeadConstantUsers();
     if (GV.use_empty())
       Dead.push_back(&GV);
   }

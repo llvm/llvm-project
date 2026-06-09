@@ -79,6 +79,19 @@ static Type *inferElementType(Value *V) {
         return SI->getValueOperand()->getType();
     if (auto *LI = dyn_cast<LoadInst>(U))
       return LI->getType();
+    if (auto *CI = dyn_cast<CallInst>(U)) {
+      if (Function *F = CI->getCalledFunction()) {
+        StringRef Name = F->getName();
+        if (Name.starts_with("air.simdgroup")) {
+          auto &Ctx = V->getContext();
+          if (Name.contains("bf16"))
+            return Type::getBFloatTy(Ctx);
+          if (Name.contains("f16"))
+            return Type::getHalfTy(Ctx);
+          return Type::getFloatTy(Ctx);
+        }
+      }
+    }
     if (isa<GetElementPtrInst>(U) || isa<GEPOperator>(U) || isa<BitCastInst>(U))
       if (Type *T = inferElementType(U))
         return T;
@@ -830,6 +843,7 @@ static bool retypeByteGlobals(Module &M) {
 
     Changed |= rewriteByteGEPs(GV, NewGV, OldAT, NewAT, ElemTy, ElemSize, Ctx);
 
+    GV->removeDeadConstantUsers();
     if (GV->use_empty())
       GV->eraseFromParent();
 
