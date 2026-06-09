@@ -23,6 +23,7 @@
 #include "llvm/TableGen/SetTheory.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -182,6 +183,76 @@ constructPerfectHashTable(ArrayRef<RuntimeLibcallImpl> Keywords,
   return Lookup;
 }
 
+struct CompactHashTable {
+  struct CollisionBucket {
+    uint16_t Bucket;
+    uint16_t Start;
+    uint16_t Count;
+  };
+
+  std::vector<uint16_t> FirstValues;
+  std::vector<uint16_t> SecondValues;
+  std::vector<CollisionBucket> CollisionBuckets;
+  std::vector<uint16_t> CollisionValues;
+};
+
+static CompactHashTable compactHashTable(ArrayRef<unsigned> Lookup,
+                                         unsigned Collisions) {
+  if (Collisions == 0 || Lookup.size() % Collisions != 0)
+    reportFatalInternalError("invalid runtime libcall hash table");
+
+  CompactHashTable Compact;
+  const size_t NumBuckets = Lookup.size() / Collisions;
+  Compact.FirstValues.reserve(NumBuckets);
+  Compact.SecondValues.reserve(NumBuckets);
+
+  for (size_t Bucket = 0; Bucket != NumBuckets; ++Bucket) {
+    ArrayRef<unsigned> Values = Lookup.slice(Bucket * Collisions, Collisions);
+    bool SawEmpty = false;
+    for (unsigned Value : Values) {
+      if (Value == 0) {
+        SawEmpty = true;
+        continue;
+      }
+      if (SawEmpty)
+        reportFatalInternalError(
+            "runtime libcall collisions are not contiguous");
+      if (Value > std::numeric_limits<uint16_t>::max())
+        reportFatalInternalError("runtime libcall index exceeds uint16_t");
+    }
+
+    Compact.FirstValues.push_back(Values[0]);
+    Compact.SecondValues.push_back(Collisions > 1 ? Values[1] : 0);
+
+    const size_t CollisionStart = Compact.CollisionValues.size();
+    for (unsigned Value :
+         Values.drop_front(std::min<unsigned>(Collisions, 2))) {
+      if (Value == 0)
+        break;
+      Compact.CollisionValues.push_back(Value);
+    }
+
+    const size_t NumCollisions =
+        Compact.CollisionValues.size() - CollisionStart;
+    if (NumCollisions == 0)
+      continue;
+    if (Bucket > std::numeric_limits<uint16_t>::max() ||
+        CollisionStart > std::numeric_limits<uint16_t>::max() ||
+        NumCollisions > std::numeric_limits<uint16_t>::max())
+      reportFatalInternalError(
+          "runtime libcall collision metadata exceeds uint16_t");
+    Compact.CollisionBuckets.push_back({static_cast<uint16_t>(Bucket),
+                                        static_cast<uint16_t>(CollisionStart),
+                                        static_cast<uint16_t>(NumCollisions)});
+  }
+
+  if (Compact.CollisionValues.size() > std::numeric_limits<uint16_t>::max())
+    reportFatalInternalError(
+        "too many runtime libcall collisions for uint16_t");
+
+  return Compact;
+}
+
 /// Generate hash table based lookup by name.
 void RuntimeLibcallEmitter::emitNameMatchHashTable(
     raw_ostream &OS, StringToOffsetTable &OffsetTable) const {
@@ -241,6 +312,7 @@ void RuntimeLibcallEmitter::emitNameMatchHashTable(
   std::vector<unsigned> Lookup =
       constructPerfectHashTable(RuntimeLibcallImplDefList, Hashes, TableValues,
                                 Size, Collisions, OffsetTable);
+  CompactHashTable Compact = compactHashTable(Lookup, Collisions);
 
   LLVM_DEBUG(dbgs() << "Runtime libcall perfect hashing parameters: Size = "
                     << Size << ", maximum collisions = " << Collisions << '\n');
@@ -251,30 +323,124 @@ void RuntimeLibcallEmitter::emitNameMatchHashTable(
   OS << "iota_range<RTLIB::LibcallImpl> RTLIB::RuntimeLibcallsInfo::"
         "lookupLibcallImplNameImpl(StringRef Name) {\n";
 
-  // Emit RTLIB::LibcallImpl values
-  OS << "  static constexpr uint16_t HashTableNameToEnum[" << Lookup.size()
-     << "] = {\n";
+  OS << "  static constexpr uint16_t HashTableFirstValues[] = {\n";
 
-  for (unsigned TableVal : Lookup)
-    OS << "    " << TableVal << ",\n";
+  for (uint16_t Value : Compact.FirstValues)
+    OS << "    " << Value << ",\n";
 
   OS << "  };\n\n";
 
-  OS << "  unsigned Idx = (hash(Name) % " << Size << ") * " << Collisions
-     << ";\n\n"
-        "  for (int I = 0; I != "
-     << Collisions << R"(; ++I) {
-    const uint16_t Entry = HashTableNameToEnum[Idx + I];
-    const uint16_t StrOffset = RuntimeLibcallNameOffsetTable[Entry];
-    const uint8_t StrSize = RuntimeLibcallNameSizeTable[Entry];
-    StringRef Str(
-      &RTLIB::RuntimeLibcallsInfo::RuntimeLibcallImplNameTableStorage[StrOffset],
-      StrSize);
-    if (Str == Name)
-      return libcallImplNameHit(Entry, StrOffset);
+  OS << "  static constexpr uint16_t HashTableSecondValues[] = {\n";
+
+  for (uint16_t Value : Compact.SecondValues)
+    OS << "    " << Value << ",\n";
+
+  OS << "  };\n\n";
+
+  const size_t CollisionBucketStorageSize =
+      std::max<size_t>(Compact.CollisionBuckets.size(), 1);
+  const size_t CollisionValueStorageSize =
+      std::max<size_t>(Compact.CollisionValues.size(), 1);
+  OS << "  struct HashTableCollisionBucket {\n"
+        "    uint16_t Bucket;\n"
+        "    uint16_t Start;\n"
+        "    uint16_t Count;\n"
+        "  };\n\n"
+        "  static constexpr HashTableCollisionBucket "
+        "HashTableCollisionBuckets[] = {\n";
+
+  for (const CompactHashTable::CollisionBucket &Bucket :
+       Compact.CollisionBuckets)
+    OS << "    {" << Bucket.Bucket << ", " << Bucket.Start << ", "
+       << Bucket.Count << "},\n";
+  if (Compact.CollisionBuckets.empty())
+    OS << "    {0, 0, 0},\n";
+
+  OS << "  };\n\n"
+        "  static constexpr uint16_t HashTableCollisionValues[] = {\n";
+
+  for (uint16_t Value : Compact.CollisionValues)
+    OS << "    " << Value << ",\n";
+  if (Compact.CollisionValues.empty())
+    OS << "    0,\n";
+
+  OS << "  };\n\n";
+
+  OS << "  static_assert(RTLIB::NumLibcallImpls <= "
+        "uint32_t(UINT16_MAX) + 1,\n"
+        "                \"runtime libcall indices must fit in uint16_t\");\n"
+     << "  static_assert(" << Size
+     << " <= uint32_t(UINT16_MAX) + 1,\n"
+        "                \"runtime libcall bucket indices must fit in "
+        "uint16_t\");\n"
+     << "  static_assert(" << Compact.CollisionValues.size()
+     << " <= UINT16_MAX,\n"
+        "                \"runtime libcall collision offsets must fit in "
+        "uint16_t\");\n"
+     << "  static_assert(sizeof(HashTableFirstValues) / "
+        "sizeof(HashTableFirstValues[0]) == "
+     << Compact.FirstValues.size() << ");\n"
+     << "  static_assert(sizeof(HashTableSecondValues) / "
+        "sizeof(HashTableSecondValues[0]) == "
+     << Compact.SecondValues.size() << ");\n"
+     << "  static_assert(sizeof(HashTableCollisionBucket) == 6);\n"
+     << "  static_assert(sizeof(HashTableCollisionBuckets) / "
+        "sizeof(HashTableCollisionBuckets[0]) == "
+     << CollisionBucketStorageSize << ");\n"
+     << "  static_assert(sizeof(HashTableCollisionValues) / "
+        "sizeof(HashTableCollisionValues[0]) == "
+     << CollisionValueStorageSize << ");\n\n";
+
+  OS << "  unsigned Idx = hash(Name) % " << Size
+     << ";\n"
+        "  uint16_t Entry = HashTableFirstValues[Idx];\n"
+        "  uint16_t StrOffset = RuntimeLibcallNameOffsetTable[Entry];\n"
+        "  uint8_t StrSize = RuntimeLibcallNameSizeTable[Entry];\n"
+        "  StringRef Str(\n"
+        "    &RTLIB::RuntimeLibcallsInfo::"
+        "RuntimeLibcallImplNameTableStorage[StrOffset],\n"
+        "    StrSize);\n"
+        "  if (Str != Name) {\n"
+        "    Entry = HashTableSecondValues[Idx];\n"
+        "    if (Entry == 0)\n"
+        "      return enum_seq(RTLIB::Unsupported, "
+        "RTLIB::Unsupported);\n\n"
+        "    StrOffset = RuntimeLibcallNameOffsetTable[Entry];\n"
+        "    StrSize = RuntimeLibcallNameSizeTable[Entry];\n"
+        "    Str = StringRef(\n"
+        "      &RTLIB::RuntimeLibcallsInfo::"
+        "RuntimeLibcallImplNameTableStorage[StrOffset],\n"
+        "      StrSize);\n"
+        "    if (Str != Name) {\n"
+        "      auto CollisionBuckets = ArrayRef(HashTableCollisionBuckets, "
+     << Compact.CollisionBuckets.size()
+     << ");\n"
+        "      auto It = llvm::lower_bound(\n"
+        "          CollisionBuckets, Idx,\n"
+        "          [](const HashTableCollisionBucket &Bucket, "
+        "unsigned Idx) {\n"
+        "            return Bucket.Bucket < Idx;\n"
+        "          });\n"
+        "      if (It == CollisionBuckets.end() || It->Bucket != Idx)\n"
+        "        return enum_seq(RTLIB::Unsupported, "
+        "RTLIB::Unsupported);\n\n"
+        "      for (unsigned I = It->Start, E = I + It->Count; I != E; "
+        "++I) {\n"
+        R"(        Entry = HashTableCollisionValues[I];
+        StrOffset = RuntimeLibcallNameOffsetTable[Entry];
+        StrSize = RuntimeLibcallNameSizeTable[Entry];
+        Str = StringRef(
+        &RTLIB::RuntimeLibcallsInfo::RuntimeLibcallImplNameTableStorage[StrOffset],
+        StrSize);
+        if (Str == Name)
+          return libcallImplNameHit(Entry, StrOffset);
+      }
+
+      return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
+    }
   }
 
-  return enum_seq(RTLIB::Unsupported, RTLIB::Unsupported);
+  return libcallImplNameHit(Entry, StrOffset);
 }
 )";
 }

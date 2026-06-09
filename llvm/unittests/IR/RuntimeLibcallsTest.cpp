@@ -8,7 +8,9 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "gtest/gtest.h"
+#include <string>
 using namespace llvm;
 
 namespace {
@@ -24,8 +26,19 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
 
   for (RTLIB::LibcallImpl LC : RTLIB::libcall_impls()) {
     StringRef Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LC);
-    EXPECT_TRUE(is_contained(
-        RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(Name), LC));
+    SmallVector<RTLIB::LibcallImpl> Expected;
+    for (RTLIB::LibcallImpl Candidate : RTLIB::libcall_impls())
+      if (RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Candidate) == Name)
+        Expected.push_back(Candidate);
+
+    auto Actual =
+        to_vector(RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(Name));
+    EXPECT_EQ(Actual, Expected);
+
+    std::string Miss = Name.str();
+    Miss.push_back('\0');
+    EXPECT_TRUE(
+        RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName(Miss).empty());
   }
 
   // Test first libcall name

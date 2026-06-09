@@ -8,6 +8,7 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/SystemLibraries.h"
