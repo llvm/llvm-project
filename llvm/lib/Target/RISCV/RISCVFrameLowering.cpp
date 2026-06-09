@@ -1526,7 +1526,11 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
       FrameReg = SPReg;
     } else {
       FrameReg = FPReg;
-      if (RVFI->getRVVStackSize() == 0 && !MFI.hasVarSizedObjects()) {
+      // SP-relative addressing is only valid when SP is stable throughout
+      // the function body: no dynamic SP adjustments for outgoing call args,
+      // no variable-sized objects, and no RVV scalable stack regions.
+      // hasReservedCallFrame() conservatively encompasses all these checks.
+      if (hasReservedCallFrame(MF)) {
         // Both FP and SP are candidates.
         // Prefer SP when the SP-relative offset fits in the compressed
         // instruction immediate range.
@@ -1621,9 +1625,9 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   } else if (MFI.getStackID(FI) == TargetStackID::ScalableVector) {
     // Ensure the base of the RVV stack is correctly aligned: add on the
     // alignment padding.
-    int ScalarLocalVarSize = MFI.getStackSize() -
-                             RVFI->getCalleeSavedStackSize() -
-                             RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
+    int64_t ScalarLocalVarSize =
+        MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
+        RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
     Offset += StackOffset::get(ScalarLocalVarSize, RVFI->getRVVStackSize());
   }
   return Offset;

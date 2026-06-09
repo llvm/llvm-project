@@ -175,6 +175,7 @@ public:
     eServerPacketType_jLLDBTraceGetBinaryData,
     eServerPacketType_jMultiBreakpoint,
     eServerPacketType_jAcceleratorPluginInitialize,
+    eServerPacketType_jAcceleratorPluginBreakpointHit,
 
     eServerPacketType_qMemTags, // read memory tags
     eServerPacketType_QMemTags, // write memory tags

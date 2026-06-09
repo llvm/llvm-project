@@ -221,6 +221,11 @@ Error L0AsyncQueueTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr,
   return memoryCopy(TgtPtr, SrcPtr, Size);
 }
 
+Error L0AsyncQueueTy::dataFenceImpl() {
+  return CmdList->appendBarrier(/*SignalEvent*/ nullptr, /*NumWaitEvents*/ 0,
+                                /*WaitEvents*/ nullptr);
+}
+
 Error L0AsyncQueueTy::launchKernelImpl(ze_kernel_handle_t Kernel,
                                        L0LaunchEnvTy &KEnv) {
   auto EventOrError = Device.getEvent();
@@ -247,9 +252,11 @@ Error L0AsyncQueueTy::memoryFillImpl(void *Ptr, const void *Pattern,
   auto EventOrErr = Device.getEvent();
   if (!EventOrErr)
     return EventOrErr.takeError();
+  auto [NumWaitEvents, WaitEventsPtr] = getMemCopyEvents();
   ze_event_handle_t SignalEvent = *EventOrErr;
   if (auto Err = CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size,
-                                           SignalEvent, 0, nullptr)) {
+                                           SignalEvent, NumWaitEvents,
+                                           WaitEventsPtr)) {
     if (auto ReleaseErr = Device.releaseEvent(SignalEvent))
       return joinErrors(std::move(Err), std::move(ReleaseErr));
     return Err;

@@ -336,6 +336,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jMultiBreakpoint;
     if (PACKET_MATCHES("jAcceleratorPluginInitialize"))
       return eServerPacketType_jAcceleratorPluginInitialize;
+    if (PACKET_STARTS_WITH("jAcceleratorPluginBreakpointHit:"))
+      return eServerPacketType_jAcceleratorPluginBreakpointHit;
     break;
 
   case 'v':

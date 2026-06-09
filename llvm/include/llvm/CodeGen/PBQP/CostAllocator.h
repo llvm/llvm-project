@@ -47,8 +47,6 @@ private:
 
   class PoolEntryDSInfo {
   public:
-    static inline PoolEntry *getEmptyKey() { return nullptr; }
-
     template <typename ValueKeyT>
     static unsigned getHashValue(const ValueKeyT &C) {
       return hash_value(C);
@@ -69,14 +67,10 @@ private:
 
     template <typename ValueKeyT>
     static bool isEqual(const ValueKeyT &C, PoolEntry *P) {
-      if (P == getEmptyKey())
-        return false;
       return isEqual(C, P->getValue());
     }
 
     static bool isEqual(PoolEntry *P1, PoolEntry *P2) {
-      if (P1 == getEmptyKey())
-        return P1 == P2;
       return isEqual(P1->getValue(), P2);
     }
   };

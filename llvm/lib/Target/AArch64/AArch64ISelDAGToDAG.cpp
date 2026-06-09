@@ -4268,15 +4268,10 @@ static int getIntOperandFromRegisterString(StringRef RegString) {
           "Unexpected non-integer value in special register string.");
   (void)AllIntFields;
 
-  if (Ops[0] < 2 || Ops[1] > 7 || Ops[2] > 15 || Ops[3] > 15 || Ops[4] > 7)
-    return -1;
-
   // Need to combine the integer fields of the string into a single value
-  // based on the bit encoding of MRS/MSR instruction. We also mask Ops[0], as
-  // top bit as it is implicitly assumed to be 1 for MRS/MSR instruction and is
-  // not part of the encoding.
-  return ((Ops[0] & 0x1) << 14) | (Ops[1] << 11) | (Ops[2] << 7) |
-         (Ops[3] << 3) | (Ops[4]);
+  // based on the bit encoding of MRS/MSR instruction.
+  return (Ops[0] << 14) | (Ops[1] << 11) | (Ops[2] << 7) | (Ops[3] << 3) |
+         (Ops[4]);
 }
 
 // Lower the read_register intrinsic to an MRS instruction node if the special
@@ -4309,6 +4304,24 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
         Opcode64Bit = AArch64::ADR;
         Imm = 0;
       } else {
+        // Not a system register. It may name an allocatable 64-bit GPR/FPR read
+        // by the MSVC __getReg/__getRegFp intrinsics. Emit a pseudo that
+        // carries the source register as an immediate so the read does not
+        // reference an undefined physical register (which the machine verifier
+        // rejects); the AsmPrinter materializes the real mov/fmov.
+        Register PReg = Subtarget->getTargetLowering()->matchRegisterName(
+            RegString->getString());
+        unsigned PseudoOp = 0;
+        if (AArch64::GPR64RegClass.contains(PReg))
+          PseudoOp = AArch64::READ_REGISTER_GPR64;
+        else if (AArch64::FPR64RegClass.contains(PReg))
+          PseudoOp = AArch64::READ_REGISTER_FPR64;
+        if (!ReadIs128Bit && PseudoOp && N->getValueType(0) == MVT::i64) {
+          CurDAG->SelectNodeTo(N, PseudoOp, MVT::i64, MVT::Other,
+                               {CurDAG->getTargetConstant(PReg, DL, MVT::i32),
+                                N->getOperand(0)});
+          return true;
+        }
         return false;
       }
     }
@@ -4393,8 +4406,28 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
     else
       Imm = AArch64SysReg::parseGenericRegister(RegString->getString());
 
-    if (Imm == -1)
+    if (Imm == -1) {
+      // Used by the MSVC __setReg/__setRegFp intrinsics. Copy the value into
+      // the physical register and keep it live with a FAKE_USE so the write is
+      // not dead-eliminated. (getRegisterByName rejects allocatable registers,
+      // so the generic write path cannot handle these.)
+      Register PReg = Subtarget->getTargetLowering()->matchRegisterName(
+          RegString->getString());
+      bool IsGPR = AArch64::GPR64RegClass.contains(PReg);
+      bool IsFPR = AArch64::FPR64RegClass.contains(PReg);
+      if (!WriteIs128Bit && (IsGPR || IsFPR) &&
+          N->getOperand(2).getValueType() == MVT::i64) {
+        SDValue Copy =
+            CurDAG->getCopyToReg(N->getOperand(0), DL, PReg, N->getOperand(2));
+        SDValue RegOp = CurDAG->getRegister(PReg, MVT::i64);
+        SDNode *FakeUse = CurDAG->getMachineNode(TargetOpcode::FAKE_USE, DL,
+                                                 MVT::Other, {RegOp, Copy});
+        ReplaceUses(SDValue(N, 0), SDValue(FakeUse, 0));
+        CurDAG->RemoveDeadNode(N);
+        return true;
+      }
       return false;
+    }
   }
 
   SDValue InChain = N->getOperand(0);
@@ -7682,6 +7715,13 @@ static EVT getPackedVectorTypeFromPredicateType(LLVMContext &Ctx, EVT PredVT,
   return MemVT;
 }
 
+/// Builds an integer vector type large enough to hold \p NumVec instances
+/// of \p VecVT.
+static EVT getMultipleVectorType(LLVMContext &Ctx, EVT VecVT, unsigned NumVec) {
+  return EVT::getVectorVT(Ctx, VecVT.getScalarType().changeTypeToInteger(),
+                          VecVT.getVectorElementCount() * NumVec);
+}
+
 /// Return the EVT of the data associated to a memory operation in \p
 /// Root. If such EVT cannot be retrieved, it returns an invalid EVT.
 static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
@@ -7756,6 +7796,22 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
   case Intrinsic::aarch64_sve_st4q:
     return getPackedVectorTypeFromPredicateType(
         Ctx, Root->getOperand(6)->getValueType(0), /*NumVec=*/4);
+  case Intrinsic::aarch64_sve_ld1_pn_x2:
+  case Intrinsic::aarch64_sve_ldnt1_pn_x2:
+    return getMultipleVectorType(Ctx, Root->getValueType(0),
+                                 /*NumVec=*/2);
+  case Intrinsic::aarch64_sve_ld1_pn_x4:
+  case Intrinsic::aarch64_sve_ldnt1_pn_x4:
+    return getMultipleVectorType(Ctx, Root->getValueType(0),
+                                 /*NumVec=*/4);
+  case Intrinsic::aarch64_sve_st1_pn_x2:
+  case Intrinsic::aarch64_sve_stnt1_pn_x2:
+    return getMultipleVectorType(Ctx, Root->getOperand(2).getValueType(),
+                                 /*NumVec=*/2);
+  case Intrinsic::aarch64_sve_st1_pn_x4:
+  case Intrinsic::aarch64_sve_stnt1_pn_x4:
+    return getMultipleVectorType(Ctx, Root->getOperand(2).getValueType(),
+                                 /*NumVec=*/4);
   case Intrinsic::aarch64_sve_ld1udq:
   case Intrinsic::aarch64_sve_st1dq:
     return EVT(MVT::nxv1i64);

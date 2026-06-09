@@ -26,6 +26,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instruction.h"
@@ -3306,20 +3307,20 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                             CI->getArgOperand(2), Aligned);
   } else if (Name.starts_with("avx512.mask.expand.load.")) {
     auto *ResultTy = cast<FixedVectorType>(CI->getType());
+    auto *PtrTy = CI->getOperand(0)->getType();
     Value *MaskVec = getX86MaskVec(Builder, CI->getArgOperand(2),
                                    ResultTy->getNumElements());
-
     Rep = Builder.CreateIntrinsic(
-        Intrinsic::masked_expandload, ResultTy,
+        Intrinsic::masked_expandload, {ResultTy, PtrTy},
         {CI->getOperand(0), MaskVec, CI->getOperand(1)});
   } else if (Name.starts_with("avx512.mask.compress.store.")) {
     auto *ResultTy = cast<VectorType>(CI->getArgOperand(1)->getType());
+    auto *PtrTy = CI->getArgOperand(0)->getType();
     Value *MaskVec =
         getX86MaskVec(Builder, CI->getArgOperand(2),
                       cast<FixedVectorType>(ResultTy)->getNumElements());
-
     Rep = Builder.CreateIntrinsic(
-        Intrinsic::masked_compressstore, ResultTy,
+        Intrinsic::masked_compressstore, {ResultTy, PtrTy},
         {CI->getArgOperand(1), CI->getArgOperand(0), MaskVec});
   } else if (Name.starts_with("avx512.mask.compress.") ||
              Name.starts_with("avx512.mask.expand.")) {
@@ -6353,6 +6354,50 @@ bool llvm::UpgradeModuleFlags(Module &M) {
                     ConstantInt::get(Int8Ty, SwiftMajorVersion));
     M.addModuleFlag(Module::Error, "Swift Minor Version",
                     ConstantInt::get(Int8Ty, SwiftMinorVersion));
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+bool llvm::UpgradeCFIFunctionsMetadata(Module &M) {
+  NamedMDNode *CFIConsts = M.getNamedMetadata("cfi.functions");
+  // If this metadata has operands, we expect all of them to be either from
+  // before or from after the format change handled here, so we can bail out
+  // fast if the first (if any) operands is of the new format.
+  auto MatchesVersion = [](const MDNode *Op) {
+    return Op->getNumOperands() >= 3 &&
+           isa<ConstantAsMetadata>(Op->getOperand(2)) &&
+           cast<ConstantAsMetadata>(Op->getOperand(2))
+               ->getType()
+               ->isIntegerTy(64);
+  };
+
+  if (!CFIConsts || !CFIConsts->getNumOperands() ||
+      MatchesVersion(CFIConsts->getOperand(0)))
+    return false;
+
+  bool Changed = false;
+  for (unsigned I = 0, E = CFIConsts->getNumOperands(); I != E; ++I) {
+    MDNode *Op = CFIConsts->getOperand(I);
+    assert(!MatchesVersion(Op) && "Unexpected mix of CFIConstant formats");
+    assert(Op->getNumOperands() >= 2 &&
+           "Expected at least 2 operands - name and linkage type");
+    MDString *NameMD = dyn_cast<MDString>(Op->getOperand(0));
+    StringRef Name = NameMD->getString();
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(Name));
+
+    SmallVector<Metadata *, 4> Elts;
+    Elts.push_back(Op->getOperand(0));
+    Elts.push_back(Op->getOperand(1));
+    Elts.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt64Ty(M.getContext()), GUID)));
+
+    for (unsigned J = 2, EJ = Op->getNumOperands(); J != EJ; ++J)
+      Elts.push_back(Op->getOperand(J));
+
+    CFIConsts->setOperand(I, MDNode::get(M.getContext(), Elts));
     Changed = true;
   }
 

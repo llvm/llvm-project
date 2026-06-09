@@ -28,6 +28,14 @@
 using namespace llvm;
 
 namespace {
+
+// A real instruction is a non-meta, non-pseudo instruction. Calls (including
+// call pseudos like tail-call returns) are also treated as real because they
+// expand to a branch and any preceding call probe must be preserved.
+static bool isCallOrRealInstruction(const MachineInstr &MI) {
+  return MI.isCall() || (!MI.isPseudo() && !MI.isMetaInstruction());
+}
+
 class PseudoProbeInserter : public MachineFunctionPass {
 public:
   static char ID;
@@ -54,7 +62,9 @@ public:
     for (MachineBasicBlock &MBB : MF) {
       MachineInstr *FirstInstr = nullptr;
       for (MachineInstr &MI : MBB) {
-        if (!MI.isPseudo())
+        // Pseudo instructions like TCRETURNdi results in a branch instruction
+        // and the call probe for that tail call should be preserved.
+        if (isCallOrRealInstruction(MI))
           FirstInstr = &MI;
         if (MI.isCall()) {
           if (DILocation *DL = MI.getDebugLoc()) {
@@ -90,8 +100,10 @@ public:
         auto MII = MBB.rbegin();
         while (MII != MBB.rend()) {
           // Skip all pseudo probes followed by a real instruction since they
-          // are not dangling.
-          if (!MII->isPseudo())
+          // are not dangling. Treat call pseudos (e.g. tail-call returns)
+          // as real instructions to keep this consistent with the forward
+          // scan above.
+          if (isCallOrRealInstruction(*MII))
             break;
           auto Cur = MII++;
           if (Cur->getOpcode() != TargetOpcode::PSEUDO_PROBE)
