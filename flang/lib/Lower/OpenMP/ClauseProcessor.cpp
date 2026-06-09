@@ -341,6 +341,13 @@ static mlir::Value buildIteratedMapEntry(
       });
 }
 
+static void
+iteratorMemberMapNotSupported(mlir::Location loc, const omp::Object &object,
+                              Fortran::semantics::SemanticsContext &semaCtx) {
+  if (getBaseObject(object, semaCtx))
+    TODO(loc, "iterator modifier with derived type member map");
+}
+
 template <typename ClauseTuple>
 static void collectIteratorIVs(
     const ClauseTuple &clause, Fortran::lower::AbstractConverter &converter,
@@ -2018,6 +2025,8 @@ bool ClauseProcessor::processMap(
 
       for (const omp::Object &object : objects) {
         if (hasIteratorIVReference(object, ivSyms)) {
+          if (directive != llvm::omp::Directive::OMPD_unknown)
+            iteratorMemberMapNotSupported(clauseLocation, object, semaCtx);
           result.mapIterated.push_back(buildIteratedMapEntry(
               converter, semaCtx, clauseLocation, iteratorRanges, object,
               mapperIdName, mapTypeBits, directive));
@@ -2071,6 +2080,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
 
       for (const omp::Object &object : objects) {
         if (hasIteratorIVReference(object, ivSyms)) {
+          iteratorMemberMapNotSupported(clauseLocation, object, semaCtx);
           result.mapIterated.push_back(buildIteratedMapEntry(
               converter, semaCtx, clauseLocation, iteratorRanges, object,
               mapperIdName, mapTypeBits,
