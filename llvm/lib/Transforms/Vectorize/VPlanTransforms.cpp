@@ -4210,31 +4210,37 @@ struct EarlyExitInfo {
 
 /// Update \p Plan to mask memory operations in the loop based on whether the
 /// early exit is taken or not.
-//
-// We're currently expecting to find a loop with properties similar to the
-// following C code:
-//
-//   #define N 10000
-//   int cond[N];
-//   int src[N];
-//   int dst[N];
-//
-//   void foo(int threshold) {
-//     for (int i=0; i<N; ++i) {
-//       if (cond[i] > threshold)
-//         break;
-//       dst[i] = src[i] + 42;
-//     }
-//   }
-//
-// The loop must have a single unconditional load contributing to the
-// uncountable exit comparison, and the other term must be loop-invariant.
-// There must also be a counted exit. Other memory operations in the loop can
-// take place before or after the uncountable exit, but must also be
-// unconditional. All potential accesses to the memory used for the load for the
-// exit condition must be guaranteed to be dereferenceable. Any stores within
-// the loop must not alias with any other memory operations.
-//
+///
+/// We're currently expecting to find a loop with properties similar to the
+/// following:
+///
+/// for.body:
+///   ir<%indvars.iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<%0>
+///   EMIT ir<%arrayidx> = getelementptr inbounds nuw ir<@c>, ir<%indvars.iv>
+///   EMIT-SCALAR ir<%0> = load ir<%arrayidx>
+///   EMIT ir<%cmp1> = icmp sgt ir<%0>, ir<5>
+///   EMIT branch-on-cond ir<%cmp1>
+/// Successor(s): ir-bb<cleanup>, if.end
+///
+/// if.end:
+///   EMIT ir<%arrayidx3> = getelementptr inbounds nuw ir<@src>, ir<%indvars.iv>
+///   EMIT-SCALAR ir<%1> = load ir<%arrayidx3>
+///   EMIT ir<%add> = add nsw ir<%1>, ir<42>
+///   EMIT ir<%arrayidx5> = getelementptr inbounds nuw ir<@dst>, ir<%indvars.iv>
+///   EMIT store ir<%add>, ir<%arrayidx5>
+///   EMIT ir<%indvars.iv.next> = add nuw nsw ir<%indvars.iv>, ir<1>
+///   EMIT ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<10000>
+///   EMIT branch-on-cond ir<%exitcond.not>
+/// Successor(s): middle.block, for.body
+///
+/// The loop must have a single unconditional load contributing to the
+/// uncountable exit comparison, and the other term must be loop-invariant.
+/// There must also be a counted exit. Other memory operations in the loop can
+/// take place before or after the uncountable exit, but must also be
+/// unconditional. All potential accesses to the memory used for the load for
+/// the exit condition must be guaranteed to be dereferenceable. Any stores
+/// within the loop must not alias with any other memory operations.
+///
 static bool handleUncountableExitsWithSideEffects(
     VPlan &Plan, SmallVectorImpl<EarlyExitInfo> &Exits,
     VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
