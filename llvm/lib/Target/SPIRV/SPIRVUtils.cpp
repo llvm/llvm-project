@@ -883,6 +883,38 @@ bool sortBlocks(Function &F) {
   return Modified;
 }
 
+AllocaInst *createVariable(Function &F, Type *Type,
+                           BasicBlock::iterator Position) {
+  const DataLayout &DL = F.getDataLayout();
+  return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
+                        Position);
+}
+
+Value *
+createExitVariable(BasicBlock *BB,
+                   const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
+  auto *T = BB->getTerminator();
+  if (isa<ReturnInst>(T))
+    return nullptr;
+  if (auto *BI = dyn_cast<UncondBrInst>(T))
+    return TargetToValue.lookup(BI->getSuccessor());
+
+  IRBuilder<> Builder(BB);
+  Builder.SetInsertPoint(T);
+
+  if (auto *BI = dyn_cast<CondBrInst>(T)) {
+    Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
+    Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
+
+    if (LHS == nullptr || RHS == nullptr)
+      return LHS == nullptr ? RHS : LHS;
+    return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
+  }
+
+  // TODO: add support for switch cases.
+  llvm_unreachable("Unhandled terminator type.");
+}
+
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
   MachineInstr *MaybeDef = MRI.getVRegDef(Reg);
   if (MaybeDef && MaybeDef->getOpcode() == SPIRV::ASSIGN_TYPE)

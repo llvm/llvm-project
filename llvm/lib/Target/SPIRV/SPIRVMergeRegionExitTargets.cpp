@@ -32,40 +32,6 @@ using namespace llvm;
 
 namespace {
 
-/// Create a value in BB set to the value associated with the branch the block
-/// terminator will take.
-static llvm::Value *
-createExitVariable(BasicBlock *BB,
-                   const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
-  auto *T = BB->getTerminator();
-  if (isa<ReturnInst>(T))
-    return nullptr;
-  if (auto *BI = dyn_cast<UncondBrInst>(T))
-    return TargetToValue.lookup(BI->getSuccessor());
-
-  IRBuilder<> Builder(BB);
-  Builder.SetInsertPoint(T);
-
-  if (auto *BI = dyn_cast<CondBrInst>(T)) {
-    Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
-    Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
-
-    if (LHS == nullptr || RHS == nullptr)
-      return LHS == nullptr ? RHS : LHS;
-    return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
-  }
-
-  // TODO: add support for switch cases.
-  llvm_unreachable("Unhandled terminator type.");
-}
-
-static AllocaInst *createVariable(Function &F, Type *Type,
-                                  BasicBlock::iterator Position) {
-  const DataLayout &DL = F.getDataLayout();
-  return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
-                        Position);
-}
-
 // Run the pass on the given convergence region, ignoring the sub-regions.
 // Returns true if the CFG changed, false otherwise.
 static bool runOnConvergenceRegionNoRecurse(LoopInfo &LI,
