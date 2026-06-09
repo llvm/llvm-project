@@ -200,6 +200,9 @@ public:
   }
 
   static bool shouldFoldFNegIntoSrc(SDNode *FNeg, SDValue FNegSrc);
+  /// \return true if select(fneg \p LHS, fneg \p RHS) is preferable to
+  /// fneg(select).
+  bool shouldFoldFNegIntoSelect(SDValue Res, SDValue LHS, SDValue RHS) const;
   static bool allUsesHaveSourceMods(const SDNode *N,
                                     unsigned CostThreshold = 4);
   bool isFAbsFree(EVT VT) const override;

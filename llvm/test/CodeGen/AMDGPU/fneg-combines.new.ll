@@ -1559,10 +1559,9 @@ define float @v_fneg_inv2pi_minimum_f32(float %a) #0 {
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_min_f32_e32 v1, 0.15915494, v0
-; VI-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; VI-NEXT:    v_mov_b32_e32 v2, 0xffc00000
 ; VI-NEXT:    v_cmp_o_f32_e32 vcc, v0, v0
-; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; VI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v2, -v1, vcc
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %min = call float @llvm.minimum.f32(float 0x3FC45F3060000000, float %a)
   %fneg = fneg float %min

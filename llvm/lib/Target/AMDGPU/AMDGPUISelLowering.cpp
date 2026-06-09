@@ -5070,13 +5070,19 @@ AMDGPUTargetLowering::foldFreeOpFromSelect(TargetLowering::DAGCombinerInfo &DCI,
   SDValue RHS = N.getOperand(2);
 
   EVT VT = N.getValueType();
-  if ((LHS.getOpcode() == ISD::FABS && RHS.getOpcode() == ISD::FABS) ||
-      (LHS.getOpcode() == ISD::FNEG && RHS.getOpcode() == ISD::FNEG)) {
+  if (LHS.getOpcode() == ISD::FNEG && RHS.getOpcode() == ISD::FNEG) {
+    if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode(), 0) &&
+        shouldFoldFNegIntoSelect(N, LHS.getOperand(0), RHS.getOperand(0)))
+      return SDValue();
+
+    return distributeOpThroughSelect(DCI, ISD::FNEG, SDLoc(N), Cond, LHS, RHS);
+  }
+
+  if (LHS.getOpcode() == ISD::FABS && RHS.getOpcode() == ISD::FABS) {
     if (!AMDGPUTargetLowering::allUsesHaveSourceMods(N.getNode()))
       return SDValue();
 
-    return distributeOpThroughSelect(DCI, LHS.getOpcode(),
-                                     SDLoc(N), Cond, LHS, RHS);
+    return distributeOpThroughSelect(DCI, ISD::FABS, SDLoc(N), Cond, LHS, RHS);
   }
 
   bool Inv = false;
@@ -5266,6 +5272,21 @@ bool AMDGPUTargetLowering::shouldFoldFNegIntoSrc(SDNode *N, SDValue N0) {
   }
 
   return true;
+}
+
+bool AMDGPUTargetLowering::shouldFoldFNegIntoSelect(SDValue Res, SDValue LHS,
+                                                    SDValue RHS) const {
+  if (!selectSupportsSourceMods(Res.getNode()))
+    return false;
+
+  // If the fneg already folds into all its users for free, leave it there
+  // (only relevant when Res is the fneg, i.e. the push-in).
+  if (Res.getOpcode() == ISD::FNEG && allUsesHaveSourceMods(Res.getNode()))
+    return false;
+
+  // Negating a value is free (a source modifier); decline only for a constant
+  // whose negation is not an inline immediate (e.g. +0.0 -> -0.0).
+  return !isConstantCostlierToNegate(LHS) && !isConstantCostlierToNegate(RHS);
 }
 
 SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
@@ -5468,8 +5489,16 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   }
   case ISD::SELECT: {
     // fneg (select c, a, b) -> select c, (fneg a), (fneg b)
-    // TODO: Invert conditions of foldFreeOpFromSelect
-    return SDValue();
+    if (!shouldFoldFNegIntoSelect(SDValue(N, 0), N0.getOperand(1),
+                                  N0.getOperand(2)))
+      return SDValue();
+
+    SDValue NegT =
+        DAG.getNode(ISD::FNEG, SL, VT, N0.getOperand(1), N->getFlags());
+    SDValue NegF =
+        DAG.getNode(ISD::FNEG, SL, VT, N0.getOperand(2), N->getFlags());
+    return DAG.getNode(ISD::SELECT, SL, VT, N0.getOperand(0), NegT, NegF,
+                       N0->getFlags());
   }
   case ISD::BITCAST: {
     SDLoc SL(N);
