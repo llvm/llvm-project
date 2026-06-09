@@ -266,26 +266,31 @@ struct LayoutInfoLattice : public Lattice<LayoutInfo> {
 /// Helper Function to get the default layout for uniform values like constants.
 /// For 1D vector, lane_layout is [subgroupSize] and lane_data is [1].
 /// For 2D vector, lane_layout is [1, subgroupSize] and lane_data is [1, 1].
+/// For ND vector (N>2), leading dims get unit lane_layout and lane_data.
 static LayoutInfo getDefaultSIMTLayoutInfo(mlir::MLIRContext *ctx,
                                            unsigned rank,
                                            const xegpu::uArch::uArch *uArch) {
-  assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
+  assert(rank >= 1 && "Expected at least 1D vector.");
   if (rank == 1) {
     return LayoutInfo(
         xegpu::LayoutAttr::get(ctx, {uArch->getSubgroupSize()}, {1}));
   }
-  return LayoutInfo(
-      xegpu::LayoutAttr::get(ctx, {1, uArch->getSubgroupSize()}, {1, 1}));
+  // For rank >= 2, lane_layout is [1, ..., 1, subgroupSize] and
+  // lane_data is [1, ..., 1, 1].
+  SmallVector<int32_t> laneLayout(rank, 1);
+  SmallVector<int32_t> laneData(rank, 1);
+  laneLayout[rank - 1] = uArch->getSubgroupSize();
+  return LayoutInfo(xegpu::LayoutAttr::get(ctx, laneLayout, laneData));
 }
 
 /// Helper to get the default layout for 2D block operations.
+/// For ND (N>2) types, leading dimensions get unit layout/data values.
 template <typename Ty>
 static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
                                            const xegpu::uArch::uArch *uArch,
                                            unsigned packingSize) {
-  // Expecting a 1D or 2D vector.
-  assert((ty.getRank() == 1 || ty.getRank() == 2) &&
-         "Expected 1D or 2D vector.");
+  // Expecting at least 1D.
+  assert(ty.getRank() >= 1 && "Expected at least 1D vector.");
   // Expecting int or float element type.
   assert(ty.getElementType().isIntOrFloat() &&
          "Expected int or float element type.");
@@ -295,8 +300,14 @@ static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
   // Packing factor is determined by the element type bitwidth.
   unsigned bitwidth = ty.getElementType().getIntOrFloatBitWidth();
   int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  return LayoutInfo(xegpu::LayoutAttr::get(
-      ty.getContext(), {1, uArch->getSubgroupSize()}, {1, packingFactor}));
+  // For rank >= 2, distribute along the last dimension with leading units.
+  unsigned rank = ty.getRank();
+  SmallVector<int32_t> laneLayout(rank, 1);
+  SmallVector<int32_t> laneData(rank, 1);
+  laneLayout[rank - 1] = uArch->getSubgroupSize();
+  laneData[rank - 1] = packingFactor;
+  return LayoutInfo(
+      xegpu::LayoutAttr::get(ty.getContext(), laneLayout, laneData));
 }
 
 //===----------------------------------------------------------------------===//
@@ -969,21 +980,24 @@ void LayoutInfoPropagation::visitStoreNdOp(
     if (!blockWHC)
       store.emitWarning("No known block params found for the element type.");
     auto [bWidth, bHeight, bCount] = blockWHC.value();
-    SmallVector<int> instData;
+    // Default to 1 for any leading batch dims; rank-1 and rank>=2 cases
+    // overwrite the trailing entries below.
+    SmallVector<int> instData(dataTy.getRank(), 1);
     int instWidth = xegpu::getLargestDivisor(
         static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth);
     if (instWidth == -1)
       store.emitWarning(
           "No suitable instruction multiple found for the given shape.");
-    if (dataTy.getRank() == 1)
+    if (dataTy.getRank() == 1) {
       instData = {instWidth};
-    else {
+    } else {
       int instHeight = xegpu::getLargestDivisor(
           static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 2)), bHeight);
       if (instHeight == -1)
         store.emitWarning(
             "No suitable instruction multiple found for the given shape.");
-      instData = {instHeight, instWidth};
+      instData[dataTy.getRank() - 2] = instHeight;
+      instData[dataTy.getRank() - 1] = instWidth;
     }
 
     if (layoutKind == xegpu::LayoutKind::InstData)
@@ -1323,7 +1337,6 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
   }
 }
 
-// Store matrix is a flavor of scattered store for 2D shapes.
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
@@ -1567,6 +1580,26 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   if (consumerLayout.isEqualTo(producerLayout))
     return success();
 
+  // If the producer is trivially rematerializable (e.g. `vector.step`, splat
+  // `arith.constant`), clone it and stamp the consumer's expected layout on
+  // the clone instead of inserting a `xegpu.convert_layout`. The convert
+  // would otherwise lower to a cross-subgroup data movement through SLM at
+  // WG-to-SG distribution time, which is more expensive than
+  // recomputing a pure value generator.
+  if (auto *producerOp = vectorValue.getDefiningOp();
+      producerOp && producerOp->getNumResults() == 1 &&
+      isa<OpResult>(vectorValue) &&
+      xegpu::isTriviallyRematerializable(producerOp)) {
+    builder.setInsertionPointAfter(producerOp);
+    Operation *clone = builder.clone(*producerOp);
+    OpResult cloneResult = clone->getResult(0);
+    // Drop the inherited producer layout so the new layout takes effect
+    xegpu::removeLayoutAttr(cloneResult);
+    xegpu::setDistributeLayoutAttr(cloneResult, consumerLayout);
+    operand.set(cloneResult);
+    return success();
+  }
+
   // Insert a convert_layout op to resolve the conflict.
   builder.setInsertionPointAfterValue(vectorValue);
   auto convertOp = xegpu::ConvertLayoutOp::create(
@@ -1696,8 +1729,6 @@ updateControlFlowOps(mlir::OpBuilder &builder,
       // We only need to operate on tensor descriptor or vector types.
       if (!isa<xegpu::TensorDescType, VectorType>(inputType))
         continue;
-      xegpu::DistributeLayoutAttr successorInputLayout =
-          getLayoutOfValue(successorInput);
       xegpu::DistributeLayoutAttr successorOperandLayout =
           getLayoutOfValue(successorOperand->get());
 
@@ -1706,15 +1737,6 @@ updateControlFlowOps(mlir::OpBuilder &builder,
         LLVM_DEBUG(DBGS() << "No layout assigned for forwarded operand in "
                              "branch terminator: "
                           << successorOperand->get() << "\n");
-        return failure();
-      }
-      // We expect the layouts to match.
-      if (successorInputLayout &&
-          successorInputLayout != successorOperandLayout) {
-        LLVM_DEBUG(DBGS() << "Conflicting layouts for region argument and "
-                             "operand forwarded as the argument: "
-                          << successorInputLayout << " vs "
-                          << successorOperandLayout << "\n");
         return failure();
       }
       // Get tensor descriptor type with the layout.
@@ -1795,7 +1817,8 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
     return success();
   }
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
-  auto getXeGPULayoutForValue = [&](Value val) -> xegpu::DistributeLayoutAttr {
+  auto getLayoutFromPropagation =
+      [&](Value val) -> xegpu::DistributeLayoutAttr {
     LayoutInfo layout = analysis.getLayoutInfo(val);
     if (auto opResult = dyn_cast<OpResult>(val)) {
       Operation *defOp = opResult.getDefiningOp();
@@ -1826,14 +1849,18 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
       TypeSwitch<Operation *>(&op)
           .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
             r = updateControlFlowOps(builder, branchTermOp,
-                                     getXeGPULayoutForValue);
+                                     getLayoutFromPropagation);
+          })
+          .Case([&](mlir::RegionBranchOpInterface branchOp) {
+            r = xegpu::propagateRegionArgsToInits(branchOp,
+                                                  getLayoutFromPropagation);
           })
           .Case([&](mlir::FunctionOpInterface funcOp) {
             r = updateFunctionOpInterface(builder, funcOp,
-                                          getXeGPULayoutForValue);
+                                          getLayoutFromPropagation);
           })
           .Default([&](Operation *op) {
-            r = updateOp(builder, op, getXeGPULayoutForValue);
+            r = updateOp(builder, op, getLayoutFromPropagation);
           });
       if (failed(r)) {
         op.emitError("Failed to update operation with the layout.");

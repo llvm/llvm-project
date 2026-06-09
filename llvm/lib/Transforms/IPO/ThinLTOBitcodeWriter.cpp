@@ -436,6 +436,11 @@ void splitAndWriteThinLTOBitcode(
       Linkage = CFL_Declaration;
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt8Ty(Ctx), Linkage)));
+    // TODO: use F->getGUID() once #184065 is relanded.
+    GlobalValue::GUID GUID = GlobalValue::getGUIDAssumingExternalLinkage(
+        GlobalValue::dropLLVMManglingEscape(V->getName()));
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
     append_range(Elts, Types);
     CfiFunctionMDs.push_back(MDTuple::get(Ctx, Elts));
   }

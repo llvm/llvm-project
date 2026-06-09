@@ -131,22 +131,13 @@ static void hoistAllocaOutOfCleanupScope(CIRGenFunction &cgf, Address addr,
   if (!alloca)
     return;
 
-  // If the alloca is not contained within a cleanup scope or the cleanup scope
-  // containing the alloca is not the cleanup scope we're currently proccessing
-  // we don't need to hoist it.
-  if (alloca->getParentOfType<cir::CleanupScopeOp>() != scope) {
-    // It shouldn't be possible to get here with a nested cleanup scope.
-    assert(![&]() {
-      auto cur = alloca->getParentOfType<cir::CleanupScopeOp>();
-      while (cur) {
-        if (cur == scope)
-          return true;
-        cur = cur->getParentOfType<cir::CleanupScopeOp>();
-      }
-      return false;
-    }() && "alloca is nested within the current cleanup scope");
+  // If the alloca is not contained within the cleanup scope we're currently
+  // proccessing we don't need to hoist it.
+  auto cur = alloca->getParentOfType<cir::CleanupScopeOp>();
+  while (cur && cur != scope)
+    cur = cur->getParentOfType<cir::CleanupScopeOp>();
+  if (cur != scope)
     return;
-  }
 
   // Place the alloca at the canonical alloca insertion point of the block
   // containing the cleanup scope op, so it groups with any preceding
@@ -207,9 +198,10 @@ void CIRGenFunction::FullExprCleanupScope::exit(
     cgf.builder.createStore(val.getLoc(), val, temp);
   }
 
-  // Pop any EH and lifetime-extended cleanups that were pushed during
-  // the expression (e.g. temporary destructors).
-  cleanups.forceCleanup();
+  // Pop any EH cleanups that were pushed during the expression but leave
+  // any lifetime-extended cleanups so that they can be promoted to the EH
+  // stack after we've finished emitting any deferred cleanups.
+  cleanups.forceCleanupExceptLifetimeExtended();
 
   // Make sure the cleanup scope body region has a terminator.
   {
@@ -273,6 +265,12 @@ void CIRGenFunction::FullExprCleanupScope::exit(
 
   cgf.deferredConditionalCleanupStack.truncate(oldSize);
   cgf.builder.setInsertionPointAfter(scope);
+
+  // Promote any lifetime-extended cleanups onto the EH scope stack. The new
+  // cir.cleanup.scope ops created here will wrap any code in the enclosing
+  // scope, including reloads of any spilled values below, so the
+  // lifetime-extended destructors run at the correct point.
+  cleanups.forceLifetimeExtendedCleanups();
 
   // Reload spilled values now that the builder is after the closed scope.
   for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
@@ -422,7 +420,12 @@ void EHScopeStack::popCleanup() {
       cir::YieldOp::create(cgf->getBuilder(),
                            cgf->getBuilder().getUnknownLoc());
     }
-    cgf->getBuilder().setInsertionPointAfter(cleanupScope);
+    // If the insertion point was inside the cleanup scope we just closed, move
+    // it to immediate after the scope.
+    mlir::Block *insertBlock = cgf->getBuilder().getInsertionBlock();
+    if (insertBlock &&
+        cleanupScope.getBodyRegion().findAncestorBlockInRegion(*insertBlock))
+      cgf->getBuilder().setInsertionPointAfter(cleanupScope);
   }
 
   // Destroy the cleanup.

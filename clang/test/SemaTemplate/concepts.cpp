@@ -1567,12 +1567,9 @@ template<generic_range_value<[]<
    >() {}> T>
 void x() {}
 
-// FIXME: Crashes because it produces a template type parameter with invalid depth
-#if 0
 void foo() {
   x<vector<int>>();
 }
-#endif
 }
 
 namespace GH162770 {
@@ -1997,3 +1994,11 @@ template <> struct StorageTraits<int> {
 };
 View zbi(GetVmo(string("")));
 }
+
+namespace GH196375 {
+  template <class T, T V> concept Small = V <= 2; // expected-note {{because '4 <= 2' (4 <= 2) evaluated to false}}
+  template <int V> consteval bool f() // expected-note {{candidate template ignored: constraints not satisfied}}
+    requires(Small<int, V>) { return true; } // expected-note {{because 'Small<int, 4>' evaluated to false}}
+  static_assert(f<4>());
+  // expected-error@-1 {{no matching function for call to 'f'}}
+} // namespace GHGH196375

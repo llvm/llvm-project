@@ -34,6 +34,10 @@ class IntBitUtilTemplate : Template<
      "unsigned long int", "unsigned long long int"],
     ["_uc", "_us", "_ui", "_ul", "_ull"]>;
 
+class MemReverse8Template : Template<
+    ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
+    ["u8",      "u16",      "u32",      "u64"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -986,6 +990,19 @@ def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplat
   let Prototype = "T(T, unsigned int)";
 }
 
+def StdcMemReverse8: LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Spellings = ["stdc_memreverse8"];
+  let Attributes = [NoThrow, NonNull<NonOptimizing, [1]>];
+  let Prototype = "void(size_t, unsigned char*)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Template {
+  let Spellings = ["stdc_memreverse8"];
+  let Attributes = [NoThrow, Pure, Const, Constexpr];
+  let Prototype = "T(T)";
+}
+
 
 // Random GCC builtins
 // FIXME: The builtins marked FunctionWithBuiltinPrefix below should be
@@ -1188,6 +1205,12 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__builtin_is_within_lifetime"];
   let Attributes = [NoThrow, CustomTypeChecking, Consteval];
   let Prototype = "bool(void*)";
+}
+
+def ClearPadding : Builtin {
+  let Spellings = ["__builtin_clear_padding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(void*)";
 }
 
 def GetVtablePointer : LangBuiltin<"CXX_LANG"> {
@@ -1802,6 +1825,12 @@ def ElementwiseCtlz : Builtin {
 
 def ElementwiseCttz : Builtin {
   let Spellings = ["__builtin_elementwise_ctzg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseClmul : Builtin {
+  let Spellings = ["__builtin_elementwise_clmul"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }

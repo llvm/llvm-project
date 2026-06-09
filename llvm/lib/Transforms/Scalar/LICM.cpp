@@ -2100,7 +2100,8 @@ bool llvm::promoteLoopAccessesToScalars(
         if (!DereferenceableInPH) {
           DereferenceableInPH = isDereferenceableAndAlignedPointer(
               Store->getPointerOperand(), Store->getValueOperand()->getType(),
-              Store->getAlign(), MDL, Preheader->getTerminator(), AC, DT, TLI);
+              Store->getAlign(),
+              SimplifyQuery(MDL, TLI, DT, AC, Preheader->getTerminator()));
         }
       } else
         continue; // Not a load or store.
@@ -2602,6 +2603,9 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
+  // The new LHS is a different value, so a samesign (or any other
+  // poison-generating) flag asserted about the old operands may no longer hold.
+  ICmp.dropPoisonGeneratingFlags();
 
   Instruction &DeadI = cast<Instruction>(*VariantLHS);
   salvageDebugInfo(DeadI);
@@ -2683,6 +2687,9 @@ static bool hoistSub(ICmpInst::Predicate Pred, Value *VariantLHS,
   ICmp.setPredicate(Pred);
   ICmp.setOperand(0, VariantOp);
   ICmp.setOperand(1, NewCmpOp);
+  // The new LHS is a different value, so a samesign (or any other
+  // poison-generating) flag asserted about the old operands may no longer hold.
+  ICmp.dropPoisonGeneratingFlags();
 
   Instruction &DeadI = cast<Instruction>(*VariantLHS);
   salvageDebugInfo(DeadI);

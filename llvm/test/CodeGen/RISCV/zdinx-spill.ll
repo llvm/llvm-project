@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+zdinx -verify-machineinstrs -stop-after=prologepilog | FileCheck %s -check-prefix=ZDINX
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+zdinx,+zilsd -verify-machineinstrs -stop-after=prologepilog | FileCheck %s -check-prefix=ZDINX-ZILSD
 ; RUN: llc < %s -mtriple=riscv32 -mattr=+zdinx,+zilsd,+unaligned-scalar-mem -verify-machineinstrs -stop-after=prologepilog | FileCheck %s -check-prefix=ZDINX-ZILSD-UNALIGNED
-; RUN: llc < %s -mtriple=riscv32 -mattr=+zdinx,+zilsd,+zilsd-4byte-align -verify-machineinstrs -stop-after=prologepilog | FileCheck %s -check-prefix=ZDINX-ZILSD-4BYTEALIGN
+; RUN: llc < %s -mtriple=riscv32 -mattr=+zdinx,+zilsd,+zilsd-word-align -verify-machineinstrs -stop-after=prologepilog | FileCheck %s -check-prefix=ZDINX-ZILSD-4BYTEALIGN
 
 declare void @bar()
 

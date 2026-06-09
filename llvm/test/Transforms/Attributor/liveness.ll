@@ -154,7 +154,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i32 @dead_block_present(i32 %a, ptr %ptr1) #0 {
 ; TUNIT: Function Attrs: nosync
 ; TUNIT-LABEL: define {{[^@]+}}@dead_block_present
-; TUNIT-SAME: (i32 [[A:%.*]], ptr nofree [[PTR1:%.*]]) #[[ATTR7:[0-9]+]] {
+; TUNIT-SAME: (i32 [[A:%.*]], ptr [[PTR1:%.*]]) #[[ATTR7:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
 ; TUNIT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -170,7 +170,7 @@ define i32 @dead_block_present(i32 %a, ptr %ptr1) #0 {
 ;
 ; CGSCC: Function Attrs: nosync
 ; CGSCC-LABEL: define {{[^@]+}}@dead_block_present
-; CGSCC-SAME: (i32 [[A:%.*]], ptr nofree [[PTR1:%.*]]) #[[ATTR9:[0-9]+]] {
+; CGSCC-SAME: (i32 [[A:%.*]], ptr [[PTR1:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]

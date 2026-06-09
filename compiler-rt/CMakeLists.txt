@@ -322,6 +322,14 @@ option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatom
 
 option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
 
+# Opt-in clang_rt.profile_rocm (built /MD on Windows, depends on the sanitizer
+# interception library). Off by default on all platforms so default builds are
+# unaffected.
+option(COMPILER_RT_BUILD_PROFILE_ROCM
+  "Build the host-side ROCm/HIP device profile collection runtime (clang_rt.profile_rocm)"
+  OFF)
+mark_as_advanced(COMPILER_RT_BUILD_PROFILE_ROCM)
+
 include(config-ix)
 
 #================================
@@ -527,7 +535,7 @@ if(MSVC)
     string(REGEX REPLACE "(^| )/Z[i7I]($| )" " /Z7 "
            "${var_to_update}" "${${var_to_update}}")
   endforeach()
-elseif(APPLE)
+elseif("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES "apple")
   # On Apple platforms use full debug info (i.e. not `-gline-tables-only`)
   # for all build types so that the runtime can be debugged.
   if(NOT COMPILER_RT_HAS_G_FLAG)

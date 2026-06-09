@@ -5,6 +5,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+struct S1 {
+  short x, y, z;
+};
+
 _Atomic int g1;
 _Atomic int g2 = 42;
 // CIR: cir.global external @g2 = #cir.int<42> : !s32i {alignment = 4 : i64}
@@ -82,6 +86,49 @@ void f4(_Atomic(float) *p) {
 
 // OGCG-LABEL: @f4
 // OGCG: store atomic float 3.140000e+00, ptr %{{.+}} seq_cst, align 4
+
+void init_with_padding(_Atomic struct S1 *p) {
+  // CIR-LABEL: @init_with_padding
+  // LLVM-LABEL: @init_with_padding
+  // OGCG-LABEL: @init_with_padding
+
+  __c11_atomic_init(p, (struct S1){1, 2, 3});
+
+  // CIR:      %[[PTR_VOID:.+]] = cir.cast bitcast %[[PTR:.+]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!void>
+  // CIR-NEXT: %[[MEMSET_VALUE:.+]] = cir.const #cir.int<0> : !u8i
+  // CIR-NEXT: %[[MEMSET_SIZE:.+]] = cir.const #cir.int<8> : !u64i
+  // CIR-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[PTR_VOID]] align(8) to %[[MEMSET_VALUE]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR-NEXT: %[[VALUE_PTR:.+]] = cir.get_member %[[PTR]][0] {name = "value"} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_S1>
+  // CIR-NEXT: %[[X_PTR:.+]] = cir.get_member %[[VALUE_PTR]][0] {name = "x"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %[[X_INIT:.+]] = cir.const #cir.int<1> : !s16i
+  // CIR-NEXT: cir.store align(8) %[[X_INIT]], %[[X_PTR]] : !s16i, !cir.ptr<!s16i>
+  // CIR-NEXT: %[[Y_PTR:.+]] = cir.get_member %[[VALUE_PTR]][1] {name = "y"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %[[Y_INIT:.+]] = cir.const #cir.int<2> : !s16i
+  // CIR-NEXT: cir.store align(2) %[[Y_INIT]], %[[Y_PTR]] : !s16i, !cir.ptr<!s16i>
+  // CIR-NEXT: %[[Z_PTR:.+]] = cir.get_member %[[VALUE_PTR]][2] {name = "z"} : !cir.ptr<!rec_S1> -> !cir.ptr<!s16i>
+  // CIR-NEXT: %[[Z_INIT:.+]] = cir.const #cir.int<3> : !s16i
+  // CIR-NEXT: cir.store align(4) %[[Z_INIT]], %[[Z_PTR]] : !s16i, !cir.ptr<!s16i>
+
+  // LLVM:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // LLVM-NEXT: call void @llvm.memset.p0.i64(ptr align 8 %[[PTR]], i8 0, i64 8, i1 false)
+  // LLVM-NEXT: %[[VALUE_PTR:.+]] = getelementptr inbounds nuw { %struct.S1, [2 x i8] }, ptr %[[PTR]], i32 0, i32 0
+  // LLVM-NEXT: %[[X_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 0
+  // LLVM-NEXT: store i16 1, ptr %[[X_PTR]], align 8
+  // LLVM-NEXT: %[[Y_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 1
+  // LLVM-NEXT: store i16 2, ptr %[[Y_PTR]], align 2
+  // LLVM-NEXT: %[[Z_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 2
+  // LLVM-NEXT: store i16 3, ptr %[[Z_PTR]], align 4
+
+  // OGCG:      %[[PTR:.+]] = load ptr, ptr %{{.+}}, align 8
+  // OGCG-NEXT: call void @llvm.memset.p0.i64(ptr align 8 %[[PTR]], i8 0, i64 8, i1 false)
+  // OGCG-NEXT: %[[VALUE_PTR:.+]] = getelementptr inbounds nuw { %struct.S1, [2 x i8] }, ptr %[[PTR]], i32 0, i32 0
+  // OGCG-NEXT: %[[X_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 0
+  // OGCG-NEXT: store i16 1, ptr %[[X_PTR]], align 8
+  // OGCG-NEXT: %[[Y_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 1
+  // OGCG-NEXT: store i16 2, ptr %[[Y_PTR]], align 2
+  // OGCG-NEXT: %[[Z_PTR:.+]] = getelementptr inbounds nuw %struct.S1, ptr %[[VALUE_PTR]], i32 0, i32 2
+  // OGCG-NEXT: store i16 3, ptr %[[Z_PTR]], align 4
+}
 
 void atomic_to_non_atomic(_Atomic int *ptr, _Atomic volatile int *vptr) {
   // CIR-LABEL: @atomic_to_non_atomic
@@ -598,6 +645,35 @@ void atomic_cmpxchg(int *ptr, int *expected, int *desired, int failure) {
   // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst acquire
   // OGCG: [[SEQ_CST]]:
   // OGCG:   cmpxchg weak ptr %{{.+}}, i32 %{{.+}}, i32 %{{.+}} seq_cst seq_cst
+}
+
+void atomic_cmpxchg_fp_to_int_cast(float *ptr, float *expected, float *desired) {
+  // CIR-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  // LLVM-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  // OGCG-LABEL: @atomic_cmpxchg_fp_to_int_cast
+  
+  __atomic_compare_exchange(ptr, expected, desired, 0, __ATOMIC_SEQ_CST,
+                            __ATOMIC_SEQ_CST);
+  // CIR: %[[PTR_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[EXP_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[DES_CAST:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.float> -> !cir.ptr<!u32i>
+  // CIR: %[[EXP_DEREF:.*]] = cir.load align(4) %[[EXP_CAST]] : !cir.ptr<!u32i>, !u32i
+  // CIR: %[[DES_DEREF:.*]] = cir.load align(4) %[[DES_CAST]] : !cir.ptr<!u32i>, !u32i
+  // CIR: cir.atomic.cmpxchg success(seq_cst) failure(seq_cst) syncscope(system) %[[PTR_CAST]], %[[EXP_DEREF]], %[[DES_DEREF]] align(4) : (!cir.ptr<!u32i>, !u32i, !u32i) -> (!u32i, !cir.bool)
+
+  // LLVM: %[[PTR_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[EXP_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[DES_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // LLVM: %[[EXP_DEREF:.*]] = load i32, ptr %[[EXP_LOAD]]
+  // LLVM: %[[DES_DEREF:.*]] = load i32, ptr %[[DES_LOAD]]
+  // LLVM: cmpxchg ptr %[[PTR_LOAD]], i32 %[[EXP_DEREF]], i32 %[[DES_DEREF]] seq_cst seq_cst, align 4
+
+  // OGCG: %[[PTR_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[EXP_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[DES_LOAD:.*]] = load ptr, ptr %{{.*}}
+  // OGCG: %[[EXP_DEREF:.*]] = load i32, ptr %[[EXP_LOAD]]
+  // OGCG: %[[DES_DEREF:.*]] = load i32, ptr %[[DES_LOAD]]
+  // OGCG: cmpxchg ptr %[[PTR_LOAD]], i32 %[[EXP_DEREF]], i32 %[[DES_DEREF]] seq_cst seq_cst, align 4
 }
 
 void atomic_cmpxchg_n(int *ptr, int *expected, int desired, int failure) {
