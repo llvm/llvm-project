@@ -424,7 +424,7 @@ private:
         }
       }
 
-      // Phase 8: exit the loop is timeout is reached.
+      // Phase 8: exit the loop if timeout is reached.
       if (timeout_flag) {
         // When a timeout triggers, the waiting thread wakes up, unregisters
         // itself from the waiting queue, and exits. However, if the timing-out
