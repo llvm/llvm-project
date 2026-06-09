@@ -383,39 +383,44 @@ ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
   result.m_alignment = extractor.GetU32_unchecked(&cursor);
   result.m_size = extractor.GetU32_unchecked(&cursor);
 
-  process->ReadCStringFromMemory(result.m_name_ptr, result.m_name, error);
-  if (error.Fail())
-    return error.takeError();
+  llvm::SmallVector<std::optional<std::string>> strs =
+      process->ReadCStringsFromMemory({result.m_name_ptr, result.m_type_ptr});
 
-  process->ReadCStringFromMemory(result.m_type_ptr, result.m_type, error);
-  if (error.Fail())
-    return error.takeError();
+  if (!strs[0])
+    return llvm::createStringErrorV(
+        "failed to read ivar_t::m_name_str at address {0:x}",
+        result.m_name_ptr);
+  if (!strs[1])
+    return llvm::createStringErrorV(
+        "failed to read ivar_t::m_type_str at address {0:x}",
+        result.m_type_ptr);
+
+  result.m_name = std::move(*strs[0]);
+  result.m_type = std::move(*strs[1]);
   return result;
 }
 
-llvm::Expected<ClassDescriptorV2::relative_list_entry_t>
-ClassDescriptorV2::relative_list_entry_t::Read(Process *process,
-                                               lldb::addr_t addr) {
+llvm::Expected<llvm::SmallVector<ClassDescriptorV2::relative_list_entry_t>>
+ClassDescriptorV2::ReadRelativeListEntries(Process &process,
+                                           llvm::ArrayRef<lldb::addr_t> addrs) {
   size_t size = sizeof(uint64_t); // m_image_index : 16
                                   // m_list_offset : 48
 
-  DataBufferHeap buffer(size, '\0');
-  Status error;
+  llvm::SmallVector<std::optional<uint64_t>> raw_entries =
+      process.ReadUnsignedIntegersFromMemory(addrs, size);
 
-  process->ReadMemory(addr, buffer.GetBytes(), size, error);
-  if (error.Fail())
-    return llvm::joinErrors(
-        error.takeError(),
-        llvm::createStringErrorV(
-            "Failed to read relative_list_entry_t at address {0:x}", addr));
-
-  DataExtractor extractor(buffer.GetBytes(), size, process->GetByteOrder(),
-                          process->GetAddressByteSize());
-  lldb::offset_t cursor = 0;
-  uint64_t raw_entry = extractor.GetU64_unchecked(&cursor);
-  uint16_t image_index = raw_entry & 0xFFFF;
-  int64_t list_offset = llvm::SignExtend64<48>(raw_entry >> 16);
-  return relative_list_entry_t{image_index, list_offset};
+  llvm::SmallVector<relative_list_entry_t> results;
+  results.reserve(addrs.size());
+  for (auto [addr, maybe_raw] : llvm::zip(addrs, raw_entries)) {
+    if (!maybe_raw)
+      return llvm::createStringErrorV(
+          "Failed to read relative_list_entry_t at address {0:x}", addr);
+    uint64_t raw = *maybe_raw;
+    uint16_t image_index = raw & 0xFFFF;
+    int64_t list_offset = llvm::SignExtend64<48>(raw >> 16);
+    results.push_back(relative_list_entry_t{image_index, list_offset});
+  }
+  return results;
 }
 
 llvm::Expected<ClassDescriptorV2::relative_list_list_t>
@@ -505,18 +510,23 @@ llvm::Error ClassDescriptorV2::ProcessRelativeMethodLists(
   if (!relative_method_lists)
     return relative_method_lists.takeError();
 
-  for (uint32_t i = 0; i < relative_method_lists->m_count; i++) {
-    // 2. Extract the image index and the list offset from the
-    // relative_list_entry_t
-    const lldb::addr_t entry_addr = relative_method_lists->m_first_ptr +
-                                    (i * relative_method_lists->m_entsize);
-    auto entry = relative_list_entry_t::Read(process, entry_addr);
-    if (!entry)
-      return entry.takeError();
+  // 2. Compute the address of every relative_list_entry_t and read them all in
+  // a single batched memory read.
+  auto to_entry_addr = [&](uint64_t idx) {
+    return relative_method_lists->m_first_ptr +
+           (idx * relative_method_lists->m_entsize);
+  };
+  auto entry_addrs = llvm::to_vector(llvm::map_range(
+      llvm::seq<uint64_t>(relative_method_lists->m_count), to_entry_addr));
 
+  auto entries = ReadRelativeListEntries(*process, entry_addrs);
+  if (!entries)
+    return entries.takeError();
+
+  for (auto [entry_addr, entry] : llvm::zip(entry_addrs, *entries)) {
     // 3. Calculate the pointer to the method_list_t from the
     // relative_list_entry_t
-    const lldb::addr_t method_list_addr = entry_addr + entry->m_list_offset;
+    const lldb::addr_t method_list_addr = entry_addr + entry.m_list_offset;
 
     // 4. Get the method_list_t from the pointer
     llvm::Expected<method_list_t> method_list =
@@ -525,10 +535,10 @@ llvm::Error ClassDescriptorV2::ProcessRelativeMethodLists(
       return method_list.takeError();
 
     // 5. Cache the result so we don't need to reconstruct it later.
-    m_image_to_method_lists[entry->m_image_index].emplace_back(*method_list);
+    m_image_to_method_lists[entry.m_image_index].emplace_back(*method_list);
 
     // 6. If the relevant image is loaded, add the methods to the Decl
-    if (!m_runtime.IsSharedCacheImageLoaded(entry->m_image_index))
+    if (!m_runtime.IsSharedCacheImageLoaded(entry.m_image_index))
       continue;
 
     ProcessMethodList(instance_method_func, *method_list);

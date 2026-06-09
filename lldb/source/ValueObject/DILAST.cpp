@@ -13,10 +13,16 @@ namespace lldb_private::dil {
 
 BinaryOpKind GetBinaryOpKindFromToken(Token::Kind token_kind) {
   switch (token_kind) {
-  case Token::plus:
-    return BinaryOpKind::Add;
+  case Token::equal:
+    return BinaryOpKind::Assign;
   case Token::minus:
     return BinaryOpKind::Sub;
+  case Token::minusequal:
+    return BinaryOpKind::SubAssign;
+  case Token::plus:
+    return BinaryOpKind::Add;
+  case Token::plusequal:
+    return BinaryOpKind::AddAssign;
   case Token::star:
     return BinaryOpKind::Mul;
   case Token::slash:

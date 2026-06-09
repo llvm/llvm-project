@@ -10,6 +10,7 @@
 #define LLDB_HOST_COMMON_NATIVETHREADPROTOCOL_H
 
 #include <memory>
+#include <string>
 
 #include "lldb/Host/Debug.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -57,8 +58,15 @@ public:
   }
 
 protected:
+  void ClearStopInfo() {
+    m_stop_info = ThreadStopInfo();
+    m_stop_description.clear();
+  }
+
   NativeProcessProtocol &m_process;
   lldb::tid_t m_tid;
+  ThreadStopInfo m_stop_info = {};
+  std::string m_stop_description;
 };
 }
 

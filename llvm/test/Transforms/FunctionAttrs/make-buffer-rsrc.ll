@@ -8,7 +8,7 @@ target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:3
 define amdgpu_kernel void @test_make_buffer_rsrc(ptr %p, ptr %q) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_make_buffer_rsrc
-; FNATTRS-SAME: (ptr readonly captures(none) [[P:%.*]], ptr writeonly captures(none) [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
+; FNATTRS-SAME: (ptr nofree readonly captures(none) [[P:%.*]], ptr nofree writeonly captures(none) [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FNATTRS-NEXT:    [[P_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[P]], i16 0, i64 4, i32 822243328)
 ; FNATTRS-NEXT:    [[Q_RSRC:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p0(ptr [[Q]], i16 0, i64 4, i32 822243328)
 ; FNATTRS-NEXT:    [[V:%.*]] = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) [[P_RSRC]], i32 0, i32 0, i32 0)

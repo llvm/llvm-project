@@ -117,6 +117,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.imaxdiv_t
+    .llvm-libc-types.wchar_t
     .llvm-libc-macros.inttypes_macros
     .stdint
 )
@@ -714,6 +715,15 @@ add_header_macro(
     .llvm_libc_common_h
 )
 
+add_header_macro(
+  sys_ptrace
+  ../libc/include/sys/ptrace.yaml
+  sys/ptrace.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ptrace_macros
+)
+
 add_header(
   sys_queue
   HDR
@@ -879,7 +889,10 @@ add_header_macro(
     .llvm-libc-types.ssize_t
     .llvm-libc-types.suseconds_t
     .llvm-libc-types.time_t
+    .llvm-libc-types.u_char
+    .llvm-libc-types.u_int32_t
     .llvm-libc-types.uid_t
+    .llvm-libc-types.uint
 )
 
 add_header_macro(

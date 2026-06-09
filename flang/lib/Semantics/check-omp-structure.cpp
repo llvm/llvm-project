@@ -609,9 +609,7 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
       [&](const auto &details) {
         if constexpr (std::is_convertible_v<decltype(details),
                           const WithOmpDeclarative &>) {
-          if (auto *reqs{details.ompRequires()}) {
-            return reqs->test(req);
-          }
+          return details.ompRequires().test(req);
         }
         return false;
       },
@@ -624,7 +622,6 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
   llvm::omp::Clause clauseId{x.Id()};
 
   // Filter out clauses that don't take OmpObjectList.
-  version = std::max(version, 45u);
   auto argType{GetArgumentListItemKind(clauseId, version)};
   if (!argType) {
     return;
@@ -840,7 +837,7 @@ void OmpStructureChecker::CheckMultListItems() {
     for (const auto &ompObject : alignedList.v) {
       if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
         if (name->symbol) {
-          if (FindCommonBlockContaining(*(name->symbol))) {
+          if (name->symbol->has<CommonBlockDetails>()) {
             context_.Say(clause->source,
                 "'%s' is a common block name and can not appear in an "
                 "ALIGNED clause"_err_en_US,
