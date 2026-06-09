@@ -2460,6 +2460,16 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
       if (Kind == 1)
         return std::nullopt;
     }
+    // For Type=1, defer to the runtime path on a true incomplete-array
+    // flexible array member (e.g. 'char fam[]') even when the base is a
+    // concrete local/global. Without this, the bytecode interpreter would
+    // happily fold &af.fam to 'NumElems * elemSize = 0' below; the default
+    // const-evaluator avoids the same trap, and CGBuiltin emits
+    // @llvm.objectsize for the correct layout-derived answer (matching
+    // GCC's __bos/__bdos on '&af.fam').
+    if (Kind == 1 && pointsToLastObject(Ptr) && Ptr.getFieldDesc()->isArray() &&
+        Ptr.getFieldDesc()->getType()->isIncompleteArrayType())
+      return std::nullopt;
   }
 
   // The "closest surrounding subobject" is NOT a base class,
@@ -4957,6 +4967,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
 
   case Builtin::BI__atomic_always_lock_free:
