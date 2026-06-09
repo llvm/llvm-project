@@ -534,3 +534,39 @@ loop:
 exit:
   ret <4 x i32> %outer
 }
+
+; Basic positive case with scalable vectors
+define <vscale x 4 x i32> @hoist_scalable_swap(ptr %base, i32 %inv, i32 %n) {
+; CHECK-LABEL: define <vscale x 4 x i32> @hoist_scalable_swap(
+; CHECK-SAME: ptr [[BASE:%.*]], i32 [[INV:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[OUTER:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INV]], i32 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds i32, ptr [[BASE]], i32 [[IV]]
+; CHECK-NEXT:    [[VARIANT:%.*]] = load i32, ptr [[IDX]], align 4
+; CHECK-NEXT:    [[INNER:%.*]] = insertelement <vscale x 4 x i32> [[OUTER]], i32 [[VARIANT]], i32 0
+; CHECK-NEXT:    store <vscale x 4 x i32> [[INNER]], ptr [[IDX]], align 16
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[IV]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[OUTER_LCSSA:%.*]] = phi <vscale x 4 x i32> [ [[INNER]], %[[LOOP]] ]
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER_LCSSA]]
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = getelementptr inbounds i32, ptr %base, i32 %iv
+  %variant = load i32, ptr %idx, align 4
+  %inner = insertelement <vscale x 4 x i32> poison, i32 %variant, i32 0
+  %outer = insertelement <vscale x 4 x i32> %inner, i32 %inv, i32 1
+  store <vscale x 4 x i32> %outer, ptr %idx
+  %iv.next = add i32 %iv, 1
+  %done = icmp eq i32 %iv, %n
+  br i1 %done, label %exit, label %loop
+exit:
+  ret <vscale x 4 x i32> %outer
+}
