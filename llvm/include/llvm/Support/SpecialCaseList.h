@@ -119,7 +119,7 @@ protected:
   class Section {
   public:
     LLVM_ABI Section(StringRef Name, unsigned FileIdx, bool UseGlobs);
-                          bool UseGlobs);
+    LLVM_ABI Section(Section &&);
     LLVM_ABI ~Section();
 
     // Returns name of the section, its entire string in [].

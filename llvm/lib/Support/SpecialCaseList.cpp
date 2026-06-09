@@ -23,6 +23,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -322,11 +323,14 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
 
 bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
                             std::string &Error) {
+  StringRef Buffer = MB->getBuffer();
   unsigned long long Version = 2;
+  if (Buffer.consume_front("#!special-case-list-v")) {
+    consumeUnsignedInteger(Buffer, 10, Version);
+    Buffer = Buffer.ltrim(" \t\r\n");
+  }
 
-  StringRef Header = MB->getBuffer();
-  if (Header.consume_front("#!special-case-list-v"))
-    consumeUnsignedInteger(Header, 10, Version);
+  CanonicalizePaths = Buffer.consume_front("#!canonical-paths\n");
 
   // In https://reviews.llvm.org/D154014 we added glob support and planned
   // to remove regex support in patterns. We temporarily support the
@@ -344,14 +348,9 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   }
   Section::SectionImpl *CurrentImpl = ErrOrSection.get()->Impl.get();
 
-  // Scan the start of the file for special comments. These don't appear when
-  // iterating below because comment lines are automatically skipped.
-  StringRef Buffer = MB->getBuffer();
-  // behavior using regexes if "#!special-case-list-v1" is the first line of
-  // the file. For more details, see
-  bool UseGlobs = !Buffer.consume_front("#!special-case-list-v1\n");
-  // Specifies that patterns should be matched against canonicalized filepaths.
-  CanonicalizePaths = Buffer.consume_front("#!canonical-paths\n");
+  // This is the current list of prefixes for all existing users matching file
+  // path. We may need parametrization in constructor in future.
+  constexpr StringRef PathPrefixes[] = {"src", "!src", "mainfile", "source"};
 
   for (line_iterator LineIt(*MB, /*SkipBlanks=*/true, /*CommentMarker=*/'#');
        !LineIt.is_at_eof(); LineIt++) {
@@ -415,6 +414,12 @@ bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
 std::pair<unsigned, unsigned>
 SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                 StringRef Query, StringRef Category) const {
+  std::string CanonicalizedQuery;
+  if (CanonicalizePaths && (Prefix == "src" || Prefix == "mainfile")) {
+    CanonicalizedQuery = llvm::sys::path::convert_to_slash(
+        llvm::sys::path::remove_leading_dotslash(Query));
+    Query = CanonicalizedQuery;
+  }
   for (const auto &S : reverse(Sections)) {
     if (S.Impl->SectionMatcher.matchAny(Section)) {
       unsigned Blame = S.getLastMatch(Prefix, Query, Category);
@@ -459,12 +464,8 @@ unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,
   return 0;
 }
 
-  if (CanonicalizePaths && (Prefix == "src" || Prefix == "mainfile")) {
-    return II->getValue().match(llvm::sys::path::convert_to_slash(
-        llvm::sys::path::remove_leading_dotslash(Query)));
-  } else {
-    return II->getValue().match(Query);
-  }
+bool SpecialCaseList::Section::hasPrefix(StringRef Prefix) const {
+  return Impl->Entries.contains(Prefix);
 }
 
 } // namespace llvm
