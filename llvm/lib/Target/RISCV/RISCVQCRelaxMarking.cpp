@@ -71,16 +71,6 @@ FunctionPass *llvm::createRISCVQCRelaxMarkingPass() {
   return new RISCVQCRelaxMarking();
 }
 
-static bool isLoad(const MachineInstr &MI) {
-  return llvm::is_contained(
-      {RISCV::LW, RISCV::LH, RISCV::LHU, RISCV::LB, RISCV::LBU},
-      MI.getOpcode());
-}
-
-static bool isStore(const MachineInstr &MI) {
-  return llvm::is_contained({RISCV::SW, RISCV::SH, RISCV::SB}, MI.getOpcode());
-}
-
 static bool isUImm7LSB000(const MachineOperand &MO) {
   return MO.isImm() && isShiftedUInt<4, 3>(MO.getImm());
 }
@@ -171,7 +161,7 @@ bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
 
       // Looking for QC.E.LI followed by a load or store
       if (MI->getOpcode() != RISCV::QC_E_LI ||
-          !(isLoad(*NextMI) || isStore(*NextMI)))
+          !(RISCVInstrInfo::isBaseLoad(*NextMI) || RISCVInstrInfo::isBaseStore(*NextMI)))
         continue;
 
       LLVM_DEBUG(dbgs() << "Found QC_E_LI " << *MI);
@@ -183,7 +173,7 @@ bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
         continue;
 
       // This is unsafe for stores where the access address is being stored.
-      if (isStore(*NextMI) &&
+      if (RISCVInstrInfo::isBaseStore(*NextMI) &&
           MI->getOperand(0).getReg() == NextMI->getOperand(0).getReg())
         continue;
 
