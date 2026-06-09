@@ -248,6 +248,7 @@ end
 * `ASSIGN` statement, assigned `GO TO`, and assigned format
 * `PAUSE` statement
 * Hollerith literals and edit descriptors
+* Binary logical edit descriptor B (1/0 vs T/F)
 * `NAMELIST` allowed in the execution part
 * Omitted colons on type declaration statements with attributes
 * COMPLEX constructor expression, e.g. `(x+y,z)`

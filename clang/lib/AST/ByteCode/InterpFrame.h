@@ -92,8 +92,10 @@ public:
   /// Returns the current function.
   const Function *getFunction() const { return Func; }
 
+#ifndef NDEBUG
   /// Returns the offset on the stack at which the frame starts.
   size_t getFrameOffset() const { return FrameOffset; }
+#endif
 
   /// Returns the value of a local variable.
   template <typename T> const T &getLocal(unsigned Offset) const {
@@ -127,13 +129,13 @@ public:
   /// Returns a pointer to an argument - lazily creates a block.
   Pointer getParamPointer(unsigned Offset);
 
-  bool hasThisPointer() const { return Func && Func->hasThisPointer(); }
+  bool hasThisPointer() const { return FuncFlags & HasThisFlag; }
 
   /// Returns the 'this' pointer.
   const Pointer &getThis() const {
     assert(hasThisPointer());
     assert(!isBottomFrame());
-    return stackRef<Pointer>(ThisPointerOffset);
+    return stackRef<Pointer>((FuncFlags & HasRVOFlag) ? sizeof(Pointer) : 0);
   }
 
   /// Returns the RVO pointer, if the Function has one.
@@ -169,6 +171,9 @@ public:
   void dump(llvm::raw_ostream &OS, unsigned Indent = 0) const;
 
 private:
+  static constexpr uint8_t HasRVOFlag = 1u << 0u;
+  static constexpr uint8_t HasThisFlag = 1u << 1u;
+
   /// Returns an original argument from the stack.
   template <typename T> const T &stackRef(unsigned Offset) const {
     assert(Args);
@@ -215,19 +220,23 @@ private:
   unsigned Depth;
   /// Reference to the function being executed.
   const Function *Func;
-  /// Offset of the instance pointer. Use with stackRef<>().
-  unsigned ThisPointerOffset;
   /// Return address.
   CodePtr RetPC;
   /// The size of all the arguments.
   const unsigned ArgSize;
   /// Pointer to the arguments in the callee's frame.
   char *Args = nullptr;
+#ifndef NDEBUG
   /// Offset on the stack at entry.
-  const size_t FrameOffset;
+  size_t FrameOffset = 0;
+#endif
 
 public:
   unsigned MSVCConstexprAllowed = 0;
+
+private:
+  /// Relevant flags about the function.
+  uint8_t FuncFlags = 0;
 };
 
 } // namespace interp

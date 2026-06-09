@@ -703,6 +703,7 @@ namespace llvm {
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSADDO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;

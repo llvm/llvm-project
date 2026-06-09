@@ -29,6 +29,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -115,7 +116,7 @@ public:
 
   // Executes the function.
   void operator()(char *Memory) const
-      __attribute__((no_sanitize("cfi-icall"))) /* Incompatible with JIT */ {
+      LLVM_NO_SANITIZE("cfi-icall") /* Incompatible with JIT */ {
     ((void (*)(char *))(uintptr_t)FunctionBytes.data())(Memory);
   }
 
