@@ -1316,9 +1316,8 @@ void ExprEngine::VisitReturnStmt(const ReturnStmt *RS, ExplodedNode *Pred,
   NodeBuilder B(dstPreVisit, Dst, *currBldrCtx);
 
   if (RS->getRetValue()) {
-    for (ExplodedNodeSet::iterator it = dstPreVisit.begin(),
-                                  ei = dstPreVisit.end(); it != ei; ++it) {
-      B.generateNode(RS, *it, (*it)->getState());
+    for (ExplodedNode *N : dstPreVisit) {
+      B.generateNode(RS, N, N->getState());
     }
   }
 }
