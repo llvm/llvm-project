@@ -21,9 +21,35 @@
 
 import sys
 sys.path.append(sys.argv[1])
-from libcxx.header_information import lit_header_restrictions, public_headers
+from libcxx.header_information import public_headers
 
 import re
+
+# Headers whose transitive-includes we don't track in carved-out configurations
+# or older standard modes.
+lit_header_restrictions = {
+    "barrier": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
+    "coroutine": "// UNSUPPORTED: c++03, c++11, c++14, c++17",
+    "cwchar": "// UNSUPPORTED: no-wide-characters",
+    "cwctype": "// UNSUPPORTED: no-wide-characters",
+    "experimental/iterator": "// UNSUPPORTED: c++03",
+    "experimental/propagate_const": "// UNSUPPORTED: c++03",
+    "experimental/simd": "// UNSUPPORTED: c++03",
+    "experimental/type_traits": "// UNSUPPORTED: c++03",
+    "experimental/utility": "// UNSUPPORTED: c++03",
+    "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
+    "future": "// UNSUPPORTED: no-threads, c++03",
+    "latch": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
+    "mutex": "// UNSUPPORTED: no-threads, c++03",
+    "print": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14, c++17, c++20, availability-fp_to_chars-missing", # TODO PRINT investigate
+    "semaphore": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
+    "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
+    "stdatomic.h": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17, c++20",
+    "stop_token": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
+    "thread": "// UNSUPPORTED: no-threads, c++03",
+    "wchar.h": "// UNSUPPORTED: no-wide-characters",
+    "wctype.h": "// UNSUPPORTED: no-wide-characters",
+}
 
 # To re-generate the list of expected headers, temporarily set this to True, and run this test.
 # Note that this needs to be done for all supported language versions of libc++:
