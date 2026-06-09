@@ -1274,13 +1274,12 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   for (VPValue *Op : Operands) {
     VPValue *Candidate = Op;
     match(Op, m_Broadcast(m_VPValue(Candidate)));
-    if (match(Candidate, m_LiveIn())) {
-      if (auto *UV = Candidate->getUnderlyingValue()) {
-        Ops.push_back(UV);
-        continue;
-      }
-    }
-    return nullptr;
+    if (!match(Candidate, m_LiveIn()))
+      return nullptr;
+    Value *V = Candidate->getUnderlyingValue();
+    if (!V)
+      return nullptr;
+    Ops.push_back(V);
   }
 
   auto FoldToIRValue = [&]() -> Value * {
