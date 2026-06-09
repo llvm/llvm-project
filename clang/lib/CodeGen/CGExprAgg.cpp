@@ -279,44 +279,6 @@ bool AggExprEmitter::TypeRequiresGCollection(QualType T) {
   return Record->hasObjectMember();
 }
 
-static bool mightABIExpectAllocaAndNotAlloca(const Address RetAddr,
-                                             QualType RetTy,
-                                             const llvm::DataLayout &DL) {
-  const CXXRecordDecl *RD = RetTy->getAsCXXRecordDecl();
-  // ABIInfo might be permitted to make this return indirect. If it does, and
-  // RetTy doesn't specify an address space, it is also permitted (but not
-  // required) to change the ABI addrspace to alloca (adding an addrspacecase).
-  // We don't yet know what it will decide (awkwardly this query runs just
-  // before ABIInfo decides how to pass this sret parameter), so this may need
-  // to make a copy here, which maybe the optimizer could remove later, if it
-  // can still prove it unnecessary.
-  if (!RetAddr.isValid())
-    return false;
-  if (RetTy.hasAddressSpace())
-    return false;
-  if (RD && !RD->canPassInRegisters())
-    return false;
-  unsigned AllocaAS = DL.getAllocaAddrSpace();
-  // This will require a copy to ensure it is in the alloca (ABIInfo's
-  // indirect) addrspace unless we can find that the underlying object was
-  // already in alloca addrspace.
-  llvm::Value *DestV = RetAddr.getBasePointer();
-  if (DestV->getType()->getPointerAddressSpace() == AllocaAS)
-    return false;
-  DestV = DestV->stripPointerCasts();
-  if (DestV->getType()->getPointerAddressSpace() == AllocaAS)
-    return false;
-  return true;
-}
-
-static bool EmitLifetimeStartOnAlloca(CodeGenFunction &CGF, llvm::Value *Ptr) {
-  // Lifetime start is only valid on alloca
-  Ptr = Ptr->stripPointerCasts();
-  if (isa<llvm::AllocaInst>(Ptr))
-    return CGF.EmitLifetimeStart(Ptr);
-  return false;
-}
-
 RValue AggExprEmitter::withReturnValueSlot(
     const CGFunctionInfo &FnInfo,
     llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
@@ -329,14 +291,32 @@ RValue AggExprEmitter::withReturnValueSlot(
   // We need to always provide an address if destruction is required.
   // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
   // its lifetime before we have the chance to emit a proper destructor call.
-  //
-  // Decide if a copy is possibly legal, in which case ABIInfo might later
-  // decide this copy is required. Be careful not to try to use a copy in cases
-  // where it wouldn't be legal, in which case ABIInfo also should not expect
-  // a copy (not require an alloca) either.
   bool RequiresDestruction =
       !Dest.isExternallyDestructed() &&
       RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct;
+
+  // Determine the addrspace the ABI requires for the sret pointer, using the
+  // actual ABI decision from FnInfo rather than guessing from the QualType.
+  const ABIArgInfo &RetInfo = FnInfo.getReturnInfo();
+  bool ABIReturnsIndirect = RetInfo.isIndirect() || RetInfo.isIndirectAliased();
+  unsigned SRetAS =
+      ABIReturnsIndirect
+          ? RetInfo.getIndirectAddrSpace()
+          : CGF.getContext().getTargetAddressSpace(RetTy.getAddressSpace());
+
+  // Check whether a copy is required because the destination is not in the
+  // addrspace the ABI requires for the sret pointer (and a simple cast won't
+  // suffice because the underlying alloc is in a different addrspace).
+  Address DestAddr = Dest.getAddress();
+  bool addrspaceMismatch = [&] {
+    if (!ABIReturnsIndirect || !DestAddr.isValid())
+      return false;
+    if (DestAddr.getAddressSpace() == SRetAS)
+      return false;
+    llvm::Value *V = DestAddr.getBasePointer()->stripPointerCasts();
+    return V->getType()->getPointerAddressSpace() != SRetAS;
+  }();
+
   bool NoCopy =
       // Copy okay by construction (see note on AggValueSlot::AliasedFlag)
       !Dest.isPotentiallyAliased()
@@ -344,14 +324,10 @@ RValue AggExprEmitter::withReturnValueSlot(
       && !Dest.requiresGCollection()
       // No actual copy is performed, since there is no Dest
       && !(RequiresDestruction && Dest.isIgnored())
-      // ABIInfo only requests a copy if it is legal
-      && !mightABIExpectAllocaAndNotAlloca(Dest.getAddress(), RetTy,
-                                           CGF.CGM.getDataLayout());
+      // ABI sret addrspace requirement is satisfiable with a cast, not a copy
+      && !addrspaceMismatch;
 
   Address RetAddr = Address::invalid();
-  unsigned SRetAS =
-      CGF.getContext().getTargetAddressSpace(RetTy.getAddressSpace());
-
   EHScopeStack::stable_iterator LifetimeEndBlock;
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (NoCopy)
@@ -359,20 +335,16 @@ RValue AggExprEmitter::withReturnValueSlot(
   else
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
   if (NoCopy && RetAddr.isValid() && RetAddr.getAddressSpace() != SRetAS) {
-    // n.b. If possibly copying, assume the ABI will do this cast to the right
-    // addrspace if needed from the alloca, otherwise assume it might not?
-    // It is really awkward that this decides if it is going to make this copy
-    // just before clang asks ABIInfo if it even needs a copy to be made.
     llvm::Type *SRetPtrTy =
         llvm::PointerType::get(CGF.getLLVMContext(), SRetAS);
     RetAddr = RetAddr.withPointer(
         CGF.performAddrSpaceCast(RetAddr.getBasePointer(), SRetPtrTy),
         RetAddr.isKnownNonNull());
   }
-  if (!NoCopy && RetAddr.isValid() &&
-      EmitLifetimeStartOnAlloca(CGF, RetAddr.getBasePointer())) {
+  if (!NoCopy && RetAddr.isValid()) {
     // n.b. If not copying, the caller often already emitted the lifetime start,
     // so emitting it again is unnecessary.
+    CGF.EmitLifetimeStart(RetAddr.getBasePointer());
     LifetimeStartInst =
         cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
     assert(LifetimeStartInst->getIntrinsicID() ==
