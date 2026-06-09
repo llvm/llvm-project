@@ -333,3 +333,31 @@ spirv.func @inverse_sqrt(%arg0: f32) "None" {
   %0 = spirv.GL.InverseSqrt %arg0 : f32
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Trunc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @trunc
+spirv.func @trunc(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.trunc(%{{.*}}) : (f32) -> f32
+  %0 = spirv.GL.Trunc %arg0 : f32
+  // CHECK: llvm.intr.trunc(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Trunc %arg1 : vector<3xf16>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Asin, spirv.GL.Acos, spirv.GL.Atan
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @asin_acos_atan
+spirv.func @asin_acos_atan(%arg0: f32, %arg1: vector<3xf16>) "None" {
+  // CHECK: llvm.intr.asin(%{{.*}}) : (f32) -> f32
+  %0 = spirv.GL.Asin %arg0 : f32
+  // CHECK: llvm.intr.acos(%{{.*}}) : (vector<3xf16>) -> vector<3xf16>
+  %1 = spirv.GL.Acos %arg1 : vector<3xf16>
+  // CHECK: llvm.intr.atan(%{{.*}}) : (f32) -> f32
+  %2 = spirv.GL.Atan %arg0 : f32
+  spirv.Return
+}

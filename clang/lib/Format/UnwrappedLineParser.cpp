@@ -108,6 +108,7 @@ public:
     Parser.Line->PPLevel = PreBlockLine->PPLevel;
     Parser.Line->InPPDirective = PreBlockLine->InPPDirective;
     Parser.Line->InMacroBody = PreBlockLine->InMacroBody;
+    Parser.Line->IsModuleOrImportDecl = PreBlockLine->IsModuleOrImportDecl;
     Parser.Line->UnbracedBodyLevel = PreBlockLine->UnbracedBodyLevel;
   }
 
@@ -1350,40 +1351,60 @@ static bool isC78ParameterDecl(const FormatToken *Tok, const FormatToken *Next,
   return Tok->Previous && Tok->Previous->isOneOf(tok::l_paren, tok::comma);
 }
 
-bool UnwrappedLineParser::parseModuleImport() {
-  assert(FormatTok->is(Keywords.kw_import) && "'import' expected");
+bool UnwrappedLineParser::parseModuleDecl() {
+  assert(IsCpp);
+  assert(FormatTok->is(Keywords.kw_module));
 
-  if (auto Token = Tokens->peekNextToken(/*SkipComment=*/true);
-      !Token->Tok.getIdentifierInfo() &&
-      Token->isNoneOf(tok::colon, tok::less, tok::string_literal)) {
+  if (Style.Language == FormatStyle::LK_C ||
+      Style.Standard < FormatStyle::LS_Cpp20) {
     return false;
   }
 
   nextToken();
-  while (!eof()) {
-    if (FormatTok->is(tok::colon)) {
+  if (FormatTok->isNot(tok::identifier))
+    return false;
+
+  for (nextToken(); FormatTok->isNoneOf(tok::semi, tok::eof); nextToken())
+    if (FormatTok->is(tok::colon))
       FormatTok->setFinalizedType(TT_ModulePartitionColon);
-    }
-    // Handle import <foo/bar.h> as we would an include statement.
-    else if (FormatTok->is(tok::less)) {
-      nextToken();
-      while (FormatTok->isNoneOf(tok::semi, tok::greater) && !eof()) {
-        // Mark tokens up to the trailing line comments as implicit string
-        // literals.
-        if (FormatTok->isNot(tok::comment) &&
-            !FormatTok->TokenText.starts_with("//")) {
-          FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
-        }
-        nextToken();
-      }
-    }
-    if (FormatTok->is(tok::semi)) {
-      nextToken();
-      break;
-    }
-    nextToken();
+
+  nextToken();
+  Line->IsModuleOrImportDecl = true;
+  addUnwrappedLine();
+  return true;
+}
+
+bool UnwrappedLineParser::parseImportDecl() {
+  assert(IsCpp);
+  assert(FormatTok->is(Keywords.kw_import) && "'import' expected");
+
+  if (Style.Language == FormatStyle::LK_C ||
+      Style.Standard < FormatStyle::LS_Cpp20) {
+    return false;
   }
 
+  nextToken();
+  if (FormatTok->is(tok::colon)) {
+    FormatTok->setFinalizedType(TT_ModulePartitionColon);
+    nextToken();
+  }
+  if (FormatTok->isNoneOf(tok::identifier, tok::less, tok::string_literal))
+    return false;
+
+  for (; FormatTok->isNoneOf(tok::semi, tok::eof); nextToken()) {
+    // Handle import <foo/bar.h> as we would an include statement.
+    if (FormatTok->is(tok::less)) {
+      for (nextToken(); FormatTok->isNoneOf(tok::greater, tok::semi, tok::eof);
+           nextToken()) {
+        // Mark tokens as implicit string literals, so that import <A/Foo> will
+        // neither be broken nor have a space added.
+        FormatTok->setFinalizedType(TT_ImplicitStringLiteral);
+      }
+    }
+  }
+
+  nextToken();
+  Line->IsModuleOrImportDecl = true;
   addUnwrappedLine();
   return true;
 }
@@ -1625,14 +1646,6 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     break;
   case tok::kw_export:
-    if (Style.isJavaScript()) {
-      parseJavaScriptEs6ImportExport();
-      return;
-    }
-    if (Style.isVerilog()) {
-      parseVerilogExtern();
-      return;
-    }
     if (IsCpp) {
       nextToken();
       if (FormatTok->is(tok::kw_namespace)) {
@@ -1643,8 +1656,19 @@ void UnwrappedLineParser::parseStructuralElement(
         parseCppExportBlock();
         return;
       }
-      if (FormatTok->is(Keywords.kw_import) && parseModuleImport())
+      if (FormatTok->is(Keywords.kw_module) && parseModuleDecl())
         return;
+      if (FormatTok->is(Keywords.kw_import) && parseImportDecl())
+        return;
+      break;
+    }
+    if (Style.isJavaScript()) {
+      parseJavaScriptEs6ImportExport();
+      return;
+    }
+    if (Style.isVerilog()) {
+      parseVerilogExtern();
+      return;
     }
     break;
   case tok::kw_inline:
@@ -1665,6 +1689,8 @@ void UnwrappedLineParser::parseStructuralElement(
       return;
     }
     if (FormatTok->is(Keywords.kw_import)) {
+      if (IsCpp && parseImportDecl())
+        return;
       if (Style.isJavaScript()) {
         parseJavaScriptEs6ImportExport();
         return;
@@ -1685,25 +1711,27 @@ void UnwrappedLineParser::parseStructuralElement(
         parseVerilogExtern();
         return;
       }
-      if (IsCpp && parseModuleImport())
-        return;
     }
-    if (IsCpp && FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
-                                    Keywords.kw_slots, Keywords.kw_qslots)) {
-      nextToken();
-      if (FormatTok->is(tok::colon)) {
+    if (IsCpp) {
+      if (FormatTok->is(Keywords.kw_module) && parseModuleDecl())
+        return;
+      if (FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
+                             Keywords.kw_slots, Keywords.kw_qslots)) {
         nextToken();
-        addUnwrappedLine();
+        if (FormatTok->is(tok::colon)) {
+          nextToken();
+          addUnwrappedLine();
+          return;
+        }
+      }
+      if (FormatTok->is(TT_StatementMacro)) {
+        parseStatementMacro();
         return;
       }
-    }
-    if (IsCpp && FormatTok->is(TT_StatementMacro)) {
-      parseStatementMacro();
-      return;
-    }
-    if (IsCpp && FormatTok->is(TT_NamespaceMacro)) {
-      parseNamespace();
-      return;
+      if (FormatTok->is(TT_NamespaceMacro)) {
+        parseNamespace();
+        return;
+      }
     }
     // In Verilog labels can be any expression, so we don't do them here.
     // JS doesn't have macros, and within classes colons indicate fields, not

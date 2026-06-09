@@ -5133,22 +5133,10 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
           OffloadTriple && OffloadTriple->isSPIRV() &&
           (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
            OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
-      bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
-                                          options::OPT_no_use_spirv_backend,
-                                          /*Default=*/false);
-
-      // Special handling for the HIP SPIR-V toolchains in device-only.
-      // The translator path has a linking step, whereas the SPIR-V backend path
-      // does not to avoid any external dependency such as spirv-link. The
-      // linking step is skipped for the SPIR-V backend path.
-      bool IsAMDGCNSPIRVWithBackend =
-          IsHIPSPV && OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA &&
-          UseSPIRVBackend;
 
       if ((A->getType() != types::TY_Object && !IsHIPSPV &&
            A->getType() != types::TY_LTO_BC) ||
-          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
-          (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
+          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
@@ -5368,17 +5356,6 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
-    // Skip a redundant Backend phase for HIP device code when using the new
-    // offload driver, where mid-end is done in linker wrapper. With
-    // -save-temps, we still need the Backend phase to produce optimized IR.
-    if (TargetDeviceOffloadKind == Action::OFK_HIP &&
-        Args.hasFlag(options::OPT_offload_new_driver,
-                     options::OPT_no_offload_new_driver,
-                     C.getActiveOffloadKinds() != Action::OFK_None) &&
-        !offloadDeviceOnly() && !isSaveTempsEnabled() &&
-        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm)))
-      return Input;
-
     if (TargetLTOMode != LTOK_None) {
       bool IsDeviceOffload = TargetDeviceOffloadKind != Action::OFK_None;
       if (!IsDeviceOffload) {
@@ -5392,81 +5369,29 @@ Action *Driver::ConstructPhaseAction(
           Output = types::TY_LTO_BC;
         return C.MakeAction<BackendJobAction>(Input, Output);
       }
-      types::ID Output =
-          Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
+      types::ID Output;
+      if (Args.hasArg(options::OPT_emit_llvm)) {
+        Output =
+            Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
+      } else if (Args.hasArg(options::OPT_S) && offloadDeviceOnly() &&
+                 !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                               false)) {
+        // For non-RDC device-only compilations with -S, produce real assembly
+        // since the user explicitly requested assembly output.
+        Output = types::TY_PP_Asm;
+      } else if (Args.hasArg(options::OPT_S)) {
+        Output = types::TY_LTO_IR;
+      } else {
+        Output = types::TY_LTO_BC;
+      }
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
-                                        options::OPT_no_use_spirv_backend,
-                                        /*Default=*/false);
-
-    auto OffloadingToolChain = Input->getOffloadingToolChain();
-    // For AMD SPIRV, if offloadDeviceOnly(), we call the SPIRV backend unless
-    // LLVM bitcode was requested explicitly or RDC is set. If
-    // !offloadDeviceOnly, we emit LLVM bitcode, and clang-linker-wrapper will
-    // compile it to SPIRV.
-    bool UseSPIRVBackendForHipDeviceOnlyNoRDC =
-        TargetDeviceOffloadKind == Action::OFK_HIP && OffloadingToolChain &&
-        OffloadingToolChain->getTriple().isSPIRV() && UseSPIRVBackend &&
-        offloadDeviceOnly() &&
-        !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
-
-    auto &DefaultToolChain = C.getDefaultToolChain();
-    auto DefaultToolChainTriple = DefaultToolChain.getTriple();
-    // For regular C/C++ to AMD SPIRV emit bitcode to avoid spirv-link
-    // dependency, SPIRVAMDToolChain's linker takes care of the generation of
-    // the final SPIRV. The only exception is -S without -emit-llvm to output
-    // textual SPIRV assembly, which fits the default compilation path.
-    bool EmitBitcodeForNonOffloadAMDSPIRV =
-        !OffloadingToolChain && DefaultToolChainTriple.isSPIRV() &&
-        DefaultToolChainTriple.getVendor() == llvm::Triple::VendorType::AMD &&
-        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm));
-
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        EmitBitcodeForNonOffloadAMDSPIRV ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL ||
-        (((Input->getOffloadingToolChain() &&
-           Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&
-           TargetDeviceOffloadKind != Action::OFK_None) ||
-          TargetDeviceOffloadKind == Action::OFK_HIP) &&
-         !UseSPIRVBackendForHipDeviceOnlyNoRDC &&
-         ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                        false) ||
-           (Args.hasFlag(options::OPT_offload_new_driver,
-                         options::OPT_no_offload_new_driver,
-                         C.getActiveOffloadKinds() != Action::OFK_None) &&
-            !(Args.hasArg(options::OPT_S) &&
-              !Args.hasArg(options::OPT_emit_llvm)) &&
-            (!offloadDeviceOnly() ||
-             (Input->getOffloadingToolChain() &&
-              TargetDeviceOffloadKind == Action::OFK_HIP &&
-              Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
+        TargetDeviceOffloadKind == Action::OFK_SYCL) {
       types::ID Output =
-          Args.hasArg(options::OPT_S) &&
-                  (TargetDeviceOffloadKind == Action::OFK_None ||
-                   offloadDeviceOnly() ||
-                   (TargetDeviceOffloadKind == Action::OFK_HIP &&
-                    !Args.hasFlag(options::OPT_offload_new_driver,
-                                  options::OPT_no_offload_new_driver,
-                                  C.getActiveOffloadKinds() !=
-                                      Action::OFK_None)))
-              ? types::TY_LLVM_IR
-              : types::TY_LLVM_BC;
+          Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-
-    // The SPIRV backend compilation path for HIP must avoid external
-    // dependencies. The default compilation path assembles and links its
-    // output, but the SPIRV assembler and linker are external tools. This code
-    // ensures the backend emits binary SPIRV directly to bypass those steps and
-    // avoid failures. Without -save-temps, the compiler may already skip
-    // assembling and linking. With -save-temps, these steps must be explicitly
-    // disabled, as done here. We also force skipping these steps regardless of
-    // -save-temps to avoid relying on optimizations (unless -S is set).
-    // The current HIP bundling expects the type to be types::TY_Image
-    if (UseSPIRVBackendForHipDeviceOnlyNoRDC && !Args.hasArg(options::OPT_S))
-      return C.MakeAction<BackendJobAction>(Input, types::TY_Image);
 
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }

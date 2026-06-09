@@ -228,10 +228,6 @@ namespace llvm {
 // Type hash just like pointers.
 template <>
 struct DenseMapInfo<mlir::Location> {
-  static mlir::Location getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Location::getFromOpaquePointer(pointer);
-  }
   static unsigned getHashValue(mlir::Location val) {
     return mlir::hash_value(val);
   }
