@@ -141,6 +141,8 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
+  bool EnableOpenMPIsTargetDevice =
+      false; ///< Compiling for an OpenMP target device.
   bool UseSampleProfile = false; ///< Enable sample based profiling
   bool DebugInfoForProfiling = false; ///< Enable extra debugging info
   bool EnableOpenMPSimd = false; ///< Enable OpenMP simd-only mode.

@@ -38,6 +38,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/ConstantRange.h"
@@ -827,32 +828,29 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (!V->getType()->isPointerTy())
-        continue;
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[Elem.Index])) {
-        if (RK.WasOn != V)
-          continue;
-        bool AssumeImpliesNonNull = [&]() {
-          if (RK.AttrKind == Attribute::NonNull)
-            return true;
+      bool AssumeImpliesNonNull = [&]() {
+        auto OBU = I->getOperandBundleAt(Elem.Index);
+        switch (getBundleAttrFromOBU(OBU)) {
+        case BundleAttr::Dereferenceable: {
+          auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
+          if (Ptr != V ||
+              NullPointerIsDefined(Q.CxtI->getFunction(),
+                                   V->getType()->getPointerAddressSpace()))
+            return false;
 
-          if (RK.AttrKind == Attribute::Dereferenceable) {
-            if (NullPointerIsDefined(Q.CxtI->getFunction(),
-                                     V->getType()->getPointerAddressSpace()))
-              return false;
-            assert(RK.IRArgValue &&
-                   "Dereferenceable attribute without IR argument?");
+          auto *CI = dyn_cast<ConstantInt>(Count);
+          return CI && !CI->isZero();
+        }
 
-            auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
-            return CI && !CI->isZero();
-          }
+        case BundleAttr::NonNull:
+          return getAssumeNonNullInfo(OBU).Ptr == V;
 
+        default:
           return false;
-        }();
-        if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q))
-          return true;
-      }
+        }
+      }();
+      if (AssumeImpliesNonNull && isValidAssumeForContext(I, Q))
+        return true;
       continue;
     }
 
@@ -1088,13 +1086,14 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
            "Got assumption for the wrong function!");
 
     if (Elem.Index != AssumptionCache::ExprResultIdx) {
-      if (!V->getType()->isPointerTy())
-        continue;
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[Elem.Index])) {
-        if (RK.WasOn == V && RK.AttrKind == Attribute::Alignment &&
-            isPowerOf2_64(RK.ArgValue) && isValidAssumeForContext(I, Q))
-          Known.Zero.setLowBits(Log2_64(RK.ArgValue));
+      if (auto OBU = I->getOperandBundleAt(Elem.Index);
+          getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
+        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
+        if (Ptr != V || !Alignment || !Offset || !isPowerOf2_64(*Alignment))
+          continue;
+        auto AlignVal = MinAlign(*Offset, *Alignment);
+        if (isValidAssumeForContext(I, Q))
+          Known.Zero.setLowBits(Log2_64(AlignVal));
       }
       continue;
     }
@@ -1631,6 +1630,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
       Known.Zero.setLowBits(C->countr_zero());
+
+    // shl X, sub(Y, xor(ctlz(X, true), BitWidth-1)) shifts X so that its MSB
+    // lands at bit Y, when BitWidth is a power of 2.
+    const APInt *YC;
+    Value *X = I->getOperand(0);
+    if (isPowerOf2_32(BitWidth) &&
+        match(I->getOperand(1),
+              m_Sub(m_APInt(YC), m_Xor(m_Ctlz(m_Specific(X), m_One()),
+                                       m_SpecificInt(BitWidth - 1)))) &&
+        YC->ult(BitWidth - 1)) {
+      unsigned Y = YC->getZExtValue();
+      Known.One.setBit(Y);
+      Known.Zero.setBitsFrom(Y + 1);
+    }
     break;
   }
   case Instruction::LShr: {
