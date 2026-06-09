@@ -62,14 +62,3 @@ define <vscale x 2 x i16> @no_fold_scalable(<vscale x 2 x i16> %x) {
   %t2 = call <vscale x 2 x i16> @llvm.bitreverse.nxv2i16(<vscale x 2 x i16> %t1)
   ret <vscale x 2 x i16> %t2
 }
-
-declare i64 @llvm.bswap.i64(i64)
-declare i64 @llvm.bitreverse.i64(i64)
-declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>)
-declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>)
-declare i32 @llvm.bswap.i32(i32)
-declare i32 @llvm.bitreverse.i32(i32)
-declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)
-declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
-declare <vscale x 2 x i16> @llvm.bswap.nxv2i16(<vscale x 2 x i16>)
-declare <vscale x 2 x i16> @llvm.bitreverse.nxv2i16(<vscale x 2 x i16>)

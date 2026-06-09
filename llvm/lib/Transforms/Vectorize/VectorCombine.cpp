@@ -5928,32 +5928,21 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
       return false;
   }
 
-  if (Ty->getScalarSizeInBits() <= 8)
-    return false;
-
-  Intrinsic::ID ComplementID = (IntrID == Intrinsic::bitreverse)
-                                   ? Intrinsic::bswap
-                                   : Intrinsic::bitreverse;
-
-  Value *Arg = II->getArgOperand(0);
   Value *X;
-  if (ComplementID == Intrinsic::bswap) {
-    if (!match(Arg, m_OneUse(m_Intrinsic<Intrinsic::bswap>(m_Value(X)))))
-      return false;
-  } else {
-    if (!match(Arg, m_OneUse(m_Intrinsic<Intrinsic::bitreverse>(m_Value(X)))))
-      return false;
-  }
+  if (!match(II, m_Intrinsic<Intrinsic::bitreverse>(
+                     m_Intrinsic<Intrinsic::bswap>(m_Value(X)))) &&
+      !match(II, m_Intrinsic<Intrinsic::bswap>(
+                     m_Intrinsic<Intrinsic::bitreverse>(m_Value(X)))))
+    return false;
 
   unsigned TotalBits = Ty->getPrimitiveSizeInBits();
   Type *I8Ty = Builder.getInt8Ty();
   Type *NewVecTy = VectorType::get(I8Ty, ElementCount::getFixed(TotalBits / 8));
 
+  auto InnerII = cast<IntrinsicInst>(II->getArgOperand(0));
   // OldCost = cost of bitreverse/bswap + cost of bswap/bitreverse
-  IntrinsicCostAttributes ICAOld1(ComplementID, Ty, {Ty});
-  IntrinsicCostAttributes ICAOld2(IntrID, Ty, {Ty});
-  InstructionCost OldCost = TTI.getIntrinsicInstrCost(ICAOld1, CostKind) +
-                            TTI.getIntrinsicInstrCost(ICAOld2, CostKind);
+  InstructionCost OldCost = TTI.getInstructionCost(II, CostKind) +
+                            TTI.getInstructionCost(InnerII, CostKind);
 
   // NewCost = cost of bitcast to byte vector +
   //           cost of bitreverse/bswap on byte vector +
@@ -5968,8 +5957,12 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
       TTI.getIntrinsicInstrCost(ICANew, CostKind);
   InstructionCost NewCost = CastToVecCost + NewIntrinsicCost + CastToOrigCost;
 
-  LLVM_DEBUG(dbgs() << "foldBitOrderReverseAndSwap: OldCost=" << OldCost
-                    << " NewCost=" << NewCost << "\n");
+  if (!InnerII->hasOneUse())
+    NewCost += TTI.getInstructionCost(InnerII, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found bitorder reverse and swap: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
   if (!NewCost.isValid() || NewCost > OldCost)
     return false;
 
