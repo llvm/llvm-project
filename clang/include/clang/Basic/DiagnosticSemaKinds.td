@@ -1010,7 +1010,7 @@ def err_ptrauth_invalid_key :
         "the current target">;
 def err_ptrauth_value_bad_type :
   Error<"%select{signed value|extra discriminator|blended pointer|blended "
-        "integer}0 must have %select{pointer|integer|pointer or integer}1 "
+        "integer|blended pc}0 must have %select{pointer|integer|pointer or integer}1 "
         "type; type here is %2">;
 def err_ptrauth_bad_constant_pointer :
   Error<"argument to ptrauth_sign_constant must refer to a global variable "
@@ -1025,6 +1025,8 @@ def warn_ptrauth_sign_null_pointer :
 def warn_ptrauth_auth_null_pointer :
   Warning<"authenticating a null pointer will almost certainly trap">,
   InGroup<PtrAuthNullPointers>;
+def err_ptrauth_auth_with_pc_and_resign_invalid_key :
+  Error<"ptrauth_auth_with_pc_and_resign only supports auth with IA and IB keys, not %0">;
 def err_ptrauth_string_not_literal : Error<
   "argument must be a string literal%select{| of char type}0">;
 def err_ptrauth_type_disc_undiscriminated : Error<

@@ -1839,6 +1839,19 @@ def int_experimental_patchpoint : Intrinsic<[llvm_any_ty],
                                              ImmArg<ArgIndex<1>>,
                                              ImmArg<ArgIndex<3>>]>;
 
+// Authenticate a signed pointer using a PC-based signature and resign it.
+// The second (key) and third (discriminator) arguments specify the signing
+// schema used for authenticating.
+// The fourth argument specifies the signing PC value.
+// The fifth and sixth arguments specify the schema used for resigning.
+// The signature must be valid.
+// This uses autia171615/autib171615 for authentication with PC, then signs normally.
+def int_ptrauth_auth_with_pc_and_resign : Intrinsic<[llvm_i64_ty],
+                                                     [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty,
+                                                      llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
+                                                     [IntrNoMem, ImmArg<ArgIndex<1>>,
+                                                      ImmArg<ArgIndex<4>>]>;
+
 
 //===------------------------ Garbage Collection Intrinsics ---------------===//
 // These are documented in docs/Statepoint.rst

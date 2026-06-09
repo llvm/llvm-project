@@ -178,6 +178,31 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   __builtin_ptrauth_auth_and_resign(__value, __old_key, __old_data, __new_key, \
                                     __new_data)
 
+/* Authenticate a pointer using a PC-based signature scheme and resign
+   it using a different scheme.
+
+   If the result is subsequently authenticated using the new scheme, that
+   authentication is guaranteed to fail if and only if the initial
+   authentication failed.
+
+   The value must be an expression of pointer type.
+   The key must be a constant expression of type ptrauth_key.
+   The extra data must be an expression of pointer or integer type;
+   if an integer, it will be coerced to ptrauth_extra_data_t.
+   The oldpc must be an expression of pointer or integer type representing
+   the PC value where the original signature was created.
+   The result will have the same type as the original value.
+
+   This operation is guaranteed to not leave the intermediate value
+   available for attack before it is re-signed. The authentication is
+   performed using autia171615/autib171615 instructions which include the
+   PC value in the signature.
+
+   Do not pass a null pointer to this function. A null pointer
+   will not successfully authenticate. */
+#define ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data, __old_pc, __new_key, __new_data) \
+  __builtin_ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data, __old_pc, __new_key, __new_data)
+
 /* Authenticate a pointer using one scheme, load 32bit value at offset addend
    from the pointer, and add this value to the pointer, sign using specified
    scheme.
@@ -391,6 +416,17 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   __extension__({                                                              \
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
+    (void)__new_key;                                                           \
+    (void)__new_data;                                                          \
+    __value;                                                                   \
+  })
+
+#define ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data, __old_pc, \
+                                        __new_key, __new_data)                 \
+  ({                                                                           \
+    (void)__old_key;                                                           \
+    (void)__old_data;                                                          \
+    (void)__old_pc;                                                            \
     (void)__new_key;                                                           \
     (void)__new_data;                                                          \
     __value;                                                                   \

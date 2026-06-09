@@ -687,6 +687,22 @@ computations may still be attackable.  In the future, Clang should be enhanced
 to guarantee non-attackability if these expressions are
 :ref:`safely-derived<Safe derivation>`.
 
+``ptrauth_auth_with_pc_and_resign``
+
+.. code-block:: c
+
+  ptrauth_auth_with_pc_and_resign(pointer, oldKey, oldDiscriminator, oldPC, newKey, newDiscriminator)
+
+Similar to :ref:`ptrauth_auth_and_resign`, but additionally requires that the
+signature includes the address of the signing instruction (i.e. uses `paciasppc`
+/ `pacibsppc` instead of `paciasp` / `pacibsp`). This authenticates ``pointer``
+signed with ``oldKey`` and ``oldDiscriminator`` at ``oldPC``, then resigns the
+raw-pointer result with ``newKey`` and ``newDiscriminator``.
+
+Note: ``oldKey`` must be ``ptrauth_key_asia`` (IA) or ``ptrauth_key_asib`` (IB),
+as only these keys support PC-based authentication instructions. Data keys
+(``ptrauth_key_asda`` / ``ptrauth_key_asdb``) are not supported.
+
 ``ptrauth_auth_function``
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

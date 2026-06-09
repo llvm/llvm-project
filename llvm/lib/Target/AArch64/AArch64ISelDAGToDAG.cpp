@@ -367,6 +367,7 @@ public:
 
   void SelectPtrauthAuth(SDNode *N);
   void SelectPtrauthResign(SDNode *N);
+  void SelectPtrauthResignWithPC(SDNode *N);
 
   bool trySelectStackSlotTagP(SDNode *N);
   void SelectTagP(SDNode *N);
@@ -1759,6 +1760,45 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
     SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
     ReplaceNode(N, AUTPAC);
   }
+}
+
+void AArch64DAGToDAGISel::SelectPtrauthResignWithPC(SDNode *N) {
+  SDLoc DL(N);
+  SDValue Val = N->getOperand(1);
+  SDValue AUTKey = N->getOperand(2);
+  SDValue AUTDisc = N->getOperand(3);
+  SDValue AUTPC = N->getOperand(4);
+  SDValue PACKey = N->getOperand(5);
+  SDValue PACDisc = N->getOperand(6);
+
+  unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
+  unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
+
+  AUTKey = CurDAG->getTargetConstant(AUTKeyC, DL, MVT::i64);
+  PACKey = CurDAG->getTargetConstant(PACKeyC, DL, MVT::i64);
+
+  SDValue AUTAddrDisc, AUTConstDisc;
+  std::tie(AUTConstDisc, AUTAddrDisc) =
+      extractPtrauthBlendDiscriminators(AUTDisc, CurDAG);
+
+  SDValue PACAddrDisc, PACConstDisc;
+  std::tie(PACConstDisc, PACAddrDisc) =
+      extractPtrauthBlendDiscriminators(PACDisc, CurDAG);
+
+  SDValue X17Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                         AArch64::X17, Val, SDValue());
+  SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                         AArch64::X16, AUTAddrDisc, X17Copy.getValue(1));
+  SDValue X15Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
+                                         AArch64::X15, AUTPC, X16Copy.getValue(1));
+
+  unsigned AuthOpc = (AUTKeyC == 0) ? AArch64::AUTIA171615 : AArch64::AUTIB171615;
+  SDNode *AUTH = CurDAG->getMachineNode(AuthOpc, DL, MVT::i64, X15Copy.getValue(1));
+
+  SDValue AuthedVal = SDValue(AUTH, 0);
+  SDValue Ops[] = {AuthedVal, PACKey, PACConstDisc, PACAddrDisc};
+  SDNode *PAC = CurDAG->getMachineNode(AArch64::PAC, DL, MVT::i64, Ops);
+  ReplaceNode(N, PAC);
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
@@ -6032,6 +6072,10 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 
     case Intrinsic::ptrauth_resign:
       SelectPtrauthResign(Node);
+      return;
+
+    case Intrinsic::ptrauth_auth_with_pc_and_resign:
+      SelectPtrauthResignWithPC(Node);
       return;
 
     case Intrinsic::aarch64_neon_tbl2:
