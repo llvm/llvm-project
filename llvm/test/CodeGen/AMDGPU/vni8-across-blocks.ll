@@ -882,9 +882,9 @@ define amdgpu_kernel void @v8i8_mfma_i8(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_mfma_i32_16x16x32_i8 v[2:5], v[2:3], v[2:3], v[4:7] cbsz:1 abid:2 blgp:3
+; GFX942-NEXT:    v_mfma_i32_16x16x32_i8 v[4:7], v[2:3], v[2:3], v[4:7] cbsz:1 abid:2 blgp:3
 ; GFX942-NEXT:    s_nop 6
-; GFX942-NEXT:    global_store_dwordx4 v1, v[2:5], s[12:13]
+; GFX942-NEXT:    global_store_dwordx4 v1, v[4:7], s[12:13]
 ; GFX942-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()

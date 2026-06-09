@@ -674,3 +674,67 @@ bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
   }
   return false;
 }
+
+void MachineRegisterInfo::addChainHint(Register VReg, Register PrefReg) {
+  if (ChainHints.isEquivalent(VReg, PrefReg))
+    return;
+
+  ChainHints.insert(VReg);
+  ChainHints.insert(PrefReg);
+
+  SmallVector<Register> SetA(ChainHints.members(VReg));
+  SmallVector<Register> SetB(ChainHints.members(PrefReg));
+
+  ChainHints.unionSets(VReg, PrefReg);
+
+  for (Register A : SetA) {
+    for (Register B : SetB) {
+      RegAllocHints.grow(A);
+      RegAllocHints.grow(B);
+      if (!llvm::is_contained(RegAllocHints[A].second, B))
+        addRegAllocationHint(A, B);
+      if (!llvm::is_contained(RegAllocHints[B].second, A))
+        addRegAllocationHint(B, A);
+    }
+  }
+}
+
+void MachineRegisterInfo::removeIncompatibleChainHints() {
+  SmallVector<Register> InvalidLeaders;
+
+  for (const EquivalenceClasses<llvm::Register>::ECValue *I : ChainHints) {
+    if (!I->isLeader())
+      continue;
+
+    auto isValidChainHint = [&]() {
+      for (auto AI = ChainHints.member_begin(*I), End = ChainHints.member_end();
+           AI != End; ++AI) {
+        for (auto BI = std::next(AI); BI != End; ++BI) {
+          const TargetRegisterClass *ARC = getRegClass(*AI);
+          const TargetRegisterClass *BRC = getRegClass(*BI);
+          if (!getTargetRegisterInfo()->getCommonSubClass(ARC, BRC))
+            return false;
+        }
+      }
+      return true;
+    };
+
+    if (!isValidChainHint())
+      InvalidLeaders.push_back(I->getData());
+  }
+
+  for (Register Leader : InvalidLeaders) {
+    SmallVector<Register> Members(ChainHints.members(Leader));
+    auto LeaderIt = ChainHints.findLeader(Leader);
+    for (Register Member : Members) {
+      auto &MemberHints = RegAllocHints[Member].second;
+      MemberHints.erase(llvm::remove_if(MemberHints,
+                                        [&](Register HintReg) {
+                                          return ChainHints.findLeader(
+                                                     HintReg) == LeaderIt;
+                                        }),
+                        MemberHints.end());
+    }
+    ChainHints.eraseClass(Leader);
+  }
+}

@@ -377,7 +377,7 @@ define amdgpu_kernel void @illegal_mfma_after_rewrite() #1 {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    s_mov_b32 s5, s4
-; CHECK-NEXT:    v_mov_b64_e32 v[26:27], s[4:5]
+; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[4:5]
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def s[0:3]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -389,62 +389,59 @@ define amdgpu_kernel void @illegal_mfma_after_rewrite() #1 {
 ; CHECK-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; CHECK-NEXT:    s_mov_b32 s0, 0x3c003c00
 ; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[26:27], v[26:27], v[0:3]
-; CHECK-NEXT:    v_mov_b64_e32 v[28:29], s[0:1]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[24:25], v[24:25], v[0:3]
+; CHECK-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
 ; CHECK-NEXT:    s_mov_b32 s0, 0x7e007e00
 ; CHECK-NEXT:    s_mov_b32 s1, s0
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[26:27], v[26:27], v[4:7]
-; CHECK-NEXT:    v_mov_b64_e32 v[30:31], s[0:1]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[26:27], v[28:29], v[0:3]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[26:27], v[26:27], v[6:9]
-; CHECK-NEXT:    s_nop 3
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v24, v4
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[12:15], v[26:27], v[30:31], v[0:3]
-; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[4:7], v[24:25], v[24:25], v[4:7]
+; CHECK-NEXT:    v_mov_b64_e32 v[28:29], s[0:1]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[24:25], v[26:27], v[0:3]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[24:25], v[24:25], v[6:9]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[12:15], v[24:25], v[28:29], v[0:3]
+; CHECK-NEXT:    s_nop 5
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 0x7fc00000
 ; CHECK-NEXT:    v_mov_b32_e32 v9, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v10, v8
 ; CHECK-NEXT:    v_mov_b32_e32 v11, v8
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[20:23], v[24:25], v[24:25], v[16:19]
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v2, v6
 ; CHECK-NEXT:    v_mov_b64_e32 v[0:1], 0
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[8:11], v[26:27], v[26:27], v[8:11]
+; CHECK-NEXT:    global_store_short v[0:1], v2, off
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[8:11], v[24:25], v[24:25], v[8:11]
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v2, v4
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[16:19], v[24:25], v[26:27], v[16:19]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[8:11], v[24:25], v[24:25], v[8:11]
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[12:15], v[24:25], v[24:25], v[12:15]
+; CHECK-NEXT:    s_nop 5
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v3, v8
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[16:19], v[24:25], v[24:25], v[16:19]
+; CHECK-NEXT:    global_store_short v[0:1], v3, off
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[20:23], v[24:25], v[24:25], v[20:23]
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v3, v12
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
+; CHECK-NEXT:    global_store_short v[0:1], v3, off
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[16:19], v[26:27], v[24:25], v[16:19]
+; CHECK-NEXT:    buffer_wbl2 sc0 sc1
+; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    buffer_inv sc0 sc1
 ; CHECK-NEXT:    global_store_short v[0:1], v2, off
 ; CHECK-NEXT:    buffer_wbl2 sc0 sc1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_inv sc0 sc1
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[2:5], v[26:27], v[28:29], v[16:19]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[26:27], v[26:27], v[8:11]
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[20:23], v[26:27], v[26:27], v[16:19]
-; CHECK-NEXT:    s_nop 5
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v10, v6
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[6:9], v[26:27], v[26:27], v[12:15]
-; CHECK-NEXT:    global_store_short v[0:1], v10, off
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[2:5], v[26:27], v[26:27], v[2:5]
-; CHECK-NEXT:    buffer_wbl2 sc0 sc1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_inv sc0 sc1
-; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v6, v6
-; CHECK-NEXT:    global_store_short v[0:1], v6, off
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[16:19], v[26:27], v[26:27], v[20:23]
-; CHECK-NEXT:    buffer_wbl2 sc0 sc1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_inv sc0 sc1
-; CHECK-NEXT:    global_store_short v[0:1], v24, off
-; CHECK-NEXT:    buffer_wbl2 sc0 sc1
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_inv sc0 sc1
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[2:5], v[28:29], v[26:27], v[2:5]
-; CHECK-NEXT:    s_nop 6
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v6, v2
-; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[2:5], v[30:31], v[26:27], v[16:19]
-; CHECK-NEXT:    global_store_short v[0:1], v6, off
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v2, v16
+; CHECK-NEXT:    v_mfma_f32_16x16x16_f16 v[16:19], v[28:29], v[24:25], v[20:23]
+; CHECK-NEXT:    global_store_short v[0:1], v2, off
 ; CHECK-NEXT:    buffer_wbl2 sc0 sc1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_inv sc0 sc1
 ; CHECK-NEXT:    s_nop 2
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CHECK-NEXT:    global_store_short v[0:1], v2, off
+; CHECK-NEXT:    v_cvt_f16_f32_e32 v3, v16
+; CHECK-NEXT:    global_store_short v[0:1], v3, off
 ; CHECK-NEXT:    s_endpgm
 entry:
   %k0 = call <4 x float> asm sideeffect "; def $0", "=s"()
@@ -514,10 +511,10 @@ define void @test_rewrite_mfma_subreg_insert1(float %arg0, float %arg1, ptr addr
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v0, v1, v[2:5]
+; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[2:5], v0, v1, v[2:5]
 ; CHECK-NEXT:    s_nop 3
-; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[2:3] op_sel:[1,0]
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v3
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[2:3], v[4:5] op_sel:[1,0]
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v5
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
@@ -696,11 +693,11 @@ define void @test_rewrite_mfma_copy_from_agpr_class_f64_4x4x4f64(double %arg0, d
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_and_b32_e32 v8, 0x3ff, v31
 ; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], v[2:3], a[0:1]
-; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 3, v8
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_lshl_add_u64 v[2:3], v[4:5], 0, v[2:3]
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 3, v8
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_lshl_add_u64 v[0:1], v[4:5], 0, v[0:1]
 ; CHECK-NEXT:    s_nop 5
-; CHECK-NEXT:    global_store_dwordx2 v[2:3], a[0:1], off
+; CHECK-NEXT:    global_store_dwordx2 v[0:1], a[0:1], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %src2 = call double asm sideeffect "; def $0", "=a"()
@@ -720,13 +717,13 @@ define void @test_rewrite_mfma_copy_from_agpr_class_f64_4x4x4f64_chain(double %a
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], v[2:3], a[0:1]
-; CHECK-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
-; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
-; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    v_lshl_add_u64 v[2:3], v[8:9], 0, v[2:3]
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v31
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_lshl_add_u64 v[0:1], v[8:9], 0, v[0:1]
 ; CHECK-NEXT:    v_mfma_f64_4x4x4_4b_f64 a[0:1], v[4:5], v[6:7], a[0:1]
 ; CHECK-NEXT:    s_nop 8
-; CHECK-NEXT:    global_store_dwordx2 v[2:3], a[0:1], off
+; CHECK-NEXT:    global_store_dwordx2 v[0:1], a[0:1], off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %src2 = call double asm sideeffect "; def $0", "=a"()

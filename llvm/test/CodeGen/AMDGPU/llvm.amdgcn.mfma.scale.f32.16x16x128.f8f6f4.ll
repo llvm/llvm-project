@@ -1185,9 +1185,9 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd(<8 x i32
 ; SDAG-NEXT:    v_mov_b32_e32 v21, s12
 ; SDAG-NEXT:    v_mov_b32_e32 v22, s13
 ; SDAG-NEXT:    s_nop 1
-; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v21, v22 op_sel:[1,1,0] op_sel_hi:[1,0,0] blgp:2
+; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v21, v22 op_sel:[1,1,0] op_sel_hi:[1,0,0] blgp:2
 ; SDAG-NEXT:    s_nop 11
-; SDAG-NEXT:    global_store_dwordx4 v20, v[0:3], s[14:15]
+; SDAG-NEXT:    global_store_dwordx4 v20, v[16:19], s[14:15]
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd:
@@ -1208,10 +1208,10 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd(<8 x i32
 ; GISEL-NEXT:    v_mov_b32_e32 v20, s28
 ; GISEL-NEXT:    v_mov_b32_e32 v21, s29
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0] blgp:2
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0] blgp:2
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 10
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[30:31]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[16:19], s[30:31]
 ; GISEL-NEXT:    s_endpgm
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 0, i32 2, i32 3, i32 %scale0, i32 1, i32 %scale1)
   store <4 x float> %result, ptr addrspace(1) %ptr, align 16
@@ -1247,9 +1247,9 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA
 ; SDAG-NEXT:    v_mov_b32_e32 v15, s23
 ; SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
 ; SDAG-NEXT:    s_nop 1
-; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v22, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
+; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v22, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
 ; SDAG-NEXT:    s_nop 11
-; SDAG-NEXT:    global_store_dwordx4 v20, v[0:3], s[6:7]
+; SDAG-NEXT:    global_store_dwordx4 v20, v[16:19], s[6:7]
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA_kimm__scaleB__inlineimm:
@@ -1271,10 +1271,10 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA
 ; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 10
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[16:19], s[6:7]
 ; GISEL-NEXT:    s_endpgm
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 3, i32 65, i32 1, i32 -2)
   store <4 x float> %result, ptr addrspace(1) %ptr, align 16
@@ -1310,9 +1310,9 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA
 ; SDAG-NEXT:    v_mov_b32_e32 v15, s23
 ; SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
 ; SDAG-NEXT:    s_nop 1
-; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v22, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
+; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v22, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
 ; SDAG-NEXT:    s_nop 11
-; SDAG-NEXT:    global_store_dwordx4 v20, v[0:3], s[6:7]
+; SDAG-NEXT:    global_store_dwordx4 v20, v[16:19], s[6:7]
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA_kimm__scaleB__FP_literal:
@@ -1334,10 +1334,10 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA
 ; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 10
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[16:19], s[6:7]
 ; GISEL-NEXT:    s_endpgm
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 3, i32 65, i32 1, i32 1065353216)
   store <4 x float> %result, ptr addrspace(1) %ptr, align 16
@@ -1373,9 +1373,9 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA
 ; SDAG-NEXT:    v_mov_b32_e32 v15, s23
 ; SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
 ; SDAG-NEXT:    s_nop 1
-; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v22, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
+; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v22, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
 ; SDAG-NEXT:    s_nop 11
-; SDAG-NEXT:    global_store_dwordx4 v20, v[0:3], s[6:7]
+; SDAG-NEXT:    global_store_dwordx4 v20, v[16:19], s[6:7]
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA_FP_literal__scaleB__inline_imm:
@@ -1397,10 +1397,10 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA
 ; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 10
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[16:19], s[6:7]
 ; GISEL-NEXT:    s_endpgm
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 3, i32 1065353216, i32 1, i32 -2)
   store <4 x float> %result, ptr addrspace(1) %ptr, align 16
@@ -1436,9 +1436,9 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA
 ; SDAG-NEXT:    v_mov_b32_e32 v15, s23
 ; SDAG-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
 ; SDAG-NEXT:    s_nop 1
-; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v22, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
+; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v22, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
 ; SDAG-NEXT:    s_nop 11
-; SDAG-NEXT:    global_store_dwordx4 v20, v[0:3], s[6:7]
+; SDAG-NEXT:    global_store_dwordx4 v20, v[16:19], s[6:7]
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA_FP_literal__scaleB__FP_literal:
@@ -1460,10 +1460,10 @@ define amdgpu_kernel void @test_mfma_scale_f32_16x16x128_f8f6f4__vgprcd___scaleA
 ; GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[22:23]
 ; GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[0:1]
 ; GISEL-NEXT:    s_nop 1
-; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
-; GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GISEL-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[16:19], v[0:7], v[8:15], v[16:19], v20, v21 op_sel:[1,1,0] op_sel_hi:[1,0,0]
+; GISEL-NEXT:    v_mov_b32_e32 v0, 0
 ; GISEL-NEXT:    s_nop 10
-; GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GISEL-NEXT:    global_store_dwordx4 v0, v[16:19], s[6:7]
 ; GISEL-NEXT:    s_endpgm
   %result = call <4 x float> @llvm.amdgcn.mfma.scale.f32.16x16x128.f8f6f4.v8i32.v8i32(<8 x i32> %arg0, <8 x i32> %arg1, <4 x float> %arg2, i32 0, i32 0, i32 3, i32 1065353216, i32 1, i32 1042479491)
   store <4 x float> %result, ptr addrspace(1) %ptr, align 16
