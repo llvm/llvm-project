@@ -305,9 +305,9 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   }
 
   // If we can unconditionally load from this address, replace with a
-  // load/select idiom. TODO: use DT for context sensitive query
+  // load/select idiom.
   if (isDereferenceablePointer(LoadPtr, II.getType(),
-                               II.getDataLayout(), &II, &AC)) {
+                               SQ.getWithInstruction(&II))) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
     LI->copyMetadata(II);
@@ -3679,6 +3679,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CallBase::removeOperandBundleAt(II, Idx);
       }
 
+      case BundleAttr::Dereferenceable: {
+        auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+
+        if (Count && *Count == 0)
+          return CallBase::removeOperandBundleAt(II, Idx);
+        break;
+      }
+
       case BundleAttr::NonNull: {
         auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
@@ -3719,7 +3727,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       } break;
 
       // TODO: Drop these assumes when they are redundant
-      case BundleAttr::Dereferenceable:
       case BundleAttr::DereferenceableOrNull:
       case BundleAttr::Ignore:
       case BundleAttr::NoUndef:

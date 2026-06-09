@@ -90,7 +90,7 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
     "openmp": {"openmp"},
-    "offload": {"offload"},
+    "offload": {"offload", "openmp"},
     ".ci": {"compiler-rt", "libc", "flang-rt", "libclc", "openmp", "offload"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {

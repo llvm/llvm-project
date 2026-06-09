@@ -14,7 +14,7 @@ void maybeWrite(const char *src, unsigned size, int *dst) {
 } // expected-note{{Returning without writing to '*dst'}}
 
 void returning_without_writing_to_memcpy(const char *src, unsigned size) {
-  int block[8 * 8]; // expected-note{{'block' initialized here}}
+  int block[8 * 8]; // expected-note{{'block' declared without an initial value}}
                                 // expected-note@+1{{Calling 'maybeWrite'}}
   maybeWrite(src, size, block); // expected-note{{Returning from 'maybeWrite'}}
 

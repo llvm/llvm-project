@@ -1999,10 +1999,15 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
         return nullptr;
       };
 
-      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ true))
+      User *ShufBO = findShufBO(/* MatchShufAsOp0 */ true);
+      if (!ShufBO)
+        ShufBO = findShufBO(/* MatchShufAsOp0 */ false);
+      if (ShufBO) {
+        auto *ShufBOI = cast<Instruction>(ShufBO);
+        ShufBOI->andIRFlags(BO);
+        Worklist.add(ShufBOI);
         return ShufBO;
-      if (User *ShufBO = findShufBO(/* MatchShufAsOp0 */ false))
-        return ShufBO;
+      }
     }
 
     simplifyAndSetOp(I, 0, DemandedElts, PoisonElts);

@@ -178,6 +178,9 @@ bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
   if (!cast<SCEVConstant>(AlignSCEV)->getAPInt().isPowerOf2())
     // Only power of two alignments are supported.
     return false;
+  if (cast<SCEVConstant>(AlignSCEV)->getAPInt().ugt(Value::MaximumAlignment))
+    // Alignment exceeds what LLVM instructions can represent; skip.
+    return false;
   if (AlignOB.Inputs.size() == 3)
     OffSCEV = SE->getSCEV(AlignOB.Inputs[2].get());
   else

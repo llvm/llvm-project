@@ -1,0 +1,24 @@
+{
+  "data": [],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "suffix": "",
+        "usr": "c:@F@bar"
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "Internal"
+      }
+    }
+  ],
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  }
+}

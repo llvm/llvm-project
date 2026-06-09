@@ -1,0 +1,16 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "id_table": [
+    {
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": ""
+      }
+    }
+  ],
+  "linkage_table": [],
+  "data": []
+}

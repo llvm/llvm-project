@@ -39,6 +39,7 @@ LLVM_ABI AssumeAlignInfo getAssumeAlignInfo(OperandBundleUse);
 struct AssumeDereferenceableInfo {
   const Use &Ptr;
   const Use &Count;
+  std::optional<uint64_t> CountVal;
 };
 
 LLVM_ABI

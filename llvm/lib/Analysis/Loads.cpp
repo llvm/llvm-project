@@ -33,29 +33,27 @@ static bool isAligned(const Value *Base, Align Alignment,
 }
 
 static bool isDereferenceableAndAlignedPointerViaAssumption(
-    const Value *Ptr, Align Alignment,
-    function_ref<bool(const RetainedKnowledge &RK)> CheckSize,
-    const DataLayout &DL, const Instruction *CtxI, AssumptionCache *AC,
-    const DominatorTree *DT) {
-  if (!CtxI)
+    const Value *Ptr, Align Alignment, const SimplifyQuery &SQ,
+    function_ref<bool(const RetainedKnowledge &RK)> CheckSize) {
+  if (!SQ.CxtI)
     return false;
   /// Look through assumes to see if both dereferencability and alignment can
   /// be proven by an assume if needed.
   RetainedKnowledge AlignRK;
   RetainedKnowledge DerefRK;
   bool PtrCanBeFreed = Ptr->canBeFreed();
-  bool IsAligned = Ptr->getPointerAlignment(DL) >= Alignment;
+  bool IsAligned = Ptr->getPointerAlignment(SQ.DL) >= Alignment;
   return getKnowledgeForValue(
-      Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *AC,
+      Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *SQ.AC,
       [&](RetainedKnowledge RK, Instruction *Assume, auto) {
-        if (!isValidAssumeForContext(Assume, CtxI, DT))
+        if (!isValidAssumeForContext(Assume, SQ.CxtI, SQ.DT))
           return false;
         if (RK.AttrKind == Attribute::Alignment)
           AlignRK = std::max(AlignRK, RK);
 
         // Dereferenceable information from assumptions is only valid if the
         // value cannot be freed between the assumption and use.
-        if ((!PtrCanBeFreed || willNotFreeBetween(Assume, CtxI)) &&
+        if ((!PtrCanBeFreed || willNotFreeBetween(Assume, SQ.CxtI)) &&
             RK.AttrKind == Attribute::Dereferenceable)
           DerefRK = std::max(DerefRK, RK);
         IsAligned |= AlignRK && AlignRK.ArgValue >= Alignment.value();
@@ -69,10 +67,8 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
 /// Test if V is always a pointer to allocated and suitably aligned memory for
 /// a simple load or store.
 static bool isDereferenceableAndAlignedPointer(
-    const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
-    const Instruction *CtxI, AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI, SmallPtrSetImpl<const Value *> &Visited,
-    unsigned MaxDepth) {
+    const Value *V, Align Alignment, const APInt &Size, const SimplifyQuery &SQ,
+    SmallPtrSetImpl<const Value *> &Visited, unsigned MaxDepth) {
   assert(V->getType()->isPointerTy() && "Base must be pointer");
 
   // Recursion limit.
@@ -90,8 +86,8 @@ static bool isDereferenceableAndAlignedPointer(
   if (const GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
     const Value *Base = GEP->getPointerOperand();
 
-    APInt Offset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-    if (!GEP->accumulateConstantOffset(DL, Offset) || Offset.isNegative() ||
+    APInt Offset(SQ.DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+    if (!GEP->accumulateConstantOffset(SQ.DL, Offset) || Offset.isNegative() ||
         !Offset.urem(APInt(Offset.getBitWidth(), Alignment.value()))
              .isMinValue())
       return false;
@@ -105,35 +101,31 @@ static bool isDereferenceableAndAlignedPointer(
     // Offset and Size may have different bit widths if we have visited an
     // addrspacecast, so we can't do arithmetic directly on the APInt values.
     return isDereferenceableAndAlignedPointer(
-        Base, Alignment, Offset + Size.sextOrTrunc(Offset.getBitWidth()), DL,
-        CtxI, AC, DT, TLI, Visited, MaxDepth);
+        Base, Alignment, Offset + Size.sextOrTrunc(Offset.getBitWidth()), SQ,
+        Visited, MaxDepth);
   }
 
   // bitcast instructions are no-ops as far as dereferenceability is concerned.
   if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V)) {
     if (BC->getSrcTy()->isPointerTy())
-      return isDereferenceableAndAlignedPointer(
-        BC->getOperand(0), Alignment, Size, DL, CtxI, AC, DT, TLI,
-          Visited, MaxDepth);
+      return isDereferenceableAndAlignedPointer(BC->getOperand(0), Alignment,
+                                                Size, SQ, Visited, MaxDepth);
   }
 
   // Recurse into both hands of select.
   if (const SelectInst *Sel = dyn_cast<SelectInst>(V)) {
     return isDereferenceableAndAlignedPointer(Sel->getTrueValue(), Alignment,
-                                              Size, DL, CtxI, AC, DT, TLI,
-                                              Visited, MaxDepth) &&
+                                              Size, SQ, Visited, MaxDepth) &&
            isDereferenceableAndAlignedPointer(Sel->getFalseValue(), Alignment,
-                                              Size, DL, CtxI, AC, DT, TLI,
-                                              Visited, MaxDepth);
+                                              Size, SQ, Visited, MaxDepth);
   }
 
   auto IsKnownDeref = [&]() {
     bool CheckForNonNull, CheckForFreed;
-    if (!Size.ule(V->getPointerDereferenceableBytes(DL, CheckForNonNull,
+    if (!Size.ule(V->getPointerDereferenceableBytes(SQ.DL, CheckForNonNull,
                                                     CheckForFreed)))
       return false;
-    if (CheckForNonNull &&
-        !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
+    if (CheckForNonNull && !isKnownNonZero(V, SQ))
       return false;
 
     auto *I = dyn_cast<Instruction>(V);
@@ -154,7 +146,7 @@ static bool isDereferenceableAndAlignedPointer(
         DefI = &cast<Argument>(V)->getParent()->getEntryBlock().front();
       }
 
-      if (!CtxI || !willNotFreeBetween(DefI, CtxI))
+      if (!SQ.CxtI || !willNotFreeBetween(DefI, SQ.CxtI))
         return false;
     }
 
@@ -167,14 +159,14 @@ static bool isDereferenceableAndAlignedPointer(
     // We don't bother handling allocas here, as they aren't speculatable
     // anyway.
     if (I && !isa<AllocaInst>(I))
-      return CtxI && isValidAssumeForContext(I, CtxI, DT);
+      return SQ.CxtI && isValidAssumeForContext(I, SQ.CxtI, SQ.DT);
     return true;
   };
   if (IsKnownDeref()) {
     // As we recursed through GEPs to get here, we've incrementally checked
     // that each step advanced by a multiple of the alignment. If our base is
     // properly aligned, then the original offset accessed must also be.
-    return isAligned(V, Alignment, DL);
+    return isAligned(V, Alignment, SQ.DL);
   }
 
   /// TODO refactor this function to be able to search independently for
@@ -184,8 +176,8 @@ static bool isDereferenceableAndAlignedPointer(
   if (const auto *Call = dyn_cast<CallBase>(V)) {
     if (auto *RP = getArgumentAliasingToReturnedPointer(
             Call, /*MustPreserveOffset=*/true))
-      return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
-                                                AC, DT, TLI, Visited, MaxDepth);
+      return isDereferenceableAndAlignedPointer(RP, Alignment, Size, SQ,
+                                                Visited, MaxDepth);
 
     // If we have a call we can't recurse through, check to see if this is an
     // allocation function for which we can establish an minimum object size.
@@ -201,57 +193,50 @@ static bool isDereferenceableAndAlignedPointer(
     Opts.RoundToAlign = false;
     Opts.NullIsUnknownSize = true;
     uint64_t ObjSize;
-    if (getObjectSize(V, ObjSize, DL, TLI, Opts)) {
+    if (getObjectSize(V, ObjSize, SQ.DL, SQ.TLI, Opts)) {
       APInt KnownDerefBytes(Size.getBitWidth(), ObjSize);
       if (KnownDerefBytes.getBoolValue() && KnownDerefBytes.uge(Size) &&
-          isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)) &&
-          !V->canBeFreed()) {
+          isKnownNonZero(V, SQ) && !V->canBeFreed()) {
         // As we recursed through GEPs to get here, we've incrementally
         // checked that each step advanced by a multiple of the alignment. If
         // our base is properly aligned, then the original offset accessed
         // must also be.
-        return isAligned(V, Alignment, DL);
+        return isAligned(V, Alignment, SQ.DL);
       }
     }
   }
 
   // For gc.relocate, look through relocations
   if (const GCRelocateInst *RelocateInst = dyn_cast<GCRelocateInst>(V))
-    return isDereferenceableAndAlignedPointer(RelocateInst->getDerivedPtr(),
-                                              Alignment, Size, DL, CtxI, AC, DT,
-                                              TLI, Visited, MaxDepth);
+    return isDereferenceableAndAlignedPointer(
+        RelocateInst->getDerivedPtr(), Alignment, Size, SQ, Visited, MaxDepth);
 
   if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V))
     return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
-                                              Size, DL, CtxI, AC, DT, TLI,
-                                              Visited, MaxDepth);
+                                              Size, SQ, Visited, MaxDepth);
 
-  return AC && isDereferenceableAndAlignedPointerViaAssumption(
-                   V, Alignment,
-                   [Size](const RetainedKnowledge &RK) {
-                     return RK.ArgValue >= Size.getZExtValue();
-                   },
-                   DL, CtxI, AC, DT);
+  return SQ.AC && isDereferenceableAndAlignedPointerViaAssumption(
+                      V, Alignment, SQ, [Size](const RetainedKnowledge &RK) {
+                        return RK.ArgValue >= Size.getZExtValue();
+                      });
 }
 
-bool llvm::isDereferenceableAndAlignedPointer(
-    const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
-    const Instruction *CtxI, AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI) {
+bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
+                                              const APInt &Size,
+                                              const SimplifyQuery &SQ) {
   // Note: At the moment, Size can be zero.  This ends up being interpreted as
   // a query of whether [Base, V] is dereferenceable and V is aligned (since
   // that's what the implementation happened to do).  It's unclear if this is
   // the desired semantic, but at least SelectionDAG does exercise this case.
 
   SmallPtrSet<const Value *, 32> Visited;
-  return ::isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, AC,
-                                              DT, TLI, Visited, 16);
+  return ::isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ, Visited,
+                                              /*MaxDepth=*/16);
 }
 
-bool llvm::isDereferenceableAndAlignedPointer(
-    const Value *V, Type *Ty, Align Alignment, const DataLayout &DL,
-    const Instruction *CtxI, AssumptionCache *AC, const DominatorTree *DT,
-    const TargetLibraryInfo *TLI) {
+bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
+                                              Align Alignment,
+                                              const SimplifyQuery &SQ) {
   // For unsized types or scalable vectors we don't know exactly how many bytes
   // are dereferenced, so bail out.
   if (!Ty->isSized() || Ty->isScalableTy())
@@ -262,20 +247,14 @@ bool llvm::isDereferenceableAndAlignedPointer(
   // determine the exact offset to the attributed variable, we can use that
   // information here.
 
-  APInt AccessSize(DL.getPointerTypeSizeInBits(V->getType()),
-                   DL.getTypeStoreSize(Ty));
-  return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, DL, CtxI,
-                                            AC, DT, TLI);
+  APInt AccessSize(SQ.DL.getPointerTypeSizeInBits(V->getType()),
+                   SQ.DL.getTypeStoreSize(Ty));
+  return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, SQ);
 }
 
 bool llvm::isDereferenceablePointer(const Value *V, Type *Ty,
-                                    const DataLayout &DL,
-                                    const Instruction *CtxI,
-                                    AssumptionCache *AC,
-                                    const DominatorTree *DT,
-                                    const TargetLibraryInfo *TLI) {
-  return isDereferenceableAndAlignedPointer(V, Ty, Align(1), DL, CtxI, AC, DT,
-                                            TLI);
+                                    const SimplifyQuery &SQ) {
+  return isDereferenceableAndAlignedPointer(V, Ty, Align(1), SQ);
 }
 
 /// Test if A and B will obviously have the same value.
@@ -321,8 +300,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   // access is safe within the loop w/o needing predication.
   if (L->isLoopInvariant(Ptr))
     return isDereferenceableAndAlignedPointer(
-        Ptr, LI->getAlign(), EltSize, DL, &*L->getHeader()->getFirstNonPHIIt(),
-        AC, &DT);
+        Ptr, LI->getAlign(), EltSize,
+        SimplifyQuery(DL, &DT, AC, &*L->getHeader()->getFirstNonPHIIt()));
 
   const SCEV *EltSizeSCEV = SE.getConstant(EltSize);
   return isDereferenceableAndAlignedInLoop(PtrSCEV, LI->getAlign(), EltSizeSCEV,
@@ -428,17 +407,16 @@ bool llvm::isDereferenceableAndAlignedInLoop(
     if (isa<UncondBrInst, CondBrInst>(LoopPred->getTerminator()))
       CtxI = LoopPred->getTerminator();
   }
+  SimplifyQuery SQ(DL, &DT, AC, CtxI);
   return isDereferenceableAndAlignedPointerViaAssumption(
-             Base, Alignment,
+             Base, Alignment, SQ,
              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
                return SE.isKnownPredicate(
                    CmpInst::ICMP_ULE,
                    SE.applyLoopGuards(AccessSizeSCEV, *LoopGuards),
                    SE.applyLoopGuards(SE.getSCEV(RK.IRArgValue), *LoopGuards));
-             },
-             DL, CtxI, AC, &DT) ||
-         isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, DL,
-                                            CtxI, AC, &DT);
+             }) ||
+         isDereferenceableAndAlignedPointer(Base, Alignment, AccessSize, SQ);
 }
 
 static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
@@ -460,8 +438,8 @@ bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &S
                                        AssumptionCache *AC,
                                        const DominatorTree *DT,
                                        const TargetLibraryInfo *TLI) {
-  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, ScanFrom, AC,
-                                         DT, TLI)) {
+  if (isDereferenceableAndAlignedPointer(
+          V, Alignment, Size, SimplifyQuery(DL, TLI, DT, AC, ScanFrom))) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
     // load.
     if (!ScanFrom || !suppressSpeculativeLoadForSanitizers(*ScanFrom))

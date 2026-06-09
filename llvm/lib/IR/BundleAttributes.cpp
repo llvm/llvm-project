@@ -60,5 +60,9 @@ AssumeNonNullInfo llvm::getAssumeNonNullInfo(OperandBundleUse OBU) {
 AssumeDereferenceableInfo
 llvm::getAssumeDereferenceableInfo(OperandBundleUse OBU) {
   assert(OBU.getTagName() == "dereferenceable" && OBU.Inputs.size() == 2);
-  return {OBU.Inputs[0], OBU.Inputs[1]};
+  AssumeDereferenceableInfo Ret{OBU.Inputs[0], OBU.Inputs[1], std::nullopt};
+
+  if (auto *Size = dyn_cast<ConstantInt>(OBU.Inputs[1]))
+    Ret.CountVal = Size->getZExtValue();
+  return Ret;
 }

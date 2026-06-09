@@ -1272,9 +1272,11 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
 
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
-    if (!match(Op, m_LiveIn()))
+    VPValue *Candidate = Op;
+    match(Op, m_Broadcast(m_VPValue(Candidate)));
+    if (!match(Candidate, m_LiveIn()))
       return nullptr;
-    Value *V = Op->getUnderlyingValue();
+    Value *V = Candidate->getUnderlyingValue();
     if (!V)
       return nullptr;
     Ops.push_back(V);

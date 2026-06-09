@@ -258,7 +258,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
-  initializeAArch64PostLegalizerCombinerPass(PR);
+  initializeAArch64PostLegalizerCombinerLegacyPass(PR);
   initializeAArch64PostSelectOptimizeLegacyPass(PR);
   initializeAArch64PostLegalizerLoweringLegacyPass(PR);
   initializeAArch64PromoteConstantPass(PR);
@@ -772,7 +772,7 @@ void AArch64PassConfig::addPreRegBankSelect() {
   const bool IsGlobalISelOptNone =
       getAArch64TargetMachine().isGlobalISelOptNone();
   if (!IsGlobalISelOptNone) {
-    addPass(createAArch64PostLegalizerCombiner(IsGlobalISelOptNone));
+    addPass(createAArch64PostLegalizerCombinerLegacy(IsGlobalISelOptNone));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }

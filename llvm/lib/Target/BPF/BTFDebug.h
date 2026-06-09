@@ -142,12 +142,18 @@ public:
 /// Handle function pointer.
 class BTFTypeFuncProto : public BTFTypeBase {
   const DISubroutineType *STy;
-  std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  SmallDenseMap<uint32_t, StringRef> FuncArgNames;
+  SmallVector<uint32_t, 8> AliveParamIndices;
+  bool UseFilteredParams = false;
   std::vector<struct BTF::BTFParam> Parameters;
+  bool VoidReturn = false;
 
 public:
   BTFTypeFuncProto(const DISubroutineType *STy, uint32_t NumParams,
-                   const std::unordered_map<uint32_t, StringRef> &FuncArgNames);
+                   const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
+                   bool UseFilteredParams = false,
+                   ArrayRef<uint32_t> AliveParamIndices = {},
+                   bool VoidReturn = false);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + Parameters.size() * BTF::BTFParamSize;
   }
@@ -323,10 +329,10 @@ class BTFDebug : public DebugHandlerBase {
   void visitTypeEntry(const DIType *Ty, uint32_t &TypeId, bool CheckPointer,
                       bool SeenPointer);
   void visitBasicType(const DIBasicType *BTy, uint32_t &TypeId);
-  void visitSubroutineType(
-      const DISubroutineType *STy, bool ForSubprog,
-      const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
-      uint32_t &TypeId);
+  void
+  visitSubroutineType(const DISubroutineType *STy, bool ForSubprog,
+                      const SmallDenseMap<uint32_t, StringRef> &FuncArgNames,
+                      uint32_t &TypeId, bool VoidReturn = false);
   void visitFwdDeclType(const DICompositeType *CTy, bool IsUnion,
                         uint32_t &TypeId);
   void visitCompositeType(const DICompositeType *CTy, uint32_t &TypeId);
@@ -365,8 +371,9 @@ class BTFDebug : public DebugHandlerBase {
                               int ComponentId);
 
   /// Generate types for DISubprogram and it's arguments.
-  uint32_t processDISubprogram(const DISubprogram *SP, uint32_t ProtoTypeId,
-                               uint8_t Scope);
+  uint32_t processDISubprogram(
+      const DISubprogram *SP, uint32_t ProtoTypeId, uint8_t Scope,
+      const SmallDenseMap<uint32_t, uint32_t> *ArgIndexMap = nullptr);
 
   /// Generate BTF type_tag's. If BaseTypeId is nonnegative, the last
   /// BTF type_tag in the chain points to BaseTypeId. Otherwise, it points to

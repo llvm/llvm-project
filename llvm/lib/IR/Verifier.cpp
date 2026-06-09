@@ -6117,8 +6117,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "dereferenceable assumptions should have 2 arguments", Call);
         Check(GetTypeAt(0)->isPointerTy(), "first argument should be a pointer",
               Call);
-        Check(GetTypeAt(1)->isIntegerTy(),
-              "second argument should be an integer", Call);
+        Check(GetTypeAt(1)->isIntegerTy() &&
+                  GetTypeAt(1)->getIntegerBitWidth() <= 64,
+              "second argument should be an integer with a maximum width of 64 "
+              "bits",
+              Call);
         break;
       case BundleAttr::Ignore:
         break;
