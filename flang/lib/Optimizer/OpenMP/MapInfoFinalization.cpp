@@ -1366,6 +1366,10 @@ class MapInfoFinalizationPass
     return false;
   }
 
+  static bool isNestedInIterator(mlir::omp::MapInfoOp op) {
+    return op->getParentOfType<mlir::omp::IteratorOp>() != nullptr;
+  }
+
   // This pass executes on omp::MapInfoOp's containing descriptor based types
   // (allocatables, pointers, assumed shape etc.) and expanding them into
   // multiple omp::MapInfoOp's for each pointer member contained within the
@@ -1403,6 +1407,8 @@ class MapInfoFinalizationPass
       // is executed again as the final step of this pass to maintain
       // map to block argument consistency.
       func->walk([&](mlir::omp::MapInfoOp op) {
+        if (isNestedInIterator(op))
+          return;
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
@@ -1611,6 +1617,8 @@ class MapInfoFinalizationPass
       });
 
       func->walk([&](mlir::omp::MapInfoOp op) {
+        if (isNestedInIterator(op))
+          return;
         // NOTE: Currently only supports a single user for the MapInfoOp. This
         // is fine for the moment, as the Fortran frontend will generate a
         // new MapInfoOp with at most one user currently. In the case of
@@ -1706,6 +1714,8 @@ class MapInfoFinalizationPass
       // the target's block arguments, simplifying the process as there would be
       // no need to avoid accidental duplicate additions.
       func->walk([&](mlir::omp::MapInfoOp op) {
+        if (isNestedInIterator(op))
+          return;
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
