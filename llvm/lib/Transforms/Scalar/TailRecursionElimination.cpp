@@ -54,6 +54,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -73,9 +74,12 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -426,6 +430,11 @@ class TailRecursionEliminator {
   // to either propagate RetPN or select a new return value.
   SmallVector<SelectInst *, 8> RetSelects;
 
+  // Keep track of the sum of frequencies of blocks that have calls eliminated
+  // so we can synthesize branch weights later that require information on
+  // recursion frequency.
+  uint64_t EliminateBlocksFrequencySum = 0;
+
   // The below are shared state needed when performing accumulator recursion.
   // There values should be populated by insertAccumulator the first time we
   // find an elimination that requires an accumulator.
@@ -680,6 +689,9 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
 
   BasicBlock *BB = Ret->getParent();
 
+  if (BFI)
+    EliminateBlocksFrequencySum += BFI->getBlockFreq(BB).getFrequency();
+
   using namespace ore;
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "tailcall-recursion", CI)
@@ -857,6 +869,27 @@ void TailRecursionEliminator::cleanupAndFinalize() {
           SI->setFalseValue(AccRecInstrNew);
         }
       }
+    }
+
+    if (BFI) {
+      uint64_t BaseCaseBlocksFrequencySum = 0;
+      for (BasicBlock &BB : F)
+        if (isa<ReturnInst>(BB.getTerminator()))
+          BaseCaseBlocksFrequencySum += BFI->getBlockFreq(&BB).getFrequency();
+
+      BlockFrequencyInfoImplBase::Distribution Distribution;
+      Distribution.addExit(0, EliminateBlocksFrequencySum);
+      Distribution.addExit(1, BaseCaseBlocksFrequencySum);
+      if (Distribution.Total == 0)
+        return;
+      Distribution.normalize();
+      MDBuilder MDB(F.getContext());
+      MDNode *BranchWeights = MDB.createBranchWeights(
+          {static_cast<uint32_t>(Distribution.Weights[0].Amount),
+           static_cast<uint32_t>(Distribution.Weights[1].Amount)},
+          false);
+      for (SelectInst *SI : RetSelects)
+        SI->setMetadata(LLVMContext::MD_prof, BranchWeights);
     }
   }
 }
