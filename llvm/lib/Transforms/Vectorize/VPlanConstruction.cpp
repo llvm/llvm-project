@@ -1196,8 +1196,6 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
         VPBuilder Builder(RedRecipe);
         VPValue *Identity = new VPIRValue(
             getRecurrenceIdentity(Kind, PhiR->getScalarType(), FMFs));
-        if (!MinVF.isScalar())
-          Identity = Builder.createNaryOp(VPInstruction::Broadcast, Identity);
         auto *NewVecOp =
             Builder.createSelect(CondOp, RedRecipe->getVecOp(), Identity,
                                  RedRecipe->getDebugLoc(), "", FMFs);

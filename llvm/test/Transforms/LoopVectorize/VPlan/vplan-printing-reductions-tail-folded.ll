@@ -16,34 +16,33 @@ define float @print_reduction(i64 %n, ptr noalias %y) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = reduction-start-vector fast ir<0.000000e+00>, ir<0.000000e+00>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast ir<0.000000e+00>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (fadd) fast vp<[[VP4]]>, ir<%red.next>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP6]]>
-; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP3]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[VP7]]>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP10]]>, vp<[[VP9]]>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = select fast vp<[[VP9]]>, ir<%lv>, vp<[[VP5]]>
-; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> + fast  reduce.fadd (vp<[[VP11]]>)
-; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP6]]>, vp<[[VP1]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[VP6]]>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP9]]>, vp<[[VP8]]>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = select fast vp<[[VP8]]>, ir<%lv>, ir<0.000000e+00>
+; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> + fast  reduce.fadd (vp<[[VP10]]>)
+; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %red.next.lcssa = phi float [ %red.next, %loop ] (extra operand: vp<[[VP13]]> from middle.block)
+; CHECK-NEXT:    IR   %red.next.lcssa = phi float [ %red.next, %loop ] (extra operand: vp<[[VP12]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -78,31 +77,30 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = reduction-start-vector fast ir<0.000000e+00>, ir<0.000000e+00>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast ir<0.000000e+00>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (fadd) fast vp<[[VP4]]>, ir<%red.next>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP6]]>
-; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP3]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[VP7]]>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP10]]>, vp<[[VP9]]>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = select fast vp<[[VP9]]>, ir<%lv>, vp<[[VP5]]>
-; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> + fast  reduce.fadd (vp<[[VP11]]>)
-; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP6]]>, vp<[[VP1]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[VP6]]>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP9]]>, vp<[[VP8]]>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = select fast vp<[[VP8]]>, ir<%lv>, ir<0.000000e+00>
+; CHECK-NEXT:      REDUCE ir<%red.next> = ir<%red> + fast  reduce.fadd (vp<[[VP10]]>)
+; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
-; CHECK-NEXT:    CLONE store vp<[[VP13]]>, ir<%dst>
+; CHECK-NEXT:    EMIT vp<[[VP12:%[0-9]+]]> = compute-reduction-result (fadd, in-loop) fast ir<%red.next>
+; CHECK-NEXT:    CLONE store vp<[[VP12]]>, ir<%dst>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
@@ -141,38 +139,37 @@ define float @print_fmuladd_strict(ptr %a, ptr %b, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = reduction-start-vector nnan ninf nsz ir<0.000000e+00>, ir<0.000000e+00>, ir<1>
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = broadcast ir<0.000000e+00>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%sum.07> = phi (fmuladd) nnan ninf nsz vp<[[VP4]]>, ir<%muladd>
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP6]]>
-; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP3]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP7]]>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%l.a> = load vp<[[VP10]]>, vp<[[VP9]]>
-; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%b>, vp<[[VP7]]>
-; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx2>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%l.b> = load vp<[[VP11]]>, vp<[[VP9]]>
-; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = fmul nnan ninf nsz ir<%l.a>, ir<%l.b>
-; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = select nnan ninf nsz vp<[[VP9]]>, vp<[[VP12]]>, vp<[[VP5]]>
-; CHECK-NEXT:      REDUCE ir<%muladd> = ir<%sum.07> + nnan ninf nsz  reduce.fmuladd (vp<[[VP13]]>)
-; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP6]]>, vp<[[VP1]]>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = icmp ule vp<[[VP7]]>, vp<[[VP3]]>
+; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[VP6]]>
+; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%l.a> = load vp<[[VP9]]>, vp<[[VP8]]>
+; CHECK-NEXT:      CLONE ir<%arrayidx2> = getelementptr inbounds ir<%b>, vp<[[VP6]]>
+; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx2>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%l.b> = load vp<[[VP10]]>, vp<[[VP8]]>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = fmul nnan ninf nsz ir<%l.a>, ir<%l.b>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = select nnan ninf nsz vp<[[VP8]]>, vp<[[VP11]]>, ir<0.000000e+00>
+; CHECK-NEXT:      REDUCE ir<%muladd> = ir<%sum.07> + nnan ninf nsz  reduce.fmuladd (vp<[[VP12]]>)
+; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = compute-reduction-result (fmuladd, in-loop) nnan ninf nsz ir<%muladd>
+; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = compute-reduction-result (fmuladd, in-loop) nnan ninf nsz ir<%muladd>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %muladd.lcssa = phi float [ %muladd, %loop ] (extra operand: vp<[[VP15]]> from middle.block)
+; CHECK-NEXT:    IR   %muladd.lcssa = phi float [ %muladd, %loop ] (extra operand: vp<[[VP14]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -351,7 +348,7 @@ define i64 @print_mulacc(ptr nocapture readonly %x, ptr nocapture readonly %y, i
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP9]]>, vp<[[VP8]]>
-; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP8]]>, ir<%load0>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = freeze ir<%load0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load1> = load vp<[[VP11]]>, vp<[[VP8]]>
@@ -420,7 +417,7 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP9]]>, vp<[[VP8]]>
-; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP8]]>, ir<%load0>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = freeze ir<%load0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load1> = load vp<[[VP11]]>, vp<[[VP8]]>
@@ -692,7 +689,7 @@ define i64 @print_mulacc_sub_extended(ptr nocapture readonly %x, ptr nocapture r
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP9]]>, vp<[[VP8]]>
-; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP8]]>, ir<%load0>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = freeze ir<%load0>
 ; CHECK-NEXT:      CLONE ir<%arrayidx1> = getelementptr inbounds ir<%y>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx1>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load1> = load vp<[[VP11]]>, vp<[[VP8]]>
@@ -764,9 +761,9 @@ define i64 @print_mulacc_duplicate_extends(ptr nocapture readonly %x, ptr nocapt
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP9:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = load vp<[[VP9]]>, vp<[[VP8]]>
-; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = select vp<[[VP8]]>, ir<%load0>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = freeze ir<%load0>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP8]]>, ir<%load0>, ir<0>
-; CHECK-NEXT:      EXPRESSION vp<[[VP12]]> = ir<%rdx> + reduce.sub (mul nsw (vp<[[VP11]]> sext to i64), (vp<[[VP10]]> sext to i64))
+; CHECK-NEXT:      EXPRESSION vp<[[VP12]]> = ir<%rdx> + reduce.sub (mul nsw (vp<[[VP10]]> sext to i64), (vp<[[VP11]]> sext to i64))
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -831,7 +828,7 @@ define i32 @print_mulacc_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP10]]>, vp<[[VP9]]>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP9]]>, ir<%l>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = freeze ir<%l>
 ; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = select vp<[[VP9]]>, ir<63>, ir<0>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP13]]> = ir<%red> + reduce.add (mul (vp<[[VP11]]> zext to i32), (vp<[[VP12]]> zext to i32))
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP6]]>, vp<[[VP1]]>
@@ -953,7 +950,7 @@ define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (add) vp<[[VP5]]>, vp<[[VP12:%[0-9]+]]>
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%red> = phi (add) vp<[[VP5]]>, vp<[[VP11:%[0-9]+]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<%next.gep> = ptradd ir<%start>, vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP6]]>
@@ -961,8 +958,7 @@ define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP10]]>, vp<[[VP9]]>
 ; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP9]]>, ir<%l.ext>, ir<0>
-; CHECK-NEXT:      EXPRESSION vp<[[VP12]]> = ir<%red> + reduce.add (mul vp<[[VP11]]>, ir<128>)
+; CHECK-NEXT:      EXPRESSION vp<[[VP11]]> = ir<%red> + reduce.add (mul ir<%l.ext>, ir<128>)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -970,11 +966,11 @@ define i32 @print_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP12]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = compute-reduction-result (add, in-loop) vp<[[VP11]]>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %red.next.lcssa = phi i32 [ %red.next, %loop ] (extra operand: vp<[[VP14]]> from middle.block)
+; CHECK-NEXT:    IR   %red.next.lcssa = phi i32 [ %red.next, %loop ] (extra operand: vp<[[VP13]]> from middle.block)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
@@ -1025,7 +1021,7 @@ define i64 @print_ext_mulacc_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp ule vp<[[VP8]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer vp<%next.gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP10]]>, vp<[[VP9]]>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = select vp<[[VP9]]>, ir<%l>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = freeze ir<%l>
 ; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = select vp<[[VP9]]>, ir<63>, ir<0>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP13]]> = ir<%red> + reduce.add (mul (vp<[[VP11]]> zext to i64), (vp<[[VP12]]> zext to i64))
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP6]]>, vp<[[VP1]]>

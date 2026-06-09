@@ -4780,23 +4780,30 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   // instruction for MulAcc in the backend.
   auto HoistPredicatedSelect = [](VPExpressionRecipe *Expr,
                                   VPReductionRecipe *Red, VPValue *HeaderMask) {
+    VPSingleDefRecipe *R = dyn_cast<VPSingleDefRecipe>(Expr->getOperand(1));
+    if (!R)
+      return;
     FastMathFlags FMFs =
         Expr->getOperandOfResultType()->getScalarType()->isFloatingPointTy()
             ? Red->getFastMathFlagsOrNone()
             : FastMathFlags();
-    // Hoist predicated select to the first two operands of VPExpressionRecipe
+    // Hoist predicated select to the first operand of VPExpressionRecipe
     // with MulAcc pattern.
-    for (unsigned i = 0; i < 2; ++i) {
-      VPSingleDefRecipe *R = dyn_cast<VPSingleDefRecipe>(Expr->getOperand(i));
-      if (!R)
-        continue;
-      VPBuilder Builder(R->getParent(), std::next(R->getIterator()));
-      auto *NewSelect = Builder.createSelect(
-          HeaderMask, R,
-          new VPIRValue(getRecurrenceIdentity(Red->getRecurrenceKind(),
-                                              R->getScalarType(), FMFs)),
-          Red->getDebugLoc());
-      Expr->setOperand(i, NewSelect);
+    VPBuilder Builder(R->getParent(), std::next(R->getIterator()));
+    auto *NewSelect = Builder.createSelect(
+        HeaderMask, R,
+        new VPIRValue(getRecurrenceIdentity(Red->getRecurrenceKind(),
+                                            R->getScalarType(), FMFs)),
+        Red->getDebugLoc());
+    Expr->setOperand(1, NewSelect);
+    // Freeze the other operand to keep the semantic of mul.
+    auto *Op0 = dyn_cast<VPSingleDefRecipe>(Expr->getOperand(0));
+    if (!Op0)
+      return;
+    if (!Op0->isDefinedOutsideLoopRegions()) {
+      Builder.setInsertPoint(Op0->getParent(), std::next(Op0->getIterator()));
+      auto *Freeze = Builder.createNaryOp(Instruction::Freeze, {Op0});
+      Expr->setOperand(0, Freeze);
     }
   };
 
@@ -6588,33 +6595,25 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   E->insertBefore(WidenRecipe);
   PartialRed->replaceAllUsesWith(E);
 
+  // Predicate the first operand. For MulAcc reduction, only predicating the
+  // first oeprand is fine since identity of reduce.add is 0 and mul(0,
+  // poison)-> 0.
   if (Cond) {
     VPBuilder Builder(E);
-    VPValue *Op0 = E->getOperand(0);
-    VPValue *Op1 = E->getOperand(1);
-    auto *ScalarIdentity1 = new VPIRValue(getRecurrenceIdentity(
-        RdxKind, E->getOperand(1)->getScalarType(), FMFs));
-    VPIRValue *ScalarIdentity0 =
-        Op0->getScalarType() == Op1->getScalarType()
-            ? ScalarIdentity1
-            : new VPIRValue(getRecurrenceIdentity(
-                  RdxKind, E->getOperand(0)->getScalarType(), FMFs));
+    unsigned PredIdx = E->isMulAccPattern() ? 1 : 0;
+    auto *Identity = new VPIRValue(getRecurrenceIdentity(
+        RdxKind, E->getOperand(PredIdx)->getScalarType(), FMFs));
 
-    // MulAcc patterns need both operands predicated,
-    if (E->isMulAccPattern()) {
-      auto *Identity =
-          Builder.createNaryOp(VPInstruction::Broadcast, ScalarIdentity1);
-      VPValue *PredV = Builder.createSelect(
-          Cond, Op1, Identity, WidenRecipe->getDebugLoc(), "", FMFs);
-      E->setOperand(1, PredV);
+    VPValue *PredV =
+        Builder.createSelect(Cond, E->getOperand(PredIdx), Identity,
+                             WidenRecipe->getDebugLoc(), "", FMFs);
+    E->setOperand(PredIdx, PredV);
+    // Freeze the other operand to keep the semantic of mul.
+    auto *Op0 = dyn_cast<VPSingleDefRecipe>(E->getOperand(0));
+    if (Op0 && !Op0->isDefinedOutsideLoopRegions()) {
+      auto *Freeze = Builder.createNaryOp(Instruction::Freeze, {Op0});
+      E->setOperand(0, Freeze);
     }
-
-    // Predicate the first operand for all reduction type.
-    auto *Identity =
-        Builder.createNaryOp(VPInstruction::Broadcast, ScalarIdentity0);
-    VPValue *PredV = Builder.createSelect(Cond, Op0, Identity,
-                                          WidenRecipe->getDebugLoc(), "", FMFs);
-    E->setOperand(0, PredV);
   }
 
   // We only need to update the PHI node once, which is when we find the
