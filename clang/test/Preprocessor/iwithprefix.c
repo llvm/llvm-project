@@ -9,6 +9,6 @@
 
 // CHECK: #include <...> search starts here:
 // CHECK: {{.*}}.tmps/first
-// CHECK: [[RESOURCE_DIR]]{{[\/]}}include
+// CHECK: [[RESOURCE_DIR]]{{/|\\}}include
 // CHECK: {{.*}}.tmps/second
 // CHECK-NOT: {{.*}}.tmps
