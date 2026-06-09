@@ -300,6 +300,14 @@ jobs:
         mv $installer $env:GITHUB_WORKSPACE
         mv $tarball $env:GITHUB_WORKSPACE
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
+    
+    - name: Dump Wix logs
+      if: runner.os == 'Windows'
+      env:
+        LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
+        BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
+      run: |
+        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
 
     - name: Create zstd compressed tarball
       shell: bash
@@ -308,13 +316,6 @@ jobs:
         RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
       run: |
         xz -dc "$RELEASE_BINARY_FILENAME" | zstd --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
-    - name: Dump Build logs
-      if: runner.os == 'Windows' && failure()
-      env:
-        LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
-        BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}
-      run: |
-        cat S:/llvm/utils/release/llvm_package_$($env:LLVM_VERSION)/build_$($env:BUILD_DIR_SUFFIX)/_CPack_Packages/win64/WIX/wix.log
 
     - name: Generate sha256 digest for binaries
       id: digest

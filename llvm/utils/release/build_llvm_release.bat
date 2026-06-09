@@ -85,7 +85,6 @@ if not "%version_7z%"=="" (
 REM Prerequisites:
 REM
 REM   Visual Studio 2019, CMake, Ninja, GNUWin32, SWIG, Python 3,
-REM   NSIS with the strlen_8192 patch,
 REM   Perl (for the OpenMP run-time).
 REM
 REM
