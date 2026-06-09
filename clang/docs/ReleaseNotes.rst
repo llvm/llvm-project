@@ -325,6 +325,11 @@ Non-comprehensive list of changes in this release
 
 - Updated support for Unicode from 15.1 to 18.0.
 
+- The SafeStack builtins ``__builtin___get_unsafe_stack_ptr``,
+  ``__builtin___get_unsafe_stack_bottom``, ``__builtin___get_unsafe_stack_top``,
+  and ``__builtin___get_unsafe_stack_start`` are now deprecated. Use the
+  corresponding functions from ``<sanitizer/safestack_interface.h>`` instead.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added

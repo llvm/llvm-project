@@ -222,10 +222,12 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   const Loop *L = AR->getLoop();
   bool CheckForNonNull, CheckForFreed;
   Value *StartPtrV = StartPtr->getValue();
+  // We can ignore frees, as the fact that an object of a certain size existed
+  // at the location *at some point* is sufficient to derive the nowrap fact.
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
       DL, CheckForNonNull, CheckForFreed);
 
-  if (DerefBytes && (CheckForNonNull || CheckForFreed))
+  if (DerefBytes && CheckForNonNull)
     return false;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
@@ -242,9 +244,6 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   getKnowledgeForValue(StartPtrV, {Attribute::Dereferenceable}, *AC,
                        [&](RetainedKnowledge RK, Instruction *Assume, auto) {
                          if (!isValidAssumeForContext(Assume, CtxI, DT))
-                           return false;
-                         if (StartPtrV->canBeFreed() &&
-                             !willNotFreeBetween(Assume, CtxI))
                            return false;
                          DerefRK = std::max(DerefRK, RK);
                          return true;
