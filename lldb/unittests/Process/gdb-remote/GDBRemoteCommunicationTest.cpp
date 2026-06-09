@@ -75,6 +75,25 @@ TEST_F(GDBRemoteCommunicationTest, ReadPacket) {
   }
 }
 
+// Test that async notification packets received while waiting for a response
+// are silently dropped and that we keep looking for the actual response.
+// OpenOCD sends a "%oocd_keepalive:XX#cc" notification during long memory
+// operations; like GDB (since 7.0), LLDB must ignore it rather than mistake it
+// for the response. See https://github.com/llvm/llvm-project/issues/197944.
+TEST_F(GDBRemoteCommunicationTest, ReadPacketIgnoresNotifications) {
+  StringExtractorGDBRemote response;
+
+  // A single notification ahead of the response.
+  ASSERT_TRUE(Write("%oocd_keepalive:00#54$OK#9a"));
+  ASSERT_EQ(PacketResult::Success, client.ReadPacket(response));
+  EXPECT_EQ("OK", response.GetStringRef());
+
+  // Several notifications ahead of the response.
+  ASSERT_TRUE(Write("%oocd_keepalive:01#55%oocd_keepalive:02#56$OK#9a"));
+  ASSERT_EQ(PacketResult::Success, client.ReadPacket(response));
+  EXPECT_EQ("OK", response.GetStringRef());
+}
+
 // Test that packets with incorrect RLE sequences do not cause a crash and
 // reported as invalid.
 TEST_F(GDBRemoteCommunicationTest, CheckForPacket) {
