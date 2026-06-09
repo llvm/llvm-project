@@ -260,7 +260,10 @@ PRESERVE_NONE bool Ret(InterpState &S, CodePtr &PC) {
   const T &Ret = S.Stk.pop<T>();
 
   assert(S.Current);
+
+#ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+#endif
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
 
@@ -280,7 +283,10 @@ PRESERVE_NONE bool Ret(InterpState &S, CodePtr &PC) {
 }
 
 PRESERVE_NONE inline bool RetVoid(InterpState &S, CodePtr &PC) {
+
+#ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+#endif
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
