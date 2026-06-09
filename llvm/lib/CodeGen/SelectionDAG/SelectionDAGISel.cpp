@@ -109,6 +109,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -2749,13 +2750,24 @@ GetSignedVBR(const unsigned char *MatcherTable, size_t &Idx) {
   return Val;
 }
 
-/// getSimpleVT - Decode a value in MatcherTable, if it's a VBR encoded value,
-/// use GetVBR to decode it.
+/// Decode an MVT from MatcherTable. Values below the escape byte are encoded
+/// directly; larger values use the escape followed by a VBR-encoded offset.
 LLVM_ATTRIBUTE_ALWAYS_INLINE static MVT::SimpleValueType
 getSimpleVT(const uint8_t *MatcherTable, size_t &MatcherIndex) {
-  unsigned SimpleVT = MatcherTable[MatcherIndex++];
-  if (SimpleVT & 128)
-    SimpleVT = GetVBR(SimpleVT, MatcherTable, MatcherIndex);
+  constexpr uint64_t Escape = std::numeric_limits<uint8_t>::max();
+  using SimpleVTStorage = std::underlying_type_t<MVT::SimpleValueType>;
+  static_assert(std::is_unsigned_v<SimpleVTStorage>);
+  static_assert(sizeof(SimpleVTStorage) <= sizeof(uint64_t));
+
+  uint64_t SimpleVT = MatcherTable[MatcherIndex++];
+  if (SimpleVT == Escape) {
+    uint64_t Offset = MatcherTable[MatcherIndex++];
+    if (Offset & 128)
+      Offset = GetVBR(Offset, MatcherTable, MatcherIndex);
+    assert(Offset <= std::numeric_limits<SimpleVTStorage>::max() - Escape &&
+           "invalid MVT encoding");
+    SimpleVT += Offset;
+  }
 
   return static_cast<MVT::SimpleValueType>(SimpleVT);
 }

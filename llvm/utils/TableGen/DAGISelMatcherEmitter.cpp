@@ -27,6 +27,9 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include <cstdint>
+#include <limits>
+#include <type_traits>
 
 using namespace llvm;
 
@@ -313,6 +316,16 @@ static unsigned GetVBRSize(unsigned Val) {
   return NumBytes + 1;
 }
 
+static unsigned getMVTEncodingSize(MVT VT) {
+  constexpr uint64_t Escape = std::numeric_limits<uint8_t>::max();
+  using SimpleVTStorage = std::underlying_type_t<MVT::SimpleValueType>;
+  static_assert(std::is_unsigned_v<SimpleVTStorage>);
+  static_assert(sizeof(SimpleVTStorage) <= sizeof(uint64_t));
+
+  uint64_t SimpleVT = static_cast<SimpleVTStorage>(VT.SimpleTy);
+  return SimpleVT < Escape ? 1 : 1 + GetVBRSize(SimpleVT - Escape);
+}
+
 /// EmitVBRValue - Emit the specified value as a VBR, returning the number of
 /// bytes emitted.
 static unsigned EmitVBRValue(uint64_t Val, raw_ostream &OS) {
@@ -422,9 +435,7 @@ unsigned MatcherTableEmitter::SizeMatcher(Matcher *N, raw_ostream &OS) {
         Size += 2; // Count the child's opcode.
       } else {
         Child = &cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
-        Size += GetVBRSize(cast<SwitchTypeMatcher>(N)
-                               ->getCaseType(i)
-                               .SimpleTy); // Count the child's type.
+        Size += getMVTEncodingSize(cast<SwitchTypeMatcher>(N)->getCaseType(i));
       }
       const unsigned ChildSize = SizeMatcherList(*Child, OS);
       assert(ChildSize != 0 && "Matcher cannot have child of size 0");
@@ -502,15 +513,21 @@ void MatcherTableEmitter::EmitPatternMatchTable(raw_ostream &OS) {
 }
 
 static unsigned emitMVT(MVT VT, raw_ostream &OS) {
-  // Print the MVT directly if it doesn't require a VBR.
-  if (VT.SimpleTy <= 127) {
+  constexpr uint64_t Escape = std::numeric_limits<uint8_t>::max();
+  using SimpleVTStorage = std::underlying_type_t<MVT::SimpleValueType>;
+  static_assert(std::is_unsigned_v<SimpleVTStorage>);
+  static_assert(sizeof(SimpleVTStorage) <= sizeof(uint64_t));
+
+  uint64_t SimpleVT = static_cast<SimpleVTStorage>(VT.SimpleTy);
+  if (SimpleVT < Escape) {
     OS << getEnumName(VT) << ',';
     return 1;
   }
 
+  OS << Escape << ',';
   if (!OmitComments)
     OS << "/*" << getEnumName(VT) << "*/";
-  return EmitVBRValue(VT.SimpleTy, OS);
+  return 1 + EmitVBRValue(SimpleVT - Escape, OS);
 }
 
 unsigned
@@ -708,10 +725,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         IdxSize = 2; // size of opcode in table is 2 bytes.
       } else {
         Child = &cast<SwitchTypeMatcher>(N)->getCaseMatcher(i);
-        IdxSize = GetVBRSize(
-            cast<SwitchTypeMatcher>(N)
-                ->getCaseType(i)
-                .SimpleTy); // size of type in table is sizeof(VBR(MVT)) byte.
+        IdxSize =
+            getMVTEncodingSize(cast<SwitchTypeMatcher>(N)->getCaseType(i));
       }
 
       if (i != 0) {
