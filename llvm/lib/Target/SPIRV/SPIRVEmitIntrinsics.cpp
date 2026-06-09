@@ -1933,6 +1933,63 @@ Instruction *SPIRVEmitIntrinsics::visitGetElementPtrInst(GetElementPtrInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
 
+  // OpPtrAccessChain requires a scalar pointer result; scalarize per-lane
+  // GEPs that return <N x ptr> and rebuild the vector via insertelement.
+  if (auto *RetVTy = dyn_cast<FixedVectorType>(I.getType())) {
+    unsigned N = RetVTy->getNumElements();
+    Value *PtrOp = I.getPointerOperand();
+    bool PtrIsVec = isa<VectorType>(PtrOp->getType());
+    Type *ResultPtrTy = RetVTy->getElementType();
+    Type *ScalarPtrTy = PtrOp->getType()->getScalarType();
+    SmallVector<Type *, 2> GepTypes = {ResultPtrTy, ScalarPtrTy};
+    Value *InBounds = B.getInt1(I.isInBounds());
+    Type *LanePointeeTy = getGEPType(&I);
+    Type *SrcElemTy = I.getSourceElementType();
+
+    // Pin the lane pointee type on the vector operand and on each extracted
+    // lane so the prelegalizer wraps them as OpTypeVector/OpTypePointer of
+    // the right element type instead of defaulting to i8.
+    if (PtrIsVec)
+      GR->buildAssignPtr(B, SrcElemTy, PtrOp);
+
+    Value *VecResult = PoisonValue::get(RetVTy);
+    for (unsigned Lane = 0; Lane < N; ++Lane) {
+      Value *LaneIdx = B.getInt32(Lane);
+      Value *ScalarPtr = PtrOp;
+      if (PtrIsVec) {
+        SmallVector<Type *, 3> ExtractTypes = {ScalarPtrTy, PtrOp->getType(),
+                                               LaneIdx->getType()};
+        ScalarPtr = B.CreateIntrinsic(Intrinsic::spv_extractelt, {ExtractTypes},
+                                      {PtrOp, LaneIdx});
+        GR->buildAssignPtr(B, SrcElemTy, ScalarPtr);
+      }
+      SmallVector<Value *, 4> Args;
+      Args.push_back(InBounds);
+      Args.push_back(ScalarPtr);
+      for (Value *Idx : I.indices()) {
+        if (isa<VectorType>(Idx->getType()))
+          Args.push_back(B.CreateExtractElement(Idx, LaneIdx));
+        else
+          Args.push_back(Idx);
+      }
+      Value *ScalarGep = B.CreateIntrinsic(Intrinsic::spv_gep, GepTypes, Args);
+      GR->buildAssignPtr(B, LanePointeeTy, ScalarGep);
+      VecResult = B.CreateInsertElement(VecResult, ScalarGep, LaneIdx);
+    }
+
+    auto *NewI = cast<Instruction>(VecResult);
+    replaceAllUsesWithAndErase(B, &I, NewI);
+
+    if (CallInst *Old = GR->findAssignPtrTypeInstr(NewI)) {
+      Old->eraseFromParent();
+      GR->addAssignPtrTypeInstr(NewI, nullptr);
+    }
+    setInsertPointAfterDef(B, NewI);
+    GR->buildAssignPtr(B, LanePointeeTy, NewI);
+
+    return NewI;
+  }
+
   if (TM.getSubtargetImpl()->isLogicalSPIRV() && !isFirstIndexZero(&I)) {
     // Logical SPIR-V cannot use the OpPtrAccessChain instruction. If the first
     // index of the GEP is not 0, then we need to try to adjust it.
@@ -2317,10 +2374,16 @@ Instruction *SPIRVEmitIntrinsics::visitInsertValueInst(InsertValueInst &I) {
 }
 
 Instruction *SPIRVEmitIntrinsics::visitExtractValueInst(ExtractValueInst &I) {
-  if (I.getAggregateOperand()->getType()->isAggregateType())
-    return &I;
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
+  if (I.getAggregateOperand()->getType()->isAggregateType()) {
+    // Mutate an aggregate-returning spv_extractv producer to i32 so
+    // IRTranslator does not see a multi-register value.
+    CallBase *CB = dyn_cast<CallBase>(I.getAggregateOperand());
+    if (!CB || CB->getIntrinsicID() != Intrinsic::spv_extractv)
+      return &I;
+    CB->mutateType(B.getInt32Ty());
+  }
   SmallVector<Value *> Args(I.operands());
   for (auto &Op : I.indices())
     Args.push_back(B.getInt32(Op));
@@ -2491,15 +2554,47 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   return &I;
 }
 
+// llvm.compiler.used and llvm.used hold use-list entries that protect their
+// referenced globals from DCE without participating in code generation.
+static bool isUseListGlobal(StringRef Name) {
+  return Name == "llvm.compiler.used" || Name == "llvm.used";
+}
+
+// Returns true for module-level globals that should not have SPIR-V intrinsics
+// emitted (use-list globals plus llvm.global.annotations).
+static bool isArtificialGlobal(StringRef Name) {
+  return isUseListGlobal(Name) || Name == "llvm.global.annotations";
+}
+
+// Returns true if every use of GV traces back to llvm.compiler.used or
+// llvm.used.
+static bool hasOnlyArtificialUses(const GlobalVariable &GV) {
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *> Stack(GV.users());
+  while (!Stack.empty()) {
+    const Value *V = Stack.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    if (const auto *GVUser = dyn_cast<GlobalVariable>(V)) {
+      if (!isUseListGlobal(GVUser->getName()))
+        return false;
+      continue;
+    }
+    if (const auto *C = dyn_cast<Constant>(V)) {
+      Stack.append(C->user_begin(), C->user_end());
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
 static bool
 shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
                                    const GlobalVariable &GV,
                                    const Function *F) {
   // Skip special artificial variables.
-  static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
-                                             "llvm.compiler.used", "llvm.used"};
-
-  if (ArtificialGlobals.contains(GV.getName()))
+  if (isArtificialGlobal(GV.getName()))
     return false;
 
   auto &UserFunctions = GVUsers.getTransitiveUserFunctions(GV);
@@ -2582,7 +2677,9 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, InitOp);
   }
-  if (!Init && GV.use_empty())
+  // Globals with only use-list references have no real function uses. Emit
+  // spv_unref_global so buildGlobalVariable is called for them.
+  if (!Init && hasOnlyArtificialUses(GV))
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -3115,6 +3212,19 @@ void SPIRVEmitIntrinsics::processParamTypesByFunHeader(Function *F,
   B.SetInsertPointPastAllocas(F);
   for (unsigned OpIdx = 0; OpIdx < F->arg_size(); ++OpIdx) {
     Argument *Arg = F->getArg(OpIdx);
+    // Vector-of-pointers arg: deduce pointee from a GEP user so the function
+    // type isn't emitted with the default i8 pointee.
+    if (isUntypedPointerVectorTy(Arg->getType()) &&
+        !GR->findDeducedElementType(Arg)) {
+      for (User *U : Arg->users()) {
+        auto *GEP = dyn_cast<GetElementPtrInst>(U);
+        if (GEP && GEP->getPointerOperand() == Arg) {
+          GR->buildAssignPtr(B, GEP->getSourceElementType(), Arg);
+          break;
+        }
+      }
+      continue;
+    }
     if (!isUntypedPointerTy(Arg->getType()))
       continue;
     Type *ElemTy = GR->findDeducedElementType(Arg);

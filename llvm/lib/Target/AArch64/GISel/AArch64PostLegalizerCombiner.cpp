@@ -585,7 +585,7 @@ static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
   MI.getOperand(1).setReg(Tmp);
   MI.getOperand(2).setReg(Mul2);
   Sub.eraseFromParent();
-  Observer.changingInstr(MI);
+  Observer.changedInstr(MI);
 }
 
 class AArch64PostLegalizerCombinerImpl : public Combiner {
