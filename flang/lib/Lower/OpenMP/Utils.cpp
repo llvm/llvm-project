@@ -1398,9 +1398,10 @@ makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
 // Lower the stable base entity for an iterator map/motion locator.
 //
 // MapInfoOp stores this base in var_ptr and represents the iterator-selected
-// elements or sections with map bounds. For component array locators such as
-// v%a(i) or v%a(i:i+1), return v%a so each iteration maps offsets from the
-// same base.
+// elements or sections with map bounds computed inside the omp.iterator body.
+// For component array locators such as v%a(i) or v%a(i:i+1), return v%a so each
+// iteration maps offsets from the same base instead of lowering the subscripted
+// component address as the var_ptr.
 static std::optional<hlfir::Entity>
 getIteratorMapEntity(Fortran::lower::AbstractConverter &converter,
                      fir::FirOpBuilder &builder,
@@ -1430,9 +1431,9 @@ getIteratorMapEntity(Fortran::lower::AbstractConverter &converter,
   evaluate::ExpressionAnalyzer ea{semaCtx};
   std::optional<ExprTy> arrayBase;
   const evaluate::NamedEntity &base = arrayRef->base();
-  // Component array references carry the array base separately from the
+  // Component array references carry the component base separately from the
   // subscript list. Lower that base, e.g. v%a in v%a(i), and leave the
-  // subscript-dependent part to map bounds.
+  // subscript-dependent part to the iterator-local map bounds below.
   if (const semantics::SymbolRef *symRef = base.UnwrapSymbolRef())
     arrayBase = ea.Designate(evaluate::DataRef{*symRef});
   else if (const evaluate::Component *component = base.UnwrapComponent())
@@ -1452,8 +1453,11 @@ getIteratorMapEntity(Fortran::lower::AbstractConverter &converter,
 }
 
 // Build normalized map bounds for an iterator-dependent map/motion object.
-// MapInfoOp keeps the array base address as var_ptr; these bounds describe the
-// selected element or contiguous array section for each dimension.
+// Ordinary map lowering can lower a complete locator and derive bounds from the
+// resulting extended value. Iterator lowering instead keeps a stable array base
+// address as var_ptr and lowers the iterator-dependent subscripts inside the
+// omp.iterator body, so each generated bound describes the selected element or
+// contiguous array section for one iteration.
 //
 // Examples:
 //   a(i)     -> lower_bound == upper_bound == i - base lower bound
