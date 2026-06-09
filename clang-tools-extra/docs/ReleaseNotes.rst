@@ -200,6 +200,10 @@ Improvements to clang-tidy
 - Improved :program:`clang-tidy` ``-store-check-profile`` by generating valid
   JSON when the source file path contains characters that require JSON escaping.
 
+- Added support for specifying ``LineFilter`` in :program:`clang-tidy`
+  configuration files. This is particularly useful for tools such as
+  :program:`clangd` that consume ``.clang-tidy`` files directly.
+
 - Ensured that :program:`clang-tidy` and the clang compiler uses the same logic
   for the suppression of compiler diagnostics in system headers and expansions
   of macros defined in system headers. Previously the default setting of tidy
