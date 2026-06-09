@@ -867,7 +867,8 @@ public:
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
   void plan(ElementCount UserVF, unsigned UserIC,
-            LoopVectorizationCostModel &CM);
+            LoopVectorizationCostModel &CM,
+            std::optional<LoopVectorizationCostModel> &EpilogueTailFoldingCM);
 
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
@@ -876,8 +877,9 @@ public:
   /// Compute and return the most profitable vectorization factor and the
   /// corresponding best VPlan. Also collect all profitable VFs in
   /// ProfitableVFs.
-  std::pair<VectorizationFactor, VPlan *>
-  computeBestVF(LoopVectorizationCostModel &CM);
+  std::pair<VectorizationFactor, VPlan *> computeBestVF(
+      LoopVectorizationCostModel &CM,
+      std::optional<LoopVectorizationCostModel> &EpilogueTailFoldingCM);
 
   /// \return The desired interleave count.
   /// If interleave count has been specified by metadata it will be returned.
