@@ -17,6 +17,17 @@
 #include <thread>
 #include <type_traits>
 
+// Determine whether to use the public os_sync API on Apple platforms based on the deployment target.
+// Otherwise we fall back to the private __ulock API.
+#if defined(__APPLE__)
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 140400) ||      \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 170400) ||    \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 170400) ||            \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 100400)
+#    define _LIBCPP_USE_OS_SYNC
+#  endif
+#endif
+
 #ifdef __linux__
 
 #  include <linux/futex.h>
@@ -48,6 +59,13 @@
 
 #  include <memory>
 #  include <windows.h>
+
+#elif defined(__APPLE__)
+
+#  if defined(_LIBCPP_USE_OS_SYNC)
+#    include <os/os_sync_wait_on_address.h>
+#    include <time.h>
+#  endif
 
 #elif defined(__Fuchsia__)
 
@@ -95,14 +113,40 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
 
 #elif defined(__APPLE__)
 
+#  if defined(_LIBCPP_USE_OS_SYNC)
+
+template <std::size_t _Size, class MaybeTimeout>
+static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
+  static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
+  uint64_t __value = 0;
+  std::memcpy(&__value, __val, _Size);
+  if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
+    os_sync_wait_on_address(const_cast<void*>(__ptr), __value, _Size, OS_SYNC_WAIT_ON_ADDRESS_NONE);
+  } else {
+    os_sync_wait_on_address_with_timeout(
+        const_cast<void*>(__ptr), __value, _Size, OS_SYNC_WAIT_ON_ADDRESS_NONE, CLOCK_MONOTONIC_RAW, maybe_timeout_ns);
+  }
+}
+
+template <std::size_t _Size>
+static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
+  static_assert(_Size == 8 || _Size == 4, "Can only wake up on 8 bytes or 4 bytes value");
+  if (__notify_one)
+    os_sync_wake_by_address_any(const_cast<void*>(__ptr), _Size, OS_SYNC_WAKE_BY_ADDRESS_NONE);
+  else
+    os_sync_wake_by_address_all(const_cast<void*>(__ptr), _Size, OS_SYNC_WAKE_BY_ADDRESS_NONE);
+}
+
+#  else // !_LIBCPP_USE_OS_SYNC -- fall back to the private __ulock API
+
 extern "C" int __ulock_wait(
     uint32_t operation, void* addr, uint64_t value, uint32_t timeout); /* timeout is specified in microseconds */
 extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value);
 
 // https://github.com/apple/darwin-xnu/blob/2ff845c2e033bd0ff64b5b6aa6063a1f8f65aa32/bsd/sys/ulock.h#L82
-#  define UL_COMPARE_AND_WAIT 1
-#  define UL_COMPARE_AND_WAIT64 5
-#  define ULF_WAKE_ALL 0x00000100
+#    define UL_COMPARE_AND_WAIT 1
+#    define UL_COMPARE_AND_WAIT64 5
+#    define ULF_WAKE_ALL 0x00000100
 
 template <std::size_t _Size, class MaybeTimeout>
 static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
@@ -136,6 +180,8 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
   else
     __ulock_wake(UL_COMPARE_AND_WAIT64 | (__notify_one ? 0 : ULF_WAKE_ALL), const_cast<void*>(__ptr), 0);
 }
+
+#  endif // _LIBCPP_USE_OS_SYNC
 
 #elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
 /*
