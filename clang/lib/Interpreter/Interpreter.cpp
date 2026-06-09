@@ -133,17 +133,6 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   // times, reusing the same AST.
   Clang->getCodeGenOpts().ClearASTBeforeBackend = false;
 
-  // Clang emits direct PC-relative accesses for external data (e.g. C++
-  // type-info used by exception handling). As clang-repl directly mmap()s
-  // shared objects into memory, the target symbol may be more than 2GB away
-  // from the generated code, resulting in an out-of-range Delta32/PC32
-  // relocation. Force GOT-based access instead so the relocation remains
-  // within range.
-  //
-  // Unlike -fPIC, this does not define __PIC__ and remains compatible with
-  // precompiled headers.
-  Clang->getCodeGenOpts().DirectAccessExternalData = false;
-
   Clang->getFrontendOpts().DisableFree = false;
   Clang->getCodeGenOpts().DisableFree = false;
   return std::move(Clang);
@@ -163,6 +152,17 @@ IncrementalCompilerBuilder::create(std::string TT,
       llvm::sys::fs::getMainExecutable(nullptr, nullptr);
 
   ClangArgv.insert(ClangArgv.begin(), MainExecutableName.c_str());
+
+  // Compile as position-independent code. This prevents the frontend from
+  // marking external symbols (e.g. C++ type-info such as _ZTIPKc used for
+  // exception handling) as dso_local and emitting direct PC-relative
+  // references. JITLink can place the GOT entry near the JIT'd code, keeping
+  // the relocation in range. Without -fPIC, a direct Delta32 relocation to a
+  // host symbol may be out of range when the JIT memory is mapped more than
+  // 2GB away (as on FreeBSD), breaking tests such as
+  // Interpreter/simple-exception.cpp. Insert before user arguments so it can
+  // still be overridden.
+  ClangArgv.insert(ClangArgv.begin() + 1, "-fPIC");
 
   // Prepending -c to force the driver to do something if no action was
   // specified. By prepending we allow users to override the default
