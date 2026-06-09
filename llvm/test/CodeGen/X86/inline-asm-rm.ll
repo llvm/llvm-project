@@ -243,4 +243,117 @@ cleanup:                                          ; preds = %asm.pref.reg, %asm.
 }
 
 
+; Exhaust all 14 usable x86 GPRs: 6 inputs consume rdi/rsi/rdx/rcx/r8/r9, and
+; the asm clobbers rax/rbx/rbp/r10-r15. The early-clobber output (=&rm) has
+; no register left, so the greedy RA must fold it to a stack slot at O2. At O0,
+; InlineAsmPrepare routes directly to the memory path.
+define i64 @test_rm_output_pressure(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f) {
+; O0-LABEL: test_rm_output_pressure:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    pushq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    pushq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    pushq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    pushq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 56
+; O0-NEXT:    .cfi_offset %rbx, -56
+; O0-NEXT:    .cfi_offset %r12, -48
+; O0-NEXT:    .cfi_offset %r13, -40
+; O0-NEXT:    .cfi_offset %r14, -32
+; O0-NEXT:    .cfi_offset %r15, -24
+; O0-NEXT:    .cfi_offset %rbp, -16
+; O0-NEXT:    #APP
+; O0-NEXT:    # -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
+; O0-NEXT:    #NO_APP
+; O0-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 48
+; O0-NEXT:    popq %r12
+; O0-NEXT:    .cfi_def_cfa_offset 40
+; O0-NEXT:    popq %r13
+; O0-NEXT:    .cfi_def_cfa_offset 32
+; O0-NEXT:    popq %r14
+; O0-NEXT:    .cfi_def_cfa_offset 24
+; O0-NEXT:    popq %r15
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    popq %rbp
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O2-LABEL: test_rm_output_pressure:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbp
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    pushq %r15
+; O2-NEXT:    .cfi_def_cfa_offset 24
+; O2-NEXT:    pushq %r14
+; O2-NEXT:    .cfi_def_cfa_offset 32
+; O2-NEXT:    pushq %r13
+; O2-NEXT:    .cfi_def_cfa_offset 40
+; O2-NEXT:    pushq %r12
+; O2-NEXT:    .cfi_def_cfa_offset 48
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 56
+; O2-NEXT:    .cfi_offset %rbx, -56
+; O2-NEXT:    .cfi_offset %r12, -48
+; O2-NEXT:    .cfi_offset %r13, -40
+; O2-NEXT:    .cfi_offset %r14, -32
+; O2-NEXT:    .cfi_offset %r15, -24
+; O2-NEXT:    .cfi_offset %rbp, -16
+; O2-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O2-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O2-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O2-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O2-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
+; O2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; O2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O2-NEXT:    #APP # 8-byte Folded Spill
+; O2-NEXT:    # -{{[0-9]+}}(%rsp) %rdi %rsi %rdx %rcx %r8 %r9
+; O2-NEXT:    #NO_APP
+; O2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 48
+; O2-NEXT:    popq %r12
+; O2-NEXT:    .cfi_def_cfa_offset 40
+; O2-NEXT:    popq %r13
+; O2-NEXT:    .cfi_def_cfa_offset 32
+; O2-NEXT:    popq %r14
+; O2-NEXT:    .cfi_def_cfa_offset 24
+; O2-NEXT:    popq %r15
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    popq %rbp
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+entry:
+  %out = alloca i64, align 8
+  callbr void @llvm.asm.constraint.br()
+      to label %asm.pref.reg [label %asm.pref.mem]
+
+asm.pref.reg:
+  %0 = call i64 asm sideeffect "# $0 $1 $2 $3 $4 $5 $6",
+      "=&rm,r,r,r,r,r,r,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
+      (i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f)
+  br label %asm.merge
+
+asm.pref.mem:
+  call void asm sideeffect "# $0 $1 $2 $3 $4 $5 $6",
+      "=*&rm,r,r,r,r,r,r,~{rax},~{rbx},~{rbp},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"
+      (ptr elementtype(i64) %out, i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f)
+  %1 = load i64, ptr %out, align 8
+  br label %asm.merge
+
+asm.merge:
+  %2 = phi i64 [ %0, %asm.pref.reg ], [ %1, %asm.pref.mem ]
+  ret i64 %2
+}
+
 declare void @llvm.asm.constraint.br()
