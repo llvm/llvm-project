@@ -9,9 +9,8 @@ define <8 x i1> @vector_f32_ole() {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 16
-; CHECK-NEXT:    v_mov_b32_e32 v5, 0
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
+; CHECK-NEXT:    v_dual_mov_b32 v4, 16 :: v_dual_mov_b32 v5, 0
 ; CHECK-NEXT:    s_clause 0x1
 ; CHECK-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; CHECK-NEXT:    global_load_b128 v[4:7], v[4:5], off
@@ -56,8 +55,7 @@ define <4 x i1> @vector_f32_ogt() {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; CHECK-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 0, v0
@@ -87,24 +85,22 @@ define <32 x i1> @vector_f32_ueq() {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 16
-; CHECK-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v8, 32
-; CHECK-NEXT:    v_dual_mov_b32 v9, 0 :: v_dual_mov_b32 v12, 48
-; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
+; CHECK-NEXT:    v_dual_mov_b32 v4, 16 :: v_dual_mov_b32 v5, 0
+; CHECK-NEXT:    v_dual_mov_b32 v8, 32 :: v_dual_mov_b32 v9, 0
 ; CHECK-NEXT:    global_load_b128 v[0:3], v[0:1], off
-; CHECK-NEXT:    global_load_b128 v[4:7], v[4:5], off
-; CHECK-NEXT:    v_mov_b32_e32 v13, 0
-; CHECK-NEXT:    global_load_b128 v[8:11], v[8:9], off
-; CHECK-NEXT:    v_mov_b32_e32 v16, 64
-; CHECK-NEXT:    v_dual_mov_b32 v17, 0 :: v_dual_mov_b32 v20, 0x50
-; CHECK-NEXT:    global_load_b128 v[12:15], v[12:13], off
-; CHECK-NEXT:    v_dual_mov_b32 v21, 0 :: v_dual_mov_b32 v24, 0x60
-; CHECK-NEXT:    global_load_b128 v[16:19], v[16:17], off
-; CHECK-NEXT:    v_dual_mov_b32 v25, 0 :: v_dual_mov_b32 v28, 0x70
-; CHECK-NEXT:    global_load_b128 v[20:23], v[20:21], off
-; CHECK-NEXT:    v_mov_b32_e32 v29, 0
+; CHECK-NEXT:    v_dual_mov_b32 v12, 48 :: v_dual_mov_b32 v13, 0
 ; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    global_load_b128 v[4:7], v[4:5], off
+; CHECK-NEXT:    global_load_b128 v[8:11], v[8:9], off
+; CHECK-NEXT:    v_dual_mov_b32 v16, 64 :: v_dual_mov_b32 v17, 0
+; CHECK-NEXT:    global_load_b128 v[12:15], v[12:13], off
+; CHECK-NEXT:    v_dual_mov_b32 v20, 0x50 :: v_dual_mov_b32 v21, 0
+; CHECK-NEXT:    v_dual_mov_b32 v24, 0x60 :: v_dual_mov_b32 v25, 0
+; CHECK-NEXT:    global_load_b128 v[16:19], v[16:17], off
+; CHECK-NEXT:    v_dual_mov_b32 v28, 0x70 :: v_dual_mov_b32 v29, 0
+; CHECK-NEXT:    s_clause 0x2
+; CHECK-NEXT:    global_load_b128 v[20:23], v[20:21], off
 ; CHECK-NEXT:    global_load_b128 v[24:27], v[24:25], off
 ; CHECK-NEXT:    global_load_b128 v[28:31], v[28:29], off
 ; CHECK-NEXT:    s_wait_loadcnt 0x7
@@ -226,8 +222,7 @@ define <4 x i1> @vector_f32_ugt() {
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
 ; CHECK-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    v_cmp_nge_f32_e32 vcc_lo, 0, v0
