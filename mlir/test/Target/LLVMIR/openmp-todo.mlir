@@ -262,10 +262,10 @@ atomic {
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
-llvm.func @task_in_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.task operation}}
+llvm.func @task_in_reduction_byref(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with byref modifier in omp.task operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.task in_reduction(byref @add_f32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
