@@ -169,10 +169,10 @@ void conditionVariable() {
 
   if (X *x = makeX(); x)
     delete x;
-  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect
 
   X *x = makeX();
   if (Y *y = makeY(); x)
     delete x;
-  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect [readability-delete-null-pointer]
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: 'if' statement is unnecessary; deleting null pointer has no effect
 }
