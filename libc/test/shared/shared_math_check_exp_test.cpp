@@ -18,13 +18,13 @@ class CheckExpTest : public LIBC_NAMESPACE::testing::Test {
   DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  void test() {
-    using exp_exceptions = LIBC_NAMESPACE::shared::check::exp_exceptions<T>;
-    using array = LIBC_NAMESPACE::cpp::array;
+  void run_test() {
+    using LIBC_NAMESPACE::shared::check::exp_exceptions;
+    using IntArray = LIBC_NAMESPACE::cpp::array<int, 4>;
     using Bounds = LIBC_NAMESPACE::math::check::exp_internal::Bounds<T>;
 
-    constexpr array<int, 4> ROUNDING_MODES[] = {FE_TONEAREST, FE_UPWARD,
-                                                FE_DOWNWARD, FE_TOWARDZERO};
+    constexpr IntArray ROUNDING_MODES = {FE_TONEAREST, FE_UPWARD, FE_DOWNWARD,
+                                         FE_TOWARDZERO};
     for (auto rm : ROUNDING_MODES) {
       EXPECT_EQ(FE_INVALID, exp_exceptions(sNaN, rm));
       EXPECT_EQ(FE_INVALID, exp_exceptions(neg_sNaN, rm));
@@ -34,12 +34,17 @@ public:
       EXPECT_EQ(0, exp_exceptions(neg_inf, rm));
       EXPECT_EQ(0, exp_exceptions(zero, rm));
       EXPECT_EQ(0, exp_exceptions(neg_zero, rm));
-      EXPECT_EQ(FE_OVERFLOW, exp_exceptions(max_normal, rm) & FE_OVERFLOW);
       EXPECT_EQ(FE_UNDERFLOW,
                 exp_exceptions(neg_max_normal, rm) & FE_UNDERFLOW);
       EXPECT_EQ(FE_UNDERFLOW, exp_exceptions(Bounds::LOWER, rm) & FE_UNDERFLOW);
       EXPECT_EQ(0, exp_exceptions(T(1), rm) & (~FE_INEXACT));
     }
+
+    EXPECT_EQ(FE_OVERFLOW,
+              exp_exceptions(max_normal, FE_TONEAREST) & FE_OVERFLOW);
+    EXPECT_EQ(FE_OVERFLOW, exp_exceptions(max_normal, FE_UPWARD) & FE_OVERFLOW);
+    EXPECT_EQ(0, exp_exceptions(max_normal, FE_DOWNWARD) & FE_OVERFLOW);
+    EXPECT_EQ(0, exp_exceptions(max_normal, FE_TOWARDZERO) & FE_OVERFLOW);
 
     EXPECT_EQ(FE_OVERFLOW,
               exp_exceptions(Bounds::UPPER, FE_TONEAREST) & FE_OVERFLOW);
@@ -53,5 +58,5 @@ public:
 using LlvmLibcCheckExpTestFloat = CheckExpTest<float>;
 using LlvmLibcCheckExpTestDouble = CheckExpTest<double>;
 
-TEST_F(LlvmLibcCheckExpTestFloat, CheckExpfExceptions) { test(); }
-TEST_F(LlvmLibcCheckExpTestDouble, CheckExpExceptions) { test(); }
+TEST_F(LlvmLibcCheckExpTestFloat, CheckExpfExceptions) { run_test(); }
+TEST_F(LlvmLibcCheckExpTestDouble, CheckExpExceptions) { run_test(); }
