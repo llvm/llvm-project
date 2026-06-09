@@ -31,10 +31,12 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 
 #include <array>
 #include <cinttypes>
@@ -154,7 +156,8 @@ bool IsCommonBlock(const Symbol &sym) {
 }
 
 bool IsVariableListItem(const Symbol &sym) {
-  return evaluate::IsVariable(sym) || sym.attrs().test(Attr::POINTER);
+  return evaluate::IsVariable(sym) || IsCommonBlock(sym) ||
+      sym.attrs().test(Attr::POINTER);
 }
 
 bool IsExtendedListItem(const Symbol &sym) {
@@ -172,6 +175,14 @@ bool IsTypeParamInquiry(const Symbol &sym) {
           [&](auto &&) { return false; },
       },
       sym.details());
+}
+
+bool IsComplexPart(const Symbol &sym) {
+  if (auto *misc{sym.detailsIf<MiscDetails>()}) {
+    return misc->kind() == MiscDetails::Kind::ComplexPartRe ||
+        misc->kind() == MiscDetails::Kind::ComplexPartIm;
+  }
+  return false;
 }
 
 bool IsStructureComponent(const Symbol &sym) {
@@ -213,6 +224,38 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
   if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)};
       sym && IsAssumedSizeArray(*sym)) {
     return !GetArrayElementFromObj(object);
+  }
+  return false;
+}
+
+bool IsExtendedListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsVariableListItem(object, semaCtx)) {
+    return true;
+  }
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+    return IsProcedure(*sym);
+  }
+  return false;
+}
+
+bool IsLocatorListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsVariableListItem(object, semaCtx)) {
+    return true;
+  }
+  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    return IsVarOrFunctionRef(ea.Analyze(*desg));
+  }
+  return false;
+}
+
+bool IsVariableListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+    return IsVariableListItem(*sym);
   }
   return false;
 }
@@ -552,6 +595,188 @@ MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp) {
           },
       },
       instance.u);
+}
+
+/// For clauses that take argument lists, return the type of the argument
+/// list item. For other clauses return std::nullopt.
+std::optional<ListItemKind> GetArgumentListItemKind(
+    llvm::omp::Clause clause, unsigned version) {
+  switch (clause) {
+  case llvm::omp::Clause::OMPC_absent:
+    if (version >= 51) {
+      return ListItemKind::DirectiveName;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_adjust_args:
+    if (version >= 61) {
+      return ListItemKind::ProcedureArgument;
+    }
+    if (version >= 51) {
+      return ListItemKind::Parameter;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_affinity:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_aligned:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_allocate:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_append_args:
+    if (version >= 51) {
+      return ListItemKind::Operation;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_apply:
+    if (version >= 60) {
+      return ListItemKind::DirectiveSpecification;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_contains:
+    if (version >= 51) {
+      return ListItemKind::DirectiveName;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_copyin:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_copyprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_counts:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_depend:
+    if (version >= 61) {
+      return ListItemKind::Depend;
+    }
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_enter:
+    if (version >= 52) {
+      return ListItemKind::Extended;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_exclusive:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_firstprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_from:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_has_device_addr:
+    if (version >= 51) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_in_reduction:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_inclusive:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_induction:
+    if (version >= 60) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_interop:
+    if (version >= 60) {
+      return ListItemKind::Interop;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_is_device_ptr:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_lastprivate:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_linear:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_link:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_local:
+    if (version >= 60) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_map:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_nontemporal:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_num_threads:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_permutation:
+    if (version >= 60) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_private:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_reduction:
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_shared:
+    return ListItemKind::Variable;
+  // TODO 6.1
+  // case llvm::omp::Clause::OMPC_shift:
+  //   if (version >= 61) {
+  //     return ListItemKind::IntegerExpression;
+  //   }
+  //   break;
+  case llvm::omp::Clause::OMPC_sizes:
+    if (version >= 51) {
+      return ListItemKind::IntegerExpression;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_task_reduction:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_to:
+    if (version >= 50) {
+      return ListItemKind::Locator;
+    }
+    return ListItemKind::Extended;
+  case llvm::omp::Clause::OMPC_uniform:
+    if (version >= 50) {
+      return ListItemKind::Parameter;
+    }
+    return ListItemKind::Variable;
+  case llvm::omp::Clause::OMPC_use_device_addr:
+    if (version >= 50) {
+      return ListItemKind::Variable;
+    }
+    break;
+  case llvm::omp::Clause::OMPC_use_device_ptr:
+    return ListItemKind::Variable;
+  default:
+    break;
+  }
+  return std::nullopt;
 }
 
 bool IsLoopTransforming(llvm::omp::Directive dir) {
@@ -1849,4 +2074,137 @@ WithReason<bool> LoopSequence::isRectangular(
 
   return result;
 }
+// ---------------------------------------------------------------------------
+// Trait-matching helpers shared between metadirective lowering and
+// declare-variant semantic recording.
+// ---------------------------------------------------------------------------
+
+llvm::omp::TraitSet MapTraitSet(parser::OmpTraitSetSelectorName::Value name) {
+  switch (name) {
+  case parser::OmpTraitSetSelectorName::Value::Construct:
+    return llvm::omp::TraitSet::construct;
+  case parser::OmpTraitSetSelectorName::Value::Device:
+    return llvm::omp::TraitSet::device;
+  case parser::OmpTraitSetSelectorName::Value::Implementation:
+    return llvm::omp::TraitSet::implementation;
+  case parser::OmpTraitSetSelectorName::Value::User:
+    return llvm::omp::TraitSet::user;
+  case parser::OmpTraitSetSelectorName::Value::Target_Device:
+    return llvm::omp::TraitSet::target_device;
+  }
+  llvm_unreachable("unknown trait set");
+}
+
+llvm::omp::TraitSelector MapTraitSelector(
+    const parser::OmpTraitSelectorName &name, llvm::omp::TraitSet set) {
+  if (const auto *val =
+          std::get_if<parser::OmpTraitSelectorName::Value>(&name.u)) {
+    switch (*val) {
+    case parser::OmpTraitSelectorName::Value::Kind:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_kind;
+      return llvm::omp::TraitSelector::device_kind;
+    case parser::OmpTraitSelectorName::Value::Arch:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_arch;
+      return llvm::omp::TraitSelector::device_arch;
+    case parser::OmpTraitSelectorName::Value::Isa:
+      if (set == llvm::omp::TraitSet::target_device)
+        return llvm::omp::TraitSelector::target_device_isa;
+      return llvm::omp::TraitSelector::device_isa;
+    case parser::OmpTraitSelectorName::Value::Vendor:
+      return llvm::omp::TraitSelector::implementation_vendor;
+    case parser::OmpTraitSelectorName::Value::Extension:
+      return llvm::omp::TraitSelector::implementation_extension;
+    case parser::OmpTraitSelectorName::Value::Condition:
+      return llvm::omp::TraitSelector::user_condition;
+    case parser::OmpTraitSelectorName::Value::Atomic_Default_Mem_Order:
+    case parser::OmpTraitSelectorName::Value::Requires:
+    case parser::OmpTraitSelectorName::Value::Simd:
+    case parser::OmpTraitSelectorName::Value::Device_Num:
+    case parser::OmpTraitSelectorName::Value::Uid:
+      break;
+    }
+  }
+  // Construct traits, extension strings, and remaining selectors use
+  // string-based lookup.
+  return llvm::omp::getOpenMPContextTraitSelectorKind(name.ToString(), set);
+}
+
+std::optional<bool> EvaluateUserCondition(
+    SemanticsContext &semaCtx, const parser::ScalarExpr &scalarExpr) {
+  const auto *typedExpr = GetExpr(semaCtx, scalarExpr);
+  if (!typedExpr)
+    return std::nullopt;
+
+  auto foldedExpr =
+      evaluate::Fold(semaCtx.foldingContext(), common::Clone(*typedExpr));
+  if (auto constVal = evaluate::ToInt64(foldedExpr))
+    return *constVal != 0;
+
+  if (auto logicalVal =
+          evaluate::GetScalarConstantValue<evaluate::LogicalResult>(foldedExpr))
+    return logicalVal->IsTrue();
+
+  return std::nullopt;
+}
+
+llvm::APInt *GetTraitScore(
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    SemanticsContext &semaCtx, std::optional<llvm::APInt> &scoreStorage) {
+  if (!props)
+    return nullptr;
+
+  const auto &optScore =
+      std::get<std::optional<parser::OmpTraitScore>>(props->t);
+  if (!optScore)
+    return nullptr;
+
+  const auto *typedExpr = GetExpr(semaCtx, optScore->v);
+  if (!typedExpr)
+    return nullptr;
+
+  auto constVal = evaluate::ToInt64(*typedExpr);
+  if (!constVal)
+    return nullptr;
+
+  scoreStorage = llvm::APInt(64, *constVal);
+  return &*scoreStorage;
+}
+
+void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
+    llvm::omp::TraitSet set, llvm::omp::TraitSelector selector,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    llvm::APInt *scorePtr) {
+  if (!props)
+    return;
+
+  for (const auto &prop :
+      std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+    const auto *name = std::get_if<parser::OmpTraitPropertyName>(&prop.u);
+    if (!name)
+      continue; // caller is responsible for diagnosing unsupported kinds
+
+    llvm::omp::TraitProperty propKind =
+        llvm::omp::getOpenMPContextTraitPropertyKind(set, selector, name->v);
+    if (propKind != llvm::omp::TraitProperty::invalid) {
+      vmi.addTrait(set, propKind, name->v, scorePtr);
+      continue;
+    }
+
+    if (selector == llvm::omp::TraitSelector::device_isa) {
+      vmi.addTrait(
+          set, llvm::omp::TraitProperty::device_isa___ANY, name->v, scorePtr);
+    } else if (selector == llvm::omp::TraitSelector::target_device_isa) {
+      vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
+          name->v, scorePtr);
+    } else {
+      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
+      // mean the variant cannot match. Add an invalid trait to ensure it is
+      // not selected.
+      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+    }
+  }
+}
+
 } // namespace Fortran::semantics::omp
