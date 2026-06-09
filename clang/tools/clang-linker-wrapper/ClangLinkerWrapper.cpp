@@ -142,7 +142,6 @@ using OffloadingImage = OffloadBinary::OffloadingImage;
 namespace llvm {
 // Provide DenseMapInfo so that OffloadKind can be used in a DenseMap.
 template <> struct DenseMapInfo<OffloadKind> {
-  static inline OffloadKind getEmptyKey() { return OFK_LAST; }
   static unsigned getHashValue(const OffloadKind &Val) { return Val; }
 
   static bool isEqual(const OffloadKind &LHS, const OffloadKind &RHS) {

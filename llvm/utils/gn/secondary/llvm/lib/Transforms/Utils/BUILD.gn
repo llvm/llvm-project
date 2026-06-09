@@ -10,7 +10,6 @@ static_library("Utils") {
     "AMDGPUEmitPrintf.cpp",
     "ASanStackFrameLayout.cpp",
     "AddDiscriminators.cpp",
-    "AssignGUID.cpp",
     "AssumeBundleBuilder.cpp",
     "BasicBlockUtils.cpp",
     "BreakCriticalEdges.cpp",

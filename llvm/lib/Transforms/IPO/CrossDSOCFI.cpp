@@ -73,8 +73,9 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
   if (CfiFunctionsMD) {
     for (auto *Func : CfiFunctionsMD->operands()) {
-      assert(Func->getNumOperands() >= 2);
-      for (unsigned I = 2; I < Func->getNumOperands(); ++I)
+      assert(Func->getNumOperands() >= 3);
+      assert(isa<ConstantAsMetadata>(Func->getOperand(2)));
+      for (unsigned I = 3; I < Func->getNumOperands(); ++I)
         if (ConstantInt *TypeId =
                 extractNumericTypeId(cast<MDNode>(Func->getOperand(I).get())))
           TypeIds.insert(TypeId->getZExtValue());
