@@ -297,6 +297,16 @@ public:
     return UserReservedRegister[i.id()];
   }
 
+  std::optional<TargetRegisterClass> getLargestFPRegClass() const {
+    if (HasStdExtQ)
+      return RISCV::FPR128RegClass;
+    if (HasStdExtD)
+      return RISCV::FPR64RegClass;
+    if (HasStdExtF)
+      return RISCV::FPR32RegClass;
+    return std::nullopt;
+  };
+
   // XRay support - require D and C extensions.
   bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }
 

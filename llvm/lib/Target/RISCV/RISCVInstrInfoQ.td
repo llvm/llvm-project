@@ -165,3 +165,9 @@ let Predicates = [HasStdExtQ] in {
   def PseudoFLQ : PseudoFloatLoad<"flq", FPR128>;
   def PseudoFSQ : PseudoStore<"fsq", FPR128>;
 } // Predicates = [HasStdExtQ]
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    isCodeGenOnly = true in
+def PseudoClearFPR128 : Pseudo<(outs FPR128:$rd), (ins), []>,
+                        PseudoInstExpansion<(FCVT_Q_W FPR128:$rd, X0, FRM_RTZ)>;
+
