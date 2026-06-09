@@ -266,7 +266,20 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       // If the ptrcast would be redundant, replace all uses with the source
       // register.
       MachineRegisterInfo *MRI = MIB.getMRI();
-      if (GR->getSPIRVTypeForVReg(Source) == AssignedPtrType) {
+      // For untyped pointers the SPIR-V pointer type does not encode the
+      // pointee, so two pointers with different element types share the same
+      // pointer type. The element type still matters because it selects the
+      // Base Type operand of OpUntyped*AccessChainKHR. Treat the cast as
+      // redundant only when the source already carries the same element type.
+      // Otherwise keep a distinct register so the element type is preserved.
+      bool Redundant =
+          AssignedPtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR
+              ? GR->getUntypedPtrElementType(Source) ==
+                    GR->getOrCreateSPIRVType(ElemTy, MIB,
+                                             SPIRV::AccessQualifier::ReadWrite,
+                                             /*EmitIR=*/true)
+              : GR->getSPIRVTypeForVReg(Source) == AssignedPtrType;
+      if (Redundant) {
         // Erase Def's assign type instruction if we are going to replace Def.
         if (MachineInstr *AssignMI = findAssignTypeInstr(Def, MRI))
           ToErase.push_back(AssignMI);
@@ -590,9 +603,18 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
         Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
-        SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            ElementTy, MI,
-            addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        auto SC = addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST);
+        SPIRVTypeInst AssignedPtrType =
+            GR->getOrCreateSPIRVPointerType(ElementTy, MI, SC);
+
+        // For untyped pointers, store the element type for later use.
+        if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
+            !ST->isShader()) {
+          SPIRVTypeInst ElemSpvType = GR->getOrCreateSPIRVType(
+              ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite, true);
+          GR->setUntypedPtrElementType(Reg, ElemSpvType);
+        }
+
         // The intrinsic also carries vector-of-pointer values produced by
         // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
         // the vreg's LLT.
@@ -600,6 +622,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         if (RegTy.isValid() && RegTy.isVector())
           AssignedPtrType = GR->getOrCreateSPIRVVectorType(
               AssignedPtrType, RegTy.getNumElements(), MIB, true);
+
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.

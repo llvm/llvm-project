@@ -197,7 +197,10 @@ static SPIRVTypeInst getArgSPIRVType(const Function &F, unsigned ArgIdx,
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   if (hasPointeeTypeAttr(Arg)) {
-    return GR->getOrCreateSPIRVPointerType(
+    // byval/byref/sret carry the aggregate layout in the pointee type, so keep
+    // a typed pointer here. An untyped one drops the type and breaks the
+    // argument ABI on the way back from SPIR-V.
+    return GR->getOrCreateSPIRVTypedPointerType(
         getPointeeTypeByAttr(Arg), MIRBuilder,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }

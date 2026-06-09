@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPIRV
 ; RUN: %if spirv-tools %{ llc -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: llc -verify-machineinstrs -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,AMDGCNSPIRV
 ; RUN: %if spirv-tools %{ llc -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | spirv-val %}
 ;
 ; Verify that we can lower the embedded module and cmdline.
@@ -19,12 +19,15 @@
 ; CHECK: %[[#UCHAR_ARR_5:]] = OpTypeArray %[[#UCHAR]] %[[#FIVE]]
 ; CHECK: %[[#FOUR:]] = OpConstant %[[#UINT]] 4
 ; CHECK: %[[#UCHAR_ARR_4:]] = OpTypeArray %[[#UCHAR]] %[[#FOUR]]
-; CHECK: %[[#UCHAR_ARR_5_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_5]]
-; CHECK: %[[#UCHAR_ARR_4_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_4]]
+; SPIRV: %[[#UCHAR_ARR_5_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_5]]
+; SPIRV: %[[#UCHAR_ARR_4_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_4]]
+; AMDGCNSPIRV: %[[#CROSS_PTR:]] = OpTypeUntypedPointerKHR CrossWorkgroup
 ; CHECK: %[[#CONST_UCHAR_ARR_4:]] = OpConstantComposite %[[#UCHAR_ARR_4]]
-; CHECK: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#UCHAR_ARR_4_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_4]]
+; SPIRV: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#UCHAR_ARR_4_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_4]]
+; AMDGCNSPIRV: %[[#LLVM_EMBEDDED_MODULE]] = OpUntypedVariableKHR %[[#CROSS_PTR]] CrossWorkgroup %[[#UCHAR_ARR_4]] %[[#CONST_UCHAR_ARR_4]]
 ; CHECK: %[[#CONST_UCHAR_ARR_5:]] = OpConstantComposite %[[#UCHAR_ARR_5]]
-; CHECK: %[[#LLVM_CMDLINE]] = OpVariable %[[#UCHAR_ARR_5_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_5]]
+; SPIRV: %[[#LLVM_CMDLINE]] = OpVariable %[[#UCHAR_ARR_5_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_5]]
+; AMDGCNSPIRV: %[[#LLVM_CMDLINE]] = OpUntypedVariableKHR %[[#CROSS_PTR]] CrossWorkgroup %[[#UCHAR_ARR_5]] %[[#CONST_UCHAR_ARR_5]]
 
 define spir_kernel void @foo() {
 entry:

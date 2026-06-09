@@ -283,6 +283,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds the Vulkan memory model, which defines memory semantics for the Vulkan API.
    * - ``SPV_KHR_poison_freeze``
      - Adds instructions to represent a poison value and freeze. Also adds an execution mode to control poison behavior.
+   * - ``SPV_KHR_untyped_pointers``
+     - Adds untyped pointer types and instructions that operate on them, decoupling pointer types from the type of the data they point to.
 
 
 SPIR-V representation in LLVM IR

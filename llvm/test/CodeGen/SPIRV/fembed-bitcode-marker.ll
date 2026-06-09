@@ -15,10 +15,10 @@
 ; SPIRV: %[[#UCHAR_PTR:]] = OpTypePointer Generic %[[#UCHAR]]
 ; AMDGCNSPIRV: %[[#UINT64_MAX:]] = OpConstant %[[#UINT64]] 18446744073709551615
 ; AMDGCNSPIRV: %[[#UCHAR_ARR_UINT64_MAX:]] = OpTypeArray %[[#UCHAR]] %[[#UINT64_MAX]]
-; AMDGCNSPIRV: %[[#UCHAR_ARR_UINT64_MAX_PTR:]] = OpTypePointer CrossWorkgroup %[[#UCHAR_ARR_UINT64_MAX]]
+; AMDGCNSPIRV: %[[#CROSS_PTR:]] = OpTypeUntypedPointerKHR CrossWorkgroup
 ; AMDGCNSPIRV: %[[#CONST_UCHAR_ARR_UINT64_MAX:]] = OpConstantNull %[[#UCHAR_ARR_UINT64_MAX]]
 ; SPIRV: %[[#CONST_UCHAR_NULL_PTR:]] = OpConstantNull %[[#UCHAR_PTR]]
-; AMDGCNSPIRV: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#UCHAR_ARR_UINT64_MAX_PTR]] CrossWorkgroup %[[#CONST_UCHAR_ARR_UINT64_MAX]]
+; AMDGCNSPIRV: %[[#LLVM_EMBEDDED_MODULE]] = OpUntypedVariableKHR %[[#CROSS_PTR]] CrossWorkgroup %[[#UCHAR_ARR_UINT64_MAX]] %[[#CONST_UCHAR_ARR_UINT64_MAX]]
 ; SPIRV: %[[#LLVM_EMBEDDED_MODULE]] = OpVariable %[[#]] CrossWorkgroup %[[#CONST_UCHAR_NULL_PTR]]
 
 define spir_kernel void @foo() {
