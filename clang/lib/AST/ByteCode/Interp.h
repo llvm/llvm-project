@@ -35,6 +35,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Compiler.h"
 #include <type_traits>
 
 // preserve_none causes problems when asan is enabled on both AArch64 and other
@@ -147,25 +148,33 @@ bool CheckDynamicCast(InterpState &S, CodePtr OpPC);
 
 enum class ShiftDir { Left, Right };
 
+enum class ShiftFailure {
+  NegativeCount,
+  TooLarge,
+  NegativeLeftOperand,
+  DiscardsBits,
+};
+
+LLVM_ATTRIBUTE_NOINLINE bool DiagnoseShiftFailure(InterpState &S, CodePtr OpPC,
+                                                  ShiftFailure Failure,
+                                                  const APSInt *Value = nullptr,
+                                                  unsigned Bits = 0);
+
 /// Checks if the shift operation is legal.
 template <ShiftDir Dir, typename LT, typename RT>
 bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
                 unsigned Bits) {
   if (RHS.isNegative()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
-    if (!S.noteUndefinedBehavior())
+    const APSInt Value = RHS.toAPSInt();
+    if (!DiagnoseShiftFailure(S, OpPC, ShiftFailure::NegativeCount, &Value))
       return false;
   }
 
   // C++11 [expr.shift]p1: Shift width must be less than the bit width of
   // the shifted type.
   if (Bits > 1 && RHS >= Bits) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    const APSInt Val = RHS.toAPSInt();
-    QualType Ty = E->getType();
-    S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    if (!S.noteUndefinedBehavior())
+    const APSInt Value = RHS.toAPSInt();
+    if (!DiagnoseShiftFailure(S, OpPC, ShiftFailure::TooLarge, &Value, Bits))
       return false;
   }
 
@@ -174,15 +183,13 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
       if (LHS.isNegative()) {
-        const Expr *E = S.Current->getExpr(OpPC);
-        S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
-        if (!S.noteUndefinedBehavior())
+        const APSInt Value = LHS.toAPSInt();
+        if (!DiagnoseShiftFailure(S, OpPC, ShiftFailure::NegativeLeftOperand,
+                                  &Value))
           return false;
       } else if (LHS.toUnsigned().countLeadingZeros() <
                  static_cast<unsigned>(RHS)) {
-        const Expr *E = S.Current->getExpr(OpPC);
-        S.CCEDiag(E, diag::note_constexpr_lshift_discards);
-        if (!S.noteUndefinedBehavior())
+        if (!DiagnoseShiftFailure(S, OpPC, ShiftFailure::DiscardsBits))
           return false;
       }
     }

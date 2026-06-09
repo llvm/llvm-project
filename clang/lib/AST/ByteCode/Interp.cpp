@@ -225,6 +225,33 @@ namespace interp {
 PRESERVE_NONE static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset,
                               PrimType PT);
 
+bool DiagnoseShiftFailure(InterpState &S, CodePtr OpPC, ShiftFailure Failure,
+                          const APSInt *Value, unsigned Bits) {
+  switch (Failure) {
+  case ShiftFailure::NegativeCount:
+    assert(Value);
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_negative_shift)
+        << *Value;
+    break;
+  case ShiftFailure::TooLarge: {
+    assert(Value);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(E, diag::note_constexpr_large_shift)
+        << *Value << E->getType() << Bits;
+    break;
+  }
+  case ShiftFailure::NegativeLeftOperand:
+    assert(Value);
+    S.CCEDiag(S.Current->getExpr(OpPC), diag::note_constexpr_lshift_of_negative)
+        << *Value;
+    break;
+  case ShiftFailure::DiscardsBits:
+    S.CCEDiag(S.Current->getExpr(OpPC), diag::note_constexpr_lshift_discards);
+    break;
+  }
+  return S.noteUndefinedBehavior();
+}
+
 static void popArg(InterpState &S, const Expr *Arg) {
   PrimType Ty = S.getContext().classify(Arg).value_or(PT_Ptr);
   TYPE_SWITCH(Ty, S.Stk.discard<T>());
