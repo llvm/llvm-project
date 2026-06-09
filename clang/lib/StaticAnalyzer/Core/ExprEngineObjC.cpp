@@ -39,14 +39,11 @@ void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
   getCheckerManager().runCheckersForPreStmt(Dst, Pred, S, *this);
 }
 
-/// Generate a node into \p Dst for an iteration statement using ObjC
-/// for-loop iterator.
-static void populateObjCForDestinationSet(
-    ExplodedNode *Pred, SValBuilder &svalBuilder,
-    const ObjCForCollectionStmt *S, ConstCFGElementRef elem, SVal elementV,
-    SymbolManager &SymMgr, unsigned NumVisitedCurrent, ExplodedNodeSet &Dst,
-    CoreEngine &Engine, bool hasElements) {
-
+void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
+                                               ExplodedNode *Pred,
+                                               ExplodedNodeSet &Dst,
+                                               SVal elementV,
+                                               bool hasElements) {
   ProgramStateRef state = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
@@ -63,7 +60,8 @@ static void populateObjCForDestinationSet(
 
       SVal V;
       if (hasElements) {
-        SymbolRef Sym = SymMgr.conjureSymbol(elem, SF, T, NumVisitedCurrent);
+        SymbolRef Sym = SymMgr.conjureSymbol(getCFGElementRef(), SF, T,
+                                             getNumVisitedCurrent());
         V = svalBuilder.makeLoc(Sym);
       } else {
         V = svalBuilder.makeIntVal(0, T);
@@ -105,7 +103,6 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
   const Stmt *elem = S->getElement();
   const Expr *collection = S->getCollection();
-  const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
 
   SVal collectionV = state->getSVal(collection, Pred->getStackFrame());
@@ -128,14 +125,10 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
     ExplodedNodeSet Tmp;
 
     if (!isContainerNull)
-      populateObjCForDestinationSet(dstLocation, svalBuilder, S, elemRef,
-                                    elementV, SymMgr, getNumVisitedCurrent(),
-                                    Tmp, Engine,
+      populateObjCForDestinationSet(S, dstLocation, Tmp, elementV,
                                     /*hasElements=*/true);
 
-    populateObjCForDestinationSet(dstLocation, svalBuilder, S, elemRef,
-                                  elementV, SymMgr, getNumVisitedCurrent(), Tmp,
-                                  Engine,
+    populateObjCForDestinationSet(S, dstLocation, Tmp, elementV,
                                   /*hasElements=*/false);
 
     // Finally, run any custom checkers.
