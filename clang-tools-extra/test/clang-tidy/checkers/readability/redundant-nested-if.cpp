@@ -114,13 +114,11 @@ void else_branch_child_chain_is_reported_when_parent_is_not_diagnosable() {
 }
 
 void negative_cases() {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (cond()) {
     if (bool B = cond(1))
       sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (cond()) {
     if (cond(1))
       sink();
@@ -128,7 +126,6 @@ void negative_cases() {
       sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (cond()) {
     if (cond(1))
       sink();
@@ -136,14 +133,12 @@ void negative_cases() {
     sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (cond()) {
     sink();
     if (cond(1))
       sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (cond()) {
     if (cond(1))
       sink();
@@ -152,18 +147,15 @@ void negative_cases() {
 }
 
 void macro_and_preprocessor_cases() {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (cond()) {
     INNER_IF(cond(1));
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (COND_MACRO) {
     if (cond(1))
       sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (cond()) {
 #if 1
     if (cond(1))
@@ -203,13 +195,11 @@ void comment_handling_cases() {
 }
 
 void user_defined_bool_conversion_default_cases() {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (make_bool_like()) {
     if (cond(1))
       sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (cond(1)) {
     if (make_bool_like())
       sink();

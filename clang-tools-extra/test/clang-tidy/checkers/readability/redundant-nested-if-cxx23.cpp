@@ -15,7 +15,6 @@ void cxx23_positive_anchor(bool B1, bool B2) {
 }
 
 void consteval_cases(bool B1, bool B2) {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if consteval {
     if (B1)
       sink();
@@ -23,7 +22,6 @@ void consteval_cases(bool B1, bool B2) {
     sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (!B1) {
     if consteval {
       sink();
@@ -35,7 +33,6 @@ void consteval_cases(bool B1, bool B2) {
 }
 
 template <bool B> constexpr void consteval_nested_in_constexpr() {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if constexpr (B) {
     if consteval {
       sink();

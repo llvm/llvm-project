@@ -45,13 +45,11 @@ void init_statement_cases() {
 }
 
 void declaration_condition_boollike_default_cases() {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (auto Guard = make_bool_like()) {
     if (cond(1))
       sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (bool X = COND_MACRO) {
     if (cond(1))
       sink();
@@ -118,7 +116,6 @@ template <typename T> void dependent_constexpr_operand_after_true_is_fixable() {
 
 template <bool B, typename T>
 void dependent_constexpr_operand_after_dependent_is_unsafe() {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if constexpr (B) {
     if constexpr (sizeof(typename T::type) == 4)
       sink();
@@ -137,13 +134,11 @@ template <typename T> void dependent_constexpr_type_chain_outer_is_fixable() {
 }
 
 void mixed_constexpr_and_non_constexpr(bool B) {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if constexpr (C1) {
     if (B)
       sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (B) {
     if constexpr (C1)
       sink();

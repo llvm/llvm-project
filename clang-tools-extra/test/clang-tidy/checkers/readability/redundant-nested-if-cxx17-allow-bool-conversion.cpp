@@ -15,7 +15,6 @@ void declaration_condition_boollike_cases() {
   // CHECK-FIXES-ALLOWBOOL: if (auto Guard = make_bool_like(); static_cast<bool>(Guard) && (cond(1)))
   // CHECK-FIXES-ALLOWBOOL: sink();
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (bool X = COND_MACRO) {
     if (cond(1))
       sink();

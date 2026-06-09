@@ -48,14 +48,11 @@ template <bool B, typename T> void dependent_requires_after_bool_is_fixable() {
 }
 
 void attribute_cases(bool B1, bool B2) {
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   if (B1) {
-    // CHECK-MESSAGES-NOT: :[[@LINE+1]]:5: warning: nested 'if' statements can be merged together
     [[likely]] if (B2)
       sink();
   }
 
-  // CHECK-MESSAGES-NOT: :[[@LINE+1]]:3: warning: nested 'if' statements can be merged together
   [[likely]] if (B1) {
     if (B2)
       sink();
