@@ -1707,16 +1707,140 @@ func.func @test_do_not_canonicalize_cast_from_cast_to_block_scaled_unranked(%arg
 
 // -----
 
+// CHECK-LABEL: @canonicalize_unit_avg_pool2d
+// CHECK-NOT: tosa.avg_pool2d
+// CHECK: return %arg0 : tensor<1x32x32x8xf32>
+func.func @canonicalize_unit_avg_pool2d(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_avg_pool2d_integer
+// CHECK: tosa.avg_pool2d
+func.func @dont_canonicalize_unit_avg_pool2d_integer(%arg0: tensor<1x32x32x8xi8>) -> tensor<1x32x32x8xi8> {
+  %input_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %output_zp = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = i32, kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x32x32x8xi8>
+  return %0 : tensor<1x32x32x8xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_avg_pool2d_non_zero_padding
+// CHECK: tosa.avg_pool2d
+func.func @dont_canonicalize_unit_avg_pool2d_non_zero_padding(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x31x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 2, 2>, pad = array<i64: 1, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x32x31x8xf32>
+  return %0 : tensor<1x32x31x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_avg_pool2d_non_unit_stride
+// CHECK: tosa.avg_pool2d
+func.func @dont_canonicalize_unit_avg_pool2d_non_unit_stride(%arg0: tensor<1x33x32x8xf32>) -> tensor<1x17x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 2, 1>} :
+       (tensor<1x33x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x17x32x8xf32>
+  return %0 : tensor<1x17x32x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_avg_pool2d_non_unit_kernel
+// CHECK: tosa.avg_pool2d
+func.func @dont_canonicalize_unit_avg_pool2d_non_unit_kernel(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x31x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 2, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x31x32x8xf32>
+  return %0 : tensor<1x31x32x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_avg_pool2d_input_output_mismatch
+// CHECK: tosa.avg_pool2d
+func.func @dont_canonicalize_unit_avg_pool2d_input_output_mismatch(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x?x32x8xf32> {
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.avg_pool2d %arg0, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 2, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x?x32x8xf32>
+  return %0 : tensor<1x?x32x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @canonicalize_unit_max_pool2d
+// CHECK-NOT: tosa.max_pool2d
+// CHECK: return %arg0 : tensor<1x32x32x8xf32>
+func.func @canonicalize_unit_max_pool2d(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %0 = tosa.max_pool2d %arg0 {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>, nan_mode = PROPAGATE} :
+       (tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_max_pool2d_ignore_nan
+// CHECK: tosa.max_pool2d
+func.func @dont_canonicalize_unit_max_pool2d_ignore_nan(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
+  %0 = tosa.max_pool2d %arg0 {kernel = array<i64: 1, 1>, nan_mode = IGNORE, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32>
+  return %0 : tensor<1x32x32x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_max_pool2d_non_zero_padding
+// CHECK: tosa.max_pool2d
+func.func @dont_canonicalize_unit_max_pool2d_non_zero_padding(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x31x8xf32> {
+  %0 = tosa.max_pool2d %arg0 {kernel = array<i64: 2, 2>, pad = array<i64: 1, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xf32>) -> tensor<1x32x31x8xf32>
+  return %0 : tensor<1x32x31x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_max_pool2d_non_unit_stride
+// CHECK: tosa.max_pool2d
+func.func @dont_canonicalize_unit_max_pool2d_non_unit_stride(%arg0: tensor<1x33x32x8xf32>) -> tensor<1x17x32x8xf32> {
+  %0 = tosa.max_pool2d %arg0 {kernel = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 2, 1>} :
+       (tensor<1x33x32x8xf32>) -> tensor<1x17x32x8xf32>
+  return %0 : tensor<1x17x32x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_unit_max_pool2d_non_unit_kernel
+// CHECK: tosa.max_pool2d
+func.func @dont_canonicalize_unit_max_pool2d_non_unit_kernel(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x31x32x8xf32> {
+  %0 = tosa.max_pool2d %arg0 {kernel = array<i64: 2, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} :
+       (tensor<1x32x32x8xf32>) -> tensor<1x31x32x8xf32>
+  return %0 : tensor<1x31x32x8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @canonicalize_max_pool2d_adaptive
-// CHECK: %[[POOL:.+]] = tosa.max_pool2d %arg0 {kernel = array<i64: 1, 1>, nan_mode = IGNORE, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32>
+// CHECK: %[[POOL:.+]] = tosa.max_pool2d %arg0 {kernel = array<i64: 2, 1>, nan_mode = IGNORE, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x32x32x8xf32>) -> tensor<1x31x32x8xf32>
 // CHECK: return %[[POOL]]
-func.func @canonicalize_max_pool2d_adaptive(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x8xf32> {
-  %kernel = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+func.func @canonicalize_max_pool2d_adaptive(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x31x32x8xf32> {
+  %kernel = tosa.const_shape {values = dense<[2, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
   %stride = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
   %pad = tosa.const_shape {values = dense<[0, 0, 0, 0]> : tensor<4xindex>} : () -> !tosa.shape<4>
   %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad {nan_mode = IGNORE} :
-         (tensor<1x32x32x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x32x8xf32>
-  return %0 : tensor<1x32x32x8xf32>
+         (tensor<1x32x32x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x31x32x8xf32>
+  return %0 : tensor<1x31x32x8xf32>
 }
 
 // -----
