@@ -137,11 +137,11 @@ bool ParseTrieEntriesImpl(DataExtractor &data, lldb::offset_t offset,
 
 bool lldb_private::ParseTrieEntries(
     DataExtractor &data, lldb::offset_t offset, const bool is_arm,
-    lldb::addr_t text_seg_base_addr, std::string &prefix,
-    std::set<lldb::addr_t> &resolver_addresses,
+    lldb::addr_t text_seg_base_addr, std::set<lldb::addr_t> &resolver_addresses,
     std::vector<TrieEntryWithOffset> &reexports,
     std::vector<TrieEntryWithOffset> &ext_symbols) {
   std::set<lldb::offset_t> visited_nodes;
+  std::string prefix;
   return ParseTrieEntriesImpl(data, offset, is_arm, text_seg_base_addr, prefix,
                               resolver_addresses, reexports, ext_symbols,
                               visited_nodes);

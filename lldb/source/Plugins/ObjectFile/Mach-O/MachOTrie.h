@@ -66,8 +66,6 @@ struct TrieEntryWithOffset {
 /// handling.
 /// \param[in] text_seg_base_addr The __TEXT segment file address added to each
 ///     symbol address, or LLDB_INVALID_ADDRESS to leave addresses unbiased.
-/// \param[in,out] prefix The accumulated symbol-name prefix; pass an empty
-///     string for the root call.
 /// \param[out] resolver_addresses Stub-and-resolver addresses encountered.
 /// \param[out] reexports Re-export entries with a valid import name.
 /// \param[out] ext_symbols Externally visible (non-re-export) entries.
@@ -75,7 +73,6 @@ struct TrieEntryWithOffset {
 /// \return false if the trie is detectably corrupt, true otherwise.
 bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
                       const bool is_arm, lldb::addr_t text_seg_base_addr,
-                      std::string &prefix,
                       std::set<lldb::addr_t> &resolver_addresses,
                       std::vector<TrieEntryWithOffset> &reexports,
                       std::vector<TrieEntryWithOffset> &ext_symbols);

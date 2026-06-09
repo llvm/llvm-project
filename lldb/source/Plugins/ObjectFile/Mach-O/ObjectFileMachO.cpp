@@ -2528,8 +2528,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
     if (text_segment_sp)
       text_segment_file_addr = text_segment_sp->GetFileAddress();
-    std::string prefix;
-    ParseTrieEntries(dyld_trie_data, 0, is_arm, text_segment_file_addr, prefix,
+    ParseTrieEntries(dyld_trie_data, 0, is_arm, text_segment_file_addr,
                      resolver_addresses, reexport_trie_entries,
                      external_sym_trie_entries);
   }
