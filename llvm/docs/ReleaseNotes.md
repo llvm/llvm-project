@@ -262,6 +262,8 @@ Makes programs 10x faster by doing Special New Thing.
   in use. This matches the behaviour of Intel syntax and aids with
   compatibility when changing the default Clang syntax to the Intel syntax.
 
+* EGPR (R16-R31) now requires V3 unwind info on Windows x64. Using EGPR
+  without V3 unwind produces a fatal error.
 * Implemented Win64 APX ABI callee-saved registers: R30 and R31 are now
   treated as non-volatile in the Win64 calling convention when APX is
   available, per the Microsoft x64 calling convention specification.
@@ -270,6 +272,10 @@ Makes programs 10x faster by doing Special New Thing.
   register allocation, as the unwinder cannot restore APX extended
   registers across longjmp. A warning is emitted for large functions
   where this reservation may impact performance.
+
+* Added ``.seh_push2regs`` assembly directive for explicitly encoding a
+  two-register push in Windows x64 V3 unwind info. The directive takes two
+  register operands: ``.seh_push2regs %r12, %r13``.
 
 ### Changes to the OCaml bindings
 
