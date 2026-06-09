@@ -4480,6 +4480,54 @@ static void GenerateCustomAppertainsTo(const Record &Subject, raw_ostream &OS) {
   CustomSubjectSet.insert(FnName);
 }
 
+static StringRef getParsedAttrInfoBaseClass(const Record &Attr) {
+  if (Attr.isValueUnset("Subjects"))
+    return "ParsedAttrInfo";
+
+  const Record *SubjectObj = Attr.getValueAsDef("Subjects");
+  std::vector<const Record *> Subjects =
+      SubjectObj->getValueAsListOfDefs("Subjects");
+  if (Subjects.empty())
+    return "ParsedAttrInfo";
+
+  bool HasStmtSubject = any_of(
+      Subjects, [](const Record *R) { return R->isSubClassOf("StmtNode"); });
+  bool HasDeclSubject = any_of(
+      Subjects, [](const Record *R) { return !R->isSubClassOf("StmtNode"); });
+  if (HasDeclSubject == HasStmtSubject)
+    return "ParsedAttrInfo";
+  return HasDeclSubject ? "DeclOnlyParsedAttrInfo" : "StmtOnlyParsedAttrInfo";
+}
+
+static void GenerateAppertainsToBaseClasses(raw_ostream &OS) {
+  OS << R"cpp(
+struct DeclOnlyParsedAttrInfo : ParsedAttrInfo {
+  using ParsedAttrInfo::ParsedAttrInfo;
+
+  bool diagAppertainsToStmt(Sema &S, const ParsedAttr &AL,
+                            const Stmt *St) const override {
+    S.Diag(AL.getLoc(), diag::err_decl_attribute_invalid_on_stmt)
+        << AL << AL.isRegularKeywordAttribute() << St->getBeginLoc();
+    return false;
+  }
+};
+static_assert(sizeof(DeclOnlyParsedAttrInfo) == sizeof(ParsedAttrInfo));
+
+struct StmtOnlyParsedAttrInfo : ParsedAttrInfo {
+  using ParsedAttrInfo::ParsedAttrInfo;
+
+  bool diagAppertainsToDecl(Sema &S, const ParsedAttr &AL,
+                            const Decl *D) const override {
+    S.Diag(AL.getLoc(), diag::err_attribute_invalid_on_decl)
+        << AL << AL.isRegularKeywordAttribute() << D->getLocation();
+    return false;
+  }
+};
+static_assert(sizeof(StmtOnlyParsedAttrInfo) == sizeof(ParsedAttrInfo));
+
+)cpp";
+}
+
 static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // If the attribute does not contain a Subjects definition, then use the
   // default appertainsTo logic.
@@ -4512,21 +4560,9 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
   // FIXME: this assertion will be wrong if we ever add type attribute subjects.
   assert(DeclSubjects.size() + StmtSubjects.size() == Subjects.size());
 
-  if (DeclSubjects.empty()) {
-    // If there are no decl subjects but there are stmt subjects, diagnose
-    // trying to apply a statement attribute to a declaration.
-    if (!StmtSubjects.empty()) {
-      OS << "bool diagAppertainsToDecl(Sema &S, const ParsedAttr &AL, ";
-      OS << "const Decl *D) const override {\n";
-      OS << "  S.Diag(AL.getLoc(), diag::err_attribute_invalid_on_decl)\n";
-      OS << "    << AL << AL.isRegularKeywordAttribute() << "
-            "D->getLocation();\n";
-      OS << "  return false;\n";
-      OS << "}\n\n";
-    }
-  } else {
-    // Otherwise, generate an appertainsTo check specific to this attribute
-    // which checks all of the given subjects against the Decl passed in.
+  if (!DeclSubjects.empty()) {
+    // Generate an appertainsTo check specific to this attribute which checks
+    // all of the given declaration subjects against the Decl passed in.
     OS << "bool diagAppertainsToDecl(Sema &S, ";
     OS << "const ParsedAttr &Attr, const Decl *D) const override {\n";
     OS << "  if (";
@@ -4557,19 +4593,7 @@ static void GenerateAppertainsTo(const Record &Attr, raw_ostream &OS) {
     OS << "}\n\n";
   }
 
-  if (StmtSubjects.empty()) {
-    // If there are no stmt subjects but there are decl subjects, diagnose
-    // trying to apply a declaration attribute to a statement.
-    if (!DeclSubjects.empty()) {
-      OS << "bool diagAppertainsToStmt(Sema &S, const ParsedAttr &AL, ";
-      OS << "const Stmt *St) const override {\n";
-      OS << "  S.Diag(AL.getLoc(), diag::err_decl_attribute_invalid_on_stmt)\n";
-      OS << "    << AL << AL.isRegularKeywordAttribute() << "
-            "St->getBeginLoc();\n";
-      OS << "  return false;\n";
-      OS << "}\n\n";
-    }
-  } else {
+  if (!StmtSubjects.empty()) {
     // Now, do the same for statements.
     OS << "bool diagAppertainsToStmt(Sema &S, ";
     OS << "const ParsedAttr &Attr, const Stmt *St) const override {\n";
@@ -4984,6 +5008,8 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
         GenerateCustomAppertainsTo(*Subject, OS);
   }
 
+  GenerateAppertainsToBaseClasses(OS);
+
   // This stream is used to collect all of the declaration attribute merging
   // logic for performing mutual exclusion checks. This gets emitted at the
   // end of the file in a helper function of its own.
@@ -5002,6 +5028,7 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
     // ParsedAttr.cpp.
     const std::string &AttrName = I->first;
     const Record &Attr = *I->second;
+    StringRef BaseClass = getParsedAttrInfoBaseClass(Attr);
     auto Spellings = GetFlattenedSpellings(Attr);
     if (!Spellings.empty()) {
       OS << "static constexpr ParsedAttrInfo::Spelling " << I->first
@@ -5041,9 +5068,10 @@ void EmitClangAttrParsedAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
       OS << "};\n";
     }
 
-    OS << "struct ParsedAttrInfo" << I->first
-       << " final : public ParsedAttrInfo {\n";
-    OS << "  constexpr ParsedAttrInfo" << I->first << "() : ParsedAttrInfo(\n";
+    OS << "struct ParsedAttrInfo" << I->first << " final : public " << BaseClass
+       << " {\n";
+    OS << "  constexpr ParsedAttrInfo" << I->first << "() : " << BaseClass
+       << "(\n";
     OS << "    /*AttrKind=*/ParsedAttr::AT_" << AttrName << ",\n";
     emitArgInfo(Attr, OS);
     OS << "    /*HasCustomParsing=*/";
