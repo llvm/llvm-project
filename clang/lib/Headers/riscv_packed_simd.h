@@ -104,50 +104,6 @@ __packed_splat(pmv_s_i16x4, int16x4_t, int16_t, __packed_splat4)
 __packed_splat(pmv_s_u32x2, uint32x2_t, uint32_t, __packed_splat2)
 __packed_splat(pmv_s_i32x2, int32x2_t, int32_t, __packed_splat2)
 
-/* Packed Shifts (32-bit) */
-__packed_shift8(psll_s_u8x4, uint8x4_t, <<)
-__packed_shift8(psll_s_i8x4, int8x4_t, <<)
-__packed_shift16(psll_s_u16x2, uint16x2_t, <<)
-__packed_shift16(psll_s_i16x2, int16x2_t, <<)
-__packed_shift8(psrl_s_u8x4, uint8x4_t, >>)
-__packed_shift16(psrl_s_u16x2, uint16x2_t, >>)
-__packed_shift8(psra_s_i8x4, int8x4_t, >>)
-__packed_shift16(psra_s_i16x2, int16x2_t, >>)
-
-/* Packed Shifts (64-bit) */
-__packed_shift8(psll_s_u8x8, uint8x8_t, <<)
-__packed_shift8(psll_s_i8x8, int8x8_t, <<)
-__packed_shift16(psll_s_u16x4, uint16x4_t, <<)
-__packed_shift16(psll_s_i16x4, int16x4_t, <<)
-__packed_shift32(psll_s_u32x2, uint32x2_t, <<)
-__packed_shift32(psll_s_i32x2, int32x2_t, <<)
-__packed_shift8(psrl_s_u8x8, uint8x8_t, >>)
-__packed_shift16(psrl_s_u16x4, uint16x4_t, >>)
-__packed_shift32(psrl_s_u32x2, uint32x2_t, >>)
-__packed_shift8(psra_s_i8x8, int8x8_t, >>)
-__packed_shift16(psra_s_i16x4, int16x4_t, >>)
-__packed_shift32(psra_s_i32x2, int32x2_t, >>)
-
-/* Packed Addition with Scalar (32-bit) */
-__packed_scalar_binary_op(padd_s_u8x4, uint8x4_t, uint8_t, +, __packed_splat4)
-__packed_scalar_binary_op(padd_s_i8x4, int8x4_t, int8_t, +, __packed_splat4)
-__packed_scalar_binary_op(padd_s_u16x2, uint16x2_t, uint16_t, +,
-                          __packed_splat2)
-__packed_scalar_binary_op(padd_s_i16x2, int16x2_t, int16_t, +,
-                          __packed_splat2)
-
-/* Packed Addition with Scalar (64-bit) */
-__packed_scalar_binary_op(padd_s_u8x8, uint8x8_t, uint8_t, +, __packed_splat8)
-__packed_scalar_binary_op(padd_s_i8x8, int8x8_t, int8_t, +, __packed_splat8)
-__packed_scalar_binary_op(padd_s_u16x4, uint16x4_t, uint16_t, +,
-                          __packed_splat4)
-__packed_scalar_binary_op(padd_s_i16x4, int16x4_t, int16_t, +,
-                          __packed_splat4)
-__packed_scalar_binary_op(padd_s_u32x2, uint32x2_t, uint32_t, +,
-                          __packed_splat2)
-__packed_scalar_binary_op(padd_s_i32x2, int32x2_t, int32_t, +,
-                          __packed_splat2)
-
 /* Packed Addition and Subtraction (32-bit) */
 __packed_binary_op(padd_i8x4, int8x4_t, +)
 __packed_binary_op(padd_u8x4, uint8x4_t, +)
@@ -176,6 +132,26 @@ __packed_binary_op(psub_u32x2, uint32x2_t, -)
 __packed_unary_op(pneg_i8x8, int8x8_t, -)
 __packed_unary_op(pneg_i16x4, int16x4_t, -)
 __packed_unary_op(pneg_i32x2, int32x2_t, -)
+
+/* Packed Addition with Scalar (32-bit) */
+__packed_scalar_binary_op(padd_s_u8x4, uint8x4_t, uint8_t, +, __packed_splat4)
+__packed_scalar_binary_op(padd_s_i8x4, int8x4_t, int8_t, +, __packed_splat4)
+__packed_scalar_binary_op(padd_s_u16x2, uint16x2_t, uint16_t, +,
+                          __packed_splat2)
+__packed_scalar_binary_op(padd_s_i16x2, int16x2_t, int16_t, +,
+                          __packed_splat2)
+
+/* Packed Addition with Scalar (64-bit) */
+__packed_scalar_binary_op(padd_s_u8x8, uint8x8_t, uint8_t, +, __packed_splat8)
+__packed_scalar_binary_op(padd_s_i8x8, int8x8_t, int8_t, +, __packed_splat8)
+__packed_scalar_binary_op(padd_s_u16x4, uint16x4_t, uint16_t, +,
+                          __packed_splat4)
+__packed_scalar_binary_op(padd_s_i16x4, int16x4_t, int16_t, +,
+                          __packed_splat4)
+__packed_scalar_binary_op(padd_s_u32x2, uint32x2_t, uint32_t, +,
+                          __packed_splat2)
+__packed_scalar_binary_op(padd_s_i32x2, int32x2_t, int32_t, +,
+                          __packed_splat2)
 
 /* Packed Saturating Addition and Subtraction (32-bit) */
 __packed_binary_builtin(psadd_i8x4, int8x4_t, __builtin_elementwise_add_sat)
@@ -237,6 +213,30 @@ __packed_binary_builtin(pmax_i32x2, int32x2_t, __builtin_elementwise_max)
 __packed_binary_builtin(pmaxu_u8x8, uint8x8_t, __builtin_elementwise_max)
 __packed_binary_builtin(pmaxu_u16x4, uint16x4_t, __builtin_elementwise_max)
 __packed_binary_builtin(pmaxu_u32x2, uint32x2_t, __builtin_elementwise_max)
+
+/* Packed Shifts (32-bit) */
+__packed_shift8(psll_s_u8x4, uint8x4_t, <<)
+__packed_shift8(psll_s_i8x4, int8x4_t, <<)
+__packed_shift16(psll_s_u16x2, uint16x2_t, <<)
+__packed_shift16(psll_s_i16x2, int16x2_t, <<)
+__packed_shift8(psrl_s_u8x4, uint8x4_t, >>)
+__packed_shift16(psrl_s_u16x2, uint16x2_t, >>)
+__packed_shift8(psra_s_i8x4, int8x4_t, >>)
+__packed_shift16(psra_s_i16x2, int16x2_t, >>)
+
+/* Packed Shifts (64-bit) */
+__packed_shift8(psll_s_u8x8, uint8x8_t, <<)
+__packed_shift8(psll_s_i8x8, int8x8_t, <<)
+__packed_shift16(psll_s_u16x4, uint16x4_t, <<)
+__packed_shift16(psll_s_i16x4, int16x4_t, <<)
+__packed_shift32(psll_s_u32x2, uint32x2_t, <<)
+__packed_shift32(psll_s_i32x2, int32x2_t, <<)
+__packed_shift8(psrl_s_u8x8, uint8x8_t, >>)
+__packed_shift16(psrl_s_u16x4, uint16x4_t, >>)
+__packed_shift32(psrl_s_u32x2, uint32x2_t, >>)
+__packed_shift8(psra_s_i8x8, int8x8_t, >>)
+__packed_shift16(psra_s_i16x4, int16x4_t, >>)
+__packed_shift32(psra_s_i32x2, int32x2_t, >>)
 
 /* Packed Logical Operations (32-bit) */
 __packed_binary_op(pand_i8x4, int8x4_t, &)

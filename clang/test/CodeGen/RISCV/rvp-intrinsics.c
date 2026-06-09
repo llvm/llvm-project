@@ -212,806 +212,6 @@ int32x2_t test_pmv_s_i32x2(int32_t x) {
   return __riscv_pmv_s_i32x2(x);
 }
 
-/* Packed Shifts (32-bit) */
-
-// RV32-LABEL: define dso_local i32 @test_psll_s_i8x4(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <4 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHL_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i32 @test_psll_s_i8x4(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <4 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHL_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP4]]
-//
-int8x4_t test_psll_s_i8x4(int8x4_t a, unsigned shamt) {
-  return __riscv_psll_s_i8x4(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i32 @test_psll_s_u8x4(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <4 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHL_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i32 @test_psll_s_u8x4(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <4 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHL_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP4]]
-//
-uint8x4_t test_psll_s_u8x4(uint8x4_t a, unsigned shamt) {
-  return __riscv_psll_s_u8x4(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i32 @test_psll_s_i16x2(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <2 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHL_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i32 @test_psll_s_i16x2(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <2 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHL_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP4]]
-//
-int16x2_t test_psll_s_i16x2(int16x2_t a, unsigned shamt) {
-  return __riscv_psll_s_i16x2(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i32 @test_psll_s_u16x2(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <2 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHL_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i32 @test_psll_s_u16x2(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <2 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHL_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP4]]
-//
-uint16x2_t test_psll_s_u16x2(uint16x2_t a, unsigned shamt) {
-  return __riscv_psll_s_u16x2(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i32 @test_psra_s_i8x4(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = ashr <4 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHR_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i32 @test_psra_s_i8x4(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = ashr <4 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHR_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP4]]
-//
-int8x4_t test_psra_s_i8x4(int8x4_t a, unsigned shamt) {
-  return __riscv_psra_s_i8x4(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i32 @test_psrl_s_u8x4(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = lshr <4 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHR_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i32 @test_psrl_s_u8x4(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = lshr <4 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHR_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP4]]
-//
-uint8x4_t test_psrl_s_u8x4(uint8x4_t a, unsigned shamt) {
-  return __riscv_psrl_s_u8x4(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i32 @test_psra_s_i16x2(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = ashr <2 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHR_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i32 @test_psra_s_i16x2(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = ashr <2 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHR_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP4]]
-//
-int16x2_t test_psra_s_i16x2(int16x2_t a, unsigned shamt) {
-  return __riscv_psra_s_i16x2(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i32 @test_psrl_s_u16x2(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = lshr <2 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHR_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i32 @test_psrl_s_u16x2(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = lshr <2 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHR_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP4]]
-//
-uint16x2_t test_psrl_s_u16x2(uint16x2_t a, unsigned shamt) {
-  return __riscv_psrl_s_u16x2(a, shamt);
-}
-
-/* Packed Shifts (64-bit) */
-
-// RV32-LABEL: define dso_local i64 @test_psll_s_i8x8(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <8 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHL_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i64 @test_psll_s_i8x8(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <8 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHL_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP4]]
-//
-int8x8_t test_psll_s_i8x8(int8x8_t a, unsigned shamt) {
-  return __riscv_psll_s_i8x8(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psll_s_u8x8(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <8 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHL_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i64 @test_psll_s_u8x8(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <8 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHL_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP4]]
-//
-uint8x8_t test_psll_s_u8x8(uint8x8_t a, unsigned shamt) {
-  return __riscv_psll_s_u8x8(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psll_s_i16x4(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <4 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHL_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i64 @test_psll_s_i16x4(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <4 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHL_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP4]]
-//
-int16x4_t test_psll_s_i16x4(int16x4_t a, unsigned shamt) {
-  return __riscv_psll_s_i16x4(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psll_s_u16x4(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <4 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHL_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i64 @test_psll_s_u16x4(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <4 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHL_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP4]]
-//
-uint16x4_t test_psll_s_u16x4(uint16x4_t a, unsigned shamt) {
-  return __riscv_psll_s_u16x4(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psll_s_i32x2(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
-// RV32-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
-// RV32-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHL_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_psll_s_i32x2(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
-// RV64-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
-// RV64-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHL_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-int32x2_t test_psll_s_i32x2(int32x2_t a, unsigned shamt) {
-  return __riscv_psll_s_i32x2(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psll_s_u32x2(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
-// RV32-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
-// RV32-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[SHL_I:%.*]] = shl <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHL_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_psll_s_u32x2(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
-// RV64-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
-// RV64-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[SHL_I:%.*]] = shl <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHL_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-uint32x2_t test_psll_s_u32x2(uint32x2_t a, unsigned shamt) {
-  return __riscv_psll_s_u32x2(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psra_s_i8x8(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = ashr <8 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHR_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i64 @test_psra_s_i8x8(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = ashr <8 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHR_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP4]]
-//
-int8x8_t test_psra_s_i8x8(int8x8_t a, unsigned shamt) {
-  return __riscv_psra_s_i8x8(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psrl_s_u8x8(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = lshr <8 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHR_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i64 @test_psrl_s_u8x8(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
-// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = lshr <8 x i8> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHR_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP4]]
-//
-uint8x8_t test_psrl_s_u8x8(uint8x8_t a, unsigned shamt) {
-  return __riscv_psrl_s_u8x8(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psra_s_i16x4(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = ashr <4 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHR_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i64 @test_psra_s_i16x4(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = ashr <4 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHR_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP4]]
-//
-int16x4_t test_psra_s_i16x4(int16x4_t a, unsigned shamt) {
-  return __riscv_psra_s_i16x4(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psrl_s_u16x4(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
-// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = lshr <4 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHR_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP4]]
-//
-// RV64-LABEL: define dso_local i64 @test_psrl_s_u16x4(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
-// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
-// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
-// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = lshr <4 x i16> [[TMP0]], [[SH_PROM_I]]
-// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHR_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP4]]
-//
-uint16x4_t test_psrl_s_u16x4(uint16x4_t a, unsigned shamt) {
-  return __riscv_psrl_s_u16x4(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psra_s_i32x2(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
-// RV32-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
-// RV32-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = ashr <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHR_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_psra_s_i32x2(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
-// RV64-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
-// RV64-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = ashr <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHR_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-int32x2_t test_psra_s_i32x2(int32x2_t a, unsigned shamt) {
-  return __riscv_psra_s_i32x2(a, shamt);
-}
-
-// RV32-LABEL: define dso_local i64 @test_psrl_s_u32x2(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
-// RV32-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
-// RV32-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[SHR_I:%.*]] = lshr <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHR_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_psrl_s_u32x2(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
-// RV64-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
-// RV64-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[SHR_I:%.*]] = lshr <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHR_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-uint32x2_t test_psrl_s_u32x2(uint32x2_t a, unsigned shamt) {
-  return __riscv_psrl_s_u32x2(a, shamt);
-}
-
-/* Packed Addition with Scalar (32-bit) */
-
-// RV32-LABEL: define dso_local i32 @test_padd_s_u8x4(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <4 x i8> [[VECINIT4_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ADD_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i32 @test_padd_s_u8x4(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <4 x i8> [[VECINIT4_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ADD_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP1]]
-//
-uint8x4_t test_padd_s_u8x4(uint8x4_t a, uint8_t b) {
-  return __riscv_padd_s_u8x4(a, b);
-}
-
-// RV32-LABEL: define dso_local i32 @test_padd_s_i8x4(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <4 x i8> [[VECINIT4_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ADD_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i32 @test_padd_s_i8x4(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <4 x i8> [[VECINIT4_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ADD_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP1]]
-//
-int8x4_t test_padd_s_i8x4(int8x4_t a, int8_t b) {
-  return __riscv_padd_s_i8x4(a, b);
-}
-
-// RV32-LABEL: define dso_local i32 @test_padd_s_u16x2(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i16 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i16> [[VECINIT_I]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <2 x i16> [[VECINIT2_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ADD_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i32 @test_padd_s_u16x2(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i16 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i16> [[VECINIT_I]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <2 x i16> [[VECINIT2_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ADD_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP1]]
-//
-uint16x2_t test_padd_s_u16x2(uint16x2_t a, uint16_t b) {
-  return __riscv_padd_s_u16x2(a, b);
-}
-
-// RV32-LABEL: define dso_local i32 @test_padd_s_i16x2(
-// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i16 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i16> [[VECINIT_I]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <2 x i16> [[VECINIT2_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ADD_I]] to i32
-// RV32-NEXT:    ret i32 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i32 @test_padd_s_i16x2(
-// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i16 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i16> [[VECINIT_I]], <2 x i16> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <2 x i16> [[VECINIT2_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ADD_I]] to i32
-// RV64-NEXT:    ret i32 [[TMP1]]
-//
-int16x2_t test_padd_s_i16x2(int16x2_t a, int16_t b) {
-  return __riscv_padd_s_i16x2(a, b);
-}
-
-/* Packed Addition with Scalar (64-bit) */
-
-// RV32-LABEL: define dso_local i64 @test_padd_s_u8x8(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <8 x i8> [[VECINIT8_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ADD_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_padd_s_u8x8(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <8 x i8> [[VECINIT8_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ADD_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-uint8x8_t test_padd_s_u8x8(uint8x8_t a, uint8_t b) {
-  return __riscv_padd_s_u8x8(a, b);
-}
-
-// RV32-LABEL: define dso_local i64 @test_padd_s_i8x8(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <8 x i8> [[VECINIT8_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ADD_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_padd_s_i8x8(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> poison, <8 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <8 x i8> [[VECINIT8_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ADD_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-int8x8_t test_padd_s_i8x8(int8x8_t a, int8_t b) {
-  return __riscv_padd_s_i8x8(a, b);
-}
-
-// RV32-LABEL: define dso_local i64 @test_padd_s_u16x4(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i16 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i16> [[VECINIT_I]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <4 x i16> [[VECINIT4_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ADD_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_padd_s_u16x4(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i16 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i16> [[VECINIT_I]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <4 x i16> [[VECINIT4_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ADD_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-uint16x4_t test_padd_s_u16x4(uint16x4_t a, uint16_t b) {
-  return __riscv_padd_s_u16x4(a, b);
-}
-
-// RV32-LABEL: define dso_local i64 @test_padd_s_i16x4(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i16 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i16> [[VECINIT_I]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <4 x i16> [[VECINIT4_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ADD_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_padd_s_i16x4(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i16 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i16> [[VECINIT_I]], <4 x i16> poison, <4 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <4 x i16> [[VECINIT4_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ADD_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-int16x4_t test_padd_s_i16x4(int16x4_t a, int16_t b) {
-  return __riscv_padd_s_i16x4(a, b);
-}
-
-// RV32-LABEL: define dso_local i64 @test_padd_s_u32x2(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i32> [[VECINIT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <2 x i32> [[VECINIT2_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[ADD_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_padd_s_u32x2(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i32> [[VECINIT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <2 x i32> [[VECINIT2_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[ADD_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-uint32x2_t test_padd_s_u32x2(uint32x2_t a, uint32_t b) {
-  return __riscv_padd_s_u32x2(a, b);
-}
-
-// RV32-LABEL: define dso_local i64 @test_padd_s_i32x2(
-// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
-// RV32-NEXT:  [[ENTRY:.*:]]
-// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
-// RV32-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i32> [[VECINIT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV32-NEXT:    [[ADD_I:%.*]] = add <2 x i32> [[VECINIT2_I]], [[TMP0]]
-// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[ADD_I]] to i64
-// RV32-NEXT:    ret i64 [[TMP1]]
-//
-// RV64-LABEL: define dso_local i64 @test_padd_s_i32x2(
-// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
-// RV64-NEXT:  [[ENTRY:.*:]]
-// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
-// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
-// RV64-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i32> [[VECINIT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
-// RV64-NEXT:    [[ADD_I:%.*]] = add <2 x i32> [[VECINIT2_I]], [[TMP0]]
-// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[ADD_I]] to i64
-// RV64-NEXT:    ret i64 [[TMP1]]
-//
-int32x2_t test_padd_s_i32x2(int32x2_t a, int32_t b) {
-  return __riscv_padd_s_i32x2(a, b);
-}
-
 /* Packed Addition and Subtraction (32-bit) */
 
 // RV32-LABEL: define dso_local i32 @test_padd_i8x4(
@@ -1554,6 +754,250 @@ int16x4_t test_pneg_i16x4(int16x4_t a) {
 //
 int32x2_t test_pneg_i32x2(int32x2_t a) {
   return __riscv_pneg_i32x2(a);
+}
+
+/* Packed Addition with Scalar (32-bit) */
+
+// RV32-LABEL: define dso_local i32 @test_padd_s_u8x4(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <4 x i8> [[VECINIT4_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ADD_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i32 @test_padd_s_u8x4(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <4 x i8> [[VECINIT4_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ADD_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP1]]
+//
+uint8x4_t test_padd_s_u8x4(uint8x4_t a, uint8_t b) {
+  return __riscv_padd_s_u8x4(a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_padd_s_i8x4(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <4 x i8> [[VECINIT4_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ADD_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i32 @test_padd_s_i8x4(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i8> poison, i8 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i8> [[VECINIT_I]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <4 x i8> [[VECINIT4_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8> [[ADD_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP1]]
+//
+int8x4_t test_padd_s_i8x4(int8x4_t a, int8_t b) {
+  return __riscv_padd_s_i8x4(a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_padd_s_u16x2(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i16 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i16> [[VECINIT_I]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <2 x i16> [[VECINIT2_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ADD_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i32 @test_padd_s_u16x2(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i16 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i16> [[VECINIT_I]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <2 x i16> [[VECINIT2_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ADD_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP1]]
+//
+uint16x2_t test_padd_s_u16x2(uint16x2_t a, uint16_t b) {
+  return __riscv_padd_s_u16x2(a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_padd_s_i16x2(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i16 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i16> [[VECINIT_I]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <2 x i16> [[VECINIT2_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ADD_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i32 @test_padd_s_i16x2(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i16 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i16> poison, i16 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i16> [[VECINIT_I]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <2 x i16> [[VECINIT2_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[ADD_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP1]]
+//
+int16x2_t test_padd_s_i16x2(int16x2_t a, int16_t b) {
+  return __riscv_padd_s_i16x2(a, b);
+}
+
+/* Packed Addition with Scalar (64-bit) */
+
+// RV32-LABEL: define dso_local i64 @test_padd_s_u8x8(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <8 x i8> [[VECINIT8_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ADD_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_padd_s_u8x8(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <8 x i8> [[VECINIT8_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ADD_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+uint8x8_t test_padd_s_u8x8(uint8x8_t a, uint8_t b) {
+  return __riscv_padd_s_u8x8(a, b);
+}
+
+// RV32-LABEL: define dso_local i64 @test_padd_s_i8x8(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <8 x i8> [[VECINIT8_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ADD_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_padd_s_i8x8(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i8 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x i8> poison, i8 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT8_I:%.*]] = shufflevector <8 x i8> [[VECINIT_I]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <8 x i8> [[VECINIT8_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <8 x i8> [[ADD_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+int8x8_t test_padd_s_i8x8(int8x8_t a, int8_t b) {
+  return __riscv_padd_s_i8x8(a, b);
+}
+
+// RV32-LABEL: define dso_local i64 @test_padd_s_u16x4(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i16 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i16> [[VECINIT_I]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <4 x i16> [[VECINIT4_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ADD_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_padd_s_u16x4(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i16 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i16> [[VECINIT_I]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <4 x i16> [[VECINIT4_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ADD_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+uint16x4_t test_padd_s_u16x4(uint16x4_t a, uint16_t b) {
+  return __riscv_padd_s_u16x4(a, b);
+}
+
+// RV32-LABEL: define dso_local i64 @test_padd_s_i16x4(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i16 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i16> [[VECINIT_I]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <4 x i16> [[VECINIT4_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ADD_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_padd_s_i16x4(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i16 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x i16> poison, i16 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT4_I:%.*]] = shufflevector <4 x i16> [[VECINIT_I]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <4 x i16> [[VECINIT4_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[ADD_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+int16x4_t test_padd_s_i16x4(int16x4_t a, int16_t b) {
+  return __riscv_padd_s_i16x4(a, b);
+}
+
+// RV32-LABEL: define dso_local i64 @test_padd_s_u32x2(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i32> [[VECINIT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <2 x i32> [[VECINIT2_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[ADD_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_padd_s_u32x2(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i32> [[VECINIT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <2 x i32> [[VECINIT2_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[ADD_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+uint32x2_t test_padd_s_u32x2(uint32x2_t a, uint32_t b) {
+  return __riscv_padd_s_u32x2(a, b);
+}
+
+// RV32-LABEL: define dso_local i64 @test_padd_s_i32x2(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
+// RV32-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i32> [[VECINIT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[ADD_I:%.*]] = add <2 x i32> [[VECINIT2_I]], [[TMP0]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[ADD_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_padd_s_i32x2(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[VECINIT_I:%.*]] = insertelement <2 x i32> poison, i32 [[B]], i64 0
+// RV64-NEXT:    [[VECINIT2_I:%.*]] = shufflevector <2 x i32> [[VECINIT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[ADD_I:%.*]] = add <2 x i32> [[VECINIT2_I]], [[TMP0]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[ADD_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+int32x2_t test_padd_s_i32x2(int32x2_t a, int32_t b) {
+  return __riscv_padd_s_i32x2(a, b);
 }
 
 /* Packed Saturating Addition and Subtraction (32-bit) */
@@ -2662,6 +2106,562 @@ uint16x4_t test_pmaxu_u16x4(uint16x4_t a, uint16x4_t b) {
 //
 uint32x2_t test_pmaxu_u32x2(uint32x2_t a, uint32x2_t b) {
   return __riscv_pmaxu_u32x2(a, b);
+}
+
+/* Packed Shifts (32-bit) */
+
+// RV32-LABEL: define dso_local i32 @test_psll_s_i8x4(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <4 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHL_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i32 @test_psll_s_i8x4(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <4 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHL_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP4]]
+//
+int8x4_t test_psll_s_i8x4(int8x4_t a, unsigned shamt) {
+  return __riscv_psll_s_i8x4(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_psll_s_u8x4(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <4 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHL_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i32 @test_psll_s_u8x4(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <4 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHL_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP4]]
+//
+uint8x4_t test_psll_s_u8x4(uint8x4_t a, unsigned shamt) {
+  return __riscv_psll_s_u8x4(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_psll_s_i16x2(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <2 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHL_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i32 @test_psll_s_i16x2(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <2 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHL_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP4]]
+//
+int16x2_t test_psll_s_i16x2(int16x2_t a, unsigned shamt) {
+  return __riscv_psll_s_i16x2(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_psll_s_u16x2(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <2 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHL_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i32 @test_psll_s_u16x2(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <2 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHL_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP4]]
+//
+uint16x2_t test_psll_s_u16x2(uint16x2_t a, unsigned shamt) {
+  return __riscv_psll_s_u16x2(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_psra_s_i8x4(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = ashr <4 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHR_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i32 @test_psra_s_i8x4(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = ashr <4 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHR_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP4]]
+//
+int8x4_t test_psra_s_i8x4(int8x4_t a, unsigned shamt) {
+  return __riscv_psra_s_i8x4(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_psrl_s_u8x4(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = lshr <4 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHR_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i32 @test_psrl_s_u8x4(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <4 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8> poison, i8 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i8> [[TMP3]], <4 x i8> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = lshr <4 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i8> [[SHR_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP4]]
+//
+uint8x4_t test_psrl_s_u8x4(uint8x4_t a, unsigned shamt) {
+  return __riscv_psrl_s_u8x4(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_psra_s_i16x2(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = ashr <2 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHR_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i32 @test_psra_s_i16x2(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = ashr <2 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHR_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP4]]
+//
+int16x2_t test_psra_s_i16x2(int16x2_t a, unsigned shamt) {
+  return __riscv_psra_s_i16x2(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i32 @test_psrl_s_u16x2(
+// RV32-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = lshr <2 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHR_I]] to i32
+// RV32-NEXT:    ret i32 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i32 @test_psrl_s_u16x2(
+// RV64-SAME: i32 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i32 [[A_COERCE]] to <2 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <2 x i16> poison, i16 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <2 x i16> [[TMP3]], <2 x i16> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = lshr <2 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <2 x i16> [[SHR_I]] to i32
+// RV64-NEXT:    ret i32 [[TMP4]]
+//
+uint16x2_t test_psrl_s_u16x2(uint16x2_t a, unsigned shamt) {
+  return __riscv_psrl_s_u16x2(a, shamt);
+}
+
+/* Packed Shifts (64-bit) */
+
+// RV32-LABEL: define dso_local i64 @test_psll_s_i8x8(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <8 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHL_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i64 @test_psll_s_i8x8(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <8 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHL_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP4]]
+//
+int8x8_t test_psll_s_i8x8(int8x8_t a, unsigned shamt) {
+  return __riscv_psll_s_i8x8(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psll_s_u8x8(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <8 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHL_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i64 @test_psll_s_u8x8(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <8 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHL_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP4]]
+//
+uint8x8_t test_psll_s_u8x8(uint8x8_t a, unsigned shamt) {
+  return __riscv_psll_s_u8x8(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psll_s_i16x4(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <4 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHL_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i64 @test_psll_s_i16x4(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <4 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHL_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP4]]
+//
+int16x4_t test_psll_s_i16x4(int16x4_t a, unsigned shamt) {
+  return __riscv_psll_s_i16x4(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psll_s_u16x4(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <4 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHL_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i64 @test_psll_s_u16x4(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <4 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHL_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP4]]
+//
+uint16x4_t test_psll_s_u16x4(uint16x4_t a, unsigned shamt) {
+  return __riscv_psll_s_u16x4(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psll_s_i32x2(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
+// RV32-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
+// RV32-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHL_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_psll_s_i32x2(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
+// RV64-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
+// RV64-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHL_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+int32x2_t test_psll_s_i32x2(int32x2_t a, unsigned shamt) {
+  return __riscv_psll_s_i32x2(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psll_s_u32x2(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
+// RV32-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
+// RV32-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[SHL_I:%.*]] = shl <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHL_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_psll_s_u32x2(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
+// RV64-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
+// RV64-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[SHL_I:%.*]] = shl <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHL_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+uint32x2_t test_psll_s_u32x2(uint32x2_t a, unsigned shamt) {
+  return __riscv_psll_s_u32x2(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psra_s_i8x8(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = ashr <8 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHR_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i64 @test_psra_s_i8x8(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = ashr <8 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHR_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP4]]
+//
+int8x8_t test_psra_s_i8x8(int8x8_t a, unsigned shamt) {
+  return __riscv_psra_s_i8x8(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psrl_s_u8x8(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV32-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = lshr <8 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHR_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i64 @test_psrl_s_u8x8(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <8 x i8>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i8
+// RV64-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], 7
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = lshr <8 x i8> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[SHR_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP4]]
+//
+uint8x8_t test_psrl_s_u8x8(uint8x8_t a, unsigned shamt) {
+  return __riscv_psrl_s_u8x8(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psra_s_i16x4(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = ashr <4 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHR_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i64 @test_psra_s_i16x4(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = ashr <4 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHR_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP4]]
+//
+int16x4_t test_psra_s_i16x4(int16x4_t a, unsigned shamt) {
+  return __riscv_psra_s_i16x4(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psrl_s_u16x4(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV32-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV32-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+// RV32-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = lshr <4 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV32-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHR_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP4]]
+//
+// RV64-LABEL: define dso_local i64 @test_psrl_s_u16x4(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <4 x i16>
+// RV64-NEXT:    [[TMP1:%.*]] = trunc i32 [[SHAMT]] to i16
+// RV64-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], 15
+// RV64-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+// RV64-NEXT:    [[SH_PROM_I:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = lshr <4 x i16> [[TMP0]], [[SH_PROM_I]]
+// RV64-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[SHR_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP4]]
+//
+uint16x4_t test_psrl_s_u16x4(uint16x4_t a, unsigned shamt) {
+  return __riscv_psrl_s_u16x4(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psra_s_i32x2(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
+// RV32-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
+// RV32-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = ashr <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHR_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_psra_s_i32x2(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
+// RV64-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
+// RV64-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = ashr <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHR_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+int32x2_t test_psra_s_i32x2(int32x2_t a, unsigned shamt) {
+  return __riscv_psra_s_i32x2(a, shamt);
+}
+
+// RV32-LABEL: define dso_local i64 @test_psrl_s_u32x2(
+// RV32-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
+// RV32-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
+// RV32-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV32-NEXT:    [[SHR_I:%.*]] = lshr <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
+// RV32-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHR_I]] to i64
+// RV32-NEXT:    ret i64 [[TMP1]]
+//
+// RV64-LABEL: define dso_local i64 @test_psrl_s_u32x2(
+// RV64-SAME: i64 noundef [[A_COERCE:%.*]], i32 noundef signext [[SHAMT:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A_COERCE]] to <2 x i32>
+// RV64-NEXT:    [[AND_I:%.*]] = and i32 [[SHAMT]], 31
+// RV64-NEXT:    [[SPLAT_SPLATINSERT_I:%.*]] = insertelement <2 x i32> poison, i32 [[AND_I]], i64 0
+// RV64-NEXT:    [[SPLAT_SPLAT_I:%.*]] = shufflevector <2 x i32> [[SPLAT_SPLATINSERT_I]], <2 x i32> poison, <2 x i32> zeroinitializer
+// RV64-NEXT:    [[SHR_I:%.*]] = lshr <2 x i32> [[TMP0]], [[SPLAT_SPLAT_I]]
+// RV64-NEXT:    [[TMP1:%.*]] = bitcast <2 x i32> [[SHR_I]] to i64
+// RV64-NEXT:    ret i64 [[TMP1]]
+//
+uint32x2_t test_psrl_s_u32x2(uint32x2_t a, unsigned shamt) {
+  return __riscv_psrl_s_u32x2(a, shamt);
 }
 
 /* Packed Logical Operations (32-bit) */
