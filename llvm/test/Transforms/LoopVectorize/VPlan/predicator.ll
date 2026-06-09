@@ -665,6 +665,8 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    Successor(s): merge.a
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.a:
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      BLEND ir<%blend.a> = ir<%v1>/ir<%c0> ir<%v1>/vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT ir<%d0> = icmp sgt ir<%iv>, ir<0>
 ; CHECK-NEXT:    Successor(s): if.b
 ; CHECK-EMPTY:
@@ -673,14 +675,16 @@ define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
 ; CHECK-NEXT:    Successor(s): if.b.inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if.b.inner:
-; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = logical-and ir<%d0>, ir<%cb>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%d0>, ir<%cb>
 ; CHECK-NEXT:    Successor(s): merge.b.inner
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.b.inner:
 ; CHECK-NEXT:    Successor(s): merge.b
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    merge.b:
-; CHECK-NEXT:      EMIT ir<%sum> = add ir<%v1>, ir<%v2>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%d0>
+; CHECK-NEXT:      BLEND ir<%blend.b> = ir<%v2>/ir<%d0> ir<%v2>/vp<[[VP7]]>
+; CHECK-NEXT:      EMIT ir<%sum> = add ir<%blend.a>, ir<%blend.b>
 ; CHECK-NEXT:      EMIT store ir<%sum>, ir<%gep>
 ; CHECK-NEXT:    Successor(s): loop.latch
 ; CHECK-EMPTY:

@@ -315,16 +315,6 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     for (EdgeTy Edge : OutEdges)
       Edges.erase(Edge);
 
-    // Peek through phis that are postdominated by VPBB.
-    if (auto *Phi = dyn_cast<VPPhi>(Common))
-      if (VPPDT.dominates(VPBB, Phi->getParent())) {
-        for (auto [InV, InVPBB] : Phi->incoming_values_and_blocks()) {
-          AddEdge(InVPBB, Phi->getParent(), InV);
-          Worklist.insert(InVPBB);
-        }
-        continue;
-      }
-
     // Iterate up through the post dominance frontier.
     for (const VPBlockBase *Frontier : VPPDF.find(VPBB)->second) {
       for (const VPBlockBase *FrontierSucc : Frontier->getSuccessors())
