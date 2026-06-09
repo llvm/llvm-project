@@ -103,7 +103,7 @@ private:
           reinterpret_cast<const support::ulittle32_t *>(List->data()),
           List->size() / sizeof(support::ulittle32_t)));
     else
-      return createStringError("Unsupported width: %d", Width);
+      assert(false && "unexpected list width");
 
     return Error::success();
   }
