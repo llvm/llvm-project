@@ -6267,7 +6267,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     switch (BuiltinID) {
     case Builtin::BI__builtin_ptrauth_auth_with_pc_and_resign:
-      // Convert oldDiscriminator (arg 2), oldPC (arg 3) and newDiscriminator (arg 5) to intptr_t
+      // Convert oldDiscriminator (arg 2), oldPC (arg 3) and newDiscriminator
+      // (arg 5) to intptr_t
       if (Args[2]->getType()->isPointerTy())
         Args[2] = Builder.CreatePtrToInt(Args[2], IntPtrTy);
       if (Args[3]->getType()->isPointerTy())

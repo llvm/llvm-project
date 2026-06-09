@@ -6730,8 +6730,8 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     // Note: Only IA/IB keys supported for 171615 instructions, not DA/DB
     assert((AUTKey == 0 || AUTKey == 1) &&
            "auth_with_pc_and_resign only supports IA and IB keys");
-    unsigned AuthOpc = (AUTKey == 0) ? AArch64::AUTIA171615
-                                      : AArch64::AUTIB171615;
+    unsigned AuthOpc =
+        (AUTKey == 0) ? AArch64::AUTIA171615 : AArch64::AUTIB171615;
     MIB.buildInstr(AuthOpc).constrainAllUses(TII, TRI, RBI);
 
     // Now sign the authenticated value (result is in X17)

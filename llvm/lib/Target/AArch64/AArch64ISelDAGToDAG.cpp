@@ -1787,13 +1787,16 @@ void AArch64DAGToDAGISel::SelectPtrauthResignWithPC(SDNode *N) {
 
   SDValue X17Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
                                          AArch64::X17, Val, SDValue());
-  SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
-                                         AArch64::X16, AUTAddrDisc, X17Copy.getValue(1));
-  SDValue X15Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
-                                         AArch64::X15, AUTPC, X16Copy.getValue(1));
+  SDValue X16Copy =
+      CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL, AArch64::X16,
+                           AUTAddrDisc, X17Copy.getValue(1));
+  SDValue X15Copy = CurDAG->getCopyToReg(
+      CurDAG->getEntryNode(), DL, AArch64::X15, AUTPC, X16Copy.getValue(1));
 
-  unsigned AuthOpc = (AUTKeyC == 0) ? AArch64::AUTIA171615 : AArch64::AUTIB171615;
-  SDNode *AUTH = CurDAG->getMachineNode(AuthOpc, DL, MVT::i64, X15Copy.getValue(1));
+  unsigned AuthOpc =
+      (AUTKeyC == 0) ? AArch64::AUTIA171615 : AArch64::AUTIB171615;
+  SDNode *AUTH =
+      CurDAG->getMachineNode(AuthOpc, DL, MVT::i64, X15Copy.getValue(1));
 
   SDValue AuthedVal = SDValue(AUTH, 0);
   SDValue Ops[] = {AuthedVal, PACKey, PACConstDisc, PACAddrDisc};

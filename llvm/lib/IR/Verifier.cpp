@@ -7463,7 +7463,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     auto *AuthKey = cast<ConstantInt>(Call.getArgOperand(1));
     uint64_t Key = AuthKey->getZExtValue();
     Check(Key == 0 || Key == 1,
-          "ptrauth.auth.with.pc.and.resign key must be IA (0) or IB (1)", &Call);
+          "ptrauth.auth.with.pc.and.resign key must be IA (0) or IB (1)",
+          &Call);
     break;
   }
   };

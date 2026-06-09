@@ -200,8 +200,10 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 
    Do not pass a null pointer to this function. A null pointer
    will not successfully authenticate. */
-#define ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data, __old_pc, __new_key, __new_data) \
-  __builtin_ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data, __old_pc, __new_key, __new_data)
+#define ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data,        \
+                                        __old_pc, __new_key, __new_data)       \
+  __builtin_ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data,    \
+                                            __old_pc, __new_key, __new_data)
 
 /* Authenticate a pointer using one scheme, load 32bit value at offset addend
    from the pointer, and add this value to the pointer, sign using specified
@@ -421,8 +423,8 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     __value;                                                                   \
   })
 
-#define ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data, __old_pc, \
-                                        __new_key, __new_data)                 \
+#define ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data,        \
+                                        __old_pc, __new_key, __new_data)       \
   ({                                                                           \
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
