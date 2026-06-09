@@ -64,9 +64,33 @@ public:
   }
 
   llvm::Error RegisterMessageHandler(MessageHandler &handler) override {
+    if (m_register_should_fail)
+      return llvm::createStringError("RegisterMessageHandler failed");
     if (!m_handler)
       m_handler = &handler;
     return llvm::Error::success();
+  }
+
+  /// Makes the next RegisterMessageHandler call fail, to exercise error paths.
+  void SetRegisterMessageHandlerShouldFail(bool fail) {
+    m_register_should_fail = fail;
+  }
+
+  /// Drives the registered handler's error callback, as the real transport
+  /// would on a read or parse failure.
+  void SimulateError(llvm::Error error) {
+    EXPECT_TRUE(m_handler)
+        << "SimulateError called before RegisterMessageHandler";
+    m_handler->OnError(std::move(error));
+  }
+
+  /// Drives the registered handler's close callback, as the real transport
+  /// would on EOF. Mirrors IOTransport::OnRead: the handler may destroy this
+  /// transport, so members must not be accessed after this returns.
+  void SimulateClosed() {
+    EXPECT_TRUE(m_handler)
+        << "SimulateClosed called before RegisterMessageHandler";
+    m_handler->OnClosed();
   }
 
 protected:
@@ -75,6 +99,7 @@ protected:
 private:
   lldb_private::MainLoop &m_loop;
   MessageHandler *m_handler = nullptr;
+  bool m_register_should_fail = false;
 };
 
 template <typename Proto>
