@@ -1060,7 +1060,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem23(IRBuilder<> &Builder,
                                                 BinaryOperator &I, Value *Num,
                                                 Value *Den, bool IsDiv,
                                                 bool IsSigned) const {
-  unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned);
+  unsigned DivBits = getDivNumBits(I, Num, Den, 23, IsSigned);
 
   // v_rcp_f32(float(X)) can have an error of 1 ulp.
   // This can cause expandDivRem23Impl to sometimes calculate Y/X incorrectly
