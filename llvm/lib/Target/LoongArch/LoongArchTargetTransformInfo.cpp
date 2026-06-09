@@ -133,3 +133,76 @@ LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
 
   return Options;
 }
+
+InstructionCost LoongArchTTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Invalid;
+
+  if (Opcode != Instruction::Add)
+    return Invalid;
+
+  // LoongArch only supports fixed-length vector now.
+  if (!ST->hasExtLSX() || VF.isScalable())
+    return Invalid;
+
+  // We only support multiply binary operations for now, and for muls we
+  // require the types being extended to be the same.
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+
+  if (!BinOp || *BinOp != Instruction::Mul)
+    return Invalid;
+
+  // Must be sext or zext, different extend type is allowed for SUMLA.
+  if (OpAExtend == TTI::PR_None || OpBExtend == TTI::PR_None)
+    return Invalid;
+
+  unsigned Ratio =
+      AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
+  if (VF.getKnownMinValue() <= Ratio)
+    return Invalid;
+
+  VectorType *InputVectorType = VectorType::get(InputTypeA, VF);
+  VectorType *AccumVectorType =
+      VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
+  // We don't yet support all kinds of legalization.
+  auto TC = TLI->getTypeConversion(AccumVectorType->getContext(),
+                                   EVT::getEVT(AccumVectorType));
+  switch (TC.first) {
+  default:
+    return Invalid;
+  case TargetLowering::TypeLegal:
+  case TargetLowering::TypePromoteInteger:
+  case TargetLowering::TypeSplitVector:
+    // The legalised type (e.g. after splitting) must be legal too.
+    if (TLI->getTypeAction(AccumVectorType->getContext(), TC.second) !=
+        TargetLowering::TypeLegal)
+      return Invalid;
+    break;
+  }
+
+  std::pair<InstructionCost, MVT> AccumLT =
+      getTypeLegalizationCost(AccumVectorType);
+  std::pair<InstructionCost, MVT> InputLT =
+      getTypeLegalizationCost(InputVectorType);
+
+  // A legal i8->i32 partial reduction will be lowered into:
+  //   vmulwev.h.b[u] + vmulwod.h.b[u] + 2 x vhaddw.w.h + 2 x vadd.w
+  // The estimate recip-throughput is 10.
+  InstructionCost Cost = InputLT.first * TTI::TCC_Basic * 10;
+  unsigned Bits = AccumLT.second.getSizeInBits();
+  if (AccumLT.second.getScalarType() == MVT::i32 &&
+      InputLT.second.getScalarType() == MVT::i8)
+    if ((ST->hasExtLASX() && Bits <= 256) || (ST->hasExtLSX() && Bits <= 128))
+      return Cost;
+
+  return BaseT::getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                        AccumType, VF, OpAExtend, OpBExtend,
+                                        BinOp, CostKind, FMF);
+}

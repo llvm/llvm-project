@@ -2732,4 +2732,22 @@ def : Pat<(int_loongarch_lsx_vstelm_d v2i64:$vd, GPR:$rj, timm:$imm, timm:$idx),
           (VSTELM_D v2i64:$vd, GPR:$rj, (to_valid_timm timm:$imm),
                     (to_valid_timm timm:$idx))>;
 
+// SMLA
+def : Pat<(v4i32 (partial_reduce_smla v4i32:$Acc, v16i8:$LHS, v16i8:$RHS)),
+            (VADD_W (VADD_W
+              (VHADDW_W_H (VMULWEV_H_B $LHS, $RHS), (VMULWEV_H_B $LHS, $RHS)),
+              (VHADDW_W_H (VMULWOD_H_B $LHS, $RHS), (VMULWOD_H_B $LHS, $RHS))), $Acc)>;
+
+// UMLA
+def : Pat<(v4i32 (partial_reduce_umla v4i32:$Acc, v16i8:$LHS, v16i8:$RHS)),
+            (VADD_W (VADD_W
+              (VHADDW_W_H (VMULWEV_H_BU $LHS, $RHS), (VMULWEV_H_BU $LHS, $RHS)),
+              (VHADDW_W_H (VMULWOD_H_BU $LHS, $RHS), (VMULWOD_H_BU $LHS, $RHS))), $Acc)>;
+
+// SUMLA
+def : Pat<(v4i32 (partial_reduce_sumla v4i32:$Acc, v16i8:$LHS, v16i8:$RHS)),
+            (VADD_W (VADD_W
+              (VHADDW_W_H (VMULWEV_H_BU_B $RHS, $LHS), (VMULWEV_H_BU_B $RHS, $LHS)),
+              (VHADDW_W_H (VMULWOD_H_BU_B $RHS, $LHS), (VMULWOD_H_BU_B $RHS, $LHS))), $Acc)>;
+
 } // Predicates = [HasExtLSX]

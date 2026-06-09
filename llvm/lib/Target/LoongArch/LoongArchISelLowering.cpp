@@ -408,6 +408,12 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     for (MVT VT : {MVT::v16i16, MVT::v8i32, MVT::v4i64, MVT::v16i32, MVT::v8i64,
                    MVT::v16i64})
       setOperationAction(ISD::SIGN_EXTEND, VT, Custom);
+
+    static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                      ISD::PARTIAL_REDUCE_UMLA,
+                                      ISD::PARTIAL_REDUCE_SUMLA};
+
+    setPartialReduceMLAAction(MLAOps, MVT::v4i32, MVT::v16i8, Legal);
   }
 
   // Set operations for 'LASX' feature.
@@ -493,6 +499,11 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Legal);
     }
+    static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                      ISD::PARTIAL_REDUCE_UMLA,
+                                      ISD::PARTIAL_REDUCE_SUMLA};
+
+    setPartialReduceMLAAction(MLAOps, MVT::v8i32, MVT::v32i8, Legal);
   }
 
   // Set DAG combine for LA32 and LA64.
