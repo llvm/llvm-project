@@ -475,6 +475,8 @@ public:
     return true;
   }
 
+  virtual bool isLegalLookupTableElementType(Type *Ty) const { return true; }
+
   virtual bool shouldBuildRelLookupTables() const { return false; }
 
   virtual bool useColdCCForColdCall(Function &F) const { return false; }

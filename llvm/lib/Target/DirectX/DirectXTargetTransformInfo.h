@@ -38,6 +38,7 @@ public:
                                           unsigned ScalarOpdIdx) const override;
   bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
                                               int OpdIdx) const override;
+  bool isLegalLookupTableElementType(Type *Ty) const override;
 
   InstructionCost getPartialReductionCost(
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
