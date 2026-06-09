@@ -604,6 +604,21 @@ void CGHLSLRuntime::finishCodeGen() {
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec",
                     1);
 
+  if (LangOpts.HLSLSpvPreserveInterface && T.isSPIRV()) {
+    // Runs before optimization. Keeps Input/Output globals from GlobalDCE.
+    const ASTContext &Ctx = CGM.getContext();
+    unsigned InputAS = Ctx.getTargetAddressSpace(LangAS::hlsl_input);
+    unsigned OutputAS = Ctx.getTargetAddressSpace(LangAS::hlsl_output);
+    SmallVector<GlobalValue *, 8> InterfaceVars;
+    for (GlobalVariable &GV : M.globals()) {
+      unsigned AS = GV.getAddressSpace();
+      if (AS == InputAS || AS == OutputAS)
+        InterfaceVars.push_back(&GV);
+    }
+    if (!InterfaceVars.empty())
+      appendToCompilerUsed(M, InterfaceVars);
+  }
+
   generateGlobalCtorDtorCalls();
 }
 

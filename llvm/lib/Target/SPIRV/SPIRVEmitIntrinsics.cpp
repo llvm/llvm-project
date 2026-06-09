@@ -2554,15 +2554,47 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   return &I;
 }
 
+// llvm.compiler.used and llvm.used hold use-list entries that protect their
+// referenced globals from DCE without participating in code generation.
+static bool isUseListGlobal(StringRef Name) {
+  return Name == "llvm.compiler.used" || Name == "llvm.used";
+}
+
+// Returns true for module-level globals that should not have SPIR-V intrinsics
+// emitted (use-list globals plus llvm.global.annotations).
+static bool isArtificialGlobal(StringRef Name) {
+  return isUseListGlobal(Name) || Name == "llvm.global.annotations";
+}
+
+// Returns true if every use of GV traces back to llvm.compiler.used or
+// llvm.used.
+static bool hasOnlyArtificialUses(const GlobalVariable &GV) {
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *> Stack(GV.users());
+  while (!Stack.empty()) {
+    const Value *V = Stack.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    if (const auto *GVUser = dyn_cast<GlobalVariable>(V)) {
+      if (!isUseListGlobal(GVUser->getName()))
+        return false;
+      continue;
+    }
+    if (const auto *C = dyn_cast<Constant>(V)) {
+      Stack.append(C->user_begin(), C->user_end());
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
 static bool
 shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
                                    const GlobalVariable &GV,
                                    const Function *F) {
   // Skip special artificial variables.
-  static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
-                                             "llvm.compiler.used", "llvm.used"};
-
-  if (ArtificialGlobals.contains(GV.getName()))
+  if (isArtificialGlobal(GV.getName()))
     return false;
 
   auto &UserFunctions = GVUsers.getTransitiveUserFunctions(GV);
@@ -2645,7 +2677,9 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                        {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, InitOp);
   }
-  if (!Init && GV.use_empty())
+  // Globals with only use-list references have no real function uses. Emit
+  // spv_unref_global so buildGlobalVariable is called for them.
+  if (!Init && hasOnlyArtificialUses(GV))
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
