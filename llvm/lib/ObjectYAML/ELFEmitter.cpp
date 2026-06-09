@@ -1462,119 +1462,13 @@ void ELFState<ELFT>::writeSectionContent(
       PGOAnalyses = &Section.PGOAnalyses.value();
   }
 
-  for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
-    // Write version and feature values.
-    if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 5)
-        WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
-                             << static_cast<int>(E.Version)
-                             << "; encoding using the most recent version";
-      CBA.write(E.Version);
-      SHeader.sh_size += 1;
-      if (E.Version < 5) {
-        CBA.write(static_cast<uint8_t>(E.Feature));
-        SHeader.sh_size += 1;
-      } else {
-        CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
-        SHeader.sh_size += 2;
-      }
-    }
-    auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
-    bool MultiBBRangeFeatureEnabled = false;
-    if (!FeatureOrErr)
-      WithColor::warning() << toString(FeatureOrErr.takeError());
-    else
-      MultiBBRangeFeatureEnabled = FeatureOrErr->MultiBBRange;
-    bool MultiBBRange =
-        MultiBBRangeFeatureEnabled ||
-        (E.NumBBRanges.has_value() && E.NumBBRanges.value() != 1) ||
-        (E.BBRanges && E.BBRanges->size() != 1);
-    if (MultiBBRange && !MultiBBRangeFeatureEnabled)
-      WithColor::warning() << "feature value(" << E.Feature
-                           << ") does not support multiple BB ranges.";
-    if (MultiBBRange) {
-      // Write the number of basic block ranges, which is overridden by the
-      // 'NumBBRanges' field when specified.
-      uint64_t NumBBRanges =
-          E.NumBBRanges.value_or(E.BBRanges ? E.BBRanges->size() : 0);
-      SHeader.sh_size += CBA.writeULEB128(NumBBRanges);
-    }
-    if (!E.BBRanges)
-      continue;
-    uint64_t TotalNumBlocks = 0;
-    bool EmitCallsiteEndOffsets =
-        FeatureOrErr->CallsiteEndOffsets || E.hasAnyCallsiteEndOffsets();
-    for (const BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
-      // Write the base address of the range.
-      CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
-      // Write number of BBEntries (number of basic blocks in this basic block
-      // range). This is overridden by the 'NumBlocks' YAML field when
-      // specified.
-      uint64_t NumBlocks =
-          BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
-      SHeader.sh_size += sizeof(uintX_t) + CBA.writeULEB128(NumBlocks);
-      // Write all BBEntries in this BBRange.
-      if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
-        continue;
-      for (const BBAddrMapYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
-        ++TotalNumBlocks;
-        if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
-          SHeader.sh_size += CBA.writeULEB128(BBE.ID);
-        SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
-        if (EmitCallsiteEndOffsets) {
-          size_t NumCallsiteEndOffsets =
-              BBE.CallsiteEndOffsets ? BBE.CallsiteEndOffsets->size() : 0;
-          SHeader.sh_size += CBA.writeULEB128(NumCallsiteEndOffsets);
-          if (BBE.CallsiteEndOffsets) {
-            for (uint32_t Offset : *BBE.CallsiteEndOffsets)
-              SHeader.sh_size += CBA.writeULEB128(Offset);
-          }
-        }
-        SHeader.sh_size += CBA.writeULEB128(BBE.Size);
-        SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
-        if (FeatureOrErr->BBHash || BBE.Hash.has_value()) {
-          uint64_t Hash =
-              BBE.Hash.has_value() ? BBE.Hash.value() : llvm::yaml::Hex64(0);
-          CBA.write<uint64_t>(Hash, ELFT::Endianness);
-          SHeader.sh_size += 8;
-        }
-      }
-    }
-    if (!PGOAnalyses)
-      continue;
-    const BBAddrMapYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
-
-    if (PGOEntry.FuncEntryCount)
-      SHeader.sh_size += CBA.writeULEB128(*PGOEntry.FuncEntryCount);
-
-    if (!PGOEntry.PGOBBEntries)
-      continue;
-
-    const auto &PGOBBEntries = PGOEntry.PGOBBEntries.value();
-    if (TotalNumBlocks != PGOBBEntries.size()) {
-      WithColor::warning() << "PBOBBEntries must be the same length as "
-                              "BBEntries in SHT_LLVM_BB_ADDR_MAP.\n"
-                           << "Mismatch on function with address: "
-                           << E.getFunctionAddress();
-      continue;
-    }
-
-    for (const auto &PGOBBE : PGOBBEntries) {
-      if (PGOBBE.BBFreq)
-        SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
-      if (FeatureOrErr->PostLinkCfg || PGOBBE.PostLinkBBFreq.has_value())
-        SHeader.sh_size += CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
-      if (PGOBBE.Successors) {
-        SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb, PostLinkBrFreq] : *PGOBBE.Successors) {
-          SHeader.sh_size += CBA.writeULEB128(ID);
-          SHeader.sh_size += CBA.writeULEB128(BrProb);
-          if (FeatureOrErr->PostLinkCfg || PostLinkBrFreq.has_value())
-            SHeader.sh_size += CBA.writeULEB128(PostLinkBrFreq.value_or(0));
-        }
-      }
-    }
-  }
+  // The payload encoder is format-neutral and shared with the COFF emitter.
+  SmallString<128> Buf;
+  raw_svector_ostream OS(Buf);
+  BBAddrMapYAML::Encoder E{OS, ELFT::Endianness, sizeof(uintX_t)};
+  SHeader.sh_size +=
+      BBAddrMapYAML::encodePayload(*Section.Entries, PGOAnalyses, E);
+  CBA.write(Buf.data(), Buf.size());
 }
 
 template <class ELFT>
