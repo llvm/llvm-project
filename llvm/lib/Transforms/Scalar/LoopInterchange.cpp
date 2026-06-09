@@ -1010,8 +1010,23 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
-    case RecurKind::AnyOf:
       return true;
+
+    // Interchanging the loops that contain AnyOf reduction is not always legal.
+    // Especially, when the result value of the AnyOf is not loop-invariant with
+    // respect to the outer loop, interchanging may change the semantics. The
+    // following is an example of such case:
+    //   int A = {{ 1, 0 }, { 0, 1 }};
+    //   int red = 0;
+    //   for (int i = 0; i < 2; i++)
+    //     for (int j = 0; j < 2; j++)
+    //       red = (A[j][i] == 0) ? i + 1 : red;
+    //
+    // TODO: We may be able to support interchanging loops with AnyOf reduction
+    // by checking the operand of the reduction is loop-invariant with respect
+    // to the outer loop as well.
+    case RecurKind::AnyOf:
+      return false;
 
     // Changing the order of floating-point operations may alter the results. If
     // a certain instruction has the ninf flag, it means that reordering can

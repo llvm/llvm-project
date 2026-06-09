@@ -529,7 +529,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   // Replace predicated replicate recipe with a replicate recipe without a
   // mask but in the replicate region.
   auto *RecipeWithoutMask = new VPReplicateRecipe(
-      PredRecipe->getUnderlyingInstr(), drop_end(PredRecipe->operands()),
+      PredRecipe->getUnderlyingInstr(), PredRecipe->operandsWithoutMask(),
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
   auto *Pred =
@@ -1686,7 +1686,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
     if (match(A, m_Broadcast(m_VPValue(X))))
       return Def->replaceAllUsesWith(X);
 
-    if (vputils::isSingleScalar(A))
+    if (isa<VPInstruction, VPReplicateRecipe>(A) && vputils::isSingleScalar(A))
       return Def->replaceAllUsesWith(A);
 
     if (Plan->hasScalarVFOnly())
@@ -4181,7 +4181,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       unsigned MulOpc;
       if (IVTy->isFloatingPointTy()) {
         MulOpc = Instruction::FMul;
-        Flags = VPI->getFastMathFlags();
+        Flags = VPI->getFastMathFlagsOrNone();
       } else {
         MulOpc = Instruction::Mul;
         Flags = VPIRFlags::getDefaultFlags(MulOpc);
@@ -4616,7 +4616,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
                  "getExtendedReductionCost only supports integer types");
           ExtRedCost = Ctx.TTI.getExtendedReductionCost(
               Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
-              Red->getFastMathFlags(), CostKind);
+              Red->getFastMathFlagsOrNone(), CostKind);
           return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
         },
         Range);
@@ -6486,7 +6486,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       PhiType->isFloatingPointTy() ? RecurKind::FAdd : RecurKind::Add;
   auto *PartialRed = new VPReductionRecipe(
       RdxKind,
-      RdxKind == RecurKind::FAdd ? WidenRecipe->getFastMathFlags()
+      RdxKind == RecurKind::FAdd ? WidenRecipe->getFastMathFlagsOrNone()
                                  : FastMathFlags(),
       WidenRecipe->getUnderlyingInstr(), Accumulator, ExtendedOp, Cond,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
@@ -6553,7 +6553,7 @@ getPartialReductionLinkCost(VPCostContext &CostCtx,
 
   std::optional<llvm::FastMathFlags> Flags;
   if (RdxType->isFloatingPointTy())
-    Flags = Link.ReductionBinOp->getFastMathFlags();
+    Flags = Link.ReductionBinOp->getFastMathFlagsOrNone();
 
   auto GetLinkOpcode = [&Link]() -> unsigned {
     switch (Link.RK) {
@@ -7207,17 +7207,19 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
       VPBuilder Builder(LoadR);
       // Create the base pointer of strided access.
+      // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
+      // supports a general VPValue as the start value.
       VPValue *StartVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
-      VPValue *CanIVTyStride = Builder.createScalarSExtOrTrunc(
-          StrideInBytes, VectorLoop->getCanonicalIVType(), IndexTy,
-          DebugLoc::getUnknown());
+      VPValue *CanIV = Builder.createScalarSExtOrTrunc(
+          VectorLoop->getCanonicalIV(), IndexTy,
+          VectorLoop->getCanonicalIVType(), DebugLoc::getUnknown());
       auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {VectorLoop->getCanonicalIV(), CanIVTyStride},
+          Instruction::Mul, {CanIV, StrideInBytes},
           {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
       auto *BasePtr = Builder.createNoWrapPtrAdd(
           StartVPV, Offset,
