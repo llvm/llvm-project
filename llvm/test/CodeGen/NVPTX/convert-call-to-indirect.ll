@@ -118,13 +118,12 @@ define %struct.64 @test_return_type_mismatch_variadic(ptr %p) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot3;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_return_type_mismatch_variadic_param_0];
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
 ; CHECK-NEXT:    { // callseq 3, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    .param .align 1 .b8 retval0[8];
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
 ; CHECK-NEXT:    st.param.b64 [param1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    prototype_3 : .callprototype (.param .align 1 .b8 _[8]) _ (.param .b64 _, .param .b64 _);
@@ -183,14 +182,13 @@ define i64 @test_param_type_mismatch_variadic(ptr %p) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot4;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_type_mismatch_variadic_param_0];
-; CHECK-NEXT:    st.b64 [%SP], 7;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
+; CHECK-NEXT:    st.local.b64 [%rd2], 7;
 ; CHECK-NEXT:    { // callseq 4, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    .param .b64 retval0;
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
 ; CHECK-NEXT:    st.param.b64 [param1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    call.uni (retval0), callee_variadic, (param0, param1);
@@ -212,14 +210,13 @@ define i64 @test_param_count_mismatch_variadic(ptr %p) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot5;
-; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_param_count_mismatch_variadic_param_0];
-; CHECK-NEXT:    st.b64 [%SP], 7;
+; CHECK-NEXT:    add.u64 %rd2, %SPL, 0;
+; CHECK-NEXT:    st.local.b64 [%rd2], 7;
 ; CHECK-NEXT:    { // callseq 5, 0
 ; CHECK-NEXT:    .param .b64 param0;
 ; CHECK-NEXT:    .param .b64 param1;
 ; CHECK-NEXT:    .param .b64 retval0;
-; CHECK-NEXT:    add.u64 %rd2, %SP, 0;
 ; CHECK-NEXT:    st.param.b64 [param1], %rd2;
 ; CHECK-NEXT:    st.param.b64 [param0], %rd1;
 ; CHECK-NEXT:    call.uni (retval0), callee_variadic, (param0, param1);

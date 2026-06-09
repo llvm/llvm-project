@@ -22,7 +22,9 @@
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 
 #include <memory>
 #include <optional>
@@ -95,11 +97,22 @@ bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsTypeParamInquiry(const Symbol &sym);
+bool IsComplexPart(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
 bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
+
+bool IsExtendedListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsLocatorListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsVariableListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
 
 const Symbol *GetHostSymbol(const Symbol &sym);
 
@@ -158,6 +171,23 @@ bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
+
+enum struct ListItemKind : uint32_t {
+  Depend,
+  DirectiveName,
+  DirectiveSpecification,
+  Extended,
+  IntegerExpression,
+  Interop,
+  Locator,
+  Operation,
+  Parameter,
+  ProcedureArgument,
+  Variable,
+};
+
+std::optional<ListItemKind> GetArgumentListItemKind(
+    llvm::omp::Clause clause, unsigned version);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool HasDataEnvironment(llvm::omp::Directive dir);
@@ -370,6 +400,37 @@ private:
   std::vector<LoopSequence> children_;
   SemanticsContext *semaCtx_{nullptr};
 };
+
+// ---------------------------------------------------------------------------
+// Trait-matching helpers shared between metadirective lowering and
+// declare-variant semantic recording.
+// ---------------------------------------------------------------------------
+
+/// Map a parsed trait-set name to the corresponding LLVM OMP TraitSet enum.
+llvm::omp::TraitSet MapTraitSet(parser::OmpTraitSetSelectorName::Value name);
+
+/// Map a parsed trait-selector name (plus its containing set) to the
+/// corresponding LLVM OMP TraitSelector enum.
+llvm::omp::TraitSelector MapTraitSelector(
+    const parser::OmpTraitSelectorName &name, llvm::omp::TraitSet set);
+
+/// Try to constant-fold a user condition expression to a boolean.
+std::optional<bool> EvaluateUserCondition(
+    SemanticsContext &semaCtx, const parser::ScalarExpr &scalarExpr);
+
+/// Extract the optional score value from trait properties.
+llvm::APInt *GetTraitScore(
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    SemanticsContext &semaCtx, std::optional<llvm::APInt> &scoreStorage);
+
+/// Collect trait property names (vendor, kind, arch, isa, etc.) into a VMI.
+/// Non-name properties (clause, extension) are silently skipped; the caller is
+/// responsible for diagnosing them before invoking this function.
+void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
+    llvm::omp::TraitSet set, llvm::omp::TraitSelector selector,
+    const std::optional<parser::OmpTraitSelector::Properties> &props,
+    llvm::APInt *scorePtr);
+
 } // namespace omp
 } // namespace Fortran::semantics
 

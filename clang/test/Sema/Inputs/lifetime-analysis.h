@@ -53,6 +53,9 @@ T *begin(T (&array)[N]);
 
 using size_t = decltype(sizeof(0));
 using nullptr_t = decltype(nullptr);
+enum class align_val_t : size_t {};
+struct nothrow_t {};
+extern const nothrow_t nothrow;
 
 template<typename T>
 struct initializer_list {
@@ -356,3 +359,6 @@ public:
 
 void *operator new(std::size_t, void *) noexcept;
 void *operator new[](std::size_t, void *) noexcept;
+void *operator new(std::size_t, const std::nothrow_t &) noexcept;
+void *operator new(std::size_t, std::align_val_t,
+                   const std::nothrow_t &) noexcept;

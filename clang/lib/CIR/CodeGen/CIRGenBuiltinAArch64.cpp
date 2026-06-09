@@ -439,6 +439,12 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vmaxnmvq_f64:
   case NEON::BI__builtin_neon_vsrid_n_s64:
   case NEON::BI__builtin_neon_vsrid_n_u64:
+  case NEON::BI__builtin_neon_vslid_n_s64:
+  case NEON::BI__builtin_neon_vslid_n_u64:
+  case NEON::BI__builtin_neon_vpmaxs_f32:
+  case NEON::BI__builtin_neon_vpmaxqd_f64:
+  case NEON::BI__builtin_neon_vpmaxnms_f32:
+  case NEON::BI__builtin_neon_vpmaxnmqd_f64:
     break;
   }
 
@@ -2442,10 +2448,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vnegd_s64: {
-    return builder.createNeg(ops[0]);
+    return builder.createNeg(loc, ops[0]);
   }
   case NEON::BI__builtin_neon_vnegh_f16: {
-    return builder.createFNeg(ops[0]);
+    return builder.createFNeg(loc, ops[0]);
   }
   case NEON::BI__builtin_neon_vtstd_s64:
   case NEON::BI__builtin_neon_vtstd_u64:
@@ -2517,7 +2523,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vfmsh_f16:
     // NEON intrinsic puts accumulator first, unlike the LLVM fma.
     std::rotate(ops.begin(), ops.begin() + 1, ops.end());
-    ops[0] = builder.createFNeg(ops[0]);
+    ops[0] = builder.createFNeg(loc, ops[0]);
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma",
                                            convertType(expr->getType()), ops);
   case NEON::BI__builtin_neon_vaddd_s64:
@@ -2569,7 +2575,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cir::IntType int64Type = builtinID == NEON::BI__builtin_neon_vrsrad_n_u64
                                  ? builder.getUInt64Ty()
                                  : builder.getSInt64Ty();
-    ops[2] = builder.createNeg(ops[2]);
+    ops[2] = builder.createNeg(loc, ops[2]);
     const StringRef intrName = builtinID == NEON::BI__builtin_neon_vrsrad_n_u64
                                    ? "aarch64.neon.urshl"
                                    : "aarch64.neon.srshl";
@@ -2805,10 +2811,10 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vpmax_v:
   case NEON::BI__builtin_neon_vpmaxq_v:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    intrName = usgn ? "aarch64.neon.umaxp" : "aarch64.neon.smaxp";
+    if (cir::isFPOrVectorOfFPType(ty))
+      intrName = "aarch64.neon.fmaxp";
+    return emitNeonCall(cgm, builder, {ty, ty}, ops, intrName, ty, loc);
   case NEON::BI__builtin_neon_vminnm_v:
   case NEON::BI__builtin_neon_vminnmq_v:
     intrName = "aarch64.neon.fminnm";

@@ -6468,8 +6468,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     const auto &SDI =
         static_cast<const AArch64SelectionDAGInfo &>(DAG.getSelectionDAGInfo());
     SDValue MS = SDI.EmitMOPS(AArch64::MOPSMemorySetTaggingPseudo, DAG, DL,
-                              Chain, Dst, Val, Size, Alignment, IsVol,
-                              DstPtrInfo, MachinePointerInfo{});
+                              Chain, Dst, Val, Size, Alignment, Alignment,
+                              IsVol, DstPtrInfo, MachinePointerInfo{});
 
     // MOPS_MEMSET_TAGGING has 3 results (DstWb, SizeWb, Chain) whereas the
     // intrinsic has 2. So hide SizeWb using MERGE_VALUES. Otherwise
@@ -10374,6 +10374,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         SDValue Cpy = DAG.getMemcpy(
             Chain, DL, DstAddr, Arg, SizeNode,
             Outs[i].Flags.getNonZeroByValAlign(),
+            Outs[i].Flags.getNonZeroByValAlign(),
             /*isVol = */ false, /*AlwaysInline = */ false,
             /*CI=*/nullptr, std::nullopt, DstInfo, MachinePointerInfo());
 
@@ -13027,8 +13028,8 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
 
   return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(VaListSize, DL, MVT::i32),
-                       Align(PtrSize), false, false, /*CI=*/nullptr,
-                       std::nullopt, MachinePointerInfo(DestSV),
+                       Align(PtrSize), Align(PtrSize), false, false,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DestSV),
                        MachinePointerInfo(SrcSV));
 }
 
@@ -20352,7 +20353,7 @@ static EVT calculatePreExtendType(SDValue Extend) {
     if (!Constant)
       return MVT::Other;
 
-    uint32_t Mask = Constant->getZExtValue();
+    uint64_t Mask = Constant->getZExtValue();
 
     if (Mask == UCHAR_MAX)
       return MVT::i8;
@@ -25402,7 +25403,7 @@ static SDValue tryCombineExtendRShTrunc(SDNode *N, SelectionDAG &DAG) {
   // Same unextended operand value?
   SDValue Lo = Op0.getOperand(0);
   SDValue Hi = Op1.getOperand(0);
-  if (Lo.getOpcode() != AArch64ISD::UUNPKLO &&
+  if (Lo.getOpcode() != AArch64ISD::UUNPKLO ||
       Hi.getOpcode() != AArch64ISD::UUNPKHI)
     return SDValue();
   SDValue OrigArg = Lo.getOperand(0);
@@ -25819,8 +25820,8 @@ static SDValue performPostLD1Combine(SDNode *N,
     // If the increment is a constant, it must match the memory ref size.
     SDValue Inc = User->getOperand(User->getOperand(0) == Addr ? 1 : 0);
     if (ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode())) {
-      uint32_t IncVal = CInc->getZExtValue();
-      unsigned NumBytes = VT.getScalarSizeInBits() / 8;
+      uint64_t IncVal = CInc->getZExtValue();
+      uint64_t NumBytes = VT.getScalarSizeInBits() / 8;
       if (IncVal != NumBytes)
         continue;
       Inc = DAG.getRegister(AArch64::XZR, MVT::i64);
@@ -26348,9 +26349,11 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
 
   assert(ST->getOffset().isUndef() && "undef offset expected");
   SDLoc DL(ST);
-  auto WideVT = EVT::getVectorVT(
+  EVT WideVT = EVT::getVectorVT(
       *DAG.getContext(),
       Value->getOperand(0).getValueType().getVectorElementType(), 4);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(WideVT))
+    return SDValue();
   SDValue PoisonVector = DAG.getPOISON(WideVT);
   SDValue WideTrunc = DAG.getNode(
       ISD::INSERT_SUBVECTOR, DL, WideVT,
@@ -26956,8 +26959,8 @@ static SDValue performNEONPostLDSTCombine(SDNode *N,
     // If the increment is a constant, it must match the memory ref size.
     SDValue Inc = User->getOperand(User->getOperand(0) == Addr ? 1 : 0);
     if (ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode())) {
-      uint32_t IncVal = CInc->getZExtValue();
-      unsigned NumBytes = NumVecs * VecTy.getSizeInBits() / 8;
+      uint64_t IncVal = CInc->getZExtValue();
+      uint64_t NumBytes = NumVecs * VecTy.getSizeInBits() / 8;
       if (IsLaneOp || IsDupOp)
         NumBytes /= VecTy.getVectorNumElements();
       if (IncVal != NumBytes)

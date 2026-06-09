@@ -47,7 +47,7 @@ class EvalIDScope;
 class Context final {
 public:
   /// Initialises the constexpr VM.
-  Context(ASTContext &Ctx);
+  explicit Context(ASTContext &Ctx);
 
   /// Cleans up the constexpr VM.
   ~Context();

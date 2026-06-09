@@ -1,4 +1,4 @@
-; RUN: llc --filetype=asm %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s
 
 target triple = "dxil-unknown-shadermodel6.3-library"
 
