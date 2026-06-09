@@ -207,3 +207,17 @@ define <4 x i64> @variable_shuffle_v4i64_to_v4i64(<4 x i64> %src, <4 x i64> %idx
   %shuffled = call <4 x i64> @llvm.vector.shuffle(<4 x i64> %src, <4 x i64> %idx, <4 x i64> %passthru)
   ret <4 x i64> %shuffled
 }
+
+; Legal scalable tbl
+define <vscale x 2 x i64> @variable_shuffle_nxv2i64(<vscale x 2 x i64> %src, <vscale x 2 x i64> %idx, <vscale x 2 x i64> %passthru) #0 {
+  %shuffled = call <vscale x 2 x i64> @llvm.vector.shuffle(<vscale x 2 x i64> %src, <vscale x 2 x i64> %idx, <vscale x 2 x i64> %passthru)
+  ret <vscale x 2 x i64> %shuffled
+}
+
+; Legal, zero passthru
+define <vscale x 2 x i64> @variable_shuffle_nxv2i64_zeroed(<vscale x 2 x i64> %src, <vscale x 2 x i64> %idx) #0 {
+  %shuffled = call <vscale x 2 x i64> @llvm.vector.shuffle(<vscale x 2 x i64> %src, <vscale x 2 x i64> %idx, <vscale x 2 x i64> zeroinitializer)
+  ret <vscale x 2 x i64> %shuffled
+}
+
+attributes #0 = { vscale_range(1,16) "target-features"="+sve" }

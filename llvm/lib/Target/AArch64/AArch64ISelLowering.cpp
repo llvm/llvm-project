@@ -1705,6 +1705,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
       setOperationAction(ISD::VECTOR_DEINTERLEAVE, VT, Custom);
       setOperationAction(ISD::VECTOR_INTERLEAVE, VT, Custom);
+      setOperationAction(ISD::VECTOR_TABLE_SHUFFLE, VT, Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
@@ -8543,6 +8544,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerZERO_EXTEND_VECTOR_INREG(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::VECTOR_TABLE_SHUFFLE:
+    return LowerVECTOR_TABLE_SHUFFLE(Op, DAG);
   case ISD::SPLAT_VECTOR:
     return LowerSPLAT_VECTOR(Op, DAG);
   case ISD::EXTRACT_SUBVECTOR:
@@ -15880,6 +15883,31 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   // Fall back to generating a TBL
   return GenerateTBL(Op, ShuffleMask, DAG);
+}
+
+SDValue
+AArch64TargetLowering::LowerVECTOR_TABLE_SHUFFLE(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op.getNode());
+  EVT VT = Op.getValueType();
+  SDValue Data = Op.getOperand(0);
+  SDValue Indices = Op.getOperand(1);
+  SDValue PassThru = Op.getOperand(2);
+  
+  SDValue Result = DAG.getNode(AArch64ISD::TBL, DL, VT, Data, Indices);
+  
+  if (!isNullOrNullSplat(PassThru)) {
+    EVT IdxVT = Indices.getValueType().getVectorElementType();
+    unsigned MinElts = VT.getVectorMinNumElements();
+    SDValue VScale = DAG.getVScale(DL, IdxVT, APInt(IdxVT.getScalarSizeInBits(), MinElts));
+    SDValue VSSplat = DAG.getSplatVector(Indices.getValueType(), DL, VScale);
+    EVT MaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, VT.getVectorElementCount());
+    SDValue OutOfRange = DAG.getSetCC(DL, MaskVT, Indices, VSSplat, ISD::SETUGE);
+    Result = DAG.getSelect(DL, VT, OutOfRange, PassThru, Result);
+    //llvm_unreachable("Implement proper passthru!\n");
+  }
+
+  return Result;
 }
 
 SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
