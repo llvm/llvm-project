@@ -62,11 +62,11 @@ using namespace llvm::PatternMatch;
 // The name for newly created blocks.
 const char FlowBlockName[] = "Flow";
 
-// True if BB contains nothing but an unconditional branch and has only one
-// predecessor.
+/// True if BB contains nothing but an unconditional branch and has only one
+/// predecessor.
 static bool isIntermediateTarget(const BasicBlock &BB) {
   return BB.size() == 1 && isa<UncondBrInst>(BB.getTerminator()) &&
-         BB.hasNPredecessors(1);
+         BB.getUniquePredecessor();
 }
 
 /// True if BB's terminator must be preserved verbatim and therefore cannot
@@ -1353,6 +1353,11 @@ void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
   // the region's SESE boundary, which the precomputed RegionInfo cannot
   // represent.
   SmallVector<BasicBlock *, 4> Targets;
+  // Several island edges to the same block are indistinguishable, so each
+  // distinct target is given a single forwarder (one ladder arm, one sel
+  // value).
+  SmallDenseMap<BasicBlock *, BasicBlock *> ForwarderFor;
+
   if (CallBrInst *CallBr = dyn_cast<CallBrInst>(IslandBB->getTerminator())) {
     for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
       BasicBlock *Target = CallBr->getSuccessor(I);
@@ -1367,13 +1372,35 @@ void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
         NeedFixRegionExitDom = true;
         continue;
       }
-      if (isIntermediateTarget(*Target) && ParentRegion->contains(Target)) {
-        Targets.push_back(Target);
-        continue;
+      // Already handled this target: route this edge to the same forwarder.
+      if (BasicBlock *Fwd = ForwarderFor.lookup(Target)) {
+        CallBr->setSuccessor(I, Fwd);
+        if (Fwd != Target && !is_contained(successors(CallBr), Target)) {
+          // Target is now reached only via Fwd; drop the duplicate Fwd phi
+          // incomings SplitCallBrEdge left (one per collapsed callbr edge).
+          DTU.applyUpdates({{DominatorTree::Delete, IslandBB, Target}});
+          for (PHINode &Phi : Target->phis()) {
+            bool Kept = false;
+            for (unsigned K = Phi.getNumIncomingValues(); K-- > 0;)
+              if (Phi.getIncomingBlock(K) == Fwd) {
+                if (Kept)
+                  Phi.removeIncomingValue(K, /*DeletePHIIfEmpty=*/false);
+                Kept = true;
+              }
+          }
+        }
+      } else {
+        // A trivial in-region target is reused as its own forwarder; otherwise
+        // split the edge into one.
+        if (!isIntermediateTarget(*Target) || !ParentRegion->contains(Target)) {
+          Fwd = SplitCallBrEdge(IslandBB, Target, I, &DTU);
+          ParentRegion->getRegionInfo()->setRegionFor(Fwd, ParentRegion);
+        } else {
+          Fwd = Target;
+        }
+        ForwarderFor[Target] = Fwd;
+        Targets.push_back(Fwd);
       }
-      BasicBlock *NewBB = SplitCallBrEdge(IslandBB, Target, I, &DTU);
-      ParentRegion->getRegionInfo()->setRegionFor(NewBB, ParentRegion);
-      Targets.push_back(NewBB);
     }
   } else {
     llvm_unreachable("not a supported island type");

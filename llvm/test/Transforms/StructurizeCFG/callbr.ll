@@ -131,27 +131,202 @@ define void @callbr_shared_target() {
 ; CHECK-LABEL: define void @callbr_shared_target() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    callbr void asm "", "!i"()
-; CHECK-NEXT:            to label %[[ENTRY_TARGET_FT:.*]] [label %[[ENTRY_TARGET_FT1:.*]]]
-; CHECK:       [[FLOW:.*]]:
-; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_FT]] ], [ false, %[[ENTRY_TARGET_FT1]] ]
-; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
-; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW2:.*]], label %[[FT:.*]]
-; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    br label %[[FT]]
+; CHECK-NEXT:            to label %[[ENTRY_TARGET_FT1:.*]] [label %[[ENTRY_TARGET_FT1]]]
+; CHECK:       [[FLOW2:.*]]:
+; CHECK-NEXT:    br label %[[FT:.*]]
 ; CHECK:       [[FT]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
-; CHECK:       [[ENTRY_TARGET_FT]]:
-; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[ENTRY_TARGET_FT1]]:
-; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK-NEXT:    br label %[[FLOW2]]
 ;
 entry:
   callbr void asm "", "!i"() to label %ft [label %ft]
 ft:
   br label %exit
 exit:
+  ret void
+}
+
+; A target reached by two callbr edges that is *in-region* (a third target makes
+; the convergence the region exit, not the shared target). The two edges to %x
+; are indistinguishable, so %x is dispatched once, not duplicated in the ladder.
+define void @callbr_shared_target_in_region() {
+; CHECK-LABEL: define void @callbr_shared_target_in_region() {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[X:.*]] [label %[[X]], label %[[Y:.*]]]
+; CHECK:       [[X]]:
+; CHECK-NEXT:    br label %[[FLOW:.*]]
+; CHECK:       [[Y]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[X]] ], [ false, %[[Y]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW1:.*]], label %[[JOIN:.*]]
+; CHECK:       [[FLOW1]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  callbr void asm "", "!i,!i"() to label %x [label %x, label %y]
+x:
+  br label %join
+y:
+  br label %join
+join:
+  ret void
+}
+
+; Same shape, but the shared in-region target is non-trivial (a conditional
+; branch), so it is split per edge rather than reused.
+define void @callbr_shared_target_in_region_nontrivial(i1 %c) {
+; CHECK-LABEL: define void @callbr_shared_target_in_region_nontrivial(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[ENTRY_TARGET_X1:.*]] [label %[[ENTRY_TARGET_X1]], label %[[Y:.*]]]
+; CHECK:       [[X:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[FLOW:.*]]
+; CHECK:       [[A]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK:       [[Y]]:
+; CHECK-NEXT:    br label %[[FLOW2:.*]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[FLOW2]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_X1]] ], [ false, %[[Y]] ]
+; CHECK-NEXT:    br i1 [[ISLAND_SEL]], label %[[X]], label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[ENTRY_TARGET_X1]]:
+; CHECK-NEXT:    br label %[[FLOW2]]
+;
+entry:
+  callbr void asm "", "!i,!i"() to label %x [label %x, label %y]
+x:
+  br i1 %c, label %a, label %join
+a:
+  br label %join
+y:
+  br label %join
+join:
+  ret void
+}
+
+; A shared non-trivial target that carries a phi over its multiple callbr edges:
+; the edges collapse to a single forwarder and the phi to a single incoming.
+define i32 @callbr_shared_target_with_phi(i1 %c) {
+; CHECK-LABEL: define i32 @callbr_shared_target_with_phi(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[ENTRY_TARGET_X:.*]] [label %[[ENTRY_TARGET_X]], label %[[Y:.*]]]
+; CHECK:       [[X:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[FLOW:.*]]
+; CHECK:       [[A]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK:       [[Y]]:
+; CHECK-NEXT:    br label %[[FLOW1:.*]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[FLOW1]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[ENTRY_TARGET_X]] ], [ false, %[[Y]] ]
+; CHECK-NEXT:    br i1 [[ISLAND_SEL]], label %[[X]], label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[Q:%.*]] = phi i32 [ 0, %[[FLOW1]] ], [ 7, %[[FLOW]] ]
+; CHECK-NEXT:    ret i32 [[Q]]
+; CHECK:       [[ENTRY_TARGET_X]]:
+; CHECK-NEXT:    br label %[[FLOW1]]
+;
+entry:
+  callbr void asm "", "!i,!i"() to label %x [label %x, label %y]
+x:
+  %p = phi i32 [ 7, %entry ], [ 7, %entry ]
+  br i1 %c, label %a, label %join
+a:
+  br label %join
+y:
+  br label %join
+join:
+  %q = phi i32 [ %p, %a ], [ %p, %x ], [ 0, %y ]
+  ret i32 %q
+}
+
+; A shared target that also has a non-callbr predecessor, so the callbr does not
+; dominate it. SplitCallBrEdge then omits the forwarder->target dominator edge;
+; collapsing the duplicate edge must still leave a correct dominator tree.
+define void @callbr_shared_target_not_dominated(i1 %c, i1 %d) {
+; CHECK-LABEL: define void @callbr_shared_target_not_dominated(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[FLOW2:.*]], label %[[FLOW4:.*]]
+; CHECK:       [[FLOW2]]:
+; CHECK-NEXT:    br label %[[PRE:.*]]
+; CHECK:       [[FLOW4]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[ISLAND_SEL:%.*]], %[[FLOW3:.*]] ], [ true, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[X:.*]], label %[[JOIN:.*]]
+; CHECK:       [[PRE]]:
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[PRE_TARGET_X:.*]] [label %[[PRE_TARGET_X]], label %[[Y:.*]]]
+; CHECK:       [[X]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[A:.*]], label %[[FLOW:.*]]
+; CHECK:       [[A]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+; CHECK:       [[Y]]:
+; CHECK-NEXT:    br label %[[FLOW3]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[FLOW3]]:
+; CHECK-NEXT:    [[ISLAND_SEL]] = phi i1 [ true, %[[PRE_TARGET_X]] ], [ false, %[[Y]] ]
+; CHECK-NEXT:    br label %[[FLOW4]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[PRE_TARGET_X]]:
+; CHECK-NEXT:    br label %[[FLOW3]]
+;
+entry:
+  br i1 %c, label %pre, label %x
+pre:
+  callbr void asm "", "!i,!i"() to label %x [label %x, label %y]
+x:
+  br i1 %d, label %a, label %join
+a:
+  br label %join
+y:
+  br label %join
+join:
+  ret void
+}
+
+; Three callbr edges to the same block: the collapse defers the edge/phi cleanup
+; until the last duplicate is redirected onto the single forwarder.
+define void @callbr_shared_target_thrice(i1 %d) {
+; CHECK-LABEL: define void @callbr_shared_target_thrice(
+; CHECK-SAME: i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[ENTRY_TARGET_X:.*]] [label %[[ENTRY_TARGET_X]], label %[[ENTRY_TARGET_X]]]
+; CHECK:       [[FLOW:.*]]:
+; CHECK-NEXT:    br label %[[X:.*]]
+; CHECK:       [[X]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[A:.*]], label %[[JOIN:.*]]
+; CHECK:       [[A]]:
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[ENTRY_TARGET_X]]:
+; CHECK-NEXT:    br label %[[FLOW]]
+;
+entry:
+  callbr void asm "", "!i,!i"() to label %x [label %x, label %x]
+x:
+  br i1 %d, label %a, label %join
+a:
+  br label %join
+join:
   ret void
 }
 
