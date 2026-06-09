@@ -394,7 +394,7 @@ def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterf
 }
 
 def EmitC_CastOp : EmitC_Op<"cast",
-    [CExpressionInterface,
+    [Pure, CExpressionInterface,
      DeclareOpInterfaceMethods<CastOpInterface>]> {
   let summary = "Cast operation";
   let description = [{
