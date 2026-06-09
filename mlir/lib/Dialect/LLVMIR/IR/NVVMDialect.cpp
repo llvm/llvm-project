@@ -3467,6 +3467,21 @@ mlir::NVVM::IDArgPair NVVM::BarrierOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
+mlir::NVVM::IDArgPair NVVM::BarrierArriveOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::BarrierArriveOp>(op);
+  llvm::Value *barrierId = thisOp.getBarrierId()
+                               ? mt.lookupValue(thisOp.getBarrierId())
+                               : builder.getInt32(0);
+  llvm::Intrinsic::ID id =
+      thisOp.getAligned()
+          ? llvm::Intrinsic::nvvm_barrier_cta_arrive_aligned_count
+          : llvm::Intrinsic::nvvm_barrier_cta_arrive_count;
+  llvm::SmallVector<llvm::Value *> args = {
+      barrierId, mt.lookupValue(thisOp.getNumberOfThreads())};
+  return {id, std::move(args)};
+}
+
 mlir::NVVM::IDArgPair NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::BarrierReductionOp>(op);
