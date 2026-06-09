@@ -650,7 +650,8 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
   }
 }
 
-void toolchains::PS4PS5Base::addClangWarningOptions(ArgStringList &CC1Args) const {
+void toolchains::PS4PS5Base::addClangWarningOptions(
+    ArgStringList &CC1Args) const {
   CC1Args.push_back("-Wnonportable-include-path-separator");
   CC1Args.push_back("-Wnonportable-system-include-path");
 }
