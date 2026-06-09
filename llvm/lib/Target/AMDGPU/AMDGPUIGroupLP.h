@@ -24,6 +24,7 @@ enum IGLPStrategyID : int {
   MFMASmallGemmSingleWaveOptID = 1,
   MFMAExpInterleaveID = 2,
   MFMAExpSimpleInterleaveID = 3,
+  MFMAValuSpacingOptID = 4,
 };
 } // namespace AMDGPU
 

@@ -3137,11 +3137,33 @@ void GCNScheduleDAGMILive::setTargetOccupancy(unsigned TargetOccupancy) {
     MFI.limitOccupancy(MinOccupancy);
 }
 
-static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
+/// Returns {MutationOnly, SkipPostRA} pair.
+/// For MutationOnly, we scan for IGLP "mutation-only" instructions
+/// (SCHED_GROUP_BARRIER or IGLP_OPT). For SkipPostRA, we check For a region
+/// that has IGLP_OPT with MFMAValuSpacingOpt strategy (but make sure no
+/// SCHED_[GROUP_]BARRIERs exist). SkipPostRA has a meaning only if MutationOnly
+/// is true.
+static std::pair<bool, bool> hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
   const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG->TII);
-  return any_of(*DAG, [SII](MachineBasicBlock::iterator MI) {
-    return SII->isIGLPMutationOnly(MI->getOpcode());
-  });
+  bool HasMFMAValuSpacingOpt = false;
+  bool HasSchedBarrier = false;
+  for (MachineBasicBlock::iterator MI : *DAG) {
+    unsigned Opc = MI->getOpcode();
+    if (!HasMFMAValuSpacingOpt && SII->isIGLPMutationOnly(Opc)) {
+      HasMFMAValuSpacingOpt =
+          Opc == AMDGPU::IGLP_OPT &&
+          static_cast<AMDGPU::IGLPStrategyID>(MI->getOperand(0).getImm()) ==
+              AMDGPU::MFMAValuSpacingOptID;
+      if (!HasMFMAValuSpacingOpt || HasSchedBarrier)
+        return {true, false};
+    }
+    if (Opc == AMDGPU::SCHED_BARRIER || Opc == AMDGPU::SCHED_GROUP_BARRIER) {
+      if (HasMFMAValuSpacingOpt)
+        return {true, false};
+      HasSchedBarrier = true;
+    }
+  }
+  return {HasMFMAValuSpacingOpt, !HasSchedBarrier};
 }
 
 GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(
@@ -3150,8 +3172,13 @@ GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(
     : ScheduleDAGMI(C, std::move(S), RemoveKillFlags) {}
 
 void GCNPostScheduleDAGMILive::schedule() {
-  HasIGLPInstrs = hasIGLPInstrs(this);
-  if (HasIGLPInstrs) {
+  auto [HasIGLP, SkipPostRA] = hasIGLPInstrs(this);
+  if (HasIGLP) {
+    if (SkipPostRA) {
+      HasIGLPInstrs = false;
+      return;
+    }
+    HasIGLPInstrs = true;
     SavedMutations.clear();
     SavedMutations.swap(Mutations);
     addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::PostRA));

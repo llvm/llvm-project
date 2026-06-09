@@ -381,11 +381,17 @@ def int_amdgcn_sched_group_barrier : ClangBuiltin<"__builtin_amdgcn_sched_group_
   [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects,
    IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
-// Scheduler optimization hint.
-//     MASK = 0: Small gemm opt
+// Scheduler optimization hint: immediate selects the IGLP strategy in
+// AMDGPUIGroupLP.cpp (createIGLPStrategy). Must be a constant in [0,4]. Mappings:
+//   0 - MFMA small-GEMM scheduling (MFMASmallGemmOpt).
+//   1 - MFMA small-GEMM single-wave variant (MFMASmallGemmSingleWaveOpt).
+//   2 - MFMAExpInterleaveOpt (TRANS/MFMA scheduling pipeline; see AMDGPUIGroupLP.cpp).
+//   3 - MFMAExpSimpleInterleaveOpt (simpler TRANS-then-MFMA interleave pattern).
+//   4 - MFMA (or WMMA) / VALU spacing (MFMAValuSpacingOpt).
 def int_amdgcn_iglp_opt : ClangBuiltin<"__builtin_amdgcn_iglp_opt">,
-  Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrConvergent,
-                                IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+  Intrinsic<[], [llvm_i32_ty],
+            [ImmArg<ArgIndex<0>>, Range<ArgIndex<0>, 0, 5>, IntrNoMem, IntrHasSideEffects,
+             IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_s_waitcnt : ClangBuiltin<"__builtin_amdgcn_s_waitcnt">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;

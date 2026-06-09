@@ -892,6 +892,76 @@ bool MFMASmallGemmOpt::applyIGLPStrategy(
   return true;
 }
 
+/// Whether \p MI matches \c SchedGroupMask::VALU classification (e.g. barrier
+/// mask \c 0x2)
+static bool matchesSchedGroupValu(const MachineInstr &MI,
+                                  const SIInstrInfo *TII) {
+  if (MI.isMetaInstruction())
+    return false;
+  return TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI) &&
+         !TII->isLDSDMA(MI);
+}
+
+/// Interleave MFMA/WMMA with VALU slots: each repeating stage is one MFMA (or
+/// WMMA), then up to N VALU ops per gap where N = floor(#VALU / #MFMA) in this
+/// schedule region (same predicate as \c matchesSchedGroupValu), at least 1.
+/// Template length uses MFMACount * 3 for slack, like MFMASmallGemmOpt.
+/// \p IsBottomUp is false so SchedGroup pipeline order matches forward program
+/// order (MFMA before its VALU gap).
+class MFMAValuSpacingOpt final : public IGLPStrategy {
+public:
+  bool applyIGLPStrategy(
+      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      AMDGPU::SchedulingPhase Phase) override;
+
+  bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
+                           AMDGPU::SchedulingPhase Phase) override {
+    for (const MachineInstr &I : *DAG)
+      if (TII->isMFMAorWMMA(I))
+        return true;
+    return false;
+  }
+
+  MFMAValuSpacingOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : IGLPStrategy(DAG, TII) {
+    IsBottomUp = false;
+  }
+};
+
+bool MFMAValuSpacingOpt::applyIGLPStrategy(
+    DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+    AMDGPU::SchedulingPhase Phase) {
+  unsigned MFMACount = 0;
+  unsigned ValuCount = 0;
+  for (const MachineInstr &I : *DAG) {
+    if (TII->isMFMAorWMMA(I))
+      ++MFMACount;
+    else if (matchesSchedGroupValu(I, TII) && !I.mayLoadOrStore())
+      ++ValuCount;
+  }
+
+  unsigned ValuGap = 1;
+  if (MFMACount > 0 && ValuCount > MFMACount) {
+    ValuGap = ValuCount / MFMACount;
+  }
+
+  const unsigned PipelineSyncID = 0;
+  SchedGroup *SG = nullptr;
+  for (unsigned I = 0; I < MFMACount * 3; ++I) {
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::VALU, ValuGap, PipelineSyncID, DAG, TII);
+    SG->findCandidateSUnits(SyncedInstrs[SG->getSyncID()]);
+  }
+
+  return true;
+}
+
 class MFMAExpInterleaveOpt final : public IGLPStrategy {
 private:
   // The count of TRANS SUs involved in the interleaved pipeline
@@ -2323,6 +2393,8 @@ createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
     return std::make_unique<MFMAExpInterleaveOpt>(DAG, TII);
   case MFMAExpSimpleInterleaveID:
     return std::make_unique<MFMAExpSimpleInterleaveOpt>(DAG, TII);
+  case MFMAValuSpacingOptID:
+    return std::make_unique<MFMAValuSpacingOpt>(DAG, TII);
   }
 
   llvm_unreachable("Unknown IGLPStrategyID");
@@ -2451,8 +2523,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
     Result = !MI.mayLoadOrStore();
 
   else if (((SGMask & SchedGroupMask::VALU) != SchedGroupMask::NONE) &&
-           TII->isVALU(MI) && !TII->isMFMAorWMMA(MI) && !TII->isTRANS(MI) &&
-           !TII->isLDSDMA(MI)) {
+           matchesSchedGroupValu(MI, TII)) {
     // Some memory instructions may be marked as VALU (e.g. BUFFER_LOAD_*_LDS).
     // For our purposes, these shall not be classified as VALU as this results
     // in unexpected behavior.
