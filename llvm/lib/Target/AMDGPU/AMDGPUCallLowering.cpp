@@ -1330,6 +1330,10 @@ bool AMDGPUCallLowering::lowerTailCall(
         LLVM_DEBUG(dbgs() << "Bad type for fallback EXEC\n");
         return false;
       }
+    } else {
+      F.getContext().diagnose(DiagnosticInfoUnsupported(
+          F, "invalid flags value for amdgcn.cs.chain"));
+      return false;
     }
   }
 
