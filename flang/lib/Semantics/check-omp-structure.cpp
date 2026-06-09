@@ -668,12 +668,23 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
   }
 
   // Named constants are OK to be used within 'shared' and 'firstprivate'
-  // clauses. The check for this happens a few lines below.
+  // clauses. Assumed-size arrays are allowed on "map", "shared", and
+  // "use_device_addr". The check for this happens a few lines below.
+  bool AssumedSizeArrayAllowed{false};
   bool NamedConstantAllowed{false};
   switch (clauseId) {
-  case llvm::omp::Clause::OMPC_shared:
   case llvm::omp::Clause::OMPC_firstprivate:
     NamedConstantAllowed = true;
+    break;
+  case llvm::omp::Clause::OMPC_map:
+    AssumedSizeArrayAllowed = true;
+    break;
+  case llvm::omp::Clause::OMPC_shared:
+    AssumedSizeArrayAllowed = true;
+    NamedConstantAllowed = true;
+    break;
+  case llvm::omp::Clause::OMPC_use_device_addr:
+    AssumedSizeArrayAllowed = true;
     break;
   default:
     break;
@@ -689,6 +700,12 @@ void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
     }
     auto source{*parser::omp::GetObjectSource(object)};
     if (NamedConstantAllowed && IsNamedConstant(*symbol)) {
+      continue;
+    }
+    if (!AssumedSizeArrayAllowed && IsWholeAssumedSizeArray(object)) {
+      context_.Say(source,
+          "A whole assumed-size array is not allowed as a list item on %s clause"_err_en_US,
+          parser::omp::GetUpperName(clauseId, version));
       continue;
     }
     // Emit a more user-friendly diagnostic than "'kind' must be a variable
@@ -4237,7 +4254,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Private &x) {
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "PRIVATE");
   CheckIntentInPointer(symbols, llvm::omp::Clause::OMPC_private);
   CheckCrayPointee(x.v, "PRIVATE");
-  CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_private);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
@@ -4309,7 +4325,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   GetSymbolsInObjectList(x.v, currSymbols);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_firstprivate);
-  CheckAssumedSizeArray(currSymbols, llvm::omp::Clause::OMPC_firstprivate);
 
   DirectivesClauseTriple dirClauseTriple;
   // Check firstprivate variables in worksharing constructs
@@ -4981,7 +4996,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   CheckIntentInPointer(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_lastprivate);
-  CheckAssumedSizeArray(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
 
   // Check lastprivate variables in worksharing constructs
   dirClauseTriple.emplace(llvm::omp::Directive::OMPD_do,
@@ -5428,18 +5442,6 @@ void OmpStructureChecker::CheckIntentInPointer(
     if (IsPointer(*symbol) && IsIntentIn(*symbol)) {
       context_.Say(source,
           "Pointer '%s' with the INTENT(IN) attribute may not appear in a %s clause"_err_en_US,
-          symbol->name(), parser::omp::GetUpperName(clauseId, version));
-    }
-  }
-}
-
-void OmpStructureChecker::CheckAssumedSizeArray(
-    SymbolSourceMap &symbols, llvm::omp::Clause clauseId) {
-  unsigned version{context_.langOptions().OpenMPVersion};
-  for (auto &[symbol, source] : symbols) {
-    if (IsAssumedSizeArray(*symbol)) {
-      context_.Say(source,
-          "Assumed-size array '%s' may not appear in a %s clause"_err_en_US,
           symbol->name(), parser::omp::GetUpperName(clauseId, version));
     }
   }
