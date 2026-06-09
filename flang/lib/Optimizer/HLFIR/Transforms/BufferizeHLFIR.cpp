@@ -164,12 +164,9 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
       // expression. This does not copy the data.
       if (storage.isArray() && mlir::isa<fir::BaseBoxType>(storage.getType()) &&
           storage.mayHaveNonDefaultLowerBounds()) {
-        mlir::Value one =
-            builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-        llvm::SmallVector<mlir::Value> ones(storage.getRank(), one);
-        mlir::Value shift = builder.genShift(loc, ones);
+        // A rebox without a shape operand resets the lower bounds to one.
         storage = hlfir::Entity{fir::ReboxOp::create(
-            builder, loc, storage.getType(), storage, shift,
+            builder, loc, storage.getType(), storage, /*shape=*/mlir::Value{},
             /*slice=*/mlir::Value{})};
       }
       mlir::Value bufferizedExpr =

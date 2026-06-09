@@ -20,9 +20,7 @@ func.func @shapeof_asexpr(%arg0: !fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir
 // CHECK-NEXT:    %[[SHPE_SHFT:.*]] = fir.shape_shift %[[BOX_DIMS]]#0, %[[BOX_DIMS]]#1
 // CHECK-NEXT:    %[[VAR:.*]]:2 = hlfir.declare %[[BOX_ADDR]](%[[SHPE_SHFT]])
 // CHECK-NEXT:    %[[TRUE:.*]] = arith.constant true
-// CHECK-NEXT:    %[[C1:.*]] = arith.constant 1 : index
-// CHECK-NEXT:    %[[SHIFT:.*]] = fir.shift %[[C1]]
-// CHECK-NEXT:    %[[REBOX:.*]] = fir.rebox %[[VAR]]#0(%[[SHIFT]])
+// CHECK-NEXT:    %[[REBOX:.*]] = fir.rebox %[[VAR]]#0 :
 // CHECK-NEXT:    %[[TUPLE0:.*]] = fir.undefined tuple
 // CHECK-NEXT:    %[[TUPLE1:.*]] = fir.insert_value %[[TUPLE0]], %[[TRUE]]
 // CHECK-NEXT:    %[[TUPLE2:.*]] = fir.insert_value %[[TUPLE1]], %[[REBOX]]

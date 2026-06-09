@@ -45,9 +45,7 @@
 // CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 // CHECK:           fir.call @_FortranAPushArrayConstructorValue(%[[VAL_14]], %[[VAL_33]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.box<none>) -> ()
 // CHECK:           %[[VAL_35:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>>
-// CHECK:           %[[VAL_35B:.*]] = arith.constant 1 : index
-// CHECK:           %[[SHIFT:.*]] = fir.shift %[[VAL_35B]]
-// CHECK:           %[[REBOX:.*]] = fir.rebox %[[VAL_35]](%[[SHIFT]]) : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, !fir.shift<1>) -> !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>
+// CHECK:           %[[REBOX:.*]] = fir.rebox %[[VAL_35]] : (!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>
 // CHECK:           %[[VAL_36:.*]] = fir.undefined tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
 // CHECK:           %[[VAL_37:.*]] = fir.insert_value %[[VAL_36]], %[[VAL_2]], [1 : index] : (tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>, i1) -> tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>
 // CHECK:           %[[VAL_38:.*]] = fir.insert_value %[[VAL_37]], %[[REBOX]], [0 : index] : (tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>, !fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>) -> tuple<!fir.box<!fir.heap<!fir.array<1x!fir.char<1,?>>>>, i1>

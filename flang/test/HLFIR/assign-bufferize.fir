@@ -13,6 +13,5 @@ func.func @keep_attributes(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.
 // CHECK-LABEL: func.func @keep_attributes(
 // CHECK-SAME: %[[X:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,8>>>>>,
 // CHECK-SAME: %[[Y:.*]]: !fir.box<!fir.array<1x!fir.char<1,?>>>) {
-// CHECK: %[[SHIFT:.*]] = fir.shift
-// CHECK: %[[REBOX:.*]] = fir.rebox %[[Y]](%[[SHIFT]])
+// CHECK: %[[REBOX:.*]] = fir.rebox %[[Y]] :
 // CHECK: hlfir.assign %[[REBOX]] to %[[X]] realloc keep_lhs_len : !fir.box<!fir.array<1x!fir.char<1,?>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,8>>>>>

@@ -39,7 +39,7 @@ end subroutine
 ! CHECK-FIR-NEXT:      %[[DIMS0:.*]]:3 = fir.box_dims %[[MUL]], %[[C0]]
 ! CHECK-FIR-NEXT:      %[[DIMS1:.*]]:3 = fir.box_dims %[[MUL]], %[[C1]]
 ! ...
-! CHECK-FIR:           %[[REBOX:.*]] = fir.rebox {{.*}} : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
+! CHECK-FIR:           %[[REBOX:.*]] = fir.rebox {{.*}} : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK-FIR:           %[[RDIMS0:.*]]:3 = fir.box_dims %[[REBOX]], %{{.*}}
 ! CHECK-FIR:           %[[RDIMS1:.*]]:3 = fir.box_dims %[[REBOX]], %{{.*}}
 ! CHECK-FIR:           %[[SHAPE:.*]] = fir.shape %[[RDIMS0]]#1, %[[RDIMS1]]#1

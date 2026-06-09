@@ -73,7 +73,7 @@ endsubroutine
 ! CHECK-BUFFERING:      %[[TRANSPOSE_RES_LD:.*]] = fir.load %[[TRANSPOSE_RES_BOX:.*]]
 ! CHECK-BUFFERING:      %[[TRANSPOSE_RES_ADDR:.*]] = fir.box_addr %[[TRANSPOSE_RES_LD]]
 ! CHECK-BUFFERING:      %[[TRANSPOSE_RES_VAR:.*]]:2 = hlfir.declare %[[TRANSPOSE_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
-! CHECK-BUFFERING:      %[[TRANSPOSE_REBOX:.*]] = fir.rebox %[[TRANSPOSE_RES_VAR]]#0({{.*}}) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
+! CHECK-BUFFERING:      %[[TRANSPOSE_REBOX:.*]] = fir.rebox %[[TRANSPOSE_RES_VAR]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK-BUFFERING:      %[[TUPLE0:.*]] = fir.undefined tuple<!fir.box<!fir.array<?x?xf32>>, i1>
 ! CHECK-BUFFERING:      %[[TUPLE1:.*]] = fir.insert_value %[[TUPLE0]], {{.*}}, [1 : index]
 ! CHECK-BUFFERING:      %[[TUPLE2:.*]] = fir.insert_value %[[TUPLE1]], %[[TRANSPOSE_REBOX]], [0 : index]
@@ -87,7 +87,7 @@ endsubroutine
 ! CHECK-BUFFERING:      %[[MUL_RES_LD:.*]] = fir.load %[[MUL_RES_BOX:.*]]
 ! CHECK-BUFFERING:      %[[MUL_RES_ADDR:.*]] = fir.box_addr %[[MUL_RES_LD]]
 ! CHECK-BUFFERING:      %[[MUL_RES_VAR:.*]]:2 = hlfir.declare %[[MUL_RES_ADDR]]({{.*}}) {uniq_name = ".tmp.intrinsic_result"}
-! CHECK-BUFFERING:      %[[MUL_REBOX:.*]] = fir.rebox %[[MUL_RES_VAR]]#0({{.*}}) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
+! CHECK-BUFFERING:      %[[MUL_REBOX:.*]] = fir.rebox %[[MUL_RES_VAR]]#0 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK-BUFFERING:      %[[TUPLE3:.*]] = fir.undefined tuple<!fir.box<!fir.array<?x?xf32>>, i1>
 ! CHECK-BUFFERING:      %[[TUPLE4:.*]] = fir.insert_value %[[TUPLE3]], {{.*}}, [1 : index]
 ! CHECK-BUFFERING:      %[[TUPLE5:.*]] = fir.insert_value %[[TUPLE4]], %[[MUL_REBOX]], [0 : index]
