@@ -2787,7 +2787,7 @@ QualType Type::getRVVEltType(const ASTContext &Ctx) const {
 
 bool QualType::isPODType(const ASTContext &Context) const {
   if (Context.getLangOpts().HLSL &&
-      getTypePtr()->isHLSLStandardRecordOrArrayOf())
+      getTypePtr()->isHLSLStandardLayoutRecordOrArrayOf())
     return true;
 
   // C++11 has a more relaxed definition of POD.
@@ -5533,11 +5533,11 @@ bool Type::isHLSLIntangibleType() const {
   return RD->isHLSLIntangible();
 }
 
-bool Type::isHLSLStandardRecordOrArrayOf() const {
+bool Type::isHLSLStandardLayoutRecordOrArrayOf() const {
   const Type *BaseTy = getBaseElementTypeUnsafe();
   if (const auto *RD =
           dyn_cast_or_null<CXXRecordDecl>(BaseTy->getAsRecordDecl())) {
-    if (!RD->isHLSLBuiltinRecord())
+    if (!RD->isHLSLBuiltinRecord() && RD->isStandardLayout())
       return true;
   }
   return false;

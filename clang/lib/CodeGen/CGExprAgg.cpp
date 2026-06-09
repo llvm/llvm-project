@@ -881,7 +881,11 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     // Create a temporary for the derived record, switch it out with the current
     // Dest slot, and emit the derived value.
     QualType DerivedTy = E->getSubExpr()->getType();
-    AggValueSlot DerivedTmpSlot = CGF.CreateAggTemp(DerivedTy, "tmp");
+    RawAddress DerivedAddr = CGF.CreateMemTempWithoutCast(DerivedTy);
+    AggValueSlot DerivedTmpSlot = AggValueSlot::forAddr(
+        DerivedAddr, DerivedTy.getQualifiers(), AggValueSlot::IsNotDestructed,
+        AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,
+        AggValueSlot::DoesNotOverlap);
 
     AggValueSlot DestBaseSlot = Dest;
     Dest = DerivedTmpSlot;
