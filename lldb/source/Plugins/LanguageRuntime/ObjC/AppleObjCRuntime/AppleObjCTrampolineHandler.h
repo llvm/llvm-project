@@ -36,13 +36,10 @@ public:
 
   struct DispatchFunction {
   public:
-    enum FixUpState { eFixUpNone, eFixUpFixed, eFixUpToFix };
-
     const char *name = nullptr;
     bool stret_return = false;
     bool is_super = false;
     bool is_super2 = false;
-    FixUpState fixedup = eFixUpNone;
   };
 
   lldb::addr_t SetupDispatchFunction(Thread &thread,

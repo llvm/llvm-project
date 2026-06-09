@@ -25,16 +25,22 @@ using namespace clang::interp;
 
 InterpFrame::InterpFrame(InterpState &S)
     : Caller(nullptr), S(S), Depth(0), Func(nullptr), RetPC(CodePtr()),
-      ArgSize(0), Args(nullptr), FrameOffset(0) {}
+      ArgSize(0), Args(nullptr) {}
 
 InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
-      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
-      FrameOffset(S.Stk.size()) {
+      RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())) {
+#ifndef NDEBUG
+  FrameOffset = S.Stk.size();
+#endif
 
   if (!Func)
     return;
+
+  FuncFlags |= Func->hasRVO() * HasRVOFlag;
+  FuncFlags |= Func->hasThisPointer() * HasThisFlag;
+
   // Initialize argument blocks.
   for (unsigned I = 0, N = Func->getNumWrittenParams(); I != N; ++I)
     new (argBlock(I)) Block(S.EvalID, Func->getParamDescriptor(I).Desc);
@@ -61,12 +67,6 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC,
   // If the fuction has a This pointer, that one is next.
   // Then follow the actual arguments (but those are handled
   // in getParamPointer()).
-  if (Func->hasRVO()) {
-    // RVO pointer offset is always 0.
-  }
-
-  if (Func->hasThisPointer())
-    ThisPointerOffset = Func->hasRVO() ? sizeof(Pointer) : 0;
 }
 
 InterpFrame::~InterpFrame() {
