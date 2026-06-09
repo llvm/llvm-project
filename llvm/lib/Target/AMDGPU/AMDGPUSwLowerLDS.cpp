@@ -656,6 +656,12 @@ void AMDGPUSwLowerLDS::getLDSMemoryInstructions(
         if (ASC->getSrcAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
             ASC->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS)
           LDSInstructions.insert(&Inst);
+      } else if (AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(&Inst)) {
+        if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+          LDSInstructions.insert(&Inst);
+        else if (auto *MTI = dyn_cast<AnyMemTransferInst>(MI))
+          if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+            LDSInstructions.insert(&Inst);
       } else
         continue;
     }
@@ -729,6 +735,46 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
       AsanInfo.Instructions.insert(NewXCHG);
       XCHG->replaceAllUsesWith(NewXCHG);
       XCHG->eraseFromParent();
+    } else if (AnyMemIntrinsic *MI = dyn_cast<AnyMemIntrinsic>(Inst)) {
+      Value *NewDest = MI->getRawDest();
+      if (MI->getDestAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+        NewDest = getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, NewDest);
+      CallInst *NewMI = nullptr;
+      if (AnyMemSetInst *MSI = dyn_cast<AnyMemSetInst>(MI)) {
+        if (MI->isAtomic())
+          NewMI = IRB.CreateElementUnorderedAtomicMemSet(
+              NewDest, MSI->getValue(), MSI->getLength(),
+              MSI->getDestAlign().valueOrOne(), MSI->getElementSizeInBytes());
+        else
+          NewMI = IRB.CreateMemSet(NewDest, MSI->getValue(), MSI->getLength(),
+                                   MSI->getDestAlign(),
+                                   cast<MemSetInst>(MI)->isVolatile());
+      } else if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(MI)) {
+        Value *NewSrc = MTI->getRawSource();
+        if (MTI->getSourceAddressSpace() == AMDGPUAS::LOCAL_ADDRESS)
+          NewSrc = getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, NewSrc);
+        if (MI->isAtomic()) {
+          if (MI->getIntrinsicID() ==
+              Intrinsic::memmove_element_unordered_atomic)
+            NewMI = IRB.CreateElementUnorderedAtomicMemMove(
+                NewDest, MTI->getDestAlign().valueOrOne(), NewSrc,
+                MTI->getSourceAlign().valueOrOne(), MTI->getLength(),
+                MTI->getElementSizeInBytes());
+          else
+            NewMI = IRB.CreateElementUnorderedAtomicMemCpy(
+                NewDest, MTI->getDestAlign().valueOrOne(), NewSrc,
+                MTI->getSourceAlign().valueOrOne(), MTI->getLength(),
+                MTI->getElementSizeInBytes());
+        } else
+          NewMI = IRB.CreateMemTransferInst(
+              MI->getIntrinsicID(), NewDest, MTI->getDestAlign(), NewSrc,
+              MTI->getSourceAlign(), MTI->getLength(),
+              cast<MemTransferInst>(MI)->isVolatile());
+      } else
+        report_fatal_error("Unimplemented LDS lowering memory intrinsic");
+      AsanInfo.Instructions.insert(NewMI);
+      MI->replaceAllUsesWith(NewMI);
+      MI->eraseFromParent();
     } else if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(Inst)) {
       Value *AIOperand = ASC->getPointerOperand();
       Value *Replacement =
