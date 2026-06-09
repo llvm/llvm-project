@@ -729,13 +729,13 @@ LoadFoundationValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp, lldb_private::formatters::swift::UUID_SummaryProvider,
-      "UUID summary provider", ConstString("Foundation.UUID"),
-      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+      "UUID summary provider", ConstString("^Foundation(Essentials)?\\.UUID$"),
+      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true), true);
 
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp, lldb_private::formatters::swift::Data_SummaryProvider,
-      "Data summary provider", ConstString("Foundation.Data"),
-      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+      "Data summary provider", ConstString("^Foundation(Essentials)?\\.Data$"),
+      TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true), true);
 
   lldb_private::formatters::AddCXXSummary(
       swift_category_sp,

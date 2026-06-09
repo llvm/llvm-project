@@ -330,6 +330,38 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
   if (!representation_enum_sp)
     return false;
 
+  // swift-foundation (FoundationEssentials, used on Windows and Linux) replaces
+  // the _Representation enum with a struct:
+  //
+  //   struct _Representation {
+  //       var _storage: __DataStorage
+  //       var _slice: Range<Int>
+  //   }
+  //
+  // where the byte count is the size of _slice. Detect that layout and handle
+  // it before falling through to the legacy enum logic below.
+  {
+    static constexpr llvm::StringLiteral g__slice("_slice");
+    ValueObjectSP slice_sp =
+        representation_enum_sp->GetChildAtNamePath({g__slice});
+    if (slice_sp) {
+      DataExtractor extractor;
+      Status error;
+      if (slice_sp->GetData(extractor, error) < 16 || error.Fail())
+        return false;
+      lldb::offset_t offset = 0;
+      int64_t lowerBound = (int64_t)extractor.GetU64(&offset);
+      int64_t upperBound = (int64_t)extractor.GetU64(&offset);
+
+      int64_t count = upperBound - lowerBound;
+      if (count == 1)
+        stream << "1 byte";
+      else
+        stream.Printf("%" PRId64 " bytes", count);
+      return true;
+    }
+  }
+
   // representation_case holds the name of the enum case we're looking at.
   ConstString representation_case(representation_enum_sp->GetValueAsCString());
   if (!representation_case)
