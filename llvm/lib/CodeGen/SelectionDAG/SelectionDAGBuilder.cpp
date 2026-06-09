@@ -10354,14 +10354,16 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
                                     SelectionDAGBuilder &Builder,
                                     const TargetLowering &TLI,
                                     SelectionDAG &DAG) {
-  // Registers before tied operands can't be folded, because the tied operand
-  // will move, which the back-end isn't able to properly account for.
-  bool Clear = false;
-  for (SDISelAsmOperandInfo &OpInfo : llvm::reverse(Info.ConstraintOperands)) {
-    Clear |= OpInfo.isMatchingInputConstraint();
-    if (Clear)
-      OpInfo.MayFoldRegister = false;
-  }
+  // A tied input points to output T by MIR operand position. If any output at
+  // position P < T is folded (register → memory), its operand count changes and
+  // shifts T's MIR position, corrupting the tie encoding. Output T itself
+  // cannot be folded either — it IS the tie target. Outputs after T are
+  // unaffected. Clear only the operands that actually threaten each tie, rather
+  // than conservatively clearing everything before the first matched input.
+  for (SDISelAsmOperandInfo &OpInfo : Info.ConstraintOperands)
+    if (OpInfo.isMatchingInputConstraint())
+      for (unsigned i = 0, T = OpInfo.getMatchedOperand(); i <= T; ++i)
+        Info.ConstraintOperands[i].MayFoldRegister = false;
 
   SDLoc DL = Builder.getCurSDLoc();
   for (SDISelAsmOperandInfo &OpInfo : Info.ConstraintOperands) {
