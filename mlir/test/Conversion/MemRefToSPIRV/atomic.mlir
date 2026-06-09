@@ -146,3 +146,21 @@ func.func @atomic_andi_i8_storage_buffer(%value: i8, %memref: memref<16xi8, #spi
 }
 
 }
+
+// -----
+
+// Floating-point atomic add requires the shader_atomic_float_add extension.
+
+module attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.3, [Shader, AtomicFloat32AddEXT], [SPV_EXT_shader_atomic_float_add]>, #spirv.resource_limits<>>} {
+
+//      CHECK: func.func @atomic_addf_storage_buffer
+// CHECK-SAME: (%[[VAL:.+]]: f32,
+func.func @atomic_addf_storage_buffer(%value: f32, %memref: memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>, %i0: index, %i1: index, %i2: index) -> f32 {
+  // CHECK: %[[AC:.+]] = spirv.AccessChain
+  // CHECK: %[[ATOMIC:.+]] = spirv.EXT.AtomicFAdd <Device> <AcquireRelease|UniformMemory> %[[AC]], %[[VAL]] : !spirv.ptr<f32, StorageBuffer>
+  // CHECK: return %[[ATOMIC]]
+  %0 = memref.atomic_rmw "addf" %value, %memref[%i0, %i1, %i2] : (f32, memref<2x3x4xf32, #spirv.storage_class<StorageBuffer>>) -> f32
+  return %0: f32
+}
+
+}

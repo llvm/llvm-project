@@ -46,17 +46,17 @@ void f(D *d) {}
 // Trigger vtable and VTT emission for D.
 void D::y() {}
 
-// CIR-COMMON: !rec_A2Ebase = !cir.record<struct "A.base" packed {!cir.vptr, !s32i}>
-// CIR-COMMON: !rec_B2Ebase = !cir.record<struct "B.base" packed {!cir.vptr, !s32i}>
-// CIR-COMMON: !rec_C2Ebase = !cir.record<struct "C.base" {!cir.vptr, !s64i}>
-// CIR-COMMON: !rec_A = !cir.record<class "A" packed padded {!cir.vptr, !s32i, !cir.array<!u8i x 4>}>
-// CIR-COMMON: !rec_B = !cir.record<class "B" packed padded {!cir.vptr, !s32i, !cir.array<!u8i x 4>, !rec_A2Ebase, !cir.array<!u8i x 4>}>
-// CIR-COMMON: !rec_C = !cir.record<class "C" {!cir.vptr, !s64i, !rec_A2Ebase}>
-// CIR-COMMON: !rec_D = !cir.record<class "D" {!rec_B2Ebase, !rec_C2Ebase, !s64i, !rec_A2Ebase}>
+// CIR-COMMON: !rec_A2Ebase = !cir.struct<"A.base" packed {!cir.vptr, !s32i}>
+// CIR-COMMON: !rec_B2Ebase = !cir.struct<"B.base" packed {!cir.vptr, !s32i}>
+// CIR-COMMON: !rec_C2Ebase = !cir.struct<"C.base" {!cir.vptr, !s64i}>
+// CIR-COMMON: !rec_A = !cir.struct<class "A" packed padded {!cir.vptr, !s32i, !cir.array<!u8i x 4>}>
+// CIR-COMMON: !rec_B = !cir.struct<class "B" packed padded {!cir.vptr, !s32i, !cir.array<!u8i x 4>, !rec_A2Ebase, !cir.array<!u8i x 4>}>
+// CIR-COMMON: !rec_C = !cir.struct<class "C" {!cir.vptr, !s64i, !rec_A2Ebase}>
+// CIR-COMMON: !rec_D = !cir.struct<class "D" {!rec_B2Ebase, !rec_C2Ebase, !s64i, !rec_A2Ebase}>
 
-// CIR-RTTI:   ![[REC_TYPE_INFO_VTABLE:.*]]= !cir.record<struct  {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !u32i, !u32i, !cir.ptr<!u8i>, !s64i, !cir.ptr<!u8i>, !s64i}>
-// CIR-COMMON: ![[REC_D_VTABLE:.*]] = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 5>, !cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 4>}>
-// CIR-COMMON: ![[REC_B_OR_C_IN_D_VTABLE:.*]]= !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-RTTI:   ![[REC_TYPE_INFO_VTABLE:.*]]= !cir.struct<{!cir.ptr<!u8i>, !cir.ptr<!u8i>, !u32i, !u32i, !cir.ptr<!u8i>, !s64i, !cir.ptr<!u8i>, !s64i}>
+// CIR-COMMON: ![[REC_D_VTABLE:.*]] = !cir.struct<{!cir.array<!cir.ptr<!u8i> x 5>, !cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-COMMON: ![[REC_B_OR_C_IN_D_VTABLE:.*]]= !cir.struct<{!cir.array<!cir.ptr<!u8i> x 4>, !cir.array<!cir.ptr<!u8i> x 4>}>
 
 // Vtable for D
 
@@ -94,7 +94,8 @@ void D::y() {}
 // LLVM-RTTI-SAME:      [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr @_ZTI1D, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:       @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
+// OGCG-NO-RTTI:      @_ZTV1D = unnamed_addr constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
+// OGCG-RTTI:         @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // OGCG-RTTI-SAME:      [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1D, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN1C1xEv],
@@ -161,7 +162,8 @@ void D::y() {}
 // LLVM-RTTI-SAME:    [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr @_ZTI1B, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:       @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
+// OGCG-NO-RTTI:      @_ZTC1D0_1B = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
+// OGCG-RTTI:         @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv],
 // OGCG-RTTI-SAME:      [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1B, ptr @_ZN1B1wEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr null, ptr @_ZN1A1vEv]
@@ -199,7 +201,8 @@ void D::y() {}
 // LLVM-RTTI-SAME:      [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr @_ZTI1C, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:        @_ZTC1D16_1C = constant { [4 x ptr], [4 x ptr] } {
+// OGCG-NO-RTTI:       @_ZTC1D16_1C = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
+// OGCG-RTTI:          @_ZTC1D16_1C = constant { [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr null, ptr @_ZN1C1xEv],
 // OGCG-RTTI-SAME:      [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr @_ZTI1C, ptr @_ZN1C1xEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr null, ptr @_ZN1A1vEv]

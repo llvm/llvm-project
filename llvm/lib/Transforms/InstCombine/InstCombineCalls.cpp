@@ -31,6 +31,7 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -292,10 +293,11 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
 Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   Value *LoadPtr = II.getArgOperand(0);
   const Align Alignment = II.getParamAlign(0).valueOrOne();
+  Value *Mask = II.getArgOperand(1);
 
-  // If the mask is all ones or undefs, this is a plain vector load of the 1st
+  // If the mask is all ones or poison, this is a plain vector load of the 1st
   // argument.
-  if (maskIsAllOneOrUndef(II.getArgOperand(1))) {
+  if (match(Mask, m_AllOnesOrPoison())) {
     LoadInst *L = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                             "unmaskedload");
     L->copyMetadata(II);
@@ -325,12 +327,13 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
   if (!ConstMask)
     return nullptr;
 
-  // If the mask is all zeros, this instruction does nothing.
-  if (maskIsAllZeroOrUndef(ConstMask))
+  // If the mask is all zeros or poison, this instruction does nothing.
+  if (match(ConstMask, m_ZeroOrPoison()))
     return eraseInstFromFunction(II);
 
-  // If the mask is all ones, this is a plain vector store of the 1st argument.
-  if (maskIsAllOneOrUndef(ConstMask)) {
+  // If the mask is all ones or poison, this is a plain vector store of the 1st
+  // argument.
+  if (match(ConstMask, m_AllOnesOrPoison())) {
     StoreInst *S =
         new StoreInst(II.getArgOperand(0), StorePtr, false, Alignment);
     S->copyMetadata(II);
@@ -388,8 +391,8 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   if (!ConstMask)
     return nullptr;
 
-  // If the mask is all zeros, a scatter does nothing.
-  if (maskIsAllZeroOrUndef(ConstMask))
+  // If the mask is all zeros or poison, a scatter does nothing.
+  if (match(ConstMask, m_ZeroOrPoison()))
     return eraseInstFromFunction(II);
 
   // Vector splat address -> scalar store
@@ -3645,66 +3648,54 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return eraseInstFromFunction(*II);
     }
 
-    for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
-      OperandBundleUse OBU = II->getOperandBundleAt(Idx);
+    for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::None:
+        llvm_unreachable("Unexpected Attribute");
+      case BundleAttr::Align: {
+        // Try to remove redundant alignment assumptions.
+        auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
-      // Separate storage assumptions apply to the underlying allocations, not
-      // any particular pointer within them. When evaluating the hints for AA
-      // purposes we getUnderlyingObject them; by precomputing the answers here
-      // we can avoid having to do so repeatedly there.
-      if (OBU.getTagName() == "separate_storage") {
-        assert(OBU.Inputs.size() == 2);
-        auto MaybeSimplifyHint = [&](const Use &U) {
-          Value *Hint = U.get();
-          // Not having a limit is safe because InstCombine removes unreachable
-          // code.
-          Value *UnderlyingObject = getUnderlyingObject(Hint, /*MaxLookup*/ 0);
-          if (Hint != UnderlyingObject)
-            replaceUse(const_cast<Use &>(U), UnderlyingObject);
-        };
-        MaybeSimplifyHint(OBU.Inputs[0]);
-        MaybeSimplifyHint(OBU.Inputs[1]);
-      }
+        if (!Alignment || !Offset || *Offset != 0)
+          break;
 
-      // Try to remove redundant alignment assumptions.
-      if (OBU.getTagName() == "align" && OBU.Inputs.size() == 2) {
-        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
-            *cast<AssumeInst>(II), II->arg_size() + Idx);
-        if (!RK || RK.AttrKind != Attribute::Alignment ||
-            !isPowerOf2_64(RK.ArgValue) || !isa<ConstantInt>(RK.IRArgValue))
-          continue;
-
-        // Remove align 1 bundles; they don't add any useful information.
-        if (RK.ArgValue == 1)
+        // Remove align 1 and non-power-of-two bundles; they don't add any
+        // useful information.
+        if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
           return CallBase::removeOperandBundleAt(II, Idx);
 
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
         // the align argument attribute disappears.
-        Value *UO = getUnderlyingObject(RK.WasOn);
+        Value *UO = getUnderlyingObject(Ptr);
         if (!UO || isa<Argument>(UO))
-          continue;
+          break;
 
         // Compute known bits for the pointer and drop the assume if the
         // known alignment isn't increased by it.
-        if ((1ULL << computeKnownBits(RK.WasOn, II).countMinTrailingZeros()) <
-            RK.ArgValue)
+        if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
+            Log2_64(*Alignment))
           continue;
         return CallBase::removeOperandBundleAt(II, Idx);
       }
 
-      if (OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1) {
-        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
-            *cast<AssumeInst>(II), II->arg_size() + Idx);
-        if (!RK || RK.AttrKind != Attribute::NonNull)
-          continue;
+      case BundleAttr::Dereferenceable: {
+        auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+
+        if (Count && *Count == 0)
+          return CallBase::removeOperandBundleAt(II, Idx);
+        break;
+      }
+
+      case BundleAttr::NonNull: {
+        auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
         // Drop assume if we can prove nonnull without it
-        if (isKnownNonZero(RK.WasOn, getSimplifyQuery().getWithInstruction(II)))
+        if (isKnownNonZero(Ptr, getSimplifyQuery().getWithInstruction(II)))
           return CallBase::removeOperandBundleAt(II, Idx);
 
         // Fold the assume into metadata if it's valid at the load
-        if (auto *LI = dyn_cast<LoadInst>(RK.WasOn);
+        if (auto *LI = dyn_cast<LoadInst>(Ptr);
             LI &&
             isValidAssumeForContext(II, LI, &DT, /*AllowEphemerals=*/true)) {
           MDNode *MD = MDNode::get(II->getContext(), {});
@@ -3714,6 +3705,36 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         }
 
         // TODO: apply nonnull return attributes to calls and invokes
+        break;
+      }
+
+      case BundleAttr::SeparateStorage: {
+        auto [Ptr1, Ptr2] = getAssumeSeparateStorageInfo(OBU);
+        // Separate storage assumptions apply to the underlying allocations, not
+        // any particular pointer within them. When evaluating the hints for AA
+        // purposes we getUnderlyingObject them; by precomputing the answers
+        // here we can avoid having to do so repeatedly there.
+        auto MaybeSimplifyHint = [&](const Use &U) {
+          Value *Hint = U.get();
+          // Not having a limit is safe because InstCombine removes unreachable
+          // code.
+          Value *UnderlyingObject = getUnderlyingObject(Hint, /*MaxLookup*/ 0);
+          if (Hint != UnderlyingObject)
+            replaceUse(const_cast<Use &>(U), UnderlyingObject);
+        };
+        MaybeSimplifyHint(Ptr1);
+        MaybeSimplifyHint(Ptr2);
+      } break;
+
+      // TODO: Drop these assumes when they are redundant
+      case BundleAttr::DereferenceableOrNull:
+      case BundleAttr::Ignore:
+      case BundleAttr::NoUndef:
+        break;
+
+      // This cannot be simplified
+      case BundleAttr::Cold:
+        break;
       }
     }
 
@@ -3953,47 +3974,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       Value *Shuffle = Builder.CreateShuffleVector(Vec, Mask);
       return replaceInstUsesWith(CI, Shuffle);
-    }
-    break;
-  }
-  case Intrinsic::vp_load: {
-    auto *VPI = cast<VPIntrinsic>(II);
-    // Fold away bit casts of the loaded value by loading the desired type,
-    // if the mask is all-ones.
-    Value *Mask = VPI->getMaskParam();
-    Value *EVL = VPI->getVectorLengthParam();
-    if (!isa<Constant>(Mask) || !cast<Constant>(Mask)->isAllOnesValue() ||
-        !II->hasOneUse())
-      break;
-
-    const DataLayout &DL = II->getDataLayout();
-    auto *Cast = dyn_cast<CastInst>(II->user_back());
-    if (!Cast || !Cast->isNoopCast(DL) || !isa<VectorType>(Cast->getDestTy()))
-      break;
-    VectorType *OrigVecTy = cast<VectorType>(II->getType());
-    Align OrigAlign =
-        DL.getValueOrABITypeAlignment(VPI->getPointerAlignment(), OrigVecTy);
-    ElementCount OrigVecCnt = OrigVecTy->getElementCount();
-    VectorType *NewVecTy = cast<VectorType>(Cast->getDestTy());
-    ElementCount NewVecCnt = NewVecTy->getElementCount();
-
-    // Right now we only support cases where the NewVec is longer, because for
-    // cases where it's shorter, we have to be sure that EVL can be exactly
-    // divided, otherwise it might yield incorrect results or even page faults
-    // (if we round-up during the division).
-    if (OrigVecCnt.isScalable() == NewVecCnt.isScalable() &&
-        NewVecCnt.hasKnownScalarFactor(OrigVecCnt)) {
-      unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
-      Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
-      Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
-      CallInst *NewVP = Builder.CreateIntrinsic(
-          NewVecTy, Intrinsic::vp_load,
-          {VPI->getMemoryPointerParam(), NewMask, NewEVL});
-      // Preserve the original alignment.
-      NewVP->addParamAttrs(
-          0, AttrBuilder(VPI->getContext()).addAlignmentAttr(OrigAlign));
-      replaceInstUsesWith(*Cast, NewVP);
-      return eraseInstFromFunction(*Cast);
     }
     break;
   }
@@ -4283,17 +4263,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return I;
     break;
   case Intrinsic::frexp: {
-    Value *X;
-    // The first result is idempotent with the added complication of the struct
-    // return, and the second result is zero because the value is already
-    // normalized.
-    if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
-      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
-        X = Builder.CreateInsertValue(
-            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
-            1);
-        return replaceInstUsesWith(*II, X);
-      }
+    // frexp(frexp(x).fract) -> { frexp(x).fract, 0 }: the fraction operand is
+    // already normalized, so the first result is idempotent and the second is
+    // zero.
+    if (match(II->getArgOperand(0),
+              m_ExtractValue<0>(m_Intrinsic<Intrinsic::frexp>(m_Value())))) {
+      Value *Res = Builder.CreateInsertValue(PoisonValue::get(II->getType()),
+                                             II->getArgOperand(0), 0);
+      Res = Builder.CreateInsertValue(
+          Res, Constant::getNullValue(II->getType()->getStructElementType(1)),
+          1);
+      return replaceInstUsesWith(*II, Res);
     }
     break;
   }

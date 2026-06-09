@@ -22,6 +22,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.math
     libc.include.netinet_in
     libc.include.netinet_tcp
+    libc.include.netinet_udp
     libc.include.poll
     libc.include.pthread
     libc.include.sched
@@ -48,12 +49,14 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_random
     libc.include.sys_resource
     libc.include.sys_select
+    libc.include.sys_sendfile
     libc.include.sys_socket
     libc.include.sys_stat
     libc.include.sys_statvfs
     libc.include.sys_syscall
     libc.include.sys_time
     libc.include.sys_types
+    libc.include.sys_uio
     libc.include.sys_utsname
     libc.include.sys_wait
     libc.include.syscall
@@ -68,5 +71,8 @@ set(TARGET_PUBLIC_HEADERS
 )
 
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  list(APPEND TARGET_PUBLIC_HEADERS libc.include.regex)
+  list(APPEND TARGET_PUBLIC_HEADERS
+    libc.include.regex
+    libc.include.sys_ptrace
+  )
 endif()

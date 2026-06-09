@@ -130,12 +130,34 @@ static bool isDereferenceableAndAlignedPointer(
   auto IsKnownDeref = [&]() {
     bool CheckForNonNull, CheckForFreed;
     if (!Size.ule(V->getPointerDereferenceableBytes(DL, CheckForNonNull,
-                                                    CheckForFreed)) ||
-        CheckForFreed)
+                                                    CheckForFreed)))
       return false;
     if (CheckForNonNull &&
         !isKnownNonZero(V, SimplifyQuery(DL, DT, AC, CtxI)))
       return false;
+
+    auto *I = dyn_cast<Instruction>(V);
+    if (CheckForFreed) {
+      const Instruction *DefI;
+      if (I) {
+        // We don't want to consider frees by the instruction producing the
+        // pointer, so skip it if we can.
+        if (auto *II = dyn_cast<InvokeInst>(V)) {
+          DefI = &II->getNormalDest()->front();
+        } else if (!I->isTerminator()) {
+          DefI = I->getNextNode();
+        } else {
+          DefI = I;
+        }
+      } else {
+        // For arguments, check frees from the start of the entry block.
+        DefI = &cast<Argument>(V)->getParent()->getEntryBlock().front();
+      }
+
+      if (!CtxI || !willNotFreeBetween(DefI, CtxI))
+        return false;
+    }
+
     // When using something like !dereferenceable on a load, the
     // dereferenceability may only be valid on a specific control-flow path.
     // If the instruction doesn't dominate the context instruction, we're
@@ -144,7 +166,6 @@ static bool isDereferenceableAndAlignedPointer(
     // in which case we don't know if the dereferenceability info still holds.
     // We don't bother handling allocas here, as they aren't speculatable
     // anyway.
-    auto *I = dyn_cast<Instruction>(V);
     if (I && !isa<AllocaInst>(I))
       return CtxI && isValidAssumeForContext(I, CtxI, DT);
     return true;
@@ -433,27 +454,14 @@ bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
   return !LI.isUnordered() || suppressSpeculativeLoadForSanitizers(LI);
 }
 
-/// Check if executing a load of this pointer value cannot trap.
-///
-/// If DT and ScanFrom are specified this method performs context-sensitive
-/// analysis and returns true if it is safe to load immediately before ScanFrom.
-///
-/// If it is not obviously safe to load from the specified pointer, we do
-/// a quick local scan of the basic block containing \c ScanFrom, to determine
-/// if the address is already accessed.
-///
-/// This uses the pointee type to determine how many bytes need to be safe to
-/// load from the pointer.
 bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,
                                        const DataLayout &DL,
                                        Instruction *ScanFrom,
                                        AssumptionCache *AC,
                                        const DominatorTree *DT,
                                        const TargetLibraryInfo *TLI) {
-  // If DT is not specified we can't make context-sensitive query
-  const Instruction* CtxI = DT ? ScanFrom : nullptr;
-  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, AC, DT,
-                                         TLI)) {
+  if (isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, ScanFrom, AC,
+                                         DT, TLI)) {
     // With sanitizers `Dereferenceable` is not always enough for unconditional
     // load.
     if (!ScanFrom || !suppressSpeculativeLoadForSanitizers(*ScanFrom))
