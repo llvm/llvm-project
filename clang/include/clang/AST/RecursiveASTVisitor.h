@@ -323,6 +323,16 @@ public:
 
   // Visit concept reference.
   bool VisitConceptReference(ConceptReference *CR) { return true; }
+
+  /// Recursively visit a single component of an __builtin_offsetof
+  /// designator (a field, identifier, base-class, or array-index node).
+  ///
+  /// \returns false if the visitation was terminated early, true otherwise.
+  bool TraverseOffsetOfNode(const OffsetOfNode *Node);
+
+  /// Visit a single component of an __builtin_offsetof designator.
+  bool VisitOffsetOfNode(const OffsetOfNode *Node) { return true; }
+
   // ---- Methods on Attrs ----
 
   // Visit an attribute.
@@ -1157,6 +1167,9 @@ DEF_TRAVERSE_TYPE(CountAttributedType, {
 DEF_TRAVERSE_TYPE(BTFTagAttributedType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
+DEF_TRAVERSE_TYPE(OverflowBehaviorType,
+                  { TRY_TO(TraverseType(T->getUnderlyingType())); })
+
 DEF_TRAVERSE_TYPE(HLSLAttributedResourceType,
                   { TRY_TO(TraverseType(T->getWrappedType())); })
 
@@ -1512,6 +1525,9 @@ DEF_TRAVERSE_TYPELOC(CountAttributedType,
 DEF_TRAVERSE_TYPELOC(BTFTagAttributedType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
+DEF_TRAVERSE_TYPELOC(OverflowBehaviorType,
+                     { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
+
 DEF_TRAVERSE_TYPELOC(HLSLAttributedResourceType,
                      { TRY_TO(TraverseTypeLoc(TL.getWrappedLoc())); })
 
@@ -1742,6 +1758,18 @@ DEF_TRAVERSE_DECL(StaticAssertDecl, {
   TRY_TO(TraverseStmt(D->getMessage()));
 })
 
+DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
+  // No double visiting: getTypeAsWritten() returns null for class
+  // templates/nested classes where the qualifier lives inside the TSI.
+  if (D->getQualifierLoc())
+    TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
+  if (TypeSourceInfo *TSI = D->getTypeAsWritten())
+    TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
+  if (auto NumArgs = D->getNumTemplateArgs())
+    for (unsigned I = 0; I != *NumArgs; ++I)
+      TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
+})
+
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {
   // Code in an unnamed namespace shows up automatically in
   // decls_begin()/decls_end().  Thus we don't need to recurse on
@@ -1949,10 +1977,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateParameterListHelper(
 template <typename Derived>
 template <typename T>
 bool RecursiveASTVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
-  for (unsigned i = 0; i < D->getNumTemplateParameterLists(); i++) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(i);
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     TraverseTemplateParameterListHelper(TPL);
-  }
   return true;
 }
 
@@ -1976,6 +2002,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
       case TSK_ExplicitSpecialization:
+      case TSK_FriendDeclaration:
         break;
       }
     }
@@ -1996,6 +2023,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
+      case TSK_FriendDeclaration:
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
       case TSK_ExplicitSpecialization:
@@ -2021,13 +2049,16 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
-      // FIXME: For now traverse explicit instantiations here. Change that
-      // once they are represented as dedicated nodes in the AST.
+      // Unlike class/variable template specializations, function template
+      // specializations are not independent children of the DeclContext —
+      // they are only reachable via FunctionTemplateDecl::specializations().
+      // We must traverse them here so visitors can see the instantiated body.
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
         TRY_TO(TraverseDecl(RD));
         break;
 
+      case TSK_FriendDeclaration:
       case TSK_ExplicitSpecialization:
         break;
       }
@@ -2190,12 +2221,13 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        the source code anywhere.  (Note the instatiated *type* --              \
        set<int> -- is written, and will still get a callback of                \
        TemplateSpecializationType).  For explicit instantiations               \
-       ("template set<int>;"), we do need a callback, since this               \
-       is the only callback that's made for this instantiation.                \
-       We use getTemplateArgsAsWritten() to distinguish. */                    \
-    if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
-      assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      /* The args that remains unspecialized. */                               \
+       ("template set<int>;"), the ExplicitInstantiationDecl node              \
+       handles traversal of template args and qualifier.                       \
+       For explicit specializations ("template<> set<int> {...};"),            \
+       we traverse template args here since there is no EID. */                \
+    if (const auto *Info = D->getExplicitSpecializationInfo()) {               \
+      const auto *ArgsWritten = Info->TemplateArgsAsWritten;                   \
+      TRY_TO(TraverseTemplateParameterListHelper(Info->TemplateParams));       \
       TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
           ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
     }                                                                          \
@@ -2205,8 +2237,6 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
       /* Traverse base definition for explicit specializations */              \
       TRY_TO(Traverse##DECLKIND##Helper(D));                                   \
     } else {                                                                   \
-      TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));            \
-                                                                               \
       /* Returning from here skips traversing the                              \
          declaration context of the *TemplateSpecializationDecl                \
          (embedded in the DEF_TRAVERSE_DECL() macro)                           \
@@ -2710,6 +2740,13 @@ bool RecursiveASTVisitor<Derived>::TraverseConceptReference(
   return true;
 }
 
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::TraverseOffsetOfNode(
+    const OffsetOfNode *Node) {
+  TRY_TO(VisitOffsetOfNode(Node));
+  return true;
+}
+
 // If shouldVisitImplicitCode() returns false, this method traverses only the
 // syntactic form of InitListExpr.
 // If shouldVisitImplicitCode() return true, this method is called once for
@@ -2781,11 +2818,12 @@ DEF_TRAVERSE_STMT(CXXNewExpr, {
 })
 
 DEF_TRAVERSE_STMT(OffsetOfExpr, {
-  // The child-iterator will pick up the expression representing
-  // the field.
-  // FIXME: for code like offsetof(Foo, a.b.c), should we get
-  // making a MemberExpr callbacks for Foo.a, Foo.a.b, and Foo.a.b.c?
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
+  // Visit each designator component (e.g. the `a`, `b`, `c` in
+  // offsetof(Foo, a.b.c)). Array index expressions are reached through the
+  // child-iterator, which DEF_TRAVERSE_STMT walks automatically.
+  for (unsigned I = 0, E = S->getNumComponents(); I != E; ++I)
+    TRY_TO(TraverseOffsetOfNode(&S->getComponent(I)));
 })
 
 DEF_TRAVERSE_STMT(UnaryExprOrTypeTraitExpr, {
@@ -2884,6 +2922,8 @@ DEF_TRAVERSE_STMT(CXXUnresolvedConstructExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
 
+DEF_TRAVERSE_STMT(CXXReflectExpr, {/*TODO*/})
+
 // These expressions all might take explicit template arguments.
 // We traverse those if so.  FIXME: implement these.
 DEF_TRAVERSE_STMT(CXXConstructExpr, {})
@@ -2942,6 +2982,7 @@ DEF_TRAVERSE_STMT(UserDefinedLiteral, {})
 DEF_TRAVERSE_STMT(DesignatedInitExpr, {})
 DEF_TRAVERSE_STMT(DesignatedInitUpdateExpr, {})
 DEF_TRAVERSE_STMT(ExtVectorElementExpr, {})
+DEF_TRAVERSE_STMT(MatrixElementExpr, {})
 DEF_TRAVERSE_STMT(GNUNullExpr, {})
 DEF_TRAVERSE_STMT(ImplicitValueInitExpr, {})
 DEF_TRAVERSE_STMT(NoInitExpr, {})
@@ -2992,6 +3033,13 @@ DEF_TRAVERSE_STMT(ParenListExpr, {})
 DEF_TRAVERSE_STMT(SYCLUniqueStableNameExpr, {
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
+DEF_TRAVERSE_STMT(UnresolvedSYCLKernelCallStmt, {
+  if (getDerived().shouldVisitImplicitCode()) {
+    TRY_TO(TraverseStmt(S->getOriginalStmt()));
+    TRY_TO(TraverseStmt(S->getKernelLaunchIdExpr()));
+    ShouldVisitChildren = false;
+  }
+})
 DEF_TRAVERSE_STMT(OpenACCAsteriskSizeExpr, {})
 DEF_TRAVERSE_STMT(PredefinedExpr, {})
 DEF_TRAVERSE_STMT(ShuffleVectorExpr, {})
@@ -3029,6 +3077,7 @@ DEF_TRAVERSE_STMT(CapturedStmt, { TRY_TO(TraverseDecl(S->getCapturedDecl())); })
 DEF_TRAVERSE_STMT(SYCLKernelCallStmt, {
   if (getDerived().shouldVisitImplicitCode()) {
     TRY_TO(TraverseStmt(S->getOriginalStmt()));
+    TRY_TO(TraverseStmt(S->getKernelLaunchStmt()));
     TRY_TO(TraverseDecl(S->getOutlinedFunctionDecl()));
     ShouldVisitChildren = false;
   }
@@ -3183,6 +3232,9 @@ DEF_TRAVERSE_STMT(OMPFuseDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPInterchangeDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPSplitDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPForDirective,
@@ -3482,6 +3534,13 @@ bool RecursiveASTVisitor<Derived>::VisitOMPSimdlenClause(OMPSimdlenClause *C) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPSizesClause(OMPSizesClause *C) {
   for (Expr *E : C->getSizesRefs())
+    TRY_TO(TraverseStmt(E));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPCountsClause(OMPCountsClause *C) {
+  for (Expr *E : C->getCountsRefs())
     TRY_TO(TraverseStmt(E));
   return true;
 }

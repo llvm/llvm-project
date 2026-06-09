@@ -43,6 +43,7 @@ class APInt;
 class AssemblerConstantPools;
 class MCAsmBackend;
 class MCAssembler;
+class MCLFIRewriter;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -61,6 +62,7 @@ struct DefRangeRegisterRelHeader;
 struct DefRangeSubfieldRegisterHeader;
 struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
+struct DefRangeRegisterRelIndirHeader;
 }
 
 using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
@@ -221,7 +223,6 @@ class LLVM_ABI MCStreamer {
   MCContext &Context;
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
-  std::vector<MCDwarfFrameInfo> DwarfFrameInfos;
   // This is a pair of index into DwarfFrameInfos and the MCSection associated
   // with the frame. Note, we use an index instead of an iterator because they
   // can be invalidated in std::vector.
@@ -266,6 +267,8 @@ protected:
 
   MCFragment *CurFrag = nullptr;
 
+  SmallVector<MCDwarfFrameInfo, 0> DwarfFrameInfos;
+
   MCStreamer(MCContext &Ctx);
 
   /// This is called by popSection and switchSection, if the current
@@ -290,6 +293,8 @@ protected:
   /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
 
+  std::unique_ptr<MCLFIRewriter> LFIRewriter;
+
 public:
   MCStreamer(const MCStreamer &) = delete;
   MCStreamer &operator=(const MCStreamer &) = delete;
@@ -306,6 +311,10 @@ public:
   SMLoc getStartTokLoc() const {
     return StartTokLocPtr ? *StartTokLocPtr : SMLoc();
   }
+
+  void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter);
+
+  MCLFIRewriter *getLFIRewriter() { return LFIRewriter.get(); }
 
   /// State management
   ///
@@ -353,8 +362,6 @@ public:
   }
 
   bool isInEpilogCFI() const { return CurrentWinEpilog; }
-
-  void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
   /// \name Assembly File Formatting.
   /// @{
@@ -462,7 +469,7 @@ public:
   void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
-  virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
+  virtual void initSections(const MCSubtargetInfo &STI);
 
   MCSymbol *endSection(MCSection *Section);
 
@@ -839,7 +846,8 @@ public:
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
-  virtual void emitPrefAlign(Align A);
+  virtual void emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
+                             uint8_t Fill, const MCSubtargetInfo &STI);
 
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
@@ -972,6 +980,10 @@ public:
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr);
 
+  virtual void emitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelIndirHeader DRHdr);
+
   /// This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void emitCVStringTableDirective() {}
 
@@ -1022,6 +1034,23 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                       int64_t R1SizeInBits, int64_t R2,
+                                       int64_t R2SizeInBits, SMLoc Loc = {});
+  virtual void emitCFILLVMVectorRegisters(
+      int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+      SMLoc Loc = {});
+  virtual void emitCFILLVMVectorOffset(int64_t Register,
+                                       int64_t RegisterSizeInBits,
+                                       int64_t MaskRegister,
+                                       int64_t MaskRegisterSizeInBits,
+                                       int64_t Offset, SMLoc Loc = {});
+  virtual void
+  emitCFILLVMVectorRegisterMask(int64_t Register, int64_t SpillRegister,
+                                int64_t SpillRegisterLaneSizeInBits,
+                                int64_t MaskRegister,
+                                int64_t MaskRegisterSizeInBits, SMLoc Loc = {});
+
   virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
   virtual void emitCFIValOffset(int64_t Register, int64_t Offset,

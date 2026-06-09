@@ -21,9 +21,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQA32Z128rmkz:%[0-9]+]]:vr128x = VMOVDQA32Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VALIGNDZ128rmik:%[0-9]+]]:vr128 = VALIGNDZ128rmik [[AVX512_128_SET0_]], [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg, 1 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VALIGNDZ128rmik]]
+    ; CHECK-NEXT: [[VALIGNDZ128rrik:%[0-9]+]]:vr128 = VALIGNDZ128rrik [[AVX512_128_SET0_]], [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQA32Z128rmkz]], 1
+    ; CHECK-NEXT: $xmm0 = COPY [[VALIGNDZ128rrik]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -53,9 +54,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk16wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQU8Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU8Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPALIGNRZ128rmikz:%[0-9]+]]:vr128 = VPALIGNRZ128rmikz [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg, 4 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPALIGNRZ128rmikz]]
+    ; CHECK-NEXT: [[VPALIGNRZ128rrikz:%[0-9]+]]:vr128 = VPALIGNRZ128rrikz [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQU8Z128rmkz]], 4
+    ; CHECK-NEXT: $xmm0 = COPY [[VPALIGNRZ128rrikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk16wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -84,8 +86,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VBROADCASTSSZ128rmk:%[0-9]+]]:vr128 = VBROADCASTSSZ128rmk [[AVX512_128_SET0_]], [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VBROADCASTSSZ128rmk]]
+    ; CHECK-NEXT: [[VMOVAPSZ128rmkz:%[0-9]+]]:vr128x = VMOVAPSZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VBROADCASTSSZ128rrk:%[0-9]+]]:vr128 = VBROADCASTSSZ128rrk [[AVX512_128_SET0_]], [[COPY]], [[VMOVAPSZ128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VBROADCASTSSZ128rrk]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -113,8 +116,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk2wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VMOVDDUPZ128rmkz:%[0-9]+]]:vr128 = VMOVDDUPZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VMOVDDUPZ128rmkz]]
+    ; CHECK-NEXT: [[VMOVAPDZ128rmkz:%[0-9]+]]:vr128x = VMOVAPDZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VMOVDDUPZ128rrkz:%[0-9]+]]:vr128 = VMOVDDUPZ128rrkz [[COPY]], [[VMOVAPDZ128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VMOVDDUPZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk2wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -142,8 +146,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VMOVSHDUPZ128rmkz:%[0-9]+]]:vr128 = VMOVSHDUPZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VMOVSHDUPZ128rmkz]]
+    ; CHECK-NEXT: [[VMOVAPSZ128rmkz:%[0-9]+]]:vr128x = VMOVAPSZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VMOVSHDUPZ128rrkz:%[0-9]+]]:vr128 = VMOVSHDUPZ128rrkz [[COPY]], [[VMOVAPSZ128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VMOVSHDUPZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -171,8 +176,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPBROADCASTDZ128rmkz:%[0-9]+]]:vr128 = VPBROADCASTDZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPBROADCASTDZ128rmkz]]
+    ; CHECK-NEXT: [[VMOVDQA32Z128rmkz:%[0-9]+]]:vr128x = VMOVDQA32Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VPBROADCASTDZ128rrkz:%[0-9]+]]:vr128 = VPBROADCASTDZ128rrkz [[COPY]], [[VMOVDQA32Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPBROADCASTDZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -201,9 +207,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQU16Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU16Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VDBPSADBWZ128rmikz:%[0-9]+]]:vr128 = VDBPSADBWZ128rmikz [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg, 0 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VDBPSADBWZ128rmikz]]
+    ; CHECK-NEXT: [[VDBPSADBWZ128rrikz:%[0-9]+]]:vr128 = VDBPSADBWZ128rrikz [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQU16Z128rmkz]], 0
+    ; CHECK-NEXT: $xmm0 = COPY [[VDBPSADBWZ128rrikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk8wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -233,9 +240,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk16wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQU8Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU8Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VGF2P8AFFINEQBZ128rmikz:%[0-9]+]]:vr128 = VGF2P8AFFINEQBZ128rmikz [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg, 0 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VGF2P8AFFINEQBZ128rmikz]]
+    ; CHECK-NEXT: [[VGF2P8AFFINEQBZ128rrikz:%[0-9]+]]:vr128 = VGF2P8AFFINEQBZ128rrikz [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQU8Z128rmkz]], 0
+    ; CHECK-NEXT: $xmm0 = COPY [[VGF2P8AFFINEQBZ128rrikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk16wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -265,9 +273,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQU16Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU16Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VMPSADBWZ128rmikz:%[0-9]+]]:vr128 = VMPSADBWZ128rmikz [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg, 0 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VMPSADBWZ128rmikz]]
+    ; CHECK-NEXT: [[VMPSADBWZ128rrikz:%[0-9]+]]:vr128 = VMPSADBWZ128rrikz [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQU16Z128rmkz]], 0
+    ; CHECK-NEXT: $xmm0 = COPY [[VMPSADBWZ128rrikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk8wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -296,8 +305,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPCONFLICTDZ128rmk:%[0-9]+]]:vr128 = VPCONFLICTDZ128rmk [[AVX512_128_SET0_]], [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPCONFLICTDZ128rmk]]
+    ; CHECK-NEXT: [[VMOVDQA32Z128rmkz:%[0-9]+]]:vr128x = VMOVDQA32Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VPCONFLICTDZ128rrk:%[0-9]+]]:vr128 = VPCONFLICTDZ128rrk [[AVX512_128_SET0_]], [[COPY]], [[VMOVDQA32Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPCONFLICTDZ128rrk]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -326,9 +336,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk16wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQU8Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU8Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPMULTISHIFTQBZ128rmkz:%[0-9]+]]:vr128 = VPMULTISHIFTQBZ128rmkz [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPMULTISHIFTQBZ128rmkz]]
+    ; CHECK-NEXT: [[VPMULTISHIFTQBZ128rrkz:%[0-9]+]]:vr128 = VPMULTISHIFTQBZ128rrkz [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQU8Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPMULTISHIFTQBZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk16wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -357,8 +368,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VEXPANDPSZ128rmk:%[0-9]+]]:vr128 = VEXPANDPSZ128rmk [[AVX512_128_SET0_]], [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VEXPANDPSZ128rmk]]
+    ; CHECK-NEXT: [[VMOVAPSZ128rmkz:%[0-9]+]]:vr128x = VMOVAPSZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VEXPANDPSZ128rrk:%[0-9]+]]:vr128 = VEXPANDPSZ128rrk [[AVX512_128_SET0_]], [[COPY]], [[VMOVAPSZ128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VEXPANDPSZ128rrk]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -385,11 +397,12 @@ body:             |
     ; CHECK-LABEL: name: test_vinserti32x4_same_mask
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk16wm = COPY $k1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_256_SET0_:%[0-9]+]]:vr256x = AVX512_256_SET0
     ; CHECK-NEXT: [[AVX512_256_SET0_1:%[0-9]+]]:vr256x = AVX512_256_SET0
-    ; CHECK-NEXT: [[VINSERTI32X4Z256rmikz:%[0-9]+]]:vr256 = VINSERTI32X4Z256rmikz [[COPY]], [[AVX512_256_SET0_1]], $rdi, 1, $noreg, 0, $noreg, 1 :: (load (s128))
-    ; CHECK-NEXT: $ymm0 = COPY [[VINSERTI32X4Z256rmikz]]
+    ; CHECK-NEXT: [[VMOVDQA32Z128rmkz:%[0-9]+]]:vr128x = VMOVDQA32Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VINSERTI32X4Z256rrikz:%[0-9]+]]:vr256 = VINSERTI32X4Z256rrikz [[COPY]], [[AVX512_256_SET0_1]], [[VMOVDQA32Z128rmkz]], 1
+    ; CHECK-NEXT: $ymm0 = COPY [[VINSERTI32X4Z256rrikz]]
     ; CHECK-NEXT: RET 0, $ymm0
     %0:vk4wm = COPY $k1
     %1:vr256x = AVX512_256_SET0
@@ -419,9 +432,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQU16Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU16Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPACKSSDWZ128rmk:%[0-9]+]]:vr128 = VPACKSSDWZ128rmk [[AVX512_128_SET0_]], [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPACKSSDWZ128rmk]]
+    ; CHECK-NEXT: [[VPACKSSDWZ128rrk:%[0-9]+]]:vr128 = VPACKSSDWZ128rrk [[AVX512_128_SET0_]], [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQU16Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPACKSSDWZ128rrk]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk8wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -451,9 +465,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_256_SET0_:%[0-9]+]]:vr256x = AVX512_256_SET0
+    ; CHECK-NEXT: [[VMOVDQA32Z256rmkz:%[0-9]+]]:vr256x = VMOVDQA32Z256rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s256))
     ; CHECK-NEXT: [[AVX512_256_SET0_1:%[0-9]+]]:vr256x = AVX512_256_SET0
-    ; CHECK-NEXT: [[VPERMDZ256rmk:%[0-9]+]]:vr256 = VPERMDZ256rmk [[AVX512_256_SET0_]], [[COPY]], [[AVX512_256_SET0_1]], $rdi, 1, $noreg, 0, $noreg :: (load (s256))
-    ; CHECK-NEXT: $ymm0 = COPY [[VPERMDZ256rmk]]
+    ; CHECK-NEXT: [[VPERMDZ256rrk:%[0-9]+]]:vr256 = VPERMDZ256rrk [[AVX512_256_SET0_]], [[COPY]], [[AVX512_256_SET0_1]], [[VMOVDQA32Z256rmkz]]
+    ; CHECK-NEXT: $ymm0 = COPY [[VPERMDZ256rrk]]
     ; CHECK-NEXT: RET 0, $ymm0
     %0:vk8wm = COPY $k1
     %1:vr256x = AVX512_256_SET0
@@ -483,9 +498,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQA32Z128rmkz:%[0-9]+]]:vr128x = VMOVDQA32Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPERMI2DZ128rmkz:%[0-9]+]]:vr128x = VPERMI2DZ128rmkz [[AVX512_128_SET0_]], [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPERMI2DZ128rmkz]]
+    ; CHECK-NEXT: [[VPERMI2DZ128rrkz:%[0-9]+]]:vr128x = VPERMI2DZ128rrkz [[AVX512_128_SET0_]], [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQA32Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPERMI2DZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -512,8 +528,9 @@ body:             |
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
-    ; CHECK-NEXT: [[VPERMILPSZ128mikz:%[0-9]+]]:vr128 = VPERMILPSZ128mikz [[COPY]], $rdi, 1, $noreg, 0, $noreg, 27 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPERMILPSZ128mikz]]
+    ; CHECK-NEXT: [[VMOVAPSZ128rmkz:%[0-9]+]]:vr128x = VMOVAPSZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VPERMILPSZ128rikz:%[0-9]+]]:vr128 = VPERMILPSZ128rikz [[COPY]], [[VMOVAPSZ128rmkz]], 27
+    ; CHECK-NEXT: $xmm0 = COPY [[VPERMILPSZ128rikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = VMOVAPSZ128rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s128))
@@ -541,9 +558,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_256_SET0_:%[0-9]+]]:vr256x = AVX512_256_SET0
+    ; CHECK-NEXT: [[VMOVAPSZ256rmkz:%[0-9]+]]:vr256x = VMOVAPSZ256rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s256))
     ; CHECK-NEXT: [[AVX512_256_SET0_1:%[0-9]+]]:vr256x = AVX512_256_SET0
-    ; CHECK-NEXT: [[VPERMPSZ256rmkz:%[0-9]+]]:vr256 = VPERMPSZ256rmkz [[COPY]], [[AVX512_256_SET0_1]], $rdi, 1, $noreg, 0, $noreg :: (load (s256))
-    ; CHECK-NEXT: $ymm0 = COPY [[VPERMPSZ256rmkz]]
+    ; CHECK-NEXT: [[VPERMPSZ256rrkz:%[0-9]+]]:vr256 = VPERMPSZ256rrkz [[COPY]], [[AVX512_256_SET0_1]], [[VMOVAPSZ256rmkz]]
+    ; CHECK-NEXT: $ymm0 = COPY [[VPERMPSZ256rrkz]]
     ; CHECK-NEXT: RET 0, $ymm0
     %0:vk8wm = COPY $k1
     %1:vr256x = AVX512_256_SET0
@@ -573,9 +591,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQA32Z128rmkz:%[0-9]+]]:vr128x = VMOVDQA32Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPERMT2DZ128rmkz:%[0-9]+]]:vr128x = VPERMT2DZ128rmkz [[AVX512_128_SET0_]], [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPERMT2DZ128rmkz]]
+    ; CHECK-NEXT: [[VPERMT2DZ128rrkz:%[0-9]+]]:vr128x = VPERMT2DZ128rrkz [[AVX512_128_SET0_]], [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQA32Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPERMT2DZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -605,9 +624,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
+    ; CHECK-NEXT: [[VMOVDQU16Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU16Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
     ; CHECK-NEXT: [[AVX512_128_SET0_1:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPERMWZ128rmkz:%[0-9]+]]:vr128 = VPERMWZ128rmkz [[COPY]], [[AVX512_128_SET0_1]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPERMWZ128rmkz]]
+    ; CHECK-NEXT: [[VPERMWZ128rrkz:%[0-9]+]]:vr128 = VPERMWZ128rrkz [[COPY]], [[AVX512_128_SET0_1]], [[VMOVDQU16Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPERMWZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk8wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -634,8 +654,9 @@ body:             |
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
-    ; CHECK-NEXT: [[VPSHUFDZ128mikz:%[0-9]+]]:vr128 = VPSHUFDZ128mikz [[COPY]], $rdi, 1, $noreg, 0, $noreg, 27 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPSHUFDZ128mikz]]
+    ; CHECK-NEXT: [[VMOVDQA32Z128rmkz:%[0-9]+]]:vr128x = VMOVDQA32Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VPSHUFDZ128rikz:%[0-9]+]]:vr128 = VPSHUFDZ128rikz [[COPY]], [[VMOVDQA32Z128rmkz]], 27
+    ; CHECK-NEXT: $xmm0 = COPY [[VPSHUFDZ128rikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = VMOVDQA32Z128rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s128))
@@ -660,8 +681,9 @@ body:             |
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
-    ; CHECK-NEXT: [[VPSHUFHWZ128mikz:%[0-9]+]]:vr128 = VPSHUFHWZ128mikz [[COPY]], $rdi, 1, $noreg, 0, $noreg, 27 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPSHUFHWZ128mikz]]
+    ; CHECK-NEXT: [[VMOVDQU16Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU16Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VPSHUFHWZ128rikz:%[0-9]+]]:vr128 = VPSHUFHWZ128rikz [[COPY]], [[VMOVDQU16Z128rmkz]], 27
+    ; CHECK-NEXT: $xmm0 = COPY [[VPSHUFHWZ128rikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk8wm = COPY $k1
     %1:vr128x = VMOVDQU16Z128rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s128))
@@ -686,8 +708,9 @@ body:             |
     ; CHECK: liveins: $rdi, $k1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
-    ; CHECK-NEXT: [[VPSHUFLWZ128mikz:%[0-9]+]]:vr128 = VPSHUFLWZ128mikz [[COPY]], $rdi, 1, $noreg, 0, $noreg, 27 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPSHUFLWZ128mikz]]
+    ; CHECK-NEXT: [[VMOVDQU16Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU16Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VPSHUFLWZ128rikz:%[0-9]+]]:vr128 = VPSHUFLWZ128rikz [[COPY]], [[VMOVDQU16Z128rmkz]], 27
+    ; CHECK-NEXT: $xmm0 = COPY [[VPSHUFLWZ128rikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk8wm = COPY $k1
     %1:vr128x = VMOVDQU16Z128rmkz %0, $rdi, 1, $noreg, 0, $noreg :: (load (s128))
@@ -715,9 +738,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk8wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_256_SET0_:%[0-9]+]]:vr256x = AVX512_256_SET0
+    ; CHECK-NEXT: [[VMOVAPSZ256rmkz:%[0-9]+]]:vr256x = VMOVAPSZ256rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s256))
     ; CHECK-NEXT: [[AVX512_256_SET0_1:%[0-9]+]]:vr256x = AVX512_256_SET0
-    ; CHECK-NEXT: [[VSHUFF32X4Z256rmikz:%[0-9]+]]:vr256 = VSHUFF32X4Z256rmikz [[COPY]], [[AVX512_256_SET0_1]], $rdi, 1, $noreg, 0, $noreg, 2 :: (load (s256))
-    ; CHECK-NEXT: $ymm0 = COPY [[VSHUFF32X4Z256rmikz]]
+    ; CHECK-NEXT: [[VSHUFF32X4Z256rrikz:%[0-9]+]]:vr256 = VSHUFF32X4Z256rrikz [[COPY]], [[AVX512_256_SET0_1]], [[VMOVAPSZ256rmkz]], 2
+    ; CHECK-NEXT: $ymm0 = COPY [[VSHUFF32X4Z256rrikz]]
     ; CHECK-NEXT: RET 0, $ymm0
     %0:vk8wm = COPY $k1
     %1:vr256x = AVX512_256_SET0
@@ -746,8 +770,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk2wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VSHUFPDZ128rmikz:%[0-9]+]]:vr128 = VSHUFPDZ128rmikz [[COPY]], [[AVX512_128_SET0_]], $rdi, 1, $noreg, 0, $noreg, 1 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VSHUFPDZ128rmikz]]
+    ; CHECK-NEXT: [[VMOVAPDZ128rmkz:%[0-9]+]]:vr128x = VMOVAPDZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VSHUFPDZ128rrikz:%[0-9]+]]:vr128 = VSHUFPDZ128rrikz [[COPY]], [[AVX512_128_SET0_]], [[VMOVAPDZ128rmkz]], 1
+    ; CHECK-NEXT: $xmm0 = COPY [[VSHUFPDZ128rrikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk2wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -775,8 +800,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VSHUFPSZ128rmikz:%[0-9]+]]:vr128 = VSHUFPSZ128rmikz [[COPY]], [[AVX512_128_SET0_]], $rdi, 1, $noreg, 0, $noreg, 68 :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VSHUFPSZ128rmikz]]
+    ; CHECK-NEXT: [[VMOVAPSZ128rmkz:%[0-9]+]]:vr128x = VMOVAPSZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VSHUFPSZ128rrikz:%[0-9]+]]:vr128 = VSHUFPSZ128rrikz [[COPY]], [[AVX512_128_SET0_]], [[VMOVAPSZ128rmkz]], 68
+    ; CHECK-NEXT: $xmm0 = COPY [[VSHUFPSZ128rrikz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -804,8 +830,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk16wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPUNPCKHBWZ128rmkz:%[0-9]+]]:vr128 = VPUNPCKHBWZ128rmkz [[COPY]], [[AVX512_128_SET0_]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPUNPCKHBWZ128rmkz]]
+    ; CHECK-NEXT: [[VMOVDQU8Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU8Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VPUNPCKHBWZ128rrkz:%[0-9]+]]:vr128 = VPUNPCKHBWZ128rrkz [[COPY]], [[AVX512_128_SET0_]], [[VMOVDQU8Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPUNPCKHBWZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk16wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -833,8 +860,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk16wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VPUNPCKLBWZ128rmkz:%[0-9]+]]:vr128 = VPUNPCKLBWZ128rmkz [[COPY]], [[AVX512_128_SET0_]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VPUNPCKLBWZ128rmkz]]
+    ; CHECK-NEXT: [[VMOVDQU8Z128rmkz:%[0-9]+]]:vr128x = VMOVDQU8Z128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VPUNPCKLBWZ128rrkz:%[0-9]+]]:vr128 = VPUNPCKLBWZ128rrkz [[COPY]], [[AVX512_128_SET0_]], [[VMOVDQU8Z128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VPUNPCKLBWZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk16wm = COPY $k1
     %1:vr128x = AVX512_128_SET0
@@ -862,8 +890,9 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vk4wm = COPY $k1
     ; CHECK-NEXT: [[AVX512_128_SET0_:%[0-9]+]]:vr128x = AVX512_128_SET0
-    ; CHECK-NEXT: [[VUNPCKLPSZ128rmkz:%[0-9]+]]:vr128 = VUNPCKLPSZ128rmkz [[COPY]], [[AVX512_128_SET0_]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
-    ; CHECK-NEXT: $xmm0 = COPY [[VUNPCKLPSZ128rmkz]]
+    ; CHECK-NEXT: [[VMOVAPSZ128rmkz:%[0-9]+]]:vr128x = VMOVAPSZ128rmkz [[COPY]], $rdi, 1, $noreg, 0, $noreg :: (load (s128))
+    ; CHECK-NEXT: [[VUNPCKLPSZ128rrkz:%[0-9]+]]:vr128 = VUNPCKLPSZ128rrkz [[COPY]], [[AVX512_128_SET0_]], [[VMOVAPSZ128rmkz]]
+    ; CHECK-NEXT: $xmm0 = COPY [[VUNPCKLPSZ128rrkz]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:vk4wm = COPY $k1
     %1:vr128x = AVX512_128_SET0

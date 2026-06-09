@@ -12,7 +12,6 @@
 #include <cstring>
 #include <vector>
 
-#include "Plugins/Language/ClangCommon/ClangHighlighter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
@@ -20,8 +19,6 @@
 namespace lldb_private {
 
 class ObjCLanguage : public Language {
-  ClangHighlighter m_highlighter;
-
 public:
   class ObjCMethodName {
   public:
@@ -164,8 +161,6 @@ public:
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
-  const Highlighter *GetHighlighter() const override { return &m_highlighter; }
-
   // Static Functions
   static void Initialize();
 
@@ -189,7 +184,7 @@ public:
       return false;
   }
 
-  llvm::StringRef GetInstanceVariableName() override { return "self"; }
+  llvm::StringRef GetInstanceName() override { return "self"; }
 
   virtual std::optional<bool>
   GetBooleanFromString(llvm::StringRef str) const override;

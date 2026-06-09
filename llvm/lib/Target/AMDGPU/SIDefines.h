@@ -11,6 +11,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIDEFINES_H
 
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 
 namespace llvm {
 
@@ -44,9 +45,10 @@ enum {
   GFX90A = 8,
   GFX940 = 9,
   GFX11 = 10,
-  GFX12 = 11,
-  GFX1250 = 12,
-  GFX13 = 13,
+  GFX1170 = 11,
+  GFX12 = 12,
+  GFX1250 = 13,
+  GFX13 = 14,
 };
 }
 
@@ -197,6 +199,7 @@ enum ClassFlags : unsigned {
 }
 
 namespace AMDGPU {
+
 enum OperandType : unsigned {
   /// Operands with register, 32-bit, or 64-bit immediate
   OPERAND_REG_IMM_INT32 = MCOI::OPERAND_FIRST_TARGET,
@@ -450,7 +453,6 @@ enum Id { // Message ID, width(4) [3:0].
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
-  ID_SAVEWAVE_HAS_TDM = 10,  // added in GFX1250
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
 
@@ -464,6 +466,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_SE_AID_ID = 135,
 
   ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1250
+  ID_RTN_SAVE_WAVE_HAS_TDM = 152,         // added in GFX1250
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -500,6 +503,14 @@ enum StreamId : unsigned { // Stream ID, (2) [9:8].
 };
 
 } // namespace SendMsg
+
+namespace WaitEvent { // Encoding of SIMM16 used in s_wait_event
+enum Id {
+  DONT_WAIT_EXPORT_READY = 1 << 0, // Only used in gfx11
+  EXPORT_READY = 1 << 1,           // gfx12+
+};
+
+} // namespace WaitEvent
 
 namespace Hwreg { // Encoding of SIMM16 used in s_setreg/getreg* insns.
 
@@ -1201,6 +1212,10 @@ enum {
 #define   S_00B84C_EXCP_EN(x)                                         (((x) & 0x7F) << 24)
 #define   G_00B84C_EXCP_EN(x)                                         (((x) >> 24) & 0x7F)
 #define   C_00B84C_EXCP_EN                                            0x80FFFFFF
+
+#define   S_00B84C_USER_SGPR_GFX1250(x)                               (((x) & 0x3F) << 1)
+#define   G_00B84C_USER_SGPR_GFX1250(x)                               (((x) >> 1) & 0x3F)
+#define   C_00B84C_USER_SGPR_GFX1250                                  0xFFFFFF81
 
 #define R_0286CC_SPI_PS_INPUT_ENA                                       0x0286CC
 #define R_0286D0_SPI_PS_INPUT_ADDR                                      0x0286D0

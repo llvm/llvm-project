@@ -203,7 +203,7 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.getArch() == llvm::Triple::x86_64 && Triple.isX32())
     return "libx32";
 
-  if (Triple.getArch() == llvm::Triple::riscv32)
+  if (Triple.isRISCV32())
     return "lib32";
 
   if (Triple.getArch() == llvm::Triple::loongarch32) {
@@ -234,6 +234,9 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
   GCCInstallation.init(Triple, Args);
   Multilibs = GCCInstallation.getMultilibs();
   SelectedMultilibs.assign({GCCInstallation.getMultilib()});
+
+  loadMultilibsFromYAML(Args, D);
+
   llvm::Triple::ArchType Arch = Triple.getArch();
   std::string SysRoot = computeSysRoot();
   ToolChain::path_list &PPaths = getProgramPaths();
@@ -274,15 +277,16 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       // issue that this flag is not accepted by other linkers.
       ExtraOpts.push_back("--no-rosegment");
     }
-    if (!Triple.isAndroidVersionLT(28)) {
-      // Android supports relr packing starting with API 28 and had its own
-      // flavor (--pack-dyn-relocs=android) starting in API 23.
-      // TODO: It's possible to use both with --pack-dyn-relocs=android+relr,
-      // but we need to gather some data on the impact of that form before we
-      // can know if it's a good default.
-      // On the other hand, relr should always be an improvement.
+    // SHT_RELR relocations are only supported at API level >= 30.
+    // ANDROID_RELR relocations were supported at API level >= 28.
+    // Relocation packer was supported at API level >= 23.
+    if (!Triple.isAndroidVersionLT(30)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
+    } else if (!Triple.isAndroidVersionLT(28)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android+relr");
       ExtraOpts.push_back("--use-android-relr-tags");
-      ExtraOpts.push_back("--pack-dyn-relocs=relr");
+    } else if (!Triple.isAndroidVersionLT(23)) {
+      ExtraOpts.push_back("--pack-dyn-relocs=android");
     }
   }
 
@@ -480,9 +484,10 @@ static void setPAuthABIInTriple(const Driver &D, const ArgList &Args,
 }
 
 std::string Linux::ComputeEffectiveClangTriple(const llvm::opt::ArgList &Args,
+                                               llvm::StringRef BoundArch,
                                                types::ID InputType) const {
   std::string TripleString =
-      Generic_ELF::ComputeEffectiveClangTriple(Args, InputType);
+      Generic_ELF::ComputeEffectiveClangTriple(Args, BoundArch, InputType);
   if (getTriple().isAArch64()) {
     llvm::Triple Triple(TripleString);
     setPAuthABIInTriple(getDriver(), Args, Triple);
@@ -692,7 +697,9 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
         (tools::ppc::hasPPCAbiArg(Args, "elfv1")) ? "ld64.so.1" : "ld64.so.2";
     break;
   case llvm::Triple::riscv32:
-  case llvm::Triple::riscv64: {
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be: {
     StringRef ArchName = llvm::Triple::getArchTypeName(Arch);
     StringRef ABIName = tools::riscv::getRISCVABI(Args, Triple);
     LibDir = "lib";
@@ -759,6 +766,18 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
+
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (D.getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
 
   // After the resource directory, we prioritize the standard clang include
   // directory.
@@ -861,6 +880,10 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
   if (ActiveKinds & Action::OFK_HIP)
     Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
+  else if ((ActiveKinds & Action::OFK_SYCL) &&
+           !Args.hasArg(options::OPT_nolibsycl))
+    Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(),
+                           "libLLVMSYCL.so");
 
   for (auto [Path, Library] : Libraries) {
     if (Args.hasFlag(options::OPT_frtlib_add_rpath,
@@ -879,6 +902,13 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   if (ActiveKinds & Action::OFK_HIP)
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
+
+  // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
+  // self-contained superset of clang_rt.profile, emitted first so the base
+  // archive stays inert.
+  if ((ActiveKinds & Action::OFK_HIP) && needsProfileRT(Args) &&
+      getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static)))
+    CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
@@ -920,7 +950,9 @@ bool Linux::IsMathErrnoDefault() const {
   return Generic_ELF::IsMathErrnoDefault();
 }
 
-SanitizerMask Linux::getSupportedSanitizers() const {
+SanitizerMask
+Linux::getSupportedSanitizers(StringRef BoundArch,
+                              Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsMIPS = getTriple().isMIPS32();
@@ -934,11 +966,12 @@ SanitizerMask Linux::getSupportedSanitizers() const {
                          getTriple().getArch() == llvm::Triple::armeb ||
                          getTriple().getArch() == llvm::Triple::thumbeb;
   const bool IsLoongArch64 = getTriple().getArch() == llvm::Triple::loongarch64;
-  const bool IsRISCV64 = getTriple().getArch() == llvm::Triple::riscv64;
+  const bool IsRISCV64 = getTriple().isRISCV64();
   const bool IsSystemZ = getTriple().getArch() == llvm::Triple::systemz;
   const bool IsHexagon = getTriple().getArch() == llvm::Triple::hexagon;
   const bool IsAndroid = getTriple().isAndroid();
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -956,7 +989,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 || IsAArch64 || IsSystemZ)
+  if (IsX86_64 || IsAArch64 || IsSystemZ || IsHexagon)
     Res |= SanitizerKind::Type;
   if (IsX86_64 || IsSystemZ || IsPowerPC64)
     Res |= SanitizerKind::KernelMemory;

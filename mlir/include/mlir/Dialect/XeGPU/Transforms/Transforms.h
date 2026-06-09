@@ -49,11 +49,9 @@ struct UnrollOptions {
 
   /// Function that converts a ShapedType (TensorDescType or VectorType)
   /// into the unrolled type based on the tileShape. It returns a vector of
-  /// types representing the unrolled types for simplicity. When
-  /// `returnSingleType` is true, it returns a vector containing only one single
-  /// unrolled type.
+  /// types representing the unrolled types for simplicity.
   using UnrolledTypeFnType = std::function<SmallVector<Type>(
-      ShapedType type, ArrayRef<int64_t> tileShape, bool returnSingleType)>;
+      ShapedType type, ArrayRef<int64_t> tileShape)>;
   UnrolledTypeFnType getUnrolledTypes = nullptr;
   UnrollOptions &setUnrolledTypesFn(UnrolledTypeFnType fn) {
     getUnrolledTypes = std::move(fn);
@@ -61,25 +59,22 @@ struct UnrollOptions {
   }
 };
 
-/// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
-void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
 /// Appends patterns for optimizing block load operations into `patterns`.
 void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
-/// Appends patterns for XeGPU SIMT distribution into `patterns`.
-void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
-/// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.
-void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
+/// Appends patterns for array length optimization into `patterns`.
+void populateXeGPUArrayLengthOptimizationPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU workgroup to subgroup distribution into
 /// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
-/// Define only the type conversions needed for XeGPU subgroup to workitem
+/// Define only the type conversions needed for XeGPU subgroup to lane
 /// distribution.
-void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
-/// Defines type conversions and legality for XeGPU subgroup to workitem
+void populateXeGPUSgToLaneDistributeTypeConversions(
+    TypeConverter &typeConverter);
+/// Defines type conversions and legality for XeGPU subgroup to lane
 /// distribution and appends the required conversion patterns into `patterns`.
-/// Appends patterns for XeGPU subgroup to workitem distribution into
+/// Appends patterns for XeGPU subgroup to lane distribution into
 /// `patterns`.
-void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+void populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
 
@@ -93,7 +88,7 @@ void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
 ///   1. the unrolled type `unrolledType` and number of unrolled instances
 ///   `numUnrolledInstances` are computed from the `targetShape`.
 ///   2. pack each operand. ExtractStridedSlice are created to break-up the
-///   vector operands. And BuiltinUnrealizedCastop are created to break-up
+///   vector operands. And BuiltinUnrealizedCastOp are created to break-up
 ///    the TensorDesc operands.
 ///   3. the original op is cloned `numUnrolledInstances` times, once for each
 ///   result.
@@ -102,12 +97,6 @@ void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
 ///   to re-assemble the slices into the original shape.
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);
-
-enum class LayoutKind { Lane, InstData, Subgroup };
-LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
-                               LayoutKind layoutKind, bool printOnly = false);
-
-LogicalResult resolveLayoutConflicts(Operation *target);
 
 } // namespace xegpu
 } // namespace mlir

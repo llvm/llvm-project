@@ -69,6 +69,7 @@ if(LLVM_LIBC_FULL_BUILD AND NOT LIBC_TARGET_OS_IS_GPU)
       libc.src.__support.freelist_heap
       libc.src.string.memcmp
       libc.src.string.memcpy
+      libc.src.string.memory_utils.inline_memset
   )
 endif()
 
@@ -290,6 +291,18 @@ add_libc_test(
     libc.src.__support.weak_avl
 )
 
+add_libc_test(
+  wctype_utils_test
+  SUITE
+    libc-support-tests
+  SRCS
+    wctype_utils_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.__support.wctype.wctype_classification_utils
+    libc.src.__support.macros.properties.os
+)
+
 add_subdirectory(CPP)
 add_subdirectory(File)
 add_subdirectory(RPC)
@@ -299,9 +312,5 @@ add_subdirectory(fixed_point)
 add_subdirectory(HashTable)
 add_subdirectory(time)
 add_subdirectory(threads)
-# Requires access to uchar header which is not on MacOS
-# Cannot currently build this on MacOS in overlay mode
-if(NOT(LIBC_TARGET_OS_IS_DARWIN))
-  add_subdirectory(wchar)
-  add_subdirectory(wctype)
-endif()
+add_subdirectory(wchar)
+add_subdirectory(wctype)

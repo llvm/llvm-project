@@ -16,6 +16,7 @@
 #define FORTRAN_FRONTEND_CODEGENOPTIONS_H
 
 #include "flang/Optimizer/OpenMP/Utils.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
@@ -72,6 +73,11 @@ public:
 
   /// The string containing the commandline for the llvm.commandline metadata.
   std::optional<std::string> RecordCommandLine;
+
+  /// The value from -dwarf-debug-flags to append to DW_AT_producer.
+  /// This is typically a reconstructed user command line (e.g. from
+  /// -grecord-command-line) and may contain multiple space-separated flags.
+  std::string DwarfDebugFlags;
 
   /// The name of the file to which the backend should save YAML optimization
   /// records.
@@ -174,6 +180,9 @@ public:
 
   /// Output filename for the split debug info, not used in the skeleton CU.
   std::string SplitDwarfOutput;
+
+  /// Name of the profile file to use with -fprofile-sample-use.
+  std::string SampleProfileFile;
 
   /// Check if Clang profile instrumenation is on.
   bool hasProfileClangInstr() const {

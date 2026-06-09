@@ -24,11 +24,12 @@
 
 namespace llvm {
 class GlobalValueSummary;
+class LLVMContext;
 class Module;
 class OptimizationRemarkEmitter;
 
 class MemProfContextDisambiguation
-    : public PassInfoMixin<MemProfContextDisambiguation> {
+    : public OptionalPassInfoMixin<MemProfContextDisambiguation> {
   /// Run the context disambiguator on \p M, returns true if any changes made.
   bool processModule(
       Module &M,
@@ -86,23 +87,28 @@ class MemProfContextDisambiguation
   std::unique_ptr<ICallPromotionAnalysis> ICallAnalysis;
 
 public:
+  LLVM_ABI
   MemProfContextDisambiguation(const ModuleSummaryIndex *Summary = nullptr,
                                bool isSamplePGO = false);
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
-  void run(ModuleSummaryIndex &Index,
-           function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
-               isPrevailing);
+  LLVM_ABI void
+  run(ModuleSummaryIndex &Index,
+      function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
+          isPrevailing,
+      LLVMContext &Ctx,
+      function_ref<void(StringRef, StringRef, const Twine &)> EmitRemark =
+          nullptr);
 };
 
 /// Strips MemProf attributes and metadata. Can be invoked by the pass pipeline
 /// when we don't have an index that has recorded that we are linking with
 /// allocation libraries containing the necessary APIs for downstream
 /// transformations.
-class MemProfRemoveInfo : public PassInfoMixin<MemProfRemoveInfo> {
+class MemProfRemoveInfo : public OptionalPassInfoMixin<MemProfRemoveInfo> {
 public:
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

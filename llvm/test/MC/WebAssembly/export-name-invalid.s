@@ -6,8 +6,11 @@
 # CHECK: [[#@LINE+1]]:17: error: Expected ,, instead got:
 .export_name foo
 
-# CHECK: [[#@LINE+1]]:18: error: Expected identifier, got:
+# CHECK: [[#@LINE+1]]:18: error: Expected string or identifier, got:
 .export_name foo,
 
 # CHECK: [[#@LINE+1]]:22: error: Expected EOL, instead got: ,
 .export_name foo, bar,
+
+# CHECK: [[#@LINE+1]]:19: error: Expected string or identifier, got: "bar
+.export_name foo, "bar

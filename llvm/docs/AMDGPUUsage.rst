@@ -1,3 +1,5 @@
+.. _amdgpu-usage-guide:
+
 =============================
 User Guide for AMDGPU Backend
 =============================
@@ -17,6 +19,7 @@ User Guide for AMDGPU Backend
    AMDGPU/AMDGPUAsmGFX908
    AMDGPU/AMDGPUAsmGFX90a
    AMDGPU/AMDGPUAsmGFX940
+   AMDGPU/AMDGPUAsmGFX950
    AMDGPU/AMDGPUAsmGFX10
    AMDGPU/AMDGPUAsmGFX1011
    AMDGPU/AMDGPUAsmGFX1013
@@ -29,6 +32,7 @@ User Guide for AMDGPU Backend
    AMDGPUInstructionNotation
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
    AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
+   AMDGPU/DeveloperGuideline
 
 Introduction
 ============
@@ -45,7 +49,7 @@ LLVM
 Target Triples
 --------------
 
-Use the Clang option ``-target <Architecture>-<Vendor>-<OS>-<Environment>``
+Use the Clang option ``--target=<Architecture>-<Vendor>-<OS>-<Environment>``
 to specify the target triple:
 
   .. table:: AMDGPU Architectures
@@ -486,7 +490,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     **GCN GFX11 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
+     **GCN GFX11.5 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   Radeon 890M
                                                     - wavefrontsize64   flat
@@ -510,6 +514,29 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         IDs                             names.
 
      ``gfx1153``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
+     **GCN GFX11.7 (RDNA 4m)**
+     -----------------------------------------------------------------------------------------------------------------------
+     ``gfx1170``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
+     ``gfx1171``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
+     ``gfx1172``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
@@ -674,6 +701,12 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                                                               - Packed
                                                                                 work-item
                                                                                 IDs
+
+     ``gfx12-5-generic``  ``amdgcn``     - ``gfx1250``                        - Architected     Functionally equivalent to
+                                         - ``gfx1251``                          flat scratch    gfx1250.
+                                                                              - Packed
+                                                                                work-item
+                                                                                IDs
      ==================== ============== ================= ================== ================= =================================
 
 .. _amdgpu-generic-processor-versioning:
@@ -797,6 +830,55 @@ For example:
 
      =============== ============================ ==================================================
 
+.. _amdgpu-module-flags:
+
+Module Flags
+------------
+
+AMDGPU-specific behaviour can be controlled via LLVM module flags (see
+`Module Flags Metadata
+<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+reference). These flags are set by frontends and are
+consumed by the AMDGPU backend during code generation.
+
+.. list-table:: AMDGPU Module Flags
+   :name: amdgpu-module-flags-table
+   :header-rows: 1
+
+   * - Flag Name
+     - Type
+     - Merge
+     - Description
+   * - ``amdgpu.buffer.oob.mode``
+     - ``i32``
+     - Max
+     - Controls out-of-bounds semantics for untyped buffer
+       instructions (``buffer_load`` / ``buffer_store``).
+
+       - ``0`` (or absent): **any**. The module does not care about OOB
+         semantics. This is an alias of **strict** that is allowed to link
+         with any other module. Code generation is identical to **strict**.
+       - ``1``: **relaxed**. The backend may merge misaligned buffer
+         accesses for performance, even if that changes OOB behaviour.
+       - ``2``: **strict**. The backend preserves per-byte OOB guarantees
+         by preventing merging of misaligned buffer accesses that could
+         straddle an OOB boundary (e.g. as required by Vulkan
+         ``robustBufferAccess2``).
+
+   * - ``amdgpu.tbuffer.oob.mode``
+     - ``i32``
+     - Max
+     - Same as above, but for typed buffer instructions (``tbuffer_load`` /
+       ``tbuffer_store``).
+
+.. note::
+
+   Frontends that require misaligned-access merging for performance should
+   set both flags to ``1`` (relaxed).  Frontends that require strict
+   per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
+   Modules that do not use buffer operations or are indifferent to OOB semantics
+   (e.g. device libraries) should leave the flags absent.
+
 .. _amdgpu-target-id:
 
 Target ID
@@ -895,6 +977,9 @@ supported for the ``amdgcn`` target.
      *reserved for future use*             10
      *reserved for future use*             11
      *reserved for downstream use (LLPC)*  12
+     *reserved for future use*             13
+     *reserved for future use*             14
+     *reserved for future use*             16
      Streamout Registers                   128             N/A         GS_REGS
      ===================================== =============== =========== ================ ======= ============================
 
@@ -1097,7 +1182,7 @@ supported for the ``amdgcn`` target.
 
   These pointers can be created by ``addrspacecast`` from a buffer resource
   (``ptr addrspace(8)``) or by using ``llvm.amdgcn.make.buffer.rsrc`` to produce a
-  ``ptr addrspace(9)``` directly, which produces a buffer strided pointer whose initial
+  ``ptr addrspace(9)`` directly, which produces a buffer strided pointer whose initial
   index and offset values are both 0. This prevents the address space cast from
   being rewritten away.
 
@@ -1119,6 +1204,15 @@ supported for the ``amdgcn`` target.
 Memory Scopes
 -------------
 
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
+
 This section provides LLVM memory synchronization scopes supported by the AMDGPU
 backend memory model when the target triple OS is ``amdhsa`` (see
 :ref:`amdgpu-amdhsa-memory-model` and :ref:`amdgpu-target-triples`).
@@ -1127,108 +1221,123 @@ The memory model supported is based on the HSA memory model [HSA]_ which is
 based in turn on HRF-indirect with scope inclusion [HRF]_. The happens-before
 relation is transitive over the synchronizes-with relation independent of scope
 and synchronizes-with allows the memory scope instances to be inclusive (see
-table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`).
+table :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`). Concurrent atomic operations
+only operate atomically with respect to each other if they are included in each
+other's sync scope. If a read R and the writes it may see are atomic but do not
+all have inclusive scopes, then R returns ``undef`` (see :ref:`memmodel`).
 
 This is different to the OpenCL [OpenCL]_ memory model which does not have scope
 inclusion and requires the memory scopes to exactly match. However, this
 is conservatively correct for OpenCL.
 
-  .. table:: AMDHSA LLVM Sync Scopes
-     :name: amdgpu-amdhsa-llvm-sync-scopes-table
+There is a ``one-as`` variant for each sync scope. If a ``release`` or
+``acquire`` operation with a ``one-as`` sync scope participates in a
+synchronization, only the effects of memory operations in the address space of
+the ``one-as`` operation are synchronized. The address space of a ``fence``
+instruction with ``one-as`` sync scope is specified via
+``amdgpu-synchronize-as`` MMRAs (see :ref:`amdgpu-fence-as`).
 
-     ======================= ===================================================
-     LLVM Sync Scope         Description
-     ======================= ===================================================
-     *none*                  The default: ``system``.
+.. note::
+  The behavior of ``one-as`` sync scopes is currently not well-founded in the
+  memory model. Synchronization via a ``one-as`` sync scope effectively causes
+  the happens-before relation to be non-transitive.
 
-                             Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+.. table:: AMDHSA LLVM Sync Scopes
+    :name: amdgpu-amdhsa-llvm-sync-scopes-table
 
-                             - ``system``.
-                             - ``agent`` and executed by a thread on the same
-                               agent.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+    ======================= ===================================================
+    LLVM Sync Scope         Description
+    ======================= ===================================================
+    *none*                  The default: ``system``.
 
-     ``agent``               Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+                            Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system`` or ``agent`` and executed by a thread
-                               on the same agent.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system``.
+                            - ``agent`` and executed by a thread on the same
+                              agent.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``cluster``             Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+    ``agent``               Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system``, ``agent`` or ``cluster`` and
-                               executed by a thread on the same cluster.
-                             - ``workgroup`` and executed by a thread in the
-                               same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system`` or ``agent`` and executed by a thread
+                              on the same agent.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-                             On targets that do not support workgroup cluster
-                             launch mode, this behaves like ``agent`` scope instead.
+    ``cluster``             Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-     ``workgroup``           Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+                            - ``system``, ``agent`` or ``cluster`` and
+                              executed by a thread on the same cluster.
+                            - ``workgroup`` and executed by a thread in the
+                              same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-                             - ``system``, ``agent`` or ``workgroup`` and
-                               executed by a thread in the same work-group.
-                             - ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            On targets that do not support workgroup cluster
+                            launch mode, this behaves like ``agent`` scope instead.
 
-     ``wavefront``           Synchronizes with, and participates in modification
-                             and seq_cst total orderings with, other operations
-                             (except image operations) for all address spaces
-                             (except private, or generic that accesses private)
-                             provided the other operation's sync scope is:
+    ``workgroup``           Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-                             - ``system``, ``agent``, ``workgroup`` or
-                               ``wavefront`` and executed by a thread in the
-                               same wavefront.
+                            - ``system``, ``agent`` or ``workgroup`` and
+                              executed by a thread in the same work-group.
+                            - ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``singlethread``        Only synchronizes with and participates in
-                             modification and seq_cst total orderings with,
-                             other operations (except image operations) running
-                             in the same thread for all address spaces (for
-                             example, in signal handlers).
+    ``wavefront``           Synchronizes with, and participates in modification
+                            and seq_cst total orderings with, other operations
+                            (except image operations) for all address spaces
+                            (except private, or generic that accesses private)
+                            provided the other operation's sync scope is:
 
-     ``one-as``              Same as ``system`` but only synchronizes with other
-                             operations within the same address space.
+                            - ``system``, ``agent``, ``workgroup`` or
+                              ``wavefront`` and executed by a thread in the
+                              same wavefront.
 
-     ``agent-one-as``        Same as ``agent`` but only synchronizes with other
-                             operations within the same address space.
+    ``singlethread``        Only synchronizes with and participates in
+                            modification and seq_cst total orderings with,
+                            other operations (except image operations) running
+                            in the same thread for all address spaces (for
+                            example, in signal handlers).
 
-     ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
-                             operations within the same address space.
+    ``one-as``              Same as ``system`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
-                             other operations within the same address space.
+    ``agent-one-as``        Same as ``agent`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``wavefront-one-as``    Same as ``wavefront`` but only synchronizes with
-                             other operations within the same address space.
+    ``cluster-one-as``      Same as ``cluster`` but only synchronizes with other
+                            operations within the same address space.
 
-     ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
-                             other operations within the same address space.
-     ======================= ===================================================
+    ``workgroup-one-as``    Same as ``workgroup`` but only synchronizes with
+                            other operations within the same address space.
+
+    ``wavefront-one-as``    Same as ``wavefront`` but only synchronizes with
+                            other operations within the same address space.
+
+    ``singlethread-one-as`` Same as ``singlethread`` but only synchronizes with
+                            other operations within the same address space.
+    ======================= ===================================================
 
 Target Types
 ------------
@@ -1274,6 +1383,45 @@ It is undefined behavior to use a pointer to any part of a named barrier object
 as the pointer operand of a regular memory access instruction or intrinsic.
 Pointers to named barrier objects are intended to be used with dedicated
 intrinsics. Reading from or writing to such pointers is undefined behavior.
+
+Strided Buffer Marker (``stridemark``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The strided buffer marker type ``target("amdgpu.stridemark")`` is a type used to
+allow representing the mixed index/offset access provided by buffer instructions,
+which is used with ``ptr addrspace(9)`` - a pointer that carries both indices.
+
+This type is a compile-time marker that has no real value and appears only in
+element type metadata. No value of this type can be created.
+
+The marker type has one optional parameter - an integer indicating the constant
+value of the stride of the buffer(s) being addressed if known. That integer, if
+given, must be non-negative (but can be 0, indicating the degenarate case where
+no stride is set but the index field should be used anyway).
+
+When creating a structured GEP, arrays of ``amdgpu.stridemark``s are used to
+represent indexing into the *index* component of the structured/strided buffer,
+while a subsequent bare ``getelementptr`` - is used to manipulate the *offset*
+part.
+
+Example usage:
+
+.. code-block:: llvm
+
+      ;; A 2-D array of unknown length and stride.
+      %q1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+        (ptr addrspace(9) elementtype([0 x target("amdgpu.stridemark") ]) %p,
+        i32 %index)
+      %q = getelementptr i8, ptr addrspace(9) %q1, i32 %offset
+
+      ;; Known bounds on index and offset.
+      %y1 = call ptr addrspace(9) (ptr addrspace(9), ...)
+        (ptr addrspace(9) elementtype([256 x target("amdgpu.stridemark", 16) ]) %p,
+        i32 %index)
+      %y = getelementptr ptr addrspace(9) %y1, i32 %offset
+
+Note that the lowering for these examples is not yet implemented and will
+be added in future changes.
 
 LLVM IR Intrinsics
 ------------------
@@ -1364,6 +1512,12 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    `buffer_load_* ... lds`, or `global_load__* ... lds` depending on address
                                                    space and architecture. `amdgcn.global.load.lds` has the same semantics as
                                                    `amdgcn.load.to.lds.p1`.
+
+  llvm.amdgcn.load.async.to.lds.p<1/7>             Same as `llvm.amdgcn.load.to.lds.p<1/7>`, but the completion of this
+                                                   :ref:`asynchronous version<amdgpu-async-operations>` is not automatically tracked
+                                                   by the compiler. The user must explicitly track the completion with `asyncmark`
+                                                   operations before using their side-effects.
+
   llvm.amdgcn.readfirstlane                        Provides direct access to v_readfirstlane_b32. Returns the value in
                                                    the lowest active lane of the input operand. Currently implemented
                                                    for i16, i32, float, half, bfloat, <2 x i16>, <2 x half>, <2 x bfloat>,
@@ -1568,6 +1722,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - 0x0100: All DS read instructions may be scheduled across sched_barrier.
                                                    - 0x0200: All DS write instructions may be scheduled across sched_barrier.
                                                    - 0x0400: All Transcendental (e.g. V_EXP) instructions may be scheduled across sched_barrier.
+                                                   - 0x0800: All LDSDMA instructions may be scheduled across sched_barrier.
 
   llvm.amdgcn.sched.group.barrier                  Creates schedule groups with specific properties to create custom scheduling
                                                    pipelines. The ordering between groups is enforced by the instruction scheduler.
@@ -1607,10 +1762,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    cannot be combined with sched_barrier or sched_group_barrier.
 
                                                    The iglp_opt strategy implementations are subject to change.
-
-  llvm.amdgcn.s.barrier.signal.isfirst             Provides access to the s_barrier_signal_first instruction;
-                                                   additionally ensures that the result value is valid even when the
-                                                   intrinsic is used from a wave that is not running in a workgroup.
 
   llvm.amdgcn.s.getpc                              Provides access to the s_getpc_b64 instruction, but with the return value
                                                    sign-extended from the width of the underlying PC hardware register even on
@@ -1678,24 +1829,191 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    Instruction cache prefetches are unsafe on invalid address.
 
-
-  llvm.amdgcn.s.barrier                            Performs a barrier *signal* operation immediately followed
+  llvm.amdgcn.s.barrier                            Performs a barrier *arrive* operation immediately followed
                                                    by a barrier *wait* operation on the *workgroup barrier* object.
                                                    see :ref:`amdgpu-amdhsa-execution-barriers`.
 
-  llvm.amdgcn.s.barrier.signal                     Performs a barrier *signal* operation on the barrier *object* determined by the ``i32`` immediate argument.
+  llvm.amdgcn.s.barrier.init                       Performs a barrier *init* operation on the barrier *object* determined by the first operand.
+                                                   See :ref:`amdgpu-amdhsa-execution-barriers`.
+                                                   Available starting GFX12.5.
+
+  llvm.amdgcn.s.barrier.signal                     Performs a barrier *arrive* operation on the barrier *object* determined by the ``i32`` immediate argument.
+                                                   See :ref:`amdgpu-amdhsa-execution-barriers`.
+                                                   Available starting GFX12.
+
+  llvm.amdgcn.s.barrier.signal.var                 Performs a barrier *arrive* operation on the barrier *object* determined by the first argument.
+                                                   The second argument is an ``i32`` immediate *expected count*. The *expected count* of the barrier *object*
+                                                   is only set when the argument is not zero, and when the barrier *object* is a *named barrier object*.
+                                                   See :ref:`amdgpu-amdhsa-execution-barriers`.
+                                                   Available starting GFX12.
+
+  llvm.amdgcn.s.barrier.signal.isfirst             Performs a barrier *arrive* operation on the barrier *object* determined by the ``i32`` immediate argument.
+                                                   Returns ``i1 1`` if the wave is running in a workgroup, and it was the first wave to *arrive* at the barrier
+                                                   *object*, otherwise returns ``i1 0``.
                                                    See :ref:`amdgpu-amdhsa-execution-barriers`.
                                                    Available starting GFX12.
 
   llvm.amdgcn.s.barrier.wait                       Performs a barrier *wait* operation on the barrier *object* determined by the ``i16`` immediate argument.
+                                                   If waiting on a *named barrier object*, this instruction always waits on the last *named barrier object*
+                                                   that the thread has *joined*, even if it is different from the argument.
                                                    See :ref:`amdgpu-amdhsa-execution-barriers`.
                                                    Available starting GFX12.
+
+  llvm.amdgcn.s.barrier.join                       Performs a barrier *join* operation on the barrier *object* determined by the first operand.
+                                                   See :ref:`amdgpu-amdhsa-execution-barriers`.
+                                                   Available starting GFX12.5.
+
+  llvm.amdgcn.s.barrier.leave                      Performs a barrier *drop* operation.
+                                                   See :ref:`amdgpu-amdhsa-execution-barriers`.
+                                                   Available starting GFX12.5.
+
+  llvm.amdgcn.flat.load.monitor                    Available on GFX12.5 only.
+                                                   Corresponds to ``flat_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
+                                                   instructions.
+                                                   For the purposes of the memory model, this is an atomic load operation in
+                                                   the generic (flat) address space.
+
+                                                   This intrinsic has 3 operands:
+
+                                                   * Flat pointer.
+                                                   * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
+                                                   * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
+
+  llvm.amdgcn.global.load.monitor                  Available on GFX12.5 only.
+                                                   Corresponds to ``global_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
+                                                   instructions.
+                                                   For the purposes of the memory model, this is an atomic load operation in
+                                                   the global address space.
+
+                                                   This intrinsic has 3 operands:
+
+                                                   * Global pointer.
+                                                   * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
+                                                   * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
+
+  llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64     Available starting GFX12.5.
+                                                   Corresponds to ``ds_atomic_barrier_arrive_rtn_b64``.
+
+                                                   For the purposes of the memory model, this is a monotonic atomic
+                                                   read-modify-write operation in the local address space.
+
+                                                   This intrinsic has 2 operands:
+
+                                                   * Local pointer to the LDS barrier data.
+                                                   * Update value; the pending count of the barrier will be
+                                                     decremented by this value (generally 1).
+
+                                                   Returns the LDS barrier data as it was before this operation
+                                                   was executed.
+
+  llvm.amdgcn.ds.atomic.async.barrier.arrive.b64   Available starting GFX12.5.
+                                                   Corresponds to ``ds_atomic_async_barrier_arrive_b64``.
+
+                                                   For the purposes of the memory model, this is an asynchronous
+                                                   monotonic atomic read-modify-write operation in the local
+                                                   address space.
+
+                                                   This intrinsic has 1 operand:
+
+                                                   * Local pointer to the LDS barrier data.
 
   ==============================================   ==========================================================
 
 .. TODO::
 
    List AMDGPU intrinsics.
+
+'``llvm.amdgcn.av``' Intrinsics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The '``llvm.amdgcn.av``' intrinsics perform
+:ref:`store-available<amdgpu-store-available>` and
+:ref:`load-visible<amdgpu-load-visible>` operations on flat or global memory
+with *scope* supplied as a metadata argument.
+
+The pointer argument can be a global pointer (``addrspace(1)``) or a flat
+pointer (``addrspace(0)``). Global pointers select ``global_load``/
+``global_store`` instructions; flat pointers select ``flat_load``/
+``flat_store`` instructions. The cache policy bits are the same in both cases.
+
+.. code-block:: llvm
+
+   <4 x i32> @llvm.amdgcn.av.load.b128.p1(
+       ptr addrspace(1), ; source (global)
+       metadata)         ; scope    - e.g. '!0' where '!0 = !{!"workgroup"}'
+
+   <4 x i32> @llvm.amdgcn.av.load.b128.p0(
+       ptr,              ; source (flat)
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p1(
+       ptr addrspace(1), ; destination (global)
+       <4 x i32>,        ; value
+       metadata)         ; scope
+
+   void @llvm.amdgcn.av.store.b128.p0(
+       ptr,              ; destination (flat)
+       <4 x i32>,        ; value
+       metadata)         ; scope
+
+Implementation Details
+++++++++++++++++++++++
+
+This section is informational and for **internal reference only**. Users should
+not rely on the expansions described below. The only reliable user-level
+guarantees are those provided by the :ref:`AMDGPU memory model<amdgpu-memmodel>`.
+
+The tables below show the cache policy bits for global pointer variants.
+Flat pointer variants use the corresponding ``flat_load``/``flat_store``
+instructions with the same cache policy bits.
+
+**TODO:** Currently the compiler does not support WGP mode on gfx12+. Hence,
+``"workgroup"`` scope currently maps to CU scope (no bits). When WGP mode is
+enabled this should map to ``scope:SCOPE_SE``.
+
+.. table:: AMDGPU Load-Visible Implementation
+   :class: longtable
+
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target       | instruction             | wavefront     | workgroup     | cluster       | agent         | system        |
+   +==============+=========================+===============+===============+===============+===============+===============+
+   | gfx90*       | ``global_load_dwordx4`` |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950       | ``global_load_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10*       | ``global_load_dwordx4`` |               |               | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* (WGP) | ``global_load_dwordx4`` |               | ``glc``       | ``glc dlc``   | ``glc dlc``   | ``glc dlc``   |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11*       | ``global_load_b128``    |               |               | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* (WGP) | ``global_load_b128``    |               | ``glc``       | ``glc``       | ``glc``       | ``glc``       |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+       | ``global_load_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------------+-------------------------+---------------+---------------+---------------+---------------+---------------+
+
+.. table:: AMDGPU Store-Available Implementation
+   :class: longtable
+
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | target | instruction              | wavefront     | workgroup     | cluster       | agent         | system        |
+   +========+==========================+===============+===============+===============+===============+===============+
+   | gfx90* | ``global_store_dwordx4`` |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx942 | ``global_store_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx950 | ``global_store_dwordx4`` |               | ``sc0``       | ``sc1``       | ``sc1``       | ``sc0 sc1``   |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx10* | ``global_store_dwordx4`` |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx11* | ``global_store_b128``    |               |               |               |               |               |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+   | gfx12+ | ``global_store_b128``    | ``SCOPE_CU``  | ``SCOPE_CU``  | ``SCOPE_SE``  | ``SCOPE_DEV`` | ``SCOPE_SYS`` |
+   +--------+--------------------------+---------------+---------------+---------------+---------------+---------------+
+
+**Note:** Cache control bits for Store are not affected by WGP mode.
 
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1756,28 +2074,64 @@ then this intrinsic causes undefined behavior.
 
 The intrinsics are available for the global (``.p1`` suffix) and generic (``.p0`` suffix) address spaces.
 
-The atomic ordering operand (3rd operand for ``.store``, 2nd for ``.load``) is an integer that follows the
-C ABI encoding of atomic memory orderings. The supported values are in
-:ref:`the table below<amdgpu-cooperative-atomic-intrinsics-atomic-memory-orderings-table>`.
+The 3rd operand for ``.store`` or 2nd for ``.load`` intrinsics is the
+:ref:`atomic ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>` of the operation.
 
-  .. table:: AMDGPU Cooperative Atomic Intrinsics Atomic Memory Orderings
-    :name: amdgpu-cooperative-atomic-intrinsics-atomic-memory-orderings-table
+The last operand of the intrinsic is the
+:ref:`synchronization scope<amdgpu-intrinsics-syncscope-metadata-operand>` of the operation.
 
-    ====== ================ =================================
-    Value  Atomic Memory    Notes
-           Ordering
-    ====== ================ =================================
-    ``0``  ``relaxed``      The default for unsupported values.
+Intrinsic Operands
+~~~~~~~~~~~~~~~~~~
 
-    ``2``  ``acquire``      Only for ``.load``
+.. _amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand:
 
-    ``3``  ``release``      Only for ``.store``
+C ABI Atomic Ordering Operand
++++++++++++++++++++++++++++++
 
-    ``5``  ``seq_cst``
-    ====== ================ =================================
+Intrinsic operands in this format are always ``i32`` integer constants whose value is
+determined by the C ABI encoding of atomic memory orderings. The supported values are in
+:ref:`the table below<amdgpu-intrinsics-c-abi-atomic-memory-orderings-table>`.
 
-The last argument of the intrinsic is the synchronization scope
-as a metadata string, which must be one of the supported :ref:`memory scopes<amdgpu-memory-scopes>`.
+  .. table:: AMDGPU Intrinsics C ABI Atomic Memory Ordering Values
+    :name: amdgpu-intrinsics-c-abi-atomic-memory-orderings-table
+
+    ========= ================ =================================
+    Value     Atomic Memory    Notes
+              Ordering
+    ========= ================ =================================
+    ``i32 0`` ``relaxed``      The default for unsupported values.
+
+    ``i32 2`` ``acquire``      Only for loads.
+
+    ``i32 3`` ``release``      Only for stores.
+
+    ``i32 5`` ``seq_cst``
+    ========= ================ =================================
+
+Example:
+
+.. code::
+
+  ; "i32 5" is the atomic ordering operand
+  %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 5, metadata !0)
+
+.. _amdgpu-intrinsics-syncscope-metadata-operand:
+
+Syncscope Metadata Operand
+++++++++++++++++++++++++++
+
+Intrinsics operand in this format are metadata strings which must be one of the supported
+:ref:`memory scopes<amdgpu-memory-scopes>`.
+The metadata node must be made of a single ``MDString`` at the top level.
+
+Example:
+
+.. code::
+
+  ; "metadata !0" is the syncscope metadata operand.
+  %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 4, metadata !0)
+
+  !0 = !{ !"agent" }
 
 .. _amdgpu_metadata:
 
@@ -1904,10 +2258,12 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       argument block size for the implicit arguments. This
                                                       varies by OS and language (for OpenCL see
                                                       :ref:`opencl-kernel-implicit-arguments-appended-for-amdhsa-os-table`).
-     "amdgpu-num-sgpr"="n"                            Specifies the number of SGPRs to use. Generated by
-                                                      the ``amdgpu_num_sgpr`` CLANG attribute [CLANG-ATTR]_.
-     "amdgpu-num-vgpr"="n"                            Specifies the number of VGPRs to use. Generated by the
-                                                      ``amdgpu_num_vgpr`` CLANG attribute [CLANG-ATTR]_.
+     "amdgpu-num-sgpr"="n"                            Deprecated. Specifies the number of SGPRs to use. Generated
+                                                      by the ``amdgpu_num_sgpr`` CLANG attribute [CLANG-ATTR]_.
+                                                      Use ``"amdgpu-waves-per-eu"`` instead.
+     "amdgpu-num-vgpr"="n"                            Deprecated. Specifies the number of VGPRs to use. Generated
+                                                      by the ``amdgpu_num_vgpr`` CLANG attribute [CLANG-ATTR]_.
+                                                      Use ``"amdgpu-waves-per-eu"`` instead.
      "amdgpu-waves-per-eu"="m,n"                      Specify the minimum and maximum number of waves per
                                                       execution unit. Generated by the ``amdgpu_waves_per_eu``
                                                       CLANG attribute [CLANG-ATTR]_. This is an optimization hint,
@@ -1916,11 +2272,11 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       "amdgpu-flat-work-group-size" value, the implied occupancy
                                                       bounds by the workgroup size takes precedence.
 
-     "amdgpu-ieee" true/false.                        GFX6-GFX11 Only
+     "amdgpu-ieee" true/false.                        GFX6-GFX11 (Except GFX11.7) Only
                                                       Specify whether the function expects the IEEE field of the
                                                       mode register to be set on entry. Overrides the default for
                                                       the calling convention.
-     "amdgpu-dx10-clamp" true/false.                  GFX6-GFX11 Only
+     "amdgpu-dx10-clamp" true/false.                  GFX6-GFX11 (Except GFX11.7) Only
                                                       Specify whether the function expects the DX10_CLAMP field of
                                                       the mode register to be set on entry. Overrides the default
                                                       for the calling convention.
@@ -1968,6 +2324,9 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-no-dispatch-id"                          The same as amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.dispatch.id intrinsic.
+
+     "amdgpu-no-wwm"                                  The same as amdgpu-no-workitem-id-x, except for the
+                                                      llvm.amdgcn.strict.wwm intrinsic.
 
      "amdgpu-no-queue-ptr"                            Similar to amdgpu-no-workitem-id-x, except for the
                                                       llvm.amdgcn.queue.ptr intrinsic. Note that unlike the other ABI hint
@@ -2118,6 +2477,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       on a single counter type. This allows PC-sampling based profilers to
                                                       attribute wait cycles to specific counter types (e.g., VMEM, LDS, EXP).
 
+     "amdgpu-no-fwd-progress"                         Disable forward progress mode for wave priority
+                                                      (enabled by default).
+
+                                                      Relevant for GFX10+.
      ================================================ ==========================================================
 
 Calling Conventions
@@ -2166,10 +2529,10 @@ The AMDGPU backend supports the following calling conventions:
                                      case the backend assumes that there are no inactive lanes upon entry; any inactive
                                      lanes that need to be preserved must be explicitly present in the IR).
 
-                                     Wave scratch is "empty" at function boundaries. There is no stack pointer input
-                                     or output value, but functions are free to use scratch starting from an initial
-                                     stack pointer. Calls to ``amdgpu_gfx`` functions are allowed and behave like they
-                                     do in ``amdgpu_cs`` functions.
+                                     Chain functions receive a stack pointer from their caller (in s32), similar to
+                                     ``amdgpu_gfx`` functions. If needed, the frame pointer is s33 and the base pointer
+                                     is s34. Calls to ``amdgpu_gfx`` functions are allowed and behave like they do in
+                                     ``amdgpu_cs`` functions.
 
                                      A function may have multiple exits (e.g. one chain exit and one plain ``ret void``
                                      for when the wave ends), but all ``llvm.amdgcn.cs.chain`` exits must be in
@@ -2260,6 +2623,9 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
      =================== ================= ========================================================
      ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
                                            value of all its arguments.
+
+     ``min(arg, ...)``   1 or more         Variadic signed operation that returns the minimum
+                                           value of all its arguments
 
      ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
                                            result of all its arguments.
@@ -2671,7 +3037,13 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX1251``          0x05a      ``gfx1251``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX12_5_GENERIC``  0x05b      ``gfx12-5-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1172``          0x05c      ``gfx1172``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1171``          0x05e      ``gfx1171``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
+     *reserved*                                 0x060      Reserved.
+     *reserved*                                 0x070      Reserved.
      ========================================== ========== =============================
 
 Sections
@@ -2701,6 +3073,8 @@ An AMDGPU target ELF code object has the standard ELF sections which include:
      ``.strtab``        ``SHT_STRTAB``   *none*
      ``.symtab``        ``SHT_SYMTAB``   *none*
      ``.text``          ``SHT_PROGBITS`` ``SHF_ALLOC`` + ``SHF_EXECINSTR``
+     ``.amdgpu.info``   ``SHT_PROGBITS`` ``SHF_EXCLUDE``
+     ``.amdgpu.strtab`` ``SHT_STRTAB``   ``SHF_EXCLUDE``
      ================== ================ =================================
 
 These sections have their standard meanings (see [ELF]_) and are only generated
@@ -2735,6 +3109,67 @@ if needed.
 
 ``.amdgpu.kernel.runtime.handle``
   Symbols used for device enqueue.
+
+.. _amdgpu-info-section:
+
+``.amdgpu.info``
+  Per-function metadata for AMDGPU object linking, emitted only in relocatable
+  code objects when object linking is enabled
+  (``-amdgpu-enable-object-linking``).  The linker uses this section to
+  propagate resource usage (registers, stack, LDS) and resolve call graph
+  dependencies across translation units.
+
+  Each entry uses a tagged, length-prefixed binary encoding:
+
+  .. code-block:: none
+
+     [kind: u8] [len: u8] [payload: <len> bytes]
+
+  A function scope is opened by an ``INFO_FUNC`` entry whose payload is an
+  8-byte relocated symbol reference.  All subsequent entries until the next
+  ``INFO_FUNC`` or end of section belong to that scope.  The format is
+  forward-compatible: unknown kinds can be skipped by reading the length byte.
+
+  .. table:: AMDGPU Info Entry Kinds
+     :name: amdgpu-info-entry-kinds-table
+
+     ===== ============================== ==========================================
+     Value Name                           Payload
+     ===== ============================== ==========================================
+     1     ``INFO_FUNC``                  8B symbol ref; opens function scope
+     2     ``INFO_FLAGS``                 u32; ``FuncInfoFlags`` bitfield
+     3     ``INFO_NUM_SGPR``              u32; SGPRs explicitly used
+     4     ``INFO_NUM_VGPR``              u32; architectural VGPRs used
+     5     ``INFO_NUM_AGPR``              u32; accumulator VGPRs (AGPRs) used
+     6     ``INFO_PRIVATE_SEGMENT_SIZE``  u32; private (scratch) segment bytes
+     7     ``INFO_USE``                   8B symbol ref; resource dependency edge
+     8     ``INFO_CALL``                  8B symbol ref; direct call edge
+     9     ``INFO_INDIRECT_CALL``         u32 strtab offset; indirect call type-ID
+     10    ``INFO_TYPEID``                u32 strtab offset; function type-ID
+     ===== ============================== ==========================================
+
+  .. table:: AMDGPU Info Function Flags (``INFO_FLAGS``)
+     :name: amdgpu-info-flags-table
+
+     ===== =========================== ==========================================
+     Bit   Name                        Description
+     ===== =========================== ==========================================
+     0x1   ``FUNC_USES_VCC``           Function uses the VCC register
+     0x2   ``FUNC_USES_FLAT_SCRATCH``  Function uses flat scratch addressing
+     0x4   ``FUNC_HAS_DYN_STACK``      Function has dynamic stack allocation
+     ===== =========================== ==========================================
+
+  Symbol references (``INFO_FUNC``, ``INFO_USE``, ``INFO_CALL``) generate
+  ``R_AMDGPU_ABS64`` relocations in ``.rela.amdgpu.info``.  String payloads
+  (``INFO_INDIRECT_CALL``, ``INFO_TYPEID``) store a ``u32`` offset into
+  the companion ``.amdgpu.strtab`` section.
+
+  See :ref:`amdgpu-assembler-directive-amdgpu-info` for the assembly syntax.
+
+``.amdgpu.strtab``
+  Null-terminated string pool for the ``.amdgpu.info`` section.  Contains
+  type-ID strings referenced by ``INFO_INDIRECT_CALL`` and ``INFO_TYPEID``
+  entries.  Only present when ``.amdgpu.info`` requires string data.
 
 .. _amdgpu-note-records:
 
@@ -5697,7 +6132,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.PRIV``.
-     21      1 bit   ENABLE_DX10_CLAMP               GFX9-GFX11
+     21      1 bit   ENABLE_DX10_CLAMP               GFX9-GFX11 (except GFX11.7)
                                                        Wavefront starts execution
                                                        with DX10 clamp mode
                                                        enabled. Used by the vector
@@ -5709,6 +6144,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.DX10_CLAMP``.
+                                                     GFX11.7
+                                                       Reserved. Must be 0.
                      WG_RR_EN                        GFX12
                                                        If 1, wavefronts are scheduled
                                                        in a round-robin fashion with
@@ -5726,7 +6163,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      CP is responsible for
                                                      filling in
                                                      ``COMPUTE_PGM_RSRC1.DEBUG_MODE``.
-     23      1 bit   ENABLE_IEEE_MODE                GFX9-GFX11
+     23      1 bit   ENABLE_IEEE_MODE                GFX9-GFX11 (except GFX11.7)
                                                        Wavefront starts execution
                                                        with IEEE mode
                                                        enabled. Floating point
@@ -5742,6 +6179,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
                                                        Used by CP to set up
                                                        ``COMPUTE_PGM_RSRC1.IEEE_MODE``.
+                                                     GFX11.7
+                                                       Reserved. Must be 0.
                      DISABLE_PERF                    GFX12
                                                        Reserved. Must be 0.
      24      1 bit   BULKY                           Must be 0.
@@ -6671,304 +7110,8 @@ Wavefront Offset is only requested if it is used (see
 Execution Barriers
 ~~~~~~~~~~~~~~~~~~
 
-.. note::
-
-  This specification is a work-in-progress (see lines annotated with :sup:`WIP`), and is not complete for GFX12.5.
-
-Threads can synchronize execution by performing barrier operations on barrier *objects* as described below:
-
-* Each barrier *object* has the following state:
-
-  * An unsigned positive integer *expected count*: counts the number of *signal* operations
-    expected for this barrier *object*.
-  * An unsigned non-negative integer *signal count*: counts the number of *signal* operations
-    already performed on this barrier *object*.
-
-      * The initial value of *signal count* is zero.
-      * When an operation causes *signal count* to be equal to *expected count*, the barrier is completed,
-        and the *signal count* is reset to zero.
-
-* Barrier operations are performed on barrier *objects*. A barrier operation is a dynamic instance
-  of one of the following:
-
-  * Barrier *init*.
-  * Barrier *join*.
-  * Barrier *leave*.
-
-    * Decrements *expected count* of the barrier *object* by one.
-
-  * Barrier *signal*.
-
-    * Increments *signal count* of the barrier *object* by one.
-
-  * Barrier *wait*.
-
-* Barrier modification operations are barrier operations that modify the barrier *object* state:
-
-  * Barrier *init*.
-  * Barrier *leave*.
-  * Barrier *signal*.
-
-* For a given barrier *object* ``BO``:
-
-  * There is exactly one barrier *init* for ``BO``. :sup:`WIP`
-  * *Thread-barrier-order<BO>* is the subset of *program-order* that only
-    relates barrier operations performed on ``BO``.
-  * Let ``S`` be the set of barrier modification operations on ``BO``, then
-    *barrier-modification-order<BO>* is a strict total order over ``S``. It is the order
-    in which ``BO`` observes barrier operations that change its state.
-
-    * *Barrier-modification-order<BO>* is consistent with *happens-before*.
-    * Let ``A`` and ``B`` be two barrier modification operations where ``A -> B`` in
-      *thread-barrier-order<BO>*, then ``A -> B`` in *barrier-modification-order<BO>*.
-    * The first element in *barrier-modification-order<BO>* is a barrier *init*.
-      There is only one barrier *init* in *barrier-modification-order<BO>*.
-
-  * *Barrier-joined-before<BO>* is a strict partial order over barrier operations on ``BO``.
-    A barrier *join* ``J`` is *barrier-joined-before<BO>* a barrier operation ``X`` if and only if all
-    of the following is true:
-
-    * ``J -> X`` in *thread-barrier-order<BO>*.
-    * There is no barrier *leave* ``L`` where ``J -> L -> X`` in *thread-barrier-order<BO>*.
-
-  * *Barrier-participates-in<BO>* is a partial order that relates barrier operations to barrier *waits*.
-    A barrier operation ``X`` may *barrier-participates-in<BO>* a barrier *wait* ``W`` if all of the following
-    is true:
-
-    * ``X`` and ``W`` are both performed on ``BO``.
-    * ``X`` is a barrier *signal* or *leave* operation.
-    * ``X`` does not *barrier-participates-in<BO>* another barrier *wait* ``W'`` in the same thread as ``W``.
-    * ``W -> X`` **not** in *thread-barrier-order<BO>*.
-
-  * *Barrier-participates-in<BO>* is consistent with *happens-before*.
-
-* Let ``S`` be the set of barrier operations that *barrier-participate-in<BO>* a barrier *wait* ``W`` for some
-  barrier *object* ``BO``, then all of the following is true:
-
-  * ``S`` cannot be empty.
-  * The elements of ``S`` all exist in a continuous interval of *barrier-modification-order<BO>*.
-  * Let ``A`` be the first operation of ``S`` in *barrier-modification-order<BO>*, then the *signal count* of ``BO``
-    is zero before ``A`` is performed.
-  * Let ``B`` be the last operation of ``S`` in *barrier-modification-order<BO>*, then the *signal count* and
-    *expected count* of ``BO`` are equal after ``B`` is performed. ``B`` is the only barrier operation in ``S``
-    that causes the *signal count* and *expected count* of ``BO`` to be equal.
-
-* For every barrier *signal* ``S`` performed on a barrier *object* ``BO``:
-
-  * The immediate successor of ``S`` in *thread-barrier-order<BO>* is a barrier *wait*. :sup:`WIP`
-
-* For every barrier *wait* ``W`` performed on a barrier *object* ``BO``:
-
-  * There is a barrier *join* ``J`` such that ``J -> W`` in *barrier-joined-before<BO>*. :sup:`WIP`
-
-* For every barrier *join* ``J`` performed on a barrier *object* ``BO``:
-
-  * ``J`` is not *barrier-joined-before<BO>* another barrier *join*.
-
-* *Barrier-executes-before* is a strict partial order defined over the union of all barrier operations
-  performed by all threads on all barriers. It is the transitive closure of all the following orders:
-
-  * *Thread-barrier-order<BO>* for every barrier object ``BO``.
-  * *Barrier-participates-in<BO>* for every barrier object ``BO``.
-
-* *Barrier-executes-before* is consistent with *program-order*.
-* For every barrier *object* ``BO``:
-
-  * *Barrier-modification-order<BO>* is consistent with *barrier-executes-before*.
-
-* For every barrier operation ``X`` on a barrier *object* ``BO``,
-  there is a barrier *init* ``I`` on ``BO`` such that ``I`` *barrier-executes-before* ``X``.
-
-  .. note::
-
-    Barriers only synchronize execution and do not affect the visibility of memory operations between threads.
-    Refer to the :ref:`execution barriers memory model<amdgpu-amdhsa-execution-barriers-memory-model>`
-    to determine how to synchronize memory operations through *barrier-executes-before*.
-
-Target-Specific Properties
-++++++++++++++++++++++++++
-
-This section covers properties of barrier operation and *objects* that are specific to the implementation of
-barriers in AMDGPU hardware.
-
-Barrier operations have the following additional target-specific properties:
-
-* Barrier operations are convergent within a wave. All threads of a wavefront use the same barrier *object* when
-  performing any barrier operation.
-
-  * Thus, barrier operations can only be performed in wave-uniform control flow.
-
-All barrier *objects* have the following additional target-specific properties:
-
-* Barrier *join* does not increment the *expected count* of a barrier *object*. The *expected count* is set
-  during initialization of the barrier by the hardware. :sup:`WIP`
-* Barrier *objects* are allocated and managed by the hardware.
-
-  * Barrier *objects* are stored in an unspecified memory region that does not alias with
-    any other address space. Updates to the barrier *object* are not done in order with any other
-    memory operation in any other :ref:`address space<amdgpu-address-spaces>`.
-
-* Barrier *objects* exist within a *scope* (see :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`),
-  and can only be accessed by threads in that *scope*.
-
-See :ref:`amdgpu-llvm-ir-intrinsics-table` for more information on how to perform barrier operations using
-LLVM IR intrinsic calls, or see the sections below to perform barrier operations using machine code.
-
-.. _amdgpu-amdhsa-execution-barriers-workgroup-barriers:
-
-Workgroup Barrier Operations
-############################
-
-.. note::
-
-  This section only applies to entries of the target code sequence tables below that reference this section.
-
-This section covers properties of barrier operation on *workgroup barrier objects* implemented in AMDGPU
-hardware.
-
-The following barrier operations can never be performed by the shader on *workgroup barrier objects*.
-The hardware will instead perform them automatically under certain conditions.
-
-* Barrier *init*:
-
-  * The hardware automatically initializes *workgroup barrier objects* when a workgroup is launched:
-    The *expected count* of the barrier object is set to the number of waves in the workgroup.
-
-* Barrier *join*:
-
-  * Any thread launched within a workgroup automatically *joins* *workgroup barrier objects*.
-
-* Barrier *leave*
-
-  * When a thread ends, it automatically *leaves* any *workgroup barrier object* it had previously *joined*.
-
-Additionally, no barrier *wait* operation on a *workgroup barrier object* can complete before all waves of
-the workgroup have launched.
-
-Informational Notes
-+++++++++++++++++++
-
-Informally, we can deduce from the above formal model that execution barriers behave as follows:
-
-* Synchronization of threads always happens at a wavefront granularity.
-* *Barrier-executes-before* relates the dynamic instances of operations from different threads together.
-  For example, if ``A -> B`` in *barrier-executes-before*, then the execution of ``A`` must complete
-  before the execution of ``B`` can complete.
-* When a barrier *signal* or *leave* causes the *signal count* of a barrier *object* to be identical to the
-  *expected count*, the *signal count* is reset to zero, and threads that have *joined* the barrier *object*
-  will:
-
-  * Wake-up if they were sleeping because of a barrier *wait*, **or**
-  * Skip the next barrier *wait* operation if they have not previously *waited*.
-
-* Barriers do not complete "out-of-thin-air"; a barrier *wait* ``W`` cannot depend on a barrier operation
-  ``X`` to complete if ``W -> X`` in *barrier-executes-before*.
-* It is undefined behavior to operate on an uninitialized barrier.
-* It is undefined behavior for a barrier *wait* to never complete.
-
-Execution Barrier GFX6-11
-+++++++++++++++++++++++++
-
-Targets from GFX6 through GFX11 included do not have the split barrier feature.
-The barrier *signal* and barrier *wait* operations cannot be performed independently.
-
-There is only one *workgroup barrier* object of ``workgroup`` scope that is implicitly used
-by all barrier operations.
-
-  .. table:: AMDHSA Execution Barriers Code Sequences GFX6-GFX11
-     :name: amdgpu-amdhsa-execution-barriers-code-sequences-gfx6-gfx11-table
-
-     ===================== ====================== ===========================================================
-     Barrier Operation(s)  Barrier *Object*       AMDGPU Machine Code
-     ===================== ====================== ===========================================================
-     **Init, Join and Leave**
-     --------------------------------------------------------------------------------------------------------
-     *init*                - *Workgroup barrier*  See barrier *init* in
-                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
-
-     *join*                - *Workgroup barrier*  See barrier *join* in
-                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
-
-     *leave*               - *Workgroup barrier*  See barrier *leave* in
-                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
-
-     **Signal and Wait**
-     --------------------------------------------------------------------------------------------------------
-     *signal* then *wait*  - *Workgroup barrier*  | **BackOffBarrier**
-                                                  | ``s_barrier``
-                                                  | **No BackOffBarrier**
-                                                  | ``s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)``
-                                                  | ``s_waitcnt_vscnt null, 0x0``
-                                                  | ``s_barrier``
-
-                                                  - If the target does not have the BackOffBarrier feature,
-                                                    then there cannot be any outstanding memory operations
-                                                    before issuing the ``s_barrier`` instruction.
-                                                  - The waitcnts can independently be moved earlier, or
-                                                    removed entirely as long as the associated
-                                                    counter remains at zero before issuing the
-                                                    ``s_barrier`` instruction.
-
-     *signal*              - *Workgroup barrier*  Not available separately, see *signal* then *wait*
-
-     *wait*                - *Workgroup barrier*  Not available separately, see *signal* then *wait*
-     ===================== ====================== ===========================================================
-
-Execution Barrier GFX12
-+++++++++++++++++++++++
-
-.. note::
-
-  This is incomplete for GFX12.5.
-
-GFX12 targets have the split-barrier feature, and also offer multiple barrier *objects* per workgroup
-(see :ref:`amdgpu-amdhsa-execution-barriers-ids-gfx12-table`).
-
-  .. table:: AMDHSA Execution Barriers Code Sequences GFX12
-     :name: amdgpu-amdhsa-execution-barriers-code-sequences-gfx12-table
-
-     ===================== =========================== ===========================================================
-     Barrier Operation(s)  Barrier *Object*            AMDGPU Machine Code
-     ===================== =========================== ===========================================================
-     **Init, Join and Leave**
-     -------------------------------------------------------------------------------------------------------------
-     *init*                - *Workgroup barrier*       See barrier *init* in
-                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
-
-     *join*                - *Workgroup barrier*       See barrier *join* in
-                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
-
-     *leave*               - *Workgroup barrier*       See barrier *leave* in
-                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
-
-     **Signal and Wait**
-     -------------------------------------------------------------------------------------------------------------
-
-     *signal*              - *Workgroup barrier*       | ``s_barrier_signal -1``
-                                                       | Or
-                                                       | ``s_barrier_signal_isfirst -1``
-
-
-     *wait*                - *Workgroup barrier*       ``s_barrier_wait -1``.
-
-     *signal*              - *Workgroup trap barrier*  Not available to the shader.
-
-     *wait*                - *Workgroup trap barrier*  Not available to the shader.
-     ===================== =========================== ===========================================================
-
-
-  .. table:: AMDHSA Execution Barriers IDs GFX12
-     :name: amdgpu-amdhsa-execution-barriers-ids-gfx12-table
-
-     =========== ============== ==============================================================
-     Barrier ID  Scope          Description
-     =========== ============== ==============================================================
-     ``-2``      ``workgroup``  *Workgroup trap barrier*, dedicated for the trap handler and
-                                only available in privileged execution mode
-                                (not accessible by the shader).
-
-     ``-1``      ``workgroup``  *Workgroup barrier*.
-     =========== ============== ==============================================================
+See the :ref:`barriers<amdgpu-execution-synchronization-barriers>` section of the
+execution synchronization documentation.
 
 .. _amdgpu-amdhsa-memory-model:
 
@@ -6980,6 +7123,15 @@ code (see :ref:`memmodel`).
 
 The AMDGPU backend supports the memory synchronization scopes specified in
 :ref:`amdgpu-memory-scopes`.
+
+.. note::
+
+   `:ref:amdgpu-memmodel` is a work in progress to provide a complete memory
+   consistency model for AMDGPU, including newer features like *availability*,
+   *visibility* and asynchronous operations. The new model will replace the
+   model described in this section. Until then, this section should only be read
+   along with the new model; any ambiguity is likely to be settled in favour of
+   the new model.
 
 The code sequences used to implement the memory model specify the order of
 instructions that a single thread must execute. The ``s_waitcnt`` and cache
@@ -7023,6 +7175,14 @@ cache modifiers. They cannot be performed atomically. They implement volatile
 (via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
 from the global address space.
 
+The LDS DMA instructions are synchronous by default, which means that the
+compiler will automatically ensure that the corresponding operation has
+completed before its side-effects are used. The :ref:`asynchronous
+versions<amdgpu-async-operations>` of these same instructions perform the same
+operations, but without automatic tracking in the compiler; the user must
+explicitly track the completion of these instructions before using their
+side-effects.
+
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
 is accessing the memory, atomic memory orderings are not meaningful, and all
@@ -7037,17 +7197,20 @@ treated as non-atomic.
 A memory synchronization scope wider than work-group is not meaningful for the
 group (LDS) address space and is treated as work-group.
 
+When a work-group's maximum flat work-group size does not exceed the wavefront
+size, the work-group fits within a single wavefront. In this case, LLVM
+``workgroup`` synchronization scope is equivalent to ``wavefront`` scope.
+
+If the compiler can determine this bound (e.g., via ``amdgpu-flat-work-group-size``),
+the AMDGPU backend optimizes ``workgroup`` scope operations by lowering them to
+``wavefront``-scoped machine instructions.
+
+It applies to atomic ``load``, ``store``, ``atomicrmw``, and ``cmpxchg``
+instructions, and to ``fence`` instructions, when they use synchronizing memory
+orderings (``acquire``, ``release``, ``acq_rel``, or ``seq_cst``).
+
 The memory model does not support the region address space which is treated as
 non-atomic.
-
-Acquire memory ordering is not meaningful on store atomic instructions and is
-treated as non-atomic.
-
-Release memory ordering is not meaningful on load atomic instructions and is
-treated as non-atomic.
-
-Acquire-release memory ordering is not meaningful on load or store atomic
-instructions and is treated as acquire and release respectively.
 
 The memory order also adds the single thread optimization constraints defined in
 table
@@ -7086,7 +7249,11 @@ table
      ============ ==============================================================
 
 The code sequences used to implement the memory model are defined in the
-following sections:
+sections listed below.
+
+**Note:** The presence of :ref:`AV metadata<amdgpu-av-metadata>` can **suppress
+cache operations** (such as write-back or invalidate) that are usually part of
+these sequences.
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
@@ -7101,11 +7268,11 @@ Execution Barriers
 ++++++++++++++++++
 
 .. note::
-  See :ref:`amdgpu-amdhsa-execution-barriers` for definitions of the terminology used
-  in this section.
+  See :ref:`amdgpu-execution-synchronization-barriers-execution-model` for definitions of
+  the terminology used in this section.
 
-* A barrier *signal* operation ``S`` can pair with a release fence program-ordered before it
-  to form a ``barrier-signal-release`` ``BR``. The synchronization scope and the set of address
+* A barrier *arrive* operation ``A`` can pair with a release fence program-ordered before it
+  to form a ``barrier-arrive-release`` ``BR``. The synchronization scope and the set of address
   spaces affected are determined by the release fence.
 * A barrier *wait* operation ``W`` can pair with an acquire fence program-ordered after it to
   form a ``barrier-wait-acquire`` ``BA``. The synchronization scope and the set of address
@@ -7113,11 +7280,15 @@ Execution Barriers
 
 A ``BR`` *synchronizes-with* ``BA`` in an address space *AS* if and only if:
 
-* ``S`` *barrier-executes-before* ``W``.
+* ``A`` *barrier-executes-before* ``W``.
 * *BA* and *BR*'s :ref:`synchronization scope<amdgpu-memory-scopes>` overlap.
 * *BA* and *BR*'s :ref:`synchronization scope<amdgpu-memory-scopes>`
   allow cross address space synchronization (they cannot have ``one-as``) :sup:`1`.
 * *BA* and *BR*'s address spaces both include *AS*.
+
+Informally, we can deduce from the above rules that:
+
+* *Happens-before* is consistent with *barrier-executes-before*.
 
 :sup:`1`: This is a requirement due to how current hardware implements barrier operations.
 This limitation may be lifted in the future.
@@ -15847,7 +16018,7 @@ the instruction in the code sequence that references the table.
                                - wavefront    - local
                                               - generic
      store atomic release      - workgroup    - global   1. | ``s_wait_bvhcnt 0x0``
-                                                            | ``s_wait_samplecnt 0x0``
+                                              - generic     | ``s_wait_samplecnt 0x0``
                                                             | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
@@ -17246,7 +17417,7 @@ For GFX125x:
 
   This section is currently incomplete as work on the compiler is still ongoing.
   The following is a non-exhaustive list of unimplemented/undocumented features:
-  non-volatile bit code sequences, monitor and wait, globally accessing scratch atomics,
+  non-volatile bit code sequences, globally accessing scratch atomics,
   multicast loads, barriers (including split barriers) and cooperative atomics.
   Scalar operations memory model needs more elaboration as well.
 
@@ -17346,6 +17517,18 @@ For GFX125x:
   * ``global_inv``, ``global_wb`` and ``global_wbinv`` behave like memory operations
     issued to every address at the same time. They are kept in order with other
     memory operations from the same wave.
+
+* ``global_load_monitor_*`` and ``flat_load_monitor_*`` instructions load
+  data and request that the wave is notified (see ``s_monitor_sleep``) if
+  the L2 cache line that holds the data is evicted, or written to.
+
+  * In order to monitor a cache line in the L2 cache, these instructions must
+    ensure that the L2 cache is always hit by setting the ``SCOPE`` of the instruction
+    appropriately. The compiler may adjust the scope of the instruction accordingly
+    to ensure this is the case.
+  * For non-atomic and atomic code sequences, it is valid to replace
+    ``global_load_b32/64/128`` with a ``global_load_monitor_b32/64/128`` and a
+    ``flat_load_b32/64/128`` with a ``flat_load_monitor_b32/64/128``.
 
 Scalar memory operations are only used to access memory that is proven to not
 change during the execution of the kernel dispatch. This includes constant
@@ -20792,6 +20975,8 @@ in this description.
 
     CDNA 3        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx942<AMDGPU/AMDGPUAsmGFX940>`
 
+    CDNA 4        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx950<AMDGPU/AMDGPUAsmGFX950>`
+
     RDNA 1        :doc:`GFX10 RDNA1<AMDGPU/AMDGPUAsmGFX10>`     :doc:`gfx1010<AMDGPU/AMDGPUAsmGFX10>`
 
                                                                 :doc:`gfx1011<AMDGPU/AMDGPUAsmGFX1011>`
@@ -21418,9 +21603,11 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
      ``.amdhsa_dx10_clamp``                                   1                   GFX6-GFX11   Controls ENABLE_DX10_CLAMP in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                  GFX11.7)
      ``.amdhsa_ieee_mode``                                    1                   GFX6-GFX11   Controls ENABLE_IEEE_MODE in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
+                                                                                  GFX11.7)
      ``.amdhsa_round_robin_scheduling``                       0                   GFX12        Controls ENABLE_WG_RR_EN in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX12   Controls FP16_OVFL in
@@ -21474,6 +21661,49 @@ semantics described in :ref:`amdgpu-amdhsa-code-object-metadata-v3`,
 :ref:`amdgpu-amdhsa-code-object-metadata-v5`.
 
 This directive is terminated by an ``.end_amdgpu_metadata`` directive.
+
+.. _amdgpu-assembler-directive-amdgpu-info:
+
+.amdgpu_info <symbol>
++++++++++++++++++++++
+
+Begins a per-function metadata block for ``<symbol>`` in the ``.amdgpu.info``
+section (see :ref:`amdgpu-info-section`).  Only valid when the OS is ``amdhsa``.
+The block is terminated by an ``.end_amdgpu_info`` directive.
+
+The following sub-directives may appear inside the block:
+
+  .. table:: .amdgpu_info Sub-Directives
+     :name: amdgpu-info-sub-directives-table
+
+     ====================================== ==========================================
+     Directive                              Description
+     ====================================== ==========================================
+     ``.amdgpu_flags`` *value*              ``FuncInfoFlags`` bitfield (u32)
+     ``.amdgpu_num_sgpr`` *value*           SGPRs explicitly used (u32)
+     ``.amdgpu_num_vgpr`` *value*           Architectural VGPRs used (u32)
+     ``.amdgpu_num_agpr`` *value*           Accumulator VGPRs used (u32)
+     ``.amdgpu_private_segment_size`` *n*   Private segment size in bytes (u32)
+     ``.amdgpu_use`` *symbol*               Resource dependency (LDS or barrier)
+     ``.amdgpu_call`` *symbol*              Direct call edge to *symbol*
+     ``.amdgpu_indirect_call`` *"type-id"*  Indirect call with given type-ID string
+     ``.amdgpu_typeid`` *"type-id"*         Type-ID for an address-taken function
+     ====================================== ==========================================
+
+Example:
+
+.. code-block:: nasm
+
+   .amdgpu_info my_kernel
+     .amdgpu_flags 7
+     .amdgpu_num_sgpr 33
+     .amdgpu_num_vgpr 32
+     .amdgpu_num_agpr 0
+     .amdgpu_private_segment_size 0
+     .amdgpu_use lds_var
+     .amdgpu_call helper
+     .amdgpu_indirect_call "vi"
+   .end_amdgpu_info
 
 .. _amdgpu-amdhsa-assembler-example-v3-onwards:
 

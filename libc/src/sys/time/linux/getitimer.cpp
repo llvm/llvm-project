@@ -19,14 +19,18 @@ LLVM_LIBC_FUNCTION(int, getitimer, (int which, struct itimerval *curr_value)) {
   long ret = 0;
   if constexpr (sizeof(time_t) > sizeof(long)) {
     // There is no SYS_getitimer_time64 call, so we can't use time_t directly.
-    long curr_value32[4];
-    ret =
-        LIBC_NAMESPACE::syscall_impl<long>(SYS_getitimer, which, curr_value32);
-    if (!ret) {
-      curr_value->it_interval.tv_sec = curr_value32[0];
-      curr_value->it_interval.tv_usec = curr_value32[1];
-      curr_value->it_value.tv_sec = curr_value32[2];
-      curr_value->it_value.tv_usec = curr_value32[3];
+    if (curr_value) {
+      long curr_value32[4];
+      ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_getitimer, which,
+                                               curr_value32);
+      if (!ret) {
+        curr_value->it_interval.tv_sec = curr_value32[0];
+        curr_value->it_interval.tv_usec = curr_value32[1];
+        curr_value->it_value.tv_sec = curr_value32[2];
+        curr_value->it_value.tv_usec = curr_value32[3];
+      }
+    } else {
+      ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_getitimer, which, nullptr);
     }
   } else {
     ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_getitimer, which, curr_value);

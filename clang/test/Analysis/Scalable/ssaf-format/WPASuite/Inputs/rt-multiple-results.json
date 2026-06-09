@@ -1,0 +1,40 @@
+{
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@foo"
+      }
+    }
+  ],
+  "results": [
+    {
+      "analysis_name": "PairsAnalysisResult",
+      "result": {
+        "pair_counts": [
+          {
+            "count": 100,
+            "entity_id": {
+              "@": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "analysis_name": "TagsAnalysisResult",
+      "result": {
+        "tags": [
+          "important"
+        ]
+      }
+    }
+  ]
+}

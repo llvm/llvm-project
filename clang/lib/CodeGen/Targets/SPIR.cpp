@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "HLSLBufferLayoutBuilder.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Basic/LangOptions.h"
 #include "llvm/IR/DerivedTypes.h"
 
@@ -38,6 +39,10 @@ public:
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                    AggValueSlot Slot) const override;
+
+  llvm::FixedVectorType *
+  getOptimalVectorMemoryType(llvm::FixedVectorType *Ty,
+                             const LangOptions &LangOpt) const override;
 
 private:
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
@@ -87,11 +92,6 @@ public:
   CommonSPIRTargetCodeGenInfo(std::unique_ptr<ABIInfo> ABIInfo)
       : TargetCodeGenInfo(std::move(ABIInfo)) {}
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
-
   unsigned getDeviceKernelCallingConv() const override;
   llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const override;
   llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *Ty,
@@ -131,42 +131,18 @@ public:
                                   const VarDecl *D) const override;
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
-  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                         SyncScope Scope,
-                                         llvm::AtomicOrdering Ordering,
-                                         llvm::LLVMContext &Ctx) const override;
+  StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                llvm::AtomicOrdering Ordering) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::Instruction &AtomicInst,
+                               const AtomicExpr *Expr = nullptr) const override;
   bool supportsLibCall() const override {
     return getABIInfo().getTarget().getTriple().getVendor() !=
            llvm::Triple::AMD;
   }
-};
 
-inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return "subgroup";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return "device";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return "";
-  }
-  return "";
-}
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
+};
 } // End anonymous namespace.
 
 void CommonSPIRABIInfo::setCCs() {
@@ -175,31 +151,30 @@ void CommonSPIRABIInfo::setCCs() {
 }
 
 ABIArgInfo SPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
-  if (getContext().getLangOpts().isTargetDevice()) {
-    // Coerce pointer arguments with default address space to CrossWorkGroup
-    // pointers for target devices as default address space kernel arguments
-    // are not allowed. We use the opencl_global language address space which
-    // always maps to CrossWorkGroup.
-    llvm::Type *LTy = CGT.ConvertType(Ty);
-    auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
-    auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
-    auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
-    if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
-      LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
-      return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
-    }
+  // Coerce pointer arguments with default address space to CrossWorkGroup
+  // pointers as default address space kernel
+  // arguments are not allowed. We use the opencl_global language address
+  // space which always maps to CrossWorkGroup.
+  llvm::Type *LTy = CGT.ConvertType(Ty);
+  auto DefaultAS = getContext().getTargetAddressSpace(LangAS::Default);
+  auto GlobalAS = getContext().getTargetAddressSpace(LangAS::opencl_global);
+  auto *PtrTy = llvm::dyn_cast<llvm::PointerType>(LTy);
+  if (PtrTy && PtrTy->getAddressSpace() == DefaultAS) {
+    LTy = llvm::PointerType::get(PtrTy->getContext(), GlobalAS);
+    return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
+  }
 
-    if (isAggregateTypeForABI(Ty)) {
-      // Force copying aggregate type in kernel arguments by value when
-      // compiling CUDA targeting SPIR-V. This is required for the object
-      // copied to be valid on the device.
-      // This behavior follows the CUDA spec
-      // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
-      // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
-      // revisited if HIPSPV / byval starts making use of the AS of an indirect
-      // arg.
-      return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*byval=*/true);
-    }
+  if (getContext().getLangOpts().isTargetDevice() &&
+      isAggregateTypeForABI(Ty)) {
+    // Force copying aggregate type in kernel arguments by value when
+    // compiling CUDA targeting SPIR-V. This is required for the object
+    // copied to be valid on the device.
+    // This behavior follows the CUDA spec
+    // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#global-function-argument-processing,
+    // and matches the NVPTX implementation. TODO: hardcoding to 0 should be
+    // revisited if HIPSPV / byval starts making use of the AS of an indirect
+    // arg.
+    return getNaturalAlignIndirect(Ty, /*AddrSpace=*/0, /*byval=*/true);
   }
   return classifyArgumentType(Ty);
 }
@@ -430,6 +405,17 @@ void AMDGCNSPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 }
 
+llvm::FixedVectorType *
+SPIRVABIInfo::getOptimalVectorMemoryType(llvm::FixedVectorType *Ty,
+                                         const LangOptions &LangOpt) const {
+  // For Logical SPIR-V, we don't know the underlying hardware or layout.
+  // This means we don't know which vector size is better, and also cannot
+  // assume a smaller vector size is stored in a larger vector size.
+  if (getTarget().getTriple().isSPIRVLogical())
+    return Ty;
+  return DefaultABIInfo::getOptimalVectorMemoryType(Ty, LangOpt);
+}
+
 llvm::FixedVectorType *AMDGCNSPIRVABIInfo::getOptimalVectorMemoryType(
     llvm::FixedVectorType *Ty, const LangOptions &LangOpt) const {
   // AMDGPU has legal instructions for 96-bit so 3x32 can be supported.
@@ -455,6 +441,15 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI) {
 
 unsigned CommonSPIRTargetCodeGenInfo::getDeviceKernelCallingConv() const {
   return llvm::CallingConv::SPIR_KERNEL;
+}
+
+LangAS SPIRVTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place, use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
 }
 
 void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
@@ -563,11 +558,54 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
                  llvm::MDNode::get(M.getLLVMContext(), AttrMDArgs));
 }
 
-llvm::SyncScope::ID
-SPIRVTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &, SyncScope Scope,
-                                           llvm::AtomicOrdering,
-                                           llvm::LLVMContext &Ctx) const {
-  return Ctx.getOrInsertSyncScopeID(mapClangSyncScopeToLLVM(Scope));
+StringRef SPIRVTargetCodeGenInfo::getLLVMSyncScopeStr(
+    const LangOptions &, SyncScope Scope, llvm::AtomicOrdering) const {
+  switch (Scope) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return "singlethread";
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return "subgroup";
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return "workgroup";
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return "device";
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return "";
+  }
+  return "";
+}
+
+void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::Instruction &AtomicInst,
+    const AtomicExpr *AE) const {
+  if (CGF.CGM.getTriple().getVendor() != llvm::Triple::VendorType::AMD)
+    return;
+
+  auto *RMW = dyn_cast<llvm::AtomicRMWInst>(&AtomicInst);
+  if (!RMW)
+    return;
+
+  AtomicOptions AO = CGF.CGM.getAtomicOpts();
+  llvm::MDNode *Empty = llvm::MDNode::get(CGF.getLLVMContext(), {});
+  if (!AO.getOption(clang::AtomicOptionKind::FineGrainedMemory))
+    RMW->setMetadata("amdgpu.no.fine.grained.memory", Empty);
+  if (!AO.getOption(clang::AtomicOptionKind::RemoteMemory))
+    RMW->setMetadata("amdgpu.no.remote.memory", Empty);
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode) &&
+      RMW->getOperation() == llvm::AtomicRMWInst::FAdd &&
+      RMW->getType()->isFloatTy())
+    RMW->setMetadata("amdgpu.ignore.denormal.mode", Empty);
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

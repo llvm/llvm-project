@@ -1,0 +1,17 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "TagsAnalysisResult",
+      "result": {
+        "tags": []
+      }
+    },
+    {
+      "analysis_name": "PairsAnalysisResult",
+      "result": {
+        "pair_counts": "not-an-array"
+      }
+    }
+  ]
+}

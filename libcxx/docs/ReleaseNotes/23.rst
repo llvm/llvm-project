@@ -38,10 +38,29 @@ What's New in Libc++ 23.0.0?
 Implemented Papers
 ------------------
 
-- P2440R1 (partial): ``ranges::iota`` and ``ranges::shift_left`` are supported (`Github <https://llvm.org/PR105184>`__)
+- P2440R1: ``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right`` (`Github <https://llvm.org/PR105184>`__)
+- P1899R3: ``stride_view`` (`Github <https://llvm.org/PR105198>`__)
+- P3936R1: Safer ``atomic_ref::address`` (`Github <https://llvm.org/PR189594>`__)
+- P3953R3: Rename ``std::runtime_format`` (`Github <https://llvm.org/PR189624>`__)
+- P4052R0: Renaming saturation arithmetic functions (`Github <https://llvm.org/PR189589>`__)
+- P2781R9: ``std::constant_wrapper`` (`Github <https://llvm.org/PR148179>`__)
+- P3978R3: ``constant_wrapper`` should unwrap on call and subscript (`Github <https://llvm.org/PR189605>`__)
+- P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
+- P2322R6: ``ranges::fold`` (`Github <https://llvm.org/PR105208>`__)
+- P4144R1: Remove ``span``'s ``initializer_list`` constructor for C++26 (`Github <https://llvm.org/PR189612>`__)
+- P2542R8: ``views::concat`` (`Github <https://llvm.org/PR105419>`__)
+- P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
+- P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
 
 Improvements and New Features
 -----------------------------
+
+- The ``std::ranges::fold_left_with_iter`` algorithm has been optimized for
+  segmented iterators, resulting in a performance improvement of up to 1.38x
+  for ``std::deque<int>`` iterators.
+- ``std::copy(CharT*, CharT*, ostreambuf_iterator<CharT>)`` has been optimized, resulting in performance improvements
+  of up to 25x.
+- A lot of transitive includes have been removed, resulting in significant compile time improvements.
 
 Deprecations and Removals
 -------------------------
@@ -49,8 +68,19 @@ Deprecations and Removals
 - The ``std::launch::any`` enumerator that was accidentally provided as an extension is now deprecated.
   It will be removed in LLVM 25.
 
+- In ``__wrap_iter`` (iterator wrapper type for ``array``, ``span``, ``string``, ``string_view`` and ``vector``),
+  the ``base()`` method and ``iterator_type`` member type have been removed as they are non-standard.
+
+- In ``__bit_reference`` (the proxy ``reference`` type of ``bitset`` and ``vector<bool>``), the overloaded ``operator&``
+  is removed as it is non-standard and causes non-conforming behavior.
+
 Potentially breaking changes
 ----------------------------
+
+- libc++ has dropped a lot of transitive includes in all language modes. This improves compile time significantly, but
+  causes programs which rely on these includes to not compile anymore. Any errors caused by this should be fixable by
+  including the correct header. To ease the transition ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23`` can be defined, which
+  includes the removed headers again. This macro will be removed in LLVM 24.
 
 Announcements About Future Releases
 -----------------------------------
@@ -65,6 +95,19 @@ ABI Affecting Changes
 - ``bitset::operator[]`` returns ``bool`` since LLVM 22, making libc++ conforming. The behaviour can be reverted by
   defining ``_LIBCPP_DEPRECATED_ABI_BITSET_CONST_SUBSCRIPT_RETURN_REF``. Please inform the libc++ team if you need this
   flag, since it will be removed in LLVM 24 if there is no evidence that it's required.
+
+- ``vector::iterator`` and ``string::iterator`` no longer use ``__bounded_iter<__wrap_iter<Iter>>``, but instead
+  ``__bounded_iter<Iter>`` directly if ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR`` and
+  ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING`` are defined.
+
+- The ``const_iterator`` member type of ``std::deque`` is now corrected to hold a (possibly fancy) pointer to the
+  (possibly fancy) pointer allocated in the internal map. E.g. when the allocators use fancy pointers, the internal map
+  stores ``FancyPtr<T>`` objects, and the previous strategy accessed these objects via ``const FancyPtr<const T>``
+  lvalues, causing undefined behavior. Now ``const_iterator`` stores ``FancyPtr<const FancyPtr<T>>`` instead of
+  ``FancyPtr<const FancyPtr<const T>>``, which is technically an ABI break when these two types have incompatible
+  layouts.  The ``iterator`` member type is also changed to store ``FancyPtr<const FancyPtr<T>>`` because the internal
+  map is never modified via an ``iterator``. This is necessary for reducing undefined behavior and for adding
+  ``constexpr`` support for ``deque`` in C++26, so we do not provide any way to opt-out of that behavior.
 
 Build System Changes
 --------------------

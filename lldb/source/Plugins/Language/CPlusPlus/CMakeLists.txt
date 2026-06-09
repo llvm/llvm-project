@@ -6,6 +6,10 @@ lldb_tablegen(LanguageCPlusPlusPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE LanguageCPlusPlusProperties.td
   TARGET LLDBPluginLanguageCPlusPlusPropertiesEnumGen)
 
+lldb_tablegen(LanguageCPlusPlusProperties.json -dump-json
+  SOURCE LanguageCPlusPlusProperties.td
+  TARGET LLDBPluginLanguageCPlusPlusPropertiesJsonGen)
+
 add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   BlockPointer.cpp
   Coroutines.cpp
@@ -56,7 +60,6 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbTarget
     lldbUtility
     lldbValueObject
-    lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
 )

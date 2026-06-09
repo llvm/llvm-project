@@ -50,6 +50,7 @@ X86_CPU_TYPE(INTEL_SIERRAFOREST,  "sierraforest")
 X86_CPU_TYPE(INTEL_GRANDRIDGE,    "grandridge")
 X86_CPU_TYPE(INTEL_CLEARWATERFOREST, "clearwaterforest")
 X86_CPU_TYPE(AMDFAM1AH,           "amdfam1ah")
+X86_CPU_TYPE(HYGONFAM18H,         "hygonfam18h")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_TYPE_ALIAS(INTEL_BONNELL,    "atom")
@@ -107,8 +108,12 @@ X86_CPU_SUBTYPE(INTEL_COREI7_ARROWLAKE,      "arrowlake")
 X86_CPU_SUBTYPE(INTEL_COREI7_ARROWLAKE_S,    "arrowlake-s")
 X86_CPU_SUBTYPE(INTEL_COREI7_PANTHERLAKE,    "pantherlake")
 X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER5,            "znver5")
+X86_CPU_SUBTYPE(AMDFAM1AH_ZNVER6,            "znver6")
 X86_CPU_SUBTYPE(INTEL_COREI7_DIAMONDRAPIDS,  "diamondrapids")
 X86_CPU_SUBTYPE(INTEL_COREI7_NOVALAKE,       "novalake")
+X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M4,       "c86-4g-m4")
+X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M6,       "c86-4g-m6")
+X86_CPU_SUBTYPE(HYGONFAM18H_C86_4G_M7,       "c86-4g-m7")
 
 // Alternate names supported by __builtin_cpu_is and target multiversioning.
 X86_CPU_SUBTYPE_ALIAS(INTEL_COREI7_ALDERLAKE, "raptorlake")
@@ -267,6 +272,7 @@ X86_FEATURE       (PPX,                "ppx")
 X86_FEATURE       (NDD,                "ndd")
 X86_FEATURE       (EGPR,               "egpr")
 X86_FEATURE       (ZU,                 "zu")
+X86_FEATURE       (JMPABS,             "jmpabs")
 
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")

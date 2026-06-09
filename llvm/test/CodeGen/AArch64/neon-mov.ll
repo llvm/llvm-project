@@ -5,10 +5,10 @@
 ; RUN: llc -mattr=+neon,+fullfp16 -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
 
 ; This are copies of the above RUN lines but with vector constants enabled.
-; RUN: llc -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat < %s -verify-machineinstrs -mattr=+neon | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-SD
-; RUN: llc -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat < %s -verify-machineinstrs -mattr=+neon,+fullfp16 | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-SD
-; RUN: llc -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat -mattr=+neon -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-GI
-; RUN: llc -use-constant-int-for-fixed-length-splat -use-constant-fp-for-fixed-length-splat -mattr=+neon,+fullfp16 -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
+; RUN: llc -use-constant-int-for-fixed-length-splat < %s -verify-machineinstrs -mattr=+neon | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-SD
+; RUN: llc -use-constant-int-for-fixed-length-splat < %s -verify-machineinstrs -mattr=+neon,+fullfp16 | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-SD
+; RUN: llc -use-constant-int-for-fixed-length-splat -mattr=+neon -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOFP16,CHECK-NOFP16-GI
+; RUN: llc -use-constant-int-for-fixed-length-splat -mattr=+neon,+fullfp16 -global-isel %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
 
 target triple = "aarch64-none-linux-gnu"
 
@@ -600,16 +600,18 @@ declare <2 x i32> @test_movi1d(<2 x i32>, <2 x i32>)
 define <2 x i32> @movi1d() {
 ; CHECK-NOFP16-SD-LABEL: movi1d:
 ; CHECK-NOFP16-SD:       // %bb.0:
+; CHECK-NOFP16-SD-NEXT:    mov x8, #9223231299366420480 // =0x7fff800000000000
 ; CHECK-NOFP16-SD-NEXT:    movi d1, #0x00ffffffff0000
-; CHECK-NOFP16-SD-NEXT:    adrp x8, .LCPI57_0
-; CHECK-NOFP16-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI57_0]
+; CHECK-NOFP16-SD-NEXT:    movk x8, #32768, lsl #16
+; CHECK-NOFP16-SD-NEXT:    fmov d0, x8
 ; CHECK-NOFP16-SD-NEXT:    b test_movi1d
 ;
 ; CHECK-FP16-SD-LABEL: movi1d:
 ; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    mov x8, #9223231299366420480 // =0x7fff800000000000
 ; CHECK-FP16-SD-NEXT:    movi d1, #0x00ffffffff0000
-; CHECK-FP16-SD-NEXT:    adrp x8, .LCPI57_0
-; CHECK-FP16-SD-NEXT:    ldr d0, [x8, :lo12:.LCPI57_0]
+; CHECK-FP16-SD-NEXT:    movk x8, #32768, lsl #16
+; CHECK-FP16-SD-NEXT:    fmov d0, x8
 ; CHECK-FP16-SD-NEXT:    b test_movi1d
 ;
 ; CHECK-NOFP16-GI-LABEL: movi1d:

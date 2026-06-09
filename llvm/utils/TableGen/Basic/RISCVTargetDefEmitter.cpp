@@ -13,8 +13,12 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/RISCVISAUtils.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
@@ -42,28 +46,21 @@ static void printExtensionTable(raw_ostream &OS,
                  << R->getValueAsInt("MinorVersion") << "}},\n";
   }
 
-  OS << "};\n\n";
+  OS << "};\n";
 }
 
-static void emitRISCVExtensions(const RecordKeeper &Records, raw_ostream &OS) {
-  OS << "#ifdef GET_SUPPORTED_EXTENSIONS\n";
-  OS << "#undef GET_SUPPORTED_EXTENSIONS\n\n";
-
-  std::vector<const Record *> Extensions =
-      Records.getAllDerivedDefinitionsIfDefined("RISCVExtension");
-  llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
-    return getExtensionName(Rec1) < getExtensionName(Rec2);
-  });
-
+static void emitExtensionTable(ArrayRef<const Record *> Extensions,
+                               raw_ostream &OS) {
+  IfDefEmitter IfDef(OS, "GET_SUPPORTED_EXTENSIONS");
   if (!Extensions.empty()) {
     printExtensionTable(OS, Extensions, /*Experimental=*/false);
     printExtensionTable(OS, Extensions, /*Experimental=*/true);
   }
+}
 
-  OS << "#endif // GET_SUPPORTED_EXTENSIONS\n\n";
-
-  OS << "#ifdef GET_IMPLIED_EXTENSIONS\n";
-  OS << "#undef GET_IMPLIED_EXTENSIONS\n\n";
+static void emitImpliedExtensionTable(ArrayRef<const Record *> Extensions,
+                                      raw_ostream &OS) {
+  IfDefEmitter IfDef(OS, "GET_IMPLIED_EXTENSIONS");
 
   if (!Extensions.empty()) {
     OS << "\nstatic constexpr ImpliedExtsEntry ImpliedExts[] = {\n";
@@ -84,10 +81,19 @@ static void emitRISCVExtensions(const RecordKeeper &Records, raw_ostream &OS) {
       }
     }
 
-    OS << "};\n\n";
+    OS << "};\n";
   }
+}
 
-  OS << "#endif // GET_IMPLIED_EXTENSIONS\n\n";
+static void emitRISCVExtensions(const RecordKeeper &Records, raw_ostream &OS) {
+  std::vector<const Record *> Extensions =
+      Records.getAllDerivedDefinitionsIfDefined("RISCVExtension");
+  llvm::sort(Extensions, [](const Record *Rec1, const Record *Rec2) {
+    return getExtensionName(Rec1) < getExtensionName(Rec2);
+  });
+
+  emitExtensionTable(Extensions, OS);
+  emitImpliedExtensionTable(Extensions, OS);
 }
 
 // We can generate march string from target features as what has been described
@@ -144,12 +150,11 @@ static void printProfileTable(raw_ostream &OS,
     OS << "\"},\n";
   }
 
-  OS << "};\n\n";
+  OS << "};\n";
 }
 
 static void emitRISCVProfiles(const RecordKeeper &Records, raw_ostream &OS) {
-  OS << "#ifdef GET_SUPPORTED_PROFILES\n";
-  OS << "#undef GET_SUPPORTED_PROFILES\n\n";
+  IfDefEmitter IfDef(OS, "GET_SUPPORTED_PROFILES");
 
   ArrayRef<const Record *> Profiles =
       Records.getAllDerivedDefinitionsIfDefined("RISCVProfile");
@@ -162,8 +167,6 @@ static void emitRISCVProfiles(const RecordKeeper &Records, raw_ostream &OS) {
     if (HasExperimentalProfiles)
       printProfileTable(OS, Profiles, /*Experimental=*/true);
   }
-
-  OS << "#endif // GET_SUPPORTED_PROFILES\n\n";
 }
 
 static void emitRISCVProcs(const RecordKeeper &RK, raw_ostream &OS) {
@@ -240,7 +243,7 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
   llvm::DenseSet<std::pair<uint64_t, uint64_t>> Seen;
 #endif
 
-  OS << "#ifdef GET_RISCVExtensionBitmaskTable_IMPL\n";
+  IfDefEmitter IfDef(OS, "GET_RISCVExtensionBitmaskTable_IMPL", true);
   OS << "static const RISCVExtensionBitmask ExtensionBitmask[]={\n";
   for (const Record *Rec : Extensions) {
     unsigned GroupIDVal = Rec->getValueAsInt("GroupID");
@@ -259,7 +262,112 @@ static void emitRISCVExtensionBitmask(const RecordKeeper &RK, raw_ostream &OS) {
                  << "},\n";
   }
   OS << "};\n";
-  OS << "#endif\n";
+}
+
+static void emitRISCVTuneFeatures(const RecordKeeper &RK,
+                                  StringToOffsetTable &StrTable,
+                                  raw_ostream &OS) {
+  std::vector<const Record *> TuneFeatureRecords =
+      RK.getAllDerivedDefinitionsIfDefined("RISCVTuneFeature");
+
+  // {Post Directive Idx, Neg Directive Idx, TuneFeature Record}
+  SmallVector<std::tuple<unsigned, unsigned, const Record *>>
+      TuneFeatureDirectives;
+  // {Directive Idx -> Original Record}
+  // This is primarily for diagnosing purposes -- when there is a duplication,
+  // we are able to pointed out the previous definition.
+  DenseMap<unsigned, const Record *> DirectiveToRecord;
+  // A list of {Feature Name, Implied Feature Name}
+  SmallVector<std::pair<StringRef, StringRef>> ImpliedFeatureList;
+
+  for (const auto *R : TuneFeatureRecords) {
+    // Preemptively insert feature name into the string table because we know
+    // it will be used later.
+    StringRef FeatureName = R->getValueAsString("Name");
+    StrTable.GetOrAddStringOffset(FeatureName);
+
+    StringRef PosName = R->getValueAsString("PositiveDirectiveName");
+    StringRef NegName = R->getValueAsString("NegativeDirectiveName");
+    unsigned PosIdx = StrTable.GetOrAddStringOffset(PosName);
+    if (auto [ItEntry, Inserted] = DirectiveToRecord.try_emplace(PosIdx, R);
+        !Inserted) {
+      PrintError(R, "RISC-V tune feature positive directive '" +
+                        Twine(PosName) + "' was already defined");
+      PrintFatalNote(ItEntry->second, "Previously defined here");
+    }
+    unsigned NegIdx = StrTable.GetOrAddStringOffset(NegName);
+    if (auto [ItEntry, Inserted] = DirectiveToRecord.try_emplace(NegIdx, R);
+        !Inserted) {
+      PrintError(R, "RISC-V tune feature negative directive '" +
+                        Twine(NegName) + "' was already defined");
+      PrintFatalNote(ItEntry->second, "Previously defined here");
+    }
+
+    TuneFeatureDirectives.emplace_back(PosIdx, NegIdx, R);
+  }
+
+  for (const auto *R : TuneFeatureRecords) {
+    std::vector<const Record *> Implies = R->getValueAsListOfDefs("Implies");
+    for (const auto *ImpliedRecord : Implies) {
+      StringRef CurrFeatureName = R->getValueAsString("Name");
+      StringRef ImpliedFeatureName = ImpliedRecord->getValueAsString("Name");
+
+      ImpliedFeatureList.emplace_back(CurrFeatureName, ImpliedFeatureName);
+    }
+  }
+
+  IfDefEmitter IfDef(OS, "GET_TUNE_FEATURES");
+
+  StrTable.EmitStringTableDef(OS, "TuneFeatureStrings");
+  OS << "\n";
+
+  OS << "static constexpr RISCVTuneFeature TuneFeatures[] = {\n";
+  for (const auto &[PosIdx, NegIdx, R] : TuneFeatureDirectives) {
+    StringRef FeatureName = R->getValueAsString("Name");
+    OS.indent(4) << formatv("{{ {0}, {1}, {2} },\t// '{3}'\n", PosIdx, NegIdx,
+                            *StrTable.GetStringOffset(FeatureName),
+                            FeatureName);
+  }
+  OS << "};\n\n";
+
+  OS << "static constexpr RISCVImpliedTuneFeature ImpliedTuneFeatures[] = {\n";
+  for (auto [Feature, ImpliedFeature] : ImpliedFeatureList)
+    OS.indent(4) << formatv("{{ {0}, {1} }, // '{2}' -> '{3}'\n",
+                            *StrTable.GetStringOffset(Feature),
+                            *StrTable.GetStringOffset(ImpliedFeature), Feature,
+                            ImpliedFeature);
+  OS << "};\n";
+}
+
+static void
+emitRISCVConfigurableTuneFeatures(const RecordKeeper &RK,
+                                  const StringToOffsetTable &StrTable,
+                                  raw_ostream &OS) {
+  std::vector<const Record *> AllProcModels =
+      RK.getAllDerivedDefinitionsIfDefined("ProcessorModel");
+
+  IfDefEmitter IfDef(OS, "GET_CONFIGURABLE_TUNE_FEATURES");
+
+  OS << "static constexpr RISCVConfigurableTuneFeatures "
+        "ConfigurableTuneFeatures[] = {\n";
+
+  for (const Record *Proc : AllProcModels) {
+    StringRef ProcName = Proc->getValueAsString("Name");
+    std::vector<const Record *> TuneFeatures =
+        Proc->getValueAsListOfDefs("ConfigurableTuneFeatures");
+    for (const Record *TF : TuneFeatures) {
+      unsigned PosDirectiveIdx = *StrTable.GetStringOffset(
+          TF->getValueAsString("PositiveDirectiveName"));
+      unsigned NegDirectiveIdx = *StrTable.GetStringOffset(
+          TF->getValueAsString("NegativeDirectiveName"));
+      OS.indent(4) << formatv("{{ {{ \"{0}\" }, {1} },\n", ProcName,
+                              PosDirectiveIdx);
+      OS.indent(4) << formatv("{{ {{ \"{0}\" }, {1} },\n", ProcName,
+                              NegDirectiveIdx);
+    }
+  }
+
+  OS << "};\n";
 }
 
 static void emitRiscvTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
@@ -267,6 +375,10 @@ static void emitRiscvTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
   emitRISCVProfiles(RK, OS);
   emitRISCVProcs(RK, OS);
   emitRISCVExtensionBitmask(RK, OS);
+
+  StringToOffsetTable TuneFeatureStrTable;
+  emitRISCVTuneFeatures(RK, TuneFeatureStrTable, OS);
+  emitRISCVConfigurableTuneFeatures(RK, TuneFeatureStrTable, OS);
 }
 
 static TableGen::Emitter::Opt X("gen-riscv-target-def", emitRiscvTargetDef,

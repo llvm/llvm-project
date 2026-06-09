@@ -1,7 +1,7 @@
 ! Simple test for lowering of OpenMP Threadprivate Directive with HLFIR.
 
-!RUN: %flang_fc1 -flang-experimental-hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
-!RUN: bbc -hlfir -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s
+!RUN: bbc -emit-hlfir -fopenmp %s -o - | FileCheck %s
 
 !CHECK-LABEL: @_QPsub
 !CHECK:    %[[ADDR:.*]] = fir.address_of(@_QFsubEa) : !fir.ref<i32>
@@ -55,7 +55,6 @@ end subroutine
 
 module mod_01
   integer, save :: a
-  !CHECK: fir.global @_QMmod_01Ea : i32
   !$omp threadprivate(a)
 end module
 
@@ -71,6 +70,7 @@ subroutine sub_05()
   !$omp end parallel
 end subroutine
 
+!CHECK: fir.global @_QMmod_01Ea : i32
 
 !CHECK:  fir.global internal @_QFsubEa : i32
 

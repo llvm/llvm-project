@@ -24,11 +24,12 @@
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/PseudoTerminal.h"
-#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
+#include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -36,6 +37,7 @@
 #include "lldb/Utility/State.h"
 
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -60,7 +62,7 @@ std::string GetProcessExecutableName(HANDLE process_handle) {
   do {
     file_name_size *= 2;
     file_name.resize(file_name_size);
-    copied = ::GetModuleFileNameExW(process_handle, NULL, file_name.data(),
+    copied = ::GetModuleFileNameExW(process_handle, nullptr, file_name.data(),
                                     file_name_size);
   } while (copied >= file_name_size);
   file_name.resize(copied);
@@ -73,7 +75,7 @@ std::string GetProcessExecutableName(DWORD pid) {
   std::string file_name;
   HANDLE process_handle =
       ::OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
-  if (process_handle != NULL) {
+  if (process_handle != nullptr) {
     file_name = GetProcessExecutableName(process_handle);
     ::CloseHandle(process_handle);
   }
@@ -102,17 +104,15 @@ static bool ShouldUseLLDBServer() {
 
 void ProcessWindows::Initialize() {
   if (!ShouldUseLLDBServer()) {
-    static llvm::once_flag g_once_flag;
-
-    llvm::call_once(g_once_flag, []() {
-      PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                    GetPluginDescriptionStatic(),
-                                    CreateInstance);
-    });
+    PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                  GetPluginDescriptionStatic(), CreateInstance);
   }
 }
 
-void ProcessWindows::Terminate() {}
+void ProcessWindows::Terminate() {
+  if (!ShouldUseLLDBServer())
+    PluginManager::UnregisterPlugin(CreateInstance);
+}
 
 llvm::StringRef ProcessWindows::GetPluginDescriptionStatic() {
   return "Process plugin for Windows";
@@ -127,7 +127,7 @@ ProcessWindows::ProcessWindows(lldb::TargetSP target_sp,
           RegisterContextWindows::GetNumHardwareBreakpointSlots(),
           LLDB_INVALID_BREAK_ID) {}
 
-ProcessWindows::~ProcessWindows() {}
+ProcessWindows::~ProcessWindows() = default;
 
 Status ProcessWindows::EnableBreakpointSite(BreakpointSite *bp_site) {
   if (bp_site->HardwareRequired())
@@ -214,7 +214,7 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
   error = LaunchProcess(launch_info, delegate);
   if (error.Success())
     SetID(launch_info.GetProcessID());
-  m_pty = launch_info.GetPTYSP();
+  m_pty = launch_info.TakePTY();
   return error;
 }
 
@@ -414,7 +414,7 @@ void ProcessWindows::RefreshStateAfterStop() {
   // If we're at a BreakpointSite, mark this as an Unexecuted Breakpoint.
   // We'll clear that state if we've actually executed the breakpoint.
   BreakpointSiteSP site(GetBreakpointSiteList().FindByAddress(pc));
-  if (site && site->IsEnabled())
+  if (site && IsBreakpointSitePhysicallyEnabled(*site))
     stop_thread->SetThreadStoppedAtUnexecutedBP(pc);
 
   switch (active_exception->GetExceptionCode()) {
@@ -555,10 +555,11 @@ bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
       new_thread_list.AddThread(old_thread);
       ++new_size;
       ++continued_threads;
-      LLDB_LOGV(log, "Thread {0} was running and is still running.",
-                old_thread_id);
+      LLDB_LOG_VERBOSE(log, "Thread {0} was running and is still running.",
+                       old_thread_id);
     } else {
-      LLDB_LOGV(log, "Thread {0} was running and has exited.", old_thread_id);
+      LLDB_LOG_VERBOSE(log, "Thread {0} was running and has exited.",
+                       old_thread_id);
       ++exited_threads;
     }
   }
@@ -569,7 +570,8 @@ bool ProcessWindows::DoUpdateThreadList(ThreadList &old_thread_list,
     new_thread_list.AddThread(thread_info.second);
     ++new_size;
     ++new_threads;
-    LLDB_LOGV(log, "Thread {0} is new since last update.", thread_info.first);
+    LLDB_LOG_VERBOSE(log, "Thread {0} is new since last update.",
+                     thread_info.first);
   }
 
   LLDB_LOG(log, "{0} new threads, {1} old threads, {2} exited threads.",
@@ -640,7 +642,7 @@ lldb::addr_t ProcessWindows::GetImageInfoAddress() {
 }
 
 DynamicLoaderWindowsDYLD *ProcessWindows::GetDynamicLoader() {
-  if (m_dyld_up.get() == NULL)
+  if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderWindowsDYLD::GetPluginNameStatic()));
   return static_cast<DynamicLoaderWindowsDYLD *>(m_dyld_up.get());
@@ -651,8 +653,13 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
-  if (m_pty)
+  if (m_pty) {
+    DrainProcessStdout();
+    m_pty->SetStopping(true);
     m_pty->Close();
+    m_stdio_communication.InterruptRead();
+    m_stdio_communication.StopReadThread();
+  }
 
   TargetSP target = CalculateTarget();
   if (target) {
@@ -666,6 +673,32 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   SetPrivateState(eStateExited);
 
   ProcessDebugger::OnExitProcess(exit_code);
+}
+
+void ProcessWindows::DrainProcessStdout() {
+  if (!m_stdio_communication.ReadThreadIsRunning())
+    return;
+  m_stdio_communication.SynchronizeWithReadThread();
+  if (!m_pty || m_pty->GetMode() != PseudoConsole::Mode::ConPTY)
+    return;
+
+  HANDLE pipe = m_pty->GetSTDOUTHandle();
+  for (int consec_empty = 0; consec_empty < 3;) {
+    if (!m_stdio_communication.ReadThreadIsRunning())
+      break;
+    DWORD avail = 0;
+    // PeekNamedPipe is thread safe.
+    if (!::PeekNamedPipe(pipe, nullptr, 0, nullptr, &avail, nullptr))
+      break;
+    if (avail > 0) {
+      consec_empty = 0;
+      m_stdio_communication.SynchronizeWithReadThread();
+    } else {
+      ++consec_empty;
+      if (consec_empty < 3)
+        ::SleepEx(1, FALSE);
+    }
+  }
 }
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
@@ -737,6 +770,7 @@ ProcessWindows::OnDebugException(bool first_chance,
   if (!first_chance) {
     // Not any second chance exception is an application crash by definition.
     // It may be an expression evaluation crash.
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
   }
 
@@ -757,10 +791,17 @@ ProcessWindows::OnDebugException(bool first_chance,
       LLDB_LOG(log, "Hit non-loader breakpoint at address {0:x}.",
                record.GetExceptionAddress());
     }
+    // Drain any in-flight process output before announcing the stop. The I/O
+    // reader thread and this debug-event thread run concurrently. Without
+    // synchronization the eBroadcastBitStateChanged(Stopped) event can reach
+    // the Debugger event thread before the preceding eBroadcastBitSTDOUT
+    // events.
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
   case EXCEPTION_SINGLE_STEP:
     result = ExceptionResult::BreakInDebugger;
+    DrainProcessStdout();
     SetPrivateState(eStateStopped);
     break;
   default:
@@ -829,7 +870,91 @@ void ProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
     dyld->OnUnloadModule(module_addr);
 }
 
-void ProcessWindows::OnDebugString(const std::string &string) {}
+void ProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
+                                   bool is_unicode,
+                                   uint16_t length_lower_word) {
+  Log *log = GetLog(WindowsLog::Process);
+
+  llvm::SmallVector<char, 256> buffer;
+  llvm::Error err =
+      ReadDebugString(debug_string_addr, is_unicode, length_lower_word, buffer);
+  if (err) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "Failed to read debug string at {1:x} (size & 0xffff={2}, "
+                   "unicode={3}): {0}",
+                   debug_string_addr, length_lower_word, is_unicode);
+    return;
+  }
+  if (buffer.empty())
+    return;
+
+  if (is_unicode) {
+    assert(buffer.size() % 2 == 0);
+    llvm::ArrayRef<unsigned short> utf16(
+        reinterpret_cast<const unsigned short *>(buffer.data()),
+        buffer.size() / 2);
+    std::string out;
+    if (!llvm::convertUTF16ToUTF8String(utf16, out)) {
+      LLDB_LOG(log, "Debug string is not valid Utf 16");
+      return;
+    }
+
+    AppendSTDOUT(out.data(), out.size());
+  } else {
+    AppendSTDOUT(buffer.data(), buffer.size());
+  }
+}
+
+llvm::Error
+ProcessWindows::ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                                uint16_t length_lower_word,
+                                llvm::SmallVectorImpl<char> &output) {
+  if (is_unicode && length_lower_word % 2 != 0)
+    return llvm::createStringError(
+        "Utf16 string can't have uneven size in bytes");
+
+  const auto is_zero_terminated = [&] {
+    // The zero terminator is always at the end of the buffer.
+    if (is_unicode)
+      return output.size() >= 2 && output.back() == 0 &&
+             output[output.size() - 2] == 0;
+
+    return !output.empty() && output.back() == 0;
+  };
+
+  // Read at most 1 MiB ((1 << 16) * 16 - 1 Bytes) since we don't know the exact
+  // size of the string. We know that `strlen(string) & 0xffff ==
+  // length_lower_word`, so we read in chunks until we reach the terminator:
+  // - 0: `length_lower_word` Bytes
+  // - 1..16: 64 KiB (= 2^16 Bytes)
+  size_t start = length_lower_word == 0 ? 1 : 0;
+  for (size_t i = start; i < 16; ++i) {
+    output.resize_for_overwrite(length_lower_word + i * (1 << 16));
+    size_t chunk_size = i == 0 ? length_lower_word : (1 << 16);
+    lldb::addr_t addr = debug_string_addr + output.size_in_bytes() - chunk_size;
+
+    Status error;
+    size_t bytes_read =
+        DoReadMemory(addr, output.end() - chunk_size, chunk_size, error);
+    if (error.Fail())
+      return error.takeError();
+
+    if (bytes_read != chunk_size) {
+      return llvm::createStringErrorV(
+          "Expected to read {0} bytes, but read {1}", chunk_size, bytes_read);
+    }
+
+    if (is_zero_terminated())
+      break;
+  }
+
+  if (!is_zero_terminated())
+    return llvm::createStringError("String is 1 MiB or larger");
+
+  // Remove null terminator.
+  output.pop_back_n(is_unicode ? 2 : 1);
+  return llvm::Error::success();
+}
 
 void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);
@@ -858,6 +983,15 @@ void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
 
 std::optional<uint32_t> ProcessWindows::GetWatchpointSlotCount() {
   return RegisterContextWindows::GetNumHardwareBreakpointSlots();
+}
+
+std::optional<DWORD> ProcessWindows::GetActiveExceptionCode() const {
+  if (!m_session_data || !m_session_data->m_debugger)
+    return std::nullopt;
+  auto exc = m_session_data->m_debugger->GetActiveException().lock();
+  if (!exc)
+    return std::nullopt;
+  return exc->GetExceptionCode();
 }
 
 Status ProcessWindows::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
@@ -951,129 +1085,21 @@ Status ProcessWindows::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
   return error;
 }
 
-class IOHandlerProcessSTDIOWindows : public IOHandler {
-public:
-  IOHandlerProcessSTDIOWindows(Process *process, HANDLE conpty_input)
-      : IOHandler(process->GetTarget().GetDebugger(),
-                  IOHandler::Type::ProcessIO),
-        m_process(process),
-        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
-        m_write_file(conpty_input) {
-    m_pipe.CreateNew();
+size_t ProcessWindows::PutSTDIN(const char *src, size_t src_len,
+                                Status &error) {
+  if (!m_stdio_communication.IsConnected()) {
+    error = Status::FromErrorString("stdin not connected");
+    return 0;
   }
+  ConnectionStatus status;
+  return m_stdio_communication.WriteAll(src, src_len, status, &error);
+}
 
-  ~IOHandlerProcessSTDIOWindows() override = default;
-
-  void SetIsRunning(bool running) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(!running);
-    m_is_running = running;
-  }
-
-  void Run() override {
-    if (!m_read_file.IsValid() || m_write_file == INVALID_HANDLE_VALUE ||
-        !m_pipe.CanRead() || !m_pipe.CanWrite()) {
-      SetIsDone(true);
-      return;
-    }
-
-    SetIsDone(false);
-    SetIsRunning(true);
-
-    HANDLE hStdin = (HANDLE)_get_osfhandle(m_read_file.GetDescriptor());
-    HANDLE hInterrupt = (HANDLE)_get_osfhandle(m_pipe.GetReadFileDescriptor());
-    HANDLE waitHandles[2] = {hStdin, hInterrupt};
-
-    while (true) {
-      {
-        std::lock_guard<std::mutex> guard(m_mutex);
-        if (GetIsDone())
-          goto exit_loop;
-      }
-
-      DWORD result = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
-      switch (result) {
-      case WAIT_FAILED:
-        goto exit_loop;
-      case WAIT_OBJECT_0: {
-        char ch = 0;
-        DWORD read = 0;
-        if (!ReadFile(hStdin, &ch, 1, &read, nullptr) || read != 1)
-          goto exit_loop;
-
-        DWORD written = 0;
-        if (!WriteFile(m_write_file, &ch, 1, &written, nullptr) || written != 1)
-          goto exit_loop;
-        break;
-      }
-      case WAIT_OBJECT_0 + 1: {
-        char ch = 0;
-        DWORD read = 0;
-        if (!ReadFile(hInterrupt, &ch, 1, &read, nullptr) || read != 1)
-          goto exit_loop;
-
-        if (ch == eControlOpQuit)
-          goto exit_loop;
-        if (ch == eControlOpInterrupt &&
-            StateIsRunningState(m_process->GetState()))
-          m_process->SendAsyncInterrupt();
-        break;
-      }
-      default:
-        goto exit_loop;
-      }
-    }
-
-  exit_loop:;
-    SetIsRunning(false);
-  }
-
-  void Cancel() override {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(true);
-    if (m_is_running) {
-      char ch = eControlOpQuit;
-      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
-                       "Pipe write failed: {0}");
-      }
-    }
-  }
-
-  bool Interrupt() override {
-    if (m_active) {
-      char ch = eControlOpInterrupt;
-      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
-    }
-    if (StateIsRunningState(m_process->GetState())) {
-      m_process->SendAsyncInterrupt();
-      return true;
-    }
-    return false;
-  }
-
-  void GotEOF() override {}
-
-private:
-  Process *m_process;
-  NativeFile m_read_file; // Read from this file (usually actual STDIN for LLDB
-  HANDLE m_write_file =
-      INVALID_HANDLE_VALUE; // Write to this file (usually the primary pty for
-                            // getting io to debuggee)
-  Pipe m_pipe;
-  std::mutex m_mutex;
-  bool m_is_running = false;
-
-  enum ControlOp : char {
-    eControlOpQuit = 'q',
-    eControlOpInterrupt = 'i',
-  };
-};
-
-void ProcessWindows::SetPseudoConsoleHandle(
-    const std::shared_ptr<PseudoConsole> &pty) {
+void ProcessWindows::SetPseudoConsoleHandle() {
+  if (m_pty == nullptr)
+    return;
   m_stdio_communication.SetConnection(
-      std::make_unique<ConnectionGenericFile>(pty->GetSTDOUTHandle(), false));
+      std::make_unique<ConnectionConPTY>(m_pty));
   if (m_stdio_communication.IsConnected()) {
     m_stdio_communication.SetReadThreadBytesReceivedCallback(
         STDIOReadThreadBytesReceived, this);
@@ -1083,8 +1109,8 @@ void ProcessWindows::SetPseudoConsoleHandle(
     {
       std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
       if (!m_process_input_reader)
-        m_process_input_reader = std::make_shared<IOHandlerProcessSTDIOWindows>(
-            this, pty->GetSTDINHandle());
+        m_process_input_reader =
+            std::make_shared<IOHandlerProcessSTDIOWindows>(this);
     }
   }
 }

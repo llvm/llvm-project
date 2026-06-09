@@ -55,6 +55,10 @@ def CvtRN_RELU     : PatLeaf<(i32 0x45)>;
 def CvtRZ_RELU     : PatLeaf<(i32 0x46)>;
 def CvtRS_RELU     : PatLeaf<(i32 0x4A)>;
 
+def CvtNONE_SATFINITE  : PatLeaf<(i32 0x80)>;
+def CvtRN_SATFINITE   : PatLeaf<(i32 0x85)>;
+def CvtRN_RELU_SATFINITE : PatLeaf<(i32 0xC5)>;
+
 def CvtMode : Operand<i32> {
   let PrintMethod = "printCvtMode";
 }
@@ -71,6 +75,11 @@ def getFTZFlag : SDNodeXForm<imm, [{
 
 def FTZFlag : OperandWithDefaultOps<i1, (ops (getFTZFlag (i1 0)))> {
   let PrintMethod = "printFTZFlag";
+}
+
+// Flag to indicate predicate negation (@!p) for conditional branches.
+def BranchFlag : OperandWithDefaultOps<i1, (ops (i1 0))> {
+  let PrintMethod = "printNegatedPredicate";
 }
 
 // Compare modes
@@ -658,19 +667,30 @@ let hasSideEffects = false in {
                 (ins B32:$src), (ins CvtMode:$mode),
                 "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.f16x2">,
       Requires<[hasPTX<81>, hasSM<89>]>;
+    def _bf16x2 :
+      BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}.satfinite${mode:relu}." # F8Name # "x2.bf16x2">,
+      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
   }
 
   defm CVT_e4m3x2 : CVT_TO_F8X2<"e4m3">;
   defm CVT_e5m2x2 : CVT_TO_F8X2<"e5m2">;
+  
+  multiclass CVT_F8x2_TO_FP16x2<string F8Name> {
+    def f16x2_ # F8Name # x2 :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.f16x2." # F8Name # "x2">,
+      Requires<[hasPTX<81>, hasSM<89>]>;
+    def bf16x2_ # F8Name # x2_scale :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F8Name # "x2">,
+      Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
+  }
 
-  class CVT_f16x2_fp8<string F8Name> :
-    BasicFlagsNVPTXInst<(outs B32:$dst),
-              (ins B16:$src), (ins CvtMode:$mode),
-              "cvt${mode:base}${mode:relu}.f16x2." # F8Name # "x2">,
-    Requires<[hasPTX<81>, hasSM<89>]>;
-
-  def CVT_f16x2_e4m3x2 : CVT_f16x2_fp8<"e4m3">;
-  def CVT_f16x2_e5m2x2 : CVT_f16x2_fp8<"e5m2">;
+  defm CVT_ : CVT_F8x2_TO_FP16x2<"e4m3">;
+  defm CVT_ : CVT_F8x2_TO_FP16x2<"e5m2">;
   
   class CVT_TO_FP8X4<string F8Name> :
     NVPTXInst<(outs B32:$dst),
@@ -702,16 +722,38 @@ let hasSideEffects = false in {
   defm CVT_to_tf32_rz_satf : CVT_TO_TF32<"rz.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rn_relu_satf  : CVT_TO_TF32<"rn.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
   defm CVT_to_tf32_rz_relu_satf  : CVT_TO_TF32<"rz.relu.satfinite", [hasPTX<86>, hasSM<100>]>;
+  
+let Predicates = [callSubtarget<"hasS2F6X2ConversionSupport">] in {
+  def CVT_s2f6x2_f32_sf_scale : BasicFlagsNVPTXInst<(outs B16:$dst),
+      (ins B32:$src1, B32:$src2, B16:$scale), (ins CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.s2f6x2.f32">;
+  def CVT_s2f6x2_bf16x2_sf_scale : BasicFlagsNVPTXInst<(outs B16:$dst),
+      (ins B32:$src, B16:$scale), (ins CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.s2f6x2.bf16x2">;
+  def CVT_bf16x2_s2f6x2_scale : BasicFlagsNVPTXInst<(outs B32:$dst),
+      (ins B16:$src, B16:$scale), (ins CvtMode:$mode),
+      "cvt${mode:base}${mode:relu}.scaled::n2::ue8m0.bf16x2.s2f6x2">;
+  def CVT_bf16x2_s2f6x2_sf_scale : BasicFlagsNVPTXInst<(outs B32:$dst),
+      (ins B16:$src, B16:$scale), (ins CvtMode:$mode),
+      "cvt${mode:base}.satfinite${mode:relu}.scaled::n2::ue8m0.bf16x2.s2f6x2">;
+}
 
   // FP6 conversions.
-  foreach type = ["e2m3x2", "e3m2x2"] in {
-    def CVT_ # type # _f32_sf : BasicFlagsNVPTXInst<(outs B16:$dst),
-                                          (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
-                                          "cvt${mode:base}.satfinite${mode:relu}." # type # ".f32">;
-    def CVT_f16x2_ # type : BasicFlagsNVPTXInst<(outs B32:$dst),
-                                      (ins B16:$src), (ins CvtMode:$mode),
-                                      "cvt${mode:base}${mode:relu}.f16x2." # type>;
+  multiclass CVT_F6x2_TO_FP16x2<string F6Name> {
+    def f16x2_ # F6Name # x2 :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}.f16x2." # F6Name # "x2">,
+      Requires<[callSubtarget<"hasNarrowFPConversionSupport">]>;
+    def bf16x2_ # F6Name # x2_scale :
+      BasicFlagsNVPTXInst<(outs B32:$dst),
+                (ins B16:$src, B16:$src2), (ins CvtMode:$mode),
+                "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2." # F6Name # "x2">,
+      Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
   }
+
+  defm CVT_ : CVT_F6x2_TO_FP16x2<"e2m3">;
+  defm CVT_ : CVT_F6x2_TO_FP16x2<"e3m2">;
   
   class CVT_TO_FP6X4<string F6Name> :
     NVPTXInst<(outs B32:$dst),
@@ -721,6 +763,24 @@ let hasSideEffects = false in {
 
   def CVT_e2m3x4_f32x4_rs_sf : CVT_TO_FP6X4<"e2m3">;
   def CVT_e3m2x4_f32x4_rs_sf : CVT_TO_FP6X4<"e3m2">;
+  
+  multiclass CVT_TO_FP6X2<string FP6Name> {
+    def _f32_sf :
+      BasicFlagsNVPTXInst<(outs B16:$dst),
+                (ins B32:$src1, B32:$src2), (ins CvtMode:$mode),
+                "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.f32">;
+    def _f16x2_sf : 
+      BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
+              "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.f16x2">,
+      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
+    def _bf16x2_sf : 
+      BasicFlagsNVPTXInst<(outs B16:$dst), (ins B32:$src), (ins CvtMode:$mode),
+              "cvt${mode:base}.satfinite${mode:relu}." # FP6Name # "x2.bf16x2">,
+      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
+  }
+
+  defm CVT_e2m3x2 : CVT_TO_FP6X2<"e2m3">;
+  defm CVT_e3m2x2 : CVT_TO_FP6X2<"e3m2">;
   
   // FP4 conversions.
   def CVT_e2m1x2_f32_sf : NVPTXInst<(outs B16:$dst),
@@ -738,12 +798,40 @@ let hasSideEffects = false in {
                  "cvt.u8.u16 \t%e2m1x2_in, $src; \n\t",
                  "cvt${mode:base}${mode:relu}.f16x2.e2m1x2 \t$dst, %e2m1x2_in; \n\t",
                  "}}"), []>;
+
+  def CVT_bf16x2_e2m1x2_scale :
+    NVPTXInst<(outs B32:$dst),
+              (ins B16:$src1, B16:$src2, CvtMode:$mode),
+              "{{ \n\t" #
+              ".reg .b8 \t%e2m1x2_in; \n\t" #
+              "cvt.u8.u16 \t%e2m1x2_in, $src1; \n\t" #
+              "cvt${mode:base}${mode:relu}${mode:satfinite}.scaled::n2::ue8m0.bf16x2.e2m1x2 \t$dst, %e2m1x2_in, $src2; \n\t" #
+              "}}", []>,
+    Requires<[callSubtarget<"hasNarrowFPToBF16x2ConversionSupport">]>;
                  
   def CVT_e2m1x4_f32x4_rs_sf :
     NVPTXInst<(outs B16:$dst),
               (ins B32:$src1, B32:$src2, B32:$src3, B32:$src4, B32:$src5, CvtMode:$mode),
               "cvt${mode:base}${mode:relu}.satfinite.e2m1x4.f32 \t" # 
                 "$dst, {{$src1, $src2, $src3, $src4}}, $src5;">;
+
+  def CVT_e2m1x2_f16x2_sf : NVPTXInst<(outs B16:$dst), 
+      (ins B32:$src, CvtMode:$mode),
+      "{{ \n\t" #  
+      ".reg .b8 \t%e2m1x2_out; \n\t" #
+      "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.f16x2 \t%e2m1x2_out, $src; \n\t" #
+      "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
+      "}}", []>,
+      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
+
+  def CVT_e2m1x2_bf16x2_sf : NVPTXInst<(outs B16:$dst), 
+      (ins B32:$src, CvtMode:$mode),
+      "{{ \n\t" #  
+      ".reg .b8 \t%e2m1x2_out; \n\t" #
+      "cvt${mode:base}.satfinite${mode:relu}.e2m1x2.bf16x2 \t%e2m1x2_out, $src; \n\t" #
+      "cvt.u16.u8 \t$dst, %e2m1x2_out; \n\t" #
+      "}}", []>,
+      Requires<[callSubtarget<"hasFP16X2ToNarrowFPConversionSupport">]>;
 
   // UE8M0x2 conversions.
   class CVT_f32_to_ue8m0x2<string sat = ""> :
@@ -883,10 +971,13 @@ defm SREM : I3<"rem.s", srem, commutative = false>;
 defm UREM : I3<"rem.u", urem, commutative = false>;
 
 foreach t = [I16RT, I32RT, I64RT] in {
+  // PTX abs.s is undefined for INT_MIN, so it matches ABS_MIN_POISON
+  // semantics (where INT_MIN input is poison). ISD::ABS requires
+  // abs(INT_MIN) == INT_MIN and is expanded separately.
   def ABS_S # t.Size :
     BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a),
                    "abs.s" # t.Size,
-                   [(set t.Ty:$dst, (abs t.Ty:$a))]>;
+                   [(set t.Ty:$dst, (abs_min_poison t.Ty:$a))]>;
 
   def NEG_S # t.Size :
     BasicNVPTXInst<(outs t.RC:$dst), (ins t.RC:$src),
@@ -1516,7 +1607,7 @@ multiclass FSETP<RegTyInfo t, bit allow_ftz = true> {
   defvar ftz_str = !if(allow_ftz, "$ftz", "");
   defvar op_str = "setp.${cmp:FCmp}" # ftz_str # "." # t.PtxType;
   defvar flags = !con((ins CmpMode:$cmp), !if(allow_ftz, (ins  FTZFlag:$ftz), (ins)));
-  let hasSideEffects = false in {
+  let hasSideEffects = false, isCompare = 1, isCommutable = 1 in {
     def rr :
       BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.RC:$b),
                           flags, op_str>;
@@ -1542,7 +1633,7 @@ multiclass FSETP<RegTyInfo t, bit allow_ftz = true> {
 
 multiclass ISETP<RegTyInfo t> {
   defvar op_str = "setp.${cmp:ICmp}.${cmp:IType}" # t.Size;
-  let hasSideEffects = false in {
+  let hasSideEffects = false, isCompare = 1, isCommutable = 1 in {
     def rr :
       BasicFlagsNVPTXInst<(outs B1:$dst), (ins t.RC:$a, t.RC:$b),
                           (ins CmpMode:$cmp), op_str>;
@@ -1975,7 +2066,7 @@ def : Pat<(f16 (uint_to_fp i64:$a)), (CVT_f16_u64 $a, CvtRN)>;
 
 // sint -> bf16
 let Predicates = [hasPTX<78>, hasSM<90>] in {
-  def : Pat<(bf16 (sint_to_fp i1:$a)), (CVT_bf16_s32 (SELP_b32ii 1, 0, $a), CvtRN)>;
+  def : Pat<(bf16 (sint_to_fp i1:$a)), (CVT_bf16_s32 (SELP_b32ii -1, 0, $a), CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i16:$a)), (CVT_bf16_s16 $a, CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i32:$a)), (CVT_bf16_s32 $a, CvtRN)>;
   def : Pat<(bf16 (sint_to_fp i64:$a)), (CVT_bf16_s64 $a, CvtRN)>;
@@ -2014,26 +2105,25 @@ def : Pat<(f64 (uint_to_fp i32:$a)), (CVT_f64_u32 $a, CvtRN)>;
 def : Pat<(f64 (uint_to_fp i64:$a)), (CVT_f64_u64 $a, CvtRN)>;
 
 
+// fp_to_sint/uint to i1 is custom-lowered to an fp compare
+// (NVPTXTargetLowering::LowerOperation), so no i1 patterns appear below.
+
 // f16 -> sint
-def : Pat<(i1  (fp_to_sint f16:$a)), (SETP_i16ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint f16:$a)), (CVT_s16_f16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint f16:$a)), (CVT_s32_f16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_sint f16:$a)), (CVT_s64_f16 $a, CvtRZI)>;
 
 // f16 -> uint
-def : Pat<(i1  (fp_to_uint f16:$a)), (SETP_i16ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint f16:$a)), (CVT_u16_f16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint f16:$a)), (CVT_u32_f16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint f16:$a)), (CVT_u64_f16 $a, CvtRZI)>;
 
 // bf16 -> sint
-def : Pat<(i1  (fp_to_sint bf16:$a)), (SETP_i16ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint bf16:$a)), (CVT_s16_bf16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint bf16:$a)), (CVT_s32_bf16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_sint bf16:$a)), (CVT_s64_bf16 $a, CvtRZI)>;
 
 // bf16 -> uint
-def : Pat<(i1 (fp_to_uint bf16:$a)),  (SETP_i16ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint bf16:$a)), (CVT_u16_bf16 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint bf16:$a)), (CVT_u32_bf16 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint bf16:$a)), (CVT_u64_bf16 $a, CvtRZI)>;
@@ -2043,7 +2133,6 @@ let Predicates = [doF32FTZ] in {
   def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, CvtRZI_FTZ)>;
   def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, CvtRZI_FTZ)>;
 }
-def : Pat<(i1  (fp_to_sint f32:$a)), (SETP_i32ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint f32:$a)), (CVT_s16_f32 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint f32:$a)), (CVT_s32_f32 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_sint f32:$a)), (CVT_s64_f32 $a, CvtRZI)>;
@@ -2054,19 +2143,16 @@ let Predicates = [doF32FTZ] in {
   def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, CvtRZI_FTZ)>;
   def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, CvtRZI_FTZ)>;
 }
-def : Pat<(i1  (fp_to_uint f32:$a)), (SETP_i32ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint f32:$a)), (CVT_u16_f32 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint f32:$a)), (CVT_u32_f32 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint f32:$a)), (CVT_u64_f32 $a, CvtRZI)>;
 
 // f64 -> sint
-def : Pat<(i1  (fp_to_sint f64:$a)), (SETP_i64ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_sint f64:$a)), (CVT_s16_f64 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_sint f64:$a)), (CVT_s32_f64 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_sint f64:$a)), (CVT_s64_f64 $a, CvtRZI)>;
 
 // f64 -> uint
-def : Pat<(i1  (fp_to_uint f64:$a)), (SETP_i64ri $a, 0, CmpEQ)>;
 def : Pat<(i16 (fp_to_uint f64:$a)), (CVT_u16_f64 $a, CvtRZI)>;
 def : Pat<(i32 (fp_to_uint f64:$a)), (CVT_u32_f64 $a, CvtRZI)>;
 def : Pat<(i64 (fp_to_uint f64:$a)), (CVT_u64_f64 $a, CvtRZI)>;
@@ -2224,6 +2310,12 @@ foreach vt = [v2f32, v2i32] in {
 
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;
+def: Pat<(v2i32 (scalar_to_vector i32:$a)),
+         (CVT_u64_u32 $a, CvtNONE)>;
+def: Pat<(v2f16 (scalar_to_vector f16:$a)),
+         (V2I16toI32 $a, 0)>;
+def: Pat<(v2f32 (scalar_to_vector f32:$a)),
+         (V2I32toI64 $a, (i32 0))>;
 
 // This node is similar to ISD::BUILD_VECTOR except that the output may be
 // implicitly bitcast to a scalar. This allows for the representation of
@@ -2361,8 +2453,9 @@ let isTerminator=1 in {
       def Return : BasicNVPTXInst<(outs), (ins), "ret", [(retglue)]>;
 
   let isBranch=1 in {
-    def CBranch : NVPTXInst<(outs), (ins B1:$a, brtarget:$target),
-                              "@$a bra \t$target;",
+    def CBranch : NVPTXInst<(outs),
+                              (ins B1:$a, brtarget:$target, BranchFlag:$not),
+                              "@${not}$a bra \t$target;",
                               [(brcond i1:$a, bb:$target)]>;
 
     let isBarrier=1 in
@@ -2489,24 +2582,23 @@ foreach scope = ["sys", "gpu", "cluster", "cta"] in {
 }
 
 // Perform substitution if fma only has one use, and also if instruction has
-// nnan instruction flag or if the TM has NoNaNsFPMath
+// nnan instruction flag
 def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
                                   (fma node:$a, node:$b, node:$c), [{
-  return N->hasOneUse() &&
-    (N->getFlags().hasNoNaNs() || TM.Options.NoNaNsFPMath);
+  return N->hasOneUse() && N->getFlags().hasNoNaNs();
 }]>;
-// fmaxnum will differentiate between signed and unsigned zeros soon, so this
-// PatFrag is for a fmaxnum node with nsz
-def NVPTX_fmaxnum_nsz : PatFrag<(ops node:$a, node:$b),
-                                  (fmaxnum node:$a, node:$b), [{
-  return N->getFlags().hasNoSignedZeros() || TM.Options.NoSignedZerosFPMath;
+// fmaxnum/fmaximumnum differentiate between signed and unsigned zeros, so this
+// PatFrag is for a fmaxnum/fmaximumnum node with nsz
+def NVPTX_fmaxnum_or_fmaximumnum_nsz : PatFrag<(ops node:$a, node:$b),
+                                  (fmaxnum_or_fmaximumnum node:$a, node:$b), [{
+  return N->getFlags().hasNoSignedZeros();
 }]>;
 
 class FMARELUInst<RegTyInfo t, bit allow_ftz, PatFrag zero_pat>
   : BasicFlagsNVPTXInst<(outs t.RC:$dst), (ins t.RC:$a, t.RC:$b, t.RC:$c),
                    !if(allow_ftz, (ins FTZFlag:$ftz), (ins)),
                    "fma.rn" # !if(allow_ftz, "$ftz", "") # ".relu." # t.PtxType,
-                   [(set t.Ty:$dst, (NVPTX_fmaxnum_nsz (NVPTX_fma_oneuse_and_nnan t.Ty:$a, t.Ty:$b, t.Ty:$c), zero_pat))]>;
+                   [(set t.Ty:$dst, (NVPTX_fmaxnum_or_fmaximumnum_nsz (NVPTX_fma_oneuse_and_nnan t.Ty:$a, t.Ty:$b, t.Ty:$c), zero_pat))]>;
 
 let Predicates = [useFP16Math, hasPTX<70>, hasSM<80>] in {
   def FMARELU_F16 : FMARELUInst<F16RT, true, fpimm_0>;

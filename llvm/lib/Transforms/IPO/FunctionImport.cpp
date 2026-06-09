@@ -73,6 +73,8 @@ STATISTIC(NumDeadSymbols, "Number of dead stripped symbols in index");
 STATISTIC(NumLiveSymbols, "Number of live symbols in index");
 
 namespace llvm {
+extern cl::opt<bool> AlwaysRenamePromotedLocals;
+
 cl::opt<bool>
     ForceImportAll("force-import-all", cl::init(false), cl::Hidden,
                    cl::desc("Import functions with noinline attribute"));
@@ -1107,9 +1109,8 @@ void ModuleImportsManager::computeImportForModule(
     auto *Summary = std::get<0>(GVInfo);
     auto Threshold = std::get<1>(GVInfo);
 
-    if (auto *FS = dyn_cast<FunctionSummary>(Summary))
-      computeImportForFunction(*FS, Threshold, DefinedGVSummaries, Worklist,
-                               GVI, ImportList, ImportThresholds);
+    computeImportForFunction(*Summary, Threshold, DefinedGVSummaries, Worklist,
+                             GVI, ImportList, ImportThresholds);
   }
 
   // Print stats about functions considered but rejected for importing
@@ -1283,12 +1284,8 @@ void llvm::ComputeCrossModuleImport(
     // exporting module. We do this after the above insertion since we may hit
     // the same ref/call target multiple times in above loop, and it is more
     // efficient to avoid a set lookup each time.
-    for (auto EI = NewExports.begin(); EI != NewExports.end();) {
-      if (!DefinedGVSummaries.count(EI->getGUID()))
-        NewExports.erase(EI++);
-      else
-        ++EI;
-    }
+    NewExports.remove_if(
+        [&](ValueInfo VI) { return !DefinedGVSummaries.count(VI.getGUID()); });
     ELI.second.insert_range(NewExports);
   }
 
@@ -1607,6 +1604,34 @@ void llvm::gatherImportedSummariesForModule(
       DecSummaries.insert(DS->second);
 
     SummariesForIndex[GUID] = DS->second;
+  }
+
+  // When AlwaysRenamePromotedLocals is false, for each source module we import
+  // from, also include summaries for local functions that have
+  // NoRenameOnPromotion set. This is needed for distributed ThinLTO. Otherwise,
+  // the local function of the source module will keep its origin name, e.g.,
+  // foo() while the function in destination module will have name
+  // foo.llvm.<...>() and this will cause a link failure.
+  //
+  // Note: this imports a superset of the necessary declarations — all locals
+  // with NoRenameOnPromotion in each source module, not just those referenced
+  // by the importing module. Computing the precise set would require walking
+  // the summary reference graph from each imported function, which is more
+  // expensive than the simple scan here.
+  if (!AlwaysRenamePromotedLocals) {
+    for (auto &[ModPath, SummariesForIndex] : ModuleToSummariesForIndex) {
+      if (ModPath == ModulePath)
+        continue;
+      auto It = ModuleToDefinedGVSummaries.find(ModPath);
+      if (It == ModuleToDefinedGVSummaries.end())
+        continue;
+      for (const auto &[GUID, Summary] : It->second) {
+        if (Summary->noRenameOnPromotion()) {
+          DecSummaries.insert(Summary);
+          SummariesForIndex.try_emplace(GUID, Summary);
+        }
+      }
+    }
   }
 }
 
@@ -2106,7 +2131,7 @@ static bool doImportingForModuleForTest(
   for (auto &I : *Index) {
     for (auto &S : I.second.getSummaryList()) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
-        S->setLinkage(GlobalValue::ExternalLinkage);
+        S->setExternalLinkageForTest();
     }
   }
 

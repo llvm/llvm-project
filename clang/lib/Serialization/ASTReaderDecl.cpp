@@ -405,6 +405,7 @@ public:
   void VisitFriendDecl(FriendDecl *D);
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
+  void VisitExplicitInstantiationDecl(ExplicitInstantiationDecl *D);
   void VisitBlockDecl(BlockDecl *BD);
   void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
   void VisitCapturedDecl(CapturedDecl *CD);
@@ -636,6 +637,7 @@ void ASTDeclReader::VisitDecl(Decl *D) {
       break;
     case Decl::ModuleOwnershipKind::Unowned:
     case Decl::ModuleOwnershipKind::VisibleWhenImported:
+    case Decl::ModuleOwnershipKind::VisiblePromoted:
     case Decl::ModuleOwnershipKind::ReachableWhenImported:
     case Decl::ModuleOwnershipKind::ModulePrivate:
       break;
@@ -903,9 +905,10 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
   if (Record.readInt()) { // hasExtInfo
     auto *Info = new (Reader.getContext()) DeclaratorDecl::ExtInfo();
     Record.readQualifierInfo(*Info);
-    Info->TrailingRequiresClause = AssociatedConstraint(
-        Record.readExpr(),
-        UnsignedOrNone::fromInternalRepresentation(Record.readUInt32()));
+    Expr *ConstraintExpr = Record.readExpr();
+    UnsignedOrNone ArgPackSubstIndex = Record.readUnsignedOrNone();
+    Info->TrailingRequiresClause =
+        AssociatedConstraint(ConstraintExpr, ArgPackSubstIndex);
     DD->DeclInfo = Info;
   }
   QualType TSIType = Record.readType();
@@ -947,6 +950,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     SmallVector<TemplateArgument, 8> TemplArgs;
     Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
 
+    const TemplateParameterList *TemplateParams =
+        Record.readBool() ? Record.readTemplateParameterList() : nullptr;
+
     // Template args as written.
     TemplateArgumentListInfo TemplArgsWritten;
     bool HasTemplateArgumentsAsWritten = Record.readBool();
@@ -971,7 +977,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
     FunctionTemplateSpecializationInfo *FTInfo =
         FunctionTemplateSpecializationInfo::Create(
-            C, FD, Template, TSK, TemplArgList,
+            C, FD, Template, TSK, TemplArgList, TemplateParams,
             HasTemplateArgumentsAsWritten ? &TemplArgsWritten : nullptr, POI,
             MSInfo);
     FD->TemplateOrSpecialization = FTInfo;
@@ -994,8 +1000,6 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       if (InsertPos)
         CommonPtr->Specializations.InsertNode(FTInfo, InsertPos);
       else {
-        assert(Reader.getContext().getLangOpts().Modules &&
-               "already deserialized this template specialization");
         Existing = ExistingInfo->getFunction();
       }
     }
@@ -1008,6 +1012,9 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     while (NumCandidates--)
       Candidates.addDecl(readDeclAs<NamedDecl>());
 
+    const TemplateParameterList *TemplateParams =
+        Record.readBool() ? Record.readTemplateParameterList() : nullptr;
+
     // Templates args.
     TemplateArgumentListInfo TemplArgsWritten;
     bool HasTemplateArgumentsAsWritten = Record.readBool();
@@ -1015,7 +1022,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       Record.readTemplateArgumentListInfo(TemplArgsWritten);
 
     FD->setDependentTemplateSpecialization(
-        Reader.getContext(), Candidates,
+        Reader.getContext(), Candidates, TemplateParams,
         HasTemplateArgumentsAsWritten ? &TemplArgsWritten : nullptr);
     // These are not merged; we don't need to merge redeclarations of dependent
     // template friends.
@@ -2548,6 +2555,20 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
   D->StrictPackMatch = Record.readBool();
 
+  // extern/template keyword locations for explicit instantiations
+  if (auto K = D->SpecializationKind;
+      K == TSK_ExplicitInstantiationDeclaration ||
+      K == TSK_ExplicitInstantiationDefinition) {
+    SourceLocation ExternKeywordLoc = readSourceLocation();
+    SourceLocation TemplateKeywordLoc = readSourceLocation();
+    D->setExplicitInstantiationInfo(ExternKeywordLoc, TemplateKeywordLoc,
+                                    Record.readASTTemplateArgumentListInfo());
+  } else if (K == TSK_ExplicitSpecialization) {
+    auto *TemplateParams = Record.readTemplateParameterList();
+    D->setExplicitSpecializationInfo(TemplateParams,
+                                     Record.readASTTemplateArgumentListInfo());
+  }
+
   bool writtenAsCanonicalDecl = Record.readInt();
   if (writtenAsCanonicalDecl) {
     auto *CanonPattern = readDeclAs<ClassTemplateDecl>();
@@ -2578,27 +2599,11 @@ RedeclarableResult ASTDeclReader::VisitClassTemplateSpecializationDeclImpl(
     }
   }
 
-  // extern/template keyword locations for explicit instantiations
-  if (Record.readBool()) {
-    auto *ExplicitInfo = new (C) ExplicitInstantiationInfo;
-    ExplicitInfo->ExternKeywordLoc = readSourceLocation();
-    ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
-    D->ExplicitInfo = ExplicitInfo;
-  }
-
-  if (Record.readBool())
-    D->setTemplateArgsAsWritten(Record.readASTTemplateArgumentListInfo());
-
   return Redecl;
 }
 
 void ASTDeclReader::VisitClassTemplatePartialSpecializationDecl(
-                                    ClassTemplatePartialSpecializationDecl *D) {
-  // We need to read the template params first because redeclarable is going to
-  // need them for profiling
-  TemplateParameterList *Params = Record.readTemplateParameterList();
-  D->TemplateParams = Params;
-
+    ClassTemplatePartialSpecializationDecl *D) {
   RedeclarableResult Redecl = VisitClassTemplateSpecializationDeclImpl(D);
 
   // These are read/set from/to the first declaration.
@@ -2644,23 +2649,26 @@ RedeclarableResult ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
     }
   }
 
-  // extern/template keyword locations for explicit instantiations
-  if (Record.readBool()) {
-    auto *ExplicitInfo = new (C) ExplicitInstantiationInfo;
-    ExplicitInfo->ExternKeywordLoc = readSourceLocation();
-    ExplicitInfo->TemplateKeywordLoc = readSourceLocation();
-    D->ExplicitInfo = ExplicitInfo;
-  }
-
-  if (Record.readBool())
-    D->setTemplateArgsAsWritten(Record.readASTTemplateArgumentListInfo());
-
   SmallVector<TemplateArgument, 8> TemplArgs;
   Record.readTemplateArgumentList(TemplArgs, /*Canonicalize*/ true);
   D->TemplateArgs = TemplateArgumentList::CreateCopy(C, TemplArgs);
   D->PointOfInstantiation = readSourceLocation();
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
   D->IsCompleteDefinition = Record.readInt();
+
+  // extern/template keyword locations for explicit instantiations
+  if (auto K = D->SpecializationKind;
+      K == TSK_ExplicitInstantiationDeclaration ||
+      K == TSK_ExplicitInstantiationDefinition) {
+    SourceLocation ExternKeywordLoc = readSourceLocation();
+    SourceLocation TemplateKeywordLoc = readSourceLocation();
+    D->setExplicitInstantiationInfo(ExternKeywordLoc, TemplateKeywordLoc,
+                                    Record.readASTTemplateArgumentListInfo());
+  } else if (K == TSK_ExplicitSpecialization) {
+    auto *TemplateParams = Record.readTemplateParameterList();
+    D->setExplicitSpecializationInfo(TemplateParams,
+                                     Record.readASTTemplateArgumentListInfo());
+  }
 
   RedeclarableResult Redecl = VisitVarDeclImpl(D);
 
@@ -2692,9 +2700,6 @@ RedeclarableResult ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
 ///        using Template(Partial)SpecializationDecl as input type.
 void ASTDeclReader::VisitVarTemplatePartialSpecializationDecl(
     VarTemplatePartialSpecializationDecl *D) {
-  TemplateParameterList *Params = Record.readTemplateParameterList();
-  D->TemplateParams = Params;
-
   RedeclarableResult Redecl = VisitVarTemplateSpecializationDeclImpl(D);
 
   // These are read/set from/to the first declaration.
@@ -2782,6 +2787,32 @@ void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
   D->AssertExprAndFailed.setInt(Record.readInt());
   D->Message = cast_or_null<StringLiteral>(Record.readExpr());
   D->RParenLoc = readSourceLocation();
+}
+
+void ASTDeclReader::VisitExplicitInstantiationDecl(
+    ExplicitInstantiationDecl *D) {
+  // Note: trailing flags were already read by ReadDeclRecord and passed to
+  // CreateDeserialized, so TypeAndFlags.getInt() is already set.
+  VisitDecl(D);
+  auto *Spec = readDeclAs<NamedDecl>();
+  D->SpecAndTSK.setPointer(Spec);
+  D->ExternLoc = readSourceLocation();
+  D->NameLoc = readSourceLocation();
+  TypeSourceInfo *TSI = readTypeSourceInfo();
+  unsigned TSK = Record.readInt();
+  D->SpecAndTSK.setInt(TSK);
+  D->TypeAndFlags.setPointer(TSI); // preserves trailing flags in int bits
+  // Read trailing objects.
+  if (D->hasTrailingQualifier())
+    *D->getTrailingObjects<NestedNameSpecifierLoc>() =
+        Record.readNestedNameSpecifierLoc();
+  if (D->hasTrailingArgsAsWritten())
+    *D->getTrailingObjects<const ASTTemplateArgumentListInfo *>() =
+        Record.readASTTemplateArgumentListInfo();
+
+  // Rebuild the ASTContext map from specialization to EID.
+  if (Spec)
+    Reader.getContext().addExplicitInstantiationDecl(Spec, D);
 }
 
 void ASTDeclReader::VisitEmptyDecl(EmptyDecl *D) {
@@ -3619,11 +3650,12 @@ void mergeInheritableAttributes(ASTReader &Reader, Decl *D, Decl *Previous) {
     D->addAttr(NewAttr);
   }
 
-  const auto *AA = Previous->getAttr<AvailabilityAttr>();
-  if (AA && !D->hasAttr<AvailabilityAttr>()) {
-    NewAttr = AA->clone(Context);
-    NewAttr->setInherited(true);
-    D->addAttr(NewAttr);
+  if (!D->hasAttr<AvailabilityAttr>()) {
+    for (const auto *AA : Previous->specific_attrs<AvailabilityAttr>()) {
+      NewAttr = AA->clone(Context);
+      NewAttr->setInherited(true);
+      D->addAttr(NewAttr);
+    }
   }
 }
 } // namespace
@@ -3645,6 +3677,28 @@ void ASTDeclReader::attachPreviousDeclImpl(ASTReader &Reader,
   auto *PrevVD = cast<VarDecl>(Previous);
   D->RedeclLink.setPrevious(PrevVD);
   D->First = PrevVD->First;
+
+  // We should keep at most one definition on the chain.
+  // FIXME: Cache the definition once we've found it. Building a chain with
+  // N definitions currently takes O(N^2) time here.
+  auto *VD = static_cast<VarDecl *>(D);
+  if (VD->isThisDeclarationADefinition() == VarDecl::Definition) {
+    for (VarDecl *CurD = PrevVD; CurD; CurD = CurD->getPreviousDecl()) {
+      if (CurD->isThisDeclarationADefinition() == VarDecl::Definition) {
+        // FIXME: For header modules, there are some problems if we don't
+        // demote definition to declaration.
+        // See clang/test/Modules/module-init-forcelly-loaded-module.cpp
+        // for example. Maybe we are able to handle the CodeGen part
+        // to avoid it emitting duplicated definitions. But just workaround
+        // now temporarily.
+        if (VD->getOwningModule() &&
+            VD->getOwningModule()->isHeaderLikeModule())
+          VD->demoteThisDefinitionToDeclaration();
+        Reader.mergeDefinitionVisibility(CurD, VD);
+        break;
+      }
+    }
+  }
 }
 
 static bool isUndeducedReturnType(QualType T) {
@@ -4083,6 +4137,10 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     break;
   case DECL_STATIC_ASSERT:
     D = StaticAssertDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_EXPLICIT_INSTANTIATION:
+    D = ExplicitInstantiationDecl::CreateDeserialized(Context, ID,
+                                                      Record.readInt());
     break;
   case DECL_OBJC_METHOD:
     D = ObjCMethodDecl::CreateDeserialized(Context, ID);
@@ -4958,6 +5016,11 @@ void ASTDeclReader::UpdateDecl(Decl *D) {
           Reader.getContext(), AllocatorKind, Allocator, Alignment, SR));
       break;
     }
+
+    case DeclUpdateKind::DeclMarkedOpenMPIndirectCall:
+      D->addAttr(OMPTargetIndirectCallAttr::CreateImplicit(Reader.getContext(),
+                                                           readSourceRange()));
+      break;
 
     case DeclUpdateKind::DeclExported: {
       unsigned SubmoduleID = readSubmoduleID();

@@ -11,6 +11,8 @@
 #include "IntegralAP.h"
 #include "Interp.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -37,7 +39,7 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
-  this->CheckFullyInitialized = isa<ConstantExpr>(E);
+  this->CheckFullyInitialized = isa<ConstantExpr>(E) && !E->isGLValue();
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E, DestroyToplevelScope)) {
@@ -71,20 +73,45 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
   return std::move(this->EvalResult);
 }
 
+EvaluationResult EvalEmitter::interpretDestructor(const VarDecl *VD,
+                                                  const APValue &Value) {
+  assert(VD);
+  S.setEvalLocation(VD->getLocation());
+  EvalResult.setSource(VD);
+
+  if (!this->visitDtorCall(VD, Value))
+    EvalResult.setInvalid();
+
+  return std::move(this->EvalResult);
+}
+
 EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
                                                  PtrCallback PtrCB) {
-
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = false;
   this->CheckFullyInitialized = false;
   this->PtrCB = PtrCB;
   EvalResult.setSource(E);
 
-  if (!this->visitExpr(E, /*DestroyToplevelScope=*/true)) {
+  if (!this->visitExpr(E, true)) {
     // EvalResult may already have a result set, but something failed
     // after that (e.g. evaluating destructors).
     EvalResult.setInvalid();
   }
+
+  return std::move(this->EvalResult);
+}
+
+EvaluationResult EvalEmitter::interpretAsLValuePointer(const Expr *E,
+                                                       PtrCallback PtrCB) {
+  S.setEvalLocation(E->getExprLoc());
+  this->ConvertResultToRValue = false;
+  this->CheckFullyInitialized = false;
+  this->PtrCB = PtrCB;
+  EvalResult.setSource(E);
+
+  if (!this->visitLValueExpr(E, true))
+    EvalResult.setInvalid();
 
   return std::move(this->EvalResult);
 }
@@ -106,7 +133,7 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
-  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*isStatic=*/false);
+  auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
@@ -125,25 +152,29 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   return {Off, D};
 }
 
-bool EvalEmitter::jumpTrue(const LabelTy &Label) {
+bool EvalEmitter::jumpTrue(const LabelTy &Label, SourceInfo SI) {
   if (isActive()) {
+    CurrentSource = SI;
     if (S.Stk.pop<bool>())
       ActiveLabel = Label;
   }
   return true;
 }
 
-bool EvalEmitter::jumpFalse(const LabelTy &Label) {
+bool EvalEmitter::jumpFalse(const LabelTy &Label, SourceInfo SI) {
   if (isActive()) {
+    CurrentSource = SI;
     if (!S.Stk.pop<bool>())
       ActiveLabel = Label;
   }
   return true;
 }
 
-bool EvalEmitter::jump(const LabelTy &Label) {
-  if (isActive())
+bool EvalEmitter::jump(const LabelTy &Label, SourceInfo SI) {
+  if (isActive()) {
+    CurrentSource = SI;
     CurrentLabel = ActiveLabel = Label;
+  }
   return true;
 }
 
@@ -157,6 +188,10 @@ bool EvalEmitter::fallthrough(const LabelTy &Label) {
 bool EvalEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
   if (!isActive())
     return true;
+
+  PushIgnoreDiags(S, OpPC);
+  auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, OpPC); });
+
   size_t StackSizeBefore = S.Stk.size();
   const Expr *Arg = E->getArg(0);
   if (!this->visit(Arg)) {
@@ -202,7 +237,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
-  // Function pointers are alway returned as lvalues.
+  // Function pointers are always returned as lvalues.
   if (Ptr.isFunctionPointer()) {
     EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
     return true;
@@ -210,7 +245,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
-    if (!Ptr.isZero() && !Ptr.isDereferencable())
+    if (Ptr.isPastEnd())
       return false;
 
     if (Ptr.pointsToStringLiteral() && Ptr.isArrayRoot())
@@ -263,7 +298,7 @@ bool EvalEmitter::emitRetValue(SourceInfo Info) {
     return false;
 
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
+          Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
     EvalResult.takeValue(std::move(*APV));
     return true;
   }
@@ -279,6 +314,14 @@ bool EvalEmitter::emitGetPtrLocal(uint32_t I, SourceInfo Info) {
   Block *B = getLocal(I);
   S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
   return true;
+}
+
+bool EvalEmitter::emitGetRefLocal(uint32_t I, SourceInfo Info) {
+  if (!isActive())
+    return true;
+
+  Block *B = getLocal(I);
+  return handleReference(S, OpPC, B);
 }
 
 template <PrimType OpType>
@@ -308,6 +351,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
   B->deref<T>() = S.Stk.pop<T>();
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
+  Desc.LifeState = Lifetime::Started;
 
   return true;
 }
@@ -361,12 +405,16 @@ void EvalEmitter::updateGlobalTemporaries() {
     assert(GlobalIndex);
     const Pointer &Ptr = P.getPtrGlobal(*GlobalIndex);
     APValue *Cached = Temp->getOrCreateValue(true);
-    if (OptPrimType T = Ctx.classify(E->getType())) {
+
+    QualType TempType = E->getType();
+    if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+      TempType = MTE->getSubExpr()->skipRValueSubobjectAdjustments()->getType();
+
+    if (OptPrimType T = Ctx.classify(TempType)) {
       TYPE_SWITCH(*T,
                   { *Cached = Ptr.deref<T>().toAPValue(Ctx.getASTContext()); });
     } else {
-      if (std::optional<APValue> APV =
-              Ptr.toRValue(Ctx, Temp->getTemporaryExpr()->getType()))
+      if (std::optional<APValue> APV = Ptr.toRValue(Ctx, TempType))
         *Cached = *APV;
     }
   }

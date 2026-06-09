@@ -42,6 +42,15 @@ class APInt;
 /// LLVM Constant Representation
 class Constant : public User {
 protected:
+  /// SubclassOptionalData bits. Low bits are used by ConstantExpr.
+  enum {
+    IsNullValue = (1 << 6),
+  };
+
+  /// Bits reserved in SubclassOptionalData, not to be used for ConstantExpr
+  /// flags.
+  static constexpr unsigned ConstantSubclassBits = IsNullValue;
+
   Constant(Type *ty, ValueTy vty, AllocInfo AllocInfo)
       : User(ty, vty, AllocInfo) {}
 
@@ -52,7 +61,7 @@ public:
   Constant(const Constant &) = delete;
 
   /// Return true if this is the value that would be returned by getNullValue.
-  LLVM_ABI bool isNullValue() const;
+  bool isNullValue() const { return SubclassOptionalData & IsNullValue; }
 
   /// Returns true if the value is one.
   LLVM_ABI bool isOneValue() const;
@@ -68,9 +77,6 @@ public:
   /// Return true if the value is what would be returned by
   /// getZeroValueForNegation.
   LLVM_ABI bool isNegativeZeroValue() const;
-
-  /// Return true if the value is negative zero or null value.
-  LLVM_ABI bool isZeroValue() const;
 
   /// Return true if the value is not the smallest signed value, or,
   /// for vectors, does not contain smallest signed value elements.

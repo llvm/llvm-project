@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 
@@ -304,16 +305,12 @@ public:
   llvm::Constant *getNullPointer(const CodeGen::CodeGenModule &CGM,
       llvm::PointerType *T, QualType QT) const override;
 
-  LangAS getASTAllocaAddressSpace() const override {
-    return getLangASFromTargetAS(
-        getABIInfo().getDataLayout().getAllocaAddrSpace());
-  }
+  LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
+
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
-  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                         SyncScope Scope,
-                                         llvm::AtomicOrdering Ordering,
-                                         llvm::LLVMContext &Ctx) const override;
+  StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                llvm::AtomicOrdering Ordering) const override;
   void setTargetAtomicMetadata(CodeGenFunction &CGF,
                                llvm::Instruction &AtomicInst,
                                const AtomicExpr *Expr = nullptr) const override;
@@ -470,6 +467,16 @@ llvm::Constant *AMDGPUTargetCodeGenInfo::getNullPointer(
 }
 
 LangAS
+AMDGPUTargetCodeGenInfo::getSRetAddrSpace(const CXXRecordDecl *RD) const {
+  // Types with no viable copy/move must be constructed in-place , use the
+  // default AS so the sret pointer matches the "this" convention.
+  if (RD && !RD->canPassInRegisters())
+    return LangAS::Default;
+  return getLangASFromTargetAS(
+      getABIInfo().getDataLayout().getAllocaAddrSpace());
+}
+
+LangAS
 AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
                                                   const VarDecl *D) const {
   assert(!CGM.getLangOpts().OpenCL &&
@@ -493,55 +500,42 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return DefaultGlobalAS;
 }
 
-llvm::SyncScope::ID
-AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                            SyncScope Scope,
-                                            llvm::AtomicOrdering Ordering,
-                                            llvm::LLVMContext &Ctx) const {
-  std::string Name;
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    Name = "singlethread";
-    break;
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    Name = "wavefront";
-    break;
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    Name = "cluster";
-    break;
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    Name = "workgroup";
-    break;
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    Name = "agent";
-    break;
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    Name = "";
-    break;
-  }
+StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
+    const LangOptions &LangOpts, SyncScope Scope,
+    llvm::AtomicOrdering Ordering) const {
 
   // OpenCL assumes by default that atomic scopes are per-address space for
   // non-sequentially consistent operations.
-  if (Scope >= SyncScope::OpenCLWorkGroup &&
-      Scope <= SyncScope::OpenCLSubGroup &&
-      Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
-    if (!Name.empty())
-      Name = Twine(Twine(Name) + Twine("-")).str();
+  bool IsOneAs = (Scope >= SyncScope::OpenCLWorkGroup &&
+                  Scope <= SyncScope::OpenCLSubGroup &&
+                  Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
 
-    Name = Twine(Twine(Name) + Twine("one-as")).str();
+  switch (Scope) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return IsOneAs ? "singlethread-one-as" : "singlethread";
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return IsOneAs ? "wavefront-one-as" : "wavefront";
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    assert(!IsOneAs && "OpenCL does not have cluster scope");
+    return "cluster";
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return IsOneAs ? "workgroup-one-as" : "workgroup";
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return IsOneAs ? "agent-one-as" : "agent";
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return IsOneAs ? "one-as" : "";
   }
-
-  return Ctx.getOrInsertSyncScopeID(Name);
+  llvm_unreachable("Unknown SyncScope enum");
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(

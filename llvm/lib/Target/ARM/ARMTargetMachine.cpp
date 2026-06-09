@@ -39,6 +39,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -93,8 +94,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
   initializeARMAsmPrinterPass(Registry);
-  initializeARMLoadStoreOptPass(Registry);
-  initializeARMPreAllocLoadStoreOptPass(Registry);
+  initializeARMLoadStoreOptLegacyPass(Registry);
+  initializeARMPreAllocLoadStoreOptLegacyPass(Registry);
   initializeARMParallelDSPPass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
@@ -111,7 +112,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeMVELaneInterleavingPass(Registry);
   initializeARMFixCortexA57AES1742098Pass(Registry);
   initializeARMDAGToDAGISelLegacyPass(Registry);
-  initializeKCFIPass(Registry);
+  initializeMachineKCFILegacyPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -230,16 +231,12 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   if (F.hasMinSize())
     Key += "+minsize";
 
-  DenormalMode DM = F.getDenormalModeRaw();
+  DenormalMode DM = F.getDenormalFPEnv().DefaultMode;
   if (DM != DenormalMode::getIEEE())
     Key += "denormal-fp-math=" + DM.str();
 
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
                                        F.hasMinSize(), DM);
 
@@ -335,10 +332,15 @@ char ARMExecutionDomainFix::ID;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+                      "ARM Execution Domain Fix", false, false)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(ARMExecutionDomainFix, "arm-execution-domain-fix",
-  "ARM Execution Domain Fix", false, false)
+                    "ARM Execution Domain Fix", false, false)
+
+void ARMBaseTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#define GET_PASS_REGISTRY "ARMPassRegistry.def"
+#include "llvm/Passes/TargetPassRegistry.inc"
+}
 
 TargetPassConfig *ARMBaseTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new ARMPassConfig(*this, PM);
@@ -384,7 +386,7 @@ void ARMPassConfig::addIRPasses() {
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
-    addPass(createCFGuardCheckPass());
+    addPass(createCFGuardPass());
 
   if (TM->Options.JMCInstrument)
     addPass(createJMCInstrumenterPass());
@@ -468,7 +470,7 @@ void ARMPassConfig::addPreRegAlloc() {
     addPass(createMLxExpansionPass());
 
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass(/* pre-register alloc */ true));
+      addPass(createARMLoadStoreOptLegacyPass(/* pre-register alloc */ true));
 
     if (!DisableA15SDOptimization)
       addPass(createA15SDOptimizerPass());
@@ -478,10 +480,10 @@ void ARMPassConfig::addPreRegAlloc() {
 void ARMPassConfig::addPreSched2() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     if (EnableARMLoadStoreOpt)
-      addPass(createARMLoadStoreOptimizationPass());
+      addPass(createARMLoadStoreOptLegacyPass());
 
     addPass(new ARMExecutionDomainFix());
-    addPass(createBreakFalseDeps());
+    addPass(createBreakFalseDepsLegacyPass());
   }
 
   // Expand some pseudo instructions into multiple instructions to allow
@@ -524,7 +526,7 @@ void ARMPassConfig::addPreEmitPass() {
   // Unpack bundles for:
   // - Thumb2: Constant island pass requires unbundled instructions
   // - KCFI: KCFI_CHECK pseudo instructions need to be unbundled for AsmPrinter
-  addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
+  addPass(createUnpackMachineBundlesLegacy([](const MachineFunction &MF) {
     return MF.getSubtarget<ARMSubtarget>().isThumb2() ||
            MF.getFunction().getParent()->getModuleFlag("kcfi");
   }));

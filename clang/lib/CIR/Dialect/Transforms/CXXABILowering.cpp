@@ -9,17 +9,23 @@
 #include "PassDetail.h"
 #include "TargetLowering/LowerModule.h"
 
+#include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
+#include "mlir/Dialect/OpenMP/OpenMPOpsDialect.h.inc"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
+
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace cir;
@@ -30,6 +36,207 @@ namespace mlir {
 } // namespace mlir
 
 namespace {
+// Check an attribute for legality. An attribute is only currently potentially
+// illegal if it contains a type, member pointers are our source of illegality
+// in regards to attributes.
+bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
+                            mlir::Attribute attr) {
+  // If we don't have an attribute, it can't have a type!
+  if (!attr)
+    return true;
+
+  // None of the OpenACC/OMP attributes contain a type of concern, so we can
+  // just treat them as legal.
+  if (isa<mlir::acc::OpenACCDialect, mlir::omp::OpenMPDialect>(
+          attr.getDialect()))
+    return true;
+
+  // These attributes either don't contain a type, or don't contain a type that
+  // can have a data member/method.
+  if (isa<mlir::DenseArrayAttr, mlir::FloatAttr, mlir::UnitAttr,
+          mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr,
+          cir::AnnotationAttr>(attr))
+    return true;
+
+  // Tablegen'ed always-legal attributes:
+  if (isa<
+#define CXX_ABI_ALWAYS_LEGAL_ATTRS
+#include "clang/CIR/Dialect/IR/CIRLowering.inc"
+#undef CXX_ABI_ALWAYS_LEGAL_ATTRS
+          >(attr))
+    return true;
+
+  // Data Member and method are ALWAYS illegal.
+  if (isa<cir::DataMemberAttr, cir::MethodAttr>(attr))
+    return false;
+
+  return llvm::TypeSwitch<mlir::Attribute, bool>(attr)
+      // These attributes just have a type, so they are legal if their type is.
+      .Case<cir::ZeroAttr>(
+          [&tc](cir::ZeroAttr za) { return tc.isLegal(za.getType()); })
+      .Case<cir::PoisonAttr>(
+          [&tc](cir::PoisonAttr pa) { return tc.isLegal(pa.getType()); })
+      .Case<cir::UndefAttr>(
+          [&tc](cir::UndefAttr uda) { return tc.isLegal(uda.getType()); })
+      .Case<mlir::TypeAttr>(
+          [&tc](mlir::TypeAttr ta) { return tc.isLegal(ta.getValue()); })
+      .Case<cir::ConstPtrAttr>(
+          [&tc](cir::ConstPtrAttr cpa) { return tc.isLegal(cpa.getType()); })
+      .Case<cir::CXXCtorAttr>(
+          [&tc](cir::CXXCtorAttr ca) { return tc.isLegal(ca.getType()); })
+      .Case<cir::CXXDtorAttr>(
+          [&tc](cir::CXXDtorAttr da) { return tc.isLegal(da.getType()); })
+      .Case<cir::CXXAssignAttr>(
+          [&tc](cir::CXXAssignAttr aa) { return tc.isLegal(aa.getType()); })
+
+      // Collection attributes are legal if ALL of the attributes in them are
+      // also legal.
+      .Case<mlir::ArrayAttr>([&tc](mlir::ArrayAttr array) {
+        return llvm::all_of(array.getValue(), [&tc](mlir::Attribute attr) {
+          return isCXXABIAttributeLegal(tc, attr);
+        });
+      })
+      .Case<mlir::DictionaryAttr>([&tc](mlir::DictionaryAttr dict) {
+        return llvm::all_of(dict.getValue(), [&tc](mlir::NamedAttribute na) {
+          return isCXXABIAttributeLegal(tc, na.getValue());
+        });
+      })
+      // These attributes have sub-attributes that we should check for legality.
+      .Case<cir::ConstArrayAttr>([&tc](cir::ConstArrayAttr array) {
+        return tc.isLegal(array.getType()) &&
+               isCXXABIAttributeLegal(tc, array.getElts());
+      })
+      .Case<cir::GlobalViewAttr>([&tc](cir::GlobalViewAttr gva) {
+        return tc.isLegal(gva.getType()) &&
+               isCXXABIAttributeLegal(tc, gva.getIndices());
+      })
+      .Case<cir::VTableAttr>([&tc](cir::VTableAttr vta) {
+        return tc.isLegal(vta.getType()) &&
+               isCXXABIAttributeLegal(tc, vta.getData());
+      })
+      .Case<cir::TypeInfoAttr>([&tc](cir::TypeInfoAttr tia) {
+        return tc.isLegal(tia.getType()) &&
+               isCXXABIAttributeLegal(tc, tia.getData());
+      })
+      .Case<cir::DynamicCastInfoAttr>([&tc](cir::DynamicCastInfoAttr dcia) {
+        return isCXXABIAttributeLegal(tc, dcia.getSrcRtti()) &&
+               isCXXABIAttributeLegal(tc, dcia.getDestRtti()) &&
+               isCXXABIAttributeLegal(tc, dcia.getRuntimeFunc()) &&
+               isCXXABIAttributeLegal(tc, dcia.getBadCastFunc());
+      })
+      .Case<cir::ConstRecordAttr>([&tc](cir::ConstRecordAttr cra) {
+        return tc.isLegal(cra.getType()) &&
+               isCXXABIAttributeLegal(tc, cra.getMembers());
+      })
+      // We did an audit of all of our attributes (both in OpenACC and CIR), so
+      // it shouldn't be dangerous to consider everything we haven't considered
+      // 'illegal'. Any 'new' attributes will end up asserting in
+      // 'rewriteAttribute' to make sure we consider them here. Otherwise, we
+      // wouldn't discover a problematic new attribute until it contains a
+      // member/method.
+      .Default(false);
+}
+
+mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
+                                 mlir::MLIRContext *ctx, mlir::Attribute attr) {
+  // If the attribute is legal, there is no reason to rewrite it. This also
+  // filters out 'null' attributes.
+  if (isCXXABIAttributeLegal(tc, attr))
+    return attr;
+
+  // This switch needs to be kept in sync with the potentially-legal type switch
+  // from isCXXABIAttributeLegal. IF we miss any, this will end up causing
+  // verification/transformation issues later, often in the form of
+  // unrealized-conversion-casts.
+
+  return llvm::TypeSwitch<mlir::Attribute, mlir::Attribute>(attr)
+      // These attributes just have a type, so convert just the type.
+      .Case<cir::ZeroAttr>([&tc](cir::ZeroAttr za) {
+        return cir::ZeroAttr::get(tc.convertType(za.getType()));
+      })
+      .Case<cir::PoisonAttr>([&tc](cir::PoisonAttr pa) {
+        return cir::PoisonAttr::get(tc.convertType(pa.getType()));
+      })
+      .Case<cir::UndefAttr>([&tc](cir::UndefAttr uda) {
+        return cir::UndefAttr::get(tc.convertType(uda.getType()));
+      })
+      .Case<mlir::TypeAttr>([&tc](mlir::TypeAttr ta) {
+        return mlir::TypeAttr::get(tc.convertType(ta.getValue()));
+      })
+      .Case<cir::ConstPtrAttr>([&tc](cir::ConstPtrAttr cpa) {
+        return cir::ConstPtrAttr::get(tc.convertType(cpa.getType()),
+                                      cpa.getValue());
+      })
+      .Case<cir::CXXCtorAttr>([&tc](cir::CXXCtorAttr ca) {
+        return cir::CXXCtorAttr::get(tc.convertType(ca.getType()),
+                                     ca.getCtorKind(), ca.getIsTrivial());
+      })
+      .Case<cir::CXXDtorAttr>([&tc](cir::CXXDtorAttr da) {
+        return cir::CXXDtorAttr::get(tc.convertType(da.getType()),
+                                     da.getIsTrivial());
+      })
+      .Case<cir::CXXAssignAttr>([&tc](cir::CXXAssignAttr aa) {
+        return cir::CXXAssignAttr::get(tc.convertType(aa.getType()),
+                                       aa.getAssignKind(), aa.getIsTrivial());
+      })
+      // Collection attributes need to transform all of the attributes inside of
+      // them.
+      .Case<mlir::ArrayAttr>([&tc, ctx](mlir::ArrayAttr array) {
+        llvm::SmallVector<mlir::Attribute> elts;
+        for (mlir::Attribute a : array.getValue())
+          elts.push_back(rewriteAttribute(tc, ctx, a));
+        return mlir::ArrayAttr::get(ctx, elts);
+      })
+      .Case<mlir::DictionaryAttr>([&tc, ctx](mlir::DictionaryAttr dict) {
+        llvm::SmallVector<mlir::NamedAttribute> elts;
+        for (mlir::NamedAttribute na : dict.getValue())
+          elts.emplace_back(na.getName(),
+                            rewriteAttribute(tc, ctx, na.getValue()));
+
+        return mlir::DictionaryAttr::get(ctx, elts);
+      })
+      // These attributes have sub-attributes that need converting too.
+      .Case<cir::ConstArrayAttr>([&tc, ctx](cir::ConstArrayAttr array) {
+        return cir::ConstArrayAttr::get(
+            ctx, tc.convertType(array.getType()),
+            rewriteAttribute(tc, ctx, array.getElts()),
+            array.getTrailingZerosNum());
+      })
+      .Case<cir::GlobalViewAttr>([&tc, ctx](cir::GlobalViewAttr gva) {
+        return cir::GlobalViewAttr::get(
+            tc.convertType(gva.getType()), gva.getSymbol(),
+            mlir::cast<mlir::ArrayAttr>(
+                rewriteAttribute(tc, ctx, gva.getIndices())));
+      })
+      .Case<cir::VTableAttr>([&tc, ctx](cir::VTableAttr vta) {
+        return cir::VTableAttr::get(
+            tc.convertType(vta.getType()),
+            mlir::cast<mlir::ArrayAttr>(
+                rewriteAttribute(tc, ctx, vta.getData())));
+      })
+      .Case<cir::TypeInfoAttr>([&tc, ctx](cir::TypeInfoAttr tia) {
+        return cir::TypeInfoAttr::get(
+            tc.convertType(tia.getType()),
+            mlir::cast<mlir::ArrayAttr>(
+                rewriteAttribute(tc, ctx, tia.getData())));
+      })
+      .Case<cir::DynamicCastInfoAttr>([&tc,
+                                       ctx](cir::DynamicCastInfoAttr dcia) {
+        return cir::DynamicCastInfoAttr::get(
+            mlir::cast<cir::GlobalViewAttr>(
+                rewriteAttribute(tc, ctx, dcia.getSrcRtti())),
+            mlir::cast<cir::GlobalViewAttr>(
+                rewriteAttribute(tc, ctx, dcia.getDestRtti())),
+            dcia.getRuntimeFunc(), dcia.getBadCastFunc(), dcia.getOffsetHint());
+      })
+      .Case<cir::ConstRecordAttr>([&tc, ctx](cir::ConstRecordAttr cra) {
+        return cir::ConstRecordAttr::get(
+            ctx, tc.convertType(cra.getType()),
+            mlir::cast<mlir::ArrayAttr>(
+                rewriteAttribute(tc, ctx, cra.getMembers())));
+      })
+      .DefaultUnreachable("unrewritten illegal attribute kind");
+}
 
 #define GET_ABI_LOWERING_PATTERNS
 #include "clang/CIR/Dialect/IR/CIRLowering.inc"
@@ -58,7 +265,7 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Do not match on operations that have dedicated ABI lowering rewrite rules
     if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::BaseMethodOp,
-                  cir::CastOp, cir::CmpOp, cir::ConstantOp,
+                  cir::CastOp, cir::CmpOp, cir::ConstantOp, cir::DeleteArrayOp,
                   cir::DerivedDataMemberOp, cir::DerivedMethodOp, cir::FuncOp,
                   cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
@@ -72,19 +279,28 @@ public:
                     [typeConverter](mlir::Region &region) {
                       return typeConverter->isLegal(&region);
                     });
-    if (operandsAndResultsLegal && regionsLegal) {
+    bool attrsLegal =
+        llvm::all_of(op->getAttrs(), [typeConverter](mlir::NamedAttribute na) {
+          return isCXXABIAttributeLegal(*typeConverter, na.getValue());
+        });
+
+    if (operandsAndResultsLegal && regionsLegal && attrsLegal) {
       // The operation does not have any CXXABI-dependent operands or results,
       // the match fails.
       return mlir::failure();
     }
 
-    assert(op->getNumRegions() == 0 && "CIRGenericCXXABILoweringPattern cannot "
-                                       "deal with operations with regions");
-
     mlir::OperationState loweredOpState(op->getLoc(), op->getName());
     loweredOpState.addOperands(operands);
-    loweredOpState.addAttributes(op->getAttrs());
     loweredOpState.addSuccessors(op->getSuccessors());
+
+    // Lower all attributes.
+    llvm::SmallVector<mlir::NamedAttribute> attrs;
+    for (const mlir::NamedAttribute &na : op->getAttrs())
+      attrs.push_back(
+          {na.getName(),
+           rewriteAttribute(*typeConverter, op->getContext(), na.getValue())});
+    loweredOpState.addAttributes(attrs);
 
     // Lower all result types
     llvm::SmallVector<mlir::Type> loweredResultTypes;
@@ -135,79 +351,182 @@ mlir::LogicalResult CIRCastOpABILowering::matchAndRewrite(
     cir::CastOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type srcTy = op.getSrc().getType();
-  assert((mlir::isa<cir::DataMemberType, cir::MethodType>(srcTy)) &&
-         "input to bitcast in ABI lowering must be a data member or method");
 
-  switch (op.getKind()) {
-  case cir::CastKind::bitcast: {
-    mlir::Type destTy = getTypeConverter()->convertType(op.getType());
-    mlir::Value loweredResult;
-    if (mlir::isa<cir::DataMemberType>(srcTy))
-      loweredResult = lowerModule->getCXXABI().lowerDataMemberBitcast(
-          op, destTy, adaptor.getSrc(), rewriter);
-    else
-      loweredResult = lowerModule->getCXXABI().lowerMethodBitcast(
-          op, destTy, adaptor.getSrc(), rewriter);
-    rewriter.replaceOp(op, loweredResult);
-    return mlir::success();
-  }
-  case cir::CastKind::member_ptr_to_bool: {
-    mlir::Value loweredResult;
-    if (mlir::isa<cir::MethodType>(srcTy))
-      loweredResult = lowerModule->getCXXABI().lowerMethodToBoolCast(
-          op, adaptor.getSrc(), rewriter);
-    else
-      loweredResult = lowerModule->getCXXABI().lowerDataMemberToBoolCast(
-          op, adaptor.getSrc(), rewriter);
-    rewriter.replaceOp(op, loweredResult);
-    return mlir::success();
-  }
-  default:
-    break;
+  if (mlir::isa<cir::DataMemberType, cir::MethodType>(srcTy)) {
+    switch (op.getKind()) {
+    case cir::CastKind::bitcast: {
+      mlir::Type destTy = getTypeConverter()->convertType(op.getType());
+      mlir::Value loweredResult;
+      if (mlir::isa<cir::DataMemberType>(srcTy))
+        loweredResult = lowerModule->getCXXABI().lowerDataMemberBitcast(
+            op, destTy, adaptor.getSrc(), rewriter);
+      else
+        loweredResult = lowerModule->getCXXABI().lowerMethodBitcast(
+            op, destTy, adaptor.getSrc(), rewriter);
+      rewriter.replaceOp(op, loweredResult);
+      return mlir::success();
+    }
+    case cir::CastKind::member_ptr_to_bool: {
+      mlir::Value loweredResult;
+      if (mlir::isa<cir::DataMemberType>(srcTy))
+        loweredResult = lowerModule->getCXXABI().lowerDataMemberToBoolCast(
+            op, adaptor.getSrc(), rewriter);
+      else
+        loweredResult = lowerModule->getCXXABI().lowerMethodToBoolCast(
+            op, adaptor.getSrc(), rewriter);
+      rewriter.replaceOp(op, loweredResult);
+      return mlir::success();
+    }
+    default:
+      break;
+    }
   }
 
-  return mlir::failure();
+  mlir::Value loweredResult = cir::CastOp::create(
+      rewriter, op.getLoc(), getTypeConverter()->convertType(op.getType()),
+      adaptor.getKind(), adaptor.getSrc());
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+// Helper function to lower a value for things like an initializer.
+static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
+                                         const mlir::DataLayout &layout,
+                                         const mlir::TypeConverter &tc,
+                                         mlir::Type ty,
+                                         mlir::Attribute initVal) {
+  if (mlir::isa<cir::DataMemberType>(ty)) {
+    auto dataMemberVal = mlir::cast_if_present<cir::DataMemberAttr>(initVal);
+    return lowerModule->getCXXABI().lowerDataMemberConstant(dataMemberVal,
+                                                            layout, tc);
+  }
+  if (mlir::isa<cir::MethodType>(ty)) {
+    auto methodVal = mlir::cast_if_present<cir::MethodAttr>(initVal);
+    return lowerModule->getCXXABI().lowerMethodConstant(methodVal, layout, tc);
+  }
+
+  if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
+    auto loweredArrTy = mlir::cast<cir::ArrayType>(tc.convertType(arrTy));
+
+    if (!initVal)
+      return {};
+
+    if (auto zeroVal = mlir::dyn_cast_if_present<cir::ZeroAttr>(initVal))
+      return cir::ZeroAttr::get(loweredArrTy);
+
+    auto arrayVal = mlir::cast<cir::ConstArrayAttr>(initVal);
+
+    // String-literal arrays store their bytes as a StringAttr in `elts`. The
+    // backing i8 element type is never rewritten by the CXX ABI type
+    // converter, so the attribute is already legal and can be passed through
+    // unchanged.
+    if (mlir::isa<mlir::StringAttr>(arrayVal.getElts())) {
+      assert(loweredArrTy == arrTy &&
+             "string-literal array type should not change under CXX ABI");
+      return arrayVal;
+    }
+
+    auto arrayElts = mlir::cast<ArrayAttr>(arrayVal.getElts());
+    SmallVector<mlir::Attribute> loweredElements;
+    loweredElements.reserve(arrTy.getSize());
+    for (const mlir::Attribute &attr : arrayElts) {
+      auto typedAttr = cast<mlir::TypedAttr>(attr);
+      loweredElements.push_back(lowerInitialValue(
+          lowerModule, layout, tc, typedAttr.getType(), typedAttr));
+    }
+
+    return cir::ConstArrayAttr::get(
+        loweredArrTy, mlir::ArrayAttr::get(ty.getContext(), loweredElements),
+        arrayVal.getTrailingZerosNum());
+  }
+
+  if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty)) {
+    auto convertedTy =
+        mlir::dyn_cast<cir::RecordType>(tc.convertType(recordTy));
+    if (!convertedTy)
+      return {};
+
+    if (auto recVal = mlir::dyn_cast_if_present<cir::ZeroAttr>(initVal))
+      return cir::ZeroAttr::get(convertedTy);
+
+    if (auto undefVal = mlir::dyn_cast_if_present<cir::UndefAttr>(initVal))
+      return cir::UndefAttr::get(convertedTy);
+
+    // This might not be possible from Clang directly, but we can get here with
+    // hand-written IR.
+    if (auto poisonVal = mlir::dyn_cast_if_present<cir::PoisonAttr>(initVal))
+      return cir::PoisonAttr::get(convertedTy);
+
+    if (auto recVal =
+            mlir::dyn_cast_if_present<cir::ConstRecordAttr>(initVal)) {
+      auto recordMembers = mlir::cast<ArrayAttr>(recVal.getMembers());
+
+      SmallVector<mlir::Attribute> loweredMembers;
+      loweredMembers.reserve(recordMembers.size());
+
+      for (const mlir::Attribute &attr : recordMembers) {
+        auto typedAttr = cast<mlir::TypedAttr>(attr);
+        loweredMembers.push_back(lowerInitialValue(
+            lowerModule, layout, tc, typedAttr.getType(), typedAttr));
+      }
+
+      return cir::ConstRecordAttr::get(
+          convertedTy, mlir::ArrayAttr::get(ty.getContext(), loweredMembers));
+    }
+
+    assert(!initVal && "Record init val type not handled");
+    return {};
+  }
+
+  // Pointers can contain record types, which can change.
+  if (auto ptrTy = mlir::dyn_cast<cir::PointerType>(ty)) {
+    auto convertedTy = mlir::cast<cir::PointerType>(tc.convertType(ptrTy));
+    // pointers don't change other than their types.
+
+    if (auto gva = mlir::dyn_cast_if_present<cir::GlobalViewAttr>(initVal))
+      return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
+                                      gva.getIndices());
+
+    auto constPtr = mlir::cast_if_present<cir::ConstPtrAttr>(initVal);
+    if (!constPtr)
+      return {};
+    return cir::ConstPtrAttr::get(convertedTy, constPtr.getValue());
+  }
+
+  assert(ty == tc.convertType(ty) &&
+         "cir.global or constant operand is not an CXXABI-dependent type");
+
+  // Every other type can be left alone.
+  return cast<mlir::TypedAttr>(initVal);
 }
 
 mlir::LogicalResult CIRConstantOpABILowering::matchAndRewrite(
     cir::ConstantOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
 
-  if (mlir::isa<cir::DataMemberType>(op.getType())) {
-    auto dataMember = mlir::cast<cir::DataMemberAttr>(op.getValue());
-    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
-    mlir::TypedAttr abiValue = lowerModule->getCXXABI().lowerDataMemberConstant(
-        dataMember, layout, *getTypeConverter());
-    rewriter.replaceOpWithNewOp<ConstantOp>(op, abiValue);
-    return mlir::success();
-  }
-
-  if (mlir::isa<cir::MethodType>(op.getType())) {
-    auto method = mlir::cast<cir::MethodAttr>(op.getValue());
-    mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
-    mlir::TypedAttr abiValue = lowerModule->getCXXABI().lowerMethodConstant(
-        method, layout, *getTypeConverter());
-    rewriter.replaceOpWithNewOp<ConstantOp>(op, abiValue);
-    return mlir::success();
-  }
-
-  llvm_unreachable("constant operand is not an CXXABI-dependent type");
+  mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
+  mlir::TypedAttr newValue = lowerInitialValue(
+      lowerModule, layout, *getTypeConverter(), op.getType(), op.getValue());
+  rewriter.replaceOpWithNewOp<ConstantOp>(op, newValue);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRCmpOpABILowering::matchAndRewrite(
     cir::CmpOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type type = op.getLhs().getType();
-  assert((mlir::isa<cir::DataMemberType, cir::MethodType>(type)) &&
-         "input to cmp in ABI lowering must be a data member or method");
 
   mlir::Value loweredResult;
   if (mlir::isa<cir::DataMemberType>(type))
     loweredResult = lowerModule->getCXXABI().lowerDataMemberCmp(
         op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
-  else
+  else if (mlir::isa<cir::MethodType>(type))
     loweredResult = lowerModule->getCXXABI().lowerMethodCmp(
         op, adaptor.getLhs(), adaptor.getRhs(), rewriter);
+  else
+    loweredResult = cir::CmpOp::create(
+        rewriter, op.getLoc(), getTypeConverter()->convertType(op.getType()),
+        adaptor.getKind(), adaptor.getLhs(), adaptor.getRhs());
 
   rewriter.replaceOp(op, loweredResult);
   return mlir::success();
@@ -239,6 +558,15 @@ mlir::LogicalResult CIRFuncOpABILowering::matchAndRewrite(
   // Create a new cir.func operation for the CXXABI-lowered function.
   cir::FuncOp loweredFuncOp = rewriter.cloneWithoutRegions(op);
   loweredFuncOp.setFunctionType(loweredFuncType);
+
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
+  for (const mlir::NamedAttribute &na : op->getAttrs())
+    attrs.push_back(
+        {na.getName(), rewriteAttribute(*getTypeConverter(), op->getContext(),
+                                        na.getValue())});
+
+  loweredFuncOp->setAttrs(attrs);
+
   rewriter.inlineRegionBefore(op.getBody(), loweredFuncOp.getBody(),
                               loweredFuncOp.end());
   if (mlir::failed(rewriter.convertRegionTypes(
@@ -259,41 +587,8 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
 
   mlir::DataLayout layout(op->getParentOfType<mlir::ModuleOp>());
 
-  mlir::Attribute loweredInit;
-  if (mlir::isa<cir::DataMemberType>(ty)) {
-    cir::DataMemberAttr init =
-        mlir::cast_if_present<cir::DataMemberAttr>(op.getInitialValueAttr());
-    loweredInit = lowerModule->getCXXABI().lowerDataMemberConstant(
-        init, layout, *getTypeConverter());
-  } else if (mlir::isa<cir::MethodType>(ty)) {
-    cir::MethodAttr init =
-        mlir::cast_if_present<cir::MethodAttr>(op.getInitialValueAttr());
-    loweredInit = lowerModule->getCXXABI().lowerMethodConstant(
-        init, layout, *getTypeConverter());
-  } else if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
-    auto init = mlir::cast<cir::ConstArrayAttr>(op.getInitialValueAttr());
-    auto arrayElts = mlir::cast<ArrayAttr>(init.getElts());
-    SmallVector<mlir::Attribute> loweredElements;
-    loweredElements.reserve(arrTy.getSize());
-    for (const mlir::Attribute &attr : arrayElts) {
-      if (auto methodAttr = mlir::dyn_cast<cir::MethodAttr>(attr)) {
-        mlir::Attribute loweredElt =
-            lowerModule->getCXXABI().lowerMethodConstant(methodAttr, layout,
-                                                         *getTypeConverter());
-        loweredElements.push_back(loweredElt);
-      } else {
-        llvm_unreachable("array of data member lowering is NYI");
-      }
-    }
-    auto loweredArrTy =
-        mlir::cast<cir::ArrayType>(getTypeConverter()->convertType(arrTy));
-    loweredInit = cir::ConstArrayAttr::get(
-        loweredArrTy,
-        mlir::ArrayAttr::get(rewriter.getContext(), loweredElements));
-  } else {
-    llvm_unreachable(
-        "inputs to cir.global in ABI lowering must be data member or method");
-  }
+  mlir::Attribute loweredInit = lowerInitialValue(
+      lowerModule, layout, *getTypeConverter(), ty, op.getInitialValueAttr());
 
   auto newOp = mlir::cast<cir::GlobalOp>(rewriter.clone(*op.getOperation()));
   newOp.setInitialValueAttr(loweredInit);
@@ -317,6 +612,108 @@ mlir::LogicalResult CIRBaseMethodOpABILowering::matchAndRewrite(
   mlir::Value loweredResult =
       lowerModule->getCXXABI().lowerBaseMethod(op, adaptor.getSrc(), rewriter);
   rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
+    cir::DeleteArrayOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::FlatSymbolRefAttr deleteFn = op.getDeleteFnAttr();
+  mlir::Location loc = op->getLoc();
+  mlir::Value loweredAddress = adaptor.getAddress();
+
+  cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
+  bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
+
+  if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
+      deleteParams.getAlignment())
+    return rewriter.notifyMatchFailure(
+        op, "type-aware, destroying, or aligned delete not yet supported");
+
+  const CIRCXXABI &cxxABI = lowerModule->getCXXABI();
+  CIRBaseBuilderTy cirBuilder(rewriter);
+
+  // Read the array cookie (or compute the void* pointer for the
+  // non-cookie case) before creating the cleanup scope. The cookie read
+  // produces values that are needed by both the destruction loop in the
+  // body region (numElements for the array.dtor) and the operator
+  // delete[] call in the cleanup region (deletePtr / numElements for the
+  // total-size computation), so it must dominate both regions.
+  mlir::Value deletePtr;
+  mlir::Value numElements;
+  cir::PointerType ptrTy;
+  clang::CharUnits cookieSize;
+  mlir::DataLayout dl(op->getParentOfType<mlir::ModuleOp>());
+  unsigned ptrWidth =
+      lowerModule->getTarget().getPointerWidth(clang::LangAS::Default);
+  cir::IntType sizeTy = cirBuilder.getUIntNTy(ptrWidth);
+
+  if (cookieRequired) {
+    ptrTy = mlir::cast<cir::PointerType>(loweredAddress.getType());
+    cxxABI.readArrayCookie(loc, loweredAddress, dl, cirBuilder, numElements,
+                           deletePtr, cookieSize);
+  } else {
+    deletePtr = cir::CastOp::create(rewriter, loc, cirBuilder.getVoidPtrTy(),
+                                    cir::CastKind::bitcast, loweredAddress);
+  }
+
+  // Create a cleanup scope to wrap the ArrayDtor operation (if needed) and
+  // call the array delete operator from the cleanup region. If no exceptions
+  // are thrown during the array dtor, the normal control flow will call the
+  // delete operator. The ArrayDtor operation will get its own cleanup region
+  // when it is expanded during LoweringPrepare. If an exception is thrown, the
+  // exception handling flow will be connected to the cleanup region here to
+  // call the delete operator on the exception path.
+  mlir::FlatSymbolRefAttr dtorFn = op.getElementDtorAttr();
+  cir::CleanupKind cleanupKind =
+      op.getDtorMayThrow() ? cir::CleanupKind::All : cir::CleanupKind::Normal;
+  cir::CleanupScopeOp::create(
+      rewriter, loc, cleanupKind,
+      /*bodyBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        if (dtorFn) {
+          auto eltPtrTy = cir::PointerType::get(ptrTy.getPointee());
+          auto arrayDtor = cir::ArrayDtor::create(
+              b, l, loweredAddress, numElements,
+              [&](mlir::OpBuilder &bb, mlir::Location ll) {
+                mlir::Value arg =
+                    bb.getInsertionBlock()->addArgument(eltPtrTy, ll);
+                auto dtorCall = cir::CallOp::create(
+                    bb, ll, dtorFn, cir::VoidType(), mlir::ValueRange{arg});
+                if (!op.getDtorMayThrow())
+                  dtorCall.setNothrowAttr(bb.getUnitAttr());
+                cir::YieldOp::create(bb, ll);
+              });
+          if (op.getDtorMayThrow())
+            arrayDtor.setDtorMayThrow(true);
+        }
+        cir::YieldOp::create(b, l);
+      },
+      /*cleanupBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location l) {
+        llvm::SmallVector<mlir::Value> callArgs;
+        callArgs.push_back(deletePtr);
+        if (deleteParams.getSize()) {
+          uint64_t eltSizeBytes = dl.getTypeSizeInBits(ptrTy.getPointee()) / 8;
+          auto eltSizeVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, eltSizeBytes));
+          mlir::Value allocSize =
+              cir::MulOp::create(b, l, sizeTy, eltSizeVal, numElements);
+          auto cookieSizeVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, cookieSize.getQuantity()));
+          allocSize =
+              cir::AddOp::create(b, l, sizeTy, allocSize, cookieSizeVal);
+          callArgs.push_back(allocSize);
+        }
+        auto deleteCall =
+            cir::CallOp::create(b, l, deleteFn, cir::VoidType(), callArgs);
+        // operator delete[] is implicitly nothrow per [basic.stc.dynamic],
+        // matching classic CodeGen's `nounwind` attribute on the call.
+        deleteCall.setNothrowAttr(b.getUnitAttr());
+        cir::YieldOp::create(b, l);
+      });
+
+  rewriter.eraseOp(op);
   return mlir::success();
 }
 
@@ -368,56 +765,205 @@ mlir::LogicalResult CIRGetRuntimeMemberOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
-// Prepare the type converter for the CXXABI lowering pass.
-// Even though this is a CIR-to-CIR pass, we are eliminating some CIR types.
-static void prepareCXXABITypeConverter(mlir::TypeConverter &converter,
-                                       mlir::DataLayout &dataLayout,
-                                       cir::LowerModule &lowerModule) {
-  converter.addConversion([&](mlir::Type type) -> mlir::Type { return type; });
-  // This is necessary in order to convert CIR pointer types that are pointing
-  // to CIR types that we are lowering in this pass.
-  converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    mlir::Type loweredPointeeType = converter.convertType(type.getPointee());
-    if (!loweredPointeeType)
-      return {};
-    return cir::PointerType::get(type.getContext(), loweredPointeeType,
-                                 type.getAddrSpace());
-  });
-  converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
-    mlir::Type loweredElementType =
-        converter.convertType(type.getElementType());
-    if (!loweredElementType)
-      return {};
-    return cir::ArrayType::get(loweredElementType, type.getSize());
-  });
-
-  converter.addConversion([&](cir::DataMemberType type) -> mlir::Type {
-    mlir::Type abiType =
-        lowerModule.getCXXABI().lowerDataMemberType(type, converter);
-    return converter.convertType(abiType);
-  });
-  converter.addConversion([&](cir::MethodType type) -> mlir::Type {
-    mlir::Type abiType =
-        lowerModule.getCXXABI().lowerMethodType(type, converter);
-    return converter.convertType(abiType);
-  });
-  // This is necessary in order to convert CIR function types that have argument
-  // or return types that use CIR types that we are lowering in this pass.
-  converter.addConversion([&](cir::FuncType type) -> mlir::Type {
-    llvm::SmallVector<mlir::Type> loweredInputTypes;
-    loweredInputTypes.reserve(type.getNumInputs());
-    if (mlir::failed(
-            converter.convertTypes(type.getInputs(), loweredInputTypes)))
-      return {};
-
-    mlir::Type loweredReturnType = converter.convertType(type.getReturnType());
-    if (!loweredReturnType)
-      return {};
-
-    return cir::FuncType::get(loweredInputTypes, loweredReturnType,
-                              /*isVarArg=*/type.getVarArg());
-  });
+mlir::LogicalResult CIRVTableGetTypeInfoOpABILowering::matchAndRewrite(
+    cir::VTableGetTypeInfoOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerVTableGetTypeInfo(op, rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
 }
+
+namespace {
+// A small type to handle type conversion for the the CXXABILoweringPass.
+// Even though this is a CIR-to-CIR pass, we are eliminating some CIR types.
+// Most importantly, this pass solves recursive type conversion problems by
+// keeping a call stack.
+class CIRABITypeConverter : public mlir::TypeConverter {
+
+  mlir::MLIRContext &context;
+
+  // Recursive structure detection.
+  // We store one entry per thread here, and rely on locking. This works the
+  // same way as the LLVM-IR lowering does it, which has a similar problem.
+  DenseMap<uint64_t, std::unique_ptr<SmallVector<cir::RecordType>>>
+      conversionCallStack;
+  llvm::sys::SmartRWMutex<true> callStackMutex;
+
+  // In order to let us 'change the names' back after the fact, we collect them
+  // along the way.  They should only be added/accessed via the thread-safe
+  // functions below.
+  llvm::SmallVector<cir::RecordType> convertedRecordTypes;
+  llvm::sys::SmartRWMutex<true> recordTypeMutex;
+
+  // This provides a stack for the RecordTypes being processed on the current
+  // thread, which lets us solve recursive conversions. This implementation is
+  // cribbed from the LLVMTypeConverter which solves a similar but not identical
+  // problem.
+  SmallVector<cir::RecordType> &getCurrentThreadRecursiveStack() {
+    {
+      // Most of the time, the entry already exists in the map.
+      std::shared_lock<decltype(callStackMutex)> lock(callStackMutex,
+                                                      std::defer_lock);
+      if (context.isMultithreadingEnabled())
+        lock.lock();
+      auto recursiveStack = conversionCallStack.find(llvm::get_threadid());
+      if (recursiveStack != conversionCallStack.end())
+        return *recursiveStack->second;
+    }
+
+    // First time this thread gets here, we have to get an exclusive access to
+    // insert in the map
+    std::unique_lock<decltype(callStackMutex)> lock(callStackMutex);
+    auto recursiveStackInserted = conversionCallStack.insert(
+        std::make_pair(llvm::get_threadid(),
+                       std::make_unique<SmallVector<cir::RecordType>>()));
+    return *recursiveStackInserted.first->second;
+  }
+
+  void addConvertedRecordType(cir::RecordType rt) {
+    std::unique_lock<decltype(recordTypeMutex)> lock(recordTypeMutex);
+    convertedRecordTypes.push_back(rt);
+  }
+
+  llvm::SmallVector<mlir::Type> convertRecordMemberTypes(cir::RecordType type) {
+    llvm::SmallVector<mlir::Type> loweredMemberTypes;
+    loweredMemberTypes.reserve(type.getNumElements());
+
+    if (mlir::failed(convertTypes(type.getMembers(), loweredMemberTypes)))
+      return {};
+
+    return loweredMemberTypes;
+  }
+
+  cir::RecordType convertRecordType(cir::RecordType type) {
+    // Unnamed record types can't be referred to recursively, so we can just
+    // convert this one. It also doesn't have uniqueness problems, so we can
+    // just do a conversion on it.
+    if (!type.getName()) {
+      llvm::SmallVector<mlir::Type> converted = convertRecordMemberTypes(type);
+      if (auto u = mlir::dyn_cast<cir::UnionType>(type)) {
+        mlir::Type loweredPadding;
+        if (mlir::Type pad = u.getPadding())
+          loweredPadding = convertType(pad);
+        return cir::UnionType::get(type.getContext(), converted,
+                                   type.getPacked(), loweredPadding);
+      }
+      auto s = mlir::cast<cir::StructType>(type);
+      return cir::StructType::get(type.getContext(), converted,
+                                  type.getPacked(), type.getPadded(),
+                                  s.getIsClass());
+    }
+
+    assert(!type.isIncomplete() || type.getMembers().empty());
+
+    // If the type has already been converted, we can just return, since there
+    // is nothing to do. Also, if it is incomplete, it can't have invalid
+    // members! So we can skip transforming it.
+    if (type.isIncomplete() || type.isABIConvertedRecord())
+      return type;
+
+    SmallVectorImpl<cir::RecordType> &recursiveStack =
+        getCurrentThreadRecursiveStack();
+
+    cir::RecordType convertedType;
+    if (mlir::isa<cir::UnionType>(type))
+      convertedType =
+          cir::UnionType::get(type.getContext(), type.getABIConvertedName());
+    else
+      convertedType =
+          cir::StructType::get(type.getContext(), type.getABIConvertedName(),
+                               mlir::cast<cir::StructType>(type).getIsClass());
+
+    // This type has already been converted, just return it.
+    if (convertedType.isComplete())
+      return convertedType;
+
+    // We put the existing 'type' into the vector if we're in the process of
+    // converting it (and pop it when we're done).  To prevent recursion,
+    // just return the 'incomplete' version, and the 'top level' version of this
+    // call will call 'complete' on it.
+    if (llvm::is_contained(recursiveStack, type))
+      return convertedType;
+
+    recursiveStack.push_back(type);
+    llvm::scope_exit popConvertingType(
+        [&recursiveStack]() { recursiveStack.pop_back(); });
+
+    SmallVector<mlir::Type> convertedMembers = convertRecordMemberTypes(type);
+
+    mlir::Type loweredPadding;
+    if (auto u = mlir::dyn_cast<cir::UnionType>(type))
+      if (mlir::Type pad = u.getPadding())
+        loweredPadding = convertType(pad);
+    convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
+                           loweredPadding);
+    addConvertedRecordType(convertedType);
+    return convertedType;
+  }
+
+public:
+  CIRABITypeConverter(mlir::MLIRContext &ctx, mlir::DataLayout &dataLayout,
+                      cir::LowerModule &lowerModule)
+      : context(ctx) {
+    addConversion([&](mlir::Type type) -> mlir::Type { return type; });
+    // This is necessary in order to convert CIR pointer types that are
+    // pointing to CIR types that we are lowering in this pass.
+    addConversion([&](cir::PointerType type) -> mlir::Type {
+      mlir::Type loweredPointeeType = convertType(type.getPointee());
+      if (!loweredPointeeType)
+        return {};
+      return cir::PointerType::get(type.getContext(), loweredPointeeType,
+                                   type.getAddrSpace());
+    });
+    addConversion([&](cir::ArrayType type) -> mlir::Type {
+      mlir::Type loweredElementType = convertType(type.getElementType());
+      if (!loweredElementType)
+        return {};
+      return cir::ArrayType::get(loweredElementType, type.getSize());
+    });
+
+    addConversion([&](cir::DataMemberType type) -> mlir::Type {
+      mlir::Type abiType =
+          lowerModule.getCXXABI().lowerDataMemberType(type, *this);
+      return convertType(abiType);
+    });
+    addConversion([&](cir::MethodType type) -> mlir::Type {
+      mlir::Type abiType = lowerModule.getCXXABI().lowerMethodType(type, *this);
+      return convertType(abiType);
+    });
+    // This is necessary in order to convert CIR function types that have
+    // argument or return types that use CIR types that we are lowering in
+    // this pass.
+    addConversion([&](cir::FuncType type) -> mlir::Type {
+      llvm::SmallVector<mlir::Type> loweredInputTypes;
+      loweredInputTypes.reserve(type.getNumInputs());
+      if (mlir::failed(convertTypes(type.getInputs(), loweredInputTypes)))
+        return {};
+
+      mlir::Type loweredReturnType = convertType(type.getReturnType());
+      if (!loweredReturnType)
+        return {};
+
+      return cir::FuncType::get(loweredInputTypes, loweredReturnType,
+                                /*isVarArg=*/type.getVarArg());
+    });
+    addConversion([&](cir::StructType type) -> mlir::Type {
+      return convertRecordType(type);
+    });
+    addConversion([&](cir::UnionType type) -> mlir::Type {
+      return convertRecordType(type);
+    });
+  }
+
+  void restoreRecordTypeNames() {
+    std::unique_lock<decltype(recordTypeMutex)> lock(recordTypeMutex);
+
+    for (auto rt : convertedRecordTypes)
+      rt.removeABIConversionNamePrefix();
+  }
+};
+} // namespace
 
 static void
 populateCXXABIConversionTarget(mlir::ConversionTarget &target,
@@ -431,7 +977,31 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
       [&typeConverter](mlir::Operation *op) {
         if (!typeConverter.isLegal(op))
           return false;
-        return std::all_of(op->getRegions().begin(), op->getRegions().end(),
+
+        bool attrs = llvm::all_of(
+            op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
+              return isCXXABIAttributeLegal(typeConverter, a.getValue());
+            });
+
+        return attrs &&
+               std::all_of(op->getRegions().begin(), op->getRegions().end(),
+                           [&typeConverter](mlir::Region &region) {
+                             return typeConverter.isLegal(&region);
+                           });
+      });
+
+  target.addDynamicallyLegalDialect<mlir::acc::OpenACCDialect>(
+      [&typeConverter](mlir::Operation *op) {
+        if (!typeConverter.isLegal(op))
+          return false;
+
+        bool attrs = llvm::all_of(
+            op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
+              return isCXXABIAttributeLegal(typeConverter, a.getValue());
+            });
+
+        return attrs &&
+               std::all_of(op->getRegions().begin(), op->getRegions().end(),
                            [&typeConverter](mlir::Region &region) {
                              return typeConverter.isLegal(&region);
                            });
@@ -439,13 +1009,22 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 
   // Some CIR ops needs special checking for legality
   target.addDynamicallyLegalOp<cir::FuncOp>([&typeConverter](cir::FuncOp op) {
-    return typeConverter.isLegal(op.getFunctionType());
+    bool attrs = llvm::all_of(
+        op->getAttrs(), [&typeConverter](const mlir::NamedAttribute &a) {
+          return isCXXABIAttributeLegal(typeConverter, a.getValue());
+        });
+
+    return attrs && typeConverter.isLegal(op.getFunctionType());
   });
   target.addDynamicallyLegalOp<cir::GlobalOp>(
       [&typeConverter](cir::GlobalOp op) {
         return typeConverter.isLegal(op.getSymType());
       });
+  // Operations that do not use any special types must be explicitly marked as
+  // illegal to trigger processing here.
+  target.addIllegalOp<cir::DeleteArrayOp>();
   target.addIllegalOp<cir::DynamicCastOp>();
+  target.addIllegalOp<cir::VTableGetTypeInfoOp>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -453,23 +1032,19 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 //===----------------------------------------------------------------------===//
 
 void CXXABILoweringPass::runOnOperation() {
-  auto module = mlir::cast<mlir::ModuleOp>(getOperation());
-  mlir::MLIRContext *ctx = module.getContext();
+  auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
+  mlir::MLIRContext *ctx = mod.getContext();
 
-  // If the triple is not present, e.g. CIR modules parsed from text, we
-  // cannot init LowerModule properly.
-  assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  // If no target triple is available, skip the ABI lowering pass.
-  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
+  std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
+  // If lower module is not available, skip the ABI lowering pass.
+  if (!lowerModule) {
+    mod.emitWarning("Cannot create a CIR lower module, skipping the ")
+        << getName() << " pass";
     return;
+  }
 
-  mlir::PatternRewriter rewriter(ctx);
-  std::unique_ptr<cir::LowerModule> lowerModule =
-      cir::createLowerModule(module, rewriter);
-
-  mlir::DataLayout dataLayout(module);
-  mlir::TypeConverter typeConverter;
-  prepareCXXABITypeConverter(typeConverter, dataLayout, *lowerModule);
+  mlir::DataLayout dataLayout(mod);
+  CIRABITypeConverter typeConverter(*ctx, dataLayout, *lowerModule);
 
   mlir::RewritePatternSet patterns(ctx);
   patterns.add<CIRGenericCXXABILoweringPattern>(patterns.getContext(),
@@ -483,8 +1058,14 @@ void CXXABILoweringPass::runOnOperation() {
   mlir::ConversionTarget target(*ctx);
   populateCXXABIConversionTarget(target, typeConverter);
 
-  if (failed(mlir::applyPartialConversion(module, target, std::move(patterns))))
+  llvm::SmallVector<mlir::Operation *> ops;
+  ops.push_back(mod);
+  cir::collectUnreachable(mod, ops);
+
+  if (failed(mlir::applyPartialConversion(ops, target, std::move(patterns))))
     signalPassFailure();
+
+  typeConverter.restoreRecordTypeNames();
 }
 
 std::unique_ptr<Pass> mlir::createCXXABILoweringPass() {

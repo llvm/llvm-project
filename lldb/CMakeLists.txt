@@ -26,6 +26,7 @@ endif()
 include(GNUInstallDirs)
 
 option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
+option(LLDB_ENABLE_LIBCXX_TESTS "Set to OFF to acknowledge that libc++ is intentionally not built in-tree and silence the missing-libc++ warning." ON)
 
 if(LLDB_BUILT_STANDALONE)
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
@@ -61,6 +62,10 @@ if (LLDB_ENABLE_PYTHON)
     "Path to python interpreter exectuable, relative to python's install prefix")
   set(cachestring_LLDB_PYTHON_EXT_SUFFIX
     "Filename extension for native code python modules")
+  set(cachestring_LLDB_PYTHON_DLL_RELATIVE_PATH
+    "Relative path from LLDB executable to Python DLL directory (Windows only)")
+  set(cachestring_LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+    "Filename of Python runtime library to search for, e.g. python311.dll (Windows only)")
 
   if (LLDB_ENABLE_PYTHON_LIMITED_API)
     set(stable_abi "--stable-abi")
@@ -92,11 +97,19 @@ if (LLDB_ENABLE_PYTHON)
       set(LLDB_PYTHON_EXT_SUFFIX "_d${LLDB_PYTHON_EXT_SUFFIX}")
     endif()
   endif()
-  if(TARGET Python3::Python)
-    get_target_property(_Python3_LIB_PATH Python3::Python IMPORTED_LIBRARY_LOCATION)
-    if(_Python3_LIB_PATH)
-      get_filename_component(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME "${_Python3_LIB_PATH}" NAME)
+  if(WIN32)
+    # On Windows, FindPython3 doesn't reliably expose the runtime DLL path,
+    # only the import library. CPython's DLL naming is standard.
+    if(MINGW)
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+          "libpython${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}.dll")
+    else()
+      set(LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME
+          "python${Python3_VERSION_MAJOR}${Python3_VERSION_MINOR}.dll")
     endif()
+    message(STATUS "LLDB Python runtime DLL: ${LLDB_PYTHON_RUNTIME_LIBRARY_FILENAME} "
+                   "(Python3_VERSION=${Python3_VERSION}, "
+                   "limited_api=${LLDB_ENABLE_PYTHON_LIMITED_API})")
   endif()
 endif ()
 

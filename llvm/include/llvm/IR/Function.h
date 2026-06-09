@@ -49,6 +49,7 @@ class AssemblyAnnotationWriter;
 class Constant;
 class ConstantRange;
 class DataLayout;
+struct DenormalFPEnv;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -85,7 +86,8 @@ private:
   unsigned BlockNumEpoch = 0;
 
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
-  size_t NumArgs;
+  uint32_t NumArgs;
+  MaybeAlign PreferredAlign;
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
   AttributeList AttributeSets;            ///< Parameter attributes
@@ -717,14 +719,8 @@ public:
   /// function.
   DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
-  /// Return the representational value of "denormal-fp-math". Code interested
-  /// in the semantics of the function should use getDenormalMode instead.
-  DenormalMode getDenormalModeRaw() const;
-
-  /// Return the representational value of "denormal-fp-math-f32". Code
-  /// interested in the semantics of the function should use getDenormalMode
-  /// instead.
-  DenormalMode getDenormalModeF32Raw() const;
+  /// Return the representational value of the denormal_fpenv attribute.
+  DenormalFPEnv getDenormalFPEnv() const;
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.
@@ -1048,6 +1044,12 @@ public:
   /// This method will be deprecated as the alignment property should always be
   /// defined.
   void setAlignment(MaybeAlign Align) { GlobalObject::setAlignment(Align); }
+
+  /// Returns the prefalign of the given function.
+  MaybeAlign getPreferredAlignment() const { return PreferredAlign; }
+
+  /// Sets the prefalign attribute of the Function.
+  void setPreferredAlignment(MaybeAlign Align) { PreferredAlign = Align; }
 
   /// Return the value for vscale based on the vscale_range attribute or 0 when
   /// unknown.

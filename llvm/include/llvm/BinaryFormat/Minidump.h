@@ -270,12 +270,6 @@ static_assert(sizeof(ExceptionStream) == 168);
 } // namespace minidump
 
 template <> struct DenseMapInfo<minidump::StreamType> {
-  static minidump::StreamType getEmptyKey() { return minidump::StreamType(-1); }
-
-  static minidump::StreamType getTombstoneKey() {
-    return minidump::StreamType(-2);
-  }
-
   static unsigned getHashValue(minidump::StreamType Val) {
     return DenseMapInfo<uint32_t>::getHashValue(static_cast<uint32_t>(Val));
   }

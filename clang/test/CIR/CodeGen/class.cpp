@@ -5,10 +5,10 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// CIR: !rec_IncompleteC = !cir.record<class "IncompleteC" incomplete>
-// CIR: !rec_Base = !cir.record<class "Base" {!s32i}>
-// CIR: !rec_CompleteC = !cir.record<class "CompleteC" {!s32i, !s8i}>
-// CIR: !rec_Derived = !cir.record<class "Derived" {!rec_Base, !s32i}>
+// CIR: !rec_IncompleteC = !cir.struct<class "IncompleteC" incomplete>
+// CIR: !rec_Base = !cir.struct<class "Base" {!s32i}>
+// CIR: !rec_CompleteC = !cir.struct<class "CompleteC" {!s32i, !s8i}>
+// CIR: !rec_Derived = !cir.struct<class "Derived" {!rec_Base, !s32i}>
 
 // Note: LLVM and OGCG do not emit the type for incomplete classes.
 
@@ -59,7 +59,7 @@ int use(Derived *d) { return d->b; }
 // CIR:  %[[D_B:.*]] = cir.load align(4) %[[D_B_ADDR]]
 
 // LLVM: define{{.*}} i32 @_Z3useP7Derived
-// LLVM:   getelementptr %class.Derived, ptr %{{.*}}, i32 0, i32 1
+// LLVM:   getelementptr inbounds nuw %class.Derived, ptr %{{.*}}, i32 0, i32 1
 
 // OGCG: define{{.*}} i32 @_Z3useP7Derived
 // OGCG:   getelementptr inbounds nuw %class.Derived, ptr %{{.*}}, i32 0, i32 1
@@ -77,7 +77,7 @@ int use_base() {
 
 // LLVM: define{{.*}} i32 @_Z8use_basev
 // LLVM:   %[[D:.*]] = alloca %class.Derived
-// LLVM:   %[[D_A_ADDR:.*]] = getelementptr %class.Base, ptr %[[D]], i32 0, i32 0
+// LLVM:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %[[D]], i32 0, i32 0
 
 // OGCG: define{{.*}} i32 @_Z8use_basev
 // OGCG:   %[[D:.*]] = alloca %class.Derived
@@ -96,7 +96,7 @@ int use_base_via_pointer(Derived *d) {
 // CIR:   %[[D_A:.*]] = cir.load align(4) %[[D_A_ADDR]]
 
 // LLVM: define{{.*}} i32 @_Z20use_base_via_pointerP7Derived
-// LLVM:   %[[D_A_ADDR:.*]] = getelementptr %class.Base, ptr %{{.*}}, i32 0, i32 0
+// LLVM:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %{{.*}}, i32 0, i32 0
 
 // OGCG: define{{.*}} i32 @_Z20use_base_via_pointerP7Derived
 // OGCG:   %[[D_A_ADDR:.*]] = getelementptr inbounds nuw %class.Base, ptr %{{.*}}, i32 0, i32 0

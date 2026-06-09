@@ -1,0 +1,82 @@
+#ifndef _FUNCTIONAL_
+#define _FUNCTIONAL_
+
+namespace std {
+
+template <typename T = void>
+struct less {
+  constexpr bool operator()(const T &Lhs, const T &Rhs) const {
+    return Lhs < Rhs;
+  }
+};
+
+template <>
+struct less<void> {
+  template <typename T, typename U>
+  constexpr bool operator()(T &&Lhs, U &&Rhs) const {
+    return Lhs < Rhs;
+  }
+};
+
+template <typename T = void>
+struct greater {
+  constexpr bool operator()(const T &Lhs, const T &Rhs) const {
+    return Lhs > Rhs;
+  }
+};
+
+template <>
+struct greater<void> {
+  template <typename T, typename U>
+  constexpr bool operator()(T &&Lhs, U &&Rhs) const {
+    return Lhs > Rhs;
+  }
+};
+
+template <typename T = void>
+struct equal_to {
+  constexpr bool operator()(const T &Lhs, const T &Rhs) const {
+    return Lhs == Rhs;
+  }
+};
+
+template <>
+struct equal_to<void> {
+  template <typename T, typename U>
+  constexpr bool operator()(T &&Lhs, U &&Rhs) const {
+    return Lhs == Rhs;
+  }
+};
+
+template <typename T>
+struct hash {};
+
+template <typename T = void>
+struct plus {
+  constexpr T operator()(const T &Lhs, const T &Rhs) const {
+    return Lhs + Rhs;
+  }
+};
+
+template <>
+struct plus<void> {
+  template <typename T, typename U>
+  constexpr auto operator()(T &&Lhs, U &&Rhs) const -> decltype(Lhs + Rhs) {
+    return Lhs + Rhs;
+  }
+};
+
+template <typename T = void>
+struct logical_not {
+  constexpr bool operator()(const T &Arg) const { return !Arg; }
+};
+
+template <>
+struct logical_not<void> {
+  template <typename T>
+  constexpr bool operator()(T &&Arg) const { return !Arg; }
+};
+
+} // namespace std
+
+#endif // _FUNCTIONAL_

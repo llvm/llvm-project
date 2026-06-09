@@ -26,7 +26,7 @@ class StreamString : public Stream {
 public:
   StreamString(bool colors = false);
 
-  StreamString(uint32_t flags, uint32_t addr_size, lldb::ByteOrder byte_order);
+  StreamString(uint32_t flags, lldb::ByteOrder byte_order);
 
   ~StreamString() override;
 

@@ -103,6 +103,7 @@ def err_deleted_non_function : Error<
   "only functions can have deleted definitions">;
 def err_module_not_found : Error<"module '%0' not found">, DefaultFatal;
 def err_module_not_built : Error<"could not build module '%0'">, DefaultFatal;
+def err_module_not_written : Error<"could not write module file for '%0' to '%1': %2">, DefaultFatal;
 def err_module_build_disabled: Error<
   "module '%0' is needed but has not been provided, and implicit use of module "
   "files is disabled">, DefaultFatal;
@@ -286,6 +287,8 @@ def err_seh___except_filter : Error<
   "%0 only allowed in __except filter expression">;
 def err_seh___finally_block : Error<
   "%0 only allowed in __finally block">;
+def err_seh_object_unwinding : Error<
+  "'__try' is not permitted in functions that require object unwinding">;
 
 // Sema && AST
 def note_invalid_subexpr_in_const_expr : Note<
@@ -360,6 +363,8 @@ def err_opt_not_valid_without_opt : Error<
   "option '%0' cannot be specified without '%1'">;
 def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
+def err_opt_unsupported_with_suggest : Error<
+  "option '%0' is unsupported; consider using '%1'">;
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
 def warn_invalid_feature_combination : Warning<
@@ -383,6 +388,8 @@ def err_mips_impossible_musttail: Error<
   >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;
+def err_musttail_noexcept_mismatch: Error<
+  "'musttail' in a noexcept function requires a noexcept callee">;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

@@ -682,6 +682,10 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
   if (EBX == 0x68747541 && EDX == 0x69746e65 && ECX == 0x444d4163)
     return VendorSignatures::AUTHENTIC_AMD;
 
+  // "Hygo nGen uine"
+  if (EBX == 0x6f677948 && EDX == 0x6e65476e && ECX == 0x656e6975)
+    return VendorSignatures::HYGON_GENUINE;
+
   return VendorSignatures::UNKNOWN;
 }
 
@@ -1340,10 +1344,50 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::AMDFAM1AH_ZNVER5;
       break; //  "znver5"
     }
+    if ((Model >= 0x50 && Model <= 0x5f) || (Model >= 0x80 && Model <= 0xcf) ||
+        (Model >= 0xd8 && Model <= 0xe7)) {
+      CPU = "znver6";
+      *Subtype = X86::AMDFAM1AH_ZNVER6;
+      break; //  "znver6"
+    }
     break;
 
   default:
     break; // Unknown AMD CPU.
+  }
+
+  return CPU;
+}
+
+static StringRef getHygonProcessorTypeAndSubtype(unsigned Family,
+                                                 unsigned Model,
+                                                 const unsigned *Features,
+                                                 unsigned *Type,
+                                                 unsigned *Subtype) {
+  StringRef CPU;
+
+  switch (Family) {
+  case 24:
+    switch (Model) {
+    case 4:
+      CPU = "c86-4g-m4";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M4;
+      break; // c86-4g-m4
+    case 6:
+      CPU = "c86-4g-m6";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M6;
+      break; // c86-4g-m6
+    case 7:
+      CPU = "c86-4g-m7";
+      *Type = X86::HYGONFAM18H;
+      *Subtype = X86::HYGONFAM18H_C86_4G_M7;
+      break; // c86-4g-m7
+    }
+    break; // Hygon Family 18H
+  default:
+    break; // Unknown Hygon CPU.
   }
 
   return CPU;
@@ -1511,6 +1555,9 @@ StringRef sys::getHostCPUName() {
   } else if (Vendor == VendorSignatures::AUTHENTIC_AMD) {
     CPU = getAMDProcessorTypeAndSubtype(Family, Model, Features, &Type,
                                         &Subtype);
+  } else if (Vendor == VendorSignatures::HYGON_GENUINE) {
+    CPU = getHygonProcessorTypeAndSubtype(Family, Model, Features, &Type,
+                                          &Subtype);
   }
 
   if (!CPU.empty())
@@ -2178,6 +2225,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["nf"] = HasAPXF;
   Features["cf"] = HasAPXF;
   Features["zu"] = HasAPXF;
+  Features["jmpabs"] = HasAPXF;
 
   bool HasLeafD = MaxLevel >= 0xd &&
                   !getX86CpuIDAndInfoEx(0xd, 0x1, &EAX, &EBX, &ECX, &EDX);

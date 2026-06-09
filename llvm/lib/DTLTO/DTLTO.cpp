@@ -1,30 +1,28 @@
-//===- Dtlto.cpp - Distributed ThinLTO implementation --------------------===//
+//===- DTLTO.cpp - Integrated Distributed ThinLTO implementation ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
 // \file
-// This file implements support functions for Distributed ThinLTO, focusing on
-// archive file handling.
+// This file implements support functions for Integrated Distributed ThinLTO,
+// focusing on preparing complilation jobs for distribution.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DTLTO/DTLTO.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/LTO/LTO.h"
-#include "llvm/Object/Archive.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -32,201 +30,278 @@
 
 using namespace llvm;
 
-namespace {
-
-// Writes the content of a memory buffer into a file.
-llvm::Error saveBuffer(StringRef FileBuffer, StringRef FilePath) {
-  std::error_code EC;
-  raw_fd_ostream OS(FilePath.str(), EC, sys::fs::OpenFlags::OF_None);
-  if (EC) {
-    return createStringError(inconvertibleErrorCode(),
-                             "Failed to create file %s: %s", FilePath.data(),
-                             EC.message().c_str());
-  }
-  OS.write(FileBuffer.data(), FileBuffer.size());
-  if (OS.has_error()) {
-    return createStringError(inconvertibleErrorCode(),
-                             "Failed writing to file %s", FilePath.data());
-  }
-  return Error::success();
-}
-
-// Compute the file path for a thin archive member.
-//
-// For thin archives, an archive member name is typically a file path relative
-// to the archive file's directory. This function resolves that path.
-SmallString<64> computeThinArchiveMemberPath(const StringRef ArchivePath,
-                                             const StringRef MemberName) {
-  assert(!ArchivePath.empty() && "An archive file path must be non empty.");
-  SmallString<64> MemberPath;
-  if (sys::path::is_relative(MemberName)) {
-    MemberPath = sys::path::parent_path(ArchivePath);
-    sys::path::append(MemberPath, MemberName);
-  } else
-    MemberPath = MemberName;
-  sys::path::remove_dots(MemberPath, /*remove_dot_dot=*/true);
-  return MemberPath;
-}
-
-} // namespace
-
-// Determines if a file at the given path is a thin archive file.
-//
-// This function uses a cache to avoid repeatedly reading the same file.
-// It reads only the header portion (magic bytes) of the file to identify
-// the archive type.
-Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
-  // Return cached result if available.
-  auto Cached = ArchiveFiles.find(ArchivePath);
-  if (Cached != ArchiveFiles.end())
-    return Cached->second;
-
-  uint64_t FileSize = -1;
-  bool IsThin = false;
-  std::error_code EC = sys::fs::file_size(ArchivePath, FileSize);
-  if (EC)
-    return createStringError(inconvertibleErrorCode(),
-                             "Failed to get file size from archive %s: %s",
-                             ArchivePath.data(), EC.message().c_str());
-  if (FileSize < sizeof(object::ThinArchiveMagic))
-    return createStringError(inconvertibleErrorCode(),
-                             "Archive file size is too small %s",
-                             ArchivePath.data());
-
-  // Read only the first few bytes containing the magic signature.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufferOrError =
-      MemoryBuffer::getFileSlice(ArchivePath, sizeof(object::ThinArchiveMagic),
-                                 0);
-
-  if ((EC = MemBufferOrError.getError()))
-    return createStringError(inconvertibleErrorCode(),
-                             "Failed to read from archive %s: %s",
-                             ArchivePath.data(), EC.message().c_str());
-
-  StringRef MemBuf = (*MemBufferOrError.get()).getBuffer();
-  if (file_magic::archive != identify_magic(MemBuf))
-    return createStringError(inconvertibleErrorCode(),
-                             "Unknown format for archive %s",
-                             ArchivePath.data());
-
-  IsThin = MemBuf.starts_with(object::ThinArchiveMagic);
-
-  // Cache the result
-  ArchiveFiles[ArchivePath] = IsThin;
-  return IsThin;
-}
-
-// This function performs the following tasks:
-// 1. Adds the input file to the LTO object's list of input files.
-// 2. For thin archive members, generates a new module ID which is a path to a
-// thin archive member file.
-// 3. For regular archive members, generates a new unique module ID.
-// 4. Updates the bitcode module's identifier.
-Expected<std::shared_ptr<lto::InputFile>>
-lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
-  TimeTraceScope TimeScope("Add input for DTLTO");
-
-  // Add the input file to the LTO object.
-  InputFiles.emplace_back(InputPtr.release());
-  std::shared_ptr<lto::InputFile> &Input = InputFiles.back();
-
-  StringRef ModuleId = Input->getName();
-  StringRef ArchivePath = Input->getArchivePath();
-
-  // In most cases, the module ID already points to an individual bitcode file
-  // on disk, so no further preparation for distribution is required.
-  if (ArchivePath.empty() && !Input->isFatLTOObject())
-    return Input;
-
-  SmallString<64> NewModuleId;
-  BitcodeModule &BM = Input->getPrimaryBitcodeModule();
-
-  // For a member of a thin archive that is not a FatLTO object, there is an
-  // existing file on disk that can be used, so we can avoid having to
-  // materialize.
-  Expected<bool> UseThinMember =
-      Input->isFatLTOObject() ? false : isThinArchive(ArchivePath);
-  if (!UseThinMember)
-    return UseThinMember.takeError();
-
-  if (*UseThinMember) {
-    // For thin archives, use the path to the actual file.
-    NewModuleId =
-        computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
-  } else {
-    // For regular archives and FatLTO objects, generate a unique name.
-    Input->setSerializeForDistribution(true);
-
-    // Create unique identifier using process ID and sequence number.
-    std::string PID = utohexstr(sys::Process::getProcessId());
-    std::string Seq = std::to_string(InputFiles.size());
-
-    NewModuleId = sys::path::parent_path(LinkerOutputFile);
-    sys::path::append(NewModuleId, sys::path::filename(ModuleId) + "." + Seq +
-                                       "." + PID + ".o");
-  }
-
-  // Update the module identifier and save it.
-  BM.setModuleIdentifier(Saver.save(NewModuleId.str()));
-
-  return Input;
-}
-
-// Write the archive member content to a file named after the module ID.
-// If a file with that name already exists, it's likely a leftover from a
-// previously terminated linker process and can be safely overwritten.
-Error lto::DTLTO::saveInputArchiveMember(lto::InputFile *Input) {
-  StringRef ModuleId = Input->getName();
-  if (Input->getSerializeForDistribution()) {
-    TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleId);
-    // Cleanup this file on abnormal process exit.
-    if (!SaveTemps)
-      llvm::sys::RemoveFileOnSignal(ModuleId);
-    MemoryBufferRef MemoryBufferRef = Input->getFileBuffer();
-    if (Error EC = saveBuffer(MemoryBufferRef.getBuffer(), ModuleId))
-      return EC;
-  }
-  return Error::success();
-}
-
-// Iterates through all ThinLTO-enabled input files and saves their content
-// to separate files if they are regular archive members.
-Error lto::DTLTO::saveInputArchiveMembers() {
-  for (auto &Input : InputFiles) {
-    if (!Input->isThinLTO())
-      continue;
-    if (Error EC = saveInputArchiveMember(Input.get()))
-      return EC;
-  }
-  return Error::success();
-}
-
-// Entry point for DTLTO archives support.
-//
-// Sets up the temporary file remover and processes archive members.
-// Must be called after all inputs are added but before optimization begins.
-llvm::Error lto::DTLTO::handleArchiveInputs() {
-
-  // Process and save archive members to separate files if needed.
-  if (Error EC = saveInputArchiveMembers())
-    return EC;
-  return Error::success();
-}
-
-// Remove temporary archive member files created to enable distribution.
+// Remove temporary files created to enable distribution.
 void lto::DTLTO::cleanup() {
   if (!SaveTemps) {
-    TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
-    for (auto &Input : InputFiles) {
-      if (!Input->getSerializeForDistribution())
-        continue;
-      std::error_code EC =
-          sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
+    // Remove one file, report error if any.
+    auto removeFile = [](StringRef FileName) -> void {
+      std::error_code EC = sys::fs::remove(FileName, true);
       if (EC &&
           EC != std::make_error_code(std::errc::no_such_file_or_directory))
-        errs() << "warning: could not remove temporary DTLTO input file '"
-               << Input->getName() << "': " << EC.message() << "\n";
+        errs() << "warning: could not remove the file '" << FileName
+               << "': " << EC.message() << "\n";
+    };
+
+    TimeTraceScope JobScope("Remove DTLTO temporary files");
+    for (const auto &Name : CleanupList)
+      removeFile(Name);
+    // Clean the CleanupList for safety.
+    CleanupList.clear();
+  }
+}
+
+// Runs the DTLTO thin link phase, producing per-module summary indices,
+// import lists, and cache keys for distribution.
+Error lto::DTLTO::performThinLink() {
+  size_t NumTasks = getMaxTasks();
+  SummaryIndexFiles.resize(NumTasks);
+  ImportsFilesList.resize(NumTasks);
+  CacheKeysList.resize(NumTasks);
+
+  lto::Config &Cfg = getConfig();
+  Cfg.GetSummaryIndexOutputStream =
+      [&](size_t task) -> std::unique_ptr<raw_svector_ostream> {
+    return std::make_unique<raw_svector_ostream>(SummaryIndexFiles[task]);
+  };
+  Cfg.GetCacheKeyOutputString = [&](size_t task) -> std::string & {
+    return CacheKeysList[task];
+  };
+  Cfg.GetImportsListOutputArray =
+      [&](size_t task) -> std::vector<std::string> & {
+    return ImportsFilesList[task];
+  };
+  return Base::run(AddStreamFunc, {});
+}
+
+// Runs the DTLTO pipeline.
+LLVM_ABI Error lto::DTLTO::run(AddStreamFn AddStream, FileCache CacheParam) {
+  scope_exit CleanUp([this]() { cleanup(); });
+
+  AddStreamFunc = AddStream;
+  Cache = std::move(CacheParam);
+  Conf.Dtlto = 1;
+  UID = itostr(sys::Process::getProcessId());
+
+  if (Error Err = performThinLink())
+    return Err;
+
+  ThinLTOTaskOffset = RegularLTO.ParallelCodeGenParallelismLevel;
+  DistributorParams.TargetTriple = RegularLTO.CombinedModule->getTargetTriple();
+
+  if (Error Err = prepareDtltoJobs())
+    return Err;
+  if (Error Err = serializeLTOInputs())
+    return Err;
+  if (Error Err = performCodegen())
+    return Err;
+  if (Error Err = addObjectFilesToLink())
+    return Err;
+  return Error::success();
+}
+
+// Probes the LTO cache for a compiled native object for the given job.
+Error lto::DTLTO::checkCacheHit(Job &J) {
+  if (!Cache.isValid())
+    return Error::success();
+
+  auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
+  if (Error Err = CacheAddStreamExp.takeError())
+    return Err;
+  AddStreamFn &CacheAddStream = *CacheAddStreamExp;
+  // If CacheAddStream is null, we have a cache hit and at this point
+  // object file is already passed back to the linker.
+  if (!CacheAddStream) {
+    J.Cached = true; // Cache hit, mark the job as cached.
+    CachedJobs.fetch_add(1);
+  } else {
+    // If CacheAddStream is not null, we have a cache miss and we need to
+    // run the backend for codegen. Save cache 'add stream'
+    // function for a later use.
+    J.CacheAddStream = std::move(CacheAddStream);
+  }
+  return Error::success();
+}
+
+// Prepares a single DTLTO backend compilation job for a ThinLTO module.
+Error lto::DTLTO::prepareDtltoJob(StringRef ModulePath, unsigned Task) {
+  assert(Task >= ThinLTOTaskOffset && Task - ThinLTOTaskOffset < Jobs.size() &&
+         "Task index out of range for Jobs");
+  assert(Task < SummaryIndexFiles.size() && "Task index out of range");
+
+  SString ObjFilePath =
+      sys::path::parent_path(DistributorParams.LinkerOutputFile);
+  sys::path::append(ObjFilePath, sys::path::stem(ModulePath) + "." +
+                                     itostr(Task) + "." + UID + ".native.o");
+
+  SString SummaryIndexPathStr = ObjFilePath;
+  SummaryIndexPathStr += ".thinlto.bc";
+  SString ImportsPathStr = ModulePath;
+  ImportsPathStr += ".imports";
+
+  Job &J = Jobs[Task - ThinLTOTaskOffset];
+  J = {Task,
+       ModulePath,
+       Saver.save(ObjFilePath.str()),
+       Saver.save(SummaryIndexPathStr.str()),
+       Saver.save(ImportsPathStr.str()),
+       ImportsFilesList[Task],
+       CacheKeysList[Task],
+       nullptr,
+       false};
+
+  if (Error Err = checkCacheHit(J))
+    return Err;
+  if (!J.Cached) {
+    TimeTraceScope JobScope("Emit individual index for DTLTO",
+                            J.SummaryIndexPath);
+    if (Error Err = save(SummaryIndexFiles[Task], J.SummaryIndexPath))
+      return Err;
+  }
+  if (OnIndexWriteCb)
+    OnIndexWriteCb(J.SummaryIndexPath.str());
+
+  if (ShouldEmitImportFiles)
+    if (Error Err = save(join(J.ImportsFilesList, "\n"), J.ImportsPath))
+      return Err;
+
+  if (!SaveTemps) {
+    if (!J.Cached)
+      addToCleanup(J.NativeObjectPath.str());
+    if (!ShouldEmitIndexFiles)
+      addToCleanup(J.SummaryIndexPath.str());
+    if (!ShouldEmitImportFiles)
+      addToCleanup(J.ImportsPath.str());
+  }
+  return Error::success();
+}
+
+// Derive a set of Clang options that will be shared/common for all DTLTO
+// backend compilations.
+void lto::DTLTO::buildCommonRemoteCompilerOptions() {
+  const lto::Config &C = getConfig();
+  auto &Ops = DistributorParams.CodegenOptions;
+
+  Ops.push_back(Saver.save("-O" + Twine(C.OptLevel)));
+
+  if (C.Options.EmitAddrsig)
+    Ops.push_back("-faddrsig");
+  if (C.Options.FunctionSections)
+    Ops.push_back("-ffunction-sections");
+  if (C.Options.DataSections)
+    Ops.push_back("-fdata-sections");
+
+  if (C.RelocModel == Reloc::PIC_)
+    // Clang doesn't have -fpic for all triples.
+    if (!DistributorParams.TargetTriple.isOSBinFormatCOFF())
+      Ops.push_back("-fpic");
+
+  // Turn on/off warnings about profile cfg mismatch (default on)
+  // --lto-pgo-warn-mismatch.
+  if (!C.PGOWarnMismatch) {
+    Ops.push_back("-mllvm");
+    Ops.push_back("-no-pgo-warn-mismatch");
+  }
+
+  // Enable sample-based profile guided optimizations.
+  // Sample profile file path --lto-sample-profile=<value>.
+  if (!C.SampleProfile.empty()) {
+    Ops.push_back(Saver.save("-fprofile-sample-use=" + Twine(C.SampleProfile)));
+    DistributorParams.CommonInputs.insert(C.SampleProfile);
+  }
+
+  // We don't know which of options will be used by Clang.
+  Ops.push_back("-Wno-unused-command-line-argument");
+
+  // Forward any supplied options.
+  if (!DistributorParams.RemoteCompilerArgs.empty())
+    for (auto &a : DistributorParams.RemoteCompilerArgs)
+      Ops.push_back(a);
+}
+
+// Initializes DTLTO state and prepares a job for each ThinLTO module.
+Error lto::DTLTO::prepareDtltoJobs() {
+  auto &ModuleMap =
+      ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
+  if (ModuleMap.empty())
+    return Error::success();
+
+  Jobs.resize(ModuleMap.size());
+
+  for (auto [I, Mod] : enumerate(ModuleMap))
+    if (Error E = prepareDtltoJob(Mod.first, ThinLTOTaskOffset + I))
+      return E;
+
+  return Error::success();
+}
+
+// Runs the DTLTO code generation phase. Must be invoked after thinLink().
+Error lto::DTLTO::performCodegen() {
+  if (Jobs.empty())
+    return Error::success();
+  // Build common remote compiler options.
+  buildCommonRemoteCompilerOptions();
+
+  DistributionDriver Distributor(DistributorParams, Jobs, SaveTemps,
+                                 [&](StringRef S) { addToCleanup(S); });
+
+  if (CachedJobs.load() < Jobs.size()) {
+    if (Error E = Distributor())
+      return E;
+  }
+  return Error::success();
+}
+
+// Adds compiled object files to the link for each non-cached job.
+Error lto::DTLTO::addObjectFilesToLink() {
+  TimeTraceScope FilesScope("Add DTLTO files to the link");
+  for (auto &Job : Jobs) {
+    if (!Job.CacheKey.empty() && Job.Cached) {
+      assert(Cache.isValid());
+      continue;
+    }
+    // Load the native object from a file into a memory buffer
+    // and store its contents in the output buffer.
+    auto ObjFileMbOrErr =
+        MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
+                              /*RequiresNullTerminator=*/false);
+    if (std::error_code EC = ObjFileMbOrErr.getError())
+      return make_error<StringError>(
+          BCError + "cannot open native object file: " + Job.NativeObjectPath +
+              ": " + EC.message(),
+          inconvertibleErrorCode());
+
+    MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
+    if (Cache.isValid()) {
+      // Cache hits are taken care of earlier. At this point, we could only
+      // have cache misses.
+      assert(Job.CacheAddStream);
+      // Obtain a file stream for a storing a cache entry.
+      auto CachedFileStreamOrErr = Job.CacheAddStream(Job.Task, Job.ModuleID);
+      if (!CachedFileStreamOrErr)
+        return joinErrors(
+            CachedFileStreamOrErr.takeError(),
+            createStringError(inconvertibleErrorCode(),
+                              "Cannot get a cache file stream: %s",
+                              Job.NativeObjectPath.data()));
+      // Store a file buffer into the cache stream.
+      auto &CacheStream = *(CachedFileStreamOrErr->get());
+      *(CacheStream.OS) << ObjFileMbRef.getBuffer();
+      if (Error Err = CacheStream.commit())
+        return Err;
+    } else {
+      if (AddBuffer) {
+        AddBuffer(Job.Task, Job.ModuleID, std::move(ObjFileMbOrErr.get()));
+      } else {
+        auto StreamOrErr = AddStreamFunc(Job.Task, Job.ModuleID);
+        if (Error Err = StreamOrErr.takeError())
+          return Err;
+        auto &Stream = *StreamOrErr->get();
+        *Stream.OS << ObjFileMbRef.getBuffer();
+        if (Error Err = Stream.commit())
+          return Err;
+      }
     }
   }
-  Base::cleanup();
+  return Error::success();
 }

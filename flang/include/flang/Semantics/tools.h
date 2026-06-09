@@ -23,7 +23,12 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/ArrayRef.h"
 #include <functional>
+
+namespace Fortran::evaluate::characteristics {
+struct DummyDataObject;
+}
 
 namespace Fortran::semantics {
 
@@ -46,6 +51,7 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &);
 const Scope *FindModuleFileContaining(const Scope &);
 const Scope *FindPureProcedureContaining(const Scope &);
 const Scope *FindOpenACCConstructContaining(const Scope *);
+bool HasOpenACCRoutineDirective(const Scope *);
 
 const Symbol *FindInterface(const Symbol &);
 const Symbol *FindSubprogram(const Symbol &);
@@ -125,6 +131,9 @@ bool IsSeparateModuleProcedureInterface(const Symbol *);
 bool HasAlternateReturns(const Symbol &);
 bool IsAutomaticallyDestroyed(const Symbol &);
 
+// Follow association until the first symbol without HostAssocDetails.
+const Symbol &FollowHostAssoc(const Symbol &);
+
 // Return an ultimate component of type that matches predicate, or nullptr.
 const Symbol *FindUltimateComponent(const DerivedTypeSpec &type,
     const std::function<bool(const Symbol &)> &predicate);
@@ -196,6 +205,8 @@ bool IsExternal(const Symbol &);
 bool IsModuleProcedure(const Symbol &);
 bool HasCoarray(const parser::Expr &);
 bool IsAssumedType(const Symbol &);
+bool IsEnumerationType(const Symbol &);
+bool IsEnumerationType(const DerivedTypeSpec &);
 bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
@@ -225,6 +236,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
 }
 
 bool HasCUDAComponent(const Symbol &sym);
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &);
 
 inline bool IsCUDADevice(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
@@ -293,6 +306,14 @@ SymbolVector OrderParameterNames(const Symbol &);
 const DeclTypeSpec &FindOrInstantiateDerivedType(Scope &, DerivedTypeSpec &&,
     DeclTypeSpec::Category = DeclTypeSpec::TypeDerived);
 
+// Clone a derived type's component scope for OpenACC use_device with CUDA
+// Fortran: each component named in `path` (e.g. a%b%c -> {b,c}) gets a
+// distinct component symbol with cudaDataAttr Device in a new DerivedTypeSpec.
+// Returns nullptr if `path` is empty or `origType` is not derived.
+const DeclTypeSpec *CloneDerivedTypeForUseDevice(Scope &containingScope,
+    SemanticsContext &, const DeclTypeSpec &origType,
+    llvm::ArrayRef<SourceName> path);
+
 // When a subprogram defined in a submodule defines a separate module
 // procedure whose interface is defined in an ancestor (sub)module,
 // returns a pointer to that interface, else null.
@@ -333,9 +354,6 @@ const Symbol *FindExternallyVisibleObject(
 // Applies GetUltimate(), then if the symbol is a generic procedure shadowing a
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
-
-// Given a cray pointee symbol, returns the related cray pointer symbol.
-const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 

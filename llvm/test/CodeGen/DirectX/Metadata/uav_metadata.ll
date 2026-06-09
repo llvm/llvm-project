@@ -1,6 +1,6 @@
 ; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 ; RUN: opt -S --passes="dxil-pretty-printer" < %s 2>&1 | FileCheck %s --check-prefix=PRINT
-; RUN: llc %s --filetype=asm -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
+; RUN: llc %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
 
 target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64"
 target triple = "dxil-pc-shadermodel6.6-compute"
@@ -92,9 +92,9 @@ define void @test() #0 {
   ; RWBuffer<double> C1 = Array[10];
   ; RWBuffer<double> C2 = Array[20];
   %Array2_10_h = call target("dx.TypedBuffer", double, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 10, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 10, ptr @Array2.str)
   %Array2_20_h = call target("dx.TypedBuffer", double, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 -1, i32 20, ptr @Array2.str)
+            @llvm.dx.resource.handlefrombinding(i32 4, i32 2, i32 0, i32 20, ptr @Array2.str)
 
   ; Same buffer type as Nine - should have the same type in metadata
   ; RWBuffer<double> Ten : register(u2);

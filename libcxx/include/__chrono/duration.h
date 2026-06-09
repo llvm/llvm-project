@@ -291,35 +291,21 @@ typedef duration<long long, nano> nanoseconds;
 typedef duration<long long, micro> microseconds;
 typedef duration<long long, milli> milliseconds;
 typedef duration<long long > seconds;
-typedef duration< long, ratio< 60> > minutes;
-typedef duration< long, ratio<3600> > hours;
+typedef duration<long, ratio<60> > minutes;
+typedef duration<long, ratio<60 * 60> > hours;
 #if _LIBCPP_STD_VER >= 20
-typedef duration< int, ratio_multiply<ratio<24>, hours::period>> days;
-typedef duration< int, ratio_multiply<ratio<7>, days::period>> weeks;
-typedef duration< int, ratio_multiply<ratio<146097, 400>, days::period>> years;
-typedef duration< int, ratio_divide<years::period, ratio<12>>> months;
+typedef duration<int, ratio<60 * 60 * 24>> days;
+typedef duration<int, ratio<60 * 60 * 24 * 7>> weeks;
+typedef duration<int, ratio<static_cast<int>(365.2425 * 60 * 60 * 24)>> years;
+typedef duration<int, ratio<static_cast<int>(365.2425 * 60 * 60 * 24) / 12>> months;
 #endif
 // Duration ==
-
-template <class _LhsDuration, class _RhsDuration>
-struct __duration_eq {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _RhsDuration& __rhs) const {
-    typedef typename common_type<_LhsDuration, _RhsDuration>::type _Ct;
-    return _Ct(__lhs).count() == _Ct(__rhs).count();
-  }
-};
-
-template <class _LhsDuration>
-struct __duration_eq<_LhsDuration, _LhsDuration> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _LhsDuration& __rhs) const {
-    return __lhs.count() == __rhs.count();
-  }
-};
 
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
 operator==(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
-  return __duration_eq<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >()(__lhs, __rhs);
+  using _Ct = typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type;
+  return _Ct(__lhs).count() == _Ct(__rhs).count();
 }
 
 #if _LIBCPP_STD_VER <= 17
@@ -336,25 +322,11 @@ operator!=(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period
 
 // Duration <
 
-template <class _LhsDuration, class _RhsDuration>
-struct __duration_lt {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _RhsDuration& __rhs) const {
-    typedef typename common_type<_LhsDuration, _RhsDuration>::type _Ct;
-    return _Ct(__lhs).count() < _Ct(__rhs).count();
-  }
-};
-
-template <class _LhsDuration>
-struct __duration_lt<_LhsDuration, _LhsDuration> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(const _LhsDuration& __lhs, const _LhsDuration& __rhs) const {
-    return __lhs.count() < __rhs.count();
-  }
-};
-
 template <class _Rep1, class _Period1, class _Rep2, class _Period2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
 operator<(const duration<_Rep1, _Period1>& __lhs, const duration<_Rep2, _Period2>& __rhs) {
-  return __duration_lt<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >()(__lhs, __rhs);
+  using _Ct = typename common_type<duration<_Rep1, _Period1>, duration<_Rep2, _Period2> >::type;
+  return _Ct(__lhs).count() < _Ct(__rhs).count();
 }
 
 // Duration >

@@ -3110,20 +3110,20 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_elt(ptr addrspace(1) %out, ptr ad
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0x7e00
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v3, v[0:1]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
+; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_max_f16_sdwa v2, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_max_f16_e32 v3, v3, v3
 ; GFX8-NEXT:    v_max_f16_e32 v2, 0, v2
-; GFX8-NEXT:    v_max_f16_e32 v3, 0x7e00, v3
+; GFX8-NEXT:    v_max_f16_e32 v3, s0, v3
 ; GFX8-NEXT:    v_min_f16_e32 v3, 1.0, v3
 ; GFX8-NEXT:    v_min_f16_sdwa v2, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_e32 v2, v3, v2
@@ -3939,9 +3939,9 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts0(ptr addrspace(1) %out
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_max_f16_sdwa v2, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-NEXT:    v_max_f16_e32 v2, 0x7e00, v2
+; GFX8-NEXT:    v_max_f16_e32 v2, s0, v2
 ; GFX8-NEXT:    v_max_f16_e32 v3, 0, v3
-; GFX8-NEXT:    v_min_f16_e32 v3, 0x7e00, v3
+; GFX8-NEXT:    v_min_f16_e32 v3, s0, v3
 ; GFX8-NEXT:    v_min_f16_sdwa v2, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_e32 v2, v3, v2
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
@@ -4029,20 +4029,20 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts1(ptr addrspace(1) %out
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0x7e00
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v3, v[0:1]
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
+; GFX8-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_max_f16_sdwa v2, v3, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; GFX8-NEXT:    v_max_f16_e32 v3, v3, v3
 ; GFX8-NEXT:    v_max_f16_e32 v2, 0, v2
-; GFX8-NEXT:    v_max_f16_e32 v3, 0x7e00, v3
+; GFX8-NEXT:    v_max_f16_e32 v3, s0, v3
 ; GFX8-NEXT:    v_min_f16_e32 v3, 1.0, v3
 ; GFX8-NEXT:    v_min_f16_sdwa v2, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_e32 v2, v3, v2
@@ -4831,10 +4831,10 @@ declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #1
 declare <2 x half> @llvm.minnum.v2f16(<2 x half>, <2 x half>) #1
 declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "amdgpu-dx10-clamp"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-nans-fp-math"="false" }
-attributes #3 = { nounwind "amdgpu-dx10-clamp"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-nans-fp-math"="false" }
-attributes #4 = { nounwind "amdgpu-dx10-clamp"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-nans-fp-math"="false" }
+attributes #2 = { nounwind "amdgpu-dx10-clamp"="false" denormal_fpenv(float: preservesign) "no-nans-fp-math"="false" }
+attributes #3 = { nounwind "amdgpu-dx10-clamp"="true" denormal_fpenv(float: preservesign) "no-nans-fp-math"="false" }
+attributes #4 = { nounwind "amdgpu-dx10-clamp"="false" denormal_fpenv(float: preservesign) "no-nans-fp-math"="false" }
 attributes #5 = { nounwind readnone "amdgpu-ieee"="false" }
 attributes #6 = { nounwind "amdgpu-dx10-clamp"="false" }

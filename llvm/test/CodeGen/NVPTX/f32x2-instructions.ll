@@ -3004,4 +3004,4 @@ define void @test_trunc_to_v2f16(<2 x float> %a, ptr %p) {
 
 
 attributes #0 = { nounwind }
-attributes #2 = { "denormal-fp-math"="preserve-sign" }
+attributes #2 = { denormal_fpenv(preservesign) }
