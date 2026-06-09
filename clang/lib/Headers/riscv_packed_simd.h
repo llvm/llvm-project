@@ -90,6 +90,9 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
         __builtin_elementwise_add_sat(__rs1, __rs1), __rs2);                   \
   }
 
+// clang-format off: macro call sites have no trailing semicolons, which
+// confuses clang-format into a deeply nested expression.
+
 /* Packed Splat (32-bit) */
 __packed_splat(pmv_s_u8x4, uint8x4_t, uint8_t, __packed_splat4)
 __packed_splat(pmv_s_i8x4, int8x4_t, int8_t, __packed_splat4)
@@ -281,6 +284,8 @@ __packed_unary_op(pnot_i16x4, int16x4_t, ~)
 __packed_unary_op(pnot_u16x4, uint16x4_t, ~)
 __packed_unary_op(pnot_i32x2, int32x2_t, ~)
 __packed_unary_op(pnot_u32x2, uint32x2_t, ~)
+
+// clang-format on
 
 #undef __packed_splat2
 #undef __packed_splat4
