@@ -545,9 +545,6 @@ end program
 * An element of a contiguous `POINTER` or assumed-shape array may be used as
   the initial element of a storage sequence (sequence association), with a
   portability warning.
-* A variable in an OpenMP `THREADPRIVATE` directive that also appears in an
-  `EQUIVALENCE` statement is accepted as an OpenMP extension, with a portability
-  warning.
 * A Cray `POINTER` pointee whose type is a derived type that is neither
   `SEQUENCE` nor `BIND(C)` is accepted with a portability warning.
 * A named `COMMON` block may have different total sizes in different scoping
