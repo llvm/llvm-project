@@ -5038,50 +5038,32 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
-static StructuredGEPFlags getLegacyStructuredGEPIndexFlags(Type *&CurrentType,
-                                                           Value *Index) {
-  StructuredGEPFlags Flags = StructuredGEPFlags::unsignedIndex();
-  if (!CurrentType)
-    return Flags;
-
-  if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
-    if (AT->getNumElements() != 0)
-      Flags |= StructuredGEPFlags::inBounds();
-    CurrentType = AT->getElementType();
-    return Flags;
-  }
-
-  if (auto *VT = dyn_cast<VectorType>(CurrentType)) {
-    Flags |= StructuredGEPFlags::inBounds();
-    CurrentType = VT->getElementType();
-    return Flags;
-  }
-
-  if (auto *ST = dyn_cast<StructType>(CurrentType)) {
-    Flags |= StructuredGEPFlags::inBounds() | StructuredGEPFlags::nneg();
-    if (auto *CI = dyn_cast<ConstantInt>(Index))
-      if (CI->getZExtValue() < ST->getNumElements())
-        CurrentType = ST->getElementType(CI->getZExtValue());
-    return Flags;
-  }
-
-  CurrentType = nullptr;
-  return Flags;
-}
-
 static Constant *getLegacyStructuredGEPFlags(CallBase *CI) {
-  Type *CurrentType = nullptr;
-  if (CI->paramHasAttr(0, Attribute::ElementType))
-    CurrentType = CI->getParamAttr(0, Attribute::ElementType).getValueAsType();
+  Type *CurrentType =
+      CI->getParamAttr(0, Attribute::ElementType).getValueAsType();
 
   Type *Int32Ty = Type::getInt32Ty(CI->getContext());
   SmallVector<Constant *> FlagValues;
   unsigned NumIndices = CI->arg_size() - 1;
   FlagValues.reserve(NumIndices == 0 ? 1 : NumIndices);
   for (unsigned I = 0; I < NumIndices; ++I) {
-    StructuredGEPFlags Flags =
-        getLegacyStructuredGEPIndexFlags(CurrentType, CI->getArgOperand(I + 1));
-    FlagValues.push_back(ConstantInt::get(Int32Ty, Flags.getRaw()));
+    StructuredGEPFlags TheseFlags = StructuredGEPFlags::unsignedIndex();
+    if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      if (AT->getNumElements() != 0)
+        TheseFlags |= StructuredGEPFlags::inBounds();
+      CurrentType = AT->getElementType();
+    } else if (auto *VT = dyn_cast<VectorType>(CurrentType)) {
+      TheseFlags |= StructuredGEPFlags::inBounds();
+      CurrentType = VT->getElementType();
+    } else if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      TheseFlags |= StructuredGEPFlags::inBounds() | StructuredGEPFlags::nneg();
+      CurrentType = ST->getElementType(
+          cast<ConstantInt>(CI->getOperand(I + 1))->getZExtValue());
+    } else {
+      break;
+    }
+
+    FlagValues.push_back(ConstantInt::get(Int32Ty, TheseFlags.getRaw()));
   }
 
   if (FlagValues.empty())
@@ -5109,8 +5091,9 @@ static Value *upgradeStructuredGEPIntrinsicCall(CallBase *CI, Function *F,
   NewCall->setCallingConv(CI->getCallingConv());
   NewCall->setDebugLoc(CI->getDebugLoc());
   NewCall->copyMetadata(*CI);
-  if (CI->paramHasAttr(0, Attribute::ElementType))
-    NewCall->addParamAttr(0, CI->getParamAttr(0, Attribute::ElementType));
+  NewCall->addParamAttrs(
+      0, AttrBuilder(CI->getContext(), CI->getParamAttributes(0)));
+  NewCall->addRetAttrs(AttrBuilder(CI->getContext(), CI->getRetAttributes()));
   NewCall->takeName(CI);
   return NewCall;
 }

@@ -15610,8 +15610,13 @@ Defined flag bits:
 
 ``nneg``
   Bit 1 (``1 << 1``) - specifies that the value of this index is non-negative.
-  This is not necessarily implied by ``inbounds``, as an object may have more
-  fields than the maximal signed value for the index type.
+  This is not necessarily implied by ``inbounds``. For exmaple, consider
+
+  .. code-black:: llvm
+      %q = sgep [8 x target("amdggpu.stridemark")], inbounds|nneg, ptr addrspace(9) %p, i32 4
+      %r = sgep [8 x target("amdgpu.stridemark")], inbounds, ptr addrspace(9) %q, i32 %x
+
+  where ``inbounds`` only implies that `-4 <= %p <= 4`.
 
 ``unsigned``
   Bit 2 (``1 << 2``) - specifies that the index should be interpreted as an
