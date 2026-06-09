@@ -31,10 +31,11 @@ define i32 @add(i32 %a, i32 %b) {
 !7 = !{!"hlsl.hlsl"}
 !8 = !{!"-T", !"lib_6_5", !"-g", !"hlsl.hlsl"}
 
-; Check that both parts are emitted as a GV and used by the compiler.
+; Check that DXIL, ILDB and SRCI parts are emitted as a GV and used by the compiler.
 
 ; CHECK: @dx.ildb = private constant [[BC_TYPE:\[[0-9]+ x i8\]]] c"BC\C0\DE{{[^"]+}}", section "ILDB", align 4
 ; CHECK: @dx.dxil = private constant [[BC_TYPE:\[[0-9]+ x i8\]]] c"BC\C0\DE{{[^"]+}}", section "DXIL", align 4
+; CHECK: @dx.srci = private constant {{\[[0-9]+ x i8\]}}
 ; CHECK: @llvm.compiler.used = appending global {{\[[0-9]+ x ptr\]}} [ptr @dx.ildb, ptr @dx.dxil
 
 ; This is using regex matches on some sizes, offsets and fields. These are all
@@ -78,6 +79,9 @@ define i32 @add(i32 %a, i32 %b) {
 ; YAML-NEXT:       DXILMinorVersion: 5
 ; YAML-NEXT:       DXILSize:        [[#DXILSIZE - 24]]
 ; YAML-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE,
+
+; Check that despite dx.source is stripped from DXIL, SRCI is still emitted:
+; YAML:   - Name:            SRCI
 
 ; Check that ILDB has the debug info, and DXIL does not:
 
