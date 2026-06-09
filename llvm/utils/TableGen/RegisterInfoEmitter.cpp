@@ -20,6 +20,7 @@
 #include "Common/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -102,6 +103,9 @@ private:
                             const std::deque<CodeGenRegister> &Regs,
                             bool isCtor);
   void EmitRegUnitPressure(raw_ostream &OS, StringRef ClassName);
+  void emitRegClassSubRegTable(raw_ostream &OS,
+                               ArrayRef<SmallVector<unsigned>> Table,
+                               StringRef RegClassTy, size_t SubRegIndicesSize);
   void emitComposeSubRegIndices(raw_ostream &OS, StringRef ClassName);
   void emitComposeSubRegIndexLaneMask(raw_ostream &OS, StringRef ClassName);
 };
@@ -676,6 +680,159 @@ static void printDiff16(raw_ostream &OS, int16_t Val) { OS << Val; }
 
 static void printMask(raw_ostream &OS, LaneBitmask Val) {
   OS << "LaneBitmask(0x" << PrintLaneMask(Val) << ')';
+}
+
+void RegisterInfoEmitter::emitRegClassSubRegTable(
+    raw_ostream &OS, ArrayRef<SmallVector<unsigned>> Table,
+    StringRef RegClassTy, size_t SubRegIndicesSize) {
+  struct BlockTable {
+    unsigned BlockRows;
+    unsigned BlockColumns;
+    std::vector<unsigned> BlockMap;
+    std::deque<SmallVector<unsigned>> Blocks;
+    size_t Size;
+  } Best;
+
+  assert(!Table.empty() && SubRegIndicesSize);
+  assert(llvm::all_of(Table, [SubRegIndicesSize](ArrayRef<unsigned> Row) {
+    return Row.size() == SubRegIndicesSize;
+  }));
+
+  const unsigned RegClassBytes = RegClassTy == "uint8_t" ? 1 : 2;
+  const size_t DirectSize = Table.size() * SubRegIndicesSize * RegClassBytes;
+  Best.Size = DirectSize;
+
+  // Limit blocks to 64 entries so table generation remains inexpensive even
+  // for targets with large register files.
+  for (unsigned BlockRows = 1; BlockRows <= 64; BlockRows *= 2) {
+    for (unsigned BlockColumns = 1; BlockRows * BlockColumns <= 64;
+         BlockColumns *= 2) {
+      if (BlockRows == 1 && BlockColumns == 1)
+        continue;
+
+      DenseMap<ArrayRef<unsigned>, unsigned> BlockIDs;
+      std::vector<unsigned> BlockMap;
+      std::deque<SmallVector<unsigned>> Blocks;
+
+      for (unsigned Row = 0; Row < Table.size(); Row += BlockRows) {
+        for (unsigned Column = 0; Column < SubRegIndicesSize;
+             Column += BlockColumns) {
+          SmallVector<unsigned> Block(BlockRows * BlockColumns);
+          for (unsigned BlockRow = 0; BlockRow < BlockRows; ++BlockRow) {
+            for (unsigned BlockColumn = 0; BlockColumn < BlockColumns;
+                 ++BlockColumn) {
+              if (Row + BlockRow < Table.size() &&
+                  Column + BlockColumn < SubRegIndicesSize)
+                Block[BlockRow * BlockColumns + BlockColumn] =
+                    Table[Row + BlockRow][Column + BlockColumn];
+            }
+          }
+          auto It = BlockIDs.find(Block);
+          if (It == BlockIDs.end()) {
+            unsigned BlockID = Blocks.size();
+            Blocks.push_back(std::move(Block));
+            It = BlockIDs.try_emplace(ArrayRef(Blocks.back()), BlockID).first;
+          }
+          BlockMap.push_back(It->second);
+        }
+      }
+
+      const unsigned BlockIDBytes = Blocks.size() <= uint64_t(UINT8_MAX) + 1 ? 1
+                                    : Blocks.size() <= uint64_t(UINT16_MAX) + 1
+                                        ? 2
+                                        : 4;
+      const size_t Size =
+          BlockMap.size() * BlockIDBytes +
+          Blocks.size() * BlockRows * BlockColumns * RegClassBytes;
+      if (Size < Best.Size)
+        Best = {BlockRows, BlockColumns, std::move(BlockMap), std::move(Blocks),
+                Size};
+    }
+  }
+
+  // The block lookup needs more instructions than the direct lookup. Keep the
+  // direct table unless the data saving comfortably exceeds that code cost.
+  if (!Best.Blocks.empty() && DirectSize - Best.Size < 128)
+    Best.Blocks.clear();
+
+  if (Best.Blocks.empty()) {
+    OS << formatv("  static constexpr {} Table[{}][{}] = {{\n", RegClassTy,
+                  Table.size(), SubRegIndicesSize);
+    for (ArrayRef<unsigned> Row : Table) {
+      OS << "    { ";
+      interleaveComma(Row, OS);
+      OS << " },\n";
+    }
+    OS << "  };\n";
+    OS << "  unsigned TV = Table[RC->getID()][Idx];\n";
+    return;
+  }
+
+  const unsigned BlockRowCount =
+      divideCeil(Table.size(), size_t(Best.BlockRows));
+  const unsigned BlockColumnCount =
+      divideCeil(SubRegIndicesSize, size_t(Best.BlockColumns));
+  assert(Best.BlockMap.size() == BlockRowCount * BlockColumnCount);
+  for (unsigned Row = 0; Row < Table.size(); ++Row) {
+    for (unsigned Column = 0; Column < SubRegIndicesSize; ++Column) {
+      [[maybe_unused]] unsigned BlockID =
+          Best.BlockMap[(Row / Best.BlockRows) * BlockColumnCount +
+                        Column / Best.BlockColumns];
+      assert(BlockID < Best.Blocks.size());
+      assert(Best.Blocks[BlockID][(Row % Best.BlockRows) * Best.BlockColumns +
+                                  Column % Best.BlockColumns] ==
+             Table[Row][Column]);
+    }
+  }
+
+  StringRef BlockIDTy = getMinimalTypeForRange(Best.Blocks.size() - 1);
+  OS << formatv("  static constexpr {} BlockMap[{}][{}] = {{\n", BlockIDTy,
+                BlockRowCount, BlockColumnCount);
+  for (size_t Start = 0; Start < Best.BlockMap.size();
+       Start += BlockColumnCount) {
+    ArrayRef<unsigned> Row(Best.BlockMap.data() + Start, BlockColumnCount);
+    OS << "    { ";
+    interleaveComma(Row, OS);
+    OS << " },\n";
+  }
+  OS << "  };\n";
+  OS << formatv("  static_assert(sizeof(BlockMap) == {});\n",
+                BlockRowCount * BlockColumnCount *
+                    (BlockIDTy == "uint8_t"    ? 1
+                     : BlockIDTy == "uint16_t" ? 2
+                                               : 4));
+
+  OS << formatv("  static constexpr {} Blocks[{}][{}] = {{\n", RegClassTy,
+                Best.Blocks.size(), Best.BlockRows * Best.BlockColumns);
+  for (ArrayRef<unsigned> Block : Best.Blocks) {
+    OS << "    { ";
+    interleaveComma(Block, OS);
+    OS << " },\n";
+  }
+  OS << "  };\n";
+  OS << formatv("  static_assert(sizeof(Blocks) == {});\n",
+                Best.Blocks.size() * Best.BlockRows * Best.BlockColumns *
+                    RegClassBytes);
+  OS << "  unsigned RCID = RC->getID();\n"
+     << "  unsigned BlockID = BlockMap[";
+  if (Best.BlockRows == 1)
+    OS << "RCID";
+  else
+    OS << "RCID / " << Best.BlockRows;
+  OS << "][";
+  if (Best.BlockColumns == 1)
+    OS << "Idx";
+  else
+    OS << "Idx / " << Best.BlockColumns;
+  OS << "];\n  unsigned TV = Blocks[BlockID][";
+  if (Best.BlockRows == 1)
+    OS << "Idx % " << Best.BlockColumns;
+  else if (Best.BlockColumns == 1)
+    OS << "RCID % " << Best.BlockRows;
+  else
+    OS << "(RCID % " << Best.BlockRows << ") * " << Best.BlockColumns
+       << " + Idx % " << Best.BlockColumns;
+  OS << "];\n";
 }
 
 // Try to combine Idx's compose map into Vec if it is compatible.
@@ -1641,43 +1798,42 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
     // sentinel.
     const size_t NumRegClasses = RegisterClasses.size();
     const char *RegClassTy = getMinimalTypeForRange(NumRegClasses + 1);
-    auto EmitTableLookup = [&]() {
+    auto EmitTableLookupPreamble = [&]() {
       OS << formatv(R"(
-  };
   assert(RC && "Missing regclass");
   if (!Idx) return RC;
   --Idx;
   assert(Idx < {} && "Bad subreg");
-  unsigned TV = Table[RC->getID()][Idx];
-  return TV ? getRegClass(TV - 1) : nullptr;
-})",
+)",
                     SubRegIndicesSize);
     };
 
-    OS << formatv("  static constexpr {} Table[{}][{}] = {{\n", RegClassTy,
-                  NumRegClasses, SubRegIndicesSize);
+    SmallVector<SmallVector<unsigned>> Table;
+    Table.reserve(NumRegClasses);
     for (const auto &RC : RegisterClasses) {
-      OS << "    {\t// " << RC.getName() << "\n";
+      SmallVector<unsigned> Row;
+      Row.reserve(SubRegIndicesSize);
       for (auto &Idx : SubRegIndices) {
         if (CodeGenRegisterClass *SRC = RC.getSubClassWithSubReg(&Idx))
-          OS << "      " << SRC->EnumValue + 1 << ",\t// " << Idx.getName()
-             << " -> " << SRC->getName() << "\n";
+          Row.push_back(SRC->EnumValue + 1);
         else
-          OS << "      0,\t// " << Idx.getName() << "\n";
+          Row.push_back(0);
       }
-      OS << "    },\n";
+      Table.push_back(std::move(Row));
     }
-    EmitTableLookup();
+    EmitTableLookupPreamble();
+    emitRegClassSubRegTable(OS, Table, RegClassTy, SubRegIndicesSize);
+    OS << "  return TV ? getRegClass(TV - 1) : nullptr;\n}\n";
 
     // Emit getSubRegisterClass.
     OS << "const TargetRegisterClass *" << ClassName
        << "::getSubRegisterClass(const TargetRegisterClass *RC, unsigned Idx)"
        << " const {\n";
 
-    OS << formatv("  static constexpr {} Table[{}][{}] = {{\n", RegClassTy,
-                  NumRegClasses, SubRegIndicesSize);
+    Table.clear();
     for (const auto &RC : RegisterClasses) {
-      OS << "    {\t// " << RC.getName() << '\n';
+      SmallVector<unsigned> Row;
+      Row.reserve(SubRegIndicesSize);
       for (auto &Idx : SubRegIndices) {
         std::optional<std::pair<CodeGenRegisterClass *, CodeGenRegisterClass *>>
             MatchingSubClass = RC.getMatchingSubClassWithSubRegs(RegBank, &Idx);
@@ -1688,20 +1844,13 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
           EnumValue = SubRegClass->EnumValue + 1;
         }
 
-        OS << "      " << EnumValue << ",\t// " << RC.getName() << ':'
-           << Idx.getName();
-
-        if (MatchingSubClass) {
-          CodeGenRegisterClass *SubRegClass = MatchingSubClass->second;
-          OS << " -> " << SubRegClass->getName();
-        }
-
-        OS << '\n';
+        Row.push_back(EnumValue);
       }
-
-      OS << "    },\n";
+      Table.push_back(std::move(Row));
     }
-    EmitTableLookup();
+    EmitTableLookupPreamble();
+    emitRegClassSubRegTable(OS, Table, RegClassTy, SubRegIndicesSize);
+    OS << "  return TV ? getRegClass(TV - 1) : nullptr;\n}\n";
   }
 
   EmitRegUnitPressure(OS, ClassName);
