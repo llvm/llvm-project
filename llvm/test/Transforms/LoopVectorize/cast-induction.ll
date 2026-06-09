@@ -357,7 +357,7 @@ define void @test_start_zext(i32 %start, ptr %dst) {
 ; IC2-SAME: i32 [[START:%.*]], ptr [[DST:%.*]]) {
 ; IC2-NEXT:  [[ENTRY:.*]]:
 ; IC2-NEXT:    [[START_EXT:%.*]] = zext i32 [[START]] to i64
-; IC2-NEXT:    [[TMP0:%.*]] = sub i64 100, [[START_EXT]]
+; IC2-NEXT:    [[TMP0:%.*]] = sub nsw i64 100, [[START_EXT]]
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 2
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:

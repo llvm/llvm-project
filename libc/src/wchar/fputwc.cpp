@@ -14,6 +14,7 @@
 
 #include "src/wchar/fputwc.h"
 #include "hdr/types/FILE.h"
+#include "hdr/types/wchar_t.h"
 #include "hdr/types/wint_t.h"
 #include "hdr/wchar_macros.h" // For WEOF
 #include "src/__support/File/file.h"

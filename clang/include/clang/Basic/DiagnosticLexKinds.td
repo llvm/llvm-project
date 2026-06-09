@@ -373,13 +373,21 @@ def ext_missing_whitespace_after_macro_name : ExtWarn<
 def warn_missing_whitespace_after_macro_name : Warning<
   "whitespace recommended after macro name">;
 
-class NonportablePath  : Warning<
+class NonportablePath : Warning<
   "non-portable path to file '%0'; specified path differs in case from file"
   " name on disk">;
 def pp_nonportable_path : NonportablePath,
   InGroup<NonportableIncludePath>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
-  InGroup<DiagGroup<"nonportable-system-include-path">>;
+  InGroup<NonportableSystemIncludePath>;
+
+class NonportablePathTrailing : Warning<
+  "non-portable path to file '%0'; specified path contains trailing"
+  " %select{whitespace|dot}1">;
+def pp_nonportable_path_trailing : NonportablePathTrailing,
+  InGroup<NonportableIncludePath>;
+def pp_nonportable_system_path_trailing : NonportablePathTrailing, DefaultIgnore,
+  InGroup<NonportableSystemIncludePath>;
 def pp_nonportable_path_separator : Warning<
   "non-portable path to file '%0'; specified path contains backslashes">,
   DefaultIgnore, InGroup<NonportableIncludePathSeparator>;
@@ -421,16 +429,13 @@ def note_pp_ambiguous_macro_chosen : Note<
   "expanding this definition of %0">;
 def note_pp_ambiguous_macro_other : Note<
   "other definition of %0">;
-def warn_pp_macro_hides_keyword : ExtWarn<
+def warn_pp_macro_hides_keyword : Extension<
   "keyword is hidden by macro definition">, InGroup<KeywordAsMacro>;
-def warn_pp_macro_name_is_keyword : ExtWarn<
-  "keyword or identifier with special meaning is used as a macro name">,
-  InGroup<KeywordAsMacro>;
 def warn_pp_macro_is_reserved_id : Warning<
   "macro name is a reserved identifier">, DefaultIgnore,
   InGroup<ReservedIdAsMacro>;
 def warn_pp_macro_is_reserved_attribute_id : Warning<
-  "%0 is a reserved attribute identifier">,
+  "%0 is a reserved attribute identifier">, DefaultIgnore,
   InGroup<ReservedAttributeIdentifier>;
 def warn_pp_objc_macro_redef_ignored : Warning<
   "ignoring redefinition of Objective-C qualifier macro">,
@@ -509,10 +514,10 @@ def warn_cxx98_compat_variadic_macro : Warning<
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def ext_named_variadic_macro : Extension<
   "named variadic macros are a GNU extension">, InGroup<VariadicMacros>;
-def err_embedded_directive : Error<"embedding a%select{ #| @|}0%1 directive "
+def err_embedded_directive : Error<"embedding a %select{|#}0%1 directive "
                                    "within macro arguments is not supported">;
-def warn_embedded_directive : ExtWarn<
-  "embedding a%select{ #| @|}0%1 directive within macro arguments has undefined behavior">,
+def ext_embedded_directive : Extension<
+  "embedding a directive within macro arguments has undefined behavior">,
   InGroup<DiagGroup<"embedded-directive">>;
 def ext_c_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
@@ -1059,7 +1064,10 @@ def warn_header_guard : Warning<
 def note_header_guard : Note<
   "%0 is defined here; did you mean %1?">;
 
-def warn_defined_in_macro : Warning<
+def warn_defined_in_object_type_macro : Warning<
+  "macro expansion producing 'defined' has undefined behavior">,
+  InGroup<ExpansionToDefined>;
+def warn_defined_in_function_type_macro : Extension<
   "macro expansion producing 'defined' has undefined behavior">,
   InGroup<ExpansionToDefined>;
 

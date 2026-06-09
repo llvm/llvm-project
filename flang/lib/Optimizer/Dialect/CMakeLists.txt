@@ -6,6 +6,7 @@ add_subdirectory(MIF)
 add_flang_library(FIRDialect
   CUDAKernelOpInterface.cpp
   FIRAttr.cpp
+  FIRBoxUtils.cpp
   FIRDialect.cpp
   FIROperationMoveOpInterface.cpp
   FIROps.cpp

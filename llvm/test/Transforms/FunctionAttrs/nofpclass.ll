@@ -3,7 +3,7 @@
 
 define float @return_f32_extern(ptr %ptr) {
 ; CHECK-LABEL: define float @return_f32_extern(
-; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = load volatile float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
@@ -14,7 +14,7 @@ define float @return_f32_extern(ptr %ptr) {
 ; Deduce nofpclass(inf) on return
 define internal float @only_noinf_ret_uses(ptr %ptr) {
 ; CHECK-LABEL: define internal nofpclass(inf) float @only_noinf_ret_uses(
-; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = load volatile float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
@@ -24,7 +24,7 @@ define internal float @only_noinf_ret_uses(ptr %ptr) {
 
 define float @calls_no_inf_return(ptr %ptr) {
 ; CHECK-LABEL: define float @calls_no_inf_return(
-; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL0:%.*]] = call float @return_f32_extern(ptr [[PTR]])
 ; CHECK-NEXT:    [[CALL1:%.*]] = call nofpclass(inf) float @only_noinf_ret_uses(ptr [[PTR]])
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[CALL0]], [[CALL1]]
@@ -39,7 +39,7 @@ define float @calls_no_inf_return(ptr %ptr) {
 ; Deduce nofpclass(nan) on return, not inf or zero
 define internal float @merged_ret_uses(ptr %ptr) {
 ; CHECK-LABEL: define internal nofpclass(nan) float @merged_ret_uses(
-; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = load volatile float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
@@ -49,7 +49,7 @@ define internal float @merged_ret_uses(ptr %ptr) {
 
 define float @calls_merge_rets(ptr %ptr) {
 ; CHECK-LABEL: define float @calls_merge_rets(
-; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CALL0:%.*]] = call nofpclass(nan inf) float @merged_ret_uses(ptr [[PTR]])
 ; CHECK-NEXT:    [[CALL1:%.*]] = call nofpclass(nan zero) float @merged_ret_uses(ptr [[PTR]])
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[CALL0]], [[CALL1]]
@@ -64,7 +64,7 @@ define float @calls_merge_rets(ptr %ptr) {
 ; Do not infer nofpclass on return
 define internal float @called_with_wrong_ret_type(ptr %ptr) {
 ; CHECK-LABEL: define internal float @called_with_wrong_ret_type(
-; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = load volatile float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
@@ -74,7 +74,7 @@ define internal float @called_with_wrong_ret_type(ptr %ptr) {
 
 define <2 x half> @wrong_callee_ret_type(ptr %ptr) {
 ; CHECK-LABEL: define <2 x half> @wrong_callee_ret_type(
-; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[RET:%.*]] = call nofpclass(nan) <2 x half> @called_with_wrong_ret_type(ptr [[PTR]])
 ; CHECK-NEXT:    ret <2 x half> [[RET]]
 ;
@@ -85,7 +85,7 @@ define <2 x half> @wrong_callee_ret_type(ptr %ptr) {
 ; Do not infer nofpclass on return
 define internal float @non_callee_use_ret(ptr %ptr) {
 ; CHECK-LABEL: define internal float @non_callee_use_ret(
-; CHECK-SAME: ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[VAL:%.*]] = load volatile float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret float [[VAL]]
 ;
@@ -97,7 +97,7 @@ declare float @uses_func_ptr(ptr)
 
 define float @caller_non_callee_use(ptr %ptr) {
 ; CHECK-LABEL: define float @caller_non_callee_use(
-; CHECK-SAME: ptr readnone captures(none) [[PTR:%.*]]) {
+; CHECK-SAME: ptr nofree readnone captures(none) [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[RET:%.*]] = call nofpclass(nan) float @uses_func_ptr(ptr @non_callee_use_ret)
 ; CHECK-NEXT:    ret float [[RET]]
 ;
@@ -219,7 +219,7 @@ define internal void @infer_arg_from_load(float %arg) {
 
 define void @call_infer_arg_from_load(ptr %ptr) {
 ; CHECK-LABEL: define void @call_infer_arg_from_load(
-; CHECK-SAME: ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[NOT_NAN:%.*]] = load float, ptr [[PTR]], align 4, !nofpclass [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @infer_arg_from_load(float [[NOT_NAN]])
 ; CHECK-NEXT:    ret void
@@ -232,7 +232,7 @@ define void @call_infer_arg_from_load(ptr %ptr) {
 ; Expand ret nofpclass(inf nan), arg to nofpclass(inf zero)
 define internal nofpclass(nan) float @refine_existing_nofpclass(float nofpclass(inf) %arg, ptr %ptr) {
 ; CHECK-LABEL: define internal nofpclass(nan inf) float @refine_existing_nofpclass(
-; CHECK-SAME: float nofpclass(inf zero) [[ARG:%.*]], ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float nofpclass(inf zero) [[ARG:%.*]], ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret float [[LOAD]]
 ;
@@ -242,7 +242,7 @@ define internal nofpclass(nan) float @refine_existing_nofpclass(float nofpclass(
 
 define float @caller_refine_existing_nofpclass(float %arg, ptr %ptr) {
 ; CHECK-LABEL: define float @caller_refine_existing_nofpclass(
-; CHECK-SAME: float [[ARG:%.*]], ptr readonly captures(none) [[PTR:%.*]]) #[[ATTR3]] {
+; CHECK-SAME: float [[ARG:%.*]], ptr nofree readonly captures(none) [[PTR:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @refine_existing_nofpclass(float nofpclass(zero) [[ARG]], ptr [[PTR]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
@@ -253,7 +253,7 @@ define float @caller_refine_existing_nofpclass(float %arg, ptr %ptr) {
 ; Do not infer nofpclass
 define internal float @nofpclass_non_call_user(float %arg, ptr %ptr) {
 ; CHECK-LABEL: define internal float @nofpclass_non_call_user(
-; CHECK-SAME: float [[ARG:%.*]], ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: float [[ARG:%.*]], ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load volatile float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[LOAD]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -265,7 +265,7 @@ define internal float @nofpclass_non_call_user(float %arg, ptr %ptr) {
 
 define float @call_nofpclass_non_call_user(float %arg, ptr %ptr, ptr %fptr.ptr) {
 ; CHECK-LABEL: define float @call_nofpclass_non_call_user(
-; CHECK-SAME: float [[ARG:%.*]], ptr [[PTR:%.*]], ptr writeonly captures(none) initializes((0, 8)) [[FPTR_PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: float [[ARG:%.*]], ptr nofree captures(address) [[PTR:%.*]], ptr nofree writeonly captures(none) initializes((0, 8)) [[FPTR_PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[RET:%.*]] = call nofpclass(nan) float @nofpclass_non_call_user(float nofpclass(nan) [[ARG]], ptr [[PTR]])
 ; CHECK-NEXT:    store ptr @nofpclass_non_call_user, ptr [[FPTR_PTR]], align 8
 ; CHECK-NEXT:    ret float [[RET]]
@@ -278,7 +278,7 @@ define float @call_nofpclass_non_call_user(float %arg, ptr %ptr, ptr %fptr.ptr) 
 ; TODO: This case is missed
 define internal float @transitive_nonan_callee0(float %arg, ptr %ptr) {
 ; CHECK-LABEL: define internal float @transitive_nonan_callee0(
-; CHECK-SAME: float [[ARG:%.*]], ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: float [[ARG:%.*]], ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load volatile float, ptr [[PTR]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], [[LOAD]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -290,7 +290,7 @@ define internal float @transitive_nonan_callee0(float %arg, ptr %ptr) {
 
 define internal float @transitive_nonan_callee1(float %arg, ptr %ptr) {
 ; CHECK-LABEL: define internal nofpclass(nan) float @transitive_nonan_callee1(
-; CHECK-SAME: float nofpclass(nan) [[ARG:%.*]], ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: float nofpclass(nan) [[ARG:%.*]], ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[RET:%.*]] = call float @transitive_nonan_callee0(float [[ARG]], ptr [[PTR]])
 ; CHECK-NEXT:    ret float [[RET]]
 ;
@@ -300,7 +300,7 @@ define internal float @transitive_nonan_callee1(float %arg, ptr %ptr) {
 
 define float @caller_transitive_nonan(float %arg, ptr %ptr) {
 ; CHECK-LABEL: define float @caller_transitive_nonan(
-; CHECK-SAME: float [[ARG:%.*]], ptr [[PTR:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: float [[ARG:%.*]], ptr nofree captures(address) [[PTR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[RET:%.*]] = call nofpclass(nan) float @transitive_nonan_callee1(float nofpclass(nan) [[ARG]], ptr [[PTR]])
 ; CHECK-NEXT:    ret float [[RET]]
 ;

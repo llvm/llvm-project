@@ -225,9 +225,8 @@ llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
   if (RecordTy->isUnion()) {
     auto *InitField = ILE->getInitializedFieldInUnion();
 
-    if (!InitField)
+    if (!InitField || ILE->getNumInits() == 0)
       return llvm::Error::success();
-    assert(!ILE->inits().empty());
     return Matcher.matchesInitializerList(InitField, ILE->getInit(0));
   }
   // Handle struct/class:
@@ -302,8 +301,11 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
   if (Type->isArrayType())
     return matchInitializerListForArray(*this, Base, ILE,
                                         ArrayElementIndirectLevel);
-  // Must be the case of using a initializer-list for a scalar:
-  return matchesInitializerList(Base, ILE->getInit(0));
+
+  // Must be the case of using an initializer-list for a scalar:
+  if (ILE->getNumInits() > 0)
+    return matchesInitializerList(Base, ILE->getInit(0));
+  return llvm::Error::success();
 }
 
 class PointerFlowTUSummaryExtractor : public TUSummaryExtractor {
@@ -354,8 +356,10 @@ public:
 };
 } // namespace
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int PointerFlowTUSummaryExtractorAnchorSource = 0;
+volatile int PointerFlowExtractorAnchorSource = 0;
+} // namespace clang::ssaf
 
 static TUSummaryExtractorRegistry::Add<PointerFlowTUSummaryExtractor>
     RegisterExtractor(PointerFlowEntitySummary::Name,
