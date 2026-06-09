@@ -1114,7 +1114,7 @@ TEST(Local, CanReplaceOperandWithVariable) {
   // immarg.
   Type *PtrPtr = B.getPtrTy(0);
   Value *Alloca = B.CreateAlloca(PtrPtr, (unsigned)0);
-  CallInst *GCRoot = B.CreateIntrinsic(
+  auto *GCRoot = B.CreateIntrinsicWithoutFolding(
       Intrinsic::gcroot, {Alloca, Constant::getNullValue(PtrPtr)});
   EXPECT_TRUE(canReplaceOperandWithVariable(GCRoot, 0)); // Alloca
   EXPECT_FALSE(canReplaceOperandWithVariable(GCRoot, 1));

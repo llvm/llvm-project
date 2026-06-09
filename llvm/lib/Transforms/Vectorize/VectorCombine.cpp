@@ -1813,7 +1813,7 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
   else
     VectorBO = Builder.CreateBinOp(BinOpOpc, V0, V1);
 
-  Instruction *Rdx = Builder.CreateIntrinsic(ReductionIID, {VTy}, {VectorBO});
+  Value *Rdx = Builder.CreateIntrinsic(ReductionIID, {VTy}, {VectorBO});
   replaceValue(I, *Rdx);
   return true;
 }
@@ -4245,14 +4245,14 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   if (IsPartialReduction)
     ReduceInput = Builder.CreateShuffleVector(FinalVecV, ExtractMask);
 
-  CallInst *ReducedResult;
+  Value *ReducedResult;
   if (IsFloatReduction) {
     Value *Identity = ConstantExpr::getBinOpIdentity(
         *CommonBinOp, ReduceVecTy->getElementType(), /*AllowRHSConstant=*/false,
         CommonFMF.noSignedZeros());
-    ReducedResult = Builder.CreateIntrinsic(ReducedOp, {ReduceVecTy},
-                                            {Identity, ReduceInput});
-    ReducedResult->setFastMathFlags(CommonFMF);
+    ReducedResult = Builder.CreateIntrinsic(
+        ReducedOp, {ReduceVecTy}, {Identity, ReduceInput}, {}, "", {},
+        [&CommonFMF](CallInst *CI) { CI->setFastMathFlags(CommonFMF); });
   } else {
     ReducedResult =
         Builder.CreateIntrinsic(ReducedOp, {ReduceVecTy}, {ReduceInput});
@@ -5936,12 +5936,14 @@ bool VectorCombine::foldBitcastOfVPLoad(Instruction &I) {
   unsigned Factor = NewVecCnt.getKnownScalarFactor(OrigVecCnt);
   Value *NewEVL = Builder.CreateNUWMul(EVL, Builder.getInt32(Factor));
   Value *NewMask = Builder.CreateVectorSplat(NewVecCnt, Builder.getTrue());
-  CallInst *NewVP =
-      Builder.CreateIntrinsic(NewVecTy, Intrinsic::vp_load,
-                              {II->getMemoryPointerParam(), NewMask, NewEVL});
-  // Preserve the original alignment.
-  NewVP->addParamAttrs(
-      0, AttrBuilder(II->getContext()).addAlignmentAttr(OrigAlign));
+  Value *NewVP = Builder.CreateIntrinsic(
+      NewVecTy, Intrinsic::vp_load,
+      {II->getMemoryPointerParam(), NewMask, NewEVL}, {}, "",
+      [&](CallInst *CI) {
+        // Preserve the original alignment.
+        CI->addParamAttrs(
+            0, AttrBuilder(II->getContext()).addAlignmentAttr(OrigAlign));
+      });
   replaceValue(*Cast, *NewVP);
   return true;
 }

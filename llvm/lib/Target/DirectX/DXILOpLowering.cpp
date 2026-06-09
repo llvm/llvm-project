@@ -177,7 +177,7 @@ public:
   /// piecemeal way - we can add the casts in to avoid updating all of the uses
   /// or defs, and by the end all of the casts will be redundant.
   Value *createTmpHandleCast(Value *V, Type *Ty) {
-    CallInst *Cast = OpBuilder.getIRB().CreateIntrinsic(
+    auto *Cast = OpBuilder.getIRB().CreateIntrinsicWithoutFolding(
         Intrinsic::dx_resource_casthandle, {Ty, V->getType()}, {V});
     CleanupCasts.push_back(Cast);
     return Cast;

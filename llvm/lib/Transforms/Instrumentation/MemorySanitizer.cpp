@@ -1268,7 +1268,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     MS.initializeCallbacks(*F.getParent(), TLI);
     FnPrologueEnd =
         IRBuilder<>(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt())
-            .CreateIntrinsic(Intrinsic::donothing, {});
+            .CreateIntrinsicWithoutFolding(Intrinsic::donothing, {});
 
     if (MS.CompileKernel) {
       IRBuilder<> IRB(FnPrologueEnd);
@@ -4642,7 +4642,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // copy them.
     ShadowArgs.append(1, IRB.CreateBitCast(SrcShadow, Src->getType()));
 
-    CallInst *CI =
+    Value *CI =
         IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
@@ -4697,7 +4697,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     ShadowArgs.append(1, SrcShadowPtr);
     ShadowArgs.append(1, Mask);
 
-    CallInst *CI =
+    Value *CI =
         IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
     // The AVX masked load intrinsics do not have integer variants. We use the
     // floating-point variants, which will happily copy the shadows even if
@@ -4747,8 +4747,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Shadows are integer-ish types but some intrinsics require a
     // different (e.g., floating-point) type.
     Shadow = IRB.CreateBitCast(Shadow, I.getArgOperand(0)->getType());
-    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                       {Shadow, I.getArgOperand(1)});
+    Value *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                    {Shadow, I.getArgOperand(1)});
 
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
     setOriginForNaryOp(I);
@@ -4781,8 +4781,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // different (e.g., floating-point) type.
     AShadow = IRB.CreateBitCast(AShadow, I.getArgOperand(0)->getType());
     BShadow = IRB.CreateBitCast(BShadow, I.getArgOperand(2)->getType());
-    CallInst *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                       {AShadow, Idx, BShadow});
+    Value *CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                    {AShadow, Idx, BShadow});
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
     setOriginForNaryOp(I);
   }
@@ -5394,12 +5394,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *XShadow = getShadow(X);
     Value *BZeroShadow = getCleanShadow(B);
 
-    CallInst *AShadowXShadow = IRB.CreateIntrinsic(
+    Value *AShadowXShadow = IRB.CreateIntrinsic(
         I.getType(), I.getIntrinsicID(), {XShadow, AShadow, BZeroShadow});
-    CallInst *AShadowX = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                             {X, AShadow, BZeroShadow});
-    CallInst *XShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
-                                             {XShadow, A, BZeroShadow});
+    Value *AShadowX = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                          {X, AShadow, BZeroShadow});
+    Value *XShadowA = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
+                                          {XShadow, A, BZeroShadow});
 
     unsigned NumElements = cast<FixedVectorType>(I.getType())->getNumElements();
     Value *BShadow = getShadow(B);
@@ -5477,7 +5477,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // The NEON vector load instructions handled by this function all have
     // integer variants. It is easier to use those rather than trying to cast
     // a struct of vectors of floats into a struct of vectors of integers.
-    CallInst *CI =
+    Value *CI =
         IRB.CreateIntrinsic(getShadowTy(&I), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
@@ -5560,7 +5560,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         Addr, IRB, OutputShadowTy, Align(1), /*isStore*/ true);
     ShadowArgs.append(1, OutputShadowPtr);
 
-    CallInst *CI =
+    Value *CI =
         IRB.CreateIntrinsic(IRB.getVoidTy(), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, CI);
 
@@ -5757,8 +5757,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       ShadowArgs.push_back(Arg);
     }
 
-    CallInst *CI =
-        IRB.CreateIntrinsic(I.getType(), shadowIntrinsicID, ShadowArgs);
+    Value *CI = IRB.CreateIntrinsic(I.getType(), shadowIntrinsicID, ShadowArgs);
     Value *CombinedShadow = CI;
 
     // Combine the computed shadow with the shadow of trailing args

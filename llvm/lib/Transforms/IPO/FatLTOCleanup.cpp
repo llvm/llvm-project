@@ -79,7 +79,7 @@ static bool cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
     Value *Offset = I->getOperand(1);
     Type *PtrTy = I->getType()->getStructElementType(0);
     ConstantInt *True = ConstantInt::getTrue(M.getContext());
-    Instruction *Load;
+    Value *Load;
     if (IsRelative) {
       Load =
           IRB.CreateIntrinsic(Intrinsic::load_relative, {Offset->getType()},
