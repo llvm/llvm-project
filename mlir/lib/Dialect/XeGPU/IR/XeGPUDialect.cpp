@@ -738,8 +738,7 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
         return laneData == otherLaneData;
       } else if (laneData == otherLaneData) {
         if (laneLayout.size() == 2 && otherLaneLayout.size() == 2) {
-          // Target LaneLayout may be a fraction of this along distibuted dim
-          if (laneLayout[0] == otherLaneLayout[0])
+          // Target LaneLayout may be a fraction of this along distributed dim
             return laneLayout[1] % otherLaneLayout[1] == 0;
           else if (laneLayout[1] == otherLaneLayout[1])
             return laneLayout[0] % otherLaneLayout[0] == 0;
