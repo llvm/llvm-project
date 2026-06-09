@@ -1,14 +1,14 @@
 ; RUN: opt %s -dxil-pdb -o /dev/null
-; RUN: llvm-pdbutil dump --streams --dxcontainer PDBPartsTest.pdb | FileCheck %s
+; RUN: llvm-pdbutil pdb2yaml --dxcontainer PDBPartsTest.pdb | FileCheck %s
 
 ; Check that PDB file contains only debug-info relevant parts.
-; CHECK:              PartCount: 5
-; CHECK-NEXT:         Parts:
-; CHECK-NEXT:           ILDB |
-; CHECK-NEXT:           ILDN |
-; CHECK-NEXT:           HASH |
-; CHECK-NEXT:           SRCI |
-; CHECK-NEXT:           VERS |
+; CHECK:       PartCount:       5
+; CHECK:     Parts:
+; CHECK-DAG:       - Name:            ILDB
+; CHECK-DAG:       - Name:            ILDN
+; CHECK-DAG:       - Name:            HASH
+; CHECK-DAG:       - Name:            SRCI
+; CHECK-DAG:       - Name:            VERS
 
 target triple = "dxilv1.3-pc-shadermodel6.3-library"
 
