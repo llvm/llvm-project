@@ -5,7 +5,7 @@
 
 支持两种模式：
 - **原生构建**（推荐）：用构建目录自带的 clang/lld，无需交叉工具链
-- **bare-metal 裁剪**（可选）：`EJIT_BARE_METAL=ON` + `--exclude` 进一步缩小体积
+- **bare-metal 裁剪**（可选）：`EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON` + `--exclude` 进一步缩小体积
 
 ## 快速开始
 
@@ -77,7 +77,7 @@ ninja -C build_release_aarch64 clang LLVMEJIT lld
 | **aarch64** (原生) | 36 个 .a | **~1064** | **61 MB** | **37 MB** |
 | aarch64 (bare-metal) | 44 个 .a | ~658 | 46 MB | 30 MB |
 
-aarch64 bare-metal 更小因为 `EJIT_BARE_METAL` source guard 在编译时就排除了大量代码。
+aarch64 bare-metal 更小因为 `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` source guard 在编译时就排除了大量代码。
 原生 aarch64 和 x86 接近（~1064 .o / 37 MB），因为没有裁剪。
 
 ### 手动 aarch64 命令
@@ -106,8 +106,8 @@ python3 ejit_test/lipo/lipo.py merge \
 如需进一步减小体积（~30 MB），启用源码级裁剪 + pass 排除：
 
 ```bash
-# 配置时启用 EJIT_BARE_METAL=ON
-cmake ... -DEJIT_BARE_METAL=ON
+# 配置时启用 EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON
+cmake ... -DEJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON
 ninja -C build_release_aarch64 LLVMEJIT
 
 # extract 时传入 --exclude 排除不需要的 pass（完整列表见 git history）
@@ -138,7 +138,7 @@ python3 ejit_test/lipo/lipo.py extract \
 |---|---|---|
 | 链接时 | lipo extract 依赖追踪 | linker map + `nm -u` 计算闭包，只提取引用的 .o |
 | 链接时 | `ld -r --gc-sections` | 以 section 粒度消除未引用代码 |
-| 编译时 | `EJIT_BARE_METAL` source guard | （可选）`#ifndef` 排除 OS/arch 专属代码路径 |
+| 编译时 | `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` source guard | （可选）`#ifndef` 排除 OS/arch 专属代码路径 |
 | 链接时 | `--exclude` | （可选）排除已知不需要的 pass/format .o |
 
 ### 关键修复
@@ -149,7 +149,7 @@ python3 ejit_test/lipo/lipo.py extract \
 
 ## 体积数据
 
-### aarch64 原生 (-Os, 无 EJIT_BARE_METAL)
+### aarch64 原生 (-Os, 无 EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
 
 | 阶段 | .o 数 | 大小 |
 |---|---|---|
@@ -159,7 +159,7 @@ python3 ejit_test/lipo/lipo.py extract \
 | `.text` | — | ~14 MB |
 | `.rodata` | — | ~5 MB |
 
-### aarch64 bare-metal (-Os, EJIT_BARE_METAL=ON, --exclude)
+### aarch64 bare-metal (-Os, EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON, --exclude)
 
 | 阶段 | .o 数 | 大小 |
 |---|---|---|
@@ -170,7 +170,7 @@ python3 ejit_test/lipo/lipo.py extract \
 | `.rodata` | — | 4.0 MB |
 | 实际段总大小 | — | 14.7 MB |
 
-### x86 (Release, 无 EJIT_BARE_METAL)
+### x86 (Release, 无 EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
 
 | 阶段 | .o 数 | 大小 |
 |---|---|---|
@@ -180,9 +180,9 @@ python3 ejit_test/lipo/lipo.py extract \
 
 ## 裁剪明细（bare-metal 模式）
 
-以下裁剪仅在启用 `EJIT_BARE_METAL=ON` + `--exclude` 时生效。原生构建不使用这些裁剪。
+以下裁剪仅在启用 `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON` + `--exclude` 时生效。原生构建不使用这些裁剪。
 
-### 源码级 (EJIT_BARE_METAL guards)
+### 源码级 (EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL guards)
 
 | 文件 | 排除内容 |
 |---|---|
@@ -217,8 +217,8 @@ python3 ejit_test/lipo/lipo.py extract \
 
 ## 注意事项
 
-- **原生构建**（无 `EJIT_BARE_METAL`、无 `--exclude`）是推荐的日常使用方式，包含完整 LLVM 功能，测试 15/15 通过
-- `EJIT_BARE_METAL=ON` 不能用于编译 clang/lld（它们需要 Wasm/COFF/DWARF 等后端），只能对 `LLVMEJIT` target 启用
+- **原生构建**（无 `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL`、无 `--exclude`）是推荐的日常使用方式，包含完整 LLVM 功能，测试 15/15 通过
+- `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON` 不能用于编译 clang/lld（它们需要 Wasm/COFF/DWARF 等后端），只能对 `LLVMEJIT` target 启用
 - `merge.ld` 控制最终 `.o` 的段布局（text/rodata/data 顺序），需要与链接脚本配合
 - lipo 输出是 `ld -r` 部分链接的 `.o`（relocatable），不是最终可执行文件或 `.a`
 - `llvm-objcopy` 可剥离 ARM `$x/$d` 映射符号（省 ~3-5 MB），需先构建：`ninja -C build_release_aarch64 llvm-objcopy`

@@ -9,7 +9,7 @@ tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
-if(NOT EJIT_BARE_METAL)
+if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
 tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64O0PreLegalizerCombiner")
@@ -83,7 +83,7 @@ set(AARCH64_CODEGEN_SOURCES
   AArch64SIMDInstrOpt.cpp
   )
 
-if(NOT EJIT_BARE_METAL)
+if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
   list(APPEND AARCH64_CODEGEN_SOURCES
     GISel/AArch64CallLowering.cpp
     GISel/AArch64GlobalISelUtils.cpp
@@ -118,7 +118,7 @@ set(AARCH64_CODEGEN_LINK
   TransformUtils
   Vectorize
   )
-if(NOT EJIT_BARE_METAL)
+if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
   list(APPEND AARCH64_CODEGEN_LINK GlobalISel)
 endif()
 

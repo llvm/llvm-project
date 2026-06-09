@@ -127,7 +127,7 @@ static bool evaluate(const MCSpecifierExpr &Expr, MCValue &Res,
   return true;
 }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
@@ -165,7 +165,7 @@ const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);
   return MCBinaryExpr::createSub(Res, PC, Context);
 }
-#endif // EJIT_BARE_METAL
+#endif // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 
 void AArch64AuthMCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
   bool WrapSubExprInParens = !isa<MCSymbolRefExpr>(getSubExpr());
@@ -181,7 +181,7 @@ void AArch64AuthMCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI) const {
   OS << ')';
 }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 void AArch64MCAsmInfoDarwin::printSpecifierExpr(
     raw_ostream &OS, const MCSpecifierExpr &Expr) const {
   if (auto *AE = dyn_cast<AArch64AuthMCExpr>(&Expr))
@@ -194,7 +194,7 @@ bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
     const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
   return evaluate(Expr, Res, Asm);
 }
-#endif // EJIT_BARE_METAL
+#endif // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 
 AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   if (T.getArch() == Triple::aarch64_be)
@@ -245,7 +245,7 @@ bool AArch64MCAsmInfoELF::evaluateAsRelocatableImpl(
   return evaluate(Expr, Res, Asm);
 }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
   PrivateGlobalPrefix = ".L";
   PrivateLabelPrefix = ".L";
@@ -305,4 +305,4 @@ bool AArch64MCAsmInfoGNUCOFF::evaluateAsRelocatableImpl(
     const MCSpecifierExpr &Expr, MCValue &Res, const MCAssembler *Asm) const {
   return evaluate(Expr, Res, Asm);
 }
-#endif // EJIT_BARE_METAL
+#endif // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL

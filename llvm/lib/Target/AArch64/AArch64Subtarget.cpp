@@ -16,7 +16,7 @@
 #include "AArch64InstrInfo.h"
 #include "AArch64PBQPRegAlloc.h"
 #include "AArch64TargetMachine.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "GISel/AArch64CallLowering.h"
 #include "GISel/AArch64LegalizerInfo.h"
 #include "GISel/AArch64RegisterBankInfo.h"
@@ -392,11 +392,11 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
 #endif
   InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   Legalizer.reset(new AArch64LegalizerInfo(*this));
 
   auto *RBI = new AArch64RegisterBankInfo(*getRegisterInfo());
@@ -408,7 +408,7 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
       *static_cast<const AArch64TargetMachine *>(&TM), *this, *RBI));
 
   RegBankInfo.reset(RBI);
-#endif // EJIT_BARE_METAL
+#endif // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 
   auto TRI = getRegisterInfo();
   StringSet<> ReservedRegNames(llvm::from_range, ReservedRegsForRA);
@@ -440,7 +440,7 @@ unsigned AArch64Subtarget::getHwModeSet() const {
   return to_underlying(Modes);
 }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 const CallLowering *AArch64Subtarget::getCallLowering() const {
   return CallLoweringInfo.get();
 }
@@ -450,7 +450,7 @@ const InlineAsmLowering *AArch64Subtarget::getInlineAsmLowering() const {
   return InlineAsmLoweringInfo.get();
 }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 InstructionSelector *AArch64Subtarget::getInstructionSelector() const {
   return InstSelector.get();
 }
@@ -462,7 +462,7 @@ const LegalizerInfo *AArch64Subtarget::getLegalizerInfo() const {
 const RegisterBankInfo *AArch64Subtarget::getRegBankInfo() const {
   return RegBankInfo.get();
 }
-#else  // EJIT_BARE_METAL — stub: GlobalISel is excluded
+#else  // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL — stub: GlobalISel is excluded
 const CallLowering *AArch64Subtarget::getCallLowering() const {
   return nullptr;
 }
