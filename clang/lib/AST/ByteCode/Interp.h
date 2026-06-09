@@ -3281,7 +3281,7 @@ inline bool DoShiftAP(InterpState &S, CodePtr OpPC, const APSInt &LHS,
       return false;
     return DoShiftAP<LT, RT,
                      Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
-        S, OpPC, LHS, -RHS, Result);
+        S, OpPC, LHS, -(RHS.extend(RHS.getBitWidth() + 1)), Result);
   }
 
   if (!CheckShift<Dir>(S, OpPC, static_cast<LT>(LHS), static_cast<RT>(RHS),

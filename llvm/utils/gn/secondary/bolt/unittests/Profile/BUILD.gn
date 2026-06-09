@@ -4,8 +4,8 @@ unittest("ProfileTests") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
     "//bolt/lib/Profile",
-    "//llvm/lib/Testing/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "DataAggregator.cpp",

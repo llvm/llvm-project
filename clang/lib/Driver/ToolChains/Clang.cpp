@@ -2041,12 +2041,17 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
                     options::OPT_mno_implicit_float, true))
     CmdArgs.push_back("-no-implicit-float");
 
-  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+  auto TuneCPU = riscv::getRISCVTuneCPU(getToolChain().getDriver(), Args);
+  if (!TuneCPU)
+    return;
+  if (!TuneCPU->empty()) {
     CmdArgs.push_back("-tune-cpu");
-    if (strcmp(A->getValue(), "native") == 0)
+    if (*TuneCPU == "native")
       CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
     else
-      CmdArgs.push_back(A->getValue());
+      // TuneCPU might or might not be the original -mtune string, so we
+      // have to create a new copy here.
+      CmdArgs.push_back(Args.MakeArgString(*TuneCPU));
   }
 
   // Handle -mrvv-vector-bits=<bits>
@@ -3822,8 +3827,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
       options::OPT_fhlsl_spv_use_unknown_image_format,
-      options::OPT_fhlsl_spv_enable_maximal_reconvergence,
-      options::OPT_fhlsl_spv_preserve_interface};
+      options::OPT_fhlsl_spv_enable_maximal_reconvergence};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
@@ -7708,8 +7712,24 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // Unwind v2 (epilog) information for x64 Windows.
-  Args.AddLastArg(CmdArgs, options::OPT_winx64_eh_unwindv2);
+  // Unwind information version for x64 Windows.
+  // Forward the new unified flag if present, otherwise translate legacy flags.
+  if (const Arg *A = Args.getLastArg(options::OPT_winx64_eh_unwind_EQ)) {
+    A->claim();
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-fwinx64-eh-unwind=") + A->getValue()));
+  } else if (const Arg *A =
+                 Args.getLastArg(options::OPT_winx64_eh_unwindv2_EQ)) {
+    A->claim();
+    StringRef Val = A->getValue();
+    if (Val == "best-effort")
+      CmdArgs.push_back("-fwinx64-eh-unwind=v2-best-effort");
+    else if (Val == "required")
+      CmdArgs.push_back("-fwinx64-eh-unwind=v2-required");
+    // "disabled" maps to v1 default, nothing to forward.
+    else if (Val != "disabled")
+      D.Diag(diag::err_drv_invalid_value) << A->getAsString(Args) << Val;
+  }
 
   // Control Flow Guard mechanism for Windows.
   Args.AddLastArg(CmdArgs, options::OPT_win_cfg_mechanism);
@@ -8816,11 +8836,12 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   if (Args.hasArg(options::OPT__SLASH_kernel))
     CmdArgs.push_back("-fms-kernel");
 
-  // Unwind v2 (epilog) information for x64 Windows.
+  // Unwind v2 (epilog) information for x64 Windows. MSVC's behavior is not
+  // order-dependent: /d2epilogunwindrequirev2 always wins over /d2epilogunwind.
   if (Args.hasArg(options::OPT__SLASH_d2epilogunwindrequirev2))
-    CmdArgs.push_back("-fwinx64-eh-unwindv2=required");
+    CmdArgs.push_back("-fwinx64-eh-unwind=v2-required");
   else if (Args.hasArg(options::OPT__SLASH_d2epilogunwind))
-    CmdArgs.push_back("-fwinx64-eh-unwindv2=best-effort");
+    CmdArgs.push_back("-fwinx64-eh-unwind=v2-best-effort");
 
   // Handle the various /guard options. We don't immediately push back clang
   // args since there are /d2 args that can modify the behavior of /guard:cf.
@@ -9688,7 +9709,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
             options::OPT_fprofile_instr_generate,
             options::OPT_fprofile_instr_generate_EQ);
-        if (TC->getLTOMode(Args, Kind) == LTOK_None && !UsesProfileGenerate)
+        if (!Args.hasArg(options::OPT_foffload_lto_EQ,
+                         options::OPT_fno_offload_lto) &&
+            !UsesProfileGenerate)
           CmdArgs.push_back("--no-lto");
       }
     }

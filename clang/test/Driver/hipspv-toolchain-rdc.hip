@@ -32,20 +32,20 @@
 // Emit code (LLVM BC) for device side path.
 // OLD: [[CLANG]] "-cc1" "-triple" "spirv64"
 // OLD-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// OLD-SAME: "-emit-llvm-bc"
+// OLD-SAME: "-emit-obj"
 // OLD-SAME: "-fcuda-is-device"
 // OLD-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // OLD-SAME: "-fgpu-rdc"
-// OLD-SAME: {{.*}} "-o" [[A_BC1:".*bc"]] "-x" "hip"
+// OLD-SAME: {{.*}} "-o" [[A_BC1:".*o"]] "-x" "hip"
 // OLD-SAME: {{.*}} [[A_SRC]]
 
 // OLD: [[CLANG]] "-cc1" "-triple" "spirv64"
 // OLD-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// OLD-SAME: "-emit-llvm-bc"
+// OLD-SAME: "-emit-obj"
 // OLD-SAME: "-fcuda-is-device"
 // OLD-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // OLD-SAME: "-fgpu-rdc"
-// OLD-SAME: {{.*}} "-o" [[B_BC1:".*bc"]] "-x" "hip"
+// OLD-SAME: {{.*}} "-o" [[B_BC1:".*o"]] "-x" "hip"
 // OLD-SAME: {{.*}} [[B_SRC]]
 
 // Link device code, lower it with HIPSPV passes and emit SPIR-V binary.
@@ -74,11 +74,11 @@
 // NEW-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // NEW-SAME: "-mlink-builtin-bitcode" "[[HIP_PATH]]/lib/hip-device-lib/hipspv-spirv64-unknown-chipstar.bc"
 // NEW-SAME: "-fgpu-rdc"
-// NEW-SAME: "-o" "[[A_DEV_BC:.*bc]]" "-x" "hip"
+// NEW-SAME: "-o" "[[A_DEV_OBJ:.*o]]" "-x" "hip"
 // NEW-SAME: "[[A_SRC:.*a.cu]]"
 
 // NEW: "{{.*llvm-offload-binary[^ ]*}}" "-o" "[[A_BIN_PACKAGE:.*.out]]"
-// NEW-SAME: "--image=file=[[A_DEV_BC]],triple=[[OFFLOAD_TRIPLE]],arch=generic,kind=hip"
+// NEW-SAME: "--image=file=[[A_DEV_OBJ]],triple=[[OFFLOAD_TRIPLE]],arch=generic,kind=hip"
 
 // NEW: [[CLANG]] "-cc1" "-triple" "[[HOST_TRIPLE]]"
 // NEW-SAME: "-aux-triple" "[[OFFLOAD_TRIPLE]]"
@@ -94,11 +94,11 @@
 // NEW-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // NEW-SAME: "-mlink-builtin-bitcode" "[[HIP_PATH]]/lib/hip-device-lib/hipspv-spirv64-unknown-chipstar.bc"
 // NEW-SAME: "-fgpu-rdc"
-// NEW-SAME: "-o" "[[B_DEV_BC:.*bc]]" "-x" "hip"
+// NEW-SAME: "-o" "[[B_DEV_OBJ:.*o]]" "-x" "hip"
 // NEW-SAME: "[[B_SRC:.*b.hip]]"
 
 // NEW: "{{.*llvm-offload-binary[^ ]*}}" "-o" "[[B_BIN_PACKAGE:.*.out]]"
-// NEW-SAME: "--image=file=[[B_DEV_BC]],triple=[[OFFLOAD_TRIPLE]],arch=generic,kind=hip"
+// NEW-SAME: "--image=file=[[B_DEV_OBJ]],triple=[[OFFLOAD_TRIPLE]],arch=generic,kind=hip"
 
 // NEW: [[CLANG]] "-cc1" "-triple" "[[HOST_TRIPLE]]"
 // NEW-SAME: "-aux-triple" "[[OFFLOAD_TRIPLE]]"
@@ -110,6 +110,7 @@
 
 // NEW: "{{.*clang-linker-wrapper[^ ]*}}"
 // NEW-SAME: "--device-compiler=[[OFFLOAD_TRIPLE]]=--hip-path=[[HIP_PATH]]"
+// NEW-SAME: "--device-compiler=[[OFFLOAD_TRIPLE]]=-flto=full"
 // NEW-SAME: "--host-triple=[[HOST_TRIPLE]]"
 // NEW-SAME: "-o" "a.out"
 // NEW-SAME: "[[A_HOST_OBJ]]" "[[B_HOST_OBJ]]"

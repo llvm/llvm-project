@@ -45,7 +45,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cstdint>
 #include <optional>
 
@@ -532,18 +531,11 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   llvm::Type *LayoutTy = convertHLSLSpecificType(ResHandleTy, OffsetInfo);
   llvm::GlobalVariable *BufGV = new GlobalVariable(
       LayoutTy, /*isConstant*/ false,
-      GlobalValue::LinkageTypes::InternalLinkage, PoisonValue::get(LayoutTy),
+      GlobalValue::LinkageTypes::ExternalLinkage, PoisonValue::get(LayoutTy),
       llvm::formatv("{0}{1}", BufDecl->getName(),
                     BufDecl->isCBuffer() ? ".cb" : ".tb"),
       GlobalValue::NotThreadLocal);
-
-  llvm::Module &M = CGM.getModule();
-  M.insertGlobalVariable(BufGV);
-
-  // Add the global variable to the compiler used list so it does not
-  // get optimized away by GlobalOptPass before it reaches
-  // {DXIL|SPIRV}CBufferAccess pass.
-  llvm::appendToCompilerUsed(M, {BufGV});
+  CGM.getModule().insertGlobalVariable(BufGV);
 
   // Add globals for constant buffer elements and create metadata nodes
   emitBufferGlobalsAndMetadata(BufDecl, BufGV, OffsetInfo);
@@ -603,21 +595,6 @@ void CGHLSLRuntime::finishCodeGen() {
   if (LangOpts.NativeHalfType)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec",
                     1);
-
-  if (LangOpts.HLSLSpvPreserveInterface && T.isSPIRV()) {
-    // Runs before optimization. Keeps Input/Output globals from GlobalDCE.
-    const ASTContext &Ctx = CGM.getContext();
-    unsigned InputAS = Ctx.getTargetAddressSpace(LangAS::hlsl_input);
-    unsigned OutputAS = Ctx.getTargetAddressSpace(LangAS::hlsl_output);
-    SmallVector<GlobalValue *, 8> InterfaceVars;
-    for (GlobalVariable &GV : M.globals()) {
-      unsigned AS = GV.getAddressSpace();
-      if (AS == InputAS || AS == OutputAS)
-        InterfaceVars.push_back(&GV);
-    }
-    if (!InterfaceVars.empty())
-      appendToCompilerUsed(M, InterfaceVars);
-  }
 
   generateGlobalCtorDtorCalls();
 }

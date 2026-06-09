@@ -305,9 +305,9 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   }
 
   // If we can unconditionally load from this address, replace with a
-  // load/select idiom. TODO: use DT for context sensitive query
+  // load/select idiom.
   if (isDereferenceablePointer(LoadPtr, II.getType(),
-                               II.getDataLayout(), &II, &AC)) {
+                               SQ.getWithInstruction(&II))) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
     LI->copyMetadata(II);
@@ -2494,7 +2494,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (auto *SkippedBarrier = simplifyInvariantGroupIntrinsic(*II, *this))
       return replaceInstUsesWith(*II, SkippedBarrier);
     break;
-  case Intrinsic::powi:
+  case Intrinsic::powi: {
     if (ConstantInt *Power = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
       // 0 and 1 are handled in instsimplify
       // powi(x, -1) -> 1/x
@@ -2519,7 +2519,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           return replaceOperand(*II, 0, X);
       }
     }
+    if (ConstantFP *Base = dyn_cast<ConstantFP>(II->getArgOperand(0))) {
+      Value *Exp = II->getArgOperand(1);
+      Type *Ty = Base->getType();
+      // powi(2.0, p) -> ldexp(1.0, p)
+      if (II->hasApproxFunc() && Base->isExactlyValue(2.0)) {
+        ConstantFP *One = ConstantFP::get(Ty, 1.0);
+        if (auto *VTy = dyn_cast<VectorType>(Ty))
+          Exp = Builder.CreateVectorSplat(VTy->getElementCount(), Exp);
+        Value *Ldexp = Builder.CreateLdexp(One, Exp, II);
+        return replaceInstUsesWith(*II, Ldexp);
+      }
+    }
     break;
+  }
 
   case Intrinsic::cttz:
   case Intrinsic::ctlz:
@@ -3701,6 +3714,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           MDNode *MD = MDNode::get(II->getContext(), {});
           LI->setMetadata(LLVMContext::MD_nonnull, MD);
           LI->setMetadata(LLVMContext::MD_noundef, MD);
+          return CallBase::removeOperandBundleAt(II, Idx);
+        }
+
+        if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
+            GEP && GEP->isInBounds() &&
+            !NullPointerIsDefined(II->getFunction(),
+                                  Ptr->getType()->getPointerAddressSpace())) {
+          Builder.CreateNonnullAssumption(GEP->stripInBoundsOffsets());
           return CallBase::removeOperandBundleAt(II, Idx);
         }
 
