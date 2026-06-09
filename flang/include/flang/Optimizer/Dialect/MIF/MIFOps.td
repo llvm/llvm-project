@@ -184,7 +184,7 @@ def mif_LcoboundOp : mif_Op<"lcobound", [NoMemoryEffect]> {
 }
 
 def mif_UcoboundOp : mif_Op<"ucobound", [NoMemoryEffect]> {
-  let summary = "Returns the upper cobound(s) associated with a coarray.";
+  let summary = "Returns the upper cobound for a given codimension of a coarray.";
   let description = [{
     This operation returns the upper cobound(s) associated with a coarray.
     Arguments: 
