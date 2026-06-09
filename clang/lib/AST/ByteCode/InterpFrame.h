@@ -92,8 +92,10 @@ public:
   /// Returns the current function.
   const Function *getFunction() const { return Func; }
 
+#ifndef NDEBUG
   /// Returns the offset on the stack at which the frame starts.
   size_t getFrameOffset() const { return FrameOffset; }
+#endif
 
   /// Returns the value of a local variable.
   template <typename T> const T &getLocal(unsigned Offset) const {
@@ -223,8 +225,10 @@ private:
   const unsigned ArgSize;
   /// Pointer to the arguments in the callee's frame.
   char *Args = nullptr;
+#ifndef NDEBUG
   /// Offset on the stack at entry.
-  const size_t FrameOffset;
+  size_t FrameOffset = 0;
+#endif
 
 public:
   unsigned MSVCConstexprAllowed = 0;
