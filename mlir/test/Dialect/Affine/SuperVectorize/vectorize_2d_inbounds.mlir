@@ -41,7 +41,6 @@ func.func @copy(%A: memref<512x512xf32>, %B: memref<512x512xf32>) {
 // MATMUL-LABEL: func.func @matmul
 // Verify all three transfer_read ops carry in_bounds=[true] after the full
 // linalg-to-affine + tiling + vectorization pipeline.
-// Without the fix only the broadcast A-read gets it; B and C do not.
 // MATMUL-COUNT-3: vector.transfer_read {{.*}} {in_bounds = [true]
 // MATMUL-NOT:     vector.transfer_read
 func.func @matmul(%A: memref<512x512xf32>,
