@@ -148,7 +148,7 @@ public:
   }
 
   /// Returns a parameter descriptor.
-  ParamDescriptor getParamDescriptor(unsigned Index) const {
+  const ParamDescriptor &getParamDescriptor(unsigned Index) const {
     return ParamDescriptors[Index];
   }
 

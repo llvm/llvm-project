@@ -2132,12 +2132,27 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_raw_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprV4S32, SgprP3, Imm, Vgpr32, Sgpr32}}});
 
+  addRulesForIOpcs({amdgcn_raw_buffer_load_async_lds})
+      .Any({{_}, {{}, {IntrId, SgprV4S32, SgprB32_M0, Imm, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_struct_buffer_load_async_lds})
+      .Any(
+          {{_},
+           {{}, {IntrId, SgprV4S32, SgprB32_M0, Imm, Vgpr32, Vgpr32, Sgpr32}}});
+
   addRulesForIOpcs({amdgcn_struct_buffer_load_lds})
       .Any({{_},
             {{}, {IntrId, SgprV4S32, SgprP3, Imm, Vgpr32, Vgpr32, Sgpr32}}});
 
   addRulesForIOpcs({amdgcn_raw_ptr_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprP8, SgprP3, Imm, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_raw_ptr_buffer_load_async_lds})
+      .Any({{}, {{}, {IntrId, SgprP8, SgprB32_M0, Imm, VgprB32, SgprB32}}});
+
+  addRulesForIOpcs({amdgcn_struct_ptr_buffer_load_async_lds})
+      .Any({{_},
+            {{}, {IntrId, SgprP8, SgprB32_M0, Imm, Vgpr32, Vgpr32, Sgpr32}}});
 
   addRulesForIOpcs({amdgcn_struct_ptr_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprP8, SgprP3, Imm, Vgpr32, Vgpr32, Sgpr32}}});
@@ -2154,6 +2169,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_global_store_async_from_lds_b64,
                     amdgcn_global_store_async_from_lds_b128})
       .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
+
+  addRulesForIOpcs({amdgcn_tensor_load_to_lds, amdgcn_tensor_store_from_lds})
+      .Any({{},
+            {{},
+             {IntrId, SgprV4S32_ReadFirstLane, SgprV8S32_ReadFirstLane,
+              SgprV4S32_ReadFirstLane, SgprV4S32_ReadFirstLane,
+              SgprV8S32_ReadFirstLane, Imm}}});
 
   addRulesForIOpcs({amdgcn_cluster_load_b32})
       .Any({{UniB32}, {{UniInVgprB32}, {IntrId, SgprP1, Imm, SgprB32_M0}}})

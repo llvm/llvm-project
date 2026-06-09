@@ -59,7 +59,6 @@ static bool replaceCBufferAccesses(Module &M) {
     for (const hlsl::CBufferMember &Member : Mapping.Members)
       replaceUsersOfGlobal(Member.GV, Mapping.Handle, Member.Offset);
 
-  CBufMD->removeCBufferGlobalsFromUseList(M);
   CBufMD->eraseFromModule();
   return true;
 }
