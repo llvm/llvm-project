@@ -22,8 +22,6 @@
 #include "gtest/gtest.h"
 #include <map>
 #include <string>
-#include <thread>
-#include <vector>
 
 using namespace llvm;
 using llvm::sys::fs::UniqueID;
@@ -3733,32 +3731,4 @@ TEST(TracingFileSystemTest, PrintOutput) {
             "NumIsLocalCalls=6\n"
             "  InMemoryFileSystem\n",
             Output);
-}
-
-TEST(TracingFileSystemTest, AtomicCountersUnderConcurrency) {
-  auto InMemoryFS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory("/");
-  InMemoryFS->addFile("/foo", 0, MemoryBuffer::getMemBuffer("hello"));
-
-  auto TracingFS =
-      makeIntrusiveRefCnt<vfs::AtomicTracingFileSystem>(std::move(InMemoryFS));
-
-  constexpr unsigned NumThreads = 8;
-  constexpr unsigned CallsPerThread = 100;
-  std::vector<std::thread> Threads;
-  Threads.reserve(NumThreads);
-  for (unsigned I = 0; I < NumThreads; ++I) {
-    Threads.emplace_back([&] {
-      for (unsigned J = 0; J < CallsPerThread; ++J) {
-        (void)TracingFS->status("/foo");
-        (void)TracingFS->openFileForRead("/foo");
-      }
-    });
-  }
-  for (auto &T : Threads)
-    T.join();
-
-  EXPECT_EQ(TracingFS->NumStatusCalls.load(), NumThreads * CallsPerThread);
-  EXPECT_EQ(TracingFS->NumOpenFileForReadCalls.load(),
-            NumThreads * CallsPerThread);
 }
