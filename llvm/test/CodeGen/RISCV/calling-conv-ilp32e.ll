@@ -611,24 +611,15 @@ define i32 @callee_aligned_stack(i32 %a, i32 %b, fp128 %c, i32 %d, i32 %e, i64 %
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
 ; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; ILP32E-WITHFP-NEXT:    lw a0, 12(s0)
+; ILP32E-WITHFP-NEXT:    lw a0, 20(sp)
 ; ILP32E-WITHFP-NEXT:    lw a1, 0(a2)
-; ILP32E-WITHFP-NEXT:    lw a2, 8(s0)
-; ILP32E-WITHFP-NEXT:    lw a3, 4(s0)
-; ILP32E-WITHFP-NEXT:    lw a4, 24(s0)
-; ILP32E-WITHFP-NEXT:    lw a5, 20(s0)
+; ILP32E-WITHFP-NEXT:    lw a2, 16(sp)
+; ILP32E-WITHFP-NEXT:    lw a3, 12(sp)
+; ILP32E-WITHFP-NEXT:    lw a4, 32(sp)
+; ILP32E-WITHFP-NEXT:    lw a5, 28(sp)
 ; ILP32E-WITHFP-NEXT:    add a1, a1, a3
 ; ILP32E-WITHFP-NEXT:    add a0, a2, a0
 ; ILP32E-WITHFP-NEXT:    add a0, a1, a0
-; ILP32E-WITHFP-NEXT:    lw a0, 0(a2)
-; ILP32E-WITHFP-NEXT:    lw a1, 20(sp)
-; ILP32E-WITHFP-NEXT:    lw a2, 12(sp)
-; ILP32E-WITHFP-NEXT:    lw a3, 16(sp)
-; ILP32E-WITHFP-NEXT:    lw a4, 32(sp)
-; ILP32E-WITHFP-NEXT:    lw a5, 28(sp)
-; ILP32E-WITHFP-NEXT:    add a0, a0, a2
-; ILP32E-WITHFP-NEXT:    add a1, a3, a1
-; ILP32E-WITHFP-NEXT:    add a0, a0, a1
 ; ILP32E-WITHFP-NEXT:    add a4, a5, a4
 ; ILP32E-WITHFP-NEXT:    add a0, a0, a4
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa sp, 8
@@ -663,24 +654,15 @@ define i32 @callee_aligned_stack(i32 %a, i32 %b, fp128 %c, i32 %d, i32 %e, i64 %
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a0, 12(s0)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a0, 20(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a1, 0(a2)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a2, 8(s0)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a3, 4(s0)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a4, 24(s0)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a5, 20(s0)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a2, 16(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a3, 12(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a4, 32(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a5, 28(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a1, a1, a3
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a0, a2, a0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a0, a1, a0
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a0, 0(a2)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a1, 20(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a2, 12(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a3, 16(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a4, 32(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a5, 28(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a0, a0, a2
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a1, a3, a1
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a0, a0, a1
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a4, a5, a4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    add a0, a0, a4
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa sp, 8
@@ -1195,14 +1177,10 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; ILP32E-WITHFP-NEXT:    .cfi_offset s0, -8
 ; ILP32E-WITHFP-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-NEXT:    .cfi_def_cfa s0, 0
-; ILP32E-WITHFP-NEXT:    lw a6, 12(s0)
-; ILP32E-WITHFP-NEXT:    lw a7, 8(s0)
-; ILP32E-WITHFP-NEXT:    lw t0, 0(s0)
-; ILP32E-WITHFP-NEXT:    lw t1, 4(s0)
 ; ILP32E-WITHFP-NEXT:    lw a6, 20(sp)
-; ILP32E-WITHFP-NEXT:    lw a7, 8(sp)
-; ILP32E-WITHFP-NEXT:    lw t0, 12(sp)
-; ILP32E-WITHFP-NEXT:    lw t1, 16(sp)
+; ILP32E-WITHFP-NEXT:    lw a7, 16(sp)
+; ILP32E-WITHFP-NEXT:    lw t0, 8(sp)
+; ILP32E-WITHFP-NEXT:    lw t1, 12(sp)
 ; ILP32E-WITHFP-NEXT:    zext.b a0, a0
 ; ILP32E-WITHFP-NEXT:    slli a1, a1, 16
 ; ILP32E-WITHFP-NEXT:    srli a1, a1, 16
@@ -1254,14 +1232,10 @@ define i32 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i32 %e, i32 %f, i
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_offset s0, -8
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    addi s0, sp, 8
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    .cfi_def_cfa s0, 0
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a6, 12(s0)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a7, 8(s0)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw t0, 0(s0)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw t1, 4(s0)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a6, 20(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a7, 8(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw t0, 12(sp)
-; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw t1, 16(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw a7, 16(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw t0, 8(sp)
+; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    lw t1, 12(sp)
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    zext.b a0, a0
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    slli a1, a1, 16
 ; ILP32E-WITHFP-SAVE-RESTORE-NEXT:    srli a1, a1, 16
