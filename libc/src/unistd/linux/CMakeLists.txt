@@ -1,4 +1,18 @@
 add_entrypoint_object(
+  alarm
+  SRCS
+    alarm.cpp
+  HDRS
+    ../alarm.h
+  DEPENDS
+    libc.hdr.types.struct_itimerval
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   access
   SRCS
     access.cpp

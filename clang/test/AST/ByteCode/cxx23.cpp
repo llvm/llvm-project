@@ -620,3 +620,43 @@ namespace PointerIntInc {
   auto bar2 = foo(&p, false);
 }
 #endif
+
+namespace VariadicOperator {
+  struct S {
+    constexpr int operator()(this S, ...) { return 42; } // all20-error {{explicit object parameters are incompatible with C++ standards before C++2b}}
+  };
+  constexpr S s;
+  static_assert(s() == 42);
+}
+
+namespace DynamicCast {
+
+  struct A {virtual ~A();};
+  struct B : A {};
+  void f(A& a) { // all20-note 2{{declared here}}
+    constexpr B* b = dynamic_cast<B*>(&a); // all-error {{must be initialized by a constant expression}} \
+                                           // all23-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                           // all20-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+    constexpr void* b2 = dynamic_cast<void*>(&a); // all-error {{must be initialized by a constant expression}} \
+                                                  // all23-note {{dynamic_cast applied to object 'a' whose dynamic type is not constant}} \
+                                                  // all20-note {{function parameter 'a' with unknown value cannot be used in a constant expression}}
+  }
+
+  struct S {};
+  constexpr S s;
+  constexpr int foo = (dynamic_cast<const S &>(s), 0);
+}
+
+#if __cplusplus >= 202302L
+namespace BrokenShuffleVector {
+  typedef float __m128 __attribute__((__vector_size__(16)));
+
+  static inline constexpr __m128 _mm_cvtps_pd(__m128 z) {
+    __builtin_convertvector(__builtin_shufflevector(z, z), __m128); // all-error {{first two arguments to '__builtin_shufflevector' must have the same type}} \
+                                                                    // all-warning {{expression result unused}}
+  }
+
+  constexpr __m128 kf1{1.0f, 2.0f, 3.0f, 4.0f};
+  constexpr __m128 v_mm_cvtps_pd = _mm_cvtps_pd(kf1); // all-error {{must be initialized by a constant expression}}
+}
+#endif

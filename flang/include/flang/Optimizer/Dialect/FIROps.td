@@ -2087,6 +2087,41 @@ def fir_ShapeOp : fir_Op<"shape", [Pure]> {
   let builders = [OpBuilder<(ins "mlir::ValueRange":$extents)>];
 }
 
+def fir_ShapeExtentsOp : fir_Op<"shape_extents", [Pure]> {
+  let summary = "unpack a shape value into per-dimension extent SSA values";
+
+  let description = [{
+    Takes a single abstract `!fir.shape<n>` or `!fir.shapeshift<n>` value and yields `n` integer SSA
+    results, one per dimension extent in Fortran row-to-column order. This is
+    intended for lowering when extent values are needed but the defining
+    `fir.shape` is not visible (for example when a shape is forwarded through
+    control flow as a block argument).
+
+    When the operand is the result of `fir.shape`, a canonicalization may fold
+    this operation to the original extent operands.
+
+    ```
+      %e0, %e1 = fir.shape_extents %sh : (!fir.shape<2>) -> (index, index)
+    ```
+  }];
+
+  let arguments = (ins AnyShapeType:$shape);
+
+  let results = (outs Variadic<AnyIntegerType>:$extents);
+
+  let assemblyFormat = [{
+    $shape attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+
+  let hasCanonicalizer = 1;
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [OpBuilder<(ins "mlir::Value":$shape)>];
+}
+
 def fir_ShapeShiftOp : fir_Op<"shape_shift", [Pure]> {
 
   let summary = [{
@@ -2337,7 +2372,9 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoMemoryEffect]> {
 
 def fir_ResultOp
     : fir_Op<"result", [Pure, ReturnLike, Terminator,
-                        ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
+                        ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>,
+                        DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+                            ["getMutableSuccessorOperands"]>]> {
   let summary = "special terminator for use in fir region operations";
 
   let description = [{
@@ -2367,7 +2404,9 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
 
 def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<LoopLikeOpInterface,
-        ["getYieldedValuesMutable"]>]> {
+        ["getYieldedValuesMutable"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "generalized loop operation";
   let description = [{
     Generalized high-level looping construct. This operation is similar to

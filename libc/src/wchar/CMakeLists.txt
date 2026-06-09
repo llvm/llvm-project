@@ -246,20 +246,6 @@ add_entrypoint_object(
     libc.src.__support.libc_errno
 )
 
-add_entrypoint_object(
-  mblen
-  SRCS
-    mblen.cpp
-  HDRS
-    mblen.h
-  DEPENDS
-    libc.hdr.types.size_t
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.libc_errno
-    libc.src.__support.wchar.mbrtowc
-    libc.src.__support.wchar.mbstate
-)
 
 add_entrypoint_object(
   mbrlen
@@ -576,6 +562,8 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.FILE
     libc.src.__support.File.file
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
 
@@ -586,14 +574,14 @@ add_entrypoint_object(
   HDRS
     fputwc.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
     libc.hdr.types.FILE
-    libc.hdr.types.wint_t
     libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.common
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
 
@@ -605,10 +593,13 @@ add_entrypoint_object(
     fgetwc.h
   DEPENDS
     libc.hdr.types.FILE
-    libc.hdr.types.wint_t
     libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.common
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
 
@@ -619,14 +610,14 @@ add_entrypoint_object(
   HDRS
     fputws.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
     libc.hdr.types.FILE
     libc.hdr.types.wchar_t
     libc.src.__support.File.file
+    libc.src.__support.common
     libc.src.__support.libc_errno
-    libc.src.string.string_utils
+    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
+    libc.src.string.string_utils
 )
 
 add_entrypoint_object(
@@ -636,12 +627,12 @@ add_entrypoint_object(
   HDRS
     fgetws.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
     libc.hdr.types.FILE
     libc.hdr.types.wchar_t
     libc.src.__support.File.file
+    libc.src.__support.common
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
 
@@ -652,13 +643,13 @@ add_entrypoint_object(
   HDRS
     ungetwc.h
   DEPENDS
-    libc.src.__support.macros.config
-    libc.src.__support.common
     libc.hdr.types.FILE
     libc.hdr.types.wint_t
     libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.common
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
 
@@ -670,9 +661,13 @@ add_entrypoint_object(
     getwc.h
   DEPENDS
     libc.hdr.types.FILE
+    libc.hdr.types.wchar_t
     libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.common
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
 
@@ -683,14 +678,15 @@ add_entrypoint_object(
   HDRS
     getwchar.h
   DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
+    libc.src.__support.File.file
     libc.src.__support.common
+    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.stdio.stdin
-    libc.src.__support.File.file
-    libc.src.__support.libc_errno
-    libc.hdr.types.wint_t
-    libc.hdr.types.FILE
-    libc.hdr.wchar_macros
 )
 
 add_entrypoint_object(
@@ -700,12 +696,14 @@ add_entrypoint_object(
   HDRS
     putwc.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.macros.config
     libc.hdr.types.FILE
+    libc.hdr.types.wchar_t
     libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.common
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.__support.macros.null_check
 )
 
@@ -716,7 +714,28 @@ add_entrypoint_object(
   HDRS
     putwchar.h
   DEPENDS
-    libc.src.stdio.stdout
+    libc.hdr.types.FILE
+    libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
     libc.src.__support.File.file
+    libc.src.__support.common
     libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.stdio.stdout
+)
+
+add_entrypoint_object(
+  swprintf
+  SRCS
+    swprintf.cpp
+  HDRS
+    swprintf.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.hdr.errno_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
 )

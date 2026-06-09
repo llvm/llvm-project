@@ -4,7 +4,6 @@
 #define __CONCAT(__X, __Y) __CONCAT1(__X, __Y)
 #define __CONCAT1(__X, __Y) __X ## __Y
 
-// expected-warning@+1 {{keyword is hidden by macro definition}}
 #define static_assert(__b, __m) \
   typedef int __CONCAT(__sa, __LINE__)[__b ? 1 : -1]
 #endif

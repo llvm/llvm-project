@@ -13,14 +13,14 @@ objects: []
 functions:
   - name: wait
     standards:
-      - POSIX
+      - posix
     return_type: pid_t
     arguments:
       - type: int *
   - name: wait4
     standards:
-      - BSDExtensions
-      - POSIX
+      - bsd
+      - posix
     return_type: pid_t
     arguments:
       - type: pid_t
@@ -29,7 +29,7 @@ functions:
       - type: struct rusage *
   - name: waitpid
     standards:
-      - POSIX
+      - posix
     return_type: pid_t
     arguments:
       - type: pid_t

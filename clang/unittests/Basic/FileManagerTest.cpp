@@ -8,8 +8,6 @@
 
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
-#include "clang/Basic/FileSystemStatCache.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -20,83 +18,16 @@ using namespace clang;
 
 namespace {
 
-// Used to create a fake file system for running the tests with such
-// that the tests are not affected by the structure/contents of the
-// file system on the machine running the tests.
-class FakeStatCache : public FileSystemStatCache {
-private:
-  // Maps a file/directory path to its desired stat result.  Anything
-  // not in this map is considered to not exist in the file system.
-  llvm::StringMap<llvm::vfs::Status, llvm::BumpPtrAllocator> StatCalls;
-
-  void InjectFileOrDirectory(const char *Path, ino_t INode, bool IsFile,
-                             const char *StatPath) {
-    SmallString<128> NormalizedPath(Path);
-    SmallString<128> NormalizedStatPath;
-    if (is_style_posix(llvm::sys::path::Style::native)) {
-      llvm::sys::path::native(NormalizedPath);
-      Path = NormalizedPath.c_str();
-
-      if (StatPath) {
-        NormalizedStatPath = StatPath;
-        llvm::sys::path::native(NormalizedStatPath);
-        StatPath = NormalizedStatPath.c_str();
-      }
-    }
-
-    auto fileType = IsFile ?
-      llvm::sys::fs::file_type::regular_file :
-      llvm::sys::fs::file_type::directory_file;
-    llvm::vfs::Status Status(StatPath ? StatPath : Path,
-                             llvm::sys::fs::UniqueID(1, INode),
-                             /*MTime*/{}, /*User*/0, /*Group*/0,
-                             /*Size*/0, fileType,
-                             llvm::sys::fs::perms::all_all);
-    if (StatPath)
-      Status.ExposesExternalVFSPath = true;
-    StatCalls[Path] = Status;
-  }
-
-public:
-  // Inject a file with the given inode value to the fake file system.
-  void InjectFile(const char *Path, ino_t INode,
-                  const char *StatPath = nullptr) {
-    InjectFileOrDirectory(Path, INode, /*IsFile=*/true, StatPath);
-  }
-
-  // Inject a directory with the given inode value to the fake file system.
-  void InjectDirectory(const char *Path, ino_t INode) {
-    InjectFileOrDirectory(Path, INode, /*IsFile=*/false, nullptr);
-  }
-
-  // Implement FileSystemStatCache::getStat().
-  std::error_code getStat(StringRef Path, llvm::vfs::Status &Status,
-                          bool isFile,
-                          std::unique_ptr<llvm::vfs::File> *F,
-                          llvm::vfs::FileSystem &FS) override {
-    SmallString<128> NormalizedPath(Path);
-    if (is_style_posix(llvm::sys::path::Style::native)) {
-      llvm::sys::path::native(NormalizedPath);
-      Path = NormalizedPath.c_str();
-    }
-
-    if (StatCalls.count(Path) != 0) {
-      Status = StatCalls[Path];
-      return std::error_code();
-    }
-
-    return std::make_error_code(std::errc::no_such_file_or_directory);
-  }
-};
-
 // The test fixture.
 class FileManagerTest : public ::testing::Test {
- protected:
-  FileManagerTest() : manager(options) {
-  }
-
+protected:
   FileSystemOptions options;
-  FileManager manager;
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> FS =
+      llvm::makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  FileManager manager{options, FS};
+
+  time_t ModTime = 0;
+  std::unique_ptr<MemoryBuffer> EmptyBuf = MemoryBuffer::getMemBuffer("");
 };
 
 // When a virtual file is added, its getDir() field has correct name.
@@ -110,12 +41,6 @@ TEST_F(FileManagerTest, getVirtualFileSetsTheDirFieldCorrectly) {
 
 // Before any virtual file is added, no virtual directory exists.
 TEST_F(FileManagerTest, NoVirtualDirectoryExistsBeforeAVirtualFileIsAdded) {
-  // An empty FakeStatCache causes all stat calls made by the
-  // FileManager to report "file/directory doesn't exist".  This
-  // avoids the possibility of the result of this test being affected
-  // by what's in the real file system.
-  manager.setStatCache(std::make_unique<FakeStatCache>());
-
   ASSERT_FALSE(manager.getOptionalDirectoryRef("virtual/dir/foo"));
   ASSERT_FALSE(manager.getOptionalDirectoryRef("virtual/dir"));
   ASSERT_FALSE(manager.getOptionalDirectoryRef("virtual"));
@@ -123,9 +48,6 @@ TEST_F(FileManagerTest, NoVirtualDirectoryExistsBeforeAVirtualFileIsAdded) {
 
 // When a virtual file is added, all of its ancestors should be created.
 TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
-  // Fake an empty real file system.
-  manager.setStatCache(std::make_unique<FakeStatCache>());
-
   manager.getVirtualFileRef("virtual/dir/bar.h", 100, 0);
 
   auto dir = manager.getDirectoryRef("virtual/dir/foo");
@@ -143,37 +65,16 @@ TEST_F(FileManagerTest, getVirtualFileCreatesDirectoryEntriesForAncestors) {
 // getFileRef() succeeds if a real file exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingRealFile) {
   // Inject fake files into the file system.
-  auto statCache = std::make_unique<FakeStatCache>();
-  statCache->InjectDirectory("/tmp", 42);
-  statCache->InjectFile("/tmp/test", 43);
-
-#ifdef _WIN32
-  const char *DirName = "C:.";
-  const char *FileName = "C:test";
-  statCache->InjectDirectory(DirName, 44);
-  statCache->InjectFile(FileName, 45);
-#endif
-
-  manager.setStatCache(std::move(statCache));
+  FS->addFileNoOwn("/tmp/test", ModTime, *EmptyBuf);
 
   auto file = manager.getFileRef("/tmp/test");
   ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
   EXPECT_EQ("/tmp/test", file->getName());
-
   EXPECT_EQ("/tmp", file->getDir().getName());
-
-#ifdef _WIN32
-  file = manager.getFileRef(FileName);
-  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
-  EXPECT_EQ(DirName, file->getDir().getName());
-#endif
 }
 
 // getFileRef() succeeds if a virtual file exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
-  // Fake an empty real file system.
-  manager.setStatCache(std::make_unique<FakeStatCache>());
-
   manager.getVirtualFileRef("virtual/dir/bar.h", 100, 0);
   auto file = manager.getFileRef("virtual/dir/bar.h");
   ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
@@ -184,13 +85,9 @@ TEST_F(FileManagerTest, getFileReturnsValidFileEntryForExistingVirtualFile) {
 // getFile() returns different FileEntries for different paths when
 // there's no aliasing.
 TEST_F(FileManagerTest, getFileReturnsDifferentFileEntriesForDifferentFiles) {
-  // Inject two fake files into the file system.  Different inodes
-  // mean the files are not symlinked together.
-  auto statCache = std::make_unique<FakeStatCache>();
-  statCache->InjectDirectory(".", 41);
-  statCache->InjectFile("foo.cpp", 42);
-  statCache->InjectFile("bar.cpp", 43);
-  manager.setStatCache(std::move(statCache));
+  // Inject two fake files into the file system.
+  FS->addFileNoOwn("foo.cpp", ModTime, *EmptyBuf);
+  FS->addFileNoOwn("bar.cpp", ModTime, *EmptyBuf);
 
   auto fileFoo = manager.getOptionalFileRef("foo.cpp");
   auto fileBar = manager.getOptionalFileRef("bar.cpp");
@@ -203,11 +100,8 @@ TEST_F(FileManagerTest, getFileReturnsDifferentFileEntriesForDifferentFiles) {
 // exists at the given path.
 TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
   // Inject a fake foo.cpp into the file system.
-  auto statCache = std::make_unique<FakeStatCache>();
-  statCache->InjectDirectory(".", 41);
-  statCache->InjectFile("foo.cpp", 42);
-  statCache->InjectDirectory("MyDirectory", 49);
-  manager.setStatCache(std::move(statCache));
+  FS->addFileNoOwn("foo.cpp", ModTime, *EmptyBuf);
+  FS->addFileNoOwn("MyDirectory/keep", ModTime, *EmptyBuf);
 
   // Create a virtual bar.cpp file.
   manager.getVirtualFileRef("bar.cpp", 200, 0);
@@ -228,18 +122,80 @@ TEST_F(FileManagerTest, getFileReturnsErrorForNonexistentFile) {
             std::make_error_code(std::errc::not_a_directory));
 }
 
-// The following tests apply to Unix-like system only.
+TEST_F(FileManagerTest, getFileRefErrorIncludesFilename) {
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  auto EmptyBuffer = llvm::MemoryBuffer::getMemBuffer("");
+  ASSERT_TRUE(
+      FS->addFileNoOwn("/MyDirectory/file", 0, EmptyBuffer->getMemBufferRef()));
+  FileSystemOptions Opts;
+  FileManager Mgr(Opts, FS);
 
-#ifndef _WIN32
+  // Build the expected message for a given filename and error code, since the
+  // system-provided message text (and capitalization) for std::errc values
+  // varies by platform.
+  auto ExpectedMsg = [](StringRef Name, std::errc EC) {
+    return ("'" + Name + "': " + std::make_error_code(EC).message()).str();
+  };
+
+  // Nonexistent file.
+  auto Missing = Mgr.getFileRef("/xyz.txt");
+  ASSERT_FALSE(Missing);
+  EXPECT_EQ(ExpectedMsg("/xyz.txt", std::errc::no_such_file_or_directory),
+            llvm::toString(Missing.takeError()));
+
+  // Cached failure
+  auto MissingAgain = Mgr.getFileRef("/xyz.txt");
+  ASSERT_FALSE(MissingAgain);
+  EXPECT_EQ(std::make_error_code(std::errc::no_such_file_or_directory),
+            llvm::errorToErrorCode(MissingAgain.takeError()));
+
+  // Reading a directory as a file.
+  auto DirAsFile = Mgr.getFileRef("/MyDirectory");
+  ASSERT_FALSE(DirAsFile);
+  EXPECT_EQ(ExpectedMsg("/MyDirectory", std::errc::is_a_directory),
+            llvm::toString(DirAsFile.takeError()));
+
+  auto Trailing = Mgr.getFileRef("/some/dir/");
+  ASSERT_FALSE(Trailing);
+  EXPECT_EQ(ExpectedMsg("/some/dir/", std::errc::is_a_directory),
+            llvm::toString(Trailing.takeError()));
+}
+
+TEST_F(FileManagerTest, getDirectoryRefErrorIncludesFilename) {
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  auto EmptyBuffer = llvm::MemoryBuffer::getMemBuffer("");
+  ASSERT_TRUE(FS->addFileNoOwn("/foo.cpp", 0, EmptyBuffer->getMemBufferRef()));
+  FileSystemOptions Opts;
+  FileManager Mgr(Opts, FS);
+
+  auto ExpectedMsg = [](StringRef Name, std::errc EC) {
+    return ("'" + Name + "': " + std::make_error_code(EC).message()).str();
+  };
+
+  // Nonexistent directory.
+  auto Missing = Mgr.getDirectoryRef("/no_such_dir");
+  ASSERT_FALSE(Missing);
+  EXPECT_EQ(ExpectedMsg("/no_such_dir", std::errc::no_such_file_or_directory),
+            llvm::toString(Missing.takeError()));
+
+  // Cached failure
+  auto MissingAgain = Mgr.getDirectoryRef("/no_such_dir");
+  ASSERT_FALSE(MissingAgain);
+  EXPECT_EQ(std::make_error_code(std::errc::no_such_file_or_directory),
+            llvm::errorToErrorCode(MissingAgain.takeError()));
+
+  // Reading a file as a directory.
+  auto FileAsDir = Mgr.getDirectoryRef("/foo.cpp");
+  ASSERT_FALSE(FileAsDir);
+  EXPECT_EQ(ExpectedMsg("/foo.cpp", std::errc::not_a_directory),
+            llvm::toString(FileAsDir.takeError()));
+}
 
 // getFile() returns the same FileEntry for real files that are aliases.
 TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
   // Inject two real files with the same inode.
-  auto statCache = std::make_unique<FakeStatCache>();
-  statCache->InjectDirectory("abc", 41);
-  statCache->InjectFile("abc/foo.cpp", 42);
-  statCache->InjectFile("abc/bar.cpp", 42);
-  manager.setStatCache(std::move(statCache));
+  FS->addFileNoOwn("abc/foo.cpp", ModTime, *EmptyBuf);
+  FS->addHardLink("abc/bar.cpp", "abc/foo.cpp");
 
   auto f1 = manager.getOptionalFileRef("abc/foo.cpp");
   auto f2 = manager.getOptionalFileRef("abc/bar.cpp");
@@ -260,16 +216,11 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedRealFiles) {
 }
 
 TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
-  // Inject files with the same inode, but where some files have a stat that
-  // gives a different name. This is adding coverage for stat behaviour
-  // triggered by the RedirectingFileSystem for 'use-external-name' that
-  // FileManager::getFileRef has special logic for.
-  auto StatCache = std::make_unique<FakeStatCache>();
-  StatCache->InjectDirectory("dir", 40);
-  StatCache->InjectFile("dir/f1.cpp", 41);
-  StatCache->InjectFile("dir/f1-alias.cpp", 41, "dir/f1.cpp");
-  StatCache->InjectFile("dir/f2.cpp", 42);
-  StatCache->InjectFile("dir/f2-alias.cpp", 42, "dir/f2.cpp");
+  // This is adding coverage for stat behaviour triggered by the
+  // RedirectingFileSystem for 'use-external-name' that FileManager::getFileRef
+  // has special logic for.
+  FS->addFileNoOwn("/dir/f1.cpp", ModTime, *EmptyBuf);
+  FS->addFileNoOwn("/dir/f2.cpp", ModTime, *EmptyBuf);
 
   // This unintuitive rename-the-file-on-stat behaviour supports how the
   // RedirectingFileSystem VFS layer responds to stats. However, even if you
@@ -277,51 +228,56 @@ TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
   // following stat cache behaviour is not supported (the correct stat entry
   // for a double-redirection would be "dir/f1.cpp") and the getFileRef below
   // should assert.
-  StatCache->InjectFile("dir/f1-alias-alias.cpp", 41, "dir/f1-alias.cpp");
+  IntrusiveRefCntPtr<vfs::FileSystem> NewFS = FS;
 
-  manager.setStatCache(std::move(StatCache));
+  NewFS = vfs::RedirectingFileSystem::create(
+      {{"/dir/f1-alias.cpp", "/dir/f1.cpp"},
+       {"/dir/f2-alias.cpp", "/dir/f2.cpp"}},
+      /*UseExternalNames=*/true, std::move(NewFS));
+
+  NewFS = vfs::RedirectingFileSystem::create(
+      {{"/dir/f1-alias-alias.cpp", "/dir/f1-alias.cpp"}},
+      /*UseExternalNames=*/true, std::move(NewFS));
+
+  manager.setVirtualFileSystem(std::move(NewFS));
 
   // With F1, test accessing the non-redirected name first.
-  auto F1 = manager.getFileRef("dir/f1.cpp");
-  auto F1Alias = manager.getFileRef("dir/f1-alias.cpp");
-  auto F1Alias2 = manager.getFileRef("dir/f1-alias.cpp");
+  auto F1 = manager.getFileRef("/dir/f1.cpp");
+  auto F1Alias = manager.getFileRef("/dir/f1-alias.cpp");
+  auto F1Alias2 = manager.getFileRef("/dir/f1-alias.cpp");
   ASSERT_FALSE(!F1);
   ASSERT_FALSE(!F1Alias);
   ASSERT_FALSE(!F1Alias2);
-  EXPECT_EQ("dir/f1.cpp", F1->getName());
-  EXPECT_EQ("dir/f1.cpp", F1Alias->getName());
-  EXPECT_EQ("dir/f1.cpp", F1Alias2->getName());
+  EXPECT_EQ("/dir/f1.cpp", F1->getName());
+  EXPECT_EQ("/dir/f1.cpp", F1Alias->getName());
+  EXPECT_EQ("/dir/f1.cpp", F1Alias2->getName());
   EXPECT_EQ(&F1->getFileEntry(), &F1Alias->getFileEntry());
   EXPECT_EQ(&F1->getFileEntry(), &F1Alias2->getFileEntry());
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
-  EXPECT_DEATH((void)manager.getFileRef("dir/f1-alias-alias.cpp"),
+  EXPECT_DEATH((void)manager.getOptionalFileRef("/dir/f1-alias-alias.cpp"),
                "filename redirected to a non-canonical filename?");
 #endif
 
   // With F2, test accessing the redirected name first.
-  auto F2Alias = manager.getFileRef("dir/f2-alias.cpp");
-  auto F2 = manager.getFileRef("dir/f2.cpp");
-  auto F2Alias2 = manager.getFileRef("dir/f2-alias.cpp");
+  auto F2Alias = manager.getFileRef("/dir/f2-alias.cpp");
+  auto F2 = manager.getFileRef("/dir/f2.cpp");
+  auto F2Alias2 = manager.getFileRef("/dir/f2-alias.cpp");
   ASSERT_FALSE(!F2);
   ASSERT_FALSE(!F2Alias);
   ASSERT_FALSE(!F2Alias2);
-  EXPECT_EQ("dir/f2.cpp", F2->getName());
-  EXPECT_EQ("dir/f2.cpp", F2Alias->getName());
-  EXPECT_EQ("dir/f2.cpp", F2Alias2->getName());
+  EXPECT_EQ("/dir/f2.cpp", F2->getName());
+  EXPECT_EQ("/dir/f2.cpp", F2Alias->getName());
+  EXPECT_EQ("/dir/f2.cpp", F2Alias2->getName());
   EXPECT_EQ(&F2->getFileEntry(), &F2Alias->getFileEntry());
   EXPECT_EQ(&F2->getFileEntry(), &F2Alias2->getFileEntry());
 }
 
 TEST_F(FileManagerTest, getFileRefReturnsCorrectDirNameForDifferentStatPath) {
   // Inject files with the same inode into distinct directories (name & inode).
-  auto StatCache = std::make_unique<FakeStatCache>();
-  StatCache->InjectDirectory("dir1", 40);
-  StatCache->InjectDirectory("dir2", 41);
-  StatCache->InjectFile("dir1/f.cpp", 42);
-  StatCache->InjectFile("dir2/f.cpp", 42, "dir1/f.cpp");
+  FS->addFileNoOwn("dir1/f.cpp", ModTime, *EmptyBuf);
+  FS->addHardLink("dir2/f.cpp", "dir1/f.cpp");
 
-  manager.setStatCache(std::move(StatCache));
   auto Dir1F = manager.getFileRef("dir1/f.cpp");
   auto Dir2F = manager.getFileRef("dir2/f.cpp");
 
@@ -337,11 +293,8 @@ TEST_F(FileManagerTest, getFileRefReturnsCorrectDirNameForDifferentStatPath) {
 // corresponding real files that are aliases.
 TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
   // Inject two real files with the same inode.
-  auto statCache = std::make_unique<FakeStatCache>();
-  statCache->InjectDirectory("abc", 41);
-  statCache->InjectFile("abc/foo.cpp", 42);
-  statCache->InjectFile("abc/bar.cpp", 42);
-  manager.setStatCache(std::move(statCache));
+  FS->addFileNoOwn("abc/foo.cpp", ModTime, *EmptyBuf);
+  FS->addHardLink("abc/bar.cpp", "abc/foo.cpp");
 
   auto f1 = manager.getOptionalFileRef("abc/foo.cpp");
   auto f2 = manager.getOptionalFileRef("abc/bar.cpp");
@@ -351,20 +304,23 @@ TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
 }
 
 TEST_F(FileManagerTest, getFileRefEquality) {
-  auto StatCache = std::make_unique<FakeStatCache>();
-  StatCache->InjectDirectory("dir", 40);
-  StatCache->InjectFile("dir/f1.cpp", 41);
-  StatCache->InjectFile("dir/f1-also.cpp", 41);
-  StatCache->InjectFile("dir/f1-redirect.cpp", 41, "dir/f1.cpp");
-  StatCache->InjectFile("dir/f2.cpp", 42);
-  manager.setStatCache(std::move(StatCache));
+  FS->addFileNoOwn("/dir/f1.cpp", ModTime, *EmptyBuf);
+  FS->addHardLink("/dir/f1-also.cpp", "/dir/f1.cpp");
+  FS->addFileNoOwn("/dir/f2.cpp", ModTime, *EmptyBuf);
 
-  auto F1 = manager.getFileRef("dir/f1.cpp");
-  auto F1Again = manager.getFileRef("dir/f1.cpp");
-  auto F1Also = manager.getFileRef("dir/f1-also.cpp");
-  auto F1Redirect = manager.getFileRef("dir/f1-redirect.cpp");
-  auto F1RedirectAgain = manager.getFileRef("dir/f1-redirect.cpp");
-  auto F2 = manager.getFileRef("dir/f2.cpp");
+  IntrusiveRefCntPtr<vfs::FileSystem> NewFS =
+      vfs::RedirectingFileSystem::create(
+          {{"/dir/f1-redirect.cpp", "/dir/f1.cpp"}},
+          /*UseExternalNames=*/true, FS);
+
+  manager.setVirtualFileSystem(std::move(NewFS));
+
+  auto F1 = manager.getFileRef("/dir/f1.cpp");
+  auto F1Again = manager.getFileRef("/dir/f1.cpp");
+  auto F1Also = manager.getFileRef("/dir/f1-also.cpp");
+  auto F1Redirect = manager.getFileRef("/dir/f1-redirect.cpp");
+  auto F1RedirectAgain = manager.getFileRef("/dir/f1-redirect.cpp");
+  auto F2 = manager.getFileRef("/dir/f2.cpp");
 
   // Check Expected<FileEntryRef> for error.
   ASSERT_FALSE(!F1);
@@ -375,15 +331,15 @@ TEST_F(FileManagerTest, getFileRefEquality) {
   ASSERT_FALSE(!F2);
 
   // Check names.
-  EXPECT_EQ("dir/f1.cpp", F1->getName());
-  EXPECT_EQ("dir/f1.cpp", F1Again->getName());
-  EXPECT_EQ("dir/f1-also.cpp", F1Also->getName());
-  EXPECT_EQ("dir/f1.cpp", F1Redirect->getName());
-  EXPECT_EQ("dir/f1.cpp", F1RedirectAgain->getName());
-  EXPECT_EQ("dir/f2.cpp", F2->getName());
+  EXPECT_EQ("/dir/f1.cpp", F1->getName());
+  EXPECT_EQ("/dir/f1.cpp", F1Again->getName());
+  EXPECT_EQ("/dir/f1-also.cpp", F1Also->getName());
+  EXPECT_EQ("/dir/f1.cpp", F1Redirect->getName());
+  EXPECT_EQ("/dir/f1.cpp", F1RedirectAgain->getName());
+  EXPECT_EQ("/dir/f2.cpp", F2->getName());
 
-  EXPECT_EQ("dir/f1.cpp", F1->getNameAsRequested());
-  EXPECT_EQ("dir/f1-redirect.cpp", F1Redirect->getNameAsRequested());
+  EXPECT_EQ("/dir/f1.cpp", F1->getNameAsRequested());
+  EXPECT_EQ("/dir/f1-redirect.cpp", F1Redirect->getNameAsRequested());
 
   // Compare against FileEntry*.
   EXPECT_EQ(&F1->getFileEntry(), *F1);
@@ -418,29 +374,21 @@ TEST_F(FileManagerTest, getFileRefEquality) {
 // here by checking the size.
 TEST_F(FileManagerTest, getVirtualFileWithDifferentName) {
   // Inject fake files into the file system.
-  auto statCache = std::make_unique<FakeStatCache>();
-  statCache->InjectDirectory("c:\\tmp", 42);
-  statCache->InjectFile("c:\\tmp\\test", 43);
-
-  manager.setStatCache(std::move(statCache));
+  FS->addFileNoOwn("/tmp/test", ModTime, *EmptyBuf);
 
   // Inject the virtual file:
-  FileEntryRef file1 = manager.getVirtualFileRef("c:\\tmp\\test", 123, 1);
-  EXPECT_EQ(43U, file1.getUniqueID().getFile());
+  FileEntryRef file1 = manager.getVirtualFileRef("/tmp/test", 123, 1);
   EXPECT_EQ(123, file1.getSize());
 
   // Lookup the virtual file with a different name:
-  auto file2 = manager.getOptionalFileRef("c:/tmp/test", 100, 1);
+  auto file2 = manager.getOptionalFileRef("/tmp/./test", 100, 1);
   ASSERT_TRUE(file2);
   // Check that it's the same UFE:
   EXPECT_EQ(file1, *file2);
-  EXPECT_EQ(43U, file2->getUniqueID().getFile());
   // Check that the contents of the UFE are not overwritten by the entry in the
   // filesystem:
   EXPECT_EQ(123, file2->getSize());
 }
-
-#endif  // !_WIN32
 
 static StringRef getSystemRoot() {
   return is_style_windows(llvm::sys::path::Style::native) ? "C:\\" : "/";
@@ -454,19 +402,15 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
                                                        : StringRef("/");
   llvm::sys::path::append(CustomWorkingDir, "some", "weird", "path");
 
-  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  // setCurrentworkingdirectory must finish without error.
+  // setCurrentWorkingDirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
-
-  FileSystemOptions Opts;
-  FileManager Manager(Opts, FS);
 
   SmallString<64> Path("a/foo.cpp");
 
   SmallString<64> ExpectedResult(CustomWorkingDir);
   llvm::sys::path::append(ExpectedResult, Path);
 
-  ASSERT_TRUE(Manager.makeAbsolutePath(Path));
+  ASSERT_TRUE(manager.makeAbsolutePath(Path));
   EXPECT_EQ(Path, ExpectedResult);
 }
 
@@ -474,22 +418,14 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
 TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   SmallString<64> CustomWorkingDir = getSystemRoot();
 
-  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  // setCurrentworkingdirectory must finish without error.
+  // setCurrentWorkingDirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
-  FileSystemOptions Opts;
-  FileManager Manager(Opts, FS);
-
   // Inject fake files into the file system.
-  auto statCache = std::make_unique<FakeStatCache>();
-  statCache->InjectDirectory("/tmp", 42);
-  statCache->InjectFile("/tmp/test", 43);
-
-  Manager.setStatCache(std::move(statCache));
+  FS->addFileNoOwn("/tmp/test", ModTime, *EmptyBuf);
 
   // Check for real path.
-  FileEntryRef file = Manager.getVirtualFileRef("/tmp/test", 123, 1);
+  FileEntryRef file = manager.getVirtualFileRef("/tmp/test", 123, 1);
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
@@ -503,22 +439,14 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
 TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   SmallString<64> CustomWorkingDir = getSystemRoot();
 
-  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  // setCurrentworkingdirectory must finish without error.
+  // setCurrentWorkingDirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
-  FileSystemOptions Opts;
-  FileManager Manager(Opts, FS);
-
   // Inject fake files into the file system.
-  auto statCache = std::make_unique<FakeStatCache>();
-  statCache->InjectDirectory("/tmp", 42);
-  statCache->InjectFile("/tmp/test", 43);
-
-  Manager.setStatCache(std::move(statCache));
+  FS->addFileNoOwn("/tmp/test", ModTime, *EmptyBuf);
 
   // Check for real path.
-  auto file = Manager.getOptionalFileRef("/tmp/test", /*OpenFile=*/false);
+  auto file = manager.getOptionalFileRef("/tmp/test", /*OpenFile=*/false);
   ASSERT_TRUE(file);
   SmallString<64> ExpectedResult = CustomWorkingDir;
 
@@ -538,21 +466,14 @@ TEST_F(FileManagerTest, getBypassFile) {
   CustomWorkingDir = "/";
 #endif
 
-  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  // setCurrentworkingdirectory must finish without error.
+  // setCurrentWorkingDirectory must finish without error.
   ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
 
-  FileSystemOptions Opts;
-  FileManager Manager(Opts, FS);
-
   // Inject fake files into the file system.
-  auto Cache = std::make_unique<FakeStatCache>();
-  Cache->InjectDirectory("/tmp", 42);
-  Cache->InjectFile("/tmp/test", 43);
-  Manager.setStatCache(std::move(Cache));
+  FS->addFileNoOwn("/tmp/test", ModTime, *EmptyBuf);
 
-  // Set up a virtual file with a different size than FakeStatCache uses.
-  FileEntryRef File = Manager.getVirtualFileRef("/tmp/test", /*Size=*/10, 0);
+  // Set up a virtual file with a different size than the VFS uses.
+  FileEntryRef File = manager.getVirtualFileRef("/tmp/test", /*Size=*/10, 0);
   ASSERT_TRUE(File);
   const FileEntry &FE = *File;
   EXPECT_EQ(FE.getSize(), 10);
@@ -560,14 +481,14 @@ TEST_F(FileManagerTest, getBypassFile) {
   // Calling a second time should not affect the UID or size.
   unsigned VirtualUID = FE.getUID();
   OptionalFileEntryRef SearchRef;
-  ASSERT_THAT_ERROR(Manager.getFileRef("/tmp/test").moveInto(SearchRef),
+  ASSERT_THAT_ERROR(manager.getFileRef("/tmp/test").moveInto(SearchRef),
                     Succeeded());
   EXPECT_EQ(&FE, &SearchRef->getFileEntry());
   EXPECT_EQ(FE.getUID(), VirtualUID);
   EXPECT_EQ(FE.getSize(), 10);
 
   // Bypass the file.
-  OptionalFileEntryRef BypassRef = Manager.getBypassFile(File);
+  OptionalFileEntryRef BypassRef = manager.getBypassFile(File);
   ASSERT_TRUE(BypassRef);
   EXPECT_EQ("/tmp/test", BypassRef->getName());
 
@@ -577,7 +498,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   EXPECT_NE(BypassRef->getSize(), FE.getSize());
 
   // The virtual file should still be returned when searching.
-  ASSERT_THAT_ERROR(Manager.getFileRef("/tmp/test").moveInto(SearchRef),
+  ASSERT_THAT_ERROR(manager.getFileRef("/tmp/test").moveInto(SearchRef),
                     Succeeded());
   EXPECT_EQ(&FE, &SearchRef->getFileEntry());
 }

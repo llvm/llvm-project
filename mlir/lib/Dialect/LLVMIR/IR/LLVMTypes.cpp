@@ -150,7 +150,7 @@ generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
 
 bool LLVMArrayType::isValidElementType(Type type) {
   return !llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                    LLVMFunctionType, LLVMTokenType>(type);
+                    LLVMFunctionType, TokenType>(type);
 }
 
 LLVMArrayType LLVMArrayType::get(Type elementType, uint64_t numElements) {
@@ -435,7 +435,7 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
 
 bool LLVMStructType::isValidElementType(Type type) {
   return !llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                    LLVMFunctionType, LLVMTokenType>(type);
+                    LLVMFunctionType, TokenType>(type);
 }
 
 LLVMStructType LLVMStructType::getIdentified(MLIRContext *context,
@@ -743,10 +743,10 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       LLVMPPCFP128Type,
       LLVMPointerType,
       LLVMStructType,
-      LLVMTokenType,
       LLVMTargetExtType,
       LLVMVoidType,
-      LLVMX86AMXType
+      LLVMX86AMXType,
+      TokenType
     >(type)) {
     // clang-format on
     return true;
@@ -803,9 +803,9 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             LLVMLabelType,
             LLVMMetadataType,
             LLVMPPCFP128Type,
-            LLVMTokenType,
             LLVMVoidType,
-            LLVMX86AMXType
+            LLVMX86AMXType,
+            TokenType
           >([](Type) { return true; })
           // clang-format on
           .Case<PtrLikeTypeInterface>(
@@ -917,11 +917,11 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
                               elementSize.isScalable());
       })
       .Default([](Type ty) {
-        assert((llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType,
-                          LLVMTokenType, LLVMStructType, LLVMArrayType,
-                          LLVMPointerType, LLVMFunctionType, LLVMTargetExtType>(
-                   ty)) &&
-               "unexpected missing support for primitive type");
+        assert(
+            (llvm::isa<LLVMVoidType, LLVMLabelType, LLVMMetadataType, TokenType,
+                       LLVMStructType, LLVMArrayType, LLVMPointerType,
+                       LLVMFunctionType, LLVMTargetExtType>(ty)) &&
+            "unexpected missing support for primitive type");
         return llvm::TypeSize::getFixed(0);
       });
 }

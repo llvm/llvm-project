@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_ITERATOR_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_ITERATOR_H
 
+#include "hdr/types/size_t.h"
 #include "src/__support/CPP/type_traits/enable_if.h"
 #include "src/__support/CPP/type_traits/is_convertible.h"
 #include "src/__support/CPP/type_traits/is_same.h"
@@ -18,9 +19,13 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
+struct input_iterator_tag {};
+struct random_access_iterator_tag : input_iterator_tag {};
+
 template <typename T> struct iterator_traits;
 template <typename T> struct iterator_traits<T *> {
   using reference = T &;
+  using iterator_category = random_access_iterator_tag;
   using value_type = T;
 };
 
@@ -92,6 +97,30 @@ public:
     return tmp;
   }
 };
+
+namespace cpp_internal {
+
+template <typename It>
+LIBC_INLINE constexpr size_t distance(It first, It last,
+                                      random_access_iterator_tag) {
+  return last - first;
+}
+
+template <typename It>
+LIBC_INLINE constexpr auto distance(It first, It last, input_iterator_tag) {
+  size_t n = 0;
+  for (; first != last; ++first) {
+    ++n;
+  }
+  return n;
+}
+
+} // namespace cpp_internal
+
+template <typename It> LIBC_INLINE constexpr auto distance(It first, It last) {
+  return cpp_internal::distance(
+      first, last, typename iterator_traits<It>::iterator_category{});
+}
 
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL

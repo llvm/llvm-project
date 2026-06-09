@@ -25,6 +25,7 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -124,6 +125,25 @@ static xegpu::DistributeLayoutAttr getLayoutFromUsePoints(Value result) {
   return layout;
 }
 
+// Returns true if `op` is safe and cheap to clone (no side effects, no
+// regions, and all operands are themselves trivially rematerializable, e.g.
+// block-arg-free pure value generators such as `vector.step`, splat
+// `arith.constant`, or `vector.create_mask` whose operands are constants).
+bool xegpu::isTriviallyRematerializable(Operation *op) {
+  if (!op || op->getNumRegions() != 0)
+    return false;
+  if (!isMemoryEffectFree(op))
+    return false;
+  for (Value v : op->getOperands()) {
+    Operation *defOp = v.getDefiningOp();
+    if (!defOp)
+      return false;
+    if (!isTriviallyRematerializable(defOp))
+      return false;
+  }
+  return true;
+}
+
 // For regular operations: First the result layouts are propagated from uses.
 // Then the result layouts are propagated to uses (operands).
 static void propagateResultsToRegularOperands(Operation *op) {
@@ -216,9 +236,11 @@ static void propagateRegionResultsToYieldOperands(
 
 // Propagate layout from region arguments to region op's init operands. This
 // sets the temporary layout for region arguments and init operands.
-static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
+LogicalResult
+xegpu::propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp,
+                                  xegpu::GetLayoutFnTy getLayoutOfValue) {
   // Iterate all regions of the region op. For each block argument that has a
-  // layout (determined from its use points), trace back to find the
+  // layout (obtained via `getLayoutOfValue`), trace back to find the
   // corresponding init operand of the regionOp and set the layout on it.
   // This works generically for scf.for, scf.while, and other
   // RegionBranchOpInterface ops.
@@ -229,7 +251,7 @@ static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
     // the induction variable is a block arg but not a successor input.
     ValueRange successorInputs = regionOp.getSuccessorInputs(regionSuccessor);
     for (auto [inputIdx, regionArg] : llvm::enumerate(successorInputs)) {
-      auto layout = getLayoutFromUsePoints(regionArg);
+      auto layout = getLayoutOfValue(regionArg);
       if (!layout)
         continue;
 
@@ -250,6 +272,7 @@ static void propagateRegionArgsToInits(mlir::RegionBranchOpInterface regionOp) {
       }
     }
   }
+  return success();
 }
 
 // Prerequisite for Layout Recovery
@@ -285,7 +308,8 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
   auto processFunc = [&](Region &body, StringRef funcName) {
     walkRegionBackward(body, [&](Operation *op) {
       if (auto regionOp = dyn_cast<mlir::RegionBranchOpInterface>(op)) {
-        propagateRegionArgsToInits(regionOp);
+        (void)xegpu::propagateRegionArgsToInits(regionOp,
+                                                getLayoutFromUsePoints);
       } else if (auto yieldOp =
                      dyn_cast<mlir::RegionBranchTerminatorOpInterface>(op)) {
         propagateRegionResultsToYieldOperands(yieldOp);
@@ -1170,11 +1194,11 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
 /// load matrix lowers to load gather and 1d block load. All of them share the
 /// same layout setup logic.
 /// For Subgroup layout, uses the consumer layout directly.
-/// non-chunked loads:
+/// non-chunked loads (1D or 2D):
 ///   InstData = {1, ..., min(consumer, maxLaneLoadSize * subgroupSize)}
 ///   LaneLayout = {1, ..., subgroupSize}
 ///   lane_data = {1, ..., min(consumer, maxLaneLoadSize)}
-/// chunked loads:
+/// chunked loads (2D only):
 ///   InstData = {subgroupSize, min(consumer, maxLaneLoadSize)}
 ///   LaneLayout = {subgroupSize, 1}
 ///   lane_data={1,min(consumer, maxLaneLoadSize)}
@@ -1268,12 +1292,12 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 
 /// Sets up the anchor layout for store scatter and store matrix operation.
 /// store matrix lowers to store scatter and 1d block store. All of them share
-/// the same layout setup logic. For Subgroup layout, not support yet.
-/// non-chunked stores:
+/// the same layout setup logic. For Subgroup layout, not supported yet.
+/// non-chunked stores (1D or 2D):
 ///   InstData = {1, ..., subgroupSize}
 ///   LaneLayout = {1, ..., subgroupSize}
 ///   lane_data = {1, ..., 1}
-/// chunked stores:
+/// chunked stores (2D only):
 ///   InstData = {subgroupSize, min(srcVec, maxLaneStoreSize)}
 ///   LaneLayout = {subgroupSize, 1}
 ///   lane_data={1,min(srcVec, maxLaneStoreSize)}
@@ -1367,9 +1391,9 @@ template <typename RankedTy>
 static xegpu::LayoutAttr getDefaultLaneLayout2DBlockIo(
     RankedTy ty, const xegpu::uArch::uArch *uArch,
     std::optional<unsigned> packingSize = std::nullopt, bool vnni = false) {
-  // Expecting a 1D or 2D vector.
-  assert(((ty.getRank() == 1 && !vnni) || ty.getRank() == 2) &&
-         "Expected 1D non-vnni or 2D vector.");
+  // Expecting at least 1D vector. For rank > 2, leading dims are batch dims.
+  assert(((ty.getRank() >= 1 && !vnni) || ty.getRank() >= 2) &&
+         "Expected at least 1D non-vnni or 2D vector.");
   // Expecting int or float element type.
   assert(ty.getElementType().isIntOrFloat() &&
          "Expected int or float element type.");
@@ -1443,11 +1467,13 @@ getDpasInstDataVectors(VectorType aTy, VectorType bTy, VectorType cdTy,
         dyn_cast<xegpu::uArch::SubgroupMatrixMultiplyAcc>(uArch->getInstruction(
             xegpu::uArch::InstructionKind::SubgroupMatrixMultiplyAcc));
 
-  const unsigned dataALen = aTy.getShape().front();
+  // M dimension is the second-to-last dim of A (handles batch dims).
+  const unsigned dataALen = aTy.getShape()[aTy.getRank() - 2];
   auto supportedALen = uArchInstruction->getSupportedM(aTy.getElementType());
   const int maxALen =
       xegpu::getLargestDivisor(dataALen, ArrayRef<unsigned>(supportedALen));
 
+  // N dimension is the last dim of B.
   const unsigned dataBLen = bTy.getShape().back();
   auto supportedBLen = uArchInstruction->getSupportedN(bTy.getElementType());
   const int maxBLen =
@@ -1636,7 +1662,7 @@ createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
               xegpu::uArch::InstructionKind::SubgroupScaledMatrixMultiplyAcc));
 
   int64_t rank = matrixLayout.getRank();
-  assert(rank == 2 && "dpas layouts must be two dimensions");
+  assert(rank >= 2 && "dpas layouts must be at least two dimensions");
 
   SmallVector<int64_t> sgLayout = matrixLayout.getEffectiveSgLayoutAsInt();
   SmallVector<int64_t> sgData = matrixLayout.getEffectiveSgDataAsInt();

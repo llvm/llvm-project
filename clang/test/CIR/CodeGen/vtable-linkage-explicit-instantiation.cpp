@@ -57,6 +57,6 @@ void use_key() {
 // LLVM: @_ZTV7KeyBaseIiE = external global
 // LLVM: define {{.*}} @_Z3useP4BaseIiE
 
-// OGCG: @_ZTV4BaseIiE = external unnamed_addr constant
-// OGCG: @_ZTV7KeyBaseIiE = external unnamed_addr constant
+// OGCG: @_ZTV4BaseIiE = external constant
+// OGCG: @_ZTV7KeyBaseIiE = external constant
 // OGCG: define {{.*}} @_Z3useP4BaseIiE

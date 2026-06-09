@@ -107,8 +107,9 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
     return LHS.takeError();
   if (!RHS)
     return RHS.takeError();
-  for (auto L : *LHS)
-    Results[L].insert(RHS->begin(), RHS->end());
+  if (!RHS->empty())
+    for (auto L : *LHS)
+      Results[L].insert(RHS->begin(), RHS->end());
   return llvm::Error::success();
 }
 
@@ -353,8 +354,10 @@ public:
 };
 } // namespace
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int PointerFlowTUSummaryExtractorAnchorSource = 0;
+volatile int PointerFlowExtractorAnchorSource = 0;
+} // namespace clang::ssaf
 
 static TUSummaryExtractorRegistry::Add<PointerFlowTUSummaryExtractor>
     RegisterExtractor(PointerFlowEntitySummary::Name,

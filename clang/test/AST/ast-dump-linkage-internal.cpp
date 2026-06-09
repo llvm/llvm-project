@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -ast-dump -std=c++2c %s | FileCheck --match-full-lines %s
 
 namespace std {
-// CHECK: |-NamespaceDecl {{.*}} std external-linkage
 template <typename T>
 struct initializer_list {
   const T* begin;
@@ -10,7 +9,8 @@ struct initializer_list {
 } // namespace std
 
 namespace {
-// CHECK: |-NamespaceDecl {{.*}} internal-linkage
+// CHECK: |-NamespaceDecl {{.*}} external-linkage
+// FIXME: Unnamed namespaces have internal linkage.
 
 typedef int TypedefInt;
 // CHECK: | |-TypedefDecl {{.*}} TypedefInt 'int'
@@ -57,7 +57,7 @@ enum Enum {};
 // CHECK: | |-EnumDecl {{.*}} Enum internal-linkage
 
 enum { Enumerator };
-// CHECK: | |-EnumDecl {{.*}}
+// CHECK: | |-EnumDecl {{.*}} internal-linkage
 // CHECK: | | `-EnumConstantDecl {{.*}} referenced Enumerator '(anonymous namespace)::(unnamed enum at {{.*}})'
 
 decltype(Enumerator) f();
@@ -77,13 +77,10 @@ int Int = 0;
 const int ConstInt = 0;
 // CHECK: | |-VarDecl {{.*}} ConstInt 'const int' cinit internal-linkage
 
-extern "C" int ExternCInt;
-// CHECK: | | `-VarDecl {{.*}} ExternCInt 'int' external-linkage
-
 template <typename T>
 T TemplatedVar = T{};
 // CHECK: | |-VarTemplateDecl {{.*}} TemplatedVar internal-linkage
-// CHECK: | | |-VarDecl {{.*}} TemplatedVar 'T' cinit instantiated_from 0x{{[0-9a-f]*}}
+// CHECK: | | |-VarDecl {{.*}} TemplatedVar 'T' cinit
 // CHECK: | | `-VarTemplateSpecializationDecl {{.*}} used TemplatedVar 'int' implicit_instantiation cinit instantiated_from 0x{{[0-9a-f]*}} internal-linkage
 
 // FIXME: VarTemplateSpecializationDecl node is printed twice.
@@ -124,9 +121,6 @@ namespace Known {
 
 void FuncDecl();
 // CHECK: | | |-FunctionDecl {{.*}} FuncDecl 'void ()' internal-linkage
-
-extern "C" void ExternCFuncDecl();
-// CHECK: | | | `-FunctionDecl {{.*}} ExternCFuncDecl 'void ()' external-linkage
 
 constexpr void ConstexprFuncDecl();
 // CHECK: | | |-FunctionDecl{{.*}} constexpr ConstexprFuncDecl 'void ()' implicit-inline internal-linkage

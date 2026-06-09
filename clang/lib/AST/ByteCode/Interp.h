@@ -143,6 +143,7 @@ bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I);
 bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
+bool CheckDynamicCast(InterpState &S, CodePtr OpPC);
 
 enum class ShiftDir { Left, Right };
 
@@ -259,7 +260,10 @@ PRESERVE_NONE bool Ret(InterpState &S, CodePtr &PC) {
   const T &Ret = S.Stk.pop<T>();
 
   assert(S.Current);
+
+#ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+#endif
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
 
@@ -279,7 +283,10 @@ PRESERVE_NONE bool Ret(InterpState &S, CodePtr &PC) {
 }
 
 PRESERVE_NONE inline bool RetVoid(InterpState &S, CodePtr &PC) {
+
+#ifndef NDEBUG
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
+#endif
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     cleanupAfterFunctionCall(S, PC, S.Current->getFunction());
@@ -361,12 +368,18 @@ static bool AddSubNonNumber(InterpState &S, CodePtr OpPC, T LHS, T RHS) {
   typename T::ReprT Offset;
   IntegralKind Kind;
   if (LHS.isNumber()) {
+    if (RHS.getKind() == IntegralKind::AddrLabelDiff)
+      return Invalid(S, OpPC);
+
     Number = static_cast<typename T::ReprT>(LHS);
     Ptr = RHS.getPtr();
     Offset = RHS.getOffset();
     Kind = RHS.getKind();
   } else {
     assert(RHS.isNumber());
+    if (LHS.getKind() == IntegralKind::AddrLabelDiff)
+      return Invalid(S, OpPC);
+
     Number = static_cast<typename T::ReprT>(RHS);
     Ptr = LHS.getPtr();
     Offset = LHS.getOffset();
@@ -519,6 +532,11 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     const T &RHSR = RHS.elem<T>(0);
     const T &RHSI = RHS.elem<T>(1);
     unsigned Bits = LHSR.bitWidth();
+
+    // We only handle actual numbers here.
+    if (!LHSR.isNumber() || !LHSI.isNumber() || !RHSR.isNumber() ||
+        !RHSI.isNumber())
+      return false;
 
     // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
     T A;
@@ -1237,9 +1255,11 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
-  unsigned VL = LHS.getByteOffset();
-  unsigned VR = RHS.getByteOffset();
-  S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
+  std::optional<size_t> VL = LHS.computeOffsetForComparison(S.getASTContext());
+  std::optional<size_t> VR = RHS.computeOffsetForComparison(S.getASTContext());
+  if (!VL || !VR)
+    return Invalid(S, OpPC);
+  S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*VL, *VR))));
   return true;
 }
 
@@ -1310,10 +1330,12 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
-    size_t A = LHS.computeOffsetForComparison(S.getASTContext());
-    size_t B = RHS.computeOffsetForComparison(S.getASTContext());
+    std::optional<size_t> A = LHS.computeOffsetForComparison(S.getASTContext());
+    std::optional<size_t> B = RHS.computeOffsetForComparison(S.getASTContext());
+    if (!A || !B)
+      return Invalid(S, OpPC);
 
-    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
+    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*A, *B))));
     return true;
   }
 
@@ -1615,6 +1637,36 @@ bool GetField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
   if (!CheckRange(S, OpPC, Obj, CSK_Field))
     return false;
+
+  // FIXME(postswitch): The isUnknownSizeArray() check here is only needed
+  // to keep an invalid sample producing the same diagnostics as the current
+  // interpreter.
+  if (!Obj.getFieldDesc()->isRecord() && !Obj.isUnknownSizeArray())
+    return false;
+
+  const Pointer &Field = Obj.atField(I);
+  if (!CheckLoad(S, OpPC, Field))
+    return false;
+  S.Stk.push<T>(Field.deref<T>());
+  return true;
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Pushes the value of the pointer's field on the stack
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
+  const Pointer &Obj = S.Stk.pop<Pointer>();
+  if (!CheckNull(S, OpPC, Obj, CSK_Field))
+    return false;
+  if (!CheckRange(S, OpPC, Obj, CSK_Field))
+    return false;
+
+  // FIXME(postswitch): The isUnknownSizeArray() check here is only needed
+  // to keep an invalid sample producing the same diagnostics as the current
+  // interpreter.
+  if (!Obj.getFieldDesc()->isRecord() && !Obj.isUnknownSizeArray())
+    return false;
+
   const Pointer &Field = Obj.atField(I);
   if (!CheckLoad(S, OpPC, Field))
     return false;
@@ -1635,22 +1687,6 @@ bool SetField(InterpState &S, CodePtr OpPC, uint32_t I) {
     return false;
   Field.initialize();
   Field.deref<T>() = Value;
-  return true;
-}
-
-/// 1) Pops a pointer from the stack
-/// 2) Pushes the value of the pointer's field on the stack
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const Pointer &Obj = S.Stk.pop<Pointer>();
-  if (!CheckNull(S, OpPC, Obj, CSK_Field))
-    return false;
-  if (!CheckRange(S, OpPC, Obj, CSK_Field))
-    return false;
-  const Pointer &Field = Obj.atField(I);
-  if (!CheckLoad(S, OpPC, Field))
-    return false;
-  S.Stk.push<T>(Field.deref<T>());
   return true;
 }
 
@@ -2175,6 +2211,8 @@ bool Store(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
     return false;
+  if (!Ptr.canDeref(Name))
+    return false;
   if (Ptr.canBeInitialized())
     Ptr.initialize();
   Ptr.deref<T>() = Value;
@@ -2186,6 +2224,8 @@ bool StorePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckStore(S, OpPC, Ptr))
+    return false;
+  if (!Ptr.canDeref(Name))
     return false;
   if (Ptr.canBeInitialized())
     Ptr.initialize();
@@ -2583,7 +2623,7 @@ bool SubOffset(InterpState &S, CodePtr OpPC) {
 template <ArithOp Op>
 static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
                                    const Pointer &Ptr) {
-  if (Ptr.isDummy())
+  if (!Ptr.isDereferencable())
     return false;
 
   using OneT = Char<false>;
@@ -3241,7 +3281,7 @@ inline bool DoShiftAP(InterpState &S, CodePtr OpPC, const APSInt &LHS,
       return false;
     return DoShiftAP<LT, RT,
                      Dir == ShiftDir::Left ? ShiftDir::Right : ShiftDir::Left>(
-        S, OpPC, LHS, -RHS, Result);
+        S, OpPC, LHS, -(RHS.extend(RHS.getBitWidth() + 1)), Result);
   }
 
   if (!CheckShift<Dir>(S, OpPC, static_cast<LT>(LHS), static_cast<RT>(RHS),
@@ -3878,7 +3918,15 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     S.Stk.push<Pointer>(0, ElementDesc);
     return true;
   }
-  assert(NumElements.isPositive());
+  if (NumElements.isNegative()) {
+    if (!IsNoThrow) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_negative)
+          << NumElements.toDiagnosticString(S.getASTContext());
+      return false;
+    }
+    S.Stk.push<Pointer>(0, nullptr);
+    return true;
+  }
 
   if (!CheckArraySize(S, OpPC, static_cast<uint64_t>(NumElements)))
     return false;

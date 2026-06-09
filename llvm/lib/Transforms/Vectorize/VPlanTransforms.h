@@ -131,10 +131,6 @@ struct VPlanTransforms {
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
               PredicatedScalarEvolution &PSE, LoopVersioning *LVer = nullptr);
 
-  /// Add a canonical IV and its increment, using \p InductionTy and \p DL to \p
-  /// Plan
-  static void addCanonicalIVRecipes(VPlan &Plan, DebugLoc DL);
-
   /// Replace VPPhi recipes in \p Plan's header with corresponding
   /// VPHeaderPHIRecipe subclasses for inductions, reductions, and
   /// fixed-order recurrences. This processes all header phis and creates
@@ -148,6 +144,16 @@ struct VPlanTransforms {
       const MapVector<PHINode *, RecurrenceDescriptor> &Reductions,
       const SmallPtrSetImpl<const PHINode *> &FixedOrderRecurrences,
       const SmallPtrSetImpl<PHINode *> &InLoopReductions, bool AllowReordering);
+
+  /// Finalize SCEV predicates by adding induction predicates from \p Plan to
+  /// \p PSE and checking constraints. Returns false if predicated IVs have
+  /// outside-loop uses via ExitingIVValue, if SCEV predicate complexity exceeds
+  /// \p SCEVCheckThreshold, or if predicates are needed but \p OptForSize is
+  /// true.
+  static bool
+  finalizeSCEVPredicates(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                         bool OptForSize, unsigned SCEVCheckThreshold,
+                         OptimizationRemarkEmitter *ORE, Loop *TheLoop);
 
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
@@ -168,7 +174,7 @@ struct VPlanTransforms {
   LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan, bool TailFolded);
 
   // Create a check in \p CheckBlock to see if the vector loop should be
-  // executed.
+  // executed. May create VPExpandSCEV recipes in the plan's entry block.
   static void addMinimumIterationCheck(
       VPlan &Plan, ElementCount VF, unsigned UF,
       ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
@@ -191,12 +197,17 @@ struct VPlanTransforms {
       unsigned EpilogueLoopStep, ScalarEvolution &SE);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
-  /// flat CFG into a hierarchical CFG.
-  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan);
+  /// flat CFG into a hierarchical CFG. For the outermost loop, also create the
+  /// canonical IV's increment and adjust the latch terminator: replace
+  /// BranchOnCond with BranchOnCount, using \p DL for the canonical IV.
+  LLVM_ABI_FOR_TEST static void createLoopRegions(VPlan &Plan, DebugLoc DL);
 
   /// Wrap runtime check block \p CheckBlock in a VPIRBB and \p Cond in a
   /// VPValue and connect the block to \p Plan, using the VPValue as branch
   /// condition.
+  static void attachVPCheckBlock(VPlan &Plan, VPValue *Cond,
+                                 VPBasicBlock *CheckBlock,
+                                 bool AddBranchWeights);
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
@@ -321,6 +332,13 @@ struct VPlanTransforms {
           &InterleaveGroups,
       const bool &EpilogueAllowed);
 
+  /// Transform widen memory recipes into strided access recipes when legal
+  /// and profitable. Clamps \p Range to maintain consistency with widen
+  /// decisions of \p Plan, and uses \p Ctx to evaluate the cost.
+  static void convertToStridedAccesses(VPlan &Plan,
+                                       PredicatedScalarEvolution &PSE, Loop &L,
+                                       VPCostContext &Ctx, VFRange &Range);
+
   /// Remove dead recipes from \p Plan.
   static void removeDeadRecipes(VPlan &Plan);
 
@@ -328,10 +346,10 @@ struct VPlanTransforms {
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
-  static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                          VPBasicBlock *LatchVPBB,
-                                          VPBasicBlock *MiddleVPBB,
-                                          UncountableExitStyle Style);
+  static bool handleUncountableEarlyExits(
+      VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
+      VPBasicBlock *MiddleVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
+      DominatorTree &DT, AssumptionCache *AC, UncountableExitStyle Style);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
@@ -430,10 +448,30 @@ struct VPlanTransforms {
   static void materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
                                  ElementCount VF);
 
-  /// Expand VPExpandSCEVRecipes in \p Plan's entry block. Each
-  /// VPExpandSCEVRecipe is replaced with a live-in wrapping the expanded IR
-  /// value. A mapping from SCEV expressions to their expanded IR value is
-  /// returned.
+  /// Attaches the alias-mask to the existing header-mask.
+  static void attachAliasMaskToHeaderMask(VPlan &Plan);
+
+  /// Materializes within the \p AliasCheckVPBB block. Updates the header mask
+  /// of the loop to use the alias mask. Returns the clamped VF.
+  static VPValue *materializeAliasMask(VPlan &Plan,
+                                       VPBasicBlock *AliasCheckVPBB,
+                                       ArrayRef<PointerDiffInfo> DiffChecks);
+
+  /// Materializes the alias mask within a check block before the loop. The
+  /// vector loop will only be entered if the clamped VF from the alias mask
+  /// is not scalar.
+  static void materializeAliasMaskCheckBlock(
+      VPlan &Plan, ArrayRef<PointerDiffInfo> DiffChecks, bool HasBranchWeights);
+
+  /// Try to expand VPExpandSCEVRecipes in \p Plan's entry block to
+  /// VPInstructions. Recipes that cannot be expanded (like casts, min/max) are
+  /// kept for later IR-level expansion.
+  static void expandSCEVsToVPInstructions(VPlan &Plan, ScalarEvolution &SE);
+
+  /// Expand remaining VPExpandSCEVRecipes in \p Plan's entry block using
+  /// SCEVExpander. Each VPExpandSCEVRecipe is replaced with a live-in wrapping
+  /// the expanded IR value. A mapping from SCEV expressions to their expanded
+  /// IR value is returned.
   static DenseMap<const SCEV *, Value *> expandSCEVs(VPlan &Plan,
                                                      ScalarEvolution &SE);
 
