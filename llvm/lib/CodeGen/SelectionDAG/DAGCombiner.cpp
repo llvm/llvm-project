@@ -645,6 +645,9 @@ namespace {
     SDValue mergeInsertEltWithShuffle(SDNode *N, unsigned InsIndex);
     SDValue combineInsertEltToShuffle(SDNode *N, unsigned InsIndex);
     SDValue combineInsertEltToLoad(SDNode *N, unsigned InsIndex);
+    SDValue foldExtractSubvectorFromConcatVectors(EVT VT, SDValue V,
+                                                  uint64_t ExtIdx,
+                                                  const SDLoc &DL);
     SDValue BuildSDIV(SDNode *N);
     SDValue BuildSDIVPow2(SDNode *N);
     SDValue BuildUDIV(SDNode *N);
@@ -27553,14 +27556,11 @@ static SDValue foldExtractSubvectorFromShuffleVector(EVT NarrowVT, SDValue Src,
   return DAG.getVectorShuffle(NarrowVT, DL, NewOps[0], NewOps[1], NewMask);
 }
 
-static SDValue foldExtractSubvectorFromConcatVectors(EVT VT, SDValue V,
-                                                     uint64_t ExtIdx,
-                                                     const SDLoc &DL,
-                                                     SelectionDAG &DAG,
-                                                     bool LegalOperations) {
-  if (V.getOpcode() != ISD::CONCAT_VECTORS)
-    return SDValue();
-
+SDValue DAGCombiner::foldExtractSubvectorFromConcatVectors(EVT VT, SDValue V,
+                                                           uint64_t ExtIdx,
+                                                           const SDLoc &DL) {
+  assert(V.getOpcode() == ISD::CONCAT_VECTORS &&
+         "Expected a CONCAT_VECTORS operand");
   ElementCount ExtNumElts = VT.getVectorElementCount();
   EVT ConcatSrcVT = V.getOperand(0).getValueType();
 
@@ -27571,38 +27571,28 @@ static SDValue foldExtractSubvectorFromConcatVectors(EVT VT, SDValue V,
 
   // If the concatenated source types match this extract, it's a direct
   // simplification:
-  // extract_subvec (concat V1, V2, ...), i --> Vi
+  // extract_subvector (concat V1, V2, ...), i --> Vi
   if (VT.getVectorElementCount() == ConcatSrcVT.getVectorElementCount())
     return V.getOperand(ConcatOpIdx);
 
   // If the concatenated source vectors are a multiple length of this extract,
   // then extract a fraction of one of those source vectors directly from a
   // concat operand. Example:
-  //   v2i8 extract_subvec (v16i8 concat (v8i8 X), (v8i8 Y)), 14 -->
-  //   v2i8 extract_subvec v8i8 Y, 6
-  if (ConcatSrcNumElts.isKnownMultipleOf(ExtNumElts) &&
-      ConcatSrcNumElts.isFixed() == ExtNumElts.isFixed()) {
+  //   v2i8 extract_subvector (v16i8 concat_subvector v8i8:X, v8i8:Y), 14 -->
+  //   v2i8 extract_subvector v8i8:Y, 6
+  if (ConcatSrcNumElts.hasKnownScalarFactor(ExtNumElts)) {
     uint64_t NewExtIdx =
         ExtIdx - ConcatOpIdx * ConcatSrcNumElts.getKnownMinValue();
-    if (NewExtIdx + ExtNumElts.getKnownMinValue() >
-        ConcatSrcNumElts.getKnownMinValue())
-      return SDValue();
     return DAG.getExtractSubvector(DL, VT, V.getOperand(ConcatOpIdx),
                                    NewExtIdx);
   }
 
   // If the extract covers multiple whole concat operands, rebuild that smaller
   // concat directly.
-  bool IsPermittedConcat =
-      !LegalOperations || DAG.getTargetLoweringInfo().isOperationLegalOrCustom(
-                              ISD::CONCAT_VECTORS, VT);
-  if (ExtNumElts.isKnownMultipleOf(ConcatSrcNumElts) &&
+  if (ExtNumElts.hasKnownScalarFactor(ConcatSrcNumElts) &&
       ExtIdx % ConcatSrcNumElts.getKnownMinValue() == 0 &&
-      ExtNumElts.isFixed() == ConcatSrcNumElts.isFixed() && IsPermittedConcat) {
-    unsigned NumConcatOps =
-        ExtNumElts.getKnownMinValue() / ConcatSrcNumElts.getKnownMinValue();
-    if (ConcatOpIdx + NumConcatOps > V.getNumOperands())
-      return SDValue();
+      (!LegalOperations || hasOperation(ISD::CONCAT_VECTORS, VT))) {
+    unsigned NumConcatOps = ExtNumElts.getKnownScalarFactor(ConcatSrcNumElts);
 
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
                        V->ops().slice(ConcatOpIdx, NumConcatOps));
@@ -27716,9 +27706,11 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
     }
   }
 
-  if (SDValue Folded = foldExtractSubvectorFromConcatVectors(
-          NVT, V, ExtIdx, DL, DAG, LegalOperations))
-    return Folded;
+  if (V.getOpcode() == ISD::CONCAT_VECTORS) {
+    if (SDValue Folded =
+            foldExtractSubvectorFromConcatVectors(NVT, V, ExtIdx, DL))
+      return Folded;
+  }
 
   if (SDValue Shuffle = foldExtractSubvectorFromShuffleVector(
           NVT, V, ExtIdx, DL, DAG, LegalOperations))
