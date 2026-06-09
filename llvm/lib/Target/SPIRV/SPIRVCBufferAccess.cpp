@@ -101,8 +101,6 @@ static bool replaceCBufferAccesses(Module &M) {
     }
   }
 
-  CBufMD->removeCBufferGlobalsFromUseList(M);
-
   // Now that all uses are replaced, clean up the globals and metadata.
   for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
     for (const auto &Member : Mapping.Members) {
