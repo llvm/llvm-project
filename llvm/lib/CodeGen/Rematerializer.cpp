@@ -193,7 +193,7 @@ void Rematerializer::transferUserImpl(RegisterIdx FromRegIdx,
   bool IsNewDep = true;
   if (UserReg.Defs.size() > 1) {
     // Other defining MIs might already be using the new register.
-    IsNewDep = find(UserDeps, ToRegIdx) == UserDeps.end();
+    IsNewDep = !is_contained(UserDeps, ToRegIdx);
 
     auto MOIsFromReg = [FromReg](MachineOperand &MO) {
       return MO.getReg() == FromReg;
