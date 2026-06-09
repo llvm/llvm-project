@@ -4899,9 +4899,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OmpUtilityDirective &) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OmpUtilityDirective");
+                   const parser::OmpUtilityDirective &dir) {
+  common::visit(common::visitors{
+                    [&](const parser::OmpNothingDirective &) {
+                      // nothing-directive is a no-op (OpenMP 5.2 [8.4])
+                    },
+                    [&](const parser::OmpErrorDirective &) {
+                      if (!semaCtx.langOptions().OpenMPSimd)
+                        TODO(converter.getCurrentLocation(),
+                             "OmpErrorDirective");
+                    },
+                },
+                dir.u);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
