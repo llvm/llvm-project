@@ -2,10 +2,12 @@
 // expected-no-diagnostics
 
 // RUN: %clang %s -O2 -S -o - --target=riscv32 \
-// RUN:   -menable-experimental-extensions -march=rv32i_p0p21 -Werror -Wextra -Xclang -verify \
+// RUN:   -menable-experimental-extensions -march=rv32i_p0p21 \
+// RUN:   -Werror -Wextra -Xclang -verify \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,RV32
 // RUN: %clang %s -O2 -S -o - --target=riscv64 \
-// RUN:   -menable-experimental-extensions -march=rv64i_p0p21 -Werror -Wextra -Xclang -verify \
+// RUN:   -menable-experimental-extensions -march=rv64i_p0p21 \
+// RUN:   -Werror -Wextra -Xclang -verify \
 // RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
 
 #include <riscv_packed_simd.h>

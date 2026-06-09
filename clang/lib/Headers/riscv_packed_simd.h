@@ -42,23 +42,22 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   }
 
 #define __packed_shift(name, ty, op, mask)                                     \
-  static __inline__ ty __DEFAULT_FN_ATTRS                                      \
-  __riscv_##name(ty __rs1, unsigned __rs2) {                                   \
-    return __rs1 op (__rs2 & (mask));                                          \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,             \
+                                                         unsigned __rs2) {     \
+    return __rs1 op(__rs2 & (mask));                                           \
   }
 #define __packed_shift8(name, ty, op) __packed_shift(name, ty, op, 0x7)
 #define __packed_shift16(name, ty, op) __packed_shift(name, ty, op, 0xf)
 #define __packed_shift32(name, ty, op) __packed_shift(name, ty, op, 0x1f)
 
 #define __packed_scalar_binary_op(name, ty, scalar_ty, op, splat)              \
-  static __inline__ ty __DEFAULT_FN_ATTRS                                      \
-  __riscv_##name(ty __rs1, scalar_ty __rs2) {                                  \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1,             \
+                                                         scalar_ty __rs2) {    \
     return __rs1 op splat(ty, __rs2);                                          \
   }
 
 #define __packed_binary_op(name, ty, op)                                       \
-  static __inline__ ty __DEFAULT_FN_ATTRS                                      \
-  __riscv_##name(ty __rs1, ty __rs2) {                                         \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return __rs1 op __rs2;                                                     \
   }
 
@@ -68,14 +67,12 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   }
 
 #define __packed_binary_builtin(name, ty, builtin)                             \
-  static __inline__ ty __DEFAULT_FN_ATTRS                                      \
-  __riscv_##name(ty __rs1, ty __rs2) {                                         \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return builtin(__rs1, __rs2);                                              \
   }
 
 #define __packed_sh1add(name, ty)                                              \
-  static __inline__ ty __DEFAULT_FN_ATTRS                                      \
-  __riscv_##name(ty __rs1, ty __rs2) {                                         \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return (__rs1 << 1) + __rs2;                                               \
   }
 
@@ -84,8 +81,7 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
  * for signed types and the backend's saturating_shl1 PatFrags matches both
  * shapes. */
 #define __packed_sh1sadd(name, ty)                                             \
-  static __inline__ ty __DEFAULT_FN_ATTRS                                      \
-  __riscv_##name(ty __rs1, ty __rs2) {                                         \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2) { \
     return __builtin_elementwise_add_sat(                                      \
         __builtin_elementwise_add_sat(__rs1, __rs1), __rs2);                   \
   }
