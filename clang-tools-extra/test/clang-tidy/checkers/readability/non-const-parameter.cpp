@@ -458,6 +458,28 @@ double overloadConflict(const double *overloadConflictPtr) {
   return *overloadConflictPtr;
 }
 
+double topLevelConstPointerOverload(double *topLevelConstPtr) {
+  return *topLevelConstPtr;
+}
+
+double topLevelConstPointerOverload(const double *const topLevelConstPtr) {
+  return *topLevelConstPtr;
+}
+
+void arrayOverloadConflict(double arrayOut[2],
+                           double arrayConflictParam[2]) {
+  arrayOut[0] = arrayConflictParam[0];
+}
+
+void arrayOverloadConflict(double arrayOut[2],
+                           const double arrayConflictParam[2]) {
+  arrayOut[0] = arrayConflictParam[0];
+}
+
+int returnTypeConflict(int *returnTypePtr) { return *returnTypePtr; }
+
+long returnTypeConflict(const int *returnTypePtr) { return *returnTypePtr; }
+
 template <int>
 int templateOverloadConflict(int *templateConflictPtr) {
   return *templateConflictPtr;
@@ -480,6 +502,11 @@ struct MemberOverloadConflict {
     (void)*memberConflictPtr;
   }
   void withConflictingOverload(const int *memberConflictPtr) {}
+};
+
+struct OperatorCallConflict {
+  int operator()(int *operatorCallPtr) { return *operatorCallPtr; }
+  int operator()(const int *operatorCallPtr) { return *operatorCallPtr; }
 };
 
 struct QualifiedMemberOverload {
