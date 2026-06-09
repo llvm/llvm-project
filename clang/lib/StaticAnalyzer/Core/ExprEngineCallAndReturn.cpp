@@ -1310,14 +1310,14 @@ void ExprEngine::BifurcateCall(const MemRegion *BifurReg,
 
 void ExprEngine::VisitReturnStmt(const ReturnStmt *RS, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  ExplodedNodeSet dstPreVisit;
-  getCheckerManager().runCheckersForPreStmt(dstPreVisit, Pred, RS, *this);
+  ExplodedNodeSet DstPreVisit;
+  getCheckerManager().runCheckersForPreStmt(DstPreVisit, Pred, RS, *this);
 
   if (RS->getRetValue()) {
-    for (ExplodedNode *N : dstPreVisit) {
+    for (ExplodedNode *N : DstPreVisit) {
       Dst.insert(Engine.makePostStmtNode(RS, N->getState(), N));
     }
   } else {
-    Dst.insert(dstPreVisit);
+    Dst.insert(DstPreVisit);
   }
 }
