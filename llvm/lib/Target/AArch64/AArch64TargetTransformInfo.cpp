@@ -6093,7 +6093,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Invalid;
 
   bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
-  if (IsUSDot && !ST->hasMatMulInt8())
+  // USDot is natively supported with +i8mm. With plain +dotprod, SUMLA is
+  // lowered to two udots plus an eor and a sub.
+  if (IsUSDot && !ST->hasMatMulInt8() && !ST->hasDotProd())
     // FIXME: Remove this early bailout in favour of expand cost.
     return Invalid;
 
@@ -6150,6 +6152,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     // i8 -> i32 usdot requires +i8mm
     if (IsUSDot && IsSupported(ST->hasMatMulInt8(), ST->hasMatMulInt8()))
       return Cost + INegCost;
+    // Without +i8mm, lower SUMLA via two udots plus an eor and a sub on plain
+    // +dotprod targets. Note that this is only implemented for NEON, as all
+    // modern CPUs with SVE also have +i8mm. Charge an extra factor for the
+    // expansion.
+    if (IsUSDot && IsSupported(false, ST->hasDotProd()))
+      return Cost * 3 + INegCost;
   }
 
   if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {

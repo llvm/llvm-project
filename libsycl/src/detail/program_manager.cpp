@@ -49,9 +49,12 @@ void ProgramAndKernelManager::registerFatBin(const void *BinaryStart,
       llvm::StringRef(static_cast<const char *>(BinaryStart), Size),
       /*Identifier=*/"");
   auto BinOrErr = llvm::object::OffloadBinary::create(MBR);
-  if (!BinOrErr || BinOrErr->empty())
+  if (!BinOrErr) {
+    llvm::consumeError(BinOrErr.takeError());
     throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
                           "Failed to parse OffloadBinary");
+  }
+  assert(!BinOrErr->empty() && "OffloadBinary must contain at least one entry");
 
   DeviceImageManagerVec Images;
   Images.reserve(BinOrErr->size());

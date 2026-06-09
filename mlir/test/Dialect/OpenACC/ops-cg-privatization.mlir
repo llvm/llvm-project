@@ -1,5 +1,7 @@
 // RUN: mlir-opt -split-input-file %s | FileCheck %s --check-prefixes=CHECK
+// Verify the printed output can be parsed.
 // RUN: mlir-opt -split-input-file %s | mlir-opt -split-input-file | FileCheck %s --check-prefixes=CHECK
+// Verify the generic form can be parsed.
 // RUN: mlir-opt -split-input-file -mlir-print-op-generic %s | mlir-opt -split-input-file | FileCheck %s --check-prefixes=CHECK
 
 // -----
@@ -114,3 +116,28 @@ func.func @privatize_inside_compute_region(%data : memref<64xf32>) {
 // CHECK: acc.private_local
 // CHECK: memref.load %{{.*}}[%{{.*}}] : memref<64xf32>
 // CHECK: } {origin = "acc.parallel"}
+
+// -----
+
+// CHECK-LABEL: func @unwrap_private_to_memref
+func.func @unwrap_private_to_memref() {
+  %h = acc.privatize : () -> !acc.private_type<memref<i32>>
+  %m = acc.unwrap_private %h : !acc.private_type<memref<i32>> to memref<i32>
+  %z = arith.constant 0 : i32
+  memref.store %z, %m[] : memref<i32>
+  return
+}
+// CHECK-DAG: %[[H:.*]] = acc.privatize
+// CHECK-SAME: () -> !acc.private_type<memref<i32>>
+// CHECK: %{{.*}} = acc.unwrap_private %[[H]]
+// CHECK-SAME: !acc.private_type<memref<i32>> to memref<i32>
+
+// -----
+
+// CHECK-LABEL: func @unwrap_private_to_byte_memref
+func.func @unwrap_private_to_byte_memref() {
+  %h = acc.privatize : () -> !acc.private_type<memref<f64>>
+  %storage = acc.unwrap_private %h : !acc.private_type<memref<f64>> to memref<?xi8>
+  return
+}
+// CHECK: acc.unwrap_private %{{.*}} : !acc.private_type<memref<f64>> to memref<?xi8>

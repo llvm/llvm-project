@@ -321,5 +321,7 @@ exit:
   ret void
 }
 
-!0 = distinct !{!0, !1}
+!0 = distinct !{!0, !1, !2, !3}
 !1 = !{!"llvm.loop.vectorize.width", i32 2}
+!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!3 = !{!"llvm.loop.vectorize.enable", i1 true}
