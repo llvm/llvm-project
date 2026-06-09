@@ -15,11 +15,11 @@
 // CHECK-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "-mlink-builtin-bitcode" "[[HIP_PATH]]/lib/hip-device-lib/hipspv-spirv64-unknown-chipstar.bc"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: "-o" "[[A_DEV_OBJ:.*o]]" "-x" "hip"
+// CHECK-SAME: "-o" "[[A_DEV_BC:.*bc]]" "-x" "hip"
 // CHECK-SAME: "[[A_SRC:.*a.cu]]"
 
 // CHECK: "{{.*llvm-offload-binary[^ ]*}}" "-o" "[[A_BIN_PACKAGE:.*.out]]"
-// CHECK-SAME: "--image=file=[[A_DEV_OBJ]],triple=spirv64-unknown-chipstar,arch=generic,kind=hip"
+// CHECK-SAME: "--image=file=[[A_DEV_BC]],triple=spirv64-unknown-chipstar,arch=generic,kind=hip"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "[[HOST_TRIPLE]]"
 // CHECK-SAME: "-aux-triple" "spirv64-unknown-chipstar"
@@ -35,11 +35,11 @@
 // CHECK-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "-mlink-builtin-bitcode" "[[HIP_PATH]]/lib/hip-device-lib/hipspv-spirv64-unknown-chipstar.bc"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: "-o" "[[B_DEV_OBJ:.*o]]" "-x" "hip"
+// CHECK-SAME: "-o" "[[B_DEV_BC:.*bc]]" "-x" "hip"
 // CHECK-SAME: "[[B_SRC:.*b.hip]]"
 
 // CHECK: "{{.*llvm-offload-binary[^ ]*}}" "-o" "[[B_BIN_PACKAGE:.*.out]]"
-// CHECK-SAME: "--image=file=[[B_DEV_OBJ]],triple=spirv64-unknown-chipstar,arch=generic,kind=hip"
+// CHECK-SAME: "--image=file=[[B_DEV_BC]],triple=spirv64-unknown-chipstar,arch=generic,kind=hip"
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "[[HOST_TRIPLE]]"
 // CHECK-SAME: "-aux-triple" "spirv64-unknown-chipstar"
