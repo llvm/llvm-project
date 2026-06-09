@@ -243,11 +243,11 @@ protected:
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
         binding(binding), stOther(stOther), symbolKind(k), isPreemptible(false),
-        isUsedInRegularObj(false), isExported(false), ltoCanOmit(false),
-        traced(false), hasVersionSuffix(false), isInIplt(false),
-        gotInIgot(false), folded(false), archSpecificBit(false),
-        scriptDefined(false), dsoDefined(false), dsoProtected(false),
-        versionScriptAssigned(false), thunkAccessed(false),
+        isUsedInRegularObj(false), used(false), isExported(false),
+        ltoCanOmit(false), traced(false), hasVersionSuffix(false),
+        isInIplt(false), gotInIgot(false), folded(false),
+        archSpecificBit(false), scriptDefined(false), dsoDefined(false),
+        dsoProtected(false), versionScriptAssigned(false), thunkAccessed(false),
         inDynamicList(false), referenced(false), referencedAfterWrap(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
