@@ -95,8 +95,8 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     const char *Args[] = {"-version"};
     InputArgList AL = T.ParseArgs(Args, MAI, MAC);
     EXPECT_TRUE(AL.hasArg(OPT_version));
-    StringRef SC = AL.getSubCommand(
-        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    StringRef SC =
+        AL.getSubCommand(T, HandleMultipleSubcommands, HandleOtherPositionals);
     EXPECT_TRUE(SC.empty());
     EXPECT_FALSE(AL.hasArg(OPT_uppercase));
     EXPECT_FALSE(AL.hasArg(OPT_lowercase));
@@ -106,8 +106,8 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     // Test case 2: Subcommand 'foo' with its valid options
     const char *Args[] = {"foo", "-uppercase"};
     InputArgList AL = T.ParseArgs(Args, MAI, MAC);
-    StringRef SC = AL.getSubCommand(
-        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    StringRef SC =
+        AL.getSubCommand(T, HandleMultipleSubcommands, HandleOtherPositionals);
     EXPECT_EQ(SC, "foo");
     EXPECT_TRUE(AL.hasArg(OPT_uppercase));
     EXPECT_FALSE(AL.hasArg(OPT_lowercase));
@@ -123,8 +123,8 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     // subcommand option.
     const char *Args[] = {"-uppercase", "foo"};
     InputArgList AL = T.ParseArgs(Args, MAI, MAC);
-    StringRef SC = AL.getSubCommand(
-        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    StringRef SC =
+        AL.getSubCommand(T, HandleMultipleSubcommands, HandleOtherPositionals);
     EXPECT_EQ(SC, "foo");
     EXPECT_TRUE(AL.hasArg(OPT_uppercase));
     EXPECT_FALSE(AL.hasArg(OPT_lowercase));
@@ -139,8 +139,8 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     // Test case 4: Check invalid use of passing multiple subcommands.
     const char *Args[] = {"-uppercase", "foo", "bar"};
     InputArgList AL = T.ParseArgs(Args, MAI, MAC);
-    StringRef SC = AL.getSubCommand(
-        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    StringRef SC =
+        AL.getSubCommand(T, HandleMultipleSubcommands, HandleOtherPositionals);
     // No valid subcommand should be returned as this is an invalid invocation.
     EXPECT_TRUE(SC.empty());
     // Expect the multiple subcommands error message.
@@ -155,8 +155,8 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     // Test case 5: Check invalid use of passing unregistered subcommands.
     const char *Args[] = {"foobar"};
     InputArgList AL = T.ParseArgs(Args, MAI, MAC);
-    StringRef SC = AL.getSubCommand(
-        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    StringRef SC =
+        AL.getSubCommand(T, HandleMultipleSubcommands, HandleOtherPositionals);
     // No valid subcommand should be returned as this is an invalid invocation.
     EXPECT_TRUE(SC.empty());
     // Expect the unregistered subcommands error message.
@@ -171,8 +171,8 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     // subcommand.
     const char *Args[] = {"-lowercase", "bar"};
     InputArgList AL = T.ParseArgs(Args, MAI, MAC);
-    StringRef SC = AL.getSubCommand(
-        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    StringRef SC =
+        AL.getSubCommand(T, HandleMultipleSubcommands, HandleOtherPositionals);
     auto HandleSubCommandArg = [&](ID OptionType) {
       if (!AL.hasArg(OptionType))
         return false;
@@ -198,8 +198,8 @@ TYPED_TEST(OptSubCommandTableTest, SubCommandParsing) {
     // positional arguments.
     const char *Args[] = {"bar", "input"};
     InputArgList AL = T.ParseArgs(Args, MAI, MAC);
-    StringRef SC = AL.getSubCommand(
-        T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+    StringRef SC =
+        AL.getSubCommand(T, HandleMultipleSubcommands, HandleOtherPositionals);
     EXPECT_EQ(SC, "bar"); // valid subcommand
     EXPECT_NE(std::string::npos,
               ErrMsg.find("Unregistered positionals passed"));

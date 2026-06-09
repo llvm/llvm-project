@@ -24,6 +24,10 @@ using namespace llvm::opt;
 #include "Opts.inc"
 #undef OPTTABLE_STR_TABLE_CODE
 
+#define OPTTABLE_VALUES_CODE
+#include "Opts.inc"
+#undef OPTTABLE_VALUES_CODE
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -62,14 +66,19 @@ class TestOptTable : public GenericOptTable {
 public:
   TestOptTable(bool IgnoreCase = false)
       : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                        IgnoreCase) {}
+                        IgnoreCase, /*SubCommands=*/{},
+                        /*SubCommandIDsTable=*/{}, OptionHelpTextVariants,
+                        getGeneratedOptionValues) {}
 };
 
 class TestPrecomputedOptTable : public PrecomputedOptTable {
 public:
   TestPrecomputedOptTable(bool IgnoreCase = false)
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                            OptionPrefixesUnion, IgnoreCase) {}
+                            OptionPrefixesUnion, IgnoreCase,
+                            /*SubCommands=*/{},
+                            /*SubCommandIDsTable=*/{}, OptionHelpTextVariants,
+                            getGeneratedOptionValues) {}
 };
 }
 
@@ -232,6 +241,28 @@ TYPED_TEST(OptTableTest, HelpTextForVisibilityVariants) {
               /*ShowAllAliases=*/false, Visibility(SubtoolVis));
   EXPECT_NE(std::string::npos, Help.find("The subtool variant-help text"));
   EXPECT_EQ(std::string::npos, Help.find("The default variant-help text"));
+}
+
+TYPED_TEST(OptTableTest, ValueCompletionsFromStringsAndCode) {
+  TypeParam T;
+
+  EXPECT_EQ((std::vector<std::string>{"alpha"}),
+            T.suggestValueCompletions("--values=", "a"));
+  EXPECT_EQ((std::vector<std::string>{"gamma"}),
+            T.suggestValueCompletions("--values-code=", "g"));
+}
+
+TYPED_TEST(OptTableTest, EmptyOptionalStringsArePresent) {
+  TypeParam T;
+
+  ASSERT_NE(nullptr, T.getOptionHelpText(OPT_empty_strings));
+  EXPECT_STREQ("", T.getOptionHelpText(OPT_empty_strings));
+  ASSERT_NE(nullptr, T.getOptionMetaVar(OPT_empty_strings));
+  EXPECT_STREQ("", T.getOptionMetaVar(OPT_empty_strings));
+  ASSERT_NE(nullptr,
+            T.getOptionHelpText(OPT_empty_variant, Visibility(SubtoolVis)));
+  EXPECT_STREQ("",
+               T.getOptionHelpText(OPT_empty_variant, Visibility(SubtoolVis)));
 }
 
 TYPED_TEST(OptTableTest, ParseAliasInGroup) {

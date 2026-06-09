@@ -121,10 +121,12 @@ public:
   /// E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
   const char *getAliasArgs() const {
     assert(Info && "Must have a valid info!");
-    assert((!Info->AliasArgs || Info->AliasArgs[0] != 0) &&
+    assert(Owner && "Must have a valid owner!");
+    const char *AliasArgs = Owner->getOptionAliasArgs(Info->ID);
+    assert((!AliasArgs || AliasArgs[0] != 0) &&
            "AliasArgs should be either 0 or non-empty.");
 
-    return Info->AliasArgs;
+    return AliasArgs;
   }
 
   /// Get the default prefix for this option.
@@ -144,13 +146,15 @@ public:
   /// Get the help text for this option.
   StringRef getHelpText() const {
     assert(Info && "Must have a valid info!");
-    return Info->getHelpText();
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionHelpText(Info->ID);
   }
 
   /// Get the meta-variable list for this option.
   StringRef getMetaVar() const {
     assert(Info && "Must have a valid info!");
-    return Info->MetaVar;
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionMetaVar(Info->ID);
   }
 
   unsigned getNumArgs() const { return Info->Param; }

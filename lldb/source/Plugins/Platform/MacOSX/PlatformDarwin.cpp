@@ -58,9 +58,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_OPTION_STR_TABLE_CODE
 #include "clang/Options/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
+#undef OPTTABLE_OPTION_STR_TABLE_CODE
 
 static Status ExceptionMaskValidator(const char *string, void *unused) {
   Status error;
@@ -1182,7 +1182,8 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   if (!version.empty() && sdk_type != XcodeSDK::Type::Linux &&
       sdk_type != XcodeSDK::Type::XROS) {
 #define OPTION(PREFIX_OFFSET, NAME_OFFSET, VAR, ...)                           \
-  llvm::StringRef opt_##VAR = OptionStrTable[NAME_OFFSET];                     \
+  llvm::StringRef opt_##VAR =                                                  \
+      llvm::StringTable(OptionNameStrTable)[NAME_OFFSET];                      \
   (void)opt_##VAR;
 #include "clang/Options/Options.inc"
 #undef OPTION

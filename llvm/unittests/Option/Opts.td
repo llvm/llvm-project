@@ -56,6 +56,18 @@ def Blurmpq_eq : Flag<["--"], "blurmp=">;
 def Q : Flag<["-"], "Q">, Visibility<[SubtoolVis]>;
 def R : Flag<["-"], "R">, Visibility<[DefaultVis, SubtoolVis]>;
 
+def values : Joined<["--"], "values=">, Values<"alpha,beta">;
+def values_code : Joined<["--"], "values-code=">, ValuesCode<[{
+  static constexpr const char VALUES_CODE[] = "gamma,delta";
+}]>;
+def empty_strings : Joined<["--"], "empty-strings=">,
+                    HelpText<"">,
+                    MetaVarName<"">,
+                    Values<"">;
+def empty_variant : Flag<["--"], "empty-variant">,
+                    HelpText<"default help">,
+                    HelpTextForVariants<[SubtoolVis], "">;
+
 def multiline_help : Flag<["-"], "multiline-help">, HelpText<"This a help text that has\nmultiple lines in it">, Visibility<[MultiLineVis]>;
 
 def multiline_help_long :

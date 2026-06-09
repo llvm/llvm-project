@@ -21,7 +21,7 @@ struct OptionWithMarshallingInfo {
   const char *ImpliedValue;
 
   llvm::StringRef getPrefixedName() const {
-    return OptionStrTable[PrefixedNameOffset];
+    return llvm::StringTable(OptionStrTable)[PrefixedNameOffset];
   }
 };
 

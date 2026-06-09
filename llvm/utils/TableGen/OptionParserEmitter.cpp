@@ -19,6 +19,7 @@
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cstring>
+#include <limits>
 #include <map>
 
 using namespace llvm;
@@ -31,11 +32,31 @@ static std::string getOptionName(const Record &R) {
   return R.getValueAsString("EnumName").str();
 }
 
+static void writeCommentText(raw_ostream &OS, StringRef Str) {
+  for (size_t I = 0; I < Str.size(); ++I) {
+    if (I + 1 < Str.size() && Str[I] == '*' && Str[I + 1] == '/') {
+      OS << "* /";
+      ++I;
+      continue;
+    }
+    OS.write_escaped(Str.substr(I, 1));
+  }
+}
+
 static raw_ostream &writeStrTableOffset(raw_ostream &OS,
                                         const StringToOffsetTable &Table,
                                         llvm::StringRef Str) {
   OS << Table.GetStringOffset(Str) << " /* ";
-  OS.write_escaped(Str);
+  writeCommentText(OS, Str);
+  OS << " */";
+  return OS;
+}
+
+static raw_ostream &
+writeOptionalStrTableOffset(raw_ostream &OS, const StringToOffsetTable &Table,
+                            llvm::StringRef Str) {
+  OS << *Table.GetStringOffset(Str) + 1 << " /* ";
+  writeCommentText(OS, Str);
   OS << " */";
   return OS;
 }
@@ -55,6 +76,15 @@ static std::string getOptionPrefixedName(const Record &R) {
     return Name.str();
 
   return (Prefixes[0] + Twine(Name)).str();
+}
+
+static std::string getAliasArgs(const Record &R) {
+  std::string Result;
+  for (StringRef AliasArg : R.getValueAsListOfStrings("AliasArgs")) {
+    Result.append(AliasArg);
+    Result.push_back('\0');
+  }
+  return Result;
 }
 
 class MarshallingInfo {
@@ -243,20 +273,16 @@ struct IndexedHelpTextVariant {
 
 static void
 emitHelpTextVariants(raw_ostream &OS,
-                     ArrayRef<IndexedHelpTextVariant> HelpTextVariants) {
+                     ArrayRef<IndexedHelpTextVariant> HelpTextVariants,
+                     const StringToOffsetTable &Table) {
   if (HelpTextVariants.empty())
     return;
 
-  OS << "\nstatic constexpr llvm::opt::OptTable::HelpTextVariants "
+  OS << "\nstatic constexpr llvm::opt::OptTable::HelpTextVariant "
         "OptionHelpTextVariants[] = {\n";
   for (const IndexedHelpTextVariant &Entry : HelpTextVariants) {
     OS << "  {";
-    if (!isa<UnsetInit>(Entry.Option->getValueInit("HelpText")))
-      writeCstring(OS, Entry.Option->getValueAsString("HelpText"));
-    else
-      OS << "nullptr";
-    OS << ", ";
-    writeCstring(OS, Entry.Variant.Text);
+    writeOptionalStrTableOffset(OS, Table, Entry.Variant.Text);
     OS << ", ";
     llvm::ListSeparator Sep(" | ");
     for (const std::string &Visibility : Entry.Variant.Visibilities)
@@ -266,6 +292,8 @@ emitHelpTextVariants(raw_ostream &OS,
     OS << "}, // " << getOptionName(*Entry.Option) << "\n";
   }
   OS << "};\n";
+  OS << "static_assert(sizeof(OptionHelpTextVariants) / "
+        "sizeof(OptionHelpTextVariants[0]) <= 65535);\n";
 }
 
 /// OptionParserEmitter - This tablegen backend takes an input .td file
@@ -280,12 +308,22 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
 
   std::map<const Record *, unsigned> HelpTextVariantIndices;
   std::vector<IndexedHelpTextVariant> HelpTextVariants;
+  std::map<const Record *, unsigned> ValuesCodeIndices;
+  std::vector<const Record *> ValuesCodeOptions;
   for (const Record &R : llvm::make_pointee_range(Opts)) {
     if (std::optional<HelpTextVariant> Variant = getHelpTextVariant(R)) {
       HelpTextVariantIndices.try_emplace(&R, HelpTextVariants.size());
       HelpTextVariants.push_back({&R, std::move(*Variant)});
     }
+    if (!isa<UnsetInit>(R.getValueInit("ValuesCode"))) {
+      ValuesCodeIndices.try_emplace(&R, ValuesCodeIndices.size());
+      ValuesCodeOptions.push_back(&R);
+    }
   }
+  if (HelpTextVariants.size() > std::numeric_limits<uint16_t>::max())
+    PrintFatalError("too many visibility-specific help text entries");
+  if (ValuesCodeIndices.size() >= llvm::opt::OptTable::ValuesCodeFlag)
+    PrintFatalError("too many ValuesCode entries");
 
   std::vector<const Record *> SubCommands =
       Records.getAllDerivedDefinitions("SubCommand");
@@ -339,21 +377,60 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
                                        PrefixesUnionSet.end());
   array_pod_sort(PrefixesUnion.begin(), PrefixesUnion.end());
 
+  llvm::StringToOffsetTable NameTable;
   llvm::StringToOffsetTable Table;
-  // We can add all the prefixes via the union.
+  std::map<const Record *, unsigned> AliasArgsOffsets;
+  auto AddName = [&](StringRef Name) {
+    [[maybe_unused]] unsigned NameOffset = NameTable.GetOrAddStringOffset(Name);
+    [[maybe_unused]] unsigned TableOffset = Table.GetOrAddStringOffset(Name);
+    assert(NameOffset == TableOffset &&
+           "option name offsets must match the full string table");
+  };
+
+  // Keep every string referenced by PREFIXED_NAME_OFFSET in a compact prefix
+  // of the full table. Some generated-code consumers only need these names.
   for (const auto &Prefix : PrefixesUnion)
-    Table.GetOrAddStringOffset(Prefix);
+    AddName(Prefix);
   for (const Record &R : llvm::make_pointee_range(Groups))
-    Table.GetOrAddStringOffset(R.getValueAsString("Name"));
+    AddName(R.getValueAsString("Name"));
   for (const Record &R : llvm::make_pointee_range(Opts))
-    Table.GetOrAddStringOffset(getOptionPrefixedName(R));
+    AddName(getOptionPrefixedName(R));
+
+  for (const Record &R : llvm::make_pointee_range(Groups)) {
+    if (!isa<UnsetInit>(R.getValueInit("HelpText")))
+      Table.GetOrAddStringOffset(R.getValueAsString("HelpText"));
+  }
+  for (const Record &R : llvm::make_pointee_range(Opts)) {
+    if (!isa<UnsetInit>(R.getValueInit("HelpText")))
+      Table.GetOrAddStringOffset(R.getValueAsString("HelpText"));
+    if (!isa<UnsetInit>(R.getValueInit("MetaVarName")))
+      Table.GetOrAddStringOffset(R.getValueAsString("MetaVarName"));
+    if (!isa<UnsetInit>(R.getValueInit("Values")))
+      Table.GetOrAddStringOffset(R.getValueAsString("Values"));
+    std::string AliasArgs = getAliasArgs(R);
+    if (!AliasArgs.empty())
+      AliasArgsOffsets.try_emplace(&R, Table.GetOrAddStringOffset(AliasArgs));
+  }
+  for (const IndexedHelpTextVariant &Entry : HelpTextVariants)
+    Table.GetOrAddStringOffset(Entry.Variant.Text);
+  for (const Record *SubCommand : SubCommands) {
+    Table.GetOrAddStringOffset(SubCommand->getValueAsString("Name"));
+    Table.GetOrAddStringOffset(SubCommand->getValueAsString("HelpText"));
+    Table.GetOrAddStringOffset(SubCommand->getValueAsString("Usage"));
+  }
+  if (Table.size() + 1 >= llvm::opt::OptTable::ValuesCodeFlag)
+    PrintFatalError("option string table exceeds the ValuesCode encoding");
 
   // Dump string table.
   OS << "/////////\n";
   OS << "// String table\n\n";
   OS << "#ifdef OPTTABLE_STR_TABLE_CODE\n";
-  Table.EmitStringTableDef(OS, "OptionStrTable");
+  Table.EmitStringTableStorageDef(OS, "OptionStrTable");
+  OS << "static_assert(sizeof(OptionStrTable) < (1U << 31));\n";
   OS << "#endif // OPTTABLE_STR_TABLE_CODE\n\n";
+  OS << "#ifdef OPTTABLE_OPTION_STR_TABLE_CODE\n";
+  NameTable.EmitStringTableStorageDef(OS, "OptionNameStrTable");
+  OS << "#endif // OPTTABLE_OPTION_STR_TABLE_CODE\n\n";
 
   // Dump prefixes.
   OS << "/////////\n";
@@ -382,7 +459,7 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     }
   }
   OS << "\n};\n";
-  emitHelpTextVariants(OS, HelpTextVariants);
+  emitHelpTextVariants(OS, HelpTextVariants, Table);
   OS << "#endif // OPTTABLE_PREFIXES_TABLE_CODE\n\n";
 
   // Dump subcommand IDs.
@@ -448,6 +525,18 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << "#undef VALUES_CODE\n";
     }
   }
+  if (!ValuesCodeIndices.empty()) {
+    OS << "static_assert(" << ValuesCodeIndices.size()
+       << " <= llvm::opt::OptTable::ValuesCodeFlag);\n";
+    OS << "static const char *getGeneratedOptionValues(unsigned Index) {\n"
+          "  switch (Index) {\n";
+    for (auto [Index, Option] : llvm::enumerate(ValuesCodeOptions))
+      OS << "  case " << Index << ": return " << getOptionName(*Option)
+         << "_Values;\n";
+    OS << "  default: return nullptr;\n"
+          "  }\n"
+          "}\n";
+  }
   OS << "#endif\n";
 
   OS << "/////////\n";
@@ -478,25 +567,25 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << "INVALID";
 
     // The other option arguments (unused for groups).
-    OS << ", INVALID, nullptr, 0, 0, 0";
+    OS << ", INVALID, 0, 0, 0, 0";
 
     // The option help text.
     if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
       OS << ",\n";
       OS << "       ";
-      writeCstring(OS, R.getValueAsString("HelpText"));
+      writeOptionalStrTableOffset(OS, Table, R.getValueAsString("HelpText"));
     } else {
-      OS << ", nullptr";
+      OS << ", 0";
     }
 
     // Groups do not use visibility-specific help text.
-    OS << ", false";
+    OS << ", 0";
 
     // The option meta-variable name (unused).
-    OS << ", nullptr";
+    OS << ", 0";
 
     // The option Values (unused for groups).
-    OS << ", nullptr";
+    OS << ", 0";
 
     // The option SubCommandIDsOffset.
     OS << ", ";
@@ -541,20 +630,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     else
       OS << "INVALID";
 
-    // The option alias arguments (if any).
-    // Emitted as a \0 separated list in a string, e.g. ["foo", "bar"]
-    // would become "foo\0bar\0". Note that the compiler adds an implicit
-    // terminating \0 at the end.
+    // The option alias arguments (if any), encoded as a \0 separated list in
+    // the string table.
     OS << ", ";
-    std::vector<StringRef> AliasArgs = R.getValueAsListOfStrings("AliasArgs");
-    if (AliasArgs.size() == 0) {
-      OS << "nullptr";
-    } else {
-      OS << "\"";
-      for (StringRef AliasArg : AliasArgs)
-        OS << AliasArg << "\\0";
-      OS << "\"";
-    }
+    auto AliasArgs = AliasArgsOffsets.find(&R);
+    OS << (AliasArgs == AliasArgsOffsets.end() ? 0 : AliasArgs->second + 1);
 
     // "Flags" for the option, such as HelpHidden and Render*
     OS << ", ";
@@ -588,36 +668,38 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
     // The option parameter field.
     OS << ", " << R.getValueAsInt("NumArgs");
 
-    // The option help text. Options with visibility-specific help point to a
-    // sparse descriptor emitted next to the option prefix table.
-    auto HelpTextVariant = HelpTextVariantIndices.find(&R);
-    if (HelpTextVariant != HelpTextVariantIndices.end()) {
-      OS << ",\n       &OptionHelpTextVariants[" << HelpTextVariant->second
-         << "]";
-    } else if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
+    // The option help text.
+    if (!isa<UnsetInit>(R.getValueInit("HelpText"))) {
       OS << ",\n";
       OS << "       ";
-      writeCstring(OS, R.getValueAsString("HelpText"));
+      writeOptionalStrTableOffset(OS, Table, R.getValueAsString("HelpText"));
     } else {
-      OS << ", nullptr";
+      OS << ", 0";
     }
-    OS << ", " << (HelpTextVariant != HelpTextVariantIndices.end());
+
+    // The one-based visibility-specific help descriptor index.
+    auto HelpTextVariant = HelpTextVariantIndices.find(&R);
+    OS << ", "
+       << (HelpTextVariant == HelpTextVariantIndices.end()
+               ? 0
+               : HelpTextVariant->second + 1);
 
     // The option meta-variable name.
     OS << ", ";
     if (!isa<UnsetInit>(R.getValueInit("MetaVarName")))
-      writeCstring(OS, R.getValueAsString("MetaVarName"));
+      writeOptionalStrTableOffset(OS, Table, R.getValueAsString("MetaVarName"));
     else
-      OS << "nullptr";
+      OS << "0";
 
     // The option Values. Used for shell autocompletion.
     OS << ", ";
     if (!isa<UnsetInit>(R.getValueInit("Values")))
-      writeCstring(OS, R.getValueAsString("Values"));
-    else if (!isa<UnsetInit>(R.getValueInit("ValuesCode")))
-      OS << getOptionName(R) << "_Values";
+      writeOptionalStrTableOffset(OS, Table, R.getValueAsString("Values"));
+    else if (auto ValuesCode = ValuesCodeIndices.find(&R);
+             ValuesCode != ValuesCodeIndices.end())
+      OS << "llvm::opt::OptTable::ValuesCodeFlag | " << ValuesCode->second;
     else
-      OS << "nullptr";
+      OS << "0";
 
     // The option SubCommandIDsOffset.
     OS << ", ";
@@ -697,9 +779,13 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
         "= "
         "{\n";
   for (const Record *SubCommand : SubCommands) {
-    OS << "  { \"" << SubCommand->getValueAsString("Name") << "\", ";
-    OS << "\"" << SubCommand->getValueAsString("HelpText") << "\", ";
-    OS << "\"" << SubCommand->getValueAsString("Usage") << "\" },\n";
+    OS << "  { ";
+    writeStrTableOffset(OS, Table, SubCommand->getValueAsString("Name"));
+    OS << ", ";
+    writeStrTableOffset(OS, Table, SubCommand->getValueAsString("HelpText"));
+    OS << ", ";
+    writeStrTableOffset(OS, Table, SubCommand->getValueAsString("Usage"));
+    OS << " },\n";
   }
   OS << "};\n";
   OS << "#endif // OPTTABLE_SUBCOMMANDS_CODE\n\n";

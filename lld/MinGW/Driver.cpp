@@ -73,19 +73,19 @@ static constexpr opt::OptTable::Info infoTable[] = {
                VALUES, SUBCOMMANDIDS_OFFSET)                                   \
   {PREFIX,                                                                     \
    NAME,                                                                       \
+   HELPTEXT,                                                                   \
+   METAVAR,                                                                    \
+   ALIASARGS,                                                                  \
+   VALUES,                                                                     \
    OPT_##ID,                                                                   \
    FLAGS,                                                                      \
    VISIBILITY,                                                                 \
    SUBCOMMANDIDS_OFFSET,                                                       \
    OPT_##GROUP,                                                                \
    OPT_##ALIAS,                                                                \
-   opt::Option::KIND##Class,                                                   \
-   PARAM,                                                                      \
    HELPTEXTSFORVARIANTS,                                                       \
-   HELPTEXT,                                                                   \
-   METAVAR,                                                                    \
-   ALIASARGS,                                                                  \
-   VALUES},
+   opt::Option::KIND##Class,                                                   \
+   PARAM},
 #include "Options.inc"
 #undef OPTION
 };

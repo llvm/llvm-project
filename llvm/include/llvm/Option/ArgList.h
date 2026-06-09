@@ -283,7 +283,7 @@ public:
 
   /// getSubCommand - Find subcommand from the arguments if the usage is valid.
   ///
-  /// \param AllSubCommands - A list of all valid subcommands.
+  /// \param Options - The option table containing all valid subcommands.
   /// \param HandleMultipleSubcommands - A callback for the case where multiple
   /// subcommands are present in the arguments. It gets a list of all found
   /// subcommands.
@@ -293,7 +293,7 @@ public:
   /// this returns an empty StringRef. If multiple subcommands are found, the
   /// first one is returned.
   LLVM_ABI_FOR_TEST StringRef getSubCommand(
-      ArrayRef<OptTable::SubCommand> AllSubCommands,
+      const OptTable &Options,
       std::function<void(ArrayRef<StringRef>)> HandleMultipleSubcommands,
       std::function<void(ArrayRef<StringRef>)> HandleOtherPositionals) const;
 

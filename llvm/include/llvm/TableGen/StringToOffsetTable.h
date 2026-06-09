@@ -67,8 +67,18 @@ public:
   // valid identifiers to declare.
   void EmitStringTableDef(raw_ostream &OS, const Twine &Name) const;
 
+  // Emit only the character storage for a string table with the provided name.
+  //
+  // This is useful when the generated code stores a StringTable in a runtime
+  // object and wants the static data to contain no address-bearing wrapper.
+  void EmitStringTableStorageDef(raw_ostream &OS, const Twine &Name) const;
+
   // Emit the string as one single string.
   void EmitString(raw_ostream &O) const;
+
+private:
+  void emitStringTableStorageDef(raw_ostream &OS, const Twine &Name,
+                                 bool IsStatic) const;
 };
 
 } // end namespace llvm
