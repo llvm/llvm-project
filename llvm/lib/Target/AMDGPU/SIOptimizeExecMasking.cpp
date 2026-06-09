@@ -468,9 +468,7 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
     auto *CopyToExecInst = &*I;
     auto CopyFromExecInst = findExecCopy(MBB, I);
     if (CopyFromExecInst == E) {
-      auto PrepareExecInst = std::next(I);
-      while (PrepareExecInst != E && PrepareExecInst->isDebugInstr())
-        ++PrepareExecInst;
+      auto PrepareExecInst = next_nodbg(I, E);
       if (PrepareExecInst == E)
         continue;
       // Fold exec = COPY (S_AND_B64 reg, exec) -> exec = S_AND_B64 reg, exec
@@ -766,12 +764,8 @@ void SIOptimizeExecMasking::tryRecordOrSaveexecXorSequence(MachineInstr &MI) {
 
       // Peek at the previous non-debug instruction and check if this is a
       // relevant s_or_saveexec instruction.
-      MachineInstr *Prev = MI.getPrevNode();
-      while (Prev && Prev->isDebugInstr())
-        Prev = Prev->getPrevNode();
-      if (!Prev)
-        return;
-      MachineInstr &PossibleOrSaveexec = *Prev;
+      auto It = prev_nodbg(MI.getIterator(), MI.getParent()->instr_begin());
+      MachineInstr &PossibleOrSaveexec = *It;
       if (PossibleOrSaveexec.getOpcode() != LMC.OrSaveExecOpc)
         return;
 
