@@ -20,10 +20,13 @@
 // Determine whether to use the public os_sync API on Apple platforms based on the deployment target.
 // Otherwise we fall back to the private __ulock API.
 #if defined(__APPLE__)
-#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 140400) ||      \
-      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 170400) ||    \
-      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 170400) ||            \
-      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 100400)
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                                                       \
+       __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ >= 140400) ||                                                     \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) &&                                                      \
+       __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ >= 170400) ||                                                    \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ >= 170400) || \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) &&                                                       \
+       __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ >= 100400)
 #    define _LIBCPP_USE_OS_SYNC
 #  endif
 #endif
