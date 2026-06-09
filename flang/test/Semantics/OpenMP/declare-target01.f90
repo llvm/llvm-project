@@ -75,18 +75,18 @@ module declare_target01
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (my_var%t_arr)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (my_var%kind_param)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (my_var%kind_param)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (my_var%len_param)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (my_var%len_param)
 
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
@@ -113,25 +113,25 @@ module declare_target01
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
   !$omp declare target enter (arr(1:2))
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (x%KIND)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (x%KIND)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (w%LEN)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (w%LEN)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on TO clause
   !WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopenmp-usage]
   !$omp declare target to (y%KIND)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on ENTER clause
   !$omp declare target enter (y%KIND)
 
   !$omp declare target link (my_var2)
@@ -144,10 +144,10 @@ module declare_target01
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
   !$omp declare target link (my_var2%t_arr)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on LINK clause
   !$omp declare target link (my_var2%kind_param)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on LINK clause
   !$omp declare target link (my_var2%len_param)
 
   !$omp declare target link (arr2)
@@ -158,12 +158,12 @@ module declare_target01
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the DECLARE TARGET directive
   !$omp declare target link (arr2(1:2))
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on LINK clause
   !$omp declare target link (x2%KIND)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on LINK clause
   !$omp declare target link (w2%LEN)
 
-  !ERROR: A type parameter inquiry cannot appear on the DECLARE TARGET directive
+  !ERROR: Type parameter inquiry is not allowed as a list item on LINK clause
   !$omp declare target link (y2%KIND)
 end
