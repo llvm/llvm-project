@@ -2375,7 +2375,7 @@ long, expensive to copy, etc.  ``StringMap`` is a specialized container designed
 cope with these issues.  It supports mapping an arbitrary range of bytes to an
 arbitrary other object.
 
-The ``StringMap`` implementation uses a quadratically-probed hash table, where the
+The ``StringMap`` implementation uses a linear-probed hash table, where the
 buckets store a pointer to the heap allocated entries (and some other stuff).
 The entries in the map must be heap allocated because the strings are variable
 length.  The string data (key) and the element object (value) are stored in the
