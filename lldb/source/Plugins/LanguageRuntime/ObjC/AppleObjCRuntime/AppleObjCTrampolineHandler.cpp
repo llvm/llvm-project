@@ -634,10 +634,9 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
         }
       }
     }
-    if (!msgSend_symbol) {
+    if (!msgSend_symbol) 
       msgSend_symbol = m_objc_module_sp->FindFirstSymbolWithNameAndType(
           name_const_str, eSymbolTypeCode);
-    }
 
     if (msgSend_symbol && msgSend_symbol->ValueIsAddress()) {
       lldb::addr_t sym_addr =
