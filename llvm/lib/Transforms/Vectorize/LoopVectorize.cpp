@@ -8189,15 +8189,24 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
 //
 // Versioning is rejected when the known trip count is below
 // max(MinTC2, MinTC_load).
+// Returns true if it is profitable to emit a runtime-check-dominated versioned
+// loop with the bound load speculatively hoisted.
+//
+// Uses a conservative heuristic based on the number of existing runtime
+// pointer checks. The full LV cost model runs on the versioned clone inside
+// processLoop, so this is only a pre-screen to avoid obviously unprofitable
+// cases.
 static bool isSpeculativeBoundVersioningProfitable(
     const LoopAccessInfo &LAI, Loop *L, LoadInst *BoundLoad,
     PredicatedScalarEvolution &PSE, DominatorTree *DT, LoopInfo *LI,
-    TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE) {
-  
-  // We expect this function to only be called when we have identified a candidate load for speculative bound versioning, Should this be an assertion instead?
+    TargetTransformInfo *TTI,
+    OptimizationRemarkEmitter *ORE) {
+
+  // We expect this function to only be called when we have identified a
+  // candidate load for speculative bound versioning. Should this be an assert?
   if (!BoundLoad)
     return false;
-  
+
   // Hard cap: too many existing checks means too much overhead.
   if (LAI.getNumRuntimePointerChecks() > VectorizeMemoryCheckThreshold) {
     LLVM_DEBUG(dbgs() << "LV: Skipping speculative bound versioning: too many "

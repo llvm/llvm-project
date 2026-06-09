@@ -82,46 +82,64 @@ define dso_local void @_Z4foo2PiS_S_S_(ptr noundef writeonly captures(none) %A, 
 ; CHECK-LABEL: define dso_local void @_Z4foo2PiS_S_S_(
 ; CHECK-SAME: ptr noundef writeonly captures(none) [[A:%.*]], ptr noundef readonly captures(none) [[B:%.*]], ptr noundef readonly captures(none) [[C:%.*]], ptr noundef readnone captures(none) [[LEN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[C9:%.*]] = ptrtoaddr ptr [[C]] to i64
-; CHECK-NEXT:    [[B8:%.*]] = ptrtoaddr ptr [[B]] to i64
-; CHECK-NEXT:    [[A7:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA5]]
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label %[[IVBOUND_RTCHECK:.*]], label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[IVBOUND_RTCHECK]]:
-; CHECK-NEXT:    [[DOTSPECULATIVELY_HOISTED:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA5]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[DOTSPECULATIVELY_HOISTED]] to i64
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP1]], i64 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[SMAX]], 2
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[C]], i64 [[TMP2]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[B]], i64 12
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[SCEVGEP2]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[SCEVGEP]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[ARRAYIDX]], inttoptr (i64 -1 to ptr)
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[A]], [[SCEVGEP3]]
-; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[C]], [[SCEVGEP]]
+; CHECK-NEXT:    [[BOUND04:%.*]] = icmp ult ptr [[A]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[BOUND15:%.*]] = icmp ult ptr [[B]], inttoptr (i64 -1 to ptr)
 ; CHECK-NEXT:    [[FOUND_CONFLICT6:%.*]] = and i1 [[BOUND04]], [[BOUND15]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT6]]
+; CHECK-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[A]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[C]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
+; CHECK-NEXT:    [[IVBOUND_SAFE:%.*]] = or i1 [[CONFLICT_RDX]], [[FOUND_CONFLICT13]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA5]]
 ; CHECK-NEXT:    [[IVBOUND_WG_LOW_CHK:%.*]] = icmp ule ptr [[A]], [[ARRAYIDX]]
 ; CHECK-NEXT:    [[IVBOUND_WG_HIGH_CHK:%.*]] = icmp ult ptr [[ARRAYIDX]], inttoptr (i64 -1 to ptr)
 ; CHECK-NEXT:    [[IVBOUND_IN_WRITE_RANGE:%.*]] = and i1 [[IVBOUND_WG_LOW_CHK]], [[IVBOUND_WG_HIGH_CHK]]
-; CHECK-NEXT:    [[IVBOUND_SAFE:%.*]] = or i1 [[CONFLICT_RDX]], false
 ; CHECK-NEXT:    [[IVBOUND_SAFE7:%.*]] = or i1 [[IVBOUND_SAFE]], [[IVBOUND_IN_WRITE_RANGE]]
 ; CHECK-NEXT:    br i1 [[IVBOUND_SAFE7]], label %[[FOR_BODY_PREHEADER:.*]], label %[[FOR_BODY_PREHEADER_LVER:.*]]
-; CHECK:       [[FOR_BODY_PREHEADER_LVER]]:
+; CHECK:       [[FOR_BODY_PREHEADER]]:
+; CHECK-NEXT:    br label %[[FOR_BODY_LVER_ORIG:.*]]
+; CHECK:       [[FOR_BODY_LVER_ORIG]]:
+; CHECK-NEXT:    [[INDVARS_IV_LVER_ORIG:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_LVER_ORIG:%.*]], %[[FOR_BODY_LVER_ORIG]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[ARRAYIDX1_LVER_ORIG:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV_LVER_ORIG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX1_LVER_ORIG]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    [[ARRAYIDX3_LVER_ORIG:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[INDVARS_IV_LVER_ORIG]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3_LVER_ORIG]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    [[ADD_LVER_ORIG:%.*]] = add nsw i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[ARRAYIDX5_LVER_ORIG:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV_LVER_ORIG]]
+; CHECK-NEXT:    store i32 [[ADD_LVER_ORIG]], ptr [[ARRAYIDX5_LVER_ORIG]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT_LVER_ORIG]] = add nuw nsw i64 [[INDVARS_IV_LVER_ORIG]], 1
+; CHECK-NEXT:    [[DOTSPECULATIVELY_HOISTED:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA5]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i32 [[DOTSPECULATIVELY_HOISTED]] to i64
-; CHECK-NEXT:    [[SMAX12:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP3]], i64 1)
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX12]], 8
+; CHECK-NEXT:    [[CMP_LVER_ORIG:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_LVER_ORIG]], [[TMP3]]
+; CHECK-NEXT:    br i1 [[CMP_LVER_ORIG]], label %[[FOR_BODY_LVER_ORIG]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:.*]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       [[FOR_BODY_PREHEADER_LVER]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = sext i32 [[TMP20]] to i64
+; CHECK-NEXT:    [[SMAX12:%.*]] = call i64 @llvm.smax.i64(i64 [[TMP5]], i64 1)
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX12]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[A7]], [[B8]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP4]], 32
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[A7]], [[C9]]
-; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = icmp ult i64 [[TMP5]], 32
+; CHECK-NEXT:    [[SCEVGEP16:%.*]] = getelementptr i8, ptr [[B]], i64 12
+; CHECK-NEXT:    [[BOUND017:%.*]] = icmp ult ptr [[A]], [[SCEVGEP16]]
+; CHECK-NEXT:    [[BOUND118:%.*]] = icmp ult ptr [[ARRAYIDX]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = and i1 [[BOUND017]], [[BOUND118]]
+; CHECK-NEXT:    [[BOUND020:%.*]] = icmp ult ptr [[A]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[BOUND121:%.*]] = icmp ult ptr [[B]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = and i1 [[BOUND020]], [[BOUND121]]
 ; CHECK-NEXT:    [[CONFLICT_RDX11:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK10]]
-; CHECK-NEXT:    br i1 [[CONFLICT_RDX11]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    [[BOUND024:%.*]] = icmp ult ptr [[A]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[BOUND125:%.*]] = icmp ult ptr [[C]], inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    [[FOUND_CONFLICT26:%.*]] = and i1 [[BOUND024]], [[BOUND125]]
+; CHECK-NEXT:    [[CONFLICT_RDX27:%.*]] = or i1 [[CONFLICT_RDX11]], [[FOUND_CONFLICT26]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX27]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX12]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX12]], [[N_MOD_VF]]
@@ -130,43 +148,28 @@ define dso_local void @_Z4foo2PiS_S_S_(ptr noundef writeonly captures(none) %A, 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP6]], i64 4
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4, !tbaa [[INT_TBAA5]]
-; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i32>, ptr [[TMP7]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4, !tbaa [[INT_TBAA5]], !alias.scope [[META12:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i32>, ptr [[TMP7]], align 4, !tbaa [[INT_TBAA5]], !alias.scope [[META12]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP8]], i64 4
-; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP8]], align 4, !tbaa [[INT_TBAA5]]
-; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP8]], align 4, !tbaa [[INT_TBAA5]], !alias.scope [[META15:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4, !tbaa [[INT_TBAA5]], !alias.scope [[META15]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i32> [[WIDE_LOAD14]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw <4 x i32> [[WIDE_LOAD15]], [[WIDE_LOAD13]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP12]], i64 4
-; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[TMP12]], align 4, !tbaa [[INT_TBAA5]]
-; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP13]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[TMP12]], align 4, !tbaa [[INT_TBAA5]], !alias.scope [[META17:![0-9]+]], !noalias [[META19:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> [[TMP11]], ptr [[TMP13]], align 4, !tbaa [[INT_TBAA5]], !alias.scope [[META17]], !noalias [[META19]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX12]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT1:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[FOR_BODY_PREHEADER_LVER]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    br label %[[FOR_BODY_LVER:.*]]
-; CHECK:       [[FOR_BODY_LVER]]:
-; CHECK-NEXT:    [[INDVARS_IV_LVER:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_LVER:%.*]], %[[FOR_BODY_LVER]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX1_LVER:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV_LVER]]
-; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[ARRAYIDX1_LVER]], align 4, !tbaa [[INT_TBAA5]]
-; CHECK-NEXT:    [[ARRAYIDX3_LVER:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[INDVARS_IV_LVER]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX3_LVER]], align 4, !tbaa [[INT_TBAA5]]
-; CHECK-NEXT:    [[ADD_LVER:%.*]] = add nsw i32 [[TMP16]], [[TMP15]]
-; CHECK-NEXT:    [[ARRAYIDX5_LVER:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV_LVER]]
-; CHECK-NEXT:    store i32 [[ADD_LVER]], ptr [[ARRAYIDX5_LVER]], align 4, !tbaa [[INT_TBAA5]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT_LVER]] = add nuw nsw i64 [[INDVARS_IV_LVER]], 1
-; CHECK-NEXT:    [[TMP17:%.*]] = sext i32 [[DOTSPECULATIVELY_HOISTED]] to i64
-; CHECK-NEXT:    [[CMP_LVER:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT_LVER]], [[TMP17]]
-; CHECK-NEXT:    br i1 [[CMP_LVER]], label %[[FOR_BODY_LVER]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT1]], !llvm.loop [[LOOP15:![0-9]+]]
-; CHECK:       [[FOR_BODY_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT:.*]]:
+; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP_LOOPEXIT:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT1]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP_LOOPEXIT]]
@@ -175,7 +178,7 @@ define dso_local void @_Z4foo2PiS_S_S_(ptr noundef writeonly captures(none) %A, 
 ; CHECK:       [[FOR_COND_CLEANUP]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4, !tbaa [[INT_TBAA5]]
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[INDVARS_IV]]
@@ -184,10 +187,10 @@ define dso_local void @_Z4foo2PiS_S_S_(ptr noundef writeonly captures(none) %A, 
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX5]], align 4, !tbaa [[INT_TBAA5]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[INT_TBAA5]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = sext i32 [[TMP20]] to i64
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[INDVARS_IV_NEXT]], [[TMP21]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT_LOOPEXIT1]], !llvm.loop [[LOOP25:![0-9]+]]
 ;
 entry:
   %arrayidx = getelementptr inbounds nuw i8, ptr %B, i64 8
@@ -239,10 +242,19 @@ attributes #0 = { mustprogress nofree norecurse nosync nounwind memory(argmem: r
 ; CHECK: [[META8]] = !{!"Simple C++ TBAA"}
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META10:![0-9]+]]}
 ; CHECK: [[META10]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META12:![0-9]+]], [[META13:![0-9]+]], [[META14:![0-9]+]]}
-; CHECK: [[META12]] = !{!"llvm.loop.speculative.bound.hoist.versioned"}
-; CHECK: [[META13]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META14]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP15]] = distinct !{[[LOOP15]], [[META12]], [[META13]]}
-; CHECK: [[LOOP16]] = distinct !{[[LOOP16]], [[META10]]}
+; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META10]]}
+; CHECK: [[META12]] = !{[[META13:![0-9]+]]}
+; CHECK: [[META13]] = distinct !{[[META13]], [[META14:![0-9]+]]}
+; CHECK: [[META14]] = distinct !{[[META14]], !"LVerDomain"}
+; CHECK: [[META15]] = !{[[META16:![0-9]+]]}
+; CHECK: [[META16]] = distinct !{[[META16]], [[META14]]}
+; CHECK: [[META17]] = !{[[META18:![0-9]+]]}
+; CHECK: [[META18]] = distinct !{[[META18]], [[META14]]}
+; CHECK: [[META19]] = !{[[META20:![0-9]+]], [[META13]], [[META16]]}
+; CHECK: [[META20]] = distinct !{[[META20]], [[META14]]}
+; CHECK: [[LOOP21]] = distinct !{[[LOOP21]], [[META10]], [[META22:![0-9]+]], [[META23:![0-9]+]], [[META24:![0-9]+]]}
+; CHECK: [[META22]] = !{!"llvm.loop.speculative.bound.hoist.versioned"}
+; CHECK: [[META23]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META24]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP25]] = distinct !{[[LOOP25]], [[META10]], [[META22]], [[META23]]}
 ;.

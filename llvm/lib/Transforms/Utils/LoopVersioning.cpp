@@ -294,21 +294,19 @@ Loop *llvm::versionLoopForInvariantBoundLoad(Loop *L, LoadInst *BoundLoad,
     if (!DT.properlyDominates(BoundPtrI->getParent(), PreHeader))
       return nullptr;
 
-  // All the relevant base pointers of participating stores should dominate both
-  // loops.
+  // Run LAA on L to obtain the pointer checks and SCEV predicates we need.
   ScalarEvolution &SE = *PSE.getSE();
   LoopAccessInfoManager PreFlightLAIs(SE, AA, DT, LI, nullptr, nullptr, AC);
   const LoopAccessInfo &PreLAI = PreFlightLAIs.getInfo(*L);
   const RuntimePointerChecking &RtPtrChecking =
       *PreLAI.getRuntimePointerChecking();
 
-  // If LAA could not compute complete pointer bounds (e.g. a gather/scatter
-  // access with an unknown indirect index), we cannot reliably determine the
-  // write ranges needed for the ivbound safety check.  Bail out rather than
-  // proceeding with an incomplete or missing write-range check.
+  // If LAA could not compute complete pointer bounds bail out.
   if (!PreLAI.canVectorizeMemory())
     return nullptr;
 
+  // All loop-invariant base pointers referenced by the checks must dominate
+  // the preheader so they are available in the check block.
   for (const auto &Check : RtPtrChecking.getChecks()) {
     for (const RuntimeCheckingPtrGroup *Group : {Check.first, Check.second}) {
       for (unsigned Idx : Group->Members) {
@@ -336,135 +334,35 @@ Loop *llvm::versionLoopForInvariantBoundLoad(Loop *L, LoadInst *BoundLoad,
     }
   }
 
-  Function *ParentF = PreHeader->getParent();
-  LLVMContext &Ctx = ParentF->getContext();
-  BasicBlock *OrigExitBlock = L->getUniqueExitBlock();
+  // Use LoopVersioning to perform the CFG split, clone, check generation,
+  // PHI fixup, and formDedicatedExitBlocks.  After versionLoop():
+  //   - L              is the fast path (versioned, no-alias assumed)
+  //   - NonVersionedLoop is the fallback clone (original semantics)
+  // The check block is L->getLoopPreheader() before the split, which becomes
+  // the lver.check block after versionLoop() renames it.
+  LoopVersioning LVer(PreLAI, RtPtrChecking.getChecks(), L, &LI, &DT, &SE);
+  LVer.versionLoop();
 
-  BasicBlock *RtCheckBB =
-      BasicBlock::Create(Ctx, "ivbound.rtcheck", ParentF, PreHeader);
+  // The check block is the block that now precedes both loop preheaders.
+  // After versionLoop() it is the block that was originally L's preheader
+  // (renamed to lver.check), whose terminator is the conditional branch.
+  BasicBlock *CheckBB = L->getLoopPreheader()->getSinglePredecessor();
+  assert(CheckBB && "Expected a single predecessor check block after versioning");
+  Instruction *CheckTerm = CheckBB->getTerminator();
 
-  // Temporary terminator so SCEVExpander has a valid insertion point.
-  IRBuilder<> TmpBuilder(RtCheckBB);
-  Instruction *TmpTerm = TmpBuilder.CreateUnreachable();
-
-  // Re-wire the CFG: redirect predecessors of the preheader to RtCheckBB.
-  SmallVector<BasicBlock *, 4> PreHeaderPreds(predecessors(PreHeader));
-  for (auto *Pred : PreHeaderPreds)
-    Pred->getTerminator()->replaceUsesOfWith(PreHeader, RtCheckBB);
-
-  BasicBlock *OldPreheadIdom = DT.getNode(PreHeader)->getIDom()->getBlock();
-  DT.addNewBlock(RtCheckBB, OldPreheadIdom);
-  DT.changeImmediateDominator(PreHeader, RtCheckBB);
-
-  // Fix preheader PHIs: move their incoming values into new PHIs in RtCheckBB.
-  for (PHINode &PN : make_early_inc_range(PreHeader->phis())) {
-    PHINode *RtcPN =
-        PHINode::Create(PN.getType(), PreHeaderPreds.size(),
-                        PN.getName() + ".rtcphi", RtCheckBB->begin());
-    for (unsigned i = 0; i < PN.getNumIncomingValues(); i++) {
-      BasicBlock *IBB = PN.getIncomingBlock(i);
-      assert(is_contained(PreHeaderPreds, IBB) &&
-             "Incoming basic block not part of predecessors list!");
-      RtcPN->addIncoming(PN.getIncomingValue(i), IBB);
-    }
-    PN.replaceAllUsesWith(RtcPN);
-    PN.eraseFromParent();
-  }
-
-  // Clone the loop including its preheader.
-  ValueToValueMapTy VMap;
-  SmallVector<BasicBlock *, 4> NewBlocks;
-  Loop *VerLoop = cloneLoopWithPreheader(PreHeader, RtCheckBB, L, VMap, ".lver",
-                                         &LI, &DT, NewBlocks);
-  remapInstructionsInBlocks(NewBlocks, VMap);
-
-  BasicBlock *VerPreHeader = cast<BasicBlock>(VMap[PreHeader]);
-  BasicBlock *VerLatch = cast<BasicBlock>(VMap[L->getLoopLatch()]);
-
-  if (Loop *ParLoop = L->getParentLoop())
-    ParLoop->addBasicBlockToLoop(RtCheckBB, LI);
-
-  // Clear any existing loop metadata on the versioned latch; it will be
-  // replaced below with the speculative-hoist marker.
-  VerLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
-
-  // Speculatively hoist the bound load into RtCheckBB so the versioned loop
-  // sees a loop-invariant trip count.
+  // Speculatively hoist BoundLoad into the check block so the fast-path loop
+  // (L) sees a loop-invariant trip count.  The fallback clone already has the
+  // original bound load in place — no changes needed there.
   LoadInst *HoistLoad = cast<LoadInst>(BoundLoad->clone());
   HoistLoad->setName(BoundLoad->getName() + ".speculatively.hoisted");
-  HoistLoad->insertBefore(TmpTerm->getIterator());
-  Instruction *ClonedBoundLoad = cast<Instruction>(VMap[BoundLoad]);
-  ClonedBoundLoad->replaceAllUsesWith(HoistLoad);
-  ClonedBoundLoad->eraseFromParent();
+  HoistLoad->insertBefore(CheckTerm->getIterator());
+  BoundLoad->replaceAllUsesWith(HoistLoad);
 
-  // Fix LCSSA PHIs: add incoming edges from the versioned latch.
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L->getExitBlocks(ExitBlocks);
-  for (BasicBlock *ExBB : ExitBlocks) {
-    DT.changeImmediateDominator(ExBB, RtCheckBB);
-    for (PHINode &Phi : ExBB->phis()) {
-      int Idx = Phi.getBasicBlockIndex(L->getLoopLatch());
-      if (Idx < 0)
-        continue;
-      Value *OrigVal = Phi.getIncomingValue(Idx);
-      Value *NewVal =
-          VMap.count(OrigVal) ? cast<Value>(VMap[OrigVal]) : OrigVal;
-      Phi.addIncoming(NewVal, VerLatch);
-    }
-  }
-
-  formDedicatedExitBlocks(L, &DT, &LI, nullptr, true);
-  formDedicatedExitBlocks(VerLoop, &DT, &LI, nullptr, true);
-
-  // Fix any preheader definitions used outside both loops by inserting a merge
-  // PHI in the original exit block.
-  BasicBlock *NewExitBlock = L->getUniqueExitBlock();
-  BasicBlock *VerNewExitBlock = VerLoop->getUniqueExitBlock();
-  if (NewExitBlock && VerNewExitBlock) {
-    for (Instruction &I : *PreHeader) {
-      if (I.isTerminator())
-        continue;
-      Value *CloneI = VMap.count(&I) ? VMap[&I] : nullptr;
-      if (!CloneI)
-        continue;
-      SmallVector<Use *, 4> ExitUses;
-      for (Use &U : I.uses()) {
-        auto *UI = dyn_cast<Instruction>(U.getUser());
-        BasicBlock *UserBlock = UI->getParent();
-        if (UI && UserBlock != PreHeader && !L->contains(UserBlock) &&
-            !VerLoop->contains(UserBlock))
-          ExitUses.push_back(&U);
-      }
-      if (ExitUses.empty())
-        continue;
-      PHINode *MergePhi = PHINode::Create(
-          I.getType(), 2, I.getName() + ".merge", OrigExitBlock->begin());
-      MergePhi->addIncoming(&I, NewExitBlock);
-      MergePhi->addIncoming(CloneI, VerNewExitBlock);
-      for (Use *U : ExitUses)
-        U->set(MergePhi);
-    }
-  }
-
-  // Generate runtime checks on the versioned loop using LAA.
-  LoopAccessInfoManager NewLAIs(SE, AA, DT, LI, nullptr, nullptr, AC);
-  const LoopAccessInfo &VerLAI = NewLAIs.getInfo(*VerLoop);
-
-  SCEVExpander MemExp(*VerLAI.getRuntimePointerChecking()->getSE(),
-                      "ivbound.mem.check");
-  Value *MemRTC = nullptr;
-  if (VerLAI.getRuntimePointerChecking()->Need)
-    MemRTC = addRuntimeChecks(TmpTerm, VerLoop,
-                              VerLAI.getRuntimePointerChecking()->getChecks(),
-                              MemExp);
-
-  SCEVExpander SCEVEx(SE, "ivbound.scev.check");
-  const SCEVPredicate &Preds = VerLAI.getPSE().getPredicate();
-  Value *SCEVrtc = SCEVEx.expandCodeForPredicate(&Preds, TmpTerm);
-
-  // Check whether BoundPtrOl falls within any write group's [Low, High) byte
-  // range at runtime.  If it does, the speculative hoist is unsafe (a store
-  // in the loop would overwrite *BoundPtr), so fall back to the scalar loop.
+  // Add the write-range check: verify at runtime that BoundPtrOl does not
+  // fall within any write group's [Low, High) byte range.  If it does, the
+  // speculative hoist is unsafe (a store in the loop would overwrite
+  // *BoundPtr), so we must fall back to the original loop.
+  LLVMContext &Ctx = CheckBB->getContext();
   SCEVExpander PreExp(SE, "ivbound.wg.check");
   Value *BoundInWriteRange = nullptr;
   for (const RuntimeCheckingPtrGroup &Group : RtPtrChecking.CheckingGroups) {
@@ -474,14 +372,14 @@ Loop *llvm::versionLoopForInvariantBoundLoad(Loop *L, LoadInst *BoundLoad,
     if (!HasWrite)
       continue;
     Type *PtrArithTy = PointerType::get(Ctx, Group.AddressSpace);
-    Value *GroupLow = PreExp.expandCodeFor(Group.Low, PtrArithTy, TmpTerm);
-    Value *GroupHigh = PreExp.expandCodeFor(Group.High, PtrArithTy, TmpTerm);
+    Value *GroupLow = PreExp.expandCodeFor(Group.Low, PtrArithTy, CheckTerm);
+    Value *GroupHigh = PreExp.expandCodeFor(Group.High, PtrArithTy, CheckTerm);
     if (Group.NeedsFreeze) {
-      IRBuilder<> FreezeB(TmpTerm);
+      IRBuilder<> FreezeB(CheckTerm);
       GroupLow = FreezeB.CreateFreeze(GroupLow, "ivbound.wg.low.fr");
       GroupHigh = FreezeB.CreateFreeze(GroupHigh, "ivbound.wg.high.fr");
     }
-    IRBuilder<> Builder(TmpTerm);
+    IRBuilder<> Builder(CheckTerm);
     Value *Cmp0 =
         Builder.CreateICmpULE(GroupLow, BoundPtrOl, "ivbound.wg.low.chk");
     Value *Cmp1 =
@@ -489,60 +387,42 @@ Loop *llvm::versionLoopForInvariantBoundLoad(Loop *L, LoadInst *BoundLoad,
     Value *InRange = Builder.CreateAnd(Cmp0, Cmp1, "ivbound.in.write.range");
     BoundInWriteRange =
         BoundInWriteRange
-            ? Builder.CreateOr(BoundInWriteRange, InRange, "ivbound.wg.rdx")
+            ? IRBuilder<>(CheckTerm).CreateOr(BoundInWriteRange, InRange,
+                                              "ivbound.wg.rdx")
             : InRange;
   }
 
-  // Combine all runtime check conditions: alias checks, SCEV predicates, and
-  // the bound-pointer write-range check.
-  Value *RtCheckCond = nullptr;
-  for (Value *Cond : {MemRTC, SCEVrtc, BoundInWriteRange}) {
-    if (!Cond)
-      continue;
-    if (!RtCheckCond) {
-      RtCheckCond = Cond;
-    } else {
-      IRBuilder<> Builder(TmpTerm);
-      RtCheckCond = Builder.CreateOr(RtCheckCond, Cond, "ivbound.safe");
-    }
+  // Fold the write-range check into the existing conditional branch condition.
+  // versionLoop() emits:  br (lver.safe), fallback, fastpath
+  // We want:              br (lver.safe | BoundInWriteRange), fallback, fastpath
+  if (BoundInWriteRange) {
+    auto *BI = cast<CondBrInst>(CheckTerm);
+    IRBuilder<> Builder(CheckBB, BI->getIterator());
+    Value *NewCond = Builder.CreateOr(BI->getCondition(), BoundInWriteRange,
+                                      "ivbound.safe");
+    BI->setCondition(NewCond);
   }
 
-  TmpTerm->eraseFromParent();
-  IRBuilder<> Builder(RtCheckBB);
-
-  // If no runtime checks are needed the versioned loop is unconditionally safe;
-  // use constant false so the original (fallback) path is never taken.
-  if (!RtCheckCond)
-    RtCheckCond = ConstantInt::getFalse(Ctx);
-
-  // Branch: If conflict is detected then take the original loop path, else take
-  // the versioned loop path.
-  Builder.CreateCondBr(RtCheckCond, PreHeader, VerPreHeader);
-  DT.insertEdge(RtCheckBB, PreHeader);
-  DT.insertEdge(RtCheckBB, VerPreHeader);
-
-  assert(VerLatch &&
-         "Versioned loop must have a single latch; loop not in canonical form");
-
-  // Emit metadata on the versioned latch to prevent repeated re-versioning of
-  // the same loop if processLoop is called again on the versioned clone.
-  Instruction *VerLatchTerm = VerLatch->getTerminator();
+  // Emit metadata on L's latch to prevent re-versioning if processLoop is
+  // called again on the fast-path loop.
+  BasicBlock *Latch = L->getLoopLatch();
+  assert(Latch && "Loop must have a single latch");
+  Instruction *LatchTerm = Latch->getTerminator();
   MDNode *Marker = MDNode::get(
       Ctx, {(Metadata *)MDString::get(
-               Ctx, "llvm.loop.speculative.bound.hoist.versioned")});
-  MDNode *ExistingMD = VerLatchTerm->getMetadata(LLVMContext::MD_loop);
-  SmallVector<Metadata *, 4> Mds;
-  if (ExistingMD)
-    Mds.append(ExistingMD->op_begin(), ExistingMD->op_end());
-  else
-    Mds.push_back(nullptr);
+                Ctx, "llvm.loop.speculative.bound.hoist.versioned")});
+  MDNode *ExistingMD = LatchTerm->getMetadata(LLVMContext::MD_loop);
+  SmallVector<Metadata *, 4> Mds = {nullptr};
+  if (ExistingMD) {
+    for (unsigned I = 1, E = ExistingMD->getNumOperands(); I < E; ++I)
+      Mds.push_back(ExistingMD->getOperand(I));
+  }
   Mds.push_back(Marker);
-  MDNode *NewLoopMD = MDNode::getDistinct(Ctx, Mds);
-  if (!ExistingMD)
-    NewLoopMD->replaceOperandWith(0, NewLoopMD);
-  VerLatchTerm->setMetadata(LLVMContext::MD_loop, NewLoopMD);
+  MDNode *NewLoopMD = MDNode::get(Ctx, Mds);
+  NewLoopMD->replaceOperandWith(0, NewLoopMD);
+  LatchTerm->setMetadata(LLVMContext::MD_loop, NewLoopMD);
 
-  return VerLoop;
+  return L;
 }
 
 namespace {
