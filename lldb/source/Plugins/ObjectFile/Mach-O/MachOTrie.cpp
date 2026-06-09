@@ -37,14 +37,22 @@ void TrieEntryWithOffset::Dump(uint32_t idx) const {
   entry.Dump();
 }
 
-bool lldb_private::ParseTrieEntries(
-    DataExtractor &data, lldb::offset_t offset, const bool is_arm,
-    lldb::addr_t text_seg_base_addr, std::string &prefix,
-    std::set<lldb::addr_t> &resolver_addresses,
-    std::vector<TrieEntryWithOffset> &reexports,
-    std::vector<TrieEntryWithOffset> &ext_symbols) {
+namespace {
+
+bool ParseTrieEntriesImpl(DataExtractor &data, lldb::offset_t offset,
+                          const bool is_arm, addr_t text_seg_base_addr,
+                          std::string &prefix,
+                          std::set<lldb::addr_t> &resolver_addresses,
+                          std::vector<TrieEntryWithOffset> &reexports,
+                          std::vector<TrieEntryWithOffset> &ext_symbols,
+                          std::set<lldb::offset_t> &visited_nodes) {
   if (!data.ValidOffset(offset))
     return true;
+
+  // Every node in a well-formed trie is reached by exactly one path, so a node
+  // offset seen twice means the trie is corrupt.
+  if (!visited_nodes.insert(offset).second)
+    return false;
 
   // Terminal node -- end of a branch, possibly add this to
   // the symbol table or resolver table.
@@ -114,13 +122,27 @@ bool lldb_private::ParseTrieEntries(
     prefix.append(cstr);
     lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
     if (childNodeOffset) {
-      if (!ParseTrieEntries(data, childNodeOffset, is_arm, text_seg_base_addr,
-                            prefix, resolver_addresses, reexports,
-                            ext_symbols)) {
+      if (!ParseTrieEntriesImpl(data, childNodeOffset, is_arm,
+                                text_seg_base_addr, prefix, resolver_addresses,
+                                reexports, ext_symbols, visited_nodes)) {
         return false;
       }
     }
     prefix.resize(prevSize);
   }
   return true;
+}
+
+} // namespace
+
+bool lldb_private::ParseTrieEntries(
+    DataExtractor &data, lldb::offset_t offset, const bool is_arm,
+    lldb::addr_t text_seg_base_addr, std::string &prefix,
+    std::set<lldb::addr_t> &resolver_addresses,
+    std::vector<TrieEntryWithOffset> &reexports,
+    std::vector<TrieEntryWithOffset> &ext_symbols) {
+  std::set<lldb::offset_t> visited_nodes;
+  return ParseTrieEntriesImpl(data, offset, is_arm, text_seg_base_addr, prefix,
+                              resolver_addresses, reexports, ext_symbols,
+                              visited_nodes);
 }

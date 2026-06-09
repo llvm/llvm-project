@@ -59,7 +59,7 @@ static const char *OverloadTestA() { return "OverloadCall"; }
 
 std::string StdString(const char *Ptr) { return Ptr ? Ptr : ""; }
 
-TEST(DynamicLibrary, Overload) LLVM_NO_SANITIZE("cfi-icall") {
+TEST(DynamicLibrary, Overload) {
   {
     std::string Err;
     DynamicLibrary DL =

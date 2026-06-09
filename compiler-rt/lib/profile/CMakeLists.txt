@@ -216,14 +216,19 @@ else()
     PARENT_TARGET profile)
 endif()
 
-# clang_rt.profile_rocm: opt-in, self-contained host-side profile runtime for
-# HIP/ROCm device PGO. It is a superset of clang_rt.profile (all base sources
-# plus InstrProfilingPlatformROCm.cpp and its interceptor dependency), built
-# entirely /MD on Windows so a single CRT model holds within the archive and
-# clang_rt.profile is left untouched (/MT, no ROCm). The driver links it ahead
-# of clang_rt.profile, which then stays inert.
+set(PROFILE_ROCM_SUPPORTED_OS OFF)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "^(Linux|Windows)$")
+  set(PROFILE_ROCM_SUPPORTED_OS ON)
+endif()
+
+# clang_rt.profile_rocm: self-contained host-side profile runtime for HIP/ROCm
+# device PGO on Linux and Windows. It is a superset of clang_rt.profile (all
+# base sources plus InstrProfilingPlatformROCm.cpp and its interceptor
+# dependency), built entirely /MD on Windows so a single CRT model holds within
+# the archive and clang_rt.profile is left untouched (/MT, no ROCm). The driver
+# links it ahead of clang_rt.profile, which then stays inert.
 if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
-   AND COMPILER_RT_HAS_INTERCEPTION
+   AND PROFILE_ROCM_SUPPORTED_OS AND COMPILER_RT_HAS_INTERCEPTION
    AND TARGET RTInterception.${COMPILER_RT_DEFAULT_TARGET_ARCH}
    AND TARGET RTSanitizerCommon.${COMPILER_RT_DEFAULT_TARGET_ARCH}
    AND TARGET RTSanitizerCommonLibc.${COMPILER_RT_DEFAULT_TARGET_ARCH})
@@ -251,26 +256,13 @@ if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
   endif()
 
-  if(APPLE)
-    add_compiler_rt_runtime(clang_rt.profile_rocm
-      STATIC
-      OS ${PROFILE_SUPPORTED_OS}
-      ARCHS ${PROFILE_SUPPORTED_ARCH}
-      OBJECT_LIBS ${PROFILE_ROCM_OBJECT_LIBS}
-      CFLAGS ${PROFILE_ROCM_FLAGS}
-      SOURCES ${PROFILE_ROCM_SOURCES}
-      ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-      LINK_LIBS ${PROFILE_LINK_LIBS}
-      PARENT_TARGET profile)
-  else()
-    add_compiler_rt_runtime(clang_rt.profile_rocm
-      STATIC
-      ARCHS ${PROFILE_SUPPORTED_ARCH}
-      OBJECT_LIBS ${PROFILE_ROCM_OBJECT_LIBS}
-      CFLAGS ${PROFILE_ROCM_FLAGS}
-      SOURCES ${PROFILE_ROCM_SOURCES}
-      ADDITIONAL_HEADERS ${PROFILE_HEADERS}
-      LINK_LIBS ${PROFILE_LINK_LIBS}
-      PARENT_TARGET profile)
-  endif()
+  add_compiler_rt_runtime(clang_rt.profile_rocm
+    STATIC
+    ARCHS ${PROFILE_SUPPORTED_ARCH}
+    OBJECT_LIBS ${PROFILE_ROCM_OBJECT_LIBS}
+    CFLAGS ${PROFILE_ROCM_FLAGS}
+    SOURCES ${PROFILE_ROCM_SOURCES}
+    ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+    LINK_LIBS ${PROFILE_LINK_LIBS}
+    PARENT_TARGET profile)
 endif()

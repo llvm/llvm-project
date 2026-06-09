@@ -663,12 +663,12 @@ Processor-Specific Tuning Feature String
 ========================================
 Due to RISC-V's highly configurable nature, it is often desirable to share a single scheduling model across multiple similar RISC-V processors that only differ in a small number of (uArch) tuning features. An example of such tuning feature could be whether the latency of vector operations depend on VL or not. This could be extended to tuning features that are not directly connected to scheduling model but other parts of the RISC-V backend, like the cost of ``vrgather.vv`` instruction.
 
-To that end, RISC-V LLVM supports a tuning feature string format that helps users to build a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this string
+To that end, RISC-V LLVM supports a tuning feature string format, through frontend flags like ``-mtune`` in Clang, to help users building a performance model by "configuring" an existing tune CPU, along with its scheduling model. For example, this flag
 
 ::
-    "sifive-x280:single-element-vec-fp64"
+    -mtune=sifive-x280:single-element-vec-fp64
 
-takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``. This string could eventually be used in places like ``-mtune`` at the frontend.
+takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-element-vec-fp64``. This gives us a performance model that looks exactly like that of ``sifive-x280``, except some of the 64-bit vector floating point instructions now produce only a single element per cycle due to ``single-element-vec-fp64``.
 
 More formally speaking, each tuning feature string has the following format:
 
