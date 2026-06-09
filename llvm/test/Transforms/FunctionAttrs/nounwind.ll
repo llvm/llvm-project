@@ -352,7 +352,7 @@ define void @catchswitch_cleanuppad() personality ptr @__gxx_personality_v0 {
 ; FNATTRS-NEXT:    invoke void @do_throw()
 ; FNATTRS-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CS:%.*]]
 ; FNATTRS:       cs:
-; FNATTRS-NEXT:    [[TOK:%.*]] = catchswitch within none [label %catch] unwind label [[CPAD:%.*]]
+; FNATTRS-NEXT:    [[TOK:%.*]] = catchswitch within none [label [[CATCH:%.*]]] unwind label [[CPAD:%.*]]
 ; FNATTRS:       catch:
 ; FNATTRS-NEXT:    [[C:%.*]] = catchpad within [[TOK]] [ptr @catch_ty, i32 0, ptr null]
 ; FNATTRS-NEXT:    call void @abort()
@@ -370,7 +370,7 @@ define void @catchswitch_cleanuppad() personality ptr @__gxx_personality_v0 {
 ; ATTRIBUTOR-NEXT:    invoke void @do_throw()
 ; ATTRIBUTOR-NEXT:            to label [[UNREACHABLE:%.*]] unwind label [[CS:%.*]]
 ; ATTRIBUTOR:       cs:
-; ATTRIBUTOR-NEXT:    [[TOK:%.*]] = catchswitch within none [label %catch] unwind label [[CPAD:%.*]]
+; ATTRIBUTOR-NEXT:    [[TOK:%.*]] = catchswitch within none [label [[CATCH:%.*]]] unwind label [[CPAD:%.*]]
 ; ATTRIBUTOR:       catch:
 ; ATTRIBUTOR-NEXT:    [[C:%.*]] = catchpad within [[TOK]] [ptr @catch_ty, i32 0, ptr null]
 ; ATTRIBUTOR-NEXT:    call void @abort()
@@ -404,7 +404,7 @@ unreachable:
 
 define void @unknown_call(ptr %fn) {
 ; FNATTRS-LABEL: define {{[^@]+}}@unknown_call
-; FNATTRS-SAME: (ptr readonly captures(none) [[FN:%.*]]) {
+; FNATTRS-SAME: (ptr nofree readonly captures(none) [[FN:%.*]]) {
 ; FNATTRS-NEXT:    call void [[FN]]()
 ; FNATTRS-NEXT:    ret void
 ;
@@ -420,7 +420,7 @@ define void @unknown_call(ptr %fn) {
 define void @unknown_nounwind_call(ptr %fn) {
 ; FNATTRS: Function Attrs: nounwind
 ; FNATTRS-LABEL: define {{[^@]+}}@unknown_nounwind_call
-; FNATTRS-SAME: (ptr readonly captures(none) [[FN:%.*]]) #[[ATTR2:[0-9]+]] {
+; FNATTRS-SAME: (ptr nofree readonly captures(none) [[FN:%.*]]) #[[ATTR2:[0-9]+]] {
 ; FNATTRS-NEXT:    call void [[FN]]() #[[ATTR2]]
 ; FNATTRS-NEXT:    ret void
 ;

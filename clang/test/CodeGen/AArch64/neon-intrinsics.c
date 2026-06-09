@@ -5299,6 +5299,84 @@ uint32x4_t test_vsraq_n_u32(uint32x4_t a, uint32x4_t b) {
 //
 uint64x2_t test_vsraq_n_u64(uint64x2_t a, uint64x2_t b) {
   return vsraq_n_u64(a, b, 3);
+// CHECK-LABEL: define dso_local <8 x i8> @test_vqshlu_n_s8(
+// CHECK-SAME: <8 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VQSHLU_N:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqshlu.v8i8(<8 x i8> [[A]], <8 x i8> splat (i8 3))
+// CHECK-NEXT:    ret <8 x i8> [[VQSHLU_N]]
+//
+uint8x8_t test_vqshlu_n_s8(int8x8_t a) {
+  return vqshlu_n_s8(a, 3);
+}
+
+// CHECK-LABEL: define dso_local <4 x i16> @test_vqshlu_n_s16(
+// CHECK-SAME: <4 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i16> [[A]] to <8 x i8>
+// CHECK-NEXT:    [[VQSHLU_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x i16>
+// CHECK-NEXT:    [[VQSHLU_N1:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqshlu.v4i16(<4 x i16> [[VQSHLU_N]], <4 x i16> splat (i16 3))
+// CHECK-NEXT:    ret <4 x i16> [[VQSHLU_N1]]
+//
+uint16x4_t test_vqshlu_n_s16(int16x4_t a) {
+  return vqshlu_n_s16(a, 3);
+}
+
+// CHECK-LABEL: define dso_local <2 x i32> @test_vqshlu_n_s32(
+// CHECK-SAME: <2 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i32> [[A]] to <8 x i8>
+// CHECK-NEXT:    [[VQSHLU_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <2 x i32>
+// CHECK-NEXT:    [[VQSHLU_N1:%.*]] = call <2 x i32> @llvm.aarch64.neon.sqshlu.v2i32(<2 x i32> [[VQSHLU_N]], <2 x i32> splat (i32 3))
+// CHECK-NEXT:    ret <2 x i32> [[VQSHLU_N1]]
+//
+uint32x2_t test_vqshlu_n_s32(int32x2_t a) {
+  return vqshlu_n_s32(a, 3);
+}
+
+// CHECK-LABEL: define dso_local <16 x i8> @test_vqshluq_n_s8(
+// CHECK-SAME: <16 x i8> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[VQSHLU_N:%.*]] = call <16 x i8> @llvm.aarch64.neon.sqshlu.v16i8(<16 x i8> [[A]], <16 x i8> splat (i8 3))
+// CHECK-NEXT:    ret <16 x i8> [[VQSHLU_N]]
+//
+uint8x16_t test_vqshluq_n_s8(int8x16_t a) {
+  return vqshluq_n_s8(a, 3);
+}
+
+// CHECK-LABEL: define dso_local <8 x i16> @test_vqshluq_n_s16(
+// CHECK-SAME: <8 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[A]] to <16 x i8>
+// CHECK-NEXT:    [[VQSHLU_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x i16>
+// CHECK-NEXT:    [[VQSHLU_N1:%.*]] = call <8 x i16> @llvm.aarch64.neon.sqshlu.v8i16(<8 x i16> [[VQSHLU_N]], <8 x i16> splat (i16 3))
+// CHECK-NEXT:    ret <8 x i16> [[VQSHLU_N1]]
+//
+uint16x8_t test_vqshluq_n_s16(int16x8_t a) {
+  return vqshluq_n_s16(a, 3);
+}
+
+// CHECK-LABEL: define dso_local <4 x i32> @test_vqshluq_n_s32(
+// CHECK-SAME: <4 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x i32> [[A]] to <16 x i8>
+// CHECK-NEXT:    [[VQSHLU_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <4 x i32>
+// CHECK-NEXT:    [[VQSHLU_N1:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqshlu.v4i32(<4 x i32> [[VQSHLU_N]], <4 x i32> splat (i32 3))
+// CHECK-NEXT:    ret <4 x i32> [[VQSHLU_N1]]
+//
+uint32x4_t test_vqshluq_n_s32(int32x4_t a) {
+  return vqshluq_n_s32(a, 3);
+}
+
+// CHECK-LABEL: define dso_local <2 x i64> @test_vqshluq_n_s64(
+// CHECK-SAME: <2 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[A]] to <16 x i8>
+// CHECK-NEXT:    [[VQSHLU_N:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
+// CHECK-NEXT:    [[VQSHLU_N1:%.*]] = call <2 x i64> @llvm.aarch64.neon.sqshlu.v2i64(<2 x i64> [[VQSHLU_N]], <2 x i64> splat (i64 3))
+// CHECK-NEXT:    ret <2 x i64> [[VQSHLU_N1]]
+//
+uint64x2_t test_vqshluq_n_s64(int64x2_t a) {
+  return vqshluq_n_s64(a, 3);
 }
 
 // CHECK-LABEL: define dso_local <8 x i8> @test_vshrn_n_s16(
@@ -14317,67 +14395,6 @@ uint64_t test_vcaltd_f64(float64_t a, float64_t b) {
   return (uint64_t)vcaltd_f64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vsrad_n_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHRD_N:%.*]] = ashr i64 [[B]], 63
-// CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[A]], [[SHRD_N]]
-// CHECK-NEXT:    ret i64 [[TMP0]]
-//
-int64_t test_vsrad_n_s64(int64_t a, int64_t b) {
-  return (int64_t)vsrad_n_s64(a, b, 63);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vsra_n_s64(
-// CHECK-SAME: <1 x i64> noundef [[A:%.*]], <1 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK-NEXT:    [[VSRA_N:%.*]] = ashr <1 x i64> [[TMP3]], splat (i64 1)
-// CHECK-NEXT:    [[TMP4:%.*]] = add <1 x i64> [[TMP2]], [[VSRA_N]]
-// CHECK-NEXT:    ret <1 x i64> [[TMP4]]
-//
-int64x1_t test_vsra_n_s64(int64x1_t a, int64x1_t b) {
-  return vsra_n_s64(a, b, 1);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vsrad_n_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[SHRD_N:%.*]] = lshr i64 [[B]], 63
-// CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[A]], [[SHRD_N]]
-// CHECK-NEXT:    ret i64 [[TMP0]]
-//
-uint64_t test_vsrad_n_u64(uint64_t a, uint64_t b) {
-  return (uint64_t)vsrad_n_u64(a, b, 63);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vsrad_n_u64_2(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    ret i64 [[A]]
-//
-uint64_t test_vsrad_n_u64_2(uint64_t a, uint64_t b) {
-  return (uint64_t)vsrad_n_u64(a, b, 64);
-}
-
-// CHECK-LABEL: define dso_local <1 x i64> @test_vsra_n_u64(
-// CHECK-SAME: <1 x i64> noundef [[A:%.*]], <1 x i64> noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x i64> [[B]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK-NEXT:    [[VSRA_N:%.*]] = lshr <1 x i64> [[TMP3]], splat (i64 1)
-// CHECK-NEXT:    [[TMP4:%.*]] = add <1 x i64> [[TMP2]], [[VSRA_N]]
-// CHECK-NEXT:    ret <1 x i64> [[TMP4]]
-//
-uint64x1_t test_vsra_n_u64(uint64x1_t a, uint64x1_t b) {
-  return vsra_n_u64(a, b, 1);
-}
-
 // CHECK-LABEL: define dso_local i8 @test_vqshlb_n_s8(
 // CHECK-SAME: i8 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -14480,6 +14497,16 @@ int64_t test_vslid_n_s64(int64_t a, int64_t b) {
 //
 uint64_t test_vslid_n_u64(uint64_t a, uint64_t b) {
   return (uint64_t)vslid_n_u64(a, b, 63);
+// CHECK-LABEL: define dso_local <1 x i64> @test_vqshlu_n_s64(
+// CHECK-SAME: <1 x i64> noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i64> [[A]] to <8 x i8>
+// CHECK-NEXT:    [[VQSHLU_N:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
+// CHECK-NEXT:    [[VQSHLU_N1:%.*]] = call <1 x i64> @llvm.aarch64.neon.sqshlu.v1i64(<1 x i64> [[VQSHLU_N]], <1 x i64> splat (i64 1))
+// CHECK-NEXT:    ret <1 x i64> [[VQSHLU_N1]]
+//
+uint64x1_t test_vqshlu_n_s64(int64x1_t a) {
+  return vqshlu_n_s64(a, 1);
 }
 
 // CHECK-LABEL: define dso_local i8 @test_vqshrnh_n_s16(
@@ -18647,26 +18674,6 @@ int64x1_t test_vqneg_s64(int64x1_t a) {
 //
 int64x1_t test_vneg_s64(int64x1_t a) {
   return vneg_s64(a);
-}
-
-// CHECK-LABEL: define dso_local double @test_vmaxnmvq_f64(
-// CHECK-SAME: <2 x double> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMAXNMVQ_F64_I:%.*]] = call double @llvm.aarch64.neon.fmaxnmv.f64.v2f64(<2 x double> [[A]])
-// CHECK-NEXT:    ret double [[VMAXNMVQ_F64_I]]
-//
-float64_t test_vmaxnmvq_f64(float64x2_t a) {
-  return vmaxnmvq_f64(a);
-}
-
-// CHECK-LABEL: define dso_local float @test_vmaxnmv_f32(
-// CHECK-SAME: <2 x float> noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VMAXNMV_F32_I:%.*]] = call float @llvm.aarch64.neon.fmaxnmv.f32.v2f32(<2 x float> [[A]])
-// CHECK-NEXT:    ret float [[VMAXNMV_F32_I]]
-//
-float32_t test_vmaxnmv_f32(float32x2_t a) {
-  return vmaxnmv_f32(a);
 }
 
 // CHECK-LABEL: define dso_local <2 x i64> @test_vpaddq_s64(

@@ -2070,7 +2070,10 @@ Address CGOpenMPRuntime::emitThreadIDAddress(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntime::getCriticalRegionLock(StringRef CriticalName) {
   std::string Prefix = Twine("gomp_critical_user_", CriticalName).str();
   std::string Name = getName({Prefix, "var"});
-  return OMPBuilder.getOrCreateInternalVariable(KmpCriticalNameTy, Name);
+  llvm::GlobalVariable *GV =
+      OMPBuilder.getOrCreateInternalVariable(KmpCriticalNameTy, Name);
+  CGM.setDSOLocal(GV);
+  return GV;
 }
 
 namespace {
@@ -10984,7 +10987,8 @@ static void emitTargetCallKernelLaunch(
 
     llvm::OpenMPIRBuilder::TargetKernelArgs Args(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
-        DynCGroupMem, HasNoWait, DynCGroupMemFallback);
+        DynCGroupMem, HasNoWait, /*StrictBlocksAndThreads=*/IsBare,
+        DynCGroupMemFallback);
 
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(

@@ -425,6 +425,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lower();
 
+  getActionDefinitionsBuilder(G_CLMUL).legalFor({v8i8, v16i8});
+
   getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({i32, i64, v4i16, v8i16, v2i32, v4i32, v2i64})
       .widenScalarOrEltToNextPow2(0, 16)
@@ -1941,6 +1943,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_FMAXNUM);
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
+  case Intrinsic::aarch64_neon_pmul:
+    return LowerBinOp(TargetOpcode::G_CLMUL);
   case Intrinsic::aarch64_neon_pmull:
   case Intrinsic::aarch64_neon_pmull64:
     return LowerBinOp(AArch64::G_PMULL);
@@ -2102,6 +2106,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerUnaryOp(TargetOpcode::G_FPTOUI_SAT);
   case Intrinsic::aarch64_neon_fcvtzs:
     return LowerUnaryOp(TargetOpcode::G_FPTOSI_SAT);
+  case Intrinsic::aarch64_neon_cls:
+    return LowerUnaryOp(TargetOpcode::G_CTLS);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
