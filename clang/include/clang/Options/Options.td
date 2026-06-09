@@ -9762,15 +9762,6 @@ def fhlsl_spv_enable_maximal_reconvergence
                "well-defined merge points as defined by the Vulkan spec.">,
       MarshallingInfoFlag<LangOpts<"HLSLSpvEnableMaximalReconvergence">>;
 
-def fhlsl_spv_preserve_interface
-    : Flag<["-"], "fspv-preserve-interface">,
-      Group<dxc_Group>,
-      Visibility<[CC1Option, DXCOption]>,
-      HelpText<"Preserve all interface variables at entry points, preventing "
-               "dead-code elimination of variables with Location or BuiltIn "
-               "decorations.">,
-      MarshallingInfoFlag<LangOpts<"HLSLSpvPreserveInterface">>;
-
 def fexperimental_logical_pointer
     : Flag<["-"], "fexperimental-logical-pointer">,
       Visibility<[CC1Option, DXCOption]>,
