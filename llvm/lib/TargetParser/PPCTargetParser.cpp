@@ -123,8 +123,8 @@ StringRef getNormalizedPPCTuneCPU(const Triple &T, StringRef CPUName) {
 
 std::optional<StringMap<bool>> getPPCDefaultTargetFeatures(const Triple &T,
                                                            StringRef CPU) {
-  std::optional<StringMap<bool>> FeaturesOpt =
-      getCPUDefaultTargetFeatures(CPU, BasicPPCSubTypeKV, BasicPPCFeatureKV);
+  std::optional<StringMap<bool>> FeaturesOpt = getCPUDefaultTargetFeatures(
+      CPU, BasicPPCSubTypeKV, BasicPPCFeatureKV, BasicPPCFeatureBitsets);
 
   if (!FeaturesOpt.has_value())
     return std::nullopt;

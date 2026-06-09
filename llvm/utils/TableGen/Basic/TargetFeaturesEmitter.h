@@ -16,6 +16,10 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include <array>
+#include <cstdint>
+#include <vector>
 
 namespace llvm {
 /// Sorting predicate to sort record pointers by their
@@ -31,17 +35,28 @@ using FeatureMapTy = DenseMap<const Record *, unsigned>;
 
 class TargetFeaturesEmitter {
 protected:
+  using FeatureMask = std::array<uint64_t, MAX_SUBTARGET_WORDS>;
+  using FeatureMaskTable = std::vector<FeatureMask>;
+
   const RecordKeeper &Records;
   std::string Target;
 
+  static FeatureMask getFeatureMask(ArrayRef<const Record *> FeatureList,
+                                    const FeatureMapTy &FeatureMap);
+  static unsigned getFeatureMaskIndex(ArrayRef<const Record *> FeatureList,
+                                      const FeatureMapTy &FeatureMap,
+                                      FeatureMaskTable &FeatureMasks);
+  static void printFeatureMask(raw_ostream &OS, const FeatureMask &Mask);
+  static void printFeatureMaskTable(raw_ostream &OS, StringRef TableName,
+                                    ArrayRef<FeatureMask> FeatureMasks);
+
 public:
   TargetFeaturesEmitter(const RecordKeeper &R);
-  static void printFeatureMask(raw_ostream &OS,
-                               ArrayRef<const Record *> FeatureList,
-                               const FeatureMapTy &FeatureMap);
   FeatureMapTy enumeration(raw_ostream &OS);
-  void printFeatureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
-  void printCPUKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+  void printFeatureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap,
+                             FeatureMaskTable &FeatureMasks);
+  void printCPUKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap,
+                         FeatureMaskTable &FeatureMasks);
   virtual void run(raw_ostream &O);
   virtual ~TargetFeaturesEmitter() = default;
 };

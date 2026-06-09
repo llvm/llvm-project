@@ -23,6 +23,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
+#include <cstdint>
 #include <initializer_list>
 #include <string>
 #include <vector>
@@ -34,6 +35,7 @@ class Triple;
 
 const unsigned MAX_SUBTARGET_WORDS = 6;
 const unsigned MAX_SUBTARGET_FEATURES = MAX_SUBTARGET_WORDS * 64;
+using FeatureBitsetIndex = uint16_t;
 
 /// Container class for subtarget features.
 /// This is a constexpr reimplementation of a subset of std::bitset. It would be

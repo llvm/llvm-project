@@ -78,15 +78,17 @@ class SubtargetEmitter : TargetFeaturesEmitter {
 
   FeatureMapTy emitEnums(raw_ostream &OS);
   void emitSubtargetInfoMacroCalls(raw_ostream &OS);
-  std::tuple<unsigned, unsigned, unsigned>
+  std::tuple<unsigned, unsigned, unsigned, unsigned>
   emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap);
   void emitTargetDesc(raw_ostream &OS);
   void emitHeader(raw_ostream &OS);
   void emitCtor(raw_ostream &OS, unsigned NumNames, unsigned NumFeatures,
-                unsigned NumProcs);
+                unsigned NumProcs, unsigned NumFeatureMasks);
 
-  unsigned featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
-  unsigned cpuKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
+  unsigned featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap,
+                            FeatureMaskTable &FeatureMasks);
+  unsigned cpuKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap,
+                        FeatureMaskTable &FeatureMasks);
   unsigned cpuNames(raw_ostream &OS);
   void formItineraryStageString(const std::string &Names,
                                 const Record *ItinData, std::string &ItinString,
@@ -185,7 +187,8 @@ void SubtargetEmitter::emitSubtargetInfoMacroCalls(raw_ostream &OS) {
 // command line.
 //
 unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
-                                            const FeatureMapTy &FeatureMap) {
+                                            const FeatureMapTy &FeatureMap,
+                                            FeatureMaskTable &FeatureMasks) {
   std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
 
@@ -218,7 +221,7 @@ unsigned SubtargetEmitter::featureKeyValues(raw_ostream &OS,
 
     ConstRecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
-    printFeatureMask(OS, ImpliesList, FeatureMap);
+    OS << getFeatureMaskIndex(ImpliesList, FeatureMap, FeatureMasks);
 
     OS << " },\n";
   }
@@ -292,7 +295,8 @@ static void checkDuplicateCPUFeatures(StringRef CPUName,
 // line.
 //
 unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
-                                        const FeatureMapTy &FeatureMap) {
+                                        const FeatureMapTy &FeatureMap,
+                                        FeatureMaskTable &FeatureMasks) {
   // Gather and sort processor information
   std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
@@ -322,9 +326,9 @@ unsigned SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
     OS << " { "
        << "\"" << Name << "\", ";
 
-    printFeatureMask(OS, FeatureList, FeatureMap);
+    OS << getFeatureMaskIndex(FeatureList, FeatureMap, FeatureMasks);
     OS << ", ";
-    printFeatureMask(OS, TuneFeatureList, FeatureMap);
+    OS << getFeatureMaskIndex(TuneFeatureList, FeatureMap, FeatureMasks);
 
     // Emit the scheduler model pointer.
     const std::string &ProcModelName =
@@ -2007,11 +2011,12 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    ArrayRef<StringRef> PN,\n"
      << "    ArrayRef<SubtargetFeatureKV> PF,\n"
      << "    ArrayRef<SubtargetSubTypeKV> PD,\n"
+     << "    const FeatureBitArray *PFB,\n"
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
      << "    const unsigned *OC, const unsigned *FP) :\n"
-     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD,\n"
+     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PFB,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
@@ -2058,18 +2063,21 @@ FeatureMapTy SubtargetEmitter::emitEnums(raw_ostream &OS) {
   return enumeration(OS);
 }
 
-std::tuple<unsigned, unsigned, unsigned>
+std::tuple<unsigned, unsigned, unsigned, unsigned>
 SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_MC_DESC");
   if (Target == "AArch64")
     OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
   NamespaceEmitter LlvmNS(OS, "llvm");
+  FeatureMaskTable FeatureMasks;
 
-  unsigned NumFeatures = featureKeyValues(OS, FeatureMap);
+  unsigned NumFeatures = featureKeyValues(OS, FeatureMap, FeatureMasks);
   OS << "\n";
   emitSchedModel(OS);
   OS << "\n";
-  unsigned NumProcs = cpuKeyValues(OS, FeatureMap);
+  unsigned NumProcs = cpuKeyValues(OS, FeatureMap, FeatureMasks);
+  OS << "\n";
+  printFeatureMaskTable(OS, Target + "FeatureBitsets", FeatureMasks);
   OS << "\n";
   unsigned NumNames = cpuNames(OS);
   OS << "\n";
@@ -2097,6 +2105,10 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
     OS << Target << "SubTypeKV, ";
   else
     OS << "{}, ";
+  if (!FeatureMasks.empty())
+    OS << Target << "FeatureBitsets, ";
+  else
+    OS << "nullptr, ";
   OS << '\n';
   OS.indent(22);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "
@@ -2110,7 +2122,8 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
     OS << "nullptr, nullptr, nullptr";
   }
   OS << ");\n}\n\n";
-  return {NumNames, NumFeatures, NumProcs};
+  return {NumNames, NumFeatures, NumProcs,
+          static_cast<unsigned>(FeatureMasks.size())};
 }
 
 void SubtargetEmitter::emitTargetDesc(raw_ostream &OS) {
@@ -2185,7 +2198,8 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
 }
 
 void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
-                                unsigned NumFeatures, unsigned NumProcs) {
+                                unsigned NumFeatures, unsigned NumProcs,
+                                unsigned NumFeatureMasks) {
   IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_CTOR");
   OS << "#include \"llvm/CodeGen/TargetSchedule.h\"\n\n";
 
@@ -2193,6 +2207,8 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
   OS << "extern const llvm::StringRef " << Target << "Names[];\n";
   OS << "extern const llvm::SubtargetFeatureKV " << Target << "FeatureKV[];\n";
   OS << "extern const llvm::SubtargetSubTypeKV " << Target << "SubTypeKV[];\n";
+  OS << "extern const llvm::FeatureBitArray " << Target
+     << "FeatureBitsets[];\n";
   OS << "extern const llvm::MCWriteProcResEntry " << Target
      << "WriteProcResTable[];\n";
   OS << "extern const llvm::MCWriteLatencyEntry " << Target
@@ -2227,6 +2243,10 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, unsigned NumNames,
     OS << "ArrayRef(" << Target << "SubTypeKV, " << NumProcs << "), ";
   else
     OS << "{}, ";
+  if (NumFeatureMasks)
+    OS << Target << "FeatureBitsets, ";
+  else
+    OS << "nullptr, ";
   OS << '\n';
   OS.indent(24);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "
@@ -2254,10 +2274,11 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 
   auto FeatureMap = emitEnums(OS);
   emitSubtargetInfoMacroCalls(OS);
-  auto [NumNames, NumFeatures, NumProcs] = emitMCDesc(OS, FeatureMap);
+  auto [NumNames, NumFeatures, NumProcs, NumFeatureMasks] =
+      emitMCDesc(OS, FeatureMap);
   emitTargetDesc(OS);
   emitHeader(OS);
-  emitCtor(OS, NumNames, NumFeatures, NumProcs);
+  emitCtor(OS, NumNames, NumFeatures, NumProcs, NumFeatureMasks);
   emitMcInstrAnalysisPredicateFunctions(OS);
 }
 

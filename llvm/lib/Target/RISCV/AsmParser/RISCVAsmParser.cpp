@@ -56,6 +56,7 @@ static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
 
 namespace llvm {
 extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
+extern const FeatureBitArray RISCVFeatureBitsets[];
 } // namespace llvm
 
 namespace {
@@ -3269,7 +3270,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
         // TODO: Make use of RISCVISAInfo to handle this
         for (auto &Feature : RISCVFeatureKV) {
           if (getSTI().hasFeature(Feature.Value) &&
-              Feature.Implies.test(Ext->Value))
+              RISCVFeatureBitsets[Feature.Implies].test(Ext->Value))
             return Error(Loc, Twine("can't disable ") + Ext->Key +
                                   " extension; " + Feature.Key +
                                   " extension requires " + Ext->Key +

@@ -35,38 +35,27 @@ static const T *Find(StringRef S, ArrayRef<T> A) {
 
 /// For each feature that is (transitively) implied by this feature, set it.
 static void SetImpliedBits(FeatureBitset &Bits, FeatureBitset Implies,
-                           ArrayRef<SubtargetFeatureKV> FeatureTable) {
-  // Transitively set all features implied. We don't assume that the features in
-  // Bits have already had their implied features set.
-  FeatureBitset NewBits = Implies;
-  while (Implies.any()) {
-    FeatureBitset Implied;
-    for (const SubtargetFeatureKV &FE : FeatureTable) {
-      if (Implies.test(FE.Value))
-        Implied |= FE.Implies.getAsBitset();
-    }
-
-    // Only continue for bits that haven't been set yet.
-    Implies = Implied & ~NewBits;
-    NewBits |= Implies;
-  }
-  Bits |= NewBits;
+                           ArrayRef<SubtargetFeatureKV> FeatureTable,
+                           const FeatureBitArray *FeatureMasks) {
+  Bits |= Implies;
+  for (const SubtargetFeatureKV &FE : FeatureTable)
+    if (Implies.test(FE.Value))
+      Bits |= FeatureMasks[FE.Implies].getAsBitset();
 }
 
 /// For each feature that (transitively) implies this feature, clear it.
-static
-void ClearImpliedBits(FeatureBitset &Bits, unsigned Value,
-                      ArrayRef<SubtargetFeatureKV> FeatureTable) {
+static void ClearImpliedBits(FeatureBitset &Bits, unsigned Value,
+                             ArrayRef<SubtargetFeatureKV> FeatureTable,
+                             const FeatureBitArray *FeatureMasks) {
   for (const SubtargetFeatureKV &FE : FeatureTable) {
-    if (FE.Implies.getAsBitset().test(Value)) {
+    if (FeatureMasks[FE.Implies].getAsBitset().test(Value))
       Bits.reset(FE.Value);
-      ClearImpliedBits(Bits, FE.Value, FeatureTable);
-    }
   }
 }
 
 static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
-                             ArrayRef<SubtargetFeatureKV> FeatureTable) {
+                             ArrayRef<SubtargetFeatureKV> FeatureTable,
+                             const FeatureBitArray *FeatureMasks) {
   assert(SubtargetFeatures::hasFlag(Feature) &&
          "Feature flags should start with '+' or '-'");
 
@@ -80,12 +69,12 @@ static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
       Bits.set(FeatureEntry->Value);
 
       // For each feature that this implies, set it.
-      SetImpliedBits(Bits, FeatureEntry->Implies.getAsBitset(), FeatureTable);
+      Bits |= FeatureMasks[FeatureEntry->Implies].getAsBitset();
     } else {
       Bits.reset(FeatureEntry->Value);
 
       // For each feature that implies this, clear it.
-      ClearImpliedBits(Bits, FeatureEntry->Value, FeatureTable);
+      ClearImpliedBits(Bits, FeatureEntry->Value, FeatureTable, FeatureMasks);
     }
   } else {
     errs() << "'" << Feature << "' is not a recognized feature for this target"
@@ -179,7 +168,8 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
                                  StringRef TuneCPU, StringRef FS,
                                  ArrayRef<StringRef> ProcNames,
                                  ArrayRef<SubtargetSubTypeKV> ProcDesc,
-                                 ArrayRef<SubtargetFeatureKV> ProcFeatures) {
+                                 ArrayRef<SubtargetFeatureKV> ProcFeatures,
+                                 const FeatureBitArray *FeatureMasks) {
   SubtargetFeatures Features(FS);
 
   if (ProcDesc.empty() || ProcFeatures.empty())
@@ -201,7 +191,7 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
     // If there is a match
     if (CPUEntry) {
       // Set the features implied by this CPU feature, if any.
-      SetImpliedBits(Bits, CPUEntry->Implies.getAsBitset(), ProcFeatures);
+      Bits |= FeatureMasks[CPUEntry->Implies].getAsBitset();
     } else {
       errs() << "'" << CPU << "' is not a recognized processor for this target"
              << " (ignoring processor)\n";
@@ -214,7 +204,7 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
     // If there is a match
     if (CPUEntry) {
       // Set the features implied by this CPU feature, if any.
-      SetImpliedBits(Bits, CPUEntry->TuneImplies.getAsBitset(), ProcFeatures);
+      Bits |= FeatureMasks[CPUEntry->TuneImplies].getAsBitset();
     } else if (TuneCPU != CPU) {
       errs() << "'" << TuneCPU << "' is not a recognized processor for this "
              << "target (ignoring processor)\n";
@@ -229,7 +219,7 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
     else if (Feature == "+cpuhelp")
       cpuHelp(ProcNames);
     else
-      ApplyFeatureFlag(Bits, Feature, ProcFeatures);
+      ApplyFeatureFlag(Bits, Feature, ProcFeatures, FeatureMasks);
   }
 
   return Bits;
@@ -237,8 +227,8 @@ static FeatureBitset getFeatures(MCSubtargetInfo &STI, StringRef CPU,
 
 void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
                                           StringRef FS) {
-  FeatureBits =
-      getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
+  FeatureBits = getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc,
+                            ProcFeatures, ProcFeatureMasks);
   FeatureString = std::string(FS);
 
   if (!TuneCPU.empty())
@@ -249,21 +239,22 @@ void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef TuneCPU,
 
 void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef TuneCPU,
                                          StringRef FS) {
-  FeatureBits =
-      getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc, ProcFeatures);
+  FeatureBits = getFeatures(*this, CPU, TuneCPU, FS, ProcNames, ProcDesc,
+                            ProcFeatures, ProcFeatureMasks);
   FeatureString = std::string(FS);
 }
 
 MCSubtargetInfo::MCSubtargetInfo(
     const Triple &TT, StringRef C, StringRef TC, StringRef FS,
     ArrayRef<StringRef> PN, ArrayRef<SubtargetFeatureKV> PF,
-    ArrayRef<SubtargetSubTypeKV> PD, const MCWriteProcResEntry *WPR,
-    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
-    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
+    ArrayRef<SubtargetSubTypeKV> PD, const FeatureBitArray *PFB,
+    const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
+    const MCReadAdvanceEntry *RA, const InstrStage *IS, const unsigned *OC,
+    const unsigned *FP)
     : TargetTriple(TT), CPU(std::string(C)), TuneCPU(std::string(TC)),
-      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), WriteProcResTable(WPR),
-      WriteLatencyTable(WL), ReadAdvanceTable(RA), Stages(IS),
-      OperandCycles(OC), ForwardingPaths(FP) {
+      ProcNames(PN), ProcFeatures(PF), ProcDesc(PD), ProcFeatureMasks(PFB),
+      WriteProcResTable(WPR), WriteLatencyTable(WL), ReadAdvanceTable(RA),
+      Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
   InitMCProcessorInfo(CPU, TuneCPU, FS);
 }
 
@@ -279,7 +270,7 @@ const FeatureBitset &MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
 
 const FeatureBitset &
 MCSubtargetInfo::SetFeatureBitsTransitively(const FeatureBitset &FB) {
-  SetImpliedBits(FeatureBits, FB, ProcFeatures);
+  SetImpliedBits(FeatureBits, FB, ProcFeatures, ProcFeatureMasks);
   return FeatureBits;
 }
 
@@ -288,7 +279,7 @@ MCSubtargetInfo::ClearFeatureBitsTransitively(const FeatureBitset &FB) {
   for (unsigned I = 0, E = FB.size(); I < E; I++) {
     if (FB[I]) {
       FeatureBits.reset(I);
-      ClearImpliedBits(FeatureBits, I, ProcFeatures);
+      ClearImpliedBits(FeatureBits, I, ProcFeatures, ProcFeatureMasks);
     }
   }
   return FeatureBits;
@@ -303,13 +294,13 @@ const FeatureBitset &MCSubtargetInfo::ToggleFeature(StringRef Feature) {
     if (FeatureBits.test(FeatureEntry->Value)) {
       FeatureBits.reset(FeatureEntry->Value);
       // For each feature that implies this, clear it.
-      ClearImpliedBits(FeatureBits, FeatureEntry->Value, ProcFeatures);
+      ClearImpliedBits(FeatureBits, FeatureEntry->Value, ProcFeatures,
+                       ProcFeatureMasks);
     } else {
       FeatureBits.set(FeatureEntry->Value);
 
       // For each feature that this implies, set it.
-      SetImpliedBits(FeatureBits, FeatureEntry->Implies.getAsBitset(),
-                     ProcFeatures);
+      FeatureBits |= ProcFeatureMasks[FeatureEntry->Implies].getAsBitset();
     }
   } else {
     errs() << "'" << Feature << "' is not a recognized feature for this target"
@@ -320,7 +311,7 @@ const FeatureBitset &MCSubtargetInfo::ToggleFeature(StringRef Feature) {
 }
 
 const FeatureBitset &MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
-  ::ApplyFeatureFlag(FeatureBits, FS, ProcFeatures);
+  ::ApplyFeatureFlag(FeatureBits, FS, ProcFeatures, ProcFeatureMasks);
   return FeatureBits;
 }
 
