@@ -99,6 +99,8 @@ protected:
 
   PacketResult Handle_QSetSTDERR(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_QSetSTDIOWindowSize(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_qLaunchSuccess(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_QEnvironment(StringExtractorGDBRemote &packet);
