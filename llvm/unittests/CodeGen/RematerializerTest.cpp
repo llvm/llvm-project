@@ -524,7 +524,8 @@ TEST_F(RematerializerTest, SplitSubRegDeadDef) {
     MoveMIAndAdjustLiveness(Sub1Def);
 
     // Rematerialize %1 to bb.1. This triggers a live-interval update of %0 when
-    // calling Remater.updateLiveIntervals(), during which its interval is split.
+    // calling Remater.updateLiveIntervals(), during which its interval is
+    // split.
     Rematerializer::DependencyReuseInfo DRI;
     const unsigned MBB1 = 1;
     const RegisterIdx Add = 0;
