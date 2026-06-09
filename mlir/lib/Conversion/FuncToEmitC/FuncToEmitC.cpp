@@ -20,6 +20,7 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/LogicalResult.h"
 
 using namespace mlir;
 
@@ -140,8 +141,10 @@ struct FuncToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
   /// and mark dialect legal for the conversion target.
   void populateConvertToEmitCConversionPatterns(
       ConversionTarget &target, TypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
-    populateFuncToEmitCPatterns(typeConverter, patterns);
+      RewritePatternSet &patterns,
+      std::optional<bool> lowerToCpp) const final {
+    populateFuncToEmitCPatterns(typeConverter, patterns,
+                                lowerToCpp.value_or(true));
   }
 };
 } // namespace
@@ -159,11 +162,20 @@ void mlir::registerConvertFuncToEmitCInterface(DialectRegistry &registry) {
 namespace {
 class CallOpConversion final : public OpConversionPattern<func::CallOp> {
 public:
-  using OpConversionPattern<func::CallOp>::OpConversionPattern;
+  CallOpConversion(const TypeConverter &typeConverter, MLIRContext *ctx,
+                   bool lowerToCpp)
+      : OpConversionPattern<func::CallOp>(typeConverter, ctx),
+        lowerToCpp(lowerToCpp) {}
 
   LogicalResult
   matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // Do not convert multiple-return functions if lowering target is Cpp.
+    // The translator will emit the return values as an std::tuple.
+    if (callOp.getNumResults() > 1 && lowerToCpp)
+      return rewriter.notifyMatchFailure(
+          callOp, "only functions with zero or one result can be converted");
+
     SmallVector<Type> convertedResultTypes;
     for (Type t : callOp.getResultTypes()) {
       Type resultType = getTypeConverter()->convertType(t);
@@ -226,16 +238,28 @@ public:
     rewriter.replaceOp(callOp, results);
     return success();
   }
+
+private:
+  bool lowerToCpp;
 };
 
 class FuncOpConversion final : public OpConversionPattern<func::FuncOp> {
 public:
-  using OpConversionPattern<func::FuncOp>::OpConversionPattern;
+  FuncOpConversion(const TypeConverter &typeConverter, MLIRContext *ctx,
+                   bool lowerToCpp)
+      : OpConversionPattern<func::FuncOp>(typeConverter, ctx),
+        lowerToCpp(lowerToCpp) {}
 
   LogicalResult
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     FunctionType fnType = funcOp.getFunctionType();
+
+    // Do not convert multiple-return functions if lowering target is Cpp.
+    // The translator will emit the return values as an std::tuple.
+    if (fnType.getNumResults() > 1 && lowerToCpp)
+      return rewriter.notifyMatchFailure(
+          funcOp, "only functions with zero or one result can be converted");
 
     TypeConverter::SignatureConversion signatureConverter(
         fnType.getNumInputs());
@@ -309,15 +333,27 @@ public:
 
     return success();
   }
+
+private:
+  bool lowerToCpp;
 };
 
 class ReturnOpConversion final : public OpConversionPattern<func::ReturnOp> {
 public:
-  using OpConversionPattern<func::ReturnOp>::OpConversionPattern;
+  ReturnOpConversion(const TypeConverter &typeConverter, MLIRContext *ctx,
+                     bool lowerToCpp)
+      : OpConversionPattern<func::ReturnOp>(typeConverter, ctx),
+        lowerToCpp(lowerToCpp) {}
 
   LogicalResult
   matchAndRewrite(func::ReturnOp returnOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // Do not convert multiple-return functions if lowering target is Cpp.
+    // The translator will emit the return values as an std::tuple.
+    if (returnOp.getNumOperands() > 1 && lowerToCpp)
+      return rewriter.notifyMatchFailure(
+          returnOp, "only zero or one operand is supported");
+
     if (llvm::any_of(adaptor.getOperands(), [](Value operand) {
           return isa<emitc::ArrayType>(operand.getType());
         }))
@@ -345,6 +381,9 @@ public:
     rewriter.replaceOpWithNewOp<emitc::ReturnOp>(returnOp, structVal);
     return success();
   }
+
+private:
+  bool lowerToCpp;
 };
 } // namespace
 
@@ -353,9 +392,10 @@ public:
 //===----------------------------------------------------------------------===//
 
 void mlir::populateFuncToEmitCPatterns(const TypeConverter &typeConverter,
-                                       RewritePatternSet &patterns) {
+                                       RewritePatternSet &patterns,
+                                       bool lowerToCpp) {
   MLIRContext *ctx = patterns.getContext();
 
   patterns.add<CallOpConversion, FuncOpConversion, ReturnOpConversion>(
-      typeConverter, ctx);
+      typeConverter, ctx, lowerToCpp);
 }

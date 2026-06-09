@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-func-to-emitc %s -split-input-file -verify-diagnostics
+// RUN: mlir-opt -convert-func-to-emitc="lower-to-cpp=false" %s -split-input-file -verify-diagnostics
 
 // expected-error@+1 {{failed to legalize operation 'func.func'}}
 func.func @unsuppoted_emitc_type(%arg0: i4) -> i4 {
