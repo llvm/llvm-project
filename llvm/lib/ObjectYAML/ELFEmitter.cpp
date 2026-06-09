@@ -1464,20 +1464,18 @@ void ELFState<ELFT>::writeSectionContent(
 
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
-    if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 5)
-        WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
-                             << static_cast<int>(E.Version)
-                             << "; encoding using the most recent version";
-      CBA.write(E.Version);
+    if (E.Version > 5)
+      WithColor::warning() << "unsupported BB address map version: "
+                           << static_cast<int>(E.Version)
+                           << "; encoding using the most recent version";
+    CBA.write(E.Version);
+    SHeader.sh_size += 1;
+    if (E.Version < 5) {
+      CBA.write(static_cast<uint8_t>(E.Feature));
       SHeader.sh_size += 1;
-      if (E.Version < 5) {
-        CBA.write(static_cast<uint8_t>(E.Feature));
-        SHeader.sh_size += 1;
-      } else {
-        CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
-        SHeader.sh_size += 2;
-      }
+    } else {
+      CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
+      SHeader.sh_size += 2;
     }
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
     bool MultiBBRangeFeatureEnabled = false;
@@ -1518,7 +1516,7 @@ void ELFState<ELFT>::writeSectionContent(
         continue;
       for (const BBAddrMapYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
-        if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
+        if (E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
         SHeader.sh_size += CBA.writeULEB128(BBE.AddressOffset);
         if (EmitCallsiteEndOffsets) {
@@ -1552,8 +1550,8 @@ void ELFState<ELFT>::writeSectionContent(
 
     const auto &PGOBBEntries = PGOEntry.PGOBBEntries.value();
     if (TotalNumBlocks != PGOBBEntries.size()) {
-      WithColor::warning() << "PBOBBEntries must be the same length as "
-                              "BBEntries in SHT_LLVM_BB_ADDR_MAP.\n"
+      WithColor::warning() << "PGOBBEntries must be the same length as "
+                              "BBEntries in the BB address map.\n"
                            << "Mismatch on function with address: "
                            << E.getFunctionAddress();
       continue;
