@@ -336,8 +336,6 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   if (Header.consume_front("#!special-case-list-v"))
     consumeUnsignedInteger(Header, 10, Version);
 
-  bool CanonicalizeSlashes = Version > 3 && llvm::sys::path::is_separator('\\');
-
   // In https://reviews.llvm.org/D154014 we added glob support and planned
   // to remove regex support in patterns. We temporarily support the
   // original behavior using regexes if "#!special-case-list-v1" is the
@@ -346,6 +344,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   bool UseGlobs = Version > 1;
 
   bool RemoveDotSlash = Version > 2;
+
+  bool CanonicalizeSlashes = Version > 3 && llvm::sys::path::is_separator('\\');
 
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
