@@ -86,8 +86,8 @@ class VPPredicator {
   /// Compute the "furthest up" set of edges for each incoming value of \Phi.
   MapVector<EdgeTy, VPValue *> computeBlendEdges(VPPhi *Phi);
 
-  /// Given a set of \p Edges that lead to \p VPBB, return the OR of all edges
-  /// or an equivalent block in-mask.
+  /// Given a set of \p Edges that each can reach \p VPBB, return the OR of all
+  /// edges, or an equivalent block in-mask.
   VPValue *createMaskDisjunction(ArrayRef<EdgeTy> Edges, VPBasicBlock *VPBB);
 
 public:
@@ -245,11 +245,19 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
   setEdgeMask(Src, DefaultDst, DefaultMask);
 }
 
-// Compute the "furthest up" set of edges for each incoming value of a phi.
-//
 // Start by keeping track of what edges lead to which value. Then see if any
 // node has the same value for all outgoing edges. If so then propagate that
-// value up to every node it postdominates.
+// value up to every node it postdominates. E.g:
+//
+//    Entry      Edges =  {C->ɸ : %x, D->ɸ : %x, F->ɸ : %y}
+//    /   \            [C,D,F all outgoing edges equal: go up postdom frontier]
+//   A     B           ~> {A->C : %x, A->D : %x, Entry->B : %y}
+//  / \    |\          [A all outgoing edges equal: go up postdom frontier]
+// C   D   | E         ~> {Entry->A : %x, Entry->B : %y}
+//  \   \  |/
+//   \  |  F
+//    \ | /
+//      ɸ = phi [%x, C], [%x, D], [%y, F]
 MapVector<VPPredicator::EdgeTy, VPValue *>
 VPPredicator::computeBlendEdges(VPPhi *Phi) {
   MapVector<EdgeTy, VPValue *> Edges;
@@ -266,9 +274,9 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
     AddEdge(InVPBB, Phi->getParent(), InVal);
 
-  // The root phi must postdominate every incoming block. Also don't touch
-  // phis in a reduction chain since they need to be in a specific structure
-  // for handle*Reductions.
+  // Only handle phis that postdominate every incoming block. Also don't touch
+  // phis in a reduction chain since they need to be in a specific structure for
+  // handle*Reductions.
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
     if (!VPPDT.dominates(Phi->getParent(), InVPBB) ||
         isa<VPReductionPHIRecipe>(InVal))
@@ -303,11 +311,11 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     if (!Common)
       continue;
 
-    // They have the same value: we can move the edges up
+    // They have the same value: we can move the edges up.
     for (EdgeTy Edge : OutEdges)
       Edges.erase(Edge);
 
-    // Peek through phis that are postdominated by VPBB
+    // Peek through phis that are postdominated by VPBB.
     if (auto *Phi = dyn_cast<VPPhi>(Common))
       if (VPPDT.dominates(VPBB, Phi->getParent())) {
         for (auto [InV, InVPBB] : Phi->incoming_values_and_blocks()) {
@@ -317,7 +325,7 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
         continue;
       }
 
-    // Iterate up through the post dominance frontier
+    // Iterate up through the post dominance frontier.
     for (const VPBlockBase *Frontier : VPPDF.find(VPBB)->second) {
       for (const VPBlockBase *FrontierSucc : Frontier->getSuccessors())
         if (VPPDT.dominates(VPBB, FrontierSucc))
@@ -331,6 +339,19 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
 
 VPValue *VPPredicator::createMaskDisjunction(ArrayRef<EdgeTy> Edges,
                                              VPBasicBlock *VPBB) {
+  // If the nearest common postdominator to all of Edges destinations isn't VPBB
+  // then we can use its block in-mask. E.g:
+  //
+  //  A  ...  B
+  //   \   \ /
+  //    \   C
+  //     \ /
+  // ...  D   ...
+  //    \ |  /
+  //     VPBB
+  //
+  // If the edges are A->D and B->C, PostDom will be D. We can reuse Ds block
+  // in-mask.
   const VPBasicBlock *PostDom = Edges[0].second;
   for (auto [_, VPBB] : drop_begin(Edges))
     PostDom =
@@ -339,6 +360,7 @@ VPValue *VPPredicator::createMaskDisjunction(ArrayRef<EdgeTy> Edges,
   if (PostDom != VPBB)
     return getBlockInMask(PostDom);
 
+  // Otherwise, compute the disjunction of edges.
   VPValue *Mask = nullptr;
   for (auto [Src, ConstDst] : Edges) {
     auto *Dst = const_cast<VPBasicBlock *>(ConstDst);
