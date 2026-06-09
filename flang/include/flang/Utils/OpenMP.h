@@ -26,6 +26,21 @@ namespace Fortran::utils::openmp {
 ///
 /// \param [in] builder - MLIR operation builder.
 /// \param [in] loc     - Source location of the created op.
+/// \param [in] baseAddr Address to use as the map `var_ptr` operand. If this
+///        is a FIR box value, a `fir.box_addr` is generated and used instead.
+/// \param [in] varPtrPtr Optional secondary pointer operand for maps that need
+///        a `var_ptr_ptr` value, such as descriptor base-address maps.
+/// \param [in] name Name attribute for the generated map.
+/// \param [in] bounds Map bounds operands attached to the map.
+/// \param [in] members Child map entries for partial or structured maps.
+/// \param [in] membersIndex Placement indices for the child map entries.
+/// \param [in] mapType OpenMP map type flags.
+/// \param [in] mapCaptureType OpenMP map capture kind.
+/// \param [in] retTy Result type of the generated `omp.map.info` op.
+/// \param [in] partialMap Whether the generated map is a partial map.
+/// \param [in] mapperId Optional declare mapper symbol reference.
+/// \param [in] varPtrTy Optional type to use when deriving the `var_ptr` type
+///        attribute. When omitted, `retTy` is used.
 mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::Location loc, mlir::Value baseAddr, mlir::Value varPtrPtr,
     llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
@@ -33,7 +48,8 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     mlir::omp::ClauseMapFlags mapType,
     mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
     bool partialMap = false,
-    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
+    mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr(),
+    mlir::Type varPtrTy = mlir::Type());
 
 /// For an mlir value that does not have storage, allocate temporary storage
 /// (outside the target region), store the value in that storage, and map the

@@ -24,7 +24,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     llvm::ArrayRef<mlir::Value> members, mlir::ArrayAttr membersIndex,
     mlir::omp::ClauseMapFlags mapType,
     mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-    bool partialMap, mlir::FlatSymbolRefAttr mapperId) {
+    bool partialMap, mlir::FlatSymbolRefAttr mapperId, mlir::Type varPtrTy) {
 
   auto getPtrVarType = [](mlir::Type ptrType) {
     mlir::TypeAttr varType = mlir::TypeAttr::get(
@@ -44,7 +44,7 @@ mlir::omp::MapInfoOp createMapInfoOp(mlir::OpBuilder &builder,
     retTy = baseAddr.getType();
   }
 
-  auto varPtrType = getPtrVarType(retTy);
+  auto varPtrType = getPtrVarType(varPtrTy ? varPtrTy : retTy);
   auto varPtrPtrTy =
       varPtrPtr ? getPtrVarType(varPtrPtr.getType()) : mlir::TypeAttr{};
 

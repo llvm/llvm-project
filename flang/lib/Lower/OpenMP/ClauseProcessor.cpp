@@ -328,21 +328,15 @@ static mlir::Value buildIteratedMapEntry(
         mlir::Value baseAddr = mapInfo->entity.getBase();
         if (mlir::isa<fir::BaseBoxType>(baseAddr.getType()))
           baseAddr = fir::BoxAddrOp::create(builder, loc, baseAddr);
-        auto ptrLike =
-            llvm::cast<mlir::omp::PointerLikeType>(baseAddr.getType());
-        mlir::TypeAttr varType = mlir::TypeAttr::get(ptrLike.getElementType());
         mlir::FlatSymbolRefAttr mapperId =
             resolveMapperId(converter, loc, object, mapperIdName, mapTypeBits,
                             directive, /*hasParentObj=*/false);
-        mlir::omp::MapInfoOp mapOp = mlir::omp::MapInfoOp::create(
-            builder, loc, ptrTy, baseAddr, varType,
-            builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapTypeBits),
-            builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
-                mlir::omp::VariableCaptureKind::ByRef),
-            /*varPtrPtr=*/mlir::Value{}, /*varPtrPtrType=*/nullptr,
-            /*members=*/mlir::ValueRange{},
-            /*membersIndex=*/mlir::ArrayAttr{}, mapInfo->bounds, mapperId,
-            builder.getStringAttr(""), builder.getBoolAttr(false));
+        mlir::omp::MapInfoOp mapOp = utils::openmp::createMapInfoOp(
+            builder, loc, baseAddr, /*varPtrPtr=*/mlir::Value{},
+            /*name=*/"", mapInfo->bounds, /*members=*/{},
+            /*membersIndex=*/mlir::ArrayAttr{}, mapTypeBits,
+            mlir::omp::VariableCaptureKind::ByRef, ptrTy,
+            /*partialMap=*/false, mapperId, baseAddr.getType());
         return mapOp.getResult();
       });
 }
