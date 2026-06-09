@@ -282,6 +282,10 @@ public:
     OPC_CheckImmAllZerosV,
     OPC_CheckFoldableChainNode,
 
+    // Transfer control to a shared result tail. The target is encoded as a
+    // 32-bit absolute MatcherTable offset.
+    OPC_Jump,
+
     OPC_EmitInteger,
     // Space-optimized forms that implicitly encode integer VT.
     OPC_EmitIntegerI8,
@@ -352,6 +356,8 @@ public:
     // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };
+  static_assert(OPC_Coverage < 256,
+                "SelectionDAG matcher opcodes must fit in one byte");
 
   enum {
     OPFL_None = 0,       // Node has no chain or glue input and isn't variadic.

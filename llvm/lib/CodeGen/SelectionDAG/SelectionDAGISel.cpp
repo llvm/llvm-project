@@ -4104,6 +4104,16 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
 
+    case OPC_Jump: {
+      uint32_t Target = MatcherTable[MatcherIndex++];
+      Target |= static_cast<uint32_t>(MatcherTable[MatcherIndex++]) << 8;
+      Target |= static_cast<uint32_t>(MatcherTable[MatcherIndex++]) << 16;
+      Target |= static_cast<uint32_t>(MatcherTable[MatcherIndex++]) << 24;
+      assert(Target < TableSize && "Invalid SelectionDAG matcher jump");
+      MatcherIndex = Target;
+      continue;
+    }
+
     case OPC_EmitMergeInputChains1_0:    // OPC_EmitMergeInputChains, 1, 0
     case OPC_EmitMergeInputChains1_1:    // OPC_EmitMergeInputChains, 1, 1
     case OPC_EmitMergeInputChains1_2: {  // OPC_EmitMergeInputChains, 1, 2

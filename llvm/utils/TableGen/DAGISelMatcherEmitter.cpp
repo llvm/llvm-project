@@ -18,6 +18,7 @@
 #include "Common/CodeGenTarget.h"
 #include "DAGISelMatcher.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -34,6 +35,8 @@ enum {
   IndexWidth = 7,
   FullIndexWidth = IndexWidth + 4,
   HistOpcWidth = 40,
+  MinSharedResultTailSize = 48,
+  JumpSize = 5,
 };
 
 static cl::OptionCategory DAGISelCat("Options for -gen-dag-isel");
@@ -50,6 +53,18 @@ static cl::opt<bool> InstrumentCoverage(
 
 namespace {
 class MatcherTableEmitter {
+  struct TailOccurrence {
+    const MatcherList *Matchers;
+    const Matcher *Start;
+  };
+
+  struct SharedTail {
+    const MatcherList *Matchers;
+    const Matcher *Start;
+    unsigned Size;
+    unsigned Offset = 0;
+  };
+
   const CodeGenDAGPatterns &CGP;
 
   SmallVector<unsigned, Matcher::HighestKind + 1> OpcodeCounts;
@@ -77,6 +92,9 @@ class MatcherTableEmitter {
   std::map<ValueTypeByHwMode, std::pair<unsigned, unsigned>> ValueTypeMap;
 
   SequenceToOffsetTable<std::vector<uint8_t>> OperandTable;
+
+  SmallVector<SharedTail, 16> SharedTails;
+  DenseMap<const Matcher *, unsigned> SharedTailByStart;
 
   unsigned getPatternIdxFromTable(std::string &&P, std::string &&include_loc) {
     const auto [It, Inserted] =
@@ -205,6 +223,9 @@ public:
       else
         NodePredicates.push_back(TP);
     }
+
+    if (!InstrumentCoverage)
+      collectSharedTails(TheMatcherList);
   }
 
   unsigned EmitMatcherList(const MatcherList &ML, const unsigned Indent,
@@ -222,7 +243,47 @@ public:
 
   void EmitPatternMatchTable(raw_ostream &OS);
 
+  void layoutSharedTails(unsigned MainTableSize);
+
+  unsigned EmitSharedTails(unsigned CurrentIdx, raw_ostream &OS);
+
+  unsigned getSharedTailsSize() const {
+    unsigned Size = 0;
+    for (const SharedTail &Tail : SharedTails)
+      Size += Tail.Size;
+    return Size;
+  }
+
 private:
+  static bool isNonFailingResultMatcher(const Matcher *N) {
+    switch (N->getKind()) {
+    case Matcher::EmitInteger:
+    case Matcher::EmitRegister:
+    case Matcher::EmitConvertToTarget:
+    case Matcher::EmitCopyToReg:
+    case Matcher::EmitNode:
+    case Matcher::EmitNodeXForm:
+    case Matcher::CompleteMatch:
+    case Matcher::MorphNodeTo:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool isTerminalResultMatcher(const Matcher *N) {
+    return isa<CompleteMatchMatcher>(N) || isa<MorphNodeToMatcher>(N);
+  }
+
+  void collectSharedTails(const MatcherList &ML);
+
+  unsigned EmitMatcherSuffix(const MatcherList &ML, const Matcher *Start,
+                             const unsigned Indent, unsigned CurrentIdx,
+                             raw_ostream &OS);
+
+  unsigned EmitJump(const SharedTail &Tail, const unsigned Indent,
+                    raw_ostream &OS);
+
   // Reorder ValueType indices by usage frequency (most common -> index 0).
   // Updates the indices directly in ValueTypeMap.
   void sortValueTypeByHwModeByFrequency() {
@@ -377,8 +438,21 @@ static std::string getIncludePath(const Record *R) {
 unsigned MatcherTableEmitter::SizeMatcherList(MatcherList &ML,
                                               raw_ostream &OS) {
   unsigned Size = 0;
-  for (Matcher *N : ML)
+  bool SkippingSharedTail = false;
+  for (Matcher *N : ML) {
+    if (SkippingSharedTail) {
+      ++OpcodeCounts[N->getKind()];
+      continue;
+    }
+    auto It = SharedTailByStart.find(N);
+    if (It != SharedTailByStart.end()) {
+      ++OpcodeCounts[N->getKind()];
+      Size += JumpSize;
+      SkippingSharedTail = true;
+      continue;
+    }
     Size += SizeMatcher(N, OS);
+  }
   return Size;
 }
 
@@ -1294,6 +1368,174 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
   llvm_unreachable("Unreachable");
 }
 
+void MatcherTableEmitter::collectSharedTails(const MatcherList &Root) {
+  struct Candidate {
+    unsigned Size = 0;
+    SmallVector<TailOccurrence, 2> Occurrences;
+  };
+  SmallVector<Candidate, 64> Candidates;
+  StringMap<unsigned> CandidateByKey;
+
+  // EmitMatcher() computes the exact encoded size, but some matcher kinds use
+  // emitter maps while doing so. Restore those maps after discovery so tail
+  // selection cannot change the IDs assigned during normal table sizing.
+  auto SavedNodeXFormMap = NodeXFormMap;
+  auto SavedNodeXForms = NodeXForms;
+  auto SavedOpcodeCounts = OpcodeCounts;
+  auto SavedValueTypeMap = ValueTypeMap;
+  bool SavedOmitComments = OmitComments;
+  OmitComments = true;
+
+  std::function<void(const MatcherList &)> Visit = [&](const MatcherList &ML) {
+    SmallVector<const Matcher *, 32> Matchers;
+
+    for (const Matcher *N : ML) {
+      Matchers.push_back(N);
+      if (const auto *SM = dyn_cast<ScopeMatcher>(N)) {
+        for (unsigned I = 0; I != SM->getNumChildren(); ++I)
+          Visit(SM->getChild(I));
+      } else if (const auto *SOM = dyn_cast<SwitchOpcodeMatcher>(N)) {
+        for (unsigned I = 0; I != SOM->getNumCases(); ++I)
+          Visit(SOM->getCaseMatcher(I));
+      } else if (const auto *STM = dyn_cast<SwitchTypeMatcher>(N)) {
+        for (unsigned I = 0; I != STM->getNumCases(); ++I)
+          Visit(STM->getCaseMatcher(I));
+      }
+    }
+
+    if (Matchers.empty() || !isTerminalResultMatcher(Matchers.back()))
+      return;
+
+    // Walk backward over the terminal result sequence. This stops at
+    // EmitMergeInputChains, predicates, and every other matcher operation
+    // that can transfer control to a scope's next alternative.
+    unsigned SafeBegin = Matchers.size();
+    while (SafeBegin != 0 && isNonFailingResultMatcher(Matchers[SafeBegin - 1]))
+      --SafeBegin;
+
+    if (SafeBegin == Matchers.size())
+      return;
+
+    unsigned SuffixSize = 0;
+    std::string SuffixKey;
+    for (unsigned I = Matchers.size(); I != SafeBegin;) {
+      --I;
+
+      // With comments disabled, EmitMatcher()'s output identifies the encoded
+      // suffix. Emit each matcher once to preserve the emitter ID sequence.
+      std::string Fragment;
+      {
+        raw_string_ostream FragmentOS(Fragment);
+        SuffixSize += EmitMatcher(Matchers[I], 0, 0, FragmentOS);
+      }
+      SuffixKey.insert(0, Fragment);
+      if (SuffixSize < MinSharedResultTailSize)
+        continue;
+
+      auto [It, Inserted] =
+          CandidateByKey.try_emplace(SuffixKey, Candidates.size());
+      if (Inserted) {
+        Candidates.emplace_back();
+        Candidates.back().Size = SuffixSize;
+      } else {
+        assert(Candidates[It->second].Size == SuffixSize &&
+               "identical result tails have different sizes");
+      }
+      Candidates[It->second].Occurrences.push_back({&ML, Matchers[I]});
+    }
+  };
+
+  Visit(Root);
+  NodeXFormMap = std::move(SavedNodeXFormMap);
+  NodeXForms = std::move(SavedNodeXForms);
+  OpcodeCounts = std::move(SavedOpcodeCounts);
+  ValueTypeMap = std::move(SavedValueTypeMap);
+  OmitComments = SavedOmitComments;
+
+  SmallVector<Candidate *, 64> OrderedCandidates;
+  for (Candidate &Entry : Candidates)
+    if (Entry.Occurrences.size() >= 2)
+      OrderedCandidates.push_back(&Entry);
+
+  llvm::stable_sort(
+      OrderedCandidates, [](const Candidate *LHS, const Candidate *RHS) {
+        uint64_t LHSSaving =
+            uint64_t(LHS->Occurrences.size()) * LHS->Size -
+            (LHS->Size + uint64_t(LHS->Occurrences.size()) * JumpSize);
+        uint64_t RHSSaving =
+            uint64_t(RHS->Occurrences.size()) * RHS->Size -
+            (RHS->Size + uint64_t(RHS->Occurrences.size()) * JumpSize);
+        return LHSSaving > RHSSaving;
+      });
+
+  DenseSet<const MatcherList *> ClaimedLists;
+  for (Candidate *Entry : OrderedCandidates) {
+    SmallVector<TailOccurrence, 4> Available;
+    for (const TailOccurrence &Occurrence : Entry->Occurrences)
+      if (!ClaimedLists.contains(Occurrence.Matchers))
+        Available.push_back(Occurrence);
+    if (Available.size() < 2)
+      continue;
+
+    uint64_t UnsharedSize = uint64_t(Available.size()) * Entry->Size;
+    uint64_t SharedSize = Entry->Size + uint64_t(Available.size()) * JumpSize;
+    if (SharedSize >= UnsharedSize)
+      continue;
+
+    const TailOccurrence &Canonical = Available.front();
+    unsigned TailIndex = SharedTails.size();
+    SharedTails.push_back({Canonical.Matchers, Canonical.Start, Entry->Size,
+                           /*Offset=*/0});
+    for (const TailOccurrence &Occurrence : Available) {
+      SharedTailByStart.try_emplace(Occurrence.Start, TailIndex);
+      ClaimedLists.insert(Occurrence.Matchers);
+    }
+  }
+}
+
+void MatcherTableEmitter::layoutSharedTails(unsigned MainTableSize) {
+  uint64_t Offset = MainTableSize;
+  for (SharedTail &Tail : SharedTails) {
+    if (!isUInt<32>(Offset))
+      report_fatal_error("SelectionDAG matcher table exceeds 32-bit offsets");
+    Tail.Offset = Offset;
+    Offset += Tail.Size;
+  }
+  if (!isUInt<32>(Offset))
+    report_fatal_error("SelectionDAG matcher table exceeds 32-bit offsets");
+}
+
+unsigned MatcherTableEmitter::EmitMatcherSuffix(const MatcherList &ML,
+                                                const Matcher *Start,
+                                                const unsigned Indent,
+                                                unsigned CurrentIdx,
+                                                raw_ostream &OS) {
+  unsigned Size = 0;
+  bool FoundStart = false;
+  for (const Matcher *N : ML) {
+    FoundStart |= N == Start;
+    if (!FoundStart)
+      continue;
+
+    if (!OmitComments)
+      OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+    unsigned MatcherSize = EmitMatcher(N, Indent, CurrentIdx, OS);
+    Size += MatcherSize;
+    CurrentIdx += MatcherSize;
+  }
+  assert(FoundStart && "shared result tail is not in its matcher list");
+  return Size;
+}
+
+unsigned MatcherTableEmitter::EmitJump(const SharedTail &Tail,
+                                       const unsigned Indent, raw_ostream &OS) {
+  OS.indent(Indent) << "OPC_Jump, JUMP_TARGET(" << Tail.Offset << "),";
+  if (!OmitComments)
+    OS << " // Shared result tail";
+  OS << '\n';
+  return JumpSize;
+}
+
 /// This function traverses the matcher tree and emits all the nodes.
 /// The nodes have already been sized.
 unsigned MatcherTableEmitter::EmitMatcherList(const MatcherList &ML,
@@ -1304,9 +1546,32 @@ unsigned MatcherTableEmitter::EmitMatcherList(const MatcherList &ML,
   for (const Matcher *N : ML) {
     if (!OmitComments)
       OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+
+    auto It = SharedTailByStart.find(N);
+    if (It != SharedTailByStart.end()) {
+      Size += EmitJump(SharedTails[It->second], Indent, OS);
+      return Size;
+    }
+
     unsigned MatcherSize = EmitMatcher(N, Indent, CurrentIdx, OS);
     Size += MatcherSize;
     CurrentIdx += MatcherSize;
+  }
+  return Size;
+}
+
+unsigned MatcherTableEmitter::EmitSharedTails(unsigned CurrentIdx,
+                                              raw_ostream &OS) {
+  unsigned Size = 0;
+  for (const SharedTail &Tail : SharedTails) {
+    assert(CurrentIdx == Tail.Offset && "shared result tail offset mismatch");
+    if (!OmitComments)
+      OS << "\n  // Shared result tail at " << Tail.Offset << "\n";
+    unsigned TailSize =
+        EmitMatcherSuffix(*Tail.Matchers, Tail.Start, 1, CurrentIdx, OS);
+    assert(TailSize == Tail.Size && "shared result tail size mismatch");
+    Size += TailSize;
+    CurrentIdx += TailSize;
   }
   return Size;
 }
@@ -1633,7 +1898,10 @@ void llvm::EmitMatcherTable(MatcherList &TheMatcherList,
   bool SaveOmitComments = OmitComments;
   OmitComments = true;
   raw_null_ostream NullOS;
-  unsigned TotalSize = MatcherEmitter.SizeMatcherList(TheMatcherList, NullOS);
+  unsigned MainTableSize =
+      MatcherEmitter.SizeMatcherList(TheMatcherList, NullOS);
+  MatcherEmitter.layoutSharedTails(MainTableSize);
+  unsigned TotalSize = MainTableSize + MatcherEmitter.getSharedTailsSize();
   OmitComments = SaveOmitComments;
 
   // Now that the matchers are sized, we can emit the code for them to the
@@ -1643,10 +1911,18 @@ void llvm::EmitMatcherTable(MatcherList &TheMatcherList,
   OS << "  // this. Coverage indexes are emitted as 4 bytes,\n";
   OS << "  // COVERAGE_IDX_VAL handles this.\n";
   OS << "  #define TARGET_VAL(X) X & 255, unsigned(X) >> 8\n";
+  OS << "  #define JUMP_TARGET(X) X & 255, (unsigned(X) >> 8) & 255, ";
+  OS << "(unsigned(X) >> 16) & 255, (unsigned(X) >> 24) & 255\n";
   OS << "  #define COVERAGE_IDX_VAL(X) X & 255, (unsigned(X) >> 8) & 255, ";
   OS << "(unsigned(X) >> 16) & 255, (unsigned(X) >> 24) & 255\n";
   OS << "  static const uint8_t MatcherTable[] = {\n";
-  TotalSize = MatcherEmitter.EmitMatcherList(TheMatcherList, 1, 0, OS);
+  unsigned EmittedSize =
+      MatcherEmitter.EmitMatcherList(TheMatcherList, 1, 0, OS);
+  assert(EmittedSize == MainTableSize &&
+         "emitted main matcher table size mismatch");
+  EmittedSize += MatcherEmitter.EmitSharedTails(EmittedSize, OS);
+  assert(EmittedSize == TotalSize && "emitted matcher table size mismatch");
+  TotalSize = EmittedSize;
   OS << "  }; // Total Array size is " << TotalSize << " bytes\n\n";
 
   MatcherEmitter.EmitHistogram(OS);
@@ -1656,6 +1932,7 @@ void llvm::EmitMatcherTable(MatcherList &TheMatcherList,
   OS << "  };\n\n";
 
   OS << "  #undef COVERAGE_IDX_VAL\n";
+  OS << "  #undef JUMP_TARGET\n";
   OS << "  #undef TARGET_VAL\n";
   OS << "  SelectCodeCommon(N, MatcherTable, sizeof(MatcherTable),\n";
   OS << "                   OperandLists);\n";
