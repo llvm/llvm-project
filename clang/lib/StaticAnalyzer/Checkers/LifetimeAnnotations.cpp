@@ -1,38 +1,62 @@
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/Support/raw_ostream.h"
-#include "AllocationState.h"
-#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
-
 
 using namespace clang;
 using namespace ento;
 
-REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SymbolRef,
-                               const MemRegion *);
-REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMapVal, const MemRegion *, const MemRegion *);
+struct LifetimeMap {
+  SymbolRef SymRefType;
+  const MemRegion *MemRegType;
 
+  bool operator==(const LifetimeMap &Type) const {
+    return std::tie(SymRefType, MemRegType) ==
+           std::tie(Type.SymRefType, Type.MemRegType);
+  }
 
+  bool operator<(const LifetimeMap &Type) const {
+    return std::tie(SymRefType, MemRegType) <
+           std::tie(Type.SymRefType, Type.MemRegType);
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const {
+    ID.AddPointer(SymRefType);
+    ID.AddPointer(MemRegType);
+  }
+};
+
+REGISTER_SET_WITH_PROGRAMSTATE(LifetimeBoundSet, LifetimeMap)
+
+REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMapVal, const MemRegion *,
+                               const MemRegion *)
+
+namespace {
 class LifetimeAnnotations : public Checker<check::PostCall, eval::Call> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
-  void analyzerLifetimeBound(const CallEvent &Call, const CallExpr *, CheckerContext &C) const;
+  void analyzerLifetimeBound(const CallEvent &Call, const CallExpr *,
+                             CheckerContext &C) const;
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
+
+  using FnCheck = void (LifetimeAnnotations::*)(const CallEvent &Call,
+                                                const CallExpr *,
+                                                CheckerContext &C) const;
+
+  const CallDescriptionMap<FnCheck> Callbacks = {
+      {{CDM::SimpleFunc, {"clang_analyzer_lifetime_bound"}},
+       &LifetimeAnnotations::analyzerLifetimeBound},
+  };
 };
 
-typedef void (LifetimeAnnotations::*FnCheck)(const CallEvent &Call, const CallExpr *,
-                                              CheckerContext &C) const;
-CallDescriptionMap<FnCheck> Callbacks = {
-  {{CDM::SimpleFunc, {"clang_analyzer_lifetime_bound"}},
-    &LifetimeAnnotations::analyzerLifetimeBound},
-};
+} // namespace
 
 void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
@@ -48,26 +72,19 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
 
   SVal RetVal = Call.getReturnValue();
   SymbolRef RetValSym = RetVal.getAsSymbol(/*IncludeBaseRegions=*/true);
-  unsigned LBParamIdx = FD->getNumParams();
-  // FIXME: Use range based for loop instead. Currently that would require
-  // to also change how we create ArgVal which would need a new logic to
-  // be implemented.
-  for (unsigned I = 0, E = FD->getNumParams(); I != E; I++) {
-    if (FD->getParamDecl(I)->hasAttr<LifetimeBoundAttr>()) {
-      LBParamIdx = I;
-      // FIXME: If multiple parameters are annotated this logic would
-      // prevent the analyzer to read after the first parameter.
-      break;
-    }
-  }
 
-  if (LBParamIdx != FD->getNumParams()) {
-    SVal ArgVal = Call.getArgSVal(LBParamIdx);
-    if (const MemRegion *ArgValRegion = ArgVal.getAsRegion()) {
-      if (RetValSym)
-        State = State->set<LifetimeBoundMap>(RetValSym, ArgValRegion);
-      else if (const MemRegion *RetValRegion = RetVal.getAsRegion())
-        State = State->set<LifetimeBoundMapVal>(RetValRegion, ArgValRegion);
+  for (const ParmVarDecl *PVD : FD->parameters()) {
+    if (PVD->hasAttr<LifetimeBoundAttr>()) {
+      unsigned Idx = PVD->getFunctionScopeIndex();
+      SVal Arg = Call.getArgSVal(Idx);
+
+      if (const MemRegion *ArgValRegion = Arg.getAsRegion()) {
+        if (RetValSym)
+          State = State->add<LifetimeBoundSet>(
+              LifetimeMap{RetValSym, ArgValRegion});
+        else if (const MemRegion *RetValRegion = RetVal.getAsRegion())
+          State = State->set<LifetimeBoundMapVal>(RetValRegion, ArgValRegion);
+      }
     }
   }
 
@@ -75,7 +92,8 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
     if (clang::lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
       if (const MemRegion *AttrRegion = IC->getCXXThisVal().getAsRegion()) {
         if (RetValSym)
-          State = State->set<LifetimeBoundMap>(RetValSym, AttrRegion);
+          State =
+              State->add<LifetimeBoundSet>(LifetimeMap{RetValSym, AttrRegion});
         else if (const MemRegion *RetValRegion = RetVal.getAsRegion())
           State = State->set<LifetimeBoundMapVal>(RetValRegion, AttrRegion);
       }
@@ -86,22 +104,23 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
 
 void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
                                      const char *NL, const char *Sep) const {
-  auto LBMap = State->get<LifetimeBoundMap>();
+  auto LBMap = State->get<LifetimeBoundSet>();
   auto LBMapVal = State->get<LifetimeBoundMapVal>();
 
   if (LBMap.isEmpty() && LBMapVal.isEmpty())
     return;
 
   Out << Sep << "LifetimeBound bindings:" << NL;
-  for (auto&& [RetValSym, ArgValRegion] : LBMap) {
+  for (auto &&[RetValSym, ArgValRegion] : LBMap) {
     Out << " Origin " << RetValSym << " contains Loan " << ArgValRegion << NL;
   }
-  for (auto&& [RetVal, ArgValRegion]: LBMapVal) {
+  for (auto &&[RetVal, ArgValRegion] : LBMapVal) {
     Out << " Origin " << RetVal << " contains Loan " << ArgValRegion << NL;
   }
 }
 
-bool LifetimeAnnotations::evalCall(const CallEvent &Call, CheckerContext &C) const {
+bool LifetimeAnnotations::evalCall(const CallEvent &Call,
+                                   CheckerContext &C) const {
 
   const auto *CE = dyn_cast_if_present<CallExpr>(Call.getOriginExpr());
   if (!CE)
@@ -115,11 +134,13 @@ bool LifetimeAnnotations::evalCall(const CallEvent &Call, CheckerContext &C) con
   return true;
 }
 
-void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const CallExpr *CE, CheckerContext &C) const {
+void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call,
+                                                const CallExpr *CE,
+                                                CheckerContext &C) const {
 
   ProgramStateRef State = C.getState();
-  unsigned int ArgExpr = CE->getNumArgs();
-  if (ArgExpr != 1)
+  unsigned int ArgCount = CE->getNumArgs();
+  if (ArgCount != 1)
     return;
 
   SVal ArgSVal = Call.getArgSVal(0);
@@ -134,16 +155,20 @@ void LifetimeAnnotations::analyzerLifetimeBound(const CallEvent &Call, const Cal
     return;
 
   if (ArgSValSym) {
-    if (const auto *ArgValLookFor = State->get<LifetimeBoundMap>(ArgSValSym)) {
-      OS << " Origin " << ArgSValSym << " contains loan " << *ArgValLookFor;
-      auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
-      C.emitReport(std::move(BR));
-      Str.clear();
+    auto LBSet = State->get<LifetimeBoundSet>();
+    for (const LifetimeMap &Entry : LBSet) {
+      if (Entry.SymRefType == ArgSValSym) {
+        OS << " Origin " << ArgSValSym << " bound to " << Entry.MemRegType;
+        auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
+        C.emitReport(std::move(BR));
+        Str.clear();
+      }
     }
   }
 
   if (ArgValRegion) {
-    if (const auto *AttrValLookFor = State->get<LifetimeBoundMapVal>(ArgValRegion)) {
+    if (const auto *AttrValLookFor =
+            State->get<LifetimeBoundMapVal>(ArgValRegion)) {
       OS << " Origin " << ArgValRegion << " bound to " << *AttrValLookFor;
       auto BR = std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N);
       C.emitReport(std::move(BR));

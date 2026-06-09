@@ -21,7 +21,7 @@ void caller() {
   int v = 0;
   X obj;
   int& r = obj.choose(v);
-  clang_analyzer_lifetime_bound(r); // expected-warning {{bound to v}}
+  clang_analyzer_lifetime_bound(r); // expected-warning {{Origin v bound to v}}
 }
 
 // Obj ref type function return annotated case
@@ -34,7 +34,7 @@ void caller_two() {
   // Return statement is annotated case.
   Y y;
   A& f = y.getA();
-  clang_analyzer_lifetime_bound(f); // expected-warning {{bound to y}}
+  clang_analyzer_lifetime_bound(f); // expected-warning {{Origin y.a bound to y}}
 }
 
 // Obj ptr type function return annotated case
@@ -46,7 +46,7 @@ struct Z {
 void caller_three() {
   Z z;
   A* func = z.getA();
-  clang_analyzer_lifetime_bound(func); // expected-warning {{bound to z}}
+  clang_analyzer_lifetime_bound(func); // expected-warning {{Origin z.a bound to z}}
 }
 
 // Free function with annotated param and ref return
@@ -55,7 +55,7 @@ int& foo(int& num [[clang::lifetimebound]]) { return num; }
 void caller_four() {
   int num = 5;
   int& s = foo(num);
-  clang_analyzer_lifetime_bound(s); // expected-warning {{bound to num}}
+  clang_analyzer_lifetime_bound(s); // expected-warning {{Origin num bound to num}}
 }
 
 // Free function with annotated param and ptr return
@@ -66,7 +66,7 @@ void caller_five() {
   int* n_ptr = &n;
   int* s = boo(n_ptr);
 
-  clang_analyzer_lifetime_bound(s); // expected-warning {{bound to n}}
+  clang_analyzer_lifetime_bound(s); // expected-warning {{Origin n bound to n}}
 }
 
 // Free function with both annotated and non-annotated parameters.
@@ -92,7 +92,7 @@ void caller_seven() {
   int* y_ptr = &y;
   auto* bind = foo(y_ptr);
 
-  clang_analyzer_lifetime_bound(bind); // expected-warning {{contains loan y}}
+  clang_analyzer_lifetime_bound(bind); // expected-warning-re {{Origin conj_${{[0-9]+}}{int *, LC{{[0-9]+}}, S{{[0-9]+}}, #{{[0-9]+}}} bound to y}}
 }
 
 // Function returns a reference and has an annotated parameter
@@ -102,7 +102,7 @@ void caller_eight() {
   int f = 15;
   auto& bind = func(f);
 
-  clang_analyzer_lifetime_bound(bind); // expected-warning {{contains loan f}}
+  clang_analyzer_lifetime_bound(bind); // expected-warning-re {{Origin conj_${{[0-9]+}}{int &, LC{{[0-9]+}}, S{{[0-9]+}}, #{{[0-9]+}}} bound to f}}
 }
 
 // Function returns a reference and has two annotated parameters.
@@ -113,11 +113,9 @@ void caller_nine() {
   int second_num = 2;
   int& numbers = f(first_num, second_num);
 
-  clang_analyzer_lifetime_bound(numbers); // expected-warning {{contains loan first_num}}
-
-// FIXME: Currently the callback only iterates until the first annotated parameter which
-// means the second annotation never gets read here. That is a clear bug. It should be fixed
-// in order to analyze all the parameters which are annotated.
+  clang_analyzer_lifetime_bound(numbers);
+  // expected-warning-re@-1 {{Origin conj_${{[0-9]+}}{int &, LC{{[0-9]+}}, S{{[0-9]+}}, #{{[0-9]+}}} bound to first_num}}
+  // expected-warning-re@-2 {{Origin conj_${{[0-9]+}}{int &, LC{{[0-9]+}}, S{{[0-9]+}}, #{{[0-9]+}}} bound to second_num}}
 }
 
 struct View {
