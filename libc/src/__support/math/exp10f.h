@@ -37,7 +37,7 @@ LIBC_INLINE float exp10f(float x) {
       // exp(nan) = nan
       if (xbits.is_nan())
         return x;
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       if (fputil::fenv_is_round_up())
         return FPBits::min_subnormal().get_val();
 #endif
@@ -49,7 +49,7 @@ LIBC_INLINE float exp10f(float x) {
     if (xbits.is_pos() && (x_u >= 0x421a'209bU)) {
       // x is finite
       if (x_u < 0x7f80'0000U) {
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
           return FPBits::max_normal().get_val();
@@ -66,7 +66,7 @@ LIBC_INLINE float exp10f(float x) {
   // When |x| <= log10(2)*2^-6
   if (LIBC_UNLIKELY(x_abs <= 0x3b9a'209bU)) {
     if (LIBC_UNLIKELY(x_u == 0xb25e'5bd9U)) { // x = -0x1.bcb7b2p-27f
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return 0x1.fffffep-1f;
 #else
       if (fputil::fenv_is_round_to_nearest())
@@ -84,7 +84,7 @@ LIBC_INLINE float exp10f(float x) {
 
   // Exceptional value.
   if (LIBC_UNLIKELY(x_u == 0x3d14'd956U)) { // x = 0x1.29b2acp-5f
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     if (fputil::fenv_is_round_up())
       return 0x1.1657c4p+0f;
 #endif

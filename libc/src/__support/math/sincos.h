@@ -67,13 +67,13 @@ LIBC_INLINE void sincos(double x, double *sin_x, double *cos_x) {
         *cos_x = fputil::round_result_slightly_down(1.0);
 
         if (LIBC_UNLIKELY(x_e < 4)) {
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
           int rounding_mode = fputil::quick_get_round();
           if (rounding_mode == FE_TOWARDZERO ||
               (xbits.sign() == Sign::POS && rounding_mode == FE_DOWNWARD) ||
               (xbits.sign() == Sign::NEG && rounding_mode == FE_UPWARD))
             *sin_x = FPBits(xbits.uintval() - 1).get_val();
-#endif // !LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         }
         *sin_x = fputil::multiply_add(x, -0x1.0p-54, x);
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE

@@ -93,7 +93,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
 
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       return FPBits::inf().get_val();
@@ -107,7 +107,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       default:
         return FPBits::max_normal().get_val();
       }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // When x < -11 * log10(2).
@@ -123,7 +123,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       }
 
       // When x < -0x1.ce4p+1, round(10^x - 1, HP, RN) = -1.
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return FPBits::one(Sign::NEG).get_val();
 #else
       switch (fputil::quick_get_round()) {
@@ -133,7 +133,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
       default:
         return fputil::cast<float16>(-0x1.ffcp-1);
       }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // When |x| <= 2^(-3).

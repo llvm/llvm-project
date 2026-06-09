@@ -38,25 +38,25 @@ LIBC_INLINE float expm1f(float x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Exceptional value
   if (LIBC_UNLIKELY(x_u == 0x3e35'bec5U)) { // x = 0x1.6b7d8ap-3f
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     return 0x1.8dbe64p-3f;
 #else
     int round_mode = fputil::quick_get_round();
     if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
       return 0x1.8dbe64p-3f;
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     return 0x1.8dbe62p-3f;
   }
 #if !defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
   if (LIBC_UNLIKELY(x_u == 0xbdc1'c6cbU)) { // x = -0x1.838d96p-4f
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     return -0x1.71c884p-4f;
 #else
     int round_mode = fputil::quick_get_round();
     if (round_mode == FE_TONEAREST || round_mode == FE_DOWNWARD)
       return -0x1.71c884p-4f;
     return -0x1.71c882p-4f;
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   }
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -71,7 +71,7 @@ LIBC_INLINE float expm1f(float x) {
       // exp(nan) = nan
       if (xbits.is_nan())
         return x;
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       int round_mode = fputil::quick_get_round();
       if (round_mode == FE_UPWARD || round_mode == FE_TOWARDZERO)
         return -0x1.ffff'fep-1f; // -1.0f + 0x1.0p-24f
@@ -81,7 +81,7 @@ LIBC_INLINE float expm1f(float x) {
       // x >= 89 or nan
       if (xbits.uintval() >= 0x42b2'0000) {
         if (xbits.uintval() < 0x7f80'0000U) {
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
           int rounding = fputil::quick_get_round();
           if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
             return FPBits::max_normal().get_val();

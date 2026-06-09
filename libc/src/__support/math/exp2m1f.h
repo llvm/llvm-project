@@ -96,7 +96,7 @@ LIBC_INLINE float exp2m1f(float x) {
     // x >= 128, or x is nan
     if (xbits.is_pos()) {
       if (xbits.is_finite()) {
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
           return FPBits::max_normal().get_val();
@@ -119,7 +119,7 @@ LIBC_INLINE float exp2m1f(float x) {
     if (xbits.is_nan())
       return x;
 
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     int rounding = fputil::quick_get_round();
     if (rounding == FE_UPWARD || rounding == FE_TOWARDZERO)
       return -0x1.ffff'fep-1f; // -1.0f + 0x1.0p-24f

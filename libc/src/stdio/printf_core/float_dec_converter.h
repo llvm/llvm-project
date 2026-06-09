@@ -49,7 +49,7 @@ constexpr uint32_t MAX_BLOCK = 999999999;
 
 LIBC_INLINE RoundDirection get_round_direction(int last_digit, bool truncated,
                                                Sign sign) {
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   if (last_digit != 5) {
     return last_digit > 5 ? RoundDirection::Up : RoundDirection::Down;
   } else {

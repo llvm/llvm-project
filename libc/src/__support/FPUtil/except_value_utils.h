@@ -58,7 +58,7 @@ template <typename T, size_t N> struct ExceptValues {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_bits == values[i].input)) {
         StorageType out_bits = values[i].rnd_towardzero_result;
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         out_bits += values[i].rnd_tonearest_offset;
 #else
         switch (fputil::quick_get_round()) {
@@ -72,7 +72,7 @@ template <typename T, size_t N> struct ExceptValues {
           out_bits += values[i].rnd_tonearest_offset;
           break;
         }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         return FPBits<T>(out_bits).get_val();
       }
     }
@@ -84,7 +84,7 @@ template <typename T, size_t N> struct ExceptValues {
     for (size_t i = 0; i < N; ++i) {
       if (LIBC_UNLIKELY(x_abs == values[i].input)) {
         StorageType out_bits = values[i].rnd_towardzero_result;
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         out_bits += values[i].rnd_tonearest_offset;
 #else
         switch (fputil::quick_get_round()) {
@@ -107,7 +107,7 @@ template <typename T, size_t N> struct ExceptValues {
           out_bits += values[i].rnd_tonearest_offset;
           break;
         }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         T result = FPBits<T>(out_bits).get_val();
         if (sign)
           result = -result;
@@ -133,6 +133,9 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T round_result_slightly_down(T value_rn) {
 
 template <typename T>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T round_result_slightly_up(T value_rn) {
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  return value_rn;
+#else
   if (cpp::is_constant_evaluated()) {
     return value_rn;
   } else {
@@ -140,6 +143,7 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T round_result_slightly_up(T value_rn) {
     tmp += FPBits<T>::min_normal().get_val();
     return tmp;
   }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }
 
 #if defined(LIBC_TYPES_HAS_FLOAT16) &&                                         \
@@ -147,6 +151,9 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T round_result_slightly_up(T value_rn) {
 template <>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16
 round_result_slightly_down(float16 value_rn) {
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  return value_rn;
+#else
   if (cpp::is_constant_evaluated()) {
     return value_rn;
   } else {
@@ -154,11 +161,15 @@ round_result_slightly_down(float16 value_rn) {
     tmp -= FPBits<float16>::min_normal().get_val();
     return cast<float16>(tmp);
   }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }
 
 template <>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16
 round_result_slightly_up(float16 value_rn) {
+#ifdef LIBC_HAS_ASSUME_ROUND_NEAREST_ONLY
+  return value_rn;
+#else
   if (cpp::is_constant_evaluated()) {
     return value_rn;
   } else {
@@ -166,6 +177,7 @@ round_result_slightly_up(float16 value_rn) {
     tmp += FPBits<float16>::min_normal().get_val();
     return cast<float16>(tmp);
   }
+#endif // LIBC_HAS_ASSUME_ROUND_NEAREST_ONLY
 }
 #endif
 

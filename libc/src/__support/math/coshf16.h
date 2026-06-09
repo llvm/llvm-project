@@ -90,7 +90,7 @@ LIBC_INLINE constexpr float16 coshf16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
 
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
       return FPBits::inf().get_val();
@@ -104,7 +104,7 @@ LIBC_INLINE constexpr float16 coshf16(float16 x) {
       default:
         return FPBits::max_normal().get_val();
       }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
   }
 

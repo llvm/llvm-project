@@ -173,7 +173,7 @@ ldexp(T x, U exp) {
 
   if (LIBC_UNLIKELY(exp > EXP_LIMIT)) {
     Sign sign = bits.sign();
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     int rounding_mode = quick_get_round();
 
     if ((sign == Sign::POS && rounding_mode == FE_DOWNWARD) ||
@@ -190,7 +190,7 @@ ldexp(T x, U exp) {
   // Similarly on the negative side we return zero early if |exp| is too small.
   if (LIBC_UNLIKELY(exp < -EXP_LIMIT)) {
     Sign sign = bits.sign();
-#ifndef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     int rounding_mode = quick_get_round();
     if ((sign == Sign::POS && rounding_mode == FE_UPWARD) ||
         (sign == Sign::NEG && rounding_mode == FE_DOWNWARD))

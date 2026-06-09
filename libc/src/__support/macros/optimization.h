@@ -52,11 +52,12 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #define LIBC_MATH_SMALL_TABLES 0x02
 #define LIBC_MATH_NO_ERRNO 0x04
 #define LIBC_MATH_NO_EXCEPT 0x08
+#define LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT 0x10
+#define LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY 0x20
 #define LIBC_MATH_FAST                                                         \
   (LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES |                     \
-   LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
-#define LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT 0x10
-#define LIBC_MATH_ALWAYS_ROUND_NEAREST 0x20
+   LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT |                                  \
+   LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY)
 
 #ifndef LIBC_MATH
 #define LIBC_MATH 0
@@ -82,8 +83,8 @@ LIBC_INLINE constexpr bool expects_bool_condition(T value, T expected) {
 #define LIBC_MATH_HAS_NO_EXCEPT
 #endif
 
-#if ((LIBC_MATH) & LIBC_MATH_ALWAYS_ROUND_NEAREST)
-#define LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#if ((LIBC_MATH) & LIBC_MATH_ASSUME_ROUND_NEAREST_ONLY)
+#define LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MACROS_OPTIMIZATION_H

@@ -98,7 +98,7 @@ add_or_sub(InType x, InType y) {
       if (y_bits.is_zero()) {
         if (is_effectively_add)
           return OutFPBits::zero(x_bits.sign()).get_val();
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
         return OutFPBits::zero(Sign::POS).get_val();
 #else
         switch (fputil::quick_get_round()) {
@@ -107,7 +107,7 @@ add_or_sub(InType x, InType y) {
         default:
           return OutFPBits::zero(Sign::POS).get_val();
         }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       }
 
       if constexpr (cpp::is_same_v<InType, bfloat16> &&
@@ -140,7 +140,7 @@ add_or_sub(InType x, InType y) {
   InType y_abs = y_bits.abs().get_val();
 
   if (x_abs == y_abs && !is_effectively_add) {
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     return OutFPBits::zero(Sign::POS).get_val();
 #else
     switch (fputil::quick_get_round()) {
@@ -149,7 +149,7 @@ add_or_sub(InType x, InType y) {
     default:
       return OutFPBits::zero(Sign::POS).get_val();
     }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   }
 
   Sign result_sign = Sign::POS;

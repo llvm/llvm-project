@@ -246,9 +246,9 @@ round_using_specific_rounding_mode(T x, int rnd) {
 template <typename T>
 LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<T>, T>
 round_using_current_rounding_mode(T x) {
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   return round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
   int rounding_mode = quick_get_round();
 

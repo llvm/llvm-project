@@ -112,7 +112,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
 
     mantissa >>= shift_amount;
 
-#ifdef LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     // Round to nearest, if it's exactly halfway then round to even.
     if (truncated_bits > halfway_const)
       ++mantissa;
@@ -138,7 +138,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
     case FE_TOWARDZERO:
       break;
     }
-#endif // LIBC_MATH_HAS_ALWAYS_ROUND_NEAREST
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
     // If the rounding caused an overflow, shift the mantissa and adjust the
     // exponent to match.
