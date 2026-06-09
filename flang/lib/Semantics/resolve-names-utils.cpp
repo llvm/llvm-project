@@ -293,6 +293,10 @@ static void rewriteShapeSpecListToExplicitBounds(const parser::ArraySpec &x) {
 }
 
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
+  // This node is rewritten manually here, as opposed to using RewriteParseTree,
+  // because RewriteParseTree is called after ResolveNames in 
+  // PerformStatementSemantics, at which point we would have already
+  // aborted due to semantic errors before getting a chance to rewrite.
   if (std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u) &&
       shouldRewriteShapeSpecListToExplicitBounds(context_, x)) {
     rewriteShapeSpecListToExplicitBounds(x);

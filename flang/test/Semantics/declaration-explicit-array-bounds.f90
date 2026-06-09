@@ -108,8 +108,7 @@ program declaration_array_bounds
   integer :: k(rank2_parameter_array : rank3_array)
 
   ! Test that any comma list is parsed as ExplicitShapeSpecList and not rewritten 
-  ! to ExplicitShapeBoundsSpec, giving error messages expecting same number of 
-  ! aruments as rank of test_array and scalar integers
+  ! to ExplicitShapeBoundsSpec, giving error messages expecting scalar integer values.
   !ERROR: Must be a scalar value, but is a rank-1 array
   !ERROR: Must be a scalar value, but is a rank-1 array
   !ERROR: Must be a scalar value, but is a rank-1 array
