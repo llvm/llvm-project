@@ -2071,4 +2071,12 @@ namespace SubCb {
     return __builtin_subcb(lhs, rhs, carry, &rhs);
   }
   static_assert(subcb(10, 15, 1) == 250);
+
+  using u8 = unsigned char;
+  constexpr int subcb2() {
+    u8 a = 0, b = 0, c = 0;
+    __builtin_subcb(a, b, c, &c);
+    return 0;
+  }
+  static_assert(subcb2() == 0);
 }
