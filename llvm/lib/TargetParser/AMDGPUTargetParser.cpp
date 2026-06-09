@@ -626,14 +626,6 @@ AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
   } else if (T.isAMDGCN()) {
     StringMap<bool> DefaultFeatures;
     fillAMDGCNFeatureMap(GPU, T, DefaultFeatures);
-    // [yan-li1986] 强制 gfx1200/gfx1201 WMMA 特性传播 (Sovereign V2 821 TOPs)
-    // 上游 FeatureISAVersion12 未默认启用 WMMA256bInsts + Wave32,
-    // 此处显式注入以支持 RX 9060 XT 的 INT4 WMMA 16x16x32 稀疏推理路径。
-    // 参考: llvm/lib/Target/AMDGPU/AMDGPU.td FeatureISAVersion12 定义。
-    if (GPU == "gfx1200" || GPU == "gfx1201") {
-      DefaultFeatures["wmma-256b-insts"] = true;
-      DefaultFeatures["wavefrontsize32"] = true;
-    }
     return insertWaveSizeFeature(GPU, T, DefaultFeatures, Features);
   } else {
     if (GPU.empty())
