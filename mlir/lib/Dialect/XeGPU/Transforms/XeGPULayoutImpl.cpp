@@ -1510,6 +1510,153 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
                                        srcShape, subgroupSize);
 }
 
+// Forward declaration: defined later in the file.
+using LayoutRepresentation = std::pair<int64_t, int64_t>;
+static SmallVector<LayoutRepresentation>
+getValidLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
+                int64_t sgCount);
+
+/// Generic anchor-layout setup for ND ops (store_nd, prefetch_nd) that pick
+/// their own layout without considering a consumer.
+///
+/// Given hardware-supported block widths/heights, picks the largest divisor
+/// of the trailing two dims of `dataShape` and uses that as `inst_data`. The
+/// lane layout is the standard 2D-block-IO default (subgroupSize lanes on the
+/// innermost dim, optional packing on the innermost or second-to-innermost
+/// for vnni).
+///
+/// For Lane kind: returns just the lane layout / lane data.
+/// For InstData kind: returns inst_data + the lane layout it must be a
+///   multiple of (Category A: inst_data = k * lane_layout * lane_data, k>=1).
+/// For Subgroup kind: requires `numSg`, picks the most balanced sg_layout
+///   that evenly divides the shape and where sg_data is a multiple of the
+///   chosen inst_data.
+static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
+    xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
+    ArrayRef<int64_t> dataShape, Type elemTy, ArrayRef<int> bWidths,
+    ArrayRef<int> bHeights, unsigned packingSize, int numSg,
+    const xegpu::uArch::uArch *uArch) {
+  int rank = dataShape.size();
+  assert(rank >= 1 && "Expected at least 1D shape for ND op");
+
+  // Compute the default 2D block IO lane layout / lane data.
+  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
+  int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
+  SmallVector<int64_t> laneLayout(rank, 1);
+  SmallVector<int64_t> laneData(rank, 1);
+  laneLayout.back() = uArch->getSubgroupSize();
+  laneData.back() = packingFactor;
+
+  if (layoutKind == xegpu::LayoutKind::Lane)
+    return buildLaneLayout(context, laneLayout, laneData);
+
+  // Compute inst_data from hardware block params: pick the largest supported
+  // block width/height that divides the corresponding tensor dim.
+  SmallVector<int64_t> instData(rank, 1);
+  int instWidth = xegpu::getLargestDivisor(
+      static_cast<int>(dataShape.back()), bWidths);
+  if (instWidth == -1)
+    return nullptr;
+  instData.back() = instWidth;
+  if (rank >= 2) {
+    int instHeight = xegpu::getLargestDivisor(
+        static_cast<int>(dataShape[rank - 2]), bHeights);
+    if (instHeight == -1)
+      return nullptr;
+    instData[rank - 2] = instHeight;
+  }
+
+  // Validate Category A invariant: inst_data must be a multiple of
+  // lane_layout * lane_data on each dim (k >= 1).
+  for (int dim = 0; dim < rank; ++dim) {
+    int64_t laneProduct = laneLayout[dim] * laneData[dim];
+    assert(instData[dim] % laneProduct == 0 &&
+           "inst_data must be a multiple of lane_layout * lane_data for ND op");
+    (void)laneProduct;
+  }
+
+  if (layoutKind == xegpu::LayoutKind::InstData)
+    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
+    // Subgroup-kind layout creation currently only supports rank-2 shapes
+    // (mirrors getValidLayouts).
+    if (rank != 2)
+      return nullptr;
+    auto sgLayouts = getValidLayouts(dataShape, instData, numSg);
+    if (sgLayouts.empty())
+      return nullptr;
+    SmallVector<int> sgLayout = {static_cast<int>(sgLayouts[0].first),
+                                 static_cast<int>(sgLayouts[0].second)};
+    SmallVector<int> sgData = {
+        static_cast<int>(dataShape[0]) / sgLayout[0],
+        static_cast<int>(dataShape[1]) / sgLayout[1]};
+    return xegpu::LayoutAttr::get(
+        context, DenseI32ArrayAttr::get(context, sgLayout),
+        DenseI32ArrayAttr::get(context, sgData),
+        /*inst_data=*/nullptr, /*lane_layout=*/nullptr,
+        /*lane_data=*/nullptr, /*order=*/nullptr);
+  }
+
+  return nullptr;
+}
+
+/// Sets up the anchor layout for a store_nd operation. StoreNd picks its
+/// own layout based on uArch block parameters (it does not take a consumer
+/// layout, since it is a data sink).
+xegpu::DistributeLayoutAttr
+xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
+                                VectorType srcVecTy, int numSg,
+                                const xegpu::uArch::uArch *uArch) {
+  auto context = srcVecTy.getContext();
+  Type elemTy = srcVecTy.getElementType();
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(
+          uArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockStore));
+  if (!uArchInstruction)
+    return nullptr;
+  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(elemTy);
+  if (!blockWHC)
+    return nullptr;
+  auto [bWidths, bHeights, bCounts] = blockWHC.value();
+  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
+
+  return setupGenericNdAnchorLayout(layoutKind, context, srcVecTy.getShape(),
+                                    elemTy, bWidths, bHeights, packingSize,
+                                    numSg, uArch);
+}
+
+/// Sets up the anchor layout for a prefetch_nd operation. PrefetchNd has no
+/// consumer (it produces no value), so it picks its own layout from uArch
+/// block parameters.
+xegpu::DistributeLayoutAttr
+xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
+                                   xegpu::TensorDescType tdescTy, int numSg,
+                                   const xegpu::uArch::uArch *uArch) {
+  auto context = tdescTy.getContext();
+  Type elemTy = tdescTy.getElementType();
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
+          uArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch));
+  if (!uArchInstruction)
+    return nullptr;
+  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(elemTy);
+  if (!blockWHC)
+    return nullptr;
+  auto [bWidths, bHeights, bCounts] = blockWHC.value();
+  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
+
+  return setupGenericNdAnchorLayout(layoutKind, context, tdescTy.getShape(),
+                                    elemTy, bWidths, bHeights, packingSize,
+                                    numSg, uArch);
+}
+
 // Returns the default (lane_layout, lane_data) pair for a given 1D/2D vector
 // type used by 2D block IO ops.
 // - `packingSize` means multiple consecutive elements can be accessed
@@ -1558,7 +1705,7 @@ static xegpu::LayoutAttr getDefaultLaneLayout2DBlockIo(
 //   wgShape = [128, 64], instData = [8, 16], sgCount = 32
 // Returns layouts:
 //   [(8,4), (16,2)], which correspond to sgData [16,16] and [8,32].
-using LayoutRepresentation = std::pair<int64_t, int64_t>;
+// Definition (forward-declared above).
 static SmallVector<LayoutRepresentation>
 getValidLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
                 int64_t sgCount) {

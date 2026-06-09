@@ -599,49 +599,31 @@ void LayoutInfoPropagation::visitPrefetchNdOp(
   if (hasParamsOfLayoutKind(anchorLayout)) {
     prefetchLayout = LayoutInfo(anchorLayout);
   } else {
-    // Here we assign the default layout to the tensor descriptor operand of
-    // prefetch.
     auto tdescTy = prefetch.getTensorDescType();
-
     const uArch *uArch = getUArch(getChipStr(prefetch).value_or(""));
     if (!uArch)
       return;
-    const auto *uArchInstruction =
-        dyn_cast<xegpu::uArch::Subgroup2DBlockPrefetchInstruction>(
-            uArch->getInstruction(
-                xegpu::uArch::InstructionKind::Subgroup2DBlockPrefetch));
 
-    auto blockWHC =
-        uArchInstruction->getBlockWidthHeightCount(tdescTy.getElementType());
-    if (!blockWHC)
-      prefetch.emitWarning("No known block params found for the element type.");
-    auto [bWidth, bHeight, bCount] = blockWHC.value();
-    SmallVector<int> instData;
-    int instWidth = xegpu::getLargestDivisor(
-        static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 1)), bWidth);
-    if (instWidth == -1)
-      prefetch.emitWarning(
-          "No suitable instruction multiple found for the given shape.");
-    if (tdescTy.getRank() == 1)
-      instData = {instWidth};
-    else {
-      int instHeight = xegpu::getLargestDivisor(
-          static_cast<int>(tdescTy.getDimSize(tdescTy.getRank() - 2)), bHeight);
-      if (instHeight == -1)
+    int numSg = 0;
+    if (layoutKind == xegpu::LayoutKind::Subgroup) {
+      auto numSgOrErr = getNumSg(prefetch, uArch->getSubgroupSize());
+      if (failed(numSgOrErr)) {
         prefetch.emitWarning(
-            "No suitable instruction multiple found for the given shape.");
-      instData = {instHeight, instWidth};
+            "Unable to determine the number of subgroups for the operation.");
+        return;
+      }
+      numSg = numSgOrErr.value();
     }
 
-    if (layoutKind == xegpu::LayoutKind::InstData)
-      prefetchLayout =
-          LayoutInfo(xegpu::LayoutAttr::get(tdescTy.getContext(), instData));
-    else
-      prefetchLayout = getSIMTLayoutInfoBlockIO(
-          tdescTy, uArch, uArchInstruction->getPackedFormatBitSize());
-
-    prefetch.setLayoutAttr(
-        dyn_cast<xegpu::DistributeLayoutAttr>(prefetchLayout.get()));
+    auto layoutAttr =
+        xegpu::setupPrefetchNdAnchorLayout(layoutKind, tdescTy, numSg, uArch);
+    if (!layoutAttr) {
+      prefetch.emitWarning(
+          "Failed to determine required layout for prefetch_nd.");
+      return;
+    }
+    prefetchLayout = LayoutInfo(layoutAttr);
+    prefetch.setLayoutAttr(layoutAttr);
   }
   // Propagate the layout to the source tensor descriptor.
   propagateIfChanged(operands[0], operands[0]->meet(prefetchLayout));
@@ -980,71 +962,26 @@ void LayoutInfoPropagation::visitStoreNdOp(
     const uArch *uArch = getUArch(getChipStr(store).value_or(""));
     if (!uArch)
       return;
-    const auto *uArchInstruction =
-        dyn_cast<xegpu::uArch::Subgroup2DBlockStoreInstruction>(
-            uArch->getInstruction(
-                xegpu::uArch::InstructionKind::Subgroup2DBlockStore));
-    VectorType dataTy = store.getValueType();
-    auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
-        store.getValueType().getElementType());
-    if (!blockWHC)
-      store.emitWarning("No known block params found for the element type.");
-    auto [bWidth, bHeight, bCount] = blockWHC.value();
-    // Default to 1 for any leading batch dims; rank-1 and rank>=2 cases
-    // overwrite the trailing entries below.
-    SmallVector<int> instData(dataTy.getRank(), 1);
-    int instWidth = xegpu::getLargestDivisor(
-        static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 1)), bWidth);
-    if (instWidth == -1)
-      store.emitWarning(
-          "No suitable instruction multiple found for the given shape.");
-    if (dataTy.getRank() == 1) {
-      instData = {instWidth};
-    } else {
-      int instHeight = xegpu::getLargestDivisor(
-          static_cast<int>(dataTy.getDimSize(dataTy.getRank() - 2)), bHeight);
-      if (instHeight == -1)
-        store.emitWarning(
-            "No suitable instruction multiple found for the given shape.");
-      instData[dataTy.getRank() - 2] = instHeight;
-      instData[dataTy.getRank() - 1] = instWidth;
-    }
 
-    if (layoutKind == xegpu::LayoutKind::InstData)
-      storeLayout =
-          LayoutInfo(xegpu::LayoutAttr::get(dataTy.getContext(), instData));
-    else if (layoutKind == xegpu::LayoutKind::Lane)
-      storeLayout =
-          getSIMTLayoutInfoBlockIO(store.getValueType(), uArch,
-                                   uArchInstruction->getPackedFormatBitSize());
-    else { // xegpu::LayoutKind::Subgroup
-      auto sgSize = uArch->getSubgroupSize();
-      auto numSgOrErr = getNumSg(store, sgSize);
+    int numSg = 0;
+    if (layoutKind == xegpu::LayoutKind::Subgroup) {
+      auto numSgOrErr = getNumSg(store, uArch->getSubgroupSize());
       if (failed(numSgOrErr)) {
         store.emitWarning(
             "Unable to determine the number of subgroups for the operation.");
         return;
       }
-      auto sgLayouts = getValidLayouts(store.getValueType().getShape(),
-                                       instData, numSgOrErr.value());
-      if (sgLayouts.empty()) {
-        store.emitWarning(
-            "Unable to determine suitable subgroup layout for store value.");
-        return;
-      }
-      SmallVector<int> sgLayout = {sgLayouts[0].first, sgLayouts[0].second};
-      SmallVector<int> sgData = {
-          static_cast<int>(dataTy.getShape()[0]) / sgLayout[0],
-          static_cast<int>(dataTy.getShape()[1]) / sgLayout[1]};
-      storeLayout = LayoutInfo(xegpu::LayoutAttr::get(
-          dataTy.getContext(),
-          DenseI32ArrayAttr::get(dataTy.getContext(), sgLayout),
-          DenseI32ArrayAttr::get(dataTy.getContext(), sgData),
-          /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-          /*lane_data =*/nullptr, /*order =*/nullptr));
+      numSg = numSgOrErr.value();
     }
-    store.setLayoutAttr(
-        dyn_cast<xegpu::DistributeLayoutAttr>(storeLayout.get()));
+
+    auto layoutAttr = xegpu::setupStoreNdAnchorLayout(
+        layoutKind, store.getValueType(), numSg, uArch);
+    if (!layoutAttr) {
+      store.emitWarning("Failed to determine required layout for store_nd.");
+      return;
+    }
+    storeLayout = LayoutInfo(layoutAttr);
+    store.setLayoutAttr(layoutAttr);
   }
   // Propagate the layout to the value operand.
   // Both operands should have the same layout

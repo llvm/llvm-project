@@ -231,6 +231,21 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
                                                   int chunkSize,
                                                   const uArch::uArch *uArch);
 
+/// Sets up the anchor layout for a store_nd operation. StoreNd does not
+/// consider a consumer layout (it is a data sink), and picks its layout from
+/// uArch block parameters. `numSg` is only used for Subgroup-kind layouts.
+DistributeLayoutAttr setupStoreNdAnchorLayout(LayoutKind layoutKind,
+                                              VectorType vectorTy, int numSg,
+                                              const uArch::uArch *uArch);
+
+/// Sets up the anchor layout for a prefetch_nd operation. PrefetchNd has no
+/// value result and thus no consumer; it picks its layout from uArch block
+/// parameters. `numSg` is only used for Subgroup-kind layouts.
+DistributeLayoutAttr setupPrefetchNdAnchorLayout(LayoutKind layoutKind,
+                                                 TensorDescType tdescTy,
+                                                 int numSg,
+                                                 const uArch::uArch *uArch);
+
 /// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
 /// The numSg and consumerLayout (optional) are only used by sg layout creation.
 std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
