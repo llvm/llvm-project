@@ -1702,24 +1702,18 @@
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64_be-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=riscv32-pc-linux-musl -march=rv32im -mabi=ilp32 \
-// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV32-SF %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=riscv32-pc-linux-musl -march=rv32imf -mabi=ilp32f \
-// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV32-SP %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=riscv32-pc-linux-musl -march=rv32imfd -mabi=ilp32d \
-// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV32 %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=riscv64-pc-linux-musl -march=rv64im -mabi=lp64 \
-// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV64-SF %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=riscv64-pc-linux-musl -march=rv64imf -mabi=lp64f \
-// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV64-SP %s
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=riscv64-pc-linux-musl -march=rv64imfd -mabi=lp64d \
-// RUN:   | FileCheck --check-prefix=CHECK-MUSL-RISCV64 %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32im -mabi=ilp32 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32-SF %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32imf -mabi=ilp32f 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32-SP %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32imfd -mabi=ilp32d 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32 %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64im -mabi=lp64 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64-SF %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64imf -mabi=lp64f 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64-SP %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64imfd -mabi=lp64d 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64 %s
 // CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 // CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
 // CHECK-MUSL-MIPS:       "-dynamic-linker" "/lib/ld-musl-mips.so.1"
