@@ -24,7 +24,7 @@
 // NOHIP-NOT: "-include" "__clang_hip_runtime_wrapper.h"
 // skip check of standard C++ include path
 // CLANG-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
-// NOCLANG-NOT: [[RESOURCE_DIR]]/include"
+// NOCLANG-NOT: "[[RESOURCE_DIR]]/include"
 // NOHIP-NOT: "{{.*}}Inputs/rocm/include"
 
 // COMMON-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
