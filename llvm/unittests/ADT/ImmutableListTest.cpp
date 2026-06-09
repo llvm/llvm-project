@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ImmutableList.h"
+#include "llvm/ADT/STLExtras.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <vector>
 
 using namespace llvm;
 
@@ -268,5 +272,57 @@ TEST_F(ImmutableListTest, LongListOrderingTest) {
 
 static_assert(std::is_trivially_copyable_v<ImmutableList<Wrapper<long>>>,
               "trivially copyable");
+
+// Verify ImmutableList<T>::iterator satisfies the std::iterator_traits
+// contract:
+using IntListIter = ImmutableList<Wrapper<int>>::iterator;
+static_assert(
+    std::is_same_v<std::iterator_traits<IntListIter>::iterator_category,
+                   std::forward_iterator_tag>);
+static_assert(std::is_same_v<std::iterator_traits<IntListIter>::value_type,
+                             Wrapper<int>>);
+static_assert(std::is_same_v<std::iterator_traits<IntListIter>::difference_type,
+                             std::ptrdiff_t>);
+static_assert(std::is_same_v<std::iterator_traits<IntListIter>::pointer,
+                             const Wrapper<int> *>);
+static_assert(std::is_same_v<std::iterator_traits<IntListIter>::reference,
+                             const Wrapper<int> &>);
+
+using RefListIter = ImmutableList<const Unmodifiable &>::iterator;
+static_assert(
+    std::is_same_v<std::iterator_traits<RefListIter>::iterator_category,
+                   std::forward_iterator_tag>);
+static_assert(std::is_same_v<std::iterator_traits<RefListIter>::value_type,
+                             const Unmodifiable>);
+static_assert(std::is_same_v<std::iterator_traits<RefListIter>::pointer,
+                             const Unmodifiable *>);
+static_assert(std::is_same_v<std::iterator_traits<RefListIter>::reference,
+                             const Unmodifiable &>);
+
+TEST_F(ImmutableListTest, IteratorPostIncrementTest) {
+  ImmutableList<Wrapper<int>>::Factory f;
+  ImmutableList<Wrapper<int>> L =
+      f.add(5, f.add(4, f.add(3, f.getEmptyList())));
+
+  auto It = L.begin();
+  EXPECT_EQ(5, *It);
+
+  auto Old = It++;
+  EXPECT_EQ(5, *Old);
+  EXPECT_EQ(4, *It);
+  EXPECT_TRUE(Old != It);
+}
+
+TEST_F(ImmutableListTest, IteratorPostIncrementInLoopTest) {
+  ImmutableList<Wrapper<int>>::Factory f;
+  ImmutableList<Wrapper<int>> L =
+      f.add(5, f.add(4, f.add(3, f.getEmptyList())));
+
+  std::vector<int> Values;
+  for (auto I = L.begin(), E = L.end(); I != E; I++)
+    Values.push_back(*I);
+
+  EXPECT_THAT(Values, testing::ElementsAre(5, 4, 3));
+}
 
 } // namespace
