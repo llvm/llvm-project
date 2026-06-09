@@ -280,7 +280,9 @@ BranchRelaxation::createNewBlockAfter(MachineBasicBlock &OrigMBB,
   OrigMBB.setIsEndSection(false);
 
   // Insert an entry into BlockInfo to align it properly with the block numbers.
-  BlockInfo.insert(BlockInfo.begin() + NewBB->getNumber(), BasicBlockInfo());
+  auto It = BlockInfo.insert(BlockInfo.begin() + NewBB->getNumber(),
+                             BasicBlockInfo());
+  It->Offset = BlockInfo[OrigMBB.getNumber()].postOffset(*NewBB);
 
   return NewBB;
 }
