@@ -133,7 +133,6 @@ ArrayRef<MCDXContainerPart> DXContainerObjectWriter::getParts() {
 }
 
 uint64_t DXContainerObjectWriter::writeObject() {
-  // TODO write only necessary sections.
   write(W.OS, getContext().getTargetTriple());
   clearParts();
 

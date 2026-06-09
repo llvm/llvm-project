@@ -162,7 +162,7 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
 
   mcdxbc::DebugName DebugName;
   if (PdbFileName.empty()) {
-    // TODO Add an option to compute hash based on ILDB.
+    // Use the MD5 hash as the file name.
     Digest.stringifyResult(Result, DebugNameStr);
     DebugNameStr += ".pdb";
   } else {
@@ -179,7 +179,7 @@ void DXContainerGlobals::computeShaderHashAndDebugName(
   DebugName.write(OS);
   addSection(M, Globals, ILDNData, "dx.ildn", "ILDN");
 
-  // TODO Do not create PDB in embedded mode.
+  // TODO: Do not create PDB in embedded mode.
   // Pass PDB name to DXContainerPDBPass via PDBNAME section.
   addSection(M, Globals, AbsoluteDebugName, "dx.pdb.name",
              PdbFileNameSectionName);
