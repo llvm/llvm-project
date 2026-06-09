@@ -5764,8 +5764,14 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
   LLVM_DEBUG(dbgs() << "Cost for VF " << VF << ": " << Cost
                     << " (Estimated cost per lane: ");
   if (Cost.isValid()) {
-    double CostPerLane = double(Cost.getValue()) / EstimatedWidth;
-    LLVM_DEBUG(dbgs() << format("%.1f", CostPerLane));
+    APFloat CostPerLane(APFloat::IEEEdouble(),
+                        APInt(64, (uint64_t)Cost.getValue()));
+    APFloat EstimatedWidthAsAPFloat(APFloat::IEEEdouble(),
+                                    APInt(64, (uint64_t)EstimatedWidth));
+
+    (void)CostPerLane.divide(EstimatedWidthAsAPFloat,
+                             APFloat::rmNearestTiesToEven);
+    LLVM_DEBUG(dbgs() << CostPerLane);
   } else /* No point dividing an invalid cost - it will still be invalid */
     LLVM_DEBUG(dbgs() << "Invalid");
   LLVM_DEBUG(dbgs() << ")\n");
