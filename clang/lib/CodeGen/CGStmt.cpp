@@ -3350,6 +3350,11 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
     Builder.SetInsertPoint(PrefMemBlock);
   }
 
+  // The memory path keeps the full "rm" constraint rather than simplifying it
+  // to "m". We could strip the "r" alternative here, but reusing the same
+  // constraint string from both paths keeps the frontend simpler and the
+  // backend's InlineAsmPrepare pass already routes to this block only when
+  // memory is intended.
   EmitAsmStmt(S, OutputConstraintInfos, InputConstraintInfos, false);
 
   if (HasRegMemConstraints) {
