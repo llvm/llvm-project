@@ -243,6 +243,9 @@ C23 Feature Support
 - Fixed a failing assertion when validating an invalid structure redefinition
   with a member which uses an incomplete enumeration type. (#GH190227)
 - Clang now supports the C23 ``wN`` and ``wfN`` length modifiers. (#GH116962)
+- Clang now recognizes the C23 ``H``, ``D``, and ``DD`` length modifiers in
+  format strings and diagnoses their use because Clang does not yet support
+  the corresponding decimal floating-point types, ``_Decimal32``, ``_Decimal64``, and ``_Decimal128``. (#GH116962)
 
 Objective-C Language Changes
 -----------------------------
@@ -321,6 +324,14 @@ Non-comprehensive list of changes in this release
   vtable lookup at runtime.
 
 - Updated support for Unicode from 15.1 to 18.0.
+
+- Linux and Windows toolchains now support Clang multilibs using
+  ``-fmultilib-flag=``.
+
+- The SafeStack builtins ``__builtin___get_unsafe_stack_ptr``,
+  ``__builtin___get_unsafe_stack_bottom``, ``__builtin___get_unsafe_stack_top``,
+  and ``__builtin___get_unsafe_stack_start`` are now deprecated. Use the
+  corresponding functions from ``<sanitizer/safestack_interface.h>`` instead.
 
 New Compiler Flags
 ------------------

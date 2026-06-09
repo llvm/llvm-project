@@ -1674,15 +1674,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         // intrinsic exposes) is one bit per thread, masked with the EXEC
         // register (which contains the bitmask of live threads). So a
         // comparison that always returns true is the same as a read of the
-        // EXEC register.
-        Metadata *MDArgs[] = {MDString::get(II.getContext(), "exec")};
-        MDNode *MD = MDNode::get(II.getContext(), MDArgs);
-        Value *Args[] = {MetadataAsValue::get(II.getContext(), MD)};
-        CallInst *NewCall = IC.Builder.CreateIntrinsic(Intrinsic::read_register,
-                                                       II.getType(), Args);
-        NewCall->addFnAttr(Attribute::Convergent);
-        NewCall->takeName(&II);
-        return IC.replaceInstUsesWith(II, NewCall);
+        // EXEC register. ballot(true) reads EXEC at the wave-size width, so
+        // zext/trunc the result to the intrinsic's return type.
+        Type *WaveTy = IC.Builder.getIntNTy(ST->getWavefrontSize());
+        Value *Ballot = IC.Builder.CreateIntrinsic(
+            Intrinsic::amdgcn_ballot, WaveTy, IC.Builder.getTrue());
+        Value *Result = IC.Builder.CreateZExtOrTrunc(Ballot, II.getType());
+        return IC.replaceInstUsesWith(II, Result);
       }
 
       // Canonicalize constants to RHS.
