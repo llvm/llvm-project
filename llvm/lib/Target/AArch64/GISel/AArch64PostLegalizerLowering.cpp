@@ -1017,7 +1017,7 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
   auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
   Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
-  Observer.changedInstr(MI);
+  Observer.changingInstr(MI);
   MI.getOperand(1).setPredicate(CmpInst::getSwappedPredicate(Pred));
   MI.getOperand(2).setReg(RHS);
   MI.getOperand(3).setReg(LHS);

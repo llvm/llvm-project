@@ -44,6 +44,8 @@ MACHINE_FUNCTION_PASS("aarch64-post-select-optimize",
                       AArch64PostSelectOptimizePass())
 MACHINE_FUNCTION_PASS("aarch64-postlegalizer-lowering",
                       AArch64PostLegalizerLoweringPass())
+MACHINE_FUNCTION_PASS("aarch64-postlegalizer-combiner",
+                      AArch64PostLegalizerCombinerPass(this))
 MACHINE_FUNCTION_PASS("aarch64-prelegalizer-combiner",
                       AArch64PreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("aarch64-ptrauth", AArch64PointerAuthPass())

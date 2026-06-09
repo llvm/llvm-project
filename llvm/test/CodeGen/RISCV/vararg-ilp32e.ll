@@ -119,6 +119,17 @@ define void @va_double(i32 %n, ...) {
 ; ILP32E-WITHFP-NEXT:    addi a2, a1, 8
 ; ILP32E-WITHFP-NEXT:    sw a0, -12(s0)
 ; ILP32E-WITHFP-NEXT:    sw a2, -12(s0)
+; ILP32E-WITHFP-NEXT:    sw a5, 32(sp)
+; ILP32E-WITHFP-NEXT:    sw a1, 16(sp)
+; ILP32E-WITHFP-NEXT:    sw a2, 20(sp)
+; ILP32E-WITHFP-NEXT:    sw a3, 24(sp)
+; ILP32E-WITHFP-NEXT:    sw a4, 28(sp)
+; ILP32E-WITHFP-NEXT:    addi a0, sp, 16
+; ILP32E-WITHFP-NEXT:    addi a1, sp, 23
+; ILP32E-WITHFP-NEXT:    sw a0, 0(sp)
+; ILP32E-WITHFP-NEXT:    andi a1, a1, -8
+; ILP32E-WITHFP-NEXT:    addi a0, a1, 8
+; ILP32E-WITHFP-NEXT:    sw a0, 0(sp)
 ; ILP32E-WITHFP-NEXT:    lw a0, 0(a1)
 ; ILP32E-WITHFP-NEXT:    lw a1, 4(a1)
 ; ILP32E-WITHFP-NEXT:    lui a3, 262144

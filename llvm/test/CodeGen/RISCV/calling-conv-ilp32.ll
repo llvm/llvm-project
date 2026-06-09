@@ -90,7 +90,7 @@ define i32 @callee_float_on_stack(i64 %a, i64 %b, i64 %c, i64 %d, float %e) noun
 ; RV32I-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    lw a0, 0(s0)
+; RV32I-WITHFP-NEXT:    lw a0, 16(sp)
 ; RV32I-WITHFP-NEXT:    add a0, a6, a0
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
