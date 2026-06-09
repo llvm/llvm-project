@@ -12,7 +12,7 @@
 // RUN:   -o %t.bc \
 // RUN: 2>&1 | FileCheck %s
 
-// CHECK: clang-offload-bundler{{.*}} -type=o
+// CHECK: clang-offload-bundler{{.*}} -type=bc
 // CHECK-SAME: -targets={{.*}}hip-amdgcn-amd-amdhsa-unknown-gfx1100,hip-amdgcn-amd-amdhsa-unknown-gfx1101
 // CHECK-SAME: --compress --verbose --compression-level=9
 // CHECK: Compressed bundle format
