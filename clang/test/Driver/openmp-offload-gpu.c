@@ -297,7 +297,7 @@
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -emit-llvm -S -fopenmp=libomp \
 // RUN:     -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 -nogpulib %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-EMIT-LLVM-IR-BC
-// CHECK-EMIT-LLVM-IR-BC: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm"
+// CHECK-EMIT-LLVM-IR-BC: "-cc1"{{.*}}"-triple" "nvptx64-nvidia-cuda"{{.*}}"-emit-llvm-bc"
 
 // RUN:   %clang -### -fopenmp=libomp --offload-arch=sm_89 \
 // RUN:          --no-cuda-version-check \
