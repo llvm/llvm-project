@@ -2977,7 +2977,14 @@ void SemaOpenMP::EndOpenMPDSABlock(Stmt *CurDirective) {
         continue;
       }
       auto *DRE = cast<DeclRefExpr>(DE->IgnoreParens());
-      auto *VD = cast<VarDecl>(DRE->getDecl());
+      auto *D = DRE->getDecl();
+      // BindingDecls don't need special lastprivate handling - they're already
+      // handled through their decomposition decl.
+      if (isa<BindingDecl>(D)) {
+        PrivateCopies.push_back(nullptr);
+        continue;
+      }
+      auto *VD = cast<VarDecl>(D);
       QualType Type = VD->getType().getNonReferenceType();
       const DSAStackTy::DSAVarData DVar =
           DSAStack->getTopDSA(VD, /*FromParent=*/false);
@@ -20193,11 +20200,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
         SemaRef, VDPrivate, RefExpr->getType().getUnqualifiedType(),
         RefExpr->getExprLoc());
     DeclRefExpr *Ref = nullptr;
+    bool IsBindingDecl = isa<BindingDecl>(D);
     if (!VD && !SemaRef.CurContext->isDependentContext()) {
       if (TopDVar.CKind == OMPC_lastprivate) {
         Ref = TopDVar.PrivateCopy;
       } else {
-        bool IsBindingDecl = isa<BindingDecl>(D);
         if (!IsBindingDecl) {
           auto *FD = dyn_cast<FieldDecl>(D);
           VarDecl *VD = FD ? DSAStack->getImplicitFDCapExprDecl(FD) : nullptr;
@@ -20214,7 +20221,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
     }
     if (!IsImplicitClause)
       DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
-    bool IsBindingDecl = isa<BindingDecl>(D);
     Vars.push_back(
         (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
             ? RefExpr->IgnoreParens()
@@ -20397,9 +20403,11 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
       }
     }
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_lastprivate, Ref);
-    Vars.push_back((VD || SemaRef.CurContext->isDependentContext())
-                       ? RefExpr->IgnoreParens()
-                       : Ref);
+    bool IsBindingDecl = isa<BindingDecl>(D);
+    Vars.push_back(
+        (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
+            ? RefExpr->IgnoreParens()
+            : Ref);
     SrcExprs.push_back(PseudoSrcExpr);
     DstExprs.push_back(PseudoDstExpr);
     AssignmentOps.push_back(AssignmentOp.get());
