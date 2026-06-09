@@ -4691,8 +4691,7 @@ struct ShapeShiftOpConversion : public fir::FIROpConversion<fir::ShapeShiftOp> {
     auto ssTy = mlir::cast<fir::ShapeShiftType>(op.getType());
     mlir::Type llvmTy = convertType(ssTy);
     mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
-    mlir::Value structVal =
-        mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
+    mlir::Value structVal = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
     // Pack extent operands only; lower bounds are not part of the LLVM shape
     // bundle consumed by fir.shape_extents.
     for (auto [i, pair] : llvm::enumerate(adaptor.getPairs())) {

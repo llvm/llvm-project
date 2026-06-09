@@ -685,11 +685,11 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
 
   if (!sliceInfo.hasProjectedSlice && sliceInfo.shapeVec.empty()) {
     auto shapeVal = arrayCoorOp.getShape();
-    if (shapeVal && mlir::isa<fir::ShapeType, fir::ShapeShiftType>(shapeVal.getType())) {
+    if (shapeVal &&
+        mlir::isa<fir::ShapeType, fir::ShapeShiftType>(shapeVal.getType())) {
       rewriter.setInsertionPoint(arrayCoorOp);
-      if(!materializeShapeExtents(shapeVal, rewriter, loc,
-                                    sliceInfo.shapeVec))
-                                      return failure();
+      if (!materializeShapeExtents(shapeVal, rewriter, loc, sliceInfo.shapeVec))
+        return failure();
       rewriter.setInsertionPointAfter(arrayCoorOp);
     }
   }

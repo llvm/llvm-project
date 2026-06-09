@@ -4978,8 +4978,7 @@ struct FoldShapeExtentsOfShape
     else
       return mlir::failure();
     llvm::SmallVector<mlir::Value> results;
-    for (auto [extent, resultType] :
-         llvm::zip(extents, op.getResultTypes())) {
+    for (auto [extent, resultType] : llvm::zip(extents, op.getResultTypes())) {
       if (extent.getType() == resultType) {
         results.push_back(extent);
       } else if (fir::ConvertOp::canBeConverted(extent.getType(), resultType)) {
