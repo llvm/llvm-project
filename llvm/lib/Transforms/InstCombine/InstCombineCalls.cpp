@@ -3730,6 +3730,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       case BundleAttr::DereferenceableOrNull:
       case BundleAttr::Ignore:
       case BundleAttr::NoUndef:
+      case BundleAttr::Range:
         break;
 
       // This cannot be simplified

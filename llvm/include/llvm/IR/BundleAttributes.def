@@ -17,6 +17,7 @@ ATTR(NonNull, nonnull)
 // It's currently exclusively emitted through tests.
 ATTR(NoUndef, noundef)
 
+ATTR(Range, range)
 ATTR(SeparateStorage, separate_storage)
 
 #undef ATTR

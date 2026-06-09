@@ -1906,6 +1906,8 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+.. _attr_range:
+
 ``range(<ty> <a>, <b>)``
     This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -3183,6 +3185,10 @@ The following attributes are currently accepted:
 
 ``"noundef"(any_type %v)``
   Equivalent to :ref:`noundef <attr_noundef>` on ``%v``.
+
+``"range"(iN %val, iN <lower_bound>, iN <upper_bound>)``
+  Equivalent to :ref:`range(iN <lower_bound>, <upper_bound>) <attr_range>` on
+  ``%val``.
 
 ``"separate_storage"(ptr %p1, ptr %p2)``
   This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
