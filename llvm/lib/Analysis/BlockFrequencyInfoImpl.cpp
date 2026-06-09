@@ -144,7 +144,6 @@ BlockMass DitheringDistributer::takeMass(uint32_t Weight) {
 
 void Distribution::add(const BlockNode &Node, uint64_t Amount,
                        Weight::DistType Type) {
-  assert(Amount && "invalid weight of 0");
   uint64_t NewTotal = Total + Amount;
 
   // Check for overflow.  It should be impossible to overflow twice.
