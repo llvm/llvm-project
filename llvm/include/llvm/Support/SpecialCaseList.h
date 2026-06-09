@@ -105,8 +105,6 @@ public:
   inSectionBlame(StringRef Section, StringRef Prefix, StringRef Query,
                  StringRef Category = StringRef()) const;
 
-
-
 protected:
   // Implementations of the create*() functions that can also be used by derived
   // classes.
@@ -155,7 +153,6 @@ protected:
 private:
   BumpPtrAllocator StrAlloc;
   std::vector<Section> Sections;
-  bool CanonicalizePaths = false;
 
   LLVM_ABI Expected<Section *> addSection(StringRef SectionStr,
                                           unsigned FileIdx, unsigned LineNo,

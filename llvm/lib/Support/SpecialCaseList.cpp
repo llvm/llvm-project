@@ -330,12 +330,13 @@ SpecialCaseList::addSection(StringRef SectionStr, unsigned FileNo,
 
 bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
                             std::string &Error) {
-  StringRef Buffer = MB->getBuffer();
   unsigned long long Version = 2;
-  if (Buffer.consume_front("#!special-case-list-v"))
-    consumeUnsignedInteger(Buffer, 10, Version);
 
-  CanonicalizePaths = Version > 3;
+  StringRef Header = MB->getBuffer();
+  if (Header.consume_front("#!special-case-list-v"))
+    consumeUnsignedInteger(Header, 10, Version);
+
+  bool CanonicalizePaths = Version > 3;
 
   // In https://reviews.llvm.org/D154014 we added glob support and planned
   // to remove regex support in patterns. We temporarily support the
@@ -392,12 +393,10 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     }
 
     auto [Pattern, Category] = Postfix.split("=");
-    bool MatcherRemoveDotSlash =
-        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix);
-    bool MatcherCanonicalizePaths =
-        CanonicalizePaths && llvm::is_contained(PathPrefixes, Prefix);
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
-        Category, UseGlobs, MatcherRemoveDotSlash, MatcherCanonicalizePaths);
+        Category, UseGlobs,
+        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix),
+        CanonicalizePaths && llvm::is_contained(PathPrefixes, Prefix));
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
