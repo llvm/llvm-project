@@ -9760,12 +9760,12 @@ static bool IsPristineImplicit(const Symbol &symbol) {
   if (symbol.attrs().count() != 0) {
     return false;
   }
-  // There should be no initializer or shape.
+  // There should be no initializer, no shape or coshape.
   if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
     if (object->init()) {
       return false;
     }
-    if (object->shape().Rank()) {
+    if (object->shape().Rank() || object->coshape().Rank()) {
       return false;
     }
   }

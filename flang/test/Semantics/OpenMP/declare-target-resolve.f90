@@ -82,3 +82,13 @@ subroutine f08
   integer :: a
   a = bar(a)
 end
+
+module f09
+  !$omp declare target(baz)
+  codimension :: baz[*]
+contains
+subroutine f10
+!ERROR: Cannot call function 'baz' like a subroutine
+  call baz()
+end
+end module
