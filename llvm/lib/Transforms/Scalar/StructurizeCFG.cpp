@@ -72,8 +72,8 @@ static bool isIntermediateTarget(const BasicBlock &BB) {
 /// True if BB's terminator must be preserved verbatim and therefore cannot
 /// serve as a rewritable flow tail (it can be neither killed nor have its
 /// successors rewritten). Currently only callbr.
-static bool isIsland(const BasicBlock &BB) {
-  return isa<CallBrInst>(BB.getTerminator());
+static bool isIsland(const BasicBlock *BB) {
+  return isa<CallBrInst>(BB->getTerminator());
 }
 
 /// True if BB is an unreachable target block: it is terminated by
@@ -267,11 +267,11 @@ class StructurizeCFG; // forward declaration
 class FlowTail {
   enum class TailState { None, Rewritable, Closed };
 
-  RegionNode *Node;
-  TailState State;
+  RegionNode *Node = nullptr;
+  TailState State = TailState::None;
 
 public:
-  FlowTail() : Node(nullptr), State(TailState::None) {}
+  FlowTail() = default;
   FlowTail(RegionNode *Node)
       : Node(Node), State(Node ? TailState::Rewritable : TailState::None) {}
 
@@ -1266,7 +1266,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
   // handleIsland and we think of their terminators as immutable here.
   // A subregion whose entry happens to be an island must be wired normally, or
   // everything inside it past the entry would be dropped.
-  if (!Node->isSubRegion() && isIsland(*Entry)) {
+  if (!Node->isSubRegion() && isIsland(Entry)) {
     Tail.close(Node);
     return;
   }
@@ -1277,8 +1277,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
   // are structurized inner-first, so a subregion block can have an unsplit
   // parent-region callbr as a predecessor while still being an ordinary block
   // that must be structurized normally (handled below).
-  bool HasIslandPred = llvm::any_of(
-      predecessors(Entry), [](BasicBlock *Pred) { return isIsland(*Pred); });
+  bool HasIslandPred = llvm::any_of(predecessors(Entry), isIsland);
   if (HasIslandPred &&
       (isIntermediateTarget(*Entry) || isUnreachableTarget(*Entry))) {
     Tail.close(Node);
@@ -1462,8 +1461,8 @@ void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
     DebugLoc DL = Fwd->getTerminator()->getDebugLoc();
     Fwd->getTerminator()->eraseFromParent();
     UncondBrInst::Create(ExitFlow, Fwd)->setDebugLoc(DL);
-    DTUpdates.push_back({DominatorTree::Delete, Fwd, Real});
-    DTUpdates.push_back({DominatorTree::Insert, Fwd, ExitFlow});
+    DTUpdates.emplace_back(DominatorTree::Delete, Fwd, Real);
+    DTUpdates.emplace_back(DominatorTree::Insert, Fwd, ExitFlow);
   }
 
   // Materialize the per-target selection booleans in ExitFlow: sel_k is true
@@ -1510,20 +1509,20 @@ void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
         // values.
         RebindRealPhis(NextReal, Targets[I + 1], CurFlow);
         CondBrInst::Create(Sel[I], Real, NextReal, CurFlow);
-        DTUpdates.push_back({DominatorTree::Insert, CurFlow, Real});
-        DTUpdates.push_back({DominatorTree::Insert, CurFlow, NextReal});
+        DTUpdates.emplace_back(DominatorTree::Insert, CurFlow, Real);
+        DTUpdates.emplace_back(DominatorTree::Insert, CurFlow, NextReal);
         break;
       }
 
       BasicBlock *NextFlow = MakeFlow();
       CondBrInst::Create(Sel[I], Real, NextFlow, CurFlow);
-      DTUpdates.push_back({DominatorTree::Insert, CurFlow, Real});
-      DTUpdates.push_back({DominatorTree::Insert, CurFlow, NextFlow});
+      DTUpdates.emplace_back(DominatorTree::Insert, CurFlow, Real);
+      DTUpdates.emplace_back(DominatorTree::Insert, CurFlow, NextFlow);
       CurFlow = NextFlow;
     } else {
       // Last target: unconditional else of the ladder.
       UncondBrInst::Create(Real, CurFlow);
-      DTUpdates.push_back({DominatorTree::Insert, CurFlow, Real});
+      DTUpdates.emplace_back(DominatorTree::Insert, CurFlow, Real);
     }
   }
 
@@ -1748,7 +1747,7 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
 
   SmallVector<BasicBlock *, 8> IslandBlocks;
   for (RegionNode *E : R->elements()) {
-    if (!E->isSubRegion() && isIsland(*E->getEntry()))
+    if (!E->isSubRegion() && isIsland(E->getEntry()))
       IslandBlocks.push_back(E->getNodeAs<BasicBlock>());
   }
 
