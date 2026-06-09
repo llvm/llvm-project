@@ -44,9 +44,6 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
 
   NamedMDNode *ContentsNode = M.getNamedMetadata("dx.source.contents");
   NamedMDNode *ArgsNode = M.getNamedMetadata("dx.source.args");
-  // TODO Don't emit SRCI in cases when it is not emitted in
-  // DirectXShaderCompiler.
-  // TODO should we remove dx.source.contents/args?
   if (ContentsNode && ArgsNode) {
     MMDAI.SourceInfo.emplace();
     MMDAI.SourceInfo->setCompressionType(
