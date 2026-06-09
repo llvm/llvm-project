@@ -305,9 +305,9 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   }
 
   // If we can unconditionally load from this address, replace with a
-  // load/select idiom. TODO: use DT for context sensitive query
+  // load/select idiom.
   if (isDereferenceablePointer(LoadPtr, II.getType(),
-                               II.getDataLayout(), &II, &AC)) {
+                               SQ.getWithInstruction(&II))) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
     LI->copyMetadata(II);
@@ -3656,11 +3656,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Try to remove redundant alignment assumptions.
         auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
 
-        if (!Alignment || !Offset || *Offset != 0 || !isPowerOf2_64(*Alignment))
+        if (!Alignment || !Offset || *Offset != 0)
           break;
 
-        // Remove align 1 bundles; they don't add any useful information.
-        if (*Alignment == 1)
+        // Remove align 1 and non-power-of-two bundles; they don't add any
+        // useful information.
+        if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
           return CallBase::removeOperandBundleAt(II, Idx);
 
         // Don't try to remove align assumptions for pointers derived from
@@ -3676,6 +3677,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             Log2_64(*Alignment))
           continue;
         return CallBase::removeOperandBundleAt(II, Idx);
+      }
+
+      case BundleAttr::Dereferenceable: {
+        auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+
+        if (Count && *Count == 0)
+          return CallBase::removeOperandBundleAt(II, Idx);
+        break;
       }
 
       case BundleAttr::NonNull: {
@@ -3718,7 +3727,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       } break;
 
       // TODO: Drop these assumes when they are redundant
-      case BundleAttr::Dereferenceable:
       case BundleAttr::DereferenceableOrNull:
       case BundleAttr::Ignore:
       case BundleAttr::NoUndef:
@@ -4255,17 +4263,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return I;
     break;
   case Intrinsic::frexp: {
-    Value *X;
-    // The first result is idempotent with the added complication of the struct
-    // return, and the second result is zero because the value is already
-    // normalized.
-    if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
-      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
-        X = Builder.CreateInsertValue(
-            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
-            1);
-        return replaceInstUsesWith(*II, X);
-      }
+    // frexp(frexp(x).fract) -> { frexp(x).fract, 0 }: the fraction operand is
+    // already normalized, so the first result is idempotent and the second is
+    // zero.
+    if (match(II->getArgOperand(0),
+              m_ExtractValue<0>(m_Intrinsic<Intrinsic::frexp>(m_Value())))) {
+      Value *Res = Builder.CreateInsertValue(PoisonValue::get(II->getType()),
+                                             II->getArgOperand(0), 0);
+      Res = Builder.CreateInsertValue(
+          Res, Constant::getNullValue(II->getType()->getStructElementType(1)),
+          1);
+      return replaceInstUsesWith(*II, Res);
     }
     break;
   }

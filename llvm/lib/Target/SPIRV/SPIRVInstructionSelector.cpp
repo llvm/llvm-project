@@ -2263,6 +2263,13 @@ bool SPIRVInstructionSelector::selectCopyMemorySized(MachineInstr &I,
 
 bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
                                                   MachineInstr &I) const {
+  // Zero-sized memcpy/memmove/memset are no-ops.
+  Register SizeReg = I.getOperand(2).getReg();
+  if (MachineInstr *SizeDef = getDefInstrMaybeConstant(SizeReg, MRI);
+      SizeDef && SizeDef->getOpcode() == TargetOpcode::G_CONSTANT &&
+      getIConstVal(SizeReg, MRI) == 0)
+    return true;
+
   Register SrcReg = I.getOperand(1).getReg();
   if (I.getOpcode() == TargetOpcode::G_MEMSET) {
     Register VarReg = getOrCreateMemSetGlobal(I);

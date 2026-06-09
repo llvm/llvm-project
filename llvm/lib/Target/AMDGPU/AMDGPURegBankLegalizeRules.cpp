@@ -1744,6 +1744,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_readlane}, StandardB)
       .Uni(B32, {{SgprB32}, {IntrId, VgprB32, SgprB32_ReadFirstLane}});
 
+  addRulesForIOpcs({amdgcn_s_quadmask, amdgcn_s_wqm}, StandardB)
+      .Uni(B32, {{SgprB32}, {IntrId, SgprB32}})
+      .Div(B32, {{Sgpr32ToVgprDst}, {IntrId, SgprB32_ReadFirstLane}})
+      .Uni(B64, {{SgprB64}, {IntrId, SgprB64}})
+      .Div(B64, {{Sgpr64ToVgprDst}, {IntrId, SgprB64_ReadFirstLane}});
+
   addRulesForIOpcs({amdgcn_writelane}, StandardB)
       .Div(B32,
            {{VgprB32},
@@ -2126,12 +2132,27 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_raw_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprV4S32, SgprP3, Imm, Vgpr32, Sgpr32}}});
 
+  addRulesForIOpcs({amdgcn_raw_buffer_load_async_lds})
+      .Any({{_}, {{}, {IntrId, SgprV4S32, SgprB32_M0, Imm, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_struct_buffer_load_async_lds})
+      .Any(
+          {{_},
+           {{}, {IntrId, SgprV4S32, SgprB32_M0, Imm, Vgpr32, Vgpr32, Sgpr32}}});
+
   addRulesForIOpcs({amdgcn_struct_buffer_load_lds})
       .Any({{_},
             {{}, {IntrId, SgprV4S32, SgprP3, Imm, Vgpr32, Vgpr32, Sgpr32}}});
 
   addRulesForIOpcs({amdgcn_raw_ptr_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprP8, SgprP3, Imm, Vgpr32, Sgpr32}}});
+
+  addRulesForIOpcs({amdgcn_raw_ptr_buffer_load_async_lds})
+      .Any({{}, {{}, {IntrId, SgprP8, SgprB32_M0, Imm, VgprB32, SgprB32}}});
+
+  addRulesForIOpcs({amdgcn_struct_ptr_buffer_load_async_lds})
+      .Any({{_},
+            {{}, {IntrId, SgprP8, SgprB32_M0, Imm, Vgpr32, Vgpr32, Sgpr32}}});
 
   addRulesForIOpcs({amdgcn_struct_ptr_buffer_load_lds})
       .Any({{_}, {{}, {IntrId, SgprP8, SgprP3, Imm, Vgpr32, Vgpr32, Sgpr32}}});

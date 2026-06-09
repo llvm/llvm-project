@@ -94,7 +94,7 @@ static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
 
 /// Maximum number of instructions to check between assume and context
 /// instruction.
-static constexpr unsigned MaxInstrsToCheckForFree = 16;
+static constexpr unsigned MaxInstrsToCheckForFree = 32;
 
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
@@ -705,9 +705,10 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
   // Helper to check if there are any calls in the range that may free memory.
-  auto hasNoFreeInRange = [](auto Range) {
-    for (const auto &[Idx, I] : enumerate(Range)) {
-      if (Idx > MaxInstrsToCheckForFree)
+  unsigned NumChecked = 0;
+  auto hasNoFreeInRange = [&NumChecked](auto Range) {
+    for (const Instruction &I : Range) {
+      if (NumChecked++ > MaxInstrsToCheckForFree)
         return false;
 
       if (auto *CB = dyn_cast<CallBase>(&I)) {
@@ -719,27 +720,32 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     return true;
   };
 
-  // Handle cross-block case: CtxI in a successor of Assume's block.
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
   BasicBlock::const_iterator CtxIter = CtxI->getIterator();
-  if (CtxBB != AssumeBB) {
-    if (CtxBB->getSinglePredecessor() != AssumeBB)
-      return false;
-
-    if (!hasNoFreeInRange(make_range(CtxBB->begin(), CtxIter)))
-      return false;
-
-    CtxIter = AssumeBB->end();
-  } else {
+  if (CtxBB == AssumeBB) {
     // Same block case: check that Assume comes before CtxI.
     if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
+    return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
   }
 
-  // Check if there are any calls between Assume and CtxIter that may free
-  // memory.
-  return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
+  // Handle chain of single-predecessor blocks.
+  const BasicBlock *CurBB = CtxBB;
+  while (true) {
+    if (CurBB == AssumeBB)
+      return hasNoFreeInRange(
+          make_range(Assume->getIterator(), AssumeBB->end()));
+
+    const BasicBlock *PredBB = CurBB->getSinglePredecessor();
+    if (!PredBB)
+      return false;
+
+    if (!hasNoFreeInRange(make_range(CurBB->begin(),
+                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
+      return false;
+    CurBB = PredBB;
+  }
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
@@ -832,19 +838,14 @@ static bool isKnownNonZeroFromAssume(const Value *V, const SimplifyQuery &Q) {
         auto OBU = I->getOperandBundleAt(Elem.Index);
         switch (getBundleAttrFromOBU(OBU)) {
         case BundleAttr::Dereferenceable: {
-          auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
-          assert(Ptr == V);
-          if (NullPointerIsDefined(Q.CxtI->getFunction(),
-                                   V->getType()->getPointerAddressSpace()))
-            return false;
-
-          auto *CI = dyn_cast<ConstantInt>(Count);
-          return CI && !CI->isZero();
+          auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+          return Ptr == V && Count && *Count != 0 &&
+                 !NullPointerIsDefined(Q.CxtI->getFunction(),
+                                       V->getType()->getPointerAddressSpace());
         }
 
         case BundleAttr::NonNull:
-          assert(getAssumeNonNullInfo(OBU).Ptr == V);
-          return true;
+          return getAssumeNonNullInfo(OBU).Ptr == V;
 
         default:
           return false;
@@ -1090,8 +1091,7 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       if (auto OBU = I->getOperandBundleAt(Elem.Index);
           getBundleAttrFromOBU(OBU) == BundleAttr::Align) {
         auto [Ptr, _, Alignment, Offset] = getAssumeAlignInfo(OBU);
-        assert(Ptr == V);
-        if (!Alignment || !Offset || !isPowerOf2_64(*Alignment))
+        if (Ptr != V || !Alignment || !Offset || !isPowerOf2_64(*Alignment))
           continue;
         auto AlignVal = MinAlign(*Offset, *Alignment);
         if (isValidAssumeForContext(I, Q))
@@ -1632,6 +1632,20 @@ static void computeKnownBitsFromOperator(const Operator *I,
     const APInt *C;
     if (match(I->getOperand(0), m_APInt(C)))
       Known.Zero.setLowBits(C->countr_zero());
+
+    // shl X, sub(Y, xor(ctlz(X, true), BitWidth-1)) shifts X so that its MSB
+    // lands at bit Y, when BitWidth is a power of 2.
+    const APInt *YC;
+    Value *X = I->getOperand(0);
+    if (isPowerOf2_32(BitWidth) &&
+        match(I->getOperand(1),
+              m_Sub(m_APInt(YC), m_Xor(m_Ctlz(m_Specific(X), m_One()),
+                                       m_SpecificInt(BitWidth - 1)))) &&
+        YC->ult(BitWidth - 1)) {
+      unsigned Y = YC->getZExtValue();
+      Known.One.setBit(Y);
+      Known.Zero.setBitsFrom(Y + 1);
+    }
     break;
   }
   case Instruction::LShr: {
@@ -7285,9 +7299,9 @@ bool llvm::isSafeToSpeculativelyExecuteWithOpcode(
     if (mustSuppressSpeculation(*LI))
       return false;
     const DataLayout &DL = LI->getDataLayout();
-    return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
-                                              LI->getType(), LI->getAlign(), DL,
-                                              CtxI, AC, DT, TLI);
+    return isDereferenceableAndAlignedPointer(
+        LI->getPointerOperand(), LI->getType(), LI->getAlign(),
+        SimplifyQuery(DL, TLI, DT, AC, CtxI));
   }
   case Instruction::Call: {
     auto *CI = dyn_cast<const CallInst>(Inst);

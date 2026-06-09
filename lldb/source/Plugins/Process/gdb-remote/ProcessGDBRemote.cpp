@@ -59,6 +59,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/RegisterFlags.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
@@ -879,8 +880,18 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       SetPrivateState(SetThreadStopInfo(response));
 
       if (!disable_stdio) {
-        if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd)
+        if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
           SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+        }
+#ifdef _WIN32
+        else if (m_stdin_forward) {
+          // No client-side PTY FD on Windows.
+          std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
+          if (!m_process_input_reader)
+            m_process_input_reader =
+                std::make_shared<IOHandlerProcessSTDIOWindows>(this);
+        }
+#endif
       }
     }
   } else {
