@@ -111,8 +111,7 @@ struct TestXeGPUUnrollingPatterns
     });
 
     options.setUnrolledTypesFn(
-        [&](ShapedType type, ArrayRef<int64_t> tileShape,
-            bool returnSingleType = false) -> SmallVector<Type> {
+        [&](ShapedType type, ArrayRef<int64_t> tileShape) -> SmallVector<Type> {
           Type elemTy = type.getElementType();
           Type newTy;
 
@@ -131,13 +130,14 @@ struct TestXeGPUUnrollingPatterns
 
             newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
                                                layout);
-
-          } else {
-            newTy = type.clone(tileShape, elemTy);
+            // compute the product of batch (higher) dimensions
+            ArrayRef<int64_t> shape = type.getShape();
+            int64_t batchCount =
+                shape.size() > 2 ? computeProduct(shape.drop_back(2)) : 1;
+            return SmallVector<Type>(batchCount, newTy);
           }
 
-          if (returnSingleType)
-            return SmallVector<Type>{newTy};
+          newTy = type.clone(tileShape, elemTy);
           std::optional<SmallVector<int64_t>> ratio =
               computeShapeRatio(type.getShape(), tileShape);
           assert(ratio && "Expecting the ratio to be valid.");
@@ -231,51 +231,20 @@ struct TestXeGPURecoverTemporaryLayouts
   }
 };
 
-struct TestXeGPUSGDistribute
-    : public PassWrapper<TestXeGPUSGDistribute,
-                         OperationPass<gpu::GPUModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUSGDistribute)
-
-  StringRef getArgument() const final { return "test-xegpu-sg-distribute"; }
-
-  StringRef getDescription() const final {
-    return "Test the implementation of XeGPU Subgroup Distribution";
-  }
-
-  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
-    registry.insert<arith::ArithDialect>();
-    registry.insert<memref::MemRefDialect>();
-    registry.insert<xegpu::XeGPUDialect>();
-    registry.insert<vector::VectorDialect>();
-    registry.insert<index::IndexDialect>();
-  }
-
-  TestXeGPUSGDistribute() = default;
-  TestXeGPUSGDistribute(const TestXeGPUSGDistribute &pass) = default;
-
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
-  }
-};
-
-/// This test pass is intended to test the subgroup to workitem distribution of
+/// This test pass is intended to test the subgroup to lane distribution of
 /// xegpu/vector/arith operations in isolation, it does not handle any
 /// structural ops like scf.for etc.
-struct TestXeGPUSgToWiDistributeExperimental
-    : public PassWrapper<TestXeGPUSgToWiDistributeExperimental,
+struct TestXeGPUSgToLaneDistribute
+    : public PassWrapper<TestXeGPUSgToLaneDistribute,
                          OperationPass<gpu::GPUModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
-      TestXeGPUSgToWiDistributeExperimental)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUSgToLaneDistribute)
 
   StringRef getArgument() const final {
-    return "test-xegpu-sg-to-wi-distribute-experimental";
+    return "test-xegpu-sg-to-lane-distribute";
   }
 
   StringRef getDescription() const final {
-    return "Test the experimental implementation of XeGPU Subgroup to "
-           "Work-item Distribution";
+    return "Test the implementation of XeGPU Subgroup to Lane Distribution";
   }
 
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
@@ -287,9 +256,8 @@ struct TestXeGPUSgToWiDistributeExperimental
     registry.insert<gpu::GPUDialect>();
   }
 
-  TestXeGPUSgToWiDistributeExperimental() = default;
-  TestXeGPUSgToWiDistributeExperimental(
-      const TestXeGPUSgToWiDistributeExperimental &pass)
+  TestXeGPUSgToLaneDistribute() = default;
+  TestXeGPUSgToLaneDistribute(const TestXeGPUSgToLaneDistribute &pass)
       : PassWrapper(pass) {}
 
   void runOnOperation() override {
@@ -313,39 +281,9 @@ struct TestXeGPUSgToWiDistributeExperimental
 
     ConversionTarget target(*ctx);
     RewritePatternSet patterns(ctx);
-    xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+    xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
         typeConverter, patterns, target);
     (void)applyPartialConversion(op, target, std::move(patterns));
-  }
-};
-
-struct TestXeGPUMoveFuncBodyToWarpOp
-    : public PassWrapper<TestXeGPUMoveFuncBodyToWarpOp,
-                         OperationPass<gpu::GPUModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUMoveFuncBodyToWarpOp)
-
-  StringRef getArgument() const final {
-    return "test-xegpu-move-func-to-warp-op";
-  }
-
-  StringRef getDescription() const final {
-    return "Test the implementation of XeGPU move gpu function body to "
-           "WarpExecuteOnLane0 op.";
-  }
-
-  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
-    registry.insert<xegpu::XeGPUDialect>();
-    registry.insert<gpu::GPUDialect>();
-  }
-
-  TestXeGPUMoveFuncBodyToWarpOp() = default;
-  TestXeGPUMoveFuncBodyToWarpOp(const TestXeGPUMoveFuncBodyToWarpOp &pass) =
-      default;
-
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 
@@ -516,9 +454,7 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
   PassRegistration<TestXeGPURecoverTemporaryLayouts>();
-  PassRegistration<TestXeGPUSGDistribute>();
-  PassRegistration<TestXeGPUSgToWiDistributeExperimental>();
-  PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
+  PassRegistration<TestXeGPUSgToLaneDistribute>();
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
   PassRegistration<TestXeGPUArrayLengthOptimization>();

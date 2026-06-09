@@ -381,25 +381,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 #  endif
 
-#  if __has_feature(cxx_atomic) || __has_extension(c_atomic) || __has_keyword(_Atomic)
-#    define _LIBCPP_HAS_C_ATOMIC_IMP 1
-#    define _LIBCPP_HAS_GCC_ATOMIC_IMP 0
-#    define _LIBCPP_HAS_EXTERNAL_ATOMIC_IMP 0
-#  elif defined(_LIBCPP_COMPILER_GCC)
-#    define _LIBCPP_HAS_C_ATOMIC_IMP 0
-#    define _LIBCPP_HAS_GCC_ATOMIC_IMP 1
-#    define _LIBCPP_HAS_EXTERNAL_ATOMIC_IMP 0
-#  endif
-
-#  if !_LIBCPP_HAS_C_ATOMIC_IMP && !_LIBCPP_HAS_GCC_ATOMIC_IMP && !_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP
-#    define _LIBCPP_HAS_ATOMIC_HEADER 0
-#  else
-#    define _LIBCPP_HAS_ATOMIC_HEADER 1
-#    ifndef _LIBCPP_ATOMIC_FLAG_TYPE
-#      define _LIBCPP_ATOMIC_FLAG_TYPE bool
-#    endif
-#  endif
-
 // We often repeat things just for handling wide characters in the library.
 // When wide characters are disabled, it can be useful to have a quick way of
 // disabling it without having to resort to #if-#endif, which has a larger
@@ -469,10 +450,6 @@ typedef __char32_t char32_t;
 #    endif
 #  else
 #    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
-#  endif
-
-#  if defined(__OBJC__) && defined(_LIBCPP_APPLE_CLANG_VER)
-#    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
 #  endif
 
 #  define _PSTL_PRAGMA(x) _Pragma(#x)

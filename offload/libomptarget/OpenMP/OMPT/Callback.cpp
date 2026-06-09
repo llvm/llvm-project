@@ -387,6 +387,33 @@ void Interface::endTargetDisassociatePointer(int64_t DeviceId,
   }
 }
 
+void Interface::beginTargetMemset(int64_t DeviceId, void *HostPtrBegin,
+                                  void *TgtPtrBegin, size_t Size, void *Code) {
+  beginTargetDataOperation();
+  if (ompt_callback_target_data_op_emi_fn) {
+    ompt_callback_target_data_op_emi_fn(
+        ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
+        ompt_target_data_memset, HostPtrBegin, omp_initial_device, TgtPtrBegin,
+        DeviceId, Size, Code);
+  } else if (ompt_callback_target_data_op_fn) {
+    HostOpId = createOpId();
+    ompt_callback_target_data_op_fn(
+        TargetData.value, HostOpId, ompt_target_data_memset, HostPtrBegin,
+        omp_initial_device, TgtPtrBegin, DeviceId, Size, Code);
+  }
+}
+
+void Interface::endTargetMemset(int64_t DeviceId, void *HostPtrBegin,
+                                void *TgtPtrBegin, size_t Size, void *Code) {
+  if (ompt_callback_target_data_op_emi_fn) {
+    ompt_callback_target_data_op_emi_fn(
+        ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
+        ompt_target_data_memset, HostPtrBegin, omp_initial_device, TgtPtrBegin,
+        DeviceId, Size, Code);
+  }
+  endTargetDataOperation();
+}
+
 void Interface::beginTarget(int64_t DeviceId, void *Code) {
   beginTargetRegion();
   if (ompt_callback_target_emi_fn) {

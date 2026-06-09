@@ -2965,7 +2965,11 @@ def err_for_range_dereference : Error<
   "invalid range expression of type %0; did you mean to dereference it "
   "with '*'?">;
 def note_for_range_invalid_iterator : Note <
-  "in implicit call to 'operator%select{!=|*|++}0' for iterator of type %1">;
+  "in implicit call to 'operator%enum_select<InvalidRangeForIterator>{"
+    "%OpNotEq{!=}|"
+    "%OpDeref{*}|"
+    "%OpAdvance{++}"
+  "}0' for iterator of type %1">;
 def note_for_range_begin_end : Note<
   "selected '%select{begin|end}0' %select{function|template }1%2 with iterator type %3">;
 def warn_for_range_const_ref_binds_temp_built_from_ref : Warning<
@@ -9678,6 +9682,11 @@ def warn_atomic_stripped_in_enum : Warning<
   "'_Atomic' qualifier ignored; operations involving the enumeration type will "
   "be non-atomic">,
   InGroup<DiagGroup<"underlying-atomic-qualifier-ignored">>, DefaultError;
+def err_clear_padding_needs_trivial_copy : Error<
+  "argument to __builtin_clear_padding must be a pointer to a "
+  "trivially-copyable type (%0 invalid)">;
+def err_clear_padding_no_flexible_array : Error<
+  "%0 has flexible array member, which is unsupported by __builtin_clear_padding">;
 
 def err_overflow_builtin_must_be_int : Error<
   "operand argument to %select{overflow builtin|checked integer operation}0 "
@@ -10069,6 +10078,9 @@ let CategoryName = "Inline Assembly Issue" in {
     "invalid lvalue in asm input for constraint '%0'">;
   def err_asm_invalid_input_constraint : Error<
     "invalid input constraint '%0' in asm">;
+  def err_asm_constraint_embedded_null : Error<
+    "%select{output constraint|input constraint|clobber}0 contains "
+    "an embedded null character">;
   def err_asm_tying_incompatible_types : Error<
     "unsupported inline asm: input with type "
     "%diff{$ matching output with type $|}0,1">;
@@ -10694,6 +10706,9 @@ def warn_missing_format_string : Warning<
 def warn_scanf_nonzero_width : Warning<
   "zero field width in scanf format string is unused">,
   InGroup<Format>;
+def warn_format_unsupported_type : Warning<
+  "format specifies type %0 which is not supported yet">,
+  InGroup<Format>;
 def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
@@ -10956,27 +10971,26 @@ def warn_dangling_reference_captured_by_unknown : Warning<
 
 // Diagnostics based on the Lifetime safety analysis.
 def warn_lifetime_safety_use_after_scope : Warning<
-   "object whose reference is captured does not live long enough">,
+   "%0 does not live long enough">,
    InGroup<LifetimeSafetyUseAfterScope>, DefaultIgnore;
 def warn_lifetime_safety_use_after_scope_moved : Warning<
-   "object whose reference is captured may not live long enough. "
-   "This could be false positive as the storage may have been moved later">,
+   "%0 may not live long enough. "
+   "This could be a false positive as the storage may have been moved later">,
    InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_use_after_free : Warning<
     "%select{allocated object|parameter}0 does not live long enough">,
     InGroup<LifetimeSafetyUseAfterFree>, DefaultIgnore;
 
-def warn_lifetime_safety_return_stack_addr
-    : Warning<"address of stack memory is returned later">,
-      InGroup<LifetimeSafetyReturnStackAddr>,
-      DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_moved
-    : Warning<"address of stack memory may be returned later. "
-      "This could be false positive as the storage may have been moved. "
-      "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyReturnStackAddrMoved>,
-      DefaultIgnore;
+def warn_lifetime_safety_return_stack_addr : Warning<
+  "stack memory associated with %0 is returned">,
+  InGroup<LifetimeSafetyReturnStackAddr>, DefaultIgnore;
+
+def warn_lifetime_safety_return_stack_addr_moved : Warning<
+  "stack memory associated with %0 may be returned later. "
+  "This could be a false positive as the storage may have been moved. "
+  "Consider moving first and then aliasing later to resolve the issue">,
+  InGroup<LifetimeSafetyReturnStackAddrMoved>, DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
     : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
@@ -10992,21 +11006,21 @@ def warn_lifetime_safety_invalidated_global
       DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
-    : Warning<"address of stack memory escapes to a field">,
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingField>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_field_moved
-    : Warning<"address of stack memory escapes to a field. "
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global
-    : Warning<"address of stack memory escapes to global or static storage">,
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle">,
       InGroup<LifetimeSafetyDanglingGlobal>,
       DefaultIgnore;
 def warn_lifetime_safety_dangling_global_moved
-    : Warning<"address of stack memory escapes to global or static storage. "
+    : Warning<"stack memory associated with %0 may escape to the %1 which will dangle. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
@@ -11519,6 +11533,8 @@ def err_builtin_setjmp_unsupported : Error<
 def err_builtin_longjmp_invalid_val : Error<
   "argument to __builtin_longjmp must be a constant 1">;
 def err_builtin_requires_language : Error<"'%0' is only available in %1">;
+def err_builtin_requires_char_bit_8 : Error<
+  "'%0' is only available on targets where 'CHAR_BIT == 8'">;
 
 def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
@@ -13284,8 +13300,6 @@ def err_memtag_any2arg_pointer : Error<
   "at least one argument of MTE builtin function must be a pointer (%0, %1 invalid)">;
 def err_memtag_arg_must_be_pointer : Error<
   "%0 argument of MTE builtin function must be a pointer (%1 invalid)">;
-def err_memtag_arg_must_be_integer : Error<
-  "%0 argument of MTE builtin function must be an integer type (%1 invalid)">;
 
 def warn_dereference_of_noderef_type : Warning<
   "dereferencing %0; was declared with a 'noderef' type">, InGroup<NoDeref>;
@@ -13990,7 +14004,8 @@ def err_acc_reduction_type
             "value, or array of scalars, or composite of "
             "scalars}|%MemberNotScalar{not a scalar value}|%NotAgg{not an "
             "aggregate}|%NotComplete{not a complete type}|%NotClassStruct{not "
-            "a class or struct}}1">;
+            "a class or struct}|%NotConstantArray{not an array with constant "
+            "length}}1">;
 def note_acc_reduction_array
     : Note<"used as element type of "
            "%enum_select<OACCReductionArray>{%Section{sub-array"
@@ -14230,7 +14245,7 @@ def note_amdgcn_unguarded_builtin_silence
   : Note<"enclose %0 in a __builtin_amdgcn_is_invocable check to silence "
          "this warning">;
 
-def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+def err_amdgcn_global_or_flat_pointer_required : Error<"builtin requires a global or generic pointer">;
 
 def err_amdgcn_dmask_has_too_many_bits_set
     : Error<"dmask argument cannot have more bits set than there are elements "

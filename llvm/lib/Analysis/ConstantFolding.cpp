@@ -4693,6 +4693,9 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
                                  ConstantVector::get(CosResults));
     }
 
+    if (!Ty->isFloatingPointTy())
+      return nullptr;
+
     auto [SinResult, CosResult] = ConstantFoldScalarSincosCall(Operands[0]);
     if (!SinResult || !CosResult)
       return nullptr;
@@ -4745,6 +4748,11 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 }
 
 } // end anonymous namespace
+
+Constant *llvm::ConstantFoldUnaryIntrinsic(Intrinsic::ID ID, Constant *Op,
+                                           Type *Ty) {
+  return ConstantFoldScalarCall1("", ID, Ty, Op, nullptr, nullptr);
+}
 
 Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
                                             Constant *RHS, Type *Ty) {
