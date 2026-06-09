@@ -38,10 +38,6 @@ namespace {
 constexpr unsigned CudaFatMagic = 0x466243b1;
 constexpr unsigned HIPFatMagic = 0x48495046; // "HIPF"
 
-static std::string getOffloadProfilingNamesVarName(llvm::StringRef CUIDHash) {
-  return (llvm::Twine(llvm::getInstrProfNamesVarName()) + "_" + CUIDHash).str();
-}
-
 class CGNVCUDARuntime : public CGCUDARuntime {
 
   /// The prefix used for function calls and section names (CUDA, HIP, LLVM)
@@ -767,15 +763,17 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
   if (OffloadProfShadow) {
     llvm::Constant *Name =
         makeConstantString(std::string(OffloadProfShadow->getName()));
+    llvm::Constant *IntZero = llvm::ConstantInt::get(IntTy, 0);
     llvm::Value *RegisterVarArgs[] = {
         &GpuBinaryHandlePtr,
         OffloadProfShadow,
         Name,
         Name,
-        llvm::ConstantInt::get(IntTy, /*Extern=*/0),
-        llvm::ConstantInt::get(VarSizeTy, CGM.getDataLayout().getPointerSize()),
-        llvm::ConstantInt::get(IntTy, /*Constant=*/0),
-        llvm::ConstantInt::get(IntTy, 0)};
+        IntZero,
+        llvm::ConstantInt::get(VarSizeTy,
+                               CGM.getDataLayout().getPointerSize(/*AS=*/0)),
+        IntZero,
+        IntZero};
     Builder.CreateCall(RegisterVar, RegisterVarArgs);
 
     llvm::FunctionCallee RegisterShadow = CGM.CreateRuntimeFunction(
@@ -788,6 +786,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     llvm::FunctionCallee RegisterSectionShadow = CGM.CreateRuntimeFunction(
         llvm::FunctionType::get(VoidTy, {PtrTy}, false),
         "__llvm_profile_offload_register_section_shadow_variable");
+    llvm::Constant *IntZero = llvm::ConstantInt::get(IntTy, 0);
     for (const auto &Info : OffloadProfSectionShadows) {
       llvm::Constant *Name = makeConstantString(Info.DeviceName);
       llvm::Value *RegisterVarArgs[] = {
@@ -795,11 +794,11 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
           Info.Shadow,
           Name,
           Name,
-          llvm::ConstantInt::get(IntTy, /*Extern=*/0),
+          IntZero,
           llvm::ConstantInt::get(VarSizeTy,
-                                 CGM.getDataLayout().getPointerSize()),
-          llvm::ConstantInt::get(IntTy, /*Constant=*/0),
-          llvm::ConstantInt::get(IntTy, 0)};
+                                 CGM.getDataLayout().getPointerSize(/*AS=*/0)),
+          IntZero,
+          IntZero};
       Builder.CreateCall(RegisterVar, RegisterVarArgs);
       Builder.CreateCall(RegisterSectionShadow, {Info.Shadow});
     }
@@ -1334,7 +1333,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
   if (OffloadProfShadow) {
     llvm::offloading::emitOffloadingEntry(
         M, Kind, OffloadProfShadow, OffloadProfShadow->getName(),
-        CGM.getDataLayout().getPointerSize(),
+        CGM.getDataLayout().getPointerSize(/*AS=*/0),
         llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
 
     llvm::LLVMContext &Ctx = M.getContext();
@@ -1355,7 +1354,7 @@ void CGNVCUDARuntime::createOffloadingEntries() {
     for (const auto &Info : OffloadProfSectionShadows) {
       llvm::offloading::emitOffloadingEntry(
           M, Kind, Info.Shadow, Info.DeviceName,
-          CGM.getDataLayout().getPointerSize(),
+          CGM.getDataLayout().getPointerSize(/*AS=*/0),
           llvm::offloading::OffloadGlobalEntry, /*Data=*/0);
       B.CreateCall(RegisterSectionShadow, {Info.Shadow});
     }
@@ -1422,7 +1421,7 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
       llvm::ConstantPointerNull::get(PtrTy), Name);
   CGM.addCompilerUsedGlobal(OffloadProfShadow);
 
-  auto AddSectionShadow = [&](StringRef Kind, StringRef DeviceName) {
+  auto AddSectionShadow = [&](StringRef Kind, const Twine &DeviceName) {
     std::string ShadowName =
         (Twine("__llvm_profile_shadow_") + Kind + "_" + CUIDHash + "_" +
          Twine(OffloadProfSectionShadows.size()))
@@ -1436,9 +1435,10 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
 
   for (auto &&I : EmittedKernels) {
     std::string KernelName = getDeviceSideName(cast<NamedDecl>(I.D));
-    AddSectionShadow("data", std::string("__profd_") + KernelName);
-    AddSectionShadow("cnts", std::string("__profc_") + KernelName);
-    AddSectionShadow("names", getOffloadProfilingNamesVarName(CUIDHash));
+    AddSectionShadow("data", Twine("__profd_") + KernelName);
+    AddSectionShadow("cnts", Twine("__profc_") + KernelName);
+    AddSectionShadow("names",
+                     Twine(llvm::getInstrProfNamesVarName()) + "_" + CUIDHash);
   }
 }
 
