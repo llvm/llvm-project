@@ -44,6 +44,7 @@ jobs:
           - container-name: github-automation
             test-command: 'true'
             target: github-automation
+            context: llvm/utils/git/
 
     steps:
       - name: Checkout LLVM
@@ -54,6 +55,7 @@ jobs:
             .github/workflows/containers/github-action-ci-tooling/
             llvm/utils/git/requirements_formatting.txt
             llvm/utils/git/requirements_linting.txt
+            llvm/utils/git/github-automation.py
             clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py
             .github/actions/build-container
 
