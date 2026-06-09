@@ -92,12 +92,17 @@ static bool fixupSetCC(MachineFunction &MF) {
       if (!FlagsDefMI)
         continue;
 
+      // When ZU is available and not disabled by tuning, we rewrite to
+      // setzucc, which doesn't clobber eflags; otherwise we insert a MOV32r0
+      // (which does clobber eflags) before FlagsDefMI.
+      bool UseSetZUCC = ST->hasZU() && !ST->preferLegacySetCC();
+
       // We'd like to put something that clobbers eflags directly before
       // FlagsDefMI. This can't hurt anything after FlagsDefMI, because
       // it, itself, by definition, clobbers eflags. But it may happen that
       // FlagsDefMI also *uses* eflags, in which case the transformation is
       // invalid.
-      if ((!ST->hasZU() || ST->preferLegacySetCC()) &&
+      if (!UseSetZUCC &&
           FlagsDefMI->readsRegister(X86::EFLAGS, /*TRI=*/nullptr))
         continue;
 
@@ -117,9 +122,8 @@ static bool fixupSetCC(MachineFunction &MF) {
       // inserting the setcc/setzucc result into the low byte of the zeroed
       // register.
       Register ZeroReg = MRI->createVirtualRegister(RC);
-      if (ST->hasZU() && !ST->preferLegacySetCC()) {
-        if (MI.getOpcode() != X86::SETZUCCr)
-          MI.setDesc(TII->get(X86::SETZUCCr));
+      if (UseSetZUCC) {
+        MI.setDesc(TII->get(X86::SETZUCCr));
         BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),
                 TII->get(TargetOpcode::IMPLICIT_DEF), ZeroReg);
       } else {
