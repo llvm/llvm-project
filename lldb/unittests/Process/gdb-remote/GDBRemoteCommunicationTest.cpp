@@ -92,6 +92,11 @@ TEST_F(GDBRemoteCommunicationTest, ReadPacketIgnoresNotifications) {
   ASSERT_TRUE(Write("%oocd_keepalive:01#55%oocd_keepalive:02#56$OK#9a"));
   ASSERT_EQ(PacketResult::Success, client.ReadPacket(response));
   EXPECT_EQ("OK", response.GetStringRef());
+
+  // A notification with no response following it is dropped, and the read
+  // fails (times out) rather than returning the notification.
+  ASSERT_TRUE(Write("%oocd_keepalive:03#57"));
+  EXPECT_EQ(PacketResult::ErrorReplyTimeout, client.ReadPacket(response));
 }
 
 // Test that packets with incorrect RLE sequences do not cause a crash and

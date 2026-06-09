@@ -269,8 +269,7 @@ GDBRemoteCommunication::WaitForPacketNoLock(StringExtractorGDBRemote &packet,
 
     if (bytes_read > 0) {
       // Drop any async notification packets (see above) and keep waiting for
-      // the actual response. Once the freshly-read bytes have been consumed,
-      // re-check the cache for any further buffered packets.
+      // the actual response.
       packet_type = CheckForPacket(buffer, bytes_read, packet);
       while (packet_type == PacketType::Notify) {
         LLDB_LOGF(log,
