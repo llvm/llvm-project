@@ -2522,7 +2522,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (ConstantFP *Base = dyn_cast<ConstantFP>(II->getArgOperand(0))) {
       Value *Exp = II->getArgOperand(1);
       // powi(2.0, p) -> ldexp(1.0, p)
-      if (Base->isExactlyValue(2.f) && II->hasApproxFunc()) {
+      if (Base->isExactlyValue(2.0) && II->hasApproxFunc()) {
         ConstantFP *One = ConstantFP::get(Base->getType(), 1.0);
         Value *Ldexp = Builder.CreateIntrinsic(
             Intrinsic::ldexp, {II->getType(), Exp->getType()}, {One, Exp}, II);
