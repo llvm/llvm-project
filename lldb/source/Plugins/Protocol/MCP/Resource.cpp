@@ -196,7 +196,7 @@ DebuggerResourceProvider::ReadTargetResource(llvm::StringRef uri,
   target_resource.target_idx = target_idx;
   target_resource.arch = target_sp->GetArchitecture().GetTriple().str();
   target_resource.dummy = target_sp->IsDummyTarget();
-  target_resource.selected = target_sp == debugger_sp->GetSelectedTarget();
+  target_resource.selected = target_sp == target_list.GetSelectedTarget();
 
   if (Module *exe_module = target_sp->GetExecutableModulePointer())
     target_resource.path = exe_module->GetFileSpec().GetPath();

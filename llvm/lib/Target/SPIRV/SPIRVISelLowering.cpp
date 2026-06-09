@@ -177,7 +177,7 @@ SPIRVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   if (VT.isFloatingPoint())
     RC = VT.isVector() ? &SPIRV::vfIDRegClass : &SPIRV::fIDRegClass;
   else if (VT.isInteger())
-    RC = VT.isVector() ? &SPIRV::vIDRegClass : &SPIRV::iIDRegClass;
+    RC = VT.isVector() ? &SPIRV::viIDRegClass : &SPIRV::iIDRegClass;
   else
     RC = &SPIRV::iIDRegClass;
 
@@ -429,7 +429,7 @@ void validateAccessChain(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
   // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
   // We'd like to avoid the needless second processing pass.
-  if (ProcessedMF.find(&MF) != ProcessedMF.end())
+  if (MF.getRegInfo().reservedRegsFrozen())
     return;
 
   MachineRegisterInfo *MRI = &MF.getRegInfo();
@@ -604,7 +604,6 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       }
     }
   }
-  ProcessedMF.insert(&MF);
   TargetLowering::finalizeLowering(MF);
 }
 

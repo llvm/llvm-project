@@ -383,7 +383,7 @@ define float @test_readonly_exp2f_f32_of_sitofp(i32 %x) {
 
 define fp128 @test_readonly_exp2l_fp128_of_sitofp(i32 %x) {
 ; LDEXP32-LABEL: @test_readonly_exp2l_fp128_of_sitofp(
-; LDEXP32-NEXT:    [[LDEXPL:%.*]] = call fp128 @ldexpl(fp128 0xL00000000000000003FFF000000000000, i32 [[X:%.*]])
+; LDEXP32-NEXT:    [[LDEXPL:%.*]] = call fp128 @ldexpl(fp128 1.000000e+00, i32 [[X:%.*]])
 ; LDEXP32-NEXT:    ret fp128 [[LDEXPL]]
 ;
 ; LDEXP16-LABEL: @test_readonly_exp2l_fp128_of_sitofp(

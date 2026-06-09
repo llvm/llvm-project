@@ -152,6 +152,12 @@ public:
   void Unparse(const DeclarationTypeSpec::Record &x) {
     Word("RECORD/"), Walk(x.v), Put('/');
   }
+  void Unparse(const DeclarationTypeSpec::TypeOf &x) {
+    Word("TYPEOF("), Walk(x.v), Put(')');
+  }
+  void Unparse(const DeclarationTypeSpec::ClassOf &x) {
+    Word("CLASSOF("), Walk(x.v), Put(')');
+  }
   void Before(const IntrinsicTypeSpec::Real &) { // R704
     Word("REAL");
   }
@@ -424,6 +430,20 @@ public:
   }
   void Post(const EndEnumStmt &) { // R763
     Outdent(), Word("END ENUM");
+  }
+  void Unparse(const EnumerationTypeStmt &x) { // F2023 R767
+    Word("ENUMERATION TYPE");
+    Walk(", ", std::get<std::optional<AccessSpec>>(x.t));
+    Word(" :: ");
+    Walk(std::get<Name>(x.t));
+    Indent();
+  }
+  void Unparse(const EnumerationEnumeratorStmt &x) { // F2023 R768
+    Word("ENUMERATOR :: "), Walk(x.v, ", ");
+  }
+  void Unparse(const EndEnumerationTypeStmt &x) { // F2023 R769
+    Outdent(), Word("END ENUMERATION TYPE");
+    Walk(" ", x.v);
   }
   void Unparse(const BOZLiteralConstant &x) { // R764 - R767
     Put(x.v);
@@ -1770,6 +1790,7 @@ public:
   void Post(const PrefixSpec::Non_Recursive) { Word("NON_RECURSIVE"); }
   void Post(const PrefixSpec::Pure) { Word("PURE"); }
   void Post(const PrefixSpec::Recursive) { Word("RECURSIVE"); }
+  void Post(const PrefixSpec::Simple) { Word("SIMPLE"); }
   void Unparse(const PrefixSpec::Attributes &x) {
     Word("ATTRIBUTES("), Walk(x.v), Word(")");
   }
@@ -2093,7 +2114,7 @@ public:
   void Unparse(const OpenACCRoutineConstruct &x) {
     BeginOpenACC();
     Word("!$ACC ROUTINE");
-    Walk("(", std::get<std::optional<Name>>(x.t), ")");
+    Walk("(", std::get<std::list<Name>>(x.t), ",", ")");
     Walk(std::get<AccClauseList>(x.t));
     Put("\n");
     EndOpenACC();
@@ -2635,7 +2656,7 @@ public:
   void Unparse(const OpenMPAllocatorsConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OpenMPAssumeConstruct &x) {
+  void Unparse(const OmpAssumeDirective &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPAtomicConstruct &x) {
@@ -2658,7 +2679,7 @@ public:
   void Unparse(const OpenMPCriticalConstruct &x) {
     Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
-  void Unparse(const OpenMPDeclarativeAssumes &x) {
+  void Unparse(const OmpAssumesDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2717,7 +2738,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPGroupprivate &x) {
+  void Unparse(const OmpGroupprivateDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2741,14 +2762,14 @@ public:
   void Unparse(const OpenMPMisplacedEndDirective &x) {
     Unparse(static_cast<const OmpEndDirective &>(x));
   }
-  void Unparse(const OpenMPRequiresConstruct &x) {
+  void Unparse(const OmpRequiresDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPSectionConstruct &x) {
+  void Unparse(const OmpSectionDirective &x) {
     if (auto &&dirSpec{
             std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
       BeginOpenMP();
@@ -2771,7 +2792,7 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OpenMPThreadprivate &x) {
+  void Unparse(const OmpThreadprivateDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
     Walk(x.v);
@@ -2839,6 +2860,7 @@ public:
   WALK_NESTED_ENUM(common, CUDADataAttr) // CUDA
   WALK_NESTED_ENUM(common, CUDASubprogramAttrs) // CUDA
   WALK_NESTED_ENUM(common, OmpDependenceKind)
+  WALK_NESTED_ENUM(common, OmpDeviceType)
   WALK_NESTED_ENUM(common, OmpMemoryOrderType)
   WALK_NESTED_ENUM(IntentSpec, Intent) // R826
   WALK_NESTED_ENUM(ImplicitStmt, ImplicitNoneNameSpec) // R866
@@ -2866,8 +2888,6 @@ public:
   WALK_NESTED_ENUM(OmpThreadsetClause, ThreadsetPolicy) // OMP threadset
   WALK_NESTED_ENUM(OmpAccessGroup, Value)
   WALK_NESTED_ENUM(OmpDeviceModifier, Value) // OMP device modifier
-  WALK_NESTED_ENUM(
-      OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
   WALK_NESTED_ENUM(OmpFallbackModifier, Value) // OMP fallback-modifier
@@ -2893,6 +2913,9 @@ public:
     switch (x) {
     case ReductionOperator::Operator::Plus:
       Word("+");
+      break;
+    case ReductionOperator::Operator::Minus:
+      Word("-");
       break;
     case ReductionOperator::Operator::Multiply:
       Word("*");

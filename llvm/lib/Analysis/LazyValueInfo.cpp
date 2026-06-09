@@ -14,7 +14,6 @@
 #include "llvm/Analysis/LazyValueInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -23,6 +22,7 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -856,26 +856,26 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
       continue;
 
     if (AssumeVH.Index != AssumptionCache::ExprResultIdx) {
-      if (RetainedKnowledge RK = getKnowledgeFromBundle(
-              *I, I->bundle_op_info_begin()[AssumeVH.Index])) {
-        if (RK.WasOn != Val)
-          continue;
-        switch (RK.AttrKind) {
-        case Attribute::NonNull:
+      auto OBU = I->getOperandBundleAt(AssumeVH.Index);
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::NonNull:
+        if (getAssumeNonNullInfo(OBU).Ptr != Val)
+          break;
+        BBLV = BBLV.intersect(ValueLatticeElement::getNot(
+            Constant::getNullValue(Val->getType())));
+        break;
+
+      case BundleAttr::Dereferenceable: {
+        auto [Ptr, Count] = getAssumeDereferenceableInfo(OBU);
+        if (Ptr != Val)
+          break;
+        if (auto *CI = dyn_cast<ConstantInt>(Count); CI && !CI->isZero())
           BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-              Constant::getNullValue(RK.WasOn->getType())));
-          break;
+              Constant::getNullValue(Val->getType())));
+      } break;
 
-        case Attribute::Dereferenceable:
-          if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
-              CI && !CI->isZero())
-            BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-                Constant::getNullValue(RK.WasOn->getType())));
-          break;
-
-        default:
-          break;
-        }
+      default:
+        break;
       }
     } else {
       BBLV = BBLV.intersect(*getValueFromCondition(Val, I->getArgOperand(0),
@@ -2115,6 +2115,10 @@ Constant *LazyValueInfo::getPredicateAt(CmpInst::Predicate Pred, Value *V,
   // return it quickly. But this is only a fastpath, and falling
   // through would still be correct.
   const DataLayout &DL = CxtI->getDataLayout();
+  // NOTE: This check is meant to determine whether a pointer is semantically a
+  // null pointer, not just whether its value equals ConstantPointerNull. If the
+  // semantics of ConstantPointerNull change in the future, this should be
+  // updated to use a semantic check (e.g. isKnownNonNull).
   if (V->getType()->isPointerTy() && C->isNullValue() &&
       isKnownNonZero(V->stripPointerCastsSameRepresentation(), DL)) {
     Type *ResTy = CmpInst::makeCmpResultType(C->getType());

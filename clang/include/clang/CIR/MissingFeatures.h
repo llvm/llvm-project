@@ -34,20 +34,18 @@ struct MissingFeatures {
   static bool opGlobalVisibility() { return false; }
   static bool opGlobalDLLImportExport() { return false; }
   static bool opGlobalPartition() { return false; }
-  static bool opGlobalUsedOrCompilerUsed() { return false; }
   static bool opGlobalPragmaClangSection() { return false; }
   static bool opGlobalAnnotations() { return false; }
   static bool opGlobalCtorPriority() { return false; }
+  static bool emitNVVMMetadata() { return false; }
   static bool setDSOLocal() { return false; }
 
   static bool supportIFuncAttr() { return false; }
-  static bool supportVisibility() { return false; }
   static bool hiddenVisibility() { return false; }
   static bool protectedVisibility() { return false; }
   static bool defaultVisibility() { return false; }
 
   // Load/store attributes
-  static bool opLoadStoreThreadLocal() { return false; }
   static bool opLoadEmitScalarRangeCheck() { return false; }
   static bool opLoadStoreNontemporal() { return false; }
   static bool opLoadStoreTbaa() { return false; }
@@ -62,7 +60,6 @@ struct MissingFeatures {
   static bool opAllocaTLS() { return false; }
   static bool opAllocaOpenMPThreadPrivate() { return false; }
   static bool opAllocaEscapeByReference() { return false; }
-  static bool opAllocaReference() { return false; }
   static bool opAllocaAnnotations() { return false; }
   static bool opAllocaCaptureByInit() { return false; }
 
@@ -80,39 +77,30 @@ struct MissingFeatures {
   static bool opFuncMultiVersioning() { return false; }
   static bool opFuncNakedAttr() { return false; }
   static bool opFuncNoDuplicateAttr() { return false; }
-  static bool opFuncOpenCLKernelMetadata() { return false; }
   static bool opFuncOperandBundles() { return false; }
   static bool opFuncOptNoneAttr() { return false; }
   static bool opFuncParameterAttributes() { return false; }
   static bool opFuncReadOnly() { return false; }
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
-  static bool opFuncNoReturn() { return false; }
+  static bool handleCUDALaunchBoundsAttr() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
 
   // CallOp handling
-  static bool opCallAggregateArgs() { return false; }
   static bool opCallPaddingArgs() { return false; }
-  static bool opCallABIExtendArg() { return false; }
-  static bool opCallABIIndirectArg() { return false; }
-  static bool opCallWidenArg() { return false; }
   static bool opCallBitcastArg() { return false; }
-  static bool opCallImplicitObjectSizeArgs() { return false; }
   static bool opCallReturn() { return false; }
   static bool opCallArgEvaluationOrder() { return false; }
   static bool opCallCallConv() { return false; }
-  static bool opCallSideEffect() { return false; }
   static bool opCallMustTail() { return false; }
   static bool opCallInAlloca() { return false; }
   static bool opCallAttrs() { return false; }
   static bool opCallSurroundingTry() { return false; }
-  static bool opCallASTAttr() { return false; }
   static bool opCallObjCMethod() { return false; }
   static bool opCallExtParameterInfo() { return false; }
   static bool opCallCIRGenFuncInfoParamInfo() { return false; }
   static bool opCallCIRGenFuncInfoExtParamInfo() { return false; }
   static bool opCallChain() { return false; }
-  static bool opCallExceptionAttr() { return false; }
 
   // FnInfoOpts -- This is used to track whether calls are chain calls or
   // instance methods. Classic codegen uses chain call to track and extra free
@@ -123,9 +111,6 @@ struct MissingFeatures {
 
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
-
-  // Unary operator handling
-  static bool opUnaryPromotionType() { return false; }
 
   // SwitchOp handling
   static bool foldRangeCase() { return false; }
@@ -140,11 +125,11 @@ struct MissingFeatures {
 
   // Coroutines
   static bool coroOutsideFrameMD() { return false; }
-  static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
-  static bool deferredFuncDecls() { return false; }
+  static bool checkAliases() { return false; }
+  static bool shouldSkipAliasEmission() { return false; }
 
   // CXXABI
   static bool cxxABI() { return false; }
@@ -163,14 +148,11 @@ struct MissingFeatures {
   static bool atomicInfo() { return false; }
   static bool atomicInfoGetAtomicPointer() { return false; }
   static bool atomicInfoGetAtomicAddress() { return false; }
-  static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
-  static bool atomicMapTargetSyncScope() { return false; }
   static bool atomicTypes() { return false; }
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
   static bool atomicOpenMP() { return false; }
-  static bool atomicInitTailPadding() { return false; }
 
   // Global ctor handling
   static bool globalCtorLexOrder() { return false; }
@@ -204,7 +186,6 @@ struct MissingFeatures {
   static bool allocToken() { return false; }
   static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
-  static bool armComputeVolatileBitfields() { return false; }
   static bool asmGoto() { return false; }
   static bool asmLabelAttr() { return false; }
   static bool asmLLVMAssume() { return false; }
@@ -214,10 +195,8 @@ struct MissingFeatures {
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeNoBuiltin() { return false; }
-  static bool bitfields() { return false; }
   static bool builtinCall() { return false; }
   static bool builtinCallF128() { return false; }
-  static bool builtinCallMathErrno() { return false; }
   static bool builtinBitCountExpr() { return false; }
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
@@ -226,9 +205,7 @@ struct MissingFeatures {
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupDeactivationScope() { return false; }
-  static bool cleanupWithPreservedValues() { return false; }
   static bool cleanupsToDeactivate() { return false; }
-  static bool constEmitterAggILE() { return false; }
   static bool constEmitterArrayILE() { return false; }
   static bool constEmitterVectorILE() { return false; }
   static bool constantFoldSwitchStatement() { return false; }
@@ -240,17 +217,13 @@ struct MissingFeatures {
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
   static bool hipModuleCtor() { return false; }
-  static bool globalRegistration() { return false; }
-  static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
-  static bool dataLayoutTypeStoreSize() { return false; }
   static bool dataLayoutPtrHandlingBasedOnLangAS() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool deleteArray() { return false; }
   static bool devirtualizeDestructor() { return false; }
   static bool dtorCleanups() { return false; }
   static bool ehCleanupScope() { return false; }
-  static bool ehScopeFilter() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitConstrainedFPCall() { return false; }
@@ -273,7 +246,6 @@ struct MissingFeatures {
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
   static bool getRuntimeFunctionDecl() { return false; }
-  static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
   static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
@@ -282,13 +254,10 @@ struct MissingFeatures {
   static bool insertBuiltinUnpredictable() { return false; }
   static bool instrumentation() { return false; }
   static bool intrinsicElementTypeSupport() { return false; }
-  static bool intrinsics() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
-  static bool loweringPrepareX86CXXABI() { return false; }
-  static bool loweringPrepareAArch64XXABI() { return false; }
   static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
@@ -297,7 +266,6 @@ struct MissingFeatures {
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
-  static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
   static bool objCLifetime() { return false; }
@@ -305,13 +273,12 @@ struct MissingFeatures {
   static bool msvcBuiltins() { return false; }
   static bool openCL() { return false; }
   static bool openMP() { return false; }
+  static bool sycl() { return false; }
   static bool opTBAA() { return false; }
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }
-  static bool pointerOverflowSanitizer() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
-  static bool loopSpecificCleanupHandling() { return false; }
   static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }
   static bool sanitizers() { return false; }
@@ -358,17 +325,16 @@ struct MissingFeatures {
   // Future CIR operations
   static bool callOp() { return false; }
   static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
-  static bool switchOp() { return false; }
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
-  static bool functionArgumentAttrs() { return false; }
 
   // Maybe only needed for Windows exception handling
   static bool currentFuncletPad() { return false; }
+  static bool sizeOfUnwindException() { return false; }
 };
 
 } // namespace cir

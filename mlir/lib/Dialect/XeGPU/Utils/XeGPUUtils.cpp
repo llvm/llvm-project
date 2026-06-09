@@ -73,21 +73,32 @@ FailureOr<VectorType>
 mlir::xegpu::getDistributedVectorType(VectorType originalType,
                                       xegpu::LayoutAttr layout) {
   int64_t rank = originalType.getRank();
-  // Distributed vector type is only supported for 1D, 2D and 3D vectors.
-  if (rank < 1 || rank > 3)
+  if (rank < 1)
     return failure();
   ArrayRef<int64_t> shape = originalType.getShape();
-  // arrayLength is 1 for 1D and 2D vectors, and equal to the first dimension
-  // of the 3D vector.
+  // For rank > 2, leading dimensions are treated as batch/array dimensions.
+  // Drop them and use the product as arrayLength.
   int arrayLength = 1;
-  if (rank == 3) {
-    arrayLength = shape[0];
+  while (shape.size() > 2) {
+    arrayLength *= shape[0];
     shape = shape.drop_front();
   }
+  // Drop matching leading dims from layout if the layout rank exceeds the
+  // remaining shape rank.
+  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
+  auto laneData = layout.getEffectiveLaneDataAsInt();
+  while (!laneLayout.empty() && laneLayout.size() > shape.size()) {
+    laneLayout.erase(laneLayout.begin());
+    laneData.erase(laneData.begin());
+  }
+  auto trimmedLayout = xegpu::LayoutAttr::get(
+      layout.getContext(),
+      SmallVector<int32_t>(laneLayout.begin(), laneLayout.end()),
+      SmallVector<int32_t>(laneData.begin(), laneData.end()));
   auto helperTdescTy = xegpu::TensorDescType::get(
       shape, originalType.getElementType(), arrayLength,
       /*boundary_check=*/true,
-      /*memory_space=*/xegpu::MemorySpace::Global, layout);
+      /*memory_space=*/xegpu::MemorySpace::Global, trimmedLayout);
   return xegpu::getDistributedVectorType(helperTdescTy);
 }
 
@@ -136,10 +147,6 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
 
-  if (auto tdescTy =
-          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
-    return tdescTy.getLayoutAttr();
-
   if (auto result = dyn_cast<OpResult>(value)) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
@@ -162,9 +169,13 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
     if (auto loop = dyn_cast_if_present<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
       if (tiedInit)
-        return getDistributeLayoutAttr(tiedInit->get());
+        return getTemporaryLayout(*tiedInit);
     }
   }
+
+  if (auto tdescTy =
+          dyn_cast_if_present<xegpu::TensorDescType>(value.getType()))
+    return tdescTy.getLayoutAttr();
 
   return nullptr;
 }
@@ -182,6 +193,31 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
       } else if (idx == 2) {
         return dpasOp.getLayoutCdAttr();
       }
+    }
+    if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
+      // DpasMxOp has operands: a, b, optional acc, optional scale_a, optional
+      // scale_b
+      unsigned currentIdx = 0;
+
+      if (idx == currentIdx++)
+        return dpasMxOp.getLayoutAAttr();
+
+      if (idx == currentIdx++)
+        return dpasMxOp.getLayoutBAttr();
+
+      if (dpasMxOp.getAcc())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutCdAttr();
+
+      if (dpasMxOp.getScaleA())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutAScaleAttr();
+
+      if (dpasMxOp.getScaleB())
+        if (idx == currentIdx++)
+          return dpasMxOp.getLayoutBScaleAttr();
+
+      return nullptr;
     }
     if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(op)) {
       return convertOp.getInputLayoutAttr();
@@ -692,8 +728,6 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
-  // TODO: Remove these get/setTemporaryLayout calls after we deprecate the old
-  // XeGPUSubgroupDistribute pass.
   auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
   auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
   // Reduction result should have the same layout as the accumulator.
@@ -897,7 +931,8 @@ bool xegpu::requireTranspose(const xegpu::DistributeLayoutAttr layout,
   // Return false for unsupported targets.
   // TODO: Add more support or move to target info.
   if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg"))
+      uArch->getName().equals_insensitive("bmg") &&
+      uArch->getName().equals_insensitive("cri"))
     return false;
   if (!layout)
     return false;
@@ -949,6 +984,12 @@ bool xegpu::matchSplitDimExpansion(
     currentDstDims.push_back(dstIdx);
 
     if (accumulatedSize == src[srcIdx]) {
+      // Also collect trailing unit dims in destination, if any.
+      // Leading unit dims were implicitly collected.
+      if (srcIdx == src.size() - 1) {
+        while (++dstIdx < dst.size() && dst[dstIdx] == 1)
+          currentDstDims.push_back(dstIdx);
+      }
       // Record the mapping: srcIdx -> currentDstDims
       splitDimGroups.push_back(currentDstDims);
       // move to next src dim

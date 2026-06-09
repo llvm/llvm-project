@@ -158,7 +158,7 @@ On MachO platforms, this attribute also does not control the order of initializa
 across translation units, where it only affects the order within a single TU.
 
 This attribute is only supported for C++ and Objective-C++ and is ignored in
-other language modes. Currently, this attribute is not implemented on z/OS.
+other language modes.
   }];
 }
 
@@ -297,8 +297,14 @@ def NoEscapeDocs : Documentation {
 the compiler that the pointer cannot escape: that is, no reference to the object
 the pointer points to that is derived from the parameter value will survive
 after the function returns. Users are responsible for making sure parameters
-annotated with ``noescape`` do not actually escape. Calling ``free()`` on such
-a parameter does not constitute an escape.
+annotated with ``noescape`` do not actually escape. The optimizer may make
+assumptions based on the fact that it knows that a call to the function does
+not escape a certain parameter, so incorrectly annotating a parameter with
+``noescape`` leads to undefined behavior. The callee is also not allowed to
+deallocate memory through a ``noescape`` parameter: the optimizer does not make
+assumptions based on this information at the moment, but may do so in the
+future. Some cases of invalid uses of ``noescape`` can be found with
+:ref:`-Wlifetime-safety-noescape <Wlifetime-safety-noescape>`.
 
 For example:
 
@@ -312,6 +318,23 @@ For example:
 
   void escapingFunc(__attribute__((noescape)) int *p) {
     gp = p; // Not OK.
+  }
+
+  void freeingFunc(__attribute__((noescape)) int *p) {
+    free(p); // Not OK.
+  }
+
+Since ``noescape`` is a parameter attribute and not a type attribute, it only
+applies to the outermost pointer level, regardless of where in the parameter
+declaration you place it:
+
+.. code-block:: c
+
+  int **gp;
+
+  void nestingEscapes(__attribute__((noescape)) int **p) {
+    gp = p; // Not OK.
+    *gp = *p; // OK, p does not escape.
   }
 
 Additionally, when the parameter is a `block pointer
@@ -330,6 +353,36 @@ applies to copies of the block. For example:
   void escapingFunc(__attribute__((noescape)) BlockTy block) {
     g0 = block; // Not OK.
     g1 = Block_copy(block); // Not OK either.
+  }
+
+The function *is* allowed to leak information about the memory address of the
+pointer, but not any provenance of the allocation:
+
+.. code-block:: c
+
+  bool isNull(__attribute__((noescape)) void *p) {
+    return !p; // OK.
+  }
+
+  uintptr_t gi;
+
+  void escapingAddress(__attribute__((noescape)) int *p) {
+    // OK *if and only if* gi is never casted back to a pointer.
+    gi = (uintptr_t)p;
+  }
+
+  bool usingEscapedAddress(int *p) {
+    return (uintptr_t)p > gi; // OK.
+  }
+
+  bool usingEscapedPointer(int *p) {
+    return p > (int*)gi; // Not OK.
+  }
+
+  int *gp;
+
+  void escapingEndFunc(__attribute__((noescape)) int *p, size_t len) {
+    gp = p + len; // Not OK.
   }
 
   }];
@@ -1663,7 +1716,9 @@ safely deallocated with the standard ``free()``.
 The annotations ``ownership_takes`` and ``ownership_holds`` both prevent memory
 leak reports (concerning the specified parameter); the difference between them
 is that using taken memory is a use-after-free error, while using held memory
-is assumed to be legitimate.
+is assumed to be legitimate. However, releasing the held memory or passing it
+to another holding call is reported by the analyzer as an "attempt to release
+non-owned memory".
 
 Example:
 
@@ -7841,7 +7896,7 @@ that provide transparent access to the pointed-to object. These include:
 
 * Dereference operators: ``operator*``, ``operator->``
 * Data access methods: ``data()``, ``c_str()``, ``get()``
-* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+* Iterator operations: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``, ``operator+``, ``operator-``, ``operator++``, ``operator--``
 
 When these methods return pointers, view types, or references, the analysis treats them as
 transparently borrowing from the same object that the pointer itself borrows from,
@@ -9259,8 +9314,8 @@ def HLSLMatrixLayoutDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "row_major, column_major";
   let Content = [{
-The ``row_major`` and ``column_major`` keywords specify the memory layout 
-of an HLSL matrix type. 
+The ``row_major`` and ``column_major`` keywords specify the memory layout
+of an HLSL matrix type.
 
 * ``row_major``: Matrices are stored in memory row-by-row.
 * ``column_major``: Matrices are stored in memory column-by-column (default).
@@ -9998,5 +10053,67 @@ exception and what cleanup actions to perform. It effectively colors the
 language-agnostic unwinding mechanism with language-specific semantics, enabling
 different languages to coexist on the same call stack while each interpreting
 exceptions according to their own rules.
+  }];
+}
+
+def SentinelDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``sentinel`` attribute can be applied to variadic functions and pointers to
+variadic functions, to diagnose each function call that does not pass a
+sentinel value (a null pointer constant) as the last argument to the function
+call. The attribute accepts two optional arguments: the first argument is the
+position of the expected sentinel value, starting from the last parameter. The
+second argument describes whether the last fixed parameter is treated as a
+valid sentinel value when set to '1'.
+All arguments described above defaults to '0' when elided.
+The attribute is also supported with blocks and in Objective-C.
+
+.. code-block:: c
+
+  void foo(const char*, ...) __attribute__((sentinel));
+  void bar(int, ...) __attribute__((sentinel(1)));
+  void baz(const char*, const char*, ...) __attribute__((sentinel(0, 1)));
+
+  void example() {
+    foo("Example", (void*)0);
+    foo("Another", "example", NULL);
+    foo("Missing", "sentinel"); // Not OK
+
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
+    bar(1, 2, 3, 4, NULL);      // Not OK
+
+    baz("Test", "with", "multiple", "args", NULL);
+    baz("One", NULL);           // OK: last fixed parameter is a valid sentinel
+
+    void (*ptr) (int arg, ...) __attribute__ ((__sentinel__));
+    ptr(1, 2, 3, NULL);
+  }
+
+.. code-block:: c++
+
+  struct Ty {
+      int value;
+
+      template<typename T>
+      auto&& foo(T&& val, ...) __attribute__((sentinel(1))) {
+          return std::forward<T>(val);
+      }
+
+      template<class Self>
+      auto&& bar(this Self&& self, ...) __attribute__((sentinel(1))) {
+          return std::forward<Self>(self).value;
+      }
+  };
+
+  void example2() {
+      auto sty = Ty{};
+      sty.foo(1, nullptr, 3);
+      sty.bar(1, nullptr, 3);
+
+      auto lmbd = [](int a, ...) __attribute__((sentinel)) {};
+      lmbd(1, 2, nullptr);
+  }
   }];
 }

@@ -495,10 +495,10 @@ define float @test__pown_fast_afn_f32__neg2(float %x) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call afn float @llvm.exp2.f32(float [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = call afn float @llvm.fabs.f32(float [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = call afn float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[TMP6:%.*]] = fcmp afn oeq float [[TMP5]], 0x7FF0000000000000
+; CHECK-NEXT:    [[TMP6:%.*]] = fcmp afn oeq float [[TMP5]], +inf
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp afn oeq float [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP6]], float 0.000000e+00, float [[TMP4]]
-; CHECK-NEXT:    [[CALL:%.*]] = select i1 [[TMP7]], float 0x7FF0000000000000, float [[TMP8]]
+; CHECK-NEXT:    [[CALL:%.*]] = select i1 [[TMP7]], float +inf, float [[TMP8]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 entry:

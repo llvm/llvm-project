@@ -1,0 +1,56 @@
+{
+  "id_table": [
+    {
+      "id": 1,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@bar#"
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@baz#"
+      }
+    },
+    {
+      "id": 0,
+      "name": {
+        "namespace": [
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ],
+        "suffix": "",
+        "usr": "c:@F@foo#"
+      }
+    }
+  ],
+  "results": [
+    {
+      "analysis_name": "TagsAnalysisResult",
+      "result": {
+        "tags": [
+          "deprecated",
+          "important",
+          "internal",
+          "public"
+        ]
+      }
+    }
+  ]
+}

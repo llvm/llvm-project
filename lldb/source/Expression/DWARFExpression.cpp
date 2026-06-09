@@ -414,7 +414,7 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_implicit_value: // 0x9e ULEB128 size followed by block of that size
                              // (DWARF4)
   {
-    uint64_t block_len = data.Skip_LEB128(&offset);
+    uint64_t block_len = data.GetULEB128(&offset);
     offset += block_len;
     return offset - data_offset;
   }
@@ -925,15 +925,20 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
 }
 
 static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
-                                        LocationAtom opcode, uint8_t size,
+                                        LocationAtom opcode, unsigned size,
                                         size_t size_addr_bytes) {
   const char *op_name = DW_OP_value_to_name(opcode);
   if (eval_ctx.stack.empty())
     return llvm::createStringError("expression stack empty for %s", op_name);
 
   if (size > 8)
-    return llvm::createStringError("Invalid address size for %s: %d\n", op_name,
+    return llvm::createStringError("Invalid address size for %s: %u", op_name,
                                    size);
+
+  if (opcode == DW_OP_deref_size && size > size_addr_bytes)
+    return llvm::createStringError(
+        "DW_OP_deref_size size (%u) exceeds address size (%zu)", size,
+        size_addr_bytes);
 
   // Deref a register or implicit location and truncate the value to `size`
   // bytes. See the corresponding comment in DW_OP_deref for more details on

@@ -8,6 +8,7 @@
 
 #include "flang/Parser/tools.h"
 #include "flang/Common/indirection.h"
+#include "flang/Evaluate/characteristics.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -330,7 +331,13 @@ const Symbol *FindExternallyVisibleObject(
   // TODO: Storage association with any object for which this predicate holds,
   // once EQUIVALENCE is supported.
   const Symbol &ultimate{GetAssociationRoot(object)};
-  if (IsDummy(ultimate)) {
+  if (ultimate.owner().IsDerivedType()) {
+    return nullptr;
+  } else if (!IsDummy(ultimate) &&
+      (IsUseAssociated(object, scope) ||
+          IsHostAssociatedIntoSubprogram(object, scope))) {
+    return &object;
+  } else if (IsDummy(ultimate)) {
     if (IsIntentIn(ultimate)) {
       return &ultimate;
     }
@@ -338,12 +345,7 @@ const Symbol *FindExternallyVisibleObject(
         IsPureProcedure(ultimate.owner()) && IsFunction(ultimate.owner())) {
       return &ultimate;
     }
-  } else if (ultimate.owner().IsDerivedType()) {
-    return nullptr;
-  } else if (&GetProgramUnitContaining(ultimate) !=
-      &GetProgramUnitContaining(scope)) {
-    return &object;
-  } else if (const Symbol * block{FindCommonBlockContaining(ultimate)}) {
+  } else if (const Symbol *block{FindCommonBlockContaining(ultimate)}) {
     return block;
   }
   return nullptr;
@@ -1074,6 +1076,17 @@ bool IsAssumedType(const Symbol &symbol) {
   return false;
 }
 
+bool IsEnumerationType(const Symbol &symbol) {
+  if (const auto *details{symbol.detailsIf<DerivedTypeDetails>()}) {
+    return details->isEnumerationType();
+  }
+  return false;
+}
+
+bool IsEnumerationType(const DerivedTypeSpec &derived) {
+  return derived.IsEnumerationType();
+}
+
 bool IsPolymorphic(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->IsPolymorphic();
@@ -1124,6 +1137,15 @@ bool HasCUDAComponent(const Symbol &symbol) {
     }
   }
   return false;
+}
+
+bool IsCUDAAddressSpaceAgnostic(
+    const evaluate::characteristics::DummyDataObject &dummy) {
+  return !dummy.cudaDataAttr && dummy.type.type().IsAssumedType() &&
+      (dummy.type.attrs().test(
+           evaluate::characteristics::TypeAndShape::Attr::AssumedSize) ||
+          dummy.type.attrs().test(
+              evaluate::characteristics::TypeAndShape::Attr::AssumedRank));
 }
 
 UltimateComponentIterator::const_iterator

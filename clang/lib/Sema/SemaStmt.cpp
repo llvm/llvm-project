@@ -1794,7 +1794,6 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
     return StmtError();
 
   auto CondVal = Cond.get();
-  CheckBreakContinueBinding(CondVal.second);
 
   if (CondVal.second &&
       !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
@@ -1822,7 +1821,6 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
                   Expr *Cond, SourceLocation CondRParen) {
   assert(Cond && "ActOnDoStmt(): missing expression");
 
-  CheckBreakContinueBinding(Cond);
   ExprResult CondResult = CheckBooleanCondition(DoLoc, Cond);
   if (CondResult.isInvalid())
     return StmtError();
@@ -1832,11 +1830,6 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   if (CondResult.isInvalid())
     return StmtError();
   Cond = CondResult.get();
-
-  // Only call the CommaVisitor for C89 due to differences in scope flags.
-  if (Cond && !getLangOpts().C99 && !getLangOpts().CPlusPlus &&
-      !Diags.isIgnored(diag::warn_comma_operator, Cond->getExprLoc()))
-    CommaVisitor(*this).Visit(Cond);
 
   // OpenACC3.3 2.14.4:
   // The update directive is executable.  It must not appear in place of the
@@ -2255,25 +2248,6 @@ namespace {
 
 } // end namespace
 
-
-void Sema::CheckBreakContinueBinding(Expr *E) {
-  if (!E || getLangOpts().CPlusPlus)
-    return;
-  BreakContinueFinder BCFinder(*this, E);
-  Scope *BreakParent = CurScope->getBreakParent();
-  if (BCFinder.BreakFound() && BreakParent) {
-    if (BreakParent->getFlags() & Scope::SwitchScope) {
-      Diag(BCFinder.GetBreakLoc(), diag::warn_break_binds_to_switch);
-    } else {
-      Diag(BCFinder.GetBreakLoc(), diag::warn_loop_ctrl_binds_to_inner)
-          << "break";
-    }
-  } else if (BCFinder.ContinueFound() && CurScope->getContinueParent()) {
-    Diag(BCFinder.GetContinueLoc(), diag::warn_loop_ctrl_binds_to_inner)
-        << "continue";
-  }
-}
-
 StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                               Stmt *First, ConditionResult Second,
                               FullExprArg third, SourceLocation RParenLoc,
@@ -2316,9 +2290,6 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                                : diag::ext_c23_non_variable_decl_in_for);
     }
   }
-
-  CheckBreakContinueBinding(Second.get().second);
-  CheckBreakContinueBinding(third.get());
 
   if (!Second.get().first)
     CheckForLoopConditionalStatement(*this, Second.get().second, third.get(),
@@ -2971,7 +2942,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
           ActOnFinishFullExpr(NotEqExpr.get(), /*DiscardedValue*/ false);
     if (NotEqExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 0 << BeginRangeRef.get()->getType();
+          << RangeLoc << diag::InvalidRangeForIterator::OpNotEq
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
       if (!Context.hasSameType(BeginType, EndType))
         NoteForRangeBeginEndFunction(*this, EndExpr.get(), BEF_end);
@@ -2994,7 +2966,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
       IncrExpr = ActOnFinishFullExpr(IncrExpr.get(), /*DiscardedValue*/ false);
     if (IncrExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 2 << BeginRangeRef.get()->getType() ;
+          << RangeLoc << diag::InvalidRangeForIterator::OpAdvance
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
       return StmtError();
     }
@@ -3008,7 +2981,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
     ExprResult DerefExpr = ActOnUnaryOp(S, ColonLoc, tok::star, BeginRef.get());
     if (DerefExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 1 << BeginRangeRef.get()->getType();
+          << RangeLoc << diag::InvalidRangeForIterator::OpDeref
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
       return StmtError();
     }
@@ -3364,12 +3338,6 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
   if (!S) {
     // C99 6.8.6.2p1: A break shall appear only in or as a loop body.
     return StmtError(Diag(ContinueLoc, diag::err_continue_not_in_loop));
-  }
-  if (S->isConditionVarScope()) {
-    // We cannot 'continue;' from within a statement expression in the
-    // initializer of a condition variable because we would jump past the
-    // initialization of that variable.
-    return StmtError(Diag(ContinueLoc, diag::err_continue_from_cond_var_init));
   }
 
   // A 'continue' that would normally have execution continue on a block outside
@@ -4310,11 +4278,7 @@ class CatchHandlerType {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
-  // This is a special constructor to be used only with DenseMapInfo's
-  // getEmptyKey() and getTombstoneKey() functions.
   friend struct llvm::DenseMapInfo<CatchHandlerType>;
-  enum Unique { ForDenseMap };
-  CatchHandlerType(QualType QT, Unique) : QT(QT), IsPointer(false) {}
 
 public:
   /// Used when creating a CatchHandlerType from a handler type; will determine
@@ -4351,16 +4315,6 @@ public:
 
 namespace llvm {
 template <> struct DenseMapInfo<CatchHandlerType> {
-  static CatchHandlerType getEmptyKey() {
-    return CatchHandlerType(DenseMapInfo<QualType>::getEmptyKey(),
-                       CatchHandlerType::ForDenseMap);
-  }
-
-  static CatchHandlerType getTombstoneKey() {
-    return CatchHandlerType(DenseMapInfo<QualType>::getTombstoneKey(),
-                       CatchHandlerType::ForDenseMap);
-  }
-
   static unsigned getHashValue(const CatchHandlerType &Base) {
     return DenseMapInfo<QualType>::getHashValue(Base.underlying());
   }

@@ -48,6 +48,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -617,9 +618,15 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
     }
     return llvm::ConstantFP::get(llvmType, floatAttr.getValue());
   }
-  if (auto funcAttr = dyn_cast<FlatSymbolRefAttr>(attr))
-    return llvm::ConstantExpr::getBitCast(
-        moduleTranslation.lookupFunction(funcAttr.getValue()), llvmType);
+  if (auto symAttr = dyn_cast<FlatSymbolRefAttr>(attr)) {
+    StringRef name = symAttr.getValue();
+    if (llvm::Function *func = moduleTranslation.lookupFunction(name))
+      return llvm::ConstantExpr::getBitCast(func, llvmType);
+    if (llvm::GlobalValue *global = moduleTranslation.lookupGlobal(name))
+      return llvm::ConstantExpr::getBitCast(global, llvmType);
+    emitError(loc, "unknown symbol reference '") << name << "' in constant";
+    return nullptr;
+  }
   if (auto splatAttr = dyn_cast<SplatElementsAttr>(attr)) {
     llvm::Type *elementType;
     uint64_t numElements;
@@ -780,13 +787,14 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
 }
 
 ModuleTranslation::ModuleTranslation(Operation *module,
-                                     std::unique_ptr<llvm::Module> llvmModule)
+                                     std::unique_ptr<llvm::Module> llvmModule,
+                                     llvm::vfs::FileSystem *fs)
     : mlirModule(module), llvmModule(std::move(llvmModule)),
       debugTranslation(
           std::make_unique<DebugTranslation>(module, *this->llvmModule)),
       loopAnnotationTranslation(std::make_unique<LoopAnnotationTranslation>(
           *this, *this->llvmModule)),
-      typeTranslator(this->llvmModule->getContext()),
+      fileSystem(fs), typeTranslator(this->llvmModule->getContext()),
       iface(module->getContext()) {
   assert(satisfiesLLVMModule(mlirModule) &&
          "mlirModule should honor LLVM's module semantics.");
@@ -973,11 +981,16 @@ llvm::CallInst *mlir::LLVM::detail::createIntrinsicCall(
   SmallVector<llvm::Value *> args(immArgPositions.size() + operands.size());
   for (auto [immArgPos, immArgName] :
        llvm::zip(immArgPositions, immArgAttrNames)) {
-    auto attr = llvm::cast<TypedAttr>(intrOp->getAttr(immArgName));
-    assert(attr.getType().isIntOrFloat() && "expected int or float immarg");
-    auto *type = moduleTranslation.convertType(attr.getType());
+    Attribute attr = intrOp->getAttr(immArgName);
+    if (auto intrinsicIntegerAttr =
+            dyn_cast<LLVM::IntrinsicIntegerAttrInterface>(attr))
+      attr = intrinsicIntegerAttr.getIntegerAttr();
+    auto typedAttr = llvm::cast<TypedAttr>(attr);
+    assert(typedAttr.getType().isIntOrFloat() &&
+           "expected int or float immarg");
+    auto *type = moduleTranslation.convertType(typedAttr.getType());
     args[immArgPos] = LLVM::detail::getLLVMConstant(
-        type, attr, intrOp->getLoc(), moduleTranslation);
+        type, typedAttr, intrOp->getLoc(), moduleTranslation);
   }
   unsigned opArg = 0;
   for (auto &arg : args) {
@@ -1195,16 +1208,16 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
   for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
     llvm::Type *type = convertType(op.getType());
     llvm::Constant *cst = nullptr;
-    if (op.getValueOrNull()) {
+    const bool deferValueAttrToPass2 = op.getValueOrNull() &&
+                                       !op.getInitializerBlock() &&
+                                       !isa<StringAttr>(op.getValueOrNull());
+    if (op.getValueOrNull() && !deferValueAttrToPass2) {
       // String attributes are treated separately because they cannot appear as
       // in-function constants and are thus not supported by getLLVMConstant.
       if (auto strAttr = dyn_cast_or_null<StringAttr>(op.getValueOrNull())) {
         cst = llvm::ConstantDataArray::getString(
             llvmModule->getContext(), strAttr.getValue(), /*AddNull=*/false);
         type = cst->getType();
-      } else if (!(cst = getLLVMConstant(type, op.getValueOrNull(), op.getLoc(),
-                                         *this))) {
-        return failure();
       }
     }
 
@@ -1214,10 +1227,14 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     // external to have initializers. If MLIR does not provide an initializer,
     // default to undef.
     bool dropInitializer = shouldDropGlobalInitializer(linkage, cst);
-    if (!dropInitializer && !cst)
-      cst = llvm::UndefValue::get(type);
-    else if (dropInitializer && cst)
+    if (!deferValueAttrToPass2) {
+      if (!dropInitializer && !cst)
+        cst = llvm::UndefValue::get(type);
+      else if (dropInitializer && cst)
+        cst = nullptr;
+    } else {
       cst = nullptr;
+    }
 
     auto *var = new llvm::GlobalVariable(
         *llvmModule, type, op.getConstant(), linkage, cst, op.getSymName(),
@@ -1247,6 +1264,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
 
     globalsMapping.try_emplace(op, var);
+    globalsByNameMapping.try_emplace(op.getSymName(), var);
 
     // Add debug information if present.
     if (op.getDbgExprs()) {
@@ -1302,6 +1320,28 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     if (failed(convertedTargetSpecificAttrs))
       return failure();
     var->addAttributes(*convertedTargetSpecificAttrs);
+  }
+
+  // Value-attribute initializers may reference other globals by symbol name.
+  // Register every global above before materializing those constants.
+  for (auto op : getModuleBody(mlirModule).getOps<LLVM::GlobalOp>()) {
+    if (!op.getValueOrNull() || op.getInitializerBlock() ||
+        isa<StringAttr>(op.getValueOrNull()))
+      continue;
+
+    llvm::Type *type = convertType(op.getType());
+    llvm::Constant *cst =
+        getLLVMConstant(type, op.getValueOrNull(), op.getLoc(), *this);
+    if (!cst)
+      return failure();
+
+    auto linkage = convertLinkageToLLVM(op.getLinkage());
+    bool dropInitializer = shouldDropGlobalInitializer(linkage, cst);
+    auto *var = cast<llvm::GlobalVariable>(lookupGlobal(op));
+    if (dropInitializer)
+      var->setInitializer(nullptr);
+    else
+      var->setInitializer(cst);
   }
 
   // Create all llvm::GlobalAlias
@@ -2397,6 +2437,12 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   return ompBuilder.get();
 }
 
+llvm::vfs::FileSystem &ModuleTranslation::getFileSystem() {
+  if (fileSystem)
+    return *fileSystem;
+  return *llvm::vfs::getRealFileSystem();
+}
+
 llvm::DILocation *ModuleTranslation::translateLoc(Location loc,
                                                   llvm::DILocalScope *scope) {
   return debugTranslation->translateLoc(loc, scope);
@@ -2486,7 +2532,8 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
 
 std::unique_ptr<llvm::Module>
 mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
-                              StringRef name, bool disableVerification) {
+                              StringRef name, bool disableVerification,
+                              llvm::vfs::FileSystem *fs) {
   if (!satisfiesLLVMModule(module)) {
     module->emitOpError("can not be translated to an LLVMIR module");
     return nullptr;
@@ -2500,7 +2547,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   LLVM::ensureDistinctSuccessors(module);
   LLVM::legalizeDIExpressionsRecursively(module);
 
-  ModuleTranslation translator(module, std::move(llvmModule));
+  ModuleTranslation translator(module, std::move(llvmModule), fs);
   llvm::IRBuilder<llvm::TargetFolder> llvmBuilder(
       llvmContext,
       llvm::TargetFolder(translator.getLLVMModule()->getDataLayout()));
