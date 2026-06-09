@@ -992,11 +992,8 @@ TEST_F(PointerFlowTest, EmptyInitsScalarInt) {
     }
   )cpp"),
             true);
-
-  auto *Sum = getEntitySummary("foo");
-
   // No pointer-flow edge for 0-initialized scalar.
-  ASSERT_EQ(Sum, nullptr);
+  ASSERT_FALSE(getEntitySummary("foo"));
 }
 
 TEST_F(PointerFlowTest, EmptyInitsUnion) {
