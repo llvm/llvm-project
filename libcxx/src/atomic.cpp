@@ -121,8 +121,20 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
 template <std::size_t _Size, class MaybeTimeout>
 static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
   static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
-  uint64_t __value = 0;
-  std::memcpy(&__value, __val, _Size);
+  uint64_t __value = [__val]() -> uint64_t {
+    if constexpr (_Size == 4) {
+      std::uint32_t __result;
+      std::memcpy(&__result, __val, _Size);
+      return __result;
+    } else if constexpr (_Size == 8) {
+      std::uint64_t __result;
+      std::memcpy(&__result, __val, _Size);
+      return __result;
+    } else {
+      static_assert(false, "Can only wait on 8 bytes or 4 bytes value");
+    }
+  }();
+
   if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
     os_sync_wait_on_address(const_cast<void*>(__ptr), __value, _Size, OS_SYNC_WAIT_ON_ADDRESS_NONE);
   } else {
