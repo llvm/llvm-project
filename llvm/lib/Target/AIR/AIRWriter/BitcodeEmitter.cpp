@@ -239,11 +239,13 @@ static void fixMMAPointerSuffixMismatch(Module &M, PointeeTypeMap &PTM) {
         Elem = Type::getBFloatTy(Ctx);
       else if (Name.contains("f32"))
         Elem = Type::getFloatTy(Ctx);
-      if (!Elem || Elem->isFloatTy())
+      if (!Elem)
         continue;
       for (unsigned J = 0; J < CI->arg_size(); J++) {
         Value *Op = CI->getArgOperand(J);
         if (!Op->getType()->isPointerTy())
+          continue;
+        if (Elem->isFloatTy() && !isa<Constant>(Op))
           continue;
         if (isa<BitCastInst>(Op) || isa<AllocaInst>(Op))
           continue;
