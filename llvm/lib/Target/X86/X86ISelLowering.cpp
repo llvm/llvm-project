@@ -45461,6 +45461,71 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     }
     break;
   }
+  case X86ISD::PCLMULQDQ: {
+    // Carry-less product bit i only depends on source bits [0, i], so a
+    // low-qword extract+narrow+scalar_to_vector round-trip on an operand can be
+    // replaced by its source vector when only those low result bits are wanted.
+    unsigned NumElts = VT.getVectorNumElements();
+    APInt HighElts = APInt::getSplat(NumElts, APInt(2, 0b10));
+    unsigned DemandedLoBits = OriginalDemandedBits.getActiveBits();
+    if (!(OriginalDemandedElts & HighElts).isZero() || DemandedLoBits == 0 ||
+        DemandedLoBits >= BitWidth)
+      break;
+
+    uint64_t Imm = Op.getConstantOperandVal(2);
+    uint64_t M0 = Imm & 0x01, M1 = (Imm & 0x10) >> 4;
+    APInt LoElts = APInt::getSplat(NumElts, APInt(2, 0b01));
+    APInt SrcBits = APInt::getLowBitsSet(BitWidth, DemandedLoBits);
+    KnownBits KnownLHS, KnownRHS;
+    if (SimplifyDemandedBits(Op.getOperand(0), SrcBits, M0 ? HighElts : LoElts,
+                             KnownLHS, TLO, Depth + 1))
+      return true;
+    if (SimplifyDemandedBits(Op.getOperand(1), SrcBits, M1 ? HighElts : LoElts,
+                             KnownRHS, TLO, Depth + 1))
+      return true;
+
+    auto PeelToVector = [&](SDValue Operand, uint64_t M) -> SDValue {
+      // scalar_to_vector only defines the low qword, so the imm must select it.
+      if (M != 0)
+        return SDValue();
+
+      SDValue S2V = peekThroughBitcasts(Operand);
+      if (S2V.getOpcode() != ISD::SCALAR_TO_VECTOR ||
+          S2V.getValueSizeInBits() != VT.getSizeInBits())
+        return SDValue();
+
+      uint64_t MinScalarBits = S2V.getScalarValueSizeInBits();
+      SDValue Inner = S2V.getOperand(0);
+      while (Inner.getOpcode() == ISD::ANY_EXTEND ||
+             Inner.getOpcode() == ISD::TRUNCATE) {
+        MinScalarBits =
+            std::min(MinScalarBits, Inner.getScalarValueSizeInBits());
+        Inner = Inner.getOperand(0);
+      }
+      MinScalarBits = std::min(MinScalarBits, Inner.getScalarValueSizeInBits());
+
+      if (Inner.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+          !isNullConstant(Inner.getOperand(1)) ||
+          DemandedLoBits > MinScalarBits)
+        return SDValue();
+
+      SDValue Src = Inner.getOperand(0);
+      if (!Src.getValueType().isVector() ||
+          Src.getValueSizeInBits() != VT.getSizeInBits())
+        return SDValue();
+      return TLO.DAG.getBitcast(VT, Src);
+    };
+
+    SDValue NewLHS = PeelToVector(Op.getOperand(0), M0);
+    SDValue NewRHS = PeelToVector(Op.getOperand(1), M1);
+    if (NewLHS || NewRHS) {
+      NewLHS = NewLHS ? NewLHS : Op.getOperand(0);
+      NewRHS = NewRHS ? NewRHS : Op.getOperand(1);
+      return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, NewLHS,
+                                               NewRHS, Op.getOperand(2)));
+    }
+    break;
+  }
   case X86ISD::ANDNP: {
     KnownBits Known2;
     SDValue Op0 = Op.getOperand(0);

@@ -12604,28 +12604,25 @@ define <8 x i16> @clmulr_v8i16_allones(<8 x i16> %x) nounwind {
 ;
 ; SSE2-PCLMUL-LABEL: clmulr_v8i16_allones:
 ; SSE2-PCLMUL:       # %bb.0:
+; SSE2-PCLMUL-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-PCLMUL-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-PCLMUL-NEXT:    pxor %xmm3, %xmm3
+; SSE2-PCLMUL-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SSE2-PCLMUL-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; SSE2-PCLMUL-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
 ; SSE2-PCLMUL-NEXT:    movq %rax, %xmm2
-; SSE2-PCLMUL-NEXT:    pextrw $3, %xmm0, %eax
-; SSE2-PCLMUL-NEXT:    movd %eax, %xmm4
-; SSE2-PCLMUL-NEXT:    pextrw $1, %xmm0, %eax
-; SSE2-PCLMUL-NEXT:    movd %eax, %xmm5
-; SSE2-PCLMUL-NEXT:    pextrw $7, %xmm0, %eax
-; SSE2-PCLMUL-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; SSE2-PCLMUL-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; SSE2-PCLMUL-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $1, %xmm2, %xmm3
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm4
 ; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm0
-; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm5
-; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
+; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm4
+; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
 ; SSE2-PCLMUL-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; SSE2-PCLMUL-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $1, %xmm2, %xmm3
-; SSE2-PCLMUL-NEXT:    movd %eax, %xmm4
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[3,3,3,3]
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm4
 ; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
 ; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,1,1]
@@ -13539,28 +13536,25 @@ define <8 x i16> @clmulh_v8i16_allones(<8 x i16> %x) nounwind {
 ;
 ; SSE2-PCLMUL-LABEL: clmulh_v8i16_allones:
 ; SSE2-PCLMUL:       # %bb.0:
+; SSE2-PCLMUL-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-PCLMUL-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-PCLMUL-NEXT:    pxor %xmm3, %xmm3
+; SSE2-PCLMUL-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SSE2-PCLMUL-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
 ; SSE2-PCLMUL-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
 ; SSE2-PCLMUL-NEXT:    movq %rax, %xmm2
-; SSE2-PCLMUL-NEXT:    pextrw $3, %xmm0, %eax
-; SSE2-PCLMUL-NEXT:    movd %eax, %xmm4
-; SSE2-PCLMUL-NEXT:    pextrw $1, %xmm0, %eax
-; SSE2-PCLMUL-NEXT:    movd %eax, %xmm5
-; SSE2-PCLMUL-NEXT:    pextrw $7, %xmm0, %eax
-; SSE2-PCLMUL-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; SSE2-PCLMUL-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; SSE2-PCLMUL-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $1, %xmm2, %xmm3
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[3,3,3,3]
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm4
 ; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,1,1]
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm0
-; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm5
-; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
+; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm4
+; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
 ; SSE2-PCLMUL-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; SSE2-PCLMUL-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $1, %xmm2, %xmm3
-; SSE2-PCLMUL-NEXT:    movd %eax, %xmm4
+; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[3,3,3,3]
 ; SSE2-PCLMUL-NEXT:    pclmulqdq $0, %xmm2, %xmm4
 ; SSE2-PCLMUL-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
 ; SSE2-PCLMUL-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[1,1,1,1]

@@ -3628,23 +3628,11 @@ define i8 @clmul_i8_allones(i8 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmul_i8_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movl $255, %eax
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
-; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmul_i8_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $255, %eax
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    # kill: def $al killed $al killed $rax
-; AVX-NEXT:    retq
   %r = call i8 @llvm.clmul.i8(i8 %x, i8 -1)
   ret i8 %r
 }
@@ -3668,23 +3656,11 @@ define i16 @clmul_i16_allones(i16 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmul_i16_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
-; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmul_i16_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    # kill: def $ax killed $ax killed $rax
-; AVX-NEXT:    retq
   %r = call i16 @llvm.clmul.i16(i16 %x, i16 -1)
   ret i16 %r
 }
@@ -3710,23 +3686,11 @@ define i32 @clmul_i32_allones(i32 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmul_i32_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
-; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmul_i32_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX-NEXT:    retq
   %r = call i32 @llvm.clmul.i32(i32 %x, i32 -1)
   ret i32 %r
 }
@@ -3788,23 +3752,11 @@ define i7 @clmul_i7_allones(i7 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmul_i7_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movl $127, %eax
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
-; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmul_i7_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $127, %eax
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    # kill: def $al killed $al killed $rax
-; AVX-NEXT:    retq
   %r = call i7 @llvm.clmul.i7(i7 %x, i7 -1)
   ret i7 %r
 }
@@ -3828,23 +3780,11 @@ define i10 @clmul_i10_allones(i10 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmul_i10_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movl $1023, %eax # imm = 0x3FF
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
-; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmul_i10_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $1023, %eax # imm = 0x3FF
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    # kill: def $ax killed $ax killed $rax
-; AVX-NEXT:    retq
   %r = call i10 @llvm.clmul.i10(i10 %x, i10 -1)
   ret i10 %r
 }
@@ -3870,23 +3810,11 @@ define i25 @clmul_i25_allones(i25 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmul_i25_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movl $33554431, %eax # imm = 0x1FFFFFF
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
-; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    # kill: def $eax killed $eax killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmul_i25_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $33554431, %eax # imm = 0x1FFFFFF
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
-; AVX-NEXT:    retq
   %r = call i25 @llvm.clmul.i25(i25 %x, i25 -1)
   ret i25 %r
 }
@@ -3953,27 +3881,13 @@ define i8 @clmulr_i8_allones(i8 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmulr_i8_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
 ; SSE-PCLMUL-NEXT:    movzbl %dil, %eax
-; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    shrl $7, %eax
 ; SSE-PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmulr_i8_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    shrl $7, %eax
-; AVX-NEXT:    # kill: def $al killed $al killed $rax
-; AVX-NEXT:    retq
   %x.ext = zext i8 %x to i16
   %clmul = call i16 @llvm.clmul.i16(i16 %x.ext, i16 -1)
   %res.ext = lshr i16 %clmul, 7
@@ -4005,26 +3919,12 @@ define i16 @clmulr_i16_allones(i16 %x) nounwind {
 ; SSE-PCLMUL-LABEL: clmulr_i16_allones:
 ; SSE-PCLMUL:       # %bb.0:
 ; SSE-PCLMUL-NEXT:    movzwl %di, %eax
-; SSE-PCLMUL-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
-; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
-; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    shrl $15, %eax
 ; SSE-PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmulr_i16_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
-; AVX-NEXT:    vmovq %rcx, %xmm0
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    shrl $15, %eax
-; AVX-NEXT:    # kill: def $ax killed $ax killed $rax
-; AVX-NEXT:    retq
   %x.ext = zext i16 %x to i32
   %clmul = call i32 @llvm.clmul.i32(i32 %x.ext, i32 -1)
   %res.ext = lshr i32 %clmul, 15
@@ -4058,9 +3958,8 @@ define i32 @clmulr_i32_allones(i32 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmulr_i32_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movq $-1, %rax
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
-; SSE-PCLMUL-NEXT:    movd %edi, %xmm1
+; SSE-PCLMUL-NEXT:    movd %edi, %xmm0
+; SSE-PCLMUL-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
 ; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
 ; SSE-PCLMUL-NEXT:    shrq $31, %rax
@@ -4069,10 +3968,9 @@ define i32 @clmulr_i32_allones(i32 %x) nounwind {
 ;
 ; AVX-LABEL: clmulr_i32_allones:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq $-1, %rax
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vmovd %edi, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vmovd %edi, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovq %xmm0, %rax
 ; AVX-NEXT:    shrq $31, %rax
 ; AVX-NEXT:    # kill: def $eax killed $eax killed $rax
@@ -4224,27 +4122,13 @@ define i8 @clmulh_i8_allones(i8 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmulh_i8_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
 ; SSE-PCLMUL-NEXT:    movzbl %dil, %eax
-; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    shrl $8, %eax
 ; SSE-PCLMUL-NEXT:    # kill: def $al killed $al killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmulh_i8_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movl $65535, %eax # imm = 0xFFFF
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    shrl $8, %eax
-; AVX-NEXT:    # kill: def $al killed $al killed $rax
-; AVX-NEXT:    retq
   %x.ext = zext i8 %x to i16
   %clmul = call i16 @llvm.clmul.i16(i16 %x.ext, i16 -1)
   %res.ext = lshr i16 %clmul, 8
@@ -4276,26 +4160,12 @@ define i16 @clmulh_i16_allones(i16 %x) nounwind {
 ; SSE-PCLMUL-LABEL: clmulh_i16_allones:
 ; SSE-PCLMUL:       # %bb.0:
 ; SSE-PCLMUL-NEXT:    movzwl %di, %eax
-; SSE-PCLMUL-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
-; SSE-PCLMUL-NEXT:    movq %rcx, %xmm0
-; SSE-PCLMUL-NEXT:    movd %eax, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movd %eax, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    shrl $16, %eax
 ; SSE-PCLMUL-NEXT:    # kill: def $ax killed $ax killed $rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmulh_i16_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
-; AVX-NEXT:    vmovq %rcx, %xmm0
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    shrl $16, %eax
-; AVX-NEXT:    # kill: def $ax killed $ax killed $rax
-; AVX-NEXT:    retq
   %x.ext = zext i16 %x to i32
   %clmul = call i32 @llvm.clmul.i32(i32 %x.ext, i32 -1)
   %res.ext = lshr i32 %clmul, 16
