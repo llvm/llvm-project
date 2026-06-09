@@ -975,6 +975,8 @@ bool LoopInterchangeLegality::isLoopStructureUnderstood() {
     const SCEV *S = SE->getSCEV(Right);
     if (!SE->isLoopInvariant(S, OuterLoop))
       return false;
+  } else {
+    return false;
   }
 
   return true;

@@ -8,44 +8,29 @@
 ; We currently doesn't support interchanging triangular loops, so the above
 ; loops must not be interchanged.
 ;
-; FIXME: Currently loop-interchange is applied.
-;
 define void @complex_inner_latch_cond(ptr %A) {
 ; CHECK-LABEL: define void @complex_inner_latch_cond(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_J_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
-; CHECK:       [[FOR_J_PREHEADER]]:
+; CHECK-NEXT:  [[FOR_J_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
-; CHECK:       [[FOR_J_SPLIT1]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[FOR_J_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[FOR_I_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[FOR_J]] ], [ [[J_NEXT:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [5 x i8], ptr [[A]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    [[OLD:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[NEW:%.*]] = add i8 [[OLD]], 1
 ; CHECK-NEXT:    store i8 [[NEW]], ptr [[GEP]], align 1
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[J_NEXT]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[C0:%.*]] = icmp slt i64 [[J_NEXT]], [[I]]
 ; CHECK-NEXT:    [[C1:%.*]] = icmp slt i64 [[J_NEXT]], 100
 ; CHECK-NEXT:    [[EC_J_NOT:%.*]] = and i1 [[C0]], [[C1]]
-; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
-; CHECK:       [[FOR_J_SPLIT]]:
-; CHECK-NEXT:    [[I_LCSSA:%.*]] = phi i64 [ [[I]], %[[FOR_I_LATCH]] ]
-; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[TMP0]], 100
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i64 [[TMP0]], [[I_LCSSA]]
-; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_J]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC_J_NOT]], label %[[FOR_I_HEADER_PREHEADER]], label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[FOR_J_SPLIT]], label %[[FOR_I_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[FOR_J]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
