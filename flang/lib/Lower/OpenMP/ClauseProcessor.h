@@ -222,6 +222,18 @@ private:
       llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
       llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
 
+  void processMapObjectsWithIterator(
+      lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+      const omp::ObjectList &objects,
+      llvm::ArrayRef<IteratorRange> iteratorRanges,
+      const llvm::SmallPtrSetImpl<const semantics::Symbol *> *ivSyms,
+      mlir::omp::ClauseMapFlags mapTypeBits,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
+      mlir::omp::MapClauseOps &result,
+      llvm::SmallVectorImpl<Object> &mapObjects,
+      llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
+      llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
+
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;
   List<Clause> clauses;
