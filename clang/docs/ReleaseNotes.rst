@@ -264,11 +264,6 @@ Non-comprehensive list of changes in this release
 - Added support for floating point and pointer values in most ``__atomic_``
   builtins.
 
-- Warning suppression mappings (``--warning-suppression-mappings``) now recognize
-  version 4 of the Special Case List format (indicated by ``#!special-case-list-v4``),
-  which specifies that filename patterns should be matched against canonicalized
-  paths (without leading dots or slashes, and on Windows, without backslashes).
-
 - Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
   for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
   counts are normalized modulo the bit-width and support negative values.
@@ -972,6 +967,12 @@ Crash and bug fixes
 Sanitizers
 ----------
 - UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
+
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
+  suppression mappings (``--warning-suppression-mappings``) now recognize version
+  4 of the Special Case List format (indicated by ``#!special-case-list-v4``),
+  which specifies that filename patterns should be matched against canonicalized
+  paths (without leading dots or slashes, and on Windows, without backslashes).
 
 Python Binding Changes
 ----------------------

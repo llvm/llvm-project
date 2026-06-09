@@ -237,7 +237,7 @@ tool-specific docs.
   by LLVM. On Windows, this might involve a mix of forward and backslashes as
   file separators, and writing patterns to match both variants can be
   inconvenient.
-  
+
   File path canonicalization is supported in version 4 or later (indicated by
   starting the file with ``#!special-case-list-v4``). In this version, paths
   will be canonicalized before patterns are matched against them. This involves
