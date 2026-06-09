@@ -625,7 +625,7 @@ TEST(DWARFExpression, DW_OP_implicit_value) {
       ExpectHostAddress({0x11, 0x22, 0x33, 0x44}));
 
   // Verify that GetOpcodeDataSize correctly skips DW_OP_implicit_value
-  // (ULEB128 length + 1-byte data block)
+  // (ULEB128 length + 1-byte data block).
   std::vector<uint8_t> expr = {
       DW_OP_implicit_value, 1, 0x11, DW_OP_addr, 0x10, 0x20, 0x30, 0x40};
   DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
