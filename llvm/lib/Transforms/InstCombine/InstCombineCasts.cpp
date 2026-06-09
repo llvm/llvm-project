@@ -135,6 +135,15 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
         Res = CallInst::Create(Fn->getFunctionType(), Fn, {Op0, Op1});
         break;
       }
+      case Intrinsic::abs: {
+        Value *Arg = EvaluateInDifferentTypeImpl(II->getArgOperand(0), Ty,
+                                                 isSigned, IC, Processed);
+        Function *Fn = Intrinsic::getOrInsertDeclaration(
+            I->getModule(), II->getIntrinsicID(), {Ty});
+        Res = CallInst::Create(Fn->getFunctionType(), Fn,
+                               {Arg, ConstantInt::getFalse(I->getContext())});
+        break;
+      }
       }
     }
     break;
@@ -260,7 +269,7 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
   // cast (shuffle X, Mask) --> shuffle (cast X), Mask
   Value *X;
   ArrayRef<int> Mask;
-  if (match(Src, m_OneUse(m_Shuffle(m_Value(X), m_Undef(), m_Mask(Mask))))) {
+  if (match(Src, m_OneUse(m_Shuffle(m_Value(X), m_Poison(), m_Mask(Mask))))) {
     // TODO: Allow scalable vectors?
     auto *SrcTy = dyn_cast<FixedVectorType>(X->getType());
     auto *DestTy = dyn_cast<FixedVectorType>(Ty);
@@ -403,8 +412,18 @@ private:
     // done and and ready to have a positive verdict, we should double-check all
     // of the pending users and ensure that we visited them. allPendingVisited
     // predicate checks exactly that.
-    if (!I->hasOneUse())
-      llvm::append_range(Pending, I->users());
+    if (!I->hasOneUse()) {
+      for (Use &U : I->uses()) {
+        // For most instructions, evaluating them in a different type will
+        // change the type of all operands. This is not the case for select
+        // conditions. Make sure we don't retain an extra use via the select
+        // condition.
+        if (isa<SelectInst>(U.getUser()) && U.getOperandNo() == 0)
+          return false;
+
+        Pending.push_back(U.getUser());
+      }
+    }
 
     const bool Result = Pred(V, Ty);
     // We have to set result this way and not via It because Pred is recursive
@@ -621,6 +640,12 @@ bool TypeEvaluationHelper::canEvaluateTruncatedPred(Value *V, Type *Ty,
            canEvaluateTruncatedImpl(I->getOperand(1), Ty, IC, CxtI);
 
   case Instruction::Call: {
+    Value *AbsOp;
+    if (match(I, m_Intrinsic<Intrinsic::abs>(m_Value(AbsOp), m_Value()))) {
+      if (IC.ComputeMaxSignificantBits(AbsOp, CxtI) > Ty->getScalarSizeInBits())
+        return false;
+      return canEvaluateTruncatedImpl(AbsOp, Ty, IC, CxtI);
+    }
     auto *MM = dyn_cast<MinMaxIntrinsic>(I);
     if (!MM)
       return false;
@@ -962,25 +987,26 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
 /// creating a shuffle type that targets may not be able to lower effectively.
 static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
                                        InstCombiner::BuilderTy &Builder) {
-  auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
-  if (Shuf && Shuf->hasOneUse() && match(Shuf->getOperand(1), m_Undef()) &&
-      all_equal(Shuf->getShuffleMask()) &&
-      ElementCount::isKnownGE(Shuf->getType()->getElementCount(),
-                              cast<VectorType>(Shuf->getOperand(0)->getType())
-                                  ->getElementCount())) {
-    // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Poison, SplatMask
-    // trunc (shuf X, Poison, SplatMask) --> shuf (trunc X), Poison, SplatMask
-    Type *NewTruncTy = Shuf->getOperand(0)->getType()->getWithNewType(
-        Trunc.getType()->getScalarType());
-    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), NewTruncTy);
-    return new ShuffleVectorInst(NarrowOp, Shuf->getShuffleMask());
+  Value *Shuf = Trunc.getOperand(0), *ShufVec;
+  ArrayRef<int> SplatMask;
+  if (match(Shuf, m_OneUse(m_Shuffle(m_Value(ShufVec), m_Poison(),
+                                     m_Mask(SplatMask)))) &&
+      match(SplatMask, m_SplatMask()) &&
+      ElementCount::isKnownGE(
+          cast<VectorType>(Shuf->getType())->getElementCount(),
+          cast<VectorType>(ShufVec->getType())->getElementCount())) {
+    // trunc (shuf X, poison, SplatMask) --> shuf (trunc X), poison, SplatMask
+    Type *NewTruncTy =
+        ShufVec->getType()->getWithNewType(Trunc.getType()->getScalarType());
+    Value *NarrowOp = Builder.CreateTrunc(ShufVec, NewTruncTy);
+    return new ShuffleVectorInst(NarrowOp, SplatMask);
   }
 
   return nullptr;
 }
 
 /// Try to narrow the width of an insert element. This could be generalized for
-/// any vector constant, but we limit the transform to insertion into undef to
+/// any vector constant, but we limit the transform to insertion into poison to
 /// avoid potential backend problems from unsupported insertion widths. This
 /// could also be extended to handle the case of inserting a scalar constant
 /// into a vector variable.
@@ -990,22 +1016,15 @@ static Instruction *shrinkInsertElt(CastInst &Trunc,
   assert((Opcode == Instruction::Trunc || Opcode == Instruction::FPTrunc) &&
          "Unexpected instruction for shrinking");
 
-  auto *InsElt = dyn_cast<InsertElementInst>(Trunc.getOperand(0));
-  if (!InsElt || !InsElt->hasOneUse())
-    return nullptr;
-
-  Type *DestTy = Trunc.getType();
-  Type *DestScalarTy = DestTy->getScalarType();
-  Value *VecOp = InsElt->getOperand(0);
-  Value *ScalarOp = InsElt->getOperand(1);
-  Value *Index = InsElt->getOperand(2);
-
-  if (match(VecOp, m_Undef())) {
-    // trunc   (inselt undef, X, Index) --> inselt undef,   (trunc X), Index
-    // fptrunc (inselt undef, X, Index) --> inselt undef, (fptrunc X), Index
-    UndefValue *NarrowUndef = UndefValue::get(DestTy);
-    Value *NarrowOp = Builder.CreateCast(Opcode, ScalarOp, DestScalarTy);
-    return InsertElementInst::Create(NarrowUndef, NarrowOp, Index);
+  Value *Elt, *Index;
+  if (match(Trunc.getOperand(0),
+            m_OneUse(m_InsertElt(m_Poison(), m_Value(Elt), m_Value(Index))))) {
+    // trunc   (inselt poison, X, Index) --> inselt poison,   (trunc X), Index
+    // fptrunc (inselt poison, X, Index) --> inselt poison, (fptrunc X), Index
+    auto *NarrowPoison = PoisonValue::get(Trunc.getType());
+    Value *NarrowOp =
+        Builder.CreateCast(Opcode, Elt, Trunc.getType()->getScalarType());
+    return InsertElementInst::Create(NarrowPoison, NarrowOp, Index);
   }
 
   return nullptr;
@@ -1547,6 +1566,9 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (Instruction *Result = commonCastTransforms(Zext))
     return Result;
 
+  if (auto *NewI = foldExtractionOfVectorDeinterleave(Zext))
+    return NewI;
+
   Value *Src = Zext.getOperand(0);
   Type *SrcTy = Src->getType(), *DestTy = Zext.getType();
 
@@ -2051,11 +2073,11 @@ static Type *shrinkFPConstantVector(Value *V, bool PreferBFloat) {
 
   // For fixed-width vectors we find the minimal type by looking
   // through the constant values of the vector.
-  for (unsigned i = 0; i != NumElts; ++i) {
-    if (isa<UndefValue>(CV->getAggregateElement(i)))
+  for (unsigned I = 0; I != NumElts; ++I) {
+    if (match(CV->getAggregateElement(I), m_Poison()))
       continue;
 
-    auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
+    auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(I));
     if (!CFP)
       return nullptr;
 
@@ -2745,8 +2767,9 @@ static bool collectInsertionElements(Value *V, unsigned Shift,
   assert(isMultipleOfTypeSize(Shift, VecEltTy) &&
          "Shift should be a multiple of the element type size");
 
-  // Undef values never contribute useful bits to the result.
-  if (isa<UndefValue>(V)) return true;
+  // Poison values never contribute useful bits to the result.
+  if (match(V, m_Poison()))
+    return true;
 
   // If we got down to a value of the right type, we win, try inserting into the
   // right element.

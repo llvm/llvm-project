@@ -86,6 +86,12 @@ public:
   ol_symbol_handle_t getOrCreateKernel(DeviceKernelInfo &KernelInfo,
                                        DeviceImpl &Device);
 
+  /// \return kernel info for the kernel with the specified name.
+  DeviceKernelInfo &getDeviceKernelInfo(std::string_view KernelName);
+
+  /// Release device image managers and corresponding resources.
+  void releaseResources();
+
 protected:
   ProgramAndKernelManager() = default;
   ~ProgramAndKernelManager() = default;

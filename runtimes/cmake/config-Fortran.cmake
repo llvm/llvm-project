@@ -11,18 +11,18 @@
 # compiled. Contains the build targets for intrinsic modules, if necessary.
 # Otherweise, it is empty.
 #
-# RUNTIMES_ENABLE_FLANG_MODULES - Whether to build Flang modules and emit them
+# RUNTIMES_FORTRAN_MODULES - Whether to build Flang modules and emit them
 # into Flang's search path. This is a CMake CACHE option defined in
 # config-Fortran.cmake and default to ON iff the Fortran compiler is detected
 # for be a (compatible) version of Flang. In the OFF setting, modules are still
 # built, but not installed or emitted into a default path.
 #
 # RUNTIMES_OUTPUT_RESOURCE_MOD_DIR - Where to emit intrinsic module files in
-# the build directory. Most relevant when RUNTIMES_ENABLE_FLANG_MODULES is ON.
+# the build directory. Most relevant when RUNTIMES_FORTRAN_MODULES is ON.
 #
 # RUNTIMES_INSTALL_RESOURCE_MOD_PATH - Where to install intrinsic module files
 # in the install prefix. Relative to CMAKE_INSTALL_PREFIX. Only used when
-# RUNTIMES_ENABLE_FLANG_MODULES is ON.
+# RUNTIMES_FORTRAN_MODULES is ON.
 
 
 # Check whether the Fortran compiler already has access to builtin modules. Sets
@@ -88,15 +88,18 @@ if (CMAKE_Fortran_COMPILER)
   # cannot use CMAKE_Fortran_COMPILER_ID.
   cmake_path(GET CMAKE_Fortran_COMPILER STEM _Fortran_COMPILER_STEM)
   if (_Fortran_COMPILER_STEM STREQUAL "flang-new" OR _Fortran_COMPILER_STEM STREQUAL "flang")
+    # Force the compiler ID so CMake does not try to run the compiler for
+    # identification. In a bootstrapping build the Flang binary may not be
+    # built yet at configure time (only CMAKE_Fortran_COMPILER_WORKS is set).
+    set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
+    set(CMAKE_Fortran_COMPILER_ID_RUN TRUE)
+    set(CMAKE_Fortran_COMPILER_FORCED TRUE)
+    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
+    set(CMAKE_Fortran_SIMULATE_ID "GNU")
+
     # CMake 3.24 is the first version of CMake that directly recognizes Flang.
     # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
     if (CMAKE_VERSION VERSION_LESS "3.24")
-      include(CMakeForceCompiler)
-      CMAKE_FORCE_Fortran_COMPILER("${CMAKE_Fortran_COMPILER}" "LLVMFlang")
-
-      set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
-      set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-
       set(CMAKE_Fortran_SUBMODULE_SEP "-")
       set(CMAKE_Fortran_SUBMODULE_EXT ".mod")
 
@@ -147,6 +150,21 @@ else ()
   return ()
 endif ()
 
+# In a bootstrapping build the Fortran compiler may not have been built yet.
+# Create a placeholder so CMake's enable_language() existence check passes.
+# The build-order dependency in add_flang_mod_deps ensures the real binary is
+# built before anything tries to invoke this placeholder.
+if (CMAKE_Fortran_COMPILER_FORCED AND NOT EXISTS "${CMAKE_Fortran_COMPILER}")
+  get_filename_component(_compiler_dir "${CMAKE_Fortran_COMPILER}" DIRECTORY)
+  file(MAKE_DIRECTORY "${_compiler_dir}")
+  file(WRITE "${CMAKE_Fortran_COMPILER}" "stub")
+  # Ninja uses file mtimes to decide whether build outputs are up-to-date.
+  # If this placeholder's mtime is recent it may match what is recorded in
+  # .ninja_log, causing ninja to skip building the real compiler binary.
+  # Set it so that any subsequent real build always has a newer mtime.
+  execute_process(COMMAND touch -t 197001020000 "${CMAKE_Fortran_COMPILER}"
+                  ERROR_QUIET)
+endif ()
 
 include(CheckLanguage)
 check_language(Fortran)
@@ -180,17 +198,14 @@ endif ()
 
 
 # Check whether modules files are compatible with our version of Flang.
-set(RUNTIMES_ENABLE_FLANG_MODULES_default OFF)
-if (CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-  set(RUNTIMES_ENABLE_FLANG_MODULES_default ON)
-else ()
-  set(RUNTIMES_ENABLE_FLANG_MODULES_default OFF)
+set(RUNTIMES_FORTRAN_MODULES_default OFF)
+if (RUNTIMES_ENABLE_FORTRAN AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
+  set(RUNTIMES_FORTRAN_MODULES_default ON)
 endif ()
-option(RUNTIMES_ENABLE_FLANG_MODULES "Make Fortran .mod files available to Flang; should only be enabled if compiling with a matching version of Flang" "${RUNTIMES_ENABLE_FLANG_MODULES_default}")
-
+option(RUNTIMES_FORTRAN_MODULES "Make Fortran .mod files available to Flang; should only be enabled if compiling with a matching version of Flang" "${RUNTIMES_FORTRAN_MODULES_default}")
 
 # Determine the paths for Fortran .mod files.
-if (RUNTIMES_ENABLE_FLANG_MODULES)
+if (RUNTIMES_FORTRAN_MODULES)
   # Flang expects its builtin modules in Clang's resource directory.
   get_toolchain_module_subdir(toolchain_mod_subdir)
   extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
@@ -261,7 +276,15 @@ function (flang_module_target tgtname)
         Fortran_MODULE_DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
     )
   else ()
-    # Keep non-public modules where CMake would put them normally;
-    # Modules of different target must not overwrite each other.
+    # Modules of different targets must not overwrite each other.
+    # Ideally, we would use $<TARGET_PROPERTY:${tgtname},BINARY_DIR> but
+    # Fortran_MODULE_DIRECTORY does not support generator expressions.
+    # Not defining Fortran_MODULE_DIRECTORY at all would but it into
+    # ${CMAKE_CURRENT_BINARY_DIR} where modules with the same name but compiled
+    # by different targets would clash.
+    set_target_properties(${tgtname}
+      PROPERTIES
+        Fortran_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${tgtname}.dir/${CMAKE_CFG_INTDIR}"
+    )
   endif ()
 endfunction ()

@@ -417,6 +417,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswprint
     libc.src.wctype.iswctype
     libc.src.wctype.wctype
+    libc.src.wctype.towlower
+    libc.src.wctype.towupper
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -907,6 +909,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -1280,6 +1283,12 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.regex.regexec
       libc.src.regex.regerror
       libc.src.regex.regfree
+
+      # sys/ptrace.h entrypoints
+      libc.src.sys.ptrace.ptrace
+
+      # wchar.h entrypoints
+      libc.src.wchar.swprintf
     )
   endif()
 endif()

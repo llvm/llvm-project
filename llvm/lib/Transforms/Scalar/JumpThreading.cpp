@@ -2689,11 +2689,22 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   BasicBlock::iterator BI = BB->begin();
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
     ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
+
+  // Clone noalias scope declarations in the duplicated instructions. Otherwise
+  // the duplicate would share the original block's scopes, and alias analysis
+  // could conclude two accesses on different paths do not alias when they may.
+  SmallVector<MDNode *> NoAliasScopes;
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  LLVMContext &Context = PredBB->getContext();
+  identifyNoAliasScopesToClone(BI, BB->end(), NoAliasScopes);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+
   // Clone the non-phi instructions of BB into PredBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.
   for (; BI != BB->end(); ++BI) {
     Instruction *New = BI->clone();
     New->insertInto(PredBB, OldPredBranch->getIterator());
+    adaptNoAliasScopes(New, ClonedScopes, Context);
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
@@ -2789,6 +2800,12 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
   PredTerm->removeFromParent();
   PredTerm->insertInto(NewBB, NewBB->end());
   // Create a conditional branch and update PHI nodes.
+  //
+  // FIXME: We should `freeze` the condition before using it in a conditional
+  // branch, unless we can prove it's not poison: select-on-poison isn't UB,
+  // but branch-on-poison is.  But doing this causes performance regressions,
+  // and we haven't been able to find an end-to-end correctness issue it fixes.
+  // https://github.com/llvm/llvm-project/pull/199408#issuecomment-4545013881.
   auto *BI = CondBrInst::Create(SI->getCondition(), NewBB, BB, Pred);
   BI->applyMergedLocation(PredTerm->getDebugLoc(), SI->getDebugLoc());
   BI->copyMetadata(*SI, {LLVMContext::MD_prof});

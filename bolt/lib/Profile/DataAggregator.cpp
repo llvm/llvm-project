@@ -28,6 +28,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -114,6 +115,16 @@ MaxSamples("max-samples",
   cl::Hidden,
   cl::cat(AggregatorCategory));
 
+static cl::opt<unsigned>
+    PerfDataJobs("perfdata-jobs",
+                 cl::desc("number of perf data files to process in parallel, "
+                          "0 = all HW threads (default 4)"),
+                 cl::init(4), cl::cat(AggregatorCategory),
+                 cl::sub(cl::SubCommand::getAll()));
+
+static cl::alias PerfDataJobsAlias("pj", cl::desc("Alias for --perfdata-jobs"),
+                                   cl::aliasopt(PerfDataJobs));
+
 extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
 extern cl::opt<bool> ProfileWritePseudoProbes;
 extern cl::opt<std::string> SaveProfile;
@@ -122,16 +133,8 @@ cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
     cl::cat(AggregatorCategory));
 
-cl::opt<std::string>
-    ReadPerfEvents("perf-script-events",
-                   cl::desc("skip perf event collection by supplying a "
-                            "perf-script output in a textual format"),
-                   cl::ReallyHidden, cl::init(""), cl::cat(AggregatorCategory));
-
-cl::opt<bool> GeneratePerfTextProfile(
-    "generate-perf-script",
-    cl::desc("Dump perf-script jobs' output into a file"), cl::Hidden,
-    cl::cat(AggregatorCategory));
+cl::alias ReadPerfScript("ps", cl::desc("read pre-parsed perf script output"),
+                         cl::NotHidden, cl::aliasopt(ReadPreAggregated));
 
 static cl::opt<bool>
 TimeAggregator("time-aggr",
@@ -148,6 +151,7 @@ const char TimerGroupName[] = "aggregator";
 const char TimerGroupDesc[] = "Aggregator";
 
 constexpr const StringLiteral PerfTextMagicStr = "PERFTEXT";
+constexpr const StringLiteral PerfDataMagicStr = "PERFILE";
 
 std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
   std::vector<SectionNameAndRange> sections;
@@ -168,6 +172,50 @@ std::vector<SectionNameAndRange> getTextSections(const BinaryContext *BC) {
 }
 
 DataAggregator::~DataAggregator() { deleteTempFiles(); }
+
+void DataAggregator::addInputFile(StringRef Filename) {
+  InputFilenames.emplace_back(Filename);
+}
+
+void DataAggregator::mergeFrom(const DataAggregator &Other) {
+  Traces.insert(Traces.end(), Other.Traces.begin(), Other.Traces.end());
+
+  for (const auto &[PC, Count] : Other.BasicSamples)
+    BasicSamples[PC] += Count;
+
+  MemSamples.insert(MemSamples.end(), Other.MemSamples.begin(),
+                    Other.MemSamples.end());
+  Returns.insert(Other.Returns.begin(), Other.Returns.end());
+  EventNames.insert(Other.EventNames.begin(), Other.EventNames.end());
+
+  NumTraces += Other.NumTraces;
+  NumInvalidTraces += Other.NumInvalidTraces;
+  NumLongRangeTraces += Other.NumLongRangeTraces;
+  NumTotalSamples += Other.NumTotalSamples;
+}
+
+void DataAggregator::markFunctionsWithProfile() {
+  std::unordered_set<uint64_t> Samples;
+  std::unordered_set<BinaryFunction *> Funcs;
+
+  for (const auto &[PC, _] : BasicSamples)
+    Samples.insert(PC);
+
+  for (const PerfMemSample &Sample : MemSamples)
+    Samples.insert(Sample.PC);
+
+  for (const auto &[Trace, Info] : Traces) {
+    Samples.insert(Trace.Branch);
+    Samples.insert(Trace.From);
+  }
+
+  for (const uint64_t Addr : Samples)
+    Funcs.insert(getBinaryFunctionContainingAddress(Addr));
+
+  Funcs.erase(nullptr);
+  for (BinaryFunction *BF : Funcs)
+    BF->setHasProfileAvailable();
+}
 
 namespace {
 void deleteTempFile(const std::string &FileName) {
@@ -205,13 +253,9 @@ void DataAggregator::findPerfExecutable() {
 void DataAggregator::start() {
   outs() << "PERF2BOLT: Starting data aggregation job for " << Filename << "\n";
 
-  // Turn on heatmap building if requested by --heatmap flag.
-  if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
-    opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
-
   // Don't launch perf for pre-aggregated files or when perf input is specified
   // by the user.
-  if (opts::ReadPreAggregated || !opts::ReadPerfEvents.empty())
+  if (opts::ReadPreAggregated)
     return;
 
   findPerfExecutable();
@@ -356,26 +400,32 @@ bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
   if (opts::ReadPreAggregated)
     return true;
 
+  return DataAggregator::checkInputFileMagic(FileName, PerfDataMagicStr);
+}
+
+bool DataAggregator::checkInputFileMagic(StringRef FileName,
+                                         StringLiteral MagicStr) {
   Expected<sys::fs::file_t> FD = sys::fs::openNativeFileForRead(FileName);
   if (!FD) {
     consumeError(FD.takeError());
     return false;
   }
-
-  char Buf[7] = {0, 0, 0, 0, 0, 0, 0};
+  const size_t MagicStrSize = MagicStr.size();
+  char Buf[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  assert(MagicStr.size() <= 8 && "Size must be maximum 8");
 
   llvm::scope_exit Close([&] { sys::fs::closeFile(*FD); });
-  Expected<size_t> BytesRead = sys::fs::readNativeFileSlice(
-      *FD, MutableArrayRef(Buf, sizeof(Buf)), 0);
+  Expected<size_t> BytesRead =
+      sys::fs::readNativeFileSlice(*FD, MutableArrayRef(Buf, MagicStrSize), 0);
   if (!BytesRead) {
     consumeError(BytesRead.takeError());
     return false;
   }
 
-  if (*BytesRead != 7)
+  if (*BytesRead != MagicStrSize)
     return false;
 
-  if (strncmp(Buf, "PERFILE", 7) == 0)
+  if (strncmp(Buf, MagicStr.data(), MagicStrSize) == 0)
     return true;
   return false;
 }
@@ -415,7 +465,111 @@ void DataAggregator::parsePreAggregated() {
   }
 }
 
-Error DataAggregator::generatePerfTextData() {
+std::error_code DataAggregator::parsePerfScriptFileHeader() {
+  size_t HeaderLineEndPos = ParsingBuf.find_first_of("\n");
+  if (HeaderLineEndPos == StringRef::npos) {
+    reportError("expected rest of line");
+    Diag << "Found: " << ParsingBuf << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+
+  ErrorOr<StringRef> PSMagicStrRes = parseString(';');
+  if (std::error_code EC = PSMagicStrRes.getError())
+    return EC;
+  StringRef PSMagicStr = PSMagicStrRes.get();
+  if (PSMagicStr != PerfTextMagicStr) {
+    reportError("expected 'PERFTEXT' magic string");
+    Diag << "Found: " << PSMagicStr << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+
+  uint64_t Offset = HeaderLineEndPos + 1;
+  uint64_t Length = 0;
+  while (ParsingBuf.size() > 0 && ParsingBuf[0] != '\n') {
+    ErrorOr<StringRef> TypeLengthPairStrRes = parseString(';');
+    if (std::error_code EC = TypeLengthPairStrRes.getError())
+      return EC;
+    StringRef TypeLengthPairStr = TypeLengthPairStrRes.get();
+
+    // Parse 'PPIType=Length' pairs
+    const auto KV = TypeLengthPairStr.split("=");
+    if (KV.second.empty()) {
+      reportError("expected type=length content");
+      Diag << "Found: " << TypeLengthPairStr << "\n";
+      return make_error_code(llvm::errc::io_error);
+    }
+
+    PerfProcessInfo *PPI = StringSwitch<PerfProcessInfo *>(KV.first)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::BUILDIDS],
+                                     &BuildIDProcessInfo)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::MAIN_EVENTS],
+                                     &MainEventsPPI)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::MEM_EVENTS],
+                                     &MemEventsPPI)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::MMAP_EVENTS],
+                                     &MMapEventsPPI)
+                               .Case(PerfProcessInfo::PerfProcessTypeNames
+                                         [PerfProcessType::TASK_EVENTS],
+                                     &TaskEventsPPI)
+                               .Default(nullptr);
+
+    if (!PPI) {
+      reportError("supported types: BUILDID, MAIN, MMAP, TASK, MEM");
+      Diag << "Found: " << KV.first << " in " << TypeLengthPairStr << "\n";
+      return make_error_code(llvm::errc::io_error);
+    }
+
+    if (KV.second.getAsInteger(16, Length)) {
+      reportError("expected hexadecimal number");
+      Diag << "Found: " << KV.second << " in " << TypeLengthPairStr << "\n";
+      return make_error_code(llvm::errc::io_error);
+    }
+    PPI->Offset = Offset;
+    PPI->Length = Length;
+    Offset = Offset + Length;
+
+    while (checkAndConsumeFS()) {
+    }
+  }
+
+  ErrorOr<uint64_t> FsRes = getFileSize(Filename);
+  if (std::error_code EC = FsRes.getError())
+    return EC;
+  if (*FsRes != Offset) {
+    reportError("corrupted perfscript profile");
+    Diag << "Found: " << *FsRes << " != " << Offset << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+  return std::error_code();
+}
+
+Error DataAggregator::parsePerfScript() {
+  outs() << "PERF2BOLT: parsing a textual perf-script events...\n";
+  NamedRegionTimer T("parsePerfScript", "Parsing perf-script events",
+                     TimerGroupName, TimerGroupDesc, opts::TimeAggregator);
+  if (!Filename.empty()) {
+    // Load only the file header
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileSlice(Filename, 133, 0);
+    if (std::error_code EC = MB.getError()) {
+      return errorCodeToError(EC);
+    }
+
+    ParsingBuf = (*MB)->getBuffer();
+    Col = 0;
+    Line = 1;
+    if (std::error_code EC = parsePerfScriptFileHeader())
+      return errorCodeToError(EC);
+  }
+  parsePerfData();
+  return Error::success();
+}
+
+Error DataAggregator::generatePerfScriptData() {
   std::error_code EC;
   raw_fd_ostream OutFile(opts::OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC) {
@@ -503,10 +657,27 @@ void DataAggregator::filterBinaryMMapInfo() {
 
 int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
                                    PerfProcessErrorCallbackTy Callback) {
-  if (!opts::ReadPerfEvents.empty()) {
-    outs() << "PERF2BOLT: using pre-processed perf events for '" << Name
-           << "' (perf-script-events)\n";
-    ParsingBuf = opts::ReadPerfEvents;
+  if (opts::ReadPreAggregated) {
+    // No profile, ParsingBuf is set directly in unittests.
+    if (Filename.empty())
+      return 0;
+    if (Process.Length == 0) {
+      errs() << "PERF2BOLT-WARNING: your input profile was generated with "
+             << "parsing " << Process.Type << " event enabled. "
+             << "This data is missing from your pre-parsed profile.\n";
+    }
+
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFileSlice(Filename, Process.Length, Process.Offset);
+    if (std::error_code EC = MB.getError()) {
+      errs() << "Cannot open " << Process.Type << ": " << EC.message() << "\n";
+      exit(1);
+    }
+
+    FileBuf = std::move(*MB);
+    ParsingBuf = FileBuf->getBuffer();
+    Col = 0;
+    Line = 1;
     return 0;
   }
 
@@ -557,7 +728,7 @@ int DataAggregator::prepareToParse(StringRef Name, PerfProcessInfo &Process,
   return PI.ReturnCode;
 }
 
-void DataAggregator::parsePerfData(BinaryContext &BC) {
+void DataAggregator::parsePerfData() {
   auto ErrorCallback = [](int ReturnCode, StringRef ErrBuf) {
     errs() << "PERF-ERROR: return code " << ReturnCode << "\n" << ErrBuf;
     exit(1);
@@ -570,7 +741,7 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
       ErrorCallback(ReturnCode, ErrBuf);
   };
 
-  if (std::optional<StringRef> FileBuildID = BC.getFileBuildID()) {
+  if (std::optional<StringRef> FileBuildID = BC->getFileBuildID()) {
     outs() << "BOLT-INFO: binary build-id is:     " << *FileBuildID << "\n";
     processFileBuildID(*FileBuildID);
   } else {
@@ -578,7 +749,7 @@ void DataAggregator::parsePerfData(BinaryContext &BC) {
               "not read one from input binary\n";
   }
 
-  if (BC.IsLinuxKernel) {
+  if (BC->IsLinuxKernel) {
     // Current MMap parsing logic does not work with linux kernel.
     // MMap entries for linux kernel uses PERF_RECORD_MMAP
     // format instead of typical PERF_RECORD_MMAP2 format.
@@ -683,20 +854,56 @@ void DataAggregator::imputeFallThroughs() {
     outs() << "BOLT-INFO: imputed " << InferredTraces << " traces\n";
 }
 
+void DataAggregator::parseInput() {
+  start();
+  if (opts::ReadPreAggregated) {
+    if (checkInputFileMagic(Filename, PerfTextMagicStr)) {
+      if (Error Err = parsePerfScript()) {
+        errs() << "PERF2BOLT-ERROR: failed to parse perfscript profile"
+               << llvm::toString(std::move(Err)) << "\n";
+        exit(1);
+      }
+    } else {
+      parsePreAggregated();
+    }
+  } else {
+    parsePerfData();
+  }
+}
+
 Error DataAggregator::preprocessProfile(BinaryContext &BC) {
+  // Turn on heatmap building if requested by --heatmap flag.
+  if (!opts::HeatmapMode && opts::HeatmapOutput.getNumOccurrences())
+    opts::HeatmapMode = opts::HeatmapModeKind::HM_Optional;
+
   this->BC = &BC;
 
-  if (opts::GeneratePerfTextProfile) {
-    if (Error E = generatePerfTextData()) {
+  if (opts::ProfileFormat == opts::ProfileFormatKind::PF_PerfScript) {
+    start();
+    if (Error E = generatePerfScriptData()) {
       deleteTempFiles();
       exit(1);
     }
     exit(0);
-  } else if (opts::ReadPreAggregated) {
-    parsePreAggregated();
-  } else {
-    parsePerfData(BC);
   }
+
+  SmallVector<DataAggregator *, 1> Aggregators(1, this);
+  for (StringRef InputFilename : InputFilenames) {
+    auto *DA = Aggregators.emplace_back(new DataAggregator(InputFilename));
+    DA->BC = &BC;
+  }
+
+  ThreadPoolStrategy SavedStrategy = parallel::strategy;
+  parallel::strategy = hardware_concurrency(opts::PerfDataJobs);
+  parallelForEach(Aggregators, [](DataAggregator *DA) { DA->parseInput(); });
+  parallel::strategy = SavedStrategy;
+
+  for (DataAggregator *DA : llvm::drop_begin(Aggregators)) {
+    mergeFrom(*DA);
+    delete DA;
+  }
+
+  markFunctionsWithProfile();
 
   // Sort parsed traces for faster processing.
   llvm::sort(Traces, llvm::less_first());
@@ -711,6 +918,13 @@ Error DataAggregator::preprocessProfile(BinaryContext &BC) {
       exit(0);
   }
 
+  if (opts::AggregateOnly &&
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_PreAgg) {
+    if (std::error_code EC = writePreAggregatedFile(opts::OutputFilename))
+      report_error("cannot create output data file", EC);
+    exit(0);
+  }
+
   return Error::success();
 }
 
@@ -722,7 +936,7 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
 
   if (opts::AggregateOnly) {
     if (opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata)
-      if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
+      if (std::error_code EC = writeFdataFile(opts::OutputFilename))
         report_error("cannot create output data file", EC);
 
     // BAT YAML is handled by DataAggregator since normal YAML output requires
@@ -1387,6 +1601,11 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     if (std::error_code EC = AddrOrErr.getError())
       return EC;
     Addr[I] = AddrOrErr.get();
+    // Reset external addresses, but preserve sentinel values (BR_ONLY,
+    // FT_EXTERNAL_ORIGIN, FT_EXTERNAL_RETURN).
+    if (Addr[I]->Offset < Trace::FT_EXTERNAL_RETURN &&
+        Addr[I]->Name != FilterBuildID)
+      Addr[I]->Offset = Trace::EXTERNAL;
   }
 
   /// Parse counters depending on entry type.
@@ -1406,41 +1625,28 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
+  int64_t Count = Counters[0];
+  int64_t Mispreds = Counters[1];
+
+  switch (Type) {
   /// Record event name into \p EventNames and return.
-  if (Type == EVENT_NAME) {
+  case EVENT_NAME: {
     EventNames.insert(EventName);
     return std::error_code();
   }
 
-  // Reset external addresses, but preserve sentinel values (BR_ONLY,
-  // FT_EXTERNAL_ORIGIN, FT_EXTERNAL_RETURN).
-  for (std::optional<Location> &Loc : Addr)
-    if (Loc && Loc->Offset < Trace::FT_EXTERNAL_RETURN &&
-        Loc->Name != FilterBuildID)
-      Loc->Offset = Trace::EXTERNAL;
-
-  const uint64_t FromOffset = Addr[0]->Offset;
-  BinaryFunction *FromFunc = getBinaryFunctionContainingAddress(FromOffset);
-  if (FromFunc)
-    FromFunc->setHasProfileAvailable();
-
-  int64_t Count = Counters[0];
-  int64_t Mispreds = Counters[1];
-
   /// Record basic IP sample into \p BasicSamples and return.
-  if (Type == SAMPLE) {
+  case SAMPLE: {
+    const uint64_t FromOffset = Addr[0]->Offset;
     BasicSamples[FromOffset] += Count;
     NumTotalSamples += Count;
     return std::error_code();
   }
 
-  const uint64_t ToOffset = Addr[1]->Offset;
-  BinaryFunction *ToFunc = getBinaryFunctionContainingAddress(ToOffset);
-  if (ToFunc)
-    ToFunc->setHasProfileAvailable();
-
   /// For fall-through types, adjust locations to match Trace container.
-  if (Type == FT || Type == FT_EXTERNAL_ORIGIN || Type == FT_EXTERNAL_RETURN) {
+  case FT:
+  case FT_EXTERNAL_ORIGIN:
+  case FT_EXTERNAL_RETURN: {
     Addr[2] = Location(Addr[1]->Offset); // Trace To
     Addr[1] = Location(Addr[0]->Offset); // Trace From
     // Put a magic value into Trace Branch to differentiate from a full trace:
@@ -1452,17 +1658,28 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
       Addr[0] = Location(Trace::FT_EXTERNAL_RETURN);
     else
       llvm_unreachable("Unexpected fall-through type");
+    break;
   }
 
   /// For branch type, mark Trace To to differentiate from a full trace.
-  if (Type == BRANCH)
+  case BRANCH: {
     Addr[2] = Location(Trace::BR_ONLY);
+    break;
+  }
 
-  if (Type == RETURN) {
+  case RETURN: {
     if (!Addr[0]->Offset)
       Addr[0]->Offset = Trace::FT_EXTERNAL_RETURN;
     else
       Returns.emplace(Addr[0]->Offset, true);
+    break;
+  }
+
+  case TRACE:
+    break;
+
+  default:
+    llvm_unreachable("Unexpected Type");
   }
 
   /// Record a trace.
@@ -1684,12 +1901,8 @@ std::error_code DataAggregator::parseBranchEvents() {
   }
 
   Traces.reserve(TraceMap.size());
-  for (const auto &[Trace, Info] : TraceMap) {
+  for (const auto &[Trace, Info] : TraceMap)
     Traces.emplace_back(Trace, Info);
-    for (const uint64_t Addr : {Trace.Branch, Trace.From})
-      if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Addr))
-        BF->setHasProfileAvailable();
-  }
   clear(TraceMap);
 
   outs() << "PERF2BOLT: read " << NumSamples << " samples and " << NumEntries
@@ -1751,9 +1964,6 @@ std::error_code DataAggregator::parseBasicEvents() {
       continue;
     ++NumTotalSamples;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
-      BF->setHasProfileAvailable();
-
     ++BasicSamples[Sample->PC];
     EventNames.insert(Sample->EventName);
   }
@@ -1791,10 +2001,8 @@ std::error_code DataAggregator::parseMemEvents() {
     if (std::error_code EC = Sample.getError())
       return EC;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC)) {
-      BF->setHasProfileAvailable();
+    if (getBinaryFunctionContainingAddress(Sample->PC))
       MemSamples.emplace_back(std::move(Sample.get()));
-    }
   }
 
   return std::error_code();
@@ -2252,7 +2460,25 @@ DataAggregator::getFileNameForBuildID(StringRef FileBuildID) {
 }
 
 std::error_code
-DataAggregator::writeAggregatedFile(StringRef OutputFilename) const {
+DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
+  std::error_code EC;
+  raw_fd_ostream OS(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
+    return EC;
+
+  for (const auto &[Trace, Info] : Traces)
+    OS << Trace << " " << Info.TakenCount << '\n';
+  OS << formatv("E {0:$[,]}\n", EventNames.keys());
+  for (const auto &[PC, Count] : BasicSamples)
+    OS << formatv("S {0:x-} {1}\n", PC, Count);
+
+  outs() << "PERF2BOLT: wrote " << Traces.size() + BasicSamples.size()
+         << " pre-aggregated objects to " << OutputFilename << "\n";
+
+  return std::error_code();
+}
+
+std::error_code DataAggregator::writeFdataFile(StringRef OutputFilename) const {
   std::error_code EC;
   raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::OpenFlags::OF_None);
   if (EC)
