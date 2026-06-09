@@ -83,19 +83,23 @@ commonEmitCXXMemberOrOperatorCall(CodeGenFunction &CGF, GlobalDecl GD,
 }
 
 RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
-    const CXXMethodDecl *MD, const CGCallee &Callee,
-    ReturnValueSlot ReturnValue, llvm::Value *This, llvm::Value *ImplicitParam,
-    QualType ImplicitParamTy, const CallExpr *CE, CallArgList *RtlArgs,
-    llvm::CallBase **CallOrInvoke) {
+    const CXXMethodDecl *MD, const CGCallee &Callee, llvm::Value *This,
+    llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *CE,
+    CallArgList *RtlArgs, llvm::CallBase **CallOrInvoke,
+    ReturnSlotFn ReturnSlotWrapper) {
   const FunctionProtoType *FPT = MD->getType()->castAs<FunctionProtoType>();
   CallArgList Args;
   MemberCallInfo CallInfo = commonEmitCXXMemberOrOperatorCall(
       *this, MD, This, ImplicitParam, ImplicitParamTy, CE, Args, RtlArgs);
   auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(
       Args, FPT, CallInfo.ReqArgs, CallInfo.PrefixSize);
-  return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke,
-                  CE && CE == MustTailCall,
-                  CE ? CE->getExprLoc() : SourceLocation());
+  auto doEmitCall = [&](ReturnValueSlot Slot) {
+    return EmitCall(FnInfo, Callee, Slot, Args, CallOrInvoke,
+                    CE && CE == MustTailCall,
+                    CE ? CE->getExprLoc() : SourceLocation());
+  };
+  return ReturnSlotWrapper ? ReturnSlotWrapper(FnInfo, doEmitCall)
+                           : doEmitCall(ReturnValueSlot());
 }
 
 RValue CodeGenFunction::EmitCXXDestructorCall(
@@ -186,12 +190,12 @@ static CXXRecordDecl *getCXXRecord(const Expr *E) {
 // Note: This function also emit constructor calls to support a MSVC
 // extensions allowing explicit constructor function call.
 RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
-                                              ReturnValueSlot ReturnValue,
-                                              llvm::CallBase **CallOrInvoke) {
+                                              llvm::CallBase **CallOrInvoke,
+                                              ReturnSlotFn ReturnSlotWrapper) {
   const Expr *callee = CE->getCallee()->IgnoreParens();
 
   if (isa<BinaryOperator>(callee))
-    return EmitCXXMemberPointerCallExpr(CE, ReturnValue, CallOrInvoke);
+    return EmitCXXMemberPointerCallExpr(CE, CallOrInvoke, ReturnSlotWrapper);
 
   const MemberExpr *ME = cast<MemberExpr>(callee);
   const CXXMethodDecl *MD = cast<CXXMethodDecl>(ME->getMemberDecl());
@@ -201,7 +205,8 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
     CGCallee callee =
         CGCallee::forDirect(CGM.GetAddrOfFunction(MD), GlobalDecl(MD));
     return EmitCall(getContext().getPointerType(MD->getType()), callee, CE,
-                    ReturnValue, /*Chain=*/nullptr, CallOrInvoke);
+                    /*Chain=*/nullptr, CallOrInvoke,
+                    /*ResolvedFnInfo=*/nullptr, ReturnSlotWrapper);
   }
 
   bool HasQualifier = ME->hasQualifier();
@@ -209,15 +214,15 @@ RValue CodeGenFunction::EmitCXXMemberCallExpr(const CXXMemberCallExpr *CE,
   bool IsArrow = ME->isArrow();
   const Expr *Base = ME->getBase();
 
-  return EmitCXXMemberOrOperatorMemberCallExpr(CE, MD, ReturnValue,
-                                               HasQualifier, Qualifier, IsArrow,
-                                               Base, CallOrInvoke);
+  return EmitCXXMemberOrOperatorMemberCallExpr(CE, MD, HasQualifier, Qualifier,
+                                               IsArrow, Base, CallOrInvoke,
+                                               ReturnSlotWrapper);
 }
 
 RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
-    const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
-    bool HasQualifier, NestedNameSpecifier Qualifier, bool IsArrow,
-    const Expr *Base, llvm::CallBase **CallOrInvoke) {
+    const CallExpr *CE, const CXXMethodDecl *MD, bool HasQualifier,
+    NestedNameSpecifier Qualifier, bool IsArrow, const Expr *Base,
+    llvm::CallBase **CallOrInvoke, ReturnSlotFn ReturnSlotWrapper) {
   assert(isa<CXXMemberCallExpr>(CE) || isa<CXXOperatorCallExpr>(CE));
 
   // Compute the object pointer.
@@ -292,7 +297,6 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     // This is the MSVC p->Ctor::Ctor(...) extension. We assume that's
     // constructing a new complete object of type Ctor.
     assert(!RtlArgs);
-    assert(ReturnValue.isNull() && "Constructor shouldn't have return value");
     CallArgList Args;
     commonEmitCXXMemberOrOperatorCall(
         *this, {Ctor, Ctor_Complete}, This.getPointer(*this),
@@ -373,7 +377,6 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   if (const CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl)) {
     assert(CE->arguments().empty() &&
            "Destructor shouldn't have explicit parameters");
-    assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
       CGM.getCXXABI().EmitVirtualDestructorCall(
           *this, Dtor, Dtor_Complete, This.getAddress(),
@@ -434,15 +437,15 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
     This.setAddress(NewThisAddr);
   }
 
-  return EmitCXXMemberOrOperatorCall(
-      CalleeDecl, Callee, ReturnValue, This.getPointer(*this),
-      /*ImplicitParam=*/nullptr, QualType(), CE, RtlArgs, CallOrInvoke);
+  return EmitCXXMemberOrOperatorCall(CalleeDecl, Callee, This.getPointer(*this),
+                                     /*ImplicitParam=*/nullptr, QualType(), CE,
+                                     RtlArgs, CallOrInvoke, ReturnSlotWrapper);
 }
 
 RValue
 CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
-                                              ReturnValueSlot ReturnValue,
-                                              llvm::CallBase **CallOrInvoke) {
+                                              llvm::CallBase **CallOrInvoke,
+                                              ReturnSlotFn ReturnSlotWrapper) {
   const BinaryOperator *BO =
       cast<BinaryOperator>(E->getCallee()->IgnoreParens());
   const Expr *BaseExpr = BO->getLHS();
@@ -482,32 +485,34 @@ CodeGenFunction::EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
 
   // And the rest of the call args
   EmitCallArgs(Args, FPT, E->arguments());
-  return EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
-                                                      /*PrefixSize=*/0),
-                  Callee, ReturnValue, Args, CallOrInvoke, E == MustTailCall,
-                  E->getExprLoc());
+  auto &FnInfo = CGM.getTypes().arrangeCXXMethodCall(Args, FPT, required,
+                                                     /*PrefixSize=*/0);
+  auto doEmitCall = [&](ReturnValueSlot Slot) {
+    return EmitCall(FnInfo, Callee, Slot, Args, CallOrInvoke, E == MustTailCall,
+                    E->getExprLoc());
+  };
+  return ReturnSlotWrapper ? ReturnSlotWrapper(FnInfo, doEmitCall)
+                           : doEmitCall(ReturnValueSlot());
 }
 
 RValue CodeGenFunction::EmitCXXOperatorMemberCallExpr(
     const CXXOperatorCallExpr *E, const CXXMethodDecl *MD,
-    ReturnValueSlot ReturnValue, llvm::CallBase **CallOrInvoke) {
+    llvm::CallBase **CallOrInvoke, ReturnSlotFn ReturnSlotWrapper) {
   assert(MD->isImplicitObjectMemberFunction() &&
          "Trying to emit a member call expr on a static method!");
   return EmitCXXMemberOrOperatorMemberCallExpr(
-      E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/std::nullopt,
-      /*IsArrow=*/false, E->getArg(0), CallOrInvoke);
+      E, MD, /*HasQualifier=*/false, /*Qualifier=*/std::nullopt,
+      /*IsArrow=*/false, E->getArg(0), CallOrInvoke, ReturnSlotWrapper);
 }
 
 RValue CodeGenFunction::EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
-                                               ReturnValueSlot ReturnValue,
                                                llvm::CallBase **CallOrInvoke) {
   // Emit as a device kernel call if CUDA device code is to be generated.
   // TODO: implement for HIP
   if (!getLangOpts().HIP && getLangOpts().CUDAIsDevice)
-    return CGM.getCUDARuntime().EmitCUDADeviceKernelCallExpr(
-        *this, E, ReturnValue, CallOrInvoke);
-  return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, ReturnValue,
-                                                     CallOrInvoke);
+    return CGM.getCUDARuntime().EmitCUDADeviceKernelCallExpr(*this, E,
+                                                             CallOrInvoke);
+  return CGM.getCUDARuntime().EmitCUDAKernelCallExpr(*this, E, CallOrInvoke);
 }
 
 static void EmitNullBaseClassInitialization(CodeGenFunction &CGF,

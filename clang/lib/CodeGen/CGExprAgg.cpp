@@ -62,8 +62,13 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   //
   // The given function should take a ReturnValueSlot, and return an RValue that
   // points to said slot.
-  void withReturnValueSlot(const Expr *E,
-                           llvm::function_ref<RValue(ReturnValueSlot)> Fn);
+  RValue withReturnValueSlot(const CGFunctionInfo &FnInfo,
+                             llvm::function_ref<RValue(ReturnValueSlot)> Fn);
+
+  ReturnSlotFn makeReturnSlotFn() {
+    return ReturnSlotFn::make<&AggExprEmitter::withReturnValueSlot>(
+        this, IsResultUnused);
+  }
 
   void DoZeroInitPadding(uint64_t &PaddingStart, uint64_t PaddingEnd,
                          const FieldDecl *NextField);
@@ -312,9 +317,10 @@ static bool EmitLifetimeStartOnAlloca(CodeGenFunction &CGF, llvm::Value *Ptr) {
   return false;
 }
 
-void AggExprEmitter::withReturnValueSlot(
-    const Expr *E, llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
-  QualType RetTy = E->getType();
+RValue AggExprEmitter::withReturnValueSlot(
+    const CGFunctionInfo &FnInfo,
+    llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
+  QualType RetTy = FnInfo.getReturnType();
 
   // If it makes no observable difference, save a memcpy + temporary.
   // This is not just an optimization: avoiding the copy may be mandatory in
@@ -382,11 +388,11 @@ void AggExprEmitter::withReturnValueSlot(
                                Dest.isExternallyDestructed()));
 
   if (NoCopy)
-    return;
+    return Src;
 
-  assert(Dest.isIgnored() || Dest.emitRawPointer(CGF) !=
-                                 Src.getAggregatePointer(E->getType(), CGF));
-  EmitFinalDestCopy(E->getType(), Src);
+  assert(Dest.isIgnored() ||
+         Dest.emitRawPointer(CGF) != Src.getAggregatePointer(RetTy, CGF));
+  EmitFinalDestCopy(RetTy, Src);
 
   if (!RequiresDestruction && LifetimeStartInst) {
     // If there's no dtor to run, the copy was the last use of our temporary.
@@ -395,6 +401,7 @@ void AggExprEmitter::withReturnValueSlot(
     CGF.DeactivateCleanupBlock(LifetimeEndBlock, LifetimeStartInst);
     CGF.EmitLifetimeEnd(LifetimeStartInst->getArgOperand(0));
   }
+  return Src;
 }
 
 /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
@@ -1128,14 +1135,11 @@ void AggExprEmitter::VisitCallExpr(const CallExpr *E) {
     return;
   }
 
-  withReturnValueSlot(
-      E, [&](ReturnValueSlot Slot) { return CGF.EmitCallExpr(E, Slot); });
+  CGF.EmitCallExpr(E, /*CallOrInvoke=*/nullptr, makeReturnSlotFn());
 }
 
 void AggExprEmitter::VisitObjCMessageExpr(ObjCMessageExpr *E) {
-  withReturnValueSlot(E, [&](ReturnValueSlot Slot) {
-    return CGF.EmitObjCMessageExpr(E, Slot);
-  });
+  CGF.EmitObjCMessageExpr(E, makeReturnSlotFn());
 }
 
 void AggExprEmitter::VisitBinComma(const BinaryOperator *E) {

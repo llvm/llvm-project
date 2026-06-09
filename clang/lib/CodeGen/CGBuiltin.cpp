@@ -800,7 +800,7 @@ static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
   CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
   llvm::CallBase *callOrInvoke = nullptr;
   CGFunctionInfo const *FnInfo = nullptr;
-  return CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot(),
+  return CGF.EmitCall(E->getCallee()->getType(), callee, E,
                       /*Chain=*/nullptr, &callOrInvoke, &FnInfo);
 }
 
@@ -2929,7 +2929,7 @@ private:
 
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
-                                        ReturnValueSlot ReturnValue) {
+                                        ReturnSlotFn ReturnSlotWrapper) {
   assert(!getContext().BuiltinInfo.isImmediate(BuiltinID) &&
          "Should not codegen for consteval builtins");
 
@@ -6153,9 +6153,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_call_with_static_chain: {
     const CallExpr *Call = cast<CallExpr>(E->getArg(0));
     const Expr *Chain = E->getArg(1);
-    return EmitCall(Call->getCallee()->getType(),
-                    EmitCallee(Call->getCallee()), Call, ReturnValue,
-                    EmitScalarExpr(Chain));
+    return EmitCall(Call->getCallee()->getType(), EmitCallee(Call->getCallee()),
+                    Call, EmitScalarExpr(Chain));
   }
   case Builtin::BI_InterlockedExchange8:
   case Builtin::BI_InterlockedExchange16:
@@ -7083,55 +7082,64 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(V);
   }
 
-  // Some target-specific builtins can have aggregate return values, e.g.
-  // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force
-  // ReturnValue to be non-null, so that the target-specific emission code can
-  // always just emit into it.
   TypeEvaluationKind EvalKind = getEvaluationKind(E->getType());
-  if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
-    Address DestPtr = CreateMemTemp(E->getType(), "agg.tmp");
-    ReturnValue = ReturnValueSlot(DestPtr, false);
-  }
-
-  // Now see if we can emit a target-specific builtin.
-  if (Value *V = EmitTargetBuiltinExpr(BuiltinID, E, ReturnValue)) {
-    switch (EvalKind) {
-    case TEK_Scalar:
-      if (V->getType()->isVoidTy())
-        return RValue::get(nullptr);
-      return RValue::get(V);
-    case TEK_Aggregate:
-      return RValue::getAggregate(ReturnValue.getAddress(),
-                                  ReturnValue.isVolatile());
-    case TEK_Complex:
-      llvm_unreachable("No current target builtin returns complex");
+  auto doEmitTargetBuiltin = [&](ReturnValueSlot ReturnValue) -> RValue {
+    // Some target-specific builtins can have aggregate return values, e.g.
+    // __builtin_arm_mve_vld2q_u32. So if the result is an aggregate, force
+    // ReturnValue to be non-null, so that the target-specific emission code can
+    // always just emit into it.
+    if (EvalKind == TEK_Aggregate && ReturnValue.isNull()) {
+      Address DestPtr = CreateMemTemp(E->getType(), "agg.tmp");
+      ReturnValue = ReturnValueSlot(DestPtr, false);
     }
-    llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
-  }
 
-  // EmitHLSLBuiltinExpr will check getLangOpts().HLSL
-  if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E, ReturnValue)) {
-    switch (EvalKind) {
-    case TEK_Scalar:
-      if (V->getType()->isVoidTy())
-        return RValue::get(nullptr);
-      return RValue::get(V);
-    case TEK_Aggregate:
-      return RValue::getAggregate(ReturnValue.getAddress(),
-                                  ReturnValue.isVolatile());
-    case TEK_Complex:
-      llvm_unreachable("No current hlsl builtin returns complex");
+    // Now see if we can emit a target-specific builtin.
+    if (Value *V = EmitTargetBuiltinExpr(BuiltinID, E, ReturnValue)) {
+      switch (EvalKind) {
+      case TEK_Scalar:
+        if (V->getType()->isVoidTy())
+          return RValue::get(nullptr);
+        return RValue::get(V);
+      case TEK_Aggregate:
+        return RValue::getAggregate(ReturnValue.getAddress(),
+                                    ReturnValue.isVolatile());
+      case TEK_Complex:
+        llvm_unreachable("No current target builtin returns complex");
+      }
+      llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
     }
-    llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
-  }
 
-  if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
-    return EmitHipStdParUnsupportedBuiltin(this, FD);
+    // EmitHLSLBuiltinExpr will check getLangOpts().HLSL
+    if (Value *V = EmitHLSLBuiltinExpr(BuiltinID, E, ReturnValue)) {
+      switch (EvalKind) {
+      case TEK_Scalar:
+        if (V->getType()->isVoidTy())
+          return RValue::get(nullptr);
+        return RValue::get(V);
+      case TEK_Aggregate:
+        return RValue::getAggregate(ReturnValue.getAddress(),
+                                    ReturnValue.isVolatile());
+      case TEK_Complex:
+        llvm_unreachable("No current hlsl builtin returns complex");
+      }
+      llvm_unreachable("Bad evaluation kind in EmitBuiltinExpr");
+    }
 
-  ErrorUnsupported(E, "builtin function");
+    if (getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice)
+      return EmitHipStdParUnsupportedBuiltin(this, FD);
 
-  // Unknown builtin, for now just dump it out and return undef.
-  return GetUndefRValue(E->getType());
+    ErrorUnsupported(E, "builtin function");
+
+    // Unknown builtin, for now just dump it out and return undef.
+    return GetUndefRValue(E->getType());
+  };
+
+  if (ReturnSlotWrapper) {
+    const CGFunctionInfo &FnInfo =
+        CGM.getTypes().arrangeFunctionDeclaration(FD);
+    return ReturnSlotWrapper(FnInfo, doEmitTargetBuiltin);
+  } else
+    return doEmitTargetBuiltin(ReturnValueSlot());
 }
 
 namespace {

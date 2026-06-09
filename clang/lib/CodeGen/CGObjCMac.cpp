@@ -1105,10 +1105,10 @@ public:
 
 protected:
   CodeGen::RValue EmitMessageSend(CodeGen::CodeGenFunction &CGF,
-                                  ReturnValueSlot Return, QualType ResultType,
-                                  Selector Sel, llvm::Value *Arg0,
-                                  QualType Arg0Ty, bool IsSuper,
-                                  const CallArgList &CallArgs,
+                                  ReturnSlotFn ReturnSlotWrapper,
+                                  QualType ResultType, Selector Sel,
+                                  llvm::Value *Arg0, QualType Arg0Ty,
+                                  bool IsSuper, const CallArgList &CallArgs,
                                   const ObjCMethodDecl *OMD,
                                   const ObjCInterfaceDecl *ClassReceiver,
                                   const ObjCCommonTypesHelper &ObjCTypes);
@@ -1469,7 +1469,7 @@ public:
   llvm::Function *ModuleInitFunction() override;
 
   CodeGen::RValue GenerateMessageSend(CodeGen::CodeGenFunction &CGF,
-                                      ReturnValueSlot Return,
+                                      ReturnSlotFn ReturnSlotWrapper,
                                       QualType ResultType, Selector Sel,
                                       llvm::Value *Receiver,
                                       const CallArgList &CallArgs,
@@ -1477,7 +1477,7 @@ public:
                                       const ObjCMethodDecl *Method) override;
 
   CodeGen::RValue GenerateMessageSendSuper(
-      CodeGen::CodeGenFunction &CGF, ReturnValueSlot Return,
+      CodeGen::CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper,
       QualType ResultType, Selector Sel, const ObjCInterfaceDecl *Class,
       bool isCategoryImpl, llvm::Value *Receiver, bool IsClassMessage,
       const CallArgList &CallArgs, const ObjCMethodDecl *Method) override;
@@ -1624,7 +1624,7 @@ private:
                                    ObjCProtocolDecl::protocol_iterator end);
 
   CodeGen::RValue EmitVTableMessageSend(
-      CodeGen::CodeGenFunction &CGF, ReturnValueSlot Return,
+      CodeGen::CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper,
       QualType ResultType, Selector Sel, llvm::Value *Receiver, QualType Arg0Ty,
       bool IsSuper, const CallArgList &CallArgs, const ObjCMethodDecl *Method);
 
@@ -1757,7 +1757,7 @@ public:
   llvm::Function *ModuleInitFunction() override;
 
   CodeGen::RValue GenerateMessageSend(CodeGen::CodeGenFunction &CGF,
-                                      ReturnValueSlot Return,
+                                      ReturnSlotFn ReturnSlotWrapper,
                                       QualType ResultType, Selector Sel,
                                       llvm::Value *Receiver,
                                       const CallArgList &CallArgs,
@@ -1765,7 +1765,7 @@ public:
                                       const ObjCMethodDecl *Method) override;
 
   CodeGen::RValue GenerateMessageSendSuper(
-      CodeGen::CodeGenFunction &CGF, ReturnValueSlot Return,
+      CodeGen::CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper,
       QualType ResultType, Selector Sel, const ObjCInterfaceDecl *Class,
       bool isCategoryImpl, llvm::Value *Receiver, bool IsClassMessage,
       const CallArgList &CallArgs, const ObjCMethodDecl *Method) override;
@@ -2672,9 +2672,9 @@ enum { kCFTaggedObjectID_Integer = (1 << 1) + 1 };
 /// a message send to self with special delivery semantics indicating
 /// which class's method should be called.
 CodeGen::RValue CGObjCMac::GenerateMessageSendSuper(
-    CodeGen::CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
-    Selector Sel, const ObjCInterfaceDecl *Class, bool isCategoryImpl,
-    llvm::Value *Receiver, bool IsClassMessage,
+    CodeGen::CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper,
+    QualType ResultType, Selector Sel, const ObjCInterfaceDecl *Class,
+    bool isCategoryImpl, llvm::Value *Receiver, bool IsClassMessage,
     const CodeGen::CallArgList &CallArgs, const ObjCMethodDecl *Method) {
   // Create and init a super structure; this is a (receiver, class)
   // pair we will pass to objc_msgSendSuper.
@@ -2722,25 +2722,26 @@ CodeGen::RValue CGObjCMac::GenerateMessageSendSuper(
       CGM.getTypes().ConvertType(CGF.getContext().getObjCClassType());
   Target = CGF.Builder.CreateBitCast(Target, ClassTy);
   CGF.Builder.CreateStore(Target, CGF.Builder.CreateStructGEP(ObjCSuper, 1));
-  return EmitMessageSend(CGF, Return, ResultType, Sel, ObjCSuper.getPointer(),
-                         ObjCTypes.SuperPtrCTy, true, CallArgs, Method, Class,
-                         ObjCTypes);
+  return EmitMessageSend(CGF, ReturnSlotWrapper, ResultType, Sel,
+                         ObjCSuper.getPointer(), ObjCTypes.SuperPtrCTy, true,
+                         CallArgs, Method, Class, ObjCTypes);
 }
 
 /// Generate code for a message send expression.
 CodeGen::RValue CGObjCMac::GenerateMessageSend(
-    CodeGen::CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
-    Selector Sel, llvm::Value *Receiver, const CallArgList &CallArgs,
-    const ObjCInterfaceDecl *Class, const ObjCMethodDecl *Method) {
-  return EmitMessageSend(CGF, Return, ResultType, Sel, Receiver,
+    CodeGen::CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper,
+    QualType ResultType, Selector Sel, llvm::Value *Receiver,
+    const CallArgList &CallArgs, const ObjCInterfaceDecl *Class,
+    const ObjCMethodDecl *Method) {
+  return EmitMessageSend(CGF, ReturnSlotWrapper, ResultType, Sel, Receiver,
                          CGF.getContext().getObjCIdType(), false, CallArgs,
                          Method, Class, ObjCTypes);
 }
 
 CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
-    CodeGen::CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
-    Selector Sel, llvm::Value *Arg0, QualType Arg0Ty, bool IsSuper,
-    const CallArgList &CallArgs, const ObjCMethodDecl *Method,
+    CodeGen::CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper,
+    QualType ResultType, Selector Sel, llvm::Value *Arg0, QualType Arg0Ty,
+    bool IsSuper, const CallArgList &CallArgs, const ObjCMethodDecl *Method,
     const ObjCInterfaceDecl *ClassReceiver,
     const ObjCCommonTypesHelper &ObjCTypes) {
   CodeGenTypes &Types = CGM.getTypes();
@@ -2833,7 +2834,7 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
 
   // We don't need to emit a null check to zero out an indirect result if the
   // result is ignored.
-  if (Return.isUnused())
+  if (ReturnSlotWrapper.IsResultUnused)
     RequiresNullCheck = false;
 
   // Emit a null-check if there's a consumed argument other than the receiver.
@@ -2872,19 +2873,21 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
     ActualArgs[1] = CallArg(RValue::get(SelValue), selTy);
   }
 
-  llvm::CallBase *CallSite;
   CGCallee Callee = CGCallee::forDirect(BitcastFn);
-  RValue rvalue =
-      CGF.EmitCall(MSI.CallInfo, Callee, Return, ActualArgs, &CallSite);
-
-  // Mark the call as noreturn if the method is marked noreturn and the
-  // receiver cannot be null.
-  if (Method && Method->hasAttr<NoReturnAttr>() && !ReceiverCanBeNull) {
-    CallSite->setDoesNotReturn();
-  }
-
-  return nullReturn.complete(CGF, Return, rvalue, ResultType, CallArgs,
-                             RequiresNullCheck ? Method : nullptr);
+  auto doEmitCall = [&](ReturnValueSlot Slot) {
+    llvm::CallBase *CallSite;
+    RValue rvalue =
+        CGF.EmitCall(MSI.CallInfo, Callee, Slot, ActualArgs, &CallSite);
+    // Mark the call as noreturn if the method is marked noreturn and the
+    // receiver cannot be null.
+    if (Method && Method->hasAttr<NoReturnAttr>() && !ReceiverCanBeNull) {
+      CallSite->setDoesNotReturn();
+    }
+    return nullReturn.complete(CGF, Slot, rvalue, ResultType, CallArgs,
+                               RequiresNullCheck ? Method : nullptr);
+  };
+  return ReturnSlotWrapper ? ReturnSlotWrapper(MSI.CallInfo, doEmitCall)
+                           : doEmitCall(ReturnValueSlot());
 }
 
 static Qualifiers::GC GetGCAttrTypeForType(ASTContext &Ctx, QualType FQT,
@@ -4878,8 +4881,7 @@ CGObjCCommonMac::GenerateClassRealization(CodeGenFunction &CGF,
   CallArgList Args;
 
   RValue result = GeneratePossiblySpecializedMessageSend(
-      CGF, ReturnValueSlot(), ResultType, SelfSel, classObject, Args, OID,
-      nullptr, true);
+      CGF, nullptr, ResultType, SelfSel, classObject, Args, OID, nullptr, true);
 
   return result.getScalarVal();
 }
@@ -8158,7 +8160,7 @@ static void appendSelectorForMessageRefTable(std::string &buffer,
 /// which tail-calls objc_msgSend.  Both stubs adjust the selector
 /// argument to correctly point to the selector.
 RValue CGObjCNonFragileABIMac::EmitVTableMessageSend(
-    CodeGenFunction &CGF, ReturnValueSlot returnSlot, QualType resultType,
+    CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper, QualType resultType,
     Selector selector, llvm::Value *arg0, QualType arg0Type, bool isSuper,
     const CallArgList &formalArgs, const ObjCMethodDecl *method) {
   // Compute the actual arguments.
@@ -8256,23 +8258,30 @@ RValue CGObjCNonFragileABIMac::EmitVTableMessageSend(
   calleePtr = CGF.Builder.CreateBitCast(calleePtr, MSI.MessengerType);
   CGCallee callee(CGCalleeInfo(), calleePtr);
 
-  RValue result = CGF.EmitCall(MSI.CallInfo, callee, returnSlot, args);
-  return nullReturn.complete(CGF, returnSlot, result, resultType, formalArgs,
-                             requiresnullCheck ? method : nullptr);
+  auto doEmitCall = [&](ReturnValueSlot Slot) {
+    RValue result = CGF.EmitCall(MSI.CallInfo, callee, Slot, args);
+    return nullReturn.complete(CGF, Slot, result, resultType, formalArgs,
+                               requiresnullCheck ? method : nullptr);
+  };
+  RValue result = ReturnSlotWrapper
+                      ? ReturnSlotWrapper(MSI.CallInfo, doEmitCall)
+                      : doEmitCall(ReturnValueSlot());
+  return result;
 }
 
 /// Generate code for a message send expression in the nonfragile abi.
 CodeGen::RValue CGObjCNonFragileABIMac::GenerateMessageSend(
-    CodeGen::CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
-    Selector Sel, llvm::Value *Receiver, const CallArgList &CallArgs,
-    const ObjCInterfaceDecl *Class, const ObjCMethodDecl *Method) {
+    CodeGen::CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper,
+    QualType ResultType, Selector Sel, llvm::Value *Receiver,
+    const CallArgList &CallArgs, const ObjCInterfaceDecl *Class,
+    const ObjCMethodDecl *Method) {
   return isVTableDispatchedSelector(Sel)
-             ? EmitVTableMessageSend(CGF, Return, ResultType, Sel, Receiver,
-                                     CGF.getContext().getObjCIdType(), false,
-                                     CallArgs, Method)
-             : EmitMessageSend(CGF, Return, ResultType, Sel, Receiver,
-                               CGF.getContext().getObjCIdType(), false,
-                               CallArgs, Method, Class, ObjCTypes);
+             ? EmitVTableMessageSend(CGF, ReturnSlotWrapper, ResultType, Sel,
+                                     Receiver, CGF.getContext().getObjCIdType(),
+                                     false, CallArgs, Method)
+             : EmitMessageSend(CGF, ReturnSlotWrapper, ResultType, Sel,
+                               Receiver, CGF.getContext().getObjCIdType(),
+                               false, CallArgs, Method, Class, ObjCTypes);
 }
 
 llvm::Constant *
@@ -8454,9 +8463,9 @@ llvm::Value *CGObjCNonFragileABIMac::GetClass(CodeGenFunction &CGF,
 /// a message send to self with special delivery semantics indicating
 /// which class's method should be called.
 CodeGen::RValue CGObjCNonFragileABIMac::GenerateMessageSendSuper(
-    CodeGen::CodeGenFunction &CGF, ReturnValueSlot Return, QualType ResultType,
-    Selector Sel, const ObjCInterfaceDecl *Class, bool isCategoryImpl,
-    llvm::Value *Receiver, bool IsClassMessage,
+    CodeGen::CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper,
+    QualType ResultType, Selector Sel, const ObjCInterfaceDecl *Class,
+    bool isCategoryImpl, llvm::Value *Receiver, bool IsClassMessage,
     const CodeGen::CallArgList &CallArgs, const ObjCMethodDecl *Method) {
   // ...
   // Create and init a super structure; this is a (receiver, class)
@@ -8484,10 +8493,11 @@ CodeGen::RValue CGObjCNonFragileABIMac::GenerateMessageSendSuper(
   CGF.Builder.CreateStore(Target, CGF.Builder.CreateStructGEP(ObjCSuper, 1));
 
   return (isVTableDispatchedSelector(Sel))
-             ? EmitVTableMessageSend(
-                   CGF, Return, ResultType, Sel, ObjCSuper.getPointer(),
-                   ObjCTypes.SuperPtrCTy, true, CallArgs, Method)
-             : EmitMessageSend(CGF, Return, ResultType, Sel,
+             ? EmitVTableMessageSend(CGF, ReturnSlotWrapper, ResultType, Sel,
+                                     ObjCSuper.getPointer(),
+                                     ObjCTypes.SuperPtrCTy, true, CallArgs,
+                                     Method)
+             : EmitMessageSend(CGF, ReturnSlotWrapper, ResultType, Sel,
                                ObjCSuper.getPointer(), ObjCTypes.SuperPtrCTy,
                                true, CallArgs, Method, Class, ObjCTypes);
 }

@@ -37,6 +37,7 @@ class TargetOptions;
 class VarDecl;
 
 namespace CodeGen {
+class CGFunctionInfo;
 
 /// Abstract information about a function or function prototype.
 class CGCalleeInfo {
@@ -440,6 +441,45 @@ struct DisableDebugLocationUpdates {
   DisableDebugLocationUpdates(const DisableDebugLocationUpdates &) = delete;
   DisableDebugLocationUpdates &
   operator=(const DisableDebugLocationUpdates &) = delete;
+};
+
+/// Callback type for wrapping the innermost EmitCall(FnInfo,...) in
+/// withReturnValueSlot logic. Receives the resolved CGFunctionInfo and an
+/// inner function_ref (ReturnValueSlot → RValue); must call it exactly once.
+struct ReturnSlotFn {
+  bool IsResultUnused = false;
+
+  ReturnSlotFn() = default;
+  ReturnSlotFn(std::nullptr_t) {}
+
+  /// Bind a member function as the callback. MemFn must be a non-type template
+  /// argument so the trampoline is a stateless (convertible-to-fptr) lambda.
+  template <auto MemFn, typename T>
+  static ReturnSlotFn make(T *Obj, bool IsResultUnused) {
+    ReturnSlotFn R;
+    R.IsResultUnused = IsResultUnused;
+    R.Obj = Obj;
+    R.Trampoline =
+        [](void *O, const CGFunctionInfo &FI,
+           llvm::function_ref<RValue(ReturnValueSlot)> EC) -> RValue {
+      return (static_cast<T *>(O)->*MemFn)(FI, EC);
+    };
+    return R;
+  }
+
+  RValue
+  operator()(const CGFunctionInfo &FnInfo,
+             llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) const {
+    return Trampoline(Obj, FnInfo, EmitCall);
+  }
+
+  explicit operator bool() const { return Obj != nullptr; }
+
+private:
+  using TrampolineFn = RValue(void *, const CGFunctionInfo &,
+                              llvm::function_ref<RValue(ReturnValueSlot)>);
+  void *Obj = nullptr;
+  TrampolineFn *Trampoline = nullptr;
 };
 
 } // end namespace CodeGen

@@ -1169,8 +1169,8 @@ llvm::Type *CodeGenModule::getGenericBlockLiteralType() {
 }
 
 RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
-                                          ReturnValueSlot ReturnValue,
-                                          llvm::CallBase **CallOrInvoke) {
+                                          llvm::CallBase **CallOrInvoke,
+                                          ReturnSlotFn ReturnSlotWrapper) {
   const auto *BPT = E->getCallee()->getType()->castAs<BlockPointerType>();
   llvm::Value *BlockPtr = EmitScalarExpr(E->getCallee());
   llvm::Type *GenBlockTy = CGM.getGenericBlockLiteralType();
@@ -1236,8 +1236,12 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
 
   CGCallee Callee(CGCalleeInfo(), Func, PointerAuth);
 
-  // And call the block.
-  return EmitCall(FnInfo, Callee, ReturnValue, Args, CallOrInvoke);
+  // And call the block, applying the wrapper (if any) after EmitCallArgs above.
+  auto doEmitCall = [&](ReturnValueSlot Slot) {
+    return EmitCall(FnInfo, Callee, Slot, Args, CallOrInvoke);
+  };
+  return ReturnSlotWrapper ? ReturnSlotWrapper(FnInfo, doEmitCall)
+                           : doEmitCall(ReturnValueSlot());
 }
 
 Address CodeGenFunction::GetAddrOfBlockDecl(const VarDecl *variable) {
