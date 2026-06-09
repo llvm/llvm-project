@@ -348,9 +348,9 @@ struct AliasAnalysis {
   /// will stop at [hl]fir.declare if it represents a dummy
   /// argument declaration (i.e. it has the dummy_scope operand).
   /// If collectScopedOrigins is false, the per-declare ScopedOrigin
-  /// snapshots are not collected (used internally by buildSourceAtDeclare
-  /// to reuse getSource purely for declare classification without the
-  /// bookkeeping side effect).
+  /// snapshots are not collected, and getSource performs only the
+  /// SourceKind/origin classification without that bookkeeping side
+  /// effect.
   fir::AliasAnalysis::Source getSource(mlir::Value,
                                        bool getLastInstantiationPoint = false,
                                        bool collectScopedOrigins = true);

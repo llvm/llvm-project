@@ -288,34 +288,34 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
 
   mlir::Type mergedTy = allTypesSame ? sources[0].valueType : fallbackType;
 
-  // Intersect scopedOrigins across predecessors by (scope, declValue).
-  // For an entry that matches in every predecessor, take the bitwise
-  // union (|=) of its 'attributes' and 'approximateSource' bits and
-  // keep the first predecessor's path steps (the steps must be equal
-  // to match, so there is nothing to merge there). Drop the entry on a
-  // path-step or isData mismatch, because different control-flow shapes
-  // from the same declare to the merge point cannot be summarised
-  // safely.
+  // Intersect scopedOrigins across predecessors by declValue. The
+  // declare's governing scope is a deterministic function of the
+  // declare op, so declValue alone identifies the snapshot (the same
+  // declValue can never carry two different scopes). For an entry that
+  // matches in every predecessor, take the bitwise union (|=) of its
+  // 'attributes' and 'approximateSource' bits and keep the first
+  // predecessor's path steps (the steps must be equal to match, so
+  // there is nothing to merge there). Drop the entry on a path-step or
+  // isData mismatch, because different control-flow shapes from the
+  // same declare to the merge point cannot be summarised safely.
   llvm::SmallVector<fir::AliasAnalysis::Source::ScopedOrigin, 4>
       mergedScopedOrigins;
   if (!sources.empty()) {
-    // Seed with the first predecessor's snapshots, keyed by
-    // (scope, declValue) for intersection lookups.
-    llvm::DenseMap<std::pair<void *, void *>, unsigned> indexInMerged;
+    // Seed with the first predecessor's snapshots, keyed by declValue
+    // for intersection lookups.
+    llvm::DenseMap<void *, unsigned> indexInMerged;
     mergedScopedOrigins.assign(sources[0].scopedOrigins.begin(),
                                sources[0].scopedOrigins.end());
     for (unsigned i = 0; i < mergedScopedOrigins.size(); ++i) {
       const auto &scopedOrigin = mergedScopedOrigins[i];
-      indexInMerged[{scopedOrigin.scope.getAsOpaquePointer(),
-                     scopedOrigin.declValue.getAsOpaquePointer()}] = i;
+      indexInMerged[scopedOrigin.declValue.getAsOpaquePointer()] = i;
     }
     llvm::SmallVector<bool, 4> seenThisPred;
     for (unsigned predIdx = 1; predIdx < sources.size(); ++predIdx) {
       seenThisPred.assign(mergedScopedOrigins.size(), false);
       for (const auto &scopedOrigin : sources[predIdx].scopedOrigins) {
         auto it =
-            indexInMerged.find({scopedOrigin.scope.getAsOpaquePointer(),
-                                scopedOrigin.declValue.getAsOpaquePointer()});
+            indexInMerged.find(scopedOrigin.declValue.getAsOpaquePointer());
         if (it == indexInMerged.end())
           continue;
         unsigned idx = it->second;
@@ -338,8 +338,7 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
            --idx) {
         if (!seenThisPred[idx]) {
           const auto &scopedOrigin = mergedScopedOrigins[idx];
-          indexInMerged.erase({scopedOrigin.scope.getAsOpaquePointer(),
-                               scopedOrigin.declValue.getAsOpaquePointer()});
+          indexInMerged.erase(scopedOrigin.declValue.getAsOpaquePointer());
           mergedScopedOrigins.erase(mergedScopedOrigins.begin() + idx);
         }
       }
@@ -347,8 +346,7 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
       indexInMerged.clear();
       for (unsigned i = 0; i < mergedScopedOrigins.size(); ++i) {
         const auto &scopedOrigin = mergedScopedOrigins[i];
-        indexInMerged[{scopedOrigin.scope.getAsOpaquePointer(),
-                       scopedOrigin.declValue.getAsOpaquePointer()}] = i;
+        indexInMerged[scopedOrigin.declValue.getAsOpaquePointer()] = i;
       }
     }
   }
