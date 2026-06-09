@@ -21,6 +21,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/RegisterBank.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -61,6 +62,7 @@ public:
 
   /// Configurable target specific flags.
   const uint8_t TSFlags;
+  const uint8_t SpillStackID;
   /// Whether the class supports two (or more) disjunct subregister indices.
   const bool HasDisjunctSubRegs;
   /// Whether a combination of subregisters can cover every register in the
@@ -319,6 +321,12 @@ public:
     return Align(getRegClassInfo(RC).SpillAlignment / 8);
   }
 
+  /// Return the stack ID for spill slots holding a spilled copy of a register
+  /// from this class.
+  TargetStackID::Value getSpillStackID(const TargetRegisterClass &RC) const {
+    return static_cast<TargetStackID::Value>(RC.SpillStackID);
+  }
+
   /// Return true if the given TargetRegisterClass has the ValueType T.
   bool isTypeLegalForClass(const TargetRegisterClass &RC, MVT T) const {
     for (auto I = legalclasstypes_begin(RC); *I != MVT::Other; ++I)
@@ -353,33 +361,15 @@ public:
     return I;
   }
 
-  /// Returns the Register Class of a physical register of the given type,
-  /// picking the most sub register class of the right type that contains this
-  /// physreg.
-  const TargetRegisterClass *getMinimalPhysRegClass(MCRegister Reg,
-                                                    MVT VT = MVT::Other) const;
+  /// Returns the Register Class of a physical register, picking the smallest
+  /// register subclass that contains this physreg.
+  virtual const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const = 0;
 
-  /// Returns the common Register Class of two physical registers of the given
-  /// type, picking the most sub register class of the right type that contains
-  /// these two physregs.
+  /// Returns the common Register Class of two physical registers, picking the
+  /// smallest register subclass that contains these two physregs.
   const TargetRegisterClass *
-  getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2,
-                               MVT VT = MVT::Other) const;
-
-  /// Returns the Register Class of a physical register of the given type,
-  /// picking the most sub register class of the right type that contains this
-  /// physreg. If there is no register class compatible with the given type,
-  /// returns nullptr.
-  const TargetRegisterClass *getMinimalPhysRegClassLLT(MCRegister Reg,
-                                                       LLT Ty = LLT()) const;
-
-  /// Returns the common Register Class of two physical registers of the given
-  /// type, picking the most sub register class of the right type that contains
-  /// these two physregs. If there is no register class compatible with the
-  /// given type, returns nullptr.
-  const TargetRegisterClass *
-  getCommonMinimalPhysRegClassLLT(MCRegister Reg1, MCRegister Reg2,
-                                  LLT Ty = LLT()) const;
+  getCommonMinimalPhysRegClass(MCRegister Reg1, MCRegister Reg2) const;
 
   /// Return the maximal subclass of the given register class that is
   /// allocatable or NULL.
@@ -826,13 +816,6 @@ public:
   /// register.
   /// Will be nullptr if the register is not in any base register class.
   virtual const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) const {
-    return nullptr;
-  }
-
-  /// Returns the target-defined minimal register class for an untyped physical
-  /// register query or nullptr if the register is not in any register class.
-  virtual const TargetRegisterClass *
-  getDefaultMinimalPhysRegClass(MCRegister Reg) const {
     return nullptr;
   }
 

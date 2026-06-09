@@ -10,7 +10,7 @@
 
 // class map
 
-// explicit map(const allocator_type& a);
+// explicit map(const allocator_type& a); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -19,7 +19,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::less<int> C;
     typedef test_allocator<std::pair<const int, double> > A;
@@ -46,6 +46,13 @@ int main(int, char**) {
     assert(m.get_allocator() == A());
   }
 #endif
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

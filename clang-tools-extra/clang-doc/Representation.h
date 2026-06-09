@@ -23,6 +23,7 @@
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/StringSaver.h"
 #include <array>
@@ -51,8 +52,8 @@ private:
 
 ConcurrentStringPool &getGlobalStringPool();
 
-extern thread_local llvm::BumpPtrAllocator TransientArena;
-extern thread_local llvm::BumpPtrAllocator PersistentArena;
+llvm::BumpPtrAllocator &getTransientArena();
+llvm::BumpPtrAllocator &getPersistentArena();
 
 inline StringRef internString(const Twine &T) {
   if (T.isTriviallyEmpty())
@@ -107,12 +108,13 @@ llvm::ArrayRef<T> deepCopyArray(llvm::ArrayRef<T> V,
 // A helper function to create an owned pointer, abstracting away the memory
 // allocation mechanism.
 template <typename T, typename... Args> T *allocateTransient(Args &&...args) {
-  return new (TransientArena.Allocate<T>()) T(std::forward<Args>(args)...);
+  return new (getTransientArena().Allocate<T>()) T(std::forward<Args>(args)...);
 }
 
 // A helper function to create memory allocated in the TransientArena.
 template <typename T, typename... Args> T *allocatePersistent(Args &&...args) {
-  return new (PersistentArena.Allocate<T>()) T(std::forward<Args>(args)...);
+  return new (getPersistentArena().Allocate<T>())
+      T(std::forward<Args>(args)...);
 }
 
 // An overload to explicitly allocate on an arena, returning a bare pointer.
@@ -156,7 +158,7 @@ InfoNode<T> *allocateListNode(llvm::BumpPtrAllocator &Alloc, Args &&...args) {
 
 template <typename T, typename... Args>
 InfoNode<T> *allocateListNodeTransient(Args &&...args) {
-  return allocateListNode<T>(TransientArena, std::forward<Args>(args)...);
+  return allocateListNode<T>(getTransientArena(), std::forward<Args>(args)...);
 }
 
 template <typename T>
@@ -165,16 +167,16 @@ InfoNode<T> *allocateListNode(llvm::BumpPtrAllocator &Alloc, T *Item) {
 }
 
 template <typename T> InfoNode<T> *allocateListNodeTransient(T *Item) {
-  return allocateListNode<T>(TransientArena, Item);
+  return allocateListNode<T>(getTransientArena(), Item);
 }
 
 template <typename T, typename... Args>
 InfoNode<T> *allocateListNodePersistent(Args &&...args) {
-  return allocateListNode<T>(PersistentArena, std::forward<Args>(args)...);
+  return allocateListNode<T>(getPersistentArena(), std::forward<Args>(args)...);
 }
 
 template <typename T> InfoNode<T> *allocateListNodePersistent(T *Item) {
-  return allocateListNode<T>(PersistentArena, Item);
+  return allocateListNode<T>(getPersistentArena(), Item);
 }
 
 // An abstraction for lists that are dynamically managed (inserted/removed).
@@ -584,6 +586,8 @@ struct NamespaceInfo : public Info {
   NamespaceInfo(SymbolID USR = SymbolID(), StringRef Name = StringRef(),
                 StringRef Path = StringRef());
 
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_namespace; }
+
   void merge(NamespaceInfo &&I);
 
   ScopeChildren Children;
@@ -596,6 +600,24 @@ struct SymbolInfo : public Info {
       : Info(IT, USR, Name, Path) {}
 
   SymbolInfo(const SymbolInfo &Other, llvm::BumpPtrAllocator &Arena);
+
+  // SymbolInfo is an intermediate base without its own InfoType. It covers
+  // every Info* kind that relates to symbols, which mostly just excludes
+  // Namespace in the current schema.
+  static bool classof(const Info *I) {
+    switch (I->IT) {
+    case InfoType::IT_record:
+    case InfoType::IT_function:
+    case InfoType::IT_enum:
+    case InfoType::IT_typedef:
+    case InfoType::IT_concept:
+    case InfoType::IT_variable:
+    case InfoType::IT_friend:
+      return true;
+    default:
+      return false;
+    }
+  }
 
   void merge(SymbolInfo &&I);
 
@@ -626,6 +648,9 @@ struct FriendInfo : public SymbolInfo {
              const StringRef Name = StringRef())
       : SymbolInfo(IT, USR, Name) {}
   FriendInfo(const FriendInfo &Other, llvm::BumpPtrAllocator &Arena);
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_friend; }
+
   bool mergeable(const FriendInfo &Other);
   void merge(FriendInfo &&Other);
 
@@ -640,6 +665,8 @@ struct VarInfo : public SymbolInfo {
   VarInfo() : SymbolInfo(InfoType::IT_variable) {}
   explicit VarInfo(SymbolID USR) : SymbolInfo(InfoType::IT_variable, USR) {}
 
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_variable; }
+
   void merge(VarInfo &&I);
 
   TypeInfo Type;
@@ -650,6 +677,8 @@ struct VarInfo : public SymbolInfo {
 struct FunctionInfo : public SymbolInfo {
   FunctionInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_function, USR) {}
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_function; }
 
   void merge(FunctionInfo &&I);
 
@@ -678,6 +707,8 @@ struct RecordInfo : public SymbolInfo {
              StringRef Path = StringRef());
 
   RecordInfo(const RecordInfo &Other, llvm::BumpPtrAllocator &Arena);
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_record; }
 
   void merge(RecordInfo &&I);
 
@@ -713,6 +744,8 @@ struct RecordInfo : public SymbolInfo {
 struct TypedefInfo : public SymbolInfo {
   TypedefInfo(SymbolID USR = SymbolID())
       : SymbolInfo(InfoType::IT_typedef, USR) {}
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_typedef; }
 
   void merge(TypedefInfo &&I);
 
@@ -781,6 +814,8 @@ struct EnumInfo : public SymbolInfo {
   EnumInfo() : SymbolInfo(InfoType::IT_enum) {}
   EnumInfo(SymbolID USR) : SymbolInfo(InfoType::IT_enum, USR) {}
 
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_enum; }
+
   void merge(EnumInfo &&I);
 
   // Indicates whether this enum is scoped (e.g. enum class).
@@ -797,6 +832,8 @@ struct EnumInfo : public SymbolInfo {
 struct ConceptInfo : public SymbolInfo {
   ConceptInfo() : SymbolInfo(InfoType::IT_concept) {}
   ConceptInfo(SymbolID USR) : SymbolInfo(InfoType::IT_concept, USR) {}
+
+  static bool classof(const Info *I) { return I->IT == InfoType::IT_concept; }
 
   void merge(ConceptInfo &&I);
 
@@ -841,7 +878,7 @@ struct ClangDocContext {
                   StringRef RepositoryUrl, StringRef RepositoryCodeLinePrefix,
                   StringRef Base, std::vector<std::string> UserStylesheets,
                   clang::DiagnosticsEngine &Diags, OutputFormatTy Format,
-                  bool FTimeTrace = false);
+                  bool FTimeTrace = false, bool Pretty = false);
   tooling::ExecutionContext *ECtx;
   std::string ProjectName;  // Name of project clang-doc is documenting.
   std::string OutDirectory; // Directory for outputting generated files.
@@ -869,6 +906,7 @@ struct ClangDocContext {
   int Granularity; // Granularity of ftime trace
   bool PublicOnly; // Indicates if only public declarations are documented.
   bool FTimeTrace; // Indicates if ftime trace is turned on
+  bool Pretty;     // Indicates if JSON is emitted with whitespace.
 };
 
 // Ensure arena allocated types remain safe to allocate in the arena.
