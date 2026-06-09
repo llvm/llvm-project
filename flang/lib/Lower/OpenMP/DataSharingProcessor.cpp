@@ -494,16 +494,11 @@ void DataSharingProcessor::collectPrivatizedSymbols(
   auto shouldCollectSymbol = [&](const semantics::Symbol *sym) {
     // Linear symbols are privatized by OpenMP IRBuilder, except when they are
     // enclosed within TARGET.
-    bool inTarget = false;
     mlir::Operation *currentOp =
         firOpBuilder.getInsertionBlock()->getParentOp();
-    while (currentOp) {
-      if (mlir::dyn_cast<mlir::omp::TargetOp>(currentOp)) {
-        inTarget = true;
-        break;
-      }
-      currentOp = currentOp->getParentOp();
-    }
+    bool inTarget =
+        currentOp && (mlir::isa<mlir::omp::TargetOp>(currentOp) ||
+                      currentOp->getParentOfType<mlir::omp::TargetOp>());
 
     if (sym->test(semantics::Symbol::Flag::OmpLinear) && !inTarget)
       return false;
