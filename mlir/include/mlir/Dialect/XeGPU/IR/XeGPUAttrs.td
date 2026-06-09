@@ -221,8 +221,12 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       `sg_layout` and `lane_layout` spread outer-to-inner (capped per dim by
                       `targetShape[i]`); `sg_data`, `lane_data`, and `inst_data` fill innermost-
                       first; `inst_data` is seeded from `lane_layout * lane_data` per new dim.
-                      `order` is rewritten so the expanded dims appear innermost-fastest in the
-                      original dim's slot.}],
+                      `order`, when present, is rewritten so the expanded dims appear
+                      innermost-fastest in the original dim's slot; if the input has no
+                      `order`, the result has no `order` either.
+                      Example: layout<sg_layout=[2, 16], sg_data=[1, 1]> with
+                      expandDim(1, [2, 8]) -> layout<sg_layout=[2, 2, 8], sg_data=[1, 1, 1]>
+                      (no order in, no order out).}],
                     "xegpu::DistributeLayoutAttr",
                     "expandDim",
                     (ins "int64_t": $dim, "ArrayRef<int64_t>": $targetShape)>,

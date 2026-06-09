@@ -1007,51 +1007,80 @@ bool xegpu::matchSplitDimExpansion(
 // produced by one or more consecutive dims in src whose product equals the dst
 // dim. Populates collapseDims with one group per dst dim listing the src
 // indices collapsed into it. Unit dims in dst that have no backing src dim
-// (leading or trailing) get empty groups.
+// (leading, in-between, or trailing) get empty groups; src unit dims that
+// fall past the last consumed dst dim are absorbed into the most-recent
+// non-empty group.
 // Examples:
-//   src=[8,16,32], dst=[1,4096] -> true, collapseDims=[[],[0,1,2]]
-//   src=[2,3,4],   dst=[6,4]    -> true, collapseDims=[[0,1],[2]]
-//   src=[64],      dst=[64]     -> true, collapseDims=[[0]]
+//   src=[8,16,32], dst=[1,4096]   -> true, collapseDims=[[],[0,1,2]]
+//   src=[8,16,32], dst=[4096,1]   -> true, collapseDims=[[0,1,2],[]]
+//   src=[2,3,4],   dst=[6,4]      -> true, collapseDims=[[0,1],[2]]
+//   src=[64],      dst=[64]       -> true, collapseDims=[[0]]
 bool xegpu::matchDimCollapse(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                              SmallVector<SmallVector<int64_t>> &collapseDims) {
   collapseDims.clear();
   collapseDims.resize(dst.size());
 
-  size_t dstIdx = 0;
-  size_t srcIdx = 0;
-  int64_t accumulatedSize = 1;
-  SmallVector<int64_t> currentSrcDims;
+  // Cheap precondition: src and dst must describe the same number of
+  // elements. Bails out early on mismatched shapes without walking the dims.
+  int64_t srcProd = std::accumulate(src.begin(), src.end(), int64_t{1},
+                                    std::multiplies<int64_t>());
+  int64_t dstProd = std::accumulate(dst.begin(), dst.end(), int64_t{1},
+                                    std::multiplies<int64_t>());
+  if (srcProd != dstProd)
+    return false;
 
-  // Skip any leading unit dst dims; they have no backing src dim.
+  // Step 1: validate the partition on the unit-dim-stripped (compact) shapes.
+  // Unit dims play no role in the matching decision — they only need to be
+  // placed somewhere in the final groups (handled in step 2).
+  SmallVector<int64_t> srcCompact, dstCompact;
+  for (int64_t s : src)
+    if (s != 1)
+      srcCompact.push_back(s);
+  for (int64_t d : dst)
+    if (d != 1)
+      dstCompact.push_back(d);
+
+  size_t s = 0;
+  for (int64_t need : dstCompact) {
+    int64_t acc = 1;
+    while (s < srcCompact.size() && acc < need)
+      acc *= srcCompact[s++];
+    if (acc != need)
+      return false;
+  }
+  if (s != srcCompact.size())
+    return false;
+
+  // Step 2: assign each original src index to the correct original dst group.
+  // Walk dst in original order, advancing past unit dst dims (they keep their
+  // pre-initialized empty group). Walk src in original order; non-unit src
+  // dims accumulate into the current dst group, unit src dims attach to the
+  // current group when one is open or to the most-recent non-empty group
+  // after dst is exhausted (leading unit src dims with no group yet are
+  // dropped).
+  size_t dstIdx = 0;
   while (dstIdx < dst.size() && dst[dstIdx] == 1)
     dstIdx++;
 
-  while (srcIdx < src.size()) {
-    // Trailing src unit dims are absorbed into the most-recent group, or
-    // skipped if they appear before any group has started.
+  int64_t lastNonEmpty = -1;
+  int64_t acc = 1;
+  for (size_t srcIdx = 0; srcIdx < src.size(); ++srcIdx) {
     if (dstIdx >= dst.size()) {
-      if (src[srcIdx] != 1)
-        return false;
-      if (!collapseDims.empty() && !collapseDims.back().empty())
-        collapseDims.back().push_back(srcIdx);
-      srcIdx++;
+      // dst exhausted; remaining src dims are unit (validated above) and
+      // attach to the last non-empty group, if any.
+      if (lastNonEmpty >= 0)
+        collapseDims[lastNonEmpty].push_back(srcIdx);
       continue;
     }
-    accumulatedSize *= src[srcIdx];
-    currentSrcDims.push_back(srcIdx);
-    srcIdx++;
-
-    if (accumulatedSize == dst[dstIdx]) {
-      collapseDims[dstIdx] = currentSrcDims;
-      currentSrcDims.clear();
-      accumulatedSize = 1;
-      dstIdx++;
-      // Skip any subsequent unit dst dims; they have no backing src dim.
+    acc *= src[srcIdx];
+    collapseDims[dstIdx].push_back(srcIdx);
+    lastNonEmpty = dstIdx;
+    if (acc == dst[dstIdx]) {
+      acc = 1;
+      ++dstIdx;
       while (dstIdx < dst.size() && dst[dstIdx] == 1)
-        dstIdx++;
-    } else if (accumulatedSize > dst[dstIdx]) {
-      return false;
+        ++dstIdx;
     }
   }
-  return dstIdx == dst.size() && currentSrcDims.empty();
+  return true;
 }

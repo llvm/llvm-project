@@ -647,6 +647,14 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 // Derive a new layout by expanding a single dimension `dim` into multiple
 // adjacent dimensions whose extents are given by `targetShape`.
 //
+// The chosen distribution is the unique one under which a subsequent
+// `collapseDims` over the new dims reproduces the original layout with no
+// data movement across sg / lane boundaries. That requires sg_layout and
+// lane_layout to walk the new dims outer-to-inner (so each compute unit owns
+// a contiguous run after collapse), and sg_data / lane_data / inst_data to
+// fill innermost-first (so the per-unit data tile is contiguous in the
+// fastest-varying expanded dim).
+//
 // Distribution policy on the expanded src dims (replacing `dim`):
 //   - sg_layout / lane_layout: spread outer-to-inner; each dim takes
 //     min(remaining, targetShape[i]); leftover spills into the next inner
@@ -662,6 +670,15 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 //   - order: the original dim index is replaced by the expanded dim indices
 //     in innermost-fastest order; entries past `dim` shift up by
 //     `targetShape.size() - 1`.
+//
+// Examples (only the affected dim shown; assume rank-1 input):
+//   layout<sg_layout=[8], sg_data=[512]>, expandDim(0, [8, 16, 32])
+//     -> sg_layout=[8, 1, 1], sg_data=[1, 16, 32]
+//   layout<sg_layout=[16], sg_data=[32]>, expandDim(0, [2, 8, 32])
+//     -> sg_layout=[2, 8, 1], sg_data=[1, 1, 32]   (sg_layout spills inward)
+//   layout<inst_data=[32], lane_layout=[16], lane_data=[1]>,
+//     expandDim(0, [8, 16, 32])
+//     -> inst_data=[8, 2, 2], lane_layout=[8, 2, 1], lane_data=[1, 1, 1]
 DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
                                            ArrayRef<int64_t> targetShape) {
   SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
@@ -685,16 +702,17 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   int64_t origLaneDataDim = laneData.empty() ? 1 : laneData[dim];
   int64_t origInstDataDim = instData.empty() ? 1 : instData[dim];
 
-  // Spread `total` across `targetShape` (length expCount), capped per dim by
-  // perDimCap[i]. `outerToInner` selects iteration direction (true = i=0..n-1).
-  auto spread = [&](int64_t total, ArrayRef<int64_t> perDimCap,
+  // Spread `total` across the new dims (length expCount), capped per dim by
+  // `dimSizeCap[i]`. `outerToInner` selects iteration direction
+  // (true = i=0..n-1).
+  auto spread = [&](int64_t total, ArrayRef<int64_t> dimSizeCap,
                     bool outerToInner) -> SmallVector<int64_t> {
     SmallVector<int64_t> out(expCount, 1);
     int64_t remaining = total;
     auto step = [&](int64_t i) {
       if (remaining == 1)
         return;
-      int64_t take = std::min(remaining, perDimCap[i]);
+      int64_t take = std::min(remaining, dimSizeCap[i]);
       assert(take > 0 && "expandDim distribution must not be zero");
       assert(remaining % take == 0 &&
              "expandDims must divide evenly across dims");
@@ -733,12 +751,12 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     splice(sgLayout, expSgLayout);
   }
   if (hasSgData) {
-    SmallVector<int64_t> cap(targetShape.begin(), targetShape.end());
+    SmallVector<int64_t> dimSizeCap(targetShape.begin(), targetShape.end());
     if (hasSgLayout)
       for (int64_t i = 0; i < expCount; ++i)
-        cap[i] /= expSgLayout[i];
+        dimSizeCap[i] /= expSgLayout[i];
     SmallVector<int64_t> expSgData =
-        spread(origSgDataDim, cap, /*outerToInner=*/false);
+        spread(origSgDataDim, dimSizeCap, /*outerToInner=*/false);
     splice(sgData, expSgData);
   }
 
@@ -759,11 +777,11 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     splice(laneLayout, expLaneLayout);
   }
   if (hasLaneData) {
-    SmallVector<int64_t> cap(perSgShape.begin(), perSgShape.end());
+    SmallVector<int64_t> dimSizeCap(perSgShape.begin(), perSgShape.end());
     if (hasLaneLayout)
       for (int64_t i = 0; i < expCount; ++i)
-        cap[i] /= expLaneLayout[i];
-    expLaneData = spread(origLaneDataDim, cap, /*outerToInner=*/false);
+        dimSizeCap[i] /= expLaneLayout[i];
+    expLaneData = spread(origLaneDataDim, dimSizeCap, /*outerToInner=*/false);
     splice(laneData, expLaneData);
   }
 
@@ -781,13 +799,13 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     } else {
       int64_t laneAtom = origLaneLayoutDim * origLaneDataDim;
       SmallVector<int64_t> atom(expCount, 1);
-      SmallVector<int64_t> cap(expCount, 1);
+      SmallVector<int64_t> dimSizeCap(expCount, 1);
       for (int64_t i = 0; i < expCount; ++i) {
         atom[i] = expLaneLayout[i] * expLaneData[i];
-        cap[i] = perSgShape[i] / atom[i];
+        dimSizeCap[i] = perSgShape[i] / atom[i];
       }
-      expInstData =
-          spread(origInstDataDim / laneAtom, cap, /*outerToInner=*/false);
+      expInstData = spread(origInstDataDim / laneAtom, dimSizeCap,
+                           /*outerToInner=*/false);
       for (int64_t i = 0; i < expCount; ++i)
         expInstData[i] *= atom[i];
     }
