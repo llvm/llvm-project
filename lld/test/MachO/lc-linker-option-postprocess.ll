@@ -34,12 +34,12 @@
 
 ; CHECK: <_foo1>:
 ; CHECK: <_bar1>:
+; CHECK: <_bar2>:
 ; CHECK: <_foo2>:
 ; CHECK: <_zoo2>:
-; CHECK: <_bar2>:
+; CHECK: <_bar3>:
 ; CHECK: <_foo3>:
 ; CHECK: <_zoo3>:
-; CHECK: <_bar3>:
 
 ;--- foo1.ll
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
