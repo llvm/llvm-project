@@ -614,6 +614,171 @@ entry:
   ret <2 x double> %res
 }
 
+define <4 x half> @test_rots_0_90_16x4_lhs_lane_1(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; CHECK-LE-LABEL: test_rots_0_90_16x4_lhs_lane_1:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-LE-NEXT:    fcmla v0.4h, v2.4h, v1.h[1], #0
+; CHECK-LE-NEXT:    fcmla v0.4h, v2.4h, v1.h[1], #90
+; CHECK-LE-NEXT:    ret
+entry:
+  %b.cast = bitcast <4 x half> %b to <2 x i32>
+  %b.dup = shufflevector <2 x i32> %b.cast , <2 x i32> %b.cast, <2 x i32> <i32 1, i32 1>
+  %b.res = bitcast <2 x i32> %b.dup to <4 x half>
+  %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %a, <4 x half> %b.res, <4 x half> %c)
+  %res.two = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %res, <4 x half> %b.res, <4 x half> %c)
+  ret <4 x half> %res.two
+}
+
+define <4 x half> @test_rots_180_90_16x4_lhs_lane_0(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; CHECK-LE-LABEL: test_rots_180_90_16x4_lhs_lane_0:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-LE-NEXT:    fcmla v0.4h, v2.4h, v1.h[0], #180
+; CHECK-LE-NEXT:    fcmla v0.4h, v2.4h, v1.h[0], #90
+; CHECK-LE-NEXT:    ret
+entry:
+  %b.cast = bitcast <4 x half> %b to <2 x i32>
+  %b.dup = shufflevector <2 x i32> %b.cast , <2 x i32> %b.cast, <2 x i32> <i32 0, i32 0>
+  %b.res = bitcast <2 x i32> %b.dup to <4 x half>
+  %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot180.v4f16(<4 x half> %a, <4 x half> %b.res, <4 x half> %c)
+  %res.two = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %res, <4 x half> %b.res, <4 x half> %c)
+  ret <4 x half> %res.two
+}
+
+
+define <8 x half> @test_rots_0_270_16x8_lhs_lane_3(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LE-LABEL: test_rots_0_270_16x8_lhs_lane_3:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    fcmla v0.8h, v2.8h, v1.h[3], #0
+; CHECK-LE-NEXT:    fcmla v0.8h, v2.8h, v1.h[3], #270
+; CHECK-LE-NEXT:    ret
+entry:
+  %b.cast = bitcast <8 x half> %b to <4 x i32>
+  %b.dup = shufflevector <4 x i32> %b.cast , <4 x i32> %b.cast, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %b.res = bitcast <4 x i32> %b.dup to <8 x half>
+  %res = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot0.v8f16(<8 x half> %a, <8 x half> %b.res, <8 x half> %c)
+  %res.two = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %res, <8 x half> %b.res, <8 x half> %c)
+  ret <8 x half> %res.two
+}
+
+define <8 x half> @test_rots_180_270_16x8_lhs_lane_2(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LE-LABEL: test_rots_180_270_16x8_lhs_lane_2:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    fcmla v0.8h, v2.8h, v1.h[2], #180
+; CHECK-LE-NEXT:    fcmla v0.8h, v2.8h, v1.h[2], #270
+; CHECK-LE-NEXT:    ret
+entry:
+  %b.cast = bitcast <8 x half> %b to <4 x i32>
+  %b.dup = shufflevector <4 x i32> %b.cast , <4 x i32> %b.cast, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %b.res = bitcast <4 x i32> %b.dup to <8 x half>
+  %res = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot180.v8f16(<8 x half> %a, <8 x half> %b.res, <8 x half> %c)
+  %res.two = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %res, <8 x half> %b.res, <8 x half> %c)
+  ret <8 x half> %res.two
+}
+
+define <4 x float> @test_rots_0_90_32x4_lhs_lane_0(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LE-LABEL: test_rots_0_90_32x4_lhs_lane_0:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    fcmla v0.4s, v2.4s, v1.s[0], #0
+; CHECK-LE-NEXT:    fcmla v0.4s, v2.4s, v1.s[0], #90
+; CHECK-LE-NEXT:    ret
+entry:
+  %b.cast = bitcast <4 x float> %b to <2 x i64>
+  %b.dup = shufflevector <2 x i64> %b.cast , <2 x i64> %b.cast, <2 x i32> <i32 0, i32 0>
+  %b.res = bitcast <2 x i64> %b.dup to <4 x float>
+  %res = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %a, <4 x float> %b.res, <4 x float> %c)
+  %res.two = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot90.v4f32(<4 x float> %res, <4 x float> %b.res, <4 x float> %c)
+  ret <4 x float> %res.two
+}
+
+define <4 x float> @test_rots_270_0_32x4_dup_lhs_im(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
+; CHECK-LE-LABEL: test_rots_270_0_32x4_dup_lhs_im:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    dup v1.4s, v1.s[1]
+; CHECK-LE-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #270
+; CHECK-LE-NEXT:    fcmla v0.4s, v1.4s, v2.4s, #0
+; CHECK-LE-NOT:     fcmla {{.*}}[1]
+; CHECK-LE-NEXT:    ret
+entry:
+  %b.dup = shufflevector <4 x float> %b , <4 x float> %b, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %res = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot270.v4f32(<4 x float> %a, <4 x float> %b.dup, <4 x float> %c)
+  %res.two = tail call <4 x float> @llvm.aarch64.neon.vcmla.rot0.v4f32(<4 x float> %res, <4 x float> %b.dup, <4 x float> %c)
+  ret <4 x float> %res.two
+}
+
+define <4 x half> @test_16x4_lane_1_lhs_dup_4users(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x half> %d) {
+; CHECK-LE-LABEL: test_16x4_lane_1_lhs_dup_4users:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-LE-NEXT:    fcmla v0.4h, v2.4h, v1.h[1], #0
+; CHECK-LE-NEXT:    fcmla v0.4h, v2.4h, v1.h[1], #90
+; CHECK-LE-NEXT:    fcmla v0.4h, v3.4h, v1.h[1], #180
+; CHECK-LE-NEXT:    fcmla v0.4h, v3.4h, v1.h[1], #270
+; CHECK-LE-NEXT:    ret
+entry:
+  %b.cast = bitcast <4 x half> %b to <2 x i32>
+  %b.dup = shufflevector <2 x i32> %b.cast , <2 x i32> %b.cast, <2 x i32> <i32 1, i32 1>
+  %b.res = bitcast <2 x i32> %b.dup to <4 x half>
+  %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %a, <4 x half> %b.res, <4 x half> %c)
+  %res.two = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %res, <4 x half> %b.res, <4 x half> %c)
+  %res.three = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot180.v4f16(<4 x half> %res.two, <4 x half> %b.res, <4 x half> %d)
+  %res.four = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot270.v4f16(<4 x half> %res.three, <4 x half> %b.res, <4 x half> %d)
+  ret <4 x half> %res.four
+}
+
+
+define <4 x half> @test_16x4_lane_1_lhs_diff_operands(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; CHECK-LE-LABEL: test_16x4_lane_1_lhs_diff_operands:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-LE-NEXT:    dup v3.2s, v1.s[1]
+; CHECK-LE-NEXT:    fmov d1, d0
+; CHECK-LE-NEXT:    fcmla v1.4h, v3.4h, v2.4h, #0
+; CHECK-LE-NEXT:    fcmla v1.4h, v3.4h, v0.4h, #90
+; CHECK-LE-NOT:     fcmla {{.*}}[1]
+entry:
+  %b.cast = bitcast <4 x half> %b to <2 x i32>
+  %b.dup = shufflevector <2 x i32> %b.cast , <2 x i32> %b.cast, <2 x i32> <i32 1, i32 1>
+  %b.res = bitcast <2 x i32> %b.dup to <4 x half>
+  %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %a, <4 x half> %b.res, <4 x half> %c)
+  %res.two = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot90.v4f16(<4 x half> %res, <4 x half> %b.res, <4 x half> %a)
+  ret <4 x half> %res.two
+}
+
+define <4 x half> @test_rots_0_0_16x4_lane_1_lhs(<4 x half> %a, <4 x half> %b, <4 x half> %c) {
+; CHECK-LE-LABEL: test_rots_0_0_16x4_lane_1_lhs:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-LE-NEXT:    dup v1.2s, v1.s[1]
+; CHECK-LE-NEXT:    fcmla v0.4h, v1.4h, v2.4h, #0
+; CHECK-LE-NEXT:    fcmla v0.4h, v1.4h, v2.4h, #0
+; CHECK-LE-NOT      fcmla {{.*}}[1]
+entry:
+  %b.cast = bitcast <4 x half> %b to <2 x i32>
+  %b.dup = shufflevector <2 x i32> %b.cast , <2 x i32> %b.cast, <2 x i32> <i32 1, i32 1>
+  %b.res = bitcast <2 x i32> %b.dup to <4 x half>
+  %res = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %a, <4 x half> %b.res, <4 x half> %c)
+  %res.two = tail call <4 x half> @llvm.aarch64.neon.vcmla.rot0.v4f16(<4 x half> %res, <4 x half> %b.res, <4 x half> %c)
+  ret <4 x half> %res.two
+}
+
+define <8 x half> @test_rots_90_270_16x8_lane_0_lhs(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
+; CHECK-LE-LABEL: test_rots_90_270_16x8_lane_0_lhs:
+; CHECK-LE:       // %bb.0: // %entry
+; CHECK-LE-NEXT:    dup v1.4s, v1.s[0]
+; CHECK-LE-NEXT:    fcmla v0.8h, v1.8h, v2.8h, #90
+; CHECK-LE-NEXT:    fcmla v0.8h, v1.8h, v2.8h, #270
+; CHECK-LE-NOT      fcmla {{.*}}[0], #90
+entry:
+  %b.cast = bitcast <8 x half> %b to <4 x i32>
+  %b.dup = shufflevector <4 x i32> %b.cast , <4 x i32> %b.cast, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+  %b.res = bitcast <4 x i32> %b.dup to <8 x half>
+  %res = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot90.v8f16(<8 x half> %a, <8 x half> %b.res, <8 x half> %c)
+  %res.two = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %res, <8 x half> %b.res, <8 x half> %c)
+  ret <8 x half> %res.two
+}
+
 define <4 x float> @reassoc_f32x4(<4 x float> %a, <4 x float> %b, <4 x float> %c) {
 ; CHECK-LE-SD-LABEL: reassoc_f32x4:
 ; CHECK-LE-SD:       // %bb.0: // %entry
