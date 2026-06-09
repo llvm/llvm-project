@@ -707,6 +707,7 @@ FIRToMemRef::convertArrayCoorOp(Operation *memOp, fir::ArrayCoorOp arrayCoorOp,
   Value convertedVal = *converted;
   MemRefType memRefTy = dyn_cast<MemRefType>(convertedVal.getType());
 
+  bool isRebox = firMemref.getDefiningOp<fir::ReboxOp>() != nullptr;
   bool isDescriptor = mlir::isa<fir::BaseBoxType>(firMemref.getType()) ||
                       firMemref.getDefiningOp<fir::BoxAddrOp>() != nullptr;
 
