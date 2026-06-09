@@ -1687,19 +1687,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_reduce_min:
   case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_mul:
-  case Builtin::BI__builtin_reduce_assoc_fadd:
-  case Builtin::BI__builtin_reduce_in_order_fadd:
-  case Builtin::BI__builtin_reduce_maximum:
-  case Builtin::BI__builtin_reduce_minimum:
-  case Builtin::BI__builtin_matrix_transpose:
-  case Builtin::BI__builtin_matrix_column_major_load:
-  case Builtin::BI__builtin_matrix_column_major_store:
-  case Builtin::BI__builtin_masked_load:
-  case Builtin::BI__builtin_masked_expand_load:
-  case Builtin::BI__builtin_masked_gather:
-  case Builtin::BI__builtin_masked_store:
-  case Builtin::BI__builtin_masked_compress_store:
-  case Builtin::BI__builtin_masked_scatter:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_reduce_xor: {
     mlir::Value arg = emitScalarExpr(e->getArg(0));
@@ -1722,6 +1709,20 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         getLoc(e->getExprLoc()), "vector.reduce.and", vecTy.getElementType(),
         mlir::ValueRange{arg}));
   }
+  case Builtin::BI__builtin_reduce_assoc_fadd:
+  case Builtin::BI__builtin_reduce_in_order_fadd:
+  case Builtin::BI__builtin_reduce_maximum:
+  case Builtin::BI__builtin_reduce_minimum:
+  case Builtin::BI__builtin_matrix_transpose:
+  case Builtin::BI__builtin_matrix_column_major_load:
+  case Builtin::BI__builtin_matrix_column_major_store:
+  case Builtin::BI__builtin_masked_load:
+  case Builtin::BI__builtin_masked_expand_load:
+  case Builtin::BI__builtin_masked_gather:
+  case Builtin::BI__builtin_masked_store:
+  case Builtin::BI__builtin_masked_compress_store:
+  case Builtin::BI__builtin_masked_scatter:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_isinf_sign: {
     CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
     mlir::Location loc = getLoc(e->getBeginLoc());
