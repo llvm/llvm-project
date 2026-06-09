@@ -12843,6 +12843,36 @@ bool ScalarEvolution::isImpliedCondOperandsViaShift(CmpPredicate Pred,
   return false;
 }
 
+bool ScalarEvolution::isImpliedCondOperandsViaMatchingDiff(
+    CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS, const SCEV *FoundLHS,
+    const SCEV *FoundRHS) {
+  // Only valid for equality predicates: (A == B) implies (C == D) when
+  // the SCEV difference A - B equals C - D (they check the same
+  // underlying relationship at every iteration).
+  if (!ICmpInst::isEquality(Pred))
+    return false;
+
+  // Restrict to cases involving loop recurrences - that's where this
+  // pattern arises (correlated IV comparisons). This avoids calling
+  // getMinusSCEV on arbitrary non-loop expressions.
+  if (!isa<SCEVAddRecExpr>(LHS) && !isa<SCEVAddRecExpr>(RHS) &&
+      !isa<SCEVAddRecExpr>(FoundLHS) && !isa<SCEVAddRecExpr>(FoundRHS))
+    return false;
+
+  // Compute differences. For pointer-typed operands sharing the same base,
+  // getMinusSCEV strips the common base and returns an integer SCEV.
+  // For example, {base,+,8} - (base+8*n) = {-8n,+,8}
+  const SCEV *FoundDiff = getMinusSCEV(FoundLHS, FoundRHS);
+  if (isa<SCEVCouldNotCompute>(FoundDiff))
+    return false;
+
+  const SCEV *Diff = getMinusSCEV(LHS, RHS);
+  if (isa<SCEVCouldNotCompute>(Diff))
+    return false;
+
+  return Diff == FoundDiff;
+}
+
 bool ScalarEvolution::isImpliedCondOperands(CmpPredicate Pred, const SCEV *LHS,
                                             const SCEV *RHS,
                                             const SCEV *FoundLHS,
@@ -12855,6 +12885,8 @@ bool ScalarEvolution::isImpliedCondOperands(CmpPredicate Pred, const SCEV *LHS,
          isImpliedCondOperandsViaShift(Pred, LHS, RHS, FoundLHS, FoundRHS) ||
          isImpliedCondOperandsViaAddRecStart(Pred, LHS, RHS, FoundLHS, FoundRHS,
                                              CtxI) ||
+         isImpliedCondOperandsViaMatchingDiff(Pred, LHS, RHS, FoundLHS,
+                                              FoundRHS) ||
          isImpliedCondOperandsHelper(Pred, LHS, RHS, FoundLHS, FoundRHS);
 }
 
