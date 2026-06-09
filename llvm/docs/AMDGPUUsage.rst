@@ -7214,15 +7214,6 @@ orderings (``acquire``, ``release``, ``acq_rel``, or ``seq_cst``).
 The memory model does not support the region address space which is treated as
 non-atomic.
 
-Acquire memory ordering is not meaningful on store atomic instructions and is
-treated as non-atomic.
-
-Release memory ordering is not meaningful on load atomic instructions and is
-treated as non-atomic.
-
-Acquire-release memory ordering is not meaningful on load or store atomic
-instructions and is treated as acquire and release respectively.
-
 The memory order also adds the single thread optimization constraints defined in
 table
 :ref:`amdgpu-amdhsa-memory-model-single-thread-optimization-constraints-table`.
@@ -7260,7 +7251,11 @@ table
      ============ ==============================================================
 
 The code sequences used to implement the memory model are defined in the
-following sections:
+sections listed below.
+
+**Note:** The presence of :ref:`AV metadata<amdgpu-av-metadata>` can **suppress
+cache operations** (such as write-back or invalidate) that are usually part of
+these sequences.
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
