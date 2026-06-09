@@ -275,6 +275,10 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
     AddEdge(InVPBB, Phi->getParent(), InVal);
 
+  // Don't optimize any reduction chains for now.
+  if (any_of(Phi->incoming_values(), IsaPred<VPReductionPHIRecipe>))
+    return Edges;
+
   SetVector<const VPBlockBase *> Worklist(from_range, Phi->incoming_blocks());
   while (!Worklist.empty()) {
     auto *VPBB = cast<VPBasicBlock>(Worklist.pop_back_val());
@@ -292,6 +296,17 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     // They have the same value: we can move the edges up.
     for (EdgeTy Edge : OutEdges)
       Edges.erase(Edge);
+
+    // If the value is a phi postdominated by VPBB, then look through the inner
+    // incoming values instead of propagating the phi.
+    if (auto *Phi = dyn_cast<VPPhi>(Common))
+      if (Phi->hasOneUse() && VPPDT.dominates(VPBB, Phi->getParent())) {
+        for (auto [InV, InVPBB] : Phi->incoming_values_and_blocks()) {
+          AddEdge(InVPBB, Phi->getParent(), InV);
+          Worklist.insert(InVPBB);
+        }
+        continue;
+      }
 
     // Iterate up through the post dominance frontier.
     assert(VPPDF.find(VPBB) != VPPDF.end() &&
@@ -372,6 +387,12 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     for (auto [Edge, Val] : computeBlendEdges(PhiR))
       InValEdgesMap[Val].push_back(Edge);
     auto InValEdges = InValEdgesMap.takeVector();
+
+    if (InValEdges.size() == 1) {
+      PhiR->replaceAllUsesWith(InValEdges[0].first);
+      PhiR->eraseFromParent();
+      continue;
+    }
 
     // Sort the incoming value order to match PhiR as much as possible.
     llvm::stable_sort(InValEdges, [&PhiR](auto &L, auto &R) {
