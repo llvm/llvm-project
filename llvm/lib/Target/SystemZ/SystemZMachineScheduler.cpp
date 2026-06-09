@@ -149,7 +149,7 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   // Disable latency reduction if region has many SUs relative to the
   // overall height.
   RegionPolicy.DisableLatencyHeuristic =
-    DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
+      DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
 }
 
 void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
