@@ -663,15 +663,13 @@ void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 void OMPClauseProfiler::VisitOMPInitClause(const OMPInitClause *C) {
   // Enumerate per pref-spec so the {fr, attr} grouping is part of the profile.
   Profiler->VisitStmt(C->getInteropVar());
-  unsigned NumPrefs = C->getNumPrefs();
-  Profiler->VisitInteger(NumPrefs);
-  for (unsigned I = 0; I < NumPrefs; ++I) {
-    OMPInitClause::PrefView P = C->getPref(I);
-    Profiler->VisitInteger(P.Fr ? 1
-                                : 0); // Fr may be null for an attr-only spec
+  Profiler->VisitInteger(C->hasPreferAttrs() ? 1 : 0);
+  Profiler->VisitInteger(C->varlist_size() - 1);
+  for (OMPInitClause::PrefView P : C->prefs()) {
+    Profiler->VisitInteger(P.Fr ? 1 : 0);
     if (P.Fr)
       Profiler->VisitStmt(P.Fr);
-    Profiler->VisitInteger(P.Attrs.size()); // pref-spec boundary
+    Profiler->VisitInteger(P.Attrs.size());
     for (const Expr *A : P.Attrs)
       Profiler->VisitStmt(A);
   }

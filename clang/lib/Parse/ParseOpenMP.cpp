@@ -3713,7 +3713,7 @@ bool Parser::ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs) {
   // attr() requires at least one ext-string-literal argument; an empty list is
   // not permitted by the prefer_type grammar.
   if (Tok.is(tok::r_paren)) {
-    Diag(Tok, diag::err_expected) << tok::string_literal;
+    Diag(Tok, diag::err_omp_interop_attr_not_string);
     HasError = true;
   }
   while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::r_brace) &&
@@ -3726,7 +3726,7 @@ bool Parser::ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs) {
         HasError = true;
     } else {
       HasError = true;
-      Diag(Tok, diag::err_expected) << tok::string_literal;
+      Diag(Tok, diag::err_omp_interop_attr_not_string);
       ConsumeToken();
     }
     if (Tok.is(tok::comma))
@@ -3833,7 +3833,8 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
           if (BT.consumeClose())
             HasError = true;
 
-          InteropInfo.Prefs.push_back({FrExpr, std::move(AttrExprs)});
+          if (FrExpr || !AttrExprs.empty())
+            InteropInfo.Prefs.emplace_back(FrExpr, AttrExprs);
           InteropInfo.HasPreferAttrs = true;
         } else {
           // OMP 5.1: flat foreign-runtime-id (string or int). Stored as a
@@ -3845,7 +3846,7 @@ bool Parser::ParseOMPInteropInfo(OMPInteropInfo &InteropInfo,
           PTExpr = Actions.ActOnFinishFullExpr(PTExpr.get(), Loc,
                                                /*DiscardedValue=*/false);
           if (PTExpr.isUsable()) {
-            InteropInfo.Prefs.push_back({PTExpr.get(), {}});
+            InteropInfo.Prefs.emplace_back(PTExpr.get(), llvm::SmallVector<Expr *, 2>{});
           } else {
             HasError = true;
             SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,

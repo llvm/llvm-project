@@ -296,6 +296,8 @@ class Expr;
 /// foreign-runtime-id expression and zero or more attr() ext-string-literal
 /// expressions. Fr is nullptr for attr-only specs.
 struct OMPInteropPref final {
+  OMPInteropPref(Expr *Fr, llvm::SmallVector<Expr *, 2> Attrs)
+      : Fr(Fr), Attrs(std::move(Attrs)) {}
   Expr *Fr = nullptr;
   llvm::SmallVector<Expr *, 2> Attrs;
 };

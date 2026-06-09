@@ -3799,7 +3799,7 @@ bool RecursiveASTVisitor<Derived>::VisitOMPInitClause(OMPInitClause *C) {
   TRY_TO(VisitOMPClauseList(C));
   // VisitOMPClauseList covers the interop var and the per-pref-spec fr exprs
   // (the varlist); the prefer_type attr() exprs live outside it.
-  for (Expr *A : C->getAttrs())
+  for (Expr *A : C->attrs())
     TRY_TO(TraverseStmt(A));
   return true;
 }

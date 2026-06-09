@@ -10,7 +10,7 @@ typedef void *omp_interop_t;
 static void foo() {
   omp_interop_t obj;
 
-  // Flat string list — valid before OMP 6.0, no error expected.
+  // Flat string list -- valid before OMP 6.0, no error expected.
   #pragma omp interop init(prefer_type("sycl", "level_zero", "opencl"), targetsync: obj)
 
   // fr() with a string literal.
@@ -42,13 +42,13 @@ static void foo() {
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({fr(1.5)}), targetsync: obj)
 
-  // Integer inside attr() — only string literals allowed.
-  // expected-error@+2 {{expected <string_literal>}}
+  // Integer inside attr() -- only string literals allowed.
+  // expected-error@+2 {{attr() argument must be a string literal}}
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({attr(1)}), targetsync: obj)
 
-  // Empty attr() — at least one ext-string-literal is required.
-  // expected-error@+2 {{expected <string_literal>}}
+  // Empty attr() -- at least one ext-string-literal is required.
+  // expected-error@+2 {{attr() argument must be a string literal}}
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({attr()}), targetsync: obj)
 
@@ -57,10 +57,10 @@ static void foo() {
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({attr("cuda_prop")}), targetsync: obj)
 
-  // Valid attr() with 'ompx_' prefix — no error expected.
+  // Valid attr() with 'ompx_' prefix -- no error expected.
   #pragma omp interop init(prefer_type({attr("ompx_propX")}), targetsync: obj)
 
-  // attr() argument with a comma — not permitted by the grammar.
+  // attr() argument with a comma -- not permitted by the grammar.
   // expected-error@+2 {{attr() argument 'ompx_a,b' must not contain a comma}}
   // expected-error@+1 {{expected at least one 'init', 'use', 'destroy', or 'nowait' clause for '#pragma omp interop'}}
   #pragma omp interop init(prefer_type({attr("ompx_a,b")}), targetsync: obj)

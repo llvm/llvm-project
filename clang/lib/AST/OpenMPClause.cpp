@@ -2428,37 +2428,34 @@ void OMPClausePrinter::VisitOMPHintClause(OMPHintClause *Node) {
 
 void OMPClausePrinter::VisitOMPInitClause(OMPInitClause *Node) {
   OS << "init(";
-  unsigned NumPrefs = Node->getNumPrefs();
-  if (NumPrefs > 0) {
+  if (!Node->prefs().empty()) {
     OS << "prefer_type(";
-    if (Node->getHasPreferAttrs()) {
+    if (Node->hasPreferAttrs()) {
       // OMP 6.0 brace-grouped form
-      llvm::interleaveComma(
-          llvm::seq<unsigned>(0, NumPrefs), OS, [&](unsigned I) {
-            OMPInitClause::PrefView P = Node->getPref(I);
-            OS << "{";
-            if (P.Fr) {
-              OS << "fr(";
-              P.Fr->printPretty(OS, nullptr, Policy);
-              OS << ")";
-              if (!P.Attrs.empty())
-                OS << ", ";
-            }
-            if (!P.Attrs.empty()) {
-              OS << "attr(";
-              llvm::interleaveComma(P.Attrs, OS, [&](const Expr *A) {
-                A->printPretty(OS, nullptr, Policy);
-              });
-              OS << ")";
-            }
-            OS << "}";
+      llvm::interleaveComma(Node->prefs(), OS, [&](OMPInitClause::PrefView P) {
+        OS << "{";
+        if (P.Fr) {
+          OS << "fr(";
+          P.Fr->printPretty(OS, nullptr, Policy);
+          OS << ")";
+          if (!P.Attrs.empty())
+            OS << ", ";
+        }
+        if (!P.Attrs.empty()) {
+          OS << "attr(";
+          llvm::interleaveComma(P.Attrs, OS, [&](const Expr *A) {
+            A->printPretty(OS, nullptr, Policy);
           });
+          OS << ")";
+        }
+        OS << "}";
+      });
     } else {
       llvm::interleave(
-          llvm::seq<unsigned>(0, NumPrefs), OS,
-          [&](unsigned I) {
-            if (Expr *Fr = Node->getPref(I).Fr)
-              Fr->printPretty(OS, nullptr, Policy);
+          Node->prefs(), OS,
+          [&](OMPInitClause::PrefView P) {
+            if (P.Fr)
+              P.Fr->printPretty(OS, nullptr, Policy);
           },
           ",");
     }

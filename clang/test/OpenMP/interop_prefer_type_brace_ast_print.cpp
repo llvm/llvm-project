@@ -37,7 +37,7 @@ void brace_specs() {
   #pragma omp interop init(prefer_type({fr("sycl"), attr("ompx_propX")}), \
                            targetsync: obj)
 
-  // attr() only (no fr()) — any runtime.
+  // attr() only (no fr()) -- any runtime.
   // PRINT: #pragma omp interop init(prefer_type({attr("ompx_propX", "ompx_propY")}), targetsync : obj)
   #pragma omp interop init(prefer_type({attr("ompx_propX", "ompx_propY")}), \
                            targetsync: obj)

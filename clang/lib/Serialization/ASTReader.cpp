@@ -12109,7 +12109,7 @@ void OMPClauseReader::VisitOMPInitClause(OMPInitClause *C) {
   C->setIsTargetSync(Record.readBool());
   C->setHasPreferAttrs(Record.readBool());
 
-  unsigned NumPrefs = C->getNumPrefs();
+  unsigned NumPrefs = C->varlist_size() - 1;
   SmallVector<unsigned, 4> Counts;
   SmallVector<Expr *, 8> Attrs;
   Counts.reserve(NumPrefs);

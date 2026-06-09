@@ -10997,10 +10997,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPInitClause(OMPInitClause *C) {
     return nullptr;
 
   OMPInteropInfo InteropInfo(C->getIsTarget(), C->getIsTargetSync());
-  unsigned NumPrefs = C->getNumPrefs();
-  InteropInfo.Prefs.reserve(NumPrefs);
-  for (unsigned I = 0; I < NumPrefs; ++I) {
-    OMPInitClause::PrefView P = C->getPref(I);
+  for (OMPInitClause::PrefView P : C->prefs()) {
     Expr *NewFr = nullptr;
     if (P.Fr) {
       ExprResult ER = getDerived().TransformExpr(P.Fr);
@@ -11016,9 +11013,9 @@ OMPClause *TreeTransform<Derived>::TransformOMPInitClause(OMPInitClause *C) {
         return nullptr;
       NewAttrs.push_back(ER.get());
     }
-    InteropInfo.Prefs.push_back({NewFr, std::move(NewAttrs)});
+    InteropInfo.Prefs.emplace_back(NewFr, std::move(NewAttrs));
   }
-  InteropInfo.HasPreferAttrs = C->getHasPreferAttrs();
+  InteropInfo.HasPreferAttrs = C->hasPreferAttrs();
   return getDerived().RebuildOMPInitClause(IVR.get(), InteropInfo,
                                            C->getBeginLoc(), C->getLParenLoc(),
                                            C->getVarLoc(), C->getEndLoc());

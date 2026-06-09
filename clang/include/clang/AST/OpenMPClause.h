@@ -8899,6 +8899,15 @@ class OMPInitClause final
 
   void setAttrs(ArrayRef<unsigned> Counts, ArrayRef<Expr *> Attrs);
 
+  /// Number of pref-specs in prefer_type(...).
+  unsigned getNumPrefs() const { return varlist_size() - 1; }
+
+  /// Per-pref-spec attr end offsets: entry i is the inclusive cumulative attr
+  /// count through pref-spec i (one past its last attr in the flat attr block).
+  ArrayRef<unsigned> getAttrEnds() const {
+    return getTrailingObjects<unsigned>(getNumPrefs());
+  }
+
   /// Sets the location of the interop variable.
   void setVarLoc(SourceLocation Loc) { VarLoc = Loc; }
 
@@ -8971,37 +8980,12 @@ public:
   bool getIsTargetSync() const { return IsTargetSync; }
 
   /// Returns true if OMP 6.0 {fr/attr} syntax is used.
-  bool getHasPreferAttrs() const { return HasPreferAttrs; }
-
-  /// Number of pref-specs in prefer_type(...).
-  unsigned getNumPrefs() const { return varlist_size() - 1; }
-
-  /// Total attrs across all pref-specs.
-  unsigned getNumAttrs() const { return NumAttrs; }
+  bool hasPreferAttrs() const { return HasPreferAttrs; }
 
   /// All attr() exprs across every pref-spec, in pref-spec order (flat block).
-  ArrayRef<Expr *> getAttrs() const {
+  ArrayRef<Expr *> attrs() const {
     return ArrayRef<Expr *>(getTrailingObjects<Expr *>() + varlist_size(),
                             NumAttrs);
-  }
-
-  /// Per-pref-spec attr end offsets: entry i is the inclusive cumulative attr
-  /// count through pref-spec i (one past its last attr in the flat attr block).
-  ArrayRef<unsigned> getAttrEnds() const {
-    return getTrailingObjects<unsigned>(getNumPrefs());
-  }
-
-  PrefView getPref(unsigned I) {
-    assert(I < getNumPrefs() && "pref-spec index out of range");
-    Expr **E = getTrailingObjects<Expr *>();
-    ArrayRef<unsigned> AttrEnds = getAttrEnds();
-    unsigned Start = (I == 0) ? 0 : AttrEnds[I - 1];
-    unsigned Count = AttrEnds[I] - Start;
-    return PrefView{E[1 + I],
-                    ArrayRef<Expr *>(E + varlist_size() + Start, Count)};
-  }
-  PrefView getPref(unsigned I) const {
-    return const_cast<OMPInitClause *>(this)->getPref(I);
   }
 
   child_range children() {
@@ -9021,18 +9005,19 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
-  using prefs_iterator = MutableArrayRef<Expr *>::iterator;
-  using const_prefs_iterator = ArrayRef<const Expr *>::iterator;
-  using prefs_range = llvm::iterator_range<prefs_iterator>;
-  using const_prefs_range = llvm::iterator_range<const_prefs_iterator>;
-
-  prefs_range prefs() {
-    return prefs_range(reinterpret_cast<Expr **>(std::next(varlist_begin())),
-                       reinterpret_cast<Expr **>(varlist_end()));
-  }
-
-  const_prefs_range prefs() const {
-    return const_prefs_range(const_cast<OMPInitClause *>(this)->prefs());
+  /// Returns a range of PrefView objects, one per preference-specification,
+  /// each carrying the fr() expression (or null) and the attr() exprs.
+  auto prefs() const {
+    unsigned N = getNumPrefs();
+    Expr *const *E = getTrailingObjects<Expr *>();
+    ArrayRef<unsigned> Ends = getAttrEnds();
+    return llvm::map_range(llvm::seq<unsigned>(0, N), [=](unsigned I) {
+      unsigned Start = (I == 0) ? 0 : Ends[I - 1];
+      return PrefView{const_cast<Expr *>(E[1 + I]),
+                      ArrayRef<Expr *>(const_cast<Expr **>(E) + varlist_size() +
+                                           Start,
+                                       Ends[I] - Start)};
+    });
   }
 
   static bool classof(const OMPClause *T) {
