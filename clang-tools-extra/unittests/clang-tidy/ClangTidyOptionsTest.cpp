@@ -75,6 +75,21 @@ TEST(ParseLineFilter, ValidFilter) {
   EXPECT_EQ(1000u, Options.LineFilter[2].LineRanges[0].second);
 }
 
+TEST(ClangTidyOptions, PassesLineFilter) {
+  EXPECT_TRUE(passesLineFilter({}, "a.cpp", 1));
+
+  std::vector<FileFilter> Filters = {{"file.cpp", {{10, 12}, {20, 20}}}};
+  EXPECT_TRUE(passesLineFilter(Filters, "/path/file.cpp", 10));
+  EXPECT_TRUE(passesLineFilter(Filters, "/path/file.cpp", 12));
+  EXPECT_TRUE(passesLineFilter(Filters, "/path/file.cpp", 20));
+  EXPECT_FALSE(passesLineFilter(Filters, "/path/file.cpp", 13));
+  EXPECT_FALSE(passesLineFilter(Filters, "/path/other.cpp", 10));
+
+  Filters = {{"header.h", {}}};
+  EXPECT_TRUE(passesLineFilter(Filters, "/path/header.h", 999));
+  EXPECT_FALSE(passesLineFilter(Filters, "/path/file.cpp", 1));
+}
+
 TEST(ParseConfiguration, ValidConfiguration) {
   llvm::ErrorOr<ClangTidyOptions> Options =
       parseConfiguration(llvm::MemoryBufferRef(

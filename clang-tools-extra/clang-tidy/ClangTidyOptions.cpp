@@ -10,6 +10,7 @@
 #include "ClangTidyModule.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -243,6 +244,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("UseColor", Options.UseColor);
     IO.mapOptional("SystemHeaders", Options.SystemHeaders);
     IO.mapOptional("CustomChecks", Options.CustomChecks);
+    IO.mapOptional("LineFilter", Options.LineFilter);
   }
 };
 
@@ -303,6 +305,7 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
   overrideValue(FormatStyle, Other.FormatStyle);
   overrideValue(User, Other.User);
   overrideValue(UseColor, Other.UseColor);
+  overrideValue(LineFilter, Other.LineFilter);
   mergeVectors(ExtraArgs, Other.ExtraArgs);
   mergeVectors(ExtraArgsBefore, Other.ExtraArgsBefore);
   mergeVectors(RemovedArgs, Other.RemovedArgs);
@@ -524,6 +527,22 @@ FileOptionsBaseProvider::tryReadConfigFile(StringRef Directory) {
     return OptionsSource(*ParsedOptions, std::string(ConfigFile));
   }
   return std::nullopt;
+}
+
+bool passesLineFilter(llvm::ArrayRef<FileFilter> LineFilter,
+                      llvm::StringRef FileName, unsigned LineNumber) {
+  if (LineFilter.empty())
+    return true;
+  for (const FileFilter &Filter : LineFilter) {
+    if (!FileName.ends_with(Filter.Name))
+      continue;
+    if (Filter.LineRanges.empty())
+      return true;
+    return llvm::any_of(Filter.LineRanges, [LineNumber](const auto &Range) {
+      return Range.first <= LineNumber && LineNumber <= Range.second;
+    });
+  }
+  return false;
 }
 
 /// Parses -line-filter option and stores it to the \c Options.
