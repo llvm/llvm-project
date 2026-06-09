@@ -1158,7 +1158,8 @@ public:
                     Address TempAddr) {
       LocalVD = cast<ValueDecl>(LocalVD->getCanonicalDecl());
 
-      // For BindingDecls, also store by name for remapped lookup.
+      // For BindingDecls, also store in OMPPrivatizedBindings for remapped
+      // lookup.
       if (const auto *BD = dyn_cast<BindingDecl>(LocalVD))
         CGF.OMPPrivatizedBindings.insert_or_assign(BD, TempAddr);
 
@@ -1559,7 +1560,7 @@ private:
   /// decls.
   DeclMapTy LocalDeclMap;
 
-  /// Name-based lookup map for privatized BindingDecls.
+  /// Lookup map for privatized BindingDecls.
   /// Used when BindingDecls are remapped during OpenMP outlining, since the
   /// remapped BindingDecl has a different pointer than the original.
   llvm::DenseMap<const BindingDecl *, Address> OMPPrivatizedBindings;

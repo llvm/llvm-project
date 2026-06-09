@@ -1136,12 +1136,12 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
   bool DeviceConstTarget = getLangOpts().OpenMPIsTargetDevice &&
                            isOpenMPTargetExecutionDirective(EKind);
   bool FirstprivateIsLastprivate = false;
-  llvm::DenseMap<const VarDecl *, OpenMPLastprivateModifier> Lastprivates;
+  llvm::DenseMap<const Decl *, OpenMPLastprivateModifier> Lastprivates;
   for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
-    for (const auto *D : C->varlist())
-      Lastprivates.try_emplace(
-          cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl(),
-          C->getKind());
+    for (const auto *D : C->varlist()) {
+      const auto *VD = cast<DeclRefExpr>(D)->getDecl();
+      Lastprivates.try_emplace(VD->getCanonicalDecl(), C->getKind());
+    }
   }
   llvm::DenseSet<const VarDecl *> EmittedAsFirstprivate;
   llvm::SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
@@ -1159,13 +1159,17 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
 
       if (const auto *BD = dyn_cast<BindingDecl>(OrigDecl)) {
+        // Check if this binding is also lastprivate.
+        bool ThisFirstprivateIsLastprivate =
+            Lastprivates.count(BD->getCanonicalDecl()) > 0;
         const auto *VDInit =
             cast<VarDecl>(cast<DeclRefExpr>(*InitsRef)->getDecl());
         DeclRefExpr DRE(getContext(), const_cast<BindingDecl *>(BD),
                         /*RefersToEnclosingVariableOrCapture=*/true,
                         BD->getType(), VK_LValue, (*IRef)->getExprLoc());
         LValue OriginalLVal = EmitLValue(&DRE);
-        Address OriginalAddr = OriginalLVal.getAddress();
+        Address OriginalAddr =
+            OriginalLVal.getAddress();
         // Emit private VarDecl with copy init. Remap VDInit to point to the
         // original binding so EmitDecl properly initializes VD.
         setAddrOfLocalVar(VDInit, OriginalAddr);
@@ -1176,6 +1180,8 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
         assert(IsRegistered &&
                "firstprivate var already registered as firstprivate");
         (void)IsRegistered;
+        FirstprivateIsLastprivate =
+            FirstprivateIsLastprivate || ThisFirstprivateIsLastprivate;
         ++IRef;
         ++InitsRef;
         continue;
@@ -1309,22 +1315,14 @@ void CodeGenFunction::EmitOMPPrivateClause(
     auto IRef = C->varlist_begin();
     for (const Expr *IInit : C->private_copies()) {
       const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
-      bool ShouldEmit = true;
-      if (const auto *VD = dyn_cast<VarDecl>(OrigDecl)) {
-        if (!EmittedAsPrivate.insert(VD->getCanonicalDecl()).second) {
-          ShouldEmit = false; // Already emitted.
-        }
-      }
-      if (ShouldEmit) {
-        const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
-        EmitDecl(*VD);
-        // Emit private VarDecl with copy init.
-        bool IsRegistered =
-            PrivateScope.addPrivate(OrigDecl, GetAddrOfLocalVar(VD));
-        assert(IsRegistered && "private var already registered as private");
-        // Silence the warning about unused variable.
-        (void)IsRegistered;
-      }
+      const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
+      EmitDecl(*VD);
+      // Emit private VarDecl with copy init.
+      bool IsRegistered =
+          PrivateScope.addPrivate(OrigDecl, GetAddrOfLocalVar(VD));
+      assert(IsRegistered && "private var already registered as private");
+      // Silence the warning about unused variable.
+      (void)IsRegistered;
       ++IRef;
     }
   }
@@ -1426,7 +1424,15 @@ bool CodeGenFunction::EmitOMPLastprivateClauseInit(
     for (const Expr *IInit : C->private_copies()) {
       // Keep the address of the original variable for future update at the end
       // of the loop.
-      const auto *OrigVD = cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
+      const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      // BindingDecls are handled through privatization in
+      // EmitOMPCapturedBindingLValue.
+      if (isa<BindingDecl>(OrigDecl)) {
+        ++IRef;
+        ++IDestRef;
+        continue;
+      }
+      const auto *OrigVD = cast<VarDecl>(OrigDecl);
       // Taskloops do not require additional initialization, it is done in
       // runtime support library.
       if (AlreadyEmittedVars.insert(OrigVD->getCanonicalDecl()).second) {
@@ -1515,8 +1521,15 @@ void CodeGenFunction::EmitOMPLastprivateClauseFinal(
     auto ISrcRef = C->source_exprs().begin();
     auto IDestRef = C->destination_exprs().begin();
     for (const Expr *AssignOp : C->assignment_ops()) {
-      const auto *PrivateVD =
-          cast<VarDecl>(cast<DeclRefExpr>(*IRef)->getDecl());
+      const auto *PrivateDecl = cast<DeclRefExpr>(*IRef)->getDecl();
+      // BindingDecls don't need the same lastprivate finalization as VarDecls.
+      if (isa<BindingDecl>(PrivateDecl)) {
+        ++IRef;
+        ++ISrcRef;
+        ++IDestRef;
+        continue;
+      }
+      const auto *PrivateVD = cast<VarDecl>(PrivateDecl);
       QualType Type = PrivateVD->getType();
       const auto *CanonicalVD = PrivateVD->getCanonicalDecl();
       if (AlreadyEmittedVars.insert(CanonicalVD).second) {
@@ -1594,6 +1607,17 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
   auto *IPriv = Privates.begin();
   for (const Expr *IRef : Shareds) {
     const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*IPriv)->getDecl());
+    const BindingDecl *BD = nullptr;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(IRef->IgnoreParenImpCasts())) {
+      if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl())) {
+        if (const Expr *Init = OCED->getInit()) {
+          if (const auto *InnerDRE =
+                  dyn_cast<DeclRefExpr>(Init->IgnoreParenImpCasts())) {
+            BD = dyn_cast<BindingDecl>(InnerDRE->getDecl());
+          }
+        }
+      }
+    }
     // Emit private VarDecl with reduction init.
     RedCG.emitSharedOrigLValue(*this, Count);
     RedCG.emitAggregateType(*this, Count);
@@ -1613,21 +1637,11 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     // Silence the warning about unused variable.
     (void)IsRegistered;
 
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(IRef->IgnoreParenImpCasts())) {
-      const ValueDecl *VD = DRE->getDecl();
-      if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(VD)) {
-        if (const Expr *Init = OCED->getInit()) {
-          if (const auto *InnerDRE =
-                  dyn_cast<DeclRefExpr>(Init->IgnoreParenImpCasts())) {
-            if (const auto *BD = dyn_cast<BindingDecl>(InnerDRE->getDecl())) {
-              IsRegistered = PrivateScope.addPrivate(BD, BaseAddr);
-              assert(IsRegistered &&
-                     "private binding already registered as private");
-              (void)IsRegistered;
-            }
-          }
-        }
-      }
+    // If this is a BindingDecl, also register it directly.
+    if (BD) {
+      IsRegistered = PrivateScope.addPrivate(BD, BaseAddr);
+      assert(IsRegistered && "private binding already registered as private");
+      (void)IsRegistered;
     }
     const auto *LHSVD = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());
     const auto *RHSVD = cast<VarDecl>(cast<DeclRefExpr>(*IRHS)->getDecl());
@@ -1887,8 +1901,12 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      PrivateDecls.insert(cast<VarDecl>(DRE->getDecl()));
-      CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+      // Skip BindingDecls - they don't use the same conditional lastprivate
+      // mechanism.
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
+        PrivateDecls.insert(VD);
+        CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+      } 
     }
   }
   for (const auto *C : S.getClausesOfKind<OMPLinearClause>()) {

@@ -4647,8 +4647,7 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
       if (auto *BD = dyn_cast<BindingDecl>(CapVar)) {
         // Detect structured bindings in OpenMP captured regions.
         // When a BindingDecl (e.g., 'a' from 'auto [a, b] = p')
-        // is referenced inside an OpenMP region, we currently don't support
-        // capturing them.
+        // is referenced inside an OpenMP region.
         // This is reached during capture list construction when processing the
         // OpenMP region, before expression evaluation in SemaExpr.cpp.
         // Note: The reset to DecompositionDecl in SemaExpr.cpp happens during

@@ -5661,8 +5661,15 @@ static std::string generateUniqueName(CodeGenModule &CGM, StringRef Prefix,
   llvm::raw_svector_ostream Out(Buffer);
   const clang::DeclRefExpr *DE;
   const VarDecl *D = ::getBaseDecl(Ref, DE);
-  if (!D)
-    D = cast<VarDecl>(cast<DeclRefExpr>(Ref)->getDecl());
+  if (!D) {
+    auto *DRE = cast<DeclRefExpr>(Ref);
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+      // For BindingDecls, use the decomposed declaration as the base.
+      D = cast<VarDecl>(BD->getDecomposedDecl());
+    } else {
+      D = cast<VarDecl>(DRE->getDecl());
+    }
+  }
   D = D->getCanonicalDecl();
   std::string Name = CGM.getOpenMPRuntime().getName(
       {D->isLocalVarDeclOrParm() ? D->getName() : CGM.getMangledName(D)});
