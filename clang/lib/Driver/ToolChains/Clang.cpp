@@ -3822,8 +3822,7 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
       options::OPT_fdx_rootsignature_define,
       options::OPT_fdx_rootsignature_version,
       options::OPT_fhlsl_spv_use_unknown_image_format,
-      options::OPT_fhlsl_spv_enable_maximal_reconvergence,
-      options::OPT_fhlsl_spv_preserve_interface};
+      options::OPT_fhlsl_spv_enable_maximal_reconvergence};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
@@ -9688,7 +9687,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
             options::OPT_fprofile_instr_generate,
             options::OPT_fprofile_instr_generate_EQ);
-        if (TC->getLTOMode(Args, Kind) == LTOK_None && !UsesProfileGenerate)
+        if (!Args.hasArg(options::OPT_foffload_lto_EQ,
+                         options::OPT_fno_offload_lto) &&
+            !UsesProfileGenerate)
           CmdArgs.push_back("--no-lto");
       }
     }
