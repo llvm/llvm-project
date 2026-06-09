@@ -1040,25 +1040,6 @@ void DIEBuilder::generateUnitAbbrevs(DIE *Die) {
   }
 }
 
-void DIEBuilder::syncAbbrevTableFrom(const DIEBuilder &SrcBuilder) {
-  Abbreviations.clear();
-  AbbreviationsSet.clear();
-  Abbreviations.reserve(SrcBuilder.Abbreviations.size());
-  for (const auto &SrcAbbrev : SrcBuilder.Abbreviations) {
-    auto Copy = std::make_unique<DIEAbbrev>(SrcAbbrev->getTag(),
-                                            SrcAbbrev->hasChildren());
-    for (const auto &Attr : SrcAbbrev->getData())
-      Copy->AddAttribute(Attr.getAttribute(), Attr.getForm());
-    Copy->setNumber(SrcAbbrev->getNumber());
-    FoldingSetNodeID ID;
-    Copy->Profile(ID);
-    void *InsertToken;
-    if (!AbbreviationsSet.FindNodeOrInsertPos(ID, InsertToken))
-      AbbreviationsSet.InsertNode(Copy.get(), InsertToken);
-    Abbreviations.push_back(std::move(Copy));
-  }
-}
-
 static uint64_t getHash(const DWARFUnit &DU) {
   // Before DWARF5 TU units are in their own section, so at least one offset,
   // first one, will be the same as CUs in .debug_info.dwo section

@@ -2022,11 +2022,12 @@ void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
         LegacyRangesWriter->releaseBuffer();
     LegacyRangesSectionWriter->appendToRangeBuffer(*RangesWritersContents);
   }
+  // Assign abbreviation numbers from the main DIEBuilder so all bucket DIEs
+  // share a single global .debug_abbrev table.
   for (DWARFUnit *DU : CUs) {
     DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*DU);
     MainDIEBuilder.generateUnitAbbrevs(UnitDIE);
   }
-  DIEBlder.syncAbbrevTableFrom(MainDIEBuilder);
   DIEBlder.setUnitOffsetBases(CUOffset);
   DIEBlder.finish();
   {

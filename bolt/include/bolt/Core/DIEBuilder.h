@@ -341,7 +341,6 @@ public:
   void generateAbbrevs();
   void generateUnitAbbrevs(DIE *Die);
   void assignAbbrev(DIEAbbrev &Abbrev);
-  void syncAbbrevTableFrom(const DIEBuilder &SrcBuilder);
   /// Set the base offset for CU emission, used by the incremental merge
   /// pipeline
   void setUnitOffsetBases(uint64_t Base) {
