@@ -542,42 +542,6 @@ TEST_F(SourceManagerTest, dotDotPathSpellingsKeepRequestedNamesPerFileID) {
   EXPECT_EQ(XPath, *SourceMgr.getNonBuiltinFilenameForID(XID));
 }
 
-#ifdef _WIN32
-TEST_F(SourceManagerTest, windowsSeparatorSpellingsReuseOriginalFileName) {
-  constexpr StringRef FooPath = "C:/dir/foo.h";
-  constexpr StringRef WinFooPath = "C:\\dir\\foo.h";
-
-  AddFile(FooPath);
-  AddHardLink(WinFooPath, FooPath);
-
-  auto FooOrErr = FileMgr.getFileRef(FooPath);
-  auto WinFooOrErr = FileMgr.getFileRef(WinFooPath);
-  ASSERT_TRUE(static_cast<bool>(FooOrErr));
-  ASSERT_TRUE(static_cast<bool>(WinFooOrErr));
-
-  FileEntryRef Foo = *FooOrErr;
-  FileEntryRef WinFoo = *WinFooOrErr;
-  EXPECT_FALSE(Foo.isSameRef(WinFoo));
-  EXPECT_EQ(Foo, WinFoo);
-
-  SourceMgr.overrideFileContents(Foo, llvm::MemoryBuffer::getMemBuffer("x\n"));
-
-  FileID FooID = SourceMgr.createFileID(Foo, SourceLocation(), SrcMgr::C_User);
-  FileID WinFooID =
-      SourceMgr.createFileID(WinFoo, SourceLocation(), SrcMgr::C_User);
-
-  SourceLocation FooLoc = SourceMgr.getLocForStartOfFile(FooID);
-  SourceLocation WinFooLoc = SourceMgr.getLocForStartOfFile(WinFooID);
-
-  EXPECT_EQ(FooPath, SourceMgr.getFilename(FooLoc));
-  EXPECT_EQ(FooPath, SourceMgr.getFilename(WinFooLoc));
-  EXPECT_STREQ(FooPath.data(), SourceMgr.getPresumedLoc(FooLoc).getFilename());
-  EXPECT_STREQ(FooPath.data(),
-               SourceMgr.getPresumedLoc(WinFooLoc).getFilename());
-  EXPECT_EQ(FooPath, *SourceMgr.getNonBuiltinFilenameForID(WinFooID));
-}
-#endif
-
 struct FakeExternalSLocEntrySource : ExternalSLocEntrySource {
   bool ReadSLocEntry(int ID) override { return {}; }
   int getSLocEntryID(SourceLocation::UIntTy SLocOffset) override { return 0; }

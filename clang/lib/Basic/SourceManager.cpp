@@ -63,15 +63,6 @@ static SrcMgr::ContentCache *cloneContentCache(llvm::BumpPtrAllocator &Alloc,
   return Clone;
 }
 
-static bool pathDiffersIgnoringWindowsSlashes(FileEntryRef LHS,
-                                              FileEntryRef RHS) {
-  std::string LHSPath = llvm::sys::path::convert_to_slash(LHS.getName());
-  std::string RHSPath = llvm::sys::path::convert_to_slash(RHS.getName());
-  StringRef LHSRef(LHSPath);
-  StringRef RHSRef(RHSPath);
-  return LHSRef != RHSRef;
-}
-
 // Reaching a limit of 2^31 results in a hard error. This metric allows to track
 // if particular invocation of the compiler is close to it.
 STATISTIC(MaxUsedSLocBytes, "Maximum number of bytes used by source locations "
@@ -574,13 +565,9 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   StringRef Filename = SourceFile.getName();
 
   if (IR.OrigEntry && !IR.OrigEntry->isSameRef(SourceFile)) {
-    if (pathDiffersIgnoringWindowsSlashes(*IR.OrigEntry, SourceFile)) {
-      Cache = cloneContentCache(ContentCacheAlloc, IR);
-      Cache->OrigEntry = SourceFile;
-      FileIDContentCaches.push_back(Cache);
-    } else {
-      Filename = IR.OrigEntry->getName();
-    }
+    Cache = cloneContentCache(ContentCacheAlloc, IR);
+    Cache->OrigEntry = SourceFile;
+    FileIDContentCaches.push_back(Cache);
   }
 
   // If this is a named pipe, immediately load the buffer to ensure subsequent
