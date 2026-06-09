@@ -118,4 +118,44 @@ __UINT16_TYPE__ stdc_memreverse8u16(__UINT16_TYPE__);
 __UINT32_TYPE__ stdc_memreverse8u32(__UINT32_TYPE__);
 __UINT64_TYPE__ stdc_memreverse8u64(__UINT64_TYPE__);
 
+__UINT8_TYPE__ stdc_load8_leu8(const unsigned char *);
+__UINT16_TYPE__ stdc_load8_leu16(const unsigned char *);
+__UINT32_TYPE__ stdc_load8_leu32(const unsigned char *);
+__UINT64_TYPE__ stdc_load8_leu64(const unsigned char *);
+
+__UINT8_TYPE__ stdc_load8_beu8(const unsigned char *);
+__UINT16_TYPE__ stdc_load8_beu16(const unsigned char *);
+__UINT32_TYPE__ stdc_load8_beu32(const unsigned char *);
+__UINT64_TYPE__ stdc_load8_beu64(const unsigned char *);
+
+__UINT8_TYPE__ stdc_load8_aligned_leu8(const unsigned char *);
+__UINT16_TYPE__ stdc_load8_aligned_leu16(const unsigned char *);
+__UINT32_TYPE__ stdc_load8_aligned_leu32(const unsigned char *);
+__UINT64_TYPE__ stdc_load8_aligned_leu64(const unsigned char *);
+
+__UINT8_TYPE__ stdc_load8_aligned_beu8(const unsigned char *);
+__UINT16_TYPE__ stdc_load8_aligned_beu16(const unsigned char *);
+__UINT32_TYPE__ stdc_load8_aligned_beu32(const unsigned char *);
+__UINT64_TYPE__ stdc_load8_aligned_beu64(const unsigned char *);
+
+__INT8_TYPE__ stdc_load8_les8(const unsigned char *);
+__INT16_TYPE__ stdc_load8_les16(const unsigned char *);
+__INT32_TYPE__ stdc_load8_les32(const unsigned char *);
+__INT64_TYPE__ stdc_load8_les64(const unsigned char *);
+
+__INT8_TYPE__ stdc_load8_bes8(const unsigned char *);
+__INT16_TYPE__ stdc_load8_bes16(const unsigned char *);
+__INT32_TYPE__ stdc_load8_bes32(const unsigned char *);
+__INT64_TYPE__ stdc_load8_bes64(const unsigned char *);
+
+__INT8_TYPE__ stdc_load8_aligned_les8(const unsigned char *);
+__INT16_TYPE__ stdc_load8_aligned_les16(const unsigned char *);
+__INT32_TYPE__ stdc_load8_aligned_les32(const unsigned char *);
+__INT64_TYPE__ stdc_load8_aligned_les64(const unsigned char *);
+
+__INT8_TYPE__ stdc_load8_aligned_bes8(const unsigned char *);
+__INT16_TYPE__ stdc_load8_aligned_bes16(const unsigned char *);
+__INT32_TYPE__ stdc_load8_aligned_bes32(const unsigned char *);
+__INT64_TYPE__ stdc_load8_aligned_bes64(const unsigned char *);
+
 #endif
