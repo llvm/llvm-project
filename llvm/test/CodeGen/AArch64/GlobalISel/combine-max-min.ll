@@ -4,6 +4,8 @@
 
 declare i64 @llvm.smax.i64(i64, i64)
 declare i64 @llvm.umax.i64(i64, i64)
+declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>)
 
 ; 0 - smax(a, 0 - a)  ->  smin(a, 0 - a)   (i.e. -abs(a))
 define i64 @ASubSMax(i64 %a) {
@@ -42,6 +44,19 @@ define i64 @ASubSMaxOneUse(i64 %a) {
   ret i64 %mul
 }
 
+; 0 - smax(a, 0 - a)  ->  smin(a, 0 - a)   (i.e. -abs(a))
+define <4 x i32> @ASubSMaxVec(<4 x i32> %a) {
+; CHECK-LABEL: ASubSMaxVec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg v1.4s, v0.4s
+; CHECK-NEXT:    smin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %sub1 = sub <4 x i32> zeroinitializer, %a
+  %max = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %a, <4 x i32> %sub1)
+  %sub2 = sub <4 x i32> zeroinitializer, %max
+  ret <4 x i32> %sub2
+}
+
 ; 0 - umax(a, 0 - a)  ->  umin(a, 0 - a)
 define i64 @ASubUMax(i64 %a) {
 ; CHECK-SD-LABEL: ASubUMax:
@@ -61,4 +76,17 @@ define i64 @ASubUMax(i64 %a) {
   %max = call i64 @llvm.umax.i64(i64 %a, i64 %sub1)
   %sub2 = sub i64 0, %max
   ret i64 %sub2
+}
+
+; 0 - umax(a, 0 - a)  ->  umin(a, 0 - a)
+define <4 x i32> @ASubUMaxVec(<4 x i32> %a) {
+; CHECK-LABEL: ASubUMaxVec:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    neg v1.4s, v0.4s
+; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %sub1 = sub <4 x i32> zeroinitializer, %a
+  %max = call <4 x i32> @llvm.umax.v4i32(<4 x i32> %a, <4 x i32> %sub1)
+  %sub2 = sub <4 x i32> zeroinitializer, %max
+  ret <4 x i32> %sub2
 }
