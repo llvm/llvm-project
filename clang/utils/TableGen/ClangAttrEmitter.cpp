@@ -28,11 +28,13 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -1648,6 +1650,113 @@ static void writeDeprecatedAttrValue(raw_ostream &OS, StringRef Variety) {
   OS << "    OS << \"";
 }
 
+struct PrettyPrintSpelling {
+  SmallString<64> Prefix;
+  SmallString<8> Suffix;
+};
+
+struct PrettyPrintSpellingTableEntry {
+  unsigned PrefixOffset;
+  unsigned SuffixOffset;
+  unsigned PrefixLength;
+  unsigned SuffixLength;
+};
+
+static PrettyPrintSpelling getPrettyPrintSpelling(const FlattenedSpelling &S) {
+  PrettyPrintSpelling Result;
+  StringRef Variety = S.variety();
+
+  if (Variety == "GNU") {
+    Result.Prefix = "__attribute__((";
+    Result.Suffix = "))";
+  } else if (Variety == "CXX11" || Variety == "C23") {
+    Result.Prefix = "[[";
+    Result.Suffix = "]]";
+    StringRef Namespace = S.nameSpace();
+    if (!Namespace.empty()) {
+      Result.Prefix += Namespace;
+      Result.Prefix += "::";
+    }
+  } else if (Variety == "Declspec") {
+    Result.Prefix = "__declspec(";
+    Result.Suffix = ")";
+  } else if (Variety == "Microsoft") {
+    Result.Prefix = "[";
+    Result.Suffix = "]";
+  } else if (Variety == "Keyword") {
+    Result.Prefix = "";
+    Result.Suffix = "";
+  } else if (Variety == "Pragma") {
+    Result.Prefix = "#pragma ";
+    Result.Suffix = "\n";
+    StringRef Namespace = S.nameSpace();
+    if (!Namespace.empty()) {
+      Result.Prefix += Namespace;
+      Result.Prefix += " ";
+    }
+  } else if (Variety == "HLSLAnnotation") {
+    Result.Prefix = ":";
+    Result.Suffix = "";
+  } else {
+    llvm_unreachable("Unknown attribute syntax variety!");
+  }
+
+  Result.Prefix += S.name();
+  return Result;
+}
+
+static void writePrettyPrintSpellingTable(const RecordKeeper &Records,
+                                          raw_ostream &OS) {
+  StringToOffsetTable StringTable;
+  std::vector<PrettyPrintSpellingTableEntry> Spellings;
+
+  for (const Record *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    if (!Attr->getValueAsBit("ASTNode"))
+      continue;
+    for (const FlattenedSpelling &S : GetFlattenedSpellings(*Attr)) {
+      PrettyPrintSpelling Pretty = getPrettyPrintSpelling(S);
+      if (Pretty.Prefix.size() > std::numeric_limits<uint8_t>::max() ||
+          Pretty.Suffix.size() > std::numeric_limits<uint8_t>::max())
+        PrintFatalError("Attribute pretty-print spelling exceeds uint8_t");
+      Spellings.push_back({StringTable.GetOrAddStringOffset(Pretty.Prefix),
+                           StringTable.GetOrAddStringOffset(Pretty.Suffix),
+                           static_cast<unsigned>(Pretty.Prefix.size()),
+                           static_cast<unsigned>(Pretty.Suffix.size())});
+    }
+  }
+
+  if (StringTable.size() > std::numeric_limits<uint16_t>::max())
+    PrintFatalError("Attribute spelling string table exceeds uint16_t offsets");
+
+  OS << "static constexpr char AttrPrintSpellingStrings[] =\n";
+  StringTable.EmitString(OS);
+  OS << ";\n\n"
+     << "struct AttrPrintSpellingInfo {\n"
+     << "  uint16_t PrefixOffset;\n"
+     << "  uint16_t SuffixOffset;\n"
+     << "  uint8_t PrefixLength;\n"
+     << "  uint8_t SuffixLength;\n"
+     << "};\n"
+     << "static_assert(sizeof(AttrPrintSpellingInfo) == 6);\n\n"
+     << "static constexpr AttrPrintSpellingInfo AttrPrintSpellings[] = {\n";
+  for (const PrettyPrintSpellingTableEntry &Spelling : Spellings)
+    OS << "  {" << Spelling.PrefixOffset << ", " << Spelling.SuffixOffset
+       << ", " << Spelling.PrefixLength << ", " << Spelling.SuffixLength
+       << "},\n";
+  OS << "};\n\n"
+     << "static StringRef printAttributeSpelling(raw_ostream &OS,\n"
+     << "                                        unsigned Base,\n"
+     << "                                        unsigned Count,\n"
+     << "                                        unsigned Index) {\n"
+     << "  assert(Index < Count && \"Unknown attribute spelling!\");\n"
+     << "  const auto &Info = AttrPrintSpellings[Base + Index];\n"
+     << "  OS << StringRef(AttrPrintSpellingStrings + Info.PrefixOffset,\n"
+     << "                  Info.PrefixLength);\n"
+     << "  return StringRef(AttrPrintSpellingStrings + Info.SuffixOffset,\n"
+     << "                   Info.SuffixLength);\n"
+     << "}\n\n";
+}
+
 static void writeGetSpellingFunction(const Record &R, raw_ostream &OS) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
 
@@ -1677,20 +1786,98 @@ static void writeGetSpellingFunction(const Record &R, raw_ostream &OS) {
 static void
 writePrettyPrintFunction(const Record &R,
                          const std::vector<std::unique_ptr<Argument>> &Args,
-                         raw_ostream &OS) {
+                         unsigned SpellingBase, raw_ostream &OS) {
   std::vector<FlattenedSpelling> Spellings = GetFlattenedSpellings(R);
 
   OS << "void " << R.getName() << "Attr::printPretty("
-    << "raw_ostream &OS, const PrintingPolicy &Policy) const {\n";
+     << "raw_ostream &OS, const PrintingPolicy &Policy) const {\n";
 
   if (Spellings.empty()) {
     OS << "}\n\n";
     return;
   }
 
+  auto WriteArgumentList = [&] {
+    // To avoid printing parentheses around an empty argument list or
+    // printing spurious commas at the end of an argument list, we need to
+    // determine where the last provided non-fake argument is.
+    bool FoundNonOptArg = false;
+    for (const auto &arg : reverse(Args)) {
+      if (arg->isFake())
+        continue;
+      if (FoundNonOptArg)
+        continue;
+      // FIXME: arg->getIsOmitted() == "false" means we haven't implemented
+      // any way to detect whether the argument was omitted.
+      if (!arg->isOptional() || arg->getIsOmitted() == "false") {
+        FoundNonOptArg = true;
+        continue;
+      }
+      OS << "    if (" << arg->getIsOmitted() << ")\n"
+         << "      ++TrailingOmittedArgs;\n";
+    }
+    unsigned ArgIndex = 0;
+    for (const auto &arg : Args) {
+      if (arg->isFake())
+        continue;
+      std::string IsOmitted = arg->getIsOmitted();
+      if (arg->isOptional() && IsOmitted != "false")
+        OS << "    if (!(" << IsOmitted << ")) {\n";
+      // Variadic arguments print their own leading comma.
+      if (!arg->isVariadic())
+        OS << "    DelimitAttributeArgument(OS, IsFirstArgument);\n";
+      OS << "    OS << \"";
+      arg->writeValue(OS);
+      OS << "\";\n";
+      if (arg->isOptional() && IsOmitted != "false")
+        OS << "    }\n";
+      ++ArgIndex;
+    }
+    if (ArgIndex != 0)
+      OS << "    if (!IsFirstArgument)\n"
+         << "      OS << \")\";\n";
+  };
+
   OS << "  bool IsFirstArgument = true; (void)IsFirstArgument;\n"
-     << "  unsigned TrailingOmittedArgs = 0; (void)TrailingOmittedArgs;\n"
-     << "  switch (getAttributeSpellingListIndex()) {\n"
+     << "  unsigned TrailingOmittedArgs = 0; (void)TrailingOmittedArgs;\n";
+
+  const bool HasSpecialSpelling =
+      any_of(Spellings, [](const FlattenedSpelling &S) {
+        SmallString<64> Spelling;
+        if (S.variety() == "CXX11" || S.variety() == "C23") {
+          Spelling += S.nameSpace();
+          if (!Spelling.empty())
+            Spelling += "::";
+        }
+        Spelling += S.name();
+        return Spelling == "availability" || Spelling == "deprecated" ||
+               Spelling == "gnu::deprecated";
+      });
+
+  // Most attributes print the same argument list for every spelling. Emit the
+  // spelling through a shared table and the argument list once.
+  if (!HasSpecialSpelling) {
+    const bool IsPragma = Spellings.front().variety() == "Pragma";
+    if (!all_of(Spellings, [IsPragma](const FlattenedSpelling &S) {
+          return (S.variety() == "Pragma") == IsPragma;
+        }))
+      PrintFatalError(R.getLoc(),
+                      "cannot share pragma and non-pragma argument printing");
+
+    OS << "  llvm::StringRef Suffix = printAttributeSpelling(\n"
+       << "      OS, " << SpellingBase << ", " << Spellings.size()
+       << ", getAttributeSpellingListIndex());\n";
+
+    if (IsPragma)
+      OS << "  printPrettyPragma(OS, Policy);\n";
+    else
+      WriteArgumentList();
+    OS << "  OS << Suffix;\n"
+       << "}\n\n";
+    return;
+  }
+
+  OS << "  switch (getAttributeSpellingListIndex()) {\n"
      << "  default:\n"
      << "    llvm_unreachable(\"Unknown attribute spelling!\");\n"
      << "    break;\n";
@@ -1761,44 +1948,7 @@ writePrettyPrintFunction(const Record &R,
       writeDeprecatedAttrValue(OS, Variety);
       OS << ")\";\n";
     } else {
-      // To avoid printing parentheses around an empty argument list or
-      // printing spurious commas at the end of an argument list, we need to
-      // determine where the last provided non-fake argument is.
-      bool FoundNonOptArg = false;
-      for (const auto &arg : reverse(Args)) {
-        if (arg->isFake())
-          continue;
-        if (FoundNonOptArg)
-          continue;
-        // FIXME: arg->getIsOmitted() == "false" means we haven't implemented
-        // any way to detect whether the argument was omitted.
-        if (!arg->isOptional() || arg->getIsOmitted() == "false") {
-          FoundNonOptArg = true;
-          continue;
-        }
-        OS << "    if (" << arg->getIsOmitted() << ")\n"
-           << "      ++TrailingOmittedArgs;\n";
-      }
-      unsigned ArgIndex = 0;
-      for (const auto &arg : Args) {
-        if (arg->isFake())
-          continue;
-        std::string IsOmitted = arg->getIsOmitted();
-        if (arg->isOptional() && IsOmitted != "false")
-          OS << "    if (!(" << IsOmitted << ")) {\n";
-        // Variadic arguments print their own leading comma.
-        if (!arg->isVariadic())
-          OS << "    DelimitAttributeArgument(OS, IsFirstArgument);\n";
-        OS << "    OS << \"";
-        arg->writeValue(OS);
-        OS << "\";\n";
-        if (arg->isOptional() && IsOmitted != "false")
-          OS << "    }\n";
-        ++ArgIndex;
-      }
-      if (ArgIndex != 0)
-        OS << "    if (!IsFirstArgument)\n"
-           << "      OS << \")\";\n";
+      WriteArgumentList();
     }
     OS << "    OS << \"" << Suffix << "\";\n"
        << "    break;\n"
@@ -2796,6 +2946,7 @@ static void emitFormInitializer(raw_ostream &OS,
 static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
                            bool Header) {
   ParsedAttrMap AttrMap = getParsedAttrList(Records);
+  unsigned PrettyPrintSpellingOffset = 0;
 
   // Helper to print the starting character of an attribute argument. If there
   // hasn't been an argument yet, it prints an opening parenthese; otherwise it
@@ -3326,9 +3477,10 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
       }
       OS << "  return A;\n}\n\n";
 
-      writePrettyPrintFunction(R, Args, OS);
+      writePrettyPrintFunction(R, Args, PrettyPrintSpellingOffset, OS);
       writeGetSpellingFunction(R, OS);
     }
+    PrettyPrintSpellingOffset += Spellings.size();
   }
 }
 // Emits the class definitions for attributes.
@@ -3385,6 +3537,7 @@ void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' member function definitions", OS,
                        Records);
 
+  writePrettyPrintSpellingTable(Records, OS);
   emitAttributes(Records, OS, false);
 
   // Instead of relying on virtual dispatch we just create a huge dispatch
