@@ -42,15 +42,14 @@ void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
 void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
                                                ExplodedNode *Pred,
                                                ExplodedNodeSet &Dst,
-                                               SVal elementV,
-                                               bool hasElements) {
-  ProgramStateRef state = Pred->getState();
+                                               SVal ElementV,
+                                               bool HasElements) {
+  ProgramStateRef State = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
-  ProgramStateRef nextState =
-      ExprEngine::setWhetherHasMoreIteration(state, S, SF, hasElements);
+  State = ExprEngine::setWhetherHasMoreIteration(State, S, SF, HasElements);
 
-  if (auto MV = elementV.getAs<loc::MemRegionVal>())
+  if (auto MV = ElementV.getAs<loc::MemRegionVal>())
     if (const auto *R = dyn_cast<TypedValueRegion>(MV->getRegion())) {
       // FIXME: The proper thing to do is to really iterate over the
       //  container.  We will do this with dispatch logic to the store.
@@ -59,7 +58,7 @@ void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
       assert(Loc::isLocType(T));
 
       SVal V;
-      if (hasElements) {
+      if (HasElements) {
         SymbolRef Sym = SymMgr.conjureSymbol(getCFGElementRef(), SF, T,
                                              getNumVisitedCurrent());
         V = svalBuilder.makeLoc(Sym);
@@ -67,10 +66,10 @@ void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
         V = svalBuilder.makeIntVal(0, T);
       }
 
-      nextState = nextState->bindLoc(elementV, V, SF);
+      State = State->bindLoc(ElementV, V, SF);
     }
 
-  Dst.insert(Engine.makePostStmtNode(S, nextState, Pred));
+  Dst.insert(Engine.makePostStmtNode(S, State, Pred));
 }
 
 void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
