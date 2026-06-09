@@ -282,6 +282,7 @@ public:
     CODE16,
     EABI,
     EABIHF,
+    X32,
     Android,
     Musl,
     MuslABIN32,
@@ -1144,7 +1145,8 @@ public:
   /// Tests whether the target is X32.
   bool isX32() const {
     EnvironmentType Env = getEnvironment();
-    return Env == Triple::GNUX32 || Env == Triple::MuslX32;
+    return Env == Triple::X32 || Env == Triple::GNUX32 ||
+           Env == Triple::MuslX32;
   }
 
   /// Tests whether the target is eBPF.
