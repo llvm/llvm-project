@@ -226,6 +226,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["dpp"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
+    Features["flat-global-insts"] = true;
     Features["gfx10-insts"] = true;
     Features["gfx10-3-insts"] = true;
     Features["gfx11-insts"] = true;
@@ -280,6 +281,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["dpp"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
+    Features["flat-global-insts"] = true;
     Features["gfx10-insts"] = true;
     Features["gfx10-3-insts"] = true;
     Features["gfx11-insts"] = true;
@@ -313,6 +315,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["dpp"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
+    Features["flat-global-insts"] = true;
     Features["gfx10-insts"] = true;
     Features["gfx10-3-insts"] = true;
     Features["gfx11-insts"] = true;
@@ -354,6 +357,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["dpp"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
+    Features["flat-global-insts"] = true;
     Features["gfx10-insts"] = true;
     Features["gfx10-3-insts"] = true;
     Features["gfx11-insts"] = true;
@@ -391,6 +395,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["dpp"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
+    Features["flat-global-insts"] = true;
     Features["gfx10-insts"] = true;
     Features["gfx10-3-insts"] = true;
     Features["image-insts"] = true;
@@ -427,6 +432,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["dpp"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
+    Features["flat-global-insts"] = true;
     Features["gfx10-insts"] = true;
     Features["image-insts"] = true;
     Features["s-memrealtime"] = true;
@@ -486,6 +492,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
     Features["dot7-insts"] = true;
     Features["dot10-insts"] = true;
     Features["gfx9-insts"] = true;
+    Features["flat-global-insts"] = true;
     Features["gfx8-insts"] = true;
     Features["16-bit-insts"] = true;
     Features["dpp"] = true;
@@ -532,6 +539,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   case GK_GFX900:
   case GK_GFX9_GENERIC:
     Features["gfx9-insts"] = true;
+    Features["flat-global-insts"] = true;
     Features["vmem-to-lds-load-insts"] = true;
     [[fallthrough]];
   case GK_GFX810:

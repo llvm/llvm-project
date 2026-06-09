@@ -1265,7 +1265,7 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
 /// Operands are foldable live-ins.
 static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
                                    ArrayRef<VPValue *> Operands,
-                                   const DataLayout &DL, LLVMContext &Ctx) {
+                                   const DataLayout &DL) {
   auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
   if (!OpcodeOrIID)
     return nullptr;
@@ -1282,6 +1282,7 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
     Ops.push_back(V);
   }
 
+  VPlan &Plan = *R.getParent()->getPlan();
   auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
@@ -1318,7 +1319,8 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
     }
     case VPInstruction::PtrAdd:
     case VPInstruction::WidePtrAdd:
-      return Folder.FoldGEP(IntegerType::getInt8Ty(Ctx), Ops[0], Ops[1],
+      return Folder.FoldGEP(IntegerType::getInt8Ty(Plan.getContext()), Ops[0],
+                            Ops[1],
                             cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
     // An extract of a live-in is an extract of a broadcast, so return the
     // broadcasted element.
@@ -1330,7 +1332,7 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   };
 
   if (Value *V = FoldToIRValue())
-    return R.getParent()->getPlan()->getOrAddLiveIn(V);
+    return Plan.getOrAddLiveIn(V);
   return nullptr;
 }
 
@@ -1469,8 +1471,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
   const DataLayout &DL = Plan->getDataLayout();
-  if (VPValue *V =
-          tryToFoldLiveIns(*Def, Def->operands(), DL, Plan->getContext()))
+  if (VPValue *V = tryToFoldLiveIns(*Def, Def->operands(), DL))
     return Def->replaceAllUsesWith(V);
 
   // Fold PredPHI LiveIn -> LiveIn.
@@ -2364,8 +2365,7 @@ bool VPlanTransforms::simplifyKnownEVL(VPlan &Plan, ElementCount VF,
       if (Trunc != AVL) {
         auto *TruncR = cast<VPSingleDefRecipe>(Trunc);
         const DataLayout &DL = Plan.getDataLayout();
-        if (VPValue *Folded = tryToFoldLiveIns(*TruncR, TruncR->operands(), DL,
-                                               Plan.getContext()))
+        if (VPValue *Folded = tryToFoldLiveIns(*TruncR, TruncR->operands(), DL))
           Trunc = Folded;
       }
       R.getVPSingleValue()->replaceAllUsesWith(Trunc);
