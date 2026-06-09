@@ -182,14 +182,13 @@ public:
   unsigned getDivNumBits(BinaryOperator &I, Value *Num, Value *Den,
                          unsigned MaxDivBits, bool Signed) const;
 
-  /// Expands 24 bit div or rem.
-  Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
-                        Value *Num, Value *Den,
-                        bool IsDiv, bool IsSigned) const;
+  /// Expands 23-bit div or rem.
+  Value *expandDivRem23(IRBuilder<> &Builder, BinaryOperator &I, Value *Num,
+                        Value *Den, bool IsDiv, bool IsSigned) const;
 
-  Value *expandDivRem24Impl(IRBuilder<> &Builder, BinaryOperator &I,
-                            Value *Num, Value *Den, unsigned NumBits,
-                            bool IsDiv, bool IsSigned) const;
+  Value *expandDivRem23Impl(IRBuilder<> &Builder, BinaryOperator &I, Value *Num,
+                            Value *Den, unsigned NumBits, bool IsDiv,
+                            bool IsSigned) const;
 
   /// Expands 32 bit div or rem.
   Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
@@ -1057,28 +1056,28 @@ unsigned AMDGPUCodeGenPrepareImpl::getDivNumBits(BinaryOperator &I, Value *Num,
 
 // The fractional part of a float is enough to accurately represent up to
 // a 24-bit signed integer.
-Value *AMDGPUCodeGenPrepareImpl::expandDivRem24(IRBuilder<> &Builder,
+Value *AMDGPUCodeGenPrepareImpl::expandDivRem23(IRBuilder<> &Builder,
                                                 BinaryOperator &I, Value *Num,
                                                 Value *Den, bool IsDiv,
                                                 bool IsSigned) const {
   unsigned DivBits = getDivNumBits(I, Num, Den, 24, IsSigned);
 
   // v_rcp_f32(float(X)) can have an error of 1 ulp.
-  // This can cause expandDivRem24Impl to sometimes calculate Y/X incorrectly
-  // when abs(Y)>0x800000.
+  // This can cause expandDivRem23Impl to sometimes calculate Y/X incorrectly
+  // when:
+  //   Y = (0x7FFFFF/X)*(X-0)-1
+  // There are no problems with:
+  //   Y = (0x7FFFFF/X)*(X-0)-2
+  //   Y = (0x7FFFFF/X)*(X-1)-1
   // For example,
-  // (0xbf2758/0xbf2759) erroneously produces 1 instead of 0.
-  // (0xe3170d/0x000c32) erroneously produces 4767 instead of 4766.
-  //
-  // Note that for DivBits==24 && IsSigned, Y is in the range
-  // [-0x800000:0x7FFFFF]. abs(Y) is at most
-  // 0x800000 so it cannot hit this issue.
-  if (DivBits > (IsSigned ? 24 : 23))
+  // (0x7FF6D3/0x000FE7) erroneously produces 2060 instead of 2059.
+  // (0x7FF8F5/0x007EFB) erroneously produces 258 instead of 257.
+  if (DivBits > (IsSigned ? 23 : 22))
     return nullptr;
-  return expandDivRem24Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
+  return expandDivRem23Impl(Builder, I, Num, Den, DivBits, IsDiv, IsSigned);
 }
 
-Value *AMDGPUCodeGenPrepareImpl::expandDivRem24Impl(
+Value *AMDGPUCodeGenPrepareImpl::expandDivRem23Impl(
     IRBuilder<> &Builder, BinaryOperator &I, Value *Num, Value *Den,
     unsigned DivBits, bool IsDiv, bool IsSigned) const {
   Type *I32Ty = Builder.getInt32Ty();
@@ -1255,7 +1254,7 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRem32(IRBuilder<> &Builder,
     }
   }
 
-  if (Value *Res = expandDivRem24(Builder, I, X, Y, IsDiv, IsSigned)) {
+  if (Value *Res = expandDivRem23(Builder, I, X, Y, IsDiv, IsSigned)) {
     return IsSigned ? Builder.CreateSExtOrTrunc(Res, Ty) :
                       Builder.CreateZExtOrTrunc(Res, Ty);
   }
@@ -1365,18 +1364,18 @@ Value *AMDGPUCodeGenPrepareImpl::shrinkDivRem64(IRBuilder<> &Builder,
 
   Value *Narrowed = nullptr;
   // v_rcp_f32(float(X)) can have an error of 1 ulp.
-  // This can cause expandDivRem24Impl to sometimes calculate Y/X incorrectly
-  // when abs(Y)>0x800000.
+  // This can cause expandDivRem23Impl to sometimes calculate Y/X incorrectly
+  // when:
+  //   Y = (0x7FFFFF/X)*(X-0)-1
+  // There are no problems with:
+  //   Y = (0x7FFFFF/X)*(X-0)-2
+  //   Y = (0x7FFFFF/X)*(X-1)-1
   // For example,
-  // (0xbf2758/0xbf2759) erroneously produces 1 instead of 0.
-  // (0xe3170d/0x000c32) erroneously produces 4767 instead of 4766.
-  //
-  // Note that for NumDivBits==24 && IsSigned, Y is in the range
-  // [-0x800000:0x7FFFFF]. abs(Y) is at most
-  // 0x800000 so it cannot hit this issue.
-  if (NumDivBits <= (IsSigned ? 24 : 23)) {
-    Narrowed = expandDivRem24Impl(Builder, I, Num, Den, NumDivBits,
-                                  IsDiv, IsSigned);
+  // (0x7FF6D3/0x000FE7) erroneously produces 2060 instead of 2059.
+  // (0x7FF8F5/0x007EFB) erroneously produces 258 instead of 257.
+  if (NumDivBits <= (IsSigned ? 23 : 22)) {
+    Narrowed =
+        expandDivRem23Impl(Builder, I, Num, Den, NumDivBits, IsDiv, IsSigned);
   } else if (NumDivBits <= 32) {
     Narrowed = expandDivRem32(Builder, I, Num, Den);
   }
