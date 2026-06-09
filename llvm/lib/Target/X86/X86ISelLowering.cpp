@@ -22884,14 +22884,19 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
     SDValue Res = DAG.getNode(IsSigned ? X86ISD::CVTTP2IBS : X86ISD::CVTTP2IUBS,
                               dl, VecI16VT, Src);
     return DAG.getNode(ISD::TRUNCATE, dl, DstVT, Res);
-  } else if (DstVT == MVT::v4i32 && Subtarget.hasSSE2()) {
+  } 
+  if ((DstVT == MVT::v4i32 && Subtarget.hasSSE2()) ||
+             (DstVT == MVT::v8i32 && Subtarget.hasAVX()) ||
+             (DstVT == MVT::v16i32 && Subtarget.hasAVX512())) {
     unsigned SatWidth = SatVT.getScalarSizeInBits();
     assert(SatWidth <= 32 &&
            "Expected saturation width no wider than result element");
 
     if (SatWidth == 32) {
       if (IsSigned) {
-        SDValue Cvt = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
+        // Use X86ISD::CVTTP2SI (CVTTPS2DQ/CVTTPD2DQ) which has defined
+        // out-of-range behavior: maps overflow and NaN to 0x80000000 (INT_MIN).
+        SDValue Cvt = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Src);
         APFloat PosOvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
         PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32),
                                         /*IsSigned=*/true,
@@ -22913,7 +22918,16 @@ X86TargetLowering::LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const {
                                      /*IsSigned=*/false, APFloat::rmTowardZero);
         SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
         SDValue IsOvf = DAG.getSetCC(dl, DstVT, Clamped, OvfBound, ISD::SETOGE);
-        SDValue Cvt = DAG.getNode(ISD::FP_TO_UINT, dl, DstVT, Clamped);
+        // v16i32 (512-bit, AVX512): use X86ISD::CVTTP2UI (VCVTTPS2UDQZ).
+        // v4i32 (128-bit, SSE) and v8i32 (256-bit, AVX) are already covered
+        // by CVTTPS2DQ/VCVTTPS2DQ via expandFP_TO_UINT_SSE — no AVX512VL
+        // needed.
+        SDValue Cvt;
+        if (DstVT == MVT::v16i32)
+          Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, DstVT, Clamped);
+        else
+          Cvt = expandFP_TO_UINT_SSE(DstVT.getSimpleVT(), Clamped, dl, DAG,
+                                     Subtarget);
         SDValue UintMax = DAG.getConstant(APInt::getMaxValue(32), dl, DstVT);
         return DAG.getSelect(dl, DstVT, IsOvf, UintMax, Cvt);
       }
