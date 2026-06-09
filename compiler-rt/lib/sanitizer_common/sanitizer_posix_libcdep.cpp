@@ -188,7 +188,7 @@ static uptr GetAltStackSize() {
   return SIGSTKSZ * 4;
 }
 
-void *SetAlternateSignalStack() {
+void* SetAlternateSignalStack() {
   stack_t altstack, oldstack;
   CHECK_EQ(0, sigaltstack(nullptr, &oldstack));
   // If the alternate stack is already in place, do nothing.
@@ -205,7 +205,7 @@ void *SetAlternateSignalStack() {
   return altstack.ss_sp;
 }
 
-void UnsetAlternateSignalStack(void *altstack_base) {
+void UnsetAlternateSignalStack(void* altstack_base) {
   stack_t altstack, oldstack;
   altstack.ss_sp = altstack_base;
   altstack.ss_flags = SS_DISABLE;
