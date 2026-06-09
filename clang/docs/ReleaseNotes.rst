@@ -875,6 +875,9 @@ RISC-V Support
 - Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
 - Intrinsics were added for the 'Zvabd` (RISC-V Integer Vector Absolute Difference) extension.
 - Intrinsics were added for the 'Zvzip` (Reordering Structured Data in Vector Registers) extension.
+- A new ``-mtune`` syntax was added to support processor-specific tuning feature string
+  Currently this new syntax is gated by the ``-mexperimental-mtune-syntax`` flag.
+
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
