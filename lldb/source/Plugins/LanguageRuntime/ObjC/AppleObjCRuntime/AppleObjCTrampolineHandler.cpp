@@ -618,14 +618,14 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
   // map from there.
 
   for (size_t i = 0; i != std::size(g_dispatch_functions); i++) {
-    const AppleObjCTrampolineHandler::DispatchFunction &dispatch_function = g_dispatch_functions[i];
+    const AppleObjCTrampolineHandler::DispatchFunction &dispatch_function =
+        g_dispatch_functions[i];
     ConstString name_const_str(dispatch_function.name);
     // If this might be a re-exported symbol look there first.
     const Symbol *msgSend_symbol = nullptr;
     if (dispatch_function.might_be_reexport) {
-      msgSend_symbol =
-        m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,
-                                                         eSymbolTypeReExported);
+      msgSend_symbol = m_objc_module_sp->FindFirstSymbolWithNameAndType(
+          name_const_str, eSymbolTypeReExported);
       if (msgSend_symbol) {
         while (msgSend_symbol->GetType() == eSymbolTypeReExported) {
           msgSend_symbol = msgSend_symbol->ResolveReExportedSymbol(*target);
@@ -644,7 +644,6 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
           msgSend_symbol->GetAddressRef().GetOpcodeLoadAddress(target);
       m_msgSend_map.insert(std::pair<lldb::addr_t, int>(sym_addr, i));
     }
-
   }
 
   // Similarly, cache the addresses of the "optimized dispatch" function.
