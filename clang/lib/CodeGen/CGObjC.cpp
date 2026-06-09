@@ -454,7 +454,7 @@ static std::optional<llvm::Value *> tryGenerateSpecializedMessageSend(
 }
 
 CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
-    CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper, QualType ResultType,
+    CodeGenFunction &CGF, ReturnSlotFn WithReturnValueSlot, QualType ResultType,
     Selector Sel, llvm::Value *Receiver, const CallArgList &Args,
     const ObjCInterfaceDecl *OID, const ObjCMethodDecl *Method,
     bool isClassMessage) {
@@ -463,8 +463,8 @@ CodeGen::RValue CGObjCRuntime::GeneratePossiblySpecializedMessageSend(
                                             Sel, Method, isClassMessage)) {
     return RValue::get(*SpecializedResult);
   }
-  return GenerateMessageSend(CGF, ReturnSlotWrapper, ResultType, Sel, Receiver,
-                             Args, OID, Method);
+  return GenerateMessageSend(CGF, WithReturnValueSlot, ResultType, Sel,
+                             Receiver, Args, OID, Method);
 }
 
 static void AppendFirstImpliedRuntimeProtocols(
@@ -589,7 +589,7 @@ tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
 }
 
 RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
-                                            ReturnSlotFn ReturnSlotWrapper) {
+                                            ReturnSlotFn WithReturnValueSlot) {
   // Only the lookup mechanism and first two arguments of the method
   // implementation vary between runtimes.  We can get the receiver and
   // arguments in generic code.
@@ -704,14 +704,14 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
     const ObjCMethodDecl *OMD = cast<ObjCMethodDecl>(CurFuncDecl);
     bool isCategoryImpl = isa<ObjCCategoryImplDecl>(OMD->getDeclContext());
     result = Runtime.GenerateMessageSendSuper(
-        *this, ReturnSlotWrapper, ResultType, E->getSelector(),
+        *this, WithReturnValueSlot, ResultType, E->getSelector(),
         OMD->getClassInterface(), isCategoryImpl, Receiver, isClassMessage,
         Args, method);
   } else {
     // Call runtime methods directly if we can.
     result = Runtime.GeneratePossiblySpecializedMessageSend(
-        *this, ReturnSlotWrapper, ResultType, E->getSelector(), Receiver, Args,
-        OID, method, isClassMessage);
+        *this, WithReturnValueSlot, ResultType, E->getSelector(), Receiver,
+        Args, OID, method, isClassMessage);
   }
 
   // For delegate init calls in ARC, implicitly store the result of

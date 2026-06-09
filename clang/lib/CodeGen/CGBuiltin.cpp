@@ -2929,7 +2929,7 @@ private:
 
 RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                         const CallExpr *E,
-                                        ReturnSlotFn ReturnSlotWrapper) {
+                                        ReturnSlotFn WithReturnValueSlot) {
   assert(!getContext().BuiltinInfo.isImmediate(BuiltinID) &&
          "Should not codegen for consteval builtins");
 
@@ -7134,10 +7134,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return GetUndefRValue(E->getType());
   };
 
-  if (ReturnSlotWrapper) {
+  if (WithReturnValueSlot) {
     const CGFunctionInfo &FnInfo =
         CGM.getTypes().arrangeFunctionDeclaration(FD);
-    return ReturnSlotWrapper(FnInfo, doEmitTargetBuiltin);
+    return WithReturnValueSlot(FnInfo, doEmitTargetBuiltin);
   } else
     return doEmitTargetBuiltin(ReturnValueSlot());
 }

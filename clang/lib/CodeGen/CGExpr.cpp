@@ -6451,7 +6451,7 @@ RValue CodeGenFunction::EmitRValueForField(LValue LV,
 
 RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
                                      llvm::CallBase **CallOrInvoke,
-                                     ReturnSlotFn ReturnSlotWrapper) {
+                                     ReturnSlotFn WithReturnValueSlot) {
   llvm::CallBase *CallOrInvokeStorage;
   if (!CallOrInvoke) {
     CallOrInvoke = &CallOrInvokeStorage;
@@ -6467,13 +6467,14 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
 
   // Builtins never have block type.
   if (E->getCallee()->getType()->isBlockPointerType())
-    return EmitBlockCallExpr(E, CallOrInvoke, ReturnSlotWrapper);
+    return EmitBlockCallExpr(E, CallOrInvoke, WithReturnValueSlot);
 
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(E))
-    return EmitCXXMemberCallExpr(CE, CallOrInvoke, ReturnSlotWrapper);
+    return EmitCXXMemberCallExpr(CE, CallOrInvoke, WithReturnValueSlot);
 
   if (const auto *CE = dyn_cast<CUDAKernelCallExpr>(E)) {
-    assert(!ReturnSlotWrapper && "CUDA kernel calls cannot return aggregates");
+    assert(!WithReturnValueSlot &&
+           "CUDA kernel calls cannot return aggregates");
     return EmitCUDAKernelCallExpr(CE, CallOrInvoke);
   }
 
@@ -6484,20 +6485,20 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
             dyn_cast_if_present<CXXMethodDecl>(CE->getCalleeDecl());
         MD && MD->isImplicitObjectMemberFunction())
       return EmitCXXOperatorMemberCallExpr(CE, MD, CallOrInvoke,
-                                           ReturnSlotWrapper);
+                                           WithReturnValueSlot);
 
   CGCallee callee = EmitCallee(E->getCallee());
 
   if (callee.isBuiltin())
     return EmitBuiltinExpr(callee.getBuiltinDecl(), callee.getBuiltinID(), E,
-                           ReturnSlotWrapper);
+                           WithReturnValueSlot);
 
   if (callee.isPseudoDestructor())
     return EmitCXXPseudoDestructorExpr(callee.getPseudoDestructorExpr());
 
   return EmitCall(E->getCallee()->getType(), callee, E,
                   /*Chain=*/nullptr, CallOrInvoke, /*ResolvedFnInfo=*/nullptr,
-                  ReturnSlotWrapper);
+                  WithReturnValueSlot);
 }
 
 /// Emit a CallExpr without considering whether it might be a subclass.
@@ -6918,7 +6919,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
                                  llvm::Value *Chain,
                                  llvm::CallBase **CallOrInvoke,
                                  CGFunctionInfo const **ResolvedFnInfo,
-                                 ReturnSlotFn ReturnSlotWrapper) {
+                                 ReturnSlotFn WithReturnValueSlot) {
   // Get the actual function type. The callee type will always be a pointer to
   // function type or a block pointer type.
   assert(CalleeType->isFunctionPointerType() &&
@@ -7154,8 +7155,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
     return EmitCall(FnInfo, Callee, Slot, Args, &LocalCallOrInvoke,
                     E == MustTailCall, E->getExprLoc());
   };
-  RValue Call = ReturnSlotWrapper ? ReturnSlotWrapper(FnInfo, doEmitCall)
-                                  : doEmitCall(ReturnValueSlot());
+  RValue Call = WithReturnValueSlot ? WithReturnValueSlot(FnInfo, doEmitCall)
+                                    : doEmitCall(ReturnValueSlot());
 
   if (auto *CalleeDecl = dyn_cast_or_null<FunctionDecl>(TargetDecl)) {
     if (CalleeDecl->hasAttr<RestrictAttr>() ||

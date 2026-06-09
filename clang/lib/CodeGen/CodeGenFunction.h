@@ -4599,13 +4599,13 @@ public:
                   llvm::Value *Chain = nullptr,
                   llvm::CallBase **CallOrInvoke = nullptr,
                   CGFunctionInfo const **ResolvedFnInfo = nullptr,
-                  ReturnSlotFn ReturnSlotWrapper = nullptr);
+                  ReturnSlotFn WithReturnValueSlot = nullptr);
 
   // If a Call or Invoke instruction was emitted for this CallExpr, this method
   // writes the pointer to `CallOrInvoke` if it's not null.
   RValue EmitCallExpr(const CallExpr *E,
                       llvm::CallBase **CallOrInvoke = nullptr,
-                      ReturnSlotFn ReturnSlotWrapper = nullptr);
+                      ReturnSlotFn WithReturnValueSlot = nullptr);
   RValue EmitSimpleCallExpr(const CallExpr *E,
                             llvm::CallBase **CallOrInvoke = nullptr);
   CGCallee EmitCallee(const Expr *E);
@@ -4741,13 +4741,11 @@ public:
   void callCStructCopyAssignmentOperator(LValue Dst, LValue Src);
   void callCStructMoveAssignmentOperator(LValue Dst, LValue Src);
 
-  RValue EmitCXXMemberOrOperatorCall(const CXXMethodDecl *Method,
-                                     const CGCallee &Callee, llvm::Value *This,
-                                     llvm::Value *ImplicitParam,
-                                     QualType ImplicitParamTy,
-                                     const CallExpr *E, CallArgList *RtlArgs,
-                                     llvm::CallBase **CallOrInvoke,
-                                     ReturnSlotFn ReturnSlotWrapper = nullptr);
+  RValue EmitCXXMemberOrOperatorCall(
+      const CXXMethodDecl *Method, const CGCallee &Callee, llvm::Value *This,
+      llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *E,
+      CallArgList *RtlArgs, llvm::CallBase **CallOrInvoke,
+      ReturnSlotFn WithReturnValueSlot = nullptr);
   RValue EmitCXXDestructorCall(GlobalDecl Dtor, const CGCallee &Callee,
                                llvm::Value *This, QualType ThisTy,
                                llvm::Value *ImplicitParam,
@@ -4755,23 +4753,27 @@ public:
                                llvm::CallBase **CallOrInvoke = nullptr);
   RValue EmitCXXMemberCallExpr(const CXXMemberCallExpr *E,
                                llvm::CallBase **CallOrInvoke = nullptr,
-                               ReturnSlotFn ReturnSlotWrapper = nullptr);
+                               ReturnSlotFn WithReturnValueSlot = nullptr);
   RValue EmitCXXMemberOrOperatorMemberCallExpr(
       const CallExpr *CE, const CXXMethodDecl *MD, bool HasQualifier,
       NestedNameSpecifier Qualifier, bool IsArrow, const Expr *Base,
-      llvm::CallBase **CallOrInvoke, ReturnSlotFn ReturnSlotWrapper = nullptr);
+      llvm::CallBase **CallOrInvoke,
+      ReturnSlotFn WithReturnValueSlot = nullptr);
   // Compute the object pointer.
   Address EmitCXXMemberDataPointerAddress(
       const Expr *E, Address base, llvm::Value *memberPtr,
       const MemberPointerType *memberPtrType, bool IsInBounds,
       LValueBaseInfo *BaseInfo = nullptr, TBAAAccessInfo *TBAAInfo = nullptr);
-  RValue EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
-                                      llvm::CallBase **CallOrInvoke,
-                                      ReturnSlotFn ReturnSlotWrapper = nullptr);
+  RValue
+  EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
+                               llvm::CallBase **CallOrInvoke,
+                               ReturnSlotFn WithReturnValueSlot = nullptr);
 
-  RValue EmitCXXOperatorMemberCallExpr(
-      const CXXOperatorCallExpr *E, const CXXMethodDecl *MD,
-      llvm::CallBase **CallOrInvoke, ReturnSlotFn ReturnSlotWrapper = nullptr);
+  RValue
+  EmitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
+                                const CXXMethodDecl *MD,
+                                llvm::CallBase **CallOrInvoke,
+                                ReturnSlotFn WithReturnValueSlot = nullptr);
   RValue EmitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *E);
 
   RValue EmitCUDAKernelCallExpr(const CUDAKernelCallExpr *E,
@@ -4781,7 +4783,7 @@ public:
   RValue EmitAMDGPUDevicePrintfCallExpr(const CallExpr *E);
 
   RValue EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
-                         const CallExpr *E, ReturnSlotFn ReturnSlotWrapper);
+                         const CallExpr *E, ReturnSlotFn WithReturnValueSlot);
 
   RValue emitRotate(const CallExpr *E, bool IsRotateRight);
 
@@ -4805,7 +4807,7 @@ public:
       CharUnits BufferAlignment);
 
   RValue EmitBlockCallExpr(const CallExpr *E, llvm::CallBase **CallOrInvoke,
-                           ReturnSlotFn ReturnSlotWrapper = nullptr);
+                           ReturnSlotFn WithReturnValueSlot = nullptr);
 
   /// EmitTargetBuiltinExpr - Emit the given builtin call. Returns 0 if the call
   /// is unhandled by the current target.
@@ -4998,7 +5000,7 @@ public:
                             const ObjCMethodDecl *MethodWithObjects);
   llvm::Value *EmitObjCSelectorExpr(const ObjCSelectorExpr *E);
   RValue EmitObjCMessageExpr(const ObjCMessageExpr *E,
-                             ReturnSlotFn ReturnSlotWrapper = nullptr);
+                             ReturnSlotFn WithReturnValueSlot = nullptr);
 
   /// Retrieves the default cleanup kind for an ARC cleanup.
   /// Except under -fobjc-arc-eh, ARC cleanups are normal-only.

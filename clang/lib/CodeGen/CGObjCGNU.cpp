@@ -579,16 +579,16 @@ public:
       override;
 
   RValue GenerateMessageSend(CodeGenFunction &CGF,
-                             ReturnSlotFn ReturnSlotWrapper,
+                             ReturnSlotFn WithReturnValueSlot,
                              QualType ResultType, Selector Sel,
                              llvm::Value *Receiver, const CallArgList &CallArgs,
                              const ObjCInterfaceDecl *Class,
                              const ObjCMethodDecl *Method) override;
   RValue GenerateMessageSendSuper(
-      CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper, QualType ResultType,
-      Selector Sel, const ObjCInterfaceDecl *Class, bool isCategoryImpl,
-      llvm::Value *Receiver, bool IsClassMessage, const CallArgList &CallArgs,
-      const ObjCMethodDecl *Method) override;
+      CodeGenFunction &CGF, ReturnSlotFn WithReturnValueSlot,
+      QualType ResultType, Selector Sel, const ObjCInterfaceDecl *Class,
+      bool isCategoryImpl, llvm::Value *Receiver, bool IsClassMessage,
+      const CallArgList &CallArgs, const ObjCMethodDecl *Method) override;
   llvm::Value *GetClass(CodeGenFunction &CGF,
                         const ObjCInterfaceDecl *OID) override;
   llvm::Value *GetSelector(CodeGenFunction &CGF, Selector Sel) override;
@@ -2775,7 +2775,7 @@ ConstantAddress CGObjCGNU::GenerateConstantDictionary(
 ///send to self with special delivery semantics indicating which class's method
 ///should be called.
 RValue CGObjCGNU::GenerateMessageSendSuper(
-    CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper, QualType ResultType,
+    CodeGenFunction &CGF, ReturnSlotFn WithReturnValueSlot, QualType ResultType,
     Selector Sel, const ObjCInterfaceDecl *Class, bool isCategoryImpl,
     llvm::Value *Receiver, bool IsClassMessage, const CallArgList &CallArgs,
     const ObjCMethodDecl *Method) {
@@ -2881,8 +2881,8 @@ RValue CGObjCGNU::GenerateMessageSendSuper(
     CapturedSlot = Slot;
     return CGF.EmitCall(MSI.CallInfo, callee, Slot, ActualArgs, &call);
   };
-  RValue msgRet = ReturnSlotWrapper
-                      ? ReturnSlotWrapper(MSI.CallInfo, doEmitCall)
+  RValue msgRet = WithReturnValueSlot
+                      ? WithReturnValueSlot(MSI.CallInfo, doEmitCall)
                       : doEmitCall(ReturnValueSlot());
   call->setMetadata(msgSendMDKind, node);
   return msgRet;
@@ -2890,7 +2890,7 @@ RValue CGObjCGNU::GenerateMessageSendSuper(
 
 /// Generate code for a message send expression.
 RValue CGObjCGNU::GenerateMessageSend(
-    CodeGenFunction &CGF, ReturnSlotFn ReturnSlotWrapper, QualType ResultType,
+    CodeGenFunction &CGF, ReturnSlotFn WithReturnValueSlot, QualType ResultType,
     Selector Sel, llvm::Value *Receiver, const CallArgList &CallArgs,
     const ObjCInterfaceDecl *Class, const ObjCMethodDecl *Method) {
   CGBuilderTy &Builder = CGF.Builder;
@@ -2970,7 +2970,7 @@ RValue CGObjCGNU::GenerateMessageSend(
     // If the return value isn't flagged as unused, and the result
     // type isn't in our narrow set where we assume compatibility,
     // we need a nil check to ensure a nil value.
-    if (!ReturnSlotWrapper.IsResultUnused) {
+    if (!WithReturnValueSlot.IsResultUnused) {
       if (ResultType->isVoidType()) {
         // void results are definitely okay.
       } else if (ResultType->hasPointerRepresentation() &&
@@ -3079,8 +3079,8 @@ RValue CGObjCGNU::GenerateMessageSend(
     CapturedSlot = Slot;
     return CGF.EmitCall(MSI.CallInfo, callee, Slot, ActualArgs, &call);
   };
-  RValue msgRet = ReturnSlotWrapper
-                      ? ReturnSlotWrapper(MSI.CallInfo, doEmitCall)
+  RValue msgRet = WithReturnValueSlot
+                      ? WithReturnValueSlot(MSI.CallInfo, doEmitCall)
                       : doEmitCall(ReturnValueSlot());
   if (!isDirect)
     call->setMetadata(msgSendMDKind, node);
