@@ -4,20 +4,28 @@
 namespace test_noop {
 
 // N=0: no bytes touched.
-constexpr unsigned char test_n0() {
+constexpr bool test_n0() {
   unsigned char buf[4] = {0x12, 0x34, 0x56, 0x78};
   __builtin_stdc_memreverse8(0, buf);
-  return buf[0];
+  return buf[0] == 0x12;
 }
-static_assert(test_n0() == 0x12, "");
+static_assert(test_n0(), "");
 
 // N=1: single byte is its own reverse.
-constexpr unsigned char test_n1() {
+constexpr bool test_n1() {
   unsigned char buf[4] = {0x12, 0x34, 0x56, 0x78};
   __builtin_stdc_memreverse8(1, buf);
-  return buf[0];
+  return buf[0] == 0x12;
 }
-static_assert(test_n1() == 0x12, "");
+static_assert(test_n1(), "");
+
+// N=0 with a one-past-the-end pointer: valid since no bytes are accessed.
+constexpr bool test_n0_one_past_end() {
+  unsigned char buf[2] = {0x12, 0x34};
+  __builtin_stdc_memreverse8(0, buf + 2);
+  return buf[0] == 0x12 && buf[1] == 0x34;
+}
+static_assert(test_n0_one_past_end(), "");
 
 } // namespace test_noop
 

@@ -2062,7 +2062,7 @@ static bool isOneByteCharacterType(QualType T) {
 static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
                                              const InterpFrame *Frame,
                                              const CallExpr *Call) {
-  Pointer Ptr = S.Stk.pop<Pointer>().expand();
+  Pointer Ptr = S.Stk.pop<Pointer>();
 
   uint64_t NElems;
   if (!popToUInt64(S, Call->getArg(0), NElems))
@@ -2074,25 +2074,15 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
     return false;
   }
 
-  if (Ptr.isDummy() || !Ptr.isBlockPointer() || !Ptr.isLive())
+  if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
     return false;
 
-  QualType ElemTy = Ptr.getFieldDesc()->isArray()
-                        ? Ptr.getFieldDesc()->getElemQualType()
-                        : Ptr.getFieldDesc()->getType();
-  if (ElemTy->isIncompleteType()) {
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_ltor_incomplete_type)
-        << ElemTy;
-    return false;
-  }
-  if (!isOneByteCharacterType(ElemTy)) {
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_memchr_unsupported)
-        << S.getASTContext().BuiltinInfo.getQuotedName(Call->getBuiltinCallee())
-        << ElemTy;
-    return false;
-  }
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  bool IsArray = Desc->isArray();
+  QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
+
+  if (IsArray)
+    Ptr = Ptr.expand();
 
   size_t BaseIdx = Ptr.getIndex();
   size_t ArraySize = Ptr.getNumElems();
@@ -2107,6 +2097,20 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
   if (NElems <= 1)
     return true;
 
+  if (ElemTy->isIncompleteType()) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_ltor_incomplete_type)
+        << ElemTy;
+    return false;
+  }
+  if (!isOneByteCharacterType(ElemTy)) {
+    S.FFDiag(S.Current->getSource(OpPC),
+             diag::note_constexpr_memchr_unsupported)
+        << S.getASTContext().BuiltinInfo.getQuotedName(Call->getBuiltinCallee())
+        << ElemTy;
+    return false;
+  }
+
   PrimType ElemT = *S.getContext().classify(ElemTy);
 
   for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
@@ -2117,13 +2121,10 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
         !CheckLoad(S, OpPC, HiPtr, AK_Read))
       return false;
 
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      T LoVal = LoPtr.deref<T>();
-      LoPtr.deref<T>() = HiPtr.deref<T>();
-      HiPtr.deref<T>() = LoVal;
-      LoPtr.initialize();
-      HiPtr.initialize();
-    });
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { std::swap(LoPtr.deref<T>(), HiPtr.deref<T>()); });
+    LoPtr.initialize();
+    HiPtr.initialize();
   }
   return true;
 }
