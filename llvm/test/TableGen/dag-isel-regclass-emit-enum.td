@@ -23,7 +23,7 @@ def GPRAbove127 : RegisterClass<"TestTarget", [i32], 32,
 
 // CHECK:      OPC_CheckOpcode, TARGET_VAL(ISD::ADD),
 // CHECK-NEXT: OPC_RecordChild0, // #0 = $src
-// CHECK-NEXT: OPC_Scope /*2 children */, 11, // ->17
+// CHECK-NEXT: OPC_Scope2 /*2 children */, 11, // ->17
 // CHECK-NEXT: OPC_CheckChild1Integer, 0,
 // CHECK-NEXT: OPC_EmitIntegerI32, 0|128,1/*128*/, // #1 = TestNamespace::GPRAbove127RegClassID
 // CHECK-NEXT: OPC_MorphNodeTo1None, TARGET_VAL(TargetOpcode::COPY_TO_REGCLASS),
