@@ -58,6 +58,7 @@ def InstFormatQC_EB         : InstFormat<24>;
 def InstFormatQC_EJ         : InstFormat<25>;
 def InstFormatQC_ES         : InstFormat<26>;
 def InstFormatNDS_BRANCH_10 : InstFormat<27>;
+def InstFormatSMT           : InstFormat<28>;
 def InstFormatOther         : InstFormat<31>;
 
 

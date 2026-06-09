@@ -162,6 +162,16 @@ void RISCVInstPrinter::printFenceArg(const MCInst *MI, unsigned OpNo,
     O << "0";
 }
 
+void RISCVInstPrinter::printSMTVType(const MCInst *MI, unsigned OpNo,
+                                     const MCSubtargetInfo &STI,
+                                     raw_ostream &O) {
+  auto VType =
+      static_cast<XSMTVTypeMode::SMTVTypeMode>(MI->getOperand(OpNo).getImm());
+  assert(XSMTVTypeMode::isValidSMTVTypeMode(VType) &&
+         "SpacemiT AI only support [i4|i8|fp16|bfp16] Mode");
+  O << ", " << XSMTVTypeMode::SMTVTypeModeToString(VType);
+}
+
 void RISCVInstPrinter::printFRMArg(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   auto FRMArg =

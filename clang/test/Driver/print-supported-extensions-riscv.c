@@ -228,6 +228,7 @@
 // CHECK-NEXT:     xsifivecdiscarddlone 1.0       'XSiFivecdiscarddlone' (SiFive sf.cdiscard.d.l1 Instruction)
 // CHECK-NEXT:     xsifivecflushdlone   1.0       'XSiFivecflushdlone' (SiFive sf.cflush.d.l1 Instruction)
 // CHECK-NEXT:     xsmtvdot             1.0       'XSMTVDot' (SpacemiT Vector Dot Product Extension)
+// CHECK-NEXT:     xsmtvdotii           1.0       'XSMTVDotII' (SpacemiT Vector Dot Product 2.0 Extension)
 // CHECK-NEXT:     xtheadba             1.0       'XTHeadBa' (T-Head address calculation instructions)
 // CHECK-NEXT:     xtheadbb             1.0       'XTHeadBb' (T-Head basic bit-manipulation instructions)
 // CHECK-NEXT:     xtheadbs             1.0       'XTHeadBs' (T-Head single-bit instructions)

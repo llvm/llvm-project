@@ -867,7 +867,11 @@ def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::V0, 32>";
 }
 
+def VRV0V1 : VReg<!listconcat(VM1VTs, VMaskVTs), (add V0, V1), 1>;
+
 def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
+
+def VRNoV0V1 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0, V1), 1>;
 
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
                              (sequence "V%uM2", 6, 0, 2)), 2> {

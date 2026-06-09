@@ -144,6 +144,8 @@ enum OperandType : unsigned {
   OPERAND_BCC_OPCODE,
 
   OPERAND_VMASK,
+  OPERAND_SMTVType,
+  OPERAND_SMTI8,
 };
 } // namespace RISCVOp
 
@@ -552,6 +554,66 @@ inline static bool isValidRoundingMode(unsigned Mode) {
   }
 }
 } // namespace RISCVFPRndMode
+
+namespace XSMTVTypeMode {
+enum SMTVTypeMode {
+  // Define the different SMT VType modes here
+  SMT_FP16 = 0,
+  SMT_BFP16 = 1,
+  SMT_I4 = 2,
+  SMT_I8 = 3,
+  Invalid
+};
+
+inline static StringRef SMTVTypeModeToString(SMTVTypeMode TypeMode) {
+  switch (TypeMode) {
+  default:
+    llvm_unreachable("Unknown SpacemiT AI VType's mode");
+  case XSMTVTypeMode::SMT_BFP16:
+    return "bfp16";
+  case XSMTVTypeMode::SMT_FP16:
+    return "fp16";
+  case XSMTVTypeMode::SMT_I4:
+    return "i4";
+  case XSMTVTypeMode::SMT_I8:
+    return "i8";
+  }
+}
+
+inline static SMTVTypeMode stringToSMTVTypeMode(StringRef Str) {
+  return StringSwitch<SMTVTypeMode>(Str)
+      .Case("bfp16", XSMTVTypeMode::SMT_BFP16)
+      .Case("fp16", XSMTVTypeMode::SMT_FP16)
+      .Case("i4", XSMTVTypeMode::SMT_I4)
+      .Case("i8", XSMTVTypeMode::SMT_I8)
+      .Default(XSMTVTypeMode::Invalid);
+}
+
+inline static bool isValidSMTVTypeInt(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case XSMTVTypeMode::SMT_I4:
+  case XSMTVTypeMode::SMT_I8:
+    return true;
+  }
+}
+
+inline static bool isValidSMTVTypeFP(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case XSMTVTypeMode::SMT_BFP16:
+  case XSMTVTypeMode::SMT_FP16:
+    return true;
+  }
+}
+
+inline static bool isValidSMTVTypeMode(unsigned Mode) {
+  return isValidSMTVTypeInt(Mode) || isValidSMTVTypeFP(Mode);
+}
+
+} // namespace XSMTVTypeMode
 
 namespace RISCVVXRndMode {
 enum RoundingMode {

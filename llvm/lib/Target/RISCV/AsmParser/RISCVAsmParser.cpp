@@ -231,6 +231,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   template <bool IsRV64Inst> ParseStatus parseGPRPair(OperandVector &Operands);
   ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFRMArg(OperandVector &Operands);
+  ParseStatus parseSMTVType(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
   ParseStatus parseRegList(OperandVector &Operands, bool MustIncludeS0 = false);
   ParseStatus parseRegListS0(OperandVector &Operands) {
@@ -305,6 +306,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   std::unique_ptr<RISCVOperand> defaultMaskRegOp() const;
   std::unique_ptr<RISCVOperand> defaultFRMArgOp() const;
   std::unique_ptr<RISCVOperand> defaultFRMArgLegacyOp() const;
+  std::unique_ptr<RISCVOperand> defaultSMTVType();
 
 public:
   enum RISCVMatchResultTy : unsigned {
@@ -363,6 +365,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     FPImmediate,
     SystemRegister,
     VType,
+    SMTVType,
     FRM,
     Fence,
     RegList,
@@ -396,6 +399,10 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     unsigned Val;
   };
 
+  struct SMTVTypeOp {
+    XSMTVTypeMode::SMTVTypeMode SMTVType;
+  };
+
   struct FRMOp {
     RISCVFPRndMode::RoundingMode FRM;
   };
@@ -425,6 +432,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
     FPImmOp FPImm;
     SysRegOp SysReg;
     VTypeOp VType;
+    SMTVTypeOp SMTVType;
     FRMOp FRM;
     FenceOp Fence;
     RegListOp RegList;
@@ -457,6 +465,9 @@ public:
       break;
     case KindTy::VType:
       VType = o.VType;
+      break;
+    case KindTy::SMTVType:
+      SMTVType = o.SMTVType;
       break;
     case KindTy::FRM:
       FRM = o.FRM;
@@ -682,6 +693,22 @@ public:
   bool isFRMArg() const { return Kind == KindTy::FRM; }
   bool isFRMArgLegacy() const { return Kind == KindTy::FRM; }
   bool isRTZArg() const { return isFRMArg() && FRM.FRM == RISCVFPRndMode::RTZ; }
+
+  // Return true if the operand is a SpacemiT AI Inst support i4/i8
+  bool isSMTVType0() const {
+    return Kind == KindTy::SMTVType &&
+           XSMTVTypeMode::isValidSMTVTypeInt(SMTVType.SMTVType);
+  }
+
+  // Return true if the operand is a SpacemiT AI Inst support bfp16/fp16
+  bool isSMTVType1() const {
+    return Kind == KindTy::SMTVType &&
+           XSMTVTypeMode::isValidSMTVTypeFP(SMTVType.SMTVType);
+  }
+
+  bool isSMTI8() const {
+    return isSMTVType0() && SMTVType.SMTVType == XSMTVTypeMode::SMT_I8;
+  }
 
   /// Return true if the operand is a valid fli.s floating-point immediate.
   bool isLoadFPImm() const {
@@ -1099,6 +1126,11 @@ public:
     return Fence.Val;
   }
 
+  XSMTVTypeMode::SMTVTypeMode getSMTVType() const {
+    assert(Kind == KindTy::SMTVType && "Invalid type access!");
+    return SMTVType.SMTVType;
+  }
+
   void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     auto RegName = [](MCRegister Reg) {
       if (Reg)
@@ -1134,6 +1166,11 @@ public:
     case KindTy::FRM:
       OS << "<frm: ";
       OS << roundingModeToString(getFRM());
+      OS << '>';
+      break;
+    case KindTy::SMTVType:
+      OS << "<smt: ";
+      SMTVTypeModeToString(getSMTVType());
       OS << '>';
       break;
     case KindTy::Fence:
@@ -1209,6 +1246,15 @@ public:
   createFRMArg(RISCVFPRndMode::RoundingMode FRM, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::FRM);
     Op->FRM.FRM = FRM;
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<RISCVOperand>
+  createSMTVType(XSMTVTypeMode::SMTVTypeMode VType, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::SMTVType);
+    Op->SMTVType.SMTVType = VType;
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -1345,6 +1391,11 @@ public:
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getFRM()));
   }
+
+  void addSMTVTypeOperand(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getSMTVType()));
+  }
 };
 } // end anonymous namespace.
 
@@ -1379,6 +1430,8 @@ static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
   unsigned RegClassID;
   if (Kind == MCK_VRM2)
     RegClassID = RISCV::VRM2RegClassID;
+  else if (Kind == MCK_VRM2NoV0)
+    RegClassID = RISCV::VRM2NoV0RegClassID;
   else if (Kind == MCK_VRM4)
     RegClassID = RISCV::VRM4RegClassID;
   else if (Kind == MCK_VRM8)
@@ -1453,7 +1506,8 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
   // As the parser couldn't differentiate an VRM2/VRM4/VRM8 from an VR, coerce
   // the register from VR to VRM2/VRM4/VRM8 if necessary.
-  if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
+  if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM2NoV0 ||
+                  Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
     Op.Reg.Reg = convertVRToVRMx(*getContext().getRegisterInfo(), Reg, Kind);
     if (!Op.Reg.Reg)
       return Match_InvalidOperand;
@@ -2734,6 +2788,26 @@ ParseStatus RISCVAsmParser::parseGPRPair(OperandVector &Operands,
   return ParseStatus::Success;
 }
 
+ParseStatus RISCVAsmParser::parseSMTVType(OperandVector &Operands) {
+  if (getLexer().isNot(AsmToken::Identifier))
+    return TokError("operand must be a valid SpacemiT VType mnemonic");
+
+  StringRef Str = getLexer().getTok().getIdentifier();
+  XSMTVTypeMode::SMTVTypeMode VType = XSMTVTypeMode::stringToSMTVTypeMode(Str);
+
+  if (!isValidSMTVTypeMode(VType))
+    return TokError("SpacemiT AI only support [i4|i8|bfp16|fp16] Mode");
+
+  // bfp16 and fp16 has the same encoding in SpacemiT AI
+  // In AsmParse, need conside bfp16 as fp16
+  if (VType == XSMTVTypeMode::SMTVTypeMode::SMT_BFP16) {
+    VType = XSMTVTypeMode::SMTVTypeMode::SMT_FP16;
+  }
+  Operands.push_back(RISCVOperand::createSMTVType(VType, getLoc()));
+  Lex(); // Eat identifier token.
+  return ParseStatus::Success;
+}
+
 ParseStatus RISCVAsmParser::parseFRMArg(OperandVector &Operands) {
   if (getLexer().isNot(AsmToken::Identifier))
     return TokError(
@@ -2749,6 +2823,11 @@ ParseStatus RISCVAsmParser::parseFRMArg(OperandVector &Operands) {
   Operands.push_back(RISCVOperand::createFRMArg(FRM, getLoc()));
   Lex(); // Eat identifier token.
   return ParseStatus::Success;
+}
+
+std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultSMTVType() {
+  return RISCVOperand::createSMTVType(XSMTVTypeMode::SMTVTypeMode::SMT_I8,
+                                      llvm::SMLoc());
 }
 
 ParseStatus RISCVAsmParser::parseFenceArg(OperandVector &Operands) {

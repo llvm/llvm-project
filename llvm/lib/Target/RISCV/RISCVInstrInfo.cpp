@@ -3140,6 +3140,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_RTZARG:
           Ok = Imm == RISCVFPRndMode::RTZ;
           break;
+        case RISCVOp::OPERAND_SMTVType:
+          Ok = XSMTVTypeMode::isValidSMTVTypeMode(Imm);
+          break;
+        case RISCVOp::OPERAND_SMTI8:
+          Ok = Imm == XSMTVTypeMode::SMT_I8;
+          break;
         case RISCVOp::OPERAND_COND_CODE:
           Ok = Imm >= 0 && Imm < RISCVCC::COND_INVALID;
           break;

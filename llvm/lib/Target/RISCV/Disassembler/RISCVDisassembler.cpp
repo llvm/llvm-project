@@ -217,6 +217,35 @@ static DecodeStatus DecodeVectorRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeVRV0V1RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  if (RegNo >= 2)
+    return MCDisassembler::Fail;
+
+  return DecodeSimpleRegisterClass<RISCV::V0, 2>(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeVRNoV0V1RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo == 0 || RegNo == 1)
+    return MCDisassembler::Fail;
+
+  return DecodeSimpleRegisterClass<RISCV::V0, 32>(Inst, RegNo, Address,
+                                                  Decoder);
+}
+
+static DecodeStatus DecodeVRM2NoV0RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                                uint64_t Address,
+                                                const MCDisassembler *Decoder) {
+  if (RegNo == 0)
+    return MCDisassembler::Fail;
+
+  return DecodeVectorRegisterClass<RISCV::VRM2RegClassID, 32, 2>(
+      Inst, RegNo, Address, Decoder);
+}
+
 static DecodeStatus DecodeTRM2RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
@@ -531,7 +560,8 @@ static constexpr FeatureBitset XAndesGroup = {
     RISCV::FeatureVendorXAndesVSIntLoad, RISCV::FeatureVendorXAndesVPackFPH,
     RISCV::FeatureVendorXAndesVDot};
 
-static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot};
+static constexpr FeatureBitset XSMTGroup = {RISCV::FeatureVendorXSMTVDot,
+                                            RISCV::FeatureVendorXSMTVDotII};
 
 static constexpr FeatureBitset XAIFGroup = {RISCV::FeatureVendorXAIFET};
 
