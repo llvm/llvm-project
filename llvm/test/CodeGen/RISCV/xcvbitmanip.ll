@@ -117,7 +117,7 @@ define i32 @test.cv.fl1(i32 %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cv.fl1 a0, a0
 ; CHECK-NEXT:    ret
-  %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 0)
+  %1 = call i32 @llvm.riscv.cv.bitmanip.fl1(i32 %a)
   ret i32 %1
 }
 

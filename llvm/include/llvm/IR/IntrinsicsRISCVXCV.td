@@ -53,6 +53,7 @@ let TargetPrefix = "riscv" in {
                             [IntrNoMem, IntrSpeculatable]>;
 
   def int_riscv_cv_bitmanip_clb : ScalarCoreVBitManipGprIntrinsic;
+  def int_riscv_cv_bitmanip_fl1 : ScalarCoreVBitManipGprIntrinsic;
 
   def int_riscv_cv_bitmanip_bitrev
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],

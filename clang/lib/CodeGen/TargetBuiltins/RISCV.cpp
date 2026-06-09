@@ -1304,6 +1304,57 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Fn, {});
   }
 
+  // XCVbitmanip
+  case RISCV::BI__builtin_riscv_cv_bitmanip_extract:
+    Ops[1] = Builder.CreateIntCast(Ops[1], Int32Ty, /*isSigned*/ false);
+    ID = Intrinsic::riscv_cv_bitmanip_extract;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_extractu:
+    Ops[1] = Builder.CreateIntCast(Ops[1], Int32Ty, /*isSigned*/ false);
+    ID = Intrinsic::riscv_cv_bitmanip_extractu;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_insert:
+    Ops[1] = Builder.CreateIntCast(Ops[1], Int32Ty, /*isSigned*/ false);
+    ID = Intrinsic::riscv_cv_bitmanip_insert;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_bclr:
+    Ops[1] = Builder.CreateIntCast(Ops[1], Int32Ty, /*isSigned*/ false);
+    ID = Intrinsic::riscv_cv_bitmanip_bclr;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_bset:
+    Ops[1] = Builder.CreateIntCast(Ops[1], Int32Ty, /*isSigned*/ false);
+    ID = Intrinsic::riscv_cv_bitmanip_bset;
+    break;
+  case RISCV::BI__builtin_riscv_cv_bitmanip_ff1: {
+    Function *F = CGM.getIntrinsic(Intrinsic::cttz, Int32Ty);
+    Value *Result = Builder.CreateCall(F, {Ops[0], Builder.getInt1(false)});
+    return Builder.CreateIntCast(Result, ResultType, /*isSigned*/ false);
+  }
+  case RISCV::BI__builtin_riscv_cv_bitmanip_fl1: {
+    Function *F = CGM.getIntrinsic(Intrinsic::riscv_cv_bitmanip_fl1);
+    Value *Result = Builder.CreateCall(F, {Ops[0]});
+    return Builder.CreateIntCast(Result, ResultType, /*isSigned*/ false);
+  }
+  case RISCV::BI__builtin_riscv_cv_bitmanip_clb: {
+    Function *F = CGM.getIntrinsic(Intrinsic::riscv_cv_bitmanip_clb);
+    Value *Result = Builder.CreateCall(F, {Ops[0]});
+    return Builder.CreateIntCast(Result, ResultType, /*isSigned*/ false);
+  }
+  case RISCV::BI__builtin_riscv_cv_bitmanip_cnt: {
+    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, Int32Ty);
+    Value *Result = Builder.CreateCall(F, {Ops[0]});
+    return Builder.CreateIntCast(Result, ResultType, /*isSigned*/ false);
+  }
+  case RISCV::BI__builtin_riscv_cv_bitmanip_ror: {
+    Function *F = CGM.getIntrinsic(Intrinsic::fshr, Int32Ty);
+    return Builder.CreateCall(F, {Ops[0], Ops[0], Ops[1]});
+  }
+  case RISCV::BI__builtin_riscv_cv_bitmanip_bitrev:
+    Ops[1] = Builder.CreateIntCast(Ops[1], Int32Ty, /*isSigned*/ false);
+    Ops[2] = Builder.CreateIntCast(Ops[2], Int32Ty, /*isSigned*/ false);
+    ID = Intrinsic::riscv_cv_bitmanip_bitrev;
+    break;
+
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
     ID = Intrinsic::riscv_cv_alu_addN;
