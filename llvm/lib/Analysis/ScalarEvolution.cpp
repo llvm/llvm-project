@@ -5967,21 +5967,6 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   // the back-edge.
   const SCEV *BEValue = getSCEV(BEValueV);
 
-  // If the backedge value is an SCEVUnknown from a ptrtoint, try to use
-  // ptrtoaddr to get a usable SCEV expression. This allows recognizing
-  // integer induction variables derived from pointer inductions.
-  if (isa<SCEVUnknown>(BEValue))
-    if (auto *PTI = dyn_cast<PtrToIntInst>(BEValueV)) {
-      const SCEV *PtrAddr = getPtrToAddrExpr(getSCEV(PTI->getOperand(0)));
-      if (!isa<SCEVCouldNotCompute>(PtrAddr)) {
-        // Adjust type to match the ptrtoint result type if needed.
-        Type *DestTy = PTI->getType();
-        if (PtrAddr->getType() != DestTy)
-          PtrAddr = getTruncateOrZeroExtend(PtrAddr, DestTy);
-        BEValue = PtrAddr;
-      }
-    }
-
   // NOTE: If BEValue is loop invariant, we know that the PHI node just
   // has a special value for the first iteration of the loop.
 
@@ -8098,22 +8083,23 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
       bool HasPtrLHS = match(BO->LHS, m_PtrToInt(m_Value(PtrLHS)));
       bool HasPtrRHS = match(BO->RHS, m_PtrToInt(m_Value(PtrRHS)));
       if (HasPtrLHS || HasPtrRHS) {
-        // Convert a ptrtoint operand to ptrtoaddr. When only one side
-        // is ptrtoint, skip SCEVUnknown pointers since wrapping them
-        // in ptrtoaddr adds no useful structure.
-        auto GetOp = [&](bool HasPtr, Value *PtrOp, Value *IntOp,
-                         bool OtherHasPtr) -> const SCEV * {
-          if (HasPtr) {
-            const SCEV *PtrSCEV = getSCEV(PtrOp);
-            if (OtherHasPtr || !isa<SCEVUnknown>(PtrSCEV)) {
-              const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
-              if (!isa<SCEVCouldNotCompute>(Addr) &&
-                  getTypeSizeInBits(IntOp->getType()) <=
-                      getTypeSizeInBits(Addr->getType()))
-                return getTruncateOrZeroExtend(Addr, IntOp->getType());
-            }
+        // Convert a ptrtoint operand (OrigOp) to ptrtoaddr of its pointer
+        // PtrOp. When only one side is ptrtoint (BothPtr is false), skip
+        // SCEVUnknown pointers since wrapping them in ptrtoaddr adds no
+        // useful structure.
+        auto GetOp = [&](bool HasPtr, Value *PtrOp, Value *OrigOp,
+                         bool BothPtr) -> const SCEV * {
+          if (!HasPtr)
+            return getSCEV(OrigOp);
+          const SCEV *PtrSCEV = getSCEV(PtrOp);
+          if (BothPtr || !isa<SCEVUnknown>(PtrSCEV)) {
+            const SCEV *Addr = getPtrToAddrExpr(PtrSCEV);
+            if (!isa<SCEVCouldNotCompute>(Addr) &&
+                getTypeSizeInBits(OrigOp->getType()) <=
+                    getTypeSizeInBits(Addr->getType()))
+              return getTruncateOrNoop(Addr, OrigOp->getType());
           }
-          return getSCEV(IntOp);
+          return getSCEV(OrigOp);
         };
         const SCEV *L = GetOp(HasPtrLHS, PtrLHS, BO->LHS, HasPtrRHS);
         const SCEV *R = GetOp(HasPtrRHS, PtrRHS, BO->RHS, HasPtrLHS);

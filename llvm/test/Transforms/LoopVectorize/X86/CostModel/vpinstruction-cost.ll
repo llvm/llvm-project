@@ -217,7 +217,7 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK:  Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vector loop backedge
-; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 + ((-8 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 8))<nuw><nsw>
+; CHECK:  Cost of 0 for VF 2: EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 + ((-8 + (-1 * (ptrtoaddr ptr %start to i64)) + (ptrtoaddr ptr %end to i64)) /u 8))<nuw><nsw>
 ; CHECK:  Cost of 0 for VF 2: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP4:%[0-9]+]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 2: IR %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 2: IR %l = load i64, ptr %ptr.iv, align 1
@@ -248,7 +248,7 @@ define void @test_vpinstruction_switch_cost(ptr %start, ptr %end) {
 ; CHECK:  Cost of 0 for VF 4: EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>
 ; CHECK:  Cost of 1 for VF 4: EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: vector loop backedge
-; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP3]]> = EXPAND SCEV (1 + ((-8 + (-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64)) /u 8))<nuw><nsw>
+; CHECK:  Cost of 0 for VF 4: EMIT vp<[[VP3]]> = EXPAND SCEV (1 + ((-8 + (-1 * (ptrtoaddr ptr %start to i64)) + (ptrtoaddr ptr %end to i64)) /u 8))<nuw><nsw>
 ; CHECK:  Cost of 0 for VF 4: EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP4]]>, middle.block ], [ ir<%start>, ir-bb<entry> ]
 ; CHECK:  Cost of 0 for VF 4: IR %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK:  Cost of 0 for VF 4: IR %l = load i64, ptr %ptr.iv, align 1

@@ -18,7 +18,7 @@ define i64 @sub_ptrtoint_fat_to_addrwidth(ptr addrspace(1) %p, ptr addrspace(1) 
 ; CHECK-NEXT:    %q.int = ptrtoint ptr addrspace(1) %q to i64
 ; CHECK-NEXT:    --> %q.int U: full-set S: full-set
 ; CHECK-NEXT:    %sub = sub i64 %p.int, %q.int
-; CHECK-NEXT:    --> ((-1 * %q.int) + %p.int) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoaddr ptr addrspace(1) %q to i64)) + (ptrtoaddr ptr addrspace(1) %p to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @sub_ptrtoint_fat_to_addrwidth
 ;
   %p.int = ptrtoint ptr addrspace(1) %p to i64
@@ -75,7 +75,7 @@ define i64 @sub_ptrtoint_external_state(ptr addrspace(3) %p, ptr addrspace(3) %q
 ; CHECK-NEXT:    %q.int = ptrtoint ptr addrspace(3) %q to i64
 ; CHECK-NEXT:    --> %q.int U: full-set S: full-set
 ; CHECK-NEXT:    %sub = sub i64 %p.int, %q.int
-; CHECK-NEXT:    --> ((-1 * %q.int) + %p.int) U: full-set S: full-set
+; CHECK-NEXT:    --> ((-1 * (ptrtoaddr ptr addrspace(3) %q to i64)) + (ptrtoaddr ptr addrspace(3) %p to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @sub_ptrtoint_external_state
 ;
   %p.int = ptrtoint ptr addrspace(3) %p to i64
@@ -91,7 +91,7 @@ define void @ptrtoint_addrec_fat_to_addrwidth(ptr addrspace(1) %in) {
 ; CHECK-NEXT:    %iv = phi ptr addrspace(1) [ %in, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {%in,+,4}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.int = ptrtoint ptr addrspace(1) %iv to i64
-; CHECK-NEXT:    --> %iv.int U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> {(ptrtoaddr ptr addrspace(1) %in to i64),+,4}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = getelementptr inbounds i32, ptr addrspace(1) %iv, i64 1
 ; CHECK-NEXT:    --> {(4 + %in),+,4}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %c = call i1 @cond()

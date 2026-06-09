@@ -208,10 +208,8 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-LABEL: define void @load_store_noalias_via_tbaa(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P6:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[N5:%.*]] = ptrtoint ptr [[N]] to i64
-; CHECK-NEXT:    [[P2:%.*]] = ptrtoint ptr [[P]] to i64
-; CHECK-NEXT:    [[N1:%.*]] = ptrtoint ptr [[N]] to i64
+; CHECK-NEXT:    [[P6:%.*]] = ptrtoaddr ptr [[P]] to i64
+; CHECK-NEXT:    [[N5:%.*]] = ptrtoaddr ptr [[N]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[N5]], 3074457345618258603
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[P6]], 3074457345618258603
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP0]], [[TMP1]]
@@ -220,13 +218,13 @@ define void @load_store_noalias_via_tbaa(ptr %p, ptr %q, ptr %n) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[N1]] to i2
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[P2]] to i2
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[N5]] to i2
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[P6]] to i2
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i2 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i2 [[TMP7]] to i64
 ; CHECK-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[TMP8]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N1]], 3074457345618258603
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[P2]], 3074457345618258603
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N5]], 3074457345618258603
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[P6]], 3074457345618258603
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 4

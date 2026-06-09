@@ -15,8 +15,8 @@ define ptr @search_loop_unrolled(ptr %begin, ptr %end, i8 %val) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP_ENTRY]], i1 true, i1 [[CMP_END2]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label %[[COMMON_RET:.*]], label %[[FOR_COND:.*]]
 ; CHECK:       [[FOR_COND]]:
-; CHECK-NEXT:    [[END5:%.*]] = ptrtoint ptr [[END]] to i64
-; CHECK-NEXT:    [[BEGIN6:%.*]] = ptrtoint ptr [[BEGIN]] to i64
+; CHECK-NEXT:    [[END5:%.*]] = ptrtoaddr ptr [[END]] to i64
+; CHECK-NEXT:    [[BEGIN6:%.*]] = ptrtoaddr ptr [[BEGIN]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor i64 [[BEGIN6]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[END5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = freeze i64 [[TMP1]]
