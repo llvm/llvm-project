@@ -42,7 +42,7 @@ static bool wouldConflictWithOverload(const FunctionDecl &Function,
             Overload->getCanonicalDecl() == Function.getCanonicalDecl())
           return false;
 
-        QualType ConstParamFunctionType = Context.getFunctionType(
+        const QualType ConstParamFunctionType = Context.getFunctionType(
             Overload->getReturnType(), ParamTypes, Proto->getExtProtoInfo());
         return Context.hasSameFunctionTypeIgnoringExceptionSpec(
             ConstParamFunctionType, Overload->getType());
