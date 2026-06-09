@@ -188,8 +188,8 @@ public:
 ConvertToEmitCPassInterface::ConvertToEmitCPassInterface(
     MLIRContext *context, ArrayRef<std::string> filterDialects,
     std::optional<bool> lowerToCpp)
-    : context(context), filterDialects(filterDialects),
-      lowerToCpp(lowerToCpp) {}
+    : context(context), filterDialects(filterDialects), lowerToCpp(lowerToCpp) {
+}
 
 void ConvertToEmitCPassInterface::getDependentDialects(
     DialectRegistry &registry) {

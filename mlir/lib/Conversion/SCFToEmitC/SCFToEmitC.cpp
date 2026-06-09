@@ -42,8 +42,7 @@ struct SCFToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
   /// and mark dialect legal for the conversion target.
   void populateConvertToEmitCConversionPatterns(
       ConversionTarget &target, TypeConverter &typeConverter,
-      RewritePatternSet &patterns,
-      std::optional<bool> lowerToCpp) const final {
+      RewritePatternSet &patterns, std::optional<bool> lowerToCpp) const final {
     populateEmitCSizeTTypeConversions(typeConverter);
     populateSCFToEmitCConversionPatterns(patterns, typeConverter);
   }
