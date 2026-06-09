@@ -16,7 +16,7 @@ class BreakpointCommandTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     SHARED_BUILD_TESTCASE = False
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
+    @expectedFailureWindowsAndNoLLDBServer(bugnumber="llvm.org/pr24528")
     def test_breakpoint_command_sequence(self):
         """Test a sequence of breakpoint command add, list, and delete."""
         self.build()
