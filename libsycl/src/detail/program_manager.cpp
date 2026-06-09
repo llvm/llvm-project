@@ -18,7 +18,7 @@
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
-DeviceKernelInfo &_LIBSYCL_EXPORT
+_LIBSYCL_EXPORT DeviceKernelInfo &
 getDeviceKernelInfo(std::string_view KernelName) {
   return ProgramAndKernelManager::getInstance().getDeviceKernelInfo(KernelName);
 }
