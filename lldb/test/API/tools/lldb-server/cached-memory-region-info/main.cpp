@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <chrono>
 #include <thread>
 
 int var() {
-  sleep(100); // break here
+  std::this_thread::sleep_for(std::chrono::seconds(100)); // break here
 }
 int baz() { return 10 + var(); }
 int bar() { return 15 + baz(); }
@@ -18,7 +19,7 @@ int main() {
   std::thread thread_4(work);
   std::thread thread_5(work);
 
-  sleep(20);
+  std::this_thread::sleep_for(std::chrono::seconds(20));
 
   thread_5.join();
   thread_4.join();
