@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 
 #include "RuntimeDyldMachO.h"
 #include "Targets/RuntimeDyldMachOAArch64.h"
@@ -382,4 +382,4 @@ RuntimeDyldMachO::loadObject(const object::ObjectFile &O) {
 
 } // end namespace llvm
 
-#endif // EJIT_BARE_METAL
+#endif // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL

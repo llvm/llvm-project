@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_BARE_METAL)
-#define EJIT_BARE_METAL
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #endif
 
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Binary.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/Wasm.h"
@@ -129,7 +129,7 @@ Triple ObjectFile::makeTriple() const {
 
   // TheTriple defaults to ELF, and COFF doesn't have an environment:
   // something we can do here is indicate that it is mach-o.
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (isMachO()) {
     TheTriple.setObjectFormat(Triple::MachO);
   } else if (isCOFF()) {
@@ -187,7 +187,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::elf_shared_object:
   case file_magic::elf_core:
     return createELFObjectFile(Object, InitContent);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case file_magic::macho_object:
   case file_magic::macho_executable:
   case file_magic::macho_fixed_virtual_memory_shared_lib:

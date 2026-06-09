@@ -6,7 +6,7 @@
 ; PASS3 output: wrapper generation in process_cell
 ; CHECK: define void @process_cell(i32 %cell_idx){{.*}}{
 ; CHECK: jit_entry:
-; CHECK: alloca { ptr, i32 }
+; CHECK: alloca { ptr, i8 }
 ; CHECK: call ptr @ejit_compile_or_get(
 ; CHECK: icmp eq ptr
 ; CHECK: br i1 {{.*}}, label %jit_fallback, label %jit_dispatch

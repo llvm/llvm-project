@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 
 #include "RuntimeDyldCOFF.h"
 #include "Targets/RuntimeDyldCOFFAArch64.h"
@@ -132,4 +132,4 @@ bool RuntimeDyldCOFF::relocationNeedsDLLImportStub(
 
 } // namespace llvm
 
-#endif // EJIT_BARE_METAL
+#endif // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL

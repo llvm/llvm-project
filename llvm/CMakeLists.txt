@@ -559,9 +559,9 @@ if(EJIT_TRIM_LLVM_BACKEND)
   add_definitions(-DEJIT_TRIM_LLVM_BACKEND)
 endif()
 
-option(EJIT_BARE_METAL "Trim backend for bare-metal: exclude non-ELF formats, non-AArch64 targets, DWARF/CFI" OFF)
-if(EJIT_BARE_METAL)
-  add_definitions(-DEJIT_BARE_METAL)
+option(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL "Trim backend for bare-metal: exclude non-ELF formats, non-AArch64 targets, DWARF/CFI" OFF)
+if(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+  add_definitions(-DEJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
   add_definitions(-DEJIT_TRIM_LLVM_BACKEND)
 endif()
 

@@ -2,7 +2,7 @@
 
 ; CHECK: define i32 @multi_dim_entry(i32 %idx1, i32 %idx2)
 ; CHECK: jit_entry:
-; CHECK: alloca { ptr, i32 }, i32 2
+; CHECK: alloca { ptr, i8 }, i32 2
 ; CHECK: call ptr @ejit_compile_or_get(ptr {{.*}}, ptr {{.*}}, i32 2, ptr null)
 ; CHECK: br i1 {{.*}}, label %jit_fallback, label %jit_dispatch
 ; CHECK: jit_fallback:

@@ -11,8 +11,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_BARE_METAL)
-#define EJIT_BARE_METAL
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #endif
 
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -51,7 +51,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "llvm/Transforms/ObjCARC.h"
 #endif
 #include "llvm/Transforms/Scalar.h"
@@ -856,7 +856,7 @@ void TargetPassConfig::addIRPasses() {
     addPass(createExpandMemCmpLegacyPass());
   }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   // Run GC lowering passes for builtin collectors
   // TODO: add a pass insertion point here
   addPass(&GCLoweringID);
@@ -909,7 +909,7 @@ void TargetPassConfig::addPassesToHandleExceptions() {
   const MCAsmInfo *MCAI = TM->getMCAsmInfo();
   assert(MCAI && "No MCAsmInfo");
   switch (MCAI->getExceptionHandlingType()) {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case ExceptionHandling::SjLj:
     addPass(createSjLjEHPreparePass(TM));
     [[fallthrough]];
@@ -951,7 +951,7 @@ void TargetPassConfig::addISelPrepare() {
   if (requiresCodeGenSCCOrder())
     addPass(new DummyCGSCCPass);
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createObjCARCContractPass());
 #endif
@@ -1193,7 +1193,7 @@ void TargetPassConfig::addMachinePasses() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addBlockPlacement();
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   // Insert before XRay Instrumentation.
   addPass(&FEntryInserterID);
   addPass(&XRayInstrumentationID);
@@ -1202,7 +1202,7 @@ void TargetPassConfig::addMachinePasses() {
 
   addPreEmitPass();
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (TM->Options.EnableIPRA)
     addPass(createRegUsageInfoCollector());
 
@@ -1213,7 +1213,7 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&MachineSanitizerBinaryMetadataID);
 #endif
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (TM->Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
@@ -1226,7 +1226,7 @@ void TargetPassConfig::addMachinePasses() {
   }
 #endif
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (GCEmptyBlocks)
     addPass(llvm::createGCEmptyBasicBlocksPass());
 

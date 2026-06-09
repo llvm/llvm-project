@@ -149,8 +149,8 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     Value *CountVal = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
 
     if (DimCount > 0) {
-      // ejit_dim_t = { ptr, i32 }
-      auto *DimTy = StructType::get(Ctx, {PtrTy, Type::getInt32Ty(Ctx)});
+      // ejit_dim_t = { ptr, i8 }  (matches EJitRuntime.h: uint8_t index)
+      auto *DimTy = StructType::get(Ctx, {PtrTy, Type::getInt8Ty(Ctx)});
       auto *DimsAlloca = Builder.CreateAlloca(DimTy,
           ConstantInt::get(Type::getInt32Ty(Ctx), DimCount));
 
@@ -170,7 +170,7 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
             DimTy, DimPtr, {ConstantInt::get(Type::getInt32Ty(Ctx), 0),
                              ConstantInt::get(Type::getInt32Ty(Ctx), 1)});
         Value *ArgVal = F->getArg(PeriodInds[I].ArgIndex);
-        Value *IdxVal = Builder.CreateZExtOrTrunc(ArgVal, Type::getInt32Ty(Ctx));
+        Value *IdxVal = Builder.CreateZExtOrTrunc(ArgVal, Type::getInt8Ty(Ctx));
         Builder.CreateStore(IdxVal, IdxFieldPtr);
       }
 

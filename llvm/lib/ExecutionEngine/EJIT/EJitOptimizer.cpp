@@ -8,7 +8,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/ExecutionEngine/EJIT/EJitPassBuilder.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Transforms/IPO/AlwaysInliner.h"
+// JIT Inline disabled: AOT pre-optimization already inlines.
+// #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
@@ -67,10 +68,22 @@ void EJitOptimizer::runPipeline(Module &M,
   //    so StructFieldPass can compute correct byte offsets.
   runInstCombine(M);
 
-  // 3. StructFieldPass: replace may_const loads with runtime constants
+  // 3. Inline (L2+): currently disabled. The AOT pre-optimization in
+  //    EJitRegisterBitcodePass already runs AlwaysInline + ModuleInliner(O2),
+  //    so callee bodies are already expanded in the embedded bitcode and
+  //    their may_const GEP chains are directly traceable to global variables.
+  //    Skipping this saves JIT compile time at the cost of missing inlines
+  //    that only become profitable after parameter substitution.
+  // if (static_cast<int>(ctx.optLevel) >= 2) {
+  //   ModulePassManager MPM;
+  //   MPM.addPass(AlwaysInlinerPass());
+  //   MPM.run(M, MAM_);
+  // }
+
+  // 4. StructFieldPass: replace may_const loads with runtime constants.
   runStructFieldPass(M);
 
-  // 4. Core optimization at the configured level
+  // 5. Core optimization at the configured level
   runOptimizationPipeline(M, ctx.optLevel);
 }
 
@@ -139,23 +152,18 @@ void EJitOptimizer::runOptimizationPipeline(Module &M,
     if (!F.isDeclaration())
       L1FPM_.run(F, FAM_);
 
-  // L2: Inline always_inline helpers, then clean up + re-run
-  // StructFieldPass for loads exposed by inlining.
+  // L2: SimplifyCFG cleanup. Inline now runs in runPipeline (before
+  // StructFieldPass), so no need to re-run StructFieldPass here.
   if (static_cast<int>(level) >= 2) {
-    ModulePassManager MPM;
-    MPM.addPass(AlwaysInlinerPass());
-    MPM.run(M, MAM_);
-
     for (Function &F : M.functions())
       if (!F.isDeclaration())
         L2FPM_.run(F, FAM_);
-
-    runStructFieldPass(M);
-    runInstCombine(M);
   }
 
-  // L3: Unroll small loops with may_const-dependent bodies, then clean up
-  // + re-run StructFieldPass for loads exposed by unrolling.
+  // L3: Unroll small loops with may_const-dependent bodies. Re-run
+  // StructFieldPass because loop unrolling can turn loop-variant GEP
+  // indices into constants (e.g. g_cfg[i].field → g_cfg[0].field,
+  // g_cfg[1].field after unrolling).
   if (static_cast<int>(level) >= 3) {
     for (Function &F : M.functions())
       if (!F.isDeclaration())

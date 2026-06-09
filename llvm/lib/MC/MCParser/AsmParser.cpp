@@ -748,7 +748,7 @@ namespace llvm {
 extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
 
 extern MCAsmParserExtension *createELFAsmParser();
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 extern MCAsmParserExtension *createDarwinAsmParser();
 extern MCAsmParserExtension *createCOFFAsmParser();
 extern MCAsmParserExtension *createGOFFAsmParser();
@@ -774,7 +774,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 
   // Initialize the platform / file format parser.
   switch (Ctx.getObjectFileType()) {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case MCContext::IsCOFF:
     PlatformParser.reset(createCOFFAsmParser());
     break;
@@ -786,7 +786,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   case MCContext::IsELF:
     PlatformParser.reset(createELFAsmParser());
     break;
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case MCContext::IsGOFF:
     PlatformParser.reset(createGOFFAsmParser());
     break;

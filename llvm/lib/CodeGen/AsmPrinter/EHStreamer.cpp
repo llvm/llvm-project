@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_BARE_METAL)
-#define EJIT_BARE_METAL
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #endif
 
 #include "EHStreamer.h"
@@ -827,7 +827,7 @@ void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {
   for (const GlobalValue *GV : llvm::reverse(TypeInfos)) {
     if (VerboseAsm)
       Asm->OutStreamer->AddComment("TypeInfo " + Twine(Entry--));
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     Asm->emitTTypeReference(GV, TTypeEncoding);
 #endif
   }

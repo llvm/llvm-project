@@ -1,4 +1,4 @@
-if(NOT EJIT_BARE_METAL)
+if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
   set(LLVM_TARGET_DEFINITIONS COFFOptions.td)
   tablegen(LLVM COFFOptions.inc -gen-opt-parser-defs)
   add_public_tablegen_target(JITLinkTableGen)
@@ -47,7 +47,7 @@ set(JITLINK_ARCH_X86
 
 set(JITLINK_DEPENDS intrinsics_gen)
 
-if(NOT EJIT_BARE_METAL)
+if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
   # Normal build: include everything
   list(APPEND JITLINK_SOURCES ${JITLINK_MACHO_COFF})
   list(APPEND JITLINK_SOURCES ${JITLINK_ELF_OTHER})

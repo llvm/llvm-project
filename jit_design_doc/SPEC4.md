@@ -219,7 +219,7 @@ typedef enum {
 /* 维度信息 */
 typedef struct {
     const char* name;    /* 维度名称，如 "cell", "trp" */
-    int index;           /* 参数值 (ejit_period_arr_ind 参数的实际值) */
+    uint8_t index;       /* 参数值 (ejit_period_arr_ind 参数的实际值) */
 } ejit_dim_t;
 ```
 

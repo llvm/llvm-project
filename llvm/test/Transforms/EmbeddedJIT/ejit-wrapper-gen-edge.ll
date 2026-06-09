@@ -21,7 +21,7 @@ entry:
 ; --- 4-dim: max dimension support ---
 ; CHECK-LABEL: define void @four_dim_entry(i32 %d1, i32 %d2, i32 %d3, i32 %d4)
 ; CHECK: jit_entry:
-; CHECK: alloca { ptr, i32 }, i32 4
+; CHECK: alloca { ptr, i8 }, i32 4
 ; CHECK: call ptr @ejit_compile_or_get(ptr {{.*}}, ptr {{.*}}, i32 4, ptr null)
 
 define void @four_dim_entry(i32 %d1, i32 %d2, i32 %d3, i32 %d4) !ejit.metadata !10 {

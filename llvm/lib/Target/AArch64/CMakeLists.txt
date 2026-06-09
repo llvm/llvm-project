@@ -9,7 +9,7 @@ tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AArch64GenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
-if(NOT EJIT_BARE_METAL AND NOT EJIT_TRIM_LLVM_BACKEND)
+if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL AND NOT EJIT_TRIM_LLVM_BACKEND)
 tablegen(LLVM AArch64GenGlobalISel.inc -gen-global-isel)
 tablegen(LLVM AArch64GenO0PreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="AArch64O0PreLegalizerCombiner")
@@ -78,7 +78,7 @@ set(AARCH64_CODEGEN_SOURCES
   AArch64TargetTransformInfo.cpp
   )
 
-if(NOT EJIT_BARE_METAL AND NOT EJIT_TRIM_LLVM_BACKEND)
+if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL AND NOT EJIT_TRIM_LLVM_BACKEND)
   list(APPEND AARCH64_CODEGEN_SOURCES
     SMEABIPass.cpp
     SMEPeepholeOpt.cpp
@@ -121,7 +121,7 @@ set(AARCH64_CODEGEN_LINK
   TransformUtils
   Vectorize
   )
-if(NOT EJIT_BARE_METAL AND NOT EJIT_TRIM_LLVM_BACKEND)
+if(NOT EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL AND NOT EJIT_TRIM_LLVM_BACKEND)
   list(APPEND AARCH64_CODEGEN_LINK GlobalISel)
 endif()
 

@@ -15,7 +15,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/Minidump.h"
 #include "llvm/Object/OffloadBinary.h"
@@ -78,7 +78,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::xcoff_object_64:
   case file_magic::wasm_object:
     return ObjectFile::createSymbolicFile(Buffer, Type, Context, InitContent);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case file_magic::macho_universal_binary:
     return MachOUniversalBinary::create(Buffer);
   case file_magic::windows_resource:
@@ -97,7 +97,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
   case file_magic::spirv_object:
     // Unrecognized object file format.
     return errorCodeToError(object_error::invalid_file_type);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case file_magic::offload_binary:
     return OffloadBinary::create(Buffer);
   case file_magic::minidump:

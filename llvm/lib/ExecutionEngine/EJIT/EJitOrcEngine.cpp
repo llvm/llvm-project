@@ -124,9 +124,21 @@ EJitOrcEngine::Create(const Config &config,
           // Clear stale analysis results from previous compilations
           // (each compilation uses a fresh Module with new IR unit pointers).
           engine->P->optimizer->clearAnalyses();
+
+          // Dump pre-optimization IR (before the JIT pipeline runs).
+          if (!engine->P->dumpJITDir.empty()) {
+            std::string prePath = engine->P->dumpJITDir + "/" +
+                                  ctx->fnName + "_" +
+                                  std::to_string(ctx->cacheKey) + "_pre.ll";
+            std::error_code EC;
+            llvm::raw_fd_ostream preOS(prePath, EC);
+            if (!EC)
+              M.print(preOS, nullptr);
+          }
+
           engine->P->optimizer->runPipeline(M, *ctx);
 
-          // Dump post-optimization IR only (pre-dump already captured in bitcode).
+          // Dump post-optimization IR.
           if (!engine->P->dumpJITDir.empty()) {
             std::string path = engine->P->dumpJITDir + "/" +
                                ctx->fnName + "_" +
