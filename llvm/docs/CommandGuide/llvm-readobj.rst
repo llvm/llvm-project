@@ -329,6 +329,10 @@ The following options are implemented only for the PE/COFF file format.
 
  Display the .reloc section.
 
+.. option:: --coff-cxx-module-metadata
+
+ Display the .modmeta section.
+
 .. option:: --coff-debug-directory
 
  Display the debug directory.

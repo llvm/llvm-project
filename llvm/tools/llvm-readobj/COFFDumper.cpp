@@ -2564,9 +2564,9 @@ void COFFDumper::printCOFFTLSDirectory(
 
 void COFFDumper::printCOFFCxxModuleMetadata() {
   SectionRef Sect;
-  for (const SectionRef &S : Obj->sections()) {
-    StringRef SectionName = unwrapOrError(Obj->getFileName(), S.getName());
-    if (SectionName == ".modmeta") {
+  for (SectionRef S : Obj->sections()) {
+    Expected<StringRef> SectionName = S.getName();
+    if (SectionName && *SectionName == ".modmeta") {
       Sect = S;
       break;
     }
@@ -2574,61 +2574,81 @@ void COFFDumper::printCOFFCxxModuleMetadata() {
   if (Sect == SectionRef())
     return;
 
-  StringRef Contents = unwrapOrError(Obj->getFileName(), Sect.getContents());
-  COFFCxxModuleMetadata ModMap =
-      unwrapOrError(Obj->getFileName(), parseCOFFCxxModuleMetadata(Contents));
+  Expected<StringRef> Contents = Sect.getContents();
+  if (!Contents) {
+    reportWarning(Contents.takeError(), Obj->getFileName());
+    return;
+  }
+  Expected<COFFCxxModuleMetadata> ModMap =
+      parseCOFFCxxModuleMetadata(*Contents);
+  if (!ModMap) {
+    reportWarning(ModMap.takeError(), Obj->getFileName());
+    return;
+  }
 
   DictScope D(W, "CxxModuleMetadata");
-  W.printNumber("Version", ModMap.Version);
-  W.printNumber("Reserved", ModMap.Reserved);
-  W.printNumber("ModuleIndexWidth", ModMap.ModuleIndexWidth);
-  W.printNumber("SymbolIndexWidth", ModMap.SymbolIndexWidth);
+  W.printNumber("Version", ModMap->Version);
+  W.printNumber("Reserved", ModMap->Reserved);
+  W.printNumber("ModuleIndexWidth", ModMap->ModuleIndexWidth);
+  W.printNumber("SymbolIndexWidth", ModMap->SymbolIndexWidth);
 
-  COFFCxxModuleMetadataReader Reader(ModMap);
+  COFFCxxModuleMetadataReader Reader(*ModMap);
 
   SmallSet<uint32_t, 8> HeaderUnits;
   Error Err = Reader.readModuleList(makeVisitor([&](auto A) {
     for (auto V : A)
       HeaderUnits.insert(V);
   }));
-  if (Err)
-    reportError(std::move(Err), Obj->getFileName());
+  if (Err) {
+    reportWarning(std::move(Err), Obj->getFileName());
+    return;
+  }
 
   ListScope L(W, "Modules");
   while (Reader.hasModuleData()) {
-    uint32_t ModuleID =
-        unwrapOrError(Obj->getFileName(), Reader.readModuleID());
-    if (ModuleID == std::numeric_limits<uint32_t>::max())
+    Expected<uint32_t> ModuleID = Reader.readModuleID();
+    if (!ModuleID) {
+      reportWarning(ModuleID.takeError(), Obj->getFileName());
+      return;
+    }
+
+    if (*ModuleID == std::numeric_limits<uint32_t>::max())
       break;
 
     DictScope D(W, "CxxModule");
     StringRef Name;
-    if (ModuleID != 0)
+    if (*ModuleID != 0)
       Name = unwrapOrError(Obj->getFileName(), Reader.readModuleName());
-    W.printHex("ID", ModuleID);
+    W.printHex("ID", *ModuleID);
     W.printString("Name", Name);
-    W.printBoolean("IsHeaderUnit", HeaderUnits.contains(ModuleID));
+    W.printBoolean("IsHeaderUnit", HeaderUnits.contains(*ModuleID));
 
     Err = Reader.readModuleList([&](auto A) {
       W.printList("Dependents", A, [&](auto &OS, auto V) { OS << W.hex(V); });
     });
-    if (Err)
-      reportError(std::move(Err), Obj->getFileName());
+    if (Err) {
+      reportWarning(std::move(Err), Obj->getFileName());
+      return;
+    }
 
     Err = Reader.readSymbolList([&](auto A) {
       W.printList("Symbols", A, [&](auto &OS, auto V) {
         OS << getSymbolName(V) << " (" << to_string<uint32_t>(V) << ')';
       });
     });
-    if (Err)
-      reportError(std::move(Err), Obj->getFileName());
+    if (Err) {
+      reportWarning(std::move(Err), Obj->getFileName());
+      return;
+    }
 
     Err = Reader.readSymbolList([&](auto A) {
       W.printList("Exports", A, [&](auto &OS, auto V) {
         OS << getSymbolName(V) << " (" << to_string<uint32_t>(V) << ')';
       });
     });
-    if (Err)
-      reportError(std::move(Err), Obj->getFileName());
+    if (Err) {
+      reportWarning(std::move(Err), Obj->getFileName());
+      return;
+    }
   }
 }

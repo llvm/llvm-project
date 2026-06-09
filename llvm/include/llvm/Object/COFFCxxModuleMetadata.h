@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Windows-specific.
+// MSVC-specific.
 // Definitions and a parser for the C++ 20 ".modmeta" section.
 //
 //===----------------------------------------------------------------------===//
@@ -98,10 +98,12 @@ private:
       Visitor(ArrayRef<support::ulittle16_t>(
           reinterpret_cast<const support::ulittle16_t *>(List->data()),
           List->size() / sizeof(support::ulittle16_t)));
-    else
+    else if (Width == 4)
       Visitor(ArrayRef<support::ulittle32_t>(
           reinterpret_cast<const support::ulittle32_t *>(List->data()),
           List->size() / sizeof(support::ulittle32_t)));
+    else
+      return createStringError("Unsupported width: %d", Width);
 
     return Error::success();
   }
