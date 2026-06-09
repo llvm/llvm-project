@@ -412,6 +412,8 @@ protected:
 
   const char *m_string = nullptr;
 };
+static_assert(sizeof(ConstString) <= sizeof(const char *),
+              "High-volume object, size of object must be increased with care");
 
 /// Stream the string value \a str to the stream \a s
 Stream &operator<<(Stream &s, ConstString str);

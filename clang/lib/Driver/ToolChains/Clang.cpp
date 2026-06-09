@@ -9687,7 +9687,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
             options::OPT_fprofile_instr_generate,
             options::OPT_fprofile_instr_generate_EQ);
-        if (TC->getLTOMode(Args, Kind) == LTOK_None && !UsesProfileGenerate)
+        if (!Args.hasArg(options::OPT_foffload_lto_EQ,
+                         options::OPT_fno_offload_lto) &&
+            !UsesProfileGenerate)
           CmdArgs.push_back("--no-lto");
       }
     }
