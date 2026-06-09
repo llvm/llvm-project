@@ -148,19 +148,22 @@ void CIRGenBuilderTy::computeGlobalViewIndicesFromFlatOffset(
             }
             llvm_unreachable("offset was not found within the record");
           })
-          .Default([&](mlir::Type otherTy) -> mlir::Type {
-            // Scalar or pointer type: the offset is a flat element count.
-            // This covers pointer arithmetic through a plain scalar base, e.g.
-            // a char* GlobalViewAttr whose pointee is !s8i rather than an
-            // array — the generated GEP is getelementptr i8, ptr @sym, i64 N.
+          .Case<cir::IntType>([&](cir::IntType intTy) -> mlir::Type {
+            // Integer element type: the offset is a flat element count.
+            // This covers pointer arithmetic through a plain integer base,
+            // e.g. a char* GlobalViewAttr whose pointee type is !s8i rather
+            // than an array — the GEP is getelementptr i8, ptr @sym, i64 N.
             int64_t eltSize =
-                (int64_t)layout.getTypeAllocSize(otherTy).getFixedValue();
+                (int64_t)layout.getTypeAllocSize(intTy).getFixedValue();
             assert(eltSize > 0 && "element size must be positive");
             const auto [index, newOffset] =
                 getIndexAndNewOffset(offset, eltSize);
             indices.push_back(index);
             offset = newOffset;
-            return otherTy;
+            return intTy;
+          })
+          .Default([](mlir::Type) -> mlir::Type {
+            llvm_unreachable("unexpected type");
           });
 
   assert(subType);
@@ -182,9 +185,11 @@ uint64_t CIRGenBuilderTy::computeOffsetFromGlobalViewIndices(
     } else if (auto arrayTy = dyn_cast<cir::ArrayType>(ty)) {
       ty = arrayTy.getElementType();
       offset += layout.getTypeAllocSize(ty) * idx;
-    } else {
-      // Scalar or pointer type: the index is a flat element count.
+    } else if (mlir::isa<cir::IntType>(ty)) {
+      // Integer element type: the index is a flat element count.
       offset += (int64_t)layout.getTypeAllocSize(ty).getFixedValue() * idx;
+    } else {
+      llvm_unreachable("unexpected type");
     }
   }
   return offset;
