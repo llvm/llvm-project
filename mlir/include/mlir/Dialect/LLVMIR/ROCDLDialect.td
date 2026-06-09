@@ -142,6 +142,8 @@ def ROCDL_Dialect : Dialect {
     static constexpr unsigned kConstantMemoryAddressSpace = 4;
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
+    /// The address space value that represents barriers.
+    static constexpr unsigned kBarrierAddressSpace = 15;
   }];
 
   let discardableAttrs = (ins

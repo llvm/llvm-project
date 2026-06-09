@@ -1200,11 +1200,11 @@ supported for the ``amdgcn`` target.
   * Never alias with any other pointers outside this address space.
   * Cannot be dereferenced.
   * Can only be consumed by intrinsics.
-  * Are always uniform.
 
-  Pointer are 32 bits and directly correspond to valid barrier IDs. All barrier pointers must,
-  when interpreted as signed 32 bit integers, have a value corresponding to a valid barrier ID
-  on the target. Otherwise, the behavior is undefined.
+  Pointer are 32 bits and directly correspond to valid barrier IDs. When consumed by an
+  intrinsic, all barrier pointers must, when interpreted as signed 32 bit integers,
+  have a value corresponding to a valid barrier ID on the target.
+  Otherwise, the behavior is undefined
 
   Due to these pointers being a compiler abstraction without a corresponding hardware aperture,
   the back-end handles them as-if they were local pointers with a very large offset as to not
