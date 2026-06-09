@@ -457,3 +457,42 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i64, dense<64> : 
 // CHECK: %[[BOX:.*]] = builtin.unrealized_conversion_cast %[[DESC]] : !llvm.ptr to !fir.box<!fir.array<?x?xi32>>
 // CHECK: llvm.store %{{.*}}, %[[DESC]]
 // CHECK: gpu.launch_func {{.*}} args(%[[BOX]] : !fir.box<!fir.array<?x?xi32>>)
+
+// -----
+
+// A rebox of a device-resident global (isDeviceAllocation == true) whose result
+// is consumed by an OpenACC data-clause op (here acc.present) must NOT be placed
+// in managed memory. The box is host-side descriptor metadata for the data
+// clause; a managed descriptor created here is never freed and leaves a stale
+// descriptor behind when its address is reused. The descriptor storage should
+// therefore be a plain stack alloca and no _FortranACUFAllocDescriptor call
+// should be emitted for it.
+
+module attributes {gpu.container_module} {
+  fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+    %c0 = arith.constant 0 : index
+    %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+    %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+  }
+  func.func @_QQmain() {
+    %0 = fir.address_of(@_QMm1Eda) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+    %1 = fir.load %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+    %2 = fircg.ext_rebox %1 : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.box<!fir.array<?x?xf32>>
+    %3 = acc.present var(%2 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "uf"}
+    acc.delete accVar(%3 : !fir.box<!fir.array<?x?xf32>>) {dataClause = #acc<data_clause acc_present>, name = "uf"}
+    return
+  }
+  gpu.module @cuda_device_mod {
+    fir.global @_QMm1Eda {data_attr = #cuf.cuda<device>} : !fir.box<!fir.heap<!fir.array<?x?xf32>>> {
+      %c0 = arith.constant 0 : index
+      %0 = fir.zero_bits !fir.heap<!fir.array<?x?xf32>>
+      %1 = fircg.ext_embox %0(%c0, %c0) {allocator_idx = 2 : i32} : (!fir.heap<!fir.array<?x?xf32>>, index, index) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+      fir.has_value %1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+    }
+  }
+}
+
+// CHECK-LABEL: llvm.func @_QQmain()
+// CHECK: llvm.alloca {{.*}} x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
+// CHECK-NOT: llvm.call @_FortranACUFAllocDescriptor

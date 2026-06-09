@@ -1727,6 +1727,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV8S32:
   case VgprV16S32:
   case VgprV32S16:
+  case VgprV32S32:
   case VgprB32:
   case VgprB64:
   case VgprB96:
@@ -1796,7 +1797,8 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV6S32:
     case VgprV8S32:
     case VgprV16S32:
-    case VgprV32S16: {
+    case VgprV32S16:
+    case VgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
