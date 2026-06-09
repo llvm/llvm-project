@@ -73,7 +73,7 @@ spirv.func @cl_binary_float(%arg0: f32, %arg1: f32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
-// Ternary and integer OpenCL ops
+// Ternary FP OpenCL ops
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @cl_fma
@@ -82,6 +82,10 @@ spirv.func @cl_fma(%arg0: f32, %arg1: f32, %arg2: f32) "None" {
   %0 = spirv.CL.fma %arg0, %arg1, %arg2 : f32
   spirv.Return
 }
+
+//===----------------------------------------------------------------------===//
+// Integer OpenCL ops
+//===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @cl_integer
 spirv.func @cl_integer(%arg0: i32, %arg1: i32) "None" {
