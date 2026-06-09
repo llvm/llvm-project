@@ -180,28 +180,20 @@ namespace Defined {
 namespace Constrained {
   template<typename T>
   struct A {
-    // FIXME expected-note@-1 2{{defined here}}
     template<typename U, bool V> requires V
     static constexpr int f(); // expected-note {{declared here}}
-    // FIXME expected-note@-1 {{declared here}}
 
     template<typename U, bool V> requires V
     static const int x; // expected-note {{declared here}}
-    // FIXME expected-note@-2 2{{previous template declaration is here}}
-    // FIXME expected-note@-2 {{declared here}}
 
     template<typename U, bool V> requires V
     static const int x<U*, V>; // expected-note {{declared here}}
-    // FIXME expected-note@-1 {{partial specialization matches}}
 
     template<typename U, bool V> requires V
     struct B; // expected-note {{template is declared here}}
-    // FIXME expected-note@-2 2{{previous template declaration is here}}
-    // FIXME expected-note@-2 {{template is declared here}}
 
     template<typename U, bool V> requires V
     struct B<U*, V>; // expected-note {{template is declared here}}
-    // FIXME expected-note@-1 {{partial specialization matches}}
   };
 
   template<>
@@ -209,43 +201,36 @@ namespace Constrained {
   constexpr int A<short>::f() {
     return A<long>::f<U, V>();
   }
-  // FIXME expected-error@-3 {{out-of-line definition of 'f' does not match any declaration in 'Constrained::A<short>'}}
 
   template<>
   template<typename U, bool V> requires V
   constexpr int A<short>::x = A<long>::x<U, V>;
-  // FIXME expected-error@-2 {{requires clause differs in template redeclaration}}
 
   template<>
   template<typename U, bool V> requires V
   constexpr int A<short>::x<U*, V> = A<long>::x<U*, V>;
-  // FIXME expected-note@-1 {{partial specialization matches}}
 
   template<>
   template<typename U, bool V> requires V
   struct A<short>::B<U*, V> {
     static constexpr int y = A<long>::B<U*, V>::y;
   };
-    // FIXME expected-note@-3 {{partial specialization matches}}
 
   template<>
   template<typename U, bool V> requires V
   struct A<short>::B {
     static constexpr int y = A<long>::B<U, V>::y;
   };
-  // FIXME expected-error@-4 {{requires clause differs in template redeclaration}}
 
   template<>
   template<typename U, bool V> requires V
   constexpr int A<long>::f() {
     return 1;
   }
-  // FIXME expected-error@-3 {{out-of-line definition of 'f' does not match any declaration in 'Constrained::A<long>'}}
 
   template<>
   template<typename U, bool V> requires V
   constexpr int A<long>::x = 1;
-  // FIXME expected-error@-2 {{requires clause differs in template redeclaration}}
 
   template<>
   template<typename U, bool V> requires V
@@ -256,7 +241,6 @@ namespace Constrained {
   struct A<long>::B {
     static constexpr int y = 1;
   };
-  // FIXME expected-error@-4 {{requires clause differs in template redeclaration}}
 
   template<>
   template<typename U, bool V> requires V
@@ -274,17 +258,10 @@ namespace Constrained {
   static_assert(A<int>::B<int*, true>::y == 0); // expected-error {{implicit instantiation of undefined template 'Constrained::A<int>::B<int *, true>'}}
 
   static_assert(A<short>::f<int, true>() == 1);
-  // FIXME expected-error@-1 {{static assertion expression is not an integral constant expression}}
-  // FIXME expected-note@-2 {{undefined function 'f<int, true>' cannot be used in a constant expression}}
   static_assert(A<short>::x<int, true> == 1);
-  // FIXME expected-error@-1 {{static assertion expression is not an integral constant expression}}
-  // FIXME expected-note@-2 {{initializer of 'x<int, true>' is unknown}}
   static_assert(A<short>::x<int*, true> == 2);
-  // FIXME expected-error@-1 {{ambiguous partial specializations of 'x'}}
   static_assert(A<short>::B<int, true>::y == 1);
-  // FIXME expected-error@-1 {{implicit instantiation of undefined template 'Constrained::A<short>::B<int, true>'}}
   static_assert(A<short>::B<int*, true>::y == 2);
-  // FIXME expected-error@-1 {{ambiguous partial specializations of 'B<int *, true>'}}
 } // namespace Constrained
 
 namespace Dependent {

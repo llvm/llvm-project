@@ -1108,10 +1108,10 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
 
       if (IsFPRecurrence) {
         FastMathFlags CurFMF =
-            cast<VPRecipeWithIRFlags>(CurrentLink)->getFastMathFlags();
+            cast<VPRecipeWithIRFlags>(CurrentLink)->getFastMathFlagsOrNone();
         if (match(CurrentLink, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
           CurFMF |= cast<VPRecipeWithIRFlags>(CurrentLink->getOperand(0))
-                        ->getFastMathFlags();
+                        ->getFastMathFlagsOrNone();
         FMFs &= CurFMF;
       }
 

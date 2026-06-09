@@ -1007,13 +1007,13 @@ else ()
   endif()
 
   # Directly targeting the GPU requires a few extra flags.
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
+  if(COMPILER_RT_GPU_BUILD)
     append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
 
     # AMDGPU targets want to use a generic ABI.
-    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+    if(COMPILER_RT_TARGET_AMDGPU)
       append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                      "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
     endif()

@@ -10,6 +10,8 @@
 #include "SSAFAnalysesCommon.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include <optional>
@@ -43,10 +45,17 @@ class EntityPointerLevelTranslator
   friend class StmtVisitorBase;
 
   // Fallback method for all unsupported expression kind:
-  llvm::Error fallback(const Stmt *E) {
-    return makeErrAtNode(Ctx, E,
-                         "attempt to translate %s to EntityPointerLevels",
-                         E->getStmtClassName());
+  Expected<EntityPointerLevelSet> fallback(const Stmt *S) {
+    // Report an error/warning (at least in debug mode) for any unsupported kind
+    // of pointer/array typed expression, because we want to understand every
+    // pointer/array expression. But for non-pointer/array typed expressions, we
+    // could silently ignore unsupported kinds. This translator visits
+    // non-pointer/array typed expressions because of address-of expressions.
+    if (const Expr *E = dyn_cast<Expr>(S); E && hasPtrOrArrType(E))
+      return makeErrAtNode(Ctx, E,
+                           "attempt to translate %s to EntityPointerLevels",
+                           E->getStmtClassName());
+    return EntityPointerLevelSet{};
   }
 
   Expected<EntityPointerLevel>
@@ -142,6 +151,7 @@ private:
   // Translate(*base)          -> Translate(base) with .pointerLevel += 1
   // Translate(&base)          -> {}, if Translate(base) is {}
   //                           -> Translate(base) with .pointerLevel -= 1
+  // Translate(+base)          -> Translate(base)
   Expected<EntityPointerLevelSet> VisitUnaryOperator(const UnaryOperator *E) {
     switch (E->getOpcode()) {
     case clang::UO_PostInc:
@@ -159,6 +169,8 @@ private:
     }
     case clang::UO_Deref:
       return translateDereferencePointer(E->getSubExpr());
+    case clang::UO_Plus:
+      return Visit(E->getSubExpr());
     default:
       return fallback(E);
     }
@@ -209,10 +221,18 @@ private:
     return Visit(E->getSubExpr());
   }
 
-  // Translate("string-literal") -> {}
-  // Buffer accesses on string literals are unsafe, but string literals are not
-  // entities so there is no EntityPointerLevel associated with it.
+  // Translate("string-literal") -> {} // no entity involved
   Expected<EntityPointerLevelSet> VisitStringLiteral(const StringLiteral *E) {
+    return EntityPointerLevelSet{};
+  }
+
+  // Translate(predefined-expr) -> {} // treated the same as string literals
+  Expected<EntityPointerLevelSet> VisitPredefinedExpr(const PredefinedExpr *E) {
+    return EntityPointerLevelSet{};
+  }
+
+  // Translate(integer-literal) -> {} // no entity involved
+  Expected<EntityPointerLevelSet> VisitIntegerLiteral(const IntegerLiteral *E) {
     return EntityPointerLevelSet{};
   }
 
@@ -232,15 +252,89 @@ private:
     return EntityPointerLevelSet{*Res};
   }
 
-  // Translate(`DefaultArg`) -> Translate(`DefaultArg->getExpr()`)
+  // Unwrap CXXDefaultArgExpr
   Expected<EntityPointerLevelSet>
   VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
     return Visit(E->getExpr());
   }
 
+  // Unwrap OpaqueValueExpr
   Expected<EntityPointerLevelSet>
   VisitOpaqueValueExpr(const OpaqueValueExpr *S) {
     return Visit(S->getSourceExpr());
+  }
+
+  // Unwrap ExprWithCleanups
+  Expected<EntityPointerLevelSet>
+  VisitExprWithCleanups(const ExprWithCleanups *S) {
+    return Visit(S->getSubExpr());
+  }
+
+  // Unwrap MaterializeTemporaryExpr
+  Expected<EntityPointerLevelSet>
+  VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *S) {
+    return Visit(S->getSubExpr());
+  }
+
+  // Unwrap CXXDefaultInitExpr
+  Expected<EntityPointerLevelSet>
+  VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
+    return Visit(E->getExpr());
+  }
+
+  // Translate(`nullptr`) -> {}
+  Expected<EntityPointerLevelSet>
+  VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *S) {
+    return EntityPointerLevelSet{};
+  }
+
+  // Translate(`this`) -> {}
+  Expected<EntityPointerLevelSet> VisitCXXThisExpr(const CXXThisExpr *S) {
+    return EntityPointerLevelSet{};
+  }
+
+  // Translate(`new`/`new [*]`) -> {}
+  Expected<EntityPointerLevelSet> VisitCXXNewExpr(const CXXNewExpr *S) {
+    return EntityPointerLevelSet{};
+  }
+
+  // ImplicitValueInitExpr, for raw pointer type,
+  // evaluates to a compile-time constant zero (or null). So no EPL in the
+  // result.
+  Expected<EntityPointerLevelSet>
+  VisitImplicitValueInitExpr(const ImplicitValueInitExpr *S) {
+    return EntityPointerLevelSet{};
+  }
+
+  // The InitListExpr must be an empty or singleton list that
+  // initializes a pointer scalar.  Other cases are unexpected thus an error.
+  Expected<EntityPointerLevelSet> VisitInitListExpr(const InitListExpr *E) {
+    if (E->getNumInits() < 1)
+      return EntityPointerLevelSet{};
+    if (E->getType()->isPointerType())
+      return Visit(E->getInit(0));
+    return llvm::createStringError(
+        "Cannot translate an InitListExpr to EntityPointerLevels if it is not "
+        "an empty or singleton list that initializes a pointer scalar");
+  }
+
+  // Clang may default initializes an array with a CXXConstructExpr. Fallback on
+  // other cases, if they exist.
+  // When a CXXConstructExpr has an array type, clang is initializing an array
+  // of class-type objects with default values.  In this case, no entity is
+  // associated with the initializer.
+  Expected<EntityPointerLevelSet>
+  VisitCXXConstructExpr(const CXXConstructExpr *E) {
+    if (E->getType()->isArrayType()) {
+      return EntityPointerLevelSet{};
+    }
+    return fallback(E);
+  }
+
+  // No entity is associated with a CXXScalarValueInitExpr:
+  Expected<EntityPointerLevelSet>
+  VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
+    return EntityPointerLevelSet{};
   }
 };
 } // namespace clang::ssaf

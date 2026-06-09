@@ -24,8 +24,14 @@ public:
   BreakpointWasHit(AcceleratorBreakpointHitArgs &args) override;
 
 private:
+  // Breakpoint set during initialization, by function name with no shared
+  // library. Requests the "compute" symbol value when hit.
   static constexpr int64_t kBreakpointIDInitialize = 1;
-  static constexpr int64_t kBreakpointIDExit = 2;
+  // Breakpoint set by address, using the "compute" symbol value delivered when
+  // the initialize breakpoint was hit.
+  static constexpr int64_t kBreakpointIDByAddress = 2;
+  // Breakpoint set by function name scoped to a shared library.
+  static constexpr int64_t kBreakpointIDByNameShlib = 3;
 };
 
 } // namespace lldb_server

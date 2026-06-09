@@ -39,7 +39,6 @@ TargetThreadWindows::~TargetThreadWindows() { DestroyThread(); }
 
 void TargetThreadWindows::RefreshStateAfterStop() {
   ::SuspendThread(m_host_thread.GetNativeThread().GetSystemHandle());
-  SetState(eStateStopped);
   GetRegisterContext()->InvalidateIfNeeded(false);
 }
 

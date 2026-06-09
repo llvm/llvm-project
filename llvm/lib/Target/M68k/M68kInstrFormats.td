@@ -100,7 +100,7 @@ class MxEncFullExt<string reg_opnd, string bd_opnd, string scale_opnd,
                     string bd_decoder = "", bit size_w_l = false> {
   dag Value = (ascend (descend
      // D/A + REGISTER
-     (operand "$"#reg_opnd, 4),
+     (slice "$"#reg_opnd, 3, 0, (decoder "DecodeIndexRegister")),
      // W/L
      size_w_l,
      // SCALE
@@ -109,10 +109,7 @@ class MxEncFullExt<string reg_opnd, string bd_opnd, string scale_opnd,
      // Base Register Suppress
      0b0,
      // Index Register Suppress
-     // FIXME: the disassembler currently does not support mapping a single operand
-     // (i.e. reg_opnd in this case) to multiple bit ranges. (the REGISTER earlier
-     // and the index suppress here)
-     (operand "$"#reg_opnd, 1, (encoder "encodeIndexSuppress")),
+     (slice "$"#reg_opnd, 4, 4, (encoder "encodeIndexSuppress")),
      // Base Displacement Size
      !cond(
        !eq(bd_size, 2) : 0b10,

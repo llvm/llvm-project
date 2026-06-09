@@ -548,10 +548,6 @@ public:
 
 template <> struct DenseMapInfo<CodeViewDebug::LocalVarDef> {
 
-  static inline CodeViewDebug::LocalVarDef getEmptyKey() {
-    return CodeViewDebug::LocalVarDef::emptyValue();
-  }
-
   static unsigned getHashValue(const CodeViewDebug::LocalVarDef &DR) {
     return DR.hashValue();
   }

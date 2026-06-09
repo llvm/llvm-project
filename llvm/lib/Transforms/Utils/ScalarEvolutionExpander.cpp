@@ -152,19 +152,13 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
 BasicBlock::iterator
 SCEVExpander::findInsertPointAfter(Instruction *I,
                                    Instruction *MustDominate) const {
-  BasicBlock::iterator IP = ++I->getIterator();
-  if (auto *II = dyn_cast<InvokeInst>(I))
-    IP = II->getNormalDest()->begin();
-
-  while (isa<PHINode>(IP))
-    ++IP;
-
-  if (isa<FuncletPadInst>(IP) || isa<LandingPadInst>(IP)) {
-    ++IP;
-  } else if (isa<CatchSwitchInst>(IP)) {
-    IP = MustDominate->getParent()->getFirstInsertionPt();
+  BasicBlock::iterator IP;
+  if (auto MaybeIP = I->getInsertionPointAfterDef()) {
+    IP = *MaybeIP;
   } else {
-    assert(!IP->isEHPad() && "unexpected eh pad!");
+    assert(SE.DT.dominates(I, MustDominate) &&
+           "instruction must dominate the insertion point");
+    IP = MustDominate->getIterator();
   }
 
   // Adjust insert point to be after instructions inserted by the expander, so
@@ -2455,7 +2449,8 @@ struct SCEVFindUnsafe {
 
   bool follow(const SCEV *S) {
     if (const SCEVUDivExpr *D = dyn_cast<SCEVUDivExpr>(S)) {
-      if (!SE.isKnownNonZero(D->getRHS())) {
+      if (!SE.isKnownNonZero(D->getRHS()) ||
+          !SE.isGuaranteedNotToBePoison(D->getRHS())) {
         IsUnsafe = true;
         return false;
       }

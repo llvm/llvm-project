@@ -124,10 +124,6 @@ extern llvm::cl::opt<bool> UpdateDebugSections;
 // dbgs() for output within DEBUG().
 extern llvm::cl::opt<unsigned> Verbosity;
 
-// Option to control whether liveness analysis should be used by
-// FixupBranches and LongJmpPass. Needed for branch inversion on AArch64.
-extern llvm::cl::opt<bool> LivenessAnalysis;
-
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
 

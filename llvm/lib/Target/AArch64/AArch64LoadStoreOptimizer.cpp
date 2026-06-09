@@ -3101,7 +3101,7 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   if (!FPRStoreOpc)
     return false;
 
-  if (StoreMI.hasOrderedMemoryRef())
+  if (StoreMI.hasOrderedMemoryRef() || StoreMI.memoperands().size() != 1)
     return false;
 
   MachineBasicBlock *MBB = StoreMI.getParent();
@@ -3141,6 +3141,10 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   if (!UMOVMI)
     return false;
   MCPhysReg VecReg = UMOVMI->getOperand(1).getReg();
+  MCPhysReg FPRReg = TRI->getSubReg(VecReg, SubRegIdx);
+  if ((*StoreMI.memoperands_begin())->getSizeInBits() !=
+      TRI->getRegSizeInBits(*TRI->getMinimalPhysRegClass(FPRReg)))
+    return false;
 
   // Check that no instruction between UMOV and store clobbers the vector
   // register.  Also track whether VecReg is killed anywhere from the UMOV
@@ -3163,7 +3167,6 @@ bool AArch64LoadStoreOpt::tryToReplaceUMOVStore(
   LLVM_DEBUG(dbgs() << "Folding UMOV + store: " << *UMOVMI << "  + "
                     << StoreMI);
 
-  MCPhysReg FPRReg = TRI->getSubReg(VecReg, SubRegIdx);
   auto MIB = BuildMI(*MBB, MBBI, StoreMI.getDebugLoc(), TII->get(FPRStoreOpc))
                  .addReg(FPRReg, getKillRegState(VecRegKilled));
   for (unsigned I = 1, E = StoreMI.getNumExplicitOperands(); I < E; ++I)

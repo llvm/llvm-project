@@ -640,6 +640,15 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
   return sb_file_spec;
 }
 
+lldb::SBModuleSpecList SBModule::GetSeparateDebugInfoFiles() {
+  LLDB_INSTRUMENT_VA(this);
+  ModuleSP module_sp(GetSP());
+  if (module_sp)
+    return lldb::SBModuleSpecList(module_sp->GetSeparateDebugInfoFiles());
+
+  return lldb::SBModuleSpecList();
+}
+
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
   LLDB_INSTRUMENT_VA(this);
 

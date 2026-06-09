@@ -289,12 +289,11 @@ private:
   // check-omp-structure.cpp
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   bool CheckAllowedClause(llvm::omp::Clause clause);
-  void CheckVariableListItem(const SymbolSourceMap &symbols);
+  void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
   void AnalyzeObject(const parser::OmpObject &object);
-  void AnalyzeObjects(const parser::OmpObjectList &objects);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
   void CheckSourceLabel(const parser::Label &);
@@ -351,7 +350,6 @@ private:
   void CheckSymbolNames(
       const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
-  void CheckAssumedSizeArray(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCrayPointee(const parser::OmpObjectList &objectList,
       llvm::StringRef clause, bool suggestToUseCrayPointer = true);

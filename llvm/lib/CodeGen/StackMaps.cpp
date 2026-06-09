@@ -245,8 +245,6 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
         // where we have to insert the empty key into a map, and for a
         // DenseMap<uint64_t, T> this is (uint64_t)-1.  It can be and is
         // represented using 32 bit integers.
-        assert((uint64_t)Imm != DenseMapInfo<uint64_t>::getEmptyKey() &&
-               "empty key should fit in 32 bits!");
         auto Result = ConstPool.insert(std::make_pair(Imm, Imm));
         Locs.emplace_back(Location::ConstantIndex, sizeof(int64_t), 0,
                           Result.first - ConstPool.begin());

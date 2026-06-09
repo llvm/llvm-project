@@ -318,9 +318,6 @@ template <> struct DenseMapInfo<sandboxir::Context::CallbackID> {
   using CallbackID = sandboxir::Context::CallbackID;
   using ReprInfo = DenseMapInfo<CallbackID::ValTy>;
 
-  static CallbackID getEmptyKey() {
-    return CallbackID{ReprInfo::getEmptyKey()};
-  }
   static unsigned getHashValue(const CallbackID &ID) {
     return ReprInfo::getHashValue(ID.Val);
   }

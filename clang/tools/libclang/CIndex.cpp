@@ -732,6 +732,7 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
   switch (D->getSpecializationKind()) {
   case TSK_Undeclared:
   case TSK_ImplicitInstantiation:
+  case TSK_FriendDeclaration:
     // Nothing to visit
     return false;
 

@@ -34,7 +34,8 @@ struct ConstantOpInterface
       return failure();
 
     Attribute memorySpace;
-    if (auto memSpace = options.defaultMemorySpaceFn(type))
+    if (auto memSpace =
+            options.defaultMemorySpaceFn(cast<TensorLikeType>(type)))
       memorySpace = *memSpace;
     else
       return constantOp->emitError("could not infer memory space");

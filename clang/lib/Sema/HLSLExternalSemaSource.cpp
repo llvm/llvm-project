@@ -312,12 +312,6 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
           ElaboratedTypeKeyword::Class, TemplateName(TextureTemplate),
           {TemplateArgument(VectorType)}, {}));
 
-  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
-      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
-      SourceLocation(), TemplateParams, TextureTemplate,
-      {TemplateArgument(VectorType)},
-      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
-
   // Set the template arguments as written.
   TemplateArgument Arg(VectorType);
   TemplateArgumentLoc ArgLoc =
@@ -325,8 +319,13 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
   TemplateArgumentListInfo ArgsInfo =
       TemplateArgumentListInfo(SourceLocation(), SourceLocation());
   ArgsInfo.addArgument(ArgLoc);
-  PartialSpec->setTemplateArgsAsWritten(
-      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo));
+
+  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
+      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
+      SourceLocation(), TemplateParams,
+      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo), TextureTemplate,
+      {TemplateArgument(VectorType)},
+      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
 
   PartialSpec->setImplicit(true);
   PartialSpec->setLexicalDeclContext(HLSLNamespace);

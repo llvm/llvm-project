@@ -198,10 +198,10 @@ def _llvm_configure_impl(repository_ctx):
         executable = False,
     )
 
+    return repository_ctx.repo_metadata(reproducible = True)
+
 llvm_configure = repository_rule(
     implementation = _llvm_configure_impl,
-    local = True,
-    configure = True,
     attrs = {
         "targets": attr.string_list(default = DEFAULT_TARGETS),
     },

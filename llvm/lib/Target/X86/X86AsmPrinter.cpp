@@ -957,6 +957,10 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
     if (M.getModuleFlag("import-call-optimization"))
       EnableImportCallOptimization = true;
+
+    // Unwind v3 is set for the entire module, not just individual functions.
+    if (M.getWinX64EHUnwindMode() == WinX64EHUnwindMode::V3)
+      OutStreamer->emitWinCFIUnwindVersion(3);
   }
 
   // TODO: Support prefixed registers for the Intel syntax.

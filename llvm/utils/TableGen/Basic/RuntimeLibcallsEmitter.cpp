@@ -47,11 +47,6 @@ inline bool operator==(PredicateWithCC LHS, PredicateWithCC RHS) {
 
 namespace llvm {
 template <> struct DenseMapInfo<PredicateWithCC, void> {
-  static inline PredicateWithCC getEmptyKey() {
-    return DenseMapInfo<
-        std::pair<const Record *, const Record *>>::getEmptyKey();
-  }
-
   static unsigned getHashValue(const PredicateWithCC Val) {
     auto Pair = std::make_pair(Val.Predicate, Val.CallingConv);
     return DenseMapInfo<

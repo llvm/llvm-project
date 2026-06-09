@@ -889,6 +889,10 @@ public:
   /// DeclSpec is guaranteed self-consistent, even if an error occurred.
   void Finish(Sema &S, const PrintingPolicy &Policy);
 
+  void CheckTypeSpec(Sema &S, const PrintingPolicy &Policy);
+
+  void CheckFriendSpec(Sema &S, const PrintingPolicy &Policy);
+
   const WrittenBuiltinSpecs& getWrittenBuiltinSpecs() const {
     return writtenBS;
   }

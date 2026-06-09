@@ -567,19 +567,19 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   llvm::yaml::Output InfoYAML(OS);
   switch (I->IT) {
   case InfoType::IT_namespace:
-    InfoYAML << *static_cast<clang::doc::NamespaceInfo *>(I);
+    InfoYAML << *cast<NamespaceInfo>(I);
     break;
   case InfoType::IT_record:
-    InfoYAML << *static_cast<clang::doc::RecordInfo *>(I);
+    InfoYAML << *cast<RecordInfo>(I);
     break;
   case InfoType::IT_enum:
-    InfoYAML << *static_cast<clang::doc::EnumInfo *>(I);
+    InfoYAML << *cast<EnumInfo>(I);
     break;
   case InfoType::IT_function:
-    InfoYAML << *static_cast<clang::doc::FunctionInfo *>(I);
+    InfoYAML << *cast<FunctionInfo>(I);
     break;
   case InfoType::IT_typedef:
-    InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
+    InfoYAML << *cast<TypedefInfo>(I);
     break;
   case InfoType::IT_concept:
   case InfoType::IT_variable:

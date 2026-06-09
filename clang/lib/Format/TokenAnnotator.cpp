@@ -2701,6 +2701,7 @@ private:
 
     // int a or auto a.
     if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto) &&
+        !PreviousNotConst->endsSequence(Keywords.kw_import, tok::kw_export) &&
         PreviousNotConst->isNot(TT_StatementAttributeLikeMacro)) {
       return true;
     }
@@ -5227,23 +5228,19 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (!BeforeLeft || BeforeLeft->is(tok::kw_export))) {
       return true;
     }
-    // Space between `module :` and `import :`.
-    if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
-        Right.is(TT_ModulePartitionColon)) {
+    // Space between `import :`.
+    if (Left.is(Keywords.kw_import) && Right.is(TT_ModulePartitionColon))
       return true;
-    }
 
     if (Right.is(TT_AfterPPDirective))
       return true;
 
-    // No space between import foo:bar but keep a space between import :bar;
+    // No space between `module foo:bar`.
     if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
       return false;
     // No space between :bar;
-    if (Left.is(TT_ModulePartitionColon) &&
-        Right.isOneOf(tok::identifier, tok::kw_private)) {
+    if (Left.is(TT_ModulePartitionColon) && Right.is(tok::identifier))
       return false;
-    }
     if (Left.is(tok::ellipsis) && Right.is(tok::identifier) &&
         Line.First->is(Keywords.kw_import)) {
       return false;

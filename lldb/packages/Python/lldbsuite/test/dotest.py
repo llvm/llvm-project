@@ -472,6 +472,9 @@ def parseOptionsAndInitTestdirs():
     if args.arm64e_debugserver:
         configuration.arm64e_debugserver = True
 
+    if args.print_lldb_version:
+        configuration.print_lldb_version = True
+
     # Gather all the dirs passed on the command line.
     if len(args.args) > 0:
         configuration.testdirs = [
@@ -568,7 +571,8 @@ def setupSysPath():
         )
         sys.exit(-1)
 
-    os.system("%s -v" % lldbtest_config.lldbExec)
+    if configuration.print_lldb_version:
+        os.system("%s -v" % lldbtest_config.lldbExec)
 
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
 

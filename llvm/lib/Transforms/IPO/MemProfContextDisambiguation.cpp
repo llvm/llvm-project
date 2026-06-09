@@ -3377,7 +3377,8 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::printTotalSizes(
         // This is only emitted if the context size info is not present.
         std::string Msg =
             "MemProf hinting: " + getAllocTypeString((uint8_t)TypeI->second) +
-            " is " + getAllocTypeString(Node->AllocTypes) + " after cloning";
+            " context is " + getAllocTypeString(Node->AllocTypes) +
+            " after cloning";
         if (allocTypeToUse(Node->AllocTypes) != AllocTypeFromCall)
           Msg += " marked " + getAllocTypeString((uint8_t)AllocTypeFromCall) +
                  " due to cold byte percent";

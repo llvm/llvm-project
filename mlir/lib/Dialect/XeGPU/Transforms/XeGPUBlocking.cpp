@@ -44,36 +44,61 @@ resolveUnrealizedConversionCastOp(UnrealizedConversionCastOp castOp) {
   ValueRange inputs = castOp.getInputs();
   ValueRange outputs = castOp.getOutputs();
 
-  auto hasIdenticalVectorTypes = [](ValueRange values) {
+  auto hasIdenticalVectorOrTdescTypes = [](ValueRange values) {
     auto types = values.getTypes();
     return llvm::all_of(types, [&](Type type) {
-      return isa<VectorType>(type) && type == types.front();
+      return (isa<VectorType>(type) || isa<xegpu::TensorDescType>(type)) &&
+             type == types.front();
     });
   };
 
-  // We only interest in the case where all inputs and outputs have the
-  // identical VectorTypes
-  if (!hasIdenticalVectorTypes(inputs) || !hasIdenticalVectorTypes(outputs)) {
+  // We only interest in the case where all inputs and outputs have
+  // identical VectorTypes or TensorDescTypes.
+  if (!hasIdenticalVectorOrTdescTypes(inputs) ||
+      !hasIdenticalVectorOrTdescTypes(outputs)) {
     LDBG() << "skip unrealized conversion cast op not emulating pack/unpack.";
     return;
   }
 
   VectorType outputTy = dyn_cast<VectorType>(outputs[0].getType());
-  OpBuilder builder(castOp);
-  if (inputs.size() > 1 && outputs.size() == 1) {
-    // the castOp is emulating an unpack op
-    ArrayRef<int64_t> shape = outputTy.getShape();
-    Value result = xegpu::createVectorWithShapeFromValues(
-        builder, castOp.getLoc(), inputs, shape);
-    castOp->replaceAllUsesWith(ValueRange(result));
-    castOp->erase();
-  } else if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
-    // the castOp is emulating a pack op
-    ArrayRef<int64_t> tileShape = outputTy.getShape();
-    SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
-        builder, castOp.getLoc(), inputs[0], tileShape);
-    castOp->replaceAllUsesWith(results);
-    castOp->erase();
+  if (outputTy) {
+    OpBuilder builder(castOp);
+    if (inputs.size() > 1 && outputs.size() == 1) {
+      // the castOp is emulating an unpack op
+      ArrayRef<int64_t> shape = outputTy.getShape();
+      Value result = xegpu::createVectorWithShapeFromValues(
+          builder, castOp.getLoc(), inputs, shape);
+      castOp->replaceAllUsesWith(ValueRange(result));
+      castOp->erase();
+    } else if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
+      // the castOp is emulating a pack op
+      ArrayRef<int64_t> tileShape = outputTy.getShape();
+      SmallVector<Value> results = xegpu::extractVectorsWithShapeFromValue(
+          builder, castOp.getLoc(), inputs[0], tileShape);
+      castOp->replaceAllUsesWith(results);
+      castOp->erase();
+    }
+  } else {
+    // TensorDescType case: collapse a pack(unpack(x)) chain back to x. This
+    // happens when blocking inserts a pack cast right after an unpack cast
+    // that produced the same set of unrolled tdescs (e.g., a load consumer
+    // re-packing the tdescs that CreateNdDesc just unpacked).
+    if (castOp.getNumResults() > 1 && castOp.getNumOperands() == 1) {
+      if (auto prevCastOp =
+              inputs[0].getDefiningOp<UnrealizedConversionCastOp>()) {
+        if (prevCastOp.getNumResults() == 1 &&
+            prevCastOp.getNumOperands() > 1 &&
+            prevCastOp.getOutputs()[0].getType() ==
+                castOp.getInputs()[0].getType()) {
+          castOp->replaceAllUsesWith(prevCastOp.getInputs());
+          castOp->erase();
+          prevCastOp->erase();
+          return;
+        }
+      }
+    }
+
+    LDBG() << "skip unrealized conversion cast op not emulating pack/unpack.";
   }
 }
 
@@ -170,11 +195,24 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     std::optional<SmallVector<int64_t>> bTile =
         getTileShape(op->getOpOperand(1));
 
-    if (!aTile || aTile->size() != 2 || !bTile || bTile->size() != 2)
+    if (!aTile || aTile->size() < 2 || !bTile || bTile->size() < 2)
       return std::nullopt;
 
-    // semantic check for A and B
-    if ((*aTile)[1] != (*bTile)[0])
+    // Both must have the same number of batch dimensions.
+    int64_t aBatchRank = aTile->size() - 2;
+    int64_t bBatchRank = bTile->size() - 2;
+    if (aBatchRank != bBatchRank)
+      return std::nullopt;
+
+    // Batch dimensions must match.
+    for (int64_t i = 0; i < aBatchRank; ++i) {
+      if ((*aTile)[i] != (*bTile)[i])
+        return std::nullopt;
+    }
+
+    // Semantic check for A and B: K dimension must match.
+    // A[..., M, K] x B[..., K, N]
+    if ((*aTile).back() != (*bTile)[bBatchRank])
       return std::nullopt;
 
     return std::make_pair(*aTile, *bTile);
@@ -189,8 +227,15 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
     std::optional<SmallVector<int64_t>> cTile =
         getTileShape(op->getOpOperand(cOperandIdx));
-    int64_t expectedCTile[2] = {aTile[0], bTile[1]};
-    if (!cTile || !llvm::equal(*cTile, expectedCTile))
+    if (!cTile)
+      return false;
+    // Expected C tile: batch dims from A + [M, N]
+    int64_t aBatchRank = aTile.size() - 2;
+    SmallVector<int64_t> expectedCTile(aTile.begin(),
+                                       aTile.begin() + aBatchRank);
+    expectedCTile.push_back(aTile[aBatchRank]); // M from A
+    expectedCTile.push_back(bTile.back());      // N from B
+    if (!llvm::equal(*cTile, expectedCTile))
       return false;
     return true;
   };
@@ -202,16 +247,18 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     std::optional<SmallVector<int64_t>> aScaleTile =
         getTileShape(op->getOpOperand(scaleAOperandIdx));
 
-    if (!aScaleTile || aScaleTile->size() != 2)
+    if (!aScaleTile || aScaleTile->size() < 2)
       return std::nullopt;
 
-    // Validate scale_a tile: [M_tile, K_scale]
-    // M dimension must match A's M dimension
-    if ((*aScaleTile)[0] != aTile[0])
+    // Validate scale_a tile: [batch..., M_tile, K_scale]
+    // M dimension (second-to-last) must match A's M dimension
+    int64_t scaleRank = aScaleTile->size();
+    int64_t aBatchRank = aTile.size() - 2;
+    if ((*aScaleTile)[scaleRank - 2] != aTile[aBatchRank])
       return std::nullopt;
 
-    // Return the K scale factor
-    return (*aScaleTile)[1];
+    // Return the K scale factor (last dim)
+    return aScaleTile->back();
   };
 
   // Helper lambda to validate scale B tile for DpasMxOp
@@ -221,16 +268,17 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
     std::optional<SmallVector<int64_t>> bScaleTile =
         getTileShape(op->getOpOperand(scaleBOperandIdx));
 
-    if (!bScaleTile || bScaleTile->size() != 2)
+    if (!bScaleTile || bScaleTile->size() < 2)
       return std::nullopt;
 
-    // Validate scale_b tile: [K_scale, N_tile]
-    // N dimension must match B's N dimension
-    if ((*bScaleTile)[1] != bTile[1])
+    // Validate scale_b tile: [batch..., K_scale, N_tile]
+    // N dimension (last) must match B's N dimension (last)
+    if (bScaleTile->back() != bTile.back())
       return std::nullopt;
 
-    // Return the K scale factor
-    return (*bScaleTile)[0];
+    // Return the K scale factor (second-to-last dim)
+    int64_t scaleRank = bScaleTile->size();
+    return (*bScaleTile)[scaleRank - 2];
   };
 
   if (isa<xegpu::DpasOp>(op)) {
@@ -240,11 +288,17 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
 
     auto [aTile, bTile] = *abTiles;
 
-    // semantic check for C
+    // Semantic check for C.
     if (!validateCTile(op, 2, aTile, bTile))
       return std::nullopt;
 
-    return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1]});
+    // Return [batch..., M, K, N] as the target shape for unrolling.
+    int64_t aBatchRank = aTile.size() - 2;
+    SmallVector<int64_t> tileShape(aTile.begin(), aTile.begin() + aBatchRank);
+    tileShape.push_back(aTile[aBatchRank]);     // M
+    tileShape.push_back(aTile[aBatchRank + 1]); // K
+    tileShape.push_back(bTile.back());          // N
+    return tileShape;
   }
 
   if (auto dpasMxOp = dyn_cast<xegpu::DpasMxOp>(op)) {
@@ -292,7 +346,14 @@ XeGPUBlockingPass::getTileShape(Operation *op) const {
       kScaleFactor = *scaleBFactor;
     }
 
-    return SmallVector<int64_t>({aTile[0], aTile[1], bTile[1], kScaleFactor});
+    // Return [batch..., M, K, N, S] as the target shape for unrolling.
+    int64_t aBatchRank = aTile.size() - 2;
+    SmallVector<int64_t> tileShape(aTile.begin(), aTile.begin() + aBatchRank);
+    tileShape.push_back(aTile[aBatchRank]);     // M
+    tileShape.push_back(aTile[aBatchRank + 1]); // K
+    tileShape.push_back(bTile.back());          // N
+    tileShape.push_back(kScaleFactor);          // S
+    return tileShape;
   }
 
   if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)
@@ -432,24 +493,24 @@ void XeGPUBlockingPass::runOnOperation() {
 
   options.setNativeShapeFn([&](Operation *op) { return getTileShape(op); });
 
-  options.setUnrolledTypesFn([&](ShapedType type, ArrayRef<int64_t> tileShape,
-                                 bool returnSingleType = false) {
+  options.setUnrolledTypesFn([&](ShapedType type, ArrayRef<int64_t> tileShape) {
     Type elemTy = type.getElementType();
-    Type newTy;
 
     if (auto tdescTy = dyn_cast<xegpu::TensorDescType>(type)) {
 
       Attribute encoding = tdescTy.getEncoding();
 
-      newTy =
+      xegpu::TensorDescType newTy =
           xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
                                      tdescTy.getLayoutAttr().dropInstData());
-    } else {
-      newTy = VectorType::get(tileShape, elemTy);
+      // Compute the product of batch (higher) dimensions.
+      ArrayRef<int64_t> shape = type.getShape();
+      int64_t batchCount =
+          shape.size() > 2 ? computeProduct(shape.drop_back(2)) : 1;
+      return SmallVector<Type>(batchCount, newTy);
     }
+    Type newTy = VectorType::get(tileShape, elemTy);
 
-    if (returnSingleType)
-      return SmallVector<Type>{newTy};
     std::optional<SmallVector<int64_t>> ratio =
         computeShapeRatio(type.getShape(), tileShape);
     assert(ratio && "The shape of the type must be a multiple of tileShape.");

@@ -450,13 +450,6 @@ class SPIRVStructurizer : public FunctionPass {
       return Output;
     }
 
-    AllocaInst *CreateVariable(Function &F, Type *Type,
-                               BasicBlock::iterator Position) {
-      const DataLayout &DL = F.getDataLayout();
-      return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
-                            Position);
-    }
-
     // Given a construct defined by |Header|, and a list of exiting edges
     // |Edges|, creates a new single exit node, fixing up those edges.
     BasicBlock *createSingleExitNode(BasicBlock *Header,
@@ -484,8 +477,7 @@ class SPIRVStructurizer : public FunctionPass {
         return NewExit;
       }
 
-      AllocaInst *Variable = CreateVariable(F, ExitBuilder.getInt32Ty(),
-                                            F.begin()->getFirstInsertionPt());
+      AllocaInst *Variable = createVariable(F, ExitBuilder.getInt32Ty());
       for (auto &[Src, Dst] : FixedEdges) {
         IRBuilder<> B2(Src);
         B2.SetInsertPoint(Src->getFirstInsertionPt());
@@ -511,33 +503,6 @@ class SPIRVStructurizer : public FunctionPass {
       return NewExit;
     }
   };
-
-  /// Create a value in BB set to the value associated with the branch the block
-  /// terminator will take.
-  Value *createExitVariable(
-      BasicBlock *BB,
-      const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
-    auto *T = BB->getTerminator();
-    if (isa<ReturnInst>(T))
-      return nullptr;
-    if (auto *BI = dyn_cast<UncondBrInst>(T))
-      return TargetToValue.lookup(BI->getSuccessor());
-
-    IRBuilder<> Builder(BB);
-    Builder.SetInsertPoint(T);
-
-    if (auto *BI = dyn_cast<CondBrInst>(T)) {
-      Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
-      Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
-
-      if (LHS == nullptr || RHS == nullptr)
-        return LHS == nullptr ? RHS : LHS;
-      return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
-    }
-
-    // TODO: add support for switch cases.
-    llvm_unreachable("Unhandled terminator type.");
-  }
 
   // Creates a new basic block in F with a single OpUnreachable instruction.
   BasicBlock *CreateUnreachable(Function &F) {

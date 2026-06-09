@@ -102,7 +102,8 @@ unsigned VirtRegMap::createSpillSlot(const TargetRegisterClass *RC) {
   if (Alignment > CurrentAlign && !TRI->canRealignStack(*MF)) {
     Alignment = CurrentAlign;
   }
-  int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Alignment);
+  int SS = MF->getFrameInfo().CreateSpillStackObject(Size, Alignment,
+                                                     TRI->getSpillStackID(*RC));
   ++NumSpillSlots;
   return SS;
 }

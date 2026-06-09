@@ -6463,12 +6463,6 @@ private:
   /// A DenseMapInfo implementation for holding DenseMaps and DenseSets of
   /// sorted SmallVectors of unsigned.
   struct OrdersTypeDenseMapInfo {
-    static OrdersType getEmptyKey() {
-      OrdersType V;
-      V.push_back(~1U);
-      return V;
-    }
-
     static unsigned getHashValue(const OrdersType &V) {
       return static_cast<unsigned>(hash_combine_range(V));
     }
@@ -6523,11 +6517,6 @@ private:
 template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
   using FirstInfo = DenseMapInfo<BoUpSLP::TreeEntry *>;
   using SecondInfo = DenseMapInfo<unsigned>;
-  static BoUpSLP::EdgeInfo getEmptyKey() {
-    return BoUpSLP::EdgeInfo(FirstInfo::getEmptyKey(),
-                             SecondInfo::getEmptyKey());
-  }
-
   static unsigned getHashValue(const BoUpSLP::EdgeInfo &Val) {
     return detail::combineHashValue(FirstInfo::getHashValue(Val.UserTE),
                                     SecondInfo::getHashValue(Val.EdgeIdx));
@@ -9278,6 +9267,14 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
                "Expected exactly 2 entries.");
         for (const auto &P : Data.first->CombinedEntriesWithIndices) {
           TreeEntry &OpTE = *VectorizableTree[P.first];
+          // The order of an operand that has both reordered and reused scalars
+          // cannot be absorbed into the split node cleanly: clearing the
+          // reorder indices while keeping the reuse mask (or vice versa)
+          // desyncs the split node scalars from the operand effective order.
+          // Skip reordering for such operands.
+          if (OpTE.State != TreeEntry::SplitVectorize &&
+              !OpTE.ReorderIndices.empty() && !OpTE.ReuseShuffleIndices.empty())
+            continue;
           OrdersType Order = OpTE.ReorderIndices;
           if (Order.empty() || !OpTE.ReuseShuffleIndices.empty()) {
             if (!OpTE.isGather() && OpTE.ReuseShuffleIndices.empty())
@@ -26221,6 +26218,20 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
        I = I->getNextNode()) {
     ArrayRef<ScheduleBundle *> Bundles = BS->getScheduleBundles(I);
     if (!Bundles.empty()) {
+      // An instruction that is modeled as a copyable element in some node may
+      // also be used directly by another node that was registered only after
+      // this instruction's dependencies were last computed. The deferred
+      // copyable-operand recomputation (RecalcCopyableOperandDeps) is consumed
+      // at the next bundle scheduling, which clears the operand's dependencies
+      // before that node joins the tree, so the recomputation misses the
+      // direct def-use edge and the count stays too low. The scheduler would
+      // then decrement the instruction more times than its dependency count,
+      // tripping the unscheduled-deps assertion. The whole tree is registered
+      // now, so clear and recompute such dependencies against the full tree.
+      if (ScheduleData *SD = BS->getScheduleData(I);
+          SD && SD->hasValidDependencies() &&
+          !BS->getScheduleCopyableData(I).empty())
+        SD->clearDirectDependencies();
       for (ScheduleBundle *Bundle : Bundles) {
         Bundle->setSchedulingPriority(Idx++);
         if (const TreeEntry *TE = Bundle->getTreeEntry();

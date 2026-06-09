@@ -1084,3 +1084,15 @@ namespace Revive {
                             // both-note {{in call to}}
 }
 #endif
+
+namespace TrivialDtorInEvaluateDtor{
+  template <class T> void foo() {
+    union { // both-error {{attempt to use a deleted function}}
+      T t; // both-note {{implicitly deleted}}
+    };
+  }
+  struct S {
+    ~S();
+  };
+  template void foo<S>(); // both-note {{in instantiation of function template specialization}}
+}

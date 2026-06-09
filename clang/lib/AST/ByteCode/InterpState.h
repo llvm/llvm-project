@@ -54,8 +54,6 @@ public:
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
-  const Frame *getBottomFrame() const override { return &BottomFrame; }
-
   bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
 

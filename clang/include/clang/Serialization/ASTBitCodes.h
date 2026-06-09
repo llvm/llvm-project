@@ -134,10 +134,6 @@ static_assert(alignof(TypeIdx) == 4);
 struct UnsafeQualTypeDenseMapInfo {
   static bool isEqual(QualType A, QualType B) { return A == B; }
 
-  static QualType getEmptyKey() {
-    return QualType::getFromOpaquePtr((void *)1);
-  }
-
   static unsigned getHashValue(QualType T) {
     assert(!T.getLocalFastQualifiers() &&
            "hash invalid for types with fast quals");
@@ -2210,10 +2206,6 @@ public:
 namespace llvm {
 
 template <> struct DenseMapInfo<clang::serialization::DeclarationNameKey> {
-  static clang::serialization::DeclarationNameKey getEmptyKey() {
-    return clang::serialization::DeclarationNameKey(-1, 1);
-  }
-
   static unsigned
   getHashValue(const clang::serialization::DeclarationNameKey &Key) {
     return Key.getHash();

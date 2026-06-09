@@ -371,6 +371,9 @@ struct TypeBuilderImpl {
                                   mlir::IntegerType::get(context, 1));
     case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
       Fortran::common::die("Vector element type not implemented");
+    case (Fortran::semantics::DerivedTypeSpec::Category::EnumerationType):
+      Fortran::common::die(
+          "Vector element type not implemented for enumeration");
     }
   }
 

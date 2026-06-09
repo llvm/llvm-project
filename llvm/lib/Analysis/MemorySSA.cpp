@@ -217,10 +217,6 @@ private:
 namespace llvm {
 
 template <> struct DenseMapInfo<MemoryLocOrCall> {
-  static inline MemoryLocOrCall getEmptyKey() {
-    return MemoryLocOrCall(DenseMapInfo<MemoryLocation>::getEmptyKey());
-  }
-
   static unsigned getHashValue(const MemoryLocOrCall &MLOC) {
     if (!MLOC.IsCall)
       return hash_combine(

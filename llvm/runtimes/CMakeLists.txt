@@ -115,6 +115,25 @@ macro(append_passthrough_options out type names)
   endforeach()
 endmacro()
 
+# Wire build-order dependencies on flang for targets that invoke it. This
+# allows us to configure the runtimes without first building flang. Attaches the
+# flang dependency to the main build target and any fortran module file builds,
+# like 'install-libomp-mod' or `install-flang-rt-mod'.
+function(add_flang_mod_deps build_target)
+  if(TARGET flang)
+    if(TARGET ${build_target})
+      add_dependencies(${build_target} flang)
+    endif()
+    foreach(tgt IN LISTS ARGN)
+      if(tgt MATCHES "-mod($|-)")
+        if(TARGET ${tgt})
+          add_dependencies(${tgt} flang)
+        endif()
+      endif()
+    endforeach()
+  endif()
+endfunction()
+
 function(builtin_default_target compiler_rt_path)
   cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
 
@@ -278,8 +297,11 @@ function(runtime_default_target)
   endforeach()
   if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
     # The target libomp-mod is a dependee of check-flang needed to run its
-    # OpenMP tests
+    # OpenMP tests. install-libomp-mod is a separate distribution component
+    # so that install-openmp does not require building flang.
     list(APPEND extra_targets "libomp-mod")
+    list(APPEND extra_targets "install-libomp-mod")
+    list(APPEND extra_targets "install-libomp-mod-stripped")
 
     # Let the "doxygen" build target also build openmp's doxygen, just like
     # "check" and "install" also apply to the runtimes builds.
@@ -293,8 +315,12 @@ function(runtime_default_target)
     endif ()
   endif ()
   if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-    # The target flang-rt-mod is a dependee of check-flang.
+    # The target flang-rt-mod is a dependee of check-flang. install-flang-rt-mod
+    # is a separate distribution component so that install-flang-rt does not
+    # require building flang.
     list(APPEND extra_targets "flang-rt-mod")
+    list(APPEND extra_targets "install-flang-rt-mod")
+    list(APPEND extra_targets "install-flang-rt-mod-stripped")
   endif ()
 
   if(LLVM_INCLUDE_TESTS)
@@ -337,6 +363,8 @@ function(runtime_default_target)
                            TARGET_TRIPLE ${LLVM_TARGET_TRIPLE}
                            FOLDER "Runtimes"
                            ${EXTRA_ARGS} ${ARG_EXTRA_ARGS})
+
+  add_flang_mod_deps(runtimes-build ${extra_targets})
 endfunction()
 
 # runtime_register_target(name)
@@ -491,6 +519,8 @@ function(runtime_register_target name)
     add_dependencies(install-${component} install-${component}-${name})
     add_dependencies(install-${component}-stripped install-${component}-${name}-stripped)
   endforeach()
+
+  add_flang_mod_deps(runtimes-${name}-build ${${name}_extra_targets})
 endfunction()
 
 # Check if we have any runtimes to build.
@@ -514,7 +544,6 @@ if(build_runtimes)
   if(LLVM_INCLUDE_TESTS)
     foreach(dep FileCheck
                 clang
-                flang
                 count
                 lld
                 lli
@@ -800,11 +829,18 @@ ${_flag_values}\
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_DEPENDS runtimes-test-depends)
 
+    # Flang is not in extra_deps to avoid making runtimes configure depend on
+    # it being fully built, but tests still need it.
+    set(extra_test_deps ${extra_deps})
+    if(TARGET flang)
+      list(APPEND extra_test_deps flang)
+    endif()
+
     foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
-      add_dependencies(${target} ${extra_deps})
+      add_dependencies(${target} ${extra_test_deps})
     endforeach()
 
-    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_deps})
+    set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_test_deps})
   endif()
 
   # Flang tests depend on module files built by the runtimes.

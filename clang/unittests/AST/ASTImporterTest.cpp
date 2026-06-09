@@ -5289,11 +5289,13 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParameterLists) {
   Decl *FromTU = getTuDecl(Code, Lang_CXX03);
   auto *FromD = FirstDeclMatcher<FunctionDecl>().match(FromTU,
       functionDecl(hasName("f"), isExplicitTemplateSpecialization()));
-  ASSERT_EQ(FromD->getTemplateParameterLists().size(), 1u);
+  ASSERT_EQ(FromD->getTemplateSpecializationInfo()->TemplateParameters->size(),
+            0u);
 
   auto *ToD = Import(FromD, Lang_CXX03);
   // The template parameter list should exist.
-  EXPECT_EQ(ToD->getTemplateParameterLists().size(), 1u);
+  ASSERT_EQ(ToD->getTemplateSpecializationInfo()->TemplateParameters->size(),
+            0u);
 }
 
 const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>

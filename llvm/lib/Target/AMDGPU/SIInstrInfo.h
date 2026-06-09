@@ -1172,6 +1172,23 @@ public:
            Opcode == AMDGPU::DS_GWS_BARRIER;
   }
 
+  static bool isLoadMonitor(unsigned Opc) {
+    switch (Opc) {
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B32_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B64_SADDR:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128:
+    case AMDGPU::GLOBAL_LOAD_MONITOR_B128_SADDR:
+    case AMDGPU::FLAT_LOAD_MONITOR_B32:
+    case AMDGPU::FLAT_LOAD_MONITOR_B64:
+    case AMDGPU::FLAT_LOAD_MONITOR_B128:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
     return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
            Opc == AMDGPU::GLOBAL_WBINV;

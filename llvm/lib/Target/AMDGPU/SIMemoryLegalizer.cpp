@@ -148,6 +148,7 @@ private:
   bool IsNonTemporal = false;
   bool IsLastUse = false;
   bool IsCooperative = false;
+  bool IsAVNone = false;
 
   // TODO: Should we assume Cooperative=true if no MMO is present?
   SIMemOpInfo(
@@ -160,12 +161,12 @@ private:
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
       bool IsLastUse = false, bool IsCooperative = false,
-      bool CanDemoteWorkgroupToWavefront = false)
+      bool CanDemoteWorkgroupToWavefront = false, bool IsAVNone = false)
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
         IsVolatile(IsVolatile), IsNonTemporal(IsNonTemporal),
-        IsLastUse(IsLastUse), IsCooperative(IsCooperative) {
+        IsLastUse(IsLastUse), IsCooperative(IsCooperative), IsAVNone(IsAVNone) {
 
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(!IsCooperative && "Cannot be cooperative & non-atomic!");
@@ -276,6 +277,9 @@ public:
 
   /// \returns True if this is a cooperative load or store atomic.
   bool isCooperative() const { return IsCooperative; }
+
+  /// \returns True if MakeAvailable/MakeVisible should be suppressed.
+  bool isAVNone() const { return IsAVNone; }
 
   /// \returns True if ordering constraint of the machine instruction used to
   /// create this SIMemOpInfo is unordered or higher, false otherwise.
@@ -412,6 +416,11 @@ public:
     return false;
   };
 
+  /// Add final touches to a `mayLoad` instruction \p MI.
+  virtual bool finalizeLoad(MachineBasicBlock::iterator &MI) const {
+    return false;
+  }
+
   /// Handle cooperative load/store atomics.
   virtual bool handleCooperativeAtomic(MachineInstr &MI) const {
     llvm_unreachable(
@@ -451,12 +460,11 @@ public:
                                SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace,
                                Position Pos) const = 0;
 
-  /// Inserts writeback followed by an unconditional wait to implement a
-  /// release operation.
+  /// Inserts writeback (unless \p IsAVNone) followed by an unconditional wait.
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const {
-    bool Changed = insertWriteback(MI, Scope, AddrSpace, Pos);
+                     Position Pos, bool IsAVNone) const {
+    bool Changed = !IsAVNone && insertWriteback(MI, Scope, AddrSpace, Pos);
     Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
                           IsCrossAddrSpaceOrdering, Pos,
                           AtomicOrdering::Release, /*AtomicsOnly=*/false);
@@ -597,6 +605,8 @@ public:
 
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
+  bool finalizeLoad(MachineBasicBlock::iterator &MI) const override;
+
   bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
   bool insertWriteback(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
@@ -730,6 +740,31 @@ getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
     return std::nullopt;
 
   return Result;
+}
+
+static void diagnoseUnknownAVMetadata(const MachineInstr &MI,
+                                      StringRef Suffix) {
+  const MachineFunction *MF = MI.getMF();
+  const Function &Fn = MF->getFunction();
+  Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+      Fn, Twine("unknown amdgcn-av metadata '") + Suffix + Twine('\''),
+      MI.getDebugLoc(), DS_Warning));
+}
+
+static bool hasAVNoneMMRA(const MachineInstr &MI) {
+  MMRAMetadata MMRA(MI.getMMRAMetadata());
+  if (!MMRA)
+    return false;
+  bool TagFound = false;
+  for (const auto &[Prefix, Suffix] : MMRA) {
+    if (Prefix != "amdgcn-av")
+      continue;
+    if (Suffix == "none")
+      TagFound = true;
+    else
+      diagnoseUnknownAVMetadata(MI, Suffix);
+  }
+  return TagFound;
 }
 
 } // end anonymous namespace
@@ -875,7 +910,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
                      IsNonTemporal, IsLastUse, IsCooperative,
-                     CanDemoteWorkgroupToWavefront);
+                     CanDemoteWorkgroupToWavefront, hasAVNoneMMRA(*MI));
 }
 
 std::optional<SIMemOpInfo>
@@ -945,7 +980,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
                      AtomicOrdering::NotAtomic, false, false, false, false,
-                     CanDemoteWorkgroupToWavefront);
+                     CanDemoteWorkgroupToWavefront, hasAVNoneMMRA(*MI));
 }
 
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
@@ -2213,6 +2248,18 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   return Changed;
 }
 
+bool SIGfx12CacheControl::finalizeLoad(MachineBasicBlock::iterator &MI) const {
+  if (!SIInstrInfo::isLoadMonitor(MI->getOpcode()))
+    return false;
+
+  // load_monitor instructions need at least SCOPE_SE to ensure L2 is hit.
+  MachineOperand *CPol = TII->getNamedOperand(*MI, AMDGPU::OpName::cpol);
+  assert(CPol && "load_monitor must have a cpol operand");
+  if ((CPol->getImm() & AMDGPU::CPol::SCOPE) < AMDGPU::CPol::SCOPE_SE)
+    return setScope(MI, AMDGPU::CPol::SCOPE_SE);
+  return false;
+}
+
 bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
   if (!ST.hasGFX1250Insts())
     return false;
@@ -2317,11 +2364,13 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
           CC->insertWait(MI, MOI.getScope(), MOI.getInstrAddrSpace(),
                          SIMemOp::LOAD, MOI.getIsCrossAddressSpaceOrdering(),
                          Position::AFTER, Order, /*AtomicsOnly=*/true);
-      Changed |= CC->insertAcquire(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
-                                   Position::AFTER);
+      if (!MOI.isAVNone()) {
+        Changed |= CC->insertAcquire(
+            MI, MOI.getScope(), MOI.getOrderingAddrSpace(), Position::AFTER);
+      }
     }
 
+    Changed |= CC->finalizeLoad(MI);
     return Changed;
   }
 
@@ -2332,6 +2381,7 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, MOI.isVolatile(),
       MOI.isNonTemporal(), MOI.isLastUse());
 
+  Changed |= CC->finalizeLoad(MI);
   return Changed;
 }
 
@@ -2363,11 +2413,12 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       Changed |= CC->handleCooperativeAtomic(*MI);
 
     if (MOI.getOrdering() == AtomicOrdering::Release ||
-        MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertRelease(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
-                                   MOI.getIsCrossAddressSpaceOrdering(),
-                                   Position::BEFORE);
+        MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent) {
+      Changed |=
+          CC->insertRelease(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
+                            MOI.getIsCrossAddressSpaceOrdering(),
+                            Position::BEFORE, MOI.isAVNone());
+    }
 
     Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/true);
     return Changed;
@@ -2412,7 +2463,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
 
     if (Order == AtomicOrdering::Release ||
         Order == AtomicOrdering::AcquireRelease ||
-        Order == AtomicOrdering::SequentiallyConsistent)
+        Order == AtomicOrdering::SequentiallyConsistent) {
       /// TODO: This relies on a barrier always generating a waitcnt
       /// for LDS to ensure it is not reordered with the completion of
       /// the proceeding LDS operations. If barrier had a memory
@@ -2422,18 +2473,21 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
       /// adding S_WAITCNT before a S_BARRIER.
       Changed |= CC->insertRelease(MI, MOI.getScope(), OrderingAddrSpace,
                                    MOI.getIsCrossAddressSpaceOrdering(),
-                                   Position::BEFORE);
+                                   Position::BEFORE, MOI.isAVNone());
+    }
 
     // TODO: If both release and invalidate are happening they could be combined
     // to use the single "BUFFER_WBINV*" instruction. This could be done by
     // reorganizing this code or as part of optimizing SIInsertWaitcnt pass to
     // track cache invalidate and write back instructions.
 
-    if (Order == AtomicOrdering::Acquire ||
-        Order == AtomicOrdering::AcquireRelease ||
-        Order == AtomicOrdering::SequentiallyConsistent)
+    if ((Order == AtomicOrdering::Acquire ||
+         Order == AtomicOrdering::AcquireRelease ||
+         Order == AtomicOrdering::SequentiallyConsistent) &&
+        !MOI.isAVNone()) {
       Changed |= CC->insertAcquire(MI, MOI.getScope(), OrderingAddrSpace,
                                    Position::BEFORE);
+    }
 
     return Changed;
   }
@@ -2469,11 +2523,12 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
     if (Order == AtomicOrdering::Release ||
         Order == AtomicOrdering::AcquireRelease ||
         Order == AtomicOrdering::SequentiallyConsistent ||
-        MOI.getFailureOrdering() == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertRelease(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
-                                   MOI.getIsCrossAddressSpaceOrdering(),
-                                   Position::BEFORE);
+        MOI.getFailureOrdering() == AtomicOrdering::SequentiallyConsistent) {
+      Changed |=
+          CC->insertRelease(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
+                            MOI.getIsCrossAddressSpaceOrdering(),
+                            Position::BEFORE, MOI.isAVNone());
+    }
 
     if (Order == AtomicOrdering::Acquire ||
         Order == AtomicOrdering::AcquireRelease ||
@@ -2486,9 +2541,10 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
                          isAtomicRet(*MI) ? SIMemOp::LOAD : SIMemOp::STORE,
                          MOI.getIsCrossAddressSpaceOrdering(), Position::AFTER,
                          Order, /*AtomicsOnly=*/true);
-      Changed |= CC->insertAcquire(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
-                                   Position::AFTER);
+      if (!MOI.isAVNone()) {
+        Changed |= CC->insertAcquire(
+            MI, MOI.getScope(), MOI.getOrderingAddrSpace(), Position::AFTER);
+      }
     }
 
     Changed |= CC->finalizeStore(RMWMI, /*Atomic=*/true);

@@ -1201,6 +1201,10 @@ Intrinsic::ID llvm::getReductionForBinop(Instruction::BinaryOps Opc) {
     return Intrinsic::vector_reduce_or;
   case Instruction::Xor:
     return Intrinsic::vector_reduce_xor;
+  case Instruction::FAdd:
+    return Intrinsic::vector_reduce_fadd;
+  case Instruction::FMul:
+    return Intrinsic::vector_reduce_fmul;
   }
   return Intrinsic::not_intrinsic;
 }

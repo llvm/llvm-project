@@ -706,22 +706,41 @@ void macho::resolveLCLinkerOptions() {
     unprocessedLCLinkerOptions.clear();
 
     DeferredFiles deferred;
+    SmallVector<StringRef> frameworks;
+    SmallVector<StringRef> libraries;
+
     for (unsigned i = 0; i < LCLinkerOptions.size(); ++i) {
       StringRef arg = LCLinkerOptions[i];
       if (arg.consume_front("-l")) {
         assert(!config->ignoreAutoLinkOptions.contains(arg));
-        addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
-                   /*isReexport=*/false, /*isHidden=*/false,
-                   /*isExplicit=*/false, LoadType::LCLinkerOption, deferred);
+        libraries.push_back(arg);
       } else if (arg == "-framework") {
         StringRef name = LCLinkerOptions[++i];
         assert(!config->ignoreAutoLinkOptions.contains(name));
-        addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
-                     /*isReexport=*/false, /*isExplicit=*/false,
-                     LoadType::LCLinkerOption, deferred);
+        frameworks.push_back(name);
       } else {
         error(arg + " is not allowed in LC_LINKER_OPTION");
       }
+    }
+
+    llvm::sort(frameworks);
+    llvm::sort(libraries);
+
+    frameworks.erase(std::unique(frameworks.begin(), frameworks.end()),
+                     frameworks.end());
+    libraries.erase(std::unique(libraries.begin(), libraries.end()),
+                    libraries.end());
+
+    for (const StringRef framework : frameworks) {
+      addFramework(framework, /*isNeeded=*/false, /*isWeak=*/false,
+                   /*isReexport=*/false, /*isExplicit=*/false,
+                   LoadType::LCLinkerOption, deferred);
+    }
+
+    for (const StringRef library : libraries) {
+      addLibrary(library, /*isNeeded=*/false, /*isWeak=*/false,
+                 /*isReexport=*/false, /*isHidden=*/false,
+                 /*isExplicit=*/false, LoadType::LCLinkerOption, deferred);
     }
 
     for (auto &file : deferred) {

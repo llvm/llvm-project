@@ -122,8 +122,8 @@ void State::addCallStack(unsigned Limit) {
   // Walk the call stack and add the diagnostics.
   unsigned CallIdx = 0;
   const Frame *Top = getCurrentFrame();
-  const Frame *Bottom = getBottomFrame();
-  for (const Frame *F = Top; F != Bottom; F = F->getCaller(), ++CallIdx) {
+  for (const Frame *F = Top; F->getCaller() != nullptr;
+       F = F->getCaller(), ++CallIdx) {
     SourceRange CallRange = F->getCallRange();
     assert(CallRange.isValid());
 

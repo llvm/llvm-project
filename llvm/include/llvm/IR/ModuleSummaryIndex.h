@@ -301,16 +301,10 @@ inline bool operator<(const ValueInfo &A, const ValueInfo &B) {
 }
 
 template <> struct DenseMapInfo<ValueInfo> {
-  static inline ValueInfo getEmptyKey() {
-    return ValueInfo(false, (GlobalValueSummaryMapTy::value_type *)-8);
-  }
-
-  static inline bool isSpecialKey(ValueInfo V) { return V == getEmptyKey(); }
-
   static bool isEqual(ValueInfo L, ValueInfo R) {
     // We are not supposed to mix ValueInfo(s) with different HaveGVs flag
     // in a same container.
-    assert(isSpecialKey(L) || isSpecialKey(R) || (L.haveGVs() == R.haveGVs()));
+    assert(L.haveGVs() == R.haveGVs());
     return L.getRef() == R.getRef();
   }
   static unsigned getHashValue(ValueInfo I) { return hash_value(I.getRef()); }
@@ -1125,8 +1119,6 @@ public:
 };
 
 template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
-  static FunctionSummary::VFuncId getEmptyKey() { return {0, uint64_t(-1)}; }
-
   static bool isEqual(FunctionSummary::VFuncId L, FunctionSummary::VFuncId R) {
     return L.GUID == R.GUID && L.Offset == R.Offset;
   }
@@ -1135,10 +1127,6 @@ template <> struct DenseMapInfo<FunctionSummary::VFuncId> {
 };
 
 template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
-  static FunctionSummary::ConstVCall getEmptyKey() {
-    return {{0, uint64_t(-1)}, {}};
-  }
-
   static bool isEqual(FunctionSummary::ConstVCall L,
                       FunctionSummary::ConstVCall R) {
     return DenseMapInfo<FunctionSummary::VFuncId>::isEqual(L.VFunc, R.VFunc) &&

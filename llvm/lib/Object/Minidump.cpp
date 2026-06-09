@@ -129,9 +129,6 @@ MinidumpFile::create(MemoryBufferRef Source) {
       continue;
     }
 
-    if (Type == DenseMapInfo<StreamType>::getEmptyKey())
-      return createError("Cannot handle one of the minidump streams");
-
     // Update the directory map, checking for duplicate stream types.
     if (!StreamMap.try_emplace(Type, StreamDescriptor.index()).second)
       return createError("Duplicate stream type");

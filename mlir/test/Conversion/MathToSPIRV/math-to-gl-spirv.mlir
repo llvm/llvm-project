@@ -481,3 +481,27 @@ func.func @tensor_1d(%arg0: tensor<2xf32>) {
 }
 
 } // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @sincos_scalar
+func.func @sincos_scalar(%arg0: f32) {
+  // CHECK: %[[SIN:.+]] = spirv.GL.Sin %{{.*}}: f32
+  // CHECK: %[[COS:.+]] = spirv.GL.Cos %{{.*}}: f32
+  %sin, %cos = math.sincos %arg0 : f32
+  return
+}
+
+// CHECK-LABEL: @sincos_vector
+func.func @sincos_vector(%arg0: vector<3xf32>) {
+  // CHECK: %[[SIN:.+]] = spirv.GL.Sin %{{.*}}: vector<3xf32>
+  // CHECK: %[[COS:.+]] = spirv.GL.Cos %{{.*}}: vector<3xf32>
+  %sin, %cos = math.sincos %arg0 : vector<3xf32>
+  return
+}
+
+} // end module

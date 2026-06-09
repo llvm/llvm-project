@@ -305,6 +305,27 @@ if (FLANG_RT_FORTRAN_MODULES)
   add_dependencies(flang_rt.mod flang_rt.mod.intrinsics.barrier)
   flang_module_target(flang_rt.mod PUBLIC)
   add_module_barrier(flang-rt-mod flang_rt.mod)
+
+  if (RUNTIMES_FORTRAN_MODULES)
+    set(_mod_install_dest "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
+    cmake_path(NORMAL_PATH _mod_install_dest)
+    install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
+      DESTINATION "${_mod_install_dest}"
+      COMPONENT flang-rt-mod
+      EXCLUDE_FROM_ALL
+    )
+
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+      add_custom_target(install-flang-rt-mod
+        DEPENDS flang-rt-mod
+        COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                --component flang-rt-mod)
+      add_custom_target(install-flang-rt-mod-stripped
+        DEPENDS flang-rt-mod
+        COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                --component flang-rt-mod --strip)
+    endif ()
+  endif ()
 endif ()
 
 

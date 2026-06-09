@@ -281,6 +281,12 @@ def create_parser():
         action="store_true",
         help="Indicate that debugserver is built with arm64e support.",
     )
+    group.add_argument(
+        "--print-lldb-version",
+        dest="print_lldb_version",
+        action="store_true",
+        help="Print the lldb version banner during test setup.",
+    )
 
     # Configuration options
     group = parser.add_argument_group("Remote platform options")
