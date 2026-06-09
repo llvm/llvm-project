@@ -172,13 +172,13 @@ exit:
 ; considering register pressure.
 define void @spills_profitable(ptr %in1, ptr %in2, ptr %out, i32 %n, i32 %m) {
 ; CHECK-NOPRESSURE-LABEL: 'spills_profitable'
-; CHECK-NOPRESSURE:  Cost for VF 2: 1535 (Estimated cost per lane: 767.5)
-; CHECK-NOPRESSURE:  Cost for VF 4: 43 (Estimated cost per lane: 10.75)
+; CHECK-NOPRESSURE:  Cost for VF 2: 1535 (Estimated cost per lane: 768)
+; CHECK-NOPRESSURE:  Cost for VF 4: 43 (Estimated cost per lane: 10.8)
 ; CHECK-NOPRESSURE:  LV: Selecting VF: 4.
 ;
 ; CHECK-PRESSURE-LABEL: 'spills_profitable'
-; CHECK-PRESSURE:  Cost for VF 2: 1539 (Estimated cost per lane: 769.5)
-; CHECK-PRESSURE:  Cost for VF 4: 49 (Estimated cost per lane: 12.25)
+; CHECK-PRESSURE:  Cost for VF 2: 1539 (Estimated cost per lane: 770)
+; CHECK-PRESSURE:  Cost for VF 4: 49 (Estimated cost per lane: 12.3)
 ; CHECK-PRESSURE:  LV: Selecting VF: 4.
 ;
 entry:

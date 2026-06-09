@@ -5771,7 +5771,10 @@ InstructionCost LoopVectorizationPlanner::cost(VPlan &Plan, ElementCount VF,
 
     (void)CostPerLane.divide(EstimatedWidthAsAPFloat,
                              APFloat::rmNearestTiesToEven);
-    LLVM_DEBUG(dbgs() << CostPerLane);
+
+    SmallString<16> Str;
+    CostPerLane.toString(Str, 3);
+    LLVM_DEBUG(dbgs() << Str);
   } else /* No point dividing an invalid cost - it will still be invalid */
     LLVM_DEBUG(dbgs() << "Invalid");
   LLVM_DEBUG(dbgs() << ")\n");

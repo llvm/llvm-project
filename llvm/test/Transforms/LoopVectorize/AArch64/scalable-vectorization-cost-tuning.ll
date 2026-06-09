@@ -38,7 +38,7 @@ define void @test0(ptr %a, ptr %b, ptr %c) #0 {
 ; VSCALEFORTUNING2:  Cost for VF vscale x 2: 10 (Estimated cost per lane: 2.5)
 ; VSCALEFORTUNING2:  Cost for VF vscale x 4: 10 (Estimated cost per lane: 1.25)
 ; VSCALEFORTUNING2:  Cost for VF vscale x 8: 10 (Estimated cost per lane: 0.625)
-; VSCALEFORTUNING2:  Cost for VF vscale x 16: 10 (Estimated cost per lane: 0.3125)
+; VSCALEFORTUNING2:  Cost for VF vscale x 16: 10 (Estimated cost per lane: 0.313)
 ; VSCALEFORTUNING2:  LV: Selecting VF: vscale x 16.
 ;
 ; VSCALEFORTUNING1-PREFER-FIXED-LABEL: 'test0'

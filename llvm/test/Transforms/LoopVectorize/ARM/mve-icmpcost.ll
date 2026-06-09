@@ -395,7 +395,7 @@ define void @cheap_icmp(ptr nocapture readonly %pSrcA, ptr nocapture readonly %p
 ; CHECK:  Cost of 0 for VF 16: vp<[[VP6]]> = DERIVED-IV ir<%pSrcB> + vp<[[VP2]]> * ir<1>
 ; CHECK:  Cost of 1 for VF 16: EMIT vp<%cmp.n> = icmp eq ir<%blockSize>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 16: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost for VF 16: 50 (Estimated cost per lane: 3.125)
+; CHECK:  Cost for VF 16: 50 (Estimated cost per lane: 3.13)
 ; CHECK:  LV: Selecting VF: 16.
 ; CHECK:  Cost of 1 for VF 16: EMIT vp<%cmp.n> = icmp eq ir<%blockSize>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 16: EMIT branch-on-cond vp<%cmp.n>
