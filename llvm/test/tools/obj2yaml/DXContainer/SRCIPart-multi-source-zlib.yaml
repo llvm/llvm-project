@@ -8,15 +8,12 @@ Header:
   Version:
     Major:           1
     Minor:           0
-  FileSize:        292
   PartCount:       1
-  PartOffsets:     [ 36 ]
 Parts:
   - Name:            SRCI
-    Size:            248
+    Size:            252
     SourceInfo:
       Header:
-        AlignedSizeInBytes: 248
         Flags:           0
         SectionCount:    3
       Names:
@@ -41,14 +38,11 @@ Parts:
             FileName:        util.hlsl
       Contents:
         SectionHeader:
-          AlignedSizeInBytes: 120
           Flags:           0
           Type:            SourceContents
         Header:
-          AlignedSizeInBytes: 112
           Flags:           0
           Type:            Zlib
-          EntriesSizeInBytes: 90
           UncompressedEntriesSizeInBytes: 116
           Count:           2
         Entries:
@@ -77,10 +71,10 @@ Parts:
 ...
 
 # CHECK:      - Name:            SRCI
-# CHECK-NEXT:   Size:            248
+# CHECK-NEXT:   Size:            252
 # CHECK-NEXT:   SourceInfo:
 # CHECK-NEXT:     Header:
-# CHECK-NEXT:       AlignedSizeInBytes: 248
+# CHECK-NEXT:       AlignedSizeInBytes:
 # CHECK-NEXT:       Flags:           0
 # CHECK-NEXT:       SectionCount:    3
 # CHECK-NEXT:     Names:
@@ -105,14 +99,14 @@ Parts:
 # CHECK-NEXT:           FileName:        util.hlsl
 # CHECK-NEXT:     Contents:
 # CHECK-NEXT:       SectionHeader:
-# CHECK-NEXT:         AlignedSizeInBytes: 120
+# CHECK-NEXT:         AlignedSizeInBytes:
 # CHECK-NEXT:         Flags:           0
 # CHECK-NEXT:         Type:            SourceContents
 # CHECK-NEXT:       Header:
-# CHECK-NEXT:         AlignedSizeInBytes: 112
+# CHECK-NEXT:         AlignedSizeInBytes:
 # CHECK-NEXT:         Flags:           0
 # CHECK-NEXT:         Type:            Zlib
-# CHECK-NEXT:         EntriesSizeInBytes: 90
+# CHECK-NEXT:         EntriesSizeInBytes:
 # CHECK-NEXT:         UncompressedEntriesSizeInBytes: 116
 # CHECK-NEXT:         Count:           2
 # CHECK-NEXT:       Entries:
