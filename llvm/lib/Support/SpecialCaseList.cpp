@@ -91,7 +91,7 @@ private:
 /// Represents a set of patterns and their line numbers
 class Matcher {
 public:
-  Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizePaths);
+  Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizeSlashes);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
@@ -100,7 +100,7 @@ public:
 
   std::variant<RegexMatcher, GlobMatcher> M;
   bool RemoveDotSlash;
-  bool CanonicalizePaths;
+  bool CanonicalizeSlashes;
 };
 
 Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -220,8 +220,8 @@ unsigned GlobMatcher::match(StringRef Query) const {
   return Best < 0 ? 0 : Globs[Best].LineNo;
 }
 
-Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizePaths)
-    : RemoveDotSlash(RemoveDotSlash), CanonicalizePaths(CanonicalizePaths) {
+Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizeSlashes)
+    : RemoveDotSlash(RemoveDotSlash), CanonicalizeSlashes(CanonicalizeSlashes) {
   if (UseGlobs)
     M.emplace<GlobMatcher>();
   else
@@ -234,13 +234,12 @@ Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
 
 unsigned Matcher::match(StringRef Query) const {
   std::string CanonicalizedQuery;
-  if (CanonicalizePaths) {
-    CanonicalizedQuery = llvm::sys::path::convert_to_slash(
-        llvm::sys::path::remove_leading_dotslash(Query));
+  if (CanonicalizeSlashes) {
+    CanonicalizedQuery = llvm::sys::path::convert_to_slash(Query);
     Query = CanonicalizedQuery;
-  } else if (RemoveDotSlash) {
-    Query = llvm::sys::path::remove_leading_dotslash(Query);
   }
+  if (RemoveDotSlash)
+    Query = llvm::sys::path::remove_leading_dotslash(Query);
   return std::visit([&](auto &V) -> unsigned { return V.match(Query); }, M);
 }
 } // namespace
@@ -252,7 +251,8 @@ public:
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
   explicit SectionImpl(bool UseGlobs)
-      : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false, /*CanonicalizePaths=*/false) {}
+      : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false,
+                       /*CanonicalizeSlashes=*/false) {}
 
   Matcher SectionMatcher;
   SectionEntries Entries;
@@ -336,7 +336,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   if (Header.consume_front("#!special-case-list-v"))
     consumeUnsignedInteger(Header, 10, Version);
 
-  bool CanonicalizePaths = Version > 3;
+  bool CanonicalizeSlashes = Version > 3;
 
   // In https://reviews.llvm.org/D154014 we added glob support and planned
   // to remove regex support in patterns. We temporarily support the
@@ -396,7 +396,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
         Category, UseGlobs,
         RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix),
-        CanonicalizePaths && llvm::is_contained(PathPrefixes, Prefix));
+        CanonicalizeSlashes && llvm::is_contained(PathPrefixes, Prefix));
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
