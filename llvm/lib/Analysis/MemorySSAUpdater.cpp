@@ -984,6 +984,19 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
       InsertedPhis.push_back(MSSA->createMemoryPhi(BB));
   }
 
+  // MemoryPhis updated for inserted edges from unreachable predecessors may
+  // not be revisited by the IDF-based update below. IDF is computed from the
+  // reachable dominator tree, so such predecessors do not contribute to IDF
+  // placement. Recompute these phis after the IDF update, because newly
+  // inserted IDF phis may invalidate the incoming values of these phis.
+  SmallVector<WeakVH, 8> PhisWithUnreachableIncoming;
+  SmallPtrSet<MemoryPhi *, 8> SeenPhisWithUnreachableIncoming;
+
+  auto RecordMemoryPhiWithUnreachableIncoming = [&](MemoryPhi *MPhi) {
+    if (SeenPhisWithUnreachableIncoming.insert(MPhi).second)
+      PhisWithUnreachableIncoming.push_back(MPhi);
+  };
+
   // Now we'll fill in the MemoryPhis with the right incoming values.
   for (auto &BBPredPair : PredMap) {
     auto *BB = BBPredPair.first;
@@ -1013,6 +1026,9 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
         auto *LastDefForPred = LastDefAddedPred[Pred];
         for (int I = 0, E = EdgeCountMap[{Pred, BB}]; I < E; ++I)
           NewPhi->addIncoming(LastDefForPred, Pred);
+
+        if (!DT.getNode(Pred))
+          RecordMemoryPhiWithUnreachableIncoming(NewPhi);
       }
     } else {
       // Pick any existing predecessor and get its definition. All other
@@ -1044,6 +1060,9 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
         auto *LastDefForPred = LastDefAddedPred[Pred];
         for (int I = 0, E = EdgeCountMap[{Pred, BB}]; I < E; ++I)
           NewPhi->addIncoming(LastDefForPred, Pred);
+
+        if (!DT.getNode(Pred))
+          RecordMemoryPhiWithUnreachableIncoming(NewPhi);
       }
       for (auto *Pred : PrevBlockSet)
         for (int I = 0, E = EdgeCountMap[{Pred, BB}]; I < E; ++I)
@@ -1102,6 +1121,13 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
       }
     }
   }
+
+  // The IDF update above may have inserted new phis that should define the
+  // reachable incoming values of these phis.
+  for (auto &VH : PhisWithUnreachableIncoming)
+    if (auto *MPhi = cast_or_null<MemoryPhi>(VH))
+      for (unsigned I = 0, E = MPhi->getNumIncomingValues(); I < E; ++I)
+        MPhi->setIncomingValue(I, GetLastDef(MPhi->getIncomingBlock(I)));
 
   // Now for all defs in BlocksWithDefsToReplace, if there are uses they no
   // longer dominate, replace those with the closest dominating def.
