@@ -110,17 +110,16 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
   VPlanPtr Plan = buildVPlan0(LoopHeader);
   combineExitConditions(*Plan);
 
-  SmallVector<VPInstruction *> Recipes;
-  SmallVector<VPInstruction *> GEPs;
-
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan->getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
 
+  SmallVector<VPInstruction *> Recipes;
   std::optional<VPValue *> UncountableCondition =
-      vputils::getRecipesForUncountableExit(Recipes, GEPs, LatchVPBB);
+      vputils::getRecipesForUncountableExit(Recipes, LatchVPBB);
   ASSERT_TRUE(UncountableCondition.has_value());
-  ASSERT_EQ(GEPs.size(), 1ull);
+  ASSERT_TRUE(
+      match(Recipes.back(), m_VPInstruction<Instruction::GetElementPtr>()));
   ASSERT_EQ(Recipes.size(), 4ull);
 }
 
@@ -149,16 +148,14 @@ TEST_F(VPUncountableExitTest, NoUncountableExit) {
   auto Plan = buildVPlan0(LoopHeader);
 
   SmallVector<VPInstruction *> Recipes;
-  SmallVector<VPInstruction *> GEPs;
 
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan->getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
 
   std::optional<VPValue *> UncountableCondition =
-      vputils::getRecipesForUncountableExit(Recipes, GEPs, LatchVPBB);
+      vputils::getRecipesForUncountableExit(Recipes, LatchVPBB);
   ASSERT_FALSE(UncountableCondition.has_value());
-  ASSERT_EQ(GEPs.size(), 0ull);
   ASSERT_EQ(Recipes.size(), 0ull);
 }
 

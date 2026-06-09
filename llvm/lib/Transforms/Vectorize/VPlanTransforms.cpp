@@ -4257,11 +4257,10 @@ static bool handleUncountableExitsWithSideEffects(
   // We can abandon a VPlan entirely if we return false here, so we shouldn't
   // crash if some earlier assumptions on scalar IR don't hold for the vplan
   // version of the loop.
-  SmallVector<VPInstruction *, 2> GEPs;
   SmallVector<VPInstruction *, 8> ConditionRecipes;
 
   std::optional<VPValue *> Cond =
-      vputils::getRecipesForUncountableExit(ConditionRecipes, GEPs, LatchVPBB);
+      vputils::getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
   if (!Cond)
     return false;
 
@@ -4280,6 +4279,7 @@ static bool handleUncountableExitsWithSideEffects(
   // TODO: Support conditional loads for uncountable exits.
   assert(VPDT.dominates(Load->getParent(), LatchVPBB) &&
          "Uncountable exit condition load is conditional.");
+  VPInstruction *Ptr = cast<VPInstruction>(Load->getOperand(0));
 
   // Ensure that we are guaranteed to be able to dereference the memory used
   // for determining the uncountable exit for the maximum possible number of
@@ -4289,7 +4289,6 @@ static bool handleUncountableExitsWithSideEffects(
   //       all possible addresses are dereferenceable.
   {
     SmallVector<const SCEVPredicate *, 4> Predicates;
-    VPValue *Ptr = Load->getOperand(0);
     const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
     const DataLayout &DL = Plan.getDataLayout();
     APInt EltSize(DL.getIndexTypeSizeInBits(Ptr->getScalarType()),
@@ -4308,10 +4307,8 @@ static bool handleUncountableExitsWithSideEffects(
   if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
       !match(IV->getStepValue(), m_SpecificInt(1)))
     return false;
-  if (GEPs.size() != 1)
-    return false;
-  if (!match(GEPs.front(), m_VPInstruction<Instruction::GetElementPtr>(
-                               m_LiveIn(), m_Specific(IV))))
+  if (!match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(m_LiveIn(),
+                                                              m_Specific(IV))))
     return false;
 
   // We want to guarantee that the uncountable exit condition (and the mask

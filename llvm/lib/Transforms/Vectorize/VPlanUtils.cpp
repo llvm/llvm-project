@@ -530,7 +530,6 @@ bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
 
 std::optional<VPValue *>
 vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
-                                      SmallVectorImpl<VPInstruction *> &GEPs,
                                       VPBasicBlock *LatchVPBB) {
   // Given a plain CFG VPlan loop with countable latch exiting block
   // \p LatchVPBB, we're looking to match the recipes contributing to the
@@ -620,7 +619,6 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
         return std::nullopt;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
-      GEPs.push_back(cast<VPInstruction>(GepR));
     } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
                             m_VPValue(Op1)))) {
       Worklist.push_back(Op1);
@@ -631,7 +629,9 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 
   // If we couldn't match anything, don't return the condition. It may be
   // defined outside the loop.
-  if (Recipes.empty() || GEPs.empty())
+  if (Recipes.empty() || none_of(Recipes, [](VPInstruction *I) {
+        return match(I, m_VPInstruction<Instruction::GetElementPtr>());
+      }))
     return std::nullopt;
 
   return UncountableCondition;
