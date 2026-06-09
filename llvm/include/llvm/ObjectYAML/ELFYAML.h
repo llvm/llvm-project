@@ -815,9 +815,11 @@ struct ScalarEnumerationTraits<ELFYAML::ELF_STT> {
   static void enumeration(IO &IO, ELFYAML::ELF_STT &Value);
 };
 
-template <>
-struct ScalarEnumerationTraits<ELFYAML::ELF_REL> {
-  static void enumeration(IO &IO, ELFYAML::ELF_REL &Value);
+template <> struct ScalarTraits<ELFYAML::ELF_REL> {
+  static void output(const ELFYAML::ELF_REL &Value, void *Ctx,
+                     raw_ostream &Out);
+  static StringRef input(StringRef Scalar, void *Ctx, ELFYAML::ELF_REL &Value);
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
 };
 
 template <>

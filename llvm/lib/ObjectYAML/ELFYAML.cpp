@@ -12,6 +12,7 @@
 
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -19,11 +20,14 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MipsABIFlags.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/YAMLTraits.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
+#include <type_traits>
 
 namespace llvm {
 
@@ -848,7 +852,6 @@ void ScalarEnumerationTraits<ELFYAML::ELF_STT>::enumeration(
   IO.enumFallback<Hex8>(Value);
 }
 
-
 void ScalarEnumerationTraits<ELFYAML::ELF_RSS>::enumeration(
     IO &IO, ELFYAML::ELF_RSS &Value) {
 #define ECase(X) IO.enumCase(Value, #X, ELF::X)
@@ -859,76 +862,254 @@ void ScalarEnumerationTraits<ELFYAML::ELF_RSS>::enumeration(
 #undef ECase
 }
 
-void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
-    IO &IO, ELFYAML::ELF_REL &Value) {
-  const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
-  assert(Object && "The IO context is not initialized");
-#define ELF_RELOC(X, Y) IO.enumCase(Value, #X, ELF::X);
-  switch (Object->getMachine()) {
-  case ELF::EM_X86_64:
-#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
-    break;
-  case ELF::EM_MIPS:
-#include "llvm/BinaryFormat/ELFRelocs/Mips.def"
-    break;
-  case ELF::EM_HEXAGON:
+namespace {
+
+// Keep the relocation metadata address-free so it does not require fixups.
+struct ELFRelocationNameTable {
+#define ELF_RELOC(X, Y) char X[sizeof(#X)];
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
+#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARC.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
+#include "llvm/BinaryFormat/ELFRelocs/BPF.def"
+#include "llvm/BinaryFormat/ELFRelocs/CSKY.def"
 #include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
-    break;
+#include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
+#include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
+#include "llvm/BinaryFormat/ELFRelocs/M68k.def"
+#include "llvm/BinaryFormat/ELFRelocs/Mips.def"
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
+#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+#include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
+#include "llvm/BinaryFormat/ELFRelocs/VE.def"
+#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
+#include "llvm/BinaryFormat/ELFRelocs/i386.def"
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
+#undef ELF_RELOC
+};
+
+static constexpr ELFRelocationNameTable ELFRelocationNames = {
+#define ELF_RELOC(X, Y) #X,
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
+#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARC.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
+#include "llvm/BinaryFormat/ELFRelocs/BPF.def"
+#include "llvm/BinaryFormat/ELFRelocs/CSKY.def"
+#include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
+#include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
+#include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
+#include "llvm/BinaryFormat/ELFRelocs/M68k.def"
+#include "llvm/BinaryFormat/ELFRelocs/Mips.def"
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
+#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+#include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
+#include "llvm/BinaryFormat/ELFRelocs/VE.def"
+#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
+#include "llvm/BinaryFormat/ELFRelocs/i386.def"
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
+#undef ELF_RELOC
+};
+
+struct ELFRelocationEntry {
+  uint16_t NameOffset;
+  uint16_t Value;
+  uint8_t NameLength;
+  uint8_t NameHash;
+};
+
+static constexpr uint8_t hashELFRelocationName(const char *Data, size_t Size) {
+  uint8_t Hash = 0;
+  for (size_t I = 0; I != Size; ++I)
+    Hash = Hash * 33 + static_cast<uint8_t>(Data[I]);
+  return Hash;
+}
+
+static_assert(std::is_standard_layout_v<ELFRelocationNameTable>);
+static_assert(alignof(ELFRelocationNameTable) == 1);
+static_assert(sizeof(ELFRelocationNameTable) <=
+              std::numeric_limits<uint16_t>::max());
+static_assert(sizeof(ELFRelocationEntry) == 6);
+
+#define ELF_RELOC(X, Y)                                                        \
+  static_assert(ELF::X <= std::numeric_limits<uint16_t>::max(),                \
+                #X " does not fit in ELFRelocationEntry::Value");              \
+  static_assert(sizeof(#X) - 1 <= std::numeric_limits<uint8_t>::max(),         \
+                #X " does not fit in ELFRelocationEntry::NameLength");
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
+#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARC.def"
+#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
+#include "llvm/BinaryFormat/ELFRelocs/BPF.def"
+#include "llvm/BinaryFormat/ELFRelocs/CSKY.def"
+#include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
+#include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
+#include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
+#include "llvm/BinaryFormat/ELFRelocs/M68k.def"
+#include "llvm/BinaryFormat/ELFRelocs/Mips.def"
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
+#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+#include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
+#include "llvm/BinaryFormat/ELFRelocs/VE.def"
+#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
+#include "llvm/BinaryFormat/ELFRelocs/i386.def"
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
+#undef ELF_RELOC
+
+#define ELF_RELOC(X, Y)                                                        \
+  {static_cast<uint16_t>(offsetof(ELFRelocationNameTable, X)),                 \
+   static_cast<uint16_t>(ELF::X), static_cast<uint8_t>(sizeof(#X) - 1),        \
+   hashELFRelocationName(#X, sizeof(#X) - 1)},
+
+static constexpr ELFRelocationEntry X86_64Relocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/x86_64.def"
+};
+static constexpr ELFRelocationEntry MipsRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/Mips.def"
+};
+static constexpr ELFRelocationEntry HexagonRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"
+};
+static constexpr ELFRelocationEntry I386Relocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/i386.def"
+};
+static constexpr ELFRelocationEntry AArch64Relocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
+};
+static constexpr ELFRelocationEntry ARMRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
+};
+static constexpr ELFRelocationEntry ARCRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/ARC.def"
+};
+static constexpr ELFRelocationEntry RISCVRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
+};
+static constexpr ELFRelocationEntry LanaiRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
+};
+static constexpr ELFRelocationEntry AMDGPURelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
+};
+static constexpr ELFRelocationEntry BPFRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/BPF.def"
+};
+static constexpr ELFRelocationEntry VERelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/VE.def"
+};
+static constexpr ELFRelocationEntry CSKYRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/CSKY.def"
+};
+static constexpr ELFRelocationEntry PowerPCRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
+};
+static constexpr ELFRelocationEntry PowerPC64Relocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
+};
+static constexpr ELFRelocationEntry SparcRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
+};
+static constexpr ELFRelocationEntry M68kRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/M68k.def"
+};
+static constexpr ELFRelocationEntry LoongArchRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
+};
+static constexpr ELFRelocationEntry XtensaRelocations[] = {
+#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
+};
+
+#undef ELF_RELOC
+
+static ArrayRef<ELFRelocationEntry> getELFRelocations(unsigned Machine) {
+  switch (Machine) {
+  case ELF::EM_X86_64:
+    return X86_64Relocations;
+  case ELF::EM_MIPS:
+    return MipsRelocations;
+  case ELF::EM_HEXAGON:
+    return HexagonRelocations;
   case ELF::EM_386:
   case ELF::EM_IAMCU:
-#include "llvm/BinaryFormat/ELFRelocs/i386.def"
-    break;
+    return I386Relocations;
   case ELF::EM_AARCH64:
-#include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
-    break;
+    return AArch64Relocations;
   case ELF::EM_ARM:
-#include "llvm/BinaryFormat/ELFRelocs/ARM.def"
-    break;
+    return ARMRelocations;
   case ELF::EM_ARC:
-#include "llvm/BinaryFormat/ELFRelocs/ARC.def"
-    break;
+    return ARCRelocations;
   case ELF::EM_RISCV:
-#include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
-    break;
+    return RISCVRelocations;
   case ELF::EM_LANAI:
-#include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
-    break;
+    return LanaiRelocations;
   case ELF::EM_AMDGPU:
-#include "llvm/BinaryFormat/ELFRelocs/AMDGPU.def"
-    break;
+    return AMDGPURelocations;
   case ELF::EM_BPF:
-#include "llvm/BinaryFormat/ELFRelocs/BPF.def"
-    break;
+    return BPFRelocations;
   case ELF::EM_VE:
-#include "llvm/BinaryFormat/ELFRelocs/VE.def"
-    break;
+    return VERelocations;
   case ELF::EM_CSKY:
-#include "llvm/BinaryFormat/ELFRelocs/CSKY.def"
-    break;
+    return CSKYRelocations;
   case ELF::EM_PPC:
-#include "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
-    break;
+    return PowerPCRelocations;
   case ELF::EM_PPC64:
-#include "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
-    break;
+    return PowerPC64Relocations;
   case ELF::EM_SPARCV9:
-#include "llvm/BinaryFormat/ELFRelocs/Sparc.def"
-    break;
+    return SparcRelocations;
   case ELF::EM_68K:
-#include "llvm/BinaryFormat/ELFRelocs/M68k.def"
-    break;
+    return M68kRelocations;
   case ELF::EM_LOONGARCH:
-#include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
-    break;
+    return LoongArchRelocations;
   case ELF::EM_XTENSA:
-#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
-    break;
+    return XtensaRelocations;
   default:
-    // Nothing to do.
-    break;
+    return {};
   }
-#undef ELF_RELOC
-  IO.enumFallback<Hex32>(Value);
+}
+
+static StringRef getELFRelocationName(const ELFRelocationEntry &Entry) {
+  const char *Names = reinterpret_cast<const char *>(&ELFRelocationNames);
+  return StringRef(Names + Entry.NameOffset, Entry.NameLength);
+}
+
+} // namespace
+
+void ScalarTraits<ELFYAML::ELF_REL>::output(const ELFYAML::ELF_REL &Value,
+                                            void *Ctx, raw_ostream &Out) {
+  const auto *Object = static_cast<ELFYAML::Object *>(Ctx);
+  assert(Object && "The IO context is not initialized");
+  for (const ELFRelocationEntry &Entry :
+       getELFRelocations(Object->getMachine())) {
+    if (static_cast<uint32_t>(Value) == Entry.Value) {
+      Out << getELFRelocationName(Entry);
+      return;
+    }
+  }
+  ScalarTraits<Hex32>::output(Hex32(Value), Ctx, Out);
+}
+
+StringRef ScalarTraits<ELFYAML::ELF_REL>::input(StringRef Scalar, void *Ctx,
+                                                ELFYAML::ELF_REL &Value) {
+  const auto *Object = static_cast<ELFYAML::Object *>(Ctx);
+  assert(Object && "The IO context is not initialized");
+  const uint8_t Hash = hashELFRelocationName(Scalar.data(), Scalar.size());
+  for (const ELFRelocationEntry &Entry :
+       getELFRelocations(Object->getMachine())) {
+    if (Scalar.size() == Entry.NameLength && Hash == Entry.NameHash &&
+        Scalar == getELFRelocationName(Entry)) {
+      Value = Entry.Value;
+      return {};
+    }
+  }
+
+  Hex32 HexValue;
+  StringRef Error = ScalarTraits<Hex32>::input(Scalar, Ctx, HexValue);
+  if (Error.empty())
+    Value = HexValue;
+  return Error;
 }
 
 void ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG>::enumeration(
