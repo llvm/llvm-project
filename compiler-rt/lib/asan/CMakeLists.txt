@@ -162,22 +162,13 @@ option(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS
 # the C++ slices (RTAsan_cxx in the static build and RTAsan_dynamic_cxx in
 # the dynamic build) opt into these flags — the rest of the runtime keeps
 # -fno-exceptions / -nostdinc++.
+set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
+set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
 if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND COMPILER_RT_HAS_FEXCEPTIONS_FLAG)
-  set(ASAN_USE_EXCEPTIONS TRUE)
-else()
-  set(ASAN_USE_EXCEPTIONS FALSE)
-endif()
-
-if(ASAN_USE_EXCEPTIONS)
-  set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
   list(REMOVE_ITEM ASAN_CXX_CFLAGS -fno-exceptions -nostdinc++)
   list(APPEND ASAN_CXX_CFLAGS -fexceptions)
-  set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
   list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions -nostdinc++)
   list(APPEND ASAN_DYNAMIC_CXX_CFLAGS -fexceptions)
-else()
-  set(ASAN_CXX_CFLAGS ${ASAN_CFLAGS})
-  set(ASAN_DYNAMIC_CXX_CFLAGS ${ASAN_DYNAMIC_CFLAGS})
 endif()
 
 # LLVM turns /OPT:ICF back on when LLVM_ENABLE_PDBs is set
