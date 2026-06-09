@@ -322,12 +322,17 @@ option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatom
 
 option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
 
-# Opt-in clang_rt.profile_rocm (built /MD on Windows, depends on the sanitizer
-# interception library). Off by default on all platforms so default builds are
-# unaffected.
+set(COMPILER_RT_BUILD_PROFILE_ROCM_DEFAULT OFF)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "^(Linux|Windows)$" AND
+   NOT COMPILER_RT_PROFILE_BAREMETAL)
+  set(COMPILER_RT_BUILD_PROFILE_ROCM_DEFAULT ON)
+endif()
+
+# clang_rt.profile_rocm is supported on Linux and Windows. It is built /MD on
+# Windows and depends on the sanitizer interception library.
 option(COMPILER_RT_BUILD_PROFILE_ROCM
   "Build the host-side ROCm/HIP device profile collection runtime (clang_rt.profile_rocm)"
-  OFF)
+  ${COMPILER_RT_BUILD_PROFILE_ROCM_DEFAULT})
 mark_as_advanced(COMPILER_RT_BUILD_PROFILE_ROCM)
 
 include(config-ix)
