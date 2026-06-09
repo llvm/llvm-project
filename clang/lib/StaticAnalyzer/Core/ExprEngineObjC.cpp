@@ -120,15 +120,13 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   ExplodedNodeSet DstLocation; // states in `DstLocation` may differ from `Pred`
   evalLocation(DstLocation, S, elem, Pred, state, elementV, false);
 
-  for (ExplodedNode *dstLocation : DstLocation) {
+  for (ExplodedNode *N : DstLocation) {
     ExplodedNodeSet Tmp;
 
     if (!isContainerNull)
-      populateObjCForDestinationSet(S, dstLocation, Tmp, elementV,
-                                    /*hasElements=*/true);
+      populateObjCForDestinationSet(S, N, Tmp, elementV, /*hasElements=*/true);
 
-    populateObjCForDestinationSet(S, dstLocation, Tmp, elementV,
-                                  /*hasElements=*/false);
+    populateObjCForDestinationSet(S, N, Tmp, elementV, /*hasElements=*/false);
 
     // Finally, run any custom checkers.
     // FIXME: Eventually all pre- and post-checks should live in VisitStmt.
