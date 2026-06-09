@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/COFFCxxModuleMetadata.h"
-#include "llvm/Support/ErrorExtras.h"
 
 namespace llvm::object {
 
@@ -96,11 +95,11 @@ parseCOFFCxxModuleMetadata(StringRef SectionData) {
   };
 
   if (!IsSupportedIndexWidth(Header->ModuleIndexWidth))
-    return createStringErrorV("unsupported module index width: {0}",
-                              Header->ModuleIndexWidth);
+    return createStringError("unsupported module index width: %d",
+                             Header->ModuleIndexWidth);
   if (!IsSupportedIndexWidth(Header->SymbolIndexWidth))
-    return createStringErrorV("unsupported symbol index width: {0}",
-                              Header->SymbolIndexWidth);
+    return createStringError("unsupported symbol index width: %d",
+                             Header->SymbolIndexWidth);
 
   size_t ModuleDataSize = Header->ModuleDataSize.value();
   if (ModuleDataSize <= sizeof(COFFCxxModuleMetadataHeader))
@@ -108,7 +107,7 @@ parseCOFFCxxModuleMetadata(StringRef SectionData) {
         "module data size too small: got %d, expected more than %d",
         ModuleDataSize, sizeof(COFFCxxModuleMetadataHeader));
   if (ModuleDataSize + 1 >= SectionData.size())
-    return createStringErrorV(
+    return createStringError(
         "module data size too big: got %d, section size is %d", ModuleDataSize,
         SectionData.size());
 
