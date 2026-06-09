@@ -301,9 +301,9 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
     }
   }
 
-  for (VPBlockBase *VPB : reverse(RPOT))
-    if (VPB != Header)
-      Predicator.convertPhisToBlends(cast<VPBasicBlock>(VPB));
+  for (VPBlockBase *VPBB : reverse(RPOT))
+    if (VPBB != Header)
+      Predicator.convertPhisToBlends(cast<VPBasicBlock>(VPBB));
 
   // Linearize the blocks of the loop into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;
