@@ -89,28 +89,18 @@ TEST_CONSTEXPR_CXX26 void test(unsigned n) {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
-#if TEST_STD_VER >= 26
-  if consteval {
-    test<DefaultOnly, std::allocator<DefaultOnly>>(0);
-    test<DefaultOnly, std::allocator<DefaultOnly>>(1);
-    test<DefaultOnly, std::allocator<DefaultOnly>>(15);
-    test<DefaultOnly, std::allocator<DefaultOnly>>(33);
-  } else
-#endif
-  {
-    test<DefaultOnly, std::allocator<DefaultOnly> >(0);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(1);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(10);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(1023);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(1024);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(1025);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(2047);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(2048);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(2049);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(4095);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(4096);
-    test<DefaultOnly, std::allocator<DefaultOnly> >(4097);
-  }
+  test<DefaultOnly, std::allocator<DefaultOnly> >(0);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(1);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(10);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(1023);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(1024);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(1025);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(2047);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(2048);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(2049);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(4095);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(4096);
+  test<DefaultOnly, std::allocator<DefaultOnly> >(4097);
 
   LIBCPP_ONLY(test1<DefaultOnly, limited_allocator<DefaultOnly, 4096> >(4095));
 

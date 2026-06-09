@@ -32,28 +32,18 @@ TEST_CONSTEXPR_CXX26 void test(unsigned n, const T& x) {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
-#if TEST_STD_VER >= 26
-  if consteval {
-    test<int, std::allocator<int> >(0, 5);
-    test<int, std::allocator<int> >(2049, 654);
-    test<int, std::allocator<int> >(4097, 157);
-  } else
-#endif
-  {
-    test<int, std::allocator<int> >(0, 5);
-    test<int, std::allocator<int> >(1, 10);
-    test<int, std::allocator<int> >(10, 11);
-    test<int, std::allocator<int> >(1023, -11);
-    test<int, std::allocator<int> >(1024, 25);
-    test<int, std::allocator<int> >(1025, 0);
-    test<int, std::allocator<int> >(2047, 110);
-    test<int, std::allocator<int> >(2048, -500);
-    test<int, std::allocator<int> >(2049, 654);
-    test<int, std::allocator<int> >(4095, 78);
-    test<int, std::allocator<int> >(4096, 1165);
-    test<int, std::allocator<int> >(4097, 157);
-  }
-
+  test<int, std::allocator<int> >(0, 5);
+  test<int, std::allocator<int> >(1, 10);
+  test<int, std::allocator<int> >(10, 11);
+  test<int, std::allocator<int> >(1023, -11);
+  test<int, std::allocator<int> >(1024, 25);
+  test<int, std::allocator<int> >(1025, 0);
+  test<int, std::allocator<int> >(2047, 110);
+  test<int, std::allocator<int> >(2048, -500);
+  test<int, std::allocator<int> >(2049, 654);
+  test<int, std::allocator<int> >(4095, 78);
+  test<int, std::allocator<int> >(4096, 1165);
+  test<int, std::allocator<int> >(4097, 157);
   LIBCPP_ONLY(test<int, limited_allocator<int, 4096> >(4095, 90));
 #if TEST_STD_VER >= 11
   test<int, min_allocator<int> >(4095, 90);

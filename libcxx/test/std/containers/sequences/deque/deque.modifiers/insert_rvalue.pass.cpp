@@ -81,22 +81,6 @@ TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
-#if TEST_STD_VER >= 26
-  if consteval {
-    constexpr int is[]{0, 15, 33};
-    constexpr int js[]{0, 15, 33};
-
-    for (int i : is) {
-      for (int j : js) {
-        testN<std::deque<MoveOnly>>(i, j);
-        testN<std::deque<MoveOnly, min_allocator<MoveOnly>>>(i, j);
-        testN<std::deque<MoveOnly, safe_allocator<MoveOnly>>>(i, j);
-      }
-    }
-
-    return true;
-  }
-#endif
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);

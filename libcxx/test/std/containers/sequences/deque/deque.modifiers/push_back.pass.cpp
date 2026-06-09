@@ -40,20 +40,6 @@ TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
 
 template <class C>
 TEST_CONSTEXPR_CXX26 void test(int size) {
-#if TEST_STD_VER >= 26
-  if consteval {
-    constexpr int js[]{0, 129, 257};
-
-    for (int j : js) {
-      C c     = make<C>(size, j);
-      auto it = c.cbegin();
-      for (int i = 0; i < size; ++i, ++it)
-        assert(*it == i);
-    }
-
-    return;
-  }
-#endif
   int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2046, 2047, 2048, 2049};
   const int N = sizeof(rng) / sizeof(rng[0]);
   for (int j = 0; j < N; ++j) {
@@ -66,17 +52,6 @@ TEST_CONSTEXPR_CXX26 void test(int size) {
 }
 
 TEST_CONSTEXPR_CXX26 bool tests() {
-#if TEST_STD_VER >= 26
-  if consteval {
-    constexpr int is[]{0, 15, 33};
-    for (int i : is) {
-      test<std::deque<int>>(i);
-      test<std::deque<int, min_allocator<int>>>(i);
-    }
-
-    return true;
-  }
-#endif
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2046, 2047, 2048, 2049, 4094, 4095, 4096};
     const int N = sizeof(rng) / sizeof(rng[0]);
