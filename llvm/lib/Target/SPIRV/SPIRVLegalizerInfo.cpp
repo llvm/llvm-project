@@ -402,6 +402,18 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalIf(
           all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)));
 
+  getActionDefinitionsBuilder(G_PTRMASK)
+      .legalForCartesianProduct(allPtrs, allIntScalars)
+      .legalIf(
+          all(typeInSet(0, allPtrs), typeOfExtendedScalars(1, IsExtendedInts)))
+      .legalIf([](const LegalityQuery &Query) {
+        const LLT PtrTy = Query.Types[0];
+        const LLT MaskTy = Query.Types[1];
+        return PtrTy.isPointerVector() && MaskTy.isVector() &&
+               !MaskTy.isPointer() &&
+               PtrTy.getNumElements() == MaskTy.getNumElements();
+      });
+
   // ST.canDirectlyComparePointers() for pointer args is supported in
   // legalizeCustom().
   getActionDefinitionsBuilder(G_ICMP)
