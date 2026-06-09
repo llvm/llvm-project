@@ -105,6 +105,8 @@ public:
   inSectionBlame(StringRef Section, StringRef Prefix, StringRef Query,
                  StringRef Category = StringRef()) const;
 
+
+
 protected:
   // Implementations of the create*() functions that can also be used by derived
   // classes.

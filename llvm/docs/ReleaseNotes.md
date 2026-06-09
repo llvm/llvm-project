@@ -291,11 +291,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Renamed ISD::CTTZ_ZERO_UNDEF to ISD::CTTZ_ZERO_POISON opcode to make it clear that
   a zero input results in poison.
 
-* (Sanitizer Special Case Lists)[https://clang.llvm.org/docs/SanitizerSpecialCaseList.html]
-  version 4 (indicated by ``#!special-case-list-v4``) now specifies that filename
-  patterns should be matched against canonicalized paths, without leading dots or
-  slashes and (on Windows only) without any backslashes.
-
+### Changes to the GlobalISel infrastructure
 
 * Renamed G_CTLZ_ZERO_UNDEF to G_CTLZ_ZERO_POISON opcode to make it clear that
   a zero input results in poison.
@@ -405,6 +401,11 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to Sanitizers
 
 * Add a random delay into ThreadSanitizer to help find rare thread interleavings.
+
+* [Sanitizer Special Case Lists](https://clang.llvm.org/docs/SanitizerSpecialCaseList.html)
+  version 4 (indicated by ``#!special-case-list-v4``) now specifies that filename
+  patterns should be matched against canonicalized paths, without leading dots or
+  slashes and (on Windows only) without any backslashes.
 
 ### Other Changes
 

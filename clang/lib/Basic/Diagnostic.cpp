@@ -585,22 +585,9 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
   if (!DiagSection)
     return false;
 
-  StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
-
+  StringRef F = PLoc.getFilename();
   unsigned LastSup = DiagSection->getLastMatch("src", F, "");
   if (LastSup == 0)
-  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid()) {
-    if (CanonicalizePaths) {
-      return globsMatches(
-          CategoriesToMatchers,
-          llvm::sys::path::convert_to_slash(
-              llvm::sys::path::remove_leading_dotslash(PLoc.getFilename())));
-    } else {
-      return globsMatches(
-          CategoriesToMatchers,
-          llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
-    }
-  }
     return false;
 
   unsigned LastEmit = DiagSection->getLastMatch("src", F, "emit");

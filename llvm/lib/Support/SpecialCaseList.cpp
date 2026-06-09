@@ -91,7 +91,7 @@ private:
 /// Represents a set of patterns and their line numbers
 class Matcher {
 public:
-  Matcher(bool UseGlobs, bool RemoveDotSlash);
+  Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizePaths);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
@@ -100,6 +100,7 @@ public:
 
   std::variant<RegexMatcher, GlobMatcher> M;
   bool RemoveDotSlash;
+  bool CanonicalizePaths;
 };
 
 Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -219,8 +220,8 @@ unsigned GlobMatcher::match(StringRef Query) const {
   return Best < 0 ? 0 : Globs[Best].LineNo;
 }
 
-Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
-    : RemoveDotSlash(RemoveDotSlash) {
+Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizePaths)
+    : RemoveDotSlash(RemoveDotSlash), CanonicalizePaths(CanonicalizePaths) {
   if (UseGlobs)
     M.emplace<GlobMatcher>();
   else
@@ -232,8 +233,14 @@ Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
 }
 
 unsigned Matcher::match(StringRef Query) const {
-  if (RemoveDotSlash)
+  std::string CanonicalizedQuery;
+  if (CanonicalizePaths) {
+    CanonicalizedQuery = llvm::sys::path::convert_to_slash(
+        llvm::sys::path::remove_leading_dotslash(Query));
+    Query = CanonicalizedQuery;
+  } else if (RemoveDotSlash) {
     Query = llvm::sys::path::remove_leading_dotslash(Query);
+  }
   return std::visit([&](auto &V) -> unsigned { return V.match(Query); }, M);
 }
 } // namespace
@@ -245,7 +252,7 @@ public:
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
   explicit SectionImpl(bool UseGlobs)
-      : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false) {}
+      : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false, /*CanonicalizePaths=*/false) {}
 
   Matcher SectionMatcher;
   SectionEntries Entries;
@@ -325,10 +332,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
                             std::string &Error) {
   StringRef Buffer = MB->getBuffer();
   unsigned long long Version = 2;
-  if (Buffer.consume_front("#!special-case-list-v")) {
+  if (Buffer.consume_front("#!special-case-list-v"))
     consumeUnsignedInteger(Buffer, 10, Version);
-    Buffer = Buffer.ltrim(" \t\r\n");
-  }
 
   CanonicalizePaths = Version > 3;
 
@@ -387,9 +392,12 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     }
 
     auto [Pattern, Category] = Postfix.split("=");
+    bool MatcherRemoveDotSlash =
+        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix);
+    bool MatcherCanonicalizePaths =
+        CanonicalizePaths && llvm::is_contained(PathPrefixes, Prefix);
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
-        Category, UseGlobs,
-        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix));
+        Category, UseGlobs, MatcherRemoveDotSlash, MatcherCanonicalizePaths);
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
@@ -414,12 +422,6 @@ bool SpecialCaseList::inSection(StringRef Section, StringRef Prefix,
 std::pair<unsigned, unsigned>
 SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
                                 StringRef Query, StringRef Category) const {
-  std::string CanonicalizedQuery;
-  if (CanonicalizePaths && (Prefix == "src" || Prefix == "mainfile")) {
-    CanonicalizedQuery = llvm::sys::path::convert_to_slash(
-        llvm::sys::path::remove_leading_dotslash(Query));
-    Query = CanonicalizedQuery;
-  }
   for (const auto &S : reverse(Sections)) {
     if (S.Impl->SectionMatcher.matchAny(Section)) {
       unsigned Blame = S.getLastMatch(Prefix, Query, Category);
