@@ -937,9 +937,10 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       FunctionProtoTypes(this_(), FunctionProtoTypesLog2InitSize),
       DependentTypeOfExprTypes(this_()), DependentDecltypeTypes(this_()),
       DependentPackIndexingTypes(this_()), TemplateSpecializationTypes(this_()),
-      DependentBitIntTypes(this_()), SubstTemplateTemplateParmPacks(this_()),
-      DeducedTemplates(this_()), ArrayParameterTypes(this_()),
-      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
+      AttributedTypes(this_()), DependentBitIntTypes(this_()),
+      SubstTemplateTemplateParmPacks(this_()), DeducedTemplates(this_()),
+      ArrayParameterTypes(this_()), CanonTemplateTemplateParms(this_()),
+      SourceMgr(SM), LangOpts(LOpts),
       NoSanitizeL(new NoSanitizeList(LangOpts.NoSanitizeFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,
@@ -5741,7 +5742,8 @@ QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType equivalentType,
                                        const Attr *attr) const {
   llvm::FoldingSetNodeID id;
-  AttributedType::Profile(id, attrKind, modifiedType, equivalentType, attr);
+  AttributedType::Profile(id, *this, attrKind, modifiedType, equivalentType,
+                          attr);
 
   void *insertPos = nullptr;
   AttributedType *type = AttributedTypes.FindNodeOrInsertPos(id, insertPos);
@@ -6943,11 +6945,6 @@ QualType ASTContext::getUnconstrainedType(QualType T) const {
 QualType ASTContext::getDeducedTemplateSpecializationType(
     DeducedKind DK, QualType DeducedAsType, ElaboratedTypeKeyword Keyword,
     TemplateName Template) const {
-  // DeducedAsPack only ever occurs for lambda init-capture pack, which always
-  // use AutoType.
-  assert(DK != DeducedKind::DeducedAsPack &&
-         "unexpected DeducedAsPack for DeducedTemplateSpecializationType");
-
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
@@ -12586,6 +12583,7 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   // Modifiers.
   int HowLong = 0;
   bool Signed = false, Unsigned = false;
+  bool IsChar = false, IsShort = false;
   RequiresICE = false;
 
   // Read the prefixed modifiers first.
@@ -12609,8 +12607,29 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       assert(!Unsigned && "Can't use 'U' modifier multiple times!");
       Unsigned = true;
       break;
+    case 'B':
+      // This modifier represents int8 type (byte-width).
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'B' modifiers!");
+#ifndef NDEBUG
+      IsSpecial = true;
+#endif
+      IsChar = true;
+      break;
+    case 'T':
+      // This modifier represents int16 type (short-width).
+      assert(!IsSpecial &&
+             "Can't use two 'N', 'W', 'Z', 'O', 'B', or 'T' modifiers!");
+      assert(HowLong == 0 && "Can't use both 'L' and 'T' modifiers!");
+#ifndef NDEBUG
+      IsSpecial = true;
+#endif
+      IsShort = true;
+      break;
     case 'L':
-      assert(!IsSpecial && "Can't use 'L' with 'W', 'N', 'Z' or 'O' modifiers");
+      assert(!IsSpecial &&
+             "Can't use 'L' with 'W', 'N', 'Z', 'O', 'B', or 'T' modifiers");
       assert(HowLong <= 2 && "Can't have LLLL modifier");
       ++HowLong;
       break;
@@ -12726,7 +12745,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       Type = Context.ShortTy;
     break;
   case 'i':
-    if (HowLong == 3)
+    if (IsChar)
+      Type = Unsigned ? Context.UnsignedCharTy : Context.SignedCharTy;
+    else if (IsShort)
+      Type = Unsigned ? Context.UnsignedShortTy : Context.ShortTy;
+    else if (HowLong == 3)
       Type = Unsigned ? Context.UnsignedInt128Ty : Context.Int128Ty;
     else if (HowLong == 2)
       Type = Unsigned ? Context.UnsignedLongLongTy : Context.LongLongTy;
@@ -13542,6 +13565,12 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
   if (!QualTy && DestWidth == 128)
     return Signed ? Int128Ty : UnsignedInt128Ty;
   return QualTy;
+}
+
+QualType ASTContext::getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                                unsigned Signed) const {
+  return getFromTargetType(
+      getTargetInfo().getLeastIntTypeByWidth(DestWidth, Signed));
 }
 
 /// getRealTypeForBitwidth -

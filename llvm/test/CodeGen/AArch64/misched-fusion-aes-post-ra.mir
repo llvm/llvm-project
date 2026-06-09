@@ -1,0 +1,73 @@
+# REQUIRES: asserts
+
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mattr=+fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=generic -mattr=+crypto -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a53 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a57 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a65 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a72 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a73 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a76 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a77 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-a78c -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=cortex-x1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-e1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-n1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-v1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=neoverse-512tvb -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m3 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m4 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=exynos-m5 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1 -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1a -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=ampere1b -misched-print-dags 2>&1 | FileCheck %s
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-unknown -mcpu=apple-m5 -misched-print-dags 2>&1 | FileCheck %s
+
+## Verify that only tied AES pairs (both instructions write to the same register)
+## are being fused post-RA.
+
+---
+name: encode_physregs_tied
+body: |
+  bb.0:
+    ; CHECK: SU(0): $q0 = AESErr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK: SU(1): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): $q0 = AESMCrr $q0
+    $q0 = AESErr undef $q0, undef $q1
+    $q0 = AESMCrr $q0
+...
+---
+name: decode_physregs_tied
+body: |
+  bb.0:
+    ; CHECK: SU(0): $q0 = AESDrr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK: SU(1): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): $q0 = AESIMCrr $q0
+    $q0 = AESDrr undef $q0, undef $q1
+    $q0 = AESIMCrr $q0
+...
+---
+name: encode_physregs_untied
+body: |
+  bb.0:
+    ; CHECK: SU(0): $q0 = AESErr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): $q2 = AESMCrr $q0
+    $q0 = AESErr undef $q0, undef $q1
+    $q2 = AESMCrr $q0
+...
+---
+name: decode_physregs_untied
+body: |
+  bb.0:
+    ; CHECK: SU(0): $q0 = AESDrr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; CHECK-NOT: SU({{.*}}): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): $q2 = AESIMCrr $q0
+    $q0 = AESDrr undef $q0, undef $q1
+    $q2 = AESIMCrr $q0
+...
