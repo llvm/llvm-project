@@ -164,13 +164,10 @@ void StringMapImpl::RemoveKey(StringMapEntryBase *V) {
   assert(V == V2 && "Didn't find key?");
 }
 
-/// RemoveKey - Remove the StringMapEntry for the specified key from the
-/// table, returning it.  If the key is not in the table, this returns null.
+// Remove the StringMapEntry for the specified key from the table. Knuth
+// TAOCP 6.4 Algorithm R: walk forward sliding each following entry whose probe
+// path crosses the hole.
 void StringMapImpl::removeBucket(unsigned Bucket) {
-  // Knuth TAOCP 6.4 Algorithm R: open a hole at the removed slot, then walk
-  // forward sliding each following entry whose probe path crosses the hole
-  // back into it.  The scan stops at the next empty bucket, which is
-  // guaranteed to exist because the table is never full.
   unsigned *HashTable = getHashTable(TheTable, NumBuckets);
   unsigned Mask = NumBuckets - 1;
   unsigned I = Bucket, J = I;

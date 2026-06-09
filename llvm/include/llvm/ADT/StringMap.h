@@ -447,8 +447,8 @@ public:
         continue;
       }
       Entry->Destroy(getAllocator());
-      // erase relocates a following entry into this slot to close the hole, so
-      // re-examine the same index rather than advancing past it.
+      // This may relocate a following entry into this slot to close the hole,
+      // so re-examine the same index rather than advancing past it.
       removeBucket(I);
       Removed = true;
     }
