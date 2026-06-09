@@ -959,3 +959,165 @@ latch:
 exit:
   ret void
 }
+
+define void @look_thru_phi(i1 %c0, i1 %c1, i32 %x, i32 %y, ptr %p) {
+; CHECK-LABEL: VPlan for loop in 'look_thru_phi'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:    Successor(s): bb2
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb2:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:    Successor(s): bb1
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb1:
+; CHECK-NEXT:    Successor(s): bb4
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb4:
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP6]]>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%y>/vp<[[VP4]]> ir<%x>/vp<[[VP6]]>
+; CHECK-NEXT:    Successor(s): bb3
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb3:
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
+; CHECK-NEXT:    Successor(s): bb5
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb5:
+; CHECK-NEXT:      BLEND ir<%phi5> = ir<%phi4>/vp<[[VP7]]> ir<%x>/vp<[[VP8]]>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%phi5>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+;     bb0
+;     /  \
+;    bb1  \
+;   /  | bb2
+;   \  | /
+;  bb3 bb4
+;    \/
+;    bb5
+entry:
+  br label %bb0
+
+bb0:
+  %iv = phi i32 [0, %entry], [%iv.next, %bb5]
+  br i1 %c0, label %bb1, label %bb2
+
+bb1:
+  br i1 %c1, label %bb3, label %bb4
+
+bb2:
+  br label %bb4
+
+bb3:
+  br label %bb5
+
+bb4:
+  %phi4 = phi i32 [%x, %bb1], [%y, %bb2]
+  br label %bb5
+
+bb5:
+  %phi5 = phi i32 [ %x, %bb3 ], [ %phi4, %bb4 ]
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  store i32 %phi5, ptr %gep
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+; Same as the test above, but shouldn't look thru the phi because it has
+; multiple uses.
+define void @look_thru_phi_multi_use(i1 %c0, i1 %c1, i32 %x, i32 %y, ptr %p) {
+; CHECK-LABEL: VPlan for loop in 'look_thru_phi_multi_use'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
+; CHECK-NEXT:    Successor(s): bb2
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb2:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:    Successor(s): bb1
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb1:
+; CHECK-NEXT:    Successor(s): bb4
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb4:
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c1>
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%c0>, vp<[[VP5]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = or vp<[[VP4]]>, vp<[[VP6]]>
+; CHECK-NEXT:      BLEND ir<%phi4> = ir<%y>/vp<[[VP4]]> ir<%x>/vp<[[VP6]]>
+; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>, vp<[[VP7]]>
+; CHECK-NEXT:    Successor(s): bb3
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb3:
+; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = logical-and ir<%c0>, ir<%c1>
+; CHECK-NEXT:    Successor(s): bb5
+; CHECK-EMPTY:
+; CHECK-NEXT:    bb5:
+; CHECK-NEXT:      BLEND ir<%phi5> = ir<%phi4>/vp<[[VP7]]> ir<%x>/vp<[[VP8]]>
+; CHECK-NEXT:      EMIT store ir<%phi5>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+;     bb0
+;     /  \
+;    bb1  \
+;   /  | bb2
+;   \  | /
+;  bb3 bb4
+;    \/
+;    bb5
+entry:
+  br label %bb0
+
+bb0:
+  %iv = phi i32 [0, %entry], [%iv.next, %bb5]
+  %gep = getelementptr i32, ptr %p, i32 %iv
+  br i1 %c0, label %bb1, label %bb2
+
+bb1:
+  br i1 %c1, label %bb3, label %bb4
+
+bb2:
+  br label %bb4
+
+bb3:
+  br label %bb5
+
+bb4:
+  %phi4 = phi i32 [%x, %bb1], [%y, %bb2]
+  store i32 %phi4, ptr %gep
+  br label %bb5
+
+bb5:
+  %phi5 = phi i32 [ %x, %bb3 ], [ %phi4, %bb4 ]
+  store i32 %phi5, ptr %gep
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 128
+  br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
