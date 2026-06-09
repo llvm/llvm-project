@@ -82,25 +82,18 @@ body:             |
     // which would return false in this case.
     //
     // There aren't any non-debug instruction between the beginning of bb1 and
-    // Dbg1 (exclusive). However, the call to reset takes the end of the MBB as
-    // the limit, so it pushes the beginning of the block up to %2's def and
-    // considers the reset successful.
-    EXPECT_TRUE(RPTracker.reset(*MBB1.begin(), &MBB1LiveIns));
-    EXPECT_TRUE(RPTrackerNoLiveIns.reset(*MBB1.begin(), nullptr));
-    // advance then unnecessarily processes instructions in order until the end
-    // of the block, even though it is already past Dbg1. It still returns false
-    // because it is stopped by the end of block delimiter, not the end
-    // iterator.
+    // Dbg1 (exclusive), the reset is therefore unsuccessful. The advance caller
+    // returns early on a failure to reset. Calling advance after this does
+    // nothing and produces false because the internal iterator already points
+    // to the second debug instruction.
+    EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), Dbg1, &MBB1LiveIns));
+    EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), Dbg1, nullptr));
     EXPECT_FALSE(RPTracker.advance(Dbg1));
     EXPECT_FALSE(RPTrackerNoLiveIns.advance(Dbg1));
 
-    // In that case, the maximum pressure is also the pressure induced by the
-    // block's live-ins plus %2's def i.e., 3 VGPRs. This is confusing because
-    // %2's def is outside the [Begin,End) range we passed to advance, and there
-    // is no indication that a false return value should make the tracked
-    // pressure invalid.
-    EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 3U);
-    EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 3U);
+    // Register pressure should be the one at the block's live-ins.
+    EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 2U);
+    EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 2U);
   }
 }
 
@@ -137,20 +130,18 @@ body:             |
 
   // The following unpacks a call to
   // advance(MBB1.begin(), MBB1.end(), [MBB1LiveIns|nullptr])
-  // which would return true in this case.
+  // which would return false in this case.
   //
   // There aren't any non-debug instruction in bb.2, the reset is therefore
-  // unsuccessful. However the advance caller discards that return value and
-  // proceeds to calling its override.
-  EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), &MBB1LiveIns));
-  EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), nullptr));
-  // advance then produces true even though no advancement actually happened.
-  EXPECT_TRUE(RPTracker.advance(MBB1.end()));
-  EXPECT_TRUE(RPTrackerNoLiveIns.advance(MBB1.end()));
+  // unsuccessful. The advance caller returns early on a failure to reset.
+  // Calling advance after this does nothing and produces false because the
+  // internal iterator is already at the block's end.
+  EXPECT_FALSE(RPTracker.reset(*MBB1.begin(), MBB1.end(), &MBB1LiveIns));
+  EXPECT_FALSE(RPTrackerNoLiveIns.reset(*MBB1.begin(), MBB1.end(), nullptr));
+  EXPECT_FALSE(RPTracker.advance(MBB1.end()));
+  EXPECT_FALSE(RPTrackerNoLiveIns.advance(MBB1.end()));
 
-  // In that case, the maximum pressure is unchanged from the beginning since
-  // reset was unsuccessful. This is confusing because the top-level advance
-  // call produced true, yet the block's live-in pressure was not considered.
-  EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 0U);
-  EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 0U);
+  // Register pressure should be the one at the block's live-ins.
+  EXPECT_EQ(RPTracker.moveMaxPressure().getVGPRNum(false), 1U);
+  EXPECT_EQ(RPTrackerNoLiveIns.moveMaxPressure().getVGPRNum(false), 1U);
 }

@@ -17,12 +17,19 @@ def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
 def output : Separate<["--"], "output-file">, Alias<o>, Flags<[HelpHidden]>,
   HelpText<"Alias for -o">;
 
-def library_path_EQ : Joined<["--", "-"], "library-path=">,
-  Flags<[HelpHidden]>, HelpText<"Add <dir> to the library search path">;
+def library_path : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
+  HelpText<"Add <dir> to the library search path">;
+def library_path_S : Separate<["--", "-"], "library-path">, Flags<[HelpHidden]>,
+  Alias<library_path>;
+def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
+  Alias<library_path>;
 
-def device_libs_EQ : CommaJoined<["--", "-"], "device-libs=">,
-  Flags<[LinkerOnlyOption]>,
-  HelpText<"A comma separated list of device libraries that are linked during the device link.">;
+def bc_library : Separate<["--", "-"], "bc-library">, MetaVarName<"<name>">,
+  HelpText<"Add LLVM bitcode library <name> (with extension) to the link. A "
+          "relative <name> is resolved against -L paths; an absolute path is "
+          "taken as-is.">;
+def bc_library_EQ : Joined<["--", "-"], "bc-library=">, Flags<[HelpHidden]>,
+  Alias<bc_library>;
 
 def arch_EQ : Joined<["--", "-"], "arch=">,
               Flags<[LinkerOnlyOption]>,
@@ -57,6 +64,8 @@ def opencl_aot_options_EQ : Joined<["--", "-"], "opencl-aot-options=">,
 
 def module_split_mode_EQ : Joined<["--", "-"], "module-split-mode=">,
   Flags<[LinkerOnlyOption]>, MetaVarName<"<mode>">,
-  HelpText<"SYCL device code module split mode. Valid values: 'none' (default) "
-           "emits a single device image; 'kernel' emits one device image per "
-           "kernel function.">;
+  HelpText<"SYCL device code module split mode. Valid values:\n"
+           "- 'source' (default) emits one device image per translation unit that contains "
+           "at least one entry point;\n"
+           "- 'kernel' emits one device image per kernel function;\n"
+           "- 'none' emits a single device image.">;

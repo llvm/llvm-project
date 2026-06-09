@@ -105,6 +105,10 @@
     "LIBC_CONF_COPT_MEMCPY_X86_USE_NTA_STORES": {
       "value": false,
       "doc": "Use Non-temporal stores in memcpy on x86 to improve performance of large copies."
+    },
+    "LIBC_CONF_USE_MEM_BUILTINS": {
+      "value": false,
+      "doc": "Use builtins for memory utility functions."
     }
   },
   "ctype": {
@@ -161,12 +165,6 @@
     "LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER": {
       "value": true,
       "doc": "Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved."
-    }
-  },
-  "time": {
-    "LIBC_CONF_TIME_64BIT": {
-      "value": false,
-      "doc": "Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit."
     }
   },
   "general": {

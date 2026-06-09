@@ -222,10 +222,12 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   const Loop *L = AR->getLoop();
   bool CheckForNonNull, CheckForFreed;
   Value *StartPtrV = StartPtr->getValue();
+  // We can ignore frees, as the fact that an object of a certain size existed
+  // at the location *at some point* is sufficient to derive the nowrap fact.
   uint64_t DerefBytes = StartPtrV->getPointerDereferenceableBytes(
       DL, CheckForNonNull, CheckForFreed);
 
-  if (DerefBytes && (CheckForNonNull || CheckForFreed))
+  if (DerefBytes && CheckForNonNull)
     return false;
 
   const SCEV *Step = AR->getStepRecurrence(SE);
@@ -242,9 +244,6 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   getKnowledgeForValue(StartPtrV, {Attribute::Dereferenceable}, *AC,
                        [&](RetainedKnowledge RK, Instruction *Assume, auto) {
                          if (!isValidAssumeForContext(Assume, CtxI, DT))
-                           return false;
-                         if (StartPtrV->canBeFreed() &&
-                             !willNotFreeBetween(Assume, CtxI))
                            return false;
                          DerefRK = std::max(DerefRK, RK);
                          return true;
@@ -3229,12 +3228,11 @@ void LoopAccessInfoManager::clear() {
   // analyzed loop or SCEVs that may have been modified or invalidated. At the
   // moment, that is loops requiring memory or SCEV runtime checks, as those cache
   // SCEVs, e.g. for pointer expressions.
-  for (const auto &[L, LAI] : LoopAccessInfoMap) {
-    if (LAI->getRuntimePointerChecking()->getChecks().empty() &&
-        LAI->getPSE().getPredicate().isAlwaysTrue())
-      continue;
-    LoopAccessInfoMap.erase(L);
-  }
+  LoopAccessInfoMap.remove_if([](const auto &Entry) {
+    const auto &LAI = Entry.second;
+    return !(LAI->getRuntimePointerChecking()->getChecks().empty() &&
+             LAI->getPSE().getPredicate().isAlwaysTrue());
+  });
 }
 
 bool LoopAccessInfoManager::invalidate(

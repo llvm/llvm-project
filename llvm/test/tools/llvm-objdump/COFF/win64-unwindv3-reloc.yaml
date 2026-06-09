@@ -1,0 +1,102 @@
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-objdump --unwind-info %t.obj | FileCheck %s
+
+## T14: V3 unwind info in a relocatable object file (.obj).
+## This tests the relocation-based resolution path where .pdata fields
+## are zero and relocations point to the actual symbols.
+##
+## Uses the same V3 xdata as T2 (single epilog mirroring prolog):
+##   .xdata = 030B0823070200181400000006000405 38343C00
+
+# CHECK-LABEL:  Unwind info:
+# CHECK-EMPTY:
+# CHECK-NEXT:   Function Table:
+# CHECK-NEXT:     Start Address: func
+# CHECK-NEXT:     End Address: func + 0x0020
+# CHECK-NEXT:     Unwind Info Address: .xdata
+# CHECK-NEXT:       Version: 3
+# CHECK-NEXT:       Flags: 0x0
+# CHECK-NEXT:       Size of prolog: 0xB
+# CHECK-NEXT:       PayloadWords: 8
+# CHECK-NEXT:       NumberOfOps: 3
+# CHECK-NEXT:       NumberOfEpilogs: 1
+# CHECK-NEXT:       Prolog [3 ops]:
+# CHECK-NEXT:         [0] IP +0x0007: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0002: WOD_PUSH Reg=RSI
+# CHECK-NEXT:         [2] IP +0x0000: WOD_PUSH Reg=RDI
+# CHECK-NEXT:       Epilog [0] (Flags=0x00, Offset=+0x14, IpOfLast=+0x6) [3 ops, FirstOp=0x0]:
+# CHECK-NEXT:         [0] IP +0x0000: WOD_ALLOC_SMALL Size=0x20
+# CHECK-NEXT:         [1] IP +0x0004: WOD_PUSH Reg=RSI
+# CHECK-NEXT:         [2] IP +0x0005: WOD_PUSH Reg=RDI
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '030B082307020018140000000600040538343C00'
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '000000002000000000000000'
+    Relocations:
+      - VirtualAddress:  0
+        SymbolName:      func
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  4
+        SymbolName:      func
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  8
+        SymbolName:      .xdata
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          64
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          20
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          12
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+  - Name:            func
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

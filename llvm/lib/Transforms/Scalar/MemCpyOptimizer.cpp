@@ -923,7 +923,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (!isWritableObject(getUnderlyingObject(cpyDest),
                         ExplicitlyDereferenceableOnly) ||
       !isDereferenceableAndAlignedPointer(cpyDest, Align(1), APInt(64, cpySize),
-                                          DL, C, AC, DT)) {
+                                          SimplifyQuery(DL, DT, AC, C))) {
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
     return false;
   }
@@ -1290,6 +1290,9 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
                                                   BatchAAResults &BAA) {
   // We can only transform memset/memcpy with the same destination.
   if (!BAA.isMustAlias(MemSet->getDest(), MemCpy->getDest()))
+    return false;
+
+  if (MemSet->isVolatile())
     return false;
 
   // Don't perform the transform if src_size may be zero. In that case, the

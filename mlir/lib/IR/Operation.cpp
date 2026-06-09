@@ -21,7 +21,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <numeric>
 #include <optional>
 
 using namespace mlir;
@@ -40,7 +39,7 @@ Operation *Operation::create(const OperationState &state) {
     assert(!state.properties);
     LogicalResult result =
         op->setPropertiesFromAttribute(state.propertiesAttr,
-                                       /*diagnostic=*/nullptr);
+                                       /*emitError=*/nullptr);
     assert(result.succeeded() && "invalid properties in op creation");
     (void)result;
   }
@@ -678,7 +677,7 @@ Operation::CloneOptions::CloneOptions(
     bool cloneRegions, bool cloneOperands,
     std::optional<SmallVector<Type>> resultTypes)
     : cloneRegionsFlag(cloneRegions), cloneOperandsFlag(cloneOperands),
-      resultTypes(resultTypes) {}
+      resultTypes(std::move(resultTypes)) {}
 
 Operation::CloneOptions Operation::CloneOptions::all() {
   return CloneOptions().cloneRegions().cloneOperands().withResultTypes(

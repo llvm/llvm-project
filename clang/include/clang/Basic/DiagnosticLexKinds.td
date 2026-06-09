@@ -93,10 +93,10 @@ def err_conflict_marker : Error<"version control conflict marker in file">;
 def err_counter_overflow : Error<
   "'__COUNTER__' value cannot exceed 2'147'483'647">;
 def ext_counter : Extension<
-  "'__COUNTER__' is a C2y extension">, InGroup<C2y>;
+  "'__COUNTER__' is a C2y extension">, InGroup<C2y>, SuppressInSystemMacro;
 def warn_counter : Warning<
   "'__COUNTER__' is incompatible with standards before C2y">,
-  InGroup<CPre2yCompat>, DefaultIgnore;
+  InGroup<CPre2yCompat>, DefaultIgnore, SuppressInSystemMacro;
 
 def err_raw_delim_too_long : Error<
   "raw string delimiter longer than 16 characters"
@@ -373,13 +373,21 @@ def ext_missing_whitespace_after_macro_name : ExtWarn<
 def warn_missing_whitespace_after_macro_name : Warning<
   "whitespace recommended after macro name">;
 
-class NonportablePath  : Warning<
+class NonportablePath : Warning<
   "non-portable path to file '%0'; specified path differs in case from file"
   " name on disk">;
 def pp_nonportable_path : NonportablePath,
   InGroup<NonportableIncludePath>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
-  InGroup<DiagGroup<"nonportable-system-include-path">>;
+  InGroup<NonportableSystemIncludePath>;
+
+class NonportablePathTrailing : Warning<
+  "non-portable path to file '%0'; specified path contains trailing"
+  " %select{whitespace|dot}1">;
+def pp_nonportable_path_trailing : NonportablePathTrailing,
+  InGroup<NonportableIncludePath>;
+def pp_nonportable_system_path_trailing : NonportablePathTrailing, DefaultIgnore,
+  InGroup<NonportableSystemIncludePath>;
 def pp_nonportable_path_separator : Warning<
   "non-portable path to file '%0'; specified path contains backslashes">,
   DefaultIgnore, InGroup<NonportableIncludePathSeparator>;

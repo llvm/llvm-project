@@ -529,14 +529,15 @@ def sext_invec : SDNode<"ISD::SIGN_EXTEND_VECTOR_INREG", SDTExtInvec>;
 def zext_invec : SDNode<"ISD::ZERO_EXTEND_VECTOR_INREG", SDTExtInvec>;
 
 def abs        : SDNode<"ISD::ABS"        , SDTIntUnaryOp>;
+def abs_min_poison : SDNode<"ISD::ABS_MIN_POISON", SDTIntUnaryOp>;
 def bitreverse : SDNode<"ISD::BITREVERSE" , SDTIntUnaryOp>;
 def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
 def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntBitCountUnaryOp>;
 def cttz       : SDNode<"ISD::CTTZ"       , SDTIntBitCountUnaryOp>;
 def ctpop      : SDNode<"ISD::CTPOP"      , SDTIntBitCountUnaryOp>;
 def ctls       : SDNode<"ISD::CTLS"       , SDTIntBitCountUnaryOp>;
-def ctlz_zero_undef : SDNode<"ISD::CTLZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
-def cttz_zero_undef : SDNode<"ISD::CTTZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
+def ctlz_zero_poison : SDNode<"ISD::CTLZ_ZERO_POISON", SDTIntBitCountUnaryOp>;
+def cttz_zero_poison : SDNode<"ISD::CTTZ_ZERO_POISON", SDTIntBitCountUnaryOp>;
 def sext       : SDNode<"ISD::SIGN_EXTEND", SDTIntExtendOp>;
 def zext       : SDNode<"ISD::ZERO_EXTEND", SDTIntExtendOp>;
 def anyext     : SDNode<"ISD::ANY_EXTEND" , SDTIntExtendOp>;
@@ -2111,6 +2112,20 @@ def atomic_load_64 :
   let MemoryVT = i64;
 }
 
+def atomic_load_128_v2i64 :
+  PatFrag<(ops node:$ptr),
+          (atomic_load node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = v2i64;
+}
+
+def atomic_load_128_v4i32 :
+  PatFrag<(ops node:$ptr),
+          (atomic_load node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = v4i32;
+}
+
 def atomic_load_nonext_8 :
   PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
   let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
@@ -2376,6 +2391,41 @@ def atomic_store_128 :
   PatFrag<(ops node:$val, node:$ptr),
           (atomic_store node:$val, node:$ptr)> {
   let IsAtomic = true;
+  let MemoryVT = i128;
+}
+
+// Matches store or atomic_store, no alignment requirement.
+def any_store : PatFrags<(ops node:$val, node:$ptr),
+                         [(store node:$val, node:$ptr),
+                          (atomic_store node:$val, node:$ptr)]>;
+
+def any_store_8 : PatFrags<(ops node:$val, node:$ptr),
+                           [(store node:$val, node:$ptr),
+                            (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i8;
+}
+
+def any_store_16 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i16;
+}
+
+def any_store_32 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i32;
+}
+
+def any_store_64 : PatFrags<(ops node:$val, node:$ptr),
+                            [(store node:$val, node:$ptr),
+                             (atomic_store node:$val, node:$ptr)]> {
+  let MemoryVT = i64;
+}
+
+def any_store_128 : PatFrags<(ops node:$val, node:$ptr),
+                             [(store node:$val, node:$ptr),
+                              (atomic_store node:$val, node:$ptr)]> {
   let MemoryVT = i128;
 }
 

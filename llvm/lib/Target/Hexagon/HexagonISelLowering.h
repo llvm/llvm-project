@@ -287,6 +287,10 @@ public:
     return AtomicExpansionKind::LLSC;
   }
 
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
+
 private:
   void initializeHVXLowering();
   unsigned getPreferredHvxVectorAction(MVT VecTy) const;
@@ -354,7 +358,7 @@ private:
     return MVT::getIntegerVT(Ty.getSizeInBits());
   }
   MVT tyVector(MVT Ty, MVT ElemTy) const {
-    if (Ty.isVector() && Ty.getVectorElementType() == ElemTy)
+    if (Ty.isVectorOf(ElemTy))
       return Ty;
     unsigned TyWidth = Ty.getSizeInBits();
     unsigned ElemWidth = ElemTy.getSizeInBits();

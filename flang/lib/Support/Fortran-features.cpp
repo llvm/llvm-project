@@ -134,6 +134,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::CUDA); // !@cuf
   disable_.set(LanguageFeature::CudaManaged);
   disable_.set(LanguageFeature::CudaUnified);
+  disable_.set(LanguageFeature::CudaPinned);
   disable_.set(LanguageFeature::ImplicitNoneTypeNever);
   disable_.set(LanguageFeature::ImplicitNoneTypeAlways);
   disable_.set(LanguageFeature::ImplicitNoneExternal);
@@ -216,6 +217,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnUsage_.set(UsageWarning::CLoc);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
+  warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(

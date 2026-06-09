@@ -16,6 +16,7 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("aarch64-lower-homogeneous-prolog-epilog", AArch64LowerHomogeneousPrologEpilogPass())
 #undef MODULE_PASS
 
 #ifndef FUNCTION_PASS
@@ -43,6 +44,8 @@ MACHINE_FUNCTION_PASS("aarch64-post-select-optimize",
                       AArch64PostSelectOptimizePass())
 MACHINE_FUNCTION_PASS("aarch64-postlegalizer-lowering",
                       AArch64PostLegalizerLoweringPass())
+MACHINE_FUNCTION_PASS("aarch64-postlegalizer-combiner",
+                      AArch64PostLegalizerCombinerPass(this))
 MACHINE_FUNCTION_PASS("aarch64-prelegalizer-combiner",
                       AArch64PreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("aarch64-ptrauth", AArch64PointerAuthPass())

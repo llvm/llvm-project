@@ -544,3 +544,48 @@ func.func @testBothInsideKernels() {
   }
   return
 }
+
+// -----
+
+// Test passing through acc.compute_region boundary inside acc routine.
+// The two dummy arguments cannot alias:
+// CHECK-LABEL: Testing : "test_acc_routine__0"
+// CHECK-DAG: arg_a#0 <-> arg_b#0: NoAlias
+func.func @test_acc_routine__0(%arg0: !fir.ref<f32> {fir.bindc_name = "a"}, %arg1: !fir.ref<f32> {fir.bindc_name = "b"}) attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_0, <vector>, "test_acc_routine_">, fir.internal_name = "_QPtest_acc_routine"} {
+  %0 = acc.par_width {par_dim = #acc.par_dim<thread_x>}
+  acc.compute_region launch(%arg2 = %0) ins(%arg3 = %arg0, %arg4 = %arg1) : (!fir.ref<f32>, !fir.ref<f32>) {
+    %1 = fir.dummy_scope : !fir.dscope
+    %2 = fir.declare %arg3 dummy_scope %1 arg 1 {uniq_name = "_QFtest_acc_routineEa", test.ptr = "arg_a"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %3 = fir.declare %arg4 dummy_scope %1 arg 2 {uniq_name = "_QFtest_acc_routineEb", test.ptr = "arg_b"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+    %4 = fir.load %3 : !fir.ref<f32>
+    fir.store %4 to %2 : !fir.ref<f32>
+    acc.yield
+  } {origin = "acc.routine"}
+  return
+}
+
+// -----
+
+// Test that a fir.load of a box descriptor through an acc.compute_region
+// block argument still resolves to its dummy-argument source. Without the
+// pass-through, the recursive getSource() on the memref of the load would
+// return SourceKind::Unknown for the block argument, forcing the load itself
+// to be classified as SourceKind::Indirect and pessimizing alias analysis
+// to MayAlias for two unrelated allocatable dummy arguments.
+// CHECK-LABEL: Testing : "test_acc_compute_region_box_load"
+// CHECK-DAG: load_x#0 <-> load_y#0: NoAlias
+func.func @test_acc_compute_region_box_load(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "x"}, %arg1: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {fir.bindc_name = "y"}) {
+  %0 = fir.dummy_scope : !fir.dscope
+  %dx = fir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEx"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %dy = fir.declare %arg1 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEy"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.dscope) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %cx = acc.copyin varPtr(%dx : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "x"}
+  %cy = acc.copyin varPtr(%dy : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "y"}
+  acc.kernel_environment dataOperands(%cx, %cy : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+    acc.compute_region ins(%arg2 = %cx, %arg3 = %cy) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) {
+      %lx = fir.load %arg2 {test.ptr = "load_x"} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+      %ly = fir.load %arg3 {test.ptr = "load_y"} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+      acc.yield
+    } {origin = "acc.kernels"}
+  }
+  return
+}

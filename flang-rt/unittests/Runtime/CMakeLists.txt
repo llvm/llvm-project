@@ -18,6 +18,7 @@ add_flangrt_unittest(RuntimeTests
   CrashHandlerFixture.cpp
   Derived.cpp
   Descriptor.cpp
+  Exceptions.cpp
   ExternalIOTest.cpp
   Format.cpp
   InputExtensions.cpp
