@@ -7699,9 +7699,12 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // Values[0] is the local minimum.
   int64_t Base = Values[0];
   std::optional<unsigned> Shift;
-  // Prefer Base=0 when the case values are still dense after shifting out their
-  // common low zero bits without subtracting a base. This avoids creating an
-  // unnecessary `(condition - local_min)` expression.
+  // Prefer Base=0 when shifting out common low zero bits still produces a dense
+  // range, as this avoids an unnecessary `(condition - local_min)` expression.
+  // However, avoiding the subtract can leave a wider reduced range than using
+  // the local minimum, so require Base=0 to satisfy the stricter optsize
+  // density threshold before falling back to the normal density policy for
+  // local-min.
   if ((Shift = getDenseSwitchRangeReductionShift(Values, /*Base=*/0,
                                                  /*OptSize=*/true)))
     Base = 0;
