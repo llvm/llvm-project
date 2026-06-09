@@ -1370,13 +1370,15 @@ public:
     __tree_.__node_handle_merge_unique(__source.__tree_);
   }
   template <class _Compare2>
-  _LIBCPP_HIDE_FROM_ABI void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>& __source) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  merge(multimap<key_type, mapped_type, _Compare2, allocator_type>& __source) {
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_unique(__source.__tree_);
   }
   template <class _Compare2>
-  _LIBCPP_HIDE_FROM_ABI void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>&& __source) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+  merge(multimap<key_type, mapped_type, _Compare2, allocator_type>&& __source) {
     _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(
         __source.get_allocator() == get_allocator(), "merging container with incompatible allocator");
     __tree_.__node_handle_merge_unique(__source.__tree_);
