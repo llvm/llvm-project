@@ -166,13 +166,7 @@ void StringMapImpl::RemoveKey(StringMapEntryBase *V) {
 
 /// RemoveKey - Remove the StringMapEntry for the specified key from the
 /// table, returning it.  If the key is not in the table, this returns null.
-StringMapEntryBase *StringMapImpl::RemoveKey(StringRef Key) {
-  int Bucket = FindKey(Key);
-  if (Bucket == -1)
-    return nullptr;
-
-  StringMapEntryBase *Result = TheTable[Bucket];
-
+void StringMapImpl::removeBucket(unsigned Bucket) {
   // Knuth TAOCP 6.4 Algorithm R: open a hole at the removed slot, then walk
   // forward sliding each following entry whose probe path crosses the hole
   // back into it.  The scan stops at the next empty bucket, which is
@@ -190,7 +184,15 @@ StringMapEntryBase *StringMapImpl::RemoveKey(StringRef Key) {
   }
   TheTable[I] = nullptr;
   --NumItems;
+}
 
+StringMapEntryBase *StringMapImpl::RemoveKey(StringRef Key) {
+  int Bucket = FindKey(Key);
+  if (Bucket == -1)
+    return nullptr;
+
+  StringMapEntryBase *Result = TheTable[Bucket];
+  removeBucket(Bucket);
   return Result;
 }
 

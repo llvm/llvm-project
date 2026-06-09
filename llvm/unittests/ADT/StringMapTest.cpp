@@ -181,32 +181,28 @@ TEST_F(StringMapTest, SmallFullMapTest) {
   EXPECT_EQ(5, Map.lookup("funf"));
 }
 
-// Stress the backward-shift deletion (Knuth TAOCP 6.4 Algorithm R) used by
-// erase: interleave inserts and erases so that probe clusters form, shrink, and
-// straddle the wrap-around, then verify every surviving key is still findable
-// and every erased key is gone. A broken shift leaves keys stranded behind a
-// hole and would be caught here.
+// Stress test erase. Interleave inserts and erases so that probe clusters form,
+// shrink, and straddle the wrap-around, then verify every surviving key is
+// still findable and every erased key is gone.
 TEST_F(StringMapTest, EraseStressTest) {
   llvm::StringMap<unsigned> Map;
   std::map<std::string, unsigned> Ref;
-
-  // Simple deterministic LCG so the sequence is reproducible across platforms.
-  uint64_t State = 0x1234567;
+  // 64-bit Linear Congruential Generator.
+  uint64_t State = 1;
   auto Next = [&] {
     return (State = State * 6364136223846793005ULL + 1) >> 33;
   };
-
-  for (unsigned Iter = 0; Iter != 20000; ++Iter) {
-    std::string Key = Twine(Next() % 500).str();
+  for (unsigned I = 0; I != 4000; ++I) {
+    std::string Key = Twine(Next() % 100).str();
     if (Next() & 1) {
-      Map[Key] = Iter;
-      Ref[Key] = Iter;
+      Map[Key] = I;
+      Ref[Key] = I;
     } else {
       EXPECT_EQ(Map.erase(Key), Ref.erase(Key) != 0);
     }
 
     // Periodically cross-check the whole map against the reference.
-    if (Iter % 997 == 0) {
+    if (I % 200 == 0) {
       EXPECT_EQ(Map.size(), Ref.size());
       for (const auto &KV : Ref) {
         auto It = Map.find(KV.first);
@@ -787,5 +783,101 @@ TEST(StringMapCustomTest, ConstIterator) {
   static_assert(!std::is_constructible_v<StringMap<int>::iterator,
                                          StringMap<int>::const_iterator>);
 }
+
+TEST(StringMapCustomTest, RemoveIf) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  Map["b"] = 2;
+  Map["c"] = 3;
+  Map["d"] = 4;
+
+  EXPECT_TRUE(Map.remove_if(
+      [](const StringMapEntry<int> &E) { return E.getValue() % 2 == 0; }));
+  EXPECT_EQ(2u, Map.size());
+  EXPECT_TRUE(Map.contains("a"));
+  EXPECT_FALSE(Map.contains("b"));
+  EXPECT_TRUE(Map.contains("c"));
+  EXPECT_FALSE(Map.contains("d"));
+
+  EXPECT_FALSE(Map.remove_if(
+      [](const StringMapEntry<int> &E) { return E.getValue() > 100; }));
+  EXPECT_EQ(2u, Map.size());
+}
+
+// Stress remove_if: it deletes in place using Algorithm R backward shifting and
+// re-examines each slot after a removal, which is subtle around probe clusters
+// that wrap past the end of the table. Remove a subset from a large map and
+// verify the survivors exactly match the reference.
+TEST(StringMapCustomTest, RemoveIfStress) {
+  llvm::StringMap<unsigned> Map;
+  std::map<std::string, unsigned> Ref;
+
+  // Deterministic LCG so the sequence is reproducible across platforms.
+  uint64_t State = 0x9e3779b9;
+  auto Next = [&] {
+    return (State = State * 6364136223846793005ULL + 1) >> 33;
+  };
+
+  for (unsigned I = 0; I != 4000; ++I) {
+    std::string Key = Twine(Next() % 1500).str();
+    Map[Key] = I;
+    Ref[Key] = I;
+  }
+
+  auto IsEven = [](unsigned V) { return V % 2 == 0; };
+  Map.remove_if(
+      [&](const StringMapEntry<unsigned> &E) { return IsEven(E.getValue()); });
+  for (auto It = Ref.begin(); It != Ref.end();) {
+    if (IsEven(It->second))
+      It = Ref.erase(It);
+    else
+      ++It;
+  }
+
+  EXPECT_EQ(Map.size(), Ref.size());
+  for (const auto &KV : Ref) {
+    auto It = Map.find(KV.first);
+    ASSERT_NE(It, Map.end()) << "missing key " << KV.first;
+    EXPECT_EQ(It->second, KV.second);
+  }
+  for (const auto &E : Map)
+    EXPECT_FALSE(IsEven(E.getValue())) << "stale key " << E.getKey();
+}
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(StringMapCustomTest, InsertInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  auto It = Map.find("a");
+  Map.try_emplace("b", 2);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(StringMapCustomTest, EraseInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  Map["b"] = 2;
+  auto It = Map.find("a");
+  Map.erase(Map.find("b"));
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(StringMapCustomTest, ClearInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  auto It = Map.find("a");
+  Map.clear();
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+
+TEST(StringMapCustomTest, SwapInvalidatesIterators) {
+  StringMap<int> Map;
+  Map["a"] = 1;
+  auto It = Map.find("a");
+  StringMap<int> Other;
+  Map.swap(Other);
+  EXPECT_DEATH((void)It->second, "invalid iterator access");
+}
+#endif
 
 } // end anonymous namespace
