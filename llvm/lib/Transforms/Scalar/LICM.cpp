@@ -2149,9 +2149,13 @@ bool llvm::promoteLoopAccessesToScalars(
   if (StoreSafety == StoreSafetyUnknown) {
     Value *Object = getUnderlyingObject(SomePtr);
     bool ExplicitlyDereferenceableOnly;
+    // The dereferenceability query here is only required to satisfy the
+    // writable contract, actual dereferenceability has already been proven
+    // above. As such, we can ignore frees.
     if (isWritableObject(Object, ExplicitlyDereferenceableOnly) &&
         (!ExplicitlyDereferenceableOnly ||
-         isDereferenceablePointer(SomePtr, AccessTy, MDL)) &&
+         isDereferenceablePointer(SomePtr, AccessTy, MDL,
+                                  /*IgnoreFree=*/true)) &&
         isThreadLocalObject(Object, CurLoop, DT, TTI))
       StoreSafety = StoreSafe;
   }
