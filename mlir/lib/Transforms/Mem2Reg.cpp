@@ -595,9 +595,10 @@ Value MemorySlotPromoter::promoteInBlock(Block *block, Value reachingDef) {
       MemorySlot aliasSlot =
           getOpAliasSlot(memOp, slot, info.aliasMap).value_or(slot);
       if (memOp.storesTo(aliasSlot)) {
-        // Insert helper IR introduced by `getStored` before the storing op.
-        // This ensures the returned value dominates the store, allowing
-        // `visitReplacedValues` to safely create new uses after the store.
+        // Ensures helper IR introduced by `getStored` is created before the
+        // storing op. This ensures the provided stored value dominates the
+        // store, allowing `visitReplacedValues` to safely create new uses
+        // after the store.
         builder.setInsertionPoint(memOp);
         // To not expose default value creation to the interfaces, if we have
         // no reaching definition by now, we set it to the default value.
@@ -994,14 +995,14 @@ void MemorySlotPromoter::removeUnusedItems() {
 
 std::optional<PromotableAllocationOpInterface>
 MemorySlotPromoter::promoteSlot() {
-  // Pass 1: perform the promotion recursively through nested regions. The
+  // Step 1: perform the promotion recursively through nested regions. The
   // reaching definition starts with a null value that will be replaced by a
   // lazily-created default value if the value must be passed to a promotion
   // interface while no store has been encountered yet.
   // Blocking uses are not removed yet.
   promoteInRegion(slot.ptr.getParentRegion(), nullptr);
 
-  // Pass 2: call `visitReplacedValues` on operations that requested it.
+  // Step 2: call `visitReplacedValues` on operations that requested it.
   if (info.needsAnyReplacedValuesVisit) {
     SmallVector<std::pair<Operation *, Value>> replacedValues;
     replacedValues.reserve(replacedValuesMap.size());
@@ -1012,7 +1013,7 @@ MemorySlotPromoter::promoteSlot() {
       visitReplacedValuesForRegion(region, replacedValues);
   }
 
-  // Pass 3: remove the slot's blocking uses across all regions. Iterating
+  // Step 3: remove the slot's blocking uses across all regions. Iterating
   // in through the regions in same order as promoteInRegion.
   for (Region *region : regionsInPostOrder)
     removeBlockingUses(region);
