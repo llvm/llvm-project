@@ -84,7 +84,7 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
 
       std::optional<bool> Mutable =
           getWasmGlobalMutable(Global, CurrentFunc, MI.getDebugLoc());
-      if (!Mutable)
+      if (!Mutable.has_value())
         return WasmSym;
 
       Type *GlobalVT = Global->getValueType();
