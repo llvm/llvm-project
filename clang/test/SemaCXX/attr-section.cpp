@@ -85,7 +85,6 @@ auto lambda = [](int val) __attribute__((section("lambda_op_pragma"))) { return 
 #pragma clang section bss=""
 } // namespace lambda_call_operator_pragma
 
-// original: https://github.com/llvm/llvm-project/issues/192264
 namespace GH192264_original {
 struct S {};
 using F = decltype([](auto val) // expected-note {{declared here}}
