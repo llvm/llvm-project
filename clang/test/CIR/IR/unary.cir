@@ -46,13 +46,13 @@ module {
 // CHECK: }
 
   cir.func @test_unary_fneg() {
-    %0 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"] {alignment = 4 : i64}
+    %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.float>
     %1 = cir.load %0 : !cir.ptr<!cir.float>, !cir.float
     %2 = cir.fneg %1 : !cir.float
     cir.return
   }
 // CHECK: cir.func{{.*}} @test_unary_fneg() {
-// CHECK:   %0 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"] {alignment = 4 : i64}
+// CHECK:   %0 = cir.alloca "a" align(4) : !cir.ptr<!cir.float>
 // CHECK:   %1 = cir.load %0 : !cir.ptr<!cir.float>, !cir.float
 // CHECK:   %2 = cir.fneg %1 : !cir.float
 // CHECK:   cir.return
