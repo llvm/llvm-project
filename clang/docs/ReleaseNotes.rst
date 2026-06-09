@@ -88,6 +88,9 @@ C++ Specific Potentially Breaking Changes
 - Clang now rejects nested local classes defined in a different
   block scope than their parent class. (#GH193472)
 
+- Clang now rejects C++ declarations that combine the ``auto`` type specifier
+  with another type specifier, such as ``auto int``.
+
 ABI Changes in This Version
 ---------------------------
 

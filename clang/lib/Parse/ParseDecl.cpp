@@ -3775,7 +3775,9 @@ void Parser::ParseDeclarationSpecifiers(
       // This identifier can only be a typedef name if we haven't already seen
       // a type-specifier.  Without this check we misparse:
       //  typedef int X; struct Y { short X; };  as 'short int'.
-      if (DS.hasTypeSpecifier())
+      // However, if 'auto' is set, we need to check if this identifier is a
+      // type name to detect conflicts (e.g., "auto MyInt").
+      if (DS.hasTypeSpecifier() && DS.getTypeSpecType() != DeclSpec::TST_auto)
         goto DoneWithDeclSpec;
 
       // If the token is an identifier named "__declspec" and Microsoft
@@ -3860,6 +3862,14 @@ void Parser::ParseDeclarationSpecifiers(
                                   DS.isFriendSpecified()))
         goto DoneWithDeclSpec;
 
+      // If 'auto' is set and we're in a template parameter context, the
+      // identifier is always the parameter name, not a type specifier, so skip
+      // type name lookup to avoid false ambiguity errors.
+      if (DS.getTypeSpecType() == DeclSpec::TST_auto &&
+          DSContext == DeclSpecContext::DSC_template_param) {
+        goto DoneWithDeclSpec;
+      }
+
       ParsedType TypeRep = Actions.getTypeName(
           *Tok.getIdentifierInfo(), Tok.getLocation(), getCurScope(), nullptr,
           false, false, nullptr, false, false,
@@ -3867,11 +3877,16 @@ void Parser::ParseDeclarationSpecifiers(
 
       // If this is not a typedef name, don't parse it as part of the declspec,
       // it must be an implicit int or an error.
+      // However, if 'auto' is already set, we can't have an implicit int.
       if (!TypeRep) {
         if (TryAnnotateTypeConstraint())
           goto DoneWithDeclSpec;
         if (Tok.isNot(tok::identifier))
           continue;
+        // If 'auto' is set, the identifier must be a type name or it's an
+        // error. Don't try to parse it as implicit int.
+        if (DS.getTypeSpecType() == DeclSpec::TST_auto)
+          goto DoneWithDeclSpec;
         ParsedAttributes Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
           if (!Attrs.empty()) {
@@ -3881,6 +3896,25 @@ void Parser::ParseDeclarationSpecifiers(
           continue;
         }
         goto DoneWithDeclSpec;
+      }
+
+      // If 'auto' is set and this identifier is a type name, stop parsing
+      // declaration specifiers when the next token indicates this is the
+      // declarator-id rather than another type specifier.
+      if (DS.getTypeSpecType() == DeclSpec::TST_auto && TypeRep) {
+        Token Next = NextToken();
+        if (Next.isOneOf(tok::equal, tok::l_paren, tok::l_square, tok::amp,
+                         tok::ampamp, tok::star, tok::coloncolon, tok::comma,
+                         tok::semi, tok::colon, tok::greater, tok::r_paren,
+                         tok::arrow)) {
+          // This identifier is likely the variable/parameter name, stop parsing
+          // decl specifiers. Note: ':' is for range-based for loops:
+          // for (auto Arg: x).
+          // Note: '>' is for template parameters: template<auto V>
+          // Note: ')' is for function/lambda parameters: [](auto c)
+          // Note: '->' is for lambda return types: [](auto c) -> int
+          goto DoneWithDeclSpec;
+        }
       }
 
       // Likewise, if this is a context where the identifier could be a template
@@ -4137,12 +4171,9 @@ void Parser::ParseDeclarationSpecifiers(
           }
         };
 
-        if (MayBeTypeSpecifier()) {
+        if (!getLangOpts().CPlusPlus && MayBeTypeSpecifier()) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
-          if (!isInvalid && !getLangOpts().C23)
-            Diag(Tok, diag::ext_auto_storage_class)
-              << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
         } else
           isInvalid = DS.SetTypeSpecType(DeclSpec::TST_auto, Loc, PrevSpec,
                                          DiagID, Policy);
@@ -4700,7 +4731,8 @@ void Parser::ParseDeclarationSpecifiers(
     DS.SetRangeEnd(ConsumedEnd.isValid() ? ConsumedEnd : Tok.getLocation());
 
     // If the specifier wasn't legal, issue a diagnostic.
-    if (isInvalid) {
+    // Skip diagnostic if 'auto' conflict will be handled in Finish()
+    if (isInvalid && !DS.hasConflictingTypeSpecifier()) {
       assert(PrevSpec && "Method did not return previous specifier!");
       assert(DiagID);
 

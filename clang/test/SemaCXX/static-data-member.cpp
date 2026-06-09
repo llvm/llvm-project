@@ -13,7 +13,12 @@ double ABC::a = 1.0;
 extern double ABC::b = 1.0; // expected-error {{static data member definition cannot specify a storage class}}
 static double ABC::c = 1.0;  // expected-error {{'static' can only be specified inside the class definition}}
 __private_extern__ double ABC::d = 1.0; // expected-error {{static data member definition cannot specify a storage class}}
-auto double ABC::e = 1.0; // expected-error {{static data member definition cannot specify a storage class}}
+auto double ABC::e = 1.0;
+#if __cplusplus >= 201103L
+// expected-error@-2 {{'auto' cannot be combined with a type specifier}}
+#else
+// expected-error@-4 {{static data member definition cannot specify a storage class}}
+#endif
 #if __cplusplus < 201703L
 register double ABC::f = 1.0; // expected-error {{static data member definition cannot specify a storage class}}
 #endif
