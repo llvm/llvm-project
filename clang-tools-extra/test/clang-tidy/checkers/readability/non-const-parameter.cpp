@@ -449,3 +449,44 @@ struct StaticDepOutOfClassInit {
 
 template <class T>
 const T StaticDepOutOfClassInit<T>::X = 0;
+
+double overloadConflict(double *overloadConflictPtr) {
+  return *overloadConflictPtr;
+}
+
+double overloadConflict(const double *overloadConflictPtr) {
+  return *overloadConflictPtr;
+}
+
+template <int>
+int templateOverloadConflict(int *templateConflictPtr) {
+  return *templateConflictPtr;
+}
+
+template <int>
+int templateOverloadConflict(const int *templateConflictPtr) {
+  return *templateConflictPtr;
+}
+
+struct ConstructorOverloadConflict {
+  ConstructorOverloadConflict(int *ctorConflictPtr) {
+    (void)*ctorConflictPtr;
+  }
+  ConstructorOverloadConflict(const int *ctorConflictPtr) {}
+};
+
+struct MemberOverloadConflict {
+  void withConflictingOverload(int *memberConflictPtr) {
+    (void)*memberConflictPtr;
+  }
+  void withConflictingOverload(const int *memberConflictPtr) {}
+};
+
+struct QualifiedMemberOverload {
+  // CHECK-MESSAGES: :[[@LINE+1]]:32: warning: pointer parameter 'qualifiedMemberPtr' can be pointer to const
+  void withConstQualifier(int *qualifiedMemberPtr) const {
+    // CHECK-FIXES: void withConstQualifier(const int *qualifiedMemberPtr) const {
+    (void)*qualifiedMemberPtr;
+  }
+  void withConstQualifier(const int *qualifiedMemberPtr) {}
+};

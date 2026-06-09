@@ -785,6 +785,9 @@ Changes in existing checks
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
 
+  - Fixed a false positive when adding ``const`` to a pointer parameter would
+    conflict with an existing overload.
+
   - Fixed a crash when analyzing a redeclaration whose initializer is attached
     to another declaration.
 
