@@ -315,7 +315,7 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
         if (firstReadStmt && secondCompareStmt &&
             firstReadStmt.getX() != secondCompareStmt.getX())
           return firstReadStmt.emitError()
-                << "captured variable in atomic.read must be updated in "
+                << "captured variable in atomic.read must be compared/updated in "
                     "second operation";
 
         return mlir::success();

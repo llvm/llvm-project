@@ -567,7 +567,7 @@ void Fortran::lower::omp::lowerAtomic(
 
   if (construct.IsCapture()) {
     assert(action0 != analysis.None && action1 != analysis.None &&
-           "Expexcing two actions");
+           "Expecting two actions");
     (void)action0;
     (void)action1;
     captureOp = mlir::omp::AtomicCaptureOp::create(
@@ -730,7 +730,7 @@ void Fortran::lower::omp::lowerAtomic(
     if (!construct.IsCapture()) {
       // Non-capturing operation.
       assert(action0 != analysis.None && action1 == analysis.None &&
-             "Expexcing single action");
+             "Expecting single action");
       assert(!(analysis.op0.what & analysis.Condition));
       postAt = atomicAt = preAt;
     }
