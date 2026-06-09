@@ -1,0 +1,16 @@
+## Test that BOLT correctly handles PLT call relocations on PPC64 ELFv2.
+## When calling an external function (puts), the linker generates a PLT
+## stub and bl targets that stub via R_PPC64_REL24. BOLT must correctly
+## patch the branch to the updated PLT stub address after rewriting.
+## Uses a gcc-compiled C program to generate proper ELFv2 PLT call stubs.
+## Hand-written assembly cannot easily replicate the gcc PLT stub pattern
+## that BOLT currently supports.
+# REQUIRES: system-linux
+# RUN: gcc -O2 -mcpu=power8 -mno-prefixed -mno-pcrel \
+# RUN:     -fno-pic -no-pie -Wl,--emit-relocs \
+# RUN:     -fno-optimize-sibling-calls -mtraceback=no \
+# RUN:     %S/Inputs/plt-call.c -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.bolt -lite 2>&1 | FileCheck %s
+# RUN: %t.bolt
+# CHECK: BOLT-INFO: Target architecture: powerpc64le
+# CHECK: BOLT-INFO: enabling relocation mode
