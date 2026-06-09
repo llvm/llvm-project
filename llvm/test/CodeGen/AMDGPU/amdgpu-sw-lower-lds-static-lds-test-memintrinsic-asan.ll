@@ -8,9 +8,121 @@
 @lds_1 = internal addrspace(3) global [16 x i8] poison, align 4
 @lds_2 = internal addrspace(3) global [16 x i8] poison, align 4
 
-define amdgpu_kernel void @memintrinsic_kernel(ptr addrspace(1) %src) sanitize_address {
-; CHECK-LABEL: define amdgpu_kernel void @memintrinsic_kernel(
-; CHECK-SAME: ptr addrspace(1) [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
+define amdgpu_kernel void @memset_kernel() sanitize_address {
+; CHECK-LABEL: define amdgpu_kernel void @memset_kernel(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  [[WID:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MALLOC:.*]], label %[[BB18:.*]]
+; CHECK:       [[MALLOC]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMSET_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMSET_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_kernel.md, i32 0, i32 1, i32 2), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP13]], ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_kernel, align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr addrspace(1) [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP15]], i64 24)
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 48
+; CHECK-NEXT:    [[TMP17:%.*]] = ptrtoint ptr addrspace(1) [[TMP16]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP17]], i64 16)
+; CHECK-NEXT:    br label %[[BB18]]
+; CHECK:       [[BB18]]:
+; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_kernel, align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMSET_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_kernel, i32 [[TMP20]]
+; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    call void @llvm.memset.p1.i32(ptr addrspace(1) [[TMP23]], i8 0, i32 16, i1 false)
+; CHECK-NEXT:    br label %[[CONDFREE:.*]]
+; CHECK:       [[CONDFREE]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
+; CHECK:       [[FREE]]:
+; CHECK-NEXT:    [[TMP24:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[TMP24]] to i64
+; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(1) [[TMP19]] to i64
+; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP26]], i64 [[TMP25]])
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret void
+;
+  %a = getelementptr [16 x i8], ptr addrspace(3) @lds_1, i32 0, i32 0
+  call void @llvm.memset.p3.i32(ptr addrspace(3) %a, i8 0, i32 16, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memcpy_kernel(ptr addrspace(1) %src) sanitize_address {
+; CHECK-LABEL: define amdgpu_kernel void @memcpy_kernel(
+; CHECK-SAME: ptr addrspace(1) [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[WID:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MALLOC:.*]], label %[[BB18:.*]]
+; CHECK:       [[MALLOC]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMCPY_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMCPY_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_kernel.md, i32 0, i32 1, i32 2), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP13]], ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_kernel, align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr addrspace(1) [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP15]], i64 24)
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 48
+; CHECK-NEXT:    [[TMP17:%.*]] = ptrtoint ptr addrspace(1) [[TMP16]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP17]], i64 16)
+; CHECK-NEXT:    br label %[[BB18]]
+; CHECK:       [[BB18]]:
+; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_kernel, align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMCPY_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_kernel, i32 [[TMP20]]
+; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i32(ptr addrspace(1) [[TMP23]], ptr addrspace(1) [[SRC]], i32 16, i1 false)
+; CHECK-NEXT:    br label %[[CONDFREE:.*]]
+; CHECK:       [[CONDFREE]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
+; CHECK:       [[FREE]]:
+; CHECK-NEXT:    [[TMP24:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[TMP24]] to i64
+; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(1) [[TMP19]] to i64
+; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP26]], i64 [[TMP25]])
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret void
+;
+  %a = getelementptr [16 x i8], ptr addrspace(3) @lds_1, i32 0, i32 0
+  call void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) %a, ptr addrspace(1) %src, i32 16, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_kernel() sanitize_address {
+; CHECK-LABEL: define amdgpu_kernel void @memmove_kernel(
+; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:  [[WID:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
@@ -20,15 +132,15 @@ define amdgpu_kernel void @memintrinsic_kernel(ptr addrspace(1) %src) sanitize_a
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MALLOC:.*]], label %[[BB20:.*]]
 ; CHECK:       [[MALLOC]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMINTRINSIC_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memintrinsic_kernel.md, i32 0, i32 2, i32 0), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMINTRINSIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memintrinsic_kernel.md, i32 0, i32 2, i32 2), align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_kernel.md, i32 0, i32 2, i32 0), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_kernel.md, i32 0, i32 2, i32 2), align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
-; CHECK-NEXT:    store ptr addrspace(1) [[TMP13]], ptr addrspace(3) @llvm.amdgcn.sw.lds.memintrinsic_kernel, align 8
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP13]], ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_kernel, align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr addrspace(1) [[TMP14]] to i64
 ; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP15]], i64 24)
@@ -42,55 +154,210 @@ define amdgpu_kernel void @memintrinsic_kernel(ptr addrspace(1) %src) sanitize_a
 ; CHECK:       [[BB20]]:
 ; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
-; CHECK-NEXT:    [[TMP21:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memintrinsic_kernel, align 8
-; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMINTRINSIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memintrinsic_kernel.md, i32 0, i32 1, i32 0), align 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memintrinsic_kernel, i32 [[TMP22]]
-; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMINTRINSIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memintrinsic_kernel.md, i32 0, i32 2, i32 0), align 4
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memintrinsic_kernel, i32 [[TMP24]]
+; CHECK-NEXT:    [[TMP21:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_kernel, align 8
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_kernel, i32 [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_kernel.md, i32 0, i32 2, i32 0), align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_kernel, i32 [[TMP24]]
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP23]], i32 0, i32 0
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP25]], i32 0, i32 0
 ; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP26]]
-; CHECK-NEXT:    call void @llvm.memset.p1.i32(ptr addrspace(1) [[TMP27]], i8 0, i32 16, i1 false)
-; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
+; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr addrspace(3) [[B]] to i32
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP28]]
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i32(ptr addrspace(1) [[TMP29]], ptr addrspace(1) [[SRC]], i32 16, i1 false)
-; CHECK-NEXT:    [[TMP30:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP30]]
-; CHECK-NEXT:    [[TMP32:%.*]] = ptrtoint ptr addrspace(3) [[B]] to i32
-; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP32]]
-; CHECK-NEXT:    call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) [[TMP31]], ptr addrspace(1) [[TMP33]], i32 16, i1 false)
-; CHECK-NEXT:    [[TMP42:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP42]]
-; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p1.i32(ptr addrspace(1) align 4 [[TMP43]], i8 0, i32 16, i32 4)
-; CHECK-NEXT:    [[TMP44:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP44]]
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1.p1.i32(ptr addrspace(1) align 4 [[TMP37]], ptr addrspace(1) align 4 [[SRC]], i32 16, i32 4)
-; CHECK-NEXT:    [[TMP38:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP38]]
-; CHECK-NEXT:    [[TMP40:%.*]] = ptrtoint ptr addrspace(3) [[B]] to i32
-; CHECK-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP40]]
-; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1.p1.i32(ptr addrspace(1) align 4 [[TMP39]], ptr addrspace(1) align 4 [[TMP41]], i32 16, i32 4)
+; CHECK-NEXT:    call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) [[TMP27]], ptr addrspace(1) [[TMP29]], i32 16, i1 false)
 ; CHECK-NEXT:    br label %[[CONDFREE:.*]]
 ; CHECK:       [[CONDFREE]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
 ; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
 ; CHECK:       [[FREE]]:
-; CHECK-NEXT:    [[TMP34:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
-; CHECK-NEXT:    [[TMP35:%.*]] = ptrtoint ptr [[TMP34]] to i64
-; CHECK-NEXT:    [[TMP36:%.*]] = ptrtoint ptr addrspace(1) [[TMP21]] to i64
-; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP36]], i64 [[TMP35]])
+; CHECK-NEXT:    [[TMP30:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[TMP30]] to i64
+; CHECK-NEXT:    [[TMP32:%.*]] = ptrtoint ptr addrspace(1) [[TMP21]] to i64
+; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP32]], i64 [[TMP31]])
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
 ;
   %a = getelementptr [16 x i8], ptr addrspace(3) @lds_1, i32 0, i32 0
   %b = getelementptr [16 x i8], ptr addrspace(3) @lds_2, i32 0, i32 0
-  call void @llvm.memset.p3.i32(ptr addrspace(3) %a, i8 0, i32 16, i1 false)
-  call void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) %a, ptr addrspace(1) %src, i32 16, i1 false)
   call void @llvm.memmove.p3.p3.i32(ptr addrspace(3) %a, ptr addrspace(3) %b, i32 16, i1 false)
+  ret void
+}
+
+define amdgpu_kernel void @memset_atomic_kernel() sanitize_address {
+; CHECK-LABEL: define amdgpu_kernel void @memset_atomic_kernel(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[WID:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MALLOC:.*]], label %[[BB18:.*]]
+; CHECK:       [[MALLOC]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMSET_ATOMIC_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_atomic_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMSET_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_atomic_kernel.md, i32 0, i32 1, i32 2), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP13]], ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_atomic_kernel, align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr addrspace(1) [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP15]], i64 24)
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 48
+; CHECK-NEXT:    [[TMP17:%.*]] = ptrtoint ptr addrspace(1) [[TMP16]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP17]], i64 16)
+; CHECK-NEXT:    br label %[[BB18]]
+; CHECK:       [[BB18]]:
+; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_atomic_kernel, align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMSET_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memset_atomic_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memset_atomic_kernel, i32 [[TMP20]]
+; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    call void @llvm.memset.element.unordered.atomic.p1.i32(ptr addrspace(1) align 4 [[TMP23]], i8 0, i32 16, i32 4)
+; CHECK-NEXT:    br label %[[CONDFREE:.*]]
+; CHECK:       [[CONDFREE]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
+; CHECK:       [[FREE]]:
+; CHECK-NEXT:    [[TMP24:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[TMP24]] to i64
+; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(1) [[TMP19]] to i64
+; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP26]], i64 [[TMP25]])
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret void
+;
+  %a = getelementptr [16 x i8], ptr addrspace(3) @lds_1, i32 0, i32 0
   call void @llvm.memset.element.unordered.atomic.p3.i32(ptr addrspace(3) align 4 %a, i8 0, i32 16, i32 4)
+  ret void
+}
+
+define amdgpu_kernel void @memcpy_atomic_kernel(ptr addrspace(1) %src) sanitize_address {
+; CHECK-LABEL: define amdgpu_kernel void @memcpy_atomic_kernel(
+; CHECK-SAME: ptr addrspace(1) [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[WID:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MALLOC:.*]], label %[[BB18:.*]]
+; CHECK:       [[MALLOC]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMCPY_ATOMIC_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMCPY_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel.md, i32 0, i32 1, i32 2), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP13]], ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel, align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr addrspace(1) [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP15]], i64 24)
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 48
+; CHECK-NEXT:    [[TMP17:%.*]] = ptrtoint ptr addrspace(1) [[TMP16]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP17]], i64 16)
+; CHECK-NEXT:    br label %[[BB18]]
+; CHECK:       [[BB18]]:
+; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    [[TMP19:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel, align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMCPY_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memcpy_atomic_kernel, i32 [[TMP20]]
+; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP21]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP19]], i32 [[TMP22]]
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p1.p1.i32(ptr addrspace(1) align 4 [[TMP23]], ptr addrspace(1) align 4 [[SRC]], i32 16, i32 4)
+; CHECK-NEXT:    br label %[[CONDFREE:.*]]
+; CHECK:       [[CONDFREE]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
+; CHECK:       [[FREE]]:
+; CHECK-NEXT:    [[TMP24:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP25:%.*]] = ptrtoint ptr [[TMP24]] to i64
+; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(1) [[TMP19]] to i64
+; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP26]], i64 [[TMP25]])
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret void
+;
+  %a = getelementptr [16 x i8], ptr addrspace(3) @lds_1, i32 0, i32 0
   call void @llvm.memcpy.element.unordered.atomic.p3.p1.i32(ptr addrspace(3) align 4 %a, ptr addrspace(1) align 4 %src, i32 16, i32 4)
+  ret void
+}
+
+define amdgpu_kernel void @memmove_atomic_kernel() sanitize_address {
+; CHECK-LABEL: define amdgpu_kernel void @memmove_atomic_kernel(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[WID:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
+; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MALLOC:.*]], label %[[BB20:.*]]
+; CHECK:       [[MALLOC]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_ATOMIC_KERNEL_MD_TYPE:%.*]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_atomic_kernel.md, i32 0, i32 2, i32 0), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_atomic_kernel.md, i32 0, i32 2, i32 2), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
+; CHECK-NEXT:    [[TMP10:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = call i64 @__asan_malloc_impl(i64 [[TMP9]], i64 [[TMP11]])
+; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr addrspace(1)
+; CHECK-NEXT:    store ptr addrspace(1) [[TMP13]], ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_atomic_kernel, align 8
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 8
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr addrspace(1) [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP15]], i64 24)
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 48
+; CHECK-NEXT:    [[TMP17:%.*]] = ptrtoint ptr addrspace(1) [[TMP16]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP17]], i64 16)
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP13]], i64 80
+; CHECK-NEXT:    [[TMP19:%.*]] = ptrtoint ptr addrspace(1) [[TMP18]] to i64
+; CHECK-NEXT:    call void @__asan_poison_region(i64 [[TMP19]], i64 16)
+; CHECK-NEXT:    br label %[[BB20]]
+; CHECK:       [[BB20]]:
+; CHECK-NEXT:    [[XYZCOND:%.*]] = phi i1 [ false, %[[WID]] ], [ true, %[[MALLOC]] ]
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    [[TMP21:%.*]] = load ptr addrspace(1), ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_atomic_kernel, align 8
+; CHECK-NEXT:    [[TMP22:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_atomic_kernel.md, i32 0, i32 1, i32 0), align 4
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_atomic_kernel, i32 [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds ([[LLVM_AMDGCN_SW_LDS_MEMMOVE_ATOMIC_KERNEL_MD_TYPE]], ptr addrspace(1) @llvm.amdgcn.sw.lds.memmove_atomic_kernel.md, i32 0, i32 2, i32 0), align 4
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i8, ptr addrspace(3) @llvm.amdgcn.sw.lds.memmove_atomic_kernel, i32 [[TMP24]]
+; CHECK-NEXT:    [[A:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP23]], i32 0, i32 0
+; CHECK-NEXT:    [[B:%.*]] = getelementptr [16 x i8], ptr addrspace(3) [[TMP25]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = ptrtoint ptr addrspace(3) [[A]] to i32
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP26]]
+; CHECK-NEXT:    [[TMP28:%.*]] = ptrtoint ptr addrspace(3) [[B]] to i32
+; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP21]], i32 [[TMP28]]
+; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p1.p1.i32(ptr addrspace(1) align 4 [[TMP27]], ptr addrspace(1) align 4 [[TMP29]], i32 16, i32 4)
+; CHECK-NEXT:    br label %[[CONDFREE:.*]]
+; CHECK:       [[CONDFREE]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.s.barrier()
+; CHECK-NEXT:    br i1 [[XYZCOND]], label %[[FREE:.*]], label %[[END:.*]]
+; CHECK:       [[FREE]]:
+; CHECK-NEXT:    [[TMP30:%.*]] = call ptr @llvm.returnaddress.p0(i32 0)
+; CHECK-NEXT:    [[TMP31:%.*]] = ptrtoint ptr [[TMP30]] to i64
+; CHECK-NEXT:    [[TMP32:%.*]] = ptrtoint ptr addrspace(1) [[TMP21]] to i64
+; CHECK-NEXT:    call void @__asan_free_impl(i64 [[TMP32]], i64 [[TMP31]])
+; CHECK-NEXT:    br label %[[END]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret void
+;
+  %a = getelementptr [16 x i8], ptr addrspace(3) @lds_1, i32 0, i32 0
+  %b = getelementptr [16 x i8], ptr addrspace(3) @lds_2, i32 0, i32 0
   call void @llvm.memmove.element.unordered.atomic.p3.p3.i32(ptr addrspace(3) align 4 %a, ptr addrspace(3) align 4 %b, i32 16, i32 4)
   ret void
 }
