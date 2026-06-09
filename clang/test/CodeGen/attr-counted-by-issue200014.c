@@ -282,7 +282,7 @@ size_t global_addrof(void) {
 // FRONTEND-NEXT:    ret i64 [[TMP1]]
 //
 // O2-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @ptr_fam(
-// O2-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// O2-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // O2-NEXT:  [[ENTRY:.*:]]
 // O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[P]], align 4
 // O2-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.smax.i64(i64 [[COUNTED_BY_LOAD]], i64 0)
@@ -310,7 +310,7 @@ size_t ptr_fam(struct annotated_flex *p) {
 // FRONTEND-NEXT:    ret i64 [[TMP2]]
 //
 // O2-LABEL: define dso_local range(i64 0, -9223372036854775808) i64 @ptr_subscript(
-// O2-SAME: ptr noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR4]] {
+// O2-SAME: ptr nofree noundef readonly captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR4]] {
 // O2-NEXT:  [[ENTRY:.*:]]
 // O2-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i64, ptr [[P]], align 4
 // O2-NEXT:    [[RESULT:%.*]] = add i64 [[COUNTED_BY_LOAD]], -3
@@ -332,7 +332,7 @@ size_t ptr_subscript(struct annotated_flex *p) {
 // FRONTEND-NEXT:    ret i64 [[TMP0]]
 //
 // O2-LABEL: define dso_local i64 @ptr_addrof(
-// O2-SAME: ptr noundef readnone [[P:%.*]]) local_unnamed_addr #[[ATTR3]] {
+// O2-SAME: ptr nofree noundef readnone [[P:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // O2-NEXT:  [[ENTRY:.*:]]
 // O2-NEXT:    ret i64 -1
 //
