@@ -1534,6 +1534,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
     return LLT::fixed_vector(4, 32);
   case VgprV8S32:
   case UniInVgprV8S32:
+  case SgprV8S32_ReadFirstLane:
     return LLT::fixed_vector(8, 32);
   case VgprV2S64:
   case UniInVgprV2S64:
@@ -1664,6 +1665,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprV4S32:
   case SgprV4S32_WF:
   case SgprV4S32_ReadFirstLane:
+  case SgprV8S32_ReadFirstLane:
   case SgprB32:
   case SgprB64:
   case SgprB96:
@@ -1727,6 +1729,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV8S32:
   case VgprV16S32:
   case VgprV32S16:
+  case VgprV32S32:
   case VgprB32:
   case VgprB64:
   case VgprB96:
@@ -1796,7 +1799,8 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV6S32:
     case VgprV8S32:
     case VgprV16S32:
-    case VgprV32S16: {
+    case VgprV32S16:
+    case VgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
@@ -2104,7 +2108,8 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       Op.setReg(NewSGPR);
       break;
     }
-    case SgprV4S32_ReadFirstLane: {
+    case SgprV4S32_ReadFirstLane:
+    case SgprV8S32_ReadFirstLane: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB == SgprRB)
         break;

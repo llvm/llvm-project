@@ -10706,6 +10706,9 @@ def warn_missing_format_string : Warning<
 def warn_scanf_nonzero_width : Warning<
   "zero field width in scanf format string is unused">,
   InGroup<Format>;
+def warn_format_unsupported_type : Warning<
+  "format specifies type %0 which is not supported yet">,
+  InGroup<Format>;
 def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
@@ -11530,6 +11533,8 @@ def err_builtin_setjmp_unsupported : Error<
 def err_builtin_longjmp_invalid_val : Error<
   "argument to __builtin_longjmp must be a constant 1">;
 def err_builtin_requires_language : Error<"'%0' is only available in %1">;
+def err_builtin_requires_char_bit_8 : Error<
+  "'%0' is only available on targets where 'CHAR_BIT == 8'">;
 
 def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
@@ -12715,6 +12720,12 @@ def err_omp_interop_variable_wrong_type : Error<
 def err_omp_interop_prefer_type : Error<
   "prefer_list item must be a string literal or constant integral "
   "expression">;
+def err_omp_interop_attr_not_string : Error<
+  "attr() argument must be a string literal">;
+def err_omp_interop_attr_missing_ompx_prefix : Error<
+  "attr() argument '%0' must start with the 'ompx_' prefix">;
+def err_omp_interop_attr_contains_comma : Error<
+  "attr() argument '%0' must not contain a comma">;
 def err_omp_interop_bad_depend_clause : Error<
   "'depend' clause requires the 'targetsync' interop type">;
 def err_omp_interop_var_multiple_actions : Error<
