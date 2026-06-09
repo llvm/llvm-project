@@ -72,17 +72,47 @@ CBufferMetadata::get(Module &M, llvm::function_ref<bool(Type *)> IsPadding) {
   return Result;
 }
 
+// Removes the provided global variables from the compiler used list.
+// This needs to be implemented here because using the llvm::removeFromUsedList function
+// from LLVMTransformUtils would create a cyclic dependency.
+static void removeFromCompilerUsedList(Module &M, SmallPtrSet<GlobalVariable *, 8> &GlobalToRemove) {
+  GlobalVariable *UsedListGV = M.getNamedGlobal("llvm.compiler.used");
+  if (!UsedListGV || !UsedListGV->hasInitializer())
+    return;
+
+  auto *CA = cast<ConstantArray>(UsedListGV->getInitializer());
+  SmallVector<Constant *, 16> NewInit;
+  for (Use &Op : CA->operands()) {
+    if (auto *GV = dyn_cast<GlobalVariable>(Op->stripPointerCasts())) {
+      if (!GlobalToRemove.contains(GV))
+        NewInit.push_back(GV);
+    }
+  }
+
+  if (!NewInit.empty()) {
+    Type *ArrayEltTy = cast<ArrayType>(UsedListGV->getValueType())->getElementType();
+    ArrayType *ATy = ArrayType::get(ArrayEltTy, NewInit.size());
+    GlobalVariable *NewUsedListGV =
+        new GlobalVariable(M, ATy, false, GlobalValue::AppendingLinkage,
+                           ConstantArray::get(ATy, NewInit), "", UsedListGV,
+                           UsedListGV->getThreadLocalMode(), UsedListGV->getAddressSpace());
+    NewUsedListGV->setSection(UsedListGV->getSection());
+    NewUsedListGV->takeName(UsedListGV);
+  }
+
+  UsedListGV->eraseFromParent();
+}
+
+
 void CBufferMetadata::removeCBufferGlobalsFromUseList(Module &M) {
+  if (Mappings.empty())
+    return;
 
   SmallPtrSet<GlobalVariable *, 8> CBGlobals;
   for (const hlsl::CBufferMapping &Mapping : Mappings)
     CBGlobals.insert(Mapping.Handle);
 
-  llvm::removeFromUsedLists(M, [&](Constant *C) -> bool {
-    if (auto *GV = dyn_cast<GlobalVariable>(C))
-      return CBGlobals.contains(GV);
-    return false;
-  });
+  removeFromCompilerUsedList(M, CBGlobals);
 
   for (GlobalVariable *HandleGV : CBGlobals)
     HandleGV->removeDeadConstantUsers();
