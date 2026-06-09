@@ -118,7 +118,8 @@ public:
   static constexpr size_t MIN_ALIGN = cpp::max(size_t{4}, alignof(max_align_t));
 
   LIBC_INLINE constexpr BlockRef() = default;
-  LIBC_INLINE explicit constexpr BlockRef(cpp::byte *ptr) : header_ptr(ptr) {}
+  LIBC_INLINE explicit constexpr BlockRef(cpp::byte *header_ptr)
+      : header_ptr(header_ptr) {}
   LIBC_INLINE explicit constexpr operator bool() const {
     return header_ptr != nullptr;
   }
@@ -129,7 +130,6 @@ public:
     return !(*this == other);
   }
 
-  LIBC_INLINE cpp::byte *data() const { return header_ptr; }
   LIBC_INLINE uintptr_t addr() const {
     return reinterpret_cast<uintptr_t>(header_ptr);
   }
@@ -147,10 +147,12 @@ public:
   /// @warning  This method does not do any checking; passing a random pointer
   ///           will return a non-null pointer.
   LIBC_INLINE static BlockRef from_usable_space(void *usable_space) {
+    LIBC_ASSERT(usable_space != nullptr && "usable space cannot be null");
     auto *bytes = reinterpret_cast<cpp::byte *>(usable_space);
     return BlockRef(bytes - HEADER_SIZE);
   }
   LIBC_INLINE static BlockRef from_usable_space(const void *usable_space) {
+    LIBC_ASSERT(usable_space != nullptr && "usable space cannot be null");
     const auto *bytes = reinterpret_cast<const cpp::byte *>(usable_space);
     return BlockRef(const_cast<cpp::byte *>(bytes - HEADER_SIZE));
   }
@@ -195,14 +197,16 @@ public:
   ///
   /// Aligned to some multiple of MIN_ALIGN.
   LIBC_INLINE cpp::byte *usable_space() const {
-    auto *s = header_ptr + HEADER_SIZE;
+    auto *s = nonnull_header_ptr() + HEADER_SIZE;
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(s) % MIN_ALIGN == 0 &&
                 "usable space must be aligned to MIN_ALIGN");
     return s;
   }
 
   // @returns The region of memory the block manages, including the header.
-  LIBC_INLINE ByteSpan region() const { return {header_ptr, outer_size()}; }
+  LIBC_INLINE ByteSpan region() const {
+    return {nonnull_header_ptr(), outer_size()};
+  }
 
   /// Attempts to split this block.
   ///
@@ -223,14 +227,14 @@ public:
     size_t next_value = load_next();
     if (next_value & LAST_MASK)
       return BlockRef();
-    return BlockRef(header_ptr + (next_value & SIZE_MASK));
+    return BlockRef(nonnull_header_ptr() + (next_value & SIZE_MASK));
   }
 
   /// @returns The free block immediately before this one, otherwise null.
   LIBC_INLINE BlockRef prev_free() const {
     if (!(load_next() & PREV_FREE_MASK))
       return BlockRef();
-    return BlockRef(header_ptr - load_prev());
+    return BlockRef(nonnull_header_ptr() - load_prev());
   }
 
   /// @returns Whether the block is unavailable for allocation.
@@ -322,6 +326,8 @@ private:
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(bytes.data()) % alignof(size_t) ==
                     0 &&
                 "block start must be suitably aligned");
+    LIBC_ASSERT(bytes.size() % MIN_ALIGN == 0 &&
+                "block size must be aligned to MIN_ALIGN");
     BlockRef block(bytes.data());
     block.store_next(bytes.size());
     return block;
@@ -335,29 +341,18 @@ private:
   }
 
   LIBC_INLINE cpp::byte *field_ptr(size_t offset) const {
-    cpp::byte *ptr = header_ptr + offset;
+    cpp::byte *ptr = nonnull_header_ptr() + offset;
     LIBC_ASSERT(reinterpret_cast<uintptr_t>(ptr) % alignof(size_t) == 0 &&
                 "block metadata fields must be aligned");
-    // BlockRef points to block header which should be well-aligned. However,
-    // the compiler may not know this information. Adding assume aligned to
-    // tell the compiler to emit a single load/store even when unaligned access
-    // is disallowed.
-#if __has_builtin(__builtin_assume_aligned)
-    return reinterpret_cast<cpp::byte *>(
-        __builtin_assume_aligned(ptr, alignof(size_t)));
-#else
     return ptr;
-#endif
   }
 
   LIBC_INLINE size_t load_field(size_t offset) const {
-    size_t value;
-    inline_memcpy(&value, field_ptr(offset), sizeof(value));
-    return value;
+    return *reinterpret_cast<const size_t *>(field_ptr(offset));
   }
 
   LIBC_INLINE void store_field(size_t offset, size_t value) const {
-    inline_memcpy(field_ptr(offset), &value, sizeof(value));
+    new (field_ptr(offset)) size_t(value);
   }
 
   /// Offset from this block to the previous block. 0 if this is the first
@@ -385,6 +380,14 @@ private:
   }
   LIBC_INLINE void store_next(size_t value) const {
     store_field(NEXT_OFFSET, value);
+  }
+
+  LIBC_INLINE cpp::byte *nonnull_header_ptr() const {
+    LIBC_ASSERT(header_ptr != nullptr && "operation on an invalid block");
+#if __has_builtin(__builtin_assume)
+    __builtin_assume(header_ptr != nullptr);
+#endif
+    return header_ptr;
   }
 
   cpp::byte *header_ptr = nullptr;
@@ -443,6 +446,8 @@ optional<BlockRef> BlockRef::init(ByteSpan region) {
 LIBC_INLINE
 BlockRef::BlockInfo BlockRef::allocate(BlockRef block, size_t alignment,
                                        size_t size) {
+  LIBC_ASSERT(block.header_ptr != nullptr &&
+              "allocating from an invalid block");
   LIBC_ASSERT(alignment % MIN_ALIGN == 0 &&
               "alignment must be a multiple of MIN_ALIGN");
 
