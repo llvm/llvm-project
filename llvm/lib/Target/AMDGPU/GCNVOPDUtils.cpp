@@ -266,9 +266,9 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 
 /// Collect all load (dependents if \p Forward else dependencies) that connect
 /// to \p SU.
-static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Seen,
+static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Visited,
                          const SUnit &SU, bool Forward) {
-  if (SU.isBoundaryNode() || Seen.test(SU.NodeNum))
+  if (SU.isBoundaryNode() || Visited.test(SU.NodeNum))
     return;
 
   const SmallVector<SDep, 4> &Deps = Forward ? SU.Succs : SU.Preds;
@@ -282,33 +282,11 @@ static void collectLoads(SmallVector<SUnit *> &Loads, BitVector &Seen,
     if (Dep->isInstr() && Dep->getInstr()->mayLoad()) {
       Loads.push_back(Dep);
     } else {
-      collectLoads(Loads, Seen, *Dep, Forward);
+      collectLoads(Loads, Visited, *Dep, Forward);
     }
 
-    Seen.set(Dep->NodeNum);
+    Visited.set(Dep->NodeNum);
   }
-}
-
-/// Check whether chaining \p First and \p Second together would force a load
-/// dependency of \p Second to complete before dispatching a load which depends
-/// on \p First when the loads would otherwise be overlapped.
-static bool fusionMaySerializeOverlappingLoads(ScheduleDAGInstrs *DAG,
-                                               const SUnit &First,
-                                               const SUnit &Second) {
-  assert((First.isBoundaryNode() || First.NodeNum < Second.NodeNum) &&
-         "SUnit operands must be in topological order!");
-
-  BitVector Seen(DAG->SUnits.size());
-  SmallVector<SUnit *> FirstLoadSuccs, SecondLoadPreds;
-  collectLoads(FirstLoadSuccs, Seen, First, /*Forward=*/true);
-  collectLoads(SecondLoadPreds, Seen, Second, /*Forward=*/false);
-
-  for (SUnit *Succ : FirstLoadSuccs)
-    for (SUnit *Pred : SecondLoadPreds)
-      if (!DAG->IsReachable(Succ, Pred))
-        return true;
-
-  return false;
 }
 
 namespace {
@@ -348,16 +326,51 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       if (!VOPDCapable[IIdx])
         continue;
       const MachineInstr *IMI = ISUI->getInstr();
+
+      BitVector IVisited(DAG->SUnits.size());
+      SmallVector<SUnit *> ILoadSuccs;
+      collectLoads(ILoadSuccs, IVisited, *ISUI, /*Forward=*/true);
+
       unsigned JIdx = IIdx + 1;
       for (auto JSUI = ISUI + 1; JSUI != E; ++JSUI, ++JIdx) {
         if (!VOPDCapable[JIdx] || JSUI->isBoundaryNode())
-          continue;
-        if (fusionMaySerializeOverlappingLoads(DAG, *ISUI, *JSUI))
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
             !shouldScheduleAdjacent(TII, ST, IMI, *JMI))
           continue;
+
+        bool LoadsMayOverlap = !ILoadSuccs.empty() && [&] {
+          BitVector JVisited(
+              IVisited); // No need to collect from nodes reachable from ISUI
+          SmallVector<SUnit *> JLoadPreds;
+          collectLoads(JLoadPreds, JVisited, *JSUI, /*Forward=*/false);
+          if (JLoadPreds.empty())
+            return false;
+
+          for (SUnit *Succ : ILoadSuccs)
+            for (SUnit *Pred : JLoadPreds)
+              if (!DAG->IsReachable(Succ, Pred)) {
+                LLVM_DEBUG({
+                  dbgs() << "Will not pair SU(" << ISUI->NodeNum << ") with SU("
+                         << JSUI->NodeNum << ")\n";
+                  if (Pred == Succ)
+                    dbgs() << "  Fusion would introduce a cyclic dependency "
+                              "with SU("
+                           << Pred->NodeNum << ")\n";
+                  else
+                    dbgs() << "  Fusion may force SU(" << Pred->NodeNum
+                           << ") to complete its load before dispatching SU("
+                           << Succ->NodeNum << ")\n";
+                });
+                return true;
+              }
+          return false;
+        }();
+
+        if (LoadsMayOverlap)
+          continue;
+
         if (fuseInstructionPair(*DAG, *ISUI, *JSUI)) {
           // Clear to prevent future checks/fusing
           VOPDCapable[JIdx] = false;
