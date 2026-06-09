@@ -553,7 +553,7 @@ void X86DomainReassignmentImpl::buildClosure(Closure &C, Register Reg) {
     // Register already in this closure.
     if (!C.insertEdge(CurReg))
       continue;
-    EnclosedEdges[Reg] = C.getID();
+    EnclosedEdges[CurReg] = C.getID();
 
     MachineInstr *DefMI = MRI->getVRegDef(CurReg);
     if (!encloseInstr(C, DefMI))
