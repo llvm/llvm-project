@@ -7,8 +7,8 @@ void foo() {
 // CHECK: %array = call elementtype([10 x i32]) ptr @llvm.structured.alloca.p0()
   uint array[10];
 
-// CHECK: %[[#PTR:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x i32]) %array, {{i32|i64}} 2)
-// CHECK: store i32 10, ptr %[[#PTR]], align 4
+// CHECK: %[[FOO_PTR:.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x i32]) %array, <1 x i32> splat (i32 3), {{i32|i64}} 2)
+// CHECK: store i32 10, ptr %[[FOO_PTR]], align 4
   array[2] = 10;
 }
 
@@ -21,9 +21,9 @@ void bar() {
 // CHECK: %array = call elementtype([3 x %struct.S]) ptr @llvm.structured.alloca.p0()
   S array[3] = { { 0, 1 }, { 2, 3 }, { 3, 4 } };
 
-// CHECK: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([3 x %struct.S]) %array, {{i32|i64}} 2)
-// CHECK: %[[#B:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %[[#A]], {{i32|i64}} 1)
-// CHECK: store i32 10, ptr %[[#B]], align 1
+// CHECK: %[[BAR_A:.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([3 x %struct.S]) %array, <1 x i32> splat (i32 3), {{i32|i64}} 2)
+// CHECK: %[[BAR_B:.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.S) %[[BAR_A]], <1 x i32> splat (i32 3), {{i32|i64}} 1)
+// CHECK: store i32 10, ptr %[[BAR_B]], align 1
 
   array[2].b = 10;
 }
@@ -38,10 +38,10 @@ void baz() {
 // CHECK: %array = call elementtype([2 x %struct.S2]) ptr @llvm.structured.alloca.p0()
   S2 array[2] = { { 0, { 1, 2 }, 3 }, { 4, { 5, 6 }, 7 } };
 
-// CHECK: %[[#A:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x %struct.S2]) %array, {{i32|i64}} 1)
-// CHECK: %[[#B:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S2) %[[#A]], {{i32|i64}} 1)
-// CHECK: %[[#C:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %[[#B]], {{i32|i64}} 0)
-// CHECK: store i32 10, ptr %[[#C]], align 1
+// CHECK: %[[BAZ_A:.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([2 x %struct.S2]) %array, <1 x i32> splat (i32 3), {{i32|i64}} 1)
+// CHECK: %[[BAZ_B:.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.S2) %[[BAZ_A]], <1 x i32> splat (i32 3), {{i32|i64}} 1)
+// CHECK: %[[BAZ_C:.*]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.S) %[[BAZ_B]], <1 x i32> splat (i32 3), {{i32|i64}} 0)
+// CHECK: store i32 10, ptr %[[BAZ_C]], align 1
 
   array[1].b.a = 10;
 }

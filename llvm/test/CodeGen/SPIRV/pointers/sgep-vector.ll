@@ -22,7 +22,7 @@ entry:
   ; CHECK: %[[#vec_var:]] = OpFunctionParameter %[[#ptr_vec4]]
   ; CHECK: %[[#out_var:]] = OpFunctionParameter %[[#ptr_float]]
 
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(<4 x float>) %vec, i32 2)
+  %1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(<4 x float>) %vec, <1 x i32> <i32 5>, i32 2)
   ; CHECK: %[[#ptr_elem:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#vec_var]] %[[#idx_2]]
 
   %2 = load float, ptr %1, align 4
@@ -40,7 +40,7 @@ entry:
   ; CHECK: %[[#arr_var:]] = OpFunctionParameter %[[#ptr_array_vec4]]
   ; CHECK: %[[#out_var2:]] = OpFunctionParameter %[[#ptr_float]]
 
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([2 x <4 x float>]) %arr, i32 1, i32 2)
+  %1 = call ptr (ptr, <2 x i32>, ...) @llvm.structured.gep.p0.v2i32(ptr elementtype([2 x <4 x float>]) %arr, <2 x i32> <i32 5, i32 5>, i32 1, i32 2)
   ; CHECK: %[[#ptr_elem2:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#arr_var]] %[[#idx_1]] %[[#idx_2]]
 
   %2 = load float, ptr %1, align 4
@@ -58,13 +58,13 @@ entry:
   ; CHECK: %[[#arr_var3:]] = OpFunctionParameter %[[#ptr_array_float]]
   ; CHECK: %[[#out_var3:]] = OpFunctionParameter %[[#ptr_float]]
 
-  %1 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x float]) %arr, i32 0)
+  %1 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x float]) %arr, <1 x i32> <i32 5>, i32 0)
   ; CHECK: %[[#ptr_elem3_0:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#arr_var3]] %[[#idx_0]]
 
   %2 = load float, ptr %1, align 4
   ; CHECK: %[[#val3_0:]] = OpLoad %[[#float]] %[[#ptr_elem3_0]]
 
-  %3 = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype([10 x float]) %arr, i32 5)
+  %3 = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype([10 x float]) %arr, <1 x i32> <i32 5>, i32 5)
   ; CHECK: %[[#ptr_elem3_5:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#arr_var3]] %[[#idx_5]]
 
   %4 = load float, ptr %3, align 4
@@ -80,7 +80,8 @@ entry:
 }
 
 declare token @llvm.experimental.convergence.entry() #1
-declare ptr @llvm.structured.gep.p0(ptr, ...) #3
+declare ptr @llvm.structured.gep.p0.v1i32(ptr, <1 x i32>, ...) #3
+declare ptr @llvm.structured.gep.p0.v2i32(ptr, <2 x i32>, ...) #3
 
 attributes #1 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

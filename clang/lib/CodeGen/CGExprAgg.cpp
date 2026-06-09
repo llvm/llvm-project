@@ -31,6 +31,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -655,6 +656,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
       if (CGF.getLangOpts().EmitLogicalPointer)
         element = Builder.CreateStructuredGEP(
             AType, begin, llvm::ConstantInt::get(CGF.SizeTy, ArrayIndex),
+            llvm::StructuredGEPFlags::inBounds() |
+                llvm::StructuredGEPFlags::nneg(),
             "arrayinit.element");
       else
         element = Builder.CreateInBoundsGEP(

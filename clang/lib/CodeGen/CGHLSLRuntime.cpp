@@ -29,6 +29,7 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -40,6 +41,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Alignment.h"
@@ -56,6 +58,59 @@ using namespace llvm;
 using llvm::hlsl::CBufferRowSizeInBytes;
 
 namespace {
+
+StructuredGEPFlags getHLSLStructuredGEPArrayIndexFlags(llvm::Type *IndexedType,
+                                                       Value *Index,
+                                                       bool InBounds,
+                                                       bool SignedIndex) {
+  StructuredGEPFlags Flags = StructuredGEPFlags::none();
+  if (InBounds) {
+    if (auto *AT = dyn_cast<llvm::ArrayType>(IndexedType)) {
+      if (AT->getNumElements() != 0)
+        Flags |= StructuredGEPFlags::inBounds();
+    } else {
+      Flags |= StructuredGEPFlags::inBounds();
+    }
+  }
+  if (!SignedIndex)
+    Flags |= StructuredGEPFlags::unsignedIndex();
+  if (auto *CI = dyn_cast<ConstantInt>(Index))
+    if (!CI->isNegative())
+      Flags |= StructuredGEPFlags::nneg();
+  return Flags;
+}
+
+SmallVector<StructuredGEPFlags>
+getHLSLStructuredGEPFlags(llvm::Type *BaseType, ArrayRef<Value *> Indices,
+                          bool InBounds,
+                          std::optional<bool> FirstIndexSigned = std::nullopt) {
+  // FirstIndexSigned describes only the caller-provided source-language index.
+  // Generated layout indices after it are signed constants.
+  SmallVector<StructuredGEPFlags> Flags;
+  Flags.reserve(Indices.size());
+  llvm::Type *CurrentType = BaseType;
+  for (auto [IndexNo, Index] : llvm::enumerate(Indices)) {
+    if (auto *ST = dyn_cast<llvm::StructType>(CurrentType)) {
+      Flags.push_back(StructuredGEPFlags::inBounds() |
+                      StructuredGEPFlags::nneg());
+      if (auto *CI = dyn_cast<ConstantInt>(Index))
+        if (CI->getZExtValue() < ST->getNumElements())
+          CurrentType = ST->getElementType(CI->getZExtValue());
+      continue;
+    }
+
+    bool SignedIndex = IndexNo == 0 ? FirstIndexSigned.value_or(true) : true;
+    Flags.push_back(getHLSLStructuredGEPArrayIndexFlags(CurrentType, Index,
+                                                        InBounds, SignedIndex));
+    if (auto *AT = dyn_cast<llvm::ArrayType>(CurrentType))
+      CurrentType = AT->getElementType();
+    else if (auto *VT = dyn_cast<llvm::VectorType>(CurrentType))
+      CurrentType = VT->getElementType();
+    else
+      CurrentType = nullptr;
+  }
+  return Flags;
+}
 
 void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   // The validation of ValVersionStr is done at HLSLToolChain::TranslateArgs.
@@ -1601,8 +1656,11 @@ std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
     LayoutTy = llvm::ArrayType::get(
         LayoutTy,
         cast<llvm::ArrayType>(Addr.getElementType())->getNumElements());
+    SmallVector<StructuredGEPFlags> Flags = getHLSLStructuredGEPFlags(
+        LayoutTy, Indices, /*InBounds=*/true,
+        E->getIdx()->getType()->isSignedIntegerOrEnumerationType());
     auto *GEP = cast<StructuredGEPInst>(CGF.Builder.CreateStructuredGEP(
-        LayoutTy, Addr.emitRawPointer(CGF), Indices, "cbufferidx"));
+        LayoutTy, Addr.emitRawPointer(CGF), Indices, Flags, "cbufferidx"));
     Addr =
         Address(GEP, GEP->getResultElementType(), RowAlignedSize, KnownNonNull);
     return CGF.MakeAddrLValue(Addr, E->getType(), EltBaseInfo, EltTBAAInfo);
@@ -1662,8 +1720,12 @@ class HLSLBufferCopyEmitter {
   llvm::Value *emitAccessChain(llvm::Type *BaseTy, llvm::Value *Base,
                                ArrayRef<llvm::Value *> Indices) {
     bool EmitLogical = CGF.getLangOpts().EmitLogicalPointer;
-    if (EmitLogical)
-      return CGF.Builder.CreateAccessChain(EmitLogical, BaseTy, Base, Indices);
+    if (EmitLogical) {
+      SmallVector<StructuredGEPFlags> Flags =
+          getHLSLStructuredGEPFlags(BaseTy, Indices, /*InBounds=*/true);
+      return CGF.Builder.CreateAccessChain(EmitLogical, BaseTy, Base, Indices,
+                                           Flags);
+    }
 
     llvm::SmallVector<llvm::Value *> GEPIndices;
     GEPIndices.reserve(Indices.size() + 1);
@@ -1856,12 +1918,18 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   CharUnits Align = CharUnits::fromQuantity(
       CGF.CGM.getDataLayout().getABITypeAlign(FieldLLVMTy));
 
-  Value *Ptr = CGF.getLangOpts().EmitLogicalPointer
-                   ? CGF.Builder.CreateStructuredGEP(
-                         LayoutTy, Base.getPointer(CGF),
-                         llvm::ConstantInt::get(CGM.IntTy, FieldIdx))
-                   : CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF),
-                                                 FieldIdx, Field->getName());
+  Value *Ptr;
+  if (CGF.getLangOpts().EmitLogicalPointer) {
+    Value *FieldIndex = llvm::ConstantInt::get(CGM.IntTy, FieldIdx);
+    SmallVector<Value *> Indices = {FieldIndex};
+    SmallVector<StructuredGEPFlags> Flags =
+        getHLSLStructuredGEPFlags(LayoutTy, Indices, /*InBounds=*/true);
+    Ptr = CGF.Builder.CreateStructuredGEP(LayoutTy, Base.getPointer(CGF),
+                                          Indices, Flags);
+  } else {
+    Ptr = CGF.Builder.CreateStructGEP(LayoutTy, Base.getPointer(CGF), FieldIdx,
+                                      Field->getName());
+  }
   Address Addr(Ptr, FieldLLVMTy, Align, KnownNonNull);
 
   LValue LV = LValue::MakeAddr(Addr, FieldType, CGM.getContext(),

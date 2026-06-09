@@ -19,24 +19,24 @@ cbuffer CB {
 void main() {
   S tmp = (S)cbs;
 // CHECK-DXIL: %agg-temp = call elementtype(%struct.S) ptr @llvm.structured.alloca.p0()
-// CHECK-DXIL: %[[#SRC:]] = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype(%S) @cbs, i32 0)
-// CHECK-DXIL: %[[#DST:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %agg-temp, i32 0)
+// CHECK-DXIL: %[[#SRC:]] = call ptr addrspace(2) (ptr addrspace(2), <1 x i32>, ...) @llvm.structured.gep.p2.v1i32(ptr addrspace(2) elementtype(%S) @cbs, <1 x i32> splat (i32 3), i32 0)
+// CHECK-DXIL: %[[#DST:]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.S) %agg-temp, <1 x i32> splat (i32 3), i32 0)
 // CHECK-DXIL: %cbuf.load = load <3 x float>, ptr addrspace(2) %[[#SRC]], align 4
 // CHECK-DXIL: store <3 x float> %cbuf.load, ptr %[[#DST]], align 4
 
-// CHECK-DXIL: %[[#SRC:]] = call ptr addrspace(2) (ptr addrspace(2), ...) @llvm.structured.gep.p2(ptr addrspace(2) elementtype(%S) @cbs, i32 2)
-// CHECK-DXIL: %[[#DST:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %agg-temp, i32 1)
+// CHECK-DXIL: %[[#SRC:]] = call ptr addrspace(2) (ptr addrspace(2), <1 x i32>, ...) @llvm.structured.gep.p2.v1i32(ptr addrspace(2) elementtype(%S) @cbs, <1 x i32> splat (i32 3), i32 2)
+// CHECK-DXIL: %[[#DST:]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.S) %agg-temp, <1 x i32> splat (i32 3), i32 1)
 // CHECK-DXIL: %cbuf.load1 = load <4 x float>, ptr addrspace(2) %[[#SRC]], align 4
 // CHECK-DXIL: store <4 x float> %cbuf.load1, ptr %[[#DST]], align 4
 
 // CHECK-SPIR: %agg-temp = call elementtype(%struct.S) ptr @llvm.structured.alloca.p0()
-// CHECK-SPIR: %[[#SRC:]] = call ptr addrspace(12) (ptr addrspace(12), ...) @llvm.structured.gep.p12(ptr addrspace(12) elementtype(%S) @cbs, i32 0)
-// CHECK-SPIR: %[[#DST:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %agg-temp, i32 0)
+// CHECK-SPIR: %[[#SRC:]] = call ptr addrspace(12) (ptr addrspace(12), <1 x i32>, ...) @llvm.structured.gep.p12.v1i32(ptr addrspace(12) elementtype(%S) @cbs, <1 x i32> splat (i32 3), i32 0)
+// CHECK-SPIR: %[[#DST:]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.S) %agg-temp, <1 x i32> splat (i32 3), i32 0)
 // CHECK-SPIR: %cbuf.load = load <3 x float>, ptr addrspace(12) %[[#SRC]], align 4
 // CHECK-SPIR: store <3 x float> %cbuf.load, ptr %[[#DST]], align 4
 
-// CHECK-SPIR: %[[#SRC:]] = call ptr addrspace(12) (ptr addrspace(12), ...) @llvm.structured.gep.p12(ptr addrspace(12) elementtype(%S) @cbs, i32 2)
-// CHECK-SPIR: %[[#DST:]] = call ptr (ptr, ...) @llvm.structured.gep.p0(ptr elementtype(%struct.S) %agg-temp, i32 1)
+// CHECK-SPIR: %[[#SRC:]] = call ptr addrspace(12) (ptr addrspace(12), <1 x i32>, ...) @llvm.structured.gep.p12.v1i32(ptr addrspace(12) elementtype(%S) @cbs, <1 x i32> splat (i32 3), i32 2)
+// CHECK-SPIR: %[[#DST:]] = call ptr (ptr, <1 x i32>, ...) @llvm.structured.gep.p0.v1i32(ptr elementtype(%struct.S) %agg-temp, <1 x i32> splat (i32 3), i32 1)
 // CHECK-SPIR: %cbuf.load1 = load <4 x float>, ptr addrspace(12) %[[#SRC]], align 4
 // CHECK-SPIR: store <4 x float> %cbuf.load1, ptr %[[#DST]], align 4
 }

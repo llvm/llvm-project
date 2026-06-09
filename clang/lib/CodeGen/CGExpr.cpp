@@ -48,6 +48,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MathExtras.h"
@@ -4644,8 +4645,9 @@ Address CodeGenFunction::EmitArrayToPointerDecay(const Expr *E,
     if (getLangOpts().EmitLogicalPointer) {
       // Array-to-pointer decay for an SGEP is a no-op as we don't do any
       // logical indexing. See #179951 for some additional context.
-      auto *SGEP =
-          Builder.CreateStructuredGEP(NewTy, Addr.emitRawPointer(*this), {});
+      auto *SGEP = Builder.CreateStructuredGEP(
+          NewTy, Addr.emitRawPointer(*this), ArrayRef<llvm::Value *>(),
+          ArrayRef<llvm::StructuredGEPFlags>());
       Addr = Address(SGEP, NewTy, Addr.getAlignment(), Addr.isKnownNonNull());
     } else {
       Addr = Builder.CreateConstArrayGEP(Addr, 0, "arraydecay");
@@ -4680,6 +4682,60 @@ static const Expr *isSimpleArrayDecayOperand(const Expr *E) {
   return SubExpr;
 }
 
+static bool isStructuredGEPIndexableType(llvm::Type *T) {
+  return isa<llvm::ArrayType>(T) || isa<llvm::StructType>(T) ||
+         isa<llvm::VectorType>(T);
+}
+
+static llvm::StructuredGEPFlags
+getStructuredGEPArrayIndexFlags(llvm::Type *IndexedType, llvm::Value *Index,
+                                bool InBounds, bool SignedIndex) {
+  llvm::StructuredGEPFlags Flags = llvm::StructuredGEPFlags::none();
+  if (InBounds) {
+    if (auto *AT = dyn_cast<llvm::ArrayType>(IndexedType)) {
+      if (AT->getNumElements() != 0)
+        Flags |= llvm::StructuredGEPFlags::inBounds();
+    } else {
+      Flags |= llvm::StructuredGEPFlags::inBounds();
+    }
+  }
+  if (!SignedIndex)
+    Flags |= llvm::StructuredGEPFlags::unsignedIndex();
+  if (auto *CI = dyn_cast<llvm::ConstantInt>(Index))
+    if (!CI->isNegative())
+      Flags |= llvm::StructuredGEPFlags::nneg();
+  return Flags;
+}
+
+static SmallVector<llvm::StructuredGEPFlags>
+getStructuredGEPFlagsForIndices(llvm::Type *BaseType,
+                                ArrayRef<llvm::Value *> Indices, bool InBounds,
+                                bool SignedIndices) {
+  SmallVector<llvm::StructuredGEPFlags> Flags;
+  Flags.reserve(Indices.size());
+  llvm::Type *CurrentType = BaseType;
+  for (llvm::Value *Index : Indices) {
+    if (auto *ST = dyn_cast<llvm::StructType>(CurrentType)) {
+      Flags.push_back(llvm::StructuredGEPFlags::inBounds() |
+                      llvm::StructuredGEPFlags::nneg());
+      if (auto *CI = dyn_cast<llvm::ConstantInt>(Index))
+        if (CI->getZExtValue() < ST->getNumElements())
+          CurrentType = ST->getElementType(CI->getZExtValue());
+      continue;
+    }
+
+    Flags.push_back(getStructuredGEPArrayIndexFlags(CurrentType, Index,
+                                                    InBounds, SignedIndices));
+    if (auto *AT = dyn_cast<llvm::ArrayType>(CurrentType))
+      CurrentType = AT->getElementType();
+    else if (auto *VT = dyn_cast<llvm::VectorType>(CurrentType))
+      CurrentType = VT->getElementType();
+    else
+      CurrentType = nullptr;
+  }
+  return Flags;
+}
+
 static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                           llvm::Type *elemType,
                                           llvm::Value *ptr,
@@ -4688,8 +4744,13 @@ static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
                                           bool signedIndices,
                                           SourceLocation loc,
                                     const llvm::Twine &name = "arrayidx") {
-  if (inbounds && CGF.getLangOpts().EmitLogicalPointer)
-    return CGF.Builder.CreateStructuredGEP(elemType, ptr, indices);
+  if (inbounds && CGF.getLangOpts().EmitLogicalPointer &&
+      isStructuredGEPIndexableType(elemType)) {
+    SmallVector<llvm::StructuredGEPFlags> Flags =
+        getStructuredGEPFlagsForIndices(elemType, indices, inbounds,
+                                        signedIndices);
+    return CGF.Builder.CreateStructuredGEP(elemType, ptr, indices, Flags, name);
+  }
 
   if (inbounds) {
     return CGF.EmitCheckedInBoundsGEP(elemType, ptr, indices, signedIndices,
@@ -4707,11 +4768,19 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      bool signedIndices, SourceLocation loc,
                                      CharUnits align,
                                      const llvm::Twine &name = "arrayidx") {
-  if (inbounds && CGF.getLangOpts().EmitLogicalPointer)
-    return RawAddress(CGF.Builder.CreateStructuredGEP(arrayType,
-                                                      addr.emitRawPointer(CGF),
-                                                      indices.drop_front()),
-                      elementType, align);
+  ArrayRef<llvm::Value *> LogicalIndices =
+      indices.empty() ? indices : indices.drop_front();
+  // arrayType is optional after array-to-pointer decay.
+  if (inbounds && CGF.getLangOpts().EmitLogicalPointer && arrayType &&
+      isStructuredGEPIndexableType(arrayType)) {
+    SmallVector<llvm::StructuredGEPFlags> Flags =
+        getStructuredGEPFlagsForIndices(arrayType, LogicalIndices, inbounds,
+                                        signedIndices);
+    return RawAddress(
+        CGF.Builder.CreateStructuredGEP(arrayType, addr.emitRawPointer(CGF),
+                                        LogicalIndices, Flags, name),
+        elementType, align);
+  }
 
   if (inbounds) {
     return CGF.EmitCheckedInBoundsGEP(addr, indices, elementType, signedIndices,
@@ -5711,7 +5780,9 @@ static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   if (CGF.getLangOpts().EmitLogicalPointer)
     return RawAddress(
         CGF.Builder.CreateStructuredGEP(StructType, base.emitRawPointer(CGF),
-                                        {CGF.Builder.getSize(idx)}),
+                                        {CGF.Builder.getSize(idx)},
+                                        {llvm::StructuredGEPFlags::inBounds() |
+                                         llvm::StructuredGEPFlags::nneg()}),
         base.getElementType(), base.getAlignment());
 
   if (!IsInBounds)

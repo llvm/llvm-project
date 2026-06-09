@@ -6617,8 +6617,6 @@ Value *llvm::simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
     if (isSplatValue(Op0))
       return Op0;
     break;
-  case Intrinsic::structured_gep:
-    return Op0;
   default:
     break;
   }
@@ -7231,6 +7229,10 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
       any_of(Args, IsaPred<PoisonValue>))
     return PoisonValue::get(F->getReturnType());
+  if (IID == Intrinsic::structured_gep) {
+    auto *SGEP = cast<StructuredGEPInst>(Call);
+    return SGEP->getNumIndices() == 0 ? SGEP->getPointerOperand() : nullptr;
+  }
   // Most of the intrinsics with no operands have some kind of side effect.
   // Don't simplify.
   if (!NumOperands) {

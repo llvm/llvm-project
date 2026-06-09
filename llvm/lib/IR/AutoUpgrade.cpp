@@ -43,6 +43,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/StructuredGEPFlags.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -1279,6 +1280,14 @@ static bool convertIntrinsicValidType(StringRef Name,
   return false;
 }
 
+static bool isOldStructuredGEPIntrinsic(Function *F, StringRef Name) {
+  if (Name != "structured.gep" && !Name.starts_with("structured.gep."))
+    return false;
+
+  FunctionType *FTy = F->getFunctionType();
+  return FTy->getNumParams() < 2 || !FTy->getParamType(1)->isVectorTy();
+}
+
 static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                                       bool CanUpgradeDebugIntrinsicsToRecords) {
   assert(F && "Illegal to upgrade a non-existent Function.");
@@ -1812,6 +1821,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
 
   case 's':
     if (Name == "stackprotectorcheck") {
+      NewFn = nullptr;
+      return true;
+    }
+    if (isOldStructuredGEPIntrinsic(F, Name)) {
       NewFn = nullptr;
       return true;
     }
@@ -5025,6 +5038,66 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+static Constant *getLegacyStructuredGEPFlags(CallBase *CI) {
+  Type *CurrentType =
+      CI->getParamAttr(0, Attribute::ElementType).getValueAsType();
+
+  Type *Int32Ty = Type::getInt32Ty(CI->getContext());
+  SmallVector<Constant *> FlagValues;
+  unsigned NumIndices = CI->arg_size() - 1;
+  FlagValues.reserve(NumIndices == 0 ? 1 : NumIndices);
+  for (unsigned I = 0; I < NumIndices; ++I) {
+    StructuredGEPFlags TheseFlags = StructuredGEPFlags::unsignedIndex();
+    if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      if (AT->getNumElements() != 0)
+        TheseFlags |= StructuredGEPFlags::inBounds();
+      CurrentType = AT->getElementType();
+    } else if (auto *VT = dyn_cast<VectorType>(CurrentType)) {
+      TheseFlags |= StructuredGEPFlags::inBounds();
+      CurrentType = VT->getElementType();
+    } else if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      TheseFlags |= StructuredGEPFlags::inBounds() | StructuredGEPFlags::nneg();
+      CurrentType = ST->getElementType(
+          cast<ConstantInt>(CI->getOperand(I + 1))->getZExtValue());
+    } else {
+      break;
+    }
+
+    FlagValues.push_back(ConstantInt::get(Int32Ty, TheseFlags.getRaw()));
+  }
+
+  if (FlagValues.empty())
+    FlagValues.push_back(ConstantInt::get(Int32Ty, 0));
+  return ConstantVector::get(FlagValues);
+}
+
+static Value *upgradeStructuredGEPIntrinsicCall(CallBase *CI, Function *F,
+                                                IRBuilder<> &Builder) {
+  Constant *Flags = getLegacyStructuredGEPFlags(CI);
+  SmallVector<Value *> Args;
+  Args.reserve(CI->arg_size() + 1);
+  Args.push_back(CI->getArgOperand(0));
+  Args.push_back(Flags);
+  for (unsigned I = 1; I < CI->arg_size(); ++I)
+    Args.push_back(CI->getArgOperand(I));
+
+  Function *NewFn = Intrinsic::getOrInsertDeclaration(
+      F->getParent(), Intrinsic::structured_gep,
+      {CI->getType(), Flags->getType()});
+  SmallVector<OperandBundleDef, 1> Bundles;
+  CI->getOperandBundlesAsDefs(Bundles);
+
+  CallInst *NewCall = Builder.CreateCall(NewFn, Args, Bundles);
+  NewCall->setCallingConv(CI->getCallingConv());
+  NewCall->setDebugLoc(CI->getDebugLoc());
+  NewCall->copyMetadata(*CI);
+  NewCall->addParamAttrs(
+      0, AttrBuilder(CI->getContext(), CI->getParamAttributes(0)));
+  NewCall->addRetAttrs(AttrBuilder(CI->getContext(), CI->getRetAttributes()));
+  NewCall->takeName(CI);
+  return NewCall;
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -5077,6 +5150,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       Rep = upgradeVectorSplice(CI, Builder);
     } else if (Name.consume_front("convert.")) {
       Rep = upgradeConvertIntrinsicCall(Name, CI, F, Builder);
+    } else if (Name == "structured.gep" ||
+               Name.starts_with("structured.gep.")) {
+      Rep = upgradeStructuredGEPIntrinsicCall(CI, F, Builder);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
