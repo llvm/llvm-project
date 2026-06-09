@@ -2743,7 +2743,7 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
                                         const OpenMPScheduleTy &ScheduleKind,
                                         const StaticRTInput &Values) {
   OpenMPSchedType ScheduleNum =
-      ScheduleKind.IsDistChunkedAndChunkOne
+      ScheduleKind.UseFusedDistChunkSchedule
           ? OMP_dist_sch_static_chunked_sch_static_chunkone
           : getRuntimeSchedule(ScheduleKind.Schedule, Values.Chunk != nullptr,
                                Values.Ordered);

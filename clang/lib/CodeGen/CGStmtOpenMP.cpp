@@ -50,6 +50,9 @@ static const VarDecl *getBaseDecl(const Expr *Ref);
 static OpenMPDirectiveKind
 getEffectiveDirectiveKind(const OMPExecutableDirective &S);
 
+/// Whether a combined `distribute parallel for` may use the fused
+/// distr_static_chunk + static_chunkone schedule (enum 93): one
+/// for_static_init, no surrounding distribute_static_init.
 static bool canEmitGPUFusedDistSchedule(const CodeGenModule &CGM,
                                         const OMPLoopDirective &S,
                                         OpenMPDirectiveKind DKind) {
@@ -3897,7 +3900,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       // schedule (enum 93). The surrounding EmitOMPDistributeLoop must skip
       // its distribute_static_init under the same conditions.
       if (StaticChunkedOne && canEmitGPUFusedDistSchedule(CGM, S, EKind))
-        ScheduleKind.IsDistChunkedAndChunkOne = true;
+        ScheduleKind.UseFusedDistChunkSchedule = true;
       bool IsMonotonic =
           Ordered ||
           (ScheduleKind.Schedule == OMPC_SCHEDULE_static &&

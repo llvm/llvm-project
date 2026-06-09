@@ -190,7 +190,7 @@ struct OpenMPScheduleTy final {
   OpenMPScheduleClauseModifier M2 = OMPC_SCHEDULE_MODIFIER_unknown;
   /// Request the fused distr_static_chunk + static_chunkone runtime schedule
   /// in `for_static_init`. The outer `distribute_static_init` is skipped.
-  bool IsDistChunkedAndChunkOne = false;
+  bool UseFusedDistChunkSchedule = false;
 };
 
 /// OpenMP modifiers for 'reduction' clause.
