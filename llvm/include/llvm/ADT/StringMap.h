@@ -410,11 +410,13 @@ public:
 
   /// remove - Remove the specified key/value pair from the map, but do not
   /// erase it.  This aborts if the key is not in the map.
-  void remove(MapEntryTy *KeyValue) { RemoveKey(KeyValue); }
+  void remove(MapEntryTy *KeyValue) {
+    incrementEpoch();
+    RemoveKey(KeyValue);
+  }
 
   void erase(iterator I) {
     MapEntryTy &V = *I;
-    incrementEpoch();
     remove(&V);
     V.Destroy(getAllocator());
   }
