@@ -13,7 +13,6 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 using namespace cir;
-using namespace mlir;
 using namespace mlir::abi;
 
 // This rewrite context supports the Direct (with or without coercion),
@@ -46,14 +45,15 @@ bool needsRewrite(const FunctionClassification &fc) {
 /// Indirect (byval) arguments and Expand emit an error.  The sret return
 /// pointer, when present, is prepended by rewriteFunctionDefinition rather
 /// than here.
-LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
-                               const FunctionClassification &fc,
-                               SmallVectorImpl<Type> &newArgTypes,
-                               function_ref<InFlightDiagnostic()> emitError) {
+mlir::LogicalResult
+buildNewArgTypes(llvm::ArrayRef<mlir::Type> oldArgTypes,
+                 const FunctionClassification &fc,
+                 llvm::SmallVectorImpl<mlir::Type> &newArgTypes,
+                 llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   assert(newArgTypes.empty() && "expected an empty output vector");
   newArgTypes.reserve(oldArgTypes.size());
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
-    Type origTy = oldArgTypes[idx];
+    mlir::Type origTy = oldArgTypes[idx];
     switch (ac.kind) {
     case ArgKind::Direct:
       // Direct with a coerced type means the wire signature uses the
@@ -67,7 +67,7 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
     case ArgKind::Expand:
       emitError() << "Expand at arg " << idx
                   << " not yet implemented in CallConvLowering";
-      return failure();
+      return mlir::failure();
     case ArgKind::Extend:
       // Extend keeps the original (narrow) type in the signature; the
       // sign/zero extension is communicated to LLVM via the llvm.signext /
@@ -80,19 +80,20 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
     case ArgKind::Indirect:
       emitError() << "Indirect at arg " << idx
                   << " not yet implemented in CallConvLowering";
-      return failure();
+      return mlir::failure();
     }
   }
-  return success();
+  return mlir::success();
 }
 
 /// Compute the new return type for a function whose return classification
 /// is \p retInfo.  Direct returns keep (or coerce to) their type, Ignore and
 /// Indirect (sret) returns become void, Extend keeps its type; Expand emits
 /// an error.
-Type computeNewReturnType(Type origRetTy, const ArgClassification &retInfo,
-                          MLIRContext *ctx,
-                          function_ref<InFlightDiagnostic()> emitError) {
+mlir::Type
+computeNewReturnType(mlir::Type origRetTy, const ArgClassification &retInfo,
+                     mlir::MLIRContext *ctx,
+                     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   switch (retInfo.kind) {
   case ArgKind::Direct:
     // Direct return with a coerced type uses the coerced type on the wire;
@@ -123,57 +124,64 @@ Type computeNewReturnType(Type origRetTy, const ArgClassification &retInfo,
 /// classification is Ignore.  Using poison is honest -- the value is
 /// genuinely unused at the ABI boundary -- and avoids a fake alloca+load
 /// pattern that would suggest we have a value when we don't.
-Value createIgnoredValue(OpBuilder &builder, Location loc, Type ty) {
+mlir::Value createIgnoredValue(mlir::OpBuilder &builder, mlir::Location loc,
+                               mlir::Type ty) {
   return cir::ConstantOp::create(builder, loc, ty, cir::PoisonAttr::get(ty));
 }
 
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args and adds
 /// llvm.signext / llvm.zeroext on Extend args.  Preserves any existing arg
 /// attributes on retained arg slots.
-ArrayAttr updateArgAttrs(MLIRContext *ctx, ArrayAttr existingArgAttrs,
-                         const FunctionClassification &fc) {
-  SmallVector<Attribute> newArgAttrs;
+mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
+                               mlir::ArrayAttr existingArgAttrs,
+                               const FunctionClassification &fc) {
+  llvm::SmallVector<mlir::Attribute> newArgAttrs;
   newArgAttrs.reserve(fc.argInfos.size());
   for (auto [oldIdx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;
-    DictionaryAttr existing = DictionaryAttr::get(ctx);
+    mlir::DictionaryAttr existing = mlir::DictionaryAttr::get(ctx);
     if (existingArgAttrs && oldIdx < existingArgAttrs.size())
-      existing = cast<DictionaryAttr>(existingArgAttrs[oldIdx]);
+      existing = mlir::cast<mlir::DictionaryAttr>(existingArgAttrs[oldIdx]);
     if (ac.kind == ArgKind::Extend) {
-      StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
-      NamedAttribute extAttr(StringAttr::get(ctx, attrName),
-                             UnitAttr::get(ctx));
+      llvm::StringRef attrName =
+          ac.signExtend ? "llvm.signext" : "llvm.zeroext";
+      mlir::NamedAttribute extAttr(mlir::StringAttr::get(ctx, attrName),
+                                   mlir::UnitAttr::get(ctx));
       if (existing.empty()) {
-        newArgAttrs.push_back(DictionaryAttr::get(ctx, {extAttr}));
+        newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, {extAttr}));
       } else {
-        SmallVector<NamedAttribute> attrs(existing.begin(), existing.end());
+        llvm::SmallVector<mlir::NamedAttribute> attrs(existing.begin(),
+                                                      existing.end());
         attrs.push_back(extAttr);
-        newArgAttrs.push_back(DictionaryAttr::get(ctx, attrs));
+        newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, attrs));
       }
     } else {
       newArgAttrs.push_back(existing);
     }
   }
-  return ArrayAttr::get(ctx, newArgAttrs);
+  return mlir::ArrayAttr::get(ctx, newArgAttrs);
 }
 
 /// Build an updated res_attrs ArrayAttr (single entry, since CIR funcs have
 /// at most one result) that adds llvm.signext / llvm.zeroext on an Extend
 /// return.  Preserves any existing res attributes.
-ArrayAttr updateResAttrs(MLIRContext *ctx, ArrayAttr existingResAttrs,
-                         const ArgClassification &retInfo) {
+mlir::ArrayAttr updateResAttrs(mlir::MLIRContext *ctx,
+                               mlir::ArrayAttr existingResAttrs,
+                               const ArgClassification &retInfo) {
   if (retInfo.kind != ArgKind::Extend)
     return existingResAttrs;
 
-  SmallVector<NamedAttribute> attrs;
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
   if (existingResAttrs && !existingResAttrs.empty())
-    for (NamedAttribute na : cast<DictionaryAttr>(existingResAttrs[0]))
+    for (mlir::NamedAttribute na :
+         mlir::cast<mlir::DictionaryAttr>(existingResAttrs[0]))
       attrs.push_back(na);
-  StringRef attrName = retInfo.signExtend ? "llvm.signext" : "llvm.zeroext";
-  attrs.push_back(
-      NamedAttribute(StringAttr::get(ctx, attrName), UnitAttr::get(ctx)));
-  return ArrayAttr::get(ctx, {DictionaryAttr::get(ctx, attrs)});
+  llvm::StringRef attrName =
+      retInfo.signExtend ? "llvm.signext" : "llvm.zeroext";
+  attrs.push_back(mlir::NamedAttribute(mlir::StringAttr::get(ctx, attrName),
+                                       mlir::UnitAttr::get(ctx)));
+  return mlir::ArrayAttr::get(ctx, {mlir::DictionaryAttr::get(ctx, attrs)});
 }
 
 /// Coerce \p src to type \p dstTy at the current builder insertion point by
@@ -196,17 +204,20 @@ ArrayAttr updateResAttrs(MLIRContext *ctx, ArrayAttr existingResAttrs,
 /// Any operations the helper creates are appended to \p createdOps so the
 /// caller can pass them to replaceAllUsesExcept and avoid clobbering the
 /// store's value operand when later rewiring the source value.
-Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
-                   FunctionOpInterface funcOp, const DataLayout &dl,
-                   SmallPtrSetImpl<Operation *> &createdOps) {
-  Type srcTy = src.getType();
+mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
+                         mlir::Type dstTy, mlir::Value src,
+                         mlir::FunctionOpInterface funcOp,
+                         const mlir::DataLayout &dl,
+                         llvm::SmallPtrSetImpl<mlir::Operation *> &createdOps) {
+  mlir::Type srcTy = src.getType();
   assert(srcTy != dstTy &&
          "emitCoercion callers must pre-check that the types differ");
 
   uint64_t srcAlign = dl.getTypeABIAlignment(srcTy);
   uint64_t dstAlign = dl.getTypeABIAlignment(dstTy);
   uint64_t allocaAlign = std::max(srcAlign, dstAlign);
-  Type slotTy = dl.getTypeSize(srcTy) >= dl.getTypeSize(dstTy) ? srcTy : dstTy;
+  mlir::Type slotTy =
+      dl.getTypeSize(srcTy) >= dl.getTypeSize(dstTy) ? srcTy : dstTy;
 
   auto slotPtrTy = cir::PointerType::get(slotTy);
   auto srcPtrTy = cir::PointerType::get(srcTy);
@@ -214,63 +225,66 @@ Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
 
   cir::AllocaOp alloca;
   {
-    OpBuilder::InsertionGuard guard(rewriter);
-    Block &entry = funcOp->getRegion(0).front();
-    rewriter.setInsertionPointToStart(&entry);
-    alloca = cir::AllocaOp::create(rewriter, loc, slotPtrTy,
-                                   rewriter.getStringAttr("coerce"),
-                                   rewriter.getI64IntegerAttr(allocaAlign));
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    mlir::Block &entry = funcOp->getRegion(0).front();
+    builder.setInsertionPointToStart(&entry);
+    alloca = cir::AllocaOp::create(builder, loc, slotPtrTy,
+                                   builder.getStringAttr("coerce"),
+                                   builder.getI64IntegerAttr(allocaAlign));
   }
   createdOps.insert(alloca);
 
   // Store through a source-typed view of the slot.
-  Value srcSlot = alloca;
+  mlir::Value srcSlot = alloca;
   if (slotTy != srcTy) {
-    auto srcCast = cir::CastOp::create(rewriter, loc, srcPtrTy,
+    auto srcCast = cir::CastOp::create(builder, loc, srcPtrTy,
                                        cir::CastKind::bitcast, alloca);
     createdOps.insert(srcCast);
     srcSlot = srcCast;
   }
-  auto store = cir::StoreOp::create(rewriter, loc, src, srcSlot);
+  auto store = cir::StoreOp::create(builder, loc, src, srcSlot);
   createdOps.insert(store);
 
   // Load through a destination-typed view of the slot.
-  Value dstSlot = alloca;
+  mlir::Value dstSlot = alloca;
   if (slotTy != dstTy) {
-    auto dstCast = cir::CastOp::create(rewriter, loc, dstPtrTy,
+    auto dstCast = cir::CastOp::create(builder, loc, dstPtrTy,
                                        cir::CastKind::bitcast, alloca);
     createdOps.insert(dstCast);
     dstSlot = dstCast;
   }
-  auto load = cir::LoadOp::create(rewriter, loc, dstSlot);
+  auto load = cir::LoadOp::create(builder, loc, dstSlot);
   createdOps.insert(load);
   return load;
 }
 
 /// Convenience overload for callers that don't need the createdOps set
 /// (e.g. call-site coercion where we don't replaceAllUsesExcept).
-Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
-                   FunctionOpInterface funcOp, const DataLayout &dl) {
-  SmallPtrSet<Operation *, 4> ignored;
-  return emitCoercion(rewriter, loc, dstTy, src, funcOp, dl, ignored);
+mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
+                         mlir::Type dstTy, mlir::Value src,
+                         mlir::FunctionOpInterface funcOp,
+                         const mlir::DataLayout &dl) {
+  llvm::SmallPtrSet<mlir::Operation *, 4> ignored;
+  return emitCoercion(builder, loc, dstTy, src, funcOp, dl, ignored);
 }
 
 /// Insert coercion before each cir.return so the returned value matches the
 /// new (coerced) return type.
-void insertReturnCoercion(FunctionOpInterface funcOp, Type origRetTy,
-                          Type coercedRetTy, OpBuilder &rewriter,
-                          const DataLayout &dl) {
-  SmallVector<cir::ReturnOp> returns;
+void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
+                          mlir::Type origRetTy, mlir::Type coercedRetTy,
+                          mlir::OpBuilder &builder,
+                          const mlir::DataLayout &dl) {
+  llvm::SmallVector<cir::ReturnOp> returns;
   funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
   for (cir::ReturnOp r : returns) {
     if (r.getInput().empty())
       continue;
-    Value origVal = r.getInput()[0];
+    mlir::Value origVal = r.getInput()[0];
     if (origVal.getType() == coercedRetTy)
       continue;
-    rewriter.setInsertionPoint(r);
-    Value coerced =
-        emitCoercion(rewriter, r.getLoc(), coercedRetTy, origVal, funcOp, dl);
+    builder.setInsertionPoint(r);
+    mlir::Value coerced =
+        emitCoercion(builder, r.getLoc(), coercedRetTy, origVal, funcOp, dl);
     r->setOperand(0, coerced);
   }
 }
@@ -278,36 +292,40 @@ void insertReturnCoercion(FunctionOpInterface funcOp, Type origRetTy,
 /// For each Direct arg with a coerced type, change the block argument's type
 /// to the coerced type and insert a coercion at function entry that maps it
 /// back to the original type for body uses.
-/// \p sretOffset is 1 when the function has an sret return (a hidden return
-/// pointer is prepended as block argument 0), so classification index \p idx
-/// maps to block argument \p idx + \p sretOffset.
-void insertArgCoercion(FunctionOpInterface funcOp,
-                       const FunctionClassification &fc, OpBuilder &rewriter,
-                       const DataLayout &dl, unsigned sretOffset) {
-  Region &body = funcOp->getRegion(0);
+///
+/// The entry block arguments mirror the function's ABI signature: argument
+/// \p hasSRetArg shifts the classification index by one because a hidden
+/// sret pointer occupies block argument 0 when the function returns by
+/// reference.  So fc.argInfos[i] corresponds to block argument
+/// i + hasSRetArg.
+void insertArgCoercion(mlir::FunctionOpInterface funcOp,
+                       const FunctionClassification &fc,
+                       mlir::OpBuilder &builder, const mlir::DataLayout &dl,
+                       bool hasSRetArg) {
+  mlir::Region &body = funcOp->getRegion(0);
   if (body.empty())
     return;
-  Block &entry = body.front();
+  mlir::Block &entry = body.front();
 
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind != ArgKind::Direct || !ac.coercedType)
       continue;
-    unsigned blockIdx = idx + sretOffset;
+    unsigned blockIdx = idx + hasSRetArg;
     if (blockIdx >= entry.getNumArguments())
       continue;
 
-    BlockArgument blockArg = entry.getArgument(blockIdx);
-    Type oldArgTy = blockArg.getType();
-    Type newArgTy = ac.coercedType;
+    mlir::BlockArgument blockArg = entry.getArgument(blockIdx);
+    mlir::Type oldArgTy = blockArg.getType();
+    mlir::Type newArgTy = ac.coercedType;
     if (oldArgTy == newArgTy)
       continue;
 
     blockArg.setType(newArgTy);
 
-    rewriter.setInsertionPointToStart(&entry);
-    SmallPtrSet<Operation *, 4> coercionOps;
-    Value adapted = emitCoercion(rewriter, funcOp.getLoc(), oldArgTy, blockArg,
-                                 funcOp, dl, coercionOps);
+    builder.setInsertionPointToStart(&entry);
+    llvm::SmallPtrSet<mlir::Operation *, 4> coercionOps;
+    mlir::Value adapted = emitCoercion(builder, funcOp.getLoc(), oldArgTy,
+                                       blockArg, funcOp, dl, coercionOps);
 
     // Replace blockArg uses with the adapted value, except inside the helper
     // ops we just created.  This is critical: the StoreOp's value operand is
@@ -345,32 +363,38 @@ void insertArgCoercion(FunctionOpInterface funcOp,
 /// `cir.return (cir.load <alloca>)` shape is an invariant guaranteed by
 /// CIRGen, so it is asserted via `cast<>` rather than guarded with a
 /// fallback.
-void insertSRetStores(FunctionOpInterface funcOp, Type origRetTy,
-                      OpBuilder &rewriter) {
-  Value sretPtr = funcOp.getArguments()[0];
+void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
+                      mlir::OpBuilder &builder) {
+  mlir::Value sretPtr = funcOp.getArguments()[0];
 
-  SmallVector<cir::ReturnOp> returnOps;
+  llvm::SmallVector<cir::ReturnOp> returnOps;
   funcOp->walk([&](cir::ReturnOp retOp) { returnOps.push_back(retOp); });
 
   cir::AllocaOp retAlloca = nullptr;
   for (cir::ReturnOp retOp : returnOps) {
-    if (retOp.getInput().empty())
-      continue;
+    // Every cir.return in an sret function must carry the loaded return
+    // value -- a bare return would mean the sret slot was never written.
+    assert(!retOp.getInput().empty() &&
+           "cir.return in sret function must have an operand");
 
     cir::LoadOp retLoad =
-        cast<cir::LoadOp>(retOp.getInput()[0].getDefiningOp());
+        mlir::cast<cir::LoadOp>(retOp.getInput()[0].getDefiningOp());
 
-    // Rewire the shared `__retval` alloca to the sret pointer once; all
-    // other returns' loads point at the same alloca and are updated by the
-    // replaceAllUsesWith below.
+    // Rewire the shared `__retval` alloca to the sret pointer once.
+    // replaceAllUsesWith updates every load of the alloca (including those
+    // feeding the other cir.return ops) to read from sretPtr instead, so
+    // all returns are covered by this single rewiring.  Only then is the
+    // now-unused alloca safe to erase.
     if (!retAlloca) {
-      retAlloca = cast<cir::AllocaOp>(retLoad.getAddr().getDefiningOp());
+      retAlloca = mlir::cast<cir::AllocaOp>(retLoad.getAddr().getDefiningOp());
       retAlloca.getResult().replaceAllUsesWith(sretPtr);
       retAlloca->erase();
     }
 
-    rewriter.setInsertionPoint(retOp);
-    cir::ReturnOp::create(rewriter, retOp.getLoc());
+    // The sret slot now holds the return value directly; replace the
+    // value-carrying return with a void return (no operand).
+    builder.setInsertionPoint(retOp);
+    cir::ReturnOp::create(builder, retOp.getLoc());
     retOp->erase();
     if (retLoad.use_empty())
       retLoad->erase();
@@ -382,20 +406,20 @@ void insertSRetStores(FunctionOpInterface funcOp, Type origRetTy,
 /// `sret(T) align A [noalias] writable dead_on_unwind`.  noalias is only
 /// valid on the callee's parameter, not at the call site, so it is gated by
 /// \p withNoalias.  Key order is irrelevant: DictionaryAttr sorts by name.
-SmallVector<NamedAttribute> buildSretSlotAttrs(OpBuilder &rewriter, Type retTy,
-                                               uint64_t align,
-                                               bool withNoalias) {
-  SmallVector<NamedAttribute> attrs;
-  attrs.push_back(rewriter.getNamedAttr("llvm.sret", TypeAttr::get(retTy)));
+llvm::SmallVector<mlir::NamedAttribute>
+buildSretSlotAttrs(mlir::OpBuilder &builder, mlir::Type retTy, uint64_t align,
+                   bool withNoalias) {
+  llvm::SmallVector<mlir::NamedAttribute> attrs;
   attrs.push_back(
-      rewriter.getNamedAttr("llvm.align", rewriter.getI64IntegerAttr(align)));
+      builder.getNamedAttr("llvm.sret", mlir::TypeAttr::get(retTy)));
+  attrs.push_back(
+      builder.getNamedAttr("llvm.align", builder.getI64IntegerAttr(align)));
   if (withNoalias)
     attrs.push_back(
-        rewriter.getNamedAttr("llvm.noalias", rewriter.getUnitAttr()));
+        builder.getNamedAttr("llvm.noalias", builder.getUnitAttr()));
+  attrs.push_back(builder.getNamedAttr("llvm.writable", builder.getUnitAttr()));
   attrs.push_back(
-      rewriter.getNamedAttr("llvm.writable", rewriter.getUnitAttr()));
-  attrs.push_back(
-      rewriter.getNamedAttr("llvm.dead_on_unwind", rewriter.getUnitAttr()));
+      builder.getNamedAttr("llvm.dead_on_unwind", builder.getUnitAttr()));
   return attrs;
 }
 
@@ -405,41 +429,42 @@ SmallVector<NamedAttribute> buildSretSlotAttrs(OpBuilder &rewriter, Type retTy,
 /// must already be shaped for the rewritten argument list (Extend slots
 /// carry signext/zeroext, Ignore slots dropped); it is shifted to slots
 /// 1..N behind the sret slot.
-void applySretSlotAttrs(cir::CallOp newCall, ArrayAttr argAttrs, Type retTy,
-                        uint64_t align, OpBuilder &rewriter) {
-  MLIRContext *ctx = newCall->getContext();
-  SmallVector<NamedAttribute> sretAttrs =
-      buildSretSlotAttrs(rewriter, retTy, align, /*withNoalias=*/false);
+void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
+                        mlir::Type retTy, uint64_t align,
+                        mlir::OpBuilder &builder) {
+  mlir::MLIRContext *ctx = newCall->getContext();
+  llvm::SmallVector<mlir::NamedAttribute> sretAttrs =
+      buildSretSlotAttrs(builder, retTy, align, /*withNoalias=*/false);
 
-  SmallVector<Attribute> newArgAttrs;
+  llvm::SmallVector<mlir::Attribute> newArgAttrs;
   newArgAttrs.reserve(newCall.getArgOperands().size());
-  newArgAttrs.push_back(DictionaryAttr::get(ctx, sretAttrs));
+  newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, sretAttrs));
   if (argAttrs)
-    for (Attribute a : argAttrs)
+    for (mlir::Attribute a : argAttrs)
       newArgAttrs.push_back(a);
   while (newArgAttrs.size() < newCall.getArgOperands().size())
-    newArgAttrs.push_back(DictionaryAttr::get(ctx));
-  newCall->setAttr("arg_attrs", ArrayAttr::get(ctx, newArgAttrs));
+    newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx));
+  newCall->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, newArgAttrs));
 }
 
 } // namespace
 
-LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
-    FunctionOpInterface funcOpInterface, const FunctionClassification &fc,
-    OpBuilder &builder) {
+mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
+    mlir::FunctionOpInterface funcOpInterface, const FunctionClassification &fc,
+    mlir::OpBuilder &builder) {
   // The pass driver (CallConvLoweringPass) only ever hands us cir.func ops.
   // Cast once at the top so the rest of the function reads in CIR's own
   // vocabulary, and so we can dispatch to the CIRGlobalValueInterface for
   // isDefinition() (FunctionOpInterface alone does not inherit from
   // CIRGlobalValueInterface).
-  cir::FuncOp funcOp = cast<cir::FuncOp>(funcOpInterface);
+  cir::FuncOp funcOp = mlir::cast<cir::FuncOp>(funcOpInterface);
 
   if (!needsRewrite(fc))
-    return success();
+    return mlir::success();
 
-  ArrayRef<Type> oldArgTypes = funcOp.getArgumentTypes();
-  ArrayRef<Type> oldResultTypes = funcOp.getResultTypes();
-  MLIRContext *ctx = funcOp->getContext();
+  llvm::ArrayRef<mlir::Type> oldArgTypes = funcOp.getArgumentTypes();
+  llvm::ArrayRef<mlir::Type> oldResultTypes = funcOp.getResultTypes();
+  mlir::MLIRContext *ctx = funcOp->getContext();
 
   // CIR follows LLVM IR's single-result rule: a function returns either
   // zero or one value.  Document the invariant so a future multi-result
@@ -447,31 +472,30 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   assert(oldResultTypes.size() <= 1 &&
          "CIR functions return zero or one value");
 
-  SmallVector<Type> newArgTypes;
-  if (failed(buildNewArgTypes(oldArgTypes, fc, newArgTypes,
-                              [&]() { return funcOp.emitOpError(); })))
-    return failure();
+  llvm::SmallVector<mlir::Type> newArgTypes;
+  if (mlir::failed(buildNewArgTypes(oldArgTypes, fc, newArgTypes,
+                                    [&]() { return funcOp.emitOpError(); })))
+    return mlir::failure();
 
-  Type voidTy = cir::VoidType::get(ctx);
-  Type origRetTy = oldResultTypes.empty() ? voidTy : oldResultTypes[0];
-  Type newRetTy = computeNewReturnType(origRetTy, fc.returnInfo, ctx,
-                                       [&]() { return funcOp.emitOpError(); });
+  mlir::Type voidTy = cir::VoidType::get(ctx);
+  mlir::Type origRetTy = oldResultTypes.empty() ? voidTy : oldResultTypes[0];
+  mlir::Type newRetTy = computeNewReturnType(
+      origRetTy, fc.returnInfo, ctx, [&]() { return funcOp.emitOpError(); });
   if (!newRetTy)
-    return failure();
-  SmallVector<Type> newResultTypes = {newRetTy};
+    return mlir::failure();
+  llvm::SmallVector<mlir::Type> newResultTypes = {newRetTy};
 
   // sret return: the value is returned through a hidden pointer prepended as
   // argument 0.  The wire return type was already set to void by
   // computeNewReturnType.  Every classification index therefore maps to a
-  // block argument shifted by this offset in the body handling below.
+  // block argument shifted by one in the body handling below.
   bool hasSRet =
       fc.returnInfo.kind == ArgKind::Indirect && !oldResultTypes.empty();
   if (hasSRet)
     newArgTypes.insert(newArgTypes.begin(), cir::PointerType::get(origRetTy));
-  unsigned sretOffset = hasSRet ? 1 : 0;
 
   if (funcOp.isDefinition()) {
-    Region &body = funcOp->getRegion(0);
+    mlir::Region &body = funcOp->getRegion(0);
     if (!body.empty()) {
       // Prepend the sret pointer block argument and route every cir.return
       // through it before any index-based argument handling below (which
@@ -489,7 +513,7 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       // in-body cir.call operands) through the recovered value.  Done before
       // the Ignore-drop below so the entry block argument indices used here
       // still refer to the original positions.
-      insertArgCoercion(funcOp, fc, builder, dl, sretOffset);
+      insertArgCoercion(funcOp, fc, builder, dl, hasSRet);
 
       // Direct return with coerced type: insert a coercion at every
       // cir.return so the returned value matches the (coerced) return
@@ -499,7 +523,7 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
         insertReturnCoercion(funcOp, origRetTy, fc.returnInfo.coercedType,
                              builder, dl);
 
-      Block &entry = body.front();
+      mlir::Block &entry = body.front();
 
       // For each Ignored argument: drop the block argument and, if the
       // body still references it, replace those uses with a poison
@@ -511,13 +535,13 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
            blockIdx >= 0; --blockIdx) {
         if (fc.argInfos[blockIdx].kind != ArgKind::Ignore)
           continue;
-        unsigned realIdx = static_cast<unsigned>(blockIdx) + sretOffset;
+        unsigned realIdx = static_cast<unsigned>(blockIdx) + hasSRet;
         if (realIdx >= entry.getNumArguments())
           continue;
-        BlockArgument arg = entry.getArgument(realIdx);
+        mlir::BlockArgument arg = entry.getArgument(realIdx);
         if (!arg.use_empty()) {
           builder.setInsertionPointToStart(&entry);
-          Value poison =
+          mlir::Value poison =
               createIgnoredValue(builder, funcOp.getLoc(), arg.getType());
           arg.replaceAllUsesWith(poison);
         }
@@ -532,9 +556,9 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     // updated below to match.  Asserting this keeps the dependency
     // explicit.
     if (fc.returnInfo.kind == ArgKind::Ignore && !oldResultTypes.empty()) {
-      assert(isa<cir::VoidType>(newRetTy) &&
+      assert(mlir::isa<cir::VoidType>(newRetTy) &&
              "Ignore-return path requires the new return type to be void");
-      SmallVector<cir::ReturnOp> returns;
+      llvm::SmallVector<cir::ReturnOp> returns;
       funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
       for (cir::ReturnOp r : returns) {
         if (r.getNumOperands() == 0)
@@ -546,8 +570,8 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     }
   }
 
-  Type newFnTy = funcOp.cloneTypeWith(newArgTypes, newResultTypes);
-  funcOp.setFunctionTypeAttr(TypeAttr::get(newFnTy));
+  mlir::Type newFnTy = funcOp.cloneTypeWith(newArgTypes, newResultTypes);
+  funcOp.setFunctionTypeAttr(mlir::TypeAttr::get(newFnTy));
 
   // Rebuild arg_attrs when the function has an sret slot (slot 0 needs the
   // sret attribute set) or any arg is Ignore (dropped from the output array)
@@ -557,20 +581,20 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
         return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
       });
   if (needsArgAttrUpdate) {
-    auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
-    ArrayAttr updated = updateArgAttrs(ctx, existing, fc);
+    auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
+    mlir::ArrayAttr updated = updateArgAttrs(ctx, existing, fc);
     if (hasSRet) {
       // Prepend the sret slot's attribute dict (slot 0); the per-argument
       // dicts shift to slots 1..N.  noalias is valid only on the callee's
       // parameter, so it is added only for definitions.
-      SmallVector<NamedAttribute> sretAttrs = buildSretSlotAttrs(
+      llvm::SmallVector<mlir::NamedAttribute> sretAttrs = buildSretSlotAttrs(
           builder, origRetTy, fc.returnInfo.indirectAlign.value(),
           /*withNoalias=*/funcOp.isDefinition());
-      SmallVector<Attribute> withSret;
-      withSret.push_back(DictionaryAttr::get(ctx, sretAttrs));
-      for (Attribute a : updated)
+      llvm::SmallVector<mlir::Attribute> withSret;
+      withSret.push_back(mlir::DictionaryAttr::get(ctx, sretAttrs));
+      for (mlir::Attribute a : updated)
         withSret.push_back(a);
-      funcOp->setAttr("arg_attrs", ArrayAttr::get(ctx, withSret));
+      funcOp->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, withSret));
     } else {
       funcOp->setAttr("arg_attrs", updated);
     }
@@ -579,29 +603,31 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   // Rebuild res_attrs: layer llvm.signext / llvm.zeroext onto an Extend
   // return.
   if (fc.returnInfo.kind == ArgKind::Extend) {
-    auto existing = funcOp->getAttrOfType<ArrayAttr>("res_attrs");
+    auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("res_attrs");
     funcOp->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
   }
 
-  return success();
+  return mlir::success();
 }
 
-LogicalResult CIRABIRewriteContext::rewriteCallSite(
-    Operation *callOp, const FunctionClassification &fc, OpBuilder &builder) {
+mlir::LogicalResult
+CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
+                                      const FunctionClassification &fc,
+                                      mlir::OpBuilder &builder) {
   if (!needsRewrite(fc))
-    return success();
+    return mlir::success();
 
-  if (isa<cir::TryCallOp>(callOp))
+  if (mlir::isa<cir::TryCallOp>(callOp))
     return callOp->emitOpError()
            << "TryCallOp not yet implemented in CallConvLowering";
 
-  auto call = cast<cir::CallOp>(callOp);
+  auto call = mlir::cast<cir::CallOp>(callOp);
   if (call.isIndirect())
     return call.emitOpError()
            << "indirect call not yet implemented in CallConvLowering";
 
-  MLIRContext *ctx = callOp->getContext();
-  auto enclosingFunc = call->getParentOfType<FunctionOpInterface>();
+  mlir::MLIRContext *ctx = callOp->getContext();
+  auto enclosingFunc = call->getParentOfType<mlir::FunctionOpInterface>();
 
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     switch (ac.kind) {
@@ -623,8 +649,8 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
 
   builder.setInsertionPoint(call);
 
-  SmallVector<Value> newArgs;
-  ValueRange argOperands = call.getArgOperands();
+  llvm::SmallVector<mlir::Value> newArgs;
+  mlir::ValueRange argOperands = call.getArgOperands();
   newArgs.reserve(argOperands.size());
   if (argOperands.size() > fc.argInfos.size())
     return call.emitOpError()
@@ -634,7 +660,7 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;
-    Value arg = argOperands[idx];
+    mlir::Value arg = argOperands[idx];
     if (ac.kind == ArgKind::Direct && ac.coercedType &&
         arg.getType() != ac.coercedType)
       arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg,
@@ -643,7 +669,7 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   }
 
   bool hasResult = call.getNumResults() > 0;
-  Type origRetTy =
+  mlir::Type origRetTy =
       hasResult ? call.getResult().getType() : cir::VoidType::get(ctx);
 
   // sret return: prepend a return-slot pointer to the call, make the call
@@ -666,11 +692,11 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
     // matching classic CodeGen's "pass %s as sret" pattern.  %dest must
     // dominate the call so the rewritten call (which takes it as operand 0)
     // does not use a value before its definition.
-    Value sretSlot = nullptr;
+    mlir::Value sretSlot = nullptr;
     cir::StoreOp reuseStore = nullptr;
     if (call.getResult().hasOneUse()) {
-      Operation *user = *call.getResult().getUsers().begin();
-      if (auto store = dyn_cast<cir::StoreOp>(user))
+      mlir::Operation *user = *call.getResult().getUsers().begin();
+      if (auto store = mlir::dyn_cast<cir::StoreOp>(user))
         if (store.getValue() == call.getResult() &&
             store.getAddr().getType() == ptrTy &&
             mlir::DominanceInfo().properlyDominates(store.getAddr(), call)) {
@@ -686,21 +712,22 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
       sretSlot = alloca;
     }
 
-    SmallVector<Value> sretArgs;
+    llvm::SmallVector<mlir::Value> sretArgs;
     sretArgs.push_back(sretSlot);
     sretArgs.append(newArgs.begin(), newArgs.end());
 
-    Type sretVoidTy = cir::VoidType::get(ctx);
+    mlir::Type sretVoidTy = cir::VoidType::get(ctx);
     auto newCall = cir::CallOp::create(
         builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
-    for (NamedAttribute attr : call->getAttrs())
+    for (mlir::NamedAttribute attr : call->getAttrs())
       if (!newCall->hasAttr(attr.getName()))
         newCall->setAttr(attr.getName(), attr.getValue());
 
     // Shape the per-argument attrs exactly as the non-sret path does
     // (signext / zeroext for Extend, drop Ignore slots) before prepending
     // the sret slot, so sret composes correctly with Extend / Ignore args.
-    ArrayAttr argAttrs = call->getAttrOfType<ArrayAttr>("arg_attrs");
+    mlir::ArrayAttr argAttrs =
+        call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     bool needsArgAttrUpdate =
         llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
           return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
@@ -726,10 +753,10 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
       call.getResult().replaceAllUsesWith(load);
     }
     call->erase();
-    return success();
+    return mlir::success();
   }
 
-  Type callRetTy = origRetTy;
+  mlir::Type callRetTy = origRetTy;
   if (fc.returnInfo.kind == ArgKind::Ignore && hasResult)
     callRetTy = cir::VoidType::get(ctx);
   bool returnNeedsCoercion =
@@ -741,7 +768,7 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   builder.setInsertionPoint(call);
   auto newCall = cir::CallOp::create(builder, call.getLoc(),
                                      call.getCalleeAttr(), callRetTy, newArgs);
-  for (NamedAttribute attr : call->getAttrs())
+  for (mlir::NamedAttribute attr : call->getAttrs())
     if (!newCall->hasAttr(attr.getName()))
       newCall->setAttr(attr.getName(), attr.getValue());
 
@@ -749,8 +776,9 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   // emit a coercion back to the original type for the call's existing uses.
   if (returnNeedsCoercion) {
     builder.setInsertionPointAfter(newCall);
-    Value coercedBack = emitCoercion(builder, call.getLoc(), origRetTy,
-                                     newCall.getResult(), enclosingFunc, dl);
+    mlir::Value coercedBack =
+        emitCoercion(builder, call.getLoc(), origRetTy, newCall.getResult(),
+                     enclosingFunc, dl);
     call.getResult().replaceAllUsesWith(coercedBack);
   }
 
@@ -762,11 +790,11 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
         return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
       });
   if (needsArgAttrUpdate) {
-    auto existing = call->getAttrOfType<ArrayAttr>("arg_attrs");
+    auto existing = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     newCall->setAttr("arg_attrs", updateArgAttrs(ctx, existing, fc));
   }
   if (fc.returnInfo.kind == ArgKind::Extend) {
-    auto existing = call->getAttrOfType<ArrayAttr>("res_attrs");
+    auto existing = call->getAttrOfType<mlir::ArrayAttr>("res_attrs");
     newCall->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
   }
 
@@ -777,7 +805,8 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
     // value at the ABI boundary.
     if (!call.getResult().use_empty()) {
       builder.setInsertionPointAfter(newCall);
-      Value poison = createIgnoredValue(builder, call.getLoc(), origRetTy);
+      mlir::Value poison =
+          createIgnoredValue(builder, call.getLoc(), origRetTy);
       call.getResult().replaceAllUsesWith(poison);
     }
   } else if (hasResult && !returnNeedsCoercion) {
@@ -786,5 +815,5 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   }
 
   call->erase();
-  return success();
+  return mlir::success();
 }
