@@ -3304,7 +3304,7 @@ public:
   /// instruction or a vp.load intrinsic.
   /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
   /// component being interwoven) mask.  Can be nullptr, in which case the
-  /// result is uncondiitional.
+  /// result is unconditional.
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
@@ -3336,8 +3336,7 @@ public:
   }
 
   /// Lower a deinterleave intrinsic to a target specific load intrinsic.
-  /// Return true on success. Currently only supports
-  /// llvm.vector.deinterleave{2,3,5,7}
+  /// Return true on success for factors supported by the target.
   ///
   /// \p Load is the accompanying load instruction.  Can be either a plain load
   /// instruction or a vp.load intrinsic.
@@ -3351,14 +3350,13 @@ public:
   }
 
   /// Lower an interleave intrinsic to a target specific store intrinsic.
-  /// Return true on success. Currently only supports
-  /// llvm.vector.interleave{2,3,5,7}
+  /// Return true on success for factors supported by the target.
   ///
   /// \p Store is the accompanying store instruction.  Can be either a plain
   /// store or a vp.store intrinsic.
   /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
   /// component being interwoven) mask.  Can be nullptr, in which case the
-  /// result is uncondiitional.
+  /// result is unconditional.
   /// \p InterleaveValues contains the interleaved values.
   virtual bool
   lowerInterleaveIntrinsicToStore(Instruction *Store, Value *Mask,

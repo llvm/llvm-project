@@ -5192,6 +5192,17 @@ unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
   return ST->getMaxInterleaveFactor();
 }
 
+bool AArch64TTIImpl::supportsVectorInterleaveDeinterleaveIntrinsics(
+    unsigned Factor, VectorType *VecTy) const {
+  if (VecTy->isScalableTy()) {
+    assert(Factor <= 8 && "Scalable vector interleave/deinterleave intrinsics "
+                          "only support factors up to 8");
+    return Factor <= 8;
+  }
+  // For Fixed length vectors.
+  return Factor <= 4;
+}
+
 // For Falkor, we want to avoid having too many strided loads in a loop since
 // that can exhaust the HW prefetcher resources.  We adjust the unroller
 // MaxCount preference below to attempt to ensure unrolling doesn't create too

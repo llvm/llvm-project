@@ -1501,6 +1501,12 @@ public:
   /// and the number of execution units in the CPU.
   LLVM_ABI unsigned getMaxInterleaveFactor(ElementCount VF) const;
 
+  /// \return True if the target supports vector interleave/deinterleave
+  /// intrinsics for the \p Factor and \p VecTy.
+  LLVM_ABI bool
+  supportsVectorInterleaveDeinterleaveIntrinsics(unsigned Factor,
+                                                 VectorType *VecTy) const;
+
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
 
