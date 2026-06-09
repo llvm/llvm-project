@@ -118,6 +118,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.imaxdiv
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
+    libc.src.inttypes.wcstoimax
+    libc.src.inttypes.wcstoumax
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
@@ -995,6 +997,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -1506,6 +1509,12 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.regex.regexec
       libc.src.regex.regerror
       libc.src.regex.regfree
+
+      # sys/ptrace.h entrypoints
+      libc.src.sys.ptrace.ptrace
+
+      # wchar.h entrypoints
+      libc.src.wchar.swprintf
     )
   endif()
 endif()

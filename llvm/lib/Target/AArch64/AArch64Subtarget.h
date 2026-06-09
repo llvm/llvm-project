@@ -59,7 +59,7 @@ protected:
   unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
-  uint16_t CacheLineSize = 0;
+  uint16_t CacheLineSize = 64;
   // Default scatter/gather overhead.
   unsigned ScatterOverhead = 10;
   unsigned GatherOverhead = 10;

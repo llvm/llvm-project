@@ -8,14 +8,14 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 @CB.cb = internal global target("spirv.VulkanBuffer", %__cblayout_CB, 2, 0) poison
 @i = external hidden local_unnamed_addr addrspace(2) global i32, align 4
 
-@llvm.used = appending global [1 x ptr] [ptr @CB.cb], section "llvm.metadata"
+@llvm.compiler.used = appending global [1 x ptr] [ptr @CB.cb], section "llvm.metadata"
 
-; Check that SPRIVCBufferAccessPass removes the cbuffer global from @llvm.used
+; Check that SPIRVCBufferAccessPass removes the cbuffer global from @llvm.compiler.used
 ; and from the module.
 ;
 ; CHECK-NOT: @CB.cb = internal global target("spirv.VulkanBuffer", %__cblayout_CB, 2, 0) poison
 ; CHECK-NOT: @i
-; CHECK-NOT: @llvm.used
+; CHECK-NOT: @llvm.compiler.used
 
 ; Check that the cbuffer global is removed during lowering to DXIL
 ;

@@ -8,13 +8,13 @@ target triple = "dxil-unknown-shadermodel6.6-compute"
 @CB.cb = internal global target("dx.CBuffer", %__cblayout_CB) poison
 @i = external hidden local_unnamed_addr addrspace(2) global i32, align 4
 
-@llvm.used = appending global [1 x ptr] [ptr @CB.cb], section "llvm.metadata"
+@llvm.compiler.used = appending global [1 x ptr] [ptr @CB.cb], section "llvm.metadata"
 
-; Check that DXILCBufferAccessPass removes the cbuffer global from @llvm.used
+; Check that DXILCBufferAccessPass removes the cbuffer global from @llvm.compiler.used
 ;
 ; CHECK: @CB.cb = internal global target("dx.CBuffer", %__cblayout_CB) poison
 ; CHECK-NOT: @i
-; CHECK-NOT: @llvm.used
+; CHECK-NOT: @llvm.compiler.used
 
 ; Check that the cbuffer global is removed during lowering to DXIL
 ;

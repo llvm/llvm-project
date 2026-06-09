@@ -352,6 +352,10 @@ cbuffer CB_C {
   double D4;
 }
 
+// CHECK: @llvm.compiler.used = appending global [10 x ptr] [ptr @CBScalars.cb, ptr @CBVectors.cb,
+// CHECK-SAME: ptr @CBArrays.cb, ptr @CBTypedefArray.cb, ptr @CBStructs.cb, ptr @CBClasses.cb,
+// CHECK-SAME: ptr @CBMix.cb, ptr @CB_A.cb, ptr @CB_B.cb, ptr @CB_C.cb], section "llvm.metadata"
+
 // CHECK: define internal void @_init_buffer_CBScalars.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %CBScalars.cb_h = call target("dx.CBuffer", %__cblayout_CBScalars)

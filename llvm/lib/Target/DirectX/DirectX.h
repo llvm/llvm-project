@@ -12,6 +12,7 @@
 #define LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 
 namespace llvm {
+class AttributeMask;
 class FunctionPass;
 class ModulePass;
 class PassRegistry;
@@ -132,6 +133,9 @@ void initializeDXILFinalizeLinkageLegacyPass(PassRegistry &);
 /// Pass to finalize linkage of functions.
 ModulePass *createDXILFinalizeLinkageLegacyPass();
 
+namespace dxil {
+const AttributeMask &getNonDXILAttributeMask();
+} // namespace dxil
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H

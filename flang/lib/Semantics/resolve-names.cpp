@@ -1042,6 +1042,8 @@ public:
   bool Pre(const parser::DeclarationTypeSpec::Class &);
   void Post(const parser::DeclarationTypeSpec::Class &);
   void Post(const parser::DeclarationTypeSpec::Record &);
+  bool Pre(const parser::DeclarationTypeSpec::TypeOf &);
+  bool Pre(const parser::DeclarationTypeSpec::ClassOf &);
   void Post(const parser::DerivedTypeSpec &);
   bool Pre(const parser::DerivedTypeDef &);
   bool Pre(const parser::DerivedTypeStmt &);
@@ -1275,6 +1277,7 @@ private:
       const parser::Name &name, Symbol &symbol, Symbol::Flag flag);
   bool CheckForHostAssociatedImplicit(const parser::Name &);
   bool HasCycle(const Symbol &, const Symbol *interface);
+  bool ResolveTypeOfOrClassOf(const parser::DataRef &, bool isClassOf);
   bool MustBeScalar(const Symbol &symbol) const {
     return mustBeScalar_.find(symbol) != mustBeScalar_.end();
   }
@@ -4937,12 +4940,13 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
         }
         // Implicitly USE the cudadevice module by copying its symbols in the
         // current scope.
-        const Scope &cudaDeviceScope{context().GetCUDADeviceScope()};
-        for (auto sym : cudaDeviceScope.GetSymbols()) {
-          if (!currScope().FindSymbol(sym->name())) {
-            auto &localSymbol{MakeSymbol(
-                sym->name(), Attrs{}, UseDetails{sym->name(), *sym})};
-            localSymbol.flags() = sym->flags();
+        if (const Scope *cudaDeviceScope{context().GetCUDADeviceScope()}) {
+          for (auto sym : cudaDeviceScope->GetSymbols()) {
+            if (!currScope().FindSymbol(sym->name())) {
+              auto &localSymbol{MakeSymbol(
+                  sym->name(), Attrs{}, UseDetails{sym->name(), *sym})};
+              localSymbol.flags() = sym->flags();
+            }
           }
         }
       }
@@ -5226,8 +5230,14 @@ void SubprogramVisitor::CreateEntry(
     return static_cast<const parser::Name *>(nullptr);
   }()};
   std::optional<SourceName> distinctResultName;
-  if (resultName && resultName->source != entryName.source) {
-    distinctResultName = resultName->source;
+  if (resultName) {
+    if (resultName->source == entryName.source) {
+      Say(*resultName,
+          "Explicit RESULT('%s') of ENTRY '%s' cannot have the same name as the ENTRY"_err_en_US,
+          resultName->source, entryName.source);
+    } else {
+      distinctResultName = resultName->source;
+    }
   }
   if (outer.IsModule() && !attrs.test(Attr::PRIVATE)) {
     attrs.set(Attr::PUBLIC);
@@ -6644,6 +6654,168 @@ void DeclarationVisitor::Post(const parser::DeclarationTypeSpec::Record &rec) {
           typeName.source);
     }
   }
+}
+
+// TYPEOF and CLASSOF type specifiers
+bool DeclarationVisitor::ResolveTypeOfOrClassOf(
+    const parser::DataRef &dataRef, bool isClassOf) {
+  const char *specName{isClassOf ? "CLASSOF" : "TYPEOF"};
+
+  if (std::holds_alternative<common::Indirection<parser::CoindexedNamedObject>>(
+          dataRef.u)) {
+    Say(currStmtSource().value(),
+        "The data-ref in %s must not have an image-selector"_err_en_US,
+        specName);
+    return false;
+  }
+
+  const parser::Name *name{ResolveDataRef(dataRef)};
+  if (!name || !name->symbol) {
+    return false;
+  }
+
+  // data-ref shall be a data object, not a procedure or type name.
+  const Symbol &ultimate{name->symbol->GetUltimate()};
+  if (!ultimate.has<ObjectEntityDetails>() &&
+      !ultimate.has<AssocEntityDetails>() && !ultimate.has<EntityDetails>()) {
+    Say(currStmtSource().value(), "'%s' in %s must be a data object"_err_en_US,
+        name->source, specName);
+    return false;
+  }
+
+  // data-ref shall not be a whole assumed-size array.
+  if (!std::holds_alternative<common::Indirection<parser::ArrayElement>>(
+          dataRef.u) &&
+      IsAssumedSizeArray(ultimate)) {
+    Say(currStmtSource().value(),
+        "The data-ref in %s must not be a whole assumed-size array"_err_en_US,
+        specName);
+    return false;
+  }
+
+  // Get the declared type of the referenced object.
+  const DeclTypeSpec *refType{ultimate.GetType()};
+  if (!refType) {
+    Say(currStmtSource().value(),
+        "Referenced object '%s' does not have a declared type"_err_en_US,
+        name->source);
+    return false;
+  }
+
+  // F2023 C713: If the data-ref has the OPTIONAL attribute, it shall not have
+  // a deferred or assumed type parameter.
+  if (ultimate.attrs().test(Attr::OPTIONAL)) {
+    if (auto dyType{evaluate::DynamicType::From(ultimate)};
+        dyType && dyType->HasDeferredOrAssumedTypeParameter()) {
+      Say(currStmtSource().value(),
+          "The OPTIONAL data-ref in %s must not have assumed or deferred type parameters"_err_en_US,
+          specName);
+      return false;
+    }
+  }
+
+  switch (refType->category()) {
+  case DeclTypeSpec::Numeric:
+  case DeclTypeSpec::Logical:
+    if (isClassOf) {
+      Say(currStmtSource().value(),
+          "CLASSOF may not be used with an intrinsic-type object"_err_en_US);
+      return false;
+    }
+    SetDeclTypeSpec(*refType);
+    break;
+  case DeclTypeSpec::Character: {
+    if (isClassOf) {
+      Say(currStmtSource().value(),
+          "CLASSOF may not be used with an intrinsic-type object"_err_en_US);
+      return false;
+    }
+    const auto &charSpec{refType->characterTypeSpec()};
+    if (charSpec.length().isAssumed()) {
+      auto lenExpr{evaluate::NamedEntity{ultimate}.LEN()};
+      if (!lenExpr) {
+        Say(currStmtSource().value(),
+            "Could not determine the length of '%s' in %s"_err_en_US,
+            name->source, specName);
+        return false;
+      }
+      SetDeclTypeSpec(currScope().MakeCharacterType(
+          ParamValue{
+              SomeIntExpr{std::move(*lenExpr)}, common::TypeParamAttr::Len},
+          KindExpr{charSpec.kind()}));
+    } else {
+      SetDeclTypeSpec(*refType);
+    }
+    break;
+  }
+  case DeclTypeSpec::TypeDerived:
+  case DeclTypeSpec::ClassDerived: {
+    const DerivedTypeSpec &derived{refType->derivedTypeSpec()};
+    if (isClassOf && !IsExtensibleType(&derived)) {
+      Say(currStmtSource().value(),
+          "CLASSOF requires a data-ref of extensible type"_err_en_US);
+      return false;
+    }
+    for (const auto &[paramName, paramValue] : derived.parameters()) {
+      if (paramValue.isAssumed()) {
+        Say(currStmtSource().value(),
+            "%s with parameterized derived type that has assumed LEN parameter '%s' is not yet implemented"_todo_en_US,
+            specName, paramName.ToString());
+        return false;
+      }
+    }
+    auto category{
+        isClassOf ? DeclTypeSpec::ClassDerived : DeclTypeSpec::TypeDerived};
+    if (const DeclTypeSpec *extant{
+            currScope().FindInstantiatedDerivedType(derived, category)}) {
+      SetDeclTypeSpec(*extant);
+    } else {
+      DeclTypeSpec &type{
+          currScope().MakeDerivedType(category, DerivedTypeSpec{derived})};
+      DerivedTypeSpec &newDerived{type.derivedTypeSpec()};
+      newDerived.CookParameters(GetFoldingContext());
+      newDerived.EvaluateParameters(context());
+      if (!newDerived.IsForwardReferenced()) {
+        newDerived.Instantiate(currScope());
+      }
+      SetDeclTypeSpec(type);
+    }
+    break;
+  }
+  case DeclTypeSpec::TypeStar:
+    if (isClassOf) {
+      // F2023 C712: CLASSOF shall not be used with assumed-type
+      Say(currStmtSource().value(),
+          "The data-ref in CLASSOF must not be assumed-type"_err_en_US);
+      return false;
+    }
+    // TYPEOF of TYPE(*) is valid, produces TYPE(*)
+    SetDeclTypeSpec(context().globalScope().MakeTypeStarType());
+    break;
+  case DeclTypeSpec::ClassStar:
+    if (!isClassOf) {
+      // F2023 C711: TYPEOF shall not be used with unlimited polymorphic
+      Say(currStmtSource().value(),
+          "The data-ref in TYPEOF must not be unlimited polymorphic"_err_en_US);
+      return false;
+    }
+    // CLASSOF of CLASS(*) is valid, produces CLASS(*)
+    SetDeclTypeSpec(context().globalScope().MakeClassStarType());
+    break;
+  }
+  return true;
+}
+
+bool DeclarationVisitor::Pre(
+    const parser::DeclarationTypeSpec::TypeOf &typeOf) {
+  ResolveTypeOfOrClassOf(typeOf.v.value(), /*isClassOf=*/false);
+  return false;
+}
+
+bool DeclarationVisitor::Pre(
+    const parser::DeclarationTypeSpec::ClassOf &classOf) {
+  ResolveTypeOfOrClassOf(classOf.v.value(), /*isClassOf=*/true);
+  return false;
 }
 
 // The descendents of DerivedTypeDef in the parse tree are visited directly
@@ -9921,11 +10093,13 @@ bool ResolveNamesVisitor::Pre(const parser::SpecificationPart &x) {
 
 void ResolveNamesVisitor::UseCUDABuiltinNames() {
   if (FindCUDADeviceContext(&currScope())) {
-    for (const auto &[name, symbol] : context().GetCUDABuiltinsScope()) {
-      if (!FindInScope(name)) {
-        auto &localSymbol{MakeSymbol(name)};
-        localSymbol.set_details(UseDetails{name, *symbol});
-        localSymbol.flags() = symbol->flags();
+    if (const Scope *cudaBuiltinsScope{context().GetCUDABuiltinsScope()}) {
+      for (const auto &[name, symbol] : *cudaBuiltinsScope) {
+        if (!FindInScope(name)) {
+          auto &localSymbol{MakeSymbol(name)};
+          localSymbol.set_details(UseDetails{name, *symbol});
+          localSymbol.flags() = symbol->flags();
+        }
       }
     }
   }

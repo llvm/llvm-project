@@ -132,7 +132,7 @@ func.func @arm_sme_tile_load__pad_but_no_mask(%src : memref<?x?xf64>, %pad : f64
 
 func.func @arm_sme_tile_load__bad_memref_rank(%src : memref<?xf64>, %pad : f64) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{op operand #0 must be 2D memref of any type values, but got 'memref<?xf64>'}}
+  // expected-error@+1 {{op operand #0 must be 2D memref of any non-token type values, but got 'memref<?xf64>'}}
   %tile = arm_sme.tile_load %src[%c0], %pad, : memref<?xf64>, vector<[2]x[2]xf64>
   return
 }
@@ -186,7 +186,7 @@ func.func @arm_sme_tile_store__bad_mask_type(%tile : vector<[16]x[16]xi8>, %mask
 
 func.func @arm_sme_tile_store__bad_memref_rank(%tile : vector<[16]x[16]xi8>, %dest : memref<?xi8>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{op operand #1 must be 2D memref of any type values, but got 'memref<?xi8>'}}
+  // expected-error@+1 {{op operand #1 must be 2D memref of any non-token type values, but got 'memref<?xi8>'}}
   arm_sme.tile_store %tile, %dest[%c0] : memref<?xi8>, vector<[16]x[16]xi8>
   return
 }
