@@ -1899,6 +1899,46 @@ void ClauseProcessor::processMapObjects(
   }
 }
 
+// Process objects in map/motion clauses, lowering iterator-dependent
+// locators into `result.mapIterated` and all others through the regular
+// map-lowering path. A null `ivSyms` indicates that no iterator modifier
+// is present.
+void ClauseProcessor::processMapObjectsWithIterator(
+    lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+    const omp::ObjectList &objects,
+    llvm::ArrayRef<IteratorRange> iteratorRanges,
+    const llvm::SmallPtrSetImpl<const semantics::Symbol *> *ivSyms,
+    mlir::omp::ClauseMapFlags mapTypeBits,
+    std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
+    mlir::omp::MapClauseOps &result, llvm::SmallVectorImpl<Object> &mapObjects,
+    llvm::StringRef mapperIdNameRef, bool isMotionModifier,
+    llvm::omp::Directive directive) const {
+  if (!ivSyms) {
+    processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
+                      parentMemberIndices, result.mapVars, mapObjects,
+                      mapperIdNameRef, isMotionModifier, directive);
+    return;
+  }
+
+  // Objects in an iterator-modified clause may independently reference
+  // iterator variables, so handle each object separately.
+  for (const omp::Object &object : objects) {
+    if (hasIteratorIVReference(object, *ivSyms)) {
+      if (directive != llvm::omp::Directive::OMPD_unknown)
+        iteratorMemberMapNotSupported(clauseLocation, object, semaCtx);
+      result.mapIterated.push_back(buildIteratedMapEntry(
+          converter, semaCtx, clauseLocation, iteratorRanges, object,
+          mapperIdNameRef, mapTypeBits, directive));
+      continue;
+    }
+
+    omp::ObjectList singleObj{object};
+    processMapObjects(stmtCtx, clauseLocation, singleObj, mapTypeBits,
+                      parentMemberIndices, result.mapVars, mapObjects,
+                      mapperIdNameRef, isMotionModifier, directive);
+  }
+}
+
 /// Extract and mangle the mapper identifier name from a mapper clause.
 /// Returns "__implicit_mapper" if no mapper is specified, or "default" if
 /// the default mapper is specified, otherwise returns the mangled mapper name.
@@ -2023,26 +2063,15 @@ bool ClauseProcessor::processMap(
       llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
       collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
 
-      for (const omp::Object &object : objects) {
-        if (hasIteratorIVReference(object, ivSyms)) {
-          if (directive != llvm::omp::Directive::OMPD_unknown)
-            iteratorMemberMapNotSupported(clauseLocation, object, semaCtx);
-          result.mapIterated.push_back(buildIteratedMapEntry(
-              converter, semaCtx, clauseLocation, iteratorRanges, object,
-              mapperIdName, mapTypeBits, directive));
-        } else {
-          omp::ObjectList singleObj{object};
-          processMapObjects(stmtCtx, clauseLocation, singleObj, mapTypeBits,
-                            parentMemberIndices, result.mapVars, *ptrMapObjects,
-                            mapperIdName, /*isMotionModifier=*/false,
-                            directive);
-        }
-      }
+      processMapObjectsWithIterator(
+          stmtCtx, clauseLocation, objects, iteratorRanges, &ivSyms,
+          mapTypeBits, parentMemberIndices, result, *ptrMapObjects,
+          mapperIdName, /*isMotionModifier=*/false, directive);
     } else {
-      processMapObjects(stmtCtx, clauseLocation,
-                        std::get<omp::ObjectList>(clause.t), mapTypeBits,
-                        parentMemberIndices, result.mapVars, *ptrMapObjects,
-                        mapperIdName, /*isMotionModifier=*/false, directive);
+      processMapObjectsWithIterator(
+          stmtCtx, clauseLocation, objects, /*iteratorRanges=*/{},
+          /*ivSyms=*/nullptr, mapTypeBits, parentMemberIndices, result,
+          *ptrMapObjects, mapperIdName, /*isMotionModifier=*/false, directive);
     }
   };
 
@@ -2078,26 +2107,16 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
       llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
       collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
 
-      for (const omp::Object &object : objects) {
-        if (hasIteratorIVReference(object, ivSyms)) {
-          iteratorMemberMapNotSupported(clauseLocation, object, semaCtx);
-          result.mapIterated.push_back(buildIteratedMapEntry(
-              converter, semaCtx, clauseLocation, iteratorRanges, object,
-              mapperIdName, mapTypeBits,
-              llvm::omp::Directive::OMPD_target_update));
-        } else {
-          omp::ObjectList singleObj{object};
-          processMapObjects(stmtCtx, clauseLocation, singleObj, mapTypeBits,
-                            parentMemberIndices, result.mapVars, mapObjects,
-                            mapperIdName, /*isMotionModifier=*/true,
-                            llvm::omp::Directive::OMPD_target_update);
-        }
-      }
+      processMapObjectsWithIterator(
+          stmtCtx, clauseLocation, objects, iteratorRanges, &ivSyms,
+          mapTypeBits, parentMemberIndices, result, mapObjects, mapperIdName,
+          /*isMotionModifier=*/true, llvm::omp::Directive::OMPD_target_update);
     } else {
-      processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
-                        parentMemberIndices, result.mapVars, mapObjects,
-                        mapperIdName, /*isMotionModifier=*/true,
-                        llvm::omp::Directive::OMPD_target_update);
+      processMapObjectsWithIterator(
+          stmtCtx, clauseLocation, objects, /*iteratorRanges=*/{},
+          /*ivSyms=*/nullptr, mapTypeBits, parentMemberIndices, result,
+          mapObjects, mapperIdName, /*isMotionModifier=*/true,
+          llvm::omp::Directive::OMPD_target_update);
     }
   };
 
