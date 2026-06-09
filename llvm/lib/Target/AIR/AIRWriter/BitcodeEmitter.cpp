@@ -217,6 +217,45 @@ static void fixGEPTypeMismatches(Module &M, PointeeTypeMap &PTM) {
 // actual parameter pointee types from PTM. The transform pipeline may set
 // all buffer type names to "float" even when the actual type is bfloat/char.
 // AIR GPU JIT validates these metadata entries against the bitcode types.
+static void fixMMAPointerSuffixMismatch(Module &M, PointeeTypeMap &PTM) {
+  auto &Ctx = M.getContext();
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    SmallVector<CallInst *, 8> Calls;
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *CI = dyn_cast<CallInst>(&I))
+          if (CI->getCalledFunction() &&
+              CI->getCalledFunction()->getName().starts_with(
+                  "air.simdgroup_matrix_8x8_"))
+            Calls.push_back(CI);
+    for (auto *CI : Calls) {
+      StringRef Name = CI->getCalledFunction()->getName();
+      Type *Elem = nullptr;
+      if (Name.contains("f16") && !Name.contains("bf16"))
+        Elem = Type::getHalfTy(Ctx);
+      else if (Name.contains("bf16"))
+        Elem = Type::getBFloatTy(Ctx);
+      else if (Name.contains("f32"))
+        Elem = Type::getFloatTy(Ctx);
+      if (!Elem || Elem->isFloatTy())
+        continue;
+      for (unsigned J = 0; J < CI->arg_size(); J++) {
+        Value *Op = CI->getArgOperand(J);
+        if (!Op->getType()->isPointerTy())
+          continue;
+        if (isa<BitCastInst>(Op) || isa<AllocaInst>(Op))
+          continue;
+        auto *BC = CastInst::Create(Instruction::BitCast, Op, Op->getType(),
+                                    "", CI->getIterator());
+        CI->setArgOperand(J, BC);
+        PTM.set(BC, Elem);
+      }
+    }
+  }
+}
+
 static void fixKernelArgMetadata(Module &M, const PointeeTypeMap &PTM) {
   auto &Ctx = M.getContext();
   auto *AirKernel = M.getNamedMetadata("air.kernel");
@@ -490,6 +529,7 @@ std::vector<uint8_t> emitAIRBitcode(Module &M, PointeeTypeMap &PTM) {
     // Pre-serialization IR fixups (these helpers refine the PTM in place).
     removeRedundantBitcasts(M, PTM);
     fixGEPTypeMismatches(M, PTM);
+    fixMMAPointerSuffixMismatch(M, PTM);
 
     // Lower ConstantExpr operands to real instructions before enumeration.
     lowerConstantExprs(M);
