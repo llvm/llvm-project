@@ -477,8 +477,7 @@ class SPIRVStructurizer : public FunctionPass {
         return NewExit;
       }
 
-      AllocaInst *Variable = createVariable(F, ExitBuilder.getInt32Ty(),
-                                            F.begin()->getFirstInsertionPt());
+      AllocaInst *Variable = createVariable(F, ExitBuilder.getInt32Ty());
       for (auto &[Src, Dst] : FixedEdges) {
         IRBuilder<> B2(Src);
         B2.SetInsertPoint(Src->getFirstInsertionPt());

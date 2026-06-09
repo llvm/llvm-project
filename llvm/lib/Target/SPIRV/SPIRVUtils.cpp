@@ -883,11 +883,10 @@ bool sortBlocks(Function &F) {
   return Modified;
 }
 
-AllocaInst *createVariable(Function &F, Type *Type,
-                           BasicBlock::iterator Position) {
+AllocaInst *createVariable(Function &F, Type *Type) {
   const DataLayout &DL = F.getDataLayout();
   return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
-                        Position);
+                        F.begin()->getFirstInsertionPt());
 }
 
 Value *

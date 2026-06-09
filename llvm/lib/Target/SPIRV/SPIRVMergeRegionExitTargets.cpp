@@ -54,8 +54,7 @@ static bool runOnConvergenceRegionNoRecurse(LoopInfo &LI,
   auto NewExitTarget = BasicBlock::Create(F->getContext(), "new.exit", F);
   IRBuilder<> Builder(NewExitTarget);
 
-  AllocaInst *Variable = createVariable(*F, Builder.getInt32Ty(),
-                                        F->begin()->getFirstInsertionPt());
+  AllocaInst *Variable = createVariable(*F, Builder.getInt32Ty());
 
   // CodeGen output needs to be stable. Using the set as-is would order
   // the targets differently depending on the allocation pattern.

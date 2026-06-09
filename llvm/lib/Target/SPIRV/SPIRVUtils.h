@@ -334,9 +334,8 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
 
-// Create a stack slot in F for a value of the given type at Position.
-AllocaInst *createVariable(Function &F, Type *Type,
-                           BasicBlock::iterator Position);
+// Create a stack slot in the entry block of F for a value of the given type.
+AllocaInst *createVariable(Function &F, Type *Type);
 
 // Create a value in BB set to the value associated with the branch the block
 // terminator will take.
