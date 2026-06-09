@@ -36,7 +36,7 @@ Parts:
 ...
 
 # CHECK:      - Name:            SRCI
-# CHECK-NEXT:   Size:            184
+# CHECK-NEXT:   Size:
 # CHECK-NEXT:   SourceInfo:
 # CHECK-NEXT:     Header:
 # CHECK-NEXT:       AlignedSizeInBytes:
