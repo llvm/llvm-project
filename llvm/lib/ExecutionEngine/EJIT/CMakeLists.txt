@@ -162,7 +162,7 @@ add_custom_target(check-ejit-size
 #===-- Bare-metal stub library ---------------------------------------------===#
 # libejit_baremetal.a — no-op stubs for POSIX functions that EJIT+LLVM
 # link against but never call at runtime on bare-metal (pthread, dl, mmap,
-# file I/O, signals, etc.).  See jit_design_doc/EJIT_BARE_METAL_STUBS.md.
+# file I/O, signals, etc.).  See jit_design_doc/EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL_STUBS.md.
 add_library(ejit_baremetal STATIC
   BareMetal/ejit_baremetal_stubs.c)
 target_compile_options(ejit_baremetal PRIVATE -ffunction-sections -fdata-sections)

@@ -2,7 +2,7 @@
 
 **版本**: 3.2
 **日期**: 2026-06-02
-**关联**: SPEC4.md, PASS7_EJitRuntime_OrcJITLink.md, EJIT_BARE_METAL_STUBS.md
+**关联**: SPEC4.md, PASS7_EJitRuntime_OrcJITLink.md, EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL_STUBS.md
 **目标**: 提供 X86_64 / AArch64 裸核环境下 EJIT 运行时的最小单一产物
 
 ---
@@ -35,7 +35,7 @@
 | Phase 2 | 1 个 `.a`, ~99 MB | 1 个 `.a`, ~80 MB | lipo extract（linker map + nm -u 依赖追踪） |
 | Phase 3 | 1 个 `.a`, ~59 MB | 1 个 `.a`, ~46 MB | lipo gc-merge（ld -r --gc-sections） |
 | Phase 4 | 1 个 `ejit.o`, **37 MB** | 1 个 `ejit.o`, **30 MB** | ld -r -T merge.ld（段合并 + .group DISCARD） |
-| +源码裁剪 | — | 省 ~3 MB（vs 无裁剪） | `EJIT_BARE_METAL` guards 排除 CodeView/GlobalISel/DWARF 等 |
+| +源码裁剪 | — | 省 ~3 MB（vs 无裁剪） | `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` guards 排除 CodeView/GlobalISel/DWARF 等 |
 | +--exclude | — | 省 ~9 MB（658 vs 978 .o） | lipo extract `--exclude` 排除未用 pass/format .o |
 | 最终链接 | 二进制, **21 MB** | 二进制, 预估 **~12 MB** | `-Os` + `--gc-sections` + strip |
 
@@ -46,7 +46,7 @@
 | `CMAKE_BUILD_TYPE` | Release | |
 | `CMAKE_CXX_FLAGS_RELEASE` | `-Os -DNDEBUG -ffunction-sections -fdata-sections` | 体积优先 + 段级裁剪 |
 | `LLVM_TARGETS_TO_BUILD` | X86 或 AArch64 | 单架构 |
-| `EJIT_BARE_METAL` | ON | 去除 mutex/chrono/logger/async |
+| `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` | ON | 去除 mutex/chrono/logger/async |
 
 ---
 
@@ -58,7 +58,7 @@
 |---|---|
 | `EJitJITLinkMemoryManager.cpp/.h` | 死代码桩，`allocate()` 调用 `report_fatal_error` |
 
-### 3.2 宏隔离（`EJIT_BARE_METAL`）
+### 3.2 宏隔离（`EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL`）
 
 | 文件 | 效果 |
 |---|---|
@@ -70,10 +70,10 @@
 | `EJitRuntimeState.cpp` | std::mutex → BareMetalMutex |
 | `EJitCompileDriver.cpp` | chrono 计时代码排除 |
 
-### 3.3 LLVM 上游源文件裁剪（`EJIT_BARE_METAL` guards）
+### 3.3 LLVM 上游源文件裁剪（`EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` guards）
 
-`EJIT_BARE_METAL` 宏被提升到顶层 `llvm/CMakeLists.txt` 作为全局 `add_definitions`，
-允许在 LLVM 上游源文件中使用 `#ifndef EJIT_BARE_METAL` 排除不需要的功能。
+`EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` 宏被提升到顶层 `llvm/CMakeLists.txt` 作为全局 `add_definitions`，
+允许在 LLVM 上游源文件中使用 `#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` 排除不需要的功能。
 具体 guards 分布在：
 
 | 文件 | 排除内容 | 节省 (aarch64) |
@@ -174,7 +174,7 @@ python3 ejit_test/lipo/lipo.py merge \
 
 ### 4.7 COMMON_LIBS 精简
 
-以下库已从 `COMMON_LIBS` 移除（通过源码级 `EJIT_BARE_METAL` guards 确保无符号依赖）：
+以下库已从 `COMMON_LIBS` 移除（通过源码级 `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` guards 确保无符号依赖）：
 
 | 被移除的库 | 原因 |
 |---|---|
@@ -385,8 +385,8 @@ ejit.o (30-37 MB)
 
 | 项目 | 方法 | 节省 (aarch64) |
 |---|---|---|
-| CodeView (DebugInfo) | `#ifndef EJIT_BARE_METAL` guard AsmPrinter + CMakeLists 排除源文件 | ~0.3 MB |
-| GlobalISel | AArch64TargetMachine/AArch64Subtarget/CMakeLists 用 `EJIT_BARE_METAL` 排除 | ~3 MB |
+| CodeView (DebugInfo) | `#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` guard AsmPrinter + CMakeLists 排除源文件 | ~0.3 MB |
+| GlobalISel | AArch64TargetMachine/AArch64Subtarget/CMakeLists 用 `EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL` 排除 | ~3 MB |
 | DWARF debug info | AsmPrinter CMakeLists 排除 DwarfDebug/DwarfCompileUnit/DIE 等 | ~2 MB |
 | ObjCARC | CodeGen.cpp + TargetPassConfig.cpp pass 注册 guard | <0.1 MB |
 | CFGuard / WinEH / WasmEH / AIXEH | AsmPrinter.cpp 条件排除 | <0.1 MB |
@@ -418,7 +418,7 @@ ejit.o (30-37 MB)
 
 ```bash
 # === x86_64 本机构建 ===
-# 注意: x86 不启用 EJIT_BARE_METAL（lld 需要 Wasm/COFF 后端）
+# 注意: x86 不启用 EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL（lld 需要 Wasm/COFF 后端）
 cmake -S llvm -B build_release_x86 -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_FLAGS="-ffunction-sections -fdata-sections" \
@@ -442,7 +442,7 @@ cmake -S llvm -B build_release_aarch64 -G Ninja \
   -DLLVM_TARGETS_TO_BUILD="AArch64" \
   -DLLVM_ENABLE_PROJECTS="clang;lld" \
   -DLLVM_ENABLE_ZLIB=OFF \
-  -DEJIT_BARE_METAL=ON
+  -DEJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL=ON
 
 ninja -C build_release_aarch64 LLVMEJIT
 

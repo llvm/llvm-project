@@ -10,14 +10,14 @@
 
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #endif
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #endif
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
@@ -1162,7 +1162,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
   J.setPlatformSupport(std::make_unique<ORCPlatformSupport>(J));
 
   switch (TT.getObjectFormat()) {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case Triple::COFF: {
     const char *VCRuntimePath = nullptr;
     bool StaticVCRuntime = false;
@@ -1192,7 +1192,7 @@ Expected<JITDylibSP> ExecutorNativePlatform::operator()(LLJIT &J) {
       return P.takeError();
     break;
   }
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case Triple::MachO: {
     auto G = StaticLibraryDefinitionGenerator::Create(
         *ObjLinkingLayer, std::move(RuntimeArchiveBuffer));

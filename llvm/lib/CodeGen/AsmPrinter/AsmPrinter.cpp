@@ -11,17 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/AsmPrinter.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "CodeViewDebug.h"
 #endif
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "DwarfDebug.h"
 #include "DwarfException.h"
 #else
 #include "EHStreamer.h"
 #endif
 #include "PseudoProbePrinter.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "WasmException.h"
 #include "WinCFGuard.h"
 #include "WinException.h"
@@ -443,7 +443,7 @@ void AsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst) {
 }
 
 void AsmPrinter::emitInitialRawDwarfLocDirective(const MachineFunction &MF) {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (DD) {
     assert(OutStreamer->hasRawTextSupport() &&
            "Expected assembly output mode.");
@@ -574,7 +574,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   }
 
   if (MAI->doesSupportDebugInformation()) {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     bool EmitCodeView = M.getCodeViewFlag();
     // On Windows targets, emit minimal CodeView compiler info even when debug
     // info is disabled.  EJIT bare-metal builds skip CodeView support entirely
@@ -584,7 +584,7 @@ bool AsmPrinter::doInitialization(Module &M) {
         (TM.getTargetTriple().isUEFI() && EmitCodeView))
       Handlers.push_back(std::make_unique<CodeViewDebug>(this));
 #endif
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     if (!EmitCodeView || M.getDwarfVersion()) {
       if (hasDebugInfo()) {
         DD = new DwarfDebug(this);
@@ -625,14 +625,14 @@ bool AsmPrinter::doInitialization(Module &M) {
     if (!usesCFIWithoutEH())
       break;
     [[fallthrough]];
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ZOS:
     ES = new DwarfCFIException(this);
     break;
 #endif
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case ExceptionHandling::ARM:
     ES = new ARMException(this);
     break;
@@ -642,7 +642,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     default: llvm_unreachable("unsupported unwinding information encoding");
     case WinEH::EncodingType::Invalid:
       break;
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     case WinEH::EncodingType::X86:
     case WinEH::EncodingType::Itanium:
       ES = new WinException(this);
@@ -650,12 +650,12 @@ bool AsmPrinter::doInitialization(Module &M) {
 #endif
     }
     break;
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case ExceptionHandling::Wasm:
     ES = new WasmException(this);
     break;
 #endif
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case ExceptionHandling::AIX:
     ES = new AIXException(this);
     break;
@@ -664,7 +664,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   if (ES)
     Handlers.push_back(std::unique_ptr<EHStreamer>(ES));
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   // Emit tables for any value of cfguard flag (i.e. cfguard=1 or cfguard=2).
   if (mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("cfguard")))
     EHHandlers.push_back(std::make_unique<WinCFGuard>(this));
@@ -1236,7 +1236,7 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
     OS << '[';
     ListSeparator LS;
     for (auto &Op : Expr->expr_ops()) {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
       OS << LS << dwarf::OperationEncodingString(Op.getOp());
 #else
       OS << LS << "DW_OP_" << (unsigned)Op.getOp();
@@ -1374,7 +1374,7 @@ bool AsmPrinter::usesCFIWithoutEH() const {
 }
 
 void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
   if (!usesCFIWithoutEH() &&
       ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
@@ -1401,7 +1401,7 @@ void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
 #endif
 }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 // emitTTypeReference is defined in AsmPrinterDwarf.cpp (excluded in bare-metal).
 #else
 void AsmPrinter::emitTTypeReference(const GlobalValue *, unsigned) {}

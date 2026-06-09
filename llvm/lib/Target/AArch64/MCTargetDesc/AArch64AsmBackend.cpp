@@ -561,7 +561,7 @@ enum CompactUnwindEncodings {
 } // end CU namespace
 
 // FIXME: This should be in a separate file.
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 class DarwinAArch64AsmBackend : public AArch64AsmBackend {
   const MCRegisterInfo &MRI;
 
@@ -746,7 +746,7 @@ public:
 
 namespace {
 
-#endif // EJIT_BARE_METAL (DarwinAArch64AsmBackend)
+#endif // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL (DarwinAArch64AsmBackend)
 
 class ELFAArch64AsmBackend : public AArch64AsmBackend {
 public:
@@ -767,7 +767,7 @@ public:
 }
 
 namespace {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 class COFFAArch64AsmBackend : public AArch64AsmBackend {
 public:
   COFFAArch64AsmBackend(const Target &T, const Triple &TheTriple)
@@ -778,7 +778,7 @@ public:
     return createAArch64WinCOFFObjectWriter(TheTriple);
   }
 };
-#endif // EJIT_BARE_METAL
+#endif // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 }
 
 MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
@@ -786,7 +786,7 @@ MCAsmBackend *llvm::createAArch64leAsmBackend(const Target &T,
                                               const MCRegisterInfo &MRI,
                                               const MCTargetOptions &Options) {
   const Triple &TheTriple = STI.getTargetTriple();
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (TheTriple.isOSBinFormatMachO()) {
     return new DarwinAArch64AsmBackend(T, TheTriple, MRI);
   }
