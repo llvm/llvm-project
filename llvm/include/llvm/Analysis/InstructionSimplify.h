@@ -211,7 +211,7 @@ simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType, ArrayRef<Value *> Args,
                   FastMathFlags FMF, const SimplifyQuery &Q,
                   fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
                   RoundingMode Rounding = RoundingMode::NearestTiesToEven,
-                  ConstantRange VScaleRange = ConstantRange::getFull(64));
+                  Function *CxtF = nullptr);
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
 /// See class ShuffleVectorInst for a description of the mask representation.

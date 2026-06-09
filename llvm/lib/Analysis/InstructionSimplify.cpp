@@ -7223,8 +7223,7 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                ArrayRef<Value *> Args, FastMathFlags FMF,
                                const SimplifyQuery &Q,
                                fp::ExceptionBehavior ExBehavior,
-                               RoundingMode Rounding,
-                               ConstantRange VScaleRange) {
+                               RoundingMode Rounding, Function *CxtF) {
   unsigned NumOperands = Args.size();
   if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
       any_of(Args, IsaPred<PoisonValue>))
@@ -7235,7 +7234,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
-      if (const APInt *C = VScaleRange.getSingleElement())
+      ConstantRange CR =
+          CxtF ? getVScaleRange(CxtF, 64) : ConstantRange::getFull(64);
+      if (const APInt *C = CR.getSingleElement())
         return ConstantInt::get(ReturnType, C->getZExtValue());
       return nullptr;
     }
@@ -7252,30 +7253,6 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
-  case Intrinsic::vector_splice_left:
-  case Intrinsic::vector_splice_right: {
-    Value *Offset = Args[2];
-    auto *Ty = cast<VectorType>(ReturnType);
-    if (Q.isUndefValue(Offset))
-      return PoisonValue::get(Ty);
-
-    unsigned BitWidth = Offset->getType()->getScalarSizeInBits();
-    ConstantRange NumElts(
-        APInt(BitWidth, Ty->getElementCount().getKnownMinValue()));
-    if (Ty->isScalableTy())
-      NumElts = NumElts.multiply(VScaleRange.zextOrTrunc(BitWidth));
-
-    // If we know Offset > NumElts, simplify to poison.
-    ConstantRange CR = computeConstantRangeIncludingKnownBits(Offset, false, Q);
-    if (CR.getUnsignedMin().ugt(NumElts.getUnsignedMax()))
-      return PoisonValue::get(Ty);
-
-    // splice.left(a, b, 0) --> a, splice.right(a, b, 0) --> b
-    if (CR.isSingleElement() && CR.getSingleElement()->isZero())
-      return IID == Intrinsic::vector_splice_left ? Args[0] : Args[1];
-
-    return nullptr;
-  }
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather: {
     Value *MaskArg = Args[1];
@@ -7378,6 +7355,31 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     return nullptr;
   }
+  case Intrinsic::vector_splice_left:
+  case Intrinsic::vector_splice_right: {
+    Value *Offset = Args[2];
+    auto *Ty = cast<VectorType>(ReturnType);
+    if (Q.isUndefValue(Offset))
+      return PoisonValue::get(Ty);
+
+    unsigned BitWidth = Offset->getType()->getScalarSizeInBits();
+    ConstantRange NumElts(
+        APInt(BitWidth, Ty->getElementCount().getKnownMinValue()));
+    if (Ty->isScalableTy())
+      NumElts = NumElts.multiply(CxtF ? getVScaleRange(CxtF, BitWidth)
+                                      : ConstantRange::getFull(BitWidth));
+
+    // If we know Offset > NumElts, simplify to poison.
+    ConstantRange CR = computeConstantRangeIncludingKnownBits(Offset, false, Q);
+    if (CR.getUnsignedMin().ugt(NumElts.getUnsignedMax()))
+      return PoisonValue::get(Ty);
+
+    // splice.left(a, b, 0) --> a, splice.right(a, b, 0) --> b
+    if (CR.isSingleElement() && CR.getSingleElement()->isZero())
+      return IID == Intrinsic::vector_splice_left ? Args[0] : Args[1];
+
+    return nullptr;
+  }
   case Intrinsic::experimental_constrained_fadd:
     return simplifyFAddInst(Args[0], Args[1], FMF, Q, ExBehavior, Rounding);
   case Intrinsic::experimental_constrained_fsub:
@@ -7449,7 +7451,7 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
     }
     return simplifyIntrinsic(IID, ReturnType, Args,
                              Call->getFastMathFlagsOrNone(), Q, ExBehavior,
-                             Rounding, getVScaleRange(Call->getFunction(), 64));
+                             Rounding, Call->getFunction());
   }
   }
 }
