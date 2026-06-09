@@ -50,7 +50,7 @@ public:
   /// SimpleSymbolTable (typically the BootstrapInfo table).
   static Expected<std::unique_ptr<SimpleNativeMemoryMap>>
   Create(Session &S, SimpleSymbolTable &ST,
-         const char *InstanceName = "orc_rt_SimpleNativeMemoryMap_Instance",
+         const char *InstanceName = "orc_rt_ci_SimpleNativeMemoryMap_Instance",
          SimpleSymbolTable::MutatorFn AddInterface =
              sps_ci::addSimpleNativeMemoryMap);
 
@@ -110,7 +110,8 @@ public:
   void deinitializeMultiple(OnDeinitializeCompleteFn &&OnComplete,
                             std::vector<void *> Bases);
 
-  void onDetach(Service::OnCompleteFn OnComplete) override;
+  void onDetach(Service::OnCompleteFn OnComplete,
+                bool ShutdownRequested) override;
   void onShutdown(Service::OnCompleteFn OnComplete) override;
 
 private:

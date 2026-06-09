@@ -19,7 +19,7 @@ define void @caller() {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   BL @foo_alias, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   RET_ReallyLR
 entry:
   %0 = call i32 @foo_alias()

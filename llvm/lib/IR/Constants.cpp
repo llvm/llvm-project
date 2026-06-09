@@ -39,15 +39,9 @@ using namespace PatternMatch;
 static cl::opt<bool> UseConstantIntForFixedLengthSplat(
     "use-constant-int-for-fixed-length-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native fixed-length vector splat support."));
-static cl::opt<bool> UseConstantFPForFixedLengthSplat(
-    "use-constant-fp-for-fixed-length-splat", cl::init(false), cl::Hidden,
-    cl::desc("Use ConstantFP's native fixed-length vector splat support."));
 static cl::opt<bool> UseConstantIntForScalableSplat(
     "use-constant-int-for-scalable-splat", cl::init(false), cl::Hidden,
     cl::desc("Use ConstantInt's native scalable vector splat support."));
-static cl::opt<bool> UseConstantFPForScalableSplat(
-    "use-constant-fp-for-scalable-splat", cl::init(true), cl::Hidden,
-    cl::desc("Use ConstantFP's native scalable vector splat support."));
 
 //===----------------------------------------------------------------------===//
 //                              Constant Class
@@ -69,27 +63,6 @@ bool Constant::isNegativeZeroValue() const {
 
   // Otherwise, just use +0.0.
   return isNullValue();
-}
-
-bool Constant::isNullValue() const {
-  // 0 is null.
-  if (const ConstantInt *CI = dyn_cast<ConstantInt>(this))
-    return CI->isZero();
-
-  // 0 is null.
-  if (const ConstantByte *CB = dyn_cast<ConstantByte>(this))
-    return CB->isZero();
-
-  // +0.0 is null.
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
-    // ppc_fp128 determine isZero using high order double only
-    // Should check the bitwise value to make sure all bits are zero.
-    return CFP->isExactlyValue(+0.0);
-
-  // constant zero is zero for aggregates, cpnull is null for pointers, none for
-  // tokens.
-  return isa<ConstantAggregateZero>(this) || isa<ConstantPointerNull>(this) ||
-         isa<ConstantTokenNone>(this) || isa<ConstantTargetNone>(this);
 }
 
 bool Constant::isAllOnesValue() const {
@@ -404,10 +377,13 @@ Constant *Constant::getNullValue(Type *Ty) {
                            APFloat::getZero(Ty->getFltSemantics()));
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
-  case Type::StructTyID:
-  case Type::ArrayTyID:
   case Type::FixedVectorTyID:
   case Type::ScalableVectorTyID:
+    if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
+      return ConstantPointerNull::get(Ty);
+    return ConstantAggregateZero::get(Ty);
+  case Type::StructTyID:
+  case Type::ArrayTyID:
     return ConstantAggregateZero::get(Ty);
   case Type::TokenTyID:
     return ConstantTokenNone::get(Ty->getContext());
@@ -491,6 +467,13 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
                        .getKnownMinValue()
                ? ConstantFP::get(getContext(), CFP->getValue())
                : nullptr;
+
+  if (isa<ConstantPointerNull>(this)) {
+    auto *VT = cast<VectorType>(getType());
+    return Elt < VT->getElementCount().getKnownMinValue()
+               ? ConstantPointerNull::get(VT->getElementType())
+               : nullptr;
+  }
 
   // FIXME: getNumElements() will fail for non-fixed vector types.
   if (isa<ScalableVectorType>(getType()))
@@ -903,6 +886,8 @@ ConstantInt::ConstantInt(Type *Ty, const APInt &V)
   assert(V.getBitWidth() ==
              cast<IntegerType>(Ty->getScalarType())->getBitWidth() &&
          "Invalid constant for type");
+  if (V.isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 ConstantInt *ConstantInt::getTrue(LLVMContext &Context) {
@@ -1028,6 +1013,8 @@ ConstantByte::ConstantByte(Type *Ty, const APInt &V)
   assert(V.getBitWidth() ==
              cast<ByteType>(Ty->getScalarType())->getBitWidth() &&
          "Invalid constant for type");
+  if (V.isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 // Get a ConstantByte from an APInt.
@@ -1110,91 +1097,70 @@ void ConstantByte::destroyConstantImpl() {
 //                                ConstantFP
 //===----------------------------------------------------------------------===//
 
-Constant *ConstantFP::get(Type *Ty, double V) {
+ConstantFP *ConstantFP::get(Type *Ty, double V) {
   LLVMContext &Context = Ty->getContext();
 
   APFloat FV(V);
   bool ignored;
   FV.convert(Ty->getScalarType()->getFltSemantics(),
              APFloat::rmNearestTiesToEven, &ignored);
-  Constant *C = get(Context, FV);
 
-  // For vectors, broadcast the value.
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
+    return get(Context, VTy->getElementCount(), FV);
 
-  return C;
+  return get(Context, FV);
 }
 
-Constant *ConstantFP::get(Type *Ty, const APFloat &V) {
-  ConstantFP *C = get(Ty->getContext(), V);
-  assert(C->getType() == Ty->getScalarType() &&
+ConstantFP *ConstantFP::get(Type *Ty, const APFloat &V) {
+  LLVMContext &Context = Ty->getContext();
+  assert(Ty->getScalarType() ==
+             Type::getFloatingPointTy(Context, V.getSemantics()) &&
          "ConstantFP type doesn't match the type implied by its value!");
 
-  // For vectors, broadcast the value.
   if (auto *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
+    return get(Context, VTy->getElementCount(), V);
 
-  return C;
+  return get(Ty->getContext(), V);
 }
 
-Constant *ConstantFP::get(Type *Ty, StringRef Str) {
+ConstantFP *ConstantFP::get(Type *Ty, StringRef Str) {
   LLVMContext &Context = Ty->getContext();
-
   APFloat FV(Ty->getScalarType()->getFltSemantics(), Str);
-  Constant *C = get(Context, FV);
 
-  // For vectors, broadcast the value.
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
+    return get(Context, VTy->getElementCount(), FV);
 
-  return C;
+  return get(Context, FV);
 }
 
-Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
+ConstantFP *ConstantFP::getInfinity(Type *Ty, bool Negative) {
+  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
+  return get(Ty, APFloat::getInf(Semantics, Negative));
+}
+
+ConstantFP *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getNaN(Semantics, Negative, Payload);
-  Constant *C = get(Ty->getContext(), NaN);
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
+  return get(Ty, NaN);
 }
 
-Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
+ConstantFP *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getQNaN(Semantics, Negative, Payload);
-  Constant *C = get(Ty->getContext(), NaN);
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
+  return get(Ty, NaN);
 }
 
-Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
+ConstantFP *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NaN = APFloat::getSNaN(Semantics, Negative, Payload);
-  Constant *C = get(Ty->getContext(), NaN);
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
+  return get(Ty, NaN);
 }
 
-Constant *ConstantFP::getZero(Type *Ty, bool Negative) {
+ConstantFP *ConstantFP::getZero(Type *Ty, bool Negative) {
   const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
   APFloat NegZero = APFloat::getZero(Semantics, Negative);
-  Constant *C = get(Ty->getContext(), NegZero);
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
+  return get(Ty, NegZero);
 }
-
 
 // ConstantFP accessors.
 ConstantFP* ConstantFP::get(LLVMContext &Context, const APFloat& V) {
@@ -1230,20 +1196,14 @@ ConstantFP *ConstantFP::get(LLVMContext &Context, ElementCount EC,
   return Slot.get();
 }
 
-Constant *ConstantFP::getInfinity(Type *Ty, bool Negative) {
-  const fltSemantics &Semantics = Ty->getScalarType()->getFltSemantics();
-  Constant *C = get(Ty->getContext(), APFloat::getInf(Semantics, Negative));
-
-  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-
-  return C;
-}
-
 ConstantFP::ConstantFP(Type *Ty, const APFloat &V)
     : ConstantData(Ty, ConstantFPVal), Val(V) {
   assert(&V.getSemantics() == &Ty->getScalarType()->getFltSemantics() &&
          "FP type Mismatch");
+  // ppc_fp128 determine isZero using high order double only
+  // so check the bitwise value to make sure all bits are zero.
+  if (V.bitcastToAPInt().isZero())
+    SubclassOptionalData = IsNullValue;
 }
 
 bool ConstantFP::isExactlyValue(const APFloat &V) const {
@@ -1588,19 +1548,23 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   bool isZero = C->isNullValue();
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
-  bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
+  bool isSplatFP = isa<ConstantFP>(C);
   bool isSplatInt = UseConstantIntForFixedLengthSplat && isa<ConstantInt>(C);
   bool isSplatByte = isa<ConstantByte>(C);
+  bool isSplatPtrNull = isa<ConstantPointerNull>(C);
 
-  if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte) {
+  if (isZero || isUndef || isSplatFP || isSplatInt || isSplatByte ||
+      isSplatPtrNull) {
     for (unsigned i = 1, e = V.size(); i != e; ++i)
       if (V[i] != C) {
         isZero = isUndef = isPoison = isSplatFP = isSplatInt = isSplatByte =
-            false;
+            isSplatPtrNull = false;
         break;
       }
   }
 
+  if (isSplatPtrNull)
+    return ConstantPointerNull::get(T);
   if (isZero)
     return ConstantAggregateZero::get(T);
   if (isPoison)
@@ -1628,23 +1592,28 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
 }
 
 Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
+  if (isa<ConstantPointerNull>(V)) {
+    VectorType *VTy = VectorType::get(V->getType(), EC);
+    return ConstantPointerNull::get(VTy);
+  }
+
+  if (auto *CB = dyn_cast<ConstantByte>(V))
+    return ConstantByte::get(V->getContext(), EC, CB->getValue());
+
+  if (auto *CFP = dyn_cast<ConstantFP>(V))
+    return ConstantFP::get(V->getContext(), EC, CFP->getValue());
+
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
     if (!V->isNullValue()) {
       if (UseConstantIntForFixedLengthSplat && isa<ConstantInt>(V))
         return ConstantInt::get(V->getContext(), EC,
                                 cast<ConstantInt>(V)->getValue());
-      if (isa<ConstantByte>(V))
-        return ConstantByte::get(V->getContext(), EC,
-                                 cast<ConstantByte>(V)->getValue());
-      if (UseConstantFPForFixedLengthSplat && isa<ConstantFP>(V))
-        return ConstantFP::get(V->getContext(), EC,
-                               cast<ConstantFP>(V)->getValue());
     }
 
     // If this splat is compatible with ConstantDataVector, use it instead of
     // ConstantVector.
-    if ((isa<ConstantFP>(V) || isa<ConstantInt>(V) || isa<ConstantByte>(V)) &&
+    if (isa<ConstantInt>(V) &&
         ConstantDataSequential::isElementTypeCompatible(V->getType()))
       return ConstantDataVector::getSplat(EC.getKnownMinValue(), V);
 
@@ -1657,12 +1626,6 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
     if (UseConstantIntForScalableSplat && isa<ConstantInt>(V))
       return ConstantInt::get(V->getContext(), EC,
                               cast<ConstantInt>(V)->getValue());
-    if (isa<ConstantByte>(V))
-      return ConstantByte::get(V->getContext(), EC,
-                               cast<ConstantByte>(V)->getValue());
-    if (UseConstantFPForScalableSplat && isa<ConstantFP>(V))
-      return ConstantFP::get(V->getContext(), EC,
-                             cast<ConstantFP>(V)->getValue());
   }
 
   Type *VTy = VectorType::get(V->getType(), EC);
@@ -1884,6 +1847,8 @@ Constant *Constant::getSplatValue(bool AllowPoison) const {
     return ConstantByte::get(getContext(), CB->getValue());
   if (auto *CFP = dyn_cast<ConstantFP>(this))
     return ConstantFP::get(getContext(), CFP->getValue());
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(this))
+    return ConstantPointerNull::get(CPN->getPointerType());
   if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this))
     return CV->getSplatValue();
   if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
@@ -1989,7 +1954,7 @@ ConstantRange Constant::toConstantRange() const {
       auto *CB = dyn_cast<ConstantByte>(Elem);
       if (!CI && !CB)
         return ConstantRange::getFull(BitWidth);
-      CR = CR.unionWith(CI->getValue());
+      CR = CR.unionWith(CI ? CI->getValue() : CB->getValue());
     }
     return CR;
   }
@@ -2001,11 +1966,17 @@ ConstantRange Constant::toConstantRange() const {
 //
 
 ConstantPointerNull *ConstantPointerNull::get(PointerType *Ty) {
+  return get(static_cast<Type *>(Ty));
+}
+
+ConstantPointerNull *ConstantPointerNull::get(Type *Ty) {
+  assert(Ty->isPtrOrPtrVectorTy() && "invalid type for null pointer constant");
   std::unique_ptr<ConstantPointerNull> &Entry =
       Ty->getContext().pImpl->CPNConstants[Ty];
   if (!Entry)
     Entry.reset(new ConstantPointerNull(Ty));
 
+  assert(Entry->getType() == Ty);
   return Entry.get();
 }
 
@@ -2085,7 +2056,7 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 
 BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
     : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
-  setOperand(0, BB);
+  Block = BB;
   BB->setHasAddressTaken(true);
 }
 
@@ -2110,17 +2081,15 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
 
   // See if the 'new' entry already exists, if not, just update this in place
   // and return early.
-  BlockAddress *&NewBA = getContext().pImpl->BlockAddresses[NewBB];
-  if (NewBA)
+  if (BlockAddress *NewBA = getContext().pImpl->BlockAddresses.lookup(NewBB))
     return NewBA;
 
   getBasicBlock()->setHasAddressTaken(false);
 
-  // Remove the old entry, this can't cause the map to rehash (just a
-  // tombstone will get added).
+  // erase invalidates iterators/references, hence the duplicate NewBB lookup.
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
-  NewBA = this;
-  setOperand(0, NewBB);
+  getContext().pImpl->BlockAddresses[NewBB] = this;
+  Block = NewBB;
   getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.
@@ -2155,27 +2124,26 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
 
   // The replacement is with another global value.
   if (const auto *ToObj = dyn_cast<GlobalValue>(To)) {
-    DSOLocalEquivalent *&NewEquiv =
-        getContext().pImpl->DSOLocalEquivalents[ToObj];
-    if (NewEquiv)
+    if (DSOLocalEquivalent *NewEquiv =
+            getContext().pImpl->DSOLocalEquivalents.lookup(ToObj))
       return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
   }
 
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
-  if (cast<Constant>(To)->isNullValue())
+  if (isa<ConstantPointerNull>(To))
     return To;
 
   // The replacement could be a bitcast or an alias to another function. We can
   // replace it with a bitcast to the dso_local_equivalent of that function.
   auto *Func = cast<Function>(To->stripPointerCastsAndAliases());
-  DSOLocalEquivalent *&NewEquiv = getContext().pImpl->DSOLocalEquivalents[Func];
-  if (NewEquiv)
+  if (DSOLocalEquivalent *NewEquiv =
+          getContext().pImpl->DSOLocalEquivalents.lookup(Func))
     return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
 
-  // Replace this with the new one.
+  // erase invalidates iterators/references, hence the duplicate Func lookup.
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
-  NewEquiv = this;
+  getContext().pImpl->DSOLocalEquivalents[Func] = this;
   setOperand(0, Func);
 
   if (Func->getType() != getType()) {
@@ -2213,12 +2181,12 @@ Value *NoCFIValue::handleOperandChangeImpl(Value *From, Value *To) {
   GlobalValue *GV = dyn_cast<GlobalValue>(To->stripPointerCasts());
   assert(GV && "Can only replace the operands with a global value");
 
-  NoCFIValue *&NewNC = getContext().pImpl->NoCFIValues[GV];
-  if (NewNC)
+  if (NoCFIValue *NewNC = getContext().pImpl->NoCFIValues.lookup(GV))
     return llvm::ConstantExpr::getBitCast(NewNC, getType());
 
+  // erase invalidates iterators/references, hence the duplicate GV lookup.
   getContext().pImpl->NoCFIValues.erase(getGlobalValue());
-  NewNC = this;
+  getContext().pImpl->NoCFIValues[GV] = this;
   setOperand(0, GV);
 
   if (GV->getType() != getType())
@@ -2307,7 +2275,7 @@ bool ConstantPtrAuth::isKnownCompatibleWith(const Value *Key,
                                             const DataLayout &DL) const {
   // This function may only be validly called to analyze a ptrauth operation
   // with no deactivation symbol, so if we have one it isn't compatible.
-  if (!getDeactivationSymbol()->isNullValue())
+  if (!isa<ConstantPointerNull>(getDeactivationSymbol()))
     return false;
 
   // If the keys are different, there's no chance for this to be compatible.

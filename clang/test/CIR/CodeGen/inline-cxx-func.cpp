@@ -13,7 +13,7 @@ struct S {
   }
 };
 
-// CIR: !rec_S = !cir.record<struct "S" {!s32i}>
+// CIR: !rec_S = !cir.struct<"S" {!s32i}>
 // LLVM: %struct.S = type { i32 }
 // OGCG: %struct.S = type { i32 }
 
@@ -33,7 +33,7 @@ struct S {
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr %struct.S, ptr %[[THIS]], i32 0, i32 0
+// LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[MEMBER:.*]] = load i32, ptr %[[MEMBER_ADDR]], align 4
 // LLVM:   store i32 %[[MEMBER]], ptr %[[RET_ADDR]], align 4
 // LLVM:   %[[RET_VAL:.*]] = load i32, ptr %[[RET_ADDR]], align 4

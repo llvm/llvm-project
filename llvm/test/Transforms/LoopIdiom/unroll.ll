@@ -126,5 +126,5 @@ for.end:                                          ; preds = %for.end.loopexit, %
 }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind ssp }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ;.

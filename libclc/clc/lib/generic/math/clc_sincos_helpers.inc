@@ -8,71 +8,63 @@
 
 #pragma OPENCL FP_CONTRACT OFF
 
-_CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_sinf_piby4(__CLC_FLOATN x,
-                                                     __CLC_FLOATN y) {
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_SINCOS_RET_GENTYPE
+__clc_sincos_reduced_eval(__CLC_FLOATN x) {
   // Taylor series for sin(x) is x - x^3/3! + x^5/5! - x^7/7! ...
   // = x * (1 - x^2/3! + x^4/5! - x^6/7! ...
   // = x * f(w)
   // where w = x*x and f(w) = (1 - w/3! + w^2/5! - w^3/7! ...
   // We use a minimax approximation of (f(w) - 1) / w
   // because this produces an expansion in even powers of x.
+  const __CLC_FLOATN sin_c1 = -0x1.55553ap-3f;  // ~-1/3!
+  const __CLC_FLOATN sin_c2 = 0x1.110388p-7f;   // ~1/5!
+  const __CLC_FLOATN sin_c3 = -0x1.983304p-13f; // ~1/7!
 
-  const __CLC_FLOATN c1 = -0.1666666666e0f;
-  const __CLC_FLOATN c2 = 0.8333331876e-2f;
-  const __CLC_FLOATN c3 = -0.198400874e-3f;
-  const __CLC_FLOATN c4 = 0.272500015e-5f;
-  const __CLC_FLOATN c5 = -2.5050759689e-08f; // 0xb2d72f34
-  const __CLC_FLOATN c6 = 1.5896910177e-10f;  // 0x2f2ec9d3
+  const __CLC_FLOATN cos_c1 = -0x1.000008p-1f;  // ~1/2!
+  const __CLC_FLOATN cos_c2 = 0x1.5557eep-5f;   // ~1/4!
+  const __CLC_FLOATN cos_c3 = -0x1.6c9e76p-10f; // ~1/6!
+  const __CLC_FLOATN cos_c4 = 0x1.aea668p-16f;  // ~1/8!
 
-  __CLC_FLOATN z = x * x;
-  __CLC_FLOATN v = z * x;
-  __CLC_FLOATN r = __clc_mad(
-      z, __clc_mad(z, __clc_mad(z, __clc_mad(z, c6, c5), c4), c3), c2);
-  __CLC_FLOATN ret =
-      x - __clc_mad(v, -c1, __clc_mad(z, __clc_mad(y, 0.5f, -v * r), -y));
+  __CLC_FLOATN t = x * x;
 
+  __CLC_FLOATN s =
+      __clc_mad(x, t * __clc_mad(t, __clc_mad(t, sin_c3, sin_c2), sin_c1), x);
+
+  __CLC_FLOATN c = __clc_mad(
+      t,
+      __clc_mad(t, __clc_mad(t, __clc_mad(t, cos_c4, cos_c3), cos_c2), cos_c1),
+      1.0f);
+
+  __CLC_SINCOS_RET_GENTYPE ret;
+  ret.cos = c;
+  ret.sin = s;
   return ret;
 }
 
-_CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_cosf_piby4(__CLC_FLOATN x,
-                                                     __CLC_FLOATN y) {
-  // Taylor series for cos(x) is 1 - x^2/2! + x^4/4! - x^6/6! ...
-  // = f(w)
-  // where w = x*x and f(w) = (1 - w/2! + w^2/4! - w^3/6! ...
-  // We use a minimax approximation of (f(w) - 1 + w/2) / (w*w)
-  // because this produces an expansion in even powers of x.
+_CLC_DEF _CLC_OVERLOAD _CLC_CONST __CLC_SINCOS_RET_GENTYPE
+__clc_sincospi_reduced_eval(__CLC_GENTYPE x) {
+  __CLC_GENTYPE t = x * x;
 
-  const __CLC_FLOATN c1 = 0.416666666e-1f;
-  const __CLC_FLOATN c2 = -0.138888876e-2f;
-  const __CLC_FLOATN c3 = 0.248006008e-4f;
-  const __CLC_FLOATN c4 = -0.2730101334e-6f;
-  const __CLC_FLOATN c5 = 2.0875723372e-09f;  // 0x310f74f6
-  const __CLC_FLOATN c6 = -1.1359647598e-11f; // 0xad47d74e
+  __CLC_GENTYPE sx =
+      __clc_mad(t,
+                __clc_mad(t, __clc_mad(t, 0x1.eb5482p-3f, -0x1.3e497cp-1f),
+                          0x1.468e6cp+1f),
+                -0x1.4abc1cp+2f);
+  sx = x * t * sx;
+  sx = __clc_mad(x, 0x1.921fb6p+1f, sx);
 
-  __CLC_FLOATN z = x * x;
-  __CLC_FLOATN r =
-      z *
-      __clc_mad(
-          z,
-          __clc_mad(z, __clc_mad(z, __clc_mad(z, __clc_mad(z, c6, c5), c4), c3),
-                    c2),
-          c1);
+  __CLC_GENTYPE cx = __clc_mad(
+      t,
+      __clc_mad(t,
+                __clc_mad(t, __clc_mad(t, 0x1.97ca88p-5f, 0x1.c85d3ap-3f),
+                          -0x1.55a3b4p+0f),
+                0x1.03c1a6p+2f),
+      -0x1.3bd3ccp+2f);
+  cx = __clc_mad(t, cx, 1.0f);
 
-  // if |x| < 0.3
-  __CLC_FLOATN qx = 0.0f;
-
-  __CLC_INTN ix = __CLC_AS_INTN(x) & EXSIGNBIT_SP32;
-
-  //  0.78125 > |x| >= 0.3
-  __CLC_FLOATN xby4 = __CLC_AS_FLOATN(ix - 0x01000000);
-  qx = ((ix >= 0x3e99999a) & (ix <= 0x3f480000)) ? xby4 : qx;
-
-  // x > 0.78125
-  qx = ix > 0x3f480000 ? 0.28125f : qx;
-
-  __CLC_FLOATN hz = __clc_mad(z, 0.5f, -qx);
-  __CLC_FLOATN a = 1.0f - qx;
-  __CLC_FLOATN ret = a - (hz - __clc_mad(z, r, -x * y));
+  __CLC_SINCOS_RET_GENTYPE ret;
+  ret.cos = cx;
+  ret.sin = sx;
   return ret;
 }
 
@@ -136,7 +128,7 @@ _CLC_DEF _CLC_OVERLOAD void __clc_fullMulS(private __CLC_FLOATN *hi,
                                            private __CLC_FLOATN *lo,
                                            __CLC_FLOATN a, __CLC_FLOATN b,
                                            __CLC_FLOATN bh, __CLC_FLOATN bt) {
-  if (__CLC_HAVE_HW_FMA32()) {
+  if (__CLC_FAST_FMA_F32) {
     __CLC_FLOATN ph = a * b;
     *hi = ph;
     *lo = __clc_fma(a, b, -ph);
@@ -152,53 +144,29 @@ _CLC_DEF _CLC_OVERLOAD void __clc_fullMulS(private __CLC_FLOATN *hi,
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_FLOATN __clc_removePi2S(private __CLC_FLOATN *hi,
-                                                     private __CLC_FLOATN *lo,
                                                      __CLC_FLOATN x) {
-  // 72 bits of pi/2
-  const __CLC_FLOATN fpiby2_1 = (__CLC_FLOATN)0xC90FDA / 0x1.0p+23f;
-  const __CLC_FLOATN fpiby2_1_h = (__CLC_FLOATN)0xC90 / 0x1.0p+11f;
-  const __CLC_FLOATN fpiby2_1_t = (__CLC_FLOATN)0xFDA / 0x1.0p+23f;
-
-  const __CLC_FLOATN fpiby2_2 = (__CLC_FLOATN)0xA22168 / 0x1.0p+47f;
-  const __CLC_FLOATN fpiby2_2_h = (__CLC_FLOATN)0xA22 / 0x1.0p+35f;
-  const __CLC_FLOATN fpiby2_2_t = (__CLC_FLOATN)0x168 / 0x1.0p+47f;
-
-  const __CLC_FLOATN fpiby2_3 = (__CLC_FLOATN)0xC234C4 / 0x1.0p+71f;
-  const __CLC_FLOATN fpiby2_3_h = (__CLC_FLOATN)0xC23 / 0x1.0p+59f;
-  const __CLC_FLOATN fpiby2_3_t = (__CLC_FLOATN)0x4C4 / 0x1.0p+71f;
-
   const __CLC_FLOATN twobypi = 0x1.45f306p-1f;
+  const __CLC_FLOATN piby2_h = 0x1.921fb4p+0f;
+  const __CLC_FLOATN piby2_m = 0x1.4442d0p-24f;
+  const __CLC_FLOATN piby2_l = 0x1.846988p-48f;
 
-  __CLC_FLOATN fnpi2 = __clc_trunc(__clc_mad(x, twobypi, 0.5f));
+  __CLC_FLOATN fn = __clc_rint(x * twobypi);
 
-  // subtract n * pi/2 from x
-  __CLC_FLOATN rhead, rtail;
-  __clc_fullMulS(&rhead, &rtail, fnpi2, fpiby2_1, fpiby2_1_h, fpiby2_1_t);
-  __CLC_FLOATN v = x - rhead;
-  __CLC_FLOATN rem = v + (((x - v) - rhead) - rtail);
+  __CLC_FLOATN r = __clc_fma(
+      fn, -piby2_l, __clc_fma(fn, -piby2_m, __clc_fma(fn, -piby2_h, x)));
+  *hi = r;
 
-  __CLC_FLOATN rhead2, rtail2;
-  __clc_fullMulS(&rhead2, &rtail2, fnpi2, fpiby2_2, fpiby2_2_h, fpiby2_2_t);
-  v = rem - rhead2;
-  rem = v + (((rem - v) - rhead2) - rtail2);
-
-  __CLC_FLOATN rhead3, rtail3;
-  __clc_fullMulS(&rhead3, &rtail3, fnpi2, fpiby2_3, fpiby2_3_h, fpiby2_3_t);
-  v = rem - rhead3;
-
-  *hi = v + ((rem - v) - rhead3);
-  *lo = -rtail3;
-  return fnpi2;
+  return fn;
 }
 
-_CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionSmallS(
-    private __CLC_FLOATN *r, private __CLC_FLOATN *rr, __CLC_FLOATN x) {
-  __CLC_FLOATN fnpi2 = __clc_removePi2S(r, rr, x);
+_CLC_DEF _CLC_OVERLOAD __CLC_INTN
+__clc_argReductionSmallS(private __CLC_FLOATN *r, __CLC_FLOATN x) {
+  __CLC_FLOATN fnpi2 = __clc_removePi2S(r, x);
   return __CLC_CONVERT_INTN(fnpi2) & 0x3;
 }
 
-_CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
-    private __CLC_FLOATN *r, private __CLC_FLOATN *rr, __CLC_FLOATN x) {
+_CLC_DEF _CLC_OVERLOAD __CLC_INTN
+__clc_argReductionLargeS(private __CLC_FLOATN *r, __CLC_FLOATN x) {
   __CLC_INTN xe;
   __CLC_FLOATN m = __clc_frexp(x, &xe);
   --xe;
@@ -216,6 +184,17 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   const __CLC_UINTN b0 = 0xFE5163ABU;
 
   __CLC_UINTN p0, p1, p2, p3, p4, p5, p6, p7;
+#ifndef __opencl_c_int64
+  __CLC_UINTN c0, c1;
+
+  __CLC_FULL_MUL(xm, b0, c0, p0);
+  __CLC_FULL_MAD(xm, b1, c0, c1, p1);
+  __CLC_FULL_MAD(xm, b2, c1, c0, p2);
+  __CLC_FULL_MAD(xm, b3, c0, c1, p3);
+  __CLC_FULL_MAD(xm, b4, c1, c0, p4);
+  __CLC_FULL_MAD(xm, b5, c0, c1, p5);
+  __CLC_FULL_MAD(xm, b6, c1, p7, p6);
+#else
   __CLC_ULONGN a;
 
   __CLC_ULONGN xm_u64 = __CLC_CONVERT_ULONGN(xm);
@@ -247,8 +226,10 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   a = xm_u64 * __CLC_CONVERT_ULONGN(b6) + a;
   p6 = __CLC_CONVERT_UINTN(a);
   p7 = __CLC_CONVERT_UINTN(a >> 32);
+#endif
 
-  __CLC_UINTN fbits = (__CLC_UINTN)224 + (__CLC_UINTN)23 - __CLC_AS_UINTN(xe);
+  __CLC_UINTN fbits =
+      (__CLC_UINTN)224 + (__CLC_UINTN)23 - __CLC_CONVERT_UINTN(xe);
 
   // shift amount to get 2 lsb of integer part at top 2 bits
   //   min: 25 (xe=18) max: 134 (xe=127)
@@ -262,7 +243,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   p4 = c ? p2 : p4;
   p3 = c ? p1 : p3;
   p2 = c ? p0 : p2;
-  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)64);
+  shift -= c ? 64u : 0u;
 
   c = shift > 31;
   p7 = c ? p6 : p7;
@@ -270,14 +251,14 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   p5 = c ? p4 : p5;
   p4 = c ? p3 : p4;
   p3 = c ? p2 : p3;
-  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)32);
+  shift -= c ? 32u : 0u;
 
   c = shift > 31;
   p7 = c ? p6 : p7;
   p6 = c ? p5 : p6;
   p5 = c ? p4 : p5;
   p4 = c ? p3 : p4;
-  shift -= __CLC_CONVERT_UINTN((-c) & (__CLC_INTN)32);
+  shift -= c ? 32u : 0u;
 
   // bitalign cannot handle a shift of 32
   c = shift > 0;
@@ -290,7 +271,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   p5 = c ? t5 : p5;
 
   // Get 2 lsb of int part and msb of fraction
-  __CLC_INTN i = __CLC_AS_INTN(p7 >> 29U);
+  __CLC_INTN i = __CLC_CONVERT_INTN(p7 >> 29U);
 
   // Scoot up 2 more bits so only fraction remains
   p7 = bitalign(p7, p6, (__CLC_UINTN)30u);
@@ -336,7 +317,7 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
 
   __CLC_FLOATN rh, rt;
 
-  if (__CLC_HAVE_HW_FMA32()) {
+  if (__CLC_FAST_FMA_F32) {
     rh = q1 * pio2h;
     rt = __clc_fma(q0, pio2h, __clc_fma(q1, pio2t, __clc_fma(q1, pio2h, -rh)));
   } else {
@@ -354,24 +335,22 @@ _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionLargeS(
   rt = rt - (t - rh);
 
   *r = t;
-  *rr = rt;
   return ((i >> 1) + (i & 1)) & 0x3;
 }
 
 _CLC_DEF _CLC_OVERLOAD __CLC_INTN __clc_argReductionS(private __CLC_FLOATN *r,
-                                                      private __CLC_FLOATN *rr,
                                                       __CLC_FLOATN x) {
-  __CLC_INTN is_large = x >= (__CLC_FLOATN)0x1.0p+23f;
+  __CLC_INTN is_large = x >= (__CLC_FLOATN)0x1.0p+17f;
+
 #ifdef __CLC_SCALAR
   if (is_large)
-    return __clc_argReductionLargeS(r, rr, x);
-  return __clc_argReductionSmallS(r, rr, x);
+    return __clc_argReductionLargeS(r, x);
+  return __clc_argReductionSmallS(r, x);
 #else
-  __CLC_FLOATN r1, rr1, r2, rr2;
-  __CLC_INTN ret1 = __clc_argReductionSmallS(&r1, &rr1, x);
-  __CLC_INTN ret2 = __clc_argReductionLargeS(&r2, &rr2, x);
-  *r = is_large ? r2 : r1;
-  *rr = is_large ? rr2 : rr1;
-  return is_large ? ret2 : ret1;
+  __CLC_FLOATN large_result, small_result;
+  __CLC_INTN small_n = __clc_argReductionSmallS(&small_result, x);
+  __CLC_INTN large_n = __clc_argReductionLargeS(&large_result, x);
+  *r = is_large ? large_result : small_result;
+  return is_large ? large_n : small_n;
 #endif
 }

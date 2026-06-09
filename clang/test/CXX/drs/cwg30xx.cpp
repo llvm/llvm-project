@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
-// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected %s
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected %s
 
 
 namespace cwg3005 { // cwg3005: 21
@@ -21,3 +21,14 @@ void f(
 }
 
 } // namespace cwg3005
+
+namespace cwg3035 { // cwg3035: no
+#if __cplusplus >= 201103L
+static union {
+  int x = [] { return 42; }();
+  // FIXME-error@-1 {{lambda expressions are not allowed in anonymous unions}}
+};
+#endif
+} // namespace cwg3035
+
+// cwg3058: na

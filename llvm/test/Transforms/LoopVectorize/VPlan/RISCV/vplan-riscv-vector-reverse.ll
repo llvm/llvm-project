@@ -22,8 +22,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vp<[[INDUCTION:%.+]]> = CANONICAL-IV
+; CHECK-EMPTY:
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     EMIT vp<[[INDUCTION:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[INDEX_NEXT:%.+]]>
 ; CHECK-NEXT:     CURRENT-ITERATION-PHI vp<[[EVL_PHI:%.+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; CHECK-NEXT:     EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ vp<[[OTC]]>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; CHECK-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -37,12 +38,12 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[VAL_B:%.+]]> = call llvm.experimental.vp.reverse(ir<[[LOAD_B]]>, ir<true>, vp<[[EVL]]>)
 ; CHECK-NEXT:     WIDEN ir<[[ADD_RESULT:%.+]]> = add vp<[[VAL_B]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<[[ARRAY_IDX_A:%.+]]> = getelementptr inbounds ir<[[A:%.+]]>, ir<[[IDX_PROM]]>
-; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[STORE_VAL:%.+]]> = call llvm.experimental.vp.reverse(ir<[[ADD_RESULT]]>, ir<true>, vp<[[EVL]]>)
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_A:%.+]]> = vector-end-pointer ir<[[ARRAY_IDX_A]]>, vp<[[EVL]]>
+; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[STORE_VAL:%.+]]> = call llvm.experimental.vp.reverse(ir<[[ADD_RESULT]]>, ir<true>, vp<[[EVL]]>)
 ; CHECK-NEXT:     WIDEN vp.store vp<[[VEC_END_PTR_A]]>, vp<[[STORE_VAL]]>, vp<[[EVL]]>
 ; CHECK-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[EVL]]>, vp<[[EVL_PHI]]>
 ; CHECK-NEXT:     EMIT vp<[[AVL_NEXT]]> = sub nuw vp<[[AVL]]>, vp<[[EVL]]>
-; CHECK-NEXT:     EMIT vp<[[INDEX_NEXT]]> = add vp<[[INDUCTION]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT vp<[[INDEX_NEXT:%.+]]> = add vp<[[INDUCTION]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[INDEX_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -55,8 +56,6 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT: No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
-; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<%n>, ir-bb<entry> ]
-; CHECK-NEXT:   EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ ir<%n>, ir-bb<entry> ]
 ; CHECK-NEXT: Successor(s): ir-bb<for.body>
 ;
 entry:

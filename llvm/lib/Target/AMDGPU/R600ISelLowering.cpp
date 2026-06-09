@@ -177,10 +177,10 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CTPOP, MVT::i64, Expand);
 
   if (Subtarget->hasFFBH())
-    setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Custom);
+    setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Custom);
 
   if (Subtarget->hasFFBL())
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Custom);
+    setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Custom);
 
   // FIXME: This was moved from AMDGPUTargetLowering, I'm not sure if we
   // need it for R600.
@@ -672,7 +672,7 @@ SDValue R600TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   return vectorToVerticalVector(DAG, Insert);
 }
 
-SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
+SDValue R600TargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                                SDValue Op,
                                                SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);

@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -62,31 +63,111 @@ class SCEVUnknown;
 class StructType;
 class TargetLibraryInfo;
 class Type;
+class VPSCEVExpander;
 enum SCEVTypes : unsigned short;
 
 LLVM_ABI extern bool VerifySCEV;
 
+/// NoWrapFlags are bitfield indices into SCEV's SubclassData.
+///
+/// Add and Mul expressions may have no-unsigned-wrap <NUW> or
+/// no-signed-wrap <NSW> properties, which are derived from the IR
+/// operator. NSW is a misnomer that we use to mean no signed overflow or
+/// underflow. NUW and NSW must hold for all subsets and orders of
+/// Add/Mul operands. That is, in `(a + b + c)<nsw>`, all of `a + b`,
+/// `b + c`, `a + c` must be nsw as well.
+///
+/// AddRec expressions may have a no-self-wraparound <NW> property if, in
+/// the integer domain, abs(step) * max-iteration(loop) <=
+/// unsigned-max(bitwidth).  This means that the recurrence will never reach
+/// its start value if the step is non-zero.  Computing the same value on
+/// each iteration is not considered wrapping, and recurrences with step = 0
+/// are trivially <NW>.  <NW> is independent of the sign of step and the
+/// value the add recurrence starts with.
+///
+/// Note that NUW and NSW are also valid properties of a recurrence, and
+/// either implies NW. For convenience, NW will be set for a recurrence
+/// whenever either NUW or NSW are set.
+///
+/// We require that the flag on a SCEV apply to the entire scope in which
+/// that SCEV is defined.  A SCEV's scope is set of locations dominated by
+/// a defining location, which is in turn described by the following rules:
+/// * A SCEVUnknown is at the point of definition of the Value.
+/// * A SCEVConstant is defined at all points.
+/// * A SCEVAddRec is defined starting with the header of the associated
+///   loop.
+/// * All other SCEVs are defined at the earlest point all operands are
+///   defined.
+///
+/// The above rules describe a maximally hoisted form (without regards to
+/// potential control dependence).  A SCEV is defined anywhere a
+/// corresponding instruction could be defined in said maximally hoisted
+/// form.  Note that SCEVUDivExpr (currently the only expression type which
+/// can trap) can be defined per these rules in regions where it would trap
+/// at runtime.  A SCEV being defined does not require the existence of any
+/// instruction within the defined scope.
+enum class SCEVNoWrapFlags {
+  FlagAnyWrap = 0,    // No guarantee.
+  FlagNW = (1 << 0),  // No self-wrap.
+  FlagNUW = (1 << 1), // No unsigned wrap.
+  FlagNSW = (1 << 2), // No signed wrap.
+  NoWrapMask = (1 << 3) - 1,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/NoWrapMask)
+};
+
 class SCEV;
 
-struct SCEVUse : PointerIntPair<const SCEV *, 2> {
-  SCEVUse() : PointerIntPair() { setFromOpaqueValue(nullptr); }
-  SCEVUse(const SCEV *S) : PointerIntPair() {
-    setFromOpaqueValue(reinterpret_cast<void *>(const_cast<SCEV *>(S)));
+template <typename SCEVPtrT = const SCEV *>
+struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
+  using Base = PointerIntPair<SCEVPtrT, 2>;
+  using Base::getOpaqueValue;
+  using Base::getPointer;
+
+  SCEVUseT() : Base(nullptr, 0) {}
+  SCEVUseT(SCEVPtrT S) : Base(S, 0) {}
+  /// Construct with NoWrapFlags; only NUW/NSW are encoded, NW is dropped.
+  SCEVUseT(SCEVPtrT S, SCEVNoWrapFlags Flags)
+      : Base(S, static_cast<unsigned>(Flags) >> 1) {}
+  template <typename OtherPtrT, typename = std::enable_if_t<
+                                    std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
+  SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
+      : SCEVUseT(Other.getPointer(), Other.getUseNoWrapFlags()) {}
+
+  operator SCEVPtrT() const { return getPointer(); }
+  SCEVPtrT operator->() const { return getPointer(); }
+
+  /// Returns true if the SCEVUse is canonical, i.e. no SCEVUse flags set in any
+  /// operands.
+  bool isCanonical() const { return getCanonical() == getOpaqueValue(); }
+
+  /// Return the canonical SCEV for this SCEVUse.
+  const SCEV *getCanonical() const;
+
+  /// Return the no-wrap flags for this SCEVUse, which is the union of the
+  /// use-specific flags and the underlying SCEV's flags, masked by \p Mask.
+  SCEVNoWrapFlags
+  getNoWrapFlags(SCEVNoWrapFlags Mask = SCEVNoWrapFlags::NoWrapMask) const;
+
+  /// Return only the use-specific no-wrap flags (NUW/NSW) without the
+  /// underlying SCEV's flags.
+  SCEVNoWrapFlags getUseNoWrapFlags() const {
+    SCEVNoWrapFlags UseFlags =
+        static_cast<SCEVNoWrapFlags>(Base::getInt() << 1);
+    if (any(UseFlags & (SCEVNoWrapFlags::FlagNUW | SCEVNoWrapFlags::FlagNSW)))
+      UseFlags |= SCEVNoWrapFlags::FlagNW;
+    return UseFlags;
   }
-  SCEVUse(const SCEV *S, unsigned Flags) : PointerIntPair(S, Flags) {}
 
-  operator const SCEV *() const { return getPointer(); }
-  const SCEV *operator->() const { return getPointer(); }
-
-  void *getRawPointer() const { return getOpaqueValue(); }
-
-  unsigned getFlags() const { return getInt(); }
-
-  bool operator==(const SCEVUse &RHS) const {
-    return getRawPointer() == RHS.getRawPointer();
+  bool operator==(const SCEVUseT &RHS) const {
+    return getOpaqueValue() == RHS.getOpaqueValue();
   }
 
-  bool operator==(const SCEV *RHS) const { return getRawPointer() == RHS; }
+  bool operator!=(const SCEVUseT &RHS) const { return !(*this == RHS); }
+
+  bool operator>(const SCEVUseT &RHS) const { return Base::operator>(RHS); }
+
+  bool operator==(const SCEV *RHS) const { return getOpaqueValue() == RHS; }
+  bool operator!=(const SCEV *RHS) const { return getOpaqueValue() != RHS; }
 
   /// Print out the internal representation of this scalar to the specified
   /// stream.  This should really only be used for debugging purposes.
@@ -94,7 +175,16 @@ struct SCEVUse : PointerIntPair<const SCEV *, 2> {
 
   /// This method is used for debugging.
   void dump() const;
+
+private:
+  using Base::setFromOpaqueValue;
+  friend struct PointerLikeTypeTraits<SCEVUseT>;
 };
+
+/// Deduction guide for various SCEV subclass pointers.
+template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
+
+using SCEVUse = SCEVUseT<const SCEV *>;
 
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.
@@ -111,22 +201,12 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 };
 
 template <> struct DenseMapInfo<SCEVUse> {
-  static inline SCEVUse getEmptyKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-1);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
-  static inline SCEVUse getTombstoneKey() {
-    uintptr_t Val = static_cast<uintptr_t>(-2);
-    return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
-  }
-
   static unsigned getHashValue(SCEVUse U) {
-    return hash_value(U.getRawPointer());
+    return hash_value(U.getOpaqueValue());
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
-    return LHS.getRawPointer() == RHS.getRawPointer();
+    return LHS.getOpaqueValue() == RHS.getOpaqueValue();
   }
 };
 
@@ -137,6 +217,31 @@ template <> struct simplify_type<SCEVUse> {
     return Val.getPointer();
   }
 };
+
+/// Provide CastInfo for SCEVUseT so that cast<SCEVUseT<const To *>>(use)
+/// returns SCEVUseT<const To *> with flags preserved.
+template <typename ToSCEVPtrT>
+struct CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse,
+                std::enable_if_t<!is_simple_type<SCEVUse>::value>> {
+  using To = std::remove_cv_t<std::remove_pointer_t<ToSCEVPtrT>>;
+  using CastReturnType = SCEVUseT<ToSCEVPtrT>;
+
+  static bool isPossible(const SCEVUse &U) { return isa<To>(U.getPointer()); }
+  static CastReturnType doCast(const SCEVUse &U) {
+    return CastReturnType(cast<To>(U.getPointer()), U.getUseNoWrapFlags());
+  }
+  static CastReturnType castFailed() { return CastReturnType(nullptr); }
+  static CastReturnType doCastIfPossible(const SCEVUse &U) {
+    if (!isPossible(U))
+      return castFailed();
+    return doCast(U);
+  }
+};
+
+template <typename ToSCEVPtrT>
+struct CastInfo<SCEVUseT<ToSCEVPtrT>, const SCEVUse,
+                std::enable_if_t<!is_simple_type<const SCEVUse>::value>>
+    : CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse> {};
 
 /// This class represents an analyzed expression in the program.  These are
 /// opaque objects that the client is not allowed to do much with directly.
@@ -159,50 +264,17 @@ protected:
   /// miscellaneous information.
   unsigned short SubclassData = 0;
 
+  /// Pointer to the canonical version of the SCEV, i.e. one where all operands
+  /// have no SCEVUse flags.
+  const SCEV *CanonicalSCEV = nullptr;
+
 public:
-  /// NoWrapFlags are bitfield indices into SubclassData.
-  ///
-  /// Add and Mul expressions may have no-unsigned-wrap <NUW> or
-  /// no-signed-wrap <NSW> properties, which are derived from the IR
-  /// operator. NSW is a misnomer that we use to mean no signed overflow or
-  /// underflow.
-  ///
-  /// AddRec expressions may have a no-self-wraparound <NW> property if, in
-  /// the integer domain, abs(step) * max-iteration(loop) <=
-  /// unsigned-max(bitwidth).  This means that the recurrence will never reach
-  /// its start value if the step is non-zero.  Computing the same value on
-  /// each iteration is not considered wrapping, and recurrences with step = 0
-  /// are trivially <NW>.  <NW> is independent of the sign of step and the
-  /// value the add recurrence starts with.
-  ///
-  /// Note that NUW and NSW are also valid properties of a recurrence, and
-  /// either implies NW. For convenience, NW will be set for a recurrence
-  /// whenever either NUW or NSW are set.
-  ///
-  /// We require that the flag on a SCEV apply to the entire scope in which
-  /// that SCEV is defined.  A SCEV's scope is set of locations dominated by
-  /// a defining location, which is in turn described by the following rules:
-  /// * A SCEVUnknown is at the point of definition of the Value.
-  /// * A SCEVConstant is defined at all points.
-  /// * A SCEVAddRec is defined starting with the header of the associated
-  ///   loop.
-  /// * All other SCEVs are defined at the earlest point all operands are
-  ///   defined.
-  ///
-  /// The above rules describe a maximally hoisted form (without regards to
-  /// potential control dependence).  A SCEV is defined anywhere a
-  /// corresponding instruction could be defined in said maximally hoisted
-  /// form.  Note that SCEVUDivExpr (currently the only expression type which
-  /// can trap) can be defined per these rules in regions where it would trap
-  /// at runtime.  A SCEV being defined does not require the existence of any
-  /// instruction within the defined scope.
-  enum NoWrapFlags {
-    FlagAnyWrap = 0,    // No guarantee.
-    FlagNW = (1 << 0),  // No self-wrap.
-    FlagNUW = (1 << 1), // No unsigned wrap.
-    FlagNSW = (1 << 2), // No signed wrap.
-    NoWrapMask = (1 << 3) - 1
-  };
+  using NoWrapFlags = SCEVNoWrapFlags;
+  static constexpr auto FlagAnyWrap = SCEVNoWrapFlags::FlagAnyWrap;
+  static constexpr auto FlagNW = SCEVNoWrapFlags::FlagNW;
+  static constexpr auto FlagNUW = SCEVNoWrapFlags::FlagNUW;
+  static constexpr auto FlagNSW = SCEVNoWrapFlags::FlagNSW;
+  static constexpr auto NoWrapMask = SCEVNoWrapFlags::NoWrapMask;
 
   explicit SCEV(const FoldingSetNodeIDRef ID, SCEVTypes SCEVTy,
                 unsigned short ExpressionSize)
@@ -249,6 +321,16 @@ public:
 
   /// This method is used for debugging.
   LLVM_ABI void dump() const;
+
+  /// Compute and set the canonical SCEV, by constructing a SCEV with the same
+  /// operands, but all SCEVUse flags dropped.
+  LLVM_ABI void computeAndSetCanonical(ScalarEvolution &SE);
+
+  /// Return the canonical SCEV.
+  const SCEV *getCanonical() const {
+    assert(CanonicalSCEV && "canonical SCEV not yet computed");
+    return CanonicalSCEV;
+  }
 };
 
 // Specialize FoldingSetTrait for SCEV to avoid needing to compute
@@ -268,6 +350,11 @@ template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
 
 inline raw_ostream &operator<<(raw_ostream &OS, const SCEV &S) {
   S.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, SCEVUse U) {
+  U.print(OS);
   return OS;
 }
 
@@ -534,6 +621,7 @@ public:
   enum LoopDisposition {
     LoopVariant,   ///< The SCEV is loop-variant (unknown).
     LoopInvariant, ///< The SCEV is loop-invariant.
+    LoopUniform,   ///< The SCEV is loop-uniform.
     LoopComputable ///< The SCEV varies predictably with the loop.
   };
 
@@ -544,19 +632,19 @@ public:
     ProperlyDominatesBlock ///< The SCEV properly dominates the block.
   };
 
-  /// Convenient NoWrapFlags manipulation that hides enum casts and is
-  /// visible in the ScalarEvolution name space.
+  /// Convenient NoWrapFlags manipulation. TODO: Replace with & operator of
+  /// enum class.
   [[nodiscard]] static SCEV::NoWrapFlags maskFlags(SCEV::NoWrapFlags Flags,
-                                                   int Mask) {
-    return (SCEV::NoWrapFlags)(Flags & Mask);
+                                                   SCEV::NoWrapFlags Mask) {
+    return Flags & Mask;
   }
   [[nodiscard]] static SCEV::NoWrapFlags setFlags(SCEV::NoWrapFlags Flags,
                                                   SCEV::NoWrapFlags OnFlags) {
-    return (SCEV::NoWrapFlags)(Flags | OnFlags);
+    return Flags | OnFlags;
   }
   [[nodiscard]] static SCEV::NoWrapFlags
   clearFlags(SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags OffFlags) {
-    return (SCEV::NoWrapFlags)(Flags & ~OffFlags);
+    return Flags & ~OffFlags;
   }
   [[nodiscard]] static bool hasFlags(SCEV::NoWrapFlags Flags,
                                      SCEV::NoWrapFlags TestFlags) {
@@ -1200,13 +1288,12 @@ public:
   ///    so we can assert on that.
   /// e. Return true if isLoopEntryGuardedByCond(Pred, E(LHS), E(RHS)) &&
   ///                   isLoopBackedgeGuardedByCond(Pred, B(LHS), B(RHS))
-  LLVM_ABI bool isKnownViaInduction(CmpPredicate Pred, const SCEV *LHS,
-                                    const SCEV *RHS);
+  LLVM_ABI bool isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
+                                    SCEVUse RHS);
 
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred, LHS, and RHS.
-  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, const SCEV *LHS,
-                                 const SCEV *RHS);
+  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS);
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false. If we know it, return the evaluation of this condition. If neither
@@ -1255,6 +1342,7 @@ public:
     /// one from a SCEVCouldNotCompute.  No other types of SCEVs are allowed
     /// as arguments and asserts enforce that internally.
     /*implicit*/ LLVM_ABI ExitLimit(const SCEV *E);
+    /*implicit*/ ExitLimit(SCEVUse E) : ExitLimit((const SCEV *)E) {}
 
     LLVM_ABI
     ExitLimit(const SCEV *E, const SCEV *ConstantMaxNotTaken,
@@ -1348,12 +1436,35 @@ public:
   /// iff any changes were made. If the operands are provably equal or
   /// unequal, LHS and RHS are set to the same value and Pred is set to either
   /// ICMP_EQ or ICMP_NE.
-  LLVM_ABI bool SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
-                                     const SCEV *&RHS, unsigned Depth = 0);
+  LLVM_ABI bool SimplifyICmpOperands(CmpPredicate &Pred, SCEVUse &LHS,
+                                     SCEVUse &RHS, unsigned Depth = 0);
 
   /// Return the "disposition" of the given SCEV with respect to the given
   /// loop.
   LLVM_ABI LoopDisposition getLoopDisposition(const SCEV *S, const Loop *L);
+
+  /// Returns true if the given SCEV is loop-uniform with respect to the
+  /// specified loop L.
+  ///
+  /// A SCEV is considered loop-uniform if its value is invariant across all
+  /// iterations of L, meaning it does not depend on any induction variables
+  /// or values that vary within L.
+  ///
+  /// This notion is particularly useful in nested loops, where a value may vary
+  /// in an inner loop but remain invariant in an outer loop.
+  ///
+  /// Example:
+  /// \code
+  ///   for (i)
+  ///     for (j)
+  ///       dep(j);
+  ///       dep(i, j);
+  /// \endcode
+  /// isLoopUniform(SCEV(dep(j)), loop_i) returns true, as `j` is independent of
+  /// `i`.
+  /// isLoopUniform(SCEV(dep(i, j)), loop_i) returns false, as the expression
+  /// depends on `i`, which varies in loop_i.
+  LLVM_ABI bool isLoopUniform(const SCEV *S, const Loop *L);
 
   /// Return true if the value of the given SCEV is unchanging in the
   /// specified loop.
@@ -1540,6 +1651,7 @@ private:
   friend class SCEVCallbackVH;
   friend class SCEVExpander;
   friend class SCEVUnknown;
+  friend class VPSCEVExpander;
 
   /// The function we are analyzing.
   Function &F;
@@ -2010,9 +2122,10 @@ private:
                                          Value *ExitCond, bool ExitIfTrue,
                                          bool ControlsOnlyExit,
                                          bool AllowPredicates);
-  std::optional<ScalarEvolution::ExitLimit> computeExitLimitFromCondFromBinOp(
-      ExitLimitCacheTy &Cache, const Loop *L, Value *ExitCond, bool ExitIfTrue,
-      bool ControlsOnlyExit, bool AllowPredicates);
+  std::optional<ScalarEvolution::ExitLimit>
+  computeExitLimitFromCondFromBinOp(ExitLimitCacheTy &Cache, const Loop *L,
+                                    Value *ExitCond, bool ExitIfTrue,
+                                    bool AllowPredicates);
 
   /// Compute the number of times the backedge of the specified loop will
   /// execute if its exit condition were a conditional branch of the ICmpInst
@@ -2029,8 +2142,7 @@ private:
   /// return more precise results in some cases and is preferred when caller
   /// has a materialized ICmp.
   ExitLimit computeExitLimitFromICmp(const Loop *L, CmpPredicate Pred,
-                                     const SCEV *LHS, const SCEV *RHS,
-                                     bool IsSubExpr,
+                                     SCEVUse LHS, SCEVUse RHS, bool IsSubExpr,
                                      bool AllowPredicates = false);
 
   /// Compute the number of times the backedge of the specified loop will
@@ -2110,11 +2222,9 @@ private:
   /// whenever the given FoundCondValue value evaluates to true in given
   /// Context. If Context is nullptr, then the found predicate is true
   /// everywhere. LHS and FoundLHS must have same type width.
-  LLVM_ABI bool isImpliedCondBalancedTypes(CmpPredicate Pred, const SCEV *LHS,
-                                           const SCEV *RHS,
-                                           CmpPredicate FoundPred,
-                                           const SCEV *FoundLHS,
-                                           const SCEV *FoundRHS,
+  LLVM_ABI bool isImpliedCondBalancedTypes(CmpPredicate Pred, SCEVUse LHS,
+                                           SCEVUse RHS, CmpPredicate FoundPred,
+                                           SCEVUse FoundLHS, SCEVUse FoundRHS,
                                            const Instruction *CtxI);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
@@ -2145,8 +2255,8 @@ private:
 
   /// Test whether the condition described by Pred, LHS, and RHS is true.
   /// Use only simple non-recursive types of checks, such as range analysis etc.
-  bool isKnownViaNonRecursiveReasoning(CmpPredicate Pred, const SCEV *LHS,
-                                       const SCEV *RHS);
+  bool isKnownViaNonRecursiveReasoning(CmpPredicate Pred, SCEVUse LHS,
+                                       SCEVUse RHS);
 
   /// Test whether the condition described by Pred, LHS, and RHS is true
   /// whenever the condition described by Pred, FoundLHS, and FoundRHS is
@@ -2219,24 +2329,24 @@ private:
 
   /// Test if the given expression is known to satisfy the condition described
   /// by Pred and the known constant ranges of LHS and RHS.
-  bool isKnownPredicateViaConstantRanges(CmpPredicate Pred, const SCEV *LHS,
-                                         const SCEV *RHS);
+  bool isKnownPredicateViaConstantRanges(CmpPredicate Pred, SCEVUse LHS,
+                                         SCEVUse RHS);
 
   /// Try to prove the condition described by "LHS Pred RHS" by ruling out
   /// integer overflow.
   ///
   /// For instance, this will return true for "A s< (A + C)<nsw>" if C is
   /// positive.
-  bool isKnownPredicateViaNoOverflow(CmpPredicate Pred, const SCEV *LHS,
-                                     const SCEV *RHS);
+  bool isKnownPredicateViaNoOverflow(CmpPredicate Pred, SCEVUse LHS,
+                                     SCEVUse RHS);
 
   /// Try to split Pred LHS RHS into logical conjunctions (and's) and try to
   /// prove them individually.
-  bool isKnownPredicateViaSplitting(CmpPredicate Pred, const SCEV *LHS,
-                                    const SCEV *RHS);
+  bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS,
+                                    SCEVUse RHS);
 
   /// Try to match the Expr as "(L + R)<Flags>".
-  bool splitBinaryAdd(const SCEV *Expr, const SCEV *&L, const SCEV *&R,
+  bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R,
                       SCEV::NoWrapFlags &Flags);
 
   /// Forget predicated/non-predicated backedge taken counts for the given loop.
@@ -2456,23 +2566,20 @@ public:
 
 /// Verifier pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionVerifierPass
-    : public PassInfoMixin<ScalarEvolutionVerifierPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionVerifierPass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for the \c ScalarEvolutionAnalysis results.
 class ScalarEvolutionPrinterPass
-    : public PassInfoMixin<ScalarEvolutionPrinterPass> {
+    : public RequiredPassInfoMixin<ScalarEvolutionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ScalarEvolutionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI ScalarEvolutionWrapperPass : public FunctionPass {
@@ -2540,8 +2647,11 @@ public:
   /// Attempts to produce an AddRecExpr for V by adding additional SCEV
   /// predicates. If we can't transform the expression into an AddRecExpr we
   /// return nullptr and not add additional SCEV predicates to the current
-  /// context.
-  LLVM_ABI const SCEVAddRecExpr *getAsAddRec(Value *V);
+  /// context. If \p WrapPredsAdded is non-null, the required predicates are
+  /// collected there instead of being added to this context.
+  LLVM_ABI const SCEVAddRecExpr *
+  getAsAddRec(Value *V,
+              SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
   /// Proves that V doesn't overflow by adding SCEV predicate.
   LLVM_ABI void setNoOverflow(Value *V,
@@ -2563,9 +2673,10 @@ public:
   LLVM_ABI void print(raw_ostream &OS, unsigned Depth) const;
 
   /// Check if \p AR1 and \p AR2 are equal, while taking into account
-  /// Equal predicates in Preds.
-  LLVM_ABI bool areAddRecsEqualWithPreds(const SCEVAddRecExpr *AR1,
-                                         const SCEVAddRecExpr *AR2) const;
+  /// Equal predicates in Preds and \p ExtraPreds.
+  LLVM_ABI bool areAddRecsEqualWithPreds(
+      const SCEVAddRecExpr *AR1, const SCEVAddRecExpr *AR2,
+      ArrayRef<const SCEVPredicate *> ExtraPreds = {}) const;
 
 private:
   /// Increments the version number of the predicate.  This needs to be called
@@ -2613,15 +2724,6 @@ private:
 };
 
 template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
-  static inline ScalarEvolution::FoldID getEmptyKey() {
-    ScalarEvolution::FoldID ID(0);
-    return ID;
-  }
-  static inline ScalarEvolution::FoldID getTombstoneKey() {
-    ScalarEvolution::FoldID ID(1);
-    return ID;
-  }
-
   static unsigned getHashValue(const ScalarEvolution::FoldID &Val) {
     return Val.computeHash();
   }
@@ -2631,6 +2733,28 @@ template <> struct DenseMapInfo<ScalarEvolution::FoldID> {
     return LHS == RHS;
   }
 };
+
+template <> inline const SCEV *SCEVUseT<const SCEV *>::getCanonical() const {
+  return getPointer()->getCanonical();
+}
+
+template <typename SCEVPtrT>
+void SCEVUseT<SCEVPtrT>::print(raw_ostream &OS) const {
+  getPointer()->print(OS);
+  SCEV::NoWrapFlags Flags = getUseNoWrapFlags();
+  if (any(Flags & SCEV::FlagNUW))
+    OS << "(u nuw)";
+  if (any(Flags & SCEV::FlagNSW))
+    OS << "(u nsw)";
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+template <typename SCEVPtrT>
+LLVM_DUMP_METHOD void SCEVUseT<SCEVPtrT>::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
+}
+#endif
 
 } // end namespace llvm
 

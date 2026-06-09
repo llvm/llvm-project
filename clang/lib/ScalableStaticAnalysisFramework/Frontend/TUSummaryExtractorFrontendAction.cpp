@@ -17,6 +17,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include <memory>
 #include <string>
@@ -150,6 +151,9 @@ void TUSummaryRunner::HandleTranslationUnit(ASTContext &Ctx) {
   // First, invoke the Summary Extractors.
   MultiplexConsumer::HandleTranslationUnit(Ctx);
 
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  llvm::sys::sandbox::ScopedSetting Guard = llvm::sys::sandbox::scopedDisable();
+
   // Then serialize the result.
   if (auto Err = Format->writeTUSummary(Summary, Opts.SSAFTUSummaryFile)) {
     Ctx.getDiagnostics().Report(diag::warn_ssaf_write_tu_summary_failed)
@@ -171,6 +175,7 @@ TUSummaryExtractorFrontendAction::CreateASTConsumer(CompilerInstance &CI,
     return nullptr;
 
   if (auto Runner = TUSummaryRunner::create(CI, InFile)) {
+    CI.getCodeGenOpts().ClearASTBeforeBackend = false;
     std::vector<std::unique_ptr<ASTConsumer>> Consumers;
     Consumers.reserve(2);
     Consumers.push_back(std::move(WrappedConsumer));

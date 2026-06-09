@@ -434,6 +434,9 @@ ClangTidyASTConsumerFactory::createASTConsumer(CompilerInstance &Compiler,
 
   ast_matchers::MatchFinder::MatchFinderOptions FinderOptions;
 
+  // We should always skip the declarations in modules.
+  FinderOptions.SkipDeclsInModules = true;
+
   std::unique_ptr<ClangTidyProfiling> Profiling;
   if (Context.getEnableProfiling()) {
     Profiling =
@@ -571,7 +574,7 @@ runClangTidy(ClangTidyContext &Context, const CompilationDatabase &Compilations,
         CommandLineArguments AdjustedArgs = Args;
         if (Opts.ExtraArgsBefore) {
           auto I = AdjustedArgs.begin();
-          if (I != AdjustedArgs.end() && !StringRef(*I).starts_with("-"))
+          if (I != AdjustedArgs.end() && !StringRef(*I).starts_with('-'))
             ++I; // Skip compiler binary name, if it is there.
           AdjustedArgs.insert(I, Opts.ExtraArgsBefore->begin(),
                               Opts.ExtraArgsBefore->end());

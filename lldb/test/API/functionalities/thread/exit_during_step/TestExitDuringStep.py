@@ -9,6 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportThreads()
 class ExitDuringStepTestCase(TestBase):
     @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test(self):

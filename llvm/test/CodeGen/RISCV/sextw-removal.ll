@@ -1584,39 +1584,41 @@ define signext i32 @test22(i64 %arg1, i64 %arg2, i64 %arg3)  {
 ; RV64I:       # %bb.0: # %entry
 ; RV64I-NEXT:    addi a2, a2, -1
 ; RV64I-NEXT:    lui a3, %hi(.LCPI26_0)
-; RV64I-NEXT:    lui a4, %hi(.LCPI26_1)
-; RV64I-NEXT:    lui a5, %hi(.LCPI26_2)
-; RV64I-NEXT:    lui a6, %hi(.LCPI26_3)
-; RV64I-NEXT:    li a7, 69
+; RV64I-NEXT:    lui a4, 61681
+; RV64I-NEXT:    lui a5, 209715
+; RV64I-NEXT:    li a6, 69
+; RV64I-NEXT:    li a7, 65
 ; RV64I-NEXT:    ld a3, %lo(.LCPI26_0)(a3)
-; RV64I-NEXT:    ld a4, %lo(.LCPI26_1)(a4)
-; RV64I-NEXT:    ld a5, %lo(.LCPI26_2)(a5)
-; RV64I-NEXT:    ld a6, %lo(.LCPI26_3)(a6)
-; RV64I-NEXT:    slli a7, a7, 32
-; RV64I-NEXT:    li t0, 65
-; RV64I-NEXT:    slli t0, t0, 28
-; RV64I-NEXT:    li t1, 256
+; RV64I-NEXT:    addi t0, a4, -241
+; RV64I-NEXT:    addi t1, a5, 819
+; RV64I-NEXT:    slli a4, a6, 32
+; RV64I-NEXT:    slli a5, t0, 32
+; RV64I-NEXT:    add a5, t0, a5
+; RV64I-NEXT:    slli a6, t1, 32
+; RV64I-NEXT:    add a6, t1, a6
+; RV64I-NEXT:    slli a7, a7, 28
+; RV64I-NEXT:    li t0, 256
 ; RV64I-NEXT:  .LBB26_1: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    slli t2, a0, 11
+; RV64I-NEXT:    slli t1, a0, 11
 ; RV64I-NEXT:    slli a0, a0, 3
-; RV64I-NEXT:    and t2, t2, a3
-; RV64I-NEXT:    and a0, a0, a4
-; RV64I-NEXT:    or a0, a0, t2
-; RV64I-NEXT:    srli t2, a0, 2
+; RV64I-NEXT:    and t1, t1, a3
+; RV64I-NEXT:    and a0, a0, a5
+; RV64I-NEXT:    or a0, a0, t1
+; RV64I-NEXT:    srli t1, a0, 2
 ; RV64I-NEXT:    and a0, a0, a6
-; RV64I-NEXT:    and t2, t2, a5
+; RV64I-NEXT:    and t1, t1, a6
 ; RV64I-NEXT:    slli a0, a0, 2
-; RV64I-NEXT:    or a0, t2, a0
-; RV64I-NEXT:    srli t2, a0, 1
-; RV64I-NEXT:    and a0, a0, t0
-; RV64I-NEXT:    and t2, t2, a7
+; RV64I-NEXT:    or a0, t1, a0
+; RV64I-NEXT:    srli t1, a0, 1
+; RV64I-NEXT:    and a0, a0, a7
+; RV64I-NEXT:    and t1, t1, a4
 ; RV64I-NEXT:    slli a0, a0, 1
-; RV64I-NEXT:    or a0, t2, a0
+; RV64I-NEXT:    or a0, t1, a0
 ; RV64I-NEXT:    srli a0, a0, 28
 ; RV64I-NEXT:    addi a2, a2, 1
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    bltu a2, t1, .LBB26_1
+; RV64I-NEXT:    bltu a2, t0, .LBB26_1
 ; RV64I-NEXT:  # %bb.2: # %bb7
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
@@ -1673,4 +1675,21 @@ bb2:                                              ; preds = %bb2, %entry
 bb7:                                              ; preds = %bb2
   %i7 = trunc i64 %i5 to i32
   ret i32 %i7
+}
+
+define signext i32 @test_volatile_ld(ptr %p) {
+; CHECK-LABEL: test_volatile_ld:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ld a0, 0(a0)
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test_volatile_ld:
+; NOREMOVAL:       # %bb.0:
+; NOREMOVAL-NEXT:    ld a0, 0(a0)
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+  %1 = load volatile i64, ptr %p, align 8
+  %2 = trunc i64 %1 to i32
+  ret i32 %2
 }

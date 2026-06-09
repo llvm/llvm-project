@@ -60,6 +60,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/PCHContainerOperations.h"
@@ -784,7 +785,10 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       *AST->PP, *AST->ModCache, AST->Ctx.get(), PCHContainerRdr,
       *AST->CodeGenOpts, ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
       /*isysroot=*/"",
-      /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors);
+      /*DisableValidationKind=*/disableValid, AllowASTWithCompilerErrors,
+      /*AllowConfigurationMismatch=*/false,
+      /*ValidateSystemInputs=*/false,
+      /*ForceValidateUserInputs=*/true, HSOpts.ValidateASTInputFilesContent);
 
   // Attach the AST reader to the AST context as an external AST source, so that
   // declarations will be deserialized from the AST file as needed.
@@ -820,6 +824,8 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
         AST->LangOpts->CommentOpts);
   }
 
+  ModuleFileName ModuleFilename = ModuleFileName::makeExplicit(Filename);
+
   // The temporary FileManager we used for ASTReader::readASTFileControlBlock()
   // might have already read stdin, and reading it again will fail. Let's
   // explicitly forward the buffer.
@@ -828,14 +834,17 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
       if (auto BufRef = TmpFileMgr.getBufferForFile(*FE)) {
         auto Buf = llvm::MemoryBuffer::getMemBufferCopy(
             (*BufRef)->getBuffer(), (*BufRef)->getBufferIdentifier());
-        AST->Reader->getModuleManager().addInMemoryBuffer("-", std::move(Buf));
+        off_t BufSize = Buf->getBufferSize();
+        AST->ModCache->getInMemoryModuleCache().addBuiltPCM(
+            "-", std::move(Buf), BufSize, /*ModTime=*/0);
+        ModuleFilename = ModuleFileName::makeInMemory(Filename);
       }
 
   // Reinstate the provided options that are relevant for reading AST files.
   AST->HSOpts->ForceCheckCXX20ModulesInputFiles =
       HSOpts.ForceCheckCXX20ModulesInputFiles;
 
-  switch (AST->Reader->ReadAST(Filename, serialization::MK_MainFile,
+  switch (AST->Reader->ReadAST(ModuleFilename, serialization::MK_MainFile,
                                SourceLocation(), ASTReader::ARR_None)) {
   case ASTReader::Success:
     break;
@@ -2442,7 +2451,7 @@ bool ASTUnit::visitLocalTopLevelDecls(void *context, DeclVisitorFn Fn) {
   return true;
 }
 
-OptionalFileEntryRef ASTUnit::getPCHFile() {
+std::optional<StringRef> ASTUnit::getPCHFile() {
   if (!Reader)
     return std::nullopt;
 
@@ -2465,7 +2474,7 @@ OptionalFileEntryRef ASTUnit::getPCHFile() {
     return true;
   });
   if (Mod)
-    return Mod->File;
+    return Mod->FileName;
 
   return std::nullopt;
 }

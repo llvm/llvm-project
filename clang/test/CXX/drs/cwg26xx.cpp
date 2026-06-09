@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,cxx98
-// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20
-// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
-// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,cxx98
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors %s -verify-directives -verify=expected,since-cxx11,since-cxx20,since-cxx23
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -148,6 +148,13 @@ void f() {
 #endif
 } // namespace cwg2628
 
+namespace cwg2629 { // cwg2629: 2.7
+void f() {
+  switch (double d = 0.0) {}
+  // expected-error@-1 {{statement requires expression of integer type ('double' invalid)}}
+}
+} // namespace cwg2629
+
 // cwg2630 is in cwg2630.cpp
 
 namespace cwg2631 { // cwg2631: 16
@@ -266,6 +273,8 @@ void f() {
     brachiosaur |= neck;                // OK
 }
 } // namespace cwg2654
+
+// cwg2660: na
 
 namespace cwg2681 { // cwg2681: 17
 #if __cplusplus >= 202002L

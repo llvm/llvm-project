@@ -22,9 +22,8 @@ scf.parallel (%iv) = (%c0_2) to (%c4_2) step (%c1_2) {
 
 // -----
 
-// expected-note@+1 {{prior use here}}
 %c32 = arith.constant 32 : index
-// expected-error@+1 {{use of value '%c32' expects different type than prior uses: '!acc.par_width' vs 'index'}}
+// expected-error@+1 {{'acc.compute_region' op launch arguments must be results of acc.par_width operations}}
 acc.compute_region launch(%arg0 = %c32) {
   acc.yield
 } {origin = "acc.parallel"}
@@ -38,4 +37,38 @@ acc.compute_region launch(%arg0 = %c32) {
 "acc.compute_region"(%w) <{operandSegmentSizes = array<i32: 1, 0, 0>}> ({
 ^bb0(%arg0: index, %extra: index):
   "acc.yield"() : () -> ()
-}) {origin = "acc.parallel"} : (!acc.par_width) -> ()
+}) {origin = "acc.parallel"} : (index) -> ()
+
+// -----
+
+func.func @reduction_accumulate_invalid_operator() {
+  %partial = arith.constant 1.0 : f32
+  %private = memref.alloca() : memref<f32>
+  acc.reduction_accumulate %partial to %private <addi>
+      : f32 -> memref<f32> {par_dims = #acc<par_dims[thread_x]>}
+  // expected-error@-2 {{expected ::mlir::acc::ReductionOperator to be one of}}
+  // expected-error@-3 {{failed to parse OpenACC_ReductionOperatorAttr}}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_type_mismatch() {
+  %wrong_ty = arith.constant 3.0 : f32
+  %private_i32 = memref.alloca() : memref<i32>
+  // expected-error@+1 {{pointer-like element type must match value type}}
+  acc.reduction_accumulate %wrong_ty to %private_i32 <add>
+      : f32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_empty_par_dims() {
+  %partial3 = arith.constant 4 : i32
+  %private4 = memref.alloca() : memref<i32>
+  // expected-error@+1 {{par_dims must specify at least one parallel dimension}}
+  acc.reduction_accumulate %partial3 to %private4 <add>
+      : i32 -> memref<i32> {par_dims = #acc<par_dims[]>}
+  return
+}

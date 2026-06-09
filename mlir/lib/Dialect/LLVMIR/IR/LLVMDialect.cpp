@@ -1255,10 +1255,15 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
       fnType = fn.getFunctionType();
     } else if (auto ifunc = dyn_cast<IFuncOp>(callee)) {
       fnType = ifunc.getIFuncType();
+    } else if (isa<AliasOp>(callee)) {
+      // Aliases can alias functions, so calling through an alias is valid.
+      // The function type is determined by the call's operands and result
+      // types.
+      fnType = getCalleeFunctionType();
     } else {
       return emitOpError()
              << "'" << calleeName.getValue()
-             << "' does not reference a valid LLVM function or IFunc";
+             << "' does not reference a valid LLVM function, IFunc, or alias";
     }
   }
 
@@ -1938,12 +1943,16 @@ static Type getInsertExtractValueElementType(Type llvmType,
 }
 
 /// Extracts the element at the given index from an attribute. For
-/// `ElementsAttr` and `ArrayAttr`, returns the element at the specified index.
-/// For `ZeroAttr`, `UndefAttr`, and `PoisonAttr`, returns the attribute itself
-/// unchanged. Returns `nullptr` if the attribute is not one of these types or
-/// if the index is out of bounds.
+/// `ElementsAttr`, returns the element at the specified index, or `nullptr` if
+/// the shaped type does not have rank 1. For `ArrayAttr`, returns the element
+/// at the specified index. For `ZeroAttr`, `UndefAttr`, and `PoisonAttr`,
+/// returns the attribute itself unchanged. Returns `nullptr` if the attribute
+/// is not one of these types or if the index is out of bounds.
 static Attribute extractElementAt(Attribute attr, size_t index) {
   if (auto elementsAttr = dyn_cast<ElementsAttr>(attr)) {
+    ShapedType shapedType = elementsAttr.getShapedType();
+    if (!shapedType.hasRank() || shapedType.getRank() != 1)
+      return nullptr;
     if (index < static_cast<size_t>(elementsAttr.getNumElements()))
       return elementsAttr.getValues<Attribute>()[index];
     return nullptr;
@@ -2600,8 +2609,8 @@ static bool isZeroAttribute(Attribute value) {
 
 LogicalResult GlobalOp::verify() {
   bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
+                                    LLVMLabelType>(getType())
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
@@ -2821,8 +2830,8 @@ ParseResult AliasOp::parse(OpAsmParser &parser, OperationState &result) {
 
 LogicalResult AliasOp::verify() {
   bool validType = isCompatibleOuterType(getType())
-                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
-                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       ? !llvm::isa<LLVMVoidType, TokenType, LLVMMetadataType,
+                                    LLVMLabelType>(getType())
                        : llvm::isa<PointerElementTypeInterface>(getType());
   if (!validType)
     return emitOpError(
@@ -3035,6 +3044,15 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   if (functionEntryCount)
     result.addAttribute(getFunctionEntryCountAttrName(result.name),
                         builder.getI64IntegerAttr(functionEntryCount.value()));
+#ifndef NDEBUG
+  std::optional<NamedAttribute> duplicate = result.attributes.findDuplicate();
+  if (duplicate.has_value()) {
+    llvm::report_fatal_error(
+        Twine("LLVMFuncOp propagated an attribute that is meant "
+              "to be constructed by the builder: ") +
+        duplicate->getName().str());
+  }
+#endif
   if (argAttrs.empty())
     return;
 
@@ -3350,6 +3368,15 @@ OpFoldResult LLVM::PoisonOp::fold(FoldAdaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// MetadataAsValueOp.
+//===----------------------------------------------------------------------===//
+
+/// Fold a metadata-as-value operation to its wrapped metadata attribute.
+OpFoldResult LLVM::MetadataAsValueOp::fold(FoldAdaptor) {
+  return getMetadataAttr();
+}
+
+//===----------------------------------------------------------------------===//
 // ZeroOp.
 //===----------------------------------------------------------------------===//
 
@@ -3455,7 +3482,19 @@ static LogicalResult verifyStructArrayConstant(LLVM::ConstantOp op,
   // from a symbol and cannot be represented in a DenseElementsAttr, but no MLIR
   // user needs this so far, and it seems better to avoid people misusing the
   // ArrayAttr for simple types.
-  auto structType = dyn_cast<LLVM::LLVMStructType>(arrayType.getElementType());
+  Type elementType = arrayType.getElementType();
+  if (isa<LLVM::LLVMPointerType>(elementType)) {
+    for (auto [idx, elementAttr] : llvm::enumerate(arrayAttr)) {
+      if (isa<FlatSymbolRefAttr, LLVM::ZeroAttr, LLVM::UndefAttr,
+              LLVM::PoisonAttr>(elementAttr))
+        continue;
+      return op.emitOpError()
+             << "pointer array element at index " << idx
+             << " must be a flat symbol reference, zero, undef, or poison";
+    }
+    return success();
+  }
+  auto structType = dyn_cast<LLVM::LLVMStructType>(elementType);
   if (!structType)
     return op.emitOpError() << "for array with an array attribute must have a "
                                "struct element type";
@@ -3649,7 +3688,9 @@ LogicalResult AtomicRMWOp::verify() {
   if (getBinOp() == AtomicBinOp::fadd || getBinOp() == AtomicBinOp::fsub ||
       getBinOp() == AtomicBinOp::fmin || getBinOp() == AtomicBinOp::fmax ||
       getBinOp() == AtomicBinOp::fminimum ||
-      getBinOp() == AtomicBinOp::fmaximum) {
+      getBinOp() == AtomicBinOp::fmaximum ||
+      getBinOp() == AtomicBinOp::fminimumnum ||
+      getBinOp() == AtomicBinOp::fmaximumnum) {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
@@ -4434,7 +4475,6 @@ void LLVMDialect::initialize() {
 
   // clang-format off
   addTypes<LLVMVoidType,
-           LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType>();
   // clang-format on
@@ -4670,6 +4710,10 @@ Operation *LLVMDialect::materializeConstant(OpBuilder &builder, Attribute value,
     return LLVM::PoisonOp::create(builder, loc, type);
   if (isa<LLVM::ZeroAttr>(value))
     return LLVM::ZeroOp::create(builder, loc, type);
+  if (isa<LLVM::MDStringAttr, LLVM::MDConstantAttr, LLVM::MDFuncAttr,
+          LLVM::MDNodeAttr>(value))
+    if (isa<LLVM::LLVMMetadataType>(type))
+      return LLVM::MetadataAsValueOp::create(builder, loc, type, value);
   // Otherwise try materializing it as a regular llvm.mlir.constant op.
   return LLVM::ConstantOp::materialize(builder, value, type, loc);
 }

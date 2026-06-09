@@ -4,8 +4,6 @@
 
 ; float foo(void) { return float(2147483648); }
 define float @select_fp_const() {
-; CHECK-LABEL: select_opt4
-; CHECK: movi v0.2s, #79, lsl #24
 ; GISEL-LABEL: select_fp_const:
 ; GISEL:       // %bb.0: // %entry
 ; GISEL-NEXT:    movi v0.2s, #79, lsl #24

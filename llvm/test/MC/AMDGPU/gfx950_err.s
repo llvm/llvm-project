@@ -419,7 +419,7 @@ v_cvt_sr_f16_f32 v1, v2, v3 clamp
 // GFX950: :[[@LINE-1]]:29: error: invalid operand for instruction
 
 v_maximum3_f16 v0, v1, v2, v3
-// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx950): v_maximum3_f16
 
 v_maximum3_f32 v0, s1, s2, v3
 // GFX950: :[[@LINE-1]]:24: error: invalid operand (violates constant bus restrictions)
@@ -431,13 +431,13 @@ v_maximum3_f32 v0, v3, s1, s2
 // GFX950: :[[@LINE-1]]:28: error: invalid operand (violates constant bus restrictions)
 
 v_maximum_f16 v0, v1, v2
-// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx950): v_maximum_f16
 
 v_maximum_f32 v0, v1, v2
-// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx950): v_maximum_f32
 
 v_minimum3_f16 v0, v1, v2, v3
-// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx950): v_minimum3_f16
 
 v_minimum3_f32 v0, s1, s2, v3
 // GFX950: :[[@LINE-1]]:24: error: invalid operand (violates constant bus restrictions)
@@ -446,10 +446,10 @@ v_minimum3_f32 v0, v1, v2, 0xdeadbeef
 // GFX950: :[[@LINE-1]]:28: error: literal operands are not supported
 
 v_minimum_f16 v0, v1, v2
-// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx950): v_minimum_f16
 
 v_minimum_f32 v0, v1, v2
-// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX950: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx950): v_minimum_f32
 
 v_permlane16_swap_b32 s0, v0
 // GFX950: :[[@LINE-1]]:23: error: invalid operand for instruction

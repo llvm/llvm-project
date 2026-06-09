@@ -58,6 +58,9 @@ enum UniformityLLTOpPredicateID {
   DivS64,
   DivS128,
 
+  // any LLT, divergent-check only predicate
+  DivAnyTy,
+
   // pointers
   P0,
   P1,
@@ -97,16 +100,32 @@ enum UniformityLLTOpPredicateID {
   V2S64,
   V3S32,
   V4S32,
+  V32S32,
 
   UniV2S16,
   UniV2S32,
   UniV2S64,
+  UniV3S32,
+  UniV6S32,
+  UniV8S16,
+  UniV8S32,
+  UniV16S16,
+  UniV16S32,
+  UniV32S16,
+  UniV32S32,
 
   DivV2S16,
   DivV2S32,
   DivV2S64,
   DivV3S32,
   DivV4S16,
+  DivV8S16,
+  DivV8S32,
+  DivV16S16,
+  DivV16S32,
+  DivV6S32,
+  DivV32S16,
+  DivV32S32,
 
   // B types
   B32,
@@ -116,6 +135,7 @@ enum UniformityLLTOpPredicateID {
   B160,
   B256,
   B512,
+  BRC,
 
   UniB32,
   UniB64,
@@ -146,6 +166,10 @@ enum RegBankLLTMappingApplyID {
   IntrId,
   Imm,
   Vcc,
+
+  // any LLT, bank-only apply IDs
+  VgprAnyTy,
+  AgprAnyTy,
 
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,
@@ -199,6 +223,8 @@ enum RegBankLLTMappingApplyID {
   VgprB512,
   VgprBRC,
   VgprV4S16,
+  VgprV8S16,
+  VgprV16S16,
   VgprV4S32,
   VgprV8S32,
   VgprV2S64,
@@ -210,8 +236,16 @@ enum RegBankLLTMappingApplyID {
   UniInVgprS64,
   UniInVgprV2S16,
   UniInVgprV2S32,
+  UniInVgprV3S32,
   UniInVgprV4S32,
   UniInVgprV2S64,
+  UniInVgprV6S32,
+  UniInVgprV8S16,
+  UniInVgprV8S32,
+  UniInVgprV16S16,
+  UniInVgprV16S32,
+  UniInVgprV32S16,
+  UniInVgprV32S32,
   UniInVgprB32,
   UniInVgprB64,
   UniInVgprB96,
@@ -243,6 +277,8 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: operand must be SGPR, if in VGPR, insert readfirstlane
   // to move to SGPR.
   SgprB32_ReadFirstLane,
+  SgprB64_ReadFirstLane,
+  SgprV4S32_ReadFirstLane,
 
   // Src only modifiers: extends
   Sgpr32AExt,
@@ -252,6 +288,11 @@ enum RegBankLLTMappingApplyID {
   Vgpr32AExt,
   Vgpr32SExt,
   Vgpr32ZExt,
+
+  VgprV6S32,
+  VgprV16S32,
+  VgprV32S16,
+  VgprV32S32,
 };
 
 // Instruction needs to be replaced with sequence of instructions. Lowering was
@@ -278,6 +319,7 @@ enum LoweringMethodID {
   SplitTo32SExtInReg,
   Ext32To64,
   UniCstExt,
+  CtPop64To32,
   SplitLoad,
   WidenLoad,
   WidenMMOToS32,
@@ -289,7 +331,14 @@ enum LoweringMethodID {
   VerifyAllSgprGPHI,
   VerifyAllSgprOrVgprGPHI,
   ApplyINTRIN_IMAGE,
-  SplitBitCount64To32
+  ApplyBVH_INTERSECT_RAY,
+  SplitBitCount64To32,
+  ExtrVecEltToSel,
+  ExtrVecEltTo32,
+  InsVecEltToSel,
+  InsVecEltTo32,
+  AbsToNegMax,
+  AbsToS32
 };
 
 enum FastRulesTypes {

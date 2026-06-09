@@ -39,11 +39,25 @@ static cl::opt<bool> LineInfoWithInlinedAt(
 NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {
   // PTX emits debug strings inline (no .debug_str section), does not support
   // .debug_ranges, and uses sections as references (no temp symbols inside
-  // DWARF sections).  DWARF v2 is the default for NVPTX.
+  // DWARF sections).  DWARF v2 is the default for NVPTX and does not support
+  // accelerator tables.
   setUseInlineStrings(true);
   setUseRangesSection(false);
   setUseSectionsAsReferences(true);
   Asm->OutStreamer->getContext().setDwarfVersion(2);
+  setTheAccelTableKind(AccelTableKind::None);
+}
+
+MCSymbol *NVPTXDwarfDebug::getOrCreateFuncNameSymbol(StringRef LinkageName) {
+  return InfoHolder.getStringPool().getEntry(*Asm, LinkageName).getSymbol();
+}
+
+bool NVPTXDwarfDebug::isEnhancedLineinfo(const MachineFunction &MF) const {
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  const NVPTXSubtarget &STI = MF.getSubtarget<NVPTXSubtarget>();
+  return LineInfoWithInlinedAt && (STI.getPTXVersion() >= 72) && SP &&
+         (SP->getUnit()->isDebugDirectivesOnly() ||
+          SP->getUnit()->getEmissionKind() == DICompileUnit::LineTablesOnly);
 }
 
 /// NVPTX-specific source line recording with inlined_at support.
@@ -105,12 +119,7 @@ void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
   if (!MF)
     return;
 
-  const DISubprogram *SP = MF->getFunction().getSubprogram();
-  const NVPTXSubtarget &STI = MF->getSubtarget<NVPTXSubtarget>();
-  const bool EnhancedLineinfo =
-      LineInfoWithInlinedAt && (STI.getPTXVersion() >= 72) && SP &&
-      (SP->getUnit()->isDebugDirectivesOnly() ||
-       SP->getUnit()->getEmissionKind() == DICompileUnit::LineTablesOnly);
+  const bool EnhancedLineinfo = isEnhancedLineinfo(*MF);
 
   while (EmitLoc) {
     // Get the scope for the current location.
@@ -269,4 +278,19 @@ void NVPTXDwarfDebug::addTargetVariableAttributes(
 
   CU.addUInt(Die, dwarf::DW_AT_address_class, dwarf::DW_FORM_data1,
              TargetAddrSpace.value_or(DefaultAddrSpace));
+}
+
+void NVPTXDwarfDebug::finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                                 DwarfCompileUnit &NewCU) {
+  uint16_t Dialect = DIUnit.getSourceLanguage().getDialect();
+  // A zero dialect means "no dialect specified"; nothing to emit. This field
+  // should have already been range-checked by the assembly parser, IR verifier,
+  // and bitcode reader.
+  assert(Dialect <= dwarf::DW_LLVM_LANG_DIALECT_max &&
+         "Invalid or unsupported NVPTX language dialect.");
+  if (Dialect == 0)
+    return;
+
+  NewCU.addUInt(NewCU.getUnitDie(), dwarf::DW_AT_LLVM_language_dialect,
+                dwarf::DW_FORM_data1, Dialect);
 }

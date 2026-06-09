@@ -169,7 +169,7 @@ __device__ double test_isnan() {
 // MALLOC:  call i64 @__ockl_dm_alloc
 // NOMALLOC:  call void @llvm.trap
 // MALLOC-ASAN-LABEL: define weak {{.*}}ptr @malloc(i64
-// MALLOC-ASAN:  call ptr @llvm.returnaddress(i32 0)
+// MALLOC-ASAN:  call ptr @llvm.returnaddress.p0(i32 0)
 // MALLOC-ASAN:  call i64 @__asan_malloc_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_malloc(void *a) {
   a = malloc(42);
@@ -183,7 +183,7 @@ __device__ void test_malloc(void *a) {
 // MALLOC:  call void @__ockl_dm_dealloc
 // NOMALLOC: call void @llvm.trap
 // MALLOC-ASAN-LABEL: define weak {{.*}}void @free(ptr
-// MALLOC-ASAN:  call ptr @llvm.returnaddress(i32 0)
+// MALLOC-ASAN:  call ptr @llvm.returnaddress.p0(i32 0)
 // MALLOC-ASAN:  call void @__asan_free_impl(i64 {{.*}}, i64 {{.*}})
 __device__ void test_free(void *a) {
   free(a);

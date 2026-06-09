@@ -183,12 +183,14 @@ constexpr auto limitedSpecificationPart{inContext("specification part"_en_US,
         implicitPart, many(limitedDeclarationConstruct)))};
 
 // R508 specification-construct ->
-//        derived-type-def | enum-def | generic-stmt | interface-block |
-//        parameter-stmt | procedure-declaration-stmt |
+//        derived-type-def | enum-def |  enumeration-type-def | generic-stmt |
+//        interface-block | parameter-stmt | procedure-declaration-stmt |
 //        other-specification-stmt | type-declaration-stmt
 TYPE_CONTEXT_PARSER("specification construct"_en_US,
     first(construct<SpecificationConstruct>(indirect(Parser<DerivedTypeDef>{})),
         construct<SpecificationConstruct>(indirect(Parser<EnumDef>{})),
+        construct<SpecificationConstruct>(
+            indirect(Parser<EnumerationTypeDef>{})),
         construct<SpecificationConstruct>(
             statement(indirect(Parser<GenericStmt>{}))),
         construct<SpecificationConstruct>(indirect(interfaceBlock)),
@@ -371,9 +373,11 @@ TYPE_PARSER(construct<InterfaceBlock>(statement(Parser<InterfaceStmt>{}),
     many(Parser<InterfaceSpecification>{}),
     statement(Parser<EndInterfaceStmt>{})))
 
-// R1502 interface-specification -> interface-body | procedure-stmt
+// R1502 interface-specification ->
+//         interface-body | procedure-stmt | compiler-directive
 TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
-    construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})))
+    construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})) ||
+    construct<InterfaceSpecification>(indirect(compilerDirective)))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
@@ -510,15 +514,34 @@ TYPE_PARSER(construct<ProcedureDesignator>(Parser<ProcComponentRef>{}) ||
 TYPE_PARSER(construct<ActualArgSpec>(
     maybe(keyword / "=" / !"="_ch), Parser<ActualArg>{}))
 
+// F2023 R1527 consequent -> consequent-arg | .NIL.
+// F2023 R1528 consequent-arg -> expr | variable
+// N.B. "variable" is subsumed by "expr" in the parser;
+// semantics determines the distinction.
+constexpr auto consequent{construct<ConditionalArg::Consequent>(
+                              ".NIL." >> construct<ConditionalArgNil>()) ||
+    construct<ConditionalArg::Consequent>(indirect(expr))};
+
+// F2023 R1526 conditional-arg ->
+//   scalar-logical-expr ? consequent : conditional-arg-or-consequent
+// The outer parentheses are added at the ActualArg level.
+TYPE_PARSER(construct<ConditionalArg>(scalarLogicalExpr / "?", consequent / ":",
+    indirect(Parser<ConditionalArgTail>{})))
+
+// conditional-arg-part-or-consequent -> conditional-arg | consequent
+TYPE_PARSER(construct<ConditionalArgTail>(Parser<ConditionalArg>{}) ||
+    construct<ConditionalArgTail>(consequent))
+
 // R1524 actual-arg ->
 //         expr | variable | procedure-name | proc-component-ref |
-//         alt-return-spec
+//         alt-return-spec | conditional-arg
 // N.B. the "procedure-name" and "proc-component-ref" alternatives can't
 // yet be distinguished from "variable", many instances of which can't be
 // distinguished from "expr" anyway (to do so would misparse structure
 // constructors and function calls as array elements).
 // Semantics sorts it all out later.
-TYPE_PARSER(construct<ActualArg>(expr) ||
+TYPE_PARSER(construct<ActualArg>(parenthesized(Parser<ConditionalArg>{})) ||
+    construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
     extension<LanguageFeature::PercentRefAndVal>(
         "nonstandard usage: %REF"_port_en_US,
@@ -534,7 +557,7 @@ TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 
 // R1527 prefix-spec ->
 //         declaration-type-spec | ELEMENTAL | IMPURE | MODULE |
-//         NON_RECURSIVE | PURE | RECURSIVE |
+//         NON_RECURSIVE | PURE | RECURSIVE | SIMPLE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
 TYPE_PARSER(withMessage(
@@ -551,6 +574,7 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
         construct<PrefixSpec::Non_Recursive>("NON_RECURSIVE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
+    construct<PrefixSpec>(construct<PrefixSpec::Simple>("SIMPLE"_tok)),
     extension<LanguageFeature::CUDA>(
         construct<PrefixSpec>(construct<PrefixSpec::Attributes>(
             localRecovery("expected valid ATTRIBUTES specification"_err_en_US,

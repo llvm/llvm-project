@@ -479,7 +479,11 @@ ParsedType Sema::getDestructorTypeForDecltype(const DeclSpec &DS,
     return nullptr;
   }
 
-  return ParsedType::make(T);
+  TypeLocBuilder TLB;
+  DecltypeTypeLoc DecltypeTL = TLB.push<DecltypeTypeLoc>(T);
+  DecltypeTL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
+  DecltypeTL.setRParenLoc(DS.getTypeofParensRange().getEnd());
+  return CreateParsedType(T, TLB.getTypeSourceInfo(Context, T));
 }
 
 bool Sema::checkLiteralOperatorId(const CXXScopeSpec &SS,
@@ -1429,7 +1433,7 @@ bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
   const auto *Method = dyn_cast<CXXMethodDecl>(DC);
   if (Method && Method->isExplicitObjectMemberFunction()) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (Method && isLambdaCallWithExplicitObjectParameter(CurContext)) {
+  } else if (Method && isLambdaCallWithExplicitObjectParameter(DC)) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
   } else {
     Diag(Loc, diag::err_invalid_this_use) << 0;
@@ -1485,11 +1489,6 @@ void Sema::MarkThisReferenced(CXXThisExpr *This) {
 }
 
 bool Sema::isThisOutsideMemberFunctionBody(QualType BaseType) {
-  // If we're outside the body of a member function, then we'll have a specified
-  // type for 'this'.
-  if (CXXThisTypeOverride.isNull())
-    return false;
-
   // Determine whether we're looking into a class that's currently being
   // defined.
   CXXRecordDecl *Class = BaseType->getAsCXXRecordDecl();
@@ -1674,7 +1673,15 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
     // CXXTemporaryObjectExpr. It's also weird that the functional cast
     // is sometimes handled by initialization and sometimes not.
     QualType ResultType = Result.get()->getType();
-    SourceRange Locs = ListInitialization
+    // In HLSL, vector/matrix constructors have their arguments wrapped into an
+    // InitListExpr during initialization sequencing. Mark the resulting
+    // CXXFunctionalCastExpr as list-initialization so that during template
+    // re-instantiation, TreeTransform correctly passes the InitListExpr back
+    // through BuildCXXTypeConstructExpr with ListInitialization=true as opposed
+    // to false.
+    bool IsListInit = ListInitialization ||
+                      (getLangOpts().HLSL && isa<InitListExpr>(Result.get()));
+    SourceRange Locs = IsListInit
                            ? SourceRange()
                            : SourceRange(LParenOrBraceLoc, RParenOrBraceLoc);
     Result = CXXFunctionalCastExpr::Create(
@@ -2206,9 +2213,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           << /*array*/ 2
           << (*ArraySize ? (*ArraySize)->getSourceRange() : TypeRange));
 
-    InitializedEntity Entity =
-        InitializedEntity::InitializeNew(StartLoc, AllocType,
-                                         /*VariableLengthArrayNew=*/false);
+    InitializedEntity Entity = InitializedEntity::InitializeNew(
+        StartLoc, AllocType, InitializedEntity::NewArrayKind::KnownLength);
     AllocType = DeduceTemplateSpecializationFromInitializer(
         AllocTypeInfo, Entity, Kind, Exprs);
     if (AllocType.isNull())
@@ -2592,7 +2598,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     bool VariableLengthArrayNew = ArraySize && *ArraySize && !KnownArraySize;
     InitializedEntity Entity = InitializedEntity::InitializeNew(
-        StartLoc, InitType, VariableLengthArrayNew);
+        StartLoc, InitType,
+        VariableLengthArrayNew ? InitializedEntity::NewArrayKind::UnknownLength
+                               : InitializedEntity::NewArrayKind::KnownLength);
     InitializationSequence InitSeq(*this, Entity, Kind, Exprs);
     ExprResult FullInit = InitSeq.Perform(*this, Entity, Kind, Exprs);
     if (FullInit.isInvalid())
@@ -3444,6 +3452,13 @@ void Sema::DeclareGlobalNewDelete() {
     AlignValT->setIntegerType(Context.getSizeType());
     AlignValT->setPromotionType(Context.getSizeType());
     AlignValT->setImplicit(true);
+
+    // Add to the std namespace so that the module merger can find it via
+    // noload_lookup and merge it with the module's explicit definition.
+    // We want the created EnumDecl to be available for redeclaration lookups,
+    // but not for regular name lookups (same pattern as
+    // getOrCreateStdNamespace).
+    getOrCreateStdNamespace()->addDecl(AlignValT);
 
     StdAlignValT = AlignValT;
   }
@@ -5329,9 +5344,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     case ICK_HLSL_Matrix_Truncation: {
       auto *FromMat = From->getType()->castAs<ConstantMatrixType>();
       QualType TruncTy = FromMat->getElementType();
-      if (auto *ToMat = ToType->getAs<ConstantMatrixType>())
-        TruncTy = Context.getConstantMatrixType(TruncTy, ToMat->getNumRows(),
-                                                ToMat->getNumColumns());
+      // Preserve any sugar (e.g. `row_major`/`column_major` HLSL TypeAttrs) on
+      // `ToType` so that downstream CodeGen can query the destination layout
+      // from the cast node itself rather than falling back to the TU default.
+      if (ToType->getAs<ConstantMatrixType>())
+        TruncTy = ToType;
       From = ImpCastExprToType(From, TruncTy, CK_HLSLMatrixTruncation,
                                From->getValueKind())
                  .get();
@@ -6631,6 +6648,9 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
       ObjCMethodDecl *D = nullptr;
       if (ObjCMessageExpr *Send = dyn_cast<ObjCMessageExpr>(E)) {
         D = Send->getMethodDecl();
+      } else if (auto *OL = dyn_cast<ObjCObjectLiteral>(E);
+                 OL && OL->isGlobalAllocation()) {
+        return E;
       } else if (ObjCBoxedExpr *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
         D = BoxedExpr->getBoxingMethod();
       } else if (ObjCArrayLiteral *ArrayLit = dyn_cast<ObjCArrayLiteral>(E)) {
@@ -6641,8 +6661,8 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
           return E;
 
         D = ArrayLit->getArrayWithObjectsMethod();
-      } else if (ObjCDictionaryLiteral *DictLit
-                                        = dyn_cast<ObjCDictionaryLiteral>(E)) {
+      } else if (ObjCDictionaryLiteral *DictLit =
+                     dyn_cast<ObjCDictionaryLiteral>(E)) {
         // Don't do reclaims if we're using the zero-element dictionary
         // constant.
         if (DictLit->getNumElements() == 0 &&
@@ -7497,7 +7517,7 @@ static void MaybeDecrementCount(
   if ((IsCompoundAssign || isIncrementDecrementUnaryOp) &&
       VD->getType().isVolatileQualified())
     return;
-  auto iter = RefsMinusAssignments.find(VD);
+  auto iter = RefsMinusAssignments.find(VD->getCanonicalDecl());
   if (iter == RefsMinusAssignments.end())
     return;
   iter->getSecond()--;
@@ -7981,6 +8001,8 @@ Sema::BuildExprRequirement(
     assert(TC && "Type Constraint cannot be null here");
     auto *IDC = TC->getImmediatelyDeclaredConstraint();
     assert(IDC && "ImmediatelyDeclaredConstraint can't be null here.");
+
+    SFINAETrap Trap(*this);
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     bool HasError = Constraint.isInvalid();
     if (!HasError) {
@@ -7990,6 +8012,8 @@ Sema::BuildExprRequirement(
         HasError = true;
     }
     if (HasError) {
+      // FIXME: Capture diagnostics from the SFINAE trap and store them in the
+      // requirement.
       return new (Context) concepts::ExprRequirement(
           createSubstDiagAt(IDC->getExprLoc(),
                             [&](llvm::raw_ostream &OS) {

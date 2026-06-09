@@ -3044,10 +3044,13 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
   unsigned MaxNumInstToLookAt = 9;
   // Skip pseudo probe intrinsic calls which are not really killing any memory
   // accesses.
-  for (Instruction &CurI : reverse(BrBB->instructionsWithoutDebug(true))) {
+  for (Instruction &CurI : reverse(*BrBB)) {
     if (!MaxNumInstToLookAt)
       break;
     --MaxNumInstToLookAt;
+
+    if (isa<PseudoProbeInst>(CurI))
+      continue;
 
     // Could be calling an instruction that affects memory like free().
     if (CurI.mayWriteToMemory() && !isa<StoreInst>(CurI))
@@ -3072,8 +3075,8 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         bool ExplicitlyDereferenceableOnly;
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
             capturesNothing(
-                PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
-                                     CaptureComponents::Provenance)) &&
+                PointerMayBeCaptured(Obj, CaptureComponents::Provenance)
+                    .WithoutRet) &&
             (!ExplicitlyDereferenceableOnly ||
              isDereferenceablePointer(StorePtr, StoreTy,
                                       LI->getDataLayout()))) {
@@ -3345,7 +3348,7 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(CondBrInst *BI,
     SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
                                          SpeculatedStore->getDebugLoc());
     // The value stored is still conditional, but the store itself is now
-    // unconditonally executed, so we must be sure that any linked dbg.assign
+    // unconditionally executed, so we must be sure that any linked dbg.assign
     // intrinsics are tracking the new stored value (the result of the
     // select). If we don't, and the store were to be removed by another pass
     // (e.g. DSE), then we'd eventually end up emitting a location describing
@@ -3467,7 +3470,7 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
 
   // Walk the loop in reverse so that we can identify ephemeral values properly
   // (values only feeding assumes).
-  for (Instruction &I : reverse(BB->instructionsWithoutDebug(false))) {
+  for (Instruction &I : reverse(*BB)) {
     // Can't fold blocks that contain noduplicate or convergent calls.
     if (CallInst *CI = dyn_cast<CallInst>(&I))
       if (CI->cannotDuplicate() || CI->isConvergent())
@@ -4321,6 +4324,8 @@ static bool mergeConditionalStoreToAddress(
 
   // Now check the stores are compatible.
   if (!QStore->isUnordered() || !PStore->isUnordered() ||
+      PStore->getOrdering() != QStore->getOrdering() ||
+      PStore->getSyncScopeID() != QStore->getSyncScopeID() ||
       PStore->getValueOperand()->getType() !=
           QStore->getValueOperand()->getType())
     return false;
@@ -4362,7 +4367,7 @@ static bool mergeConditionalStoreToAddress(
     InstructionCost Cost = 0;
     InstructionCost Budget =
         PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
-    for (auto &I : BB->instructionsWithoutDebug(false)) {
+    for (auto &I : *BB) {
       // Consider terminator instruction to be free.
       if (I.isTerminator())
         continue;
@@ -4454,12 +4459,27 @@ static bool mergeConditionalStoreToAddress(
 
   QB.SetInsertPoint(T);
   StoreInst *SI = cast<StoreInst>(QB.CreateStore(QPHI, Address));
-  SI->setAAMetadata(PStore->getAAMetadata().merge(QStore->getAAMetadata()));
+  combineMetadataForCSE(QStore, PStore, true);
+  SI->copyMetadata(*QStore);
+  // Update any dbg.assign intrinsics to track the merged value (QPHI) instead
+  // of the original constant values, likely making these identical.
+  for (auto *DbgAssign : at::getDVRAssignmentMarkers(SI)) {
+    if (llvm::is_contained(DbgAssign->location_ops(),
+                           PStore->getValueOperand()))
+      DbgAssign->replaceVariableLocationOp(PStore->getValueOperand(), QPHI);
+    if (llvm::is_contained(DbgAssign->location_ops(),
+                           QStore->getValueOperand()))
+      DbgAssign->replaceVariableLocationOp(QStore->getValueOperand(), QPHI);
+  }
+
   // Choose the minimum alignment. If we could prove both stores execute, we
   // could use biggest one.  In this case, though, we only know that one of the
   // stores executes.  And we don't know it's safe to take the alignment from a
   // store that doesn't execute.
   SI->setAlignment(std::min(PStore->getAlign(), QStore->getAlign()));
+
+  if (QStore->isAtomic())
+    SI->setAtomic(QStore->getOrdering(), QStore->getSyncScopeID());
 
   QStore->eraseFromParent();
   PStore->eraseFromParent();
@@ -4676,7 +4696,7 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
   // fold the conditions into logical ops and one cond br.
 
   // Ignore dbg intrinsics.
-  if (&*BB->instructionsWithoutDebug(false).begin() != BI)
+  if (&*BB->begin() != BI)
     return false;
 
   int PBIOp, BIOp;
@@ -4813,7 +4833,7 @@ static bool SimplifyCondBranchToCondBranch(CondBrInst *PBI, CondBrInst *BI,
       if (auto *SI = dyn_cast<SelectInst>(Cond)) {
         assert(isSelectInRoleOfConjunctionOrDisjunction(SI));
         // The select is predicated on PBICond
-        assert(dyn_cast<SelectInst>(SI)->getCondition() == PBICond);
+        assert(SI->getCondition() == PBICond);
         // The corresponding probabilities are what was referred to above as
         // PredCommon and PredOther.
         setFittedBranchWeights(*SI, {PredCommon, PredOther},
@@ -5884,7 +5904,8 @@ findContiguousCases(Value *Condition, SmallVectorImpl<ConstantInt *> &Cases,
         /*OtherCases=*/&OtherCases,
     };
   }
-  ConstantRange CR = computeConstantRange(Condition, /*ForSigned=*/false);
+  ConstantRange CR = computeConstantRange(Condition, /*ForSigned=*/false,
+                                          SimplifyQuery(Dest->getDataLayout()));
   // If this is a wrapping contiguous range, that is, [Min, OtherMin] +
   // [OtherMax, Max] (also [OtherMax, OtherMin]), [OtherMin+1, OtherMax-1] is a
   // contiguous range for the other destination. N.B. If CR is not a full range,
@@ -6387,7 +6408,7 @@ getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
   // which we can constant-propagate the CaseVal, continue to its successor.
   SmallDenseMap<Value *, Constant *> ConstantPool;
   ConstantPool.insert(std::make_pair(SI->getCondition(), CaseVal));
-  for (Instruction &I : CaseDest->instructionsWithoutDebug(false)) {
+  for (Instruction &I : *CaseDest) {
     if (I.isTerminator()) {
       // If the terminator is a simple branch, continue to the next block.
       if (I.getNumSuccessors() != 1 || I.isSpecialTerminator())
@@ -6949,8 +6970,23 @@ SwitchReplacement::SwitchReplacement(
     return;
   }
 
+  if (auto *IT = dyn_cast<IntegerType>(ValueType)) {
+    ConstantRange Range(IT->getBitWidth(), false);
+    for (Constant *Value : TableContents)
+      if (!isa<UndefValue>(Value))
+        Range = Range.unionWith(cast<ConstantInt>(Value)->getValue());
+    // TODO: handle sign extension as well?
+    unsigned NeededBitWidth =
+        std::max(8u, unsigned(PowerOf2Ceil(Range.getActiveBits())));
+    if (NeededBitWidth < IT->getBitWidth()) {
+      IntegerType *DstTy = IntegerType::get(IT->getContext(), NeededBitWidth);
+      for (Constant *&Value : TableContents)
+        Value = ConstantFoldCastInstruction(Instruction::Trunc, Value, DstTy);
+    }
+  }
+
   // Store the table in an array.
-  auto *TableTy = ArrayType::get(ValueType, TableSize);
+  auto *TableTy = ArrayType::get(TableContents[0]->getType(), TableSize);
   Initializer = ConstantArray::get(TableTy, TableContents);
 
   Kind = LookupTableKind;
@@ -7024,7 +7060,11 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
     Value *GEP =
         Builder.CreateInBoundsGEP(ArrayTy, Table, GEPIndices, "switch.gep");
-    return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
+    Value *Load =
+        Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
+    if (Load->getType() == ValueType)
+      return Load;
+    return Builder.CreateZExt(Load, ValueType, "switch.ext");
   }
   }
   llvm_unreachable("Unknown helper kind!");
@@ -7072,11 +7112,12 @@ bool SwitchReplacement::isLookupTable() { return Kind == LookupTableKind; }
 
 bool SwitchReplacement::isBitMap() { return Kind == BitMapKind; }
 
-static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
+static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange, bool OptSize) {
   // 40% is the default density for building a jump table in optsize/minsize
-  // mode. See also TargetLoweringBase::isSuitableForJumpTable(), which this
-  // function was based on.
-  const uint64_t MinDensity = 40;
+  // mode, 10% is the default density for jump tables. See also
+  // TargetLoweringBase::isSuitableForJumpTable(), which this function was based
+  // on.
+  const uint64_t MinDensity = OptSize ? 40 : 10;
 
   if (CaseRange >= UINT64_MAX / 100)
     return false; // Avoid multiplication overflows below.
@@ -7084,13 +7125,13 @@ static bool isSwitchDense(uint64_t NumCases, uint64_t CaseRange) {
   return NumCases * 100 >= CaseRange * MinDensity;
 }
 
-static bool isSwitchDense(ArrayRef<int64_t> Values) {
+static bool isSwitchDense(ArrayRef<int64_t> Values, bool OptSize) {
   uint64_t Diff = (uint64_t)Values.back() - (uint64_t)Values.front();
   uint64_t Range = Diff + 1;
   if (Range < Diff)
     return false; // Overflow.
 
-  return isSwitchDense(Values.size(), Range);
+  return isSwitchDense(Values.size(), Range, OptSize);
 }
 
 /// Determine whether a lookup table should be built for this switch, based on
@@ -7131,7 +7172,8 @@ static bool shouldBuildLookupTable(SwitchInst *SI, uint64_t TableSize,
   if (HasIllegalType)
     return false;
 
-  return isSwitchDense(SI->getNumCases(), TableSize);
+  return isSwitchDense(SI->getNumCases(), TableSize,
+                       SI->getFunction()->hasOptSize());
 }
 
 static bool shouldUseSwitchConditionAsTableIndex(
@@ -7364,8 +7406,8 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
       // Grow the table to cover all possible index values to avoid the range
       // check. It will use the default result to fill in the table hole later,
       // so make sure it exist.
-      ConstantRange CR =
-          computeConstantRange(TableIndex, /* ForSigned */ false);
+      ConstantRange CR = computeConstantRange(TableIndex, /*ForSigned=*/false,
+                                              SimplifyQuery(DL));
       // Grow the table shouldn't have any size impact by checking
       // wouldFitInRegister.
       // TODO: Consider growing the table also when it doesn't fit in a register
@@ -7614,7 +7656,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   llvm::sort(Values);
 
   // If the switch is already dense, there's nothing useful to do here.
-  if (isSwitchDense(Values))
+  if (isSwitchDense(Values, SI->getFunction()->hasOptSize()))
     return false;
 
   // First, transform the values such that they start at zero and ascend.
@@ -7640,7 +7682,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
     for (auto &V : Values)
       V = (int64_t)((uint64_t)V >> Shift);
 
-  if (!isSwitchDense(Values))
+  if (!isSwitchDense(Values, SI->getFunction()->hasOptSize()))
     // Transform didn't create a dense switch.
     return false;
 
@@ -7792,8 +7834,10 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
 
   // isSwichDense requires case values to be sorted.
   llvm::sort(Values);
-  if (!isSwitchDense(Values.size(), llvm::countr_zero(Values.back()) -
-                                        llvm::countr_zero(Values.front()) + 1))
+  if (!isSwitchDense(Values.size(),
+                     llvm::countr_zero(Values.back()) -
+                         llvm::countr_zero(Values.front()) + 1,
+                     SI->getFunction()->hasOptSize()))
     // Transform is unable to generate dense switch.
     return false;
 
@@ -8031,13 +8075,6 @@ struct EqualBBWrapper {
 };
 
 template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
-  static const EqualBBWrapper *getEmptyKey() {
-    return static_cast<EqualBBWrapper *>(DenseMapInfo<void *>::getEmptyKey());
-  }
-  static const EqualBBWrapper *getTombstoneKey() {
-    return static_cast<EqualBBWrapper *>(
-        DenseMapInfo<void *>::getTombstoneKey());
-  }
   static unsigned getHashValue(const EqualBBWrapper *EBW) {
     BasicBlock *BB = EBW->BB;
     UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
@@ -8057,11 +8094,6 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
     return hash_combine(Succ, hash_combine_range(PhiValsForBB));
   }
   static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
-    auto *EKey = DenseMapInfo<EqualBBWrapper *>::getEmptyKey();
-    auto *TKey = DenseMapInfo<EqualBBWrapper *>::getTombstoneKey();
-    if (LHS == EKey || RHS == EKey || LHS == TKey || RHS == TKey)
-      return LHS == RHS;
-
     BasicBlock *A = LHS->BB;
     BasicBlock *B = RHS->BB;
 
@@ -8246,7 +8278,7 @@ bool SimplifyCFGOpt::simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
 
     // If the block only contains the switch, see if we can fold the block
     // away into any preds.
-    if (SI == &*BB->instructionsWithoutDebug(false).begin())
+    if (SI == &*BB->begin())
       if (foldValueComparisonIntoPredecessors(SI, Builder))
         return requestResimplify();
   }
@@ -8604,15 +8636,15 @@ bool SimplifyCFGOpt::simplifyCondBranch(CondBrInst *BI, IRBuilder<> &Builder) {
         return requestResimplify();
 
     // This block must be empty, except for the setcond inst, if it exists.
-    // Ignore dbg and pseudo intrinsics.
-    auto I = BB->instructionsWithoutDebug(true).begin();
-    if (&*I == BI) {
-      if (foldValueComparisonIntoPredecessors(BI, Builder))
-        return requestResimplify();
-    } else if (&*I == cast<Instruction>(BI->getCondition())) {
-      ++I;
-      if (&*I == BI && foldValueComparisonIntoPredecessors(BI, Builder))
-        return requestResimplify();
+    // Ignore pseudo intrinsics.
+    for (auto &I : *BB) {
+      if (isa<PseudoProbeInst>(I) ||
+          &I == cast<Instruction>(BI->getCondition()))
+        continue;
+      if (&I == BI)
+        if (foldValueComparisonIntoPredecessors(BI, Builder))
+          return requestResimplify();
+      break;
     }
   }
 
@@ -8736,10 +8768,14 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
     return false;
 
   if (C->isNullValue() || isa<UndefValue>(C)) {
-    // Only look at the first use we can handle, avoid hurting compile time with
-    // long uselists
-    auto FindUse = llvm::find_if(I->uses(), [](auto &U) {
+    // Find the first same-block use with a UB-triggering opcode, skipping
+    // cross-block or before-I uses.
+    auto FindUse = llvm::find_if(I->uses(), [I](auto &U) {
       auto *Use = cast<Instruction>(U.getUser());
+      // Only same-block uses after I can witness UB at I's program point.
+      // Self-uses and before-I uses can occur when I is a PHI node.
+      if (Use->getParent() != I->getParent() || Use == I || Use->comesBefore(I))
+        return false;
       // Change this list when we want to add new instructions.
       switch (Use->getOpcode()) {
       default:
@@ -8766,12 +8802,6 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
       return false;
     auto &Use = *FindUse;
     auto *User = cast<Instruction>(Use.getUser());
-    // Bail out if User is not in the same BB as I or User == I or User comes
-    // before I in the block. The latter two can be the case if User is a
-    // PHI node.
-    if (User->getParent() != I->getParent() || User == I ||
-        User->comesBefore(I))
-      return false;
 
     // Now make sure that there are no instructions in between that can alter
     // control flow (eg. calls)

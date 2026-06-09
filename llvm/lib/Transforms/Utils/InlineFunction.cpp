@@ -560,6 +560,7 @@ static Value *getUnwindDestToken(Instruction *EHPad,
 /// nodes in that block with the values specified in InvokeDestPHIValues.
 static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
     BasicBlock *BB, BasicBlock *UnwindEdge,
+    SmallSetVector<const Value *, 4> &OriginallyIndirectCalls,
     UnwindDestMemoTy *FuncletUnwindMap = nullptr) {
   for (Instruction &I : llvm::make_early_inc_range(*BB)) {
     // We only need to check for function calls: inlined invoke
@@ -605,7 +606,10 @@ static BasicBlock *HandleCallsInBlockInlinedThroughInvoke(
 #endif // NDEBUG
     }
 
+    bool WasIndirect = OriginallyIndirectCalls.remove(CI);
     changeToInvokeAndSplitBasicBlock(CI, UnwindEdge);
+    if (WasIndirect)
+      OriginallyIndirectCalls.insert(BB->getTerminator());
     return BB;
   }
   return nullptr;
@@ -651,7 +655,8 @@ static void HandleInlinedLandingPad(InvokeInst *II, BasicBlock *FirstNewBlock,
        BB != E; ++BB) {
     if (InlinedCodeInfo.ContainsCalls)
       if (BasicBlock *NewBB = HandleCallsInBlockInlinedThroughInvoke(
-              &*BB, Invoke.getOuterResumeDest()))
+              &*BB, Invoke.getOuterResumeDest(),
+              InlinedCodeInfo.OriginallyIndirectCalls))
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         Invoke.addIncomingPHIValuesFor(NewBB);
@@ -785,7 +790,8 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
                             E = Caller->end();
          BB != E; ++BB)
       if (BasicBlock *NewBB = HandleCallsInBlockInlinedThroughInvoke(
-              &*BB, UnwindDest, &FuncletUnwindMap))
+              &*BB, UnwindDest, InlinedCodeInfo.OriginallyIndirectCalls,
+              &FuncletUnwindMap))
         // Update any PHI nodes in the exceptional block to indicate that there
         // is now a new entry in them.
         UpdatePHINodes(NewBB);
@@ -931,6 +937,62 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
   }
 }
 
+/// Collect all calls that produce RetVal, following only pointer-preserving
+/// instructions (cast, phi, select).
+static void collectPointerReturningCalls(Value *RetVal,
+                                         SmallVectorImpl<CallBase *> &Out) {
+  SmallVector<Value *, 8> Worklist{RetVal};
+  SmallPtrSet<Value *, 8> Visited;
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!V->getType()->isPointerTy() || !Visited.insert(V).second)
+      continue;
+    if (auto *CB = dyn_cast<CallBase>(V))
+      Out.push_back(CB);
+    else if (isa<BitCastInst, AddrSpaceCastInst>(V))
+      Worklist.push_back(cast<CastInst>(V)->getOperand(0));
+    else if (auto *PN = dyn_cast<PHINode>(V))
+      append_range(Worklist, PN->incoming_values());
+    else if (auto *SI = dyn_cast<SelectInst>(V)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+    }
+  }
+}
+
+/// When inlining a call that carries !alloc_token metadata, propagate that
+/// metadata onto calls exposed by inlining the wrapper body.  Propagation is
+/// restricted to return-value producing calls, which avoids instrumenting
+/// unrelated calls in the wrapper body.
+static void
+propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
+                            const ValueMap<const Value *, WeakTrackingVH> &VMap,
+                            ClonedCodeInfo &InlinedFunctionInfo) {
+  MDNode *AllocTokenMD = CB.getMetadata(LLVMContext::MD_alloc_token);
+  if (!AllocTokenMD)
+    return;
+
+  SmallVector<CallBase *, 2> AllocCalls;
+  for (BasicBlock &BB : *CalledFunc)
+    if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
+      if (Value *RV = RI->getReturnValue())
+        collectPointerReturningCalls(RV, AllocCalls);
+
+  for (CallBase *OrigCall : AllocCalls) {
+    auto *ClonedCall = dyn_cast_or_null<CallBase>(VMap.lookup(OrigCall));
+    if (!ClonedCall)
+      continue;
+    // Skip calls simplified during inlining; propagation may be incorrect.
+    if (InlinedFunctionInfo.isSimplified(OrigCall, ClonedCall))
+      continue;
+    // Fill missing only: never overwrite a more specific token the wrapper
+    // already set on an internal allocation.
+    if (ClonedCall->getMetadata(LLVMContext::MD_alloc_token))
+      continue;
+    ClonedCall->setMetadata(LLVMContext::MD_alloc_token, AllocTokenMD);
+  }
+}
+
 /// When inlining a call site that has !llvm.mem.parallel_loop_access,
 /// !llvm.access.group, !alias.scope or !noalias metadata, that metadata should
 /// be propagated to all memory-accessing cloned instructions.
@@ -970,6 +1032,46 @@ static void PropagateCallSiteMetadata(CallBase &CB, Function::iterator FStart,
       if (NoAlias)
         I.setMetadata(LLVMContext::MD_noalias, MDNode::concatenate(
             I.getMetadata(LLVMContext::MD_noalias), NoAlias));
+    }
+  }
+}
+
+/// Track inlining chain via inlined.from metadata for dontcall diagnostics.
+static void PropagateInlinedFromMetadata(CallBase &CB, StringRef CalledFuncName,
+                                         StringRef CallerFuncName,
+                                         Function::iterator FStart,
+                                         Function::iterator FEnd) {
+  LLVMContext &Ctx = CB.getContext();
+  uint64_t InlineSiteLoc = 0;
+  if (auto *MD = CB.getMetadata("srcloc"))
+    if (auto *CI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0)))
+      InlineSiteLoc = CI->getZExtValue();
+
+  auto *I64Ty = Type::getInt64Ty(Ctx);
+  auto MakeMDInt = [&](uint64_t V) {
+    return ConstantAsMetadata::get(ConstantInt::get(I64Ty, V));
+  };
+
+  for (BasicBlock &BB : make_range(FStart, FEnd)) {
+    for (Instruction &I : BB) {
+      auto *CI = dyn_cast<CallInst>(&I);
+      if (!CI || !CI->getMetadata("srcloc"))
+        continue;
+      auto *Callee = CI->getCalledFunction();
+      if (!Callee || (!Callee->hasFnAttribute("dontcall-error") &&
+                      !Callee->hasFnAttribute("dontcall-warn")))
+        continue;
+
+      SmallVector<Metadata *, 8> Ops;
+      if (MDNode *Existing = CI->getMetadata("inlined.from"))
+        append_range(Ops, Existing->operands());
+      else {
+        Ops.push_back(MDString::get(Ctx, CalledFuncName));
+        Ops.push_back(MakeMDInt(0));
+      }
+      Ops.push_back(MDString::get(Ctx, CallerFuncName));
+      Ops.push_back(MakeMDInt(InlineSiteLoc));
+      CI->setMetadata("inlined.from", MDNode::get(Ctx, Ops));
     }
   }
 }
@@ -2372,13 +2474,15 @@ remapIndices(Function &Caller, BasicBlock *StartBB,
 // Updating the contextual profile after an inlining means, at a high level,
 // copying over the data of the callee, **intentionally without any value
 // scaling**, and copying over the callees of the inlined callee.
-llvm::InlineResult llvm::InlineFunction(
-    CallBase &CB, InlineFunctionInfo &IFI, PGOContextualProfile &CtxProf,
-    bool MergeAttributes, AAResults *CalleeAAR, bool InsertLifetime,
-    Function *ForwardVarArgsTo, OptimizationRemarkEmitter *ORE) {
+llvm::InlineResult
+llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                     PGOContextualProfile &CtxProf, bool MergeAttributes,
+                     AAResults *CalleeAAR, bool InsertLifetime,
+                     bool TrackInlineHistory, Function *ForwardVarArgsTo,
+                     OptimizationRemarkEmitter *ORE) {
   if (!CtxProf.isInSpecializedModule())
     return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
-                          ForwardVarArgsTo, ORE);
+                          TrackInlineHistory, ForwardVarArgsTo, ORE);
 
   auto &Caller = *CB.getCaller();
   auto &Callee = *CB.getCalledFunction();
@@ -2396,7 +2500,7 @@ llvm::InlineResult llvm::InlineFunction(
   const auto NumCalleeCallsites = CtxProf.getNumCallsites(Callee);
 
   auto Ret = InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
-                            ForwardVarArgsTo, ORE);
+                            TrackInlineHistory, ForwardVarArgsTo, ORE);
   if (!Ret.isSuccess())
     return Ret;
 
@@ -2481,6 +2585,18 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
   if (!CalledFunc ||               // Can't inline external function or indirect
       CalledFunc->isDeclaration()) // call!
     return InlineResult::failure("external or indirect");
+
+  // Don't inline if we've already inlined this callee through this call site
+  // before to prevent infinite inlining through mutually recursive functions.
+  if (MDNode *InlineHistory = CB.getMetadata(LLVMContext::MD_inline_history)) {
+    for (const auto &Op : InlineHistory->operands()) {
+      if (auto *MD = dyn_cast_or_null<ValueAsMetadata>(Op)) {
+        if (MD->getValue() == CalledFunc) {
+          return InlineResult::failure("inline history");
+        }
+      }
+    }
+  }
 
   // The inliner does not know how to inline through calls with operand bundles
   // in general ...
@@ -2607,7 +2723,8 @@ llvm::InlineResult llvm::CanInlineCallSite(const CallBase &CB,
 /// function by one level.
 void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
                               bool MergeAttributes, AAResults *CalleeAAR,
-                              bool InsertLifetime, Function *ForwardVarArgsTo,
+                              bool InsertLifetime, bool TrackInlineHistory,
+                              Function *ForwardVarArgsTo,
                               OptimizationRemarkEmitter *ORE) {
   BasicBlock *OrigBB = CB.getParent();
   Function *Caller = OrigBB->getParent();
@@ -2728,7 +2845,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // happy with whatever the cloner can do.
     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
                               /*ModuleLevelChanges=*/false, Returns, ".i",
-                              &InlinedFunctionInfo);
+                              InlinedFunctionInfo);
     // Remember the first block that is newly cloned over.
     FirstNewBlock = LastBlock; ++FirstNewBlock;
 
@@ -2842,6 +2959,9 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // Propagate metadata on the callsite if necessary.
     PropagateCallSiteMetadata(CB, FirstNewBlock, Caller->end());
 
+    // Propagate an allocation wrapper's !alloc_token if necessary.
+    propagateAllocTokenMetadata(CalledFunc, CB, VMap, InlinedFunctionInfo);
+
     // Propagate implicit ref metadata.
     if (CalledFunc->hasMetadata(LLVMContext::MD_implicit_ref)) {
       SmallVector<MDNode *> MDs;
@@ -2850,6 +2970,10 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
         Caller->addMetadata(LLVMContext::MD_implicit_ref, *MD);
       }
     }
+
+    // Propagate inlined.from metadata for dontcall diagnostics.
+    PropagateInlinedFromMetadata(CB, CalledFunc->getName(), Caller->getName(),
+                                 FirstNewBlock, Caller->end());
 
     // Register any cloned assumptions.
     if (IFI.GetAssumptionCache)
@@ -3176,32 +3300,13 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   // musttail.  Therefore it's safe to return without merging control into the
   // phi below.
   if (InlinedMustTailCalls) {
-    // Check if we need to bitcast the result of any musttail calls.
-    Type *NewRetTy = Caller->getReturnType();
-    bool NeedBitCast = !CB.use_empty() && CB.getType() != NewRetTy;
-
     // Handle the returns preceded by musttail calls separately.
     SmallVector<ReturnInst *, 8> NormalReturns;
     for (ReturnInst *RI : Returns) {
       CallInst *ReturnedMustTail =
           RI->getParent()->getTerminatingMustTailCall();
-      if (!ReturnedMustTail) {
+      if (!ReturnedMustTail)
         NormalReturns.push_back(RI);
-        continue;
-      }
-      if (!NeedBitCast)
-        continue;
-
-      // Delete the old return and any preceding bitcast.
-      BasicBlock *CurBB = RI->getParent();
-      auto *OldCast = dyn_cast_or_null<BitCastInst>(RI->getReturnValue());
-      RI->eraseFromParent();
-      if (OldCast)
-        OldCast->eraseFromParent();
-
-      // Insert a new bitcast and return with the right type.
-      IRBuilder<> Builder(CurBB);
-      Builder.CreateRet(Builder.CreateBitCast(ReturnedMustTail, NewRetTy));
     }
 
     // Leave behind the normal returns so we can merge control flow.
@@ -3223,6 +3328,35 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
           if (!(CB->getCalledFunction() &&
                 CB->getCalledFunction()->isIntrinsic()))
             IFI.InlinedCallSites.push_back(CB);
+  }
+
+  for (CallBase *ICB : IFI.InlinedCallSites) {
+    // We only track inline history if requested, or if the inlined call site
+    // was originally an indirect call (it may have become a direct call
+    // during inlining).
+    if (TrackInlineHistory ||
+        InlinedFunctionInfo.OriginallyIndirectCalls.contains(ICB)) {
+      // !inline_history is {Callee, CB.inline_history, ICB.inline_history}.
+      // Metadata nodes may be null if the referenced function was erased from
+      // the module.
+      SmallVector<Metadata *, 4> History;
+      History.push_back(ValueAsMetadata::get(CalledFunc));
+      if (MDNode *CBHistory = CB.getMetadata(LLVMContext::MD_inline_history)) {
+        for (const auto &Op : CBHistory->operands()) {
+          if (Op)
+            History.push_back(Op.get());
+        }
+      }
+      if (MDNode *CBHistory =
+              ICB->getMetadata(LLVMContext::MD_inline_history)) {
+        for (const auto &Op : CBHistory->operands()) {
+          if (Op)
+            History.push_back(Op.get());
+        }
+      }
+      MDNode *NewHistory = MDNode::get(Caller->getContext(), History);
+      ICB->setMetadata(LLVMContext::MD_inline_history, NewHistory);
+    }
   }
 
   // If we cloned in _exactly one_ basic block, and if that block ends in a
@@ -3394,7 +3528,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
   CB.eraseFromParent();
 
   // If we inlined any musttail calls and the original return is now
-  // unreachable, delete it.  It can only contain a bitcast and ret.
+  // unreachable, delete it.  It can only contain a ret.
   if (InlinedMustTailCalls && pred_empty(AfterCallBB))
     AfterCallBB->eraseFromParent();
 
@@ -3430,16 +3564,14 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     AttributeFuncs::mergeAttributesForInlining(*Caller, *CalledFunc);
 }
 
-llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
-                                        bool MergeAttributes,
-                                        AAResults *CalleeAAR,
-                                        bool InsertLifetime,
-                                        Function *ForwardVarArgsTo,
-                                        OptimizationRemarkEmitter *ORE) {
+llvm::InlineResult llvm::InlineFunction(
+    CallBase &CB, InlineFunctionInfo &IFI, bool MergeAttributes,
+    AAResults *CalleeAAR, bool InsertLifetime, bool TrackInlineHistory,
+    Function *ForwardVarArgsTo, OptimizationRemarkEmitter *ORE) {
   llvm::InlineResult Result = CanInlineCallSite(CB, IFI);
   if (Result.isSuccess()) {
     InlineFunctionImpl(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
-                       ForwardVarArgsTo, ORE);
+                       TrackInlineHistory, ForwardVarArgsTo, ORE);
   }
 
   return Result;

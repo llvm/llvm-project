@@ -547,6 +547,8 @@ func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   %1 = llvm.atomicrmw volatile fsub %ptr, %f32 syncscope("singlethread") monotonic {alignment = 16 : i64} : !llvm.ptr, f32
   // CHECK: llvm.atomicrmw fmin %{{.*}}, %{{.*}} monotonic : !llvm.ptr, vector<2xf16>
   %2 = llvm.atomicrmw fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
+  // CHECK: llvm.atomicrmw fminimumnum %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
+  %3 = llvm.atomicrmw fminimumnum %ptr, %f32 monotonic : !llvm.ptr, f32
   llvm.return
 }
 
@@ -836,6 +838,55 @@ llvm.func @experimental_noalias_scope_with_string_id() {
   llvm.return
 }
 
+// CHECK-LABEL: @experimental_constrained_fadd
+llvm.func @experimental_constrained_fadd(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fadd %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fadd %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fsub
+llvm.func @experimental_constrained_fsub(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fsub %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fsub %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fmul
+llvm.func @experimental_constrained_fmul(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fmul %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fmul %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fdiv
+llvm.func @experimental_constrained_fdiv(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fdiv %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fdiv %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_frem
+llvm.func @experimental_constrained_frem(%a: f32, %b: f32) {
+  // CHECK: llvm.intr.experimental.constrained.frem %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.frem %a, %b towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fma
+llvm.func @experimental_constrained_fma(%a: f32, %b: f32, %c: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fma %a, %b, %c towardzero ignore : f32
+  llvm.return
+}
+
+// CHECK-LABEL: @experimental_constrained_fmuladd
+llvm.func @experimental_constrained_fmuladd(%a: f32, %b: f32, %c: f32) {
+  // CHECK: llvm.intr.experimental.constrained.fmuladd %{{.*}}, %{{.*}}, %{{.*}} towardzero ignore : f32
+  %0 = llvm.intr.experimental.constrained.fmuladd %a, %b, %c towardzero ignore : f32
+  llvm.return
+}
+
 // CHECK-LABEL: @experimental_constrained_fptrunc
 llvm.func @experimental_constrained_fptrunc(%in: f64) {
   // CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} towardzero ignore : f64 to f32
@@ -1075,6 +1126,32 @@ llvm.func @intrinsic_call_arg_attrs_bundles(%arg0: i32) -> i32 {
   // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.riscv.sha256sig0"({{.*}}) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> i32
   %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> (i32)
   llvm.return %0 : i32
+}
+
+// CHECK-LABEL: constrained_fp_metadata
+llvm.func @constrained_fp_metadata(%a: f32, %b: f32) -> f32 {
+  // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  // CHECK: %{{.*}} = llvm.call_intrinsic "llvm.experimental.constrained.fadd.f32"(%{{.*}}, %{{.*}}, %[[RM]], %[[EB]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+  %rm = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
+  %eb = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+  %r = llvm.call_intrinsic "llvm.experimental.constrained.fadd.f32"(%a, %b, %rm, %eb)
+      : (f32, f32, !llvm.metadata, !llvm.metadata) -> f32
+  llvm.return %r : f32
+}
+
+// CHECK-LABEL: metadata_as_value_shapes
+llvm.func @metadata_as_value_shapes() {
+  // Exercise each of the LLVM metadata-attribute kinds the op accepts.
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_string<"sp">
+  %0 = llvm.mlir.metadata_as_value #llvm.md_string<"sp">
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_const<42 : i32>
+  %1 = llvm.mlir.metadata_as_value #llvm.md_const<42 : i32>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_func<@md_kernel>
+  %2 = llvm.mlir.metadata_as_value #llvm.md_func<@md_kernel>
+  // CHECK: %{{.*}} = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  %3 = llvm.mlir.metadata_as_value #llvm.md_node<#llvm.md_string<"sp">>
+  llvm.return
 }
 
 llvm.mlir.global private @blockaddr_global() {addr_space = 0 : i32, dso_local} : !llvm.ptr {

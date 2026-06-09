@@ -59,69 +59,59 @@ struct TestXeGPUUnrollingPatterns
     xegpu::UnrollOptions options;
     options.setNativeShapeFn([&](Operation *op)
                                  -> std::optional<SmallVector<int64_t>> {
-      if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp,
-              xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::StoreNdOp,
-              xegpu::CreateDescOp, xegpu::UpdateOffsetOp, xegpu::PrefetchOp,
-              xegpu::LoadGatherOp, xegpu::StoreScatterOp>(op)) {
+      if (isa<xegpu::CreateNdDescOp, xegpu::PrefetchNdOp, xegpu::LoadNdOp,
+              xegpu::StoreNdOp, xegpu::PrefetchOp, xegpu::LoadGatherOp,
+              xegpu::StoreScatterOp>(op)) {
         xegpu::TensorDescType tdescTy;
         if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
           tdescTy = createNdOp.getType();
-        } else if (auto updateNdOp = dyn_cast<xegpu::UpdateNdOffsetOp>(op)) {
-          tdescTy = updateNdOp.getTensorDescType();
         } else if (auto prefetchNdOp = dyn_cast<xegpu::PrefetchNdOp>(op)) {
           tdescTy = prefetchNdOp.getTensorDescType();
         } else if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
           tdescTy = loadNdOp.getTensorDescType();
         } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
           tdescTy = storeNdOp.getTensorDescType();
-        } else if (auto createOp = dyn_cast<xegpu::CreateDescOp>(op)) {
-          tdescTy = createOp.getType();
-        } else if (auto updateOp = dyn_cast<xegpu::UpdateOffsetOp>(op)) {
-          tdescTy = updateOp.getTensorDescType();
-        } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
-          tdescTy = prefetchOp.getTensorDescType();
-        } else if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(op)) {
-          if (loadOp.getOffsets()) {
-            auto layout = xegpu::getDistributeLayoutAttr(loadOp.getResult());
-            if (layout && layout.isForSubgroup()) {
-              auto inst_data = layout.getEffectiveInstDataAsInt();
-              if (!inst_data.empty())
-                return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
-            }
-            return std::nullopt;
+        } else if (isa<xegpu::PrefetchOp, xegpu::LoadGatherOp,
+                       xegpu::StoreScatterOp>(op)) {
+          auto anchorOp = cast<xegpu::AnchorLayoutInterface>(op);
+          auto layout =
+              dyn_cast_or_null<xegpu::LayoutAttr>(anchorOp.getAnchorLayout());
+          if (layout && layout.isForSubgroup()) {
+            auto inst_data = layout.getEffectiveInstDataAsInt();
+            if (!inst_data.empty())
+              return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
           }
-          tdescTy = loadOp.getTensorDescType();
-        } else if (auto storeOp = dyn_cast<xegpu::StoreScatterOp>(op)) {
-          if (storeOp.getOffsets()) {
-            auto layout = llvm::dyn_cast_or_null<xegpu::LayoutAttr>(
-                op->getAttr("layout"));
-            if (layout && layout.isForSubgroup()) {
-              auto inst_data = layout.getEffectiveInstDataAsInt();
-              if (!inst_data.empty())
-                return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
-            }
-            return std::nullopt;
-          }
-          tdescTy = storeOp.getTensorDescType();
+          return std::nullopt;
         }
 
         if (auto layout = tdescTy.getLayoutAttr()) {
-          auto inst_data = layout.getInstData();
-          if (inst_data && layout.isForSubgroup())
-            return SmallVector<int64_t>(inst_data.asArrayRef().begin(),
-                                        inst_data.asArrayRef().end());
+          auto inst_data = layout.getEffectiveInstDataAsInt();
+          if (!inst_data.empty() && layout.isForSubgroup())
+            return SmallVector<int64_t>(inst_data.begin(), inst_data.end());
         }
       }
 
       if (isa<xegpu::DpasOp>(op))
         return SmallVector<int64_t>{8, 16, 16};
 
+      // For vector.multi_reduction, read tile shape from the layout attribute
+      // on the source operand (layout_operand_0).
+      if (isa<vector::MultiDimReductionOp>(op)) {
+        xegpu::DistributeLayoutAttr layout =
+            xegpu::getDistributeLayoutAttr(op->getOpOperand(0));
+        if (layout) {
+          auto instData = layout.getEffectiveInstDataAsInt();
+          if (!instData.empty())
+            return instData;
+        }
+        return std::nullopt;
+      }
+
       return std::nullopt;
     });
 
     options.setUnrolledTypesFn(
-        [&](ShapedType type, ArrayRef<int64_t> tileShape,
-            bool returnSingleType = false) -> SmallVector<Type> {
+        [&](ShapedType type, ArrayRef<int64_t> tileShape) -> SmallVector<Type> {
           Type elemTy = type.getElementType();
           Type newTy;
 
@@ -131,26 +121,8 @@ struct TestXeGPUUnrollingPatterns
             Attribute encoding = tdescTy.getEncoding();
             auto layout = tdescTy.getLayoutAttr();
 
-            // If the encoding is a ScatterTensorDescAttr, we need to
-            // potentially adjust the chunk size based on the inst_data.
-            if (tdescTy.isScattered()) {
-              int64_t chunkSize = tdescTy.getChunkSizeAsInt();
-
-              if (chunkSize > 1) {
-                int64_t blockedChunkSize = chunkSize;
-                auto instData = layout.getInstData();
-                if (!instData.empty())
-                  blockedChunkSize = instData.asArrayRef().back();
-
-                // To create a new attribute with a different chunk_size:
-                auto newEncoding = xegpu::ScatterTensorDescAttr::get(
-                    ctx, tdescTy.getMemorySpace(), blockedChunkSize);
-
-                encoding = newEncoding;
-              }
-            }
             if (layout) {
-              if (layout.getLaneLayout() == nullptr)
+              if (layout.getEffectiveLaneLayoutAsInt().empty())
                 layout = xegpu::LayoutAttr();
               else
                 layout = layout.dropInstData();
@@ -158,13 +130,14 @@ struct TestXeGPUUnrollingPatterns
 
             newTy = xegpu::TensorDescType::get(ctx, tileShape, elemTy, encoding,
                                                layout);
-
-          } else {
-            newTy = type.clone(tileShape, elemTy);
+            // compute the product of batch (higher) dimensions
+            ArrayRef<int64_t> shape = type.getShape();
+            int64_t batchCount =
+                shape.size() > 2 ? computeProduct(shape.drop_back(2)) : 1;
+            return SmallVector<Type>(batchCount, newTy);
           }
 
-          if (returnSingleType)
-            return SmallVector<Type>{newTy};
+          newTy = type.clone(tileShape, elemTy);
           std::optional<SmallVector<int64_t>> ratio =
               computeShapeRatio(type.getShape(), tileShape);
           assert(ratio && "Expecting the ratio to be valid.");
@@ -226,15 +199,17 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   }
 };
 
-struct TestXeGPUSGDistribute
-    : public PassWrapper<TestXeGPUSGDistribute,
+struct TestXeGPURecoverTemporaryLayouts
+    : public PassWrapper<TestXeGPURecoverTemporaryLayouts,
                          OperationPass<gpu::GPUModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUSGDistribute)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPURecoverTemporaryLayouts)
 
-  StringRef getArgument() const final { return "test-xegpu-sg-distribute"; }
+  StringRef getArgument() const final {
+    return "test-xegpu-recover-temporary-layouts";
+  }
 
   StringRef getDescription() const final {
-    return "Test the implementation of XeGPU Subgroup Distribution";
+    return "Test the implementation of XeGPU temporary layout recovery";
   }
 
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
@@ -242,35 +217,34 @@ struct TestXeGPUSGDistribute
     registry.insert<memref::MemRefDialect>();
     registry.insert<xegpu::XeGPUDialect>();
     registry.insert<vector::VectorDialect>();
-    registry.insert<index::IndexDialect>();
+    registry.insert<gpu::GPUDialect>();
   }
 
-  TestXeGPUSGDistribute() = default;
-  TestXeGPUSGDistribute(const TestXeGPUSGDistribute &pass) = default;
+  TestXeGPURecoverTemporaryLayouts() = default;
+  TestXeGPURecoverTemporaryLayouts(const TestXeGPURecoverTemporaryLayouts &pass)
+      : PassWrapper(pass) {}
 
   void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    xegpu::populateXeGPUSubgroupDistributePatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    Operation *op = getOperation();
+    if (!xegpu::recoverTemporaryLayouts(op))
+      signalPassFailure();
   }
 };
 
-/// This test pass is intended to test the subgroup to workitem distribution of
+/// This test pass is intended to test the subgroup to lane distribution of
 /// xegpu/vector/arith operations in isolation, it does not handle any
 /// structural ops like scf.for etc.
-struct TestXeGPUSgToWiDistributeExperimental
-    : public PassWrapper<TestXeGPUSgToWiDistributeExperimental,
+struct TestXeGPUSgToLaneDistribute
+    : public PassWrapper<TestXeGPUSgToLaneDistribute,
                          OperationPass<gpu::GPUModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
-      TestXeGPUSgToWiDistributeExperimental)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUSgToLaneDistribute)
 
   StringRef getArgument() const final {
-    return "test-xegpu-sg-to-wi-distribute-experimental";
+    return "test-xegpu-sg-to-lane-distribute";
   }
 
   StringRef getDescription() const final {
-    return "Test the experimental implementation of XeGPU Subgroup to "
-           "Work-item Distribution";
+    return "Test the implementation of XeGPU Subgroup to Lane Distribution";
   }
 
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
@@ -282,12 +256,17 @@ struct TestXeGPUSgToWiDistributeExperimental
     registry.insert<gpu::GPUDialect>();
   }
 
-  TestXeGPUSgToWiDistributeExperimental() = default;
-  TestXeGPUSgToWiDistributeExperimental(
-      const TestXeGPUSgToWiDistributeExperimental &pass)
+  TestXeGPUSgToLaneDistribute() = default;
+  TestXeGPUSgToLaneDistribute(const TestXeGPUSgToLaneDistribute &pass)
       : PassWrapper(pass) {}
 
   void runOnOperation() override {
+    Operation *op = getOperation();
+    if (!xegpu::recoverTemporaryLayouts(op)) {
+      signalPassFailure();
+      return;
+    }
+
     MLIRContext *ctx = &getContext();
     TypeConverter typeConverter;
     // Define type materializations using UnrealizedConversionCastOp.
@@ -302,39 +281,9 @@ struct TestXeGPUSgToWiDistributeExperimental
 
     ConversionTarget target(*ctx);
     RewritePatternSet patterns(ctx);
-    xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+    xegpu::populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
         typeConverter, patterns, target);
-    (void)applyPartialConversion(getOperation(), target, std::move(patterns));
-  }
-};
-
-struct TestXeGPUMoveFuncBodyToWarpOp
-    : public PassWrapper<TestXeGPUMoveFuncBodyToWarpOp,
-                         OperationPass<gpu::GPUModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUMoveFuncBodyToWarpOp)
-
-  StringRef getArgument() const final {
-    return "test-xegpu-move-func-to-warp-op";
-  }
-
-  StringRef getDescription() const final {
-    return "Test the implementation of XeGPU move gpu function body to "
-           "WarpExecuteOnLane0 op.";
-  }
-
-  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
-    registry.insert<xegpu::XeGPUDialect>();
-    registry.insert<gpu::GPUDialect>();
-  }
-
-  TestXeGPUMoveFuncBodyToWarpOp() = default;
-  TestXeGPUMoveFuncBodyToWarpOp(const TestXeGPUMoveFuncBodyToWarpOp &pass) =
-      default;
-
-  void runOnOperation() override {
-    RewritePatternSet patterns(&getContext());
-    xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(patterns);
-    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+    (void)applyPartialConversion(op, target, std::move(patterns));
   }
 };
 
@@ -411,6 +360,36 @@ struct TestXeGPUResolveLayoutConflicts
   }
 };
 
+struct TestXeGPUArrayLengthOptimization
+    : public PassWrapper<TestXeGPUArrayLengthOptimization,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUArrayLengthOptimization)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-array-length-optimization";
+  }
+
+  StringRef getDescription() const final {
+    return "Test XeGPU 2D block array load optimization patterns in isolation";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<vector::VectorDialect>();
+  }
+
+  TestXeGPUArrayLengthOptimization() = default;
+  TestXeGPUArrayLengthOptimization(const TestXeGPUArrayLengthOptimization &pass)
+      : PassWrapper(pass) {}
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    xegpu::populateXeGPUArrayLengthOptimizationPatterns(patterns);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
 struct TestXeGPULayoutInterface
     : public PassWrapper<TestXeGPULayoutInterface,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -474,11 +453,11 @@ namespace test {
 void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPUUnrollingPatterns>();
   PassRegistration<TestXeGPULayoutInterface>();
-  PassRegistration<TestXeGPUSGDistribute>();
-  PassRegistration<TestXeGPUSgToWiDistributeExperimental>();
-  PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
+  PassRegistration<TestXeGPURecoverTemporaryLayouts>();
+  PassRegistration<TestXeGPUSgToLaneDistribute>();
   PassRegistration<TestXeGPUPropagateLayouts>();
   PassRegistration<TestXeGPUResolveLayoutConflicts>();
+  PassRegistration<TestXeGPUArrayLengthOptimization>();
 }
 } // namespace test
 } // namespace mlir

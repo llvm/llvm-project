@@ -14,6 +14,7 @@
 #include "Linkage.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -101,6 +102,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default && B == LangAS::hlsl_private) ||
          (A == LangAS::Default && B == LangAS::hlsl_device) ||
          (A == LangAS::Default && B == LangAS::hlsl_input) ||
+         (A == LangAS::Default && B == LangAS::hlsl_output) ||
          (A == LangAS::Default && B == LangAS::hlsl_push_constant) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
@@ -126,6 +128,41 @@ const IdentifierInfo *QualType::getBaseTypeIdentifier() const {
   if (ND)
     return ND->getIdentifier();
   return nullptr;
+}
+
+bool QualType::hasPostfixDeclaratorSyntax() const {
+  QualType QT = *this;
+  while (true) {
+    const Type *T = QT.getTypePtr();
+    switch (T->getTypeClass()) {
+    default:
+      return false;
+    case Type::Pointer:
+      QT = cast<PointerType>(T)->getPointeeType();
+      break;
+    case Type::BlockPointer:
+      QT = cast<BlockPointerType>(T)->getPointeeType();
+      break;
+    case Type::MemberPointer:
+      QT = cast<MemberPointerType>(T)->getPointeeType();
+      break;
+    case Type::LValueReference:
+    case Type::RValueReference:
+      QT = cast<ReferenceType>(T)->getPointeeType();
+      break;
+    case Type::PackExpansion:
+      QT = cast<PackExpansionType>(T)->getPattern();
+      break;
+    case Type::Paren:
+    case Type::ConstantArray:
+    case Type::DependentSizedArray:
+    case Type::IncompleteArray:
+    case Type::VariableArray:
+    case Type::FunctionProto:
+    case Type::FunctionNoProto:
+      return true;
+    }
+  }
 }
 
 bool QualType::mayBeDynamicClass() const {
@@ -2274,8 +2311,20 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
-  else
-    return isSignedIntegerOrEnumerationType();
+
+  if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
+    switch (BT->getKind()) {
+#define SVE_VECTOR_TYPE_INT(Name, MangledName, Id, SingletonId, NumEls,        \
+                            ElBits, NF, IsSigned)                              \
+  case BuiltinType::Id:                                                        \
+    return IsSigned;
+#include "clang/Basic/AArch64ACLETypes.def"
+    default:
+      break;
+    }
+  }
+
+  return isSignedIntegerOrEnumerationType();
 }
 
 /// isUnsignedIntegerType - Return true if this is an integer type that is
@@ -2584,6 +2633,8 @@ bool Type::isSizelessBuiltinType() const {
       // HLSL intangible types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+      // AMDGPU feature predicate type
+    case BuiltinType::AMDGPUFeaturePredicate:
       return true;
     default:
       return false;
@@ -2887,8 +2938,9 @@ static bool isTriviallyCopyableTypeImpl(const QualType &type,
   if (CanonicalType.hasAddressDiscriminatedPointerAuth())
     return false;
 
-  // As an extension, Clang treats vector types as Scalar types.
-  if (CanonicalType->isScalarType() || CanonicalType->isVectorType())
+  // As an extension, Clang treats vector and matrix types as Scalar types.
+  if (CanonicalType->isScalarType() || CanonicalType->isVectorType() ||
+      CanonicalType->isMatrixType())
     return true;
 
   // Mfloat8 type is a special case as it not scalar, but is still trivially
@@ -5094,7 +5146,7 @@ LinkageInfo Type::getLinkageAndVisibility() const {
   return LinkageComputer{}.getTypeLinkageAndVisibility(this);
 }
 
-std::optional<NullabilityKind> Type::getNullability() const {
+NullabilityKindOrNone Type::getNullability() const {
   QualType Type(this, 0);
   while (const auto *AT = Type->getAs<AttributedType>()) {
     // Check whether this is an attributed type with nullability
@@ -5260,7 +5312,7 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
   llvm_unreachable("bad type kind!");
 }
 
-std::optional<NullabilityKind> AttributedType::getImmediateNullability() const {
+NullabilityKindOrNone AttributedType::getImmediateNullability() const {
   if (getAttrKind() == attr::TypeNonNull)
     return NullabilityKind::NonNull;
   if (getAttrKind() == attr::TypeNullable)
@@ -5272,8 +5324,7 @@ std::optional<NullabilityKind> AttributedType::getImmediateNullability() const {
   return std::nullopt;
 }
 
-std::optional<NullabilityKind>
-AttributedType::stripOuterNullability(QualType &T) {
+NullabilityKindOrNone AttributedType::stripOuterNullability(QualType &T) {
   QualType AttrTy = T;
   if (auto MacroTy = dyn_cast<MacroQualifiedType>(T))
     AttrTy = MacroTy->getUnderlyingType();
@@ -5286,6 +5337,16 @@ AttributedType::stripOuterNullability(QualType &T) {
   }
 
   return std::nullopt;
+}
+
+void AttributedType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                             Kind attrKind, QualType modified,
+                             QualType equivalent, const Attr *attr) {
+  ID.AddInteger(attrKind);
+  ID.AddPointer(modified.getAsOpaquePtr());
+  ID.AddPointer(equivalent.getAsOpaquePtr());
+  if (attr)
+    attr->Profile(ID, Ctx);
 }
 
 bool Type::isSignableIntegerType(const ASTContext &Ctx) const {
@@ -5506,6 +5567,41 @@ QualType::DestructionKind QualType::isDestructedTypeImpl(QualType type) {
   }
 
   return DK_none;
+}
+
+static bool
+requiresBuiltinLaunderImpl(const ASTContext &Context, QualType Ty,
+                           llvm::SmallPtrSetImpl<const Decl *> &Seen) {
+  if (const auto *Arr = Context.getAsArrayType(Ty))
+    Ty = Context.getBaseElementType(Arr);
+
+  if (const auto *AttrTy = Ty->getAs<AttributedType>())
+    Ty = AttrTy->getModifiedType();
+
+  assert(!Ty->isIncompleteType() &&
+         "Incomplete types cannot be evaluated for laundering");
+
+  const auto *Record = Ty->getAsCXXRecordDecl();
+  if (!Record)
+    return false;
+
+  // We've already checked this type, or are in the process of checking it.
+  if (!Seen.insert(Record).second)
+    return false;
+
+  if (Record->isDynamicClass())
+    return true;
+
+  for (FieldDecl *F : Record->fields()) {
+    if (requiresBuiltinLaunderImpl(Context, F->getType(), Seen))
+      return true;
+  }
+  return false;
+}
+
+bool QualType::requiresBuiltinLaunder(const ASTContext &Context) const {
+  llvm::SmallPtrSet<const Decl *, 16> Seen;
+  return requiresBuiltinLaunderImpl(Context, *this, Seen);
 }
 
 bool MemberPointerType::isSugared() const {

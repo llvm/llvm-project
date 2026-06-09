@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx98,cxx98-14,cxx98-11
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx98-14,cxx98-11,since-cxx11
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,cxx98-14,since-cxx14,since-cxx11,cxx14
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,since-cxx17,since-cxx14,since-cxx11
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,since-cxx17,since-cxx14,since-cxx11
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,since-cxx17,since-cxx14,since-cxx11
-// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify=expected,since-cxx17,since-cxx14,since-cxx11
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98,cxx98-14,cxx98-11
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98-11,since-cxx11
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,since-cxx14,since-cxx11,cxx14
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx17,since-cxx14,since-cxx11
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx17,since-cxx14,since-cxx11
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx17,since-cxx14,since-cxx11
+// RUN: %clang_cc1 -triple %itanium_abi_triple -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx17,since-cxx14,since-cxx11
 
 #if __cplusplus == 199711L
 #define static_assert(...) __extension__ _Static_assert(__VA_ARGS__)
@@ -334,6 +334,29 @@ namespace cwg727 { // cwg727: partial
   };
   Collision<int, int> c; // #cwg727-Collision-int-int
 } // namespace cwg727
+
+namespace cwg730 { // cwg730: 2.7
+struct A {
+  template <typename> struct S {};
+  template <typename> void f() {}
+};
+
+template <> struct A::S<int> {};
+template <> void A::f<int>() {}
+} // namespace cwg730
+
+namespace cwg743 { // cwg743: 3.1
+#if __cplusplus >= 201103L
+struct S {
+  using T = int;
+};
+
+decltype(S())::T i;
+
+template <typename T>
+using foo = typename decltype(T())::I;
+#endif
+} // namespace cwg743
 
 namespace cwg777 { // cwg777: 3.7
 #if __cplusplus >= 201103L

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -flang-experimental-hlfir -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
+! RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck --check-prefixes="LLVMIR" %s
 ! REQUIRES: target=powerpc{{.*}}
 
 ! CHECK-LABEL: fmadd_testr

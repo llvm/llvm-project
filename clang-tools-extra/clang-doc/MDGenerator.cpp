@@ -17,9 +17,7 @@
 #include <string>
 
 using namespace llvm;
-
-namespace clang {
-namespace doc {
+using namespace clang::doc;
 
 // Markdown generation
 
@@ -31,8 +29,7 @@ static std::string genEmphasis(const Twine &Text) {
   return "**" + Text.str() + "**";
 }
 
-static std::string
-genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs) {
+static std::string genReferenceList(llvm::ArrayRef<Reference> Refs) {
   std::string Buffer;
   llvm::raw_string_ostream Stream(Buffer);
   for (const auto &R : Refs) {
@@ -82,7 +79,7 @@ class TableCommentWriter {
 public:
   explicit TableCommentWriter(llvm::raw_ostream &OS) : OS(OS) {}
 
-  void write(llvm::ArrayRef<CommentInfo> Comments) {
+  void write(const DocList<CommentInfo> &Comments) {
     for (const auto &C : Comments)
       writeTableSafeComment(C);
 
@@ -111,12 +108,12 @@ private:
     switch (I.Kind) {
     case CommentKind::CK_FullComment:
       for (const auto &Child : I.Children)
-        writeTableSafeComment(*Child);
+        writeTableSafeComment(Child);
       break;
 
     case CommentKind::CK_ParagraphComment:
       for (const auto &Child : I.Children)
-        writeTableSafeComment(*Child);
+        writeTableSafeComment(Child);
       // Next content after a paragraph needs a break
       NeedsParagraphBreak = true;
       break;
@@ -132,7 +129,7 @@ private:
     // Handle other comment types (BlockCommand, InlineCommand, etc.)
     default:
       for (const auto &Child : I.Children)
-        writeTableSafeComment(*Child);
+        writeTableSafeComment(Child);
       break;
     }
   }
@@ -153,19 +150,19 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
   switch (I.Kind) {
   case CommentKind::CK_FullComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_ParagraphComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     writeNewLine(OS);
     break;
 
   case CommentKind::CK_BlockCommandComment:
     OS << genEmphasis(I.Name) << " ";
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_InlineCommandComment:
@@ -177,13 +174,13 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
     std::string Direction = I.Explicit ? (" " + I.Direction).str() : "";
     OS << genEmphasis(I.ParamName) << I.Text << Direction << " ";
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
   }
 
   case CommentKind::CK_VerbatimBlockComment:
     for (const auto &Child : I.Children)
-      writeDescription(*Child, OS);
+      writeDescription(Child, OS);
     break;
 
   case CommentKind::CK_VerbatimBlockLineComment:
@@ -389,7 +386,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
   if (!I.Children.Records.empty()) {
     writeHeader("Records", 2, OS);
     for (const auto &R : I.Children.Records)
-      writeLine(R.Name, OS);
+      writeLine(R->Name, OS);
     writeNewLine(OS);
   }
   if (!I.Children.Functions.empty()) {
@@ -436,7 +433,7 @@ static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
     OS << " for " << CDCtx.ProjectName;
   OS << "\n\n";
 
-  OwningVec<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children)
     serializeReference(OS, *C, 0);
 
@@ -455,7 +452,7 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
                                        FileErr.message());
   CDCtx.Idx.sort();
   OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
-  OwningVec<const Index *> Children = CDCtx.Idx.getSortedChildren();
+  std::vector<const Index *> Children = CDCtx.Idx.getSortedChildren();
   for (const auto *C : Children) {
     if (!C->Children.empty()) {
       const char *Type;
@@ -496,31 +493,35 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
+namespace {
 /// Generator for Markdown documentation.
 class MDGenerator : public Generator {
 public:
-  static const char *Format;
+  static StringRef Format;
 
-  llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-      const ClangDocContext &CDCtx, std::string DirName) override;
+  llvm::Error generateDocumentation(StringRef RootDir,
+                                    llvm::StringMap<Info *> Infos,
+                                    const ClangDocContext &CDCtx,
+                                    std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
 };
+} // namespace
 
-const char *MDGenerator::Format = "md";
+StringRef MDGenerator::Format = "md";
 
-llvm::Error MDGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-    const ClangDocContext &CDCtx, std::string DirName) {
+llvm::Error MDGenerator::generateDocumentation(StringRef RootDir,
+                                               llvm::StringMap<Info *> Infos,
+                                               const ClangDocContext &CDCtx,
+                                               std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
 
   // Collect all output by file name and create the necessary directories.
-  llvm::StringMap<std::vector<doc::Info *>> FileToInfos;
+  llvm::StringMap<std::vector<Info *>> FileToInfos;
   for (const auto &Group : Infos) {
-    doc::Info *Info = getPtr(Group.getValue());
+    Info *Info = Group.getValue();
 
     llvm::SmallString<128> Path;
     llvm::sys::path::native(RootDir, Path);
@@ -561,19 +562,19 @@ llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                             const ClangDocContext &CDCtx) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    genMarkdown(CDCtx, *static_cast<clang::doc::NamespaceInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<NamespaceInfo>(I), OS);
     break;
   case InfoType::IT_record:
-    genMarkdown(CDCtx, *static_cast<clang::doc::RecordInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<RecordInfo>(I), OS);
     break;
   case InfoType::IT_enum:
-    genMarkdown(CDCtx, *static_cast<clang::doc::EnumInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<EnumInfo>(I), OS);
     break;
   case InfoType::IT_function:
-    genMarkdown(CDCtx, *static_cast<clang::doc::FunctionInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<FunctionInfo>(I), OS);
     break;
   case InfoType::IT_typedef:
-    genMarkdown(CDCtx, *static_cast<clang::doc::TypedefInfo *>(I), OS);
+    genMarkdown(CDCtx, *cast<TypedefInfo>(I), OS);
     break;
   case InfoType::IT_concept:
   case InfoType::IT_variable:
@@ -602,6 +603,9 @@ llvm::Error MDGenerator::createResources(ClangDocContext &CDCtx) {
 
 static GeneratorRegistry::Add<MDGenerator> MD(MDGenerator::Format,
                                               "Generator for MD output.");
+
+namespace clang {
+namespace doc {
 
 // This anchor is used to force the linker to link in the generated object
 // file and thus register the generator.

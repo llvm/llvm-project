@@ -2133,6 +2133,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  isnanf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    isnanf16_test.cpp
+  HDRS
+    IsNanTest.h
+  DEPENDS
+    libc.src.math.isnanf16
+)
+
+add_fp_unittest(
   llogb_test
   SUITE
     libc-math-smoke-tests
@@ -4484,6 +4496,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  log2p1f16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    log2p1f16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.math.log2p1f16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   log1p_test
   SUITE
     libc-math-smoke-tests
@@ -4745,6 +4770,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpi_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinpi_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.asinpi
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   asinpif_test
   SUITE
     libc-math-smoke-tests
@@ -4815,6 +4852,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.asinbf16
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   asinf16_test
   SUITE
     libc-math-smoke-tests
@@ -4823,6 +4873,20 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.math.asinf16
+)
+
+add_fp_unittest(
+  acosbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acosbf16_test.cpp
+  DEPENDS
+    libc.src.math.acosbf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -4902,6 +4966,20 @@ add_fp_unittest(
     atan_test.cpp
   DEPENDS
     libc.src.math.atan
+)
+
+add_fp_unittest(
+  atanbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atanbf16_test.cpp
+  DEPENDS
+    libc.src.math.atanbf16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -5167,6 +5245,17 @@ add_fp_unittest(
     erff16_test.cpp
   DEPENDS
     libc.src.math.erff16
+)
+
+add_fp_unittest(
+  erfcf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    erfcf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.erfcf16
 )
 
 add_fp_unittest(

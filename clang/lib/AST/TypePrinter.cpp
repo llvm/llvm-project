@@ -2049,6 +2049,13 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     OS << "ns_returns_retained";
     break;
 
+  case attr::HLSLRowMajor:
+    OS << "row_major";
+    break;
+  case attr::HLSLColumnMajor:
+    OS << "column_major";
+    break;
+
   // FIXME: When Sema learns to form this AttributedType, avoid printing the
   // attribute again in printFunctionProtoAfter.
   case attr::AnyX86NoCfCheck: OS << "nocf_check"; break;
@@ -2707,6 +2714,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "hlsl_device";
   case LangAS::hlsl_input:
     return "hlsl_input";
+  case LangAS::hlsl_output:
+    return "hlsl_output";
   case LangAS::hlsl_push_constant:
     return "hlsl_push_constant";
   case LangAS::wasm_funcref:

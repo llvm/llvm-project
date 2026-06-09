@@ -50,7 +50,8 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
     Fuse specific subgraphs into single Ops for code generation.
   }];
   let dependentDialects = [
-    "fir::FIROpsDialect", "fir::FIRCodeGenDialect"
+    "fir::FIROpsDialect", "fir::FIRCodeGenDialect",
+    "mlir::cf::ControlFlowDialect"
   ];
   let options = [
     Option<"preserveDeclare", "preserve-declare", "bool", /*default=*/"false",
@@ -58,6 +59,18 @@ def CodeGenRewrite : Pass<"cg-rewrite", "mlir::ModuleOp"> {
   ];
   let statistics = [
     Statistic<"numDCE", "num-dce'd", "Number of operations eliminated">
+  ];
+}
+
+def RematerializeFIRBoxOpsPass
+    : Pass<"fir-rematerialize-box-ops", "mlir::func::FuncOp"> {
+  let summary = "Rematerialize FIR box operations before selected uses.";
+  let description = [{
+    Clone selected FIR box operations to preserve region-local descriptor
+    storage when their results are used inside nested regions.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::omp::OpenMPDialect"
   ];
 }
 

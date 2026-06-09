@@ -752,9 +752,12 @@ private:
                     /*printBlockTerminators=*/true);
     }
 
-    // Visit all the types used in the operation.
-    for (Type type : op->getOperandTypes())
-      printType(type);
+    // Visit all the types used in the operation. Null operands/types can
+    // occur when operating on invalid IR (e.g., with
+    // --mlir-very-unsafe-disable-verifier-on-parsing), so guard against them.
+    for (Value operand : op->getOperands())
+      if (operand && operand.getType())
+        printType(operand.getType());
     for (Type type : op->getResultTypes())
       printType(type);
 
@@ -820,7 +823,10 @@ private:
   }
 
   /// Consider the given type to be printed for an alias.
-  void printType(Type type) override { initializer.visit(type); }
+  void printType(Type type) override {
+    if (type)
+      initializer.visit(type);
+  }
 
   /// Consider the given attribute to be printed for an alias.
   void printAttribute(Attribute attr) override { initializer.visit(attr); }
@@ -970,6 +976,8 @@ private:
     }
   }
   void printAndVisitNestedAliasesImpl(Type type) {
+    if (!type)
+      return;
     if (!isa<BuiltinDialect>(type.getDialect()))
       return type.getDialect().printType(type, *this);
 
@@ -2680,7 +2688,7 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
     // printDenseElementsAttrImpl. This lambda was hitting a bug in gcc 9.1,9.2
     // and hence was replaced.
     if (llvm::isa<IntegerType>(complexElementType)) {
-      auto valueIt = attr.value_begin<std::complex<APInt>>();
+      auto valueIt = attr.value_begin<mlir::Complex<APInt>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
         auto complexValue = *(valueIt + index);
         os << "(";
@@ -2690,7 +2698,7 @@ void AsmPrinter::Impl::printDenseTypedElementsAttr(DenseTypedElementsAttr attr,
         os << ")";
       });
     } else {
-      auto valueIt = attr.value_begin<std::complex<APFloat>>();
+      auto valueIt = attr.value_begin<mlir::Complex<APFloat>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
         auto complexValue = *(valueIt + index);
         os << "(";
@@ -2899,6 +2907,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
+      .Case<TokenType>([&](Type) { os << "token"; })
       .Case([&](GraphType graphTy) {
         os << '(';
         interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });

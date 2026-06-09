@@ -48,17 +48,19 @@ public:
 
   operator bool() const { return MI; }
 
+  // Returns true if this is an OpTypeInt instruction.
+  // If N is non-zero, also checks that the bit width matches N.
+  bool isTypeIntN(unsigned N = 0) const;
+  // Returns true if this is an OpTypeFloat instruction.
+  bool isAnyTypeFloat() const;
+  // Returns true if this is an OpTypeInt or OpTypeFloat instruction.
+  bool isTypeIntOrFloat() const { return isTypeIntN() || isAnyTypeFloat(); }
+
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };
 
 template <> struct DenseMapInfo<SPIRVTypeInst> {
   using MIInfo = DenseMapInfo<MachineInstr *>;
-  static SPIRVTypeInst getEmptyKey() {
-    return {MIInfo::getEmptyKey(), SPIRVTypeInst::UncheckedConstructor()};
-  }
-  static SPIRVTypeInst getTombstoneKey() {
-    return {MIInfo::getTombstoneKey(), SPIRVTypeInst::UncheckedConstructor()};
-  }
   static unsigned getHashValue(SPIRVTypeInst Ty) {
     return MIInfo::getHashValue(Ty.MI);
   }
@@ -68,4 +70,4 @@ template <> struct DenseMapInfo<SPIRVTypeInst> {
 };
 
 } // namespace llvm
-#endif
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVTYPEINST_H
