@@ -2523,9 +2523,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Exp = II->getArgOperand(1);
       Type *Ty = Base->getType();
       // powi(2.0, p) -> ldexp(1.0, p)
-      if (II->hasApproxFunc() && Ty->isFloatingPointTy() &&
-          Base->isExactlyValue(2.0)) {
+      if (II->hasApproxFunc() && Base->isExactlyValue(2.0)) {
         ConstantFP *One = ConstantFP::get(Ty, 1.0);
+        if (auto *VTy = dyn_cast<VectorType>(Ty))
+          Exp = Builder.CreateVectorSplat(VTy->getElementCount(), Exp);
         Value *Ldexp = Builder.CreateLdexp(One, Exp, II);
         return replaceInstUsesWith(*II, Ldexp);
       }
