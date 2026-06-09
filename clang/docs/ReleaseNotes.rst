@@ -243,6 +243,9 @@ C23 Feature Support
 - Fixed a failing assertion when validating an invalid structure redefinition
   with a member which uses an incomplete enumeration type. (#GH190227)
 - Clang now supports the C23 ``wN`` and ``wfN`` length modifiers. (#GH116962)
+- Clang now recognizes the C23 ``H``, ``D``, and ``DD`` length modifiers in
+  format strings and diagnoses their use because Clang does not yet support
+  the corresponding decimal floating-point types, ``_Decimal32``, ``_Decimal64``, and ``_Decimal128``. (#GH116962)
 
 Objective-C Language Changes
 -----------------------------
@@ -321,6 +324,14 @@ Non-comprehensive list of changes in this release
   vtable lookup at runtime.
 
 - Updated support for Unicode from 15.1 to 18.0.
+
+- Linux and Windows toolchains now support Clang multilibs using
+  ``-fmultilib-flag=``.
+
+- The SafeStack builtins ``__builtin___get_unsafe_stack_ptr``,
+  ``__builtin___get_unsafe_stack_bottom``, ``__builtin___get_unsafe_stack_top``,
+  and ``__builtin___get_unsafe_stack_start`` are now deprecated. Use the
+  corresponding functions from ``<sanitizer/safestack_interface.h>`` instead.
 
 New Compiler Flags
 ------------------
@@ -674,6 +685,8 @@ Bug Fixes in This Version
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
+- Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
+- Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -735,6 +748,8 @@ Bug Fixes to C++ Support
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
 - Fixed a crash in Itanium C++ name mangling for a lambda in a local class field initializer inside a constructor/destructor. (#GH176395)
+- Fixed a crash when Expr::ClassifyImpl computes a classification like CL_LValue or CL_PRValue, then asserts that this 
+  agrees with the AST node's own value category. (#GH202693)
 - Fixed crashes in Itanium C++ name mangling for lambdas with trailing requires-clauses involving requires-expressions. (#GH100774) (#GH123854)
 - Fixed an invalid rejection and assertion failure while generating ``operator=`` for fields with the ``__restrict`` qualifier. (#GH37979)
 - Fixed a use-after-free bug when parsing default arguments containing lambdas in declarations with template-id declarators. (#GH196725)
@@ -823,6 +838,30 @@ Windows Support
   19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
 - ``-fmacro-prefix-map=`` (``-ffile-prefix-map=``) now affects an anonymous namespace hash generation
   for the MSVC targets and allows deterministic symbol mangling for reproducible builds.
+
+- Added the ``-fwinx64-eh-unwind=`` flag to select the x64 Windows unwind info
+  version (``v1``, ``v2-best-effort``, ``v2-required``, or ``v3``). The legacy
+  ``-fwinx64-eh-unwindv2=`` flag is deprecated; it is still accepted and mapped
+  onto the new flag as follows:
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Legacy ``-fwinx64-eh-unwindv2=``
+       - New ``-fwinx64-eh-unwind=``
+     * - ``disabled``
+       - ``v1`` (default; no flag forwarded)
+     * - ``best-effort``
+       - ``v2-best-effort``
+     * - ``required``
+       - ``v2-required``
+
+  The MSVC-compatible ``/d2epilogunwind`` and ``/d2epilogunwindrequirev2``
+  options map to ``v2-best-effort`` and ``v2-required`` respectively.
+
+- When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
+  automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
+  explicit unwind version was specified.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -923,6 +962,9 @@ libclang
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 - The clang_Module_getASTFile API is deprecated and now always returns nullptr
 - The clang_Cursor_getCommentRange API will now return a comment range for macro definitions that have documentation comments.
+- Added CXType_PredefinedSugar for __ptrdiff_t, __size_t, and
+  __signed_size_t types, which are no longer exposed as
+  CXType_Unexposed.
 
 Code Completion
 ---------------
