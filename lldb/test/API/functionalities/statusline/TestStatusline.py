@@ -134,8 +134,8 @@ class TestStatusline(PExpectTest):
                 self.data = b""
 
             def write(self, s):
-                self.data += s if isinstance(s, bytes) else s.encode(
-                    "latin-1", "replace"
+                self.data += (
+                    s if isinstance(s, bytes) else s.encode("latin-1", "replace")
                 )
                 return len(s)
 
