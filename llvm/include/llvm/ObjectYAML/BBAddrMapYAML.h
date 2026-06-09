@@ -16,6 +16,9 @@
 #ifndef LLVM_OBJECTYAML_BBADDRMAPYAML_H
 #define LLVM_OBJECTYAML_BBADDRMAPYAML_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 #include <optional>
@@ -80,6 +83,35 @@ struct PGOAnalysisMapEntry {
   std::optional<uint64_t> FuncEntryCount;
   std::optional<std::vector<PGOBBEntry>> PGOBBEntries;
 };
+
+/// Byte sink for encoding a BB address map section body.
+class Encoder {
+  raw_ostream &OS;
+  llvm::endianness Endian;
+  unsigned AddressSize;
+  uint64_t NumBytes = 0;
+
+public:
+  Encoder(raw_ostream &OS, llvm::endianness Endian, unsigned AddressSize)
+      : OS(OS), Endian(Endian), AddressSize(AddressSize) {
+    assert((AddressSize == 4 || AddressSize == 8) && "invalid address size");
+  }
+
+  /// Total bytes written so far.
+  uint64_t getNumBytes() const { return NumBytes; }
+
+  template <typename T> void writeInteger(T Value) {
+    support::endian::write<T>(OS, Value, Endian);
+    NumBytes += sizeof(T);
+  }
+  void writeAddress(uint64_t Address);
+  void writeULEB128(uint64_t Value);
+};
+
+/// Shared ELF/COFF yaml2obj encoder. Warns and continues on malformed YAML.
+uint64_t encodePayload(ArrayRef<BBAddrMapEntry> Entries,
+                       const std::vector<PGOAnalysisMapEntry> *PGOAnalyses,
+                       Encoder &E);
 
 } // end namespace BBAddrMapYAML
 } // end namespace llvm
