@@ -2617,8 +2617,14 @@ void COFFDumper::printCOFFCxxModuleMetadata() {
 
     DictScope D(W, "CxxModule");
     StringRef Name;
-    if (*ModuleID != 0)
-      Name = unwrapOrError(Obj->getFileName(), Reader.readModuleName());
+    if (*ModuleID != 0) {
+      Expected<StringRef> ExpName = Reader.readModuleName();
+      if (!ExpName) {
+        reportWarning(ExpName.takeError(), Obj->getFileName());
+        return;
+      }
+      Name = *ExpName;
+    }
     W.printHex("ID", *ModuleID);
     W.printString("Name", Name);
     W.printBoolean("IsHeaderUnit", HeaderUnits.contains(*ModuleID));
