@@ -403,6 +403,15 @@ public:
     OPC_MorphNodeTo1GlueOutput,
     OPC_MorphNodeTo2GlueOutput,
     OPC_CompleteMatch,
+    // Space-optimized forms for frequent adjacent matcher operations.
+    OPC_MoveParent_CheckPredicate0,
+    OPC_MoveParent2,
+    OPC_MoveChild0_CheckOpcodeISD_SRL,
+    OPC_MoveParent_RecordChild1,
+    OPC_MoveParent_CheckTypeI32,
+    OPC_MoveParent_RecordChild2,
+    OPC_MoveParent_CheckPredicate1,
+    OPC_MoveChild1_CheckOpcodeISD_ADD,
     // Contains 32-bit offset in table for pattern being selected
     OPC_Coverage
   };

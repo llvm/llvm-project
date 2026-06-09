@@ -3053,8 +3053,7 @@ static constexpr uint16_t CompactISDOpcodes[] = {
 
 static_assert(sizeof(CompactISDOpcodes) / sizeof(*CompactISDOpcodes) ==
               SelectionDAGISel::OPC_CheckOpcodeISD_BUILD_VECTOR -
-                      SelectionDAGISel::OPC_CheckOpcodeISD_SRL +
-                  1);
+                  SelectionDAGISel::OPC_CheckOpcodeISD_SRL + 1);
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
 CheckCompactISDOpcode(unsigned MatcherOpcode, SDNode *N) {
@@ -3728,6 +3727,64 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       NodeStack.pop_back();
       assert(!NodeStack.empty() && "Node stack imbalance!");
       N = NodeStack.back();
+      continue;
+
+    case OPC_MoveParent_CheckPredicate0:
+    case OPC_MoveParent_CheckPredicate1: {
+      NodeStack.pop_back();
+      assert(!NodeStack.empty() && "Node stack imbalance!");
+      N = NodeStack.back();
+      unsigned PredicateOpcode = Opcode == OPC_MoveParent_CheckPredicate0
+                                     ? OPC_CheckPredicate0
+                                     : OPC_CheckPredicate1;
+      if (!::CheckNodePredicate(PredicateOpcode, MatcherTable, MatcherIndex,
+                                *this, N))
+        break;
+      continue;
+    }
+
+    case OPC_MoveParent2:
+      NodeStack.pop_back();
+      assert(!NodeStack.empty() && "Node stack imbalance!");
+      N = NodeStack.back();
+      NodeStack.pop_back();
+      assert(!NodeStack.empty() && "Node stack imbalance!");
+      N = NodeStack.back();
+      continue;
+
+    case OPC_MoveChild0_CheckOpcodeISD_SRL:
+    case OPC_MoveChild1_CheckOpcodeISD_ADD: {
+      unsigned ChildNo = Opcode == OPC_MoveChild0_CheckOpcodeISD_SRL ? 0 : 1;
+      if (ChildNo >= N.getNumOperands())
+        break;
+      N = N.getOperand(ChildNo);
+      NodeStack.push_back(N);
+      unsigned CheckOpcode = Opcode == OPC_MoveChild0_CheckOpcodeISD_SRL
+                                 ? OPC_CheckOpcodeISD_SRL
+                                 : OPC_CheckOpcodeISD_ADD;
+      if (!::CheckCompactISDOpcode(CheckOpcode, N.getNode()))
+        break;
+      continue;
+    }
+
+    case OPC_MoveParent_RecordChild1:
+    case OPC_MoveParent_RecordChild2: {
+      NodeStack.pop_back();
+      assert(!NodeStack.empty() && "Node stack imbalance!");
+      N = NodeStack.back();
+      unsigned ChildNo = Opcode == OPC_MoveParent_RecordChild1 ? 1 : 2;
+      if (ChildNo >= N.getNumOperands())
+        break;
+      RecordedNodes.emplace_back(N->getOperand(ChildNo), N.getNode());
+      continue;
+    }
+
+    case OPC_MoveParent_CheckTypeI32:
+      NodeStack.pop_back();
+      assert(!NodeStack.empty() && "Node stack imbalance!");
+      N = NodeStack.back();
+      if (!::CheckType(MVT::i32, N, TLI, CurDAG->getDataLayout()))
+        break;
       continue;
 
     case OPC_CheckSame:
