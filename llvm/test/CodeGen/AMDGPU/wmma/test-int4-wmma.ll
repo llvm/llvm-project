@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck %s
 ;
 ; Test: WMMA + SWMMAC INT4/INT8 instruction generation for gfx1200
-; Verifies our WMMA256bInsts + Wave32 patches produce correct machine code.
+; Verifies WMMA + SWMMAC instruction generation for gfx1200
 
 ; CHECK-LABEL: test_wmma_i32_16x16x16_iu4:
 ; CHECK: v_wmma_i32_16x16x16_iu4
