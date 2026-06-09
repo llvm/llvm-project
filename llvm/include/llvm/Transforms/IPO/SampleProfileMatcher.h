@@ -37,6 +37,8 @@ class SampleProfileMatcher {
   // mapping from the source location of current build to the source location
   // in the profile.
   StringMap<LocToLocMap> FuncMappings;
+  // Hash mapping cache for matched anchor pairs in stale profile matching
+  std::unordered_map<uint64_t, uint64_t> MatchedAnchorCache;
 
   // Match state for an anchor/callsite.
   enum class MatchState {

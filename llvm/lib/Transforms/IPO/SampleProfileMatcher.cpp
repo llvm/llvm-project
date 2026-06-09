@@ -368,42 +368,46 @@ void SampleProfileMatcher::runStaleProfileMatching(
   // 1:1 mapped. If the profile has already been mapped to another function
   // during previous fuzzy matching, create a new profile with the same sample
   // counts and assumed to be pre-inlined.
-  std::unordered_map<uint64_t, uint64_t> StagedMatches;
   for (const auto &IR : IRAnchors) {
     bool ProfileConflicted = false;
     const auto &Loc = IR.first;
+    FunctionId ProfAnchor;
     auto AnchorLoc = MatchedAnchors.find(Loc);
-    if (AnchorLoc == MatchedAnchors.end())
-      continue;
-    const auto &Prof = ProfileAnchors.find(AnchorLoc->second);
-    if (Prof == ProfileAnchors.end())
-      continue;
-
-    // Conflicting profile matched with previous matchings
-    const auto *FSForMatching = getFlattenedSamplesFor(Prof->second);
-    if (!FSForMatching)
-      FSForMatching = Reader.getSamplesFor(Prof->second.stringRef());
-    if (!FSForMatching)
-      continue;
-    auto &PrevMap = getIRToProfileLocationMap(*FSForMatching);
-    if (!PrevMap.empty())
-      ProfileConflicted = true;
-
-    // Conflicting profile matched in the current run
-    if (!ProfileConflicted) {
-      uint64_t IRHash = IR.second.getHashCode();
-      uint64_t ProfHash = Prof->second.getHashCode();
-      auto Cached = StagedMatches.find(ProfHash);
-      if (Cached == StagedMatches.end() || Cached->second == IRHash) {
-        StagedMatches[ProfHash] = IRHash;
-      } else {
-        ProfileConflicted = true;
-      }
+    if (AnchorLoc == MatchedAnchors.end()) {
+      // Search within the module and find if we have conflicts in pre-matched
+      // profiles for this anchor
+      Function *Sub = M.getFunction(IR.second.stringRef());
+      if (!Sub)
+        continue;
+      auto PreMatched = FuncToProfileNameMap.find(Sub);
+      if (PreMatched == FuncToProfileNameMap.end())
+        continue;
+      ProfAnchor = PreMatched->second;
+    } else {
+      const auto &Prof = ProfileAnchors.find(AnchorLoc->second);
+      if (Prof == ProfileAnchors.end())
+        continue;
+      ProfAnchor = Prof->second;
     }
+
+    // Conflicting profile previously matched
+    uint64_t IRHash = IR.second.getHashCode();
+    uint64_t ProfHash = ProfAnchor.getHashCode();
+    auto Cached = MatchedAnchorCache.find(ProfHash);
+    if (Cached == MatchedAnchorCache.end())
+      MatchedAnchorCache[ProfHash] = IRHash;
+    else if (Cached->second != IRHash)
+      ProfileConflicted = true;
 
     if (ProfileConflicted) {
       // Create a flattened profile using the IR function name to avoid profile
       // name conflicts
+      const auto *FSForMatching = getFlattenedSamplesFor(ProfAnchor);
+      if (!FSForMatching)
+        FSForMatching = Reader.getSamplesFor(ProfAnchor.stringRef());
+      if (!FSForMatching)
+        continue;
+
       FunctionSamples &NewFS = FlattenedProfiles.create(IR.second);
       NewFS.merge(*FSForMatching);
       FuncToProfileNameMap[const_cast<Function *>(&F)] = IR.second;
