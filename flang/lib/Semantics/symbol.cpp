@@ -119,7 +119,7 @@ llvm::raw_ostream &operator<<(
     x.printClauseSet(os, dtgt);
     os << ')';
   }
-  if (const OmpClauseSet & gp{x.ompGroupprivate()}; gp.count()) {
+  if (const OmpClauseSet &gp{x.ompGroupprivate()}; gp.count()) {
     os << " OmpGroupprivateFlags:(";
     x.printClauseSet(
         os, gp, parser::CharBlock{}, x.ompGroupprivateDeviceType());

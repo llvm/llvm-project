@@ -421,7 +421,7 @@ static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
         else
           os << symbol.name();
         os << ")";
-        if (const OmpClauseSet & gp{decls->ompGroupprivate()}; gp.count()) {
+        if (const OmpClauseSet &gp{decls->ompGroupprivate()}; gp.count()) {
           os << " ";
           decls->printClauseSet(
               os, gp, parser::CharBlock{}, decls->ompGroupprivateDeviceType());
