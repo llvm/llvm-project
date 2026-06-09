@@ -114,8 +114,7 @@ public:
   StringRef getFunctionBytes() const { return FunctionBytes; }
 
   // Executes the function.
-  void operator()(char *Memory) const
-      __attribute__((no_sanitize("cfi-icall"))) /* Incompatible with JIT */ {
+  void operator()(char *Memory) const {
     ((void (*)(char *))(uintptr_t)FunctionBytes.data())(Memory);
   }
 
