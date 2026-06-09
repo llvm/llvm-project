@@ -553,7 +553,7 @@ static bool memberCallExpressionCanThrow(const Expr *e) {
 //        llvm_coro_suspend();
 //
 // This is more higher level than LLVM codegen, for that one see llvm's
-// docs/Coroutines.rst for more details.
+// docs/Coroutines.md for more details.
 namespace {
 struct LValueOrRValue {
   LValue lv;

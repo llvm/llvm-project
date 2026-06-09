@@ -219,6 +219,12 @@ New checks
 
   Finds assignments within selection statements.
 
+- New :doc:`bugprone-missing-end-comparison
+  <clang-tidy/checks/bugprone/missing-end-comparison>` check.
+
+  Finds instances where the result of a standard algorithm is used in a Boolean
+  context without being compared to the end iterator.
+
 - New :doc:`bugprone-unsafe-to-allow-exceptions
   <clang-tidy/checks/bugprone/unsafe-to-allow-exceptions>` check.
 
@@ -332,6 +338,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`altera-id-dependent-backward-branch
+  <clang-tidy/checks/altera/id-dependent-backward-branch>` check by fixing false
+  positives when ordinary variable or field assignments are used in loop
+  conditions and note locations for inferred ID-dependent fields.
+
 - Improved :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone/argument-comment>`:
 
@@ -441,6 +452,17 @@ Changes in existing checks
   - Avoid false positives when moving object is reinitialized via the base
     class's ``operator=``.
 
+  - Fix a false positive when a moved-from variable is reinitialized
+    via a ``std::tie()`` assignment (e.g. ``std::tie(a, b) = f(std::move(a),
+    std::move(b))``). The tuple assignment writes back through the stored
+    references, which fully reinitializes the captured variables.
+
+- Improved :doc:`cert-err33-c
+  <clang-tidy/checks/cert/err33-c>` check by not inheriting
+  `CheckedReturnTypes` option from :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>`, which caused false
+  positives on functions returning ``std::error_code`` or similar types.
+
 - Improved :doc:`cppcoreguidelines-avoid-capturing-lambda-coroutines
   <clang-tidy/checks/cppcoreguidelines/avoid-capturing-lambda-coroutines>`
   check by adding the `AllowExplicitObjectParameters` option. When enabled,
@@ -494,6 +516,10 @@ Changes in existing checks
   `IgnoreMacros` option. When enabled, unscoped ``enum`` declarations within
   macros are ignored.
 
+- Improved :doc:`fuchsia-statically-constructed-objects
+  <clang-tidy/checks/fuchsia/statically-constructed-objects>` check by fixing a
+  crash when checking value-dependent static member initializers in class templates.
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and
@@ -521,6 +547,10 @@ Changes in existing checks
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
+
+- Improved :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check by fixing a crash when
+  evaluating bitwise comparisons against integer constants wider than 64 bits.
 
 - Improved :doc:`misc-throw-by-value-catch-by-reference
   <clang-tidy/checks/misc/throw-by-value-catch-by-reference>` check:
@@ -651,6 +681,11 @@ Changes in existing checks
   false positives when a class is seen through both a header include and
   a C++20 module import.
 
+- Improved :doc:`readability-braces-around-statements
+  <clang-tidy/checks/readability/braces-around-statements>` check by fixing a
+  crash when diagnosing a statement that ends in the middle of a macro body
+  expansion.
+
 - Improved :doc:`readability-container-size-empty
   <clang-tidy/checks/readability/container-size-empty>` check:
 
@@ -661,6 +696,10 @@ Changes in existing checks
 
   - Fixed a false positive with suggesting ``empty`` when comparing a container
     to a default-constructed object of an unrelated type.
+
+  - Extended to warn when the non-member ``std::size()`` function is used
+    in a Boolean context or compared to ``0`` or ``1``, consistent with the
+    existing ``size()``/``length()`` member call detection.
 
 - Improved :doc:`readability-convert-member-functions-to-static
   <clang-tidy/checks/readability/convert-member-functions-to-static>` check:
@@ -693,6 +732,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
+
+- Improved :doc:`readability-function-size
+  <clang-tidy/checks/readability/function-size>` check by adding an
+  `IgnoreMacros` option to exclude statements, branches, nesting levels, and
+  variable declarations inside macros from the reported metrics.
 
 - Improved :doc:`readability-identifier-length
   <clang-tidy/checks/readability/identifier-length>` check:
@@ -740,6 +784,9 @@ Changes in existing checks
 
   - Fixed a false positive in array subscript expressions where the types are
     not yet resolved.
+
+  - Fixed a crash when analyzing a redeclaration whose initializer is attached
+    to another declaration.
 
 - Improved :doc:`readability-redundant-casting
   <clang-tidy/checks/readability/redundant-casting>` check by adding the

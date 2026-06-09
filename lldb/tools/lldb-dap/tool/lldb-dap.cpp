@@ -75,8 +75,8 @@
 #undef GetObject
 #include <io.h>
 typedef int socklen_t;
+#include "lldb/Host/ScriptInterpreterRuntimeLoader.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
-#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Program.h"
 #else
@@ -760,6 +760,22 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+#if defined(_WIN32) && LLDB_ENABLE_PYTHON
+  // liblldb.dll has direct imports from python3xx.dll, so pre-load the Python
+  // runtime before any SB call (PrintVersion below, SBDebugger::Initialize
+  // later) triggers lldb-dap.exe's delay-load thunk for liblldb.dll. The
+  // runtime loader is statically linked into lldb-dap.exe via lldbHost (no
+  // LLDB_API export), so this call does not itself trigger the load.
+  llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> python_loader =
+      lldb_private::ScriptInterpreterRuntimeLoader::Get(
+          lldb::eScriptLanguagePython);
+  if (!python_loader)
+    llvm::WithColor::warning()
+        << llvm::toString(python_loader.takeError()) << '\n';
+  else if (llvm::Error err = python_loader->Load())
+    llvm::WithColor::warning() << llvm::toString(std::move(err)) << '\n';
+#endif
+
   if (input_args.hasArg(OPT_version)) {
     PrintVersion();
     return EXIT_SUCCESS;
@@ -771,26 +787,31 @@ int main(int argc, char *argv[]) {
     llvm::errs() << "lldb-dap was not built with Python support" << '\n';
     return EXIT_SUCCESS;
 #endif
-    auto python_path_or_err = SetupPythonRuntimeLibrary();
-    if (!python_path_or_err) {
-      llvm::WithColor::error()
-          << llvm::toString(python_path_or_err.takeError()) << '\n';
+    llvm::Expected<lldb_private::ScriptInterpreterRuntimeLoader &> loader =
+        lldb_private::ScriptInterpreterRuntimeLoader::Get(
+            lldb::eScriptLanguagePython);
+    if (!loader) {
+      llvm::WithColor::error() << llvm::toString(loader.takeError()) << '\n';
       return EXIT_FAILURE;
     }
-    std::string python_path = *python_path_or_err;
-    if (python_path.empty()) {
+    if (llvm::Error err = loader->Load()) {
+      llvm::WithColor::error() << llvm::toString(std::move(err)) << '\n';
+      return EXIT_FAILURE;
+    }
+    llvm::Expected<llvm::StringRef> python_path = loader->GetLoadedPath();
+    if (!python_path) {
+      llvm::WithColor::error()
+          << llvm::toString(python_path.takeError()) << '\n';
+      return EXIT_FAILURE;
+    }
+    if (python_path->empty()) {
       llvm::WithColor::error()
           << "unable to look for the Python shared library" << '\n';
       return EXIT_FAILURE;
     }
-    llvm::outs() << python_path << '\n';
+    llvm::outs() << *python_path << '\n';
     return EXIT_SUCCESS;
   }
-
-  auto python_path_or_err = SetupPythonRuntimeLibrary();
-  if (!python_path_or_err)
-    llvm::WithColor::error()
-        << llvm::toString(python_path_or_err.takeError()) << '\n';
 #endif
 
   if (input_args.hasArg(OPT_client)) {

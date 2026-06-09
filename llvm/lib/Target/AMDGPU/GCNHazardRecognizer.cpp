@@ -479,16 +479,6 @@ hasHazard(StateT InitialState,
     }
   };
   struct StateMapKeyTraits : DenseMapInfo<StateMapKey> {
-    static inline StateMapKey getEmptyKey() {
-      return {static_cast<SmallVectorImpl<StateT> *>(
-                  DenseMapInfo<void *>::getEmptyKey()),
-              DenseMapInfo<unsigned>::getEmptyKey()};
-    }
-    static inline StateMapKey getTombstoneKey() {
-      return {static_cast<SmallVectorImpl<StateT> *>(
-                  DenseMapInfo<void *>::getTombstoneKey()),
-              DenseMapInfo<unsigned>::getTombstoneKey()};
-    }
     static unsigned getHashValue(const StateMapKey &Key) {
       return StateT::getHashValue((*Key.States)[Key.Idx]);
     }
@@ -496,17 +486,9 @@ hasHazard(StateT InitialState,
       return StateT::getHashValue(State);
     }
     static bool isEqual(const StateMapKey &LHS, const StateMapKey &RHS) {
-      const auto EKey = getEmptyKey();
-      const auto TKey = getTombstoneKey();
-      if (StateMapKey::isEqual(LHS, EKey) || StateMapKey::isEqual(RHS, EKey) ||
-          StateMapKey::isEqual(LHS, TKey) || StateMapKey::isEqual(RHS, TKey))
-        return StateMapKey::isEqual(LHS, RHS);
       return StateT::isEqual((*LHS.States)[LHS.Idx], (*RHS.States)[RHS.Idx]);
     }
     static bool isEqual(const StateT &LHS, const StateMapKey &RHS) {
-      if (StateMapKey::isEqual(RHS, getEmptyKey()) ||
-          StateMapKey::isEqual(RHS, getTombstoneKey()))
-        return false;
       return StateT::isEqual(LHS, (*RHS.States)[RHS.Idx]);
     }
   };
@@ -2085,45 +2067,50 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
          !SIInstrInfo::isSWMMAC(MI) && !SIInstrInfo::isLDSDMA(MI);
 }
 
-static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
-                                       const SIInstrInfo *TII, unsigned Latency,
-                                       unsigned Category) {
-  assert(TII->isXDLWMMA(MI) && (Latency == 8 || Latency == 16) &&
-         "Handle me if the xdl wmma instruction latency changes");
+// Classify XDL WMMA instructions into co-execution hazard categories
+// (Refer to SPG 4.6.12.1), mainly based on instruction latency.
+//
+// Category 0: WMMA with Latency 8
+//   WMMA_*F16, WMMA_*BF16
+//   WMMA_*FP8FP8
+//   WMMA_*FP8BF8
+//   WMMA_*BF8FP8
+//   WMMA_*BF8BF8
+//   WMMA_*F8F6F4 if SRCA & SRCB != F8
+//
+// Category 1: WMMA Latency 16
+//   WMMA_IU8
+//   WMMA_*F8F6F4 if SRCA OR SRCB == F8
+//
+// Category 2: SWMMAC with Latency 8
+//   SWMMAC_*F16, SWMMAC_*BF16,
+//   SWMMAC_*FP8FP8
+//   SWMMAC_*BF8FP8
+//   SWMMAC_*FP8BF8
+//   SWMMAC_*BF8BF8
+//
+// Category 3: SWMMAC with Latency 16
+//   SWMMAC_IU8
+static unsigned
+getWMMAHazardInstInCategory(const MachineInstr &MI, const SIInstrInfo *TII,
+                            const TargetSchedModel &SchedModel) {
+  assert(TII->isXDLWMMA(MI) && "must be xdl wmma");
+  bool IsSWMMAC = SIInstrInfo::isSWMMAC(MI);
+  unsigned Category = 0;
 
-  switch (Category) {
-  case 0: // Dense WMMA Instructions:
-          //   WMMA_*F16, WMMA_*BF16
-          //   WMMA_*FP8FP8
-          //   WMMA_*FP8BF8
-          //   WMMA_*BF8FP8
-          //   WMMA_*BF8BF8
-          //   WMMA_*F8F6F4 if SRCA & SRCB != F8
-    return Latency == 8 && SIInstrInfo::isWMMA(MI);
-
-  case 1: // Dense WMMA Instructions:
-          //   WMMA_IU8
-          //   WMMA_IU4
-          //   WMMA_*F8F6F4 if SRCA OR SRCB == F8
-    return Latency == 16 && SIInstrInfo::isWMMA(MI);
-
-  case 2: // Dense SWMMAC Instructions
-          //   SWMMAC_*F16, SWMMAC_*BF16,
-          //   SWMMAC_*FP8FP8
-          //   SWMMAC_*BF8FP8
-          //   SWMMAC_*FP8BF8
-          //   SWMMAC_*BF8BF8
-    return Latency == 8 && SIInstrInfo::isSWMMAC(MI);
-
-  case 3: // Sparse WMMA Instructions:
-          //   SWMMAC_IU8
-          //   SWMMAC_IU4
-    return Latency == 16 && SIInstrInfo::isSWMMAC(MI);
-  default:
+  unsigned Latency = SchedModel.computeInstrLatency(&MI);
+  switch (Latency) {
+  case 8:
+    Category = IsSWMMAC ? 2 : 0;
     break;
+  case 16:
+    Category = IsSWMMAC ? 3 : 1;
+    break;
+  default:
+    llvm_unreachable("unexpected xdl wmma latency");
   } // end switch.
 
-  return false;
+  return Category;
 }
 
 int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
@@ -2147,10 +2134,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
     if (!TII->isXDLWMMA(I))
       return false;
 
-    unsigned Latency = TSchedModel.computeInstrLatency(&I);
-    if (!IsWMMAHazardInstInCategory(I, TII, Latency, Category))
-      return false;
-
+    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel);
     return hasWMMAToWMMARegOverlap(I, *MI);
   };
 
@@ -2158,40 +2142,32 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
     if (!TII->isXDLWMMA(I))
       return false;
 
-    unsigned Latency = TSchedModel.computeInstrLatency(&I);
-    if (!IsWMMAHazardInstInCategory(I, TII, Latency, Category))
-      return false;
-
+    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel);
     return hasWMMAToVALURegOverlap(I, *MI);
   };
-
-  int Limit = 0;
 
   auto GetWaitStatesFn = [](const MachineInstr &I) {
     return SIInstrInfo::isVALU(I) ? 1 : 0;
   };
 
   int WaitStatesNeeded = -1;
+  int ExistingVALUs = 0; // Existing number of VALU ops in between.
+
+  // getWaitStatesSince checks for a hazard between instruction 'I' and 'MI':
+  // - If a hazard exists: returns the number of VALUs in between and sets
+  //   'Category' via IsWMMAHazardFn/IsVALUHazardFn for instruction 'I'.
+  // - If no hazard exists: returns INT_MAX, making WaitStatesNeeded negative,
+  //   so no V_NOP insertion is needed.
   if (TII->isXDLWMMA(*MI)) {
-    for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
-      Limit = WMMAWaitStates[Category]; // for IsExpiredFn.
-      // 'getWaitStatesSince' returns the number of VALUs in between if hazard
-      // exists, and INT_MAX if there is no hazard. As a result, a negative
-      // WaitStatesNeeded here means no hazard, and we will continue to search
-      // for other categories.
-      WaitStatesNeeded =
-          Limit - getWaitStatesSince(IsWMMAHazardFn, Limit, GetWaitStatesFn);
-    }
+    const int WMMAWaitsLimit = 9; // Maximum of WMMAWaitStates
+    ExistingVALUs =
+        getWaitStatesSince(IsWMMAHazardFn, WMMAWaitsLimit, GetWaitStatesFn);
+    WaitStatesNeeded = WMMAWaitStates[Category] - ExistingVALUs;
   } else { // Must be a co-executable VALU.
-    for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
-      Limit = VALUWaitStates[Category]; // for IsExpiredFn.
-      // 'getWaitStatesSince' returns the number of VALUs in between if hazard
-      // exists, and INT_MAX if there is no hazard. As a result, a negative
-      // WaitStatesNeeded here means no hazard, and we will continue to search
-      // for other categories.
-      WaitStatesNeeded =
-          Limit - getWaitStatesSince(IsVALUHazardFn, Limit, GetWaitStatesFn);
-    }
+    const int VALUWaitsLimit = 8; // Maximum of VALUWaitStates
+    ExistingVALUs =
+        getWaitStatesSince(IsVALUHazardFn, VALUWaitsLimit, GetWaitStatesFn);
+    WaitStatesNeeded = VALUWaitStates[Category] - ExistingVALUs;
   }
 
   return WaitStatesNeeded;

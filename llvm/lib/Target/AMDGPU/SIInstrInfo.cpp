@@ -10421,18 +10421,19 @@ bool SIInstrInfo::splitMUBUFOffset(uint32_t Imm, uint32_t &SOffset,
 // This function ignores the addressing mode, so if an offset cannot be used in
 // one addressing mode, it is considered illegal.
 bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
-                                    uint64_t FlatVariant) const {
+                                    AMDGPU::FlatAddrSpace FlatVariant) const {
   // TODO: Should 0 be special cased?
   if (!ST.hasFlatInstOffsets())
     return false;
 
-  if (ST.hasFlatSegmentOffsetBug() && FlatVariant == SIInstrFlags::FLAT &&
+  using AMDGPU::FlatAddrSpace;
+  if (ST.hasFlatSegmentOffsetBug() && FlatVariant == FlatAddrSpace::FLAT &&
       (AddrSpace == AMDGPUAS::FLAT_ADDRESS ||
        AddrSpace == AMDGPUAS::GLOBAL_ADDRESS))
     return false;
 
   if (ST.hasNegativeUnalignedScratchOffsetBug() &&
-      FlatVariant == SIInstrFlags::FlatScratch && Offset < 0 &&
+      FlatVariant == FlatAddrSpace::FlatScratch && Offset < 0 &&
       (Offset % 4) != 0) {
     return false;
   }
@@ -10445,7 +10446,7 @@ bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
 // See comment on SIInstrInfo::isLegalFLATOffset for what is legal and what not.
 std::pair<int64_t, int64_t>
 SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
-                             uint64_t FlatVariant) const {
+                             AMDGPU::FlatAddrSpace FlatVariant) const {
   int64_t RemainderOffset = COffsetVal;
   int64_t ImmField = 0;
 
@@ -10459,7 +10460,7 @@ SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
     ImmField = COffsetVal - RemainderOffset;
 
     if (ST.hasNegativeUnalignedScratchOffsetBug() &&
-        FlatVariant == SIInstrFlags::FlatScratch && ImmField < 0 &&
+        FlatVariant == AMDGPU::FlatAddrSpace::FlatScratch && ImmField < 0 &&
         (ImmField % 4) != 0) {
       // Make ImmField a multiple of 4
       RemainderOffset += ImmField % 4;
@@ -10475,12 +10476,13 @@ SIInstrInfo::splitFlatOffset(int64_t COffsetVal, unsigned AddrSpace,
   return {ImmField, RemainderOffset};
 }
 
-bool SIInstrInfo::allowNegativeFlatOffset(uint64_t FlatVariant) const {
+bool SIInstrInfo::allowNegativeFlatOffset(
+    AMDGPU::FlatAddrSpace FlatVariant) const {
   if (ST.hasNegativeScratchOffsetBug() &&
-      FlatVariant == SIInstrFlags::FlatScratch)
+      FlatVariant == AMDGPU::FlatAddrSpace::FlatScratch)
     return false;
 
-  return FlatVariant != SIInstrFlags::FLAT || AMDGPU::isGFX12Plus(ST);
+  return FlatVariant != AMDGPU::FlatAddrSpace::FLAT || AMDGPU::isGFX12Plus(ST);
 }
 
 static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
@@ -10987,6 +10989,11 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
       AMDGPU::isGenericAtomic(Opcode)) {
     return ValueUniformity::NeverUniform;
   }
+
+  // Result is computed from uniform SP and uniform wave-wide max size.
+  if (Opcode == TargetOpcode::G_DYN_STACKALLOC)
+    return ValueUniformity::AlwaysUniform;
+
   return ValueUniformity::Default;
 }
 
@@ -11006,6 +11013,19 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI) const {
       opcode == AMDGPU::V_READFIRSTLANE_B32 ||
       opcode == AMDGPU::SI_RESTORE_S32_FROM_VGPR)
     return ValueUniformity::AlwaysUniform;
+
+  // If any of defs is divergent, report as NeverUniform. isUniformReg will
+  // calculate in more detail for each def from its reg class, if available.
+  if (MI.isInlineAsm()) {
+    for (const MachineOperand &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.isDef())
+        continue;
+      const TargetRegisterClass *RC =
+          MI.getRegClassConstraint(MO.getOperandNo(), this, &RI);
+      if (!RC || !RI.isSGPRClass(RC))
+        return ValueUniformity::NeverUniform;
+    }
+  }
 
   if (isCopyInstr(MI)) {
     const MachineOperand &srcOp = MI.getOperand(1);

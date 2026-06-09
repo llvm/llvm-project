@@ -157,7 +157,7 @@
 "`LWG4137 <https://wg21.link/LWG4137>`__","Fix *Mandates*, *Preconditions*, and *Complexity* elements of [linalg] algorithms","2025-11 (Kona)","","","`#171313 <https://github.com/llvm/llvm-project/issues/171313>`__",""
 "`LWG4166 <https://wg21.link/LWG4166>`__","``concat_view::end()`` should be more constrained in order to support noncopyable iterators","2025-11 (Kona)","|Complete|","23","`#171314 <https://github.com/llvm/llvm-project/issues/171314>`__",""
 "`LWG4230 <https://wg21.link/LWG4230>`__","``simd<complex>::real/imag`` is overconstrained","2025-11 (Kona)","","","`#171316 <https://github.com/llvm/llvm-project/issues/171316>`__",""
-"`LWG4243 <https://wg21.link/LWG4243>`__","``as_bytes``/``as_writable_bytes`` is broken with ``span<volatile T>``","2025-11 (Kona)","","","`#171317 <https://github.com/llvm/llvm-project/issues/171317>`__",""
+"`LWG4243 <https://wg21.link/LWG4243>`__","``as_bytes``/``as_writable_bytes`` is broken with ``span<volatile T>``","2025-11 (Kona)","|Complete|","23","`#171317 <https://github.com/llvm/llvm-project/issues/171317>`__",""
 "`LWG4251 <https://wg21.link/LWG4251>`__","Move assignment for ``indirect`` unnecessarily requires copy construction","2025-11 (Kona)","","","`#171318 <https://github.com/llvm/llvm-project/issues/171318>`__",""
 "`LWG4253 <https://wg21.link/LWG4253>`__","``basic_const_iterator`` should provide ``iterator_type``","2025-11 (Kona)","","","`#171319 <https://github.com/llvm/llvm-project/issues/171319>`__",""
 "`LWG4255 <https://wg21.link/LWG4255>`__","``move_only_function`` constructor should recognize empty ``copyable_function``\s","2025-11 (Kona)","","","`#171320 <https://github.com/llvm/llvm-project/issues/171320>`__",""

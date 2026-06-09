@@ -144,23 +144,11 @@ struct ThunkKey {
   ThunkKey(Symbol *sym, int64_t addend) : sym(sym), addend(addend) {}
   ThunkKey(Relocation &r) : ThunkKey(cast<Symbol *>(r.referent), r.addend) {}
 
-  static ThunkKey getEmptyKey() {
-    return {llvm::DenseMapInfo<Symbol *>::getEmptyKey(), 0};
-  }
-  static ThunkKey getTombstoneKey() {
-    return {llvm::DenseMapInfo<Symbol *>::getTombstoneKey(), 0};
-  }
-  bool isSentinel() const {
-    return sym == llvm::DenseMapInfo<Symbol *>::getEmptyKey() ||
-           sym == llvm::DenseMapInfo<Symbol *>::getTombstoneKey();
-  }
   bool operator==(const ThunkKey &other) const {
     if (addend != other.addend)
       return false;
     if (sym == other.sym)
       return true;
-    if (isSentinel() || other.isSentinel())
-      return false;
     const auto *dl = dyn_cast<Defined>(sym);
     const auto *dr = dyn_cast<Defined>(other.sym);
     if (dl && dr)
@@ -170,11 +158,7 @@ struct ThunkKey {
 };
 
 struct ThunkMapKeyInfo {
-  static ThunkKey getEmptyKey() { return ThunkKey::getEmptyKey(); }
-  static ThunkKey getTombstoneKey() { return ThunkKey::getTombstoneKey(); }
   static unsigned getHashValue(const ThunkKey &k) {
-    if (k.isSentinel())
-      return llvm::hash_value(k.sym);
     if (const auto *d = dyn_cast<Defined>(k.sym))
       return llvm::hash_combine(d->isec(), d->value, k.addend);
     return llvm::hash_combine(k.sym, k.addend);

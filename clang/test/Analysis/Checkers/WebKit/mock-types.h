@@ -202,6 +202,7 @@ template <typename T> struct RefPtr {
     t = o.t;
     o.t = tmp;
   }
+  operator T*() { return t; }
   T *get() const { return t; }
   T *operator->() const { return t; }
   T &operator*() const { return *t; }
