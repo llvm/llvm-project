@@ -92,27 +92,25 @@
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST:"x86_64-[^"]+"]]
 // CHECK-SAME: "-emit-llvm-bc"
-// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[A_BC1:".*o"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[A_BC1:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
-// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-fvisibility=hidden"
 // CHECK-SAME: "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx803"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[B_BC1:".*o"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[B_BC1:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK-NOT: "*.llvm-link"
@@ -126,24 +124,22 @@
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
-// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx900"
-// CHECK-SAME: {{.*}} "-o" [[A_BC2:".*o"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[A_BC2:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
 
 // CHECK: [[CLANG]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" [[HOST]]
 // CHECK-SAME: "-emit-llvm-bc"
-// CHECK-SAME: "-flto=full" "-flto-unit"
 // CHECK-SAME: {{.*}} "-main-file-name" "b.hip"
 // CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "{{.*}}lib1.bc" "{{.*}}lib2.bc"
 // CHECK-SAME: "-target-cpu" "gfx900"
 // CHECK-SAME: "-fgpu-rdc"
-// CHECK-SAME: {{.*}} "-o" [[B_BC2:".*o"]] "-x" "hip"
+// CHECK-SAME: {{.*}} "-o" [[B_BC2:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // CHECK-NOT: "*.llvm-link"
