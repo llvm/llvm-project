@@ -36,6 +36,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
+#include <iterator>
 
 using namespace llvm;
 
@@ -50,9 +51,17 @@ static bool isSignatureValid(FunctionType *FTy,
 #define GET_INTRINSIC_NAME_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 
+static_assert(std::size(IntrinsicNameOffsetTable) == Intrinsic::num_intrinsics);
+
+static StringRef getIntrinsicName(unsigned TableEntry) {
+  unsigned Offset = TableEntry & IntrinsicNameOffsetMask;
+  unsigned Length = TableEntry >> IntrinsicNameLengthShift;
+  return StringRef(IntrinsicNameTableStorage + Offset, Length);
+}
+
 StringRef Intrinsic::getBaseName(ID id) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  return IntrinsicNameTable[IntrinsicNameOffsetTable[id]];
+  return getIntrinsicName(IntrinsicNameOffsetTable[id]);
 }
 
 StringRef Intrinsic::getName(ID id) {
@@ -684,33 +693,34 @@ static int lookupLLVMIntrinsicByName(ArrayRef<unsigned> NameOffsetTable,
     CmpEnd = Name.find('.', CmpStart + 1);
     CmpEnd = CmpEnd == StringRef::npos ? Name.size() : CmpEnd;
     auto Cmp = [CmpStart, CmpEnd](auto LHS, auto RHS) {
-      // `equal_range` requires the comparison to work with either side being an
-      // offset or the value. Detect which kind each side is to set up the
+      // `equal_range` requires the comparison to work with either side being a
+      // table entry or the value. Detect which kind each side is to set up the
       // compared strings.
-      const char *LHSStr;
+      StringRef LHSStr;
       if constexpr (std::is_integral_v<decltype(LHS)>)
-        LHSStr = IntrinsicNameTable.getCString(LHS);
+        LHSStr = getIntrinsicName(LHS);
       else
         LHSStr = LHS;
 
-      const char *RHSStr;
+      StringRef RHSStr;
       if constexpr (std::is_integral_v<decltype(RHS)>)
-        RHSStr = IntrinsicNameTable.getCString(RHS);
+        RHSStr = getIntrinsicName(RHS);
       else
         RHSStr = RHS;
 
-      return strncmp(LHSStr + CmpStart, RHSStr + CmpStart, CmpEnd - CmpStart) <
-             0;
+      size_t CmpLength = CmpEnd - CmpStart;
+      return LHSStr.substr(CmpStart, CmpLength) <
+             RHSStr.substr(CmpStart, CmpLength);
     };
     LastLow = Low;
-    std::tie(Low, High) = std::equal_range(Low, High, Name.data(), Cmp);
+    std::tie(Low, High) = std::equal_range(Low, High, Name, Cmp);
   }
   if (High - Low > 0)
     LastLow = Low;
 
   if (LastLow == NameOffsetTable.end())
     return -1;
-  StringRef NameFound = IntrinsicNameTable[*LastLow];
+  StringRef NameFound = getIntrinsicName(*LastLow);
   if (Name == NameFound ||
       (Name.starts_with(NameFound) && Name[NameFound.size()] == '.'))
     return LastLow - NameOffsetTable.begin();
@@ -754,7 +764,7 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 
   // If the intrinsic is not overloaded, require an exact match. If it is
   // overloaded, require either exact or prefix match.
-  const auto MatchSize = IntrinsicNameTable[NameOffsetTable[Idx]].size();
+  const auto MatchSize = getIntrinsicName(NameOffsetTable[Idx]).size();
   assert(Name.size() >= MatchSize && "Expected either exact or prefix match");
   bool IsExactMatch = Name.size() == MatchSize;
   return IsExactMatch || Intrinsic::isOverloaded(ID) ? ID

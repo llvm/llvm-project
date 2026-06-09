@@ -24,6 +24,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/Main.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -279,31 +280,86 @@ void IntrinsicEmitter::EmitIntrinsicBitTable(
 
 void IntrinsicEmitter::EmitIntrinsicToNameTable(
     const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
-  // Built up a table of the intrinsic names.
   constexpr StringLiteral NotIntrinsic = "not_intrinsic";
-  StringToOffsetTable Table;
-  Table.GetOrAddStringOffset(NotIntrinsic);
+  SmallVector<StringRef> Names;
+  Names.push_back(NotIntrinsic);
   for (const auto &Int : Ints)
-    Table.GetOrAddStringOffset(Int.Name);
+    Names.push_back(Int.Name);
 
   IfDefEmitter IfDef(OS, "GET_INTRINSIC_NAME_TABLE");
   OS << R"(// Intrinsic ID to name table.
 // Note that entry #0 is the invalid intrinsic!
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Woverlength-strings"
+#endif
 )";
 
-  Table.EmitStringTableDef(OS, "IntrinsicNameTable");
+  unsigned TableSize = 0;
+  unsigned MaxNameLength = 0;
+  for (StringRef Name : Names) {
+    TableSize += Name.size();
+    MaxNameLength = std::max<unsigned>(MaxNameLength, Name.size());
+  }
+  bool UseChars = !EmitLongStrLiterals && TableSize > 64 * 1024;
+  OS << "static constexpr char IntrinsicNameTableStorage[] ="
+     << (UseChars ? "{\n" : "\n");
+  ListSeparator LineSep(UseChars ? ",\n" : "\n");
+  for (StringRef Name : Names) {
+    OS << LineSep << "  ";
+    if (!UseChars) {
+      OS << "\"";
+      OS.write_escaped(Name);
+      OS << "\"";
+      continue;
+    }
+    ListSeparator CharSep(", ");
+    for (char C : Name) {
+      OS << CharSep << "'";
+      OS.write_escaped(StringRef(&C, 1));
+      OS << "'";
+    }
+  }
+  OS << LineSep << (UseChars ? "};" : ";");
+  OS << R"(
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+)";
 
   OS << R"(
 static constexpr unsigned IntrinsicNameOffsetTable[] = {
 )";
 
-  OS << formatv("  {}, // {}\n", Table.GetStringOffset(NotIntrinsic),
-                NotIntrinsic);
-  for (const auto &Int : Ints)
-    OS << formatv("  {}, // {}\n", Table.GetStringOffset(Int.Name), Int.Name);
+  constexpr unsigned OffsetBits = 24;
+  constexpr unsigned OffsetMask = (1u << OffsetBits) - 1;
+  constexpr unsigned LengthShift = OffsetBits;
+  unsigned Offset = 0;
+  for (StringRef Name : Names) {
+    if (Offset > OffsetMask)
+      PrintFatalError("intrinsic name table is too large to encode");
+    if (Name.size() > 0xffu)
+      PrintFatalError("intrinsic name is too long to encode");
+    unsigned Entry = Offset | (Name.size() << LengthShift);
+    OS << formatv("  0x{0:X-8}, // {1}\n", Entry, Name);
+    Offset += Name.size();
+  }
 
-  OS << "\n}; // IntrinsicNameOffsetTable\n";
+  OS << "\n}; // IntrinsicNameOffsetTable\n\n";
+  OS << formatv(
+      "static constexpr unsigned IntrinsicNameOffsetMask = 0x{0:X-8};\n"
+      "static constexpr unsigned IntrinsicNameLengthShift = {1};\n"
+      "static constexpr unsigned IntrinsicNameTableSize = {2};\n"
+      "static constexpr unsigned IntrinsicNameMaxLength = {3};\n"
+      "static_assert(IntrinsicNameTableSize <= "
+      "IntrinsicNameOffsetMask + 1);\n"
+      "static_assert(IntrinsicNameMaxLength <= 0xffu);\n"
+      "static_assert(sizeof(IntrinsicNameTableStorage) == "
+      "IntrinsicNameTableSize ||\n"
+      "              sizeof(IntrinsicNameTableStorage) == "
+      "IntrinsicNameTableSize + 1);\n",
+      OffsetMask, LengthShift, TableSize, MaxNameLength);
 }
 
 void IntrinsicEmitter::EmitIntrinsicToOverloadTable(

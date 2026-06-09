@@ -80,6 +80,13 @@ TEST(IntrinsicNameLookup, Basic) {
   EXPECT_EQ(memcpy_inline, lookupIntrinsicID("llvm.memcpy.inline.p0.p0.i1024"));
 }
 
+TEST(IntrinsicNameLookup, AllNamesRoundTrip) {
+  for (unsigned ID = 1; ID != Intrinsic::num_intrinsics; ++ID) {
+    StringRef Name = Intrinsic::getBaseName(ID);
+    EXPECT_EQ(ID, Intrinsic::lookupIntrinsicID(Name)) << Name;
+  }
+}
+
 TEST(IntrinsicNameLookup, NonNullterminatedStringRef) {
   using namespace Intrinsic;
   // This reproduces an issue where lookupIntrinsicID() can access memory beyond
