@@ -207,6 +207,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseVTypeI(OperandVector &Operands);
   ParseStatus parseMaskReg(OperandVector &Operands);
   ParseStatus parseVScaleReg(OperandVector &Operands);
+  ParseStatus parseTileLambda(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseInsnCDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseGPRAsFPR(OperandVector &Operands);
@@ -653,6 +654,10 @@ public:
 
   bool isXSfmmVType() const {
     return Kind == KindTy::VType && RISCVVType::isValidXSfmmVType(VType.Val);
+  }
+
+  bool isTileLambda() const {
+    return isUImmPred([](int64_t Imm) { return Imm && isUInt<3>(Imm); });
   }
 
   /// Return true if the operand is a valid for the fence instruction e.g.
@@ -2541,8 +2546,13 @@ ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
     return ParseStatus::NoMatch;
 
   StringRef Name = getLexer().getTok().getIdentifier();
-  if (!Name.consume_back(".t"))
-    return Error(getLoc(), "expected '.t' suffix");
+  if (!Name.consume_back(".t")) {
+    // Non-register identifiers may belong to another optional operand in an
+    // overloaded mnemonic. Let the matcher try those alternatives.
+    if (matchRegisterNameHelper(Name))
+      return Error(getLoc(), "expected '.t' suffix");
+    return ParseStatus::NoMatch;
+  }
   MCRegister Reg = matchRegisterNameHelper(Name);
 
   if (!Reg)
@@ -2573,6 +2583,28 @@ ParseStatus RISCVAsmParser::parseVScaleReg(OperandVector &Operands) {
   SMLoc E = getTok().getEndLoc();
   getLexer().Lex();
   Operands.push_back(RISCVOperand::createReg(Reg, S, E));
+  return ParseStatus::Success;
+}
+
+ParseStatus RISCVAsmParser::parseTileLambda(OperandVector &Operands) {
+  if (getLexer().isNot(AsmToken::Identifier))
+    return ParseStatus::NoMatch;
+
+  SMLoc S = getLoc();
+  StringRef Name = getLexer().getTok().getIdentifier();
+  if (!Name.consume_front("L") && !Name.consume_front("l"))
+    return ParseStatus::NoMatch;
+
+  unsigned Lambda;
+  if (Name.getAsInteger(10, Lambda) || !isPowerOf2_32(Lambda) || Lambda >= 128)
+    return Error(S, "operand must be L1, L2, L4, L8, L16, L32, or L64");
+
+  unsigned EncodedLambda = Log2_32(Lambda) + 1;
+
+  SMLoc E = getTok().getEndLoc();
+  getLexer().Lex();
+  Operands.push_back(RISCVOperand::createExpr(
+      MCConstantExpr::create(EncodedLambda, getContext()), S, E, isRV64()));
   return ParseStatus::Success;
 }
 

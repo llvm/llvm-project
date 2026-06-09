@@ -14527,32 +14527,6 @@ uint64x1_t test_vqshlu_n_s64(int64x1_t a) {
   return vqshlu_n_s64(a, 1);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vslid_n_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VSLID_N_S64:%.*]] = bitcast i64 [[A]] to <1 x i64>
-// CHECK-NEXT:    [[VSLID_N_S641:%.*]] = bitcast i64 [[B]] to <1 x i64>
-// CHECK-NEXT:    [[VSLID_N_S642:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsli.v1i64(<1 x i64> [[VSLID_N_S64]], <1 x i64> [[VSLID_N_S641]], i32 63)
-// CHECK-NEXT:    [[VSLID_N_S643:%.*]] = bitcast <1 x i64> [[VSLID_N_S642]] to i64
-// CHECK-NEXT:    ret i64 [[VSLID_N_S643]]
-//
-int64_t test_vslid_n_s64(int64_t a, int64_t b) {
-  return (int64_t)vslid_n_s64(a, b, 63);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vslid_n_u64(
-// CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VSLID_N_U64:%.*]] = bitcast i64 [[A]] to <1 x i64>
-// CHECK-NEXT:    [[VSLID_N_U641:%.*]] = bitcast i64 [[B]] to <1 x i64>
-// CHECK-NEXT:    [[VSLID_N_U642:%.*]] = call <1 x i64> @llvm.aarch64.neon.vsli.v1i64(<1 x i64> [[VSLID_N_U64]], <1 x i64> [[VSLID_N_U641]], i32 63)
-// CHECK-NEXT:    [[VSLID_N_U643:%.*]] = bitcast <1 x i64> [[VSLID_N_U642]] to i64
-// CHECK-NEXT:    ret i64 [[VSLID_N_U643]]
-//
-uint64_t test_vslid_n_u64(uint64_t a, uint64_t b) {
-  return (uint64_t)vslid_n_u64(a, b, 63);
-}
-
 // CHECK-LABEL: define dso_local i8 @test_vqshrnh_n_s16(
 // CHECK-SAME: i16 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]

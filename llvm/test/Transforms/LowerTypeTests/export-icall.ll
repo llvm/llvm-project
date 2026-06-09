@@ -19,19 +19,19 @@ define void @f3(i32 %x) !type !8 {
 !cfi.functions = !{!0, !1, !3, !9, !10, !4, !5, !6}
 
 ; declaration of @h with a different type is ignored
-!0 = !{!"h", i8 1, !7}
+!0 = !{!"h", i8 1, i64 8124147457056772133, !7}
 
 ; extern_weak declaration of @h with a different type is ignored as well
-!1 = !{!"h", i8 2, !8}
+!1 = !{!"h", i8 2, i64 8124147457056772133, !8}
 !2 = !{i64 0, !"typeid1"}
 
 ; definitions of @f and @f2 replace types on the IR declarations above
-!3 = !{!"f", i8 0, !2}
-!9 = !{!"f2", i8 0, !2}
-!10 = !{!"f3", i8 0, !2}
-!4 = !{!"external", i8 1, !2}
-!5 = !{!"external_weak", i8 2, !2}
-!6 = !{!"g", i8 0, !7}
+!3 = !{!"f", i8 0, i64 14740650423002898831, !2}
+!9 = !{!"f2", i8 0, i64 8471399308421654326, !2}
+!10 = !{!"f3", i8 0, i64 4197650231481825559, !2}
+!4 = !{!"external", i8 1, i64 5224464028922159466, !2}
+!5 = !{!"external_weak", i8 2, i64 5227079976482001346, !2}
+!6 = !{!"g", i8 0, i64 13146401226427987378, !7}
 !7 = !{i64 0, !"typeid2"}
 !8 = !{i64 0, !"typeid3"}
 

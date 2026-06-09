@@ -25,6 +25,7 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
@@ -3623,7 +3624,7 @@ CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
     Into = ExprResult.Val.getInt();
     if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
       return false;
-    Into = Into.zext(BitsInSizeT);
+    Into = Into.extOrTrunc(BitsInSizeT);
     return true;
   };
 
@@ -5702,4 +5703,67 @@ APValue &CompoundLiteralExpr::getOrCreateStaticValue(ASTContext &Ctx) const {
 APValue &CompoundLiteralExpr::getStaticValue() const {
   assert(StaticValue);
   return *StaticValue;
+}
+
+namespace {
+/// Visitor that walks an Expr to the head of a struct-field access chain;
+/// see clang::findStructFieldAccess.
+class StructFieldAccessVisitor
+    : public ConstStmtVisitor<StructFieldAccessVisitor, const Expr *> {
+  bool AddrOfSeen = false;
+
+public:
+  const Expr *ArrayIndex = nullptr;
+  QualType ArrayElementTy;
+
+  const Expr *VisitMemberExpr(const MemberExpr *E) {
+    if (AddrOfSeen && E->getType()->isArrayType())
+      // '&fam' designates the array object as a whole, not the
+      // pointer-to-element value that 'fam' decays to.
+      return nullptr;
+    return E;
+  }
+
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    if (ArrayIndex)
+      // We don't support multiple subscripts.
+      return nullptr;
+
+    AddrOfSeen = false; // '&ptr->array[idx]' is okay.
+    ArrayIndex = E->getIdx();
+    ArrayElementTy = E->getBase()->getType();
+    return Visit(E->getBase());
+  }
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return E;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const UnaryOperator *E) {
+    AddrOfSeen = true;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const UnaryOperator *E) {
+    AddrOfSeen = false;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitBinaryOperator(const BinaryOperator *Op) {
+    return Op->isCommaOp() ? Visit(Op->getRHS()) : nullptr;
+  }
+};
+} // namespace
+
+const Expr *clang::findStructFieldAccess(const Expr *E,
+                                         const Expr **OutArrayIndex,
+                                         QualType *OutArrayElementTy) {
+  StructFieldAccessVisitor V;
+  const Expr *Result = V.Visit(E);
+  if (OutArrayIndex)
+    *OutArrayIndex = V.ArrayIndex;
+  if (OutArrayElementTy)
+    *OutArrayElementTy = V.ArrayElementTy;
+  return Result;
 }

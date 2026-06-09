@@ -52,16 +52,14 @@ struct AMDGPUImageDMaskIntrinsic {
 // handling NaNs.
 static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
                            const APFloat &Src2) {
+  assert(!Src0.isNaN() && !Src1.isNaN() && !Src2.isNaN() &&
+         "nans handled separately");
   APFloat Max3 = maxnum(maxnum(Src0, Src1), Src2);
 
-  APFloat::cmpResult Cmp0 = Max3.compare(Src0);
-  assert(Cmp0 != APFloat::cmpUnordered && "nans handled separately");
-  if (Cmp0 == APFloat::cmpEqual)
+  if (Max3.bitwiseIsEqual(Src0))
     return maxnum(Src1, Src2);
 
-  APFloat::cmpResult Cmp1 = Max3.compare(Src1);
-  assert(Cmp1 != APFloat::cmpUnordered && "nans handled separately");
-  if (Cmp1 == APFloat::cmpEqual)
+  if (Max3.bitwiseIsEqual(Src1))
     return maxnum(Src0, Src2);
 
   return maxnum(Src0, Src1);
@@ -143,6 +141,9 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
     NewCall->copyFastMathFlags(&OldIntr);
+  // Copy attributes
+  AttributeList OldAttrList = OldIntr.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   // Erase and replace uses
   if (!InstToReplace.getType()->isVoidTy())
@@ -2408,6 +2409,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
+  AttributeList OldAttrList = II.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   if (IsLoad) {
     if (NewNumElts == 1) {
