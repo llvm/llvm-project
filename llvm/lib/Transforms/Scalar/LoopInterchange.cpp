@@ -176,27 +176,25 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   ValueVector MemInstr;
   unsigned NumInsts = 0;
 
-  // Collect memory instructions from the BB which belongs to all loops in the LoopList
-  for (Loop *PathLoop : LoopList) {
-    for (BasicBlock *BB : PathLoop->getBlocksVector()) {
-      // In this iteration we need to handle the BB contained directly by Current Loop 
-      // and all other BB of subloops will be handled in its own in next iterations.
-      if (LI->getLoopFor(BB) != PathLoop)
-        continue;
-      // Scan the BB and collect legal loads and stores.
-      for (Instruction &I : *BB) {
-        if (!isa<Instruction>(I))
+  // Collect memory instructions from the BB which belongs to all loops in the
+  // LoopList
+  for (BasicBlock *BB : L->getBlocksVector()) {
+    // In this iteration we need to handle the BB contained directly by Current
+    // Loop and all other BB of subloops will be handled in its own in next
+    // iterations.
+    if (!llvm::is_contained(LoopList, LI->getLoopFor(BB)))
+      continue;
+    // Scan the BB and collect legal loads and stores.
+    for (Instruction &I : *BB) {
+      NumInsts++;
+      if (auto *Ld = dyn_cast<LoadInst>(&I)) {
+        if (!Ld->isSimple())
           return false;
-        NumInsts++;
-        if (auto *Ld = dyn_cast<LoadInst>(&I)) {
-          if (!Ld->isSimple())
-            return false;
-          MemInstr.push_back(&I);
-        } else if (auto *St = dyn_cast<StoreInst>(&I)) {
-          if (!St->isSimple())
-            return false;
-          MemInstr.push_back(&I);
-        }
+        MemInstr.push_back(&I);
+      } else if (auto *St = dyn_cast<StoreInst>(&I)) {
+        if (!St->isSimple())
+          return false;
+        MemInstr.push_back(&I);
       }
     }
   }
@@ -241,8 +239,9 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         // make it non-negative.
         if (D->normalize(SE))
           LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
-        LLVM_DEBUG(StringRef DepType =
-                       D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
+        LLVM_DEBUG(StringRef DepType = D->isFlow()   ? "flow"
+                                       : D->isAnti() ? "anti"
+                                                     : "output";
                    dbgs() << "Found " << DepType
                           << " dependency between Src and Dst\n"
                           << " Src:" << *Src << "\n Dst:" << *Dst << '\n');
@@ -274,9 +273,15 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
           Dep.assign(Level, '*');
         }
 
-        while (Dep.size() != Level) {
+        while (Dep.size() < Level) {
           Dep.push_back('I');
         }
+
+        // Dependence analysis reports levels for the full enclosing loop nest.
+        // Keep only the suffix that corresponds to the selected perfect
+        // subnest.
+        if (Dep.size() > Level)
+          Dep.erase(Dep.begin(), Dep.end() - Level);
 
         // If all the elements of any direction vector have only '*', legality
         // can't be proven. Exit early to save compile time.
@@ -683,30 +688,31 @@ struct LoopInterchange {
     return processLoopList(LoopList);
   }
 
-  static SmallVector<SmallVector<Loop *, 8>, 4> collectRootToLeafPaths(Loop *Root) {
-    SmallVector<SmallVector<Loop *, 8>, 4> AllPaths;
-    // Stack stores {Loop, CurrentPath} pairs
-    SmallVector<std::pair<Loop *, SmallVector<Loop *, 8>>, 8> Stack;
-    Stack.push_back({Root, {Root}});
-    while (!Stack.empty()) {
-      auto [L, CurrentPath] = Stack.pop_back_val();
-      const auto &SubLoops = L->getSubLoops();
-      if (SubLoops.empty()) {
-        // Leaf node: save the path
-        AllPaths.push_back(CurrentPath);
-      } else {
-        for (Loop *Child : SubLoops) {
-          SmallVector<Loop *, 8> NewPath(CurrentPath);
-          NewPath.push_back(Child);
-          Stack.push_back({Child, NewPath});
-        }
+  static SmallVector<SmallVector<Loop *, 8>, 4>
+  collectPerfectNests(LoopNest &LN) {
+    SmallVector<SmallVector<Loop *, 8>, 4> LoopLists;
+    for (Loop *L : LN.getLoops()) {
+      if (!L->isInnermost())
+        continue;
+
+      SmallVector<Loop *, 8> LoopList;
+      Loop *Current = L;
+      while (true) {
+        LoopList.push_back(Current);
+        Loop *Parent = Current->getParentLoop();
+        if (!Parent || Parent->getSubLoops().size() != 1)
+          break;
+        Current = Parent;
       }
+      std::reverse(LoopList.begin(), LoopList.end());
+      if (LoopList.size() >= 2)
+        LoopLists.push_back(std::move(LoopList));
     }
-    return AllPaths;
+    return LoopLists;
   }
 
   bool run(LoopNest &LN) {
-    auto Paths = collectRootToLeafPaths(&LN.getOutermostLoop());
+    SmallVector<SmallVector<Loop *, 8>, 4> LoopLists = collectPerfectNests(LN);
     // Consider below kernel
     // for(int i=0; i<n; i++){  // Loop 1
     //     for(int j=0; j<m; j++){  // Loop 2
@@ -720,20 +726,20 @@ struct LoopInterchange {
     //         }
     //     }
     // }
-    // Then Paths will contain:
-    // - [Loop1, Loop2, Loop3]
-    // - [Loop1, Loop4, Loop5]
+    // Then LoopLists will contain:
+    // - [Loop2, Loop3]
+    // - [Loop4, Loop5]
     bool Changed = false;
-    for (auto &Path : Paths) {
+    for (SmallVector<Loop *, 8> &LoopList : LoopLists) {
       // Ensure minimum depth of the loop nest to do the interchange.
-      if (!hasSupportedLoopDepth(Path, *ORE))
+      if (!hasSupportedLoopDepth(LoopList, *ORE))
         continue;
       // Ensure computable loop nest.
-      if (!isComputableLoopNest(&AR->SE, Path)) {
+      if (!isComputableLoopNest(&AR->SE, LoopList)) {
         LLVM_DEBUG(dbgs() << "Not valid loop candidate for interchange\n");
         continue;
       }
-      Changed |= processLoopList(Path);
+      Changed |= processLoopList(LoopList);
     }
     return Changed;
   }
@@ -1511,11 +1517,11 @@ static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
         continue;
 
       // The incoming value is defined in the outer loop latch. Currently we
-      // only support that in case the outer loop latch has a single predecessor.
-      // This guarantees that the outer loop latch is executed if and only if
-      // the inner loop is executed (because tightlyNested() guarantees that the
-      // outer loop header only branches to the inner loop or the outer loop
-      // latch).
+      // only support that in case the outer loop latch has a single
+      // predecessor. This guarantees that the outer loop latch is executed if
+      // and only if the inner loop is executed (because tightlyNested()
+      // guarantees that the outer loop header only branches to the inner loop
+      // or the outer loop latch).
       // FIXME: We could weaken this logic and allow multiple predecessors,
       //        if the values are produced outside the loop latch. We would need
       //        additional logic to update the PHI nodes in the exit block as
