@@ -156,6 +156,7 @@ struct SubroutineSubprogram; // R1534
 // with order of the the requirement productions in the grammar.
 struct DerivedTypeDef; // R726
 struct EnumDef; // R759
+struct EnumerationTypeDef; // F2023 R766
 struct TypeDeclarationStmt; // R801
 struct AccessStmt; // R827
 struct AllocatableStmt; // R829
@@ -394,13 +395,15 @@ struct OtherSpecificationStmt {
 };
 
 // R508 specification-construct ->
-//        derived-type-def | enum-def | generic-stmt | interface-block |
-//        parameter-stmt | procedure-declaration-stmt |
-//        other-specification-stmt | type-declaration-stmt
+//        derived-type-def | enum-def | enumeration-type-def |
+//        generic-stmt | interface-block | parameter-stmt |
+//        procedure-declaration-stmt | other-specification-stmt |
+//        type-declaration-stmt
 struct SpecificationConstruct {
   UNION_CLASS_BOILERPLATE(SpecificationConstruct);
   std::variant<common::Indirection<DerivedTypeDef>,
-      common::Indirection<EnumDef>, Statement<common::Indirection<GenericStmt>>,
+      common::Indirection<EnumDef>, common::Indirection<EnumerationTypeDef>,
+      Statement<common::Indirection<GenericStmt>>,
       common::Indirection<InterfaceBlock>,
       Statement<common::Indirection<ParameterStmt>>,
       Statement<common::Indirection<OldParameterStmt>>,
@@ -1232,6 +1235,33 @@ struct EnumDef {
   TUPLE_CLASS_BOILERPLATE(EnumDef);
   std::tuple<Statement<EnumDefStmt>, std::list<Statement<EnumeratorDefStmt>>,
       Statement<EndEnumStmt>>
+      t;
+};
+
+// F2023 R767 enumeration-type-stmt ->
+//        ENUMERATION TYPE [ [ , access-spec ] :: ] enumeration-type-name
+struct EnumerationTypeStmt {
+  TUPLE_CLASS_BOILERPLATE(EnumerationTypeStmt);
+  std::tuple<std::optional<AccessSpec>, Name> t;
+};
+
+// F2023 R768 enumeration-enumerator-stmt -> ENUMERATOR [ :: ]
+// enumerator-name-list
+WRAPPER_CLASS(EnumerationEnumeratorStmt, std::list<Name>);
+
+// F2023 R769 end-enumeration-type-stmt ->
+//        END ENUMERATION TYPE [ enumeration-type-name ]
+WRAPPER_CLASS(EndEnumerationTypeStmt, std::optional<Name>);
+
+// F2023 R766 enumeration-type-def ->
+//        enumeration-type-stmt
+//        enumeration-enumerator-stmt [ enumeration-enumerator-stmt ]...
+//        end-enumeration-type-stmt
+struct EnumerationTypeDef {
+  TUPLE_CLASS_BOILERPLATE(EnumerationTypeDef);
+  std::tuple<Statement<EnumerationTypeStmt>,
+      std::list<Statement<EnumerationEnumeratorStmt>>,
+      Statement<EndEnumerationTypeStmt>>
       t;
 };
 
@@ -2257,11 +2287,11 @@ struct ConcurrentHeader {
 // F'2023 R1131 reduce-operation -> reduction-operator
 // CUF reduction-op -> reduction-operator
 // OpenACC 3.3 2.5.15 reduction-operator ->
-//                      + | * | .AND. | .OR. | .EQV. | .NEQV. |
+//                      + | - | * | .AND. | .OR. | .EQV. | .NEQV. |
 //                      MAX | MIN | IAND | IOR | IEOR
 struct ReductionOperator {
-  ENUM_CLASS(
-      Operator, Plus, Multiply, Max, Min, Iand, Ior, Ieor, And, Or, Eqv, Neqv)
+  ENUM_CLASS(Operator, Plus, Minus, Multiply, Max, Min, Iand, Ior, Ieor, And,
+      Or, Eqv, Neqv)
   WRAPPER_CLASS_BOILERPLATE(ReductionOperator, Operator);
   CharBlock source;
 };
@@ -4591,7 +4621,7 @@ struct OmpDeviceSafesyncClause {
 // device-type-clause ->
 //    DEVICE_TYPE(ANY | HOST | NOHOST)              // since 5.0
 struct OmpDeviceTypeClause {
-  ENUM_CLASS(DeviceTypeDescription, Any, Host, Nohost)
+  using DeviceTypeDescription = common::OmpDeviceType;
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
 };
 
@@ -5644,7 +5674,7 @@ struct AccClauseList {
 struct OpenACCRoutineConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCRoutineConstruct);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, AccClauseList> t;
+  std::tuple<Verbatim, std::list<Name>, AccClauseList> t;
 };
 
 struct OpenACCCacheConstruct {
