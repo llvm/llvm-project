@@ -8,6 +8,7 @@
 
 #include "AIRWriterPass.h"
 #include "AIRLibWriter.h"
+#include "BitcodeEmitter.h"
 #include "PointeeTypeMap.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -19,6 +20,7 @@ using namespace llvm;
 static void writeAIRLibImpl(Module &M, raw_pwrite_stream &OS) {
   // Reconstruct typed-pointer info into a side table (AIR v1 bitcode needs
   // typed pointers; the module itself stays opaque).
+  metal::lowerConstantExprs(M);
   metal::PointeeTypeMap PTM = metal::buildPointeeTypeMap(M);
   metal::writeAIRLib(M, PTM, OS);
 }

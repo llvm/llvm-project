@@ -26,6 +26,8 @@ namespace metal {
 /// This replaces LLVM's WriteBitcodeToFile for AIR targets.
 std::vector<uint8_t> emitAIRBitcode(llvm::Module &M, PointeeTypeMap &PTM);
 
+void lowerConstantExprs(llvm::Module &M);
+
 } // namespace metal
 } // namespace llvm
 

@@ -15,6 +15,7 @@
 
 #include "AIREmbedderPass.h"
 #include "AIRLibWriter.h"
+#include "BitcodeEmitter.h"
 #include "PointeeTypeMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constants.h"
@@ -32,6 +33,7 @@
 using namespace llvm;
 
 static void embedAIRLibImpl(Module &M) {
+  metal::lowerConstantExprs(M);
   metal::PointeeTypeMap PTM = metal::buildPointeeTypeMap(M);
   std::vector<uint8_t> Bytes = metal::serializeAIRLib(M, PTM);
 

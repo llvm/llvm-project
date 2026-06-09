@@ -42,7 +42,7 @@ namespace metal {
 // converts to float-element GEPs (gep float, @base, i64 float_index)
 // because AIR v1 typed-pointer bitcode requires GEP source type to match
 // the pointer's pointee type.
-static void lowerConstantExprs(Module &M) {
+void lowerConstantExprs(Module &M) {
   auto &Ctx = M.getContext();
   Type *FloatTy = Type::getFloatTy(Ctx);
   Type *I64Ty = Type::getInt64Ty(Ctx);
