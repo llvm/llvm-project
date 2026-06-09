@@ -1878,7 +1878,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * Flat pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
 
   llvm.amdgcn.global.load.monitor                  Available on GFX12.5 only.
                                                    Corresponds to ``global_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
@@ -1888,10 +1887,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    This intrinsic has 3 operands:
 
-                                                   * Flat pointer.
+                                                   * Global pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
 
   llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64     Available starting GFX12.5.
                                                    Corresponds to ``ds_atomic_barrier_arrive_rtn_b64``.
@@ -7213,15 +7211,6 @@ orderings (``acquire``, ``release``, ``acq_rel``, or ``seq_cst``).
 
 The memory model does not support the region address space which is treated as
 non-atomic.
-
-Acquire memory ordering is not meaningful on store atomic instructions and is
-treated as non-atomic.
-
-Release memory ordering is not meaningful on load atomic instructions and is
-treated as non-atomic.
-
-Acquire-release memory ordering is not meaningful on load or store atomic
-instructions and is treated as acquire and release respectively.
 
 The memory order also adds the single thread optimization constraints defined in
 table
@@ -17535,7 +17524,8 @@ For GFX125x:
 
   * In order to monitor a cache line in the L2 cache, these instructions must
     ensure that the L2 cache is always hit by setting the ``SCOPE`` of the instruction
-    appropriately.
+    appropriately. The compiler may adjust the scope of the instruction accordingly
+    to ensure this is the case.
   * For non-atomic and atomic code sequences, it is valid to replace
     ``global_load_b32/64/128`` with a ``global_load_monitor_b32/64/128`` and a
     ``flat_load_b32/64/128`` with a ``flat_load_monitor_b32/64/128``.
