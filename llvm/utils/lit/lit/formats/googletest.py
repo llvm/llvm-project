@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import json
 import math
 import os
@@ -43,7 +42,7 @@ class GoogleTest(TestFormat):
             return None
         return sum(
             map(
-                lambda line: lit.util.to_string(line).startswith("  "),
+                lambda line: line.startswith(b"  "),
                 out.splitlines(False),
             )
         )
@@ -192,7 +191,7 @@ class GoogleTest(TestFormat):
             out, _, exitCode = lit.util.executeCommand(
                 cmd,
                 env=test.config.environment,
-                timeout=litConfig.maxIndividualTestTime,
+                timeout=test.config.maxIndividualTestTime,
                 redirect_stderr=True,
             )
         except lit.util.ExecuteCommandTimeoutException as e:
@@ -200,7 +199,7 @@ class GoogleTest(TestFormat):
             return (
                 lit.Test.TIMEOUT,
                 f"{shard_header}{stream_msg}Reached "
-                f"timeout of {litConfig.maxIndividualTestTime} seconds",
+                f"timeout of {test.config.maxIndividualTestTime} seconds",
             )
 
         if not os.path.exists(test.gtest_json_file):

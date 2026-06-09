@@ -1,9 +1,9 @@
 ! Test scheduling of WHERE in lower-hlfir-ordered-assignments pass
 ! when fusing is enabled or disabled.
 
-!RUN: bbc -hlfir -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments{fuse-assignments=false})" --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only %s 2>&1 | FileCheck %s --check-prefix NOFUSE
+!RUN: bbc -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments{fuse-assignments=false})" --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only %s 2>&1 | FileCheck %s --check-prefix NOFUSE
 
-!RUN: bbc -hlfir -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments{fuse-assignments=true})" --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only %s 2>&1 | FileCheck %s --check-prefix FUSE
+!RUN: bbc -o - -pass-pipeline="builtin.module(lower-hlfir-ordered-assignments{fuse-assignments=true})" --debug-only=flang-ordered-assignment -flang-dbg-order-assignment-schedule-only %s 2>&1 | FileCheck %s --check-prefix FUSE
 
 !REQUIRES: asserts
 
@@ -37,5 +37,6 @@ end subroutine
 !FUSE-NEXT: run 1 evaluate: where/region_assign2
 !FUSE-LABEL: ------------ scheduling where in _QPunfusable ------------
 !FUSE-NEXT: run 1 evaluate: where/region_assign1
-!FUSE-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 1
+!FUSE-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 1
+!FUSE-NEXT: conflicting arrays:{{.*}} and {{.*}}
 !FUSE-NEXT: run 2 evaluate: where/region_assign2

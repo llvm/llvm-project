@@ -41,6 +41,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 #include <ctime>
@@ -157,7 +158,7 @@ static int AssembleInput(StringRef ProgName, const Target *TheTarget,
   std::unique_ptr<MCAsmParser> Parser(
       createMCMasmParser(SrcMgr, Ctx, Str, MAI, TM, 0));
   std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
+      TheTarget->createMCAsmParser(STI, *Parser, MCII));
 
   if (!TAP) {
     WithColor::error(errs(), ProgName)
@@ -313,6 +314,7 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
     }
   }
   SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
@@ -332,7 +334,7 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  MCContext Ctx(TheTriple, *MAI, *MRI, *STI, &SrcMgr);
   std::unique_ptr<MCObjectFileInfo> MOFI(TheTarget->createMCObjectFileInfo(
       Ctx, /*PIC=*/false, /*LargeCodeModel=*/true));
   Ctx.setObjectFileInfo(MOFI.get());

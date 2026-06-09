@@ -11,10 +11,10 @@
 #define _LIBCPP___ITERATOR_ITER_MOVE_H
 
 #include <__concepts/class_or_enum.h>
+#include <__concepts/referenceable.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_referenceable.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
@@ -40,7 +40,7 @@ void iter_move() = delete;
 
 template <class _Tp>
 concept __unqualified_iter_move = __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
-  // NOLINTNEXTLINE(libcpp-robust-against-adl) iter_swap ADL calls should only be made through ranges::iter_swap
+  // NOLINTNEXTLINE(libcpp-robust-against-adl) iter_move ADL calls should only be made through ranges::iter_move
   iter_move(std::forward<_Tp>(__t));
 };
 

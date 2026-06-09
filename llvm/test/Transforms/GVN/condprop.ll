@@ -360,7 +360,7 @@ define i1 @test6_phi2(i1 %c, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BB2]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP_NOT]], [[BB1]] ], [ true, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[BB1]] ], [ true, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[PHI]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret i1 false
@@ -862,6 +862,17 @@ bb5:
   %phi2 = phi ptr [ poison, %bb5 ], [ %phi1, %bb4 ]
   call void @use_ptr(ptr %phi2)
   br label %bb5
+}
+
+define <2 x ptr> @select_vector_eq(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: @select_vector_eq(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x ptr> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x ptr> [[A]], <2 x ptr> [[B]]
+; CHECK-NEXT:    ret <2 x ptr> [[SEL]]
+;
+  %cmp = icmp eq <2 x ptr> %a, %b
+  %sel = select <2 x i1> %cmp, <2 x ptr> %a, <2 x ptr> %b
+  ret <2 x ptr> %sel
 }
 
 define void @select_same_obj(i1 %c, ptr %p, i64 %x) {

@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/log.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "hdr/stdint_proxy.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcLogTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -76,7 +82,7 @@ TEST_F(LlvmLibcLogTest, AllExponents) {
 }
 
 TEST_F(LlvmLibcLogTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 234561;
+  constexpr uint64_t COUNT = 1'231;
   constexpr uint64_t START = 0x3FD0'0000'0000'0000ULL; // 0.25
   constexpr uint64_t STOP = 0x4010'0000'0000'0000ULL;  // 4.0
   // constexpr uint64_t START = 0x3FF0'0000'0000'0000ULL;  // 1.0
@@ -106,7 +112,7 @@ TEST_F(LlvmLibcLogTest, InDoubleRange) {
       ++count;
       // ASSERT_MPFR_MATCH(mpfr::Operation::Log, x, result, 0.5);
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Log, x, result,
-                                             0.5, rounding_mode)) {
+                                             TOLERANCE + 0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Log, x,
                                                   result, tol, rounding_mode)) {
@@ -116,10 +122,10 @@ TEST_F(LlvmLibcLogTest, InDoubleRange) {
         }
       }
     }
-    tlog << " Log failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Log failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Log, mx, mr, 0.5, rounding_mode);
     }
   };

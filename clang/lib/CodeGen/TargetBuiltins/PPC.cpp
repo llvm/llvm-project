@@ -59,7 +59,7 @@ static llvm::Value *emitPPCLoadReserveIntrinsic(CodeGenFunction &CGF,
     Constraints += MachineClobbers;
   }
 
-  llvm::Type *PtrType = CGF.UnqualPtrTy;
+  llvm::Type *PtrType = CGF.DefaultPtrTy;
   llvm::FunctionType *FTy = llvm::FunctionType::get(RetType, {PtrType}, false);
 
   llvm::InlineAsm *IA =
@@ -70,31 +70,21 @@ static llvm::Value *emitPPCLoadReserveIntrinsic(CodeGenFunction &CGF,
   return CI;
 }
 
-Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
-                                           const CallExpr *E) {
-  // Do not emit the builtin arguments in the arguments of a function call,
-  // because the evaluation order of function arguments is not specified in C++.
-  // This is important when testing to ensure the arguments are emitted in the
-  // same order every time. Eg:
-  // Instead of:
-  //   return Builder.CreateFDiv(EmitScalarExpr(E->getArg(0)),
-  //                             EmitScalarExpr(E->getArg(1)), "swdiv");
-  // Use:
-  //   Value *Op0 = EmitScalarExpr(E->getArg(0));
-  //   Value *Op1 = EmitScalarExpr(E->getArg(1));
-  //   return Builder.CreateFDiv(Op0, Op1, "swdiv")
-
-  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+Value *CodeGenFunction::EmitPPCBuiltinCpu(unsigned BuiltinID,
+                                          llvm::Type *ReturnType,
+                                          StringRef CPUStr) {
+  assert(BuiltinID == Builtin::BI__builtin_cpu_is ||
+         BuiltinID == Builtin::BI__builtin_cpu_supports);
 
 #include "llvm/TargetParser/PPCTargetParser.def"
   auto GenAIXPPCBuiltinCpuExpr = [&](unsigned SupportMethod, unsigned FieldIdx,
                                      unsigned Mask, CmpInst::Predicate CompOp,
                                      unsigned OpValue) -> Value * {
     if (SupportMethod == BUILTIN_PPC_FALSE)
-      return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
+      return llvm::ConstantInt::getFalse(ReturnType);
 
     if (SupportMethod == BUILTIN_PPC_TRUE)
-      return llvm::ConstantInt::getTrue(ConvertType(E->getType()));
+      return llvm::ConstantInt::getTrue(ReturnType);
 
     assert(SupportMethod <= SYS_CALL && "Invalid value for SupportMethod.");
 
@@ -137,12 +127,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
         ConstantInt::get(IsValueType64Bit ? Int64Ty : Int32Ty, OpValue));
   };
 
-  switch (BuiltinID) {
-  default: return nullptr;
-
-  case Builtin::BI__builtin_cpu_is: {
-    const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+  if (BuiltinID == Builtin::BI__builtin_cpu_is) {
     llvm::Triple Triple = getTarget().getTriple();
 
     typedef std::tuple<unsigned, unsigned, unsigned, unsigned> CPUInfo;
@@ -170,7 +155,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
            "Invalid CPU name. Missed by SemaChecking?");
 
     if (LinuxSupportMethod == BUILTIN_PPC_FALSE)
-      return llvm::ConstantInt::getFalse(ConvertType(E->getType()));
+      return llvm::ConstantInt::getFalse(ReturnType);
 
     Value *Op0 = llvm::ConstantInt::get(Int32Ty, PPC_FAWORD_CPUID);
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
@@ -178,47 +163,71 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateICmpEQ(TheCall,
                                 llvm::ConstantInt::get(Int32Ty, LinuxIDValue));
   }
-  case Builtin::BI__builtin_cpu_supports: {
-    llvm::Triple Triple = getTarget().getTriple();
-    const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
-    if (Triple.isOSAIX()) {
-      typedef std::tuple<unsigned, unsigned, unsigned, CmpInst::Predicate,
-                         unsigned>
-          CPUSupportType;
-      auto [SupportMethod, FieldIdx, Mask, CompOp, Value] =
-          static_cast<CPUSupportType>(StringSwitch<CPUSupportType>(CPUStr)
+  // else BuiltinID == Builtin::BI__builtin_cpu_supports
+  llvm::Triple Triple = getTarget().getTriple();
+  if (Triple.isOSAIX()) {
+    typedef std::tuple<unsigned, unsigned, unsigned, CmpInst::Predicate,
+                       unsigned>
+        CPUSupportType;
+    auto [SupportMethod, FieldIdx, Mask, CompOp, Value] =
+        static_cast<CPUSupportType>(
+            StringSwitch<CPUSupportType>(CPUStr)
 #define PPC_AIX_FEATURE(NAME, DESC, SUPPORT_METHOD, INDEX, MASK, COMP_OP,      \
                         VALUE)                                                 \
   .Case(NAME, {SUPPORT_METHOD, INDEX, MASK, COMP_OP, VALUE})
 #include "llvm/TargetParser/PPCTargetParser.def"
-                                          .Default({BUILTIN_PPC_FALSE, 0, 0,
-                                                    CmpInst::Predicate(), 0}));
-      return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, Mask, CompOp,
-                                     Value);
-    }
+                .Default({BUILTIN_PPC_FALSE, 0, 0, CmpInst::Predicate(), 0}));
+    return GenAIXPPCBuiltinCpuExpr(SupportMethod, FieldIdx, Mask, CompOp,
+                                   Value);
+  }
 
-    assert(Triple.isOSLinux() &&
-           "__builtin_cpu_supports() is only supported for AIX and Linux.");
-    auto [FeatureWord, BitMask] =
-        StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
+  assert(Triple.isOSLinux() &&
+         "__builtin_cpu_supports() is only supported for AIX and Linux.");
+  auto [FeatureWord, BitMask] =
+      StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
 #define PPC_LNX_FEATURE(Name, Description, EnumName, Bitmask, FA_WORD)         \
   .Case(Name, {FA_WORD, Bitmask})
 #include "llvm/TargetParser/PPCTargetParser.def"
-            .Default({0, 0});
-    if (!BitMask)
-      return Builder.getFalse();
-    Value *Op0 = llvm::ConstantInt::get(Int32Ty, FeatureWord);
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
-    Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_supports");
-    Value *Mask =
-        Builder.CreateAnd(TheCall, llvm::ConstantInt::get(Int32Ty, BitMask));
-    return Builder.CreateICmpNE(Mask, llvm::Constant::getNullValue(Int32Ty));
+          .Default({0, 0});
+  if (!BitMask)
+    return Builder.getFalse();
+  Value *Op0 = llvm::ConstantInt::get(Int32Ty, FeatureWord);
+  llvm::Function *F = CGM.getIntrinsic(Intrinsic::ppc_fixed_addr_ld);
+  Value *TheCall = Builder.CreateCall(F, {Op0}, "cpu_supports");
+  Value *Mask =
+      Builder.CreateAnd(TheCall, llvm::ConstantInt::get(Int32Ty, BitMask));
+  return Builder.CreateICmpNE(Mask, llvm::Constant::getNullValue(Int32Ty));
 #undef PPC_FAWORD_HWCAP
 #undef PPC_FAWORD_HWCAP2
 #undef PPC_FAWORD_CPUID
-  }
+}
 
+Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
+                                           const CallExpr *E) {
+  // Do not emit the builtin arguments in the arguments of a function call,
+  // because the evaluation order of function arguments is not specified in C++.
+  // This is important when testing to ensure the arguments are emitted in the
+  // same order every time. Eg:
+  // Instead of:
+  //   return Builder.CreateFDiv(EmitScalarExpr(E->getArg(0)),
+  //                             EmitScalarExpr(E->getArg(1)), "swdiv");
+  // Use:
+  //   Value *Op0 = EmitScalarExpr(E->getArg(0));
+  //   Value *Op1 = EmitScalarExpr(E->getArg(1));
+  //   return Builder.CreateFDiv(Op0, Op1, "swdiv")
+
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+  switch (BuiltinID) {
+  default:
+    return nullptr;
+
+  case Builtin::BI__builtin_cpu_is:
+  case Builtin::BI__builtin_cpu_supports: {
+    const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
+    StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+    return EmitPPCBuiltinCpu(BuiltinID, ConvertType(E->getType()), CPUStr);
+  }
   // __builtin_ppc_get_timebase is GCC 4.8+'s PowerPC-specific name for what we
   // call __builtin_readcyclecounter.
   case PPC::BI__builtin_ppc_get_timebase:
@@ -782,10 +791,8 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
   // Absolute value
   case PPC::BI__builtin_vsx_xvabsdp:
   case PPC::BI__builtin_vsx_xvabssp: {
-    llvm::Type *ResultType = ConvertType(E->getType());
     Value *X = EmitScalarExpr(E->getArg(0));
-    llvm::Function *F = CGM.getIntrinsic(Intrinsic::fabs, ResultType);
-    return Builder.CreateCall(F, X);
+    return Builder.CreateFAbs(X);
   }
 
   // Fastmath by default
@@ -1131,35 +1138,170 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       break;
   #include "clang/Basic/BuiltinsPPC.def"
     }
-    if (BuiltinID == PPC::BI__builtin_vsx_lxvp ||
-        BuiltinID == PPC::BI__builtin_vsx_stxvp ||
-        BuiltinID == PPC::BI__builtin_mma_lxvp ||
-        BuiltinID == PPC::BI__builtin_mma_stxvp) {
-      if (BuiltinID == PPC::BI__builtin_vsx_lxvp ||
-          BuiltinID == PPC::BI__builtin_mma_lxvp) {
-        Ops[0] = Builder.CreateGEP(Int8Ty, Ops[1], Ops[0]);
-      } else {
-        Ops[1] = Builder.CreateGEP(Int8Ty, Ops[2], Ops[1]);
-      }
+    // Handle custom builtins that return early without using the common
+    // store-back pattern.
+    switch (BuiltinID) {
+    case PPC::BI__builtin_vsx_lxvp:
+    case PPC::BI__builtin_mma_lxvp:
+      Ops[0] = Builder.CreateGEP(Int8Ty, Ops[1], Ops[0]);
       Ops.pop_back();
-      llvm::Function *F = CGM.getIntrinsic(ID);
-      return Builder.CreateCall(F, Ops, "");
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_vsx_stxvp:
+    case PPC::BI__builtin_mma_stxvp:
+      Ops[1] = Builder.CreateGEP(Int8Ty, Ops[2], Ops[1]);
+      Ops.pop_back();
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_disassemble_dmr:
+      Ops[1] = Builder.CreateLoad(EmitPointerWithAlignment(E->getArg(1)));
+      return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
+
+    // Handle AES encrypt paired builtins - they return a value directly.
+    // For variant builtins, add the appropriate immediate value.
+    case PPC::BI__builtin_aes128_encrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes192_encrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 1));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes256_encrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 2));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes_encrypt_paired:
+      // For base builtin, Ops already has all 3 arguments.
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+
+    // Handle AES decrypt paired builtins - they return a value directly.
+    // For variant builtins, add the appropriate immediate value.
+    case PPC::BI__builtin_aes128_decrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes192_decrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 1));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes256_decrypt_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 2));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes_decrypt_paired:
+      // For base builtin, Ops already has all 3 arguments.
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+
+    // Handle AES genlastkey paired builtins.
+    case PPC::BI__builtin_aes128_genlastkey_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes192_genlastkey_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 1));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes256_genlastkey_paired:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 2));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_aes_genlastkey_paired:
+      // For base builtin, Ops already has all 2 arguments.
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+
+    // Handle Galois Field multiplication builtins.
+    case PPC::BI__builtin_galois_field_mult_gcm:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_galois_field_mult_xts:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 1));
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+    case PPC::BI__builtin_galois_field_mult:
+      // For base builtin, Ops already has all 3 arguments.
+      return Builder.CreateCall(CGM.getIntrinsic(ID), Ops, "");
+
+    default:
+      break;
     }
+
     SmallVector<Value*, 4> CallOps;
+
+    // Accumulate = true, are used for builtins where the hardware instruction
+    // reads the old destination value, performs an operation with it, and
+    // writes the result back.
+    // Load the existing value from the first argument (destination pointer) and
+    // add it to CallOps as the first intrinsic operand.
     if (Accumulate) {
       Address Addr = EmitPointerWithAlignment(E->getArg(0));
       Value *Acc = Builder.CreateLoad(Addr);
       CallOps.push_back(Acc);
     }
-    if (BuiltinID == PPC::BI__builtin_mma_dmmr ||
-        BuiltinID == PPC::BI__builtin_mma_dmxor ||
-        BuiltinID == PPC::BI__builtin_mma_disassemble_dmr ||
-        BuiltinID == PPC::BI__builtin_mma_dmsha2hash) {
+
+    // Handles builtins that need special argument handling such as:
+    // - Dereferencing pointer arguments to load actual register values.
+    // - Adding implicit operands required by the intrinsic.
+    // - Transforming or reordering operands.
+    // After preprocessing, the loop at end copies Ops[1..n] into CallOps,
+    // skipping Ops[0] which is the destination pointer for result storage.
+    switch (BuiltinID) {
+    case PPC::BI__builtin_dmmr:
+    case PPC::BI__builtin_dmxor:
+    case PPC::BI__builtin_dmsha2hash: {
       Address Addr = EmitPointerWithAlignment(E->getArg(1));
       Ops[1] = Builder.CreateLoad(Addr);
+      break;
     }
-    if (BuiltinID == PPC::BI__builtin_mma_disassemble_dmr)
-      return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
+    case PPC::BI__builtin_dmsha256hash:
+    case PPC::BI__builtin_dmsha512hash: {
+      Ops[1] = Builder.CreateLoad(EmitPointerWithAlignment(E->getArg(1)));
+      int Imm = (BuiltinID == PPC::BI__builtin_dmsha256hash) ? 0 : 1;
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, Imm));
+      break;
+    }
+    case PPC::BI__builtin_dmsha3dw:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 0));
+      break;
+    case PPC::BI__builtin_dmcryshash:
+      Ops.push_back(llvm::ConstantInt::get(Int32Ty, 12));
+      break;
+    case PPC::BI__builtin_dmxxsha384512pad:
+    case PPC::BI__builtin_dmxxsha224256pad: {
+      int Imm = (BuiltinID == PPC::BI__builtin_dmxxsha384512pad) ? 2 : 3;
+      Ops.push_back(ConstantInt::get(Int32Ty, Imm));
+      Ops.push_back(ConstantInt::get(Int32Ty, 0));
+      Ops.push_back(ConstantInt::get(Int32Ty, 0));
+      break;
+    }
+    case PPC::BI__builtin_dmxxsha3512pad:
+    case PPC::BI__builtin_dmxxsha3384pad:
+    case PPC::BI__builtin_dmxxsha3256pad:
+    case PPC::BI__builtin_dmxxsha3224pad:
+    case PPC::BI__builtin_dmxxshake256pad:
+    case PPC::BI__builtin_dmxxshake128pad: {
+      Value *E_val = Ops[2];
+      int ID, BL;
+      switch (BuiltinID) {
+      case PPC::BI__builtin_dmxxsha3512pad:
+        ID = 0;
+        BL = 0;
+        break;
+      case PPC::BI__builtin_dmxxsha3384pad:
+        ID = 0;
+        BL = 1;
+        break;
+      case PPC::BI__builtin_dmxxsha3256pad:
+        ID = 0;
+        BL = 2;
+        break;
+      case PPC::BI__builtin_dmxxsha3224pad:
+        ID = 0;
+        BL = 3;
+        break;
+      case PPC::BI__builtin_dmxxshake256pad:
+        ID = 1;
+        BL = 0;
+        break;
+      case PPC::BI__builtin_dmxxshake128pad:
+        ID = 1;
+        BL = 1;
+        break;
+      }
+      Ops[2] = ConstantInt::get(Int32Ty, ID);
+      Ops.push_back(E_val);
+      Ops.push_back(ConstantInt::get(Int32Ty, BL));
+      break;
+    }
+    }
     for (unsigned i=1; i<Ops.size(); i++)
       CallOps.push_back(Ops[i]);
     llvm::Function *F = CGM.getIntrinsic(ID);
@@ -1359,5 +1501,60 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
                               {EmitScalarExpr(E->getArg(0))});
   case PPC::BI__builtin_ppc_mffs:
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_readflm));
+
+  case PPC::BI__builtin_amo_lwat_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_lwat),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_ldat_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_lwat_cond_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_lwat_cond),
+                              {Op0, Op1});
+  }
+  case PPC::BI__builtin_amo_ldat_cond_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat_cond),
+                              {Op0, Op1});
+  }
+  case PPC::BI__builtin_amo_lwat_csne_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_lwat_csne),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_ldat_csne_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat_csne),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_stwat_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_stwat),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_stdat_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_stdat),
+                              {Op0, Op1, Op2});
+  }
   }
 }

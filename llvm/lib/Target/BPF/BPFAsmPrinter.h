@@ -18,8 +18,8 @@ namespace llvm {
 class BPFAsmPrinter : public AsmPrinter {
 public:
   explicit BPFAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), BTF(nullptr), TM(TM) {}
+                         std::unique_ptr<MCStreamer> Streamer);
+  ~BPFAsmPrinter() override;
 
   StringRef getPassName() const override { return "BPF Assembly Printer"; }
   bool doInitialization(Module &M) override;
@@ -31,14 +31,16 @@ public:
                              const char *ExtraCode, raw_ostream &O) override;
 
   void emitInstruction(const MachineInstr *MI) override;
+  void emitFunctionBodyEnd() override;
   MCSymbol *getJTPublicSymbol(unsigned JTI);
-  virtual void emitJumpTableInfo() override;
+  void emitJumpTableInfo() override;
 
   static char ID;
 
 private:
   BTFDebug *BTF;
   TargetMachine &TM;
+  bool SawTrapCall = false;
 
   const BPFTargetMachine &getBTM() const;
 };

@@ -255,7 +255,7 @@ define i8 @sat_max_smax_char(ptr %addr) {
 
 define double @sat_fadd_nan(ptr %addr) {
 ; CHECK-LABEL: @sat_fadd_nan(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF release, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +snan(0xFFFFFFFF) release, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fadd ptr %addr, double 0x7FF00000FFFFFFFF release
@@ -264,7 +264,7 @@ define double @sat_fadd_nan(ptr %addr) {
 
 define double @sat_fsub_nan(ptr %addr) {
 ; CHECK-LABEL: @sat_fsub_nan(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF release, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +snan(0xFFFFFFFF) release, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fsub ptr %addr, double 0x7FF00000FFFFFFFF release
@@ -273,7 +273,7 @@ define double @sat_fsub_nan(ptr %addr) {
 
 define void @sat_fsub_nan_unused(ptr %addr) {
 ; CHECK-LABEL: @sat_fsub_nan_unused(
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF monotonic, align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +snan(0xFFFFFFFF) monotonic, align 8
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw fsub ptr %addr, double 0x7FF00000FFFFFFFF monotonic
@@ -363,7 +363,7 @@ define i32 @undef_operand_used(ptr %addr) {
 
 define double @sat_fmax_inf(ptr %addr) {
 ; CHECK-LABEL: @sat_fmax_inf(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF0000000000000 monotonic, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +inf monotonic, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fmax ptr %addr, double 0x7FF0000000000000 monotonic
@@ -381,7 +381,7 @@ define double @no_sat_fmax_inf(ptr %addr) {
 
 define double @sat_fmin_inf(ptr %addr) {
 ; CHECK-LABEL: @sat_fmin_inf(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0xFFF0000000000000 monotonic, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double -inf monotonic, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fmin ptr %addr, double 0xFFF0000000000000 monotonic
@@ -399,7 +399,7 @@ define double @no_sat_fmin_inf(ptr %addr) {
 
 define double @sat_fmaximum_inf(ptr %addr) {
 ; CHECK-LABEL: @sat_fmaximum_inf(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double 0x7FF0000000000000 monotonic, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double +inf monotonic, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fmaximum ptr %addr, double 0x7FF0000000000000 monotonic
@@ -417,7 +417,7 @@ define double @no_sat_fmaximum_inf(ptr %addr) {
 
 define double @sat_fminimum_inf(ptr %addr) {
 ; CHECK-LABEL: @sat_fminimum_inf(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double 0xFFF0000000000000 monotonic, align 8
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double -inf monotonic, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fminimum ptr %addr, double 0xFFF0000000000000 monotonic
@@ -682,7 +682,7 @@ define i8 @sat_max_smax_char_preserve_md(ptr %addr) {
 
 define double @sat_fadd_nan_preserve_md(ptr %addr) {
 ; CHECK-LABEL: @sat_fadd_nan_preserve_md(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF release, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +snan(0xFFFFFFFF) release, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fadd ptr %addr, double 0x7FF00000FFFFFFFF release, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
@@ -691,7 +691,7 @@ define double @sat_fadd_nan_preserve_md(ptr %addr) {
 
 define double @sat_fsub_nan_preserve_md(ptr %addr) {
 ; CHECK-LABEL: @sat_fsub_nan_preserve_md(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF release, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +snan(0xFFFFFFFF) release, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fsub ptr %addr, double 0x7FF00000FFFFFFFF release, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
@@ -700,7 +700,7 @@ define double @sat_fsub_nan_preserve_md(ptr %addr) {
 
 define void @sat_fsub_nan_unused_preserve_md(ptr %addr) {
 ; CHECK-LABEL: @sat_fsub_nan_unused_preserve_md(
-; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF00000FFFFFFFF syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +snan(0xFFFFFFFF) syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret void
 ;
   atomicrmw fsub ptr %addr, double 0x7FF00000FFFFFFFF syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
@@ -790,7 +790,7 @@ define i32 @undef_operand_used_preserve_md(ptr %addr) {
 
 define double @sat_fmax_inf_preserve_md(ptr %addr) {
 ; CHECK-LABEL: @sat_fmax_inf_preserve_md(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0x7FF0000000000000 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +inf syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fmax ptr %addr, double 0x7FF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
@@ -808,7 +808,7 @@ define double @no_sat_fmax_inf_preserve_md(ptr %addr) {
 
 define double @sat_fmin_inf_preserve_md(ptr %addr) {
 ; CHECK-LABEL: @sat_fmin_inf_preserve_md(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double 0xFFF0000000000000 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double -inf syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fmin ptr %addr, double 0xFFF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
@@ -826,7 +826,7 @@ define double @no_sat_fmin_inf_preserve_md(ptr %addr) {
 
 define double @sat_fmaximum_inf_preserve_md(ptr %addr) {
 ; CHECK-LABEL: @sat_fmaximum_inf_preserve_md(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double 0x7FF0000000000000 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double +inf syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fmaximum ptr %addr, double 0x7FF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
@@ -844,7 +844,7 @@ define double @no_sat_fmaximum_inf_preserve_md(ptr %addr) {
 
 define double @sat_fminimum_inf_preserve_md(ptr %addr) {
 ; CHECK-LABEL: @sat_fminimum_inf_preserve_md(
-; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double 0xFFF0000000000000 syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
+; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double -inf syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %res = atomicrmw fminimum ptr %addr, double 0xFFF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1

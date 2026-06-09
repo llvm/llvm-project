@@ -14,22 +14,32 @@ if(WIN32)
   set(system_libs version)
 endif()
 
+if(CLANG_USE_XCSELECT)
+  set(system_libs xcselect)
+endif()
+
+if(LLVM_PTHREAD_LIB)
+  list(APPEND system_libs ${LLVM_PTHREAD_LIB})
+endif()
+
 add_clang_library(clangDriver
   Action.cpp
   Compilation.cpp
+  CreateASTUnitFromArgs.cpp
+  CreateInvocationFromArgs.cpp
   Distro.cpp
   Driver.cpp
-  DriverOptions.cpp
   Job.cpp
+  ModulesDriver.cpp
   Multilib.cpp
   MultilibBuilder.cpp
   OffloadBundler.cpp
-  OptionUtils.cpp
   Phases.cpp
   SanitizerArgs.cpp
   Tool.cpp
   ToolChain.cpp
   ToolChains/Arch/AArch64.cpp
+  ToolChains/Arch/AMDGPU.cpp
   ToolChains/Arch/ARM.cpp
   ToolChains/Arch/CSKY.cpp
   ToolChains/Arch/LoongArch.cpp
@@ -65,6 +75,7 @@ add_clang_library(clangDriver
   ToolChains/Hexagon.cpp
   ToolChains/HLSL.cpp
   ToolChains/Hurd.cpp
+  ToolChains/LFILinux.cpp
   ToolChains/Linux.cpp
   ToolChains/Managarm.cpp
   ToolChains/MipsLinux.cpp
@@ -75,6 +86,7 @@ add_clang_library(clangDriver
   ToolChains/OHOS.cpp
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp
+  ToolChains/Serenity.cpp
   ToolChains/Solaris.cpp
   ToolChains/SPIRV.cpp
   ToolChains/SPIRVOpenMP.cpp
@@ -98,6 +110,13 @@ add_clang_library(clangDriver
 
   LINK_LIBS
   clangBasic
+  clangDependencyScanning
+  clangFrontend
+  clangScalableStaticAnalysisFrameworkAnalyses
+  clangScalableStaticAnalysisFrameworkCore
+  clangScalableStaticAnalysisFrameworkFrontend
+  clangSerialization
   clangLex
+  clangOptions
   ${system_libs}
   )

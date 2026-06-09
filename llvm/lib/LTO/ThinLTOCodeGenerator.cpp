@@ -79,6 +79,9 @@ extern cl::opt<bool> RemarksWithHotness;
 extern cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
     RemarksHotnessThreshold;
 extern cl::opt<std::string> RemarksFormat;
+extern cl::opt<bool> LTORunCSIRInstr;
+extern cl::opt<std::string> LTOCSIRProfile;
+extern cl::opt<std::string> SampleProfileFile;
 }
 
 // Default to using all available threads in the system, but using only one
@@ -101,8 +104,8 @@ static void saveTempBitcode(const Module &TheModule, StringRef TempDir,
   WriteBitcodeToFile(TheModule, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
-static const GlobalValueSummary *
-getFirstDefinitionForLinker(const GlobalValueSummaryList &GVSummaryList) {
+static const GlobalValueSummary *getFirstDefinitionForLinker(
+    ArrayRef<std::unique_ptr<GlobalValueSummary>> GVSummaryList) {
   // If there is any strong definition anywhere, get it.
   auto StrongDefForLinker = llvm::find_if(
       GVSummaryList, [](const std::unique_ptr<GlobalValueSummary> &Summary) {
@@ -131,14 +134,15 @@ getFirstDefinitionForLinker(const GlobalValueSummaryList &GVSummaryList) {
 static void computePrevailingCopies(
     const ModuleSummaryIndex &Index,
     DenseMap<GlobalValue::GUID, const GlobalValueSummary *> &PrevailingCopy) {
-  auto HasMultipleCopies = [&](const GlobalValueSummaryList &GVSummaryList) {
-    return GVSummaryList.size() > 1;
-  };
+  auto HasMultipleCopies =
+      [&](ArrayRef<std::unique_ptr<GlobalValueSummary>> GVSummaryList) {
+        return GVSummaryList.size() > 1;
+      };
 
   for (auto &I : Index) {
-    if (HasMultipleCopies(I.second.SummaryList))
+    if (HasMultipleCopies(I.second.getSummaryList()))
       PrevailingCopy[I.first] =
-          getFirstDefinitionForLinker(I.second.SummaryList);
+          getFirstDefinitionForLinker(I.second.getSummaryList());
   }
 }
 
@@ -234,6 +238,21 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
                            unsigned OptLevel, bool Freestanding,
                            bool DebugPassManager, ModuleSummaryIndex *Index) {
   std::optional<PGOOptions> PGOOpt;
+  if (LTORunCSIRInstr) {
+    PGOOpt =
+        PGOOptions("", LTOCSIRProfile, "",
+                   /*MemoryProfile=*/"", PGOOptions::IRUse,
+                   PGOOptions::CSIRInstr, PGOOptions::ColdFuncOpt::Default);
+  } else if (!LTOCSIRProfile.empty()) {
+    PGOOpt = PGOOptions(LTOCSIRProfile, "", "",
+                        /*MemoryProfile=*/"", PGOOptions::IRUse,
+                        PGOOptions::CSIRUse, PGOOptions::ColdFuncOpt::Default);
+  } else if (!SampleProfileFile.empty()) {
+    PGOOpt =
+        PGOOptions(SampleProfileFile, "", "",
+                   /*MemoryProfile=*/"", PGOOptions::SampleUse,
+                   PGOOptions::NoCSAction, PGOOptions::ColdFuncOpt::Default);
+  }
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
@@ -248,7 +267,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PassBuilder PB(&TM, PTO, PGOOpt, &PIC);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(TM.getTargetTriple()));
+      new TargetLibraryInfoImpl(TM.getTargetTriple(), TM.Options.VecLib));
   if (Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
@@ -289,11 +308,14 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
 static void
 addUsedSymbolToPreservedGUID(const lto::InputFile &File,
                              DenseSet<GlobalValue::GUID> &PreservedGUID) {
-  for (const auto &Sym : File.symbols()) {
-    if (Sym.isUsed())
+  Triple TT(File.getTargetTriple());
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  TargetLibraryInfoImpl TLII(TT);
+  TargetLibraryInfo TLI(TLII);
+  for (const auto &Sym : File.symbols())
+    if (Sym.isUsed() || Sym.isLibcall(TLI, Libcalls))
       PreservedGUID.insert(
           GlobalValue::getGUIDAssumingExternalLinkage(Sym.getIRName()));
-  }
 }
 
 // Convert the PreservedSymbols map from "Name" based to "GUID" based.
@@ -955,7 +977,7 @@ ThinLTOCodeGenerator::writeGeneratedObject(int count, StringRef CacheEntryPath,
 // Main entry point for the ThinLTO processing
 void ThinLTOCodeGenerator::run() {
   timeTraceProfilerBegin("ThinLink", StringRef(""));
-  auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (llvm::timeTraceProfilerEnabled())
       llvm::timeTraceProfilerEnd();
   });
@@ -1208,7 +1230,12 @@ void ThinLTOCodeGenerator::run() {
     }
   }
 
-  pruneCache(CacheOptions.Path, CacheOptions.Policy, ProducedBinaries);
+  Expected<bool> PrunedOrErr =
+      pruneCache(CacheOptions.Path, CacheOptions.Policy, ProducedBinaries);
+  if (!PrunedOrErr) {
+    errs() << "Error: " << toString(PrunedOrErr.takeError()) << "\n";
+    report_fatal_error("ThinLTO: failure to prune cache");
+  }
 
   // If statistics were requested, print them out now.
   if (llvm::AreStatisticsEnabled())

@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "OnDiskCommon.h"
-#include "llvm/Config/config.h"
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
+#include <mutex>
 #include <thread>
 
 #if __has_include(<sys/file.h>)
@@ -25,12 +28,56 @@
 #include <fcntl.h>
 #endif
 
+#if __has_include(<sys/mount.h>)
+#include <sys/mount.h> // statfs
+#endif
+
+#ifdef __APPLE__
+#if __has_include(<sys/sysctl.h>)
+#include <sys/sysctl.h>
+#endif
+#endif
+
 using namespace llvm;
+
+static uint64_t OnDiskCASMaxMappingSize = 0;
+
+Expected<std::optional<uint64_t>> cas::ondisk::getOverriddenMaxMappingSize() {
+  static std::once_flag Flag;
+  Error Err = Error::success();
+  std::call_once(Flag, [&Err] {
+    ErrorAsOutParameter EAO(&Err);
+    constexpr const char *EnvVar = "LLVM_CAS_MAX_MAPPING_SIZE";
+    auto Value = sys::Process::GetEnv(EnvVar);
+    if (!Value)
+      return;
+
+    uint64_t Size;
+    if (StringRef(*Value).getAsInteger(/*auto*/ 0, Size))
+      Err = createStringError(inconvertibleErrorCode(),
+                              "invalid value for %s: expected integer", EnvVar);
+    OnDiskCASMaxMappingSize = Size;
+  });
+
+  if (Err)
+    return std::move(Err);
+
+  if (OnDiskCASMaxMappingSize == 0)
+    return std::nullopt;
+
+  return OnDiskCASMaxMappingSize;
+}
+
+void cas::ondisk::setMaxMappingSize(uint64_t Size) {
+  OnDiskCASMaxMappingSize = Size;
+}
 
 std::error_code cas::ondisk::lockFileThreadSafe(int FD,
                                                 sys::fs::LockKind Kind) {
 #if HAVE_FLOCK
-  if (flock(FD, Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) == 0)
+  if (sys::RetryAfterSignal(
+          -1, flock, FD,
+          Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) == 0)
     return std::error_code();
   return std::error_code(errno, std::generic_category());
 #elif defined(_WIN32)
@@ -43,7 +90,7 @@ std::error_code cas::ondisk::lockFileThreadSafe(int FD,
 
 std::error_code cas::ondisk::unlockFileThreadSafe(int FD) {
 #if HAVE_FLOCK
-  if (flock(FD, LOCK_UN) == 0)
+  if (sys::RetryAfterSignal(-1, flock, FD, LOCK_UN) == 0)
     return std::error_code();
   return std::error_code(errno, std::generic_category());
 #elif defined(_WIN32)
@@ -61,11 +108,15 @@ cas::ondisk::tryLockFileThreadSafe(int FD, std::chrono::milliseconds Timeout,
   auto Start = std::chrono::steady_clock::now();
   auto End = Start + Timeout;
   do {
-    if (flock(FD, (Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) |
-                      LOCK_NB) == 0)
+    if (sys::RetryAfterSignal(
+            -1, flock, FD,
+            (Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) |
+                LOCK_NB) == 0)
       return std::error_code();
     int Error = errno;
     if (Error == EWOULDBLOCK) {
+      if (Timeout.count() == 0)
+        break;
       // Match sys::fs::tryLockFile, which sleeps for 1 ms per attempt.
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       continue;
@@ -100,7 +151,11 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   };
 #if defined(HAVE_POSIX_FALLOCATE)
   // Note: posix_fallocate returns its error directly, not via errno.
-  if (int Err = posix_fallocate(FD, CurrentSize, NewSize - CurrentSize))
+  int Err;
+  do {
+    Err = posix_fallocate(FD, CurrentSize, NewSize - CurrentSize);
+  } while (Err == EINTR);
+  if (Err)
     return CreateError(std::error_code(Err, std::generic_category()));
   return NewSize;
 #elif defined(__APPLE__)
@@ -116,7 +171,7 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   FAlloc.fst_offset = 0;
   FAlloc.fst_length = NewSize - CurrentSize;
   FAlloc.fst_bytesalloc = 0;
-  if (fcntl(FD, F_PREALLOCATE, &FAlloc))
+  if (sys::RetryAfterSignal(-1, ::fcntl, FD, F_PREALLOCATE, &FAlloc) == -1)
     return CreateError(errnoAsErrorCode());
   assert(CurrentSize + FAlloc.fst_bytesalloc >= NewSize);
   return CurrentSize + FAlloc.fst_bytesalloc;
@@ -124,4 +179,85 @@ Expected<size_t> cas::ondisk::preallocateFileTail(int FD, size_t CurrentSize,
   (void)CreateError; // Silence unused variable.
   return NewSize;    // Pretend it worked.
 #endif
+}
+
+bool cas::ondisk::useSmallMappingSize(const Twine &P) {
+  // Add exceptions to use small database file here.
+#if defined(__APPLE__) && __has_include(<sys/mount.h>)
+  // macOS tmpfs does not support sparse tails.
+  SmallString<128> PathStorage;
+  StringRef Path = P.toNullTerminatedStringRef(PathStorage);
+  struct statfs StatFS;
+  if (statfs(Path.data(), &StatFS) != 0)
+    return false;
+
+  if (strcmp(StatFS.f_fstypename, "tmpfs") == 0)
+    return true;
+#endif
+  // Default to use regular database file.
+  return false;
+}
+
+Expected<uint64_t> cas::ondisk::getBootTime() {
+#ifdef __APPLE__
+#if __has_include(<sys/sysctl.h>) && defined(KERN_BOOTTIME)
+  struct timeval TV;
+  size_t TVLen = sizeof(TV);
+  int KernBoot[2] = {CTL_KERN, KERN_BOOTTIME};
+  if (sysctl(KernBoot, 2, &TV, &TVLen, nullptr, 0) < 0)
+    return createStringError(llvm::errnoAsErrorCode(),
+                             "failed to get boottime");
+  if (TVLen != sizeof(TV))
+    return createStringError("sysctl kern.boottime unexpected format");
+  return TV.tv_sec;
+#else
+  return 0;
+#endif
+#elif defined(__linux__)
+  // Use the mtime for /proc, which is recreated during system boot.
+  // We could also read /proc/stat and search for 'btime'.
+  sys::fs::file_status Status;
+  if (std::error_code EC = sys::fs::status("/proc", Status))
+    return createFileError("/proc", EC);
+  return Status.getLastModificationTime().time_since_epoch().count();
+#else
+  return 0;
+#endif
+}
+
+Expected<StringRef>
+cas::ondisk::UniqueTempFile::createAndCopyFrom(StringRef ParentPath,
+                                               StringRef CopyFromPath) {
+  // \c clonefile requires that the destination path doesn't exist. We create
+  // a "placeholder" temporary file, then modify its path a bit and use that
+  // for \c clonefile to write to.
+  // FIXME: Instead of creating a dummy file, add a new file system API for
+  // copying to a unique path that can loop while checking EEXIST.
+  SmallString<256> UniqueTmpPath;
+  SmallString<256> Model;
+  Model += ParentPath;
+  sys::path::append(Model, "%%%%%%%.tmp");
+  if (std::error_code EC = sys::fs::createUniqueFile(Model, UniqueTmpPath))
+    return createFileError(Model, EC);
+  TmpPath = std::move(UniqueTmpPath);
+  TmpPath += ".tmp"; // modify so that there's no file at that path.
+  // \c copy_file will use \c clonefile when applicable.
+  if (std::error_code EC = sys::fs::copy_file(CopyFromPath, TmpPath))
+    return createFileError(TmpPath, EC);
+
+  return TmpPath;
+}
+
+Error cas::ondisk::UniqueTempFile::renameTo(StringRef RenameToPath) {
+  if (std::error_code EC = sys::fs::rename(TmpPath, RenameToPath))
+    return createFileError(RenameToPath, EC);
+  TmpPath.clear();
+  return Error::success();
+}
+
+cas::ondisk::UniqueTempFile::~UniqueTempFile() {
+  if (!TmpPath.empty())
+    sys::fs::remove(TmpPath);
+  if (!UniqueTmpPath.empty())
+    sys::fs::remove(UniqueTmpPath);
 }

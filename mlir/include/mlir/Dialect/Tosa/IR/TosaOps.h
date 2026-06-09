@@ -60,53 +60,6 @@ void printVariableOpTypeOrInitialValue(OpAsmPrinter &p, Operation *op,
 namespace OpTrait {
 namespace tosa {
 
-// This trait verifies if the element type amoung operands and result
-// of multiplication match tosa specification.
-template <typename ConcreteType>
-class MulOperandsAndResultElementType
-    : public TraitBase<ConcreteType, MulOperandsAndResultElementType> {
-public:
-  static LogicalResult verifyTrait(Operation *op) {
-    // Check we have a single result.
-    if (failed(impl::verifyOneResult(op)))
-      return failure();
-    Type resElemType = getElementTypeOrSelf(op->getResult(0));
-
-    // Check we have lhs and rhs.
-    if (failed(impl::verifyAtLeastNOperands(op, 2)))
-      return failure();
-
-    Type lhsElemType = getElementTypeOrSelf(op->getOperand(0));
-    Type rhsElemType = getElementTypeOrSelf(op->getOperand(1));
-
-    // Check that for i32 a shift has been explicitly provided.
-    if (lhsElemType.isInteger(32) && failed(impl::verifyNOperands(op, 3)))
-      return failure();
-
-    // Verify operands type match (ignoring the shift parameter which will
-    // always be i8).
-    if (lhsElemType != rhsElemType)
-      return op->emitOpError("requires the same element type for all operands");
-
-    // Though the spec requires the element type of result to be i32, a more
-    // relaxed way is provided at dialect level for easier cooperating with
-    // other dialects.
-    if (auto resIntType = dyn_cast<IntegerType>(resElemType)) {
-      auto lhsIntType = cast<IntegerType>(lhsElemType);
-      if (lhsIntType.getWidth() > resIntType.getWidth())
-        return op->emitOpError("invalid data type size for operands or result");
-    } else {
-      // In cases of floating point type or quant types, op requires the same
-      // element type for all operands and result (excluding shift).
-      if (resElemType != lhsElemType)
-        return op->emitOpError(
-            "requires the same element type for all operands and results");
-    }
-
-    return llvm::success();
-  }
-};
-
 /// This class indicates that an op is tosa-elementwise (permits broadcasting,
 /// unlike Elementwise trait).
 template <typename ConcreteType>
@@ -124,15 +77,9 @@ public:
   }
 };
 
-LogicalResult verifyTosaShapeOperator(Operation *op);
 /// This class indicates that op operates on tosa shape types
 template <typename ConcreteType>
-class TosaShapeOperator : public TraitBase<ConcreteType, TosaShapeOperator> {
-public:
-  static LogicalResult verifyTrait(Operation *op) {
-    return verifyTosaShapeOperator(op);
-  }
-};
+class TosaShapeOperator : public TraitBase<ConcreteType, TosaShapeOperator> {};
 
 LogicalResult verifyTosaShapeOperatorWithSameRanks(Operation *op);
 /// This class indicates that op operates on tosa shape types
@@ -151,6 +98,12 @@ public:
 namespace tosa {
 
 bool isa_tosa_shape_type(mlir::Type t);
+
+/// Represents a dimension in the shape of a tensor that can be inferred
+/// based on the other provided dimensions. For example, in a reshape
+/// operation, -1 can be used to indicate a size that is the remainder
+/// of the other dimensions.
+constexpr int64_t kInferableDimSize = -1;
 
 } // namespace tosa
 
@@ -178,6 +131,9 @@ Value createPadConstTensor(OpBuilder &builder, Location loc, Value src,
 
 // returns type of variable op
 RankedTensorType getVariableType(VariableOp variableOp);
+
+// Returns the bitwidth of a TOSA tensor element type
+unsigned getBitWidth(Type type);
 
 } // namespace tosa
 } // namespace mlir

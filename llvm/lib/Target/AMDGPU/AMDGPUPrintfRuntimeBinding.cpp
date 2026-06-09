@@ -129,7 +129,7 @@ static StringRef getAsConstantStr(Value *V) {
 
 static void diagnoseInvalidFormatString(const CallBase *CI) {
   CI->getContext().diagnose(DiagnosticInfoUnsupported(
-      *CI->getParent()->getParent(),
+      *CI->getFunction(),
       "printf format string must be a trivially resolved constant string "
       "global variable",
       CI->getDebugLoc()));
@@ -182,22 +182,17 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
       // expand the arguments that do not follow this rule.
       //
       if (ArgSize % DWORD_ALIGN != 0) {
-        Type *ResType = Type::getInt32Ty(Ctx);
-        if (auto *VecType = dyn_cast<VectorType>(ArgType))
-          ResType = VectorType::get(ResType, VecType->getElementCount());
+        Type *ResType = ArgType->getWithNewType(Type::getInt32Ty(Ctx));
         Builder.SetInsertPoint(CI);
         Builder.SetCurrentDebugLocation(CI->getDebugLoc());
 
-        if (ArgType->isFloatingPointTy()) {
-          Arg = Builder.CreateBitCast(
-              Arg,
-              IntegerType::getIntNTy(Ctx, ArgType->getPrimitiveSizeInBits()));
-        }
-
-        if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
-            OpConvSpecifiers[ArgCount - 1] == 'X' ||
-            OpConvSpecifiers[ArgCount - 1] == 'u' ||
-            OpConvSpecifiers[ArgCount - 1] == 'o')
+        if (ArgType->isFPOrFPVectorTy()) {
+          Arg = Builder.CreateFPExt(
+              Arg, ArgType->getWithNewType(Type::getFloatTy(Ctx)));
+        } else if (OpConvSpecifiers[ArgCount - 1] == 'x' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'X' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'u' ||
+                   OpConvSpecifiers[ArgCount - 1] == 'o')
           Arg = Builder.CreateZExt(Arg, ResType);
         else
           Arg = Builder.CreateSExt(Arg, ResType);
@@ -354,7 +349,7 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
           if (!S.empty()) {
             const uint64_t ReadSize = 4;
 
-            DataExtractor Extractor(S, /*IsLittleEndian=*/true, 8);
+            DataExtractor Extractor(S, /*IsLittleEndian=*/true);
             DataExtractor::Cursor Offset(0);
             while (Offset && Offset.tell() < S.size()) {
               uint64_t ReadNow = std::min(ReadSize, S.size() - Offset.tell());
@@ -416,22 +411,33 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     }
   }
 
-  // erase the printf calls
-  for (auto *CI : Printfs)
+  // Erase the printf calls and replace all uses with 0, signaling success.
+  // Since OpenCL only specifies undefined behaviors and not success criteria,
+  // returning 0 sinalling success always is valid.
+  for (auto *CI : Printfs) {
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
     CI->eraseFromParent();
+  }
 
   Printfs.clear();
   return true;
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
-  Triple TT(M.getTargetTriple());
-  if (TT.getArch() == Triple::r600)
-    return false;
-
   auto *PrintfFunction = M.getFunction("printf");
   if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
       M.getModuleFlag("openmp"))
+    return false;
+
+  // Verify the signature of the printf function and skip if it isn't correct.
+  const FunctionType *PrintfFunctionTy = PrintfFunction->getFunctionType();
+  if (PrintfFunctionTy->getNumParams() != 1 || !PrintfFunctionTy->isVarArg() ||
+      !PrintfFunctionTy->getReturnType()->isIntegerTy(32))
+    return false;
+  Type *PrintfFormatArgTy = PrintfFunctionTy->getParamType(0);
+  if (!PrintfFormatArgTy->isPointerTy() ||
+      !AMDGPU::isFlatGlobalAddrSpace(
+          PrintfFormatArgTy->getPointerAddressSpace()))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {

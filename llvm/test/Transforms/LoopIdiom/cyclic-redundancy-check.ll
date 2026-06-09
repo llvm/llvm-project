@@ -537,6 +537,52 @@ exit:                                              ; preds = %loop
   %ret = and i32 %unrelated.next, %crc.next
   ret i32 %ret
 }
+
+define i16 @not.crc.data.next.outside.user(i16 %crc.init, i16 %data.init) {
+; CHECK-LABEL: define i16 @not.crc.data.next.outside.user(
+; CHECK-SAME: i16 [[CRC_INIT:%.*]], i16 [[DATA_INIT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TBL_LD:%.*]] = phi i16 [ [[CRC_INIT]], %[[ENTRY]] ], [ [[CRC_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC_BE_SHIFT:%.*]] = phi i16 [ [[DATA_INIT]], %[[ENTRY]] ], [ [[DATA_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CRC_NEXT3:%.*]] = xor i16 [[CRC_BE_SHIFT]], [[TBL_LD]]
+; CHECK-NEXT:    [[CRC_SHL:%.*]] = shl i16 [[TBL_LD]], 1
+; CHECK-NEXT:    [[CRC_XOR:%.*]] = xor i16 [[CRC_SHL]], 3
+; CHECK-NEXT:    [[CHECK_SB:%.*]] = icmp slt i16 [[CRC_NEXT3]], 0
+; CHECK-NEXT:    [[CRC_NEXT]] = select i1 [[CHECK_SB]], i16 [[CRC_XOR]], i16 [[CRC_SHL]]
+; CHECK-NEXT:    [[DATA_NEXT]] = shl i16 [[CRC_BE_SHIFT]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 [[IV]], 7
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[DATA_NEXT_LCSSA:%.*]] = phi i16 [ [[DATA_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RET:%.*]] = xor i16 [[DATA_NEXT_LCSSA]], [[CRC_NEXT_LCSSA]]
+; CHECK-NEXT:    ret i16 [[RET]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %data.init, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %data, %crc
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 3
+  %check.sb = icmp slt i16 %xor.crc.data, 0
+  %crc.next = select i1 %check.sb, i16 %crc.xor, i16 %crc.shl
+  %data.next = shl i16 %data, 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %exit.cond = icmp samesign ult i32 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:
+  %ret = xor i16 %data.next, %crc.next
+  ret i16 %ret
+}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { optsize }
 ;.

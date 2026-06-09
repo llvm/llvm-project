@@ -14,10 +14,12 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 #include "ConstantsContext.h"
 
-namespace llvm {
+using namespace llvm;
+
 bool Operator::hasPoisonGeneratingFlags() const {
   switch (getOpcode()) {
   case Instruction::Add:
@@ -52,6 +54,16 @@ bool Operator::hasPoisonGeneratingFlags() const {
     return false;
   case Instruction::ICmp:
     return cast<ICmpInst>(this)->hasSameSign();
+  case Instruction::Call:
+    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ctlz:
+      case Intrinsic::cttz:
+      case Intrinsic::abs:
+        return cast<ConstantInt>(II->getArgOperand(1))->isOneValue();
+      }
+    }
+    [[fallthrough]];
   default:
     if (const auto *FP = dyn_cast<FPMathOperator>(this))
       return FP->hasNoNaNs() || FP->hasNoInfs();
@@ -63,7 +75,7 @@ bool Operator::hasPoisonGeneratingAnnotations() const {
   if (hasPoisonGeneratingFlags())
     return true;
   auto *I = dyn_cast<Instruction>(this);
-  return I && (I->hasPoisonGeneratingReturnAttributes() ||
+  return I && (I->hasPoisonGeneratingAttributes() ||
                I->hasPoisonGeneratingMetadata());
 }
 
@@ -288,4 +300,30 @@ void FastMathFlags::print(raw_ostream &O) const {
       O << " afn";
   }
 }
-} // namespace llvm
+
+FastMathFlags &FPMathOperator::getFastMathFlagsImpl() {
+  auto *I = cast<Instruction>(this);
+
+  if (FastMathFlagsStorage *Op = dyn_cast<FPUnaryOperator>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPBinaryOperator>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPTruncInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FPExtInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<FCmpInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<PHINode>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<SelectInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<CallInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<UIToFPInst>(I))
+    return Op->FMF;
+  if (FastMathFlagsStorage *Op = dyn_cast<SIToFPInst>(I))
+    return Op->FMF;
+
+  llvm_unreachable("Unknown FPMathOperator!");
+}

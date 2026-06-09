@@ -96,7 +96,8 @@ Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -branch-to-branch
 Enable the branch-to-branch optimizations: a branch whose target is
 another branch instruction is rewritten to point to the latter branch
-target (AArch64 and X86_64 only). Enabled by default at
+target (AArch64 and X86_64 only), and CFI jump table entries are replaced
+with the function body where possible (X86_64 only). Enabled by default at
 .Fl O2 Ns .
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
@@ -719,6 +720,19 @@ a given pattern are handled as if they were given as arguments of
 Creates a separate output section for every orphan input section.
 .It Fl -unresolved-symbols Ns = Ns Ar value
 Determine how to handle unresolved symbols.
+.Ar value
+may be:
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm report-all
+Report unresolved symbols (default).
+.It Cm ignore-in-object-files
+Only report unresolved symbols contained in shared libraries.
+.It Cm ignore-in-shared-libs
+Only report unresolved symbols contained in object files.
+.It Cm ignore-all
+Do not report unresolved symbols.
+.El
 .It Fl -use-android-relr-tags
 Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*.
 .It Fl v , Fl V

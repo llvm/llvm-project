@@ -11,6 +11,8 @@
 //
 // Comparison operators
 
+#include <cassert>
+#include <compare>
 #include <concepts>
 #include <__iterator/bounded_iter.h>
 

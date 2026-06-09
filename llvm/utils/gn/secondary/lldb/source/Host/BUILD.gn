@@ -16,6 +16,8 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
+    "common/ConPTYUtils.cpp",
+    "common/DiagnosticsRendering.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -41,6 +43,8 @@ static_library("Host") {
     "common/ProcessLaunchInfo.cpp",
     "common/ProcessRunLock.cpp",
     "common/PseudoTerminal.cpp",
+    "common/PythonRuntimeLoader.cpp",
+    "common/ScriptInterpreterRuntimeLoader.cpp",
     "common/Socket.cpp",
     "common/SocketAddress.cpp",
     "common/StreamFile.cpp",
@@ -64,8 +68,10 @@ static_library("Host") {
 
   if (current_os == "win") {
     sources += [
+      "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
       "windows/FileSystem.cpp",
+      "windows/FileWindows.cpp",
       "windows/Host.cpp",
       "windows/HostInfoWindows.cpp",
       "windows/HostProcessWindows.cpp",
@@ -75,10 +81,14 @@ static_library("Host") {
       "windows/PipeWindows.cpp",
       "windows/ProcessLauncherWindows.cpp",
       "windows/ProcessRunLock.cpp",
+      "windows/PseudoConsole.cpp",
+      "windows/PythonRuntimeLoaderWindows.cpp",
+      "windows/WindowsFileAction.cpp",
     ]
   } else {
     sources += [
       "posix/DomainSocket.cpp",
+      "posix/FilePosix.cpp",
       "posix/FileSystemPosix.cpp",
       "posix/HostInfoPosix.cpp",
       "posix/HostProcessPosix.cpp",
@@ -101,6 +111,7 @@ static_library("Host") {
 
   if (current_os == "mac") {
     sources += [
+      "macosx/PythonRuntimeLoaderDarwin.cpp",
       "macosx/cfcpp/CFCBundle.cpp",
       "macosx/cfcpp/CFCData.cpp",
       "macosx/cfcpp/CFCMutableArray.cpp",
@@ -119,6 +130,7 @@ static_library("Host") {
       "linux/Host.cpp",
       "linux/HostInfoLinux.cpp",
       "linux/LibcGlue.cpp",
+      "linux/PythonRuntimeLoaderLinux.cpp",
       "linux/Support.cpp",
     ]
   }

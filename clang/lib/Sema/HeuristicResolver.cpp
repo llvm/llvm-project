@@ -12,6 +12,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 
 namespace clang {
@@ -408,11 +409,14 @@ HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT) {
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveTemplateSpecializationType(
     const TemplateSpecializationType *TST) {
-  const DependentTemplateStorage &DTN =
-      *TST->getTemplateName().getAsDependentTemplateName();
-  return resolveDependentMember(
-      resolveNestedNameSpecifierToType(DTN.getQualifier()),
-      DTN.getName().getIdentifier(), TemplateFilter);
+  if (TST->getTemplateName().getKind() == TemplateName::DependentTemplate) {
+    const DependentTemplateStorage &DTN =
+        *TST->getTemplateName().getAsDependentTemplateName();
+    return resolveDependentMember(
+        resolveNestedNameSpecifierToType(DTN.getQualifier()),
+        DTN.getName().getIdentifier(), TemplateFilter);
+  }
+  return {};
 }
 
 std::vector<const NamedDecl *>
@@ -450,7 +454,12 @@ QualType HeuristicResolverImpl::resolveExprToType(const Expr *E) {
   if (const auto *CE = dyn_cast<CallExpr>(E)) {
     if (QualType Resolved = resolveTypeOfCallExpr(CE); !Resolved.isNull())
       return Resolved;
+
+    // Don't proceed to try resolveExprToDecls(), it would just call
+    // resolveTypeOfCallExpr() again.
+    return E->getType();
   }
+
   // Similarly, unwrapping a unary dereference operation does not work via
   // resolveExprToDecls.
   if (const auto *UO = dyn_cast<UnaryOperator>(E->IgnoreParenCasts())) {

@@ -18,8 +18,14 @@
 namespace llvm {
 
 struct DropUnnecessaryAssumesPass
-    : public PassInfoMixin<DropUnnecessaryAssumesPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+    : public OptionalPassInfoMixin<DropUnnecessaryAssumesPass> {
+  DropUnnecessaryAssumesPass(bool DropDereferenceable = false)
+      : DropDereferenceable(DropDereferenceable) {}
+
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  bool DropDereferenceable;
 };
 
 } // end namespace llvm

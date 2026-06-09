@@ -3,6 +3,21 @@ add_custom_target(libc_unistd_unittests)
 add_subdirectory(testdata)
 
 add_libc_unittest(
+  alarm_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    alarm_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.struct_timespec
+    libc.include.unistd
+    libc.src.signal.signal
+    libc.src.time.nanosleep
+    libc.src.unistd.alarm
+)
+
+add_libc_unittest(
   access_test
   SUITE
     libc_unistd_unittests
@@ -32,6 +47,26 @@ add_libc_unittest(
     libc.src.unistd.chdir
     libc.src.unistd.close
     libc.src.fcntl.open
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  chown_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    chown_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.unistd.chown
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.src.fcntl.open
+    libc.src.unistd.getuid
+    libc.src.unistd.getgid
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -122,6 +157,26 @@ add_libc_unittest(
     libc.src.fcntl.open
     libc.src.unistd.fchdir
     libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  fchown_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fchown_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.include.unistd
+    libc.src.errno.errno
+    libc.src.unistd.fchown
+    libc.src.unistd.close
+    libc.src.unistd.unlink
+    libc.src.fcntl.open
+    libc.src.unistd.getuid
+    libc.src.unistd.getgid
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -274,6 +329,7 @@ add_libc_unittest(
     rmdir_test.cpp
   DEPENDS
     libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
     libc.src.errno.errno
     libc.src.sys.stat.mkdir
     libc.src.unistd.rmdir
@@ -435,6 +491,27 @@ add_libc_unittest(
     libc.src.unistd.gethostname
     libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
+  getpagesize_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getpagesize_test.cpp
+  DEPENDS
+    libc.src.unistd.getpagesize
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_unittest(
+  getgid_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    getgid_test.cpp
+  DEPENDS
+    libc.src.unistd.getgid
 )
 
 add_libc_unittest(

@@ -1,7 +1,7 @@
-// RUN: %clangxx -fsanitize=signed-integer-overflow -w %s -O3 -o %t
+// RUN: %clangxx -fno-wrapv -fsanitize=signed-integer-overflow -w %s -O3 -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefix=RECOVER
 
-// RUN: %clangxx -fsanitize=signed-integer-overflow -fno-sanitize-recover=signed-integer-overflow -w %s -O3 -o %t.abort
+// RUN: %clangxx -fno-wrapv -fsanitize=signed-integer-overflow -fno-sanitize-recover=signed-integer-overflow -w %s -O3 -o %t.abort
 // RUN: not %run %t.abort 2>&1 | FileCheck %s --check-prefix=ABORT
 
 #include <limits.h>

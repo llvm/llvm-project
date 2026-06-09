@@ -7,30 +7,30 @@ define ptr @f(i1 %n) presplitcoroutine {
 ; CHECK-LABEL: define ptr @f(
 ; CHECK-SAME: i1 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[MEM:%.*]] = call ptr @malloc(i32 56)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[MEM]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
-; CHECK-NEXT:    [[ALIAS_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
+; CHECK-NEXT:    [[ALIAS_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    store i64 0, ptr [[X_RELOAD_ADDR]], align 4
 ; CHECK-NEXT:    store i64 0, ptr [[ALIAS_SPILL_ADDR]], align 4
 ; CHECK-NEXT:    [[X_ALIAS:%.*]] = insertvalue [1 x ptr] poison, ptr [[X_RELOAD_ADDR]], 0
-; CHECK-NEXT:    [[X_ALIAS_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 4
+; CHECK-NEXT:    [[X_ALIAS_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 32
 ; CHECK-NEXT:    store [1 x ptr] [[X_ALIAS]], ptr [[X_ALIAS_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    [[Y_ALIAS:%.*]] = insertelement <1 x ptr> poison, ptr [[ALIAS_SPILL_ADDR]], i32 0
-; CHECK-NEXT:    [[Y_ALIAS_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 5
+; CHECK-NEXT:    [[Y_ALIAS_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 40
 ; CHECK-NEXT:    store <1 x ptr> [[Y_ALIAS]], ptr [[Y_ALIAS_SPILL_ADDR]], align 8
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 6
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 48
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
   %x = alloca i64
   %y = alloca i64
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %mem = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %mem)

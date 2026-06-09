@@ -590,32 +590,6 @@ struct LinearizeVectorBitCast final
   }
 };
 
-/// This pattern converts the SplatOp to work on a linearized vector.
-/// Following,
-///   vector.splat %value : vector<4x4xf32>
-/// is converted to:
-///   %out_1d = vector.splat %value : vector<16xf32>
-///   %out_nd = vector.shape_cast %out_1d : vector<16xf32> to vector<4x4xf32>
-struct LinearizeVectorSplat final
-    : public OpConversionPattern<vector::SplatOp> {
-  using Base::Base;
-
-  LinearizeVectorSplat(const TypeConverter &typeConverter, MLIRContext *context,
-                       PatternBenefit benefit = 1)
-      : OpConversionPattern(typeConverter, context, benefit) {}
-
-  LogicalResult
-  matchAndRewrite(vector::SplatOp splatOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto dstTy = getTypeConverter()->convertType(splatOp.getType());
-    if (!dstTy)
-      return rewriter.notifyMatchFailure(splatOp, "cannot convert type.");
-    rewriter.replaceOpWithNewOp<vector::SplatOp>(splatOp, adaptor.getInput(),
-                                                 dstTy);
-    return success();
-  }
-};
-
 /// This pattern converts the CreateMaskOp to work on a linearized vector.
 /// It currently supports only 2D masks with a unit outer dimension.
 /// Following,
@@ -843,6 +817,112 @@ struct LinearizeVectorToElements final
   }
 };
 
+/// Convert broadcasts from scalars or 1-element vectors, such as
+///
+/// ```mlir
+///   vector.broadcast %value : f32 to vector<4x4xf32>
+/// ```
+///
+/// to broadcasts to rank-1 vectors, with shape_casts before/after as needed.
+/// The above becomes,
+///
+/// ```mlir
+///   %out_1d = vector.broadcast %value : f32 to vector<16xf32>
+///   %out_nd = vector.shape_cast %out_1d : vector<16xf32> to vector<4x4xf32>
+/// ```
+struct LinearizeVectorBroadcast final
+    : public OpConversionPattern<vector::BroadcastOp> {
+  using Base::Base;
+
+  LinearizeVectorBroadcast(const TypeConverter &typeConverter,
+                           MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::BroadcastOp broadcastOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    int numElements = 1;
+    Type sourceType = broadcastOp.getSourceType();
+    if (auto vecType = dyn_cast<VectorType>(sourceType)) {
+      numElements = vecType.getNumElements();
+    }
+
+    if (numElements != 1) {
+      return rewriter.notifyMatchFailure(
+          broadcastOp, "only broadcasts of single elements can be linearized.");
+    }
+
+    auto dstTy = getTypeConverter()->convertType(broadcastOp.getType());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(broadcastOp, dstTy,
+                                                     adaptor.getSource());
+
+    return success();
+  }
+};
+
+/// Linearize `vector.interleave` to operate on flattened 1D operands and
+/// result. The flattening is commutative here, the order of flatten and
+/// interleave ops does not matter, so this transform is valid for
+/// any ND shape.
+///
+/// Example:
+///   vector.interleave %a, %b : vector<4x1xT> -> vector<4x2xT>
+/// becomes:
+///   vector.interleave %a_flat, %b_flat : vector<4xT> -> vector<8xT>
+struct LinearizeVectorInterleave final
+    : public OpConversionPattern<vector::InterleaveOp> {
+  using Base::Base;
+  LinearizeVectorInterleave(const TypeConverter &typeConverter,
+                            MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::InterleaveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType flatResultTy =
+        getTypeConverter()->convertType<VectorType>(op.getResultVectorType());
+    if (!flatResultTy)
+      return rewriter.notifyMatchFailure(op, "failed to linearize result type");
+    rewriter.replaceOpWithNewOp<vector::InterleaveOp>(
+        op, flatResultTy, adaptor.getLhs(), adaptor.getRhs());
+    return success();
+  }
+};
+
+/// Linearize `vector.deinterleave` to operate on a flattened 1D source.
+/// The flattening is commutative here, the order of flatten and deinterleave
+/// ops does not matter, so this transform is valid for any ND shape.
+///
+/// Example:
+///   %even, %odd = vector.deinterleave %src : vector<4x2xT> -> vector<4x1xT>
+/// becomes:
+///   %even, %odd = vector.deinterleave %src_flat : vector<8xT> -> vector<4xT>
+/// This linearization only works if the innermost dimension is even.
+/// Consider vector<2x5xT>:
+/// [[0,1,2,3,4],
+///  [5,6,7,8,9]]
+/// Non-linearized deinterleave returns the odd part: [[1, 3], [6, 8]]
+/// Linearized deinterleave would the odd part: [1, 3, 5, 7, 9]
+struct LinearizeVectorDeinterleave final
+    : public OpConversionPattern<vector::DeinterleaveOp> {
+  using Base::Base;
+  LinearizeVectorDeinterleave(const TypeConverter &typeConverter,
+                              MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::DeinterleaveOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getSource().getType().getShape().back() % 2)
+      return failure();
+    auto newOp = vector::DeinterleaveOp::create(rewriter, op.getLoc(),
+                                                adaptor.getSource());
+    rewriter.replaceOp(op, newOp.getResults());
+    return success();
+  }
+};
+
 } // namespace
 
 /// This method defines the set of operations that are linearizable, and hence
@@ -863,7 +943,7 @@ static bool isLinearizable(Operation *op) {
       // As type legalization is done with vector.shape_cast, shape_cast
       // itself cannot be linearized (will create new shape_casts to linearize
       // ad infinitum).
-      .Case<vector::ShapeCastOp>([&](auto) { return false; })
+      .Case([&](vector::ShapeCastOp) { return false; })
       // The operations
       // - vector.extract_strided_slice
       // - vector.extract
@@ -873,18 +953,16 @@ static bool isLinearizable(Operation *op) {
       // vector.shuffle only supports fixed size vectors, so it is impossible to
       // use this approach to linearize these ops if they operate on scalable
       // vectors.
-      .Case<vector::ExtractStridedSliceOp>(
-          [&](vector::ExtractStridedSliceOp extractOp) {
-            return !extractOp.getType().isScalable();
-          })
-      .Case<vector::InsertStridedSliceOp>(
-          [&](vector::InsertStridedSliceOp insertOp) {
-            return !insertOp.getType().isScalable();
-          })
-      .Case<vector::InsertOp>([&](vector::InsertOp insertOp) {
+      .Case([&](vector::ExtractStridedSliceOp extractOp) {
+        return !extractOp.getType().isScalable();
+      })
+      .Case([&](vector::InsertStridedSliceOp insertOp) {
         return !insertOp.getType().isScalable();
       })
-      .Case<vector::ExtractOp>([&](vector::ExtractOp extractOp) {
+      .Case([&](vector::InsertOp insertOp) {
+        return !insertOp.getType().isScalable();
+      })
+      .Case([&](vector::ExtractOp extractOp) {
         return !extractOp.getSourceVectorType().isScalable();
       })
       .Default([&](auto) { return true; });
@@ -934,9 +1012,10 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
     RewritePatternSet &patterns) {
   patterns
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
-           LinearizeVectorSplat, LinearizeVectorCreateMask, LinearizeVectorLoad,
-           LinearizeVectorStore, LinearizeVectorFromElements,
-           LinearizeVectorToElements>(typeConverter, patterns.getContext());
+           LinearizeVectorCreateMask, LinearizeVectorLoad, LinearizeVectorStore,
+           LinearizeVectorBroadcast, LinearizeVectorFromElements,
+           LinearizeVectorToElements, LinearizeVectorInterleave,
+           LinearizeVectorDeinterleave>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

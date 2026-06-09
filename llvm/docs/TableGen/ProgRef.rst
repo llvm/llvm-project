@@ -340,10 +340,10 @@ to an entity of type ``bits<4>``.
 .. productionlist::
    Value: `SimpleValue` `ValueSuffix`*
         :| `Value` "#" [`Value`]
-   ValueSuffix: "{" `RangeList` "}"
+   ValueSuffix: `RangeList`
               :| "[" `SliceElements` "]"
               :| "." `TokIdentifier`
-   RangeList: `RangePiece` ("," `RangePiece`)*
+   RangeList: "{" `RangePiece` ("," `RangePiece`)* "}"
    RangePiece: `TokInteger`
              :| `TokInteger` "..." `TokInteger`
              :| `TokInteger` "-" `TokInteger`
@@ -686,9 +686,14 @@ arguments.
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
    BodyItem: `Type` `TokIdentifier` ["=" `Value`] ";"
-           :| "let" `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
+           :| "let" [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
            :| `Assert`
+   LetMode: "append" | "prepend"
+
+Note that ``append`` and ``prepend`` are context-sensitive keywords: they are
+only recognized as modifiers immediately after ``let``. In all other positions,
+they remain valid identifiers (e.g., usable as field names).
 
 A field definition in the body specifies a field to be included in the class
 or record. If no initial value is specified, then the field's value is
@@ -699,6 +704,34 @@ The ``let`` form is used to reset a field to a new value. This can be done
 for fields defined directly in the body or fields inherited from parent
 classes.  A :token:`RangeList` can be specified to reset certain bits in a
 ``bit<n>`` field.
+
+The ``let append`` and ``let prepend`` forms concatenate a value with the
+field's current value instead of replacing it. For ``append``, the new value
+is added after the current value; for ``prepend``, it is added before. The
+supported types and concatenation operators are:
+
+* ``list<T>``: uses ``!listconcat``
+* ``string`` / ``code``: uses ``!strconcat``
+* ``dag``: uses ``!con``
+
+If the field is currently unset (``?``), ``let append`` and ``let prepend``
+simply set the value directly. This is useful for accumulating values across
+a class hierarchy:
+
+.. code-block:: text
+
+  class Base {
+    list<int> items = [2, 3];
+  }
+  class Middle : Base {
+    let append items = [4];       // items = [2, 3, 4]
+  }
+  def Concrete : Middle {
+    let prepend items = [1];      // items = [1, 2, 3, 4]
+  }
+
+A plain ``let`` (without ``append``/``prepend``) always replaces the current
+value, which can be used to opt out of accumulated values.
 
 The ``defvar`` form defines a variable whose value can be used in other
 value expressions within the body. The variable is not a field: it does not
@@ -890,7 +923,7 @@ statements within the scope of the ``let``.
    Let:  "let" `LetList` "in" "{" `Statement`* "}"
       :| "let" `LetList` "in" `Statement`
    LetList: `LetItem` ("," `LetItem`)*
-   LetItem: `TokIdentifier` ["<" `RangeList` ">"] "=" `Value`
+   LetItem: [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value`
 
 The ``let`` statement establishes a scope, which is a sequence of statements
 in braces or a single statement with no braces. The bindings in the
@@ -926,6 +959,16 @@ statements can be nested.
 
 Note that a top-level ``let`` will not override fields defined in the classes or records
 themselves.
+
+Top-level ``let`` also supports ``append`` and ``prepend`` modes, which
+concatenate the value with the field's current value instead of replacing it.
+See the :token:`BodyItem` production for the supported types and semantics.
+
+.. code-block:: text
+
+  let append traits = [NewTrait] in {
+    def MyRecord : Base;
+  }
 
 
 ``multiclass`` --- define multiple records
@@ -1278,7 +1321,7 @@ variable over a sequence of values.
 .. productionlist::
    Foreach: "foreach" `ForeachIterator` "in" "{" `Statement`* "}"
           :| "foreach" `ForeachIterator` "in" `Statement`
-   ForeachIterator: `TokIdentifier` "=" ("{" `RangeList` "}" | `RangePiece` | `Value`)
+   ForeachIterator: `TokIdentifier` "=" (`RangeList` | `RangePiece` | `Value`)
 
 The body of the ``foreach`` is a series of statements in braces or a
 single statement with no braces. The statements are re-evaluated once for
@@ -1654,10 +1697,6 @@ operator produces a boolean result, the result value will be 1 for true or 0
 for false. When an operator tests a boolean argument, it interprets 0 as false
 and non-0 as true.
 
-.. warning::
-  The ``!getop`` and ``!setop`` bang operators are deprecated in favor of
-  ``!getdagop`` and ``!setdagop``.
-
 ``!add(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator adds *a*, *b*, etc., and produces the sum.
 
@@ -1969,6 +2008,21 @@ and non-0 as true.
     This operator produces the size of the string, list, or dag *a*.
     The size of a DAG is the number of arguments; the operator does not count.
 
+``!sort(``\ *var*\ ``,`` *list*\ ``,`` *key*\ ``)``
+    This operator creates a new ``list`` containing the same elements as *list*
+    but in sorted order. To determine the order, TableGen binds the variable
+    *var* to each element and evaluates the *key* expression, which presumably
+    refers to *var*. The key must produce a ``string`` or integer value
+    (``bit``, ``bits``, or ``int``); all keys must be of the same type. Elements
+    with equal keys preserve their original relative order, resulting in a
+    stable sort.
+
+    For example, to sort a list of records by their ``Name`` field::
+
+    .. code-block:: text
+
+      list<Thing> sorted = !sort(t, Things, t.Name);
+
 ``!sra(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* right arithmetically by *count* bits and produces the resulting
     value. The operation is performed on a 64-bit integer; the result
@@ -2001,6 +2055,24 @@ and non-0 as true.
     between 0 and the length of the string. The length of the substring
     is specified by *length*; if not specified, the rest of the string is
     extracted. The *start* and *length* arguments must be integers.
+
+``!switch(``\ *key*\ ``,`` *case1* ``:`` *val1*\ ``, ...,`` *casen* ``:`` *valn*\ ``,`` *default*\ ``)``
+    This operator compares *key* to each *casei* in turn using ``!eq``.
+    If *key* equals *casei*, the operator returns *vali*. If no case
+    matches, the operator returns *default* --- the trailing argument
+    with no ``:`` is the default value, identified by position. Both 
+    the trailing default and at least one *casei* : *vali* pair are 
+    mandatory.
+
+    ``!switch`` is a compact form of ``!cond`` using ``!eq`` comparisons.
+    The expression ``!switch(key, c1: v1, c2: v2, vd)`` is equivalent to
+    ``!cond(!eq(key, c1): v1, !eq(key, c2): v2, true: vd)``.
+
+    This example maps an integer size to a register-class name::
+
+    !switch(size, 1: "byte", 2: "halfword", 4: "word", "unknown")
+
+    (See also ``!cond``.)
 
 ``!tail(``\ *a*\ ``)``
     This operator produces a new list with all the elements

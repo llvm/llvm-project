@@ -6,10 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/optimization.h"
 #include "src/math/acos.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 8
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcAcosTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -18,10 +25,10 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcAcosTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 123'451;
-  uint64_t START = FPBits(0x1.0p-60).uintval();
-  uint64_t STOP = FPBits(1.0).uintval();
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t COUNT = 1'231;
+  constexpr uint64_t START = FPBits(0x1.0p-60).uintval();
+  constexpr uint64_t STOP = FPBits(1.0).uintval();
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);
@@ -46,7 +53,7 @@ TEST_F(LlvmLibcAcosTest, InDoubleRange) {
       ++count;
 
       if (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Acos, x, result,
-                                             0.5, rounding_mode)) {
+                                             TOLERANCE + 0.5, rounding_mode)) {
         ++fails;
         while (!TEST_MPFR_MATCH_ROUNDING_SILENTLY(mpfr::Operation::Acos, x,
                                                   result, tol, rounding_mode)) {

@@ -9,12 +9,12 @@ target datalayout = "e-n32"
 ; CHECK: @switch.table.test3 = private unnamed_addr constant [3 x i32] [i32 11984, i32 1143, i32 99783], align 4
 ; CHECK: @switch.table.test6 = private unnamed_addr constant [4 x i32] [i32 99783, i32 99783, i32 1143, i32 11984], align 4
 ; CHECK: @switch.table.test8 = private unnamed_addr constant [5 x i32] [i32 11984, i32 1143, i32 99783, i32 8867, i32 99783], align 4
-; CHECK: @switch.table.test9 = private unnamed_addr constant [8 x i32] [i32 99783, i32 8867, i32 99783, i32 8867, i32 8867, i32 8867, i32 11984, i32 1143], align 4
+; CHECK: @switch.table.test9 = private unnamed_addr constant [28 x i32] [i32 99783, i32 8867, i32 99783, i32 8867, i32 8867, i32 8867, i32 11984, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 1143, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 8867, i32 99783], align 4
 ;.
 define i32 @test1(i32 %a) !prof !0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 97
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 30)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 28)
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       switch.lookup:
@@ -28,9 +28,9 @@ define i32 @test1(i32 %a) !prof !0 {
 ;
   switch i32 %a, label %def [
   i32 97, label %one
-  i32 101, label %two
-  i32 105, label %three
-  i32 109, label %three
+  i32 113, label %two
+  i32 129, label %three
+  i32 145, label %three
   ], !prof !1
 
 def:
@@ -49,12 +49,12 @@ define i128 @test2(i128 %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    switch i128 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:      i128 97, label [[ONE:%.*]]
-; CHECK-NEXT:      i128 101, label [[TWO:%.*]]
-; CHECK-NEXT:      i128 105, label [[THREE:%.*]]
-; CHECK-NEXT:      i128 109, label [[THREE]]
+; CHECK-NEXT:      i128 113, label [[TWO:%.*]]
+; CHECK-NEXT:      i128 129, label [[THREE:%.*]]
+; CHECK-NEXT:      i128 145, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i128 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i128 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -65,9 +65,9 @@ define i128 @test2(i128 %a) {
 ;
   switch i128 %a, label %def [
   i128 97, label %one
-  i128 101, label %two
-  i128 105, label %three
-  i128 109, label %three
+  i128 113, label %two
+  i128 129, label %three
+  i128 145, label %three
   ]
 
 def:
@@ -118,12 +118,12 @@ define i32 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:      i32 97, label [[ONE:%.*]]
-; CHECK-NEXT:      i32 102, label [[TWO:%.*]]
-; CHECK-NEXT:      i32 105, label [[THREE:%.*]]
-; CHECK-NEXT:      i32 109, label [[THREE]]
+; CHECK-NEXT:      i32 114, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 129, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 145, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -134,9 +134,9 @@ define i32 @test4(i32 %a) {
 ;
   switch i32 %a, label %def [
   i32 97, label %one
-  i32 102, label %two
-  i32 105, label %three
-  i32 109, label %three
+  i32 114, label %two
+  i32 129, label %three
+  i32 145, label %three
   ]
 
 def:
@@ -155,12 +155,12 @@ define i32 @test5(i32 %a) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    switch i32 [[A:%.*]], label [[COMMON_RET:%.*]] [
 ; CHECK-NEXT:      i32 97, label [[ONE:%.*]]
-; CHECK-NEXT:      i32 102, label [[TWO:%.*]]
-; CHECK-NEXT:      i32 107, label [[THREE:%.*]]
-; CHECK-NEXT:      i32 112, label [[THREE]]
+; CHECK-NEXT:      i32 112, label [[TWO:%.*]]
+; CHECK-NEXT:      i32 127, label [[THREE:%.*]]
+; CHECK-NEXT:      i32 142, label [[THREE]]
 ; CHECK-NEXT:    ]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 99783, [[THREE]] ], [ 8867, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 99783, [[THREE]] ], [ 11984, [[ONE]] ], [ 1143, [[TWO]] ], [ 8867, [[TMP0:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ; CHECK:       one:
 ; CHECK-NEXT:    br label [[COMMON_RET]]
@@ -171,9 +171,9 @@ define i32 @test5(i32 %a) {
 ;
   switch i32 %a, label %def [
   i32 97, label %one
-  i32 102, label %two
-  i32 107, label %three
-  i32 112, label %three
+  i32 112, label %two
+  i32 127, label %three
+  i32 142, label %three
   ]
 
 def:
@@ -288,11 +288,11 @@ define i32 @test9(i32 %a) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[A:%.*]], 6
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.fshl.i32(i32 [[TMP1]], i32 [[TMP1]], i32 31)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP2]], 28
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[SWITCH_LOOKUP:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       switch.lookup:
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[TMP2]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i32], ptr @switch.table.test9, i64 0, i64 [[TMP4]]
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [28 x i32], ptr @switch.table.test9, i64 0, i64 [[TMP4]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ; CHECK:       common.ret:
@@ -301,9 +301,10 @@ define i32 @test9(i32 %a) {
 ;
   switch i32 %a, label %def [
   i32 18, label %one
-  i32 20, label %two
+  i32 40, label %two
   i32 6, label %three
   i32 10, label %three
+  i32 60, label %three
   ]
 
 def:
@@ -321,7 +322,7 @@ three:
 !1 = !{!"branch_weights", i32 5, i32 7, i32 11, i32 13, i32 17}
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { optsize }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i32 100}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 48, i32 5}

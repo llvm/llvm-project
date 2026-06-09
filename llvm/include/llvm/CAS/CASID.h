@@ -70,7 +70,7 @@ public:
   }
 
   /// Return a printable string for CASID.
-  std::string toString() const;
+  LLVM_ABI std::string toString() const;
 
   ArrayRef<uint8_t> getHash() const {
     return arrayRefFromStringRef<uint8_t>(Hash);
@@ -80,7 +80,7 @@ public:
     if (LHS.Context == RHS.Context)
       return LHS.Hash == RHS.Hash;
 
-    // EmptyKey or TombstoneKey.
+    // TombstoneKey.
     if (!LHS.Context || !RHS.Context)
       return false;
 
@@ -95,20 +95,20 @@ public:
   }
 
   friend hash_code hash_value(const CASID &ID) {
-    ArrayRef<uint8_t> Hash = ID.getHash();
-    return hash_combine_range(Hash.begin(), Hash.end());
+    return hash_combine_range(ID.getHash());
   }
 
   const CASContext &getContext() const {
-    assert(Context && "Tombstone or empty key for DenseMap?");
+    assert(Context && "Tombstone key for DenseMap?");
     return *Context;
   }
 
-  static CASID getDenseMapEmptyKey() {
-    return CASID(nullptr, DenseMapInfo<StringRef>::getEmptyKey());
-  }
   static CASID getDenseMapTombstoneKey() {
-    return CASID(nullptr, DenseMapInfo<StringRef>::getTombstoneKey());
+    // A reserved StringRef value distinct from the empty key, used only as a
+    // DenseMap sentinel for CASID.
+    return CASID(nullptr, StringRef(reinterpret_cast<const char *>(
+                                        ~static_cast<uintptr_t>(1)),
+                                    0));
   }
 
   CASID() = delete;
@@ -129,12 +129,6 @@ private:
 } // namespace cas
 
 template <> struct DenseMapInfo<cas::CASID> {
-  static cas::CASID getEmptyKey() { return cas::CASID::getDenseMapEmptyKey(); }
-
-  static cas::CASID getTombstoneKey() {
-    return cas::CASID::getDenseMapTombstoneKey();
-  }
-
   static unsigned getHashValue(cas::CASID ID) {
     return (unsigned)hash_value(ID);
   }

@@ -11,7 +11,9 @@
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace clang::ast_matchers;
@@ -51,6 +53,44 @@ static bool isExprAllowedInMemberInit(const Expr *E) {
       .Default(false);
 }
 
+static bool isVisibleFromDefaultMemberInitializer(const NamedDecl *ND,
+                                                  const FieldDecl *Field,
+                                                  const SourceManager &SM) {
+  if (!ND || !Field)
+    return false;
+
+  const auto *FieldClass = cast<CXXRecordDecl>(Field->getParent());
+  for (const DeclContext *DC = ND->getDeclContext(); DC; DC = DC->getParent())
+    if (DC->Equals(FieldClass))
+      return true;
+
+  const SourceLocation DeclLoc = SM.getExpansionLoc(ND->getLocation());
+  const SourceLocation FieldLoc = SM.getExpansionLoc(Field->getLocation());
+  if (DeclLoc.isInvalid() || FieldLoc.isInvalid())
+    return false;
+
+  return DeclLoc == FieldLoc || SM.isBeforeInTranslationUnit(DeclLoc, FieldLoc);
+}
+
+static const DeclRefExpr *findFirstNonVisibleDeclRef(const Stmt *S,
+                                                     const FieldDecl *Field,
+                                                     const SourceManager &SM) {
+  if (!S)
+    return nullptr;
+
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(S)) {
+    if (!isVisibleFromDefaultMemberInitializer(DRE->getDecl(), Field, SM) ||
+        !isVisibleFromDefaultMemberInitializer(DRE->getFoundDecl(), Field, SM))
+      return DRE;
+  }
+
+  for (const Stmt *Child : S->children())
+    if (const auto *DRE = findFirstNonVisibleDeclRef(Child, Field, SM))
+      return DRE;
+
+  return nullptr;
+}
+
 namespace {
 
 AST_MATCHER_P(InitListExpr, initCountIs, unsigned, N) {
@@ -58,6 +98,15 @@ AST_MATCHER_P(InitListExpr, initCountIs, unsigned, N) {
 }
 
 AST_MATCHER(Expr, allowedInitExpr) { return isExprAllowedInMemberInit(&Node); }
+
+AST_MATCHER(CXXCtorInitializer, hasOnlyVisibleReferencedDecls) {
+  const FieldDecl *Field = Node.getAnyMember();
+  if (!Field)
+    return true;
+
+  const SourceManager &SM = Finder->getASTContext().getSourceManager();
+  return findFirstNonVisibleDeclRef(Node.getInit(), Field, SM) == nullptr;
+}
 
 } // namespace
 
@@ -163,7 +212,7 @@ static bool isZero(const Expr *E) {
   case Stmt::IntegerLiteralClass:
     return !cast<IntegerLiteral>(E)->getValue();
   case Stmt::FloatingLiteralClass: {
-    llvm::APFloat Value = cast<FloatingLiteral>(E)->getValue();
+    const llvm::APFloat Value = cast<FloatingLiteral>(E)->getValue();
     return Value.isZero() && !Value.isNegative();
   }
   default:
@@ -237,12 +286,15 @@ UseDefaultMemberInitCheck::UseDefaultMemberInitCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       UseAssignment(Options.get("UseAssignment", false)),
-      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)),
+      IgnoreNonVisibleReferences(
+          Options.get("IgnoreNonVisibleReferences", true)) {}
 
 void UseDefaultMemberInitCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "UseAssignment", UseAssignment);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
+  Options.store(Opts, "IgnoreNonVisibleReferences", IgnoreNonVisibleReferences);
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
@@ -251,15 +303,26 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
                          initCountIs(0), hasType(arrayType()))),
       allowedInitExpr());
 
+  auto CandidateField = forField(unless(anyOf(
+      getLangOpts().CPlusPlus20 ? unless(anything()) : isBitField(),
+      hasInClassInitializer(anything()), hasParent(recordDecl(isUnion())))));
+
+  auto DefaultInit = cxxCtorInitializer(CandidateField, withInitializer(Init));
+  auto VisibleDefaultInit =
+      cxxCtorInitializer(DefaultInit, hasOnlyVisibleReferencedDecls())
+          .bind("visible-init");
+  ast_matchers::internal::Matcher<CXXCtorInitializer> DefaultInitMatcher =
+      VisibleDefaultInit;
+
+  if (!IgnoreNonVisibleReferences) {
+    DefaultInitMatcher = cxxCtorInitializer(anyOf(
+        VisibleDefaultInit,
+        cxxCtorInitializer(DefaultInit, unless(hasOnlyVisibleReferencedDecls()))
+            .bind("non-visible-init")));
+  }
+
   Finder->addMatcher(
-      cxxConstructorDecl(forEachConstructorInitializer(
-          cxxCtorInitializer(
-              forField(unless(anyOf(
-                  getLangOpts().CPlusPlus20 ? unless(anything()) : isBitField(),
-                  hasInClassInitializer(anything()),
-                  hasParent(recordDecl(isUnion()))))),
-              withInitializer(Init))
-              .bind("default"))),
+      cxxConstructorDecl(forEachConstructorInitializer(DefaultInitMatcher)),
       this);
 
   Finder->addMatcher(
@@ -272,8 +335,11 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseDefaultMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Default =
-          Result.Nodes.getNodeAs<CXXCtorInitializer>("default"))
-    checkDefaultInit(Result, Default);
+          Result.Nodes.getNodeAs<CXXCtorInitializer>("visible-init"))
+    checkDefaultInit(Result, Default, /*EmitFix=*/true);
+  else if (const auto *DefaultWithoutFix =
+               Result.Nodes.getNodeAs<CXXCtorInitializer>("non-visible-init"))
+    checkDefaultInit(Result, DefaultWithoutFix, /*EmitFix=*/false);
   else if (const auto *Existing =
                Result.Nodes.getNodeAs<CXXCtorInitializer>("existing"))
     checkExistingInit(Result, Existing);
@@ -282,7 +348,8 @@ void UseDefaultMemberInitCheck::check(const MatchFinder::MatchResult &Result) {
 }
 
 void UseDefaultMemberInitCheck::checkDefaultInit(
-    const MatchFinder::MatchResult &Result, const CXXCtorInitializer *Init) {
+    const MatchFinder::MatchResult &Result, const CXXCtorInitializer *Init,
+    bool EmitFix) {
   const FieldDecl *Field = Init->getAnyMember();
 
   // Check whether we have multiple hand-written constructors and bomb out, as
@@ -297,16 +364,32 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
       }) > 1)
     return;
 
-  SourceLocation StartLoc = Field->getBeginLoc();
+  const SourceLocation StartLoc = Field->getBeginLoc();
   if (StartLoc.isMacroID() && IgnoreMacros)
     return;
 
-  SourceLocation FieldEnd =
+  auto DiagDefaultMemberInitializer = [&] {
+    return diag(Field->getLocation(), "use default member initializer for %0")
+           << Field;
+  };
+
+  if (!EmitFix) {
+    DiagDefaultMemberInitializer();
+    diag(Init->getLParenLoc(),
+         "move the referenced declaration or definition before the field "
+         "declaration to use a default member initializer",
+         DiagnosticIDs::Note);
+    return;
+  }
+
+  auto Diag = DiagDefaultMemberInitializer();
+
+  const SourceLocation FieldEnd =
       Lexer::getLocForEndOfToken(Field->getSourceRange().getEnd(), 0,
                                  *Result.SourceManager, getLangOpts());
-  SourceLocation LParenEnd = Lexer::getLocForEndOfToken(
+  const SourceLocation LParenEnd = Lexer::getLocForEndOfToken(
       Init->getLParenLoc(), 0, *Result.SourceManager, getLangOpts());
-  CharSourceRange InitRange =
+  const CharSourceRange InitRange =
       CharSourceRange::getCharRange(LParenEnd, Init->getRParenLoc());
 
   const Expr *InitExpression = Init->getInit();
@@ -317,10 +400,6 @@ void UseDefaultMemberInitCheck::checkDefaultInit(
   const bool CanAssign =
       UseAssignment && (!ValueInit || !InitType->isEnumeralType());
   const bool NeedsBraces = !CanAssign || isa<ArrayType>(InitType);
-
-  auto Diag =
-      diag(Field->getLocation(), "use default member initializer for %0")
-      << Field;
 
   if (CanAssign)
     Diag << FixItHint::CreateInsertion(FieldEnd, " = ");

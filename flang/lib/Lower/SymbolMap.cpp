@@ -111,6 +111,16 @@ Fortran::lower::SymMap::lookupStorage(Fortran::semantics::SymbolRef symRef) {
 
 void Fortran::lower::SymbolBox::dump() const { llvm::errs() << *this << '\n'; }
 
+void Fortran::lower::ComponentMap::dump() const {
+  llvm::errs() << "ComponentMap:\n";
+  for (const auto &entry : componentMap) {
+    const auto *component = entry.first;
+    llvm::errs() << "  component @" << static_cast<const void *>(component)
+                 << " ->\n    ";
+    llvm::errs() << entry.second << '\n';
+  }
+}
+
 void Fortran::lower::SymMap::dump() const { llvm::errs() << *this << '\n'; }
 
 llvm::raw_ostream &
@@ -140,5 +150,17 @@ Fortran::lower::operator<<(llvm::raw_ostream &os,
     }
     os << " }>\n";
   }
+
+  os << "Component map:\n";
+  for (auto i : llvm::enumerate(symMap.componentMapStack)) {
+    if (!i.value()) {
+      os << " level " << i.index() << "<{}>\n";
+    } else {
+      os << " level " << i.index() << "<{\n";
+      (*i.value())->dump();
+      os << " }>\n";
+    }
+  }
+
   return os;
 }

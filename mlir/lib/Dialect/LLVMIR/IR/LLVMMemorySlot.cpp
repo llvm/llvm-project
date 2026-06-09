@@ -87,7 +87,13 @@ DenseMap<Attribute, MemorySlot> LLVM::AllocaOp::destructure(
 
   auto destructurableType = cast<DestructurableTypeInterface>(getElemType());
   DenseMap<Attribute, MemorySlot> slotMap;
-  for (Attribute index : usedIndices) {
+  // Iterate subelements in their original type order to produce allocas in a
+  // deterministic, readable order (matching appearance in the source type).
+  Type i32 = IntegerType::get(getContext(), 32);
+  for (size_t i = 0; i < slot.subelementTypes.size(); i++) {
+    Attribute index = IntegerAttr::get(i32, i);
+    if (!usedIndices.contains(index))
+      continue;
     Type elemType = destructurableType.getTypeAtIndex(index);
     assert(elemType && "used index must exist");
     auto subAlloca = LLVM::AllocaOp::create(
@@ -1111,7 +1117,7 @@ memsetCanUsesBeRemoved(MemsetIntr op, const MemorySlot &slot,
           .Case<IntegerType, FloatType>([](auto type) {
             return type.getWidth() % 8 == 0 && type.getWidth() > 0;
           })
-          .Default([](Type) { return false; });
+          .Default(false);
   if (!canConvertType)
     return false;
 
@@ -1585,6 +1591,9 @@ DeletionKind LLVM::MemmoveOp::rewire(const DestructurableMemorySlot &slot,
 
 std::optional<DenseMap<Attribute, Type>>
 LLVM::LLVMStructType::getSubelementIndexMap() const {
+  // Empty structs have no sub-elements and cannot be destructured.
+  if (getBody().empty())
+    return std::nullopt;
   Type i32 = IntegerType::get(getContext(), 32);
   DenseMap<Attribute, Type> destructured;
   for (const auto &[index, elemType] : llvm::enumerate(getBody()))

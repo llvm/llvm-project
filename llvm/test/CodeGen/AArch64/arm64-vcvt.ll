@@ -357,12 +357,10 @@ define <2 x i64> @fcvtzs_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
-; FIXME: Generate "fcvtzs d0, d0"?
 define <1 x i64> @fcvtzs_1d(<1 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtzs_1d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
 	%tmp3 = fptosi <1 x double> %A to <1 x i64>
 	ret <1 x i64> %tmp3
@@ -436,12 +434,10 @@ define <2 x i64> @fcvtzu_2d(<2 x double> %A) nounwind {
 	ret <2 x i64> %tmp3
 }
 
-; FIXME: Generate "fcvtzu d0, d0"?
 define <1 x i64> @fcvtzu_1d(<1 x double> %A) nounwind {
 ; CHECK-LABEL: fcvtzu_1d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzu d0, d0
 ; CHECK-NEXT:    ret
 	%tmp3 = fptoui <1 x double> %A to <1 x i64>
 	ret <1 x i64> %tmp3

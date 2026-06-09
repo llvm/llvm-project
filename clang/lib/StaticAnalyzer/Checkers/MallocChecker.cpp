@@ -6,41 +6,45 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines a variety of memory management related checkers, such as
+// This file defines checkers that report memory management errors such as
 // leak, double free, and use-after-free.
 //
-// The following checkers are defined here:
+// The logic for modeling memory allocations is implemented in the checker
+// family which is called 'MallocChecker' for historical reasons. (This name is
+// inaccurate, something like 'DynamicMemory' would be more precise.)
 //
-//   * MallocChecker
-//       Despite its name, it models all sorts of memory allocations and
-//       de- or reallocation, including but not limited to malloc, free,
-//       relloc, new, delete. It also reports on a variety of memory misuse
-//       errors.
-//       Many other checkers interact very closely with this checker, in fact,
-//       most are merely options to this one. Other checkers may register
-//       MallocChecker, but do not enable MallocChecker's reports (more details
-//       to follow around its field, ChecksEnabled).
-//       It also has a boolean "Optimistic" checker option, which if set to true
-//       will cause the checker to model user defined memory management related
-//       functions annotated via the attribute ownership_takes, ownership_holds
-//       and ownership_returns.
+// The reports produced by this backend are exposed through several frontends:
+//  *   MallocChecker: reports all misuse of dynamic memory allocated by
+//      malloc, related functions (like calloc, realloc etc.) and the functions
+//      annotated by ownership_returns. (Here the name "MallocChecker" is
+//      reasonably accurate; don't confuse this checker frontend with the whole
+//      misnamed family.)
+//  *   NewDeleteChecker: reports most misuse (anything but memory leaks) of
+//      memory managed by the C++ operators new and new[].
+//  *   NewDeleteLeaksChecker: reports leaks of dynamic memory allocated by
+//      the C++ operators new and new[].
+//  *   MismatchedDeallocatorChecker: reports situations where the allocation
+//      and deallocation is mismatched, e.g. memory allocated via malloc is
+//      passed to operator delete.
+//  *   InnerPointerChecker: reports use of pointers to the internal buffer of
+//      a std::string instance after operations that invalidate them.
+//  *   TaintedAllocChecker: reports situations where the size argument of a
+//      memory allocation function or array new operator is tainted (i.e. comes
+//      from an untrusted source and can be controlled by an attacker).
 //
-//   * NewDeleteChecker
-//       Enables the modeling of new, new[], delete, delete[] in MallocChecker,
-//       and checks for related double-free and use-after-free errors.
+// In addition to these frontends this file also defines the registration
+// functions for "unix.DynamicMemoryModeling". This registers the callbacks of
+// the checker family MallocChecker without enabling any of the frontends and
+// and handle two checker options which are attached to this "modeling
+// checker" because they affect multiple checker frontends.
 //
-//   * NewDeleteLeaksChecker
-//       Checks for leaks related to new, new[], delete, delete[].
-//       Depends on NewDeleteChecker.
-//
-//   * MismatchedDeallocatorChecker
-//       Enables checking whether memory is deallocated with the corresponding
-//       allocation function in MallocChecker, such as malloc() allocated
-//       regions are only freed by free(), new by delete, new[] by delete[].
-//
-//  InnerPointerChecker interacts very closely with MallocChecker, but unlike
-//  the above checkers, it has it's own file, hence the many InnerPointerChecker
-//  related headers and non-static functions.
+// Note that what the users see as the checker "cplusplus.InnerPointer" is a
+// combination of the frontend InnerPointerChecker (within this family) which
+// emits the bug reports and a separate checker class (also named
+// InnerPointerChecker) which is defined in InnerPointerChecker.cpp and does a
+// significant part of the modeling. This cooperation is enabled by several
+// non-static helper functions that are defined within this translation unit
+// and used in InnerPointerChecker.cpp.
 //
 //===----------------------------------------------------------------------===//
 
@@ -981,14 +985,14 @@ protected:
 
   // A release function stack frame in which memory was released. Used for
   // miscellaneous false positive suppression.
-  const StackFrameContext *ReleaseFunctionLC;
+  const StackFrame *ReleaseFunctionSF;
 
   bool IsLeak;
 
 public:
   MallocBugVisitor(SymbolRef S, bool isLeak = false)
       : Sym(S), Mode(Normal), FailedReallocSymbol(nullptr),
-        ReleaseFunctionLC(nullptr), IsLeak(isLeak) {}
+        ReleaseFunctionSF(nullptr), IsLeak(isLeak) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -1487,8 +1491,8 @@ void MallocChecker::checkCXXNewOrCXXDelete(ProgramStateRef State,
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (const auto *BufArg = getPlacementNewBufferArg(CE, FD)) {
     // Placement new does not allocate memory
-    auto RetVal = State->getSVal(BufArg, Call.getLocationContext());
-    State = State->BindExpr(CE, C.getLocationContext(), RetVal);
+    auto RetVal = State->getSVal(BufArg, Call.getStackFrame());
+    State = State->BindExpr(CE, C.getStackFrame(), RetVal);
     C.addTransition(State);
     return;
   }
@@ -1701,13 +1705,9 @@ bool MallocChecker::evalCall(const CallEvent &Call, CheckerContext &C) const {
     return true;
   }
 
-  if (isFreeingOwnershipAttrCall(Call)) {
-    checkOwnershipAttr(State, Call, C);
-    return true;
-  }
-
-  if (isAllocatingOwnershipAttrCall(Call)) {
-    State = MallocBindRetVal(C, Call, State, false);
+  if (isFreeingOwnershipAttrCall(Call) || isAllocatingOwnershipAttrCall(Call)) {
+    if (isAllocatingOwnershipAttrCall(Call))
+      State = MallocBindRetVal(C, Call, State, false);
     checkOwnershipAttr(State, Call, C);
     return true;
   }
@@ -1739,12 +1739,12 @@ ProgramStateRef MallocChecker::ProcessZeroAllocCheck(
   }
 
   if (!RetVal)
-    RetVal = State->getSVal(Call.getOriginExpr(), C.getLocationContext());
+    RetVal = State->getSVal(Call.getOriginExpr(), C.getStackFrame());
 
   assert(Arg);
 
   auto DefArgVal =
-      State->getSVal(Arg, Call.getLocationContext()).getAs<DefinedSVal>();
+      State->getSVal(Arg, Call.getStackFrame()).getAs<DefinedSVal>();
 
   if (!DefArgVal)
     return State;
@@ -1828,7 +1828,7 @@ MallocChecker::processNewAllocation(const CXXAllocatorCall &Call,
     return nullptr;
 
   const CXXNewExpr *NE = Call.getOriginExpr();
-  const ParentMap &PM = C.getLocationContext()->getParentMap();
+  const ParentMap &PM = C.getStackFrame()->getParentMap();
   ProgramStateRef State = C.getState();
 
   // Non-trivial constructors have a chance to escape 'this', but marking all
@@ -1942,12 +1942,12 @@ ProgramStateRef MallocChecker::MallocBindRetVal(CheckerContext &C,
 
   unsigned Count = C.blockCount();
   SValBuilder &SVB = C.getSValBuilder();
-  const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
+  const StackFrame *SF = C.getPredecessor()->getStackFrame();
   DefinedSVal RetVal =
-      isAlloca ? SVB.getAllocaRegionVal(CE, LCtx, Count)
-               : SVB.getConjuredHeapSymbolVal(Call.getCFGElementRef(), LCtx,
+      isAlloca ? SVB.getAllocaRegionVal(CE, SF, Count)
+               : SVB.getConjuredHeapSymbolVal(Call.getCFGElementRef(), SF,
                                               CE->getType(), Count);
-  return State->BindExpr(CE, C.getLocationContext(), RetVal);
+  return State->BindExpr(CE, C.getStackFrame(), RetVal);
 }
 
 ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
@@ -2029,11 +2029,11 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   assert(Loc::isLocType(CE->getType()) &&
          "Allocation functions must return a pointer");
 
-  const LocationContext *LCtx = C.getPredecessor()->getLocationContext();
-  SVal RetVal = State->getSVal(CE, C.getLocationContext());
+  const StackFrame *SF = C.getPredecessor()->getStackFrame();
+  SVal RetVal = State->getSVal(CE, C.getStackFrame());
 
   // Fill the region with the initialization value.
-  State = State->bindDefaultInitial(RetVal, Init, LCtx);
+  State = State->bindDefaultInitial(RetVal, Init, SF);
 
   // If Size is somehow undefined at this point, this line prevents a crash.
   if (Size.isUndef())
@@ -2057,7 +2057,7 @@ static ProgramStateRef MallocUpdateRefState(CheckerContext &C, const Expr *E,
 
   // Get the return value.
   if (!RetVal)
-    RetVal = State->getSVal(E, C.getLocationContext());
+    RetVal = State->getSVal(E, C.getStackFrame());
 
   // We expect the malloc functions to return a pointer.
   if (!RetVal->getAs<Loc>())
@@ -2415,7 +2415,7 @@ MallocChecker::FreeMemAux(CheckerContext &C, const Expr *ArgExpr,
   // conforts languages standards, since reading from freed memory is considered
   // UB and may result in arbitrary value.
   State = State->invalidateRegions({location}, Call.getCFGElementRef(),
-                                   C.blockCount(), C.getLocationContext(),
+                                   C.blockCount(), C.getStackFrame(),
                                    /*CausesPointerEscape=*/false,
                                    /*InvalidatedSymbols=*/nullptr);
 
@@ -2940,7 +2940,7 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
 
     // Get the from and to pointer symbols as in toPtr = realloc(fromPtr, size).
     SymbolRef FromPtr = arg0Val.getLocSymbolInBase();
-    SVal RetVal = stateRealloc->getSVal(CE, C.getLocationContext());
+    SVal RetVal = stateRealloc->getSVal(CE, C.getStackFrame());
     SymbolRef ToPtr = RetVal.getAsSymbol();
     assert(FromPtr && ToPtr &&
            "By this point, FreeMemAux and MallocMemAux should have checked "
@@ -2978,7 +2978,7 @@ ProgramStateRef MallocChecker::CallocMem(CheckerContext &C,
 MallocChecker::LeakInfo MallocChecker::getAllocationSite(const ExplodedNode *N,
                                                          SymbolRef Sym,
                                                          CheckerContext &C) {
-  const LocationContext *LeakContext = N->getLocationContext();
+  const StackFrame *LeakStackFrame = N->getStackFrame();
   // Walk the ExplodedGraph backwards and find the first node that referred to
   // the tracked symbol.
   const ExplodedNode *AllocNode = N;
@@ -2998,7 +2998,7 @@ MallocChecker::LeakInfo MallocChecker::getAllocationSite(const ExplodedNode *N,
           const VarRegion *VR = MR->getBaseRegion()->getAs<VarRegion>();
           // Do not show local variables belonging to a function other than
           // where the error is reported.
-          if (!VR || (VR->getStackFrame() == LeakContext->getStackFrame()))
+          if (!VR || (VR->getStackFrame() == LeakStackFrame))
             ReferenceRegion = MR;
         }
       }
@@ -3006,9 +3006,8 @@ MallocChecker::LeakInfo MallocChecker::getAllocationSite(const ExplodedNode *N,
 
     // Allocation node, is the last node in the current or parent context in
     // which the symbol was tracked.
-    const LocationContext *NContext = N->getLocationContext();
-    if (NContext == LeakContext ||
-        NContext->isParentOf(LeakContext))
+    const StackFrame *NSF = N->getStackFrame();
+    if (NSF == LeakStackFrame || NSF->isParentOf(LeakStackFrame))
       AllocNode = N;
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
   }
@@ -3044,9 +3043,8 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
 
   const Stmt *AllocationStmt = AllocNode->getStmtForDiagnostics();
   if (AllocationStmt)
-    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocationStmt,
-                                              C.getSourceManager(),
-                                              AllocNode->getLocationContext());
+    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
+        AllocationStmt, C.getSourceManager(), AllocNode->getStackFrame());
 
   SmallString<200> buf;
   llvm::raw_svector_ostream os(buf);
@@ -3059,7 +3057,7 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
 
   auto R = std::make_unique<PathSensitiveBugReport>(
       Frontend->LeakBug, os.str(), N, LocUsedForUniqueing,
-      AllocNode->getLocationContext()->getDecl());
+      AllocNode->getStackFrame()->getDecl());
   R->markInteresting(Sym);
   R->addVisitor<MallocBugVisitor>(Sym, true);
   if (ShouldRegisterNoOwnershipChangeVisitor)
@@ -3528,14 +3526,13 @@ void MallocChecker::checkPostStmt(const BlockExpr *BE,
   if (ReferencedVars.empty())
     return;
 
-  SmallVector<const MemRegion*, 10> Regions;
-  const LocationContext *LC = C.getLocationContext();
+  SmallVector<const MemRegion *, 10> Regions;
   MemRegionManager &MemMgr = C.getSValBuilder().getRegionManager();
 
   for (const auto &Var : ReferencedVars) {
     const VarRegion *VR = Var.getCapturedRegion();
     if (VR->getSuperRegion() == R) {
-      VR = MemMgr.getVarRegion(VR->getDecl(), LC);
+      VR = MemMgr.getVarRegion(VR->getDecl(), C.getStackFrame());
     }
     Regions.push_back(VR);
   }
@@ -3812,6 +3809,15 @@ bool MallocChecker::mayFreeAnyEscapedMemoryOrIsModeledExplicitly(
     return true;
   }
 
+  // Protobuf function declared in `generated_message_util.h` that takes
+  // ownership of the second argument. As the first and third arguments are
+  // allocation arenas and won't be tracked by this checker, there is no reason
+  // to set `EscapingSymbol`. (Also, this is an implementation detail of
+  // Protobuf, so it's better to be a bit more permissive.)
+  if (FName == "GetOwnedMessageInternal") {
+    return true;
+  }
+
   // Handle cases where we know a buffer's /address/ can escape.
   // Note that the above checks handle some special cases where we know that
   // even though the address escapes, it's still our responsibility to free the
@@ -3927,7 +3933,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   if (!S && (!RSCurr || RSCurr->getAllocationFamily().Kind != AF_InnerBuffer))
     return nullptr;
 
-  const LocationContext *CurrentLC = N->getLocationContext();
+  const StackFrame *CurrentSF = N->getStackFrame();
 
   // If we find an atomic fetch_add or fetch_sub within the function in which
   // the pointer was released (before the release), this is likely a release
@@ -3937,8 +3943,8 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
   // original reference count is positive, we should not report use-after-frees
   // on objects deleted in such functions. This can probably be improved
   // through better shared pointer modeling.
-  if (ReleaseFunctionLC && (ReleaseFunctionLC == CurrentLC ||
-                            ReleaseFunctionLC->isParentOf(CurrentLC))) {
+  if (ReleaseFunctionSF && (ReleaseFunctionSF == CurrentSF ||
+                            ReleaseFunctionSF->isParentOf(CurrentSF))) {
     if (const auto *AE = dyn_cast<AtomicExpr>(S)) {
       // Check for manual use of atomic builtins.
       AtomicExpr::AtomicOp Op = AE->getOp();
@@ -4015,7 +4021,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
           } else if (const auto *CallE = dyn_cast<CallExpr>(S)) {
             auto &CEMgr = BRC.getStateManager().getCallEventManager();
             CallEventRef<> Call =
-                CEMgr.getSimpleCall(CallE, state, CurrentLC, {nullptr, 0});
+                CEMgr.getSimpleCall(CallE, state, CurrentSF, {nullptr, 0});
             if (const auto *D = dyn_cast_or_null<NamedDecl>(Call->getDecl()))
               OS << D->getDeclName();
             else
@@ -4039,11 +4045,11 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
         //
         // Usually (e.g. in C) we say that the _responsible_ stack frame is the
         // current innermost stack frame:
-        ReleaseFunctionLC = CurrentLC->getStackFrame();
+        ReleaseFunctionSF = CurrentSF;
         // ...but if the stack contains a destructor call, then we say that the
         // outermost destructor stack frame is the _responsible_ one:
-        for (const LocationContext *LC = CurrentLC; LC; LC = LC->getParent()) {
-          if (const auto *DD = dyn_cast<CXXDestructorDecl>(LC->getDecl())) {
+        for (const StackFrame *SF = CurrentSF; SF; SF = SF->getParent()) {
+          if (const auto *DD = dyn_cast<CXXDestructorDecl>(SF->getDecl())) {
             if (isReferenceCountingPointerDestructor(DD)) {
               // This immediately looks like a reference-counting destructor.
               // We're bad at guessing the original reference count of the
@@ -4067,7 +4073,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             //   free(buffer);
             // }
             //
-            // This way ReleaseFunctionLC will point to outermost destructor and
+            // This way ReleaseFunctionSF will point to outermost destructor and
             // it would be possible to catch wider range of FP.
             //
             // NOTE: it would be great to support smth like that in C, since
@@ -4079,7 +4085,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
             //   if (refPut(data))
             //     doFree(data);
             // }
-            ReleaseFunctionLC = LC->getStackFrame();
+            ReleaseFunctionSF = SF;
           }
         }
 
@@ -4133,8 +4139,7 @@ PathDiagnosticPieceRef MallocBugVisitor::VisitNode(const ExplodedNode *N,
     Pos = PathDiagnosticLocation(PostImplCall->getLocation(),
                                  BRC.getSourceManager());
   } else {
-    Pos = PathDiagnosticLocation(S, BRC.getSourceManager(),
-                                 N->getLocationContext());
+    Pos = PathDiagnosticLocation(S, BRC.getSourceManager(), N->getStackFrame());
   }
 
   auto P = std::make_shared<PathDiagnosticEventPiece>(Pos, Msg, true);
@@ -4215,3 +4220,5 @@ REGISTER_CHECKER(NewDeleteChecker)
 REGISTER_CHECKER(NewDeleteLeaksChecker)
 REGISTER_CHECKER(MismatchedDeallocatorChecker)
 REGISTER_CHECKER(TaintedAllocChecker)
+
+#undef REGISTER_CHECKER

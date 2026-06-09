@@ -3232,10 +3232,8 @@ static bool tryMatchRecordTypes(ASTContext &Context,
   assert(lt && rt && lt != rt);
 
   if (!isa<RecordType>(lt) || !isa<RecordType>(rt)) return false;
-  RecordDecl *left =
-      cast<RecordType>(lt)->getOriginalDecl()->getDefinitionOrSelf();
-  RecordDecl *right =
-      cast<RecordType>(rt)->getOriginalDecl()->getDefinitionOrSelf();
+  RecordDecl *left = cast<RecordType>(lt)->getDecl()->getDefinitionOrSelf();
+  RecordDecl *right = cast<RecordType>(rt)->getDecl()->getDefinitionOrSelf();
 
   // Require union-hood to match.
   if (left->isUnion() != right->isUnion()) return false;
@@ -4732,13 +4730,13 @@ ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
                                                   bool MethodDefinition) {
   ASTContext &Context = getASTContext();
   QualType ArgType;
-  TypeSourceInfo *DI;
+  TypeSourceInfo *TSI;
 
   if (!ArgInfo.Type) {
     ArgType = Context.getObjCIdType();
-    DI = nullptr;
+    TSI = nullptr;
   } else {
-    ArgType = SemaRef.GetTypeFromParser(ArgInfo.Type, &DI);
+    ArgType = SemaRef.GetTypeFromParser(ArgInfo.Type, &TSI);
   }
   LookupResult R(SemaRef, ArgInfo.Name, ArgInfo.NameLoc,
                  Sema::LookupOrdinaryName,
@@ -4755,14 +4753,14 @@ ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
     }
   }
   SourceLocation StartLoc =
-      DI ? DI->getTypeLoc().getBeginLoc() : ArgInfo.NameLoc;
+      TSI ? TSI->getTypeLoc().getBeginLoc() : ArgInfo.NameLoc;
 
   // Temporarily put parameter variables in the translation unit. This is what
   // ActOnParamDeclarator does in the case of C arguments to the Objective-C
   // method too.
   ParmVarDecl *Param = SemaRef.CheckParameter(
       Context.getTranslationUnitDecl(), StartLoc, ArgInfo.NameLoc, ArgInfo.Name,
-      ArgType, DI, SC_None);
+      ArgType, TSI, SC_None);
   Param->setObjCMethodScopeInfo(ParamIndex);
   Param->setObjCDeclQualifier(
       CvtQTToAstBitMask(ArgInfo.DeclSpec.getObjCDeclQualifier()));
@@ -4771,7 +4769,8 @@ ParmVarDecl *SemaObjC::ActOnMethodParmDeclaration(Scope *S,
   SemaRef.ProcessDeclAttributeList(SemaRef.TUScope, Param, ArgInfo.ArgAttrs);
   SemaRef.AddPragmaAttributes(SemaRef.TUScope, Param);
   if (Param->hasAttr<BlocksAttr>()) {
-    Diag(Param->getLocation(), diag::err_block_on_nonlocal);
+    Diag(Param->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
     Param->setInvalidDecl();
   }
 
@@ -5256,7 +5255,8 @@ Decl *SemaObjC::ActOnObjCExceptionDecl(Scope *S, Declarator &D) {
   SemaRef.ProcessDeclAttributes(S, New, D);
 
   if (New->hasAttr<BlocksAttr>())
-    Diag(New->getLocation(), diag::err_block_on_nonlocal);
+    Diag(New->getLocation(), diag::err_block_not_allowed_on)
+        << diag::NotAllowedBlockVarReason::NonlocalVariable;
   return New;
 }
 

@@ -22,8 +22,12 @@ void *ThreadWithFlags(void *a) {
     defined(__VISIONOS_2_0) || defined(__WATCHOS_11_0)
 #  pragma clang diagnostic push
 #  pragma clang diagnostic ignored "-Wunguarded-availability-new"
-  os_unfair_lock_lock_with_flags(&lock, OS_UNFAIR_LOCK_FLAG_ADAPTIVE_SPIN);
-  flags_available = 1;
+  if (os_unfair_lock_lock_with_flags) {
+    os_unfair_lock_lock_with_flags(&lock, OS_UNFAIR_LOCK_FLAG_ADAPTIVE_SPIN);
+    flags_available = 1;
+  } else {
+    os_unfair_lock_lock(&lock);
+  }
 #  pragma clang diagnostic pop
 #else
   os_unfair_lock_lock(&lock);

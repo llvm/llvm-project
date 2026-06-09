@@ -1407,7 +1407,7 @@ let isBarrier = 1, isTerminator = 1 in {
     let r = 0x04;
   }
 
-  def BREAK_N : RRRN_Inst<0x0C, (outs), (ins uimm4:$imm),
+  def BREAK_N : RRRN_Inst<0x0D, (outs), (ins uimm4:$imm),
                          "break.n\t$imm", []>, Requires<[HasDensity, HasDebug]> {
     bits<4> imm;
 

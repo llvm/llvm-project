@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 #define LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
@@ -16,6 +18,7 @@
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/RoundingModeUtils.h"
@@ -292,6 +295,18 @@ private:
   ASSERT_THAT(actual, LIBC_NAMESPACE::testing::getMatcher<                     \
                           LIBC_NAMESPACE::testing::TestCond::NE>(expected))
 
+#ifdef LIBC_MATH_HAS_NO_ERRNO
+
+#define EXPECT_MATH_ERRNO(expected)                                            \
+  do {                                                                         \
+  } while (0)
+
+#define ASSERT_MATH_ERRNO(expected)                                            \
+  do {                                                                         \
+  } while (0)
+
+#else
+
 #define EXPECT_MATH_ERRNO(expected)                                            \
   do {                                                                         \
     if (math_errhandling & MATH_ERRNO) {                                       \
@@ -309,6 +324,26 @@ private:
       ASSERT_EQ(actual, expected);                                             \
     }                                                                          \
   } while (0)
+
+#endif // LIBC_MATH_HAS_NO_ERRNO
+
+#ifdef LIBC_MATH_HAS_NO_EXCEPT
+
+#define EXPECT_FP_EXCEPTION(expected)                                          \
+  do {                                                                         \
+  } while (0)
+
+#define ASSERT_FP_EXCEPTION(expected)                                          \
+  do {                                                                         \
+  } while (0)
+
+#define EXPECT_FP_EQ_WITH_EXCEPTION(expected_val, actual_val, expected_except) \
+  EXPECT_FP_EQ(expected_val, actual_val)
+
+#define EXPECT_FP_IS_NAN_WITH_EXCEPTION(actual_val, expected_except)           \
+  EXPECT_FP_IS_NAN(actual_val)
+
+#else // !LIBC_MATH_HAS_NO_EXCEPT
 
 #define EXPECT_FP_EXCEPTION(expected)                                          \
   do {                                                                         \
@@ -345,6 +380,8 @@ private:
     EXPECT_FP_IS_NAN(actual_val);                                              \
     EXPECT_FP_EXCEPTION(expected_except);                                      \
   } while (0)
+
+#endif // LIBC_MATH_HAS_NO_EXCEPT
 
 #define EXPECT_FP_EQ_ROUNDING_MODE(expected, actual, rounding_mode)            \
   do {                                                                         \

@@ -16,31 +16,25 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::llvm_libc {
 
-namespace {
-
-const TemplateParameterList *
+static const TemplateParameterList *
 getLastTemplateParameterList(const FunctionDecl *FuncDecl) {
   const TemplateParameterList *ReturnList =
       FuncDecl->getDescribedTemplateParams();
 
   if (!ReturnList) {
-    const unsigned NumberOfTemplateParameterLists =
-        FuncDecl->getNumTemplateParameterLists();
+    ArrayRef<TemplateParameterList *> TPLs =
+        FuncDecl->getTemplateParameterLists();
 
-    if (NumberOfTemplateParameterLists > 0)
-      ReturnList = FuncDecl->getTemplateParameterList(
-          NumberOfTemplateParameterLists - 1);
+    if (!TPLs.empty())
+      ReturnList = TPLs.back();
   }
 
   return ReturnList;
 }
 
-} // namespace
-
 InlineFunctionDeclCheck::InlineFunctionDeclCheck(StringRef Name,
                                                  ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      HeaderFileExtensions(Context->getHeaderFileExtensions()) {}
+    : ClangTidyCheck(Name, Context) {}
 
 void InlineFunctionDeclCheck::registerMatchers(MatchFinder *Finder) {
   // Ignore functions that have been deleted.
@@ -71,7 +65,7 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Consider functions only in header files.
   if (!utils::isSpellingLocInHeaderFile(SrcBegin, *Result.SourceManager,
-                                        HeaderFileExtensions))
+                                        getHeaderFileExtensions()))
     return;
 
   // Ignore lambda functions as they are internal and implicit.
@@ -82,7 +76,7 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
   // Check if decl starts with LIBC_INLINE
   auto Loc = FullSourceLoc(Result.SourceManager->getFileLoc(SrcBegin),
                            *Result.SourceManager);
-  llvm::StringRef SrcText = Loc.getBufferData().drop_front(Loc.getFileOffset());
+  const StringRef SrcText = Loc.getBufferData().drop_front(Loc.getFileOffset());
   if (SrcText.starts_with("LIBC_INLINE"))
     return;
 

@@ -13,6 +13,7 @@
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
@@ -130,6 +131,9 @@ private:
   void emitTraitMethods(const InterfaceTrait &trait);
   /// Emit a trait method.
   void emitTraitMethod(const InterfaceMethod &method);
+  /// Generate a using declaration for a trait method.
+  void genTraitMethodUsingDecl(const InterfaceTrait &trait,
+                               const InterfaceMethod &method);
 
   //===--------------------------------------------------------------------===//
   // OpAsm{Type,Attr}Interface Default Method Emission
@@ -176,6 +180,9 @@ private:
   StringRef valueType;
   /// The prefix/suffix of the TableGen def name, either "Attr" or "Type".
   StringRef defType;
+
+  /// The set of using declarations for trait methods.
+  llvm::StringSet<> interfaceUsingNames;
 };
 } // namespace
 
@@ -239,12 +246,16 @@ void DefGen::createParentWithTraits() {
                                  ? strfmt("{0}::{1}", def.getStorageNamespace(),
                                           def.getStorageClassName())
                                  : strfmt("::mlir::{0}Storage", valueType));
-  SmallVector<std::string> traitNames =
-      llvm::to_vector(llvm::map_range(def.getTraits(), [](auto &trait) {
-        return isa<NativeTrait>(&trait)
-                   ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
-                   : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName();
-      }));
+  SmallVector<std::string> traitNames;
+  for (auto &trait : def.getTraits()) {
+    // Skip PredTrait as it doesn't generate a C++ trait class.
+    if (isa<PredTrait>(&trait))
+      continue;
+    traitNames.push_back(
+        isa<NativeTrait>(&trait)
+            ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
+            : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName());
+  }
   for (auto &traitName : traitNames)
     defParent.addTemplateParam(traitName);
 
@@ -379,6 +390,26 @@ void DefGen::emitInvariantsVerifierImpl() {
                                 param.getName(), constraint->getSummary())
                      << "\n";
   }
+  {
+    // Generate verification for PredTraits.
+    FmtContext traitCtx;
+    for (auto it : llvm::enumerate(def.getParameters())) {
+      // Note: Skip over the first method parameter (`emitError`).
+      traitCtx.addSubst(it.value().getName(),
+                        builderParams[it.index() + 1].getName());
+    }
+    for (const Trait &trait : def.getTraits()) {
+      if (auto *t = dyn_cast<PredTrait>(&trait)) {
+        verifier->body() << tgfmt(
+            "if (!($0)) {\n"
+            "  emitError() << \"failed to verify that $1\";\n"
+            "  return ::mlir::failure();\n"
+            "}\n",
+            &traitCtx, tgfmt(t->getPredTemplate(), &traitCtx), t->getSummary());
+      }
+    }
+  }
+
   verifier->body() << "return ::mlir::success();";
 }
 
@@ -631,9 +662,13 @@ void DefGen::emitTraitMethods(const InterfaceTrait &trait) {
   for (auto &method : iface.getMethods()) {
     // Don't declare if the method has a body. Or if the method has a default
     // implementation and the def didn't request that it always be declared.
-    if (method.getBody() || (method.getDefaultImplementation() &&
-                             !alwaysDeclared.count(method.getName())))
+    if (method.getBody())
       continue;
+    if (method.getDefaultImplementation() &&
+        !alwaysDeclared.count(method.getName())) {
+      genTraitMethodUsingDecl(trait, method);
+      continue;
+    }
     emitTraitMethod(method);
   }
 }
@@ -647,6 +682,15 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
     params.emplace_back(param.type, param.name);
   defCls.addMethod(method.getReturnType(), method.getName(), props,
                    std::move(params));
+}
+
+void DefGen::genTraitMethodUsingDecl(const InterfaceTrait &trait,
+                                     const InterfaceMethod &method) {
+  std::string name = (llvm::Twine(trait.getFullyQualifiedTraitName()) + "<" +
+                      def.getCppClassName() + ">::" + method.getName())
+                         .str();
+  if (interfaceUsingNames.insert(name).second)
+    defCls.declare<UsingDeclaration>(std::move(name));
 }
 
 //===----------------------------------------------------------------------===//
@@ -995,6 +1039,38 @@ static const char *const dialectDynamicTypePrinterDispatch = R"(
     return;
 )";
 
+/// Checks whether a declarative assembly format string needs a leading space
+/// between the mnemonic and the format body in the generated printer.
+///
+/// Returns false for formats starting with punctuation or a space-eraser
+/// directive that should attach directly to the mnemonic (e.g., `<`, `(`,
+/// ``).
+///
+/// This inspects the raw format string rather than parsing it into a DefFormat.
+/// Parsing would require access to the format element types (which are local to
+/// `AttrOrTypeFormatGen.cpp`) and would re-parse every format string just to
+/// check its first token -- an overkill for a simple spacing heuristic.
+/// The only case this cannot distinguish structurally is an optional group
+/// whose then-branch starts with punctuation, but parsing has the same
+/// limitation since the group's anchor is not known at codegen time.
+static bool needsLeadingSpace(const AttrOrTypeDef &def) {
+  StringRef fmtStr = def.getAssemblyFormat()->trim();
+  if (fmtStr.empty())
+    return false;
+
+  // '(' starts an optional group.
+  if (fmtStr.front() == '(')
+    return false;
+
+  if (fmtStr.front() != '`' || fmtStr.size() < 2)
+    return true;
+
+  // Backtick-quoted literals (e.g., `<`, `{`, `[`) or space-eraser (``) -- no
+  // leading space. Bare '<', '{', '[' cannot appear at position 0 of a valid
+  // format.
+  return !llvm::is_contained("<{([`", fmtStr[1]);
+}
+
 /// Emit the dialect printer/parser dispatcher. User's code should call these
 /// functions from their dialect's print/parse methods.
 void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
@@ -1039,9 +1115,10 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
       return ::mlir::success();
     })
 )";
-  for (auto &def : defs) {
+  for (const AttrOrTypeDef &def : defs) {
     if (!def.getMnemonic())
       continue;
+
     bool hasParserPrinterDecl =
         def.hasCustomAssemblyFormat() || def.getAssemblyFormat();
     std::string defClass = strfmt(
@@ -1055,9 +1132,24 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
     parse.body() << llvm::formatv(getValueForMnemonic, defClass, parseOrGet);
 
     // If the def has no parameters and no printer, just print the mnemonic.
-    StringRef printDef = "";
-    if (hasParserPrinterDecl)
-      printDef = "\nt.print(printer);";
+    if (!hasParserPrinterDecl) {
+      printer.body() << llvm::formatv(printValue, defClass, "");
+      continue;
+    }
+
+    // Custom format: `print()` controls its own spacing.
+    if (def.hasCustomAssemblyFormat()) {
+      printer.body() << llvm::formatv(printValue, defClass,
+                                      "\nt.print(printer);");
+      continue;
+    }
+
+    // Declarative format: because `print()` doesn't emit a leading space,
+    // add one here unless the format starts with punctuation or a
+    // space-eraser directive that should attach directly to the mnemonic.
+    StringRef printDef = needsLeadingSpace(def)
+                             ? "\nprinter << ' ';\nt.print(printer);"
+                             : "\nt.print(printer);";
     printer.body() << llvm::formatv(printValue, defClass, printDef);
   }
   parse.body() << "    .Default([&](llvm::StringRef keyword, llvm::SMLoc) {\n"

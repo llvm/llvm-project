@@ -60,8 +60,10 @@ endfunction()
 function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_target_dir)
   # Add a Post-Build Event to copy over Python files and create the symlink to
   # liblldb.so for the Python API(hardlink on Windows).
+  # Note that Swig-generated code is located one level deeper in the `native`
+  # module, in order to avoid cyclic importing.
   add_custom_target(${swig_target} ALL VERBATIM
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_target_dir}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_target_dir}/native/
     DEPENDS ${lldb_python_bindings_dir}/lldb.py
     COMMENT "Python script sym-linking LLDB Python API")
 
@@ -74,6 +76,8 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     COMMAND ${CMAKE_COMMAND} -E copy
       "${LLDB_SOURCE_DIR}/source/Interpreter/embedded_interpreter.py"
       "${lldb_python_target_dir}")
+
+  create_python_package(${swig_target} ${lldb_python_target_dir} "native" FILES)
 
   # Distribute the examples as python packages.
   create_python_package(
@@ -107,6 +111,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     "plugins"
     FILES
     "${LLDB_SOURCE_DIR}/examples/python/templates/parsed_cmd.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_frame_provider.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_process.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py"
@@ -135,15 +140,35 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
             "${LLDB_SOURCE_DIR}/examples/python/diagnose_nsstring.py")
   endif()
 
-  if(LLDB_BUILD_FRAMEWORK)
-    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/LLDB")
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    # The SWIG wrapper lives in the plugin library in this mode.
+    set(liblldb_filename "liblldbPluginScriptInterpreterPython${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  elseif (LLDB_BUILD_FRAMEWORK)
+    set(liblldb_filename "LLDB")
   else()
-    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+    set(liblldb_filename "liblldb${CMAKE_SHARED_LIBRARY_SUFFIX}")
+  endif()
+  if(LLDB_BUILD_FRAMEWORK)
+    set(LIBLLDB_SYMLINK_DEST "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}/LLDB.framework/${liblldb_filename}")
+  else()
+    set(LIBLLDB_SYMLINK_DEST "${LLVM_SHLIB_OUTPUT_INTDIR}/${liblldb_filename}")
   endif()
   set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb${LLDB_PYTHON_EXT_SUFFIX}")
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
-                          ${lldb_python_target_dir} ${LIBLLDB_SYMLINK_OUTPUT_FILE})
+                          ${lldb_python_target_dir}/native/ ${LIBLLDB_SYMLINK_OUTPUT_FILE})
 
+  # On Windows, DLLs must reside alongside the .pyd extension so the loader finds them.
+  # Without this, importing _lldb fails at runtime when vcpkg-provided DLLs are not on PATH.
+  if(WIN32 AND DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    file(GLOB _lldb_vcpkg_runtime_dlls
+      "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*.dll")
+    if(_lldb_vcpkg_runtime_dlls)
+      add_custom_command(TARGET ${swig_target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          ${_lldb_vcpkg_runtime_dlls} "${lldb_python_target_dir}/native/"
+        COMMENT "Staging vcpkg runtime DLLs next to _lldb.pyd")
+    endif()
+  endif()
 
   if (NOT WIN32)
   add_dependencies(${swig_target} lldb-python-wrapper)
@@ -156,6 +181,9 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   endif()
 
   add_dependencies(${swig_target} swig_wrapper_python liblldb lldb-argdumper)
+  if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+    add_dependencies(${swig_target} lldbPluginScriptInterpreterPython)
+  endif()
   set_target_properties(${swig_target} swig_wrapper_python PROPERTIES FOLDER "lldb misc")
 
   # Ensure we do the python post-build step when building lldb.
@@ -182,6 +210,17 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     add_llvm_install_targets(${python_scripts_install_target}
                              COMPONENT ${python_scripts_target}
                              DEPENDS ${python_scripts_target})
+    # Tools that link liblldb need the python scripts installed alongside.
+    # The list is populated by add_lldb_executable.
+    get_property(lldb_liblldb_tools GLOBAL PROPERTY LLDB_TOOLS_LINKING_LIBLLDB)
+    foreach(tool ${lldb_liblldb_tools})
+      if(TARGET install-${tool})
+        add_dependencies(install-${tool} ${python_scripts_install_target})
+      endif()
+      if(TARGET install-${tool}-stripped AND TARGET ${python_scripts_install_target}-stripped)
+        add_dependencies(install-${tool}-stripped ${python_scripts_install_target}-stripped)
+      endif()
+    endforeach()
   endif()
 
   # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
@@ -196,4 +235,26 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
       COMMAND ${CMAKE_COMMAND} -E copy ${PYTHON_DLL_NATIVE_PATH} ${LLDB_BIN_DIR} VERBATIM
       COMMENT "Copying Python DLL to LLDB binaries directory.")
   endif()
+endfunction()
+
+function(add_python_wrapper target)
+  get_target_property(python_bindings_dir swig_wrapper_python BINARY_DIR)
+  set(lldb_python_wrapper ${python_bindings_dir}/LLDBWrapPython.cpp)
+
+  add_dependencies(${target} swig_wrapper_python)
+  add_swig_wrapper(${target} ${lldb_python_wrapper})
+
+  # lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
+  # which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
+  # (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
+  # that _lldb.so can be loaded from Python.
+  if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX AND NOT APPLE)
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
+  endif()
+
+  if(Python3_RPATH)
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${Python3_RPATH}")
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH   "${Python3_RPATH}")
+  endif()
+
 endfunction()

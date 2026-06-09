@@ -187,6 +187,22 @@ def ArithToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToAPFloat
+//===----------------------------------------------------------------------===//
+
+def ArithToAPFloatConversionPass
+    : Pass<"convert-arith-to-apfloat", "ModuleOp"> {
+  let summary = "Convert Arith ops to APFloat runtime library calls";
+  let description = [{
+    This pass converts supported Arith ops to APFloat-based runtime library
+    calls (APFloatWrappers.cpp). APFloat is a software implementation of
+    floating-point arithmetic operations.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
+                           "vector::VectorDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToSPIRV
 //===----------------------------------------------------------------------===//
 
@@ -486,6 +502,41 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     1 value is returned, packed into an LLVM IR struct type. Function calls and
     returns are updated accordingly. Block argument types are updated to use
     LLVM IR types.
+
+    #### Function discardable attributes
+
+    Discardable attributes on `func.func` are lowered as follows.
+
+    - **LLVM `llvm.func` properties.**  Each inherent attribute defined on
+      `llvm.func` (ODS properties such as `target_cpu`, `linkage`,
+      `vscale_range`, `passthrough`, and so on) must be attached to `func.func`
+      using the `llvm.` prefix (for example `llvm.target_cpu`,
+      `llvm.vscale_range`). The pass strips that prefix, validates the attribute
+      value the same way as for `llvm.func`, and fills the corresponding fields
+      on the generated `llvm.func`. Values that fail validation make conversion
+      fail.
+
+    - **Unprefixed legacy names.**  A discardable attribute whose name equals
+      the bare ODS property name (without `llvm.`) is **not** forwarded: it is
+      dropped. Only the explicit `llvm.*` spelling is lowered into `llvm.func`
+      properties so that front ends cannot accidentally rely on ambiguous
+      short names.
+
+    - **Opaque pass-through.**  Any other discardable attribute is copied onto
+      the `llvm.func` unchanged, so arbitrary metadata can survive the
+      conversion. That includes names that start with `llvm.` but are **not**
+      inherent `llvm.func` properties (for example dialect-specific markers): they
+      are not interpreted as properties and are forwarded as discardable
+      attributes on the result.
+
+    - **`func.varargs`.**  This attribute is interpreted when converting the
+      function type (variadic LLVM signature). It is not an LLVM IR dialect
+      property and is handled separately from the `llvm.*` property mapping
+      above.
+
+    - **`llvm.readnone`.**  If present, the pass also sets `memory_effects` on
+      the `llvm.func` to read-none semantics, in addition to any other attribute
+      handling.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
@@ -613,6 +664,8 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
            "All memrefs must have static shape.">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">,
     ListOption<"allowedDialects", "allowed-dialects", "std::string",
                "Run conversion patterns of only the specified dialects">,
   ];
@@ -758,6 +811,21 @@ def ConvertMathToLibmPass : Pass<"convert-math-to-libm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToAPFloat
+//===----------------------------------------------------------------------===//
+
+def MathToAPFloatConversionPass
+    : Pass<"convert-math-to-apfloat", "ModuleOp"> {
+  let summary = "Convert Math ops to APFloat runtime library calls";
+  let description = [{
+    This pass converts supported Math ops to APFloat-based runtime library
+    calls (APFloatWrappers.cpp). APFloat is a software implementation of
+    floating-point mathmetic operations.
+  }];
+  let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // MathToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -778,12 +846,33 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let summary = "Convert Math dialect to ROCDL library calls";
   let description = [{
     This pass converts supported Math ops to ROCDL library calls.
+
+    The chipset option specifies the target AMDGPU architecture. If the chipset
+    is empty, none of the chipset-dependent patterns are added, and the pass
+    will not attempt to parse the chipset.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
     "func::FuncDialect",
     "ROCDL::ROCDLDialect",
     "vector::VectorDialect",
+  ];
+  let options = [Option<"chipset", "chipset", "std::string",
+                        /*default=*/"\"\"",
+                        "Chipset that these operations will run on">];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToNVVM
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToNVVM : Pass<"convert-math-to-nvvm", "ModuleOp"> {
+  let summary = "Convert Math dialect to CUDA libdevice calls";
+  let description = [{
+    This pass converts supported Math ops to CUDA libdevice calls.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
+                           "NVVM::NVVMDialect", "vector::VectorDialect",
   ];
 }
 
@@ -794,6 +883,31 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
 def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
   let summary = "Convert Math dialect to SPIR-V dialect";
   let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToXeVM
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
+  let summary =
+      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+  let description = [{
+    This pass converts supported math ops marked with the `afn` fastmath flag
+    to function calls for OpenCL `native_` math intrinsics: These intrinsics
+    are typically mapped directly to native device instructions, often resulting
+    in better performance. However, the precision/error of these intrinsics
+    are implementation-defined, and thus math ops are only converted when they
+    have the `afn` fastmath flag enabled.
+  }];
+  let options = [Option<
+      "convertArith", "convert-arith", "bool", /*default=*/"true",
+      "Convert supported Arith ops (e.g. arith.divf) as well.">];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "xevm::XeVMDialect",
+    "LLVM::LLVMDialect",
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -926,20 +1040,26 @@ def ConvertMemRefToSPIRVPass : Pass<"convert-memref-to-spirv"> {
 def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
   let summary = "Convert Shard dialect to MPI dialect.";
   let description = [{
-    This pass converts communication operations from the Shard dialect to the
-    MPI dialect.
-    If it finds the DLTI attribute "MPI:comm_world-rank" on the module it will
-    use that integer value instead of calling MPI_Comm_rank. This allows
-    optimizations like constant shape propagation and fusion because
-    shard/partition sizes depend on the rank.
+    This pass lowers communication operations from the Shard dialect to the MPI dialect.
+    If the module contains the DLTI attribute "MPI:comm_world-rank", its integer value is
+    used as the rank instead of calling MPI_Comm_rank. This enables optimizations such as
+    constant shape propagation and fusion, since shard and partition sizes can be
+    determined from the rank.
+    For some operations the conversion may require intermediate memref allocations.
+    For compatibility with the buffer deallocation pipeline, these allocations are only
+    deallocated when the lowered operations return buffers. When the operation was
+    defined in tensor-land, no explicit deallocation is performed. This means that the
+    deallocation must be handled by different means, e.g. by the deallocation pipeline.
   }];
   let dependentDialects = [
     "affine::AffineDialect",
     "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "mpi::MPIDialect",
     "scf::SCFDialect",
-    "bufferization::BufferizationDialect"
+    "tensor::TensorDialect"
   ];
 }
 
@@ -1037,6 +1157,10 @@ def SCFToControlFlowPass : Pass<"convert-scf-to-cf"> {
   let summary = "Convert SCF dialect to ControlFlow dialect, replacing structured"
                 " control flow with a CFG";
   let dependentDialects = ["cf::ControlFlowDialect"];
+  let options = [
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1287,6 +1411,37 @@ def TosaToSCFPass : Pass<"tosa-to-scf"> {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA to SPIR-V Graph/TOSA
+//===----------------------------------------------------------------------===//
+
+def TosaToSPIRVTosaMarkGraphConstants
+    : Pass<"tosa-to-spirv-tosa-mark-graph-constants", "func::FuncOp"> {
+  let summary = "Mark large TOSA constants as SPIR-V Graph constants";
+  let description = [{
+    Marks large `tosa.const` and `tosa.const_shape` operations so the
+    TOSA-to-SPIR-V Graph/TOSA conversion lowers them to
+    `spirv.ARM.GraphConstant` instead of inlining them as `spirv.Constant`.
+  }];
+
+  let constructor = "tosa::createTosaToSPIRVTosaMarkGraphConstants()";
+}
+
+def TosaToSPIRVTosa : Pass<"tosa-to-spirv-tosa"> {
+  let summary = "Lower TOSA IR to SPIR-V Graph/TOSA operations";
+  let dependentDialects = [
+    "spirv::SPIRVDialect",
+  ];
+  let description = [{
+    Converts TOSA programs to the SPIR-V Graph/TOSA representation by
+    wrapping converted functions in `spirv.module` and `spirv.ARM.Graph`,
+    lowering supported TOSA ops to `spirv.Tosa.*`, and rewriting TOSA tensor
+    and shape types to the corresponding SPIR-V ARM tensor types.
+  }];
+
+  let constructor = "tosa::createTosaToSPIRVTosa()";
+}
+
+//===----------------------------------------------------------------------===//
 // TosaToTensor
 //===----------------------------------------------------------------------===//
 
@@ -1436,8 +1591,8 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
     operations. The lowering pass provides several options to control
     the kinds of optimizations that are allowed. It also provides options
     that enable the use of one or more architectural-specific dialects
-    (AMX, X86Vector, ArmNeon, ArmSVE, etc.) in combination with the
-    architectural-neutral vector dialect lowering.
+    (X86, ArmNeon, ArmSVE, etc.) in combination with the architectural-neutral
+    vector dialect lowering.
 
   }];
   // Override explicitly in C++ to allow conditional dialect dependence.
@@ -1459,10 +1614,6 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "vector access are naturally aligned. If operations have an "
            "alignment attribute set, the alignment attribute takes priority "
            "over this option ">,
-    Option<"amx", "enable-amx",
-           "bool", /*default=*/"false",
-           "Enables the use of AMX dialect while lowering the vector "
-	   "dialect.">,
     Option<"armNeon", "enable-arm-neon",
            "bool", /*default=*/"false",
            "Enables the use of ArmNeon dialect while lowering the vector "
@@ -1479,10 +1630,9 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Enables the use of Arm FEAT_BF16 instructions while lowering "
            "the vector dialect.">,
-    Option<"x86Vector", "enable-x86vector",
+    Option<"x86", "enable-x86",
            "bool", /*default=*/"false",
-           "Enables the use of X86Vector dialect while lowering the vector "
-	   "dialect.">,
+           "Enables the use of X86 dialect while lowering the vector dialect.">,
     Option<"vectorContractLowering", "vector-contract-lowering",
            "vector::VectorContractLowering",
            /*default=*/"vector::VectorContractLowering::Dot",
@@ -1542,10 +1692,10 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
 //===----------------------------------------------------------------------===//
 
 def ConvertVectorToAMX : Pass<"convert-vector-to-amx"> {
-  let summary = "Lower the operations from the vector dialect into the AMX "
-                "dialect";
+  let summary = "Lower the operations from the vector dialect into the X86 "
+                "dialect AMX operations";
   let dependentDialects = [
-    "affine::AffineDialect", "amx::AMXDialect", "arith::ArithDialect",
+    "affine::AffineDialect", "x86::X86Dialect", "arith::ArithDialect",
     "memref::MemRefDialect", "scf::SCFDialect", "vector::VectorDialect"
   ];
 }
@@ -1569,6 +1719,10 @@ def ConvertXeGPUToXeVMPass : Pass<"convert-xegpu-to-xevm"> {
                            "memref::MemRefDialect", "arith::ArithDialect",
                            "LLVM::LLVMDialect", "index::IndexDialect",
                            "gpu::GPUDialect", "scf::SCFDialect"];
+  let options = [Option<"use64bitIndex", "use-64bit-index", "bool",
+                        /*default=*/"true",
+                        "Use 64-bit integers to convert index types">,
+  ];
 }
 
 #endif // MLIR_CONVERSION_PASSES

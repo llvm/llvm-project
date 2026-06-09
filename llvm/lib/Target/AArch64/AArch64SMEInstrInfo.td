@@ -26,10 +26,6 @@ def AArch64_cond_smstop  : SDNode<"AArch64ISD::COND_SMSTOP", SDTypeProfile<0, 3,
                              [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
-def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
-                             [SDTCisInt<0>, SDTCisPtrTy<1>]>,
-                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
-                              SDNPOptInGlue]>;
 def AArch64_restore_zt : SDNode<"AArch64ISD::RESTORE_ZT", SDTypeProfile<0, 2,
                                 [SDTCisInt<0>, SDTCisPtrTy<1>]>,
                                 [SDNPHasChain, SDNPSideEffect, SDNPMayLoad]>;
@@ -60,66 +56,36 @@ def AArch64_check_matching_vl
 def : Pat<(AArch64_check_matching_vl), (CHECK_MATCHING_VL_PSEUDO)>;
 
 //===----------------------------------------------------------------------===//
-// Old SME ABI lowering ISD nodes/pseudos (deprecated)
-//===----------------------------------------------------------------------===//
-
-def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
-                              [SDTCisInt<0>, SDTCisInt<1>]>,
-                              [SDNPHasChain, SDNPSideEffect]>;
-let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
-  def AllocateZABuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
-}
-def : Pat<(i64 (AArch64AllocateZABuffer GPR64:$size)),
-          (AllocateZABuffer $size)>;
-
-def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 2,
-                              [SDTCisInt<0>, SDTCisInt<1>]>, [SDNPHasChain, SDNPMayStore]>;
-let usesCustomInserter = 1 in {
-  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer, GPR64:$save_slices), [(AArch64InitTPIDR2Obj GPR64:$buffer, GPR64:$save_slices)]>, Sched<[WriteI]> {}
-}
-
-// Nodes to allocate a save buffer for SME.
-// Needed for __arm_agnostic("sme_za_state").
-def AArch64SMESaveSize : SDNode<"AArch64ISD::GET_SME_SAVE_SIZE", SDTypeProfile<1, 0,
-                               [SDTCisInt<0>]>, [SDNPHasChain]>;
-let usesCustomInserter = 1, Defs = [X0] in {
-  def GetSMESaveSize : Pseudo<(outs GPR64:$dst), (ins), []>, Sched<[]> {}
-}
-def : Pat<(i64 AArch64SMESaveSize), (GetSMESaveSize)>;
-
-def AArch64AllocateSMESaveBuffer : SDNode<"AArch64ISD::ALLOC_SME_SAVE_BUFFER", SDTypeProfile<1, 1,
-                                          [SDTCisInt<0>, SDTCisInt<1>]>, [SDNPHasChain]>;
-let usesCustomInserter = 1, Defs = [SP] in {
-  def AllocateSMESaveBuffer : Pseudo<(outs GPR64sp:$dst), (ins GPR64:$size), []>, Sched<[WriteI]> {}
-}
-def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
-          (AllocateSMESaveBuffer $size)>;
-
-//===----------------------------------------------------------------------===//
-// New SME ABI lowering ISD nodes/pseudos (-aarch64-new-sme-abi)
+// SME ABI lowering ISD nodes/pseudos
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 1, isMeta = 1 in {
   def InOutZAUsePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
   def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def RequiresZT0SavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
-
-def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
 
 def CommitZASavePseudo
   : Pseudo<(outs),
-           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i64imm:$commit_routine, variable_ops), []>,
+           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i1imm:$zero_zt0,
+                i64imm:$commit_routine, variable_ops), []>,
            Sched<[]>;
 
 def AArch64_inout_za_use
   : SDNode<"AArch64ISD::INOUT_ZA_USE", SDTypeProfile<0, 0,[]>,
-           [SDNPHasChain, SDNPInGlue]>;
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 def : Pat<(AArch64_inout_za_use), (InOutZAUsePseudo)>;
 
 def AArch64_requires_za_save
   : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
-           [SDNPHasChain, SDNPInGlue]>;
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
+
+def AArch64_requires_zt0_save
+  : SDNode<"AArch64ISD::REQUIRES_ZT0_SAVE", SDTypeProfile<0, 0, []>,
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_requires_zt0_save), (RequiresZT0SavePseudo)>;
 
 def AArch64_sme_state_alloc
   : SDNode<"AArch64ISD::SME_STATE_ALLOC", SDTypeProfile<0, 0,[]>,
@@ -312,10 +278,6 @@ def RestoreZAPseudo :
   Pseudo<(outs),
          (ins GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, i64imm:$restore_routine, variable_ops), []>,
          Sched<[]>;
-
-def : Pat<(AArch64_restore_za
-            (i64 GPR64:$tpidr2_el0), (i64 GPR64sp:$tpidr2obj), (i64 texternalsym:$restore_routine)),
-          (RestoreZAPseudo GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, texternalsym:$restore_routine)>;
 
 // Read and write TPIDR2_EL0
 def : Pat<(int_aarch64_sme_set_tpidr2 i64:$val),
@@ -1086,7 +1048,7 @@ defm FMLAL_MZZI_BtoH      : sme2_fp8_fmlal_index_za16<"fmlal",      int_aarch64_
 defm FMLAL_VG2_M2ZZI_BtoH : sme2_fp8_fmlal_index_za16_vgx2<"fmlal", int_aarch64_sme_fp8_fmlal_lane_za16_vg2x2>;
 defm FMLAL_VG4_M4ZZI_BtoH : sme2_fp8_fmlal_index_za16_vgx4<"fmlal", int_aarch64_sme_fp8_fmlal_lane_za16_vg2x4>;
 
-defm FMLAL_VG2_MZZ_BtoH  : sme2_fp8_fmlal_single_za16<"fmlal", int_aarch64_sme_fp8_fmlal_single_za16_vg2x1>;
+defm FMLAL_VG2_MZZ_BtoH  : sme2_fp8_fmlal_single_za16<"fmlal", int_aarch64_sme_fp8_fmlal_za16_vg2x1>;
 defm FMLAL_VG2_M2ZZ_BtoH : sme2_fp_mla_long_array_vg2_single<"fmlal", 0b001, MatrixOp16, ZZ_b, ZPR4b8, nxv16i8,   int_aarch64_sme_fp8_fmlal_single_za16_vg2x2, [FPMR, FPCR]>;
 defm FMLAL_VG4_M4ZZ_BtoH : sme2_fp_mla_long_array_vg4_single<"fmlal", 0b001, MatrixOp16, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlal_single_za16_vg2x4, [FPMR, FPCR]>;
 
@@ -1112,7 +1074,7 @@ defm FMLALL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"fmlall",     0b01, 0b0
 defm FMLALL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"fmlall", 0b10, 0b100,  int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2, [FPMR, FPCR]>;
 defm FMLALL_VG4_M4ZZI_BtoS : sme2_mla_ll_array_vg4_index_32b<"fmlall", 0b00, 0b1000, int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4, [FPMR, FPCR]>;
 
-defm FMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"fmlall", 0b01000, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlall_single_za32_vg4x1, [FPMR, FPCR]>;
+defm FMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"fmlall", 0b01000, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlall_za32_vg4x1, [FPMR, FPCR]>;
 defm FMLALL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg2_single<"fmlall", 0b000001, MatrixOp32, ZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlall_single_za32_vg4x2, [FPMR, FPCR]>;
 defm FMLALL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg4_single<"fmlall", 0b010001, MatrixOp32, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlall_single_za32_vg4x4, [FPMR, FPCR]>;
 
@@ -1173,3 +1135,14 @@ let Predicates = [HasSME_MOP4, HasSMEF64F64] in {
   defm FMOP4A : sme2_fmop4as_fp64_non_widening<0, "fmop4a", "int_aarch64_sme_mop4a">;
   defm FMOP4S : sme2_fmop4as_fp64_non_widening<1, "fmop4s", "int_aarch64_sme_mop4s">;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2.3 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSME2p3] in {
+  def LUTI6_ZTZ       : sme2_lut_single<"luti6">;
+  def LUTI6_4ZT3Z     : sme2_luti6_zt_consecutive<"luti6">;
+  def LUTI6_S_4ZT3Z   : sme2_luti6_zt_strided<"luti6">;
+  def LUTI6_4Z2Z2ZI   : sme2_luti6_vector_vg4_consecutive<"luti6">;
+  def LUTI6_S_4Z2Z2ZI : sme2_luti6_vector_vg4_strided<"luti6">;
+} // [HasSME2p3]

@@ -739,7 +739,7 @@ class LLVM_ABI raw_null_ostream : public raw_pwrite_stream {
   uint64_t current_pos() const override;
 
 public:
-  explicit raw_null_ostream() = default;
+  explicit raw_null_ostream() : raw_pwrite_stream(/*Unbuffered=*/true) {}
   ~raw_null_ostream() override;
 };
 

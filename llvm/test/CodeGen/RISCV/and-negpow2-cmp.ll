@@ -221,8 +221,8 @@ define i64 @test12(i64 %0) #0 {
 ;
 ; RV64-LABEL: test12:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    addiw a0, a0, -16
-; RV64-NEXT:    addi a0, a0, 13
+; RV64-NEXT:    addi a0, a0, -16
+; RV64-NEXT:    addiw a0, a0, 13
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    ret
 entry:

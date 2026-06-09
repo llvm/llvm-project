@@ -35,6 +35,7 @@ target_link_libraries(bbc PRIVATE
   FortranEvaluate
   FortranSemantics
   FortranLower
+  MIFDialect
 )
 
 mlir_target_link_libraries(bbc PRIVATE

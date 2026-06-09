@@ -15,17 +15,17 @@
 #pragma warning(disable: 4530)
 #pragma warning(disable: 4577)
 #include <string>
-#include <vector>
 #pragma warning(pop)
 #else
 #include <string>
-#include <vector>
 #endif
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define PIPSQUEAK_EXPORT __declspec(dllexport)
 #elif defined(__MVS__)
 #define PIPSQUEAK_EXPORT __attribute__((__visibility__("default")))
+#elif defined(__GNUC__) || defined(__clang__)
+#define PIPSQUEAK_EXPORT __attribute__((visibility("default")))
 #else
 #define PIPSQUEAK_EXPORT
 #endif

@@ -310,26 +310,30 @@ LogicalResult BlockPrefetch2dOp::verify() {
 template <typename OpType, typename = std::enable_if_t<llvm::is_one_of<
                                OpType, BlockLoadOp, BlockStoreOp>::value>>
 LogicalResult verify1DBlockArg(OpType op) {
-  VectorType vTy;
+  Type srcOrDstTy;
   if constexpr (std::is_same_v<OpType, BlockLoadOp>)
-    vTy = op.getResult().getType();
+    srcOrDstTy = op.getResult().getType();
   else
-    vTy = op.getVal().getType();
+    srcOrDstTy = op.getVal().getType();
+  VectorType vTy = dyn_cast<VectorType>(srcOrDstTy);
+  // scalar case is always valid
+  if (!vTy)
+    return success();
   int elemTySize = vTy.getElementType().getIntOrFloatBitWidth() / 8;
   if (elemTySize == 1) {
-    llvm::SmallSet<int, 5> validSizes{1, 2, 4, 8, 16};
+    llvm::SmallSet<int, 4> validSizes{2, 4, 8, 16};
     if (validSizes.contains(vTy.getNumElements()))
       return success();
     else
       return op.emitOpError(
-          "vector size must be 1, 2, 4, 8 or 16 for 8-bit element type");
+          "vector size must be 2, 4, 8 or 16 for 8-bit element type");
   } else {
-    llvm::SmallSet<int, 4> validSizes{1, 2, 4, 8};
+    llvm::SmallSet<int, 3> validSizes{2, 4, 8};
     if (validSizes.contains(vTy.getNumElements()))
       return success();
     else
       return op.emitOpError(
-          "vector size must be 1, 2, 4 or 8 for element type > 8 bits");
+          "vector size must be 2, 4 or 8 for element type > 8 bits");
   }
 }
 
@@ -341,6 +345,34 @@ LogicalResult MMAOp::verify() {
   if (getC()) {
     if (getResult().getType() != getC().getType())
       return emitOpError("type of C operand must match result type");
+  }
+  return success();
+}
+
+LogicalResult MMAMxOp::verify() {
+  if (getC()) {
+    if (getResult().getType() != getC().getType())
+      return emitOpError("type of C operand must match result type");
+  }
+  return success();
+}
+
+LogicalResult TruncfOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type dstTy = getDst().getType();
+  if (isa<VectorType>(srcTy) && !isa<VectorType>(dstTy))
+    return emitOpError("both src and dst should be vector types or both should "
+                       "be scalar types");
+  if (isa<VectorType>(srcTy)) {
+    VectorType srcVecTy = dyn_cast<VectorType>(srcTy);
+    VectorType dstVecTy = dyn_cast<VectorType>(dstTy);
+    if (srcVecTy.getElementTypeBitWidth() <= dstVecTy.getElementTypeBitWidth())
+      return emitError(
+          "dst element bitwidth should be less than src element bitwidth");
+  } else {
+    if (srcTy.getIntOrFloatBitWidth() <= dstTy.getIntOrFloatBitWidth())
+      return emitError(
+          "dst element bitwidth should be less than src element bitwidth");
   }
   return success();
 }

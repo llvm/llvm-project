@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/log10.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include "hdr/stdint_proxy.h"
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcLog10Test = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -66,7 +72,7 @@ TEST_F(LlvmLibcLog10Test, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = FPBits(INPUTS[i]).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Log10, x,
-                                   LIBC_NAMESPACE::log10(x), 0.5);
+                                   LIBC_NAMESPACE::log10(x), TOLERANCE + 0.5);
   }
 }
 
@@ -79,7 +85,7 @@ TEST_F(LlvmLibcLog10Test, AllExponents) {
 }
 
 TEST_F(LlvmLibcLog10Test, InDoubleRange) {
-  constexpr uint64_t COUNT = 1'001;
+  constexpr uint64_t COUNT = 1'231;
   constexpr uint64_t START = 0x3FD0'0000'0000'0000ULL; // 0.25
   constexpr uint64_t STOP = 0x4010'0000'0000'0000ULL;  // 4.0
   // constexpr uint64_t START = 0x3FF0'0000'0000'0000ULL;  // 1.0
@@ -118,10 +124,10 @@ TEST_F(LlvmLibcLog10Test, InDoubleRange) {
         }
       }
     }
-    tlog << " Log10 failed: " << fails << "/" << count << "/" << cc
-         << " tests.\n";
-    tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
     if (fails) {
+      tlog << " Log10 failed: " << fails << "/" << count << "/" << cc
+           << " tests.\n";
+      tlog << "   Max ULPs is at most: " << static_cast<uint64_t>(tol) << ".\n";
       EXPECT_MPFR_MATCH(mpfr::Operation::Log10, mx, mr, 0.5, rounding_mode);
     }
   };

@@ -15,7 +15,7 @@ define i16 @test() {
 ; CHECK-NEXT:    [[PEDGE_061_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_BODY_I]] ], [ null, [[ENTRY]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr [[S]], ptr [[PEDGE_061_I]], i64 -1
 ; CHECK-NEXT:    [[PPREV_0_I]] = getelementptr [[S]], ptr [[PPREV_062_I]], i64 -1
-; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i16> @llvm.masked.load.v3i16.p0(ptr [[PPREV_0_I]], i32 2, <3 x i1> <i1 true, i1 false, i1 true>, <3 x i16> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <3 x i16> @llvm.masked.load.v3i16.p0(ptr align 2 [[PPREV_0_I]], <3 x i1> <i1 true, i1 false, i1 true>, <3 x i16> poison)
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i16> [[TMP1]], <3 x i16> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i16> [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i16> [[TMP2]], i32 1

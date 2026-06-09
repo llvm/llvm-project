@@ -363,8 +363,9 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
   case MachineOperand::MO_RegisterMask:
   case MachineOperand::MO_RegisterLiveOut: {
     // Shallow compare of the two RegMasks
-    const uint32_t *RegMask = getRegMask();
-    const uint32_t *OtherRegMask = Other.getRegMask();
+    const uint32_t *RegMask = isRegMask() ? getRegMask() : getRegLiveOut();
+    const uint32_t *OtherRegMask =
+        isRegMask() ? Other.getRegMask() : Other.getRegLiveOut();
     if (RegMask == OtherRegMask)
       return true;
 
@@ -393,6 +394,8 @@ bool MachineOperand::isIdenticalTo(const MachineOperand &Other) const {
     return getPredicate() == Other.getPredicate();
   case MachineOperand::MO_ShuffleMask:
     return getShuffleMask() == Other.getShuffleMask();
+  case MachineOperand::MO_LaneMask:
+    return getLaneMask() == Other.getLaneMask();
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -434,7 +437,8 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     if (const MachineFunction *MF = getMFIfAvailable(MO)) {
       const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
       unsigned RegMaskSize = MachineOperand::getRegMaskSize(TRI->getNumRegs());
-      const uint32_t *RegMask = MO.getRegMask();
+      const uint32_t *RegMask =
+          MO.isRegMask() ? MO.getRegMask() : MO.getRegLiveOut();
       std::vector<stable_hash> RegMaskHashes(RegMask, RegMask + RegMaskSize);
       return hash_combine(MO.getType(), MO.getTargetFlags(),
                           stable_hash_combine(RegMaskHashes));
@@ -458,6 +462,9 @@ hash_code llvm::hash_value(const MachineOperand &MO) {
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getPredicate());
   case MachineOperand::MO_ShuffleMask:
     return hash_combine(MO.getType(), MO.getTargetFlags(), MO.getShuffleMask());
+  case MachineOperand::MO_LaneMask:
+    return hash_combine(MO.getType(), MO.getTargetFlags(),
+                        MO.getLaneMask().getAsInteger());
   }
   llvm_unreachable("Invalid machine operand type");
 }
@@ -783,6 +790,64 @@ static void printCFI(raw_ostream &OS, const MCCFIInstruction &CFI,
     if (MCSymbol *Label = CFI.getLabel())
       MachineOperand::printSymbol(OS, *Label);
     break;
+  case MCCFIInstruction::OpLLVMRegisterPair: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::RegisterPairFields>();
+
+    OS << "llvm_register_pair ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", ";
+    printCFIRegister(Fields.Reg1, OS, TRI);
+    OS << ", " << Fields.Reg1SizeInBits << ", ";
+    printCFIRegister(Fields.Reg2, OS, TRI);
+    OS << ", " << Fields.Reg2SizeInBits;
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisters: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorRegistersFields>();
+
+    OS << "llvm_vector_registers ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    for (auto [Reg, Lane, Size] : Fields.VectorRegisters) {
+      OS << ", ";
+      printCFIRegister(Reg, OS, TRI);
+      OS << ", " << Lane << ", " << Size;
+    }
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorOffset: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorOffsetFields>();
+
+    OS << "llvm_vector_offset ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", " << Fields.RegisterSizeInBits << ", ";
+    printCFIRegister(Fields.MaskRegister, OS, TRI);
+    OS << ", " << Fields.MaskRegisterSizeInBits << ", " << Fields.Offset;
+    break;
+  }
+  case MCCFIInstruction::OpLLVMVectorRegisterMask: {
+    const auto &Fields =
+        CFI.getExtraFields<MCCFIInstruction::VectorRegisterMaskFields>();
+
+    OS << "llvm_vector_register_mask ";
+    if (MCSymbol *Label = CFI.getLabel())
+      MachineOperand::printSymbol(OS, *Label);
+    printCFIRegister(Fields.Register, OS, TRI);
+    OS << ", ";
+    printCFIRegister(Fields.SpillRegister, OS, TRI);
+    OS << ", " << Fields.SpillRegisterLaneSizeInBits << ", ";
+    printCFIRegister(Fields.MaskRegister, OS, TRI);
+    OS << ", " << Fields.MaskRegisterSizeInBits;
+    break;
+  }
   default:
     // TODO: Print the other CFI Operations.
     OS << "<unserializable cfi directive>";
@@ -1017,11 +1082,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   case MachineOperand::MO_Predicate: {
     auto Pred = static_cast<CmpInst::Predicate>(getPredicate());
-    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred("
-       << Pred << ')';
+    OS << (CmpInst::isIntPredicate(Pred) ? "int" : "float") << "pred(" << Pred
+       << ')';
     break;
   }
-  case MachineOperand::MO_ShuffleMask:
+  case MachineOperand::MO_ShuffleMask: {
     OS << "shufflemask(";
     ArrayRef<int> Mask = getShuffleMask();
     StringRef Separator;
@@ -1035,6 +1100,14 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
     OS << ')';
     break;
+  }
+  case MachineOperand::MO_LaneMask: {
+    OS << "lanemask(";
+    LaneBitmask LaneMask = getLaneMask();
+    OS << "0x" << PrintLaneMask(LaneMask);
+    OS << ')';
+    break;
+  }
   }
 }
 
@@ -1062,8 +1135,8 @@ bool MachinePointerInfo::isDereferenceable(unsigned Size, LLVMContext &C,
     return false;
 
   return isDereferenceableAndAlignedPointer(
-      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size), DL,
-      dyn_cast<Instruction>(BasePtr));
+      BasePtr, Align(1), APInt(DL.getPointerSizeInBits(), Offset + Size),
+      SimplifyQuery(DL, dyn_cast<Instruction>(BasePtr)));
 }
 
 /// getConstantPool - Return a MachinePointerInfo record that refers to the
@@ -1124,7 +1197,7 @@ MachineMemOperand::MachineMemOperand(MachinePointerInfo ptrinfo, Flags F,
                                      AtomicOrdering FailureOrdering)
     : MachineMemOperand(
           ptrinfo, F,
-          !TS.hasValue() ? LLT()
+          !TS.isPrecise() ? LLT()
           : TS.isScalable()
               ? LLT::scalable_vector(1, 8 * TS.getValue().getKnownMinValue())
               : LLT::scalar(8 * TS.getValue().getKnownMinValue()),

@@ -65,6 +65,12 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
   case Intrinsic::sqrt: // Begin floating-point.
   case Intrinsic::asin:
   case Intrinsic::acos:
@@ -81,6 +87,7 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::exp:
   case Intrinsic::exp10:
   case Intrinsic::exp2:
+  case Intrinsic::frexp:
   case Intrinsic::ldexp:
   case Intrinsic::log:
   case Intrinsic::log10:
@@ -115,33 +122,18 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
+  case Intrinsic::clmul:
     return true;
   default:
     return false;
   }
 }
 
-bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
-                                   const TargetTransformInfo *TTI) {
+bool llvm::isTriviallyScalarizable(Intrinsic::ID ID) {
   if (isTriviallyVectorizable(ID))
     return true;
 
-  if (TTI && Intrinsic::isTargetIntrinsic(ID))
-    return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
-
-  // TODO: Move frexp to isTriviallyVectorizable.
-  // https://github.com/llvm/llvm-project/issues/112408
-  switch (ID) {
-  case Intrinsic::frexp:
-  case Intrinsic::uadd_with_overflow:
-  case Intrinsic::sadd_with_overflow:
-  case Intrinsic::ssub_with_overflow:
-  case Intrinsic::usub_with_overflow:
-  case Intrinsic::umul_with_overflow:
-  case Intrinsic::smul_with_overflow:
-    return true;
-  }
-  return false;
+  return Intrinsic::isTriviallyScalarizable(ID);
 }
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
@@ -175,6 +167,10 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return (ScalarOpdIdx == 2);
   case Intrinsic::experimental_vp_splice:
     return ScalarOpdIdx == 2 || ScalarOpdIdx == 4;
+  case Intrinsic::experimental_vp_strided_load:
+    return ScalarOpdIdx == 0 || ScalarOpdIdx == 1;
+  case Intrinsic::loop_dependence_war_mask:
+    return true;
   default:
     return false;
   }
@@ -202,6 +198,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
   case Intrinsic::vector_extract:
+  case Intrinsic::loop_dependence_war_mask:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:
@@ -212,6 +209,8 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::powi:
   case Intrinsic::ldexp:
     return OpdIdx == -1 || OpdIdx == 1;
+  case Intrinsic::experimental_vp_strided_load:
+    return OpdIdx == -1 || OpdIdx == 0 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
   }
@@ -317,9 +316,9 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 
   if (InsertElementInst *III = dyn_cast<InsertElementInst>(V)) {
     // If this is an insert to a variable element, we don't know what it is.
-    if (!isa<ConstantInt>(III->getOperand(2)))
+    uint64_t IIElt;
+    if (!match(III->getOperand(2), m_ConstantInt(IIElt)))
       return nullptr;
-    unsigned IIElt = cast<ConstantInt>(III->getOperand(2))->getZExtValue();
 
     // If this is an insert to the element we are looking for, return the
     // inserted value.
@@ -459,7 +458,7 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
     return true;
 
   // Simple case of a shuffle with zeroinitializer.
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     DemandedLHS.setBit(0);
     return true;
   }
@@ -494,7 +493,7 @@ bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
   for (auto [i, M] : enumerate(Mask)) {
     if (M < 0)
       continue;
-    int Src = M >= (int)NumElts;
+    int Src = M >= NumElts;
     int Diff = (int)i - (M % NumElts);
     bool Match = false;
     for (int j = 0; j < 2; j++) {
@@ -1084,6 +1083,10 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
   for (auto &[Kind, MD] : Metadata) {
+    // Skip MMRA metadata if the instruction cannot have it.
+    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Inst))
+      continue;
+
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
@@ -1253,58 +1256,6 @@ Value *llvm::concatenateVectors(IRBuilderBase &Builder,
   return ResList[0];
 }
 
-bool llvm::maskIsAllZeroOrUndef(Value *Mask) {
-  assert(isa<VectorType>(Mask->getType()) &&
-         isa<IntegerType>(Mask->getType()->getScalarType()) &&
-         cast<IntegerType>(Mask->getType()->getScalarType())->getBitWidth() ==
-             1 &&
-         "Mask must be a vector of i1");
-
-  auto *ConstMask = dyn_cast<Constant>(Mask);
-  if (!ConstMask)
-    return false;
-  if (ConstMask->isNullValue() || isa<UndefValue>(ConstMask))
-    return true;
-  if (isa<ScalableVectorType>(ConstMask->getType()))
-    return false;
-  for (unsigned
-           I = 0,
-           E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
-       I != E; ++I) {
-    if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isNullValue() || isa<UndefValue>(MaskElt))
-        continue;
-    return false;
-  }
-  return true;
-}
-
-bool llvm::maskIsAllOneOrUndef(Value *Mask) {
-  assert(isa<VectorType>(Mask->getType()) &&
-         isa<IntegerType>(Mask->getType()->getScalarType()) &&
-         cast<IntegerType>(Mask->getType()->getScalarType())->getBitWidth() ==
-             1 &&
-         "Mask must be a vector of i1");
-
-  auto *ConstMask = dyn_cast<Constant>(Mask);
-  if (!ConstMask)
-    return false;
-  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
-    return true;
-  if (isa<ScalableVectorType>(ConstMask->getType()))
-    return false;
-  for (unsigned
-           I = 0,
-           E = cast<FixedVectorType>(ConstMask->getType())->getNumElements();
-       I != E; ++I) {
-    if (auto *MaskElt = ConstMask->getAggregateElement(I))
-      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
-        continue;
-    return false;
-  }
-  return true;
-}
-
 bool llvm::maskContainsAllOneOrUndef(Value *Mask) {
   assert(isa<VectorType>(Mask->getType()) &&
          isa<IntegerType>(Mask->getType()->getScalarType()) &&
@@ -1387,9 +1338,9 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       // wrap around the address space we would do a memory access at nullptr
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
-      int64_t Stride =
-        getPtrStride(PSE, ElementTy, Ptr, TheLoop, Strides,
-                     /*Assume=*/true, /*ShouldCheckWrap=*/false).value_or(0);
+      int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
+                                    /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                           .value_or(0);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1643,8 +1594,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
-    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true).value_or(0))
+    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
+                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+            .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                       << FirstOrLast

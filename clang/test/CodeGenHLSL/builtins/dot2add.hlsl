@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -finclude-default-header -fnative-half-type -triple \
+// RUN: %clang_cc1 -finclude-default-header -fnative-half-type -fnative-int16-type -triple \
 // RUN:   dxil-pc-shadermodel6.4-compute %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
-// RUN: %clang_cc1 -finclude-default-header -fnative-half-type -triple \
+// RUN: %clang_cc1 -finclude-default-header -fnative-half-type -fnative-int16-type -triple \
 // RUN:   spirv-pc-vulkan-compute %s -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
@@ -106,8 +106,8 @@ float test_double_arg1_arg2_type(double2 p1, double2 p2, float p3) {
 
 // CHECK-LABEL: define {{.*}}test_int16_arg1_arg2_type
 float test_int16_arg1_arg2_type(int16_t2 p1, int16_t2 p2, float p3) {
-  // CHECK:  %conv = sitofp <2 x i16> %{{.*}} to <2 x half>
-  // CHECK:  %conv1 = sitofp <2 x i16> %{{.*}} to <2 x half>
+  // CHECK:  %conv = sitofp reassoc nnan ninf nsz arcp afn <2 x i16> %{{.*}} to <2 x half>
+  // CHECK:  %conv1 = sitofp reassoc nnan ninf nsz arcp afn <2 x i16> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
   // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
@@ -123,8 +123,8 @@ float test_int16_arg1_arg2_type(int16_t2 p1, int16_t2 p2, float p3) {
 
 // CHECK-LABEL: define {{.*}}test_int32_arg1_arg2_type
 float test_int32_arg1_arg2_type(int32_t2 p1, int32_t2 p2, float p3) {
-  // CHECK:  %conv = sitofp <2 x i32> %{{.*}} to <2 x half>
-  // CHECK:  %conv1 = sitofp <2 x i32> %{{.*}} to <2 x half>
+  // CHECK:  %conv = sitofp reassoc nnan ninf nsz arcp afn <2 x i32> %{{.*}} to <2 x half>
+  // CHECK:  %conv1 = sitofp reassoc nnan ninf nsz arcp afn <2 x i32> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
   // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
@@ -140,8 +140,8 @@ float test_int32_arg1_arg2_type(int32_t2 p1, int32_t2 p2, float p3) {
 
 // CHECK-LABEL: define {{.*}}test_int64_arg1_arg2_type
 float test_int64_arg1_arg2_type(int64_t2 p1, int64_t2 p2, float p3) {
-  // CHECK:  %conv = sitofp <2 x i64> %{{.*}} to <2 x half>
-  // CHECK:  %conv1 = sitofp <2 x i64> %{{.*}} to <2 x half>
+  // CHECK:  %conv = sitofp reassoc nnan ninf nsz arcp afn <2 x i64> %{{.*}} to <2 x half>
+  // CHECK:  %conv1 = sitofp reassoc nnan ninf nsz arcp afn <2 x i64> %{{.*}} to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
   // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4
@@ -157,10 +157,10 @@ float test_int64_arg1_arg2_type(int64_t2 p1, int64_t2 p2, float p3) {
 
 // CHECK-LABEL: define {{.*}}test_bool_arg1_arg2_type
 float test_bool_arg1_arg2_type(bool2 p1, bool2 p2, float p3) {
-  // CHECK:  %loadedv = trunc <2 x i32> %{{.*}} to <2 x i1>
-  // CHECK:  %conv = uitofp <2 x i1> %loadedv to <2 x half>
-  // CHECK:  %loadedv1 = trunc <2 x i32> %{{.*}} to <2 x i1>
-  // CHECK:  %conv2 = uitofp <2 x i1> %loadedv1 to <2 x half>
+  // CHECK:  %loadedv = icmp ne <2 x i32> %{{.*}}, zeroinitializer
+  // CHECK:  %conv = uitofp {{.*}} <2 x i1> %loadedv to <2 x half>
+  // CHECK:  %loadedv1 = icmp ne <2 x i32> %{{.*}}, zeroinitializer
+  // CHECK:  %conv2 = uitofp {{.*}} <2 x i1> %loadedv1 to <2 x half>
   // CHECK-SPIRV:  %[[MUL:.*]] = call reassoc nnan ninf nsz arcp afn half @llvm.spv.fdot.v2f16(<2 x half> %{{.*}}, <2 x half> %{{.*}})
   // CHECK-SPIRV:  %[[CONV:.*]] = fpext reassoc nnan ninf nsz arcp afn half %[[MUL]] to float
   // CHECK-SPIRV:  %[[C:.*]] = load float, ptr %c.addr.i, align 4

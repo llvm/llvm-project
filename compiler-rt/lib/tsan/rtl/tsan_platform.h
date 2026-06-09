@@ -404,7 +404,7 @@ struct MappingRiscv64_39 {
   static const uptr kHeapMemBeg = 0x2c00000000ull;
   static const uptr kHeapMemEnd = 0x2c00000000ull;
   static const uptr kHiAppMemBeg = 0x3c00000000ull;
-  static const uptr kHiAppMemEnd = 0x3fffffffffull;
+  static const uptr kHiAppMemEnd = 0x4000000000ull;
   static const uptr kShadowMsk = 0x3800000000ull;
   static const uptr kShadowXor = 0x0800000000ull;
   static const uptr kShadowAdd = 0x0000000000ull;
@@ -434,7 +434,7 @@ struct MappingRiscv64_48 {
   static const uptr kHeapMemBeg = 0x5a0000000000ull;
   static const uptr kHeapMemEnd = 0x5a0000000000ull;
   static const uptr kHiAppMemBeg = 0x7a0000000000ull;
-  static const uptr kHiAppMemEnd = 0x7fffffffffffull;
+  static const uptr kHiAppMemEnd = 0x800000000000ull;
   static const uptr kShadowMsk = 0x700000000000ull;
   static const uptr kShadowXor = 0x100000000000ull;
   static const uptr kShadowAdd = 0x000000000000ull;
@@ -958,7 +958,9 @@ struct IsAppMemImpl {
 };
 
 ALWAYS_INLINE
-bool IsAppMem(uptr mem) { return SelectMapping<IsAppMemImpl>(mem); }
+bool IsAppMem(uptr mem) {
+  return SelectMapping<IsAppMemImpl>(STRIP_MTE_TAG(mem));
+}
 
 struct IsShadowMemImpl {
   template <typename Mapping>
@@ -997,7 +999,8 @@ struct MemToShadowImpl {
 
 ALWAYS_INLINE
 RawShadow *MemToShadow(uptr x) {
-  return reinterpret_cast<RawShadow *>(SelectMapping<MemToShadowImpl>(x));
+  return reinterpret_cast<RawShadow*>(
+      SelectMapping<MemToShadowImpl>(STRIP_MTE_TAG(x)));
 }
 
 struct MemToMetaImpl {
@@ -1011,7 +1014,9 @@ struct MemToMetaImpl {
 };
 
 ALWAYS_INLINE
-u32 *MemToMeta(uptr x) { return SelectMapping<MemToMetaImpl>(x); }
+u32* MemToMeta(uptr x) {
+  return SelectMapping<MemToMetaImpl>(STRIP_MTE_TAG(x));
+}
 
 struct ShadowToMemImpl {
   template <typename Mapping>

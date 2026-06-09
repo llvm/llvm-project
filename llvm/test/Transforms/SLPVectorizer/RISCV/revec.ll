@@ -7,7 +7,7 @@ define i32 @test() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END_I87:%.*]]
 ; CHECK:       if.end.i87:
-; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> getelementptr (i32, <4 x ptr> <ptr inttoptr (i64 64036 to ptr), ptr inttoptr (i64 64036 to ptr), ptr inttoptr (i64 64064 to ptr), ptr inttoptr (i64 64064 to ptr)>, <4 x i64> <i64 0, i64 1, i64 0, i64 1>), i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 getelementptr (i32, <4 x ptr> <ptr inttoptr (i64 64036 to ptr), ptr inttoptr (i64 64036 to ptr), ptr inttoptr (i64 64064 to ptr), ptr inttoptr (i64 64064 to ptr)>, <4 x i64> <i64 0, i64 1, i64 0, i64 1>), <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> <i32 undef, i32 undef, i32 0, i32 0>, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    switch i32 0, label [[SW_BB509_I:%.*]] [
 ; CHECK-NEXT:      i32 1, label [[SW_BB509_I]]
@@ -147,8 +147,8 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; POWEROF2-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; POWEROF2-NEXT:    [[TMP15:%.*]] = fmul <2 x float> zeroinitializer, [[TMP14]]
-; POWEROF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
-; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP16]]
+; POWEROF2-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
+; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP30]]
 ; POWEROF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
 ; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP18]], 0.000000e+00
 ; POWEROF2-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i32 0
@@ -177,11 +177,10 @@ define ptr @test4() {
 ; NONPOWEROF2-NEXT:    [[TMP8:%.*]] = phi <6 x float> [ poison, [[TMP6:%.*]] ], [ [[TMP5]], [[TMP0:%.*]] ]
 ; NONPOWEROF2-NEXT:    br label [[TMP9:%.*]]
 ; NONPOWEROF2:       10:
-; NONPOWEROF2-NEXT:    [[TMP10:%.*]] = shufflevector <6 x float> [[TMP8]], <6 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
-; NONPOWEROF2-NEXT:    [[TMP11:%.*]] = fmul <3 x float> zeroinitializer, [[TMP10]]
-; NONPOWEROF2-NEXT:    [[TMP12:%.*]] = shufflevector <6 x float> [[TMP8]], <6 x float> poison, <3 x i32> <i32 3, i32 4, i32 5>
-; NONPOWEROF2-NEXT:    [[TMP13:%.*]] = fmul <3 x float> zeroinitializer, [[TMP12]]
+; NONPOWEROF2-NEXT:    [[TMP12:%.*]] = fmul <6 x float> zeroinitializer, [[TMP8]]
+; NONPOWEROF2-NEXT:    [[TMP11:%.*]] = shufflevector <6 x float> [[TMP12]], <6 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; NONPOWEROF2-NEXT:    [[TMP14:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP11]])
+; NONPOWEROF2-NEXT:    [[TMP13:%.*]] = shufflevector <6 x float> [[TMP12]], <6 x float> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; NONPOWEROF2-NEXT:    [[TMP15:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v3f32(float 0.000000e+00, <3 x float> [[TMP13]])
 ; NONPOWEROF2-NEXT:    [[TMP16:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP14]])
 ; NONPOWEROF2-NEXT:    [[TMP17:%.*]] = tail call float @llvm.sqrt.f32(float [[TMP15]])
@@ -229,7 +228,7 @@ define i32 @test5() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_END47:%.*]]
 ; CHECK:       for.end47:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x double> [ <double 0x7FF8000000000000, double 0x7FF8000000000000, double 0.000000e+00, double 0.000000e+00, double 0x7FF8000000000000, double 0x7FF8000000000000, double 0.000000e+00, double 0.000000e+00>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <8 x double> [ <double +qnan, double +qnan, double 0.000000e+00, double 0.000000e+00, double +qnan, double +qnan, double 0.000000e+00, double 0.000000e+00>, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

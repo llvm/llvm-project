@@ -22,7 +22,6 @@ namespace clang::tidy::performance {
 void AvoidEndlCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          unless(isExpansionInSystemHeader()),
           anyOf(cxxOperatorCallExpr(
                     hasOverloadedOperatorName("<<"),
                     hasRHS(declRefExpr(to(namedDecl(hasName("::std::endl"))))
@@ -42,7 +41,7 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
   // 'std::cout << "Hi" << std::endl;' into
   // 'std::cout << "Hi\n"';
 
-  if (llvm::isa<DeclRefExpr>(Expression)) {
+  if (isa<DeclRefExpr>(Expression)) {
     // Handle the more common streaming '... << std::endl' case
     const CharSourceRange TokenRange =
         CharSourceRange::getTokenRange(Expression->getSourceRange());
@@ -57,7 +56,7 @@ void AvoidEndlCheck::check(const MatchFinder::MatchResult &Result) {
       Diag << FixItHint::CreateReplacement(TokenRange, "'\\n'");
   } else {
     // Handle the less common function call 'std::endl(...)' case
-    const auto *CallExpression = llvm::cast<CallExpr>(Expression);
+    const auto *CallExpression = cast<CallExpr>(Expression);
     assert(CallExpression->getNumArgs() == 1);
 
     StringRef SourceText = Lexer::getSourceText(

@@ -1,10 +1,11 @@
 #include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_asm.h"
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) && defined(ASAN_SHADOW_OFFSET_CONST)
 #include "sanitizer_common/sanitizer_platform.h"
 
 .file "asan_rtl_x86_64.S"
+.att_syntax
 
 #define NAME(n, reg, op, s, i) n##_##op##_##i##_##s##_##reg
 

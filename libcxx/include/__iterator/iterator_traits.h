@@ -15,6 +15,8 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/copyable.h>
 #include <__concepts/equality_comparable.h>
+#include <__concepts/primary_template.h>
+#include <__concepts/referenceable.h>
 #include <__concepts/same_as.h>
 #include <__concepts/totally_ordered.h>
 #include <__config>
@@ -30,9 +32,7 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_object.h>
-#include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
-#include <__type_traits/is_referenceable.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_cv.h>
@@ -420,44 +420,43 @@ using __has_exactly_bidirectional_iterator_category _LIBCPP_NODEBUG =
                           !__has_iterator_category_convertible_to<_Tp, random_access_iterator_tag>::value>;
 
 template <class _InputIterator>
-using __iter_value_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type;
+using __iterator_value_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type;
 
 #if _LIBCPP_STD_VER >= 23
 template <class _InputIterator>
-using __iter_key_type _LIBCPP_NODEBUG = remove_const_t<tuple_element_t<0, __iter_value_type<_InputIterator>>>;
+using __iter_key_type _LIBCPP_NODEBUG = remove_const_t<tuple_element_t<0, __iterator_value_type<_InputIterator>>>;
 
 template <class _InputIterator>
-using __iter_mapped_type _LIBCPP_NODEBUG = tuple_element_t<1, __iter_value_type<_InputIterator>>;
+using __iter_mapped_type _LIBCPP_NODEBUG = tuple_element_t<1, __iterator_value_type<_InputIterator>>;
 
 template <class _InputIterator>
 using __iter_to_alloc_type _LIBCPP_NODEBUG =
-    pair<const tuple_element_t<0, __iter_value_type<_InputIterator>>,
-         tuple_element_t<1, __iter_value_type<_InputIterator>>>;
+    pair<const tuple_element_t<0, __iterator_value_type<_InputIterator>>,
+         tuple_element_t<1, __iterator_value_type<_InputIterator>>>;
 #else
 template <class _InputIterator>
-using __iter_key_type _LIBCPP_NODEBUG =
-    __remove_const_t<typename iterator_traits<_InputIterator>::value_type::first_type>;
+using __iter_key_type _LIBCPP_NODEBUG = __remove_const_t<typename __iterator_value_type<_InputIterator>::first_type>;
 
 template <class _InputIterator>
-using __iter_mapped_type _LIBCPP_NODEBUG = typename iterator_traits<_InputIterator>::value_type::second_type;
+using __iter_mapped_type _LIBCPP_NODEBUG = typename __iterator_value_type<_InputIterator>::second_type;
 
 template <class _InputIterator>
 using __iter_to_alloc_type _LIBCPP_NODEBUG =
-    pair<const typename iterator_traits<_InputIterator>::value_type::first_type,
-         typename iterator_traits<_InputIterator>::value_type::second_type>;
+    pair<const typename __iterator_value_type<_InputIterator>::first_type,
+         typename __iterator_value_type<_InputIterator>::second_type>;
 #endif // _LIBCPP_STD_VER >= 23
 
 template <class _Iter>
-using __iterator_category_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;
+using __iterator_iterator_category _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::iterator_category;
 
 template <class _Iter>
-using __iterator_pointer_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::pointer;
+using __iterator_pointer _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::pointer;
 
 template <class _Iter>
-using __iter_diff_t _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::difference_type;
+using __iterator_difference_type _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::difference_type;
 
 template <class _Iter>
-using __iter_reference _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::reference;
+using __iterator_reference _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::reference;
 
 #if _LIBCPP_STD_VER >= 20
 
@@ -469,7 +468,7 @@ using __iter_reference _LIBCPP_NODEBUG = typename iterator_traits<_Iter>::refere
 // This has to be in this file and not readable_traits.h to break the include cycle between the two.
 template <class _Ip>
 using iter_value_t =
-    typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
+    typename conditional_t<__primary_template<iterator_traits<remove_cvref_t<_Ip> > >,
                            indirectly_readable_traits<remove_cvref_t<_Ip> >,
                            iterator_traits<remove_cvref_t<_Ip> > >::value_type;
 

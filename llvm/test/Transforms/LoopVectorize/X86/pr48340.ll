@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %0 = type { i32 }
 %1 = type { i64 }
 
-define ptr @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
+define ptr @foo(ptr %p, ptr %p.last) #0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -21,7 +21,7 @@ define ptr @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 1024
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 10
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -31,13 +31,13 @@ define ptr @foo(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[TMP5]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD_2]], <4 x i64> splat (i64 4096)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> [[TMP8]], i32 8, <4 x i1> splat (i1 true), <4 x ptr> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[TMP8]], <4 x i1> splat (i1 true), <4 x ptr> poison)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 16384
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i64 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
@@ -67,7 +67,7 @@ exit:
   ret ptr %v
 }
 
-define ptr @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
+define ptr @bar(ptr %p, ptr %p.last) #0 {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P3:%.*]] = ptrtoint ptr [[P:%.*]] to i64
@@ -81,7 +81,7 @@ define ptr @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 16
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[N_VEC]], 1024
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N_VEC]], 10
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -91,13 +91,13 @@ define ptr @bar(ptr %p, ptr %p.last) unnamed_addr #0 {
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[TMP5]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD]], <4 x i64> splat (i64 4096)
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <4 x ptr> [[STEP_ADD_2]], <4 x i64> splat (i64 4096)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> [[TMP8]], i32 8, <4 x i1> splat (i1 true), <4 x ptr> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 8 [[TMP8]], <4 x i1> splat (i1 true), <4 x ptr> poison)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 16384
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[WIDE_MASKED_GATHER6]], i64 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:

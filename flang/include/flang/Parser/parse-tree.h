@@ -22,9 +22,12 @@
 #include "format-specification.h"
 #include "message.h"
 #include "provenance.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Common/reference.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -153,6 +156,7 @@ struct SubroutineSubprogram; // R1534
 // with order of the the requirement productions in the grammar.
 struct DerivedTypeDef; // R726
 struct EnumDef; // R759
+struct EnumerationTypeDef; // F2023 R766
 struct TypeDeclarationStmt; // R801
 struct AccessStmt; // R827
 struct AllocatableStmt; // R829
@@ -248,6 +252,8 @@ struct Call; // R1520 & R1521
 struct CallStmt; // R1521
 struct ProcedureDesignator; // R1522
 struct ActualArg; // R1524
+struct ConditionalArg; // F2023 R1526
+struct ConditionalArgTail; // F2023 R1526
 struct SeparateModuleSubprogram; // R1538
 struct EntryStmt; // R1541
 struct ReturnStmt; // R1542
@@ -267,9 +273,9 @@ struct AccEndCombinedDirective;
 struct OpenACCDeclarativeConstruct;
 struct OpenACCRoutineConstruct;
 struct OpenMPConstruct;
-struct OpenMPLoopConstruct;
 struct OpenMPDeclarativeConstruct;
-struct OmpEndLoopDirective;
+struct OpenMPInvalidDirective;
+struct OpenMPMisplacedEndDirective;
 struct CUFKernelDoConstruct;
 
 // Cooked character stream locations
@@ -337,6 +343,7 @@ using IntConstantExpr = Integer<ConstantExpr>; // R1031
 using ScalarLogicalExpr = Scalar<LogicalExpr>;
 using ScalarIntExpr = Scalar<IntExpr>;
 using ScalarIntConstantExpr = Scalar<IntConstantExpr>;
+using ScalarLogicalConstantExpr = Scalar<Logical<ConstantExpr>>;
 using ScalarDefaultCharExpr = Scalar<DefaultCharExpr>;
 // R1030 default-char-constant-expr is used in the Standard only as part of
 // scalar-default-char-constant-expr.
@@ -388,13 +395,15 @@ struct OtherSpecificationStmt {
 };
 
 // R508 specification-construct ->
-//        derived-type-def | enum-def | generic-stmt | interface-block |
-//        parameter-stmt | procedure-declaration-stmt |
-//        other-specification-stmt | type-declaration-stmt
+//        derived-type-def | enum-def | enumeration-type-def |
+//        generic-stmt | interface-block | parameter-stmt |
+//        procedure-declaration-stmt | other-specification-stmt |
+//        type-declaration-stmt
 struct SpecificationConstruct {
   UNION_CLASS_BOILERPLATE(SpecificationConstruct);
   std::variant<common::Indirection<DerivedTypeDef>,
-      common::Indirection<EnumDef>, Statement<common::Indirection<GenericStmt>>,
+      common::Indirection<EnumDef>, common::Indirection<EnumerationTypeDef>,
+      Statement<common::Indirection<GenericStmt>>,
       common::Indirection<InterfaceBlock>,
       Statement<common::Indirection<ParameterStmt>>,
       Statement<common::Indirection<OldParameterStmt>>,
@@ -404,6 +413,8 @@ struct SpecificationConstruct {
       common::Indirection<StructureDef>,
       common::Indirection<OpenACCDeclarativeConstruct>,
       common::Indirection<OpenMPDeclarativeConstruct>,
+      common::Indirection<OpenMPMisplacedEndDirective>,
+      common::Indirection<OpenMPInvalidDirective>,
       common::Indirection<CompilerDirective>>
       u;
 };
@@ -536,7 +547,8 @@ struct ExecutableConstruct {
       common::Indirection<OpenACCConstruct>,
       common::Indirection<AccEndCombinedDirective>,
       common::Indirection<OpenMPConstruct>,
-      common::Indirection<OmpEndLoopDirective>,
+      common::Indirection<OpenMPMisplacedEndDirective>,
+      common::Indirection<OpenMPInvalidDirective>,
       common::Indirection<CUFKernelDoConstruct>>
       u;
 };
@@ -616,12 +628,12 @@ using ObjectName = Name;
 //        IMPORT [[::] import-name-list] |
 //        IMPORT , ONLY : import-name-list | IMPORT , NONE | IMPORT , ALL
 struct ImportStmt {
-  BOILERPLATE(ImportStmt);
-  ImportStmt(common::ImportKind &&k) : kind{k} {}
-  ImportStmt(std::list<Name> &&n) : names(std::move(n)) {}
+  TUPLE_CLASS_BOILERPLATE(ImportStmt);
+  ImportStmt(common::ImportKind &&k) : t(k, std::list<Name>{}) {}
+  ImportStmt(std::list<Name> &&n)
+      : t(common::ImportKind::Default, std::move(n)) {}
   ImportStmt(common::ImportKind &&, std::list<Name> &&);
-  common::ImportKind kind{common::ImportKind::Default};
-  std::list<Name> names;
+  std::tuple<common::ImportKind, std::list<Name>> t;
 };
 
 // R868 namelist-stmt ->
@@ -679,11 +691,8 @@ struct LengthSelector {
 struct CharSelector {
   UNION_CLASS_BOILERPLATE(CharSelector);
   struct LengthAndKind {
-    BOILERPLATE(LengthAndKind);
-    LengthAndKind(std::optional<TypeParamValue> &&l, ScalarIntConstantExpr &&k)
-        : length(std::move(l)), kind(std::move(k)) {}
-    std::optional<TypeParamValue> length;
-    ScalarIntConstantExpr kind;
+    TUPLE_CLASS_BOILERPLATE(LengthAndKind);
+    std::tuple<std::optional<TypeParamValue>, ScalarIntConstantExpr> t;
   };
   CharSelector(TypeParamValue &&l, ScalarIntConstantExpr &&k)
       : u{LengthAndKind{std::make_optional(std::move(l)), std::move(k)}} {}
@@ -700,25 +709,17 @@ struct CharSelector {
 struct IntrinsicTypeSpec {
   UNION_CLASS_BOILERPLATE(IntrinsicTypeSpec);
   struct Real {
-    BOILERPLATE(Real);
-    Real(std::optional<KindSelector> &&k) : kind{std::move(k)} {}
-    std::optional<KindSelector> kind;
+    WRAPPER_CLASS_BOILERPLATE(Real, std::optional<KindSelector>);
   };
   EMPTY_CLASS(DoublePrecision);
   struct Complex {
-    BOILERPLATE(Complex);
-    Complex(std::optional<KindSelector> &&k) : kind{std::move(k)} {}
-    std::optional<KindSelector> kind;
+    WRAPPER_CLASS_BOILERPLATE(Complex, std::optional<KindSelector>);
   };
   struct Character {
-    BOILERPLATE(Character);
-    Character(std::optional<CharSelector> &&s) : selector{std::move(s)} {}
-    std::optional<CharSelector> selector;
+    WRAPPER_CLASS_BOILERPLATE(Character, std::optional<CharSelector>);
   };
   struct Logical {
-    BOILERPLATE(Logical);
-    Logical(std::optional<KindSelector> &&k) : kind{std::move(k)} {}
-    std::optional<KindSelector> kind;
+    WRAPPER_CLASS_BOILERPLATE(Logical, std::optional<KindSelector>);
   };
   EMPTY_CLASS(DoubleComplex);
   std::variant<IntegerTypeSpec, UnsignedTypeSpec, Real, DoublePrecision,
@@ -763,25 +764,20 @@ struct TypeSpec {
 // R703 declaration-type-spec ->
 //        intrinsic-type-spec | TYPE ( intrinsic-type-spec ) |
 //        TYPE ( derived-type-spec ) | CLASS ( derived-type-spec ) |
-//        CLASS ( * ) | TYPE ( * )
+//        CLASS ( * ) | TYPE ( * ) |
+//        TYPEOF ( data-ref ) | CLASSOF ( data-ref )
 // Legacy extension: RECORD /struct/
 struct DeclarationTypeSpec {
   UNION_CLASS_BOILERPLATE(DeclarationTypeSpec);
-  struct Type {
-    BOILERPLATE(Type);
-    Type(DerivedTypeSpec &&dt) : derived(std::move(dt)) {}
-    DerivedTypeSpec derived;
-  };
-  struct Class {
-    BOILERPLATE(Class);
-    Class(DerivedTypeSpec &&dt) : derived(std::move(dt)) {}
-    DerivedTypeSpec derived;
-  };
+  WRAPPER_CLASS(Type, DerivedTypeSpec);
+  WRAPPER_CLASS(Class, DerivedTypeSpec);
   EMPTY_CLASS(ClassStar);
   EMPTY_CLASS(TypeStar);
   WRAPPER_CLASS(Record, Name);
+  WRAPPER_CLASS(TypeOf, common::Indirection<DataRef>);
+  WRAPPER_CLASS(ClassOf, common::Indirection<DataRef>);
   std::variant<IntrinsicTypeSpec, Type, Class, ClassStar, TypeStar, Record,
-      VectorTypeSpec>
+      VectorTypeSpec, TypeOf, ClassOf>
       u;
 };
 
@@ -819,16 +815,14 @@ enum class Sign { Positive, Negative };
 // R715 significand -> digit-string . [digit-string] | . digit-string
 // R717 exponent -> signed-digit-string
 struct RealLiteralConstant {
-  BOILERPLATE(RealLiteralConstant);
+  TUPLE_CLASS_BOILERPLATE(RealLiteralConstant);
   struct Real {
+    using EmptyTrait = std::true_type;
     COPY_AND_ASSIGN_BOILERPLATE(Real);
     Real() {}
     CharBlock source;
   };
-  RealLiteralConstant(Real &&r, std::optional<KindParam> &&k)
-      : real{std::move(r)}, kind{std::move(k)} {}
-  Real real;
-  std::optional<KindParam> kind;
+  std::tuple<Real, std::optional<KindParam>> t;
 };
 
 // R713 signed-real-literal-constant -> [sign] real-literal-constant
@@ -1145,21 +1139,12 @@ struct TypeBoundProcDecl {
 struct TypeBoundProcedureStmt {
   UNION_CLASS_BOILERPLATE(TypeBoundProcedureStmt);
   struct WithoutInterface {
-    BOILERPLATE(WithoutInterface);
-    WithoutInterface(
-        std::list<BindAttr> &&as, std::list<TypeBoundProcDecl> &&ds)
-        : attributes(std::move(as)), declarations(std::move(ds)) {}
-    std::list<BindAttr> attributes;
-    std::list<TypeBoundProcDecl> declarations;
+    TUPLE_CLASS_BOILERPLATE(WithoutInterface);
+    std::tuple<std::list<BindAttr>, std::list<TypeBoundProcDecl>> t;
   };
   struct WithInterface {
-    BOILERPLATE(WithInterface);
-    WithInterface(Name &&n, std::list<BindAttr> &&as, std::list<Name> &&bs)
-        : interfaceName(std::move(n)), attributes(std::move(as)),
-          bindingNames(std::move(bs)) {}
-    Name interfaceName;
-    std::list<BindAttr> attributes;
-    std::list<Name> bindingNames;
+    TUPLE_CLASS_BOILERPLATE(WithInterface);
+    std::tuple<Name, std::list<BindAttr>, std::list<Name>> t;
   };
   std::variant<WithoutInterface, WithInterface> u;
 };
@@ -1253,6 +1238,33 @@ struct EnumDef {
       t;
 };
 
+// F2023 R767 enumeration-type-stmt ->
+//        ENUMERATION TYPE [ [ , access-spec ] :: ] enumeration-type-name
+struct EnumerationTypeStmt {
+  TUPLE_CLASS_BOILERPLATE(EnumerationTypeStmt);
+  std::tuple<std::optional<AccessSpec>, Name> t;
+};
+
+// F2023 R768 enumeration-enumerator-stmt -> ENUMERATOR [ :: ]
+// enumerator-name-list
+WRAPPER_CLASS(EnumerationEnumeratorStmt, std::list<Name>);
+
+// F2023 R769 end-enumeration-type-stmt ->
+//        END ENUMERATION TYPE [ enumeration-type-name ]
+WRAPPER_CLASS(EndEnumerationTypeStmt, std::optional<Name>);
+
+// F2023 R766 enumeration-type-def ->
+//        enumeration-type-stmt
+//        enumeration-enumerator-stmt [ enumeration-enumerator-stmt ]...
+//        end-enumeration-type-stmt
+struct EnumerationTypeDef {
+  TUPLE_CLASS_BOILERPLATE(EnumerationTypeDef);
+  std::tuple<Statement<EnumerationTypeStmt>,
+      std::list<Statement<EnumerationEnumeratorStmt>>,
+      Statement<EndEnumerationTypeStmt>>
+      t;
+};
+
 // R773 ac-value -> expr | ac-implied-do
 struct AcValue {
   struct Triplet { // PGI/Intel extension
@@ -1267,12 +1279,9 @@ struct AcValue {
 
 // R770 ac-spec -> type-spec :: | [type-spec ::] ac-value-list
 struct AcSpec {
-  BOILERPLATE(AcSpec);
-  AcSpec(std::optional<TypeSpec> &&ts, std::list<AcValue> &&xs)
-      : type(std::move(ts)), values(std::move(xs)) {}
-  explicit AcSpec(TypeSpec &&ts) : type{std::move(ts)} {}
-  std::optional<TypeSpec> type;
-  std::list<AcValue> values;
+  TUPLE_CLASS_BOILERPLATE(AcSpec);
+  explicit AcSpec(TypeSpec &&ts) : t(std::move(ts), std::list<AcValue>()) {}
+  std::tuple<std::optional<TypeSpec>, std::list<AcValue>> t;
 };
 
 // R769 array-constructor -> (/ ac-spec /) | lbracket ac-spec rbracket
@@ -1282,15 +1291,13 @@ WRAPPER_CLASS(ArrayConstructor, AcSpec);
 using DoVariable = Scalar<Integer<Name>>;
 
 template <typename VAR, typename BOUND> struct LoopBounds {
-  LoopBounds(LoopBounds &&that) = default;
-  LoopBounds(
-      VAR &&name, BOUND &&lower, BOUND &&upper, std::optional<BOUND> &&step)
-      : name{std::move(name)}, lower{std::move(lower)}, upper{std::move(upper)},
-        step{std::move(step)} {}
-  LoopBounds &operator=(LoopBounds &&) = default;
-  VAR name;
-  BOUND lower, upper;
-  std::optional<BOUND> step;
+  TUPLE_CLASS_BOILERPLATE(LoopBounds);
+  std::tuple<VAR, BOUND, BOUND, std::optional<BOUND>> t;
+
+  const VAR &Name() const { return std::get<0>(t); }
+  const BOUND &Lower() const { return std::get<1>(t); }
+  const BOUND &Upper() const { return std::get<2>(t); }
+  const std::optional<BOUND> &Step() const { return std::get<3>(t); }
 };
 
 using ScalarName = Scalar<Name>;
@@ -1368,12 +1375,17 @@ struct IntentSpec {
   WRAPPER_CLASS_BOILERPLATE(IntentSpec, Intent);
 };
 
+// F2023_R829 rank-clause ->
+//        scalar-int-constant-expr
+WRAPPER_CLASS(RankClause, ScalarIntConstantExpr);
+
 // R802 attr-spec ->
 //        access-spec | ALLOCATABLE | ASYNCHRONOUS |
 //        CODIMENSION lbracket coarray-spec rbracket | CONTIGUOUS |
 //        DIMENSION ( array-spec ) | EXTERNAL | INTENT ( intent-spec ) |
 //        INTRINSIC | language-binding-spec | OPTIONAL | PARAMETER | POINTER |
-//        PROTECTED | SAVE | TARGET | VALUE | VOLATILE |
+//        PROTECTED | RANK ( scalar-int-constant-expr ) | SAVE | TARGET |
+//        VALUE | VOLATILE |
 // (CUDA) CONSTANT | DEVICE | MANAGED | PINNED | SHARED | TEXTURE
 EMPTY_CLASS(Asynchronous);
 EMPTY_CLASS(External);
@@ -1389,7 +1401,7 @@ struct AttrSpec {
   UNION_CLASS_BOILERPLATE(AttrSpec);
   std::variant<AccessSpec, Allocatable, Asynchronous, CoarraySpec, Contiguous,
       ArraySpec, External, IntentSpec, Intrinsic, LanguageBindingSpec, Optional,
-      Parameter, Pointer, Protected, Save, Target, Value, Volatile,
+      Parameter, Pointer, Protected, RankClause, Save, Target, Value, Volatile,
       common::CUDADataAttr>
       u;
 };
@@ -1474,8 +1486,11 @@ WRAPPER_CLASS(ContiguousStmt, std::list<ObjectName>);
 // R846 int-constant-subobject -> constant-subobject
 using ConstantSubobject = Constant<common::Indirection<Designator>>;
 
-// Represents an analyzed expression
+// Represent an analyzed expression
 using TypedExpr = common::ForwardOwningPointer<evaluate::GenericExprWrapper>;
+using TypedCall = common::ForwardOwningPointer<evaluate::ProcedureRef>;
+using TypedAssignment =
+    common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
 
 // R845 data-stmt-constant ->
 //        scalar-constant | scalar-constant-subobject |
@@ -1636,11 +1651,10 @@ struct CommonStmt {
     TUPLE_CLASS_BOILERPLATE(Block);
     std::tuple<std::optional<Name>, std::list<CommonBlockObject>> t;
   };
-  BOILERPLATE(CommonStmt);
+  WRAPPER_CLASS_BOILERPLATE(CommonStmt, std::list<Block>);
   CommonStmt(std::optional<Name> &&, std::list<CommonBlockObject> &&,
       std::list<Block> &&);
   CharBlock source;
-  std::list<Block> blocks;
 };
 
 // R872 equivalence-object -> variable-name | array-element | substring
@@ -1681,13 +1695,15 @@ using Cosubscript = ScalarIntExpr;
 WRAPPER_CLASS(TeamValue, Scalar<common::Indirection<Expr>>);
 
 // R926 image-selector-spec ->
+//        NOTIFY = notify-variable |
 //        STAT = stat-variable | TEAM = team-value |
 //        TEAM_NUMBER = scalar-int-expr
 struct ImageSelectorSpec {
   WRAPPER_CLASS(Stat, Scalar<Integer<common::Indirection<Variable>>>);
   WRAPPER_CLASS(Team_Number, ScalarIntExpr);
+  WRAPPER_CLASS(Notify, Scalar<common::Indirection<Variable>>);
   UNION_CLASS_BOILERPLATE(ImageSelectorSpec);
-  std::variant<Stat, TeamValue, Team_Number> u;
+  std::variant<Notify, Stat, TeamValue, Team_Number> u;
 };
 
 // R924 image-selector ->
@@ -1695,6 +1711,17 @@ struct ImageSelectorSpec {
 struct ImageSelector {
   TUPLE_CLASS_BOILERPLATE(ImageSelector);
   std::tuple<std::list<Cosubscript>, std::list<ImageSelectorSpec>> t;
+};
+
+// F2023 R1002 conditional-expr ->
+//   ( scalar-logical-expr ? expr
+//     [ : scalar-logical-expr ? expr ]...
+//     : expr )
+struct ConditionalExpr {
+  TUPLE_CLASS_BOILERPLATE(ConditionalExpr);
+  std::tuple<ScalarLogicalExpr, common::Indirection<Expr>,
+      common::Indirection<Expr>>
+      t;
 };
 
 // R1001 - R1022 expressions
@@ -1795,24 +1822,19 @@ struct Expr {
   CharBlock source;
 
   std::variant<common::Indirection<CharLiteralConstantSubstring>,
-      LiteralConstant, common::Indirection<Designator>, ArrayConstructor,
-      StructureConstructor, common::Indirection<FunctionReference>, Parentheses,
-      UnaryPlus, Negate, NOT, PercentLoc, DefinedUnary, Power, Multiply, Divide,
-      Add, Subtract, Concat, LT, LE, EQ, NE, GE, GT, AND, OR, EQV, NEQV,
-      DefinedBinary, ComplexConstructor, common::Indirection<SubstringInquiry>>
+      LiteralConstant, ConditionalExpr, common::Indirection<Designator>,
+      ArrayConstructor, StructureConstructor,
+      common::Indirection<FunctionReference>, Parentheses, UnaryPlus, Negate,
+      NOT, PercentLoc, DefinedUnary, Power, Multiply, Divide, Add, Subtract,
+      Concat, LT, LE, EQ, NE, GE, GT, AND, OR, EQV, NEQV, DefinedBinary,
+      ComplexConstructor, common::Indirection<SubstringInquiry>>
       u;
 };
 
 // R912 part-ref -> part-name [( section-subscript-list )] [image-selector]
 struct PartRef {
-  BOILERPLATE(PartRef);
-  PartRef(Name &&n, std::list<SectionSubscript> &&ss,
-      std::optional<ImageSelector> &&is)
-      : name{std::move(n)}, subscripts(std::move(ss)),
-        imageSelector{std::move(is)} {}
-  Name name;
-  std::list<SectionSubscript> subscripts;
-  std::optional<ImageSelector> imageSelector;
+  TUPLE_CLASS_BOILERPLATE(PartRef);
+  std::tuple<Name, std::list<SectionSubscript>, std::optional<ImageSelector>> t;
 };
 
 // R911 data-ref -> part-ref [% part-ref]...
@@ -1886,11 +1908,11 @@ using ScalarIntVariable = Scalar<Integer<Variable>>;
 
 // R913 structure-component -> data-ref
 struct StructureComponent {
-  BOILERPLATE(StructureComponent);
-  StructureComponent(DataRef &&dr, Name &&n)
-      : base{std::move(dr)}, component(std::move(n)) {}
-  DataRef base;
-  Name component;
+  TUPLE_CLASS_BOILERPLATE(StructureComponent);
+  std::tuple<DataRef, Name> t;
+
+  const DataRef &Base() const { return std::get<DataRef>(t); }
+  const Name &Component() const { return std::get<Name>(t); }
 };
 
 // R1039 proc-component-ref -> scalar-variable % procedure-component-name
@@ -1901,23 +1923,22 @@ struct ProcComponentRef {
 
 // R914 coindexed-named-object -> data-ref
 struct CoindexedNamedObject {
-  BOILERPLATE(CoindexedNamedObject);
-  CoindexedNamedObject(DataRef &&dr, ImageSelector &&is)
-      : base{std::move(dr)}, imageSelector{std::move(is)} {}
-  DataRef base;
-  ImageSelector imageSelector;
+  TUPLE_CLASS_BOILERPLATE(CoindexedNamedObject);
+  std::tuple<DataRef, ImageSelector> t;
 };
 
 // R917 array-element -> data-ref
 struct ArrayElement {
-  BOILERPLATE(ArrayElement);
-  ArrayElement(DataRef &&dr, std::list<SectionSubscript> &&ss)
-      : base{std::move(dr)}, subscripts(std::move(ss)) {}
+  TUPLE_CLASS_BOILERPLATE(ArrayElement);
   Substring ConvertToSubstring();
   StructureConstructor ConvertToStructureConstructor(
       const semantics::DerivedTypeSpec &);
-  DataRef base;
-  std::list<SectionSubscript> subscripts;
+  std::tuple<DataRef, std::list<SectionSubscript>> t;
+
+  const DataRef &Base() const { return std::get<DataRef>(t); }
+  const std::list<SectionSubscript> &Subscripts() const {
+    return std::get<std::list<SectionSubscript>>(t);
+  }
 };
 
 // R933 allocate-object -> variable-name | structure-component
@@ -2016,8 +2037,6 @@ struct DeallocateStmt {
 // R1032 assignment-stmt -> variable = expr
 struct AssignmentStmt {
   TUPLE_CLASS_BOILERPLATE(AssignmentStmt);
-  using TypedAssignment =
-      common::ForwardOwningPointer<evaluate::GenericAssignmentWrapper>;
   mutable TypedAssignment typedAssignment;
   std::tuple<Variable, Expr> t;
 };
@@ -2044,7 +2063,7 @@ struct PointerAssignmentStmt {
     std::variant<std::list<BoundsRemapping>, std::list<BoundsSpec>> u;
   };
   TUPLE_CLASS_BOILERPLATE(PointerAssignmentStmt);
-  mutable AssignmentStmt::TypedAssignment typedAssignment;
+  mutable TypedAssignment typedAssignment;
   std::tuple<DataRef, Bounds, Expr> t;
 };
 
@@ -2268,11 +2287,11 @@ struct ConcurrentHeader {
 // F'2023 R1131 reduce-operation -> reduction-operator
 // CUF reduction-op -> reduction-operator
 // OpenACC 3.3 2.5.15 reduction-operator ->
-//                      + | * | .AND. | .OR. | .EQV. | .NEQV. |
+//                      + | - | * | .AND. | .OR. | .EQV. | .NEQV. |
 //                      MAX | MIN | IAND | IOR | IEOR
 struct ReductionOperator {
-  ENUM_CLASS(
-      Operator, Plus, Multiply, Max, Min, Iand, Ior, Ieor, And, Or, Eqv, Neqv)
+  ENUM_CLASS(Operator, Plus, Minus, Multiply, Max, Min, Iand, Ior, Ieor, And,
+      Or, Eqv, Neqv)
   WRAPPER_CLASS_BOILERPLATE(ReductionOperator, Operator);
   CharBlock source;
 };
@@ -2406,10 +2425,9 @@ using CaseValue = Scalar<ConstantExpr>;
 struct CaseValueRange {
   UNION_CLASS_BOILERPLATE(CaseValueRange);
   struct Range {
-    BOILERPLATE(Range);
-    Range(std::optional<CaseValue> &&l, std::optional<CaseValue> &&u)
-        : lower{std::move(l)}, upper{std::move(u)} {}
-    std::optional<CaseValue> lower, upper; // not both missing
+    TUPLE_CLASS_BOILERPLATE(Range);
+    std::tuple<std::optional<CaseValue>, std::optional<CaseValue>>
+        t; // not both missing
   };
   std::variant<CaseValue, Range> u;
 };
@@ -2659,6 +2677,7 @@ using FileNameExpr = ScalarDefaultCharExpr;
 //         ENCODING = scalar-default-char-expr | ERR = label |
 //         FILE = file-name-expr | FORM = scalar-default-char-expr |
 //         IOMSG = iomsg-variable | IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-expr |
 //         NEWUNIT = scalar-int-variable | PAD = scalar-default-char-expr |
 //         POSITION = scalar-default-char-expr | RECL = scalar-int-expr |
 //         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
@@ -2673,7 +2692,7 @@ struct ConnectSpec {
   UNION_CLASS_BOILERPLATE(ConnectSpec);
   struct CharExpr {
     ENUM_CLASS(Kind, Access, Action, Asynchronous, Blank, Decimal, Delim,
-        Encoding, Form, Pad, Position, Round, Sign,
+        Encoding, Form, Leading_Zero, Pad, Position, Round, Sign,
         /* extensions: */ Carriagecontrol, Convert, Dispose)
     TUPLE_CLASS_BOILERPLATE(CharExpr);
     std::tuple<Kind, ScalarDefaultCharExpr> t;
@@ -2721,7 +2740,9 @@ WRAPPER_CLASS(IdVariable, ScalarIntVariable);
 //         DECIMAL = scalar-default-char-expr |
 //         DELIM = scalar-default-char-expr | END = label | EOR = label |
 //         ERR = label | ID = id-variable | IOMSG = iomsg-variable |
-//         IOSTAT = scalar-int-variable | PAD = scalar-default-char-expr |
+//         IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-expr |
+//         PAD = scalar-default-char-expr |
 //         POS = scalar-int-expr | REC = scalar-int-expr |
 //         ROUND = scalar-default-char-expr | SIGN = scalar-default-char-expr |
 //         SIZE = scalar-int-variable
@@ -2730,7 +2751,8 @@ WRAPPER_CLASS(EorLabel, Label);
 struct IoControlSpec {
   UNION_CLASS_BOILERPLATE(IoControlSpec);
   struct CharExpr {
-    ENUM_CLASS(Kind, Advance, Blank, Decimal, Delim, Pad, Round, Sign)
+    ENUM_CLASS(
+        Kind, Advance, Blank, Decimal, Delim, Leading_Zero, Pad, Round, Sign)
     TUPLE_CLASS_BOILERPLATE(CharExpr);
     std::tuple<Kind, ScalarDefaultCharExpr> t;
   };
@@ -2739,7 +2761,8 @@ struct IoControlSpec {
   WRAPPER_CLASS(Rec, ScalarIntExpr);
   WRAPPER_CLASS(Size, ScalarIntVariable);
   std::variant<IoUnit, Format, Name, CharExpr, Asynchronous, EndLabel, EorLabel,
-      ErrLabel, IdVariable, MsgVariable, StatVariable, Pos, Rec, Size>
+      ErrLabel, IdVariable, MsgVariable, StatVariable, Pos, Rec, Size,
+      ErrorRecovery>
       u;
 };
 
@@ -2865,6 +2888,7 @@ WRAPPER_CLASS(FlushStmt, std::list<PositionOrFlushSpec>);
 //         FORMATTED = scalar-default-char-variable |
 //         ID = scalar-int-expr | IOMSG = iomsg-variable |
 //         IOSTAT = scalar-int-variable |
+//         LEADING_ZERO = scalar-default-char-variable |
 //         NAME = scalar-default-char-variable |
 //         NAMED = scalar-logical-variable |
 //         NEXTREC = scalar-int-variable | NUMBER = scalar-int-variable |
@@ -2889,8 +2913,9 @@ struct InquireSpec {
   UNION_CLASS_BOILERPLATE(InquireSpec);
   struct CharVar {
     ENUM_CLASS(Kind, Access, Action, Asynchronous, Blank, Decimal, Delim,
-        Direct, Encoding, Form, Formatted, Iomsg, Name, Pad, Position, Read,
-        Readwrite, Round, Sequential, Sign, Stream, Status, Unformatted, Write,
+        Direct, Encoding, Form, Formatted, Iomsg, Leading_Zero, Name, Pad,
+        Position, Read, Readwrite, Round, Sequential, Sign, Stream, Status,
+        Unformatted, Write,
         /* extensions: */ Carriagecontrol, Convert, Dispose)
     TUPLE_CLASS_BOILERPLATE(CharVar);
     std::tuple<Kind, ScalarDefaultCharVariable> t;
@@ -3111,7 +3136,7 @@ struct ProcedureDeclarationStmt {
 
 // R1527 prefix-spec ->
 //         declaration-type-spec | ELEMENTAL | IMPURE | MODULE |
-//         NON_RECURSIVE | PURE | RECURSIVE |
+//         NON_RECURSIVE | PURE | RECURSIVE | SIMPLE |
 // (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... )
 //         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
 struct PrefixSpec {
@@ -3122,11 +3147,12 @@ struct PrefixSpec {
   EMPTY_CLASS(Non_Recursive);
   EMPTY_CLASS(Pure);
   EMPTY_CLASS(Recursive);
+  EMPTY_CLASS(Simple);
   WRAPPER_CLASS(Attributes, std::list<common::CUDASubprogramAttrs>);
   WRAPPER_CLASS(Launch_Bounds, std::list<ScalarIntConstantExpr>);
   WRAPPER_CLASS(Cluster_Dims, std::list<ScalarIntConstantExpr>);
   std::variant<DeclarationTypeSpec, Elemental, Impure, Module, Non_Recursive,
-      Pure, Recursive, Attributes, Launch_Bounds, Cluster_Dims>
+      Pure, Recursive, Simple, Attributes, Launch_Bounds, Cluster_Dims>
       u;
 };
 
@@ -3134,13 +3160,10 @@ struct PrefixSpec {
 //         proc-language-binding-spec [RESULT ( result-name )] |
 //         RESULT ( result-name ) [proc-language-binding-spec]
 struct Suffix {
-  BOILERPLATE(Suffix);
+  TUPLE_CLASS_BOILERPLATE(Suffix);
   Suffix(LanguageBindingSpec &&lbs, std::optional<Name> &&rn)
-      : binding(std::move(lbs)), resultName(std::move(rn)) {}
-  Suffix(Name &&rn, std::optional<LanguageBindingSpec> &&lbs)
-      : binding(std::move(lbs)), resultName(std::move(rn)) {}
-  std::optional<LanguageBindingSpec> binding;
-  std::optional<Name> resultName;
+      : t(std::move(rn), std::move(lbs)) {}
+  std::tuple<std::optional<Name>, std::optional<LanguageBindingSpec>> t;
 };
 
 // R1530 function-stmt ->
@@ -3203,10 +3226,13 @@ struct ProcedureStmt {
   std::tuple<Kind, std::list<Name>> t;
 };
 
-// R1502 interface-specification -> interface-body | procedure-stmt
+// R1502 interface-specification ->
+//         interface-body | procedure-stmt | compiler-directive
 struct InterfaceSpecification {
   UNION_CLASS_BOILERPLATE(InterfaceSpecification);
-  std::variant<InterfaceBody, Statement<ProcedureStmt>> u;
+  std::variant<InterfaceBody, Statement<ProcedureStmt>,
+      common::Indirection<CompilerDirective>>
+      u;
 };
 
 // R1504 end-interface-stmt -> END INTERFACE [generic-spec]
@@ -3237,15 +3263,43 @@ struct ProcedureDesignator {
 // R1525 alt-return-spec -> * label
 WRAPPER_CLASS(AltReturnSpec, Label);
 
+// .NIL. (part of F2023 R1527)
+EMPTY_CLASS(ConditionalArgNil);
+
+// F2023 R1526 conditional-arg ->
+//   ( scalar-logical-expr ? consequent
+//     [ : scalar-logical-expr ? consequent ]...
+//     : consequent )
+// F2023 R1527 consequent -> consequent-arg | .NIL.
+// F2023 R1528 consequent-arg -> expr | variable
+struct ConditionalArg {
+  TUPLE_CLASS_BOILERPLATE(ConditionalArg);
+  struct Consequent { // F2023 R1527
+    UNION_CLASS_BOILERPLATE(Consequent);
+    // N.B. "variable" is parsed as "expr" and
+    // the distinction is determined by semantics.
+    std::variant<common::Indirection<Expr>, ConditionalArgNil> u;
+  };
+  std::tuple<ScalarLogicalExpr, Consequent,
+      common::Indirection<ConditionalArgTail>>
+      t;
+};
+
+struct ConditionalArgTail {
+  UNION_CLASS_BOILERPLATE(ConditionalArgTail);
+  std::variant<ConditionalArg, ConditionalArg::Consequent> u;
+};
+
 // R1524 actual-arg ->
 //         expr | variable | procedure-name | proc-component-ref |
-//         alt-return-spec
+//         alt-return-spec | conditional-arg
 struct ActualArg {
   WRAPPER_CLASS(PercentRef, Expr); // %REF(x) extension
   WRAPPER_CLASS(PercentVal, Expr); // %VAL(x) extension
   UNION_CLASS_BOILERPLATE(ActualArg);
   ActualArg(Expr &&x) : u{common::Indirection<Expr>(std::move(x))} {}
-  std::variant<common::Indirection<Expr>, AltReturnSpec, PercentRef, PercentVal>
+  std::variant<common::Indirection<Expr>, AltReturnSpec, PercentRef, PercentVal,
+      ConditionalArg>
       u;
 };
 
@@ -3273,24 +3327,22 @@ struct FunctionReference {
 // R1521 call-stmt -> CALL procedure-designator [ chevrons ]
 //         [( [actual-arg-spec-list] )]
 // (CUDA) chevrons -> <<< * | scalar-expr, scalar-expr [,
-//          scalar-int-expr [, scalar-int-expr ] ] >>>
+//          scalar-expr [, scalar-int-expr ] ] >>>
 struct CallStmt {
-  BOILERPLATE(CallStmt);
+  TUPLE_CLASS_BOILERPLATE(CallStmt);
   WRAPPER_CLASS(StarOrExpr, std::optional<ScalarExpr>);
   struct Chevrons {
     TUPLE_CLASS_BOILERPLATE(Chevrons);
-    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarIntExpr>,
+    std::tuple<StarOrExpr, ScalarExpr, std::optional<ScalarExpr>,
         std::optional<ScalarIntExpr>>
         t;
   };
   explicit CallStmt(ProcedureDesignator &&pd, std::optional<Chevrons> &&ch,
       std::list<ActualArgSpec> &&args)
-      : call{std::move(pd), std::move(args)}, chevrons{std::move(ch)} {}
-  Call call;
-  std::optional<Chevrons> chevrons;
+      : CallStmt(Call{std::move(pd), std::move(args)}, std::move(ch)) {}
+  std::tuple<Call, std::optional<Chevrons>> t;
   CharBlock source;
-  mutable common::ForwardOwningPointer<evaluate::ProcedureRef>
-      typedCall; // filled by semantics
+  mutable TypedCall typedCall; // filled by semantics
 };
 
 // R1529 function-subprogram ->
@@ -3355,6 +3407,13 @@ struct StmtFunctionStmt {
 // !DIR$ NOVECTOR
 // !DIR$ NOUNROLL
 // !DIR$ NOUNROLL_AND_JAM
+// !DIR$ PREFETCH designator[, designator]...
+// !DIR$ FORCEINLINE
+// !DIR$ INLINE
+// !DIR$ NOINLINE
+// !DIR$ INLINEALWAYS
+// !DIR$ IVDEP
+// !DIR$ SIMD
 // !DIR$ <anything else>
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
@@ -3370,6 +3429,12 @@ struct CompilerDirective {
     std::tuple<common::Indirection<Designator>, uint64_t> t;
   };
   EMPTY_CLASS(VectorAlways);
+  struct VectorLength {
+    TUPLE_CLASS_BOILERPLATE(VectorLength);
+    ENUM_CLASS(Kind, Auto, Fixed, Scalable);
+
+    std::tuple<std::uint64_t, Kind> t;
+  };
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
@@ -3380,14 +3445,27 @@ struct CompilerDirective {
   struct UnrollAndJam {
     WRAPPER_CLASS_BOILERPLATE(UnrollAndJam, std::optional<std::uint64_t>);
   };
+  struct Prefetch {
+    WRAPPER_CLASS_BOILERPLATE(
+        Prefetch, std::list<common::Indirection<Designator>>);
+  };
+  struct InlineAlways {
+    WRAPPER_CLASS_BOILERPLATE(InlineAlways, std::optional<Name>);
+  };
   EMPTY_CLASS(NoVector);
   EMPTY_CLASS(NoUnroll);
   EMPTY_CLASS(NoUnrollAndJam);
+  EMPTY_CLASS(ForceInline);
+  EMPTY_CLASS(Inline);
+  EMPTY_CLASS(NoInline);
+  EMPTY_CLASS(IVDep);
+  EMPTY_CLASS(Simd);
   EMPTY_CLASS(Unrecognized);
   CharBlock source;
   std::variant<std::list<IgnoreTKR>, LoopCount, std::list<AssumeAligned>,
-      VectorAlways, std::list<NameValue>, Unroll, UnrollAndJam, Unrecognized,
-      NoVector, NoUnroll, NoUnrollAndJam>
+      VectorAlways, VectorLength, std::list<NameValue>, Unroll, UnrollAndJam,
+      Unrecognized, NoVector, NoUnroll, NoUnrollAndJam, ForceInline, Inline,
+      NoInline, InlineAlways, Prefetch, IVDep, Simd>
       u;
 };
 
@@ -3501,6 +3579,18 @@ struct OmpDirectiveName {
   llvm::omp::Directive v{llvm::omp::Directive::OMPD_unknown};
 };
 
+// type-name list item
+struct OmpTypeName {
+  CharBlock source;
+  mutable const semantics::DeclTypeSpec *declTypeSpec{nullptr};
+  UNION_CLASS_BOILERPLATE(OmpTypeName);
+  std::variant<TypeSpec, DeclarationTypeSpec> u;
+};
+
+struct OmpTypeNameList {
+  WRAPPER_CLASS_BOILERPLATE(OmpTypeNameList, std::list<OmpTypeName>);
+};
+
 // 2.1 Directives or clauses may accept a list or extended-list.
 //     A list item is a variable, array section or common block name (enclosed
 //     in slashes). An extended list item is a list item or a procedure Name.
@@ -3517,7 +3607,42 @@ struct OmpObject {
   std::variant<Designator, /*common block*/ Name, Invalid> u;
 };
 
-WRAPPER_CLASS(OmpObjectList, std::list<OmpObject>);
+struct OmpObjectList {
+  WRAPPER_CLASS_BOILERPLATE(OmpObjectList, std::list<OmpObject>);
+};
+
+struct OmpStylizedDeclaration {
+  COPY_AND_ASSIGN_BOILERPLATE(OmpStylizedDeclaration);
+  // Since "Reference" isn't handled by parse-tree-visitor, add EmptyTrait,
+  // and visit the members by hand when needed.
+  using EmptyTrait = std::true_type;
+  common::Reference<const OmpTypeName> type;
+  EntityDecl var;
+};
+
+struct OmpStylizedInstance {
+  struct Instance {
+    UNION_CLASS_BOILERPLATE(Instance);
+    std::variant<AssignmentStmt, CallStmt, common::Indirection<Expr>> u;
+  };
+  TUPLE_CLASS_BOILERPLATE(OmpStylizedInstance);
+  std::tuple<std::list<OmpStylizedDeclaration>, Instance> t;
+};
+
+class ParseState;
+
+// Ref: [5.2:76], [6.0:185]
+//
+struct OmpStylizedExpression {
+  CharBlock source;
+  // Pointer to a temporary copy of the ParseState that is used to create
+  // additional parse subtrees for the stylized expression. This is only
+  // used internally during parsing and conveys no information to the
+  // consumers of the AST.
+  const ParseState *state{nullptr};
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpStylizedExpression, std::list<OmpStylizedInstance>);
+};
 
 // Ref: [4.5:201-207], [5.0:293-299], [5.1:325-331], [5.2:124]
 //
@@ -3536,25 +3661,33 @@ struct OmpReductionIdentifier {
 // combiner-expression ->                           // since 4.5
 //    assignment-statement |
 //    function-reference
-struct OmpReductionCombiner {
-  UNION_CLASS_BOILERPLATE(OmpReductionCombiner);
-  std::variant<AssignmentStmt, FunctionReference> u;
+struct OmpCombinerExpression : public OmpStylizedExpression {
+  INHERITED_WRAPPER_CLASS_BOILERPLATE(
+      OmpCombinerExpression, OmpStylizedExpression);
+  static llvm::ArrayRef<CharBlock> Variables();
+};
+
+// Ref: [4.5:222:7-8], [5.0:305:28-29], [5.1:337:20-21], [5.2:127:6-8],
+//      [6.0:242:3-5]
+//
+// initializer-expression ->                        // since 4.5
+//    OMP_PRIV = expression |
+//    subroutine-name(argument-list)
+struct OmpInitializerExpression : public OmpStylizedExpression {
+  INHERITED_WRAPPER_CLASS_BOILERPLATE(
+      OmpInitializerExpression, OmpStylizedExpression);
+  static llvm::ArrayRef<CharBlock> Variables();
 };
 
 inline namespace arguments {
-struct OmpTypeSpecifier {
-  UNION_CLASS_BOILERPLATE(OmpTypeSpecifier);
-  std::variant<TypeSpec, DeclarationTypeSpec> u;
-};
-
-WRAPPER_CLASS(OmpTypeNameList, std::list<OmpTypeSpecifier>);
-
 struct OmpLocator {
   UNION_CLASS_BOILERPLATE(OmpLocator);
   std::variant<OmpObject, FunctionReference> u;
 };
 
-WRAPPER_CLASS(OmpLocatorList, std::list<OmpLocator>);
+struct OmpLocatorList {
+  WRAPPER_CLASS_BOILERPLATE(OmpLocatorList, std::list<OmpLocator>);
+};
 
 // Ref: [4.5:58-60], [5.0:58-60], [5.1:63-68], [5.2:197-198], [6.0:334-336]
 //
@@ -3589,7 +3722,7 @@ struct OmpMapperSpecifier {
 struct OmpReductionSpecifier {
   TUPLE_CLASS_BOILERPLATE(OmpReductionSpecifier);
   std::tuple<OmpReductionIdentifier, OmpTypeNameList,
-      std::optional<OmpReductionCombiner>>
+      std::optional<OmpCombinerExpression>>
       t;
 };
 
@@ -3807,6 +3940,18 @@ struct OmpAlwaysModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpAlwaysModifier, Value);
 };
 
+// Ref: [coming in 6.1]
+//
+// attach-modifier ->
+//    ATTACH(attachment-mode)                       // since 6.1
+//
+// attachment-mode ->
+//    ALWAYS | AUTO | NEVER
+struct OmpAttachModifier {
+  ENUM_CLASS(Value, Always, Never, Auto)
+  WRAPPER_CLASS_BOILERPLATE(OmpAttachModifier, Value);
+};
+
 // Ref: [6.0:289-290]
 //
 // automap-modifier ->
@@ -3874,6 +4019,18 @@ struct OmpDependenceType {
   WRAPPER_CLASS_BOILERPLATE(OmpDependenceType, Value);
 };
 
+// Ref: [6.0:180-181]
+//
+// depinfo-modifier ->                              // since 6.0
+//    keyword (locator-list-item)
+// keyword ->
+//    IN | INOUT | INOUTSET | MUTEXINOUTSET | OUT   // since 6.0
+struct OmpDepinfoModifier {
+  using Value = common::OmpDependenceKind;
+  TUPLE_CLASS_BOILERPLATE(OmpDepinfoModifier);
+  std::tuple<Value, OmpObject> t;
+};
+
 // Ref: [5.0:170-176], [5.1:197-205], [5.2:276-277]
 //
 // device-modifier ->
@@ -3881,6 +4038,14 @@ struct OmpDependenceType {
 struct OmpDeviceModifier {
   ENUM_CLASS(Value, Ancestor, Device_Num)
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceModifier, Value);
+};
+
+// Ref: TODO
+//
+// dims-modifier ->
+//   constant integer expression                    // since 6.1
+struct OmpDimsModifier {
+  WRAPPER_CLASS_BOILERPLATE(OmpDimsModifier, ScalarIntConstantExpr);
 };
 
 // Ref: [5.2:72-73,230-323], in 4.5-5.1 it's scattered over individual
@@ -3916,30 +4081,25 @@ struct OmpExpectation {
   WRAPPER_CLASS_BOILERPLATE(OmpExpectation, Value);
 };
 
-// REF: [5.1:217-220], [5.2:293-294]
+// Ref: [6.1:tbd]
 //
-// OmpInteropRuntimeIdentifier ->                   // since 5.2
-// CharLiteralConstant || ScalarIntConstantExpr
-struct OmpInteropRuntimeIdentifier {
-  UNION_CLASS_BOILERPLATE(OmpInteropRuntimeIdentifier);
-  std::variant<CharLiteralConstant, ScalarIntConstantExpr> u;
+// fallback-modifier ->
+//    FALLBACK(fallback-mode)                       // since 6.1
+// fallback-mode ->
+//    ABORT | DEFAULT_MEM | NULL                    // since 6.1
+struct OmpFallbackModifier {
+  ENUM_CLASS(Value, Abort, Default_Mem, Null);
+  WRAPPER_CLASS_BOILERPLATE(OmpFallbackModifier, Value);
 };
 
-// REF: [5.1:217-220], [5.2:293-294]
+// REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
 //
-// OmpInteropPreference ->                          // since 5.2
-// ([OmpRuntimeIdentifier, ...])
-struct OmpInteropPreference {
-  WRAPPER_CLASS_BOILERPLATE(
-      OmpInteropPreference, std::list<OmpInteropRuntimeIdentifier>);
-};
-
-// REF: [5.1:217-220], [5.2:293-294]
-//
-// InteropType -> target || targetsync              // since 5.2
+// interop-type ->                                  // since 5.1
+//    TARGET |
+//    TARGETSYNC
 // There can be at most only two interop-type.
 struct OmpInteropType {
-  ENUM_CLASS(Value, Target, TargetSync)
+  ENUM_CLASS(Value, Target, Targetsync)
   WRAPPER_CLASS_BOILERPLATE(OmpInteropType, Value);
 };
 
@@ -3980,6 +4140,14 @@ struct OmpLastprivateModifier {
 struct OmpLinearModifier {
   ENUM_CLASS(Value, Ref, Uval, Val);
   WRAPPER_CLASS_BOILERPLATE(OmpLinearModifier, Value);
+};
+
+// Ref: [5.1:100-104], [5.2:277], [6.0:452-453]
+//
+// lower-bound ->
+//    scalar-integer-expression                     // since 5.1
+struct OmpLowerBound {
+  WRAPPER_CLASS_BOILERPLATE(OmpLowerBound, ScalarIntExpr);
 };
 
 // Ref: [5.0:176-180], [5.1:205-210], [5.2:149-150]
@@ -4041,13 +4209,46 @@ struct OmpOrderModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpOrderModifier, Value);
 };
 
+// Ref: [6.0:470-471]
+//
+// preference-selector ->                           // since 6.0
+//    FR(foreign-runtime-identifier) |
+//    ATTR(preference-property-extension, ...)
+struct OmpPreferenceSelector {
+  UNION_CLASS_BOILERPLATE(OmpPreferenceSelector);
+  using ForeignRuntimeIdentifier = common::Indirection<Expr>;
+  using PreferencePropertyExtension = common::Indirection<Expr>;
+  using Extensions = std::list<PreferencePropertyExtension>;
+  std::variant<ForeignRuntimeIdentifier, Extensions> u;
+};
+
+// Ref: [6.0:470-471]
+//
+// preference-specification ->
+//    {preference-selector...} |                    // since 6.0
+//    foreign-runtime-identifier                    // since 5.1
+struct OmpPreferenceSpecification {
+  UNION_CLASS_BOILERPLATE(OmpPreferenceSpecification);
+  using ForeignRuntimeIdentifier =
+      OmpPreferenceSelector::ForeignRuntimeIdentifier;
+  std::variant<std::list<OmpPreferenceSelector>, ForeignRuntimeIdentifier> u;
+};
+
+// REF: [5.1:217-220], [5.2:293-294], [6.0:470-471]
+//
+// prefer-type ->                                   // since 5.1
+//    PREFER_TYPE(preference-specification...)
+struct OmpPreferType {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpPreferType, std::list<OmpPreferenceSpecification>);
+};
+
 // Ref: [5.1:166-171], [5.2:269-270]
 //
 // prescriptiveness ->
 //    STRICT                                        // since 5.1
-//    FALLBACK                                      // since 6.1
 struct OmpPrescriptiveness {
-  ENUM_CLASS(Value, Strict, Fallback)
+  ENUM_CLASS(Value, Strict)
   WRAPPER_CLASS_BOILERPLATE(OmpPrescriptiveness, Value);
 };
 
@@ -4116,7 +4317,7 @@ struct OmpStepSimpleModifier {
 //    MUTEXINOUTSET | DEPOBJ |                      // since 5.0
 //    INOUTSET                                      // since 5.2
 struct OmpTaskDependenceType {
-  ENUM_CLASS(Value, In, Out, Inout, Inoutset, Mutexinoutset, Depobj)
+  using Value = common::OmpDependenceKind;
   WRAPPER_CLASS_BOILERPLATE(OmpTaskDependenceType, Value);
 };
 
@@ -4183,7 +4384,7 @@ struct OmpAffinityClause {
 
 // Ref: 5.2: [174]
 struct OmpAlignClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpAlignClause, ScalarIntExpr);
+  WRAPPER_CLASS_BOILERPLATE(OmpAlignClause, ScalarIntConstantExpr);
 };
 
 // Ref: [4.5:72-81], [5.0:110-119], [5.1:134-143], [5.2:169-170]
@@ -4255,6 +4456,14 @@ struct OmpCancellationConstructTypeClause {
   std::tuple<OmpDirectiveName, std::optional<ScalarLogicalExpr>> t;
 };
 
+// Ref: [6.0:262]
+//
+// combiner-clause ->                               // since 6.0
+//    COMBINER(combiner-expr)
+struct OmpCombinerClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpCombinerClause, OmpCombinerExpression);
+};
+
 // Ref: [5.2:214]
 //
 // contains-clause ->
@@ -4324,7 +4533,9 @@ struct OmpIteration {
 //
 // iteration-vector ->
 //    [iteration...]                                // since 4.5
-WRAPPER_CLASS(OmpIterationVector, std::list<OmpIteration>);
+struct OmpIterationVector {
+  WRAPPER_CLASS_BOILERPLATE(OmpIterationVector, std::list<OmpIteration>);
+};
 
 // Extract this into a separate structure (instead of having it directly in
 // OmpDoacrossClause), so that the context in TYPE_CONTEXT_PARSER can be set
@@ -4364,14 +4575,18 @@ struct OmpDependClause {
 //
 // doacross-clause ->
 //    DOACROSS(dependence-type: iteration-vector)   // since 5.2
-WRAPPER_CLASS(OmpDoacrossClause, OmpDoacross);
+struct OmpDoacrossClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDoacrossClause, OmpDoacross);
+};
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:73]
 //
 // destroy-clause ->
 //    DESTROY |                                     // since 5.0, until 5.1
 //    DESTROY(variable)                             // since 5.2
-WRAPPER_CLASS(OmpDestroyClause, OmpObject);
+struct OmpDestroyClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDestroyClause, OmpObject);
+};
 
 // Ref: [5.0:135-140], [5.1:161-166], [5.2:265-266]
 //
@@ -4393,18 +4608,36 @@ struct OmpDeviceClause {
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
+// Ref: [6.0:356-362]
+//
+// device-safesync-clause ->
+//    DEVICE_SAFESYNC [(scalar-logical-const-expr)] // since 6.0
+struct OmpDeviceSafesyncClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpDeviceSafesyncClause, ScalarLogicalConstantExpr);
+};
+
 // Ref: [5.0:180-185], [5.1:210-216], [5.2:275]
 //
 // device-type-clause ->
 //    DEVICE_TYPE(ANY | HOST | NOHOST)              // since 5.0
 struct OmpDeviceTypeClause {
-  ENUM_CLASS(DeviceTypeDescription, Any, Host, Nohost)
+  using DeviceTypeDescription = common::OmpDeviceType;
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
+};
+
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:212-213], [6.0:356-362]
+//
+// dynamic-allocators-clause ->
+//    DYNAMIC_ALLOCATORS                            // since 5.0
+//        [(scalar-logical-const-expr)]             // since 6.0
+struct OmpDynamicAllocatorsClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpDynamicAllocatorsClause, ScalarLogicalConstantExpr);
 };
 
 struct OmpDynGroupprivateClause {
   TUPLE_CLASS_BOILERPLATE(OmpDynGroupprivateClause);
-  MODIFIER_BOILERPLATE(OmpAccessGroup, OmpPrescriptiveness);
+  MODIFIER_BOILERPLATE(OmpAccessGroup, OmpFallbackModifier);
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
 };
 
@@ -4498,6 +4731,19 @@ struct OmpIfClause {
   std::tuple<MODIFIERS(), ScalarLogicalExpr> t;
 };
 
+// Ref: [5.1:217-220], [5.2:293-294], [6.0:180-181]
+//
+// init-clause ->
+//    INIT ([modifier... :] interop-var)            // since 5.1
+// modifier ->
+//    prefer-type | interop-type |                  // since 5.1
+//    depinfo-modifier                              // since 6.0
+struct OmpInitClause {
+  TUPLE_CLASS_BOILERPLATE(OmpInitClause);
+  MODIFIER_BOILERPLATE(OmpPreferType, OmpInteropType, OmpDepinfoModifier);
+  std::tuple<MODIFIERS(), OmpObject> t;
+};
+
 // Ref: [5.0:170-176], [5.1:197-205], [5.2:138-139]
 //
 // in-reduction-clause ->
@@ -4508,16 +4754,9 @@ struct OmpInReductionClause {
   std::tuple<MODIFIERS(), OmpObjectList> t;
 };
 
-// declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
-//                                              : combiner) [initializer-clause]
-struct OmpInitializerProc {
-  TUPLE_CLASS_BOILERPLATE(OmpInitializerProc);
-  std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
-};
 // Initialization for declare reduction construct
 struct OmpInitializerClause {
-  UNION_CLASS_BOILERPLATE(OmpInitializerClause);
-  std::variant<OmpInitializerProc, AssignmentStmt> u;
+  WRAPPER_CLASS_BOILERPLATE(OmpInitializerClause, OmpInitializerExpression);
 };
 
 // Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]
@@ -4549,10 +4788,10 @@ struct OmpLinearClause {
 
 // Ref: [6.0:207-208]
 //
-// loop-range-clause ->
+// looprange-clause ->
 //    LOOPRANGE(first, count)                       // since 6.0
-struct OmpLoopRangeClause {
-  TUPLE_CLASS_BOILERPLATE(OmpLoopRangeClause);
+struct OmpLooprangeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpLooprangeClause);
   std::tuple<ScalarIntConstantExpr, ScalarIntConstantExpr> t;
 };
 
@@ -4563,6 +4802,7 @@ struct OmpLoopRangeClause {
 // modifier ->
 //    map-type-modifier [replaced] |                // since 4.5, until 5.2
 //    always-modifier |                             // since 6.0
+//    attach-modifier |                             // since 6.1
 //    close-modifier |                              // since 6.0
 //    delete-modifier |                             // since 6.0
 //    present-modifier |                            // since 6.0
@@ -4577,9 +4817,9 @@ struct OmpLoopRangeClause {
 // and delete-modifier has been split from map-type.
 struct OmpMapClause {
   TUPLE_CLASS_BOILERPLATE(OmpMapClause);
-  MODIFIER_BOILERPLATE(OmpAlwaysModifier, OmpCloseModifier, OmpDeleteModifier,
-      OmpMapTypeModifier, OmpPresentModifier, OmpRefModifier, OmpSelfModifier,
-      OmpMapper, OmpIterator, OmpMapType, OmpxHoldModifier);
+  MODIFIER_BOILERPLATE(OmpAlwaysModifier, OmpAttachModifier, OmpCloseModifier,
+      OmpDeleteModifier, OmpMapTypeModifier, OmpPresentModifier, OmpRefModifier,
+      OmpSelfModifier, OmpMapper, OmpIterator, OmpMapType, OmpxHoldModifier);
   std::tuple<MODIFIERS(), OmpObjectList, /*CommaSeparated=*/bool> t;
 };
 
@@ -4624,6 +4864,30 @@ struct OmpNumTasksClause {
   TUPLE_CLASS_BOILERPLATE(OmpNumTasksClause);
   MODIFIER_BOILERPLATE(OmpPrescriptiveness);
   std::tuple<MODIFIERS(), ScalarIntExpr> t;
+};
+
+// Ref: [4.5:114-116], [5.0:82-85], [5.1:100-104], [5.2:277], [6.0:452-453]
+//
+// num-teams-clause ->
+//    NUM_TEAMS(expr) |                             // since 4.5
+//    NUM_TEAMS([lower-bound:] upper-bound) |       // since 5.1
+//    NUM_TEAMS([dims: upper-bound...)              // since 6.1
+struct OmpNumTeamsClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumTeamsClause);
+  MODIFIER_BOILERPLATE(OmpDimsModifier, OmpLowerBound);
+  std::tuple<MODIFIERS(), std::list<ScalarIntExpr>> t;
+};
+
+// Ref: [4.5:46-50], [5.0:74-78], [5.1:92-96], [5.2:227], [6.0:388-389]
+//
+// num-threads-clause
+//    NUM_THREADS(expr) |                           // since 4.5
+//    NUM_THREADS(expr...) |                        // since 6.0
+//    NUM_THREADS([dims-modifier:] expr...)         // since 6.1
+struct OmpNumThreadsClause {
+  TUPLE_CLASS_BOILERPLATE(OmpNumThreadsClause);
+  MODIFIER_BOILERPLATE(OmpDimsModifier);
+  std::tuple<MODIFIERS(), std::list<ScalarIntExpr>> t;
 };
 
 // Ref: [5.0:101-109], [5.1:126-134], [5.2:233-234]
@@ -4678,7 +4942,16 @@ struct OmpReductionClause {
 // replayable-clause ->
 //    REPLAYABLE[(replayable-expression)]           // since 6.0
 struct OmpReplayableClause {
-  WRAPPER_CLASS_BOILERPLATE(OmpReplayableClause, Scalar<Logical<ConstantExpr>>);
+  WRAPPER_CLASS_BOILERPLATE(OmpReplayableClause, ScalarLogicalConstantExpr);
+};
+
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:212-213], [6.0:356-362]
+//
+// reverse-offload-clause ->
+//    REVERSE_OFFLOAD                               // since 5.0
+//        [(scalar-logical-const-expr)]             // since 6.0
+struct OmpReverseOffloadClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpReverseOffloadClause, ScalarLogicalConstantExpr);
 };
 
 // Ref: [4.5:56-63], [5.0:101-109], [5.1:126-133], [5.2:252-254]
@@ -4696,12 +4969,20 @@ struct OmpScheduleClause {
   std::tuple<MODIFIERS(), Kind, std::optional<ScalarIntExpr>> t;
 };
 
+// ref: [6.0:361-362]
+//
+// self-maps-clause ->
+//    SELF_MAPS [(scalar-logical-const-expr)]       // since 6.0
+struct OmpSelfMapsClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpSelfMapsClause, ScalarLogicalConstantExpr);
+};
+
 // REF: [5.2:217]
 // severity-clause ->
 //    SEVERITY(warning|fatal)
 struct OmpSeverityClause {
-  ENUM_CLASS(Severity, Fatal, Warning);
-  WRAPPER_CLASS_BOILERPLATE(OmpSeverityClause, Severity);
+  ENUM_CLASS(SevLevel, Fatal, Warning);
+  WRAPPER_CLASS_BOILERPLATE(OmpSeverityClause, SevLevel);
 };
 
 // Ref: [5.0:232-234], [5.1:264-266], [5.2:137]
@@ -4712,6 +4993,25 @@ struct OmpTaskReductionClause {
   TUPLE_CLASS_BOILERPLATE(OmpTaskReductionClause);
   MODIFIER_BOILERPLATE(OmpReductionIdentifier);
   std::tuple<MODIFIERS(), OmpObjectList> t;
+};
+
+// Ref: [4.5:114-116], [5.0:82-85], [5.1:100-104], [5.2:277], [6.0:452-453]
+//
+// thread-limit-clause ->
+//    THREAD_LIMIT(threadlim)                       // since 4.5
+//    THREAD_LIMIT([dims-modifier:] threadlim...)   // since 6.1
+struct OmpThreadLimitClause {
+  TUPLE_CLASS_BOILERPLATE(OmpThreadLimitClause);
+  MODIFIER_BOILERPLATE(OmpDimsModifier);
+  std::tuple<MODIFIERS(), std::list<ScalarIntExpr>> t;
+};
+
+// Ref: [6.0:442]
+// threadset-clause ->
+//     THREADSET(omp_pool|omp_team)
+struct OmpThreadsetClause {
+  ENUM_CLASS(ThreadsetPolicy, Omp_Pool, Omp_Team)
+  WRAPPER_CLASS_BOILERPLATE(OmpThreadsetClause, ThreadsetPolicy);
 };
 
 // Ref: [4.5:107-109], [5.0:176-180], [5.1:205-210], [5.2:167-168]
@@ -4736,6 +5036,25 @@ struct OmpToClause {
 //    TRANSPARENT[(impex-type)]                     // since 6.0
 struct OmpTransparentClause {
   WRAPPER_CLASS_BOILERPLATE(OmpTransparentClause, ScalarIntExpr);
+};
+
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:212-213], [6.0:356-362]
+//
+// unified-address-clause ->
+//    UNIFIED_ADDRESS                               // since 5.0
+//        [(scalar-logical-const-expr)]             // since 6.0
+struct OmpUnifiedAddressClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpUnifiedAddressClause, ScalarLogicalConstantExpr);
+};
+
+// Ref: [5.0:60-63], [5.1:83-86], [5.2:212-213], [6.0:356-362]
+//
+// unified-shared-memory-clause ->
+//    UNIFIED_SHARED_MEMORY                         // since 5.0
+//        [(scalar-logical-const-expr)]             // since 6.0
+struct OmpUnifiedSharedMemoryClause {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpUnifiedSharedMemoryClause, ScalarLogicalConstantExpr);
 };
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:321-322]
@@ -4768,24 +5087,12 @@ struct OmpWhenClause {
       t;
 };
 
-// REF: [5.1:217-220], [5.2:293-294]
-//
-// init-clause -> INIT ([interop-modifier,] [interop-type,]
-//                              interop-type: interop-var)
-// interop-modifier: prefer_type(preference-list)
-// interop-type: target, targetsync
-// interop-var: Ompobject
-// There can be at most only two interop-type.
-struct OmpInitClause {
-  TUPLE_CLASS_BOILERPLATE(OmpInitClause);
-  MODIFIER_BOILERPLATE(OmpInteropPreference, OmpInteropType);
-  std::tuple<MODIFIERS(), OmpObject> t;
-};
-
 // REF: [5.1:217-220], [5.2:294]
 //
 // 14.1.3 use-clause -> USE (interop-var)
-WRAPPER_CLASS(OmpUseClause, OmpObject);
+struct OmpUseClause {
+  WRAPPER_CLASS_BOILERPLATE(OmpUseClause, OmpObject);
+};
 
 // OpenMP Clauses
 struct OmpClause {
@@ -4812,7 +5119,9 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  ENUM_CLASS(Flags, None, DeprecatedSyntax);
+  ENUM_CLASS(Flag, DeprecatedSyntax, CrossesLabelDo, ExplicitBegin)
+  using Flags = common::EnumSet<Flag, Flag_enumSize>;
+
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
   const OmpDirectiveName &DirName() const {
     return std::get<OmpDirectiveName>(t);
@@ -4861,6 +5170,11 @@ struct OmpMetadirectiveDirective {
       OmpMetadirectiveDirective, OmpDirectiveSpecification);
 };
 
+struct OmpDelimitedMetadirectiveDirective : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OmpDelimitedMetadirectiveDirective, OmpBlockConstruct);
+};
+
 // Ref: [5.1:89-90], [5.2:216]
 //
 // nothing-directive ->
@@ -4875,8 +5189,8 @@ struct OmpErrorDirective {
   WRAPPER_CLASS_BOILERPLATE(OmpErrorDirective, OmpDirectiveSpecification);
 };
 
-struct OpenMPUtilityConstruct {
-  UNION_CLASS_BOILERPLATE(OpenMPUtilityConstruct);
+struct OmpUtilityDirective {
+  UNION_CLASS_BOILERPLATE(OmpUtilityDirective);
   CharBlock source;
   std::variant<OmpErrorDirective, OmpNothingDirective> u;
 };
@@ -4886,9 +5200,8 @@ struct OpenMPUtilityConstruct {
 // assumes-construct ->
 //   ASSUMES absent-clause | contains-clause | holds-clause | no-openmp-clause |
 //          no-openmp-routines-clause | no-parallelism-clause
-struct OpenMPDeclarativeAssumes {
-  WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclarativeAssumes, OmpDirectiveSpecification);
+struct OmpAssumesDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpAssumesDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
@@ -4898,8 +5211,8 @@ struct OpenMPDeclarativeAssumes {
 //   ASSUME assumption-clause...
 //     block
 //   [END ASSUME]
-struct OpenMPAssumeConstruct : public OmpBlockConstruct {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPAssumeConstruct, OmpBlockConstruct);
+struct OmpAssumeDirective : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpAssumeDirective, OmpBlockConstruct);
 };
 
 // 2.7.2 SECTIONS
@@ -4918,8 +5231,8 @@ struct OmpEndSectionsDirective : public OmpEndDirective {
 // [!$omp section
 //    structured-block]
 // ...
-struct OpenMPSectionConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPSectionConstruct);
+struct OmpSectionDirective {
+  TUPLE_CLASS_BOILERPLATE(OmpSectionDirective);
   std::tuple<std::optional<OmpDirectiveSpecification>, Block> t;
   CharBlock source;
 };
@@ -4934,7 +5247,7 @@ struct OpenMPSectionsConstruct {
     return std::get<std::optional<OmpEndSectionsDirective>>(t);
   }
   // Each of the OpenMPConstructs in the list below contains an
-  // OpenMPSectionConstruct. This is guaranteed by the parser.
+  // OmpSectionDirective. This is guaranteed by the parser.
   // The end sections directive is optional here because it is difficult to
   // generate helpful error messages for a missing end directive within the
   // parser. Semantics will generate an error if this is absent.
@@ -4959,34 +5272,33 @@ struct OmpDeclareVariantDirective {
 // declare-target-directive ->                      // since 4.5
 //    DECLARE_TARGET[(extended-list)] |
 //    DECLARE_TARGET clause-list
-struct OpenMPDeclareTargetConstruct {
+struct OmpDeclareTargetDirective {
   WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclareTargetConstruct, OmpDirectiveSpecification);
+      OmpDeclareTargetDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // OMP v5.2: 5.8.8
 //  declare-mapper -> DECLARE MAPPER ([mapper-name :] type :: var) map-clauses
-struct OpenMPDeclareMapperConstruct {
+struct OmpDeclareMapperDirective {
   WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclareMapperConstruct, OmpDirectiveSpecification);
+      OmpDeclareMapperDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // ref: 5.2: Section 5.5.11 139-141
 // 2.16 declare-reduction -> DECLARE REDUCTION (reduction-identifier : type-list
 //                                              : combiner) [initializer-clause]
-struct OpenMPDeclareReductionConstruct {
+struct OmpDeclareReductionDirective {
   WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclareReductionConstruct, OmpDirectiveSpecification);
+      OmpDeclareReductionDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // 2.8.2 declare-simd -> DECLARE SIMD [(proc-name)] [declare-simd-clause[ [,]
 //                                                   declare-simd-clause]...]
-struct OpenMPDeclareSimdConstruct {
-  WRAPPER_CLASS_BOILERPLATE(
-      OpenMPDeclareSimdConstruct, OmpDirectiveSpecification);
+struct OmpDeclareSimdDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpDeclareSimdDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
@@ -4994,57 +5306,71 @@ struct OpenMPDeclareSimdConstruct {
 //
 // groupprivate-directive ->
 //    GROUPPRIVATE (variable-list-item...)          // since 6.0
-struct OpenMPGroupprivate {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPGroupprivate, OmpDirectiveSpecification);
+struct OmpGroupprivateDirective {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpGroupprivateDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
-struct OpenMPRequiresConstruct {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPRequiresConstruct, OmpDirectiveSpecification);
+struct OmpRequiresDirective {
+  WRAPPER_CLASS_BOILERPLATE(OmpRequiresDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
 // 2.15.2 threadprivate -> THREADPRIVATE (variable-name-list)
-struct OpenMPThreadprivate {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPThreadprivate, OmpDirectiveSpecification);
+struct OmpThreadprivateDirective {
+  WRAPPER_CLASS_BOILERPLATE(
+      OmpThreadprivateDirective, OmpDirectiveSpecification);
   CharBlock source;
 };
 
-// 2.11.3 allocate -> ALLOCATE (variable-name-list) [clause]
-struct OpenMPDeclarativeAllocate {
-  TUPLE_CLASS_BOILERPLATE(OpenMPDeclarativeAllocate);
-  CharBlock source;
-  std::tuple<Verbatim, OmpObjectList, OmpClauseList> t;
+// Ref: [4.5:310-312], [5.0:156-158], [5.1:181-184], [5.2:176-177],
+//      [6.0:310-312]
+//
+// allocate-directive ->
+//    ALLOCATE (variable-list-item...) |            // since 4.5
+//    ALLOCATE (variable-list-item...)              // since 5.0, until 5.1
+//    ...
+//    allocate-stmt
+//
+// The first form is the "declarative-allocate", and is a declarative
+// directive. The second is the "executable-allocate" and is an executable
+// directive. The executable form was deprecated in 5.2.
+//
+// The executable-allocate consists of several ALLOCATE directives. Since
+// in the parse tree every type corresponding to a directive only corresponds
+// to a single directive, the executable form is represented by a sequence
+// of nested OmpAlocateDirectives, e.g.
+//    !$OMP ALLOCATE(x)
+//    !$OMP ALLOCATE(y)
+//    ALLOCATE(x, y)
+// will become
+//    OmpAllocateDirective
+//    |- ALLOCATE(x)            // begin directive
+//    `- OmpAllocateDirective   // block
+//       |- ALLOCATE(y)            // begin directive
+//       `- ALLOCATE(x, y)         // block
+//
+// The block in the declarative-allocate will be empty.
+struct OmpAllocateDirective : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpAllocateDirective, OmpBlockConstruct);
 };
 
 struct OpenMPDeclarativeConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPDeclarativeConstruct);
   CharBlock source;
-  std::variant<OpenMPDeclarativeAllocate, OpenMPDeclarativeAssumes,
-      OpenMPDeclareMapperConstruct, OpenMPDeclareReductionConstruct,
-      OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OmpDeclareVariantDirective, OpenMPGroupprivate, OpenMPThreadprivate,
-      OpenMPRequiresConstruct, OpenMPUtilityConstruct,
+  std::variant<OmpAllocateDirective, OmpAssumesDirective,
+      OmpDeclareMapperDirective, OmpDeclareReductionDirective,
+      OmpDeclareSimdDirective, OmpDeclareTargetDirective,
+      OmpDeclareVariantDirective, OmpGroupprivateDirective,
+      OmpThreadprivateDirective, OmpRequiresDirective, OmpUtilityDirective,
       OmpMetadirectiveDirective>
       u;
 };
 
 struct OpenMPCriticalConstruct : public OmpBlockConstruct {
   INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPCriticalConstruct, OmpBlockConstruct);
-};
-
-// 2.11.3 allocate -> ALLOCATE [(variable-name-list)] [clause]
-//        [ALLOCATE (variable-name-list) [clause] [...]]
-//        allocate-statement
-//        clause -> allocator-clause
-struct OpenMPExecutableAllocate {
-  TUPLE_CLASS_BOILERPLATE(OpenMPExecutableAllocate);
-  CharBlock source;
-  std::tuple<Verbatim, std::optional<OmpObjectList>, OmpClauseList,
-      std::optional<std::list<OpenMPDeclarativeAllocate>>,
-      Statement<AllocateStmt>>
-      t;
 };
 
 // Ref: [5.2:180-181], [6.0:315]
@@ -5078,7 +5404,7 @@ struct OpenMPAtomicConstruct : public OmpBlockConstruct {
 
     struct Op {
       int what;
-      AssignmentStmt::TypedAssignment assign;
+      TypedAssignment assign;
     };
     TypedExpr atom, cond;
     Op op0, op1;
@@ -5164,31 +5490,12 @@ struct OpenMPStandaloneConstruct {
       u;
 };
 
-struct OmpBeginLoopDirective : public OmpBeginDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpBeginLoopDirective, OmpBeginDirective);
-};
-
-struct OmpEndLoopDirective : public OmpEndDirective {
-  INHERITED_TUPLE_CLASS_BOILERPLATE(OmpEndLoopDirective, OmpEndDirective);
-};
-
 // OpenMP directives enclosing do loop
-using NestedConstruct =
-    std::variant<DoConstruct, common::Indirection<OpenMPLoopConstruct>>;
-struct OpenMPLoopConstruct {
-  TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct);
-  OpenMPLoopConstruct(OmpBeginLoopDirective &&a)
-      : t({std::move(a), std::nullopt, std::nullopt}) {}
+struct OpenMPLoopConstruct : public OmpBlockConstruct {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(OpenMPLoopConstruct, OmpBlockConstruct);
 
-  const OmpBeginLoopDirective &BeginDir() const {
-    return std::get<OmpBeginLoopDirective>(t);
-  }
-  const std::optional<OmpEndLoopDirective> &EndDir() const {
-    return std::get<std::optional<OmpEndLoopDirective>>(t);
-  }
-  std::tuple<OmpBeginLoopDirective, std::optional<NestedConstruct>,
-      std::optional<OmpEndLoopDirective>>
-      t;
+  const DoConstruct *GetNestedLoop() const;
+  const OpenMPLoopConstruct *GetNestedConstruct() const;
 };
 
 // Lookahead class to identify execution-part OpenMP constructs without
@@ -5201,11 +5508,24 @@ struct OpenMPExecDirective {
 struct OpenMPConstruct {
   UNION_CLASS_BOILERPLATE(OpenMPConstruct);
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
-      OpenMPSectionConstruct, OpenMPLoopConstruct, OmpBlockConstruct,
-      OpenMPAtomicConstruct, OpenMPDeclarativeAllocate, OpenMPDispatchConstruct,
-      OpenMPUtilityConstruct, OpenMPExecutableAllocate,
-      OpenMPAllocatorsConstruct, OpenMPAssumeConstruct, OpenMPCriticalConstruct>
+      OmpSectionDirective, OpenMPLoopConstruct, OmpBlockConstruct,
+      OpenMPAtomicConstruct, OmpAllocateDirective, OpenMPDispatchConstruct,
+      OmpUtilityDirective, OpenMPAllocatorsConstruct, OmpAssumeDirective,
+      OpenMPCriticalConstruct, OmpDelimitedMetadirectiveDirective>
       u;
+};
+
+// Orphaned !$OMP END <directive>, i.e. not being a part of a valid OpenMP
+// construct.
+struct OpenMPMisplacedEndDirective : public OmpEndDirective {
+  INHERITED_TUPLE_CLASS_BOILERPLATE(
+      OpenMPMisplacedEndDirective, OmpEndDirective);
+};
+
+// Unrecognized string after the !$OMP sentinel.
+struct OpenMPInvalidDirective {
+  using EmptyTrait = std::true_type;
+  CharBlock source;
 };
 
 // Parse tree nodes for OpenACC 3.3 directives and clauses
@@ -5354,7 +5674,7 @@ struct AccClauseList {
 struct OpenACCRoutineConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenACCRoutineConstruct);
   CharBlock source;
-  std::tuple<Verbatim, std::optional<Name>, AccClauseList> t;
+  std::tuple<Verbatim, std::list<Name>, AccClauseList> t;
 };
 
 struct OpenACCCacheConstruct {

@@ -1453,7 +1453,7 @@ void ELFState<ELFT>::writeSectionContent(
     return;
   }
 
-  const std::vector<ELFYAML::PGOAnalysisMapEntry> *PGOAnalyses = nullptr;
+  const std::vector<BBAddrMapYAML::PGOAnalysisMapEntry> *PGOAnalyses = nullptr;
   if (Section.PGOAnalyses) {
     if (Section.Entries->size() != Section.PGOAnalyses->size())
       WithColor::warning() << "PGOAnalyses must be the same length as Entries "
@@ -1465,13 +1465,19 @@ void ELFState<ELFT>::writeSectionContent(
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
     if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP) {
-      if (E.Version > 3)
+      if (E.Version > 5)
         WithColor::warning() << "unsupported SHT_LLVM_BB_ADDR_MAP version: "
                              << static_cast<int>(E.Version)
                              << "; encoding using the most recent version";
       CBA.write(E.Version);
-      CBA.write(E.Feature);
-      SHeader.sh_size += 2;
+      SHeader.sh_size += 1;
+      if (E.Version < 5) {
+        CBA.write(static_cast<uint8_t>(E.Feature));
+        SHeader.sh_size += 1;
+      } else {
+        CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
+        SHeader.sh_size += 2;
+      }
     }
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
     bool MultiBBRangeFeatureEnabled = false;
@@ -1498,7 +1504,7 @@ void ELFState<ELFT>::writeSectionContent(
     uint64_t TotalNumBlocks = 0;
     bool EmitCallsiteEndOffsets =
         FeatureOrErr->CallsiteEndOffsets || E.hasAnyCallsiteEndOffsets();
-    for (const ELFYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
+    for (const BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
       // Write the base address of the range.
       CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
       // Write number of BBEntries (number of basic blocks in this basic block
@@ -1510,7 +1516,7 @@ void ELFState<ELFT>::writeSectionContent(
       // Write all BBEntries in this BBRange.
       if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
         continue;
-      for (const ELFYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
+      for (const BBAddrMapYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
         if (Section.Type == llvm::ELF::SHT_LLVM_BB_ADDR_MAP && E.Version > 1)
           SHeader.sh_size += CBA.writeULEB128(BBE.ID);
@@ -1526,11 +1532,17 @@ void ELFState<ELFT>::writeSectionContent(
         }
         SHeader.sh_size += CBA.writeULEB128(BBE.Size);
         SHeader.sh_size += CBA.writeULEB128(BBE.Metadata);
+        if (FeatureOrErr->BBHash || BBE.Hash.has_value()) {
+          uint64_t Hash =
+              BBE.Hash.has_value() ? BBE.Hash.value() : llvm::yaml::Hex64(0);
+          CBA.write<uint64_t>(Hash, ELFT::Endianness);
+          SHeader.sh_size += 8;
+        }
       }
     }
     if (!PGOAnalyses)
       continue;
-    const ELFYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
+    const BBAddrMapYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
 
     if (PGOEntry.FuncEntryCount)
       SHeader.sh_size += CBA.writeULEB128(*PGOEntry.FuncEntryCount);
@@ -1550,11 +1562,15 @@ void ELFState<ELFT>::writeSectionContent(
     for (const auto &PGOBBE : PGOBBEntries) {
       if (PGOBBE.BBFreq)
         SHeader.sh_size += CBA.writeULEB128(*PGOBBE.BBFreq);
+      if (FeatureOrErr->PostLinkCfg || PGOBBE.PostLinkBBFreq.has_value())
+        SHeader.sh_size += CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
       if (PGOBBE.Successors) {
         SHeader.sh_size += CBA.writeULEB128(PGOBBE.Successors->size());
-        for (const auto &[ID, BrProb] : *PGOBBE.Successors) {
+        for (const auto &[ID, BrProb, PostLinkBrFreq] : *PGOBBE.Successors) {
           SHeader.sh_size += CBA.writeULEB128(ID);
           SHeader.sh_size += CBA.writeULEB128(BrProb);
+          if (FeatureOrErr->PostLinkCfg || PostLinkBrFreq.has_value())
+            SHeader.sh_size += CBA.writeULEB128(PostLinkBrFreq.value_or(0));
         }
       }
     }

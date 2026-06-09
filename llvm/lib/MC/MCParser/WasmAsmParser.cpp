@@ -309,10 +309,4 @@ public:
 
 } // end anonymous namespace
 
-namespace llvm {
-
-MCAsmParserExtension *createWasmAsmParser() {
-  return new WasmAsmParser;
-}
-
-} // end namespace llvm
+MCAsmParserExtension *llvm::createWasmAsmParser() { return new WasmAsmParser; }

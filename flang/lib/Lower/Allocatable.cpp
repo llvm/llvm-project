@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/IterationSpace.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/OpenACC.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Runtime.h"
@@ -29,6 +30,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Dialect/MIF/MIFOps.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -46,16 +48,6 @@ static llvm::cl::opt<bool> useAllocateRuntime(
     "use-alloc-runtime",
     llvm::cl::desc("Lower allocations to fortran runtime calls"),
     llvm::cl::init(false));
-/// Switch to force lowering of allocatable and pointers to descriptors in all
-/// cases. This is now turned on by default since that is what will happen with
-/// HLFIR lowering, so this allows getting early feedback of the impact.
-/// If this turns out to cause performance regressions, a dedicated fir.box
-/// "discretization pass" would make more sense to cover all the fir.box usage
-/// (taking advantage of any future inlining for instance).
-static llvm::cl::opt<bool> useDescForMutableBox(
-    "use-desc-for-alloc",
-    llvm::cl::desc("Always use descriptors for POINTER and ALLOCATABLE"),
-    llvm::cl::init(true));
 
 //===----------------------------------------------------------------------===//
 // Error management
@@ -192,6 +184,7 @@ static mlir::Value genRuntimeAllocate(fir::FirOpBuilder &builder,
   args.push_back(errorManager.errMsgAddr);
   args.push_back(errorManager.sourceFile);
   args.push_back(errorManager.sourceLine);
+  args.push_back(builder.createBool(loc, false));
   const auto convertedArgs = fir::runtime::createArguments(
       builder, loc, callee.getFunctionType(), args);
   return fir::CallOp::create(builder, loc, callee, convertedArgs).getResult(0);
@@ -324,11 +317,12 @@ private:
   struct Allocation {
     const Fortran::parser::Allocation &alloc;
     const Fortran::semantics::DeclTypeSpec &type;
-    bool hasCoarraySpec() const {
+    const std::optional<Fortran::parser::AllocateCoarraySpec> &
+    getCoarraySpec() const {
       return std::get<std::optional<Fortran::parser::AllocateCoarraySpec>>(
-                 alloc.t)
-          .has_value();
+          alloc.t);
     }
+    bool hasCoarraySpec() const { return getCoarraySpec().has_value(); }
     const Fortran::parser::AllocateObject &getAllocObj() const {
       return std::get<Fortran::parser::AllocateObject>(alloc.t);
     }
@@ -477,7 +471,7 @@ private:
                             !box.isPointer();
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
 
-    if (inlineAllocation &&
+    if (inlineAllocation && !alloc.hasCoarraySpec() &&
         ((isCudaAllocate && isCudaDeviceContext) || !isCudaAllocate)) {
       // Pointers must use PointerAllocate so that their deallocations
       // can be validated.
@@ -500,14 +494,17 @@ private:
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box, allocatorIdx);
-    if (alloc.hasCoarraySpec())
-      TODO(loc, "coarray: allocation of a coarray object");
     if (alloc.type.IsPolymorphic())
       genSetType(alloc, box, loc);
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (!isCudaAllocate) {
+    if (alloc.hasCoarraySpec()) {
+      stat = Fortran::lower::genAllocateCoarray(
+          converter, loc, alloc.getSymbol(), box.getAddr(),
+          alloc.getCoarraySpec(), errorManager.errMsgAddr,
+          errorManager.hasStatSpec());
+    } else if (!isCudaAllocate) {
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {
@@ -629,11 +626,14 @@ private:
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
 
+    bool sourceIsDevice = false;
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+      if (Fortran::semantics::IsCUDADevice(*sym))
+        sourceIsDevice = true;
+
     // Generate a sequence of runtime calls.
     errorManager.genStatCheck(builder, loc);
     genAllocateObjectInit(box, allocatorIdx);
-    if (alloc.hasCoarraySpec())
-      TODO(loc, "coarray: allocation of a coarray object");
     // Set length of the allocate object if it has. Otherwise, get the length
     // from source for the deferred length parameter.
     const bool isDeferredLengthCharacter =
@@ -647,7 +647,13 @@ private:
       genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol())) {
+    if (alloc.hasCoarraySpec()) {
+      stat = Fortran::lower::genAllocateCoarray(
+          converter, loc, alloc.getSymbol(), box.getAddr(),
+          alloc.getCoarraySpec(), errorManager.errMsgAddr,
+          errorManager.hasStatSpec());
+    } else if (Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) ||
+               sourceIsDevice) {
       stat =
           genCudaAllocate(builder, loc, box, errorManager, alloc.getSymbol());
     } else {
@@ -785,10 +791,19 @@ private:
     // Keep return type the same as a standard AllocatableAllocate call.
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
 
+    bool isSourceDevice = false;
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
+      if (Fortran::semantics::IsCUDADevice(*sym))
+        isSourceDevice = true;
+
+    bool doubleDescriptors = Fortran::lower::hasDoubleDescriptor(box.getAddr());
     return cuf::AllocateOp::create(
                builder, loc, retTy, box.getAddr(), errmsg, stream, pinned,
                source, cudaAttr,
-               errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+               errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
+               doubleDescriptors ? builder.getUnitAttr() : nullptr,
+               box.isPointer() ? builder.getUnitAttr() : nullptr,
+               isSourceDevice ? builder.getUnitAttr() : nullptr)
         .getResult();
   }
 
@@ -852,11 +867,14 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
           ? nullptr
           : errorManager.errMsgAddr;
 
-  // Keep return type the same as a standard AllocatableAllocate call.
+  // Keep return type the same as a standard AllocatableDeallocate call.
   mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
+  bool doubleDescriptors = Fortran::lower::hasDoubleDescriptor(box.getAddr());
   return cuf::DeallocateOp::create(
              builder, loc, retTy, box.getAddr(), errmsg, cudaAttr,
-             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr,
+             doubleDescriptors ? builder.getUnitAttr() : nullptr,
+             box.isPointer() ? builder.getUnitAttr() : nullptr)
       .getResult();
 }
 
@@ -873,8 +891,10 @@ genDeallocate(fir::FirOpBuilder &builder,
       !box.isDerived() && !box.isPolymorphic() && !box.hasAssumedRank() &&
       !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
       !useAllocateRuntime && !box.isPointer();
+  bool isCoarraySymbol = symbol && Fortran::evaluate::IsCoarray(*symbol);
+
   // Deallocate intrinsic types inline.
-  if (inlineDeallocation &&
+  if (inlineDeallocation && !isCoarraySymbol &&
       ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
     // Pointers must use PointerDeallocate so that their deallocations
     // can be validated.
@@ -887,7 +907,16 @@ genDeallocate(fir::FirOpBuilder &builder,
   // with its descriptor before and after calls if needed.
   errorManager.genStatCheck(builder, loc);
   mlir::Value stat;
-  if (!isCudaSymbol)
+  if (isCoarraySymbol) {
+    stat = errorManager.hasStatSpec()
+               ? builder.createTemporary(loc, builder.getI32Type())
+               : fir::AbsentOp::create(
+                     builder, loc, builder.getRefType(builder.getI32Type()));
+    mif::DeallocCoarrayOp::create(builder, loc, box.getAddr(), stat,
+                                  errorManager.errMsgAddr);
+    if (errorManager.hasStatSpec())
+      stat = fir::LoadOp::create(builder, loc, stat);
+  } else if (!isCudaSymbol)
     stat =
         genRuntimeDeallocate(builder, loc, box, errorManager, declaredTypeDesc);
   else
@@ -980,123 +1009,12 @@ void Fortran::lower::genDeallocateStmt(
 // MutableBoxValue creation implementation
 //===----------------------------------------------------------------------===//
 
-/// Is this symbol a pointer to a pointer array that does not have the
-/// CONTIGUOUS attribute ?
-static inline bool
-isNonContiguousArrayPointer(const Fortran::semantics::Symbol &sym) {
-  return Fortran::semantics::IsPointer(sym) && sym.Rank() != 0 &&
-         !sym.attrs().test(Fortran::semantics::Attr::CONTIGUOUS);
-}
-
-/// Is this symbol a polymorphic pointer?
-static inline bool isPolymorphicPointer(const Fortran::semantics::Symbol &sym) {
-  return Fortran::semantics::IsPointer(sym) &&
-         Fortran::semantics::IsPolymorphic(sym);
-}
-
-/// Is this symbol a polymorphic allocatable?
-static inline bool
-isPolymorphicAllocatable(const Fortran::semantics::Symbol &sym) {
-  return Fortran::semantics::IsAllocatable(sym) &&
-         Fortran::semantics::IsPolymorphic(sym);
-}
-
-/// Is this a local procedure symbol in a procedure that contains internal
-/// procedures ?
-static bool mayBeCapturedInInternalProc(const Fortran::semantics::Symbol &sym) {
-  const Fortran::semantics::Scope &owner = sym.owner();
-  Fortran::semantics::Scope::Kind kind = owner.kind();
-  // Test if this is a procedure scope that contains a subprogram scope that is
-  // not an interface.
-  if (kind == Fortran::semantics::Scope::Kind::Subprogram ||
-      kind == Fortran::semantics::Scope::Kind::MainProgram)
-    for (const Fortran::semantics::Scope &childScope : owner.children())
-      if (childScope.kind() == Fortran::semantics::Scope::Kind::Subprogram)
-        if (const Fortran::semantics::Symbol *childSym = childScope.symbol())
-          if (const auto *details =
-                  childSym->detailsIf<Fortran::semantics::SubprogramDetails>())
-            if (!details->isInterface())
-              return true;
-  return false;
-}
-
-/// In case it is safe to track the properties in variables outside a
-/// descriptor, create the variables to hold the mutable properties of the
-/// entity var. The variables are not initialized here.
-static fir::MutableProperties
-createMutableProperties(Fortran::lower::AbstractConverter &converter,
-                        mlir::Location loc,
-                        const Fortran::lower::pft::Variable &var,
-                        mlir::ValueRange nonDeferredParams, bool alwaysUseBox) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  const Fortran::semantics::Symbol &sym = var.getSymbol();
-  // Globals and dummies may be associated, creating local variables would
-  // require keeping the values and descriptor before and after every single
-  // impure calls in the current scope (not only the ones taking the variable as
-  // arguments. All.) Volatile means the variable may change in ways not defined
-  // per Fortran, so lowering can most likely not keep the descriptor and values
-  // in sync as needed.
-  // Pointers to non contiguous arrays need to be represented with a fir.box to
-  // account for the discontiguity.
-  // Pointer/Allocatable in internal procedure are descriptors in the host link,
-  // and it would increase complexity to sync this descriptor with the local
-  // values every time the host link is escaping.
-  if (alwaysUseBox || var.isGlobal() || Fortran::semantics::IsDummy(sym) ||
-      Fortran::semantics::IsFunctionResult(sym) ||
-      sym.attrs().test(Fortran::semantics::Attr::VOLATILE) ||
-      isNonContiguousArrayPointer(sym) || useAllocateRuntime ||
-      useDescForMutableBox || mayBeCapturedInInternalProc(sym) ||
-      isPolymorphicPointer(sym) || isPolymorphicAllocatable(sym))
-    return {};
-  fir::MutableProperties mutableProperties;
-  std::string name = converter.mangleName(sym);
-  mlir::Type baseAddrTy = converter.genType(sym);
-  if (auto boxType = mlir::dyn_cast<fir::BaseBoxType>(baseAddrTy))
-    baseAddrTy = boxType.getEleTy();
-  // Allocate and set a variable to hold the address.
-  // It will be set to null in setUnallocatedStatus.
-  mutableProperties.addr =
-      builder.allocateLocal(loc, baseAddrTy, name + ".addr", "",
-                            /*shape=*/{}, /*typeparams=*/{});
-  // Allocate variables to hold lower bounds and extents.
-  int rank = sym.Rank();
-  mlir::Type idxTy = builder.getIndexType();
-  for (decltype(rank) i = 0; i < rank; ++i) {
-    mlir::Value lboundVar =
-        builder.allocateLocal(loc, idxTy, name + ".lb" + std::to_string(i), "",
-                              /*shape=*/{}, /*typeparams=*/{});
-    mlir::Value extentVar =
-        builder.allocateLocal(loc, idxTy, name + ".ext" + std::to_string(i), "",
-                              /*shape=*/{}, /*typeparams=*/{});
-    mutableProperties.lbounds.emplace_back(lboundVar);
-    mutableProperties.extents.emplace_back(extentVar);
-  }
-
-  // Allocate variable to hold deferred length parameters.
-  mlir::Type eleTy = baseAddrTy;
-  if (auto newTy = fir::dyn_cast_ptrEleTy(eleTy))
-    eleTy = newTy;
-  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(eleTy))
-    eleTy = seqTy.getEleTy();
-  if (auto record = mlir::dyn_cast<fir::RecordType>(eleTy))
-    if (record.getNumLenParams() != 0)
-      TODO(loc, "deferred length type parameters.");
-  if (fir::isa_char(eleTy) && nonDeferredParams.empty()) {
-    mlir::Value lenVar = builder.allocateLocal(
-        loc, builder.getCharacterLengthType(), name + ".len", "", /*shape=*/{},
-        /*typeparams=*/{});
-    mutableProperties.deferredParams.emplace_back(lenVar);
-  }
-  return mutableProperties;
-}
-
 fir::MutableBoxValue Fortran::lower::createMutableBox(
     Fortran::lower::AbstractConverter &converter, mlir::Location loc,
     const Fortran::lower::pft::Variable &var, mlir::Value boxAddr,
-    mlir::ValueRange nonDeferredParams, bool alwaysUseBox, unsigned allocator) {
-  fir::MutableProperties mutableProperties = createMutableProperties(
-      converter, loc, var, nonDeferredParams, alwaysUseBox);
-  fir::MutableBoxValue box(boxAddr, nonDeferredParams, mutableProperties);
+    mlir::ValueRange nonDeferredParams, unsigned allocator) {
+  fir::MutableBoxValue box(boxAddr, nonDeferredParams,
+                           /*mutableProperties=*/{});
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (!var.isGlobal() && !Fortran::semantics::IsDummy(var.getSymbol()))
     fir::factory::disassociateMutableBox(builder, loc, box,
@@ -1126,22 +1044,9 @@ void Fortran::lower::associateMutableBox(
     cuf::genPointerSync(box.getAddr(), builder);
     return;
   }
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
-    fir::ExtendedValue rhs = converter.genExprAddr(loc, source, stmtCtx);
-    fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
-    cuf::genPointerSync(box.getAddr(), builder);
-    return;
-  }
-  // The right hand side is not be evaluated into a temp. Array sections can
-  // typically be represented as a value of type `!fir.box`. However, an
-  // expression that uses vector subscripts cannot be emboxed. In that case,
-  // generate a reference to avoid having to later use a fir.rebox to implement
-  // the pointer association.
-  fir::ExtendedValue rhs = isArraySectionWithoutVectorSubscript(source)
-                               ? converter.genExprBox(loc, source, stmtCtx)
-                               : converter.genExprAddr(loc, source, stmtCtx);
-
+  fir::ExtendedValue rhs = converter.genExprAddr(loc, source, stmtCtx);
   fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
+  cuf::genPointerSync(box.getAddr(), builder);
 }
 
 bool Fortran::lower::isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {

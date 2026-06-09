@@ -34,7 +34,7 @@ func.func @empty_constant() {
 
 func.func @index_args_out_of_range_1() {
     // expected-error @+1 {{'emitc.call_opaque' op index argument is out of range}}
-    emitc.call_opaque "test" () {args = [0 : index]} : () -> ()
+    emitc.call_opaque "test" () <{args = [0 : index]}> : () -> ()
     return
 }
 
@@ -42,7 +42,7 @@ func.func @index_args_out_of_range_1() {
 
 func.func @index_args_out_of_range_2(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op index argument is out of range}}
-    emitc.call_opaque "test" (%arg, %arg) {args = [2 : index]} : (i32, i32) -> ()
+    emitc.call_opaque "test" (%arg, %arg) <{args = [2 : index]}> : (i32, i32) -> ()
     return
 }
 
@@ -58,7 +58,7 @@ func.func @empty_callee() {
 
 func.func @nonetype_arg(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op array argument has no type}}
-    emitc.call_opaque "nonetype_arg"(%arg) {args = [0 : index, [0, 1, 2]]} : (i32) -> i32
+    emitc.call_opaque "nonetype_arg"(%arg) <{args = [0 : index, [0, 1, 2]]}> : (i32) -> i32
     return
 }
 
@@ -66,7 +66,7 @@ func.func @nonetype_arg(%arg : i32) {
 
 func.func @array_template_arg(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op template argument has invalid type}}
-    emitc.call_opaque "nonetype_template_arg"(%arg) {template_args = [[0, 1, 2]]} : (i32) -> i32
+    emitc.call_opaque "nonetype_template_arg"(%arg) <{template_args = [[0, 1, 2]]}> : (i32) -> i32
     return
 }
 
@@ -74,7 +74,7 @@ func.func @array_template_arg(%arg : i32) {
 
 func.func @dense_template_argument(%arg : i32) {
     // expected-error @+1 {{'emitc.call_opaque' op template argument has invalid type}}
-    emitc.call_opaque "dense_template_argument"(%arg) {template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]} : (i32) -> i32
+    emitc.call_opaque "dense_template_argument"(%arg) <{template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]}> : (i32) -> i32
     return
 }
 
@@ -83,6 +83,46 @@ func.func @dense_template_argument(%arg : i32) {
 func.func @array_result() {
     // expected-error @+1 {{'emitc.call_opaque' op cannot return array type}}
     emitc.call_opaque "array_result"() : () -> !emitc.array<4xi32>
+    return
+}
+
+// -----
+
+func.func @member_call_empty_callee(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op callee must not be empty}}
+    emitc.member_call_opaque %arg0 "" () : !emitc.opaque<"MyClass">, () -> ()
+    return
+}
+
+// -----
+
+func.func @member_call_index_out_of_range(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op index argument is out of range}}
+    emitc.member_call_opaque %arg0 "test" () <{args = [1 : index]}> : !emitc.opaque<"MyClass">, () -> ()
+    return
+}
+
+// -----
+
+func.func @member_call_array_result(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op cannot return array type}}
+    emitc.member_call_opaque %arg0 "array_result"() : !emitc.opaque<"MyClass">, () -> !emitc.array<4xi32>
+    return
+}
+
+// -----
+
+func.func @member_call_nonetype_template_arg(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op template argument has invalid type}}
+    emitc.member_call_opaque %arg0 "nonetype_template_arg"() <{template_args = [[0, 1, 2]]}> : !emitc.opaque<"MyClass">, () -> ()
+    return
+}
+
+// -----
+
+func.func @member_call_dense_template_argument(%arg0 : !emitc.opaque<"MyClass">) {
+    // expected-error @+1 {{'emitc.member_call_opaque' op template argument has invalid type}}
+    emitc.member_call_opaque %arg0 "dense_template_argument"() <{template_args = [dense<[1.0, 1.0]> : tensor<2xf32>]}> : !emitc.opaque<"MyClass">, () -> ()
     return
 }
 
@@ -252,7 +292,7 @@ func.func @sub_pointer_pointer(%arg0: !emitc.ptr<f32>, %arg1: !emitc.ptr<f32>) {
 // -----
 
 func.func @test_misplaced_yield() {
-  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.expression, emitc.if, emitc.for, emitc.switch'}}
+  // expected-error @+1 {{'emitc.yield' op expects parent op to be one of 'emitc.do, emitc.expression, emitc.for, emitc.if, emitc.switch'}}
   emitc.yield
   return
 }
@@ -375,6 +415,19 @@ emitc.func @test_expression_op_outside_expression() {
     emitc.yield %cond : i1
   }
   return
+}
+
+// -----
+
+func.func @test_expression_recurring_operands(%arg0: i32, %arg1: i32) -> i32 {
+  // expected-error @+1 {{'emitc.expression' with recurring operands expected block arguments}}
+  %r = emitc.expression %arg0, %arg1, %arg0 : (i32, i32, i32) -> i32 {
+    %a = emitc.rem %arg0, %arg1 : (i32, i32) -> i32
+    %b = emitc.add %a, %arg0 : (i32, i32) -> i32
+    %c = emitc.mul %b, %a : (i32, i32) -> i32
+    emitc.yield %c : i32
+  }
+  return %r : i32
 }
 
 // -----
@@ -728,4 +781,205 @@ emitc.class @testClass {
     %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
     return
   }
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op condition region must contain exactly two operations: 'emitc.expression' followed by 'emitc.yield', but found 3 operations}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    %3 = emitc.literal "3" : i32
+    emitc.yield %r : i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  // expected-error @+1 {{'emitc.do' op expected first op in condition region to be 'emitc.expression', but got emitc.literal}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %true = emitc.literal "true" : i1
+    emitc.yield %true : i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op emitc.expression in condition region must return 'i1', but returns 'i32'}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i32 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      emitc.yield %add : i32
+    }
+
+    emitc.yield %r : i32
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op expected last op in condition region to be 'emitc.yield', but got emitc.expression}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r1 = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    %r2 = emitc.expression %1, %2 : (i32, i32) -> i32 {
+      %add = emitc.add %1, %2 : (i32, i32) -> i32
+      emitc.yield %add : i32
+    }
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op expected condition region to return 1 value, but it returns 0 values}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  %true = emitc.literal "true" : i1
+
+  // expected-error @+1 {{'emitc.yield' must return result of 'emitc.expression' from this condition region}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %true: i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_do(%arg0 : !emitc.ptr<i32>) {
+  %1 = emitc.literal "1" : i32
+  %2 = emitc.literal "2" : i32
+
+  // expected-error @+1 {{'emitc.do' op body region must not contain terminator}}
+  emitc.do {
+    emitc.verbatim "printf(\"%d\", *{});" args %arg0 : !emitc.ptr<i32>
+    emitc.yield
+  } while {
+    %r = emitc.expression %1, %2 : (i32, i32) -> i1 {
+      %cmp = emitc.cmp eq, %1, %2 : (i32, i32) -> i1
+      emitc.yield %cmp : i1
+    }
+
+    emitc.yield %r: i1
+  }
+
+  return
+}
+
+// -----
+
+func.func @test_for_none_block_argument(%arg0: index) {
+  // expected-error@+1 {{expected body to have a single block argument for the induction variable}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @test_for_more_than_one_block_argument(%arg0: index) {
+  // expected-error@+1 {{expected body to have a single block argument for the induction variable}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+    ^bb0(%i0 : index, %i1 : index):
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @test_for_unmatch_type(%arg0: index) {
+  // expected-error@+1 {{expected induction variable to be same type as bounds}}
+  "emitc.for"(%arg0, %arg0, %arg0) (
+    {
+    ^bb0(%i0 : f32):
+      emitc.yield
+    }
+  ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @address_of(%arg0: !emitc.lvalue<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.address_of"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i8>
+  return
+}
+
+// -----
+
+func.func @dereference(%arg0: !emitc.ptr<i32>) {
+  // expected-error @+1 {{failed to verify that input and result reference the same type}}
+  %1 = "emitc.dereference"(%arg0) : (!emitc.ptr<i32>) -> !emitc.lvalue<i8>
+  return
 }

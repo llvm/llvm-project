@@ -309,6 +309,9 @@ public:
   virtual void FindFunctions(const Module::LookupInfo &lookup_info,
                              const CompilerDeclContext &parent_decl_ctx,
                              bool include_inlines, SymbolContextList &sc_list);
+  virtual void FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
+                             const CompilerDeclContext &parent_decl_ctx,
+                             bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);
 
@@ -394,7 +397,8 @@ public:
 
   /// Return the number of stack bytes taken up by the parameters to this
   /// function.
-  virtual llvm::Expected<lldb::addr_t> GetParameterStackSize(Symbol &symbol) {
+  virtual llvm::Expected<lldb::addr_t>
+  GetParameterStackSize(const Symbol &symbol) {
     return llvm::createStringError(make_error_code(llvm::errc::not_supported),
                                    "Operation not supported.");
   }
@@ -499,6 +503,18 @@ public:
   /// \returns
   ///   A DWOStats struct with loaded, total, and error counts for DWO files.
   virtual DWOStats GetDwoStats() { return {}; }
+
+  /// Return a map of separate debug info files that are loaded.
+  ///
+  /// Unlike GetSeparateDebugInfo(), this function will only return the list of
+  /// files, if there are errors they are simply ignored. This function will
+  /// always return a valid list, even if it is empty.
+  ///
+  /// \return
+  ///     A unique list of all the filespecs, or an empty list.
+  virtual lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() {
+    return {};
+  }
 
   virtual lldb::TypeSP
   MakeType(lldb::user_id_t uid, ConstString name,

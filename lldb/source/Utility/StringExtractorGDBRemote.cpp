@@ -12,9 +12,6 @@
 #include <cstring>
 #include <optional>
 
-constexpr lldb::pid_t StringExtractorGDBRemote::AllProcesses;
-constexpr lldb::tid_t StringExtractorGDBRemote::AllThreads;
-
 StringExtractorGDBRemote::ResponseType
 StringExtractorGDBRemote::GetResponseType() const {
   if (m_packet.empty())
@@ -123,6 +120,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
         return eServerPacketType_QSetSTDOUT;
       if (PACKET_STARTS_WITH("QSetSTDERR:"))
         return eServerPacketType_QSetSTDERR;
+      if (PACKET_STARTS_WITH("QSetSTDIOWindowSize:"))
+        return eServerPacketType_QSetSTDIOWindowSize;
       if (PACKET_STARTS_WITH("QSetWorkingDir:"))
         return eServerPacketType_QSetWorkingDir;
       if (PACKET_STARTS_WITH("QSetLogging:"))
@@ -333,6 +332,12 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jLLDBTraceGetState;
     if (PACKET_STARTS_WITH("jLLDBTraceGetBinaryData:"))
       return eServerPacketType_jLLDBTraceGetBinaryData;
+    if (PACKET_STARTS_WITH("jMultiBreakpoint:"))
+      return eServerPacketType_jMultiBreakpoint;
+    if (PACKET_MATCHES("jAcceleratorPluginInitialize"))
+      return eServerPacketType_jAcceleratorPluginInitialize;
+    if (PACKET_STARTS_WITH("jAcceleratorPluginBreakpointHit:"))
+      return eServerPacketType_jAcceleratorPluginBreakpointHit;
     break;
 
   case 'v':

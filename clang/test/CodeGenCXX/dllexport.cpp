@@ -615,10 +615,10 @@ void W::foo() {}
 // Copy ctor:
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc ptr @"??0W@@QAE@ABU0@@Z"
 // vftable:
-// M32-DAG: [[W_VTABLE:@.*]] = private unnamed_addr constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4W@@6B@", ptr @"?foo@W@@UAEXXZ"] }, comdat($"??_7W@@6B@")
-// M32-DAG: @"??_7W@@6B@" = dllexport unnamed_addr alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[W_VTABLE]], i32 0, i32 0, i32 1)
-// G32-DAG: @_ZTV1W = dso_local dllexport unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1W, ptr @_ZN1W3fooEv] }
-// C32-DAG: @_ZTV1W = dso_local dllexport unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1W, ptr @_ZN1W3fooEv] }
+// M32-DAG: [[W_VTABLE:@.*]] = private constant { [2 x ptr] } { [2 x ptr] [ptr @"??_R4W@@6B@", ptr @"?foo@W@@UAEXXZ"] }, comdat($"??_7W@@6B@")
+// M32-DAG: @"??_7W@@6B@" = dllexport alias ptr, getelementptr inbounds ({ [2 x ptr] }, ptr [[W_VTABLE]], i32 0, i32 0, i32 1)
+// G32-DAG: @_ZTV1W = dso_local dllexport constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1W, ptr @_ZN1W3fooEv] }
+// C32-DAG: @_ZTV1W = dso_local dllexport constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1W, ptr @_ZN1W3fooEv] }
 
 struct __declspec(dllexport) X : public virtual W {};
 // vbtable:
@@ -633,8 +633,9 @@ struct __declspec(dllexport) Y {
 };
 
 struct __declspec(dllexport) Z { virtual ~Z() {} };
-// The scalar deleting dtor does not get exported:
-// M32-DAG: define linkonce_odr dso_local x86_thiscallcc ptr @"??_GZ@@UAEPAXI@Z"
+// The deleting dtor does not get exported, but we emit body of vector deleting
+// destructor:
+// M32-DAG: define weak dso_local x86_thiscallcc ptr @"??_EZ@@UAEPAXI@Z"
 
 
 // The user-defined dtor does get exported:
@@ -1130,5 +1131,6 @@ public:
 class __declspec(dllexport) ACE_Service_Object : public ACE_Shared_Object {};
 // Implicit move constructor declaration.
 // MSVC2015-DAG: define weak_odr dso_local dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q
+// PS-DAG: define weak_odr dllexport void @_ZN18ACE_Service_ObjectC1EOS_
 // The declarations should not be exported.
 // MSVC2013-NOT: define weak_odr dso_local dllexport {{.+}}ACE_Service_Object@@Q{{.+}}@$$Q

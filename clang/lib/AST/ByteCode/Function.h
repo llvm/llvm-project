@@ -41,6 +41,8 @@ public:
     unsigned Offset;
     /// Descriptor of the local.
     Descriptor *Desc;
+    /// If the cleanup for this local should be emitted.
+    bool EnabledByDefault = true;
   };
 
   using LocalVectorTy = llvm::SmallVector<Local, 8>;
@@ -83,17 +85,40 @@ using FunctionDeclTy =
 /// After the function has been called, it will remove all arguments,
 /// including RVO and This pointer, from the stack.
 ///
+/// The parameters saved in a clang::intepr::Function include both the
+/// instance pointer as well as the RVO pointer.
+///
+/// \verbatim
+///    Stack position when calling  ─────┐
+///    this Function                     │
+///                                      ▼
+/// ┌─────┬──────┬────────┬────────┬─────┬────────────────────┐
+/// │ RVO │ This │ Param1 │ Param2 │ ... │                    │
+/// └─────┴──────┴────────┴────────┴─────┴────────────────────┘
+/// \endverbatim
 class Function final {
 public:
   enum class FunctionKind {
     Normal,
     Ctor,
+    CopyOrMoveCtor,
     Dtor,
     LambdaStaticInvoker,
     LambdaCallOperator,
     CopyOrMoveOperator,
   };
-  using ParamDescriptor = std::pair<PrimType, Descriptor *>;
+
+  struct ParamDescriptor {
+    const Descriptor *Desc;
+    /// Offset on the stack.
+    unsigned Offset;
+    /// Offset in the InterpFrame.
+    unsigned BlockOffset;
+    PrimType T;
+    ParamDescriptor(const Descriptor *Desc, unsigned Offset,
+                    unsigned BlockOffset, PrimType T)
+        : Desc(Desc), Offset(Offset), BlockOffset(BlockOffset), T(T) {}
+  };
 
   /// Returns the size of the function's local stack.
   unsigned getFrameSize() const { return FrameSize; }
@@ -123,7 +148,9 @@ public:
   }
 
   /// Returns a parameter descriptor.
-  ParamDescriptor getParamDescriptor(unsigned Offset) const;
+  const ParamDescriptor &getParamDescriptor(unsigned Index) const {
+    return ParamDescriptors[Index];
+  }
 
   /// Checks if the first argument is a RVO pointer.
   bool hasRVO() const { return HasRVO; }
@@ -138,9 +165,9 @@ public:
 
   /// Range over argument types.
   using arg_reverse_iterator =
-      SmallVectorImpl<PrimType>::const_reverse_iterator;
+      SmallVectorImpl<ParamDescriptor>::const_reverse_iterator;
   llvm::iterator_range<arg_reverse_iterator> args_reverse() const {
-    return llvm::reverse(ParamTypes);
+    return llvm::reverse(ParamDescriptors);
   }
 
   /// Returns a specific scope.
@@ -159,7 +186,13 @@ public:
   bool isConstexpr() const { return Constexpr; }
 
   /// Checks if the function is a constructor.
-  bool isConstructor() const { return Kind == FunctionKind::Ctor; }
+  bool isConstructor() const {
+    return Kind == FunctionKind::Ctor || Kind == FunctionKind::CopyOrMoveCtor;
+  }
+  bool isCopyOrMoveConstructor() const {
+    return Kind == FunctionKind::CopyOrMoveCtor;
+  }
+
   /// Checks if the function is a destructor.
   bool isDestructor() const { return Kind == FunctionKind::Dtor; }
   /// Checks if the function is copy or move operator.
@@ -200,13 +233,15 @@ public:
 
   bool isVariadic() const { return Variadic; }
 
-  unsigned getNumParams() const { return ParamTypes.size(); }
+  unsigned getNumParams() const {
+    return ParamDescriptors.size() + hasThisPointer() + hasRVO();
+  }
 
   /// Returns the number of parameter this function takes when it's called,
   /// i.e excluding the instance pointer and the RVO pointer.
   unsigned getNumWrittenParams() const {
     assert(getNumParams() >= (unsigned)(hasThisPointer() + hasRVO()));
-    return getNumParams() - hasThisPointer() - hasRVO();
+    return ParamDescriptors.size();
   }
   unsigned getWrittenArgSize() const {
     return ArgSize - (align(primSize(PT_Ptr)) * (hasThisPointer() + hasRVO()));
@@ -219,32 +254,27 @@ public:
     return false;
   }
 
-  unsigned getParamOffset(unsigned ParamIndex) const {
-    return ParamOffsets[ParamIndex];
-  }
-
-  PrimType getParamType(unsigned ParamIndex) const {
-    return ParamTypes[ParamIndex];
+  bool hasImplicitThisParam() const {
+    return hasThisPointer() && !isThisPointerExplicit();
   }
 
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
-           llvm::SmallVectorImpl<PrimType> &&ParamTypes,
-           llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
-           llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
-           bool HasRVO, bool IsLambdaStaticInvoker);
+           llvm::SmallVectorImpl<ParamDescriptor> &&ParamDescriptors,
+           bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
   void setCode(FunctionDeclTy Source, unsigned NewFrameSize,
                llvm::SmallVector<std::byte> &&NewCode, SourceMap &&NewSrcMap,
-               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody) {
+               llvm::SmallVector<Scope, 2> &&NewScopes, bool NewHasBody,
+               bool NewIsValid) {
     this->Source = Source;
     FrameSize = NewFrameSize;
     Code = std::move(NewCode);
     SrcMap = std::move(NewSrcMap);
     Scopes = std::move(NewScopes);
-    IsValid = true;
+    IsValid = NewIsValid;
     HasBody = NewHasBody;
   }
 
@@ -272,12 +302,8 @@ private:
   SourceMap SrcMap;
   /// List of block descriptors.
   llvm::SmallVector<Scope, 2> Scopes;
-  /// List of argument types.
-  llvm::SmallVector<PrimType, 8> ParamTypes;
-  /// Map from byte offset to parameter descriptor.
-  llvm::DenseMap<unsigned, ParamDescriptor> Params;
-  /// List of parameter offsets.
-  llvm::SmallVector<unsigned, 8> ParamOffsets;
+  /// List of all parameters, including RVO and instance pointer.
+  llvm::SmallVector<ParamDescriptor> ParamDescriptors;
   /// Flag to indicate if the function is valid.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;
@@ -310,8 +336,9 @@ private:
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
-  void dump() const;
-  void dump(llvm::raw_ostream &OS) const;
+  void dump() const { dump({}); }
+  void dump(CodePtr PC) const;
+  void dump(llvm::raw_ostream &OS, CodePtr PC = {}) const;
 };
 
 } // namespace interp

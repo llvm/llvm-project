@@ -114,7 +114,7 @@
 ; CHECK-NEXT:        .entry_point:    _amdgpu_gs
 ; CHECK-NEXT:        .entry_point_symbol:    gs_shader
 ; CHECK-NEXT:        .forward_progress: true
-; CHECK-NEXT:      .lds_size:       0x400
+; CHECK-NEXT:      .lds_size:       0x800
 ; CHECK-NEXT:        .mem_ordered:    true
 ; CHECK-NEXT:        .scratch_en:     false
 ; CHECK-NEXT:        .scratch_memory_size: 0
@@ -200,7 +200,7 @@ declare i64 @llvm.amdgcn.s.getpc() #2
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
 declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg) #3
 
-attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="4" "denormal-fp-math-f32"="preserve-sign" }
+attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="4" denormal_fpenv(float: preservesign) }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" }
 

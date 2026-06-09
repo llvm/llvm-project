@@ -79,6 +79,44 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
     }
   }
 
+  // Try PLI/PLUI if available, but prefer LI/LUI.
+  if (STI.hasFeature(RISCV::FeatureStdExtP) && !isInt<12>(Val) &&
+      !isShiftedInt<20, 12>(Val)) {
+    unsigned Width = 64;
+
+    int32_t Bit31To0 = Val;
+    if (!IsRV64 || int32_t(Val >> 32) == Bit31To0)
+      Width = 32;
+
+    int16_t Bit15To0 = Bit31To0;
+    if (Width == 32 && int16_t(Bit31To0 >> 16) == Bit15To0)
+      Width = 16;
+
+    int8_t Bit7To0 = Bit15To0;
+    if (Width == 16 && int8_t(Bit15To0 >> 8) == Bit7To0) {
+      Res.emplace_back(RISCV::PLI_B, Bit7To0);
+      return;
+    }
+
+    if (Width == 16 && isInt<10>(Bit15To0)) {
+      Res.emplace_back(RISCV::PLI_H, Bit15To0);
+      return;
+    }
+    if (Width == 16 && isShiftedInt<10, 6>(Bit15To0)) {
+      Res.emplace_back(RISCV::PLUI_H, Bit15To0 >> 6);
+      return;
+    }
+
+    if (Width == 32 && isInt<10>(Bit31To0)) {
+      Res.emplace_back(RISCV::PLI_W, Bit31To0);
+      return;
+    }
+    if (Width == 32 && isShiftedInt<10, 22>(Bit31To0)) {
+      Res.emplace_back(RISCV::PLUI_W, Bit31To0 >> 22);
+      return;
+    }
+  }
+
   if (isInt<32>(Val)) {
     // Depending on the active bits in the immediate Value v, the following
     // instruction sequences are emitted:
@@ -136,8 +174,8 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
   int64_t Lo12 = SignExtend64<12>(Val);
   Val = (uint64_t)Val - (uint64_t)Lo12;
 
-  int ShiftAmount = 0;
-  bool Unsigned = false;
+  unsigned ShiftAmount = 0;
+  unsigned ShiftOpc = RISCV::SLLI;
 
   // Val might now be valid for LUI without needing a shift.
   if (!isInt<32>(Val)) {
@@ -159,7 +197,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
         // LUI, then shift left with SLLI.UW to clear the upper 32 set bits.
         ShiftAmount -= 12;
         Val = SignExtend64<32>((uint64_t)Val << 12);
-        Unsigned = true;
+        ShiftOpc = RISCV::SLLI_UW;
       }
     }
 
@@ -169,7 +207,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
       // Use LUI+ADDI or LUI to compose, then clear the upper 32 bits with
       // SLLI_UW.
       Val = SignExtend64<32>((uint64_t)Val);
-      Unsigned = true;
+      ShiftOpc = RISCV::SLLI_UW;
     }
   }
 
@@ -177,8 +215,7 @@ static void generateInstSeqImpl(int64_t Val, const MCSubtargetInfo &STI,
 
   // Skip shift if we were able to use LUI directly.
   if (ShiftAmount) {
-    unsigned Opc = Unsigned ? RISCV::SLLI_UW : RISCV::SLLI;
-    Res.emplace_back(Opc, ShiftAmount);
+    Res.emplace_back(ShiftOpc, ShiftAmount);
   }
 
   if (Lo12)
@@ -329,7 +366,8 @@ InstSeq generateInstSeq(int64_t Val, const MCSubtargetInfo &STI) {
   // If the Low and High halves are the same, use pack. The pack instruction
   // packs the XLEN/2-bit lower halves of rs1 and rs2 into rd, with rs1 in the
   // lower half and rs2 in the upper half.
-  if (Res.size() > 2 && STI.hasFeature(RISCV::FeatureStdExtZbkb)) {
+  if (Res.size() > 2 && (STI.hasFeature(RISCV::FeatureStdExtZbkb) ||
+                         STI.hasFeature(RISCV::FeatureStdExtP))) {
     int64_t LoVal = SignExtend64<32>(Val);
     int64_t HiVal = SignExtend64<32>(Val >> 32);
     if (LoVal == HiVal) {
@@ -562,6 +600,11 @@ OpndKind Inst::getOpndKind() const {
   case RISCV::LUI:
   case RISCV::QC_LI:
   case RISCV::QC_E_LI:
+  case RISCV::PLI_B:
+  case RISCV::PLI_H:
+  case RISCV::PLI_W:
+  case RISCV::PLUI_H:
+  case RISCV::PLUI_W:
     return RISCVMatInt::Imm;
   case RISCV::ADD_UW:
     return RISCVMatInt::RegX0;

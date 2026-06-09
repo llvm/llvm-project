@@ -10,8 +10,8 @@ module {
     fir.has_value %0 : f32
   } loc(#loc4)
 }
-#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer", sizeInBits = 32, encoding = DW_ATE_signed>
-#di_basic_type1 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real", sizeInBits = 32, encoding = DW_ATE_float>
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "integer(kind=4)", sizeInBits = 32, encoding = DW_ATE_signed>
+#di_basic_type1 = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "real(kind=4)", sizeInBits = 32, encoding = DW_ATE_float>
 
 #di_file = #llvm.di_file<"test.f90" in "">
 #di_subroutine_type = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>

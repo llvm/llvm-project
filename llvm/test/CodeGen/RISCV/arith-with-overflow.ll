@@ -2,11 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32I %s
 
-declare {i32, i1} @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
-declare {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 %b)
-declare {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
-declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)
-
 define i1 @sadd(i32 %a, i32 %b, ptr %c) nounwind {
 ; RV32I-LABEL: sadd:
 ; RV32I:       # %bb.0: # %entry
@@ -27,9 +22,9 @@ entry:
 define i1 @ssub(i32 %a, i32 %b, ptr %c) nounwind {
 ; RV32I-LABEL: ssub:
 ; RV32I:       # %bb.0: # %entry
-; RV32I-NEXT:    sgtz a3, a1
+; RV32I-NEXT:    slt a3, a0, a1
 ; RV32I-NEXT:    sub a1, a0, a1
-; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    srli a0, a1, 31
 ; RV32I-NEXT:    xor a0, a3, a0
 ; RV32I-NEXT:    sw a1, 0(a2)
 ; RV32I-NEXT:    ret

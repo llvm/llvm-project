@@ -365,7 +365,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -380,7 +380,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -408,7 +408,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -425,7 +425,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -456,7 +456,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -473,7 +473,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $f12
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s32)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s32)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -547,7 +547,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -562,7 +562,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -590,7 +590,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -607,7 +607,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -638,7 +638,7 @@ body:             |
     ; FP32-NEXT: {{  $}}
     ; FP32-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP32-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP32-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP32-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP32-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
@@ -655,7 +655,7 @@ body:             |
     ; FP64-NEXT: {{  $}}
     ; FP64-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d6
     ; FP64-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[COPY]](s64)
-    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x41E0000000000000
+    ; FP64-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x41E0000000000000
     ; FP64-NEXT: [[FSUB:%[0-9]+]]:_(s64) = G_FSUB [[COPY]], [[C]]
     ; FP64-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FSUB]](s64)
     ; FP64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648

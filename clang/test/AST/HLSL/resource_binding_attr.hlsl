@@ -46,7 +46,7 @@ RWBuffer<float> UAV_Array[10] : register(u10, space6);
 // CHECK: HLSLResourceBindingAttr {{.*}} "c5" "space0"
 float f : register(c5);
 
-// CHECK: VarDecl {{.*}} intv 'hlsl_constant int4':'vector<int hlsl_constant, 4>'
+// CHECK: VarDecl {{.*}} intv 'hlsl_constant int4':'vector<int, 4> hlsl_constant'
 // CHECK: HLSLResourceBindingAttr {{.*}} "c2" "space0"
 int4 intv : register(c2);
 
@@ -92,9 +92,8 @@ cbuffer CB3 {
 StructuredBuffer<float> SB[10];
 
 // CHECK: VarDecl {{.*}} SB2 'StructuredBuffer<float>[10]'
+// CHECK: HLSLVkBindingAttr {{.*}} 2 0
 // DXIL: HLSLResourceBindingAttr {{.*}} Implicit
-// DXIL-NOT: HLSLVkBindingAttr
-// SPV: HLSLVkBindingAttr {{.*}} 2 0
 // SPV-NOT: HLSLResourceBindingAttr {{.*}} Implicit
 [[vk::binding(2)]]
 StructuredBuffer<float> SB2[10];

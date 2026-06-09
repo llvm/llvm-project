@@ -42,29 +42,6 @@ extern cl::opt<unsigned> Verbosity;
 namespace llvm {
 namespace bolt {
 
-/// Returns DWO Name to be used to update DW_AT_dwo_name/DW_AT_GNU_dwo_name
-/// either in CU or TU unit die. Handles case where user specifies output DWO
-/// directory, and there are duplicate names. Assumes DWO ID is unique.
-static std::string
-getDWOName(llvm::DWARFUnit &CU,
-           std::unordered_map<std::string, uint32_t> &NameToIndexMap,
-           std::optional<StringRef> &DwarfOutputPath) {
-  assert(CU.getDWOId() && "DWO ID not found.");
-  std::string DWOName = dwarf::toString(
-      CU.getUnitDIE().find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
-      "");
-  assert(!DWOName.empty() &&
-         "DW_AT_dwo_name/DW_AT_GNU_dwo_name does not exist.");
-  if (DwarfOutputPath) {
-    DWOName = std::string(sys::path::filename(DWOName));
-    uint32_t &Index = NameToIndexMap[DWOName];
-    DWOName.append(std::to_string(Index));
-    ++Index;
-  }
-  DWOName.append(".dwo");
-  return DWOName;
-}
-
 /// Adds a \p Str to .debug_str section.
 /// Uses \p AttrInfoVal to either update entry in a DIE for legacy DWARF using
 /// \p DebugInfoPatcher, or for DWARF5 update an index in .debug_str_offsets
@@ -85,38 +62,31 @@ static void addStringHelper(DebugStrOffsetsWriter &StrOffstsWriter,
 
 std::string DIEBuilder::updateDWONameCompDir(
     DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
-    DWARFUnit &SkeletonCU, std::optional<StringRef> DwarfOutputPath,
-    std::optional<StringRef> DWONameToUse) {
+    DWARFUnit &SkeletonCU, StringRef DwarfOutputPath,
+    const StringRef DWONameToUse) {
   DIE &UnitDIE = *getUnitDIEbyUnit(SkeletonCU);
   DIEValue DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_dwo_name);
   if (!DWONameAttrInfo)
     DWONameAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_GNU_dwo_name);
   if (!DWONameAttrInfo)
     return "";
-  std::string ObjectName;
-  if (DWONameToUse)
-    ObjectName = *DWONameToUse;
-  else
-    ObjectName = getDWOName(SkeletonCU, NameToIndexMap, DwarfOutputPath);
+  std::string ObjectName(DWONameToUse);
   addStringHelper(StrOffstsWriter, StrWriter, *this, UnitDIE, SkeletonCU,
                   DWONameAttrInfo, ObjectName);
 
   DIEValue CompDirAttrInfo = UnitDIE.findAttribute(dwarf::DW_AT_comp_dir);
   assert(CompDirAttrInfo && "DW_AT_comp_dir is not in Skeleton CU.");
 
-  if (DwarfOutputPath) {
-    if (!sys::fs::exists(*DwarfOutputPath))
-      sys::fs::create_directory(*DwarfOutputPath);
+  if (!DwarfOutputPath.empty()) {
     addStringHelper(StrOffstsWriter, StrWriter, *this, UnitDIE, SkeletonCU,
-                    CompDirAttrInfo, *DwarfOutputPath);
+                    CompDirAttrInfo, DwarfOutputPath);
   }
   return ObjectName;
 }
 
 void DIEBuilder::updateDWONameCompDirForTypes(
     DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
-    DWARFUnit &Unit, std::optional<StringRef> DwarfOutputPath,
-    const StringRef DWOName) {
+    DWARFUnit &Unit, StringRef DwarfOutputPath, const StringRef DWOName) {
   for (DWARFUnit *DU : getState().DWARF5TUVector)
     updateDWONameCompDir(StrOffstsWriter, StrWriter, *DU, DwarfOutputPath,
                          DWOName);
@@ -137,13 +107,10 @@ void DIEBuilder::updateReferences() {
                                   DIEInteger(NewAddr));
   }
 
-  // Handling referenes in location expressions.
+  // Handling references in location expressions.
   for (LocWithReference &LocExpr : getState().LocWithReferencesToProcess) {
     SmallVector<uint8_t, 32> Buffer;
-    DataExtractor Data(StringRef((const char *)LocExpr.BlockData.data(),
-                                 LocExpr.BlockData.size()),
-                       LocExpr.U.isLittleEndian(),
-                       LocExpr.U.getAddressByteSize());
+    DataExtractor Data(LocExpr.BlockData, LocExpr.U.isLittleEndian());
     DWARFExpression Expr(Data, LocExpr.U.getAddressByteSize(),
                          LocExpr.U.getFormParams().Format);
     cloneExpression(Data, Expr, LocExpr.U, Buffer, CloneExpressionStage::PATCH);
@@ -316,6 +283,77 @@ void DIEBuilder::buildTypeUnits(DebugStrOffsetsWriter *StrOffsetWriter,
   }
 }
 
+/// Recursively collects type unit signatures from the given DIE and all of its
+/// children.
+///
+/// Note: De-duplication of the collected signatures is handled at the outer
+/// level by registerUnit.
+static void collectReferencedTypeSignatures(DWARFDie Die,
+                                            DenseSet<uint64_t> &ProcessedTU,
+                                            SmallVectorImpl<uint64_t> &TUlist) {
+  SmallVector<DWARFDie, 8> DIElist;
+  DIElist.push_back(Die);
+
+  while (!DIElist.empty()) {
+    DWARFDie Current = DIElist.pop_back_val();
+    if (!Current)
+      continue;
+
+    for (const DWARFAttribute &Attr : Current.attributes()) {
+      if (Attr.Value.getForm() != dwarf::DW_FORM_ref_sig8)
+        continue;
+      if (const std::optional<uint64_t> Signature =
+              Attr.Value.getAsSignatureReference())
+        if (ProcessedTU.insert(*Signature).second)
+          TUlist.push_back(*Signature);
+    }
+
+    for (DWARFDie Child : Current.children())
+      DIElist.push_back(Child);
+  }
+}
+
+void DIEBuilder::buildDWPTypeUnitsForUnit(DWARFUnit &U) {
+  std::unique_lock<std::mutex> LockGuard(BC.getUnitsMutex());
+  // Avoid processing the same type unit multiple times.
+  DenseSet<uint64_t> ProcessedTU;
+  SmallVector<uint64_t, 8> TUlist;
+  // Collecting signatures of type units referenced by this unit.
+  collectReferencedTypeSignatures(U.getUnitDIE(), ProcessedTU, TUlist);
+
+  getState().Type = U.getVersion() < 5 ? ProcessingType::DWARF4TUs
+                                       : ProcessingType::DWARF5TUs;
+  // addressing type units referenced.
+  for (unsigned I = 0; I != TUlist.size(); ++I) {
+    const uint64_t Signature = TUlist[I];
+    DWARFTypeUnit *TU = DwarfContext->getTypeUnitForHash(Signature, true);
+    if (!TU)
+      continue;
+    if (!registerUnit(*TU, false))
+      continue;
+
+    const std::optional<uint32_t> UnitId = getUnitId(*TU);
+    if (!UnitId || getState().CloneUnitCtxMap[*UnitId].IsConstructed)
+      continue;
+
+    collectReferencedTypeSignatures(TU->getUnitDIE(), ProcessedTU, TUlist);
+  }
+
+  // Ensure original order of processing type units
+  auto SortByOffset = [](const DWARFUnit *A, const DWARFUnit *B) {
+    return A->getOffset() < B->getOffset();
+  };
+
+  // For Split DWARF, we have either DWARF4 or DWARF5, they cannot be mixed.
+  std::vector<DWARFUnit *> &TUVec = getState().Type == ProcessingType::DWARF4TUs
+                                        ? getState().DWARF4TUVector
+                                        : getState().DWARF5TUVector;
+  llvm::sort(TUVec, SortByOffset);
+
+  for (DWARFUnit *TU : TUVec)
+    constructFromUnit(*TU);
+}
+
 void DIEBuilder::buildCompileUnits(const bool Init) {
   if (Init)
     BuilderState.reset(new State());
@@ -336,7 +374,7 @@ void DIEBuilder::buildCompileUnits(const bool Init) {
     registerUnit(*DU, false);
   }
 
-  // Using DULIst since it can be modified by cross CU refrence resolution.
+  // Using DULIst since it can be modified by cross CU reference resolution.
   for (DWARFUnit *DU : getState().DUList) {
     if (DU->isTypeUnit())
       continue;
@@ -361,7 +399,11 @@ void DIEBuilder::buildCompileUnits(const std::vector<DWARFUnit *> &CUs) {
 void DIEBuilder::buildDWOUnit(DWARFUnit &U) {
   BuilderState.release();
   BuilderState = std::make_unique<State>();
-  buildTypeUnits(nullptr, false);
+  if (DwarfContext->isDWP()) {
+    buildDWPTypeUnitsForUnit(U);
+  } else {
+    buildTypeUnits(nullptr, false);
+  }
   getState().Type = ProcessingType::CUs;
   registerUnit(U, false);
   constructFromUnit(U);
@@ -508,7 +550,7 @@ void DIEBuilder::finish() {
     UnitStartOffset += CurUnitInfo.UnitLength;
   };
   // Computing offsets for .debug_types section.
-  // It's processed first when CU is registered so will be at the begginnig of
+  // It's processed first when CU is registered so will be at the beginning of
   // the vector.
   uint64_t TypeUnitStartOffset = 0;
   for (DWARFUnit *CU : getState().DUList) {
@@ -708,7 +750,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
          Description.Op[0] == Encoding::BaseTypeRef) ||
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
-         Description.Op[0] != Encoding::Size1))
+         Description.Op[0] != Encoding::Size1 &&
+         Description.Op[0] != Encoding::SizeLEB))
       BC.outs() << "BOLT-WARNING: [internal-dwarf-error]: unsupported DW_OP "
                    "encoding.\n";
 
@@ -716,9 +759,8 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
          Description.Op[0] == Encoding::BaseTypeRef) ||
         (Description.Op.size() == 2 &&
          Description.Op[1] == Encoding::BaseTypeRef &&
-         Description.Op[0] == Encoding::Size1)) {
-      // This code assumes that the other non-typeref operand fits into 1
-      // byte.
+         (Description.Op[0] == Encoding::Size1 ||
+          Description.Op[0] == Encoding::SizeLEB))) {
       assert(OpOffset < Op.getEndOffset());
       const uint32_t ULEBsize = Op.getEndOffset() - OpOffset - 1;
       (void)ULEBsize;
@@ -730,7 +772,9 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
       if (Description.Op.size() == 1) {
         RefOffset = Op.getRawOperand(0);
       } else {
-        OutputBuffer.push_back(Op.getRawOperand(0));
+        const StringRef FirstOpBytes =
+            Data.getData().slice(OpOffset + 1, Op.getOperandEndOffset(0));
+        OutputBuffer.append(FirstOpBytes.begin(), FirstOpBytes.end());
         RefOffset = Op.getRawOperand(1);
       }
       uint32_t Offset = 0;
@@ -794,8 +838,7 @@ void DIEBuilder::cloneBlockAttribute(
   if (DWARFAttribute::mayHaveLocationExpr(AttrSpec.Attr) &&
       (Val.isFormClass(DWARFFormValue::FC_Block) ||
        Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
-    DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
-                       U.isLittleEndian(), U.getAddressByteSize());
+    DataExtractor Data(Bytes, U.isLittleEndian());
     DWARFExpression Expr(Data, U.getAddressByteSize(),
                          U.getFormParams().Format);
     if (cloneExpression(Data, Expr, U, Buffer, CloneExpressionStage::INIT))
@@ -907,6 +950,7 @@ void DIEBuilder::cloneAttribute(
   case dwarf::DW_FORM_ref2:
   case dwarf::DW_FORM_ref4:
   case dwarf::DW_FORM_ref8:
+  case dwarf::DW_FORM_ref_udata:
     cloneDieOffsetReferenceAttribute(Die, U, InputDIE, AttrSpec,
                                      Val.getUnit()->getOffset() +
                                          *Val.getAsRelativeReference());

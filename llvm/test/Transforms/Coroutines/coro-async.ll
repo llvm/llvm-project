@@ -137,19 +137,19 @@ define void @my_async_function_pa(ptr %ctxt, ptr %task, ptr %actor) {
 ; CHECK:   store ptr %async.ctxt, ptr [[CALLEE_CTXT]]
 ; Make sure the spill is underaligned to the max context alignment (16).
 ; CHECK-O0:   [[VECTOR_SPILL:%.*]] = load <4 x double>, ptr {{.*}}
-; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds %my_async_function.Frame, ptr {{.*}}, i32 0, i32 1
+; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr {{.*}}, i64 32
 ; CHECK-O0:   store <4 x double> [[VECTOR_SPILL]], ptr [[VECTOR_SPILL_ADDR]], align 16
 ; CHECK:   tail call swiftcc void @asyncSuspend(ptr nonnull [[CALLEE_CTXT]], ptr %task, ptr %actor)
 ; CHECK:   ret void
 ; CHECK: }
 
-; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr readonly swiftasync captures(none) %0, ptr %1, ptr readnone captures(none) %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr nofree readonly swiftasync captures(none) %0, ptr %1, ptr nofree readnone captures(none) %2)
 ; CHECK-O0-LABEL: define internal swiftcc void @my_async_functionTQ0_(ptr swiftasync %0, ptr %1, ptr %2)
 ; CHECK-SAME: !dbg ![[SP2:[0-9]+]] {
 ; CHECK: entryresume.0:
 ; CHECK:   [[CALLER_CONTEXT:%.*]] = load ptr, ptr %0
 ; CHECK:   [[FRAME_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 128
-; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds %my_async_function.Frame, ptr {{.*}}, i32 0, i32 1
+; CHECK-O0:   [[VECTOR_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr {{.*}}, i64 32
 ; CHECK-O0:   load <4 x double>, ptr [[VECTOR_SPILL_ADDR]], align 16
 ; CHECK:   [[CALLEE_CTXT_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLER_CONTEXT]], i64 160
 ; CHECK:   [[CALLEE_CTXT_RELOAD:%.*]] = load ptr, ptr [[CALLEE_CTXT_SPILL_ADDR]]
@@ -228,7 +228,7 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(ptr nonnull [[CALLEE_CTXT]], ptr %task, ptr %actor)
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(ptr %0, ptr readnone captures(none) %1, ptr readonly captures(none) %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.0(ptr %0, ptr nofree readnone captures(none) %1, ptr nofree readonly captures(none) %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK-SAME: !dbg ![[SP4:[0-9]+]]
 ; CHECK: [[CALLEE_CTXT:%.*]] = load ptr, ptr %2
@@ -238,7 +238,7 @@ entry:
 ; CHECK: tail call swiftcc void @asyncSuspend(ptr [[CALLEE_CTXT_RELOAD]]
 ; CHECK: ret void
 
-; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(ptr readonly captures(none) %0, ptr %1, ptr readnone captures(none) %2)
+; CHECK-LABEL: define internal swiftcc void @my_async_function2.resume.1(ptr nofree readonly captures(none) %0, ptr %1, ptr nofree readnone captures(none) %2)
 ; CHECK-SAME: #[[FRAMEPOINTER]]
 ; CHECK: tail call swiftcc void @asyncReturn({{.*}}%1)
 ; CHECK: ret void

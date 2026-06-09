@@ -20,7 +20,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
@@ -432,12 +431,6 @@ operator<<(raw_ostream &OS,
 }
 
 template <> struct DenseMapInfo<ElementCount, void> {
-  static inline ElementCount getEmptyKey() {
-    return ElementCount::getScalable(~0U);
-  }
-  static inline ElementCount getTombstoneKey() {
-    return ElementCount::getFixed(~0U - 1);
-  }
   static unsigned getHashValue(const ElementCount &EltCnt) {
     unsigned HashVal = EltCnt.getKnownMinValue() * 37U;
     if (EltCnt.isScalable())

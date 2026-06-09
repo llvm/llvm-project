@@ -14,6 +14,7 @@
 
 #include "CIRGenCXXABI.h"
 #include "CIRGenFunction.h"
+#include "CIRGenOpenACCHelpers.h"
 #include "CIRGenOpenACCRecipe.h"
 
 #include "clang/AST/ExprCXX.h"
@@ -60,9 +61,6 @@ class OpenACCClauseCIREmitter final
   // This is necessary since a few of the clauses emit differently based on the
   // directive kind they are attached to.
   OpenACCDirectiveKind dirKind;
-  // TODO(cir): This source location should be able to go away once the NYI
-  // diagnostics are gone.
-  SourceLocation dirLoc;
 
   llvm::SmallVector<mlir::acc::DeviceType> lastDeviceTypeValues;
   // Keep track of the async-clause so that we can shortcut updating the data
@@ -70,10 +68,6 @@ class OpenACCClauseCIREmitter final
   bool hasAsyncClause = false;
   // Keep track of the data operands so that we can update their async clauses.
   llvm::SmallVector<mlir::Operation *> dataOperands;
-
-  void clauseNotImplemented(const OpenACCClause &c) {
-    cgf.cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
-  }
 
   void setLastDeviceTypeClause(const OpenACCDeviceTypeClause &clause) {
     lastDeviceTypeValues.clear();
@@ -96,8 +90,8 @@ class OpenACCClauseCIREmitter final
     mlir::IntegerType targetType = mlir::IntegerType::get(
         &cgf.getMLIRContext(), /*width=*/1,
         mlir::IntegerType::SignednessSemantics::Signless);
-    auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
-        exprLoc, targetType, condition);
+    auto conversionOp = mlir::UnrealizedConversionCastOp::create(
+        builder, exprLoc, targetType, condition);
     return conversionOp.getResult(0);
   }
 
@@ -107,8 +101,8 @@ class OpenACCClauseCIREmitter final
     mlir::IntegerType ty = mlir::IntegerType::get(
         &cgf.getMLIRContext(), width,
         mlir::IntegerType::SignednessSemantics::Signless);
-    auto constOp = builder.create<mlir::arith::ConstantOp>(
-        loc, builder.getIntegerAttr(ty, value));
+    auto constOp = mlir::arith::ConstantOp::create(
+        builder, loc, builder.getIntegerAttr(ty, value));
 
     return constOp;
   }
@@ -116,19 +110,6 @@ class OpenACCClauseCIREmitter final
   mlir::Value createConstantInt(SourceLocation loc, unsigned width,
                                 int64_t value) {
     return createConstantInt(cgf.cgm.getLoc(loc), width, value);
-  }
-
-  mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
-    // '*' case leaves no identifier-info, just a nullptr.
-    if (!ii)
-      return mlir::acc::DeviceType::Star;
-    return llvm::StringSwitch<mlir::acc::DeviceType>(ii->getName())
-        .CaseLower("default", mlir::acc::DeviceType::Default)
-        .CaseLower("host", mlir::acc::DeviceType::Host)
-        .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
-        .CasesLower("nvidia", "acc_device_nvidia",
-                    mlir::acc::DeviceType::Nvidia)
-        .CaseLower("radeon", mlir::acc::DeviceType::Radeon);
   }
 
   mlir::acc::GangArgType decodeGangType(OpenACCGangKind gk) {
@@ -149,7 +130,7 @@ class OpenACCClauseCIREmitter final
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPoint(operation.loopOp);
     OpenACCClauseCIREmitter<mlir::acc::LoopOp> loopEmitter{
-        operation.loopOp, recipeInsertLocation, cgf, builder, dirKind, dirLoc};
+        operation.loopOp, recipeInsertLocation, cgf, builder, dirKind};
     loopEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
     loopEmitter.Visit(&c);
   }
@@ -160,12 +141,7 @@ class OpenACCClauseCIREmitter final
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     builder.setInsertionPoint(operation.computeOp);
     OpenACCClauseCIREmitter<typename OpTy::ComputeOpTy> computeEmitter{
-        operation.computeOp,
-        recipeInsertLocation,
-        cgf,
-        builder,
-        dirKind,
-        dirLoc};
+        operation.computeOp, recipeInsertLocation, cgf, builder, dirKind};
 
     computeEmitter.lastDeviceTypeValues = lastDeviceTypeValues;
 
@@ -182,33 +158,6 @@ class OpenACCClauseCIREmitter final
     dataOperands.append(computeEmitter.dataOperands);
   }
 
-  mlir::acc::DataClauseModifier
-  convertModifiers(OpenACCModifierKind modifiers) {
-    using namespace mlir::acc;
-    static_assert(static_cast<int>(OpenACCModifierKind::Zero) ==
-                      static_cast<int>(DataClauseModifier::zero) &&
-                  static_cast<int>(OpenACCModifierKind::Readonly) ==
-                      static_cast<int>(DataClauseModifier::readonly) &&
-                  static_cast<int>(OpenACCModifierKind::AlwaysIn) ==
-                      static_cast<int>(DataClauseModifier::alwaysin) &&
-                  static_cast<int>(OpenACCModifierKind::AlwaysOut) ==
-                      static_cast<int>(DataClauseModifier::alwaysout) &&
-                  static_cast<int>(OpenACCModifierKind::Capture) ==
-                      static_cast<int>(DataClauseModifier::capture));
-
-    DataClauseModifier mlirModifiers{};
-
-    // The MLIR representation of this represents `always` as `alwaysin` +
-    // `alwaysout`.  So do a small fixup here.
-    if (isOpenACCModifierBitSet(modifiers, OpenACCModifierKind::Always)) {
-      mlirModifiers = mlirModifiers | DataClauseModifier::always;
-      modifiers &= ~OpenACCModifierKind::Always;
-    }
-
-    mlirModifiers = mlirModifiers | static_cast<DataClauseModifier>(modifiers);
-    return mlirModifiers;
-  }
-
   template <typename BeforeOpTy, typename AfterOpTy>
   void addDataOperand(const Expr *varOperand, mlir::acc::DataClause dataClause,
                       OpenACCModifierKind modifiers, bool structured,
@@ -217,8 +166,8 @@ class OpenACCClauseCIREmitter final
         cgf.getOpenACCDataOperandInfo(varOperand);
 
     auto beforeOp =
-        builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
-                                   implicit, opInfo.name, opInfo.bounds);
+        BeforeOpTy::create(builder, opInfo.beginLoc, opInfo.varValue,
+                           structured, implicit, opInfo.name, opInfo.bounds);
     operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
 
     AfterOpTy afterOp;
@@ -231,20 +180,20 @@ class OpenACCClauseCIREmitter final
         // Detach/Delete ops don't have the variable reference here, so they
         // take 1 fewer argument to their build function.
         afterOp =
-            builder.create<AfterOpTy>(opInfo.beginLoc, beforeOp, structured,
-                                      implicit, opInfo.name, opInfo.bounds);
+            AfterOpTy::create(builder, opInfo.beginLoc, beforeOp, structured,
+                              implicit, opInfo.name, opInfo.bounds);
       } else {
-        afterOp = builder.create<AfterOpTy>(
-            opInfo.beginLoc, beforeOp, opInfo.varValue, structured, implicit,
-            opInfo.name, opInfo.bounds);
+        afterOp = AfterOpTy::create(builder, opInfo.beginLoc, beforeOp,
+                                    opInfo.varValue, structured, implicit,
+                                    opInfo.name, opInfo.bounds);
       }
     }
 
     // Set the 'rest' of the info for both operations.
     beforeOp.setDataClause(dataClause);
     afterOp.setDataClause(dataClause);
-    beforeOp.setModifiers(convertModifiers(modifiers));
-    afterOp.setModifiers(convertModifiers(modifiers));
+    beforeOp.setModifiers(convertOpenACCModifiers(modifiers));
+    afterOp.setModifiers(convertOpenACCModifiers(modifiers));
 
     // Make sure we record these, so 'async' values can be updated later.
     dataOperands.push_back(beforeOp.getOperation());
@@ -258,13 +207,13 @@ class OpenACCClauseCIREmitter final
     CIRGenFunction::OpenACCDataOperandInfo opInfo =
         cgf.getOpenACCDataOperandInfo(varOperand);
     auto beforeOp =
-        builder.create<BeforeOpTy>(opInfo.beginLoc, opInfo.varValue, structured,
-                                   implicit, opInfo.name, opInfo.bounds);
+        BeforeOpTy::create(builder, opInfo.beginLoc, opInfo.varValue,
+                           structured, implicit, opInfo.name, opInfo.bounds);
     operation.getDataClauseOperandsMutable().append(beforeOp.getResult());
 
     // Set the 'rest' of the info for the operation.
     beforeOp.setDataClause(dataClause);
-    beforeOp.setModifiers(convertModifiers(modifiers));
+    beforeOp.setModifiers(convertOpenACCModifiers(modifiers));
 
     // Make sure we record these, so 'async' values can be updated later.
     dataOperands.push_back(beforeOp.getOperation());
@@ -368,12 +317,12 @@ public:
                           mlir::OpBuilder::InsertPoint &recipeInsertLocation,
                           CIRGen::CIRGenFunction &cgf,
                           CIRGen::CIRGenBuilderTy &builder,
-                          OpenACCDirectiveKind dirKind, SourceLocation dirLoc)
+                          OpenACCDirectiveKind dirKind)
       : operation(operation), recipeInsertLocation(recipeInsertLocation),
-        cgf(cgf), builder(builder), dirKind(dirKind), dirLoc(dirLoc) {}
+        cgf(cgf), builder(builder), dirKind(dirKind) {}
 
   void VisitClause(const OpenACCClause &clause) {
-    clauseNotImplemented(clause);
+    llvm_unreachable("Unknown/unhandled clause kind");
   }
 
   // The entry point for the CIR emitter. All users should use this rather than
@@ -432,9 +381,7 @@ public:
       // Nothing to do here either, combined constructs are just going to use
       // 'lastDeviceTypeValues' to set the value for the child visitor.
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. routine construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitDeviceTypeClause");
     }
   }
 
@@ -498,9 +445,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain. update construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitAsyncClause");
     }
   }
 
@@ -553,12 +498,15 @@ public:
   }
 
   void VisitIfClause(const OpenACCIfClause &clause) {
-    if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::InitOp,
-                               mlir::acc::ShutdownOp, mlir::acc::SetOp,
-                               mlir::acc::DataOp, mlir::acc::WaitOp,
-                               mlir::acc::HostDataOp, mlir::acc::EnterDataOp,
-                               mlir::acc::ExitDataOp, mlir::acc::UpdateOp>) {
+    if constexpr (isOneOfTypes<
+                      OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
+                      mlir::acc::KernelsOp, mlir::acc::InitOp,
+                      mlir::acc::ShutdownOp, mlir::acc::SetOp,
+                      mlir::acc::DataOp, mlir::acc::WaitOp,
+                      mlir::acc::HostDataOp, mlir::acc::EnterDataOp,
+                      mlir::acc::ExitDataOp, mlir::acc::UpdateOp,
+                      mlir::acc::AtomicReadOp, mlir::acc::AtomicWriteOp,
+                      mlir::acc::AtomicUpdateOp, mlir::acc::AtomicCaptureOp>) {
       operation.getIfCondMutable().append(
           createCondition(clause.getConditionExpr()));
     } else if constexpr (isCombinedType<OpTy>) {
@@ -624,7 +572,7 @@ public:
     } else {
       // TODO: When we've implemented this for everything, switch this to an
       // unreachable. update construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitWaitClause");
     }
   }
 
@@ -643,9 +591,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitSeqClause");
     }
   }
 
@@ -655,9 +601,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine, construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitAutoClause");
     }
   }
 
@@ -667,9 +611,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Routine construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitIndependentClause");
     }
   }
 
@@ -729,9 +671,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitWorkerClause");
     }
   }
 
@@ -747,9 +687,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToLoopOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. Combined constructs remain.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitVectorClause");
     }
   }
 
@@ -797,12 +735,16 @@ public:
             var, mlir::acc::DataClause::acc_copy, clause.getModifierList(),
             /*structured=*/true,
             /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CopyinOp>(
+            var, mlir::acc::DataClause::acc_copy, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitCopyClause");
     }
   }
 
@@ -819,12 +761,16 @@ public:
         addDataOperand<mlir::acc::CopyinOp>(
             var, mlir::acc::DataClause::acc_copyin, clause.getModifierList(),
             /*structured=*/false, /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CopyinOp>(
+            var, mlir::acc::DataClause::acc_copyin, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitCopyInClause");
     }
   }
 
@@ -842,12 +788,16 @@ public:
             var, mlir::acc::DataClause::acc_copyout, clause.getModifierList(),
             /*structured=*/false,
             /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CreateOp>(
+            var, mlir::acc::DataClause::acc_copyout, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitCopyOutClause");
     }
   }
 
@@ -864,12 +814,28 @@ public:
         addDataOperand<mlir::acc::CreateOp>(
             var, mlir::acc::DataClause::acc_create, clause.getModifierList(),
             /*structured=*/false, /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::CreateOp>(
+            var, mlir::acc::DataClause::acc_create, clause.getModifierList(),
+            /*structured=*/true,
+            /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare construct remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitCreateClause");
+    }
+  }
+
+  void VisitLinkClause(const OpenACCLinkClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::DeclareLinkOp>(
+            var, mlir::acc::DataClause::acc_declare_link, {},
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitLinkClause");
     }
   }
 
@@ -918,7 +884,8 @@ public:
 
   void VisitDevicePtrClause(const OpenACCDevicePtrClause &clause) {
     if constexpr (isOneOfTypes<OpTy, mlir::acc::ParallelOp, mlir::acc::SerialOp,
-                               mlir::acc::KernelsOp, mlir::acc::DataOp>) {
+                               mlir::acc::KernelsOp, mlir::acc::DataOp,
+                               mlir::acc::DeclareEnterOp>) {
       for (const Expr *var : clause.getVarList())
         addDataOperand<mlir::acc::DevicePtrOp>(
             var, mlir::acc::DataClause::acc_deviceptr, {},
@@ -927,9 +894,7 @@ public:
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitDevicePtrClause");
     }
   }
 
@@ -954,12 +919,16 @@ public:
         addDataOperand<mlir::acc::PresentOp, mlir::acc::DeleteOp>(
             var, mlir::acc::DataClause::acc_present, {}, /*structured=*/true,
             /*implicit=*/false);
+    } else if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::PresentOp>(
+            var, mlir::acc::DataClause::acc_present, {},
+            /*structured=*/true,
+            /*implicit=*/false);
     } else if constexpr (isCombinedType<OpTy>) {
       applyToComputeOp(clause);
     } else {
-      // TODO: When we've implemented this for everything, switch this to an
-      // unreachable. declare remains.
-      return clauseNotImplemented(clause);
+      llvm_unreachable("Unknown construct kind in VisitPresentClause");
     }
   }
 
@@ -1005,7 +974,7 @@ public:
                       /*temporary=*/nullptr, OpenACCReductionOperator::Invalid,
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
-                      privateOp);
+                      privateOp, /*reductionCombinerRecipes=*/{});
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
           // probably need to change these here.
@@ -1046,7 +1015,7 @@ public:
                       OpenACCReductionOperator::Invalid,
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
-                      firstPrivateOp);
+                      firstPrivateOp, /*reductionCombinerRecipe=*/{});
 
           // TODO: OpenACC: The dialect is going to change in the near future to
           // have these be on a different operation, so when that changes, we
@@ -1088,7 +1057,7 @@ public:
                       /*temporary=*/nullptr, clause.getReductionOp(),
                       Decl::castToDeclContext(cgf.curFuncDecl), opInfo.origType,
                       opInfo.bounds.size(), opInfo.boundTypes, opInfo.baseType,
-                      reductionOp);
+                      reductionOp, varRecipe.CombinerRecipes);
 
           operation.addReduction(builder.getContext(), reductionOp, recipe);
         }
@@ -1101,6 +1070,18 @@ public:
       llvm_unreachable("Unknown construct kind in VisitReductionClause");
     }
   }
+
+  void VisitDeviceResidentClause(const OpenACCDeviceResidentClause &clause) {
+    if constexpr (isOneOfTypes<OpTy, mlir::acc::DeclareEnterOp>) {
+      for (const Expr *var : clause.getVarList())
+        addDataOperand<mlir::acc::DeclareDeviceResidentOp>(
+            var, mlir::acc::DataClause::acc_declare_device_resident, {},
+            /*structured=*/true,
+            /*implicit=*/false);
+    } else {
+      llvm_unreachable("Unknown construct kind in VisitDeviceResidentClause");
+    }
+  }
 };
 
 template <typename OpTy>
@@ -1108,29 +1089,28 @@ auto makeClauseEmitter(OpTy &op,
                        mlir::OpBuilder::InsertPoint &recipeInsertLocation,
                        CIRGen::CIRGenFunction &cgf,
                        CIRGen::CIRGenBuilderTy &builder,
-                       OpenACCDirectiveKind dirKind, SourceLocation dirLoc) {
+                       OpenACCDirectiveKind dirKind) {
   return OpenACCClauseCIREmitter<OpTy>(op, recipeInsertLocation, cgf, builder,
-                                       dirKind, dirLoc);
+                                       dirKind);
 }
 } // namespace
 
 template <typename Op>
 void CIRGenFunction::emitOpenACCClauses(
-    Op &op, OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+    Op &op, OpenACCDirectiveKind dirKind,
     ArrayRef<const OpenACCClause *> clauses) {
   mlir::OpBuilder::InsertionGuard guardCase(builder);
 
   // Sets insertion point before the 'op', since every new expression needs to
   // be before the operation.
   builder.setInsertionPoint(op);
-  makeClauseEmitter(op, lastRecipeLocation, *this, builder, dirKind, dirLoc)
+  makeClauseEmitter(op, lastRecipeLocation, *this, builder, dirKind)
       .emitClauses(clauses);
 }
 
 #define EXPL_SPEC(N)                                                           \
   template void CIRGenFunction::emitOpenACCClauses<N>(                         \
-      N &, OpenACCDirectiveKind, SourceLocation,                               \
-      ArrayRef<const OpenACCClause *>);
+      N &, OpenACCDirectiveKind, ArrayRef<const OpenACCClause *>);
 EXPL_SPEC(mlir::acc::ParallelOp)
 EXPL_SPEC(mlir::acc::SerialOp)
 EXPL_SPEC(mlir::acc::KernelsOp)
@@ -1144,25 +1124,30 @@ EXPL_SPEC(mlir::acc::HostDataOp)
 EXPL_SPEC(mlir::acc::EnterDataOp)
 EXPL_SPEC(mlir::acc::ExitDataOp)
 EXPL_SPEC(mlir::acc::UpdateOp)
+EXPL_SPEC(mlir::acc::AtomicReadOp)
+EXPL_SPEC(mlir::acc::AtomicWriteOp)
+EXPL_SPEC(mlir::acc::AtomicCaptureOp)
+EXPL_SPEC(mlir::acc::AtomicUpdateOp)
+EXPL_SPEC(mlir::acc::DeclareEnterOp)
 #undef EXPL_SPEC
 
 template <typename ComputeOp, typename LoopOp>
 void CIRGenFunction::emitOpenACCClauses(
     ComputeOp &op, LoopOp &loopOp, OpenACCDirectiveKind dirKind,
-    SourceLocation dirLoc, ArrayRef<const OpenACCClause *> clauses) {
+    ArrayRef<const OpenACCClause *> clauses) {
   static_assert(std::is_same_v<mlir::acc::LoopOp, LoopOp>);
 
   CombinedConstructClauseInfo<ComputeOp> inf{op, loopOp};
   // We cannot set the insertion point here and do so in the emitter, but make
   // sure we reset it with the 'guard' anyway.
   mlir::OpBuilder::InsertionGuard guardCase(builder);
-  makeClauseEmitter(inf, lastRecipeLocation, *this, builder, dirKind, dirLoc)
+  makeClauseEmitter(inf, lastRecipeLocation, *this, builder, dirKind)
       .emitClauses(clauses);
 }
 
 #define EXPL_SPEC(N)                                                           \
   template void CIRGenFunction::emitOpenACCClauses<N, mlir::acc::LoopOp>(      \
-      N &, mlir::acc::LoopOp &, OpenACCDirectiveKind, SourceLocation,          \
+      N &, mlir::acc::LoopOp &, OpenACCDirectiveKind,                          \
       ArrayRef<const OpenACCClause *>);
 
 EXPL_SPEC(mlir::acc::ParallelOp)

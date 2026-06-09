@@ -25,8 +25,9 @@ include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorRegions",
-         "getRegionInvocationBounds"]>,
+        ["getEntrySuccessorOperands",
+         "getRegionInvocationBounds",
+         "getSuccessorInputs"]>,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      IsolatedFromAbove, PossibleTopLevelTransformOpTrait,
@@ -624,7 +625,7 @@ def ForeachOp : TransformDialectOp<"foreach",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-         "getSuccessorRegions", "getEntrySuccessorOperands"]>,
+         "getEntrySuccessorOperands", "getSuccessorInputs"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
   let summary = "Executes the body for each element of the payload";
@@ -1137,6 +1138,23 @@ def ParamConstantOp : Op<Transform_Dialect, "param.constant", [
   let assemblyFormat = "$value attr-dict `->` type($param)";
 }
 
+def PayloadOp : Op<Transform_Dialect, "payload",
+                   [NoTerminator, NoRegionArguments,
+                    DeclareOpInterfaceMethods<NormalFormCheckedOpInterface>]> {
+  let summary = "Optional container for transform payloads";
+  let description = [{
+    Contains payload operations on which transforms operate and serves as a
+    storage location for information between multiple transform invocations.
+
+    The operations contained in this payload must satisfy the normal forms specified by the `normal_forms` attribute.
+  }];
+  let regions = (region AnyRegion:$body);
+  let arguments =
+      (ins TypedArrayAttrBase<NormalFormAttrInterface,
+                              "normal form attributes">:$normal_forms);
+  let assemblyFormat = "attr-dict-with-keyword regions";
+}
+
 def PrintOp : TransformDialectOp<"print",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -1237,8 +1255,9 @@ def SelectOp : TransformDialectOp<"select",
 
 def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorRegions",
-         "getRegionInvocationBounds"]>,
+        ["getEntrySuccessorOperands",
+         "getRegionInvocationBounds",
+         "getSuccessorInputs"]>,
      MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,

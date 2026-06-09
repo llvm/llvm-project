@@ -35,8 +35,8 @@ public:
 
   const RISCVSubtarget &getSubtarget() const { return Subtarget; }
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
                              unsigned AS,
@@ -71,7 +71,10 @@ public:
 
   bool preferScalarizeSplat(SDNode *N) const override;
 
-  bool softPromoteHalfType() const override { return true; }
+  void finalizeLowering(MachineFunction &MF) const override;
+
+  /// Customize the preferred legalization strategy for certain types.
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
   /// Return the register type for a given MVT, ensuring vectors are treated
   /// as a series of gpr sized integers.
@@ -88,12 +91,6 @@ public:
   unsigned getNumRegistersForCallingConv(LLVMContext &Context,
                                          CallingConv::ID CC,
                                          EVT VT) const override;
-
-  unsigned getVectorTypeBreakdownForCallingConv(LLVMContext &Context,
-                                                CallingConv::ID CC, EVT VT,
-                                                EVT &IntermediateVT,
-                                                unsigned &NumIntermediates,
-                                                MVT &RegisterVT) const override;
 
   bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
                                             unsigned SelectOpcode, SDValue X,
@@ -149,6 +146,12 @@ public:
                                      const APInt &DemandedElts,
                                      const SelectionDAG &DAG,
                                      unsigned Depth) const override;
+
+  void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis, Register R,
+                                      KnownBits &Known,
+                                      const APInt &DemandedElts,
+                                      const MachineRegisterInfo &MRI,
+                                      unsigned Depth = 0) const override;
   unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
@@ -160,11 +163,9 @@ public:
                                          TargetLoweringOpt &TLO,
                                          unsigned Depth) const override;
 
-  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
-                                           const APInt &DemandedElts,
-                                           const SelectionDAG &DAG,
-                                           bool PoisonOnly, bool ConsiderFlags,
-                                           unsigned Depth) const override;
+  bool canCreateUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const override;
 
   const Constant *getTargetConstantFromLoad(LoadSDNode *LD) const override;
 
@@ -245,6 +246,7 @@ public:
   }
 
   ISD::NodeType getExtendForAtomicCmpSwapArg() const override;
+  ISD::NodeType getExtendForAtomicRMWArg(unsigned Op) const override;
 
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override;
@@ -311,13 +313,13 @@ public:
                                    SDValue ConstNode) const override;
 
   TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
   Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,
                                       Value *AlignedAddr, Value *Incr,
                                       Value *Mask, Value *ShiftAmt,
                                       AtomicOrdering Ord) const override;
   TargetLowering::AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
+  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *CI) const override;
   Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilderBase &Builder,
                                           AtomicCmpXchgInst *CI,
                                           Value *AlignedAddr, Value *CmpVal,
@@ -394,8 +396,6 @@ public:
                                           unsigned uid,
                                           MCContext &Ctx) const override;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override;
-
   bool getIndexedAddressParts(SDNode *Op, SDValue &Base, SDValue &Offset,
                               ISD::MemIndexedMode &AM, SelectionDAG &DAG) const;
   bool getPreIndexedAddressParts(SDNode *N, SDValue &Base, SDValue &Offset,
@@ -413,7 +413,8 @@ public:
 
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.
-  Value *getIRStackGuard(IRBuilderBase &IRB) const override;
+  Value *getIRStackGuard(IRBuilderBase &IRB,
+                         const LibcallLoweringInfo &Libcalls) const override;
 
   /// Returns whether or not generating a interleaved load/store intrinsic for
   /// this type will be legal.
@@ -424,6 +425,10 @@ public:
   /// Return true if a stride load store of the given result type and
   /// alignment is legal.
   bool isLegalStridedLoadStore(EVT DataType, Align Alignment) const;
+
+  /// Return true if a fault-only-first load of the given result type and
+  /// alignment is legal.
+  bool isLegalFirstFaultLoad(EVT DataType, Align Alignment) const;
 
   unsigned getMaxSupportedInterleaveFactor() const override { return 8; }
 
@@ -439,7 +444,8 @@ public:
                              const APInt &GapMask) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI) const override;
+                                        IntrinsicInst *DI,
+                                        const APInt &GapMask) const override;
 
   bool lowerInterleaveIntrinsicToStore(
       Instruction *Store, Value *Mask,
@@ -464,6 +470,13 @@ public:
 
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
 
+  bool shouldFoldMaskToVariableShiftPair(SDValue Y) const override;
+
+  /// Control the following reassociation of operands: (op (op x, c1), y) -> (op
+  /// (op x, y), c1) where N0 is (op x, c1) and N1 is y.
+  bool isReassocProfitable(SelectionDAG &DAG, SDValue N0,
+                           SDValue N1) const override;
+
   /// Match a mask which "spreads" the leading elements of a vector evenly
   /// across the result.  Factor is the spread amount, and Index is the
   /// offset applied.
@@ -471,14 +484,6 @@ public:
                            unsigned &Index);
 
 private:
-  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
-                        const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
-                        RISCVCCAssignFn Fn) const;
-  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
-                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                         bool IsRet, CallLoweringInfo *CLI,
-                         RISCVCCAssignFn Fn) const;
-
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true,
                   bool IsExternWeak = false) const;
@@ -504,9 +509,9 @@ private:
   SDValue lowerVectorMaskSplat(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorMaskExt(SDValue Op, SelectionDAG &DAG,
                              int64_t ExtTrueVal) const;
-  SDValue lowerVectorMaskTruncLike(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorTruncLike(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVectorFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorMaskTrunc(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorTrunc(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVectorFPExtendOrRound(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
@@ -538,14 +543,9 @@ private:
   SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerLogicVPOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPExtMaskOp(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPSetCCMaskOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPMergeMask(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPSplatExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPSpliceExperimental(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPReverseExperimental(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPStridedStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPCttzElements(SDValue Op, SelectionDAG &DAG) const;
@@ -559,7 +559,7 @@ private:
   SDValue lowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCTLZ_CTTZ_ZERO_POISON(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerStrictFPExtendOrRoundLike(SDValue Op, SelectionDAG &DAG) const;
 
@@ -570,9 +570,13 @@ private:
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue expandUnalignedVPLoad(SDValue Op, SelectionDAG &DAG) const;
+  SDValue expandUnalignedVPStore(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerXAndesBfHCvtBFloat16Load(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXAndesBfHCvtBFloat16Store(SDValue Op, SelectionDAG &DAG) const;

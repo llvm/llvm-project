@@ -83,7 +83,7 @@ static cl::opt<unsigned>
 // ICP the candidate function even when only a declaration is present.
 static cl::opt<bool> ICPAllowDecls(
     "icp-allow-decls", cl::init(false), cl::Hidden,
-    cl::desc("Promote the target candidate even when the defintion "
+    cl::desc("Promote the target candidate even when the definition "
              " is not available"));
 
 // ICP hot candidate functions only. When setting to false, non-cold functions
@@ -213,12 +213,11 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
                                              uint32_t AddressPointOffset) {
   Module &M = *VTable->getParent();
   LLVMContext &Context = M.getContext();
-  assert(AddressPointOffset <
-             M.getDataLayout().getTypeAllocSize(VTable->getValueType()) &&
+  assert(AddressPointOffset < VTable->getGlobalSize(M.getDataLayout()) &&
          "Out-of-bound access");
 
-  return ConstantExpr::getInBoundsGetElementPtr(
-      Type::getInt8Ty(Context), VTable,
+  return ConstantExpr::getInBoundsPtrAdd(
+      VTable,
       llvm::ConstantInt::get(Type::getInt32Ty(Context), AddressPointOffset));
 }
 
@@ -642,9 +641,9 @@ Instruction *IndirectCallPromoter::computeVTableInfos(
       continue;
 
     auto &Candidate = Candidates[CalleeIndexIter->second];
-    // There shouldn't be duplicate GUIDs in one !prof metadata (except
-    // duplicated zeros), so assign counters directly won't cause overwrite or
-    // counter loss.
+    // There should never be duplicate GUIDs in one !prof metdata, as this is
+    // an IR invariant enforced by the verifier. Assigning counters directly
+    // won't cause overwrite or counter loss.
     Candidate.VTableGUIDAndCounts[VTableVal] = V.Count;
     Candidate.AddressPoints.push_back(
         getOrCreateVTableAddressPointVar(VTableVar, AddressPointOffset));

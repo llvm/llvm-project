@@ -1,0 +1,574 @@
+//===--- Level Zero Target RTL Implementation -----------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// GenericDevice instatiation for SPIR-V/Xe machine.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEVICE_H
+#define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEVICE_H
+
+#include "llvm/ADT/SmallVector.h"
+
+#include "PerThreadTable.h"
+
+#include "L0CmdListManager.h"
+#include "L0Context.h"
+#include "L0Program.h"
+#include "L0Queue.h"
+#include "PluginInterface.h"
+
+namespace llvm::omp::target::plugin {
+
+using OmpInteropTy = omp_interop_val_t *;
+class LevelZeroPluginTy;
+
+// clang-format off
+enum class PCIIdTy : int32_t {
+  None            = 0x0000,
+  SKL             = 0x1900,
+  KBL             = 0x5900,
+  CFL             = 0x3E00,
+  CFL_2           = 0x9B00,
+  ICX             = 0x8A00,
+  TGL             = 0xFF20,
+  TGL_2           = 0x9A00,
+  DG1             = 0x4900,
+  RKL             = 0x4C00,
+  ADLS            = 0x4600,
+  RTL             = 0xA700,
+  MTL             = 0x7D00,
+  PVC             = 0x0B00,
+  DG2_ATS_M       = 0x4F00,
+  DG2_ATS_M_2     = 0x5600,
+  LNL             = 0x6400,
+  BMG             = 0xE200,
+};
+
+/// Device type enumeration common to compiler and runtime.
+enum class DeviceArchTy : uint64_t {
+  DeviceArch_None   = 0,
+  DeviceArch_Gen    = 0x0001, // Gen 9, Gen 11 or Xe
+  DeviceArch_XeLPG  = 0x0002,
+  DeviceArch_XeHPC  = 0x0004,
+  DeviceArch_XeHPG  = 0x0008,
+  DeviceArch_Xe2LP  = 0x0010,
+  DeviceArch_Xe2HP  = 0x0020,
+  DeviceArch_x86_64 = 0x0100
+};
+// clang-format on
+
+struct L0DeviceIdTy {
+  ze_device_handle_t zeId;
+  int32_t RootId;
+  int32_t SubId;
+  int32_t CCSId;
+
+  L0DeviceIdTy(ze_device_handle_t Device, int32_t RootId, int32_t SubId = -1,
+               int32_t CCSId = -1)
+      : zeId(Device), RootId(RootId), SubId(SubId), CCSId(CCSId) {}
+};
+
+class L0DeviceTy final : public GenericDeviceTy {
+  // Level Zero Context for this Device.
+  L0ContextTy &l0Context;
+
+  // Level Zero handle  for this Device.
+  ze_device_handle_t zeDevice;
+  // Device Properties.
+  ze_device_properties_t DeviceProperties{};
+  ze_device_compute_properties_t ComputeProperties{};
+  ze_device_memory_properties_t MemoryProperties{};
+  ze_device_cache_properties_t CacheProperties{};
+  ze_device_module_properties_t ModuleProperties{};
+
+  /// Devices' default target allocation kind for internal allocation.
+  int32_t AllocKind = TARGET_ALLOC_DEVICE;
+
+  DeviceArchTy DeviceArch = DeviceArchTy::DeviceArch_None;
+
+  std::string DeviceName;
+
+  /// Common indirect access flags for this device.
+  ze_kernel_indirect_access_flags_t IndirectAccessFlags = 0;
+
+  /// Device UUID for toplevel devices only.
+  std::string DeviceUuid;
+
+  /// L0 Device ID as string.
+  std::string zeId;
+
+  /// Command queue group ordinals for each device.
+  static constexpr uint32_t MaxOrdinal =
+      std::numeric_limits<decltype(MaxOrdinal)>::max();
+  std::pair<uint32_t, uint32_t> ComputeOrdinal{MaxOrdinal, 0};
+
+  /// Command queue index for each device.
+  uint32_t ComputeIndex = 0;
+
+  /// Whether the device supports cooperative kernels.
+  bool SupportsCooperativeKernels = false;
+
+  /// Lock for this device.
+  std::mutex Mutex;
+
+  /// Contains all modules (possibly from multiple device images) to handle
+  /// dynamic link across multiple images
+  llvm::SmallVector<ze_module_handle_t> GlobalModules;
+
+  /// L0 programs created for this device
+  std::list<L0ProgramTy> Programs;
+
+  /// MemAllocator for this device.
+  MemAllocatorTy MemAllocator;
+
+  /// Cache of queues for this device.
+  L0QueueCacheTy QueueCache;
+
+  DeviceArchTy computeArch() const;
+
+  /// Get default compute group ordinal. Returns Ordinal-NumQueues pair.
+  std::pair<uint32_t, uint32_t> findComputeOrdinal();
+
+  /// Helper function to call global constructors or destructors.
+  Error callGlobalCtorDtorCommon(GenericPluginTy &Plugin, DeviceImageTy &Image,
+                                 bool IsCtor);
+
+  /// Check if device supports cooperative kernels.
+  bool checkCooperativeKernelSupport();
+
+public:
+  L0DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId, int32_t NumDevices,
+             ze_device_handle_t zeDevice, L0ContextTy &DriverInfo,
+             const std::string_view zeId, int32_t ComputeIndex)
+      : GenericDeviceTy(Plugin, DeviceId, NumDevices, SPIRVGridValues),
+        l0Context(DriverInfo), zeDevice(zeDevice), zeId(zeId),
+        ComputeIndex(ComputeIndex), QueueCache(*this) {
+    DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+    DeviceProperties.pNext = nullptr;
+    ComputeProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_COMPUTE_PROPERTIES;
+    ComputeProperties.pNext = nullptr;
+    MemoryProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_MEMORY_PROPERTIES;
+    MemoryProperties.pNext = nullptr;
+    CacheProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_CACHE_PROPERTIES;
+    CacheProperties.pNext = nullptr;
+    ModuleProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_MODULE_PROPERTIES;
+    ModuleProperties.pNext = nullptr;
+  }
+
+  static L0DeviceTy &makeL0Device(GenericDeviceTy &Device) {
+    return static_cast<L0DeviceTy &>(Device);
+  }
+  LevelZeroPluginTy &getPlugin() {
+    return reinterpret_cast<LevelZeroPluginTy &>(Plugin);
+  }
+
+  Error setContext() override { return Plugin::success(); }
+  Error initImpl(GenericPluginTy &Plugin) override;
+  Error deinitImpl() override;
+  ze_device_handle_t getZeDevice() const { return zeDevice; }
+
+  bool supportsCooperativeKernels() const { return SupportsCooperativeKernels; }
+
+  const L0ContextTy &getL0Context() const { return l0Context; }
+  L0ContextTy &getL0Context() { return l0Context; }
+
+  const std::string_view getName() const { return DeviceName; }
+  const char *getNameCStr() const { return DeviceName.c_str(); }
+
+  const char *getArchCStr() const;
+
+  const std::string_view getZeId() const { return zeId; }
+  const char *getZeIdCStr() const { return zeId.c_str(); }
+
+  std::mutex &getMutex() { return Mutex; }
+
+  uint32_t getComputeIndex() const { return ComputeIndex; }
+  ze_kernel_indirect_access_flags_t getIndirectFlags() const {
+    return IndirectAccessFlags;
+  }
+
+  size_t getNumGlobalModules() const { return GlobalModules.size(); }
+  void addGlobalModule(ze_module_handle_t Module) {
+    GlobalModules.push_back(Module);
+  }
+  ze_module_handle_t *getGlobalModulesArray() { return GlobalModules.data(); }
+
+  L0ProgramTy *getProgramFromImage(MemoryBufferRef Image) {
+    for (auto &PGM : Programs)
+      if (PGM.getMemoryBuffer() == Image)
+        return &PGM;
+    return nullptr;
+  }
+
+  Error buildAllKernels() {
+    for (auto &PGM : Programs) {
+      if (auto Err = PGM.loadModuleKernels())
+        return Err;
+    }
+    return Plugin::success();
+  }
+
+  // add a new program to the device. Return a reference to the new program.
+  Expected<L0ProgramTy &> addProgram(int32_t ImageId,
+                                     L0ProgramBuilderTy &Builder) {
+    auto ImageOrErr = Builder.getELF();
+    if (!ImageOrErr)
+      return ImageOrErr.takeError();
+    Programs.emplace_back(ImageId, *this, std::move(*ImageOrErr),
+                          Builder.getGlobalModule(),
+                          std::move(Builder.getModules()));
+    return Programs.back();
+  }
+
+  const L0ProgramTy &getLastProgram() const { return Programs.back(); }
+  L0ProgramTy &getLastProgram() { return Programs.back(); }
+  // Device properties getters.
+  uint32_t getVendorId() const { return DeviceProperties.vendorId; }
+  bool isGPU() const { return DeviceProperties.type == ZE_DEVICE_TYPE_GPU; }
+
+  uint32_t getPCIId() const { return DeviceProperties.deviceId; }
+  uint32_t getNumThreadsPerEU() const {
+    return DeviceProperties.numThreadsPerEU;
+  }
+  uint32_t getSIMDWidth() const { return DeviceProperties.physicalEUSimdWidth; }
+  uint32_t getNumEUsPerSubslice() const {
+    return DeviceProperties.numEUsPerSubslice;
+  }
+  uint32_t getNumSubslicesPerSlice() const {
+    return DeviceProperties.numSubslicesPerSlice;
+  }
+  uint32_t getNumSlices() const { return DeviceProperties.numSlices; }
+  uint32_t getNumSubslices() const {
+    return DeviceProperties.numSubslicesPerSlice * DeviceProperties.numSlices;
+  }
+  uint32_t getNumEUs() const {
+    return DeviceProperties.numEUsPerSubslice * getNumSubslices();
+  }
+  uint32_t getTotalThreads() const {
+    return DeviceProperties.numThreadsPerEU * getNumEUs();
+  }
+  uint32_t getNumThreadsPerSubslice() const {
+    return getNumEUsPerSubslice() * getNumThreadsPerEU();
+  }
+  uint32_t getClockRate() const { return DeviceProperties.coreClockRate; }
+
+  uint32_t getMaxSharedLocalMemory() const {
+    return ComputeProperties.maxSharedLocalMemory;
+  }
+  uint32_t getMaxGroupSize() const {
+    return ComputeProperties.maxTotalGroupSize;
+  }
+  uint32_t getMaxGroupCount() const {
+    return getMaxGroupCountX() * getMaxGroupCountY() * getMaxGroupCountZ();
+  }
+
+  uint32_t getMaxGroupSizeX() const { return ComputeProperties.maxGroupSizeX; }
+  uint32_t getMaxGroupSizeY() const { return ComputeProperties.maxGroupSizeY; }
+  uint32_t getMaxGroupSizeZ() const { return ComputeProperties.maxGroupSizeZ; }
+  uint32_t getMaxGroupCountX() const {
+    return ComputeProperties.maxGroupCountX;
+  }
+  uint32_t getMaxGroupCountY() const {
+    return ComputeProperties.maxGroupCountY;
+  }
+  uint32_t getMaxGroupCountZ() const {
+    return ComputeProperties.maxGroupCountZ;
+  }
+  uint32_t getMemoryClockRate() const { return MemoryProperties.maxClockRate; }
+  uint64_t getGlobalMemorySize() const { return MemoryProperties.totalSize; }
+  size_t getCacheSize() const { return CacheProperties.cacheSize; }
+  uint64_t getMaxMemAllocSize() const {
+    return DeviceProperties.maxMemAllocSize;
+  }
+
+  bool supportsFP64() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP64;
+  }
+
+  bool supportsFP16() const {
+    return ModuleProperties.flags & ZE_DEVICE_MODULE_FLAG_FP16;
+  }
+
+  ze_device_fp_flags_t getFP64Flags() const {
+    return ModuleProperties.fp64flags;
+  }
+
+  ze_device_fp_flags_t getFP16Flags() const {
+    return ModuleProperties.fp16flags;
+  }
+
+  ze_device_fp_flags_t getFP32Flags() const {
+    return ModuleProperties.fp32flags;
+  }
+
+  int32_t getAllocKind() const { return AllocKind; }
+  DeviceArchTy getDeviceArch() const { return DeviceArch; }
+  bool isDeviceArch(DeviceArchTy Arch) const { return DeviceArch == Arch; }
+
+  static bool isDiscrete(uint32_t PCIId) {
+    switch (static_cast<PCIIdTy>(PCIId & 0xFF00)) {
+    case PCIIdTy::DG1:
+    case PCIIdTy::PVC:
+    case PCIIdTy::DG2_ATS_M:
+    case PCIIdTy::DG2_ATS_M_2:
+    case PCIIdTy::BMG:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool isDiscrete(ze_device_handle_t Device) {
+    ze_device_properties_t PR{};
+    PR.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
+    PR.pNext = nullptr;
+    CALL_ZE_RET(false, zeDeviceGetProperties, Device, &PR);
+    return isDiscrete(PR.deviceId);
+  }
+
+  bool isDiscreteDevice() { return isDiscrete(getPCIId()); }
+  bool isDeviceIPorNewer(uint32_t Version) const;
+
+  const std::string_view getUuid() const { return DeviceUuid; }
+
+  uint32_t getComputeEngine() const { return ComputeOrdinal.first; }
+  uint32_t getNumComputeQueues() const { return ComputeOrdinal.second; }
+
+  void reportDeviceInfo() const;
+
+  /// Create an immediate command list.
+  Expected<ze_command_list_handle_t>
+  createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder = false);
+
+  /// Create an immediate command list for computing.
+  Expected<ze_command_list_handle_t> createImmCmdList(bool InOrder = false) {
+    return createImmCmdList(getComputeEngine(), getComputeIndex(), InOrder);
+  }
+
+  /// Release an immediate command list.
+  Error releaseImmCmdList(ze_command_list_handle_t CmdList) {
+    CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+    return Plugin::success();
+  }
+
+  Expected<L0CmdListManagerTy *> getCmdListManager(bool InOrder = false) {
+    auto CmdListOrErr = createImmCmdList(InOrder);
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    return new L0CmdListManagerTy(*CmdListOrErr);
+  }
+
+  Error releaseCmdListManager(L0CmdListManagerTy *CmndListMngr) {
+    if (CmndListMngr) {
+      auto CmdList = CmndListMngr->getCmdList();
+      CALL_ZE_RET_ERROR(zeCommandListDestroy, CmdList);
+      delete CmndListMngr;
+    }
+    return Plugin::success();
+  }
+
+  /// Enqueue non-blocking memory copy.
+  Error enqueueMemCopy(void *Dst, const void *Src, size_t Size,
+                       __tgt_async_info *AsyncInfo) {
+    auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+    if (!QueueOrErr)
+      return QueueOrErr.takeError();
+    L0QueueTy *Queue = *QueueOrErr;
+    return Queue->memoryCopy(Dst, Src, Size);
+  }
+
+  Error enqueueMemCopyAndSync(void *Dst, const void *Src, size_t Size) {
+    __tgt_async_info AsyncInfo;
+    if (auto Err = enqueueMemCopy(Dst, Src, Size, &AsyncInfo)) {
+      releaseQueue(static_cast<L0QueueTy *>(AsyncInfo.Queue));
+      return Err;
+    }
+    return synchronize(&AsyncInfo);
+  }
+
+  /// Enqueue fill command.
+  Error enqueueMemFill(void *Ptr, const void *Pattern, size_t PatternSize,
+                       size_t Size, __tgt_async_info *AsyncInfo);
+  Error enqueueMemFillAndSync(void *Ptr, const void *Pattern,
+                              size_t PatternSize, size_t Size) {
+    __tgt_async_info AsyncInfo;
+    if (auto Err =
+            enqueueMemFill(Ptr, Pattern, PatternSize, Size, &AsyncInfo)) {
+      releaseQueue(static_cast<L0QueueTy *>(AsyncInfo.Queue));
+      return Err;
+    }
+    return synchronize(&AsyncInfo);
+  }
+
+  /// Driver related functions.
+
+  /// Reurn the driver handle for this device.
+  ze_driver_handle_t getZeDriver() const { return l0Context.getZeDriver(); }
+
+  /// Return context for this device.
+  ze_context_handle_t getZeContext() const { return l0Context.getZeContext(); }
+
+  /// Return driver API version for this device.
+  ze_api_version_t getDriverAPIVersion() const {
+    return l0Context.getDriverAPIVersion();
+  }
+
+  /// Get a low-level L0 event from the driver associated to this device.
+  Expected<ze_event_handle_t> getEvent() {
+    return l0Context.getEventPool().getEvent();
+  }
+  /// Get a high-level L0EventTy object from the driver associated to this
+  /// device.
+  Expected<L0EventTy *> getEventObject() {
+    return l0Context.getEventPool().getEventObject();
+  }
+
+  /// Release a L0 event to the pool associated to this device.
+  Error releaseEvent(ze_event_handle_t Event) {
+    return l0Context.getEventPool().releaseEvent(Event);
+  }
+  /// Release an L0EventTy object to the pool associated to this device.
+  Error releaseEventObject(L0EventTy *EventObj) {
+    return l0Context.getEventPool().releaseEventObject(EventObj);
+  }
+
+  StagingBufferTy &getStagingBuffer() { return l0Context.getStagingBuffer(); }
+
+  bool supportsLargeMem() const { return l0Context.supportsLargeMem(); }
+
+  /// Returns the Queue from an async info object, or creates a new one if
+  /// the async info does not have a queue yet.
+  Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
+  void releaseQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+
+  // Allocation related routines.
+
+  /// Data alloc.
+  Expected<void *> dataAlloc(
+      size_t Size, size_t Align, int32_t Kind, intptr_t Offset, bool UserAlloc,
+      bool DevMalloc = false,
+      uint32_t MemAdvice = std::numeric_limits<decltype(MemAdvice)>::max(),
+      AllocOptionTy AllocOpt = AllocOptionTy::ALLOC_OPT_NONE);
+
+  /// Data delete.
+  Error dataDelete(void *Ptr);
+
+  /// Return the memory allocation type for the specified memory location.
+  uint32_t getMemAllocType(const void *Ptr) const;
+
+  const MemAllocatorTy &getDeviceMemAllocator() const { return MemAllocator; }
+  MemAllocatorTy &getDeviceMemAllocator() { return MemAllocator; }
+
+  MemAllocatorTy &getMemAllocator(int32_t Kind) {
+    if (Kind == TARGET_ALLOC_HOST)
+      return l0Context.getHostMemAllocator();
+    return getDeviceMemAllocator();
+  }
+
+  MemAllocatorTy &getMemAllocator(const void *Ptr) {
+    if (ZE_MEMORY_TYPE_HOST == getMemAllocType(Ptr))
+      return l0Context.getHostMemAllocator();
+    return getDeviceMemAllocator();
+  }
+
+  Error makeMemoryResident(void *Mem, size_t Size);
+
+  // Generic device interface implementation.
+  Expected<DeviceImageTy *>
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
+                 int32_t ImageId) override;
+  Error unloadBinaryImpl(DeviceImageTy *Image) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr,
+                            TargetAllocTy Kind) override;
+  Error free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) override;
+
+  /// This plugin does nothing to lock buffers. Do not return an error, just
+  /// return the same pointer as the device pointer.
+  Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
+    return HstPtr;
+  }
+  Error dataUnlockImpl(void *HstPtr) override { return Plugin::success(); }
+
+  Expected<bool> isPinnedPtrImpl(void *, void *&, void *&,
+                                 size_t &) const override {
+    // Don't need to do anything, this is handled by the driver.
+    return false;
+  }
+
+  Expected<bool> isAccessiblePtrImpl(const void *Ptr, size_t Size) override;
+  Error dataFence(__tgt_async_info *Async) override;
+  Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
+                     int64_t Size,
+                     AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool ReleaseQueue) override;
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                       bool *IsQueueWorkCompleted) override;
+  Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataRetrieveImpl(void *HstPtr, const void *TgtPtr, int64_t Size,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
+                         void *DstPtr, int64_t Size,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Expected<bool>
+  hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+
+  Error enqueueHostCallImpl(void (*Callback)(void *), void *UserData,
+                            AsyncInfoWrapperTy &AsyncInfo) override {
+    return Plugin::error(ErrorCode::UNIMPLEMENTED,
+                         "enqueueHostCallImpl not implemented yet");
+  }
+
+  Expected<bool> isEventCompleteImpl(void *EventPtr,
+                                     AsyncInfoWrapperTy &) override;
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override;
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override;
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override;
+  Error waitEventImpl(void *EventPtr,
+                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error syncEventImpl(void *EventPtr) override;
+  Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
+                                          void *EndEventPtr) override;
+
+  Expected<InfoTreeNode> obtainInfoImpl() override;
+  uint64_t getClockFrequency() const override { return getClockRate(); }
+  uint64_t getHardwareParallelism() const override { return getTotalThreads(); }
+  Error getDeviceMemorySize(uint64_t &DSize) override {
+    DSize = getGlobalMemorySize();
+    return Plugin::success();
+  }
+
+  Error getDeviceStackSize(uint64_t &V) override {
+    V = 0;
+    return Plugin::success();
+  }
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override;
+
+  Error callGlobalConstructors(GenericPluginTy &Plugin,
+                               DeviceImageTy &Image) override;
+
+  Error callGlobalDestructors(GenericPluginTy &Plugin,
+                              DeviceImageTy &Image) override;
+
+  Error setDeviceStackSize(uint64_t V) override { return Plugin::success(); }
+
+  Expected<omp_interop_val_t *>
+  createInterop(int32_t InteropType, interop_spec_t &InteropSpec) override;
+  Error releaseInterop(omp_interop_val_t *Interop) override;
+
+  interop_spec_t selectInteropPreference(int32_t InteropType,
+                                         int32_t NumPrefers,
+                                         interop_spec_t *Prefers) override;
+};
+
+} // namespace llvm::omp::target::plugin
+#endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEVICE_H

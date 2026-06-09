@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-MCDXContainerTargetWriter::~MCDXContainerTargetWriter() {}
+MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
 uint64_t DXContainerObjectWriter::writeObject() {
   auto &Asm = *this->Asm;
@@ -39,7 +39,7 @@ uint64_t DXContainerObjectWriter::writeObject() {
     PartOffset = alignTo(PartOffset, Align(4ul));
     // The DXIL part also writes a program header, so we need to include its
     // size when computing the offset for a part after the DXIL part.
-    if (Sec.getName() == "DXIL")
+    if (dxbc::isProgramPart(Sec.getName()))
       PartOffset += sizeof(dxbc::ProgramHeader);
   }
   assert(PartOffset < std::numeric_limits<uint32_t>::max() &&
@@ -78,12 +78,12 @@ uint64_t DXContainerObjectWriter::writeObject() {
 
     uint64_t PartSize = SectionSize;
 
-    if (Sec.getName() == "DXIL")
+    if (dxbc::isProgramPart(Sec.getName()))
       PartSize += sizeof(dxbc::ProgramHeader);
     // DXContainer parts should be 4-byte aligned.
     PartSize = alignTo(PartSize, Align(4));
     W.write<uint32_t>(static_cast<uint32_t>(PartSize));
-    if (Sec.getName() == "DXIL") {
+    if (dxbc::isProgramPart(Sec.getName())) {
       dxbc::ProgramHeader Header;
       memset(reinterpret_cast<void *>(&Header), 0, sizeof(dxbc::ProgramHeader));
 

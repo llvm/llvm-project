@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Program.h"
+#include <limits>
 #include <unordered_map>
 
 namespace llvm {
@@ -50,9 +51,7 @@ class BoltAddressTranslation;
 /// specified by the user.
 class DataAggregator : public DataReader {
 public:
-  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {
-    start();
-  }
+  explicit DataAggregator(StringRef Filename) : DataReader(Filename) {}
 
   ~DataAggregator();
 
@@ -68,6 +67,10 @@ public:
 
   Error readProfile(BinaryContext &BC) override;
 
+  /// Add an additional perf.data or pre-aggregated profile input to be merged
+  /// into this aggregation job.
+  void addInputFile(StringRef Filename);
+
   bool mayHaveProfileData(const BinaryFunction &BF) override;
 
   /// Set Bolt Address Translation Table when processing samples collected in
@@ -76,6 +79,9 @@ public:
 
   /// Check whether \p FileName is a perf.data file
   static bool checkPerfDataMagic(StringRef FileName);
+
+  /// Checks if a file starts with a specific magic string.
+  static bool checkInputFileMagic(StringRef FileName, StringLiteral MagicStr);
 
 private:
   struct LBREntry {
@@ -86,6 +92,8 @@ private:
   friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
 
   friend struct PerfSpeEventsTestHelper;
+  friend struct PreAggregatedTestHelper;
+  friend struct PerfScriptTestHelper;
 
   struct PerfBranchSample {
     SmallVector<LBREntry, 32> LBR;
@@ -108,10 +116,14 @@ private:
   ///   (FT_ONLY, FT_EXTERNAL_ORIGIN, or FT_EXTERNAL_RETURN).
   struct Trace {
     static constexpr const uint64_t EXTERNAL = 0ULL;
-    static constexpr const uint64_t BR_ONLY = -1ULL;
-    static constexpr const uint64_t FT_ONLY = -1ULL;
-    static constexpr const uint64_t FT_EXTERNAL_ORIGIN = -2ULL;
-    static constexpr const uint64_t FT_EXTERNAL_RETURN = -3ULL;
+    static constexpr const uint64_t BR_ONLY =
+        std::numeric_limits<uint64_t>::max();
+    static constexpr const uint64_t FT_ONLY =
+        std::numeric_limits<uint64_t>::max();
+    static constexpr const uint64_t FT_EXTERNAL_ORIGIN =
+        std::numeric_limits<uint64_t>::max() - 1;
+    static constexpr const uint64_t FT_EXTERNAL_RETURN =
+        std::numeric_limits<uint64_t>::max() - 2;
 
     uint64_t Branch;
     uint64_t From;
@@ -141,6 +153,14 @@ private:
   std::unordered_map<uint64_t, uint64_t> BasicSamples;
   std::vector<PerfMemSample> MemSamples;
 
+  /// Perf.data or pre-aggregated inputs to aggregate and merge into this
+  /// reader.
+  std::vector<std::string> InputFilenames;
+
+  /// Filter pre-aggregated entries belonging to a DSO with this buildid.
+  /// Set when processing a shared library, empty implies main binary.
+  StringRef FilterBuildID;
+
   template <typename T> void clear(T &Container) {
     T TempContainer;
     TempContainer.swap(Container);
@@ -149,19 +169,39 @@ private:
   /// Perf utility full path name
   std::string PerfPath;
 
+  enum PerfProcessType {
+    BUILDIDS = 0,
+    MAIN_EVENTS,
+    MEM_EVENTS,
+    MMAP_EVENTS,
+    TASK_EVENTS
+  };
+  friend raw_ostream &operator<<(raw_ostream &OS, const PerfProcessType &T);
+
   /// Perf process spawning bookkeeping
   struct PerfProcessInfo {
+    static constexpr StringLiteral PerfProcessTypeNames[] = {
+        "BUILDIDS", "MAIN", "MEM", "MMAP", "TASK"};
+
+    enum PerfProcessType Type;
     bool IsFinished{false};
-    sys::ProcessInfo PI;
-    SmallVector<char, 256> StdoutPath;
-    SmallVector<char, 256> StderrPath;
+    sys::ProcessInfo PI{};
+    SmallVector<char, 256> StdoutPath{};
+    SmallVector<char, 256> StderrPath{};
+
+    /// Helper variables for parsing perfscript profile.
+    /// Length: Total size of the content from \p Offset.
+    uint64_t Length{0};
+    /// Position where content begins in the file.
+    uint64_t Offset{0};
   };
 
   /// Process info for spawned processes
-  PerfProcessInfo MainEventsPPI;
-  PerfProcessInfo MemEventsPPI;
-  PerfProcessInfo MMapEventsPPI;
-  PerfProcessInfo TaskEventsPPI;
+  PerfProcessInfo BuildIDProcessInfo = {PerfProcessType::BUILDIDS};
+  PerfProcessInfo MainEventsPPI = {PerfProcessType::MAIN_EVENTS};
+  PerfProcessInfo MemEventsPPI = {PerfProcessType::MEM_EVENTS};
+  PerfProcessInfo MMapEventsPPI = {PerfProcessType::MMAP_EVENTS};
+  PerfProcessInfo TaskEventsPPI = {PerfProcessType::TASK_EVENTS};
 
   /// Kernel VM starts at fixed based address
   /// https://www.kernel.org/doc/Documentation/x86/x86_64/mm.txt
@@ -210,20 +250,8 @@ private:
   /// Return a vector of offsets corresponding to a trace in a function
   /// if the trace is valid, std::nullopt otherwise.
   std::optional<SmallVector<std::pair<uint64_t, uint64_t>, 16>>
-  getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace, uint64_t Count,
+  getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
                          bool IsReturn) const;
-
-  /// Record external entry into the function \p BF.
-  ///
-  /// Return true if the entry is valid, false otherwise.
-  bool recordEntry(BinaryFunction &BF, uint64_t To, bool Mispred,
-                   uint64_t Count = 1) const;
-
-  /// Record exit from the function \p BF via a call or return.
-  ///
-  /// Return true if the exit point is valid, false otherwise.
-  bool recordExit(BinaryFunction &BF, uint64_t From, bool Mispred,
-                  uint64_t Count = 1) const;
 
   /// Branch stacks aggregation statistics
   uint64_t NumTraces{0};
@@ -237,6 +265,9 @@ private:
   /// Launch a perf subprocess with given args and save output for later
   /// parsing.
   void launchPerfProcess(StringRef Name, PerfProcessInfo &PPI, StringRef Args);
+
+  /// Helps to generate pre-parsed perf text profile.
+  ErrorOr<uint64_t> getFileSize(StringRef File);
 
   /// Delete all temporary files created to hold the output generated by spawned
   /// subprocesses during the aggregation job
@@ -374,7 +405,16 @@ private:
   std::optional<std::pair<StringRef, StringRef>> parseNameBuildIDPair();
 
   /// Coordinate reading and parsing of perf.data file
-  void parsePerfData(BinaryContext &BC);
+  void parsePerfData();
+
+  /// Parse this aggregator's input file.
+  void parseInput();
+
+  /// Merge parsed profile data from another aggregation job.
+  void mergeFrom(const DataAggregator &Other);
+
+  /// Mark binary functions covered by parsed profile data.
+  void markFunctionsWithProfile();
 
   /// Coordinate reading and parsing of pre-aggregated file
   ///
@@ -444,6 +484,60 @@ private:
   /// an external tool.
   std::error_code parsePreAggregatedLBRSamples();
 
+  /// Coordinate reading pre-parsed perf-script:
+  /// - open file header to determine offset and length for each part,
+  /// - read perf script slices.
+  Error parsePerfScript();
+
+  /// Parse the header of the perf text file.
+  std::error_code parsePerfScriptFileHeader();
+
+  /// Dump pre-parsed perf profile data into a single file.
+  /// The generator relies on the aggregator work to spawn the required
+  /// perf-script jobs based on the aggregation type, and merges
+  /// their results into a single file.
+  /// This hybrid profile contains all required items such as BuildID,
+  /// MMAP, TASK, MAIN (brstack or basic samples), or MEM for the aggregation.
+  /// The generator also creates a file header, where these data types
+  /// are listed along with the length information of their contents.
+  /// The given length numbers in the header are in bytes, they are used
+  /// as an offset in the pre-parsed profile.
+  /// Some of these events are required to be presented in the file.
+  ///
+  /// Short description of supported events:
+  /// MEM: Optional. Parsing memory profile is enabled by default, unless
+  /// '--itrace' aggregation is set. In the latter case MEM profile
+  /// won't be added into the pre-parsed profile. Note that, currently
+  /// mem events only supported if they were gathered on X86_64.
+  /// MMAP: Compulsory, the mmap data is required to be in the file.
+  /// BUILDID: Ignored when buildid information doesn't exist in the input
+  /// profile. In that case, must use `--ignore-build-id`.
+  /// TASK: If task related data exists in the input profile,
+  /// Perf2bolt will always parse it.
+  /// MAIN: Compulsory; the MAIN events always have to be represented in the
+  /// file. Main events could be either 'brstack' or 'basic' sample data
+  /// based on how it was collected by Linux Perf.
+  ///
+  /// Example how you can generate pre-parsed profile for 'basic' aggregation:
+  /// perf2bolt -p perf.data BINARY -o perf.text --ba
+  /// --profile-format=perfscript
+  ///
+  /// This is how a pre-parsed profile data looks like for Basic Aggregation:
+  /// PERFTEXT;BUILDIDS=32;MMAP=2DC6C0;MAIN=1388;TASK=55730;MEM=128;
+  /// abcd1234 /example/bin1
+  /// ...
+  /// bin1   1234 ... PERF_RECORD_MMAP2 1234/1234: ... r-xp /example/bin1
+  /// ...
+  /// bin1   1234 ... PERF_RECORD_COMM exec: bin1:1234/1234
+  /// bin1   1234 ... PERF_RECORD_EXIT(1234:1234):(20469:20469)
+  /// ...
+  /// 1234 branch: abcd1234 abcd1237
+  /// 1234 branch: abcd5678 abce9876
+  /// ...
+  /// 1234 mem-loads: efgh1234 efgh1234
+  /// 1234 mem-loads: efgh4567 efgh8910
+  Error generatePerfScriptData();
+
   /// If \p Address falls into the binary address space based on memory
   /// mapping info \p MMI, then adjust it for further processing by subtracting
   /// the base load address. External addresses, i.e. addresses that do not
@@ -480,8 +574,11 @@ private:
   /// Force all subprocesses to stop and cancel aggregation
   void abort();
 
-  /// Dump data structures into a file readable by llvm-bolt
-  std::error_code writeAggregatedFile(StringRef OutputFilename) const;
+  /// Dump data structures into an fdata file readable by llvm-bolt.
+  std::error_code writeFdataFile(StringRef OutputFilename) const;
+
+  /// Dump TraceMap into a pre-aggregated file readable by perf2bolt -pa.
+  std::error_code writePreAggregatedFile(StringRef OutputFilename) const;
 
   /// Dump translated data structures into YAML
   std::error_code writeBATYAML(BinaryContext &BC,
@@ -577,21 +674,13 @@ inline raw_ostream &operator<<(raw_ostream &OS,
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::Trace &T) {
-  switch (T.Branch) {
-  case DataAggregator::Trace::FT_ONLY:
-    break;
-  case DataAggregator::Trace::FT_EXTERNAL_ORIGIN:
-    OS << "X:0 -> ";
-    break;
-  case DataAggregator::Trace::FT_EXTERNAL_RETURN:
-    OS << "X:R -> ";
-    break;
-  default:
-    OS << Twine::utohexstr(T.Branch) << " -> ";
-  }
-  OS << Twine::utohexstr(T.From);
-  if (T.To != DataAggregator::Trace::BR_ONLY)
-    OS << " ... " << Twine::utohexstr(T.To);
+  OS << formatv("T {0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DataAggregator::PerfProcessType &T) {
+  OS << DataAggregator::PerfProcessInfo::PerfProcessTypeNames[T];
   return OS;
 }
 } // namespace bolt

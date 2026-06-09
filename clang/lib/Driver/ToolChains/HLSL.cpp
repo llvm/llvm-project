@@ -191,23 +191,35 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
   // The extensions that are commented out are supported in DXC, but the SPIR-V
   // backend does not know about them yet.
   static const std::vector<StringRef> DxcSupportedExtensions = {
-      "SPV_KHR_16bit_storage", "SPV_KHR_device_group",
-      "SPV_KHR_fragment_shading_rate", "SPV_KHR_multiview",
-      "SPV_KHR_post_depth_coverage", "SPV_KHR_non_semantic_info",
-      "SPV_KHR_shader_draw_parameters", "SPV_KHR_ray_tracing",
-      "SPV_KHR_shader_clock", "SPV_EXT_demote_to_helper_invocation",
-      "SPV_EXT_descriptor_indexing", "SPV_EXT_fragment_fully_covered",
+      "SPV_KHR_16bit_storage",
+      "SPV_KHR_device_group",
+      "SPV_KHR_fragment_shading_rate",
+      "SPV_KHR_multiview",
+      "SPV_KHR_post_depth_coverage",
+      "SPV_KHR_non_semantic_info",
+      "SPV_KHR_shader_draw_parameters",
+      "SPV_KHR_ray_tracing",
+      "SPV_KHR_shader_clock",
+      "SPV_EXT_demote_to_helper_invocation",
+      "SPV_EXT_descriptor_indexing",
+      "SPV_EXT_fragment_fully_covered",
       "SPV_EXT_fragment_invocation_density",
-      "SPV_EXT_fragment_shader_interlock", "SPV_EXT_mesh_shader",
-      "SPV_EXT_shader_stencil_export", "SPV_EXT_shader_viewport_index_layer",
+      "SPV_EXT_fragment_shader_interlock",
+      "SPV_EXT_mesh_shader",
+      "SPV_EXT_shader_stencil_export",
+      "SPV_EXT_shader_viewport_index_layer",
       // "SPV_AMD_shader_early_and_late_fragment_tests",
-      "SPV_GOOGLE_hlsl_functionality1", "SPV_GOOGLE_user_type",
-      "SPV_KHR_ray_query", "SPV_EXT_shader_image_int64",
-      "SPV_KHR_fragment_shader_barycentric", "SPV_KHR_physical_storage_buffer",
+      "SPV_GOOGLE_hlsl_functionality1",
+      "SPV_GOOGLE_user_type",
+      "SPV_KHR_ray_query",
+      "SPV_EXT_shader_image_int64",
+      "SPV_KHR_fragment_shader_barycentric",
+      "SPV_KHR_physical_storage_buffer",
       "SPV_KHR_vulkan_memory_model",
       // "SPV_KHR_compute_shader_derivatives",
-      // "SPV_KHR_maximal_reconvergence",
-      "SPV_KHR_float_controls", "SPV_NV_shader_subgroup_partitioned",
+      "SPV_KHR_maximal_reconvergence",
+      "SPV_KHR_float_controls",
+      "SPV_NV_shader_subgroup_partitioned",
       // "SPV_KHR_quad_control"
   };
 
@@ -218,7 +230,6 @@ void getSpirvExtOperand(StringRef SpvExtensionArg, raw_ostream &out) {
 
   if (SpvExtensionArg.compare_insensitive("DXC") == 0) {
     bool first = true;
-    std::string Operand;
     for (StringRef E : DxcSupportedExtensions) {
       if (!first)
         out << ",";
@@ -289,17 +300,32 @@ void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
                                           const InputInfoList &Inputs,
                                           const ArgList &Args,
                                           const char *LinkingOutput) const {
-  std::string DxvPath = getToolChain().GetProgramPath("dxv");
-  assert(DxvPath != "dxv" && "cannot find dxv");
-
   ArgStringList CmdArgs;
   assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
   const InputInfo &Input = Inputs[0];
-  CmdArgs.push_back(Input.getFilename());
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
 
-  const char *Exec = Args.MakeArgString(DxvPath);
+  const llvm::Triple &T = getToolChain().getTriple();
+  std::string ExecPath;
+  if (T.isSPIRV()) {
+    ExecPath = getToolChain().GetProgramPath("spirv-val");
+    assert(ExecPath != "spirv-val" && "cannot find spirv-val");
+
+    CmdArgs.push_back("--target-env");
+    CmdArgs.push_back(Args.MakeArgString(T.getOSName()));
+    CmdArgs.push_back("--scalar-block-layout");
+    CmdArgs.push_back(Input.getFilename());
+  } else if (T.isDXIL()) {
+    ExecPath = getToolChain().GetProgramPath("dxv");
+    assert(ExecPath != "dxv" && "cannot find dxv");
+
+    CmdArgs.push_back(Input.getFilename());
+    CmdArgs.push_back("-o");
+    CmdArgs.push_back(Output.getFilename());
+  } else {
+    llvm_unreachable("unexpected triple for HLSL validation");
+  }
+
+  const char *Exec = Args.MakeArgString(ExecPath);
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Input));
 }
@@ -315,6 +341,13 @@ void tools::hlsl::MetalConverter::ConstructJob(
   CmdArgs.push_back(Input.getFilename());
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
+
+  StringRef Reflection = Args.getLastArgValue(options::OPT_dxc_Fre);
+  if (!Reflection.empty()) {
+    const char *ReflectionStr =
+        Args.MakeArgString(StringRef("--output-reflection-file=") + Reflection);
+    CmdArgs.push_back(ReflectionStr);
+  }
 
   const char *Exec = Args.MakeArgString(MSCPath);
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
@@ -366,6 +399,9 @@ HLSLToolChain::HLSLToolChain(const Driver &D, const llvm::Triple &Triple,
   if (Args.hasArg(options::OPT_dxc_validator_path_EQ))
     getProgramPaths().push_back(
         Args.getLastArgValue(options::OPT_dxc_validator_path_EQ).str());
+  if (Args.hasArg(options::OPT_spirv_validator_path_EQ))
+    getProgramPaths().push_back(
+        Args.getLastArgValue(options::OPT_spirv_validator_path_EQ).str());
 }
 
 Tool *clang::driver::toolchains::HLSLToolChain::getTool(
@@ -401,7 +437,17 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
 
   const OptTable &Opts = getDriver().getOpts();
 
+  if (Args.hasArg(options::OPT_dxc_col_major) &&
+      Args.hasArg(options::OPT_dxc_row_major))
+    getDriver().Diag(diag::err_drv_dxc_invalid_matrix_layout);
+
   for (Arg *A : Args) {
+    if (A->getOption().getID() == options::OPT_dxc_all_resources_bound) {
+      DAL->AddFlagArg(nullptr,
+                      Opts.getOption(options::OPT_hlsl_all_resources_bound));
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT_dxil_validator_version) {
       StringRef ValVerStr = A->getValue();
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
@@ -487,6 +533,44 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       continue;
     }
 
+    if (A->getOption().getID() == options::OPT_enable_16bit_types) {
+      // Translate -enable-16bit-types into -fnative-half-type and
+      // -fnative-int16-type
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_half_type));
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_fnative_int16_type));
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_col_major) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "column-major");
+      A->claim();
+      continue;
+    }
+    if (A->getOption().getID() == options::OPT_dxc_row_major) {
+      DAL->AddJoinedArg(nullptr,
+                        Opts.getOption(options::OPT_fmatrix_memory_layout_EQ),
+                        "row-major");
+      A->claim();
+      continue;
+    }
+
+    // This is a temporary check until we support reflection generation for
+    // other targets.
+    if (A->getOption().getID() == options::OPT_dxc_Fre) {
+      if (Args.hasArg(options::OPT_metal)) {
+        if (!Args.hasArg(options::OPT_dxc_Fo))
+          getDriver().Diag(diag::err_drv_dxc_Fre_requires_Fo_metal);
+      } else
+        getDriver().Diag(diag::err_drv_unsupported_opt_for_target)
+            << "-Fre" << getTriple().getArchName();
+      A->claim();
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_dxc_Fre),
+                          A->getValue());
+      continue;
+    }
+
     DAL->append(A);
   }
 
@@ -508,19 +592,43 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   return DAL;
 }
 
-bool HLSLToolChain::requiresValidation(DerivedArgList &Args) const {
-  if (!Args.hasArg(options::OPT_dxc_Fo))
-    return false;
+HLSLToolChain::ValidationInfo
+HLSLToolChain::getValidationInfo(DerivedArgList &Args, bool Diagnose) const {
+  ValidationInfo Info;
 
-  if (Args.getLastArg(options::OPT_dxc_disable_validation))
-    return false;
+  bool HasFo = Args.hasArg(options::OPT_dxc_Fo);
+  bool DisableValidation =
+      Args.getLastArg(options::OPT_dxc_disable_validation) != nullptr;
 
-  std::string DxvPath = GetProgramPath("dxv");
-  if (DxvPath != "dxv")
-    return true;
+  if (DisableValidation || !HasFo)
+    return Info;
 
-  getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
-  return false;
+  if (getTriple().isDXIL()) {
+    std::string DxvPath = GetProgramPath("dxv");
+    if (DxvPath != "dxv") {
+      Info.NeedsValidation = true;
+      Info.ProducesOutput = true;
+      return Info;
+    }
+
+    if (Diagnose)
+      getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
+    return Info;
+  }
+
+  if (getTriple().isSPIRV()) {
+    std::string SpirvValPath = GetProgramPath("spirv-val");
+    if (SpirvValPath != "spirv-val") {
+      Info.NeedsValidation = true;
+      Info.ProducesOutput = false;
+      return Info;
+    }
+
+    if (Diagnose)
+      getDriver().Diag(diag::warn_drv_dxc_missing_spirv_val);
+  }
+
+  return Info;
 }
 
 bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
@@ -533,17 +641,27 @@ bool HLSLToolChain::requiresObjcopy(DerivedArgList &Args) const {
           Args.hasArg(options::OPT_dxc_Frs) || isRootSignatureTarget(Args));
 }
 
-bool HLSLToolChain::isLastJob(DerivedArgList &Args,
-                              Action::ActionClass AC) const {
+bool HLSLToolChain::isLastOutputProducingJob(DerivedArgList &Args,
+                                             Action::ActionClass AC) const {
   // Note: we check in the reverse order of execution
   if (requiresBinaryTranslation(Args))
     return AC == Action::Action::BinaryTranslatorJobClass;
-  if (requiresValidation(Args))
-    return AC == Action::Action::BinaryAnalyzeJobClass;
+  auto ValInfo = getValidationInfo(Args, /*Diagnose=*/false);
+  if (ValInfo.NeedsValidation) {
+    if (ValInfo.ProducesOutput)
+      return AC == Action::Action::BinaryAnalyzeJobClass;
+    return AC == Action::Action::AssembleJobClass;
+  }
   if (requiresObjcopy(Args))
     return AC == Action::Action::ObjcopyJobClass;
 
   // No translation, validation, or objcopy are required, so this action must
   // output to the result file.
   return true;
+}
+
+void HLSLToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wconversion");
+  CC1Args.push_back("-Wvector-conversion");
+  CC1Args.push_back("-Wmatrix-conversion");
 }

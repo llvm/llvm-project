@@ -12,17 +12,20 @@
 using namespace lldb;
 using namespace lldb_private;
 
-void MainLoopBase::AddCallback(const Callback &callback, TimePoint point) {
+bool MainLoopBase::AddCallback(const Callback &callback, TimePoint point) {
   bool interrupt_needed;
+  bool interrupt_succeeded = true;
   {
     std::lock_guard<std::mutex> lock{m_callback_mutex};
     // We need to interrupt the main thread if this callback is scheduled to
     // execute at an earlier time than the earliest callback registered so far.
-    interrupt_needed = m_callbacks.empty() || point < m_callbacks.top().first;
-    m_callbacks.emplace(point, callback);
+    interrupt_needed =
+        m_callbacks.empty() || point < m_callbacks.top().time_point;
+    m_callbacks.emplace(point, callback, m_callback_sequence++);
   }
   if (interrupt_needed)
-    Interrupt();
+    interrupt_succeeded = Interrupt();
+  return interrupt_succeeded;
 }
 
 void MainLoopBase::ProcessCallbacks() {
@@ -31,9 +34,9 @@ void MainLoopBase::ProcessCallbacks() {
     {
       std::lock_guard<std::mutex> lock{m_callback_mutex};
       if (m_callbacks.empty() ||
-          std::chrono::steady_clock::now() < m_callbacks.top().first)
+          std::chrono::steady_clock::now() < m_callbacks.top().time_point)
         return;
-      callback = std::move(m_callbacks.top().second);
+      callback = std::move(m_callbacks.top().callback);
       m_callbacks.pop();
     }
 
@@ -45,5 +48,5 @@ std::optional<MainLoopBase::TimePoint> MainLoopBase::GetNextWakeupTime() {
   std::lock_guard<std::mutex> lock(m_callback_mutex);
   if (m_callbacks.empty())
     return std::nullopt;
-  return m_callbacks.top().first;
+  return m_callbacks.top().time_point;
 }

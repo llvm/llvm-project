@@ -12,6 +12,7 @@
 #define LLVM_LIB_TARGET_DIRECTX_DIRECTX_H
 
 namespace llvm {
+class AttributeMask;
 class FunctionPass;
 class ModulePass;
 class PassRegistry;
@@ -65,6 +66,12 @@ void initializeDXILLegalizeLegacyPass(PassRegistry &);
 /// Pass to Legalize DXIL by remove i8 truncations and i64 insert/extract
 /// elements
 FunctionPass *createDXILLegalizeLegacyPass();
+
+/// Initializer for DXIL Mem Intrinsics.
+void initializeDXILMemIntrinsicsLegacyPass(PassRegistry &);
+
+/// Pass to transform all llvm memory intrinsics to explicit loads and stores.
+ModulePass *createDXILMemIntrinsicsLegacyPass();
 
 /// Initializer for DXILOpLowering
 void initializeDXILOpLoweringLegacyPass(PassRegistry &);
@@ -120,6 +127,9 @@ void initializeDXILFinalizeLinkageLegacyPass(PassRegistry &);
 /// Pass to finalize linkage of functions.
 ModulePass *createDXILFinalizeLinkageLegacyPass();
 
+namespace dxil {
+const AttributeMask &getNonDXILAttributeMask();
+} // namespace dxil
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H

@@ -26,14 +26,17 @@ bool tryToFindPtrOrigin(
     const Expr *E, bool StopAtFirstRefCountedObj,
     std::function<bool(const clang::CXXRecordDecl *)> isSafePtr,
     std::function<bool(const clang::QualType)> isSafePtrType,
+    std::function<bool(const clang::Decl *)> isSafeGlobalDecl,
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
     if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
       if (auto *VD = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
         auto QT = VD->getType();
-        if (VD->hasGlobalStorage() && QT.isConstQualified()) {
+        auto IsImmortal = safeGetName(VD) == "NSApp";
+        if (VD->hasGlobalStorage() && (IsImmortal || QT.isConstQualified()))
           return callback(E, true);
-        }
+        if (VD->hasGlobalStorage() && isSafeGlobalDecl(VD))
+          return callback(E, true);
       }
     }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
@@ -71,9 +74,11 @@ bool tryToFindPtrOrigin(
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
       return tryToFindPtrOrigin(Expr->getTrueExpr(), StopAtFirstRefCountedObj,
-                                isSafePtr, isSafePtrType, callback) &&
+                                isSafePtr, isSafePtrType, isSafeGlobalDecl,
+                                callback) &&
              tryToFindPtrOrigin(Expr->getFalseExpr(), StopAtFirstRefCountedObj,
-                                isSafePtr, isSafePtrType, callback);
+                                isSafePtr, isSafePtrType, isSafeGlobalDecl,
+                                callback);
     }
     if (auto *cast = dyn_cast<CastExpr>(E)) {
       if (StopAtFirstRefCountedObj) {
@@ -93,7 +98,8 @@ bool tryToFindPtrOrigin(
     if (auto *call = dyn_cast<CallExpr>(E)) {
       if (auto *Callee = call->getCalleeDecl()) {
         if (Callee->hasAttr<CFReturnsRetainedAttr>() ||
-            Callee->hasAttr<NSReturnsRetainedAttr>()) {
+            Callee->hasAttr<NSReturnsRetainedAttr>() ||
+            Callee->hasAttr<NSReturnsAutoreleasedAttr>()) {
           return callback(E, true);
         }
       }
@@ -102,9 +108,14 @@ bool tryToFindPtrOrigin(
         if (auto *decl = memberCall->getMethodDecl()) {
           std::optional<bool> IsGetterOfRefCt = isGetterOfSafePtr(decl);
           if (IsGetterOfRefCt && *IsGetterOfRefCt) {
-            E = memberCall->getImplicitObjectArgument();
-            if (StopAtFirstRefCountedObj) {
-              return callback(E, true);
+            E = memberCall->getImplicitObjectArgument()->IgnoreParenCasts();
+            if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+              if (auto *Decl = dyn_cast_or_null<VarDecl>(DRE->getDecl())) {
+                if (Decl->isLocalVarDeclOrParm()) {
+                  if (StopAtFirstRefCountedObj)
+                    return callback(E, true);
+                }
+              }
             }
             continue;
           }
@@ -126,17 +137,17 @@ bool tryToFindPtrOrigin(
         }
       }
 
-      if (call->isCallToStdMove() && call->getNumArgs() == 1) {
-        E = call->getArg(0)->IgnoreParenCasts();
-        continue;
-      }
-
       if (auto *callee = call->getDirectCallee()) {
         if (isCtorOfSafePtr(callee)) {
           if (StopAtFirstRefCountedObj)
             return callback(E, true);
 
           E = call->getArg(0);
+          continue;
+        }
+
+        if (isStdOrWTFMove(callee) && call->getNumArgs() == 1) {
+          E = call->getArg(0)->IgnoreParenCasts();
           continue;
         }
 
@@ -158,11 +169,21 @@ bool tryToFindPtrOrigin(
 
         auto Name = safeGetName(callee);
         if (Name == "__builtin___CFStringMakeConstantString" ||
-            Name == "NSClassFromString")
+            Name == "NSStringFromSelector" || Name == "NSSelectorFromString" ||
+            Name == "NSStringFromClass" || Name == "NSClassFromString" ||
+            Name == "NSStringFromProtocol" || Name == "NSProtocolFromString")
           return callback(E, true);
       } else if (auto *CalleeE = call->getCallee()) {
         if (auto *E = dyn_cast<DeclRefExpr>(CalleeE->IgnoreParenCasts())) {
           if (isSingleton(E->getFoundDecl()))
+            return callback(E, true);
+        }
+
+        if (auto *MemberExpr = dyn_cast<CXXDependentScopeMemberExpr>(CalleeE)) {
+          auto *Base = MemberExpr->getBase();
+          auto MemberName = MemberExpr->getMember().getAsString();
+          bool IsGetter = MemberName == "get" || MemberName == "ptr";
+          if (Base && isSafePtrType(Base->getType()) && IsGetter)
             return callback(E, true);
         }
       }
@@ -176,7 +197,7 @@ bool tryToFindPtrOrigin(
           if (auto *Subst = dyn_cast<SubstTemplateTypeParmType>(RetType)) {
             if (auto *SubstType = Subst->desugar().getTypePtr()) {
               if (auto *RD = dyn_cast<RecordType>(SubstType)) {
-                if (auto *CXX = dyn_cast<CXXRecordDecl>(RD->getOriginalDecl()))
+                if (auto *CXX = dyn_cast<CXXRecordDecl>(RD->getDecl()))
                   if (isSafePtr(CXX))
                     return callback(E, true);
               }
@@ -190,12 +211,16 @@ bool tryToFindPtrOrigin(
         if (isSafePtrType(Method->getReturnType()))
           return callback(E, true);
       }
+      if (ObjCMsgExpr->isClassMessage())
+        return callback(E, true);
       auto Selector = ObjCMsgExpr->getSelector();
       auto NameForFirstSlot = Selector.getNameForSlot(0);
       if ((NameForFirstSlot == "class" || NameForFirstSlot == "superclass") &&
           !Selector.getNumArgs())
         return callback(E, true);
     }
+    if (auto *ObjCProtocol = dyn_cast<ObjCProtocolExpr>(E))
+      return callback(ObjCProtocol, true);
     if (auto *ObjCDict = dyn_cast<ObjCDictionaryLiteral>(E))
       return callback(ObjCDict, true);
     if (auto *ObjCArray = dyn_cast<ObjCArrayLiteral>(E))
@@ -208,6 +233,8 @@ bool tryToFindPtrOrigin(
       continue;
     }
     if (auto *BoxedExpr = dyn_cast<ObjCBoxedExpr>(E)) {
+      if (StopAtFirstRefCountedObj)
+        return callback(BoxedExpr, true);
       E = BoxedExpr->getSubExpr();
       continue;
     }
@@ -219,10 +246,19 @@ bool tryToFindPtrOrigin(
 
 bool isASafeCallArg(const Expr *E) {
   assert(E);
+  auto IsCheckedLocalVarOrParam = [](const VarDecl *Decl) {
+    auto Ty = Decl->getType();
+    const CXXRecordDecl *CXXRD = Ty->getAsCXXRecordDecl();
+    if (!CXXRD)
+      CXXRD = Ty->getPointeeCXXRecordDecl();
+    if (CXXRD && isWeakPtr(CXXRD))
+      return false;
+    return Decl->isLocalVarDeclOrParm();
+  };
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
     auto *FoundDecl = Ref->getFoundDecl();
     if (auto *D = dyn_cast_or_null<VarDecl>(FoundDecl)) {
-      if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+      if (IsCheckedLocalVarOrParam(D))
         return true;
       if (auto *ImplicitP = dyn_cast<ImplicitParamDecl>(D)) {
         auto Kind = ImplicitP->getParameterKind();
@@ -233,9 +269,10 @@ bool isASafeCallArg(const Expr *E) {
           return true;
       }
     } else if (auto *BD = dyn_cast_or_null<BindingDecl>(FoundDecl)) {
-      VarDecl *VD = BD->getHoldingVar();
-      if (VD && (isa<ParmVarDecl>(VD) || VD->isLocalVarDecl()))
-        return true;
+      if (VarDecl *VD = BD->getHoldingVar()) {
+        if (IsCheckedLocalVarOrParam(VD))
+          return true;
+      }
     }
   }
   if (isa<CXXTemporaryObjectExpr>(E))
@@ -299,6 +336,56 @@ bool isExprToGetCheckedPtrCapableMember(const clang::Expr *E) {
     return false;
   auto result = isCheckedPtrCapable(CXXRD);
   return result && *result;
+}
+
+bool isAllocInit(const Expr *E, const Expr **InnerExpr) {
+  auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E);
+  if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+    if (unsigned ExprCount = POE->getNumSemanticExprs()) {
+      auto *Expr = POE->getSemanticExpr(ExprCount - 1)->IgnoreParenCasts();
+      ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(Expr);
+      if (InnerExpr)
+        *InnerExpr = ObjCMsgExpr;
+    }
+  }
+  if (!ObjCMsgExpr)
+    return false;
+  auto Selector = ObjCMsgExpr->getSelector();
+  auto NameForFirstSlot = Selector.getNameForSlot(0);
+  if (NameForFirstSlot.starts_with("alloc") ||
+      NameForFirstSlot.starts_with("copy") ||
+      NameForFirstSlot.starts_with("mutableCopy")) {
+    if (auto *MD = ObjCMsgExpr->getMethodDecl()) {
+      if (MD->getReturnType()->isVoidType())
+        return false;
+    }
+    return true;
+  }
+  if (!NameForFirstSlot.starts_with("init") &&
+      !NameForFirstSlot.starts_with("_init"))
+    return false;
+  if (!ObjCMsgExpr->isInstanceMessage())
+    return false;
+  auto *Receiver = ObjCMsgExpr->getInstanceReceiver();
+  if (!Receiver)
+    return false;
+  Receiver = Receiver->IgnoreParenCasts();
+  if (auto *Inner = dyn_cast<ObjCMessageExpr>(Receiver)) {
+    if (InnerExpr)
+      *InnerExpr = Inner;
+    auto InnerSelector = Inner->getSelector();
+    return InnerSelector.getNameForSlot(0).starts_with("alloc");
+  } else if (auto *CE = dyn_cast<CallExpr>(Receiver)) {
+    if (InnerExpr)
+      *InnerExpr = CE;
+    if (auto *Callee = CE->getDirectCallee()) {
+      if (Callee->getDeclName().isIdentifier()) {
+        auto CalleeName = Callee->getName();
+        return CalleeName.starts_with("alloc");
+      }
+    }
+  }
+  return false;
 }
 
 class EnsureFunctionVisitor

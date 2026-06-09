@@ -148,9 +148,8 @@ void NonNullParamChecker::checkPreCall(const CallEvent &Call,
 
       QualType T = ArgE->getType();
       const RecordType *UT = T->getAsUnionType();
-      if (!UT || !UT->getOriginalDecl()
-                      ->getMostRecentDecl()
-                      ->hasAttr<TransparentUnionAttr>())
+      if (!UT ||
+          !UT->getDecl()->getMostRecentDecl()->hasAttr<TransparentUnionAttr>())
         continue;
 
       auto CSV = DV->getAs<nonloc::CompoundVal>();
@@ -240,9 +239,9 @@ void NonNullParamChecker::checkBeginFunction(CheckerContext &Context) const {
   if (!Context.inTopFrame())
     return;
 
-  const LocationContext *LocContext = Context.getLocationContext();
+  const StackFrame *SF = Context.getStackFrame();
 
-  const Decl *FD = LocContext->getDecl();
+  const Decl *FD = SF->getDecl();
   // AnyCall helps us here to avoid checking for FunctionDecl and ObjCMethodDecl
   // separately and aggregates interfaces of these classes.
   auto AbstractCall = AnyCall::forDecl(FD);
@@ -263,7 +262,7 @@ void NonNullParamChecker::checkBeginFunction(CheckerContext &Context) const {
     if (!Parameter->getType()->isPointerType())
       continue;
 
-    Loc ParameterLoc = State->getLValue(Parameter, LocContext);
+    Loc ParameterLoc = State->getLValue(Parameter, SF);
     // We never consider top-level function parameters undefined.
     auto StoredVal =
         State->getSVal(ParameterLoc).castAs<DefinedOrUnknownSVal>();

@@ -615,11 +615,11 @@ protected:
   /// this contains the number of bits in the last unit that can be used for
   /// an adjacent bitfield if necessary.  The unit in question is usually
   /// a byte, but larger units are used if IsMsStruct.
-  unsigned char UnfilledBitsInLastUnit;
+  uint64_t UnfilledBitsInLastUnit;
 
   /// LastBitfieldStorageUnitSize - If IsMsStruct, represents the size of the
   /// storage unit of the previous field if it was a bitfield.
-  unsigned char LastBitfieldStorageUnitSize;
+  uint64_t LastBitfieldStorageUnitSize;
 
   /// MaxFieldAlignment - The maximum allowed field alignment. This is set by
   /// #pragma pack.
@@ -1213,8 +1213,8 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
   auto getBaseOrPreferredBaseAlignFromUnpacked = [&](CharUnits UnpackedAlign) {
     // Clang <= 6 incorrectly applied the 'packed' attribute to base classes.
     // Per GCC's documentation, it only applies to non-static data members.
-    return (Packed && ((Context.getLangOpts().getClangABICompat() <=
-                        LangOptions::ClangABI::Ver6) ||
+    return (Packed && (Context.getLangOpts().isCompatibleWith(
+                           LangOptions::ClangABI::Ver6) ||
                        Context.getTargetInfo().getTriple().isPS() ||
                        Context.getTargetInfo().getTriple().isOSAIX()))
                ? CharUnits::One()
@@ -1676,7 +1676,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   unsigned UnpackedFieldAlign = FieldAlign;
 
   // Ignore the field alignment if the field is packed unless it has zero-size.
-  if (!IsMsStruct && FieldPacked && FieldSize != 0)
+  if (FieldPacked && FieldSize != 0)
     FieldAlign = 1;
 
   // But, if there's an 'aligned' attribute on the field, honor that.
@@ -1960,13 +1960,13 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     }
   }
 
-  bool FieldPacked = (Packed && (!FieldClass || FieldClass->isPOD() ||
-                                 FieldClass->hasAttr<PackedAttr>() ||
-                                 Context.getLangOpts().getClangABICompat() <=
-                                     LangOptions::ClangABI::Ver15 ||
-                                 Target.isPS() || Target.isOSDarwin() ||
-                                 Target.isOSAIX())) ||
-                     D->hasAttr<PackedAttr>();
+  bool FieldPacked =
+      (Packed &&
+       (!FieldClass || FieldClass->isPOD() ||
+        FieldClass->hasAttr<PackedAttr>() ||
+        Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver15) ||
+        Target.isPS() || Target.isOSDarwin() || Target.isOSAIX())) ||
+      D->hasAttr<PackedAttr>();
 
   // When used as part of a typedef, or together with a 'packed' attribute, the
   // 'aligned' attribute can be used to decrease alignment. In that case, it
@@ -2009,7 +2009,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
     } else if (const RecordType *RT = BaseTy->getAsCanonical<RecordType>()) {
-      const RecordDecl *RD = RT->getOriginalDecl();
+      const RecordDecl *RD = RT->getDecl();
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
       PreferredAlign = FieldRecord.getPreferredAlignment();
     }
@@ -2204,8 +2204,7 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
     if (Packed && UnpackedAlignment <= Alignment &&
         UnpackedSizeInBits == getSizeInBits() && !HasPackedField &&
         (!CXXRD || CXXRD->isPOD() ||
-         Context.getLangOpts().getClangABICompat() <=
-             LangOptions::ClangABI::Ver15))
+         Context.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver15)))
       Diag(D->getLocation(), diag::warn_unnecessary_packed)
           << Context.getCanonicalTagType(RD);
   }
@@ -2710,7 +2709,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     if (const auto *RT = FD->getType()
                              ->getBaseElementTypeUnsafe()
                              ->getAsCanonical<RecordType>()) {
-      auto const &Layout = Context.getASTRecordLayout(RT->getOriginalDecl());
+      auto const &Layout = Context.getASTRecordLayout(RT->getDecl());
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldRequiredAlignment = std::max(FieldRequiredAlignment,
                                         Layout.getRequiredAlignment());
@@ -2794,6 +2793,13 @@ void MicrosoftRecordLayoutBuilder::initializeLayout(const RecordDecl *RD) {
     UseExternalLayout = Source->layoutRecordType(
         RD, External.Size, External.Align, External.FieldOffsets,
         External.BaseOffsets, External.VirtualBaseOffsets);
+
+  if (!RD->isMsStruct(Context)) {
+    auto Location = RD->getLocation();
+    if (Location.isValid())
+      Context.getDiagnostics().Report(Location,
+                                      diag::err_itanium_layout_unimplemented);
+  }
 }
 
 void
@@ -3358,21 +3364,25 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
   }
 }
 
+bool ASTContext::defaultsToMsStruct() const {
+  return getTargetInfo().hasMicrosoftRecordLayout() ||
+         getTargetInfo().getTriple().isWindowsGNUEnvironment();
+}
+
 /// getASTRecordLayout - Get or compute information about the layout of the
 /// specified record (struct/union/class), which indicates its size and field
 /// position information.
 const ASTRecordLayout &
 ASTContext::getASTRecordLayout(const RecordDecl *D) const {
-  // These asserts test different things.  A record has a definition
-  // as soon as we begin to parse the definition.  That definition is
-  // not a complete definition (which is what isDefinition() tests)
-  // until we *finish* parsing the definition.
-
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
     getExternalSource()->CompleteType(const_cast<RecordDecl*>(D));
   // Complete the redecl chain (if necessary).
   (void)D->getMostRecentDecl();
 
+  // These asserts test different things.  A record has a definition
+  // as soon as we begin to parse the definition.  That definition is
+  // not a complete definition (which is what isCompleteDefinition() tests)
+  // until we *finish* parsing the definition.
   D = D->getDefinition();
   assert(D && "Cannot get layout of forward declarations!");
   assert(!D->isInvalidDecl() && "Cannot get layout of invalid decl!");

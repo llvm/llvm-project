@@ -15,22 +15,27 @@ on:
     branches:
       - main
     paths:
-      - 'libcxx/utils/ci/**'
+      - 'libcxx/utils/ci/docker/**'
       - '.github/workflows/libcxx-build-containers.yml'
   pull_request:
     paths:
-      - 'libcxx/utils/ci/**'
+      - 'libcxx/utils/ci/docker/**'
       - '.github/workflows/libcxx-build-containers.yml'
 
 jobs:
   build-and-push:
     runs-on: ubuntu-24.04
     if: github.repository_owner == 'llvm'
+    strategy:
+      matrix:
+        image_name: ['libcxx-linux-builder-base', 'libcxx-linux-builder', 'libcxx-android-builder']
     permissions:
       packages: write
 
     steps:
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      with:
+        persist-credentials: false
 
     # The default Docker storage location for GitHub Actions doesn't have
     # enough disk space, so change it to /mnt, which has more disk space.
@@ -40,40 +45,20 @@ jobs:
         echo '{ "data-root": "/mnt/docker" }' | sudo tee /etc/docker/daemon.json
         sudo systemctl restart docker
 
-    - name: Build the Linux builder image
-      working-directory: libcxx/utils/ci
-      run: |
-        docker compose build builder-base
-        docker compose build actions-builder
-      env:
-        TAG: ${{ github.sha }}
-
-    - name: Build the Android builder image
-      working-directory: libcxx/utils/ci
-      run: docker compose build android-buildkite-builder
+    - name: Build the image
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml build "${{ matrix.image_name }}"
       env:
         TAG: ${{ github.sha }}
 
     - name: Log in to GitHub Container Registry
-      uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Push the Linux builder image
+    - name: Push the image
       if: github.event_name == 'push'
-      working-directory: libcxx/utils/ci
-      run: |
-        docker compose push builder-base
-        docker compose push actions-builder
-      env:
-        TAG: ${{ github.sha }}
-
-    - name: Push the Android builder image
-      if: github.event_name == 'push'
-      working-directory: libcxx/utils/ci
-      run: |
-        docker compose push android-buildkite-builder
+      run: docker compose --file libcxx/utils/ci/docker/docker-compose.yml push "${{ matrix.image_name }}"
       env:
         TAG: ${{ github.sha }}

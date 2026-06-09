@@ -217,6 +217,11 @@ updateCalls(ModuleOp module, const AllocDynamicSizesMap &map,
     }
     if (!options.filterFn(&callee))
       return;
+    if (callee.isPublic() && !options.modifyPublicFunctions)
+      return;
+    if (callee.isExternal())
+      return;
+
     SmallVector<Value, 6> replaceWithNewCallResults;
     SmallVector<Value, 6> replaceWithOutParams;
     for (OpResult result : op.getResults()) {
@@ -273,8 +278,8 @@ updateCalls(ModuleOp module, const AllocDynamicSizesMap &map,
 
     auto newOperands = llvm::to_vector<6>(op.getOperands());
     newOperands.append(outParams.begin(), outParams.end());
-    auto newResultTypes = llvm::to_vector<6>(llvm::map_range(
-        replaceWithNewCallResults, [](Value v) { return v.getType(); }));
+    auto newResultTypes = llvm::map_to_vector<6>(
+        replaceWithNewCallResults, [](Value v) { return v.getType(); });
     auto newCall = func::CallOp::create(
         builder, op.getLoc(), op.getCalleeAttr(), newResultTypes, newOperands);
     for (auto t : llvm::zip(replaceWithNewCallResults, newCall.getResults()))
@@ -292,14 +297,16 @@ LogicalResult mlir::bufferization::promoteBufferResultsToOutParams(
   // function.
   AllocDynamicSizesMap map;
   for (auto func : module.getOps<func::FuncOp>()) {
+    if (func.isPublic() && !options.modifyPublicFunctions)
+      continue;
+    if (func.isExternal())
+      continue;
     if (!options.filterFn(&func))
       continue;
     SmallVector<BlockArgument, 6> appendedEntryArgs;
     if (failed(
             updateFuncOp(func, appendedEntryArgs, options.addResultAttribute)))
       return failure();
-    if (func.isExternal())
-      continue;
     if (failed(updateReturnOps(func, appendedEntryArgs, map, options))) {
       return failure();
     }
@@ -323,6 +330,8 @@ struct BufferResultsToOutParamsPass
       options.hoistStaticAllocs = true;
     if (hoistDynamicAllocs)
       options.hoistDynamicAllocs = true;
+    if (modifyPublicFunctions)
+      options.modifyPublicFunctions = true;
 
     if (failed(bufferization::promoteBufferResultsToOutParams(getOperation(),
                                                               options)))

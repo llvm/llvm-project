@@ -135,8 +135,8 @@ body:             |
   ; CHECK-NEXT: %3:_ KnownBits:???????????????? SignBits:1
   ; CHECK-NEXT: %4:_ KnownBits:???????????????? SignBits:1
     %0:_(<4 x s16>) = COPY $d0
-    %2:_(s16) = COPY $h0
-    %1:_(s16) = G_CONSTANT i16 3
+    %1:_(s16) = COPY $h0
+    %2:_(s16) = G_CONSTANT i16 3
     %3:_(<4 x s16>) = G_BUILD_VECTOR %1, %2, %2, %1
     %4:_(<4 x s16>) = G_SHL %0, %3
 ...

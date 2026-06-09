@@ -840,8 +840,10 @@ void Writer::run() {
                << "': " << toString(std::move(e));
 }
 
-static StringRef getOutputSectionName(StringRef name) {
+static StringRef getOutputSectionName(StringRef name, bool isMinGW) {
   StringRef s = name.split('$').first;
+  if (!isMinGW)
+    return s;
 
   // Treat a later period as a separator for MinGW, for sections like
   // ".ctors.01234".
@@ -1114,6 +1116,10 @@ void Writer::createSections() {
         sc->printDiscardedMessage();
       continue;
     }
+    if (auto *cc = dyn_cast<CommonChunk>(c)) {
+      if (!cc->live)
+        continue;
+    }
     StringRef name = c->getSectionName();
     if (shouldStripSectionSuffix(sc, name, ctx.config.mingw))
       name = name.split('$').first;
@@ -1151,7 +1157,7 @@ void Writer::createSections() {
   // contributes to .text, for example. See PE/COFF spec 3.2.
   for (auto it : partialSections) {
     PartialSection *pSec = it.second;
-    StringRef name = getOutputSectionName(pSec->name);
+    StringRef name = getOutputSectionName(pSec->name, ctx.config.mingw);
     uint32_t outChars = pSec->characteristics;
 
     if (name == ".CRT") {
@@ -1326,7 +1332,7 @@ void Writer::createImportTables() {
     if (file->impSym && !isa<DefinedImportData>(file->impSym))
       Fatal(ctx) << file->symtab.printSymbol(file->impSym) << " was replaced";
     DefinedImportData *impSym = cast_or_null<DefinedImportData>(file->impSym);
-    if (ctx.config.delayLoads.count(StringRef(file->dllName).lower())) {
+    if (ctx.config.delayLoads.contains(StringRef(file->dllName).lower())) {
       if (!file->thunkSym)
         Fatal(ctx) << "cannot delay-load " << toString(file)
                    << " due to import of data: "
@@ -1852,7 +1858,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   buf += sizeof(PEMagic);
 
   // Write COFF header
-  assert(coffHeaderOffset == buf - buffer->getBufferStart());
+  assert(coffHeaderOffset ==
+         static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
   SymbolTable &symtab =
@@ -1878,7 +1885,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       sizeof(PEHeaderTy) + sizeof(data_directory) * numberOfDataDirectory;
 
   // Write PE header
-  assert(peHeaderOffset == buf - buffer->getBufferStart());
+  assert(peHeaderOffset == static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *pe = reinterpret_cast<PEHeaderTy *>(buf);
   buf += sizeof(*pe);
   pe->Magic = config->is64() ? PE32Header::PE32_PLUS : PE32Header::PE32;
@@ -1945,7 +1952,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write data directory
   assert(!ctx.config.is64() ||
-         dataDirOffset64 == buf - buffer->getBufferStart());
+         dataDirOffset64 ==
+             static_cast<size_t>(buf - buffer->getBufferStart()));
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
   if (symtab.edataStart) {
@@ -2613,12 +2621,17 @@ void Writer::writeSections() {
     if ((sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
         (ctx.config.machine == AMD64 || ctx.config.machine == I386)) {
       uint32_t prevEnd = 0;
+      uint32_t rawSize = sec->getRawSize();
       for (Chunk *c : sec->chunks) {
         uint32_t off = c->getRVA() - sec->getRVA();
+        // Chunks without data (e.g., .bss) have virtual addresses beyond
+        // rawSize; stop filling when we reach the end of raw data.
+        if (off >= rawSize)
+          break;
         memset(secBuf + prevEnd, 0xCC, off - prevEnd);
-        prevEnd = off + c->getSize();
+        prevEnd = std::min(off + static_cast<uint32_t>(c->getSize()), rawSize);
       }
-      memset(secBuf + prevEnd, 0xCC, sec->getRawSize() - prevEnd);
+      memset(secBuf + prevEnd, 0xCC, rawSize - prevEnd);
     }
 
     parallelForEach(sec->chunks, [&](Chunk *c) {

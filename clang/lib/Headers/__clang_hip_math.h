@@ -498,7 +498,7 @@ __DEVICE__
 float log2f(float __x) { return __FAST_OR_SLOW(__log2f, __builtin_log2f)(__x); }
 
 __DEVICE__
-float logbf(float __x) { return __ocml_logb_f32(__x); }
+float logbf(float __x) { return __builtin_logbf(__x); }
 
 __DEVICE__
 float logf(float __x) { return __FAST_OR_SLOW(__logf, __builtin_logf)(__x); }
@@ -795,13 +795,13 @@ __DEVICE__
 double erfinv(double __x) { return __ocml_erfinv_f64(__x); }
 
 __DEVICE__
-double exp(double __x) { return __ocml_exp_f64(__x); }
+double exp(double __x) { return __builtin_exp(__x); }
 
 __DEVICE__
-double exp10(double __x) { return __ocml_exp10_f64(__x); }
+double exp10(double __x) { return __builtin_exp10(__x); }
 
 __DEVICE__
-double exp2(double __x) { return __ocml_exp2_f64(__x); }
+double exp2(double __x) { return __builtin_exp2(__x); }
 
 __DEVICE__
 double expm1(double __x) { return __ocml_expm1_f64(__x); }
@@ -901,7 +901,7 @@ __DEVICE__
 double log2(double __x) { return __ocml_log2_f64(__x); }
 
 __DEVICE__
-double logb(double __x) { return __ocml_logb_f64(__x); }
+double logb(double __x) { return __builtin_logb(__x); }
 
 __DEVICE__
 long int lrint(double __x) { return __builtin_rint(__x); }

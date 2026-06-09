@@ -63,7 +63,11 @@ Expr<SomeType> Parenthesize(Expr<SomeType> &&expr) {
 
 std::optional<DataRef> ExtractDataRef(
     const ActualArgument &arg, bool intoSubstring, bool intoComplexPart) {
-  return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
+  if (const Symbol *assumedType{arg.GetAssumedTypeDummy()}) {
+    return DataRef{*assumedType};
+  } else {
+    return ExtractDataRef(arg.UnwrapExpr(), intoSubstring, intoComplexPart);
+  }
 }
 
 std::optional<DataRef> ExtractSubstringBase(const Substring &substring) {
@@ -1090,6 +1094,9 @@ template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeInteger> &);
 template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
+template semantics::UnorderedSymbolSet CollectSymbols(
+    const ProcedureDesignator &);
+template semantics::UnorderedSymbolSet CollectSymbols(const Assignment &);
 
 struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
                                       semantics::UnorderedSymbolSet> {
@@ -1123,6 +1130,40 @@ template semantics::UnorderedSymbolSet CollectCudaSymbols(
 template semantics::UnorderedSymbolSet CollectCudaSymbols(
     const Expr<SubscriptInteger> &);
 
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr) {
+  SymbolVector symbols{GetSymbolVector(expr)};
+  std::reverse(symbols.begin(), symbols.end());
+
+  std::vector<SymbolVector> symbolVectors;
+
+  SymbolVector crtSymbols;
+  for (const Symbol &sym : symbols) {
+    crtSymbols.push_back(sym);
+    if (!sym.owner().IsDerivedType()) {
+      symbolVectors.push_back(crtSymbols);
+      crtSymbols.clear();
+    }
+  }
+  return symbolVectors;
+}
+
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr) {
+  std::vector<SymbolVector> symbolVectors{evaluate::GetSymbolVectors(expr)};
+  semantics::UnorderedSymbolSet symbols;
+  semantics::UnorderedSymbolSet cudaSymbols{CollectCudaSymbols(expr)};
+  for (const auto &symbolVector : symbolVectors) {
+    for (const auto &sym : symbolVector) {
+      if (cudaSymbols.find(sym) != cudaSymbols.end()) {
+        if (IsCUDADeviceSymbol(*sym)) {
+          symbols.insert(sym);
+          break;
+        }
+      }
+    }
+  }
+  return symbols.size();
+}
+
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   semantics::UnorderedSymbolSet hostSymbols;
   semantics::UnorderedSymbolSet deviceSymbols;
@@ -1136,7 +1177,7 @@ bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
       bool isComponent{sym.owner().IsDerivedType()};
       bool skipComponent{false};
       if (!skipNext) {
-        if (IsCUDADeviceSymbol(sym)) {
+        if (IsCUDADeviceOnlySymbol(sym)) {
           deviceSymbols.insert(sym);
         } else if (isComponent) {
           skipComponent = true; // Component is not device. Look on the base.
@@ -1153,6 +1194,28 @@ bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
 }
 
+bool IsCUDADeviceSymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() &&
+        *details->cudaDataAttr() != common::CUDADataAttr::Pinned;
+  } else if (const auto *details =
+                 sym.GetUltimate().detailsIf<semantics::AssocEntityDetails>()) {
+    return GetNbOfCUDADeviceSymbols(details->expr()) > 0;
+  }
+  return false;
+}
+
+bool IsCUDADeviceOnlySymbol(const Symbol &sym) {
+  if (const auto *details =
+          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
+    return details->cudaDataAttr() &&
+        (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Constant);
+  }
+  return false;
+}
+
 // HasVectorSubscript()
 struct HasVectorSubscriptHelper
     : public AnyTraverse<HasVectorSubscriptHelper, bool,
@@ -1165,6 +1228,9 @@ struct HasVectorSubscriptHelper
   }
   bool operator()(const ProcedureRef &) const {
     return false; // don't descend into function call arguments
+  }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    return false; // not a variable designator
   }
 };
 
@@ -1196,6 +1262,20 @@ struct HasConstantHelper : public AnyTraverse<HasConstantHelper, bool,
 
 bool HasConstant(const Expr<SomeType> &expr) {
   return HasConstantHelper{}(expr);
+}
+
+// HasStructureComponent()
+struct HasStructureComponentHelper
+    : public AnyTraverse<HasStructureComponentHelper, bool, false> {
+  using Base = AnyTraverse<HasStructureComponentHelper, bool, false>;
+  HasStructureComponentHelper() : Base(*this) {}
+  using Base::operator();
+
+  bool operator()(const Component &) const { return true; }
+};
+
+bool HasStructureComponent(const Expr<SomeType> &expr) {
+  return HasStructureComponentHelper{}(expr);
 }
 
 parser::Message *AttachDeclaration(
@@ -1693,6 +1773,14 @@ struct ArgumentExtractor
     return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    // Return the condition and then/else branches as immediate operands;
+    // nested conditionals are not permitted in an OpenMP atomic context.
+    return {Operator::Conditional,
+        {AsSomeExpr(x.condition()), AsSomeExpr(x.thenValue()),
+            AsSomeExpr(x.elseValue())}};
+  }
+
   template <typename... Rs>
   Result Combine(Result &&result, Rs &&...results) const {
     // There shouldn't be any combining needed, since we're stopping the
@@ -1730,6 +1818,8 @@ std::string operation::ToString(operation::Operator op) {
     return "ASSOCIATED";
   case Operator::Call:
     return "function-call";
+  case Operator::Conditional:
+    return "conditional";
   case Operator::Constant:
     return "constant";
   case Operator::Convert:
@@ -1856,6 +1946,13 @@ struct ConvertCollector
     } else {
       return {AsSomeExpr(x.derived()), {}};
     }
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) const {
+    // ConvertCollector tracks the typed-value conversion chain (for OMP ATOMIC
+    // validation); the condition is a LOGICAL(4) selector, not a value output,
+    // so only the value branches are collected.
+    return Combine((*this)(x.thenValue()), (*this)(x.elseValue()));
   }
 
   template <typename... Rs>
@@ -2085,6 +2182,9 @@ static bool IsPureProcedureImpl(
     }
     return true; // statement function was not found to be impure
   }
+  if (symbol.attrs().test(Attr::SIMPLE)) {
+    return true; // SIMPLE implies PURE; F2023 15.8
+  }
   return symbol.attrs().test(Attr::PURE) ||
       (symbol.attrs().test(Attr::ELEMENTAL) &&
           !symbol.attrs().test(Attr::IMPURE));
@@ -2098,6 +2198,18 @@ bool IsPureProcedure(const Symbol &original) {
 bool IsPureProcedure(const Scope &scope) {
   const Symbol *symbol{scope.GetSymbol()};
   return symbol && IsPureProcedure(*symbol);
+}
+
+bool IsSimpleProcedure(const Symbol &original) {
+  // An ENTRY is SIMPLE if its containing subprogram is
+  return DEREF(GetMainEntry(&original.GetUltimate()))
+      .attrs()
+      .test(Attr::SIMPLE);
+}
+
+bool IsSimpleProcedure(const Scope &scope) {
+  const Symbol *symbol{scope.GetSymbol()};
+  return symbol && IsSimpleProcedure(*symbol);
 }
 
 bool IsExplicitlyImpureProcedure(const Symbol &original) {
@@ -2419,7 +2531,7 @@ bool IsBuiltinDerivedType(const DerivedTypeSpec *derived, const char *name) {
 bool IsBuiltinCPtr(const Symbol &symbol) {
   if (const DeclTypeSpec *declType = symbol.GetType()) {
     if (const DerivedTypeSpec *derived = declType->AsDerived()) {
-      return IsIsoCType(derived);
+      return IsIsoCType(derived) || IsBuiltinDerivedType(derived, "c_devptr");
     }
   }
   return false;
@@ -2610,6 +2722,18 @@ const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule) {
     }
   }
   return nullptr;
+}
+
+const Symbol &GetCrayPointer(const Symbol &crayPointee) {
+  const Symbol *found{nullptr};
+  const Symbol &ultimate{crayPointee.GetUltimate()};
+  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
+    if (pointee == ultimate.name()) {
+      found = &pointer.get();
+      break;
+    }
+  }
+  return DEREF(found);
 }
 
 } // namespace Fortran::semantics

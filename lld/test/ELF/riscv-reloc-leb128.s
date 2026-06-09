@@ -64,8 +64,8 @@
 # RUN: not ld.lld -shared --threads=1 unpaired2.o 2>&1 | FileCheck %s --check-prefix=UNPAIRED
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax unpaired3.s -o unpaired3.o
 # RUN: not ld.lld -shared --threads=1 unpaired3.o 2>&1 | FileCheck %s --check-prefix=UNPAIRED
-# UNPAIRED: error: {{.*}}.o:(.alloc+0x8): R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128
-# UNPAIRED: error: {{.*}}.o:(.debug_rnglists+0x8): R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128
+# UNPAIRED: error: {{.*}}.o:(.alloc+0x8): R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128
+# UNPAIRED: error: {{.*}}.o:(.debug_rnglists+0x8): R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax overflow.s -o overflow.o
 # RUN: not ld.lld -shared --threads=1 overflow.o 2>&1 | FileCheck %s --check-prefix=OVERFLOW

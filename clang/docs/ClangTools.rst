@@ -66,13 +66,13 @@ in a fast, command line interface. It can also accept flags to re-display the
 diagnostics in different formats with different flags, suitable for use driving
 an IDE or editor. Furthermore, it can be used in fixit-mode to directly apply
 fixit-hints offered by clang. See :doc:`HowToSetupToolingForLLVM` for
-instructions on how to setup and used `clang-check`.
+instructions on how to setup and use `clang-check`.
 
 ``clang-format``
 ----------------
 
 Clang-format is both a :doc:`library <LibFormat>` and a :doc:`stand-alone tool
-<ClangFormat>` with the goal of automatically reformatting C++ sources files
+<ClangFormat>` with the goal of automatically reformatting C++ source files
 according to configurable style guides.  To do so, clang-format uses Clang's
 ``Lexer`` to transform an input file into a token stream and then changes all
 the whitespace around those tokens.  The goal is for clang-format to serve both

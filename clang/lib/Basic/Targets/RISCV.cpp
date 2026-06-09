@@ -15,6 +15,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
@@ -192,8 +193,11 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_muldiv");
   }
 
-  if (ISAInfo->hasExtension("a")) {
+  // The "a" extension is composed of "zalrsc" and "zaamo"
+  if (ISAInfo->hasExtension("a"))
     Builder.defineMacro("__riscv_atomic");
+
+  if (ISAInfo->hasExtension("zalrsc")) {
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
     Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
@@ -639,4 +643,31 @@ bool RISCVTargetInfo::validateCpuIs(StringRef CPUName) const {
          "__builtin_cpu_is() is only supported for Linux.");
 
   return llvm::RISCV::hasValidCPUModel(CPUName);
+}
+
+bool RISCVTargetInfo::checkCFBranchLabelSchemeSupported(
+    const CFBranchLabelSchemeKind Scheme, DiagnosticsEngine &Diags) const {
+  // TODO: Allow the default func-sig scheme to be selected after backend
+  // implements it
+  switch (Scheme) {
+  case CFBranchLabelSchemeKind::Default:
+    Diags.Report(diag::err_opt_not_valid_without_opt)
+        << "-fcf-protection=branch"
+        << (Twine("-mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
+               .str();
+    return false;
+  case CFBranchLabelSchemeKind::Unlabeled:
+    return true;
+  case CFBranchLabelSchemeKind::FuncSig:
+    Diags.Report(diag::err_opt_unsupported_with_suggest)
+        << (Twine("-mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::FuncSig))
+               .str()
+        << (Twine("-mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
+               .str();
+    return false;
+  }
+  return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
 }

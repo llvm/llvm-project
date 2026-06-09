@@ -11,7 +11,7 @@ typedef union {
   int z : 8;
 } demo;
 
-// CIR:  !rec_demo = !cir.record<union "demo" {!s32i, !u8i, !u8i}>
+// CIR:  !rec_demo = !cir.union<"demo" {!s32i, !u8i, !u8i}>
 // LLVM: %union.demo = type { i32 }
 // OGCG: %union.demo = type { i32 }
 
@@ -22,7 +22,7 @@ typedef union {
   int z : 2;
 } zero_bit;
 
-// CIR:  !rec_zero_bit = !cir.record<union "zero_bit" {!s32i, !u8i, !u8i}>
+// CIR:  !rec_zero_bit = !cir.union<"zero_bit" {!s32i, !u8i, !u8i}>
 // LLVM: %union.zero_bit = type { i32 }
 // OGCG: %union.zero_bit = type { i32 }
 
@@ -39,7 +39,7 @@ void f() {
 // CIR: #bfi_y = #cir.bitfield_info<name = "y", storage_type = !u8i, size = 4, offset = 0, is_signed = true>
 // CIR: #bfi_z = #cir.bitfield_info<name = "z", storage_type = !u8i, size = 8, offset = 0, is_signed = true>
 
-// CIR:   cir.func no_proto dso_local @f
+// CIR:   cir.func {{.*}} @f
 // CIR:    [[ALLOC:%.*]] = cir.alloca !rec_demo, !cir.ptr<!rec_demo>, ["d"] {alignment = 4 : i64}
 // CIR:    [[ONE:%.*]] = cir.const #cir.int<1> : !s32i
 // CIR:    [[X:%.*]] = cir.get_member [[ALLOC]][0] {name = "x"} : !cir.ptr<!rec_demo> -> !cir.ptr<!s32i>

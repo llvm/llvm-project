@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify %s
+// RUN: %clang_cc1 -std=c++20 -ferror-limit 0 -verify=expected,cxx20 %s
+// RUN: %clang_cc1 -std=c++2c -ferror-limit 0 -verify=expected %s
 
 namespace PR47043 {
   template<typename T> concept True = true;
@@ -848,7 +849,7 @@ template<typename T, typename U> concept C = true;
 template<typename T> auto L = []<C<T> U>() {};
 
 struct Q {
-  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const;
+  template<C<int> U> friend constexpr auto decltype(L<int>)::operator()() const; // expected-error {{a member of a lambda should not be the target of a friend declaration}}
 };
 
 template <class T>
@@ -1036,7 +1037,7 @@ void test() {
 
 namespace GH66612 {
   template<typename C>
-    auto end(C c) ->int;
+    auto end(C c) ->int; // expected-note {{possible target for call}}
 
   template <typename T>
     concept Iterator = true;
@@ -1046,9 +1047,8 @@ namespace GH66612 {
         { end } -> Iterator; // #66612GH_END
     };
 
-  static_assert(Container<int>);// expected-error{{static assertion failed}}
-  // expected-note@-1{{because 'int' does not satisfy 'Container'}}
-  // expected-note@#66612GH_END{{because 'end' would be invalid: reference to overloaded function could not be resolved; did you mean to call it?}}
+  static_assert(Container<int>);
+  // expected-error@#66612GH_END{{reference to overloaded function could not be resolved; did you mean to call it?}}
 }
 
 namespace GH66938 {
@@ -1241,12 +1241,28 @@ struct SVGPropertyOwnerRegistry {
   }
 };
 
-class SVGCircleElement {
+struct SVGCircleElement {
   friend SVGPropertyOwnerRegistry<SVGCircleElement>;
   void propertyForAttribute(int);
 };
 
 int i = SVGPropertyOwnerRegistry<SVGCircleElement>::fastAnimatedPropertyLookup();
+
+}
+
+namespace GH173086 {
+
+template <typename, unsigned, typename> struct GeneralTensor {};
+template <typename T, unsigned Rank> using Tensor = GeneralTensor<T, Rank, int>;
+template <typename T, unsigned OtherRank, typename Alloc, typename... Dims>
+GeneralTensor(GeneralTensor<T, OtherRank, Alloc>, Dims... dims)
+    -> GeneralTensor<T, sizeof...(dims), Alloc>;
+template <typename... MultiIndex>
+Tensor<double, sizeof...(MultiIndex)> create_incremented_tensor() {
+  return Tensor<double, sizeof...(MultiIndex)>();
+}
+
+auto x = Tensor{create_incremented_tensor<>()};
 
 }
 
@@ -1404,4 +1420,585 @@ static_assert(!std::is_constructible_v<span<4>, array<int, 3>>);
 
 }
 
+namespace case7 {
+
+template <class _Tp, class _Up>
+concept __same_as_impl = __is_same(_Tp, _Up);
+template <class _Tp, class _Up>
+concept same_as = __same_as_impl<_Tp, _Up>;
+template <typename>
+concept IsEntitySpec =
+  requires { requires same_as<void, void>; };
+
 }
+
+namespace case8 {
+
+template <class T>
+struct type_identity {
+    using type = T;
+};
+
+template <typename Inner>
+struct Cat {};
+
+template <typename T>
+concept CatConcept = requires {
+    []<class Inner>(type_identity<Cat<Inner>>) {}(type_identity<T>{});
+};
+
+template <typename Dummy>
+struct Feeder {
+    template <CatConcept Dummy2>
+    void feed() noexcept {}
+};
+
+void main() { Feeder<int>{}.feed<Cat<int>>(); }
+
+}
+
+namespace case9 {
+
+template <typename>
+concept a = requires { requires true; };
+template <typename T>
+concept b = a<typename T::EntitySpec>;
+template <typename T>
+concept c = requires { b<T>; };
+template <typename T>
+  requires c<T>
+struct s;
+template <typename> constexpr bool f() { return true; }
+template <typename T> constexpr bool d = f<T>();
+struct s2;
+static_assert(d<s<s2>>);
+
+}
+
+}
+
+namespace GH162125 {
+template<typename, int size>
+concept true_int = (size, true);
+
+template<typename, typename... Ts>
+concept true_types = true_int<void, sizeof...(Ts)>;
+
+template<typename, typename... Ts>
+concept true_types2 = true_int<void, Ts...[0]{1}>; // cxx20-warning {{pack indexing is a C++2c extension}}
+
+template<typename... Ts>
+struct s {
+  template<typename T> requires true_types<T, Ts...> && true_types2<T, Ts...>
+  static void f(T);
+};
+void(*test)(int) = &s<bool>::f<int>;
+}
+
+namespace GH162125_reversed {
+template<int size, typename>
+concept true_int = (size, true);
+
+template<typename, typename... Ts>
+concept true_types = true_int<sizeof...(Ts), void>;
+
+template<typename, typename... Ts>
+concept true_types2 = true_int<Ts...[0]{1}, void>; // cxx20-warning {{pack indexing is a C++2c extension}}
+
+template<typename... Ts>
+struct s {
+  template<typename T> requires true_types<T, Ts...> && true_types2<T, Ts...>
+  static void f(T);
+};
+
+void(*test)(int) = &s<bool>::f<int>;
+}
+namespace GH51246 {
+void f(); // expected-note {{possible target for call}}
+void f(int); // expected-note {{possible target for call}}
+void g();
+static_assert(requires { f; }); // expected-error {{reference to overloaded function could not be resolved}}
+static_assert(requires { g; });
+struct S {
+    void mf() {
+        static_assert(requires { mf(); });
+        static_assert(requires { mf; });    // expected-error {{reference to non-static member function must be called}}
+        static_assert(requires { S::mf; }); // expected-error {{reference to non-static member function must be called}}
+    }
+    void mf2(int); // expected-note 2{{possible target for call}}
+    void mf2() { // expected-note 2{{possible target for call}}
+        static_assert(requires { mf2; });    // expected-error {{reference to non-static member function must be called}}
+        static_assert(requires { S::mf2; }); // expected-error {{reference to non-static member function must be called}}
+    }
+};
+
+} // namespace GH51246
+
+
+namespace GH97753 {
+
+void f(); // expected-note {{possible target for call}}
+void f(int); // expected-note {{possible target for call}}
+
+template<typename T>
+concept C = sizeof(T) == 42;
+
+static_assert( requires {{ &f } -> C;} ); // expected-error {{reference to overloaded function could not be resolved;}}
+// expected-error@-1 {{static assertion failed due to requirement 'requires { { &f() } -> C; }'}}
+
+}
+
+namespace GH162092 {
+
+template <typename T>
+struct vector;
+
+template <typename T, typename U>
+concept C = __is_same_as(T, U);
+
+template<class T, auto Cpt>
+concept generic_range_value = requires {
+    Cpt.template operator()<int>();
+};
+
+
+template<generic_range_value<[]<
+   C<int>
+   >() {}> T>
+void x() {}
+
+void foo() {
+  x<vector<int>>();
+}
+}
+
+namespace GH162770 {
+  enum e {};
+  template<e> struct s {};
+
+  template<typename> struct specialized;
+  template<e x> struct specialized<s<x>> {
+    static auto make(auto) -> s<x>;
+  };
+
+  template<e x> struct check {
+    static constexpr auto m = requires { specialized<s<x>>::make(0); };
+  };
+
+  template<typename... Ts> auto comma = (..., Ts());
+  auto b = comma<check<e{}>>;
+} // namespace GH162770
+
+namespace GH164750 {
+
+template <typename>
+struct a;
+template <typename>
+struct b;
+
+template <template <typename> typename c, typename d, typename>
+concept e = !__is_convertible_to(c<d>*, b<d>*);
+
+template <typename...>
+struct f;
+template <typename g, typename... h>
+struct f<g, h...> {
+    g i;
+};
+
+template <typename, typename>
+struct u;
+template <typename j, template <typename> typename k, typename l>
+    requires e<k, j, l>
+struct u<const k<j>*, l> {
+    u(const a<j>*);
+};
+template <typename j, template <typename> typename k, typename l>
+struct u<const k<j>*, l> {
+    u(const b<j>*);
+};
+
+template <typename>
+struct m;
+template <typename n, typename... o>
+struct m<n (*)(o...)> {
+    template <template <typename> typename j>
+    using p = j<o...>;
+};
+
+template <typename q, typename r>
+struct s {
+    template <typename... p>
+    struct D {
+        using v = f<u<r, p>...>;
+    };
+    template <typename... t>
+    s(t... p1) : x(p1...) {}
+    m<q>::template p<D>::v x;
+};
+template <typename w, typename... t>
+void fn1(w, t... p2) {
+    s<w, t...>(p2...);
+}
+int* fn2(int) { return nullptr; }
+void fn3() {
+    fn1(fn2, static_cast<const a<int>*>(nullptr));
+    fn1(fn2, static_cast<const b<int>*>(nullptr));
+}
+
+}
+
+namespace GH165238 {
+
+namespace std {
+template <typename, typename _Tp>
+concept output_iterator = requires(_Tp __t) { __t; };
+template <typename _Out> struct basic_format_context {
+  static_assert(output_iterator<_Out, int>);
+  using char_type = _Out;
+};
+template <typename> class basic_format_parse_context;
+template <typename, typename _Context, typename _Formatter,
+          typename = basic_format_parse_context<typename _Context::char_type>>
+concept __parsable_with = requires(_Formatter __f) { __f; };
+template <typename _Tp, typename _CharT,
+          typename _Context = basic_format_context<_CharT>>
+concept __formattable_impl = __parsable_with<_Tp, _Context, _Context>;
+template <typename _Tp, typename _CharT>
+concept formattable = __formattable_impl<_Tp, _CharT>;
+} // namespace std
+struct {
+  void operator()(std::formattable<char> auto);
+} call;
+void foo() { call(""); }
+
+}
+
+namespace GH186624 {
+
+template <class T>
+concept C = __is_unsigned(T);
+
+template <C T>
+struct encoder_interface {};
+
+template <template <C> class CodecInterface, C T>
+CodecInterface<T>* create_codec() {
+  return nullptr;
+}
+
+encoder_interface<unsigned>* create_encoder() {
+  return create_codec<encoder_interface, unsigned>();
+}
+
+}
+
+namespace GH170856 {
+
+template <unsigned N, unsigned M> struct symbol_text {
+  consteval symbol_text(const char txt[]) {}
+};
+template <unsigned N> symbol_text(const char (&)[N]) -> symbol_text<1, 1>;
+struct quantity_spec_interface_base {};
+template <symbol_text, auto...> struct named_unit;
+struct quantity_spec_interface : quantity_spec_interface_base {};
+struct : quantity_spec_interface {
+} thermodynamic_temperature;
+
+template <typename T>
+concept QuantitySpec = __is_convertible(T*, quantity_spec_interface_base*);
+template <typename, auto QS>
+concept QuantitySpecOf = QuantitySpec<decltype(QS)>;
+template <typename T, auto QS>
+concept PointOriginFor = QuantitySpecOf<decltype(QS), T::_quantity_spec_>;
+
+template <symbol_text Symbol, auto QS, auto PO>
+struct named_unit<Symbol, QS, PO> {
+  static constexpr auto _point_origin_ = PO;
+};
+template <auto QS> struct absolute_point_origin {
+  static constexpr auto _quantity_spec_ = QS;
+};
+template <auto> struct relative_point_origin {};
+template <class R>
+consteval PointOriginFor<R{}> auto default_point_origin(R) {
+  return R{}._point_origin_;
+}
+template <auto> class quantity_point;
+template <class R> struct point_ {
+  quantity_point<default_point_origin(R{})> operator0();
+};
+template <auto R> point_<decltype(R)> point;
+struct absolute_zero : absolute_point_origin<thermodynamic_temperature> {
+} absolute_zero;
+auto zeroth_kelvin = absolute_zero;
+struct : named_unit<"", thermodynamic_temperature, zeroth_kelvin> {
+} kelvin;
+struct ice_point : relative_point_origin<point<kelvin>> {};
+
+}
+
+namespace GH184047 {
+
+template <typename T, int N>
+concept decomposable = requires {
+    []<template <typename...> class U, typename... Args> // #decomposable_lambda
+        requires(sizeof...(Args) >= N)
+    (U<Args...>*) {}(static_cast<T*>(nullptr));
+};
+
+template<typename T>
+struct foo {};
+
+template<typename T>
+concept decomposable_fails = decomposable<T, 2>; // #decomposable_fails
+
+template<typename T>
+concept decomposable_works = requires {
+    requires decomposable<T, 1>;
+};
+
+static_assert(decomposable<foo<int>, 1>);
+
+static_assert(decomposable<foo<int>, 200>);
+// expected-error@-1 {{static assertion failed}}
+// expected-note@-2 {{evaluated to false}}
+// expected-note@#decomposable_lambda {{invalid}}
+
+static_assert(decomposable_works<foo<int>>);
+
+static_assert(decomposable_fails<foo<int>>);
+// expected-error@-1 {{static assertion failed}}
+// expected-note@-2 {{'foo<int>' does not satisfy 'decomposable_fails'}}
+// expected-note@#decomposable_fails {{evaluated to false}}
+// expected-note@#decomposable_lambda {{invalid}}
+
+}
+
+namespace GH182344 {
+
+template <typename T>
+  requires true
+void f() {}
+
+template <typename T>
+  requires false
+void f() = delete;
+
+struct Bar {};
+
+template <typename> using Foo = Bar;
+
+template <int T>
+  requires true
+void f2() {}
+
+template <int T>
+  requires false
+void f2() = delete;
+
+template <int> constexpr auto Value = 1;
+
+template <template <typename> class> using FooTemp = Bar;
+
+template <typename T, int N, template <typename> class C> void use() {
+  f<Foo<T>>();
+  f2<Value<N>>();
+  f<FooTemp<C>>();
+}
+
+}
+
+namespace instantiation_dependent {
+  template <class T> concept C = sizeof(T) >= 1;
+  template <class U> using X = int;
+  template <class V> requires C<X<V&>> struct Y {};
+  Y<void> y;
+  // expected-error@-1 {{constraints not satisfied for class template 'Y' [with V = void]}}
+  // expected-note@-3  {{because substituted constraint expression is ill-formed: cannot form a reference to 'void'}}
+} // namespace instantiation_dependent
+
+namespace GH174667 {
+
+template<class T, class, class U>
+concept C = requires{ requires U(T(1)); };
+
+template<C<void, bool> T> int f();
+void main() { f<int>(); }
+
+}
+
+namespace GH176402 {
+  void f() {
+    auto recursiveLambda = [](auto self, int depth) -> void {
+      struct MyClass;
+      auto testConcept = []<typename T> {
+        return requires(T) { &MyClass::operator0 } /* expected-error {{expected ';' at end of requirement}} */;
+      };
+    };
+    recursiveLambda(recursiveLambda, 5);
+  }
+}
+namespace GH191016 {
+  template <typename T = int>
+  struct S {
+    template <typename Args = int>
+    constexpr static bool P = true;
+    template <typename... Args>
+    constexpr static bool Q = true;
+    S() requires P<> && Q<> {}
+  };
+  void test(){ S<int> s; }
+}
+
+
+namespace GH188640 {
+
+namespace Ex1 {
+template <typename T> constexpr bool CC = true;
+
+template <typename V, typename U = V>
+concept C = CC<U>;
+
+template <typename T>
+constexpr int f()
+    requires C<T> && C<T *>
+{
+    return 21;
+}
+
+template <typename T>
+void f()
+    requires C<T>;
+
+void g() { static_assert(f<void>() == 21); }
+
+} // namespace Ex1
+
+namespace VAR {
+template <auto N> constexpr bool CC = true;
+template <auto V, auto U = V>
+concept C = CC<U>;
+
+template <auto V>
+constexpr int f()
+    requires C<V> && C<V + 1>
+{
+    return 42;
+}
+
+template <auto N>
+int f()
+    requires C<N>;
+
+void g() { static_assert(f<1>() == 42); }
+} // namespace VAR
+
+} // namespace GH188640
+
+namespace GH194803 {
+
+struct B {
+    void f();
+};
+template <typename Base>
+concept C = requires() { Base::f(); }; // expected-note {{because 'Base::f()' would be invalid: call to non-static member function without an object argument}}
+
+template <typename> struct S : B {
+    void g()
+        requires C<B>; // expected-note {{because 'B' does not satisfy 'C'}}
+    void h()
+        requires requires() { B::f(); }; // #2
+};
+void f() {
+    S<int>{}.g(); // expected-error {{invalid reference to function 'g': constraints not satisfied}}
+    S<int>{}.h();
+}
+
+}
+
+namespace GH115838 {
+
+template <typename T>
+concept has_x = requires(T t) {
+    { t.x };
+};
+
+class Publ {
+  public:
+    int x = 0;
+};
+class Priv {
+  private:
+    int x = 0;
+};
+class Prot {
+  protected:
+    int x = 0;
+};
+class Same {
+  protected:
+    int x = 0;
+};
+
+template <typename T> class D;
+template <typename T>
+requires(has_x<T>)
+class D<T> : public T {
+  public:
+    static constexpr bool has = 1;
+};
+template <typename T>
+requires(!has_x<T>)
+class D<T> : public T {
+  public:
+    static constexpr bool has = 0;
+};
+
+static_assert(!has_x<Same>, "Protected should be invisible.");
+static_assert(!D<Same>::has, "Protected should be invisible.");
+
+static_assert(D<Publ>::has, "Public should be visible.");
+static_assert(!D<Priv>::has, "Private should be invisible.");
+static_assert(!D<Prot>::has, "Protected should be invisible.");
+}
+
+
+namespace GH197067 {
+typedef int uint32_t;
+class basic_string;
+using string = basic_string;
+using __self_view = int;
+struct basic_string {
+  basic_string(const char *);
+  operator __self_view();
+};
+int GetVmo(int);
+template <typename> struct StorageTraits;
+template <class Traits, typename Storage>
+concept StorageTraitsBufferedReadApi =
+    requires(Storage storage_ref, uint32_t length) {
+      Traits::Read(storage_ref, length, length, [] {});
+    };
+template <class Traits, typename Storage>
+concept StorageTraitsApi = StorageTraitsBufferedReadApi<Traits, Storage>;
+template <typename T>
+concept StorageApi = StorageTraitsApi<StorageTraits<T>, T>;
+template <StorageApi Storage> struct View {
+  using storage_type = Storage;
+  storage_type storage_;
+};
+template <> struct StorageTraits<int> {
+  template <typename Callback>
+  static auto Read(int, long, uint32_t, Callback) {}
+};
+View zbi(GetVmo(string("")));
+}
+
+namespace GH196375 {
+  template <class T, T V> concept Small = V <= 2; // expected-note {{because '4 <= 2' (4 <= 2) evaluated to false}}
+  template <int V> consteval bool f() // expected-note {{candidate template ignored: constraints not satisfied}}
+    requires(Small<int, V>) { return true; } // expected-note {{because 'Small<int, 4>' evaluated to false}}
+  static_assert(f<4>());
+  // expected-error@-1 {{no matching function for call to 'f'}}
+} // namespace GHGH196375

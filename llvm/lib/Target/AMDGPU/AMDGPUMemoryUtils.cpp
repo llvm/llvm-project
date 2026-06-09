@@ -17,6 +17,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ReplaceConstant.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
@@ -28,6 +29,22 @@ namespace llvm::AMDGPU {
 Align getAlign(const DataLayout &DL, const GlobalVariable *GV) {
   return DL.getValueOrABITypeAlignment(GV->getPointerAlignment(DL),
                                        GV->getValueType());
+}
+
+void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
+  Source.getAllMetadata(MD);
+  for (const auto [ID, N] : MD) {
+    switch (ID) {
+    case LLVMContext::MD_dbg:
+    case LLVMContext::MD_invariant_load:
+    case LLVMContext::MD_nontemporal:
+      Dest.setMetadata(ID, N);
+      break;
+    default:
+      break;
+    }
+  }
 }
 
 // Returns the target extension type of a global variable,
@@ -70,7 +87,7 @@ bool isDynamicLDS(const GlobalVariable &GV) {
   const DataLayout &DL = M->getDataLayout();
   if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
     return false;
-  return DL.getTypeAllocSize(GV.getValueType()) == 0;
+  return GV.getGlobalSize(DL) == 0;
 }
 
 bool isLDSVariableToLower(const GlobalVariable &GV) {
@@ -126,17 +143,13 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
     for (User *V : GV.users()) {
       if (auto *I = dyn_cast<Instruction>(V)) {
         Function *F = I->getFunction();
-        if (isKernelLDS(F))
+        if (isKernel(*F))
           kernels[F].insert(&GV);
         else
           Functions[F].insert(&GV);
       }
     }
   }
-}
-
-bool isKernelLDS(const Function *F) {
-  return AMDGPU::isKernel(F->getCallingConv());
 }
 
 LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
@@ -148,7 +161,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // Collect functions whose address has escaped
   DenseSet<Function *> AddressTakenFuncs;
   for (Function &F : M.functions()) {
-    if (!isKernelLDS(&F))
+    if (!isKernel(F))
       if (F.hasAddressTaken(nullptr,
                             /* IgnoreCallbackUses */ false,
                             /* IgnoreAssumeLikeCalls */ false,
@@ -180,7 +193,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // access all variables accessed by functions whose address escaped
   for (Function &F : M.functions()) {
     if (!F.isDeclaration() && FunctionMakesUnknownCall(&F)) {
-      if (!isKernelLDS(&F)) {
+      if (!isKernel(F)) {
         set_union(TransitiveMapFunction[&F],
                   VariablesReachableThroughFunctionPointer);
       }
@@ -190,7 +203,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   // Direct implementation of collecting all variables reachable from each
   // function
   for (Function &Func : M.functions()) {
-    if (Func.isDeclaration() || isKernelLDS(&Func))
+    if (Func.isDeclaration() || isKernel(Func))
       continue;
 
     DenseSet<Function *> seen; // catches cycles
@@ -227,7 +240,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   FunctionVariableMap IndirectMapKernel;
 
   for (Function &Func : M.functions()) {
-    if (Func.isDeclaration() || !isKernelLDS(&Func))
+    if (Func.isDeclaration() || !isKernel(Func))
       continue;
 
     for (const CallGraphNode::CallRecord &R : *CG[&Func]) {
@@ -273,6 +286,8 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
   //      this is a re-run of the pass
   //      so we don't have anything to do.
   //    - No variables are absolute.
+  // Named-barriers which are absolute symbols are removed
+  // from the maps.
   std::optional<bool> HasAbsoluteGVs;
   bool HasSpecialGVs = false;
   for (auto &Map : {DirectMapKernel, IndirectMapKernel}) {
@@ -284,6 +299,10 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
         if (IsDirectMapDynLDSGV)
           continue;
         if (isNamedBarrier(*GV)) {
+          if (IsAbsolute) {
+            DirectMapKernel[Fn].erase(GV);
+            IndirectMapKernel[Fn].erase(GV);
+          }
           HasSpecialGVs = true;
           continue;
         }
@@ -335,7 +354,7 @@ void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
             Function *PotentialCallee =
                 ExternalCallRecord.second->getFunction();
             assert(PotentialCallee);
-            if (!isKernelLDS(PotentialCallee)) {
+            if (!isKernel(*PotentialCallee)) {
               for (StringRef Attr : FnAttrs)
                 PotentialCallee->removeFnAttr(Attr);
             }
@@ -369,6 +388,7 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier_wait:
     case Intrinsic::amdgcn_s_barrier_leave:
     case Intrinsic::amdgcn_s_get_barrier_state:
+    case Intrinsic::amdgcn_s_wakeup_barrier:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:
     case Intrinsic::amdgcn_sched_group_barrier:

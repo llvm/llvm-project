@@ -15,11 +15,11 @@
 #include "clang/Driver/Action.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -55,12 +55,7 @@ class JobAction;
 class ToolChain;
 
 /// Describes the kind of LTO mode selected via -f(no-)?lto(=.*)? options.
-enum LTOKind {
-  LTOK_None,
-  LTOK_Full,
-  LTOK_Thin,
-  LTOK_Unknown
-};
+enum LTOKind : int { LTOK_None, LTOK_Full, LTOK_Thin, LTOK_Unknown };
 
 /// Whether headers used to construct C++20 module units should be looked
 /// up by the path supplied on the command line, or in the user or system
@@ -135,12 +130,6 @@ class Driver {
   /// interpretation.
   bool ModulesModeCXX20;
 
-  /// LTO mode selected via -f(no-)?lto(=.*)? options.
-  LTOKind LTOMode;
-
-  /// LTO mode selected via -f(no-offload-)?lto(=.*)? options.
-  LTOKind OffloadLTOMode;
-
   /// Options for CUID
   CUIDOptions CUIDOpts;
 
@@ -179,8 +168,8 @@ public:
   /// command line.
   std::string Dir;
 
-  /// The original path to the clang executable.
-  std::string ClangExecutable;
+  /// The original path to the driver executable.
+  std::string DriverExecutable;
 
   /// Target and driver mode components extracted from clang executable name.
   ParsedClangName ClangNameParts;
@@ -227,12 +216,6 @@ public:
 
   /// The file to log CC_LOG_DIAGNOSTICS output to, if enabled.
   std::string CCLogDiagnosticsFilename;
-
-  /// An input type and its arguments.
-  using InputTy = std::pair<types::ID, const llvm::opt::Arg *>;
-
-  /// A list of inputs and their types for the given arguments.
-  using InputList = SmallVector<InputTy, 16>;
 
   /// Whether the driver should follow g++ like behavior.
   bool CCCIsCXX() const { return Mode == GXXMode; }
@@ -406,12 +389,7 @@ private:
                               SmallString<128> &CrashDiagDir);
 
 public:
-
-  /// Takes the path to a binary that's either in bin/ or lib/ and returns
-  /// the path to clang's resource directory.
-  static std::string GetResourcesPath(StringRef BinaryPath);
-
-  Driver(StringRef ClangExecutable, StringRef TargetTriple,
+  Driver(StringRef DriverExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags, std::string Title = "clang LLVM compiler",
          IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
@@ -448,10 +426,8 @@ public:
 
   std::string getTargetTriple() const { return TargetTriple; }
 
-  /// Get the path to the main clang executable.
-  const char *getClangProgramPath() const {
-    return ClangExecutable.c_str();
-  }
+  /// Get the path to the main driver executable.
+  const char *getDriverProgramPath() const { return DriverExecutable.c_str(); }
 
   StringRef getPreferredLinker() const { return PreferredLinker; }
   void setPreferredLinker(std::string Value) {
@@ -512,9 +488,6 @@ public:
 
   /// BuildActions - Construct the list of actions to perform for the
   /// given arguments, which are only done for a single architecture.
-  /// If the compilation is an explicit module build, delegates to
-  /// BuildDriverManagedModuleBuildActions. Otherwise, BuildDefaultActions is
-  /// used.
   ///
   /// \param C - The compilation that is being built.
   /// \param Args - The input arguments.
@@ -538,10 +511,14 @@ public:
   /// \param Input - The input type and arguments
   /// \param CUID - The CUID for \p Input
   /// \param HostAction - The host action used in the offloading toolchain.
-  Action *BuildOffloadingActions(Compilation &C,
-                                 llvm::opt::DerivedArgList &Args,
-                                 const InputTy &Input, StringRef CUID,
-                                 Action *HostAction) const;
+  /// \param HIPAsmBundleDeviceOut - If non-null, HIP non-RDC \c -S (AMDGCN)
+  /// device actions are appended here and \p HostAction is returned unchanged
+  /// so the caller can emit a bundled \c .s via \c OffloadBundlingJobAction.
+  Action *
+  BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
+                         const InputTy &Input, StringRef CUID,
+                         Action *HostAction,
+                         ActionList *HIPAsmBundleDeviceOut = nullptr) const;
 
   /// Returns the set of bound architectures active for this offload kind.
   /// If there are no bound architctures we return a set containing only the
@@ -554,8 +531,7 @@ public:
   /// issue a diagnostic and return false.
   /// If TypoCorrect is true and the file does not exist, see if it looks
   /// like a likely typo for a flag and if so print a "did you mean" blurb.
-  bool DiagnoseInputExistence(const llvm::opt::DerivedArgList &Args,
-                              StringRef Value, types::ID Ty,
+  bool DiagnoseInputExistence(StringRef Value, types::ID Ty,
                               bool TypoCorrect) const;
 
   /// BuildJobs - Bind actions to concrete tools and translate
@@ -675,7 +651,8 @@ public:
   Action *ConstructPhaseAction(
       Compilation &C, const llvm::opt::ArgList &Args, phases::ID Phase,
       Action *Input,
-      Action::OffloadKind TargetDeviceOffloadKind = Action::OFK_None) const;
+      Action::OffloadKind TargetDeviceOffloadKind = Action::OFK_None,
+      LTOKind TargetLTOMode = LTOK_None) const;
 
   /// BuildJobsForAction - Construct the jobs to perform for the action \p A and
   /// return an InputInfo for the result of running \p A.  Will only construct
@@ -751,18 +728,6 @@ public:
   /// Get the mode for handling headers as set by fmodule-header{=}.
   ModuleHeaderMode getModuleHeaderMode() const { return CXX20HeaderType; }
 
-  /// Returns true if we are performing any kind of LTO.
-  bool isUsingLTO() const { return getLTOMode() != LTOK_None; }
-
-  /// Get the specific kind of LTO being performed.
-  LTOKind getLTOMode() const { return LTOMode; }
-
-  /// Returns true if we are performing any kind of offload LTO.
-  bool isUsingOffloadLTO() const { return getOffloadLTOMode() != LTOK_None; }
-
-  /// Get the specific kind of offload LTO being performed.
-  LTOKind getOffloadLTOMode() const { return OffloadLTOMode; }
-
   /// Get the CUID option.
   const CUIDOptions &getCUIDOpts() const { return CUIDOpts; }
 
@@ -794,39 +759,6 @@ private:
   /// Set the driver mode (cl, gcc, etc) from the value of the `--driver-mode`
   /// option.
   void setDriverMode(StringRef DriverModeValue);
-
-  /// Parse the \p Args list for LTO options and record the type of LTO
-  /// compilation based on which -f(no-)?lto(=.*)? option occurs last.
-  void setLTOMode(const llvm::opt::ArgList &Args);
-
-  /// BuildDefaultActions - Constructs the list of actions to perform
-  /// for the provided arguments, which are only done for a single architecture.
-  ///
-  /// \param C - The compilation that is being built.
-  /// \param Args - The input arguments.
-  /// \param Actions - The list to store the resulting actions onto.
-  void BuildDefaultActions(Compilation &C, llvm::opt::DerivedArgList &Args,
-                           const InputList &Inputs, ActionList &Actions) const;
-
-  /// BuildDriverManagedModuleBuildActions - Performs a dependency
-  /// scan and constructs the list of actions to perform for dependency order
-  /// and the provided arguments. This is only done for a single a architecture.
-  ///
-  /// \param C - The compilation that is being built.
-  /// \param Args - The input arguments.
-  /// \param Actions - The list to store the resulting actions onto.
-  void BuildDriverManagedModuleBuildActions(Compilation &C,
-                                            llvm::opt::DerivedArgList &Args,
-                                            const InputList &Inputs,
-                                            ActionList &Actions) const;
-
-  /// Scans the leading lines of the C++ source inputs to detect C++20 module
-  /// usage.
-  ///
-  /// \returns True if module usage is detected, false otherwise, or an error on
-  /// read failure.
-  llvm::ErrorOr<bool>
-  ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const;
 
   /// Retrieves a ToolChain for a particular \p Target triple.
   ///
@@ -919,6 +851,18 @@ void applyOverrideOptions(SmallVectorImpl<const char *> &Args,
                           const char *OverrideOpts,
                           llvm::StringSet<> &SavedStrings, StringRef EnvVar,
                           raw_ostream *OS = nullptr);
+
+/// Creates and adds a synthesized input argument.
+///
+/// \param Args The argument list to append the input argument to.
+/// \param Opts The option table used to look up OPT_INPUT.
+/// \param Value The input to add, typically a filename.
+/// \param Claim Whether the newly created argument should be claimed.
+///
+/// \return The newly created input argument.
+llvm::opt::Arg *makeInputArg(llvm::opt::DerivedArgList &Args,
+                             const llvm::opt::OptTable &Opts, StringRef Value,
+                             bool Claim = true);
 
 } // end namespace driver
 } // end namespace clang

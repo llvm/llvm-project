@@ -123,6 +123,15 @@ private:
   llvm::SmallDenseMap<StringRef, OutputSegment *> segmentMap;
 };
 
+void writeSetTLSBase(const Ctx &ctx, raw_ostream &os) {
+  if (ctx.arg.libcallThreadContext) {
+    writeU8(os, WASM_OPCODE_CALL, "call");
+    writeUleb128(os, ctx.sym.setTLSBase->getFunctionIndex(), "function index");
+  } else {
+    writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
+    writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
+  }
+}
 } // anonymous namespace
 
 void Writer::calculateCustomSections() {
@@ -311,7 +320,8 @@ void Writer::writeBuildId() {
 }
 
 static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
-  LLVM_DEBUG(dbgs() << "setGlobalPtr " << g->getName() << " -> " << memoryPtr << "\n");
+  LLVM_DEBUG(dbgs() << "setGlobalPtr " << g->getName() << " -> " << memoryPtr
+                    << "\n");
   g->global->setPointerValue(memoryPtr);
 }
 
@@ -358,7 +368,8 @@ void Writer::layoutMemory() {
     placeStack();
     if (ctx.arg.globalBase) {
       if (ctx.arg.globalBase < memoryPtr) {
-        error("--global-base cannot be less than stack size when --stack-first is used");
+        error("--global-base cannot be less than stack size when --stack-first "
+              "is used");
         return;
       }
       memoryPtr = ctx.arg.globalBase;
@@ -379,6 +390,7 @@ void Writer::layoutMemory() {
     ctx.sym.dsoHandle->setVA(dataStart);
 
   out.dylinkSec->memAlign = 0;
+  uint64_t fixedTLSBase = memoryPtr;
   for (OutputSegment *seg : segments) {
     out.dylinkSec->memAlign = std::max(out.dylinkSec->memAlign, seg->alignment);
     memoryPtr = alignTo(memoryPtr, 1ULL << seg->alignment);
@@ -388,20 +400,31 @@ void Writer::layoutMemory() {
 
     if (!ctx.arg.relocatable && seg->isTLS()) {
       if (ctx.sym.tlsSize) {
-        auto *tlsSize = cast<DefinedGlobal>(ctx.sym.tlsSize);
-        setGlobalPtr(tlsSize, seg->size);
+        setGlobalPtr(ctx.sym.tlsSize, seg->size);
       }
       if (ctx.sym.tlsAlign) {
-        auto *tlsAlign = cast<DefinedGlobal>(ctx.sym.tlsAlign);
-        setGlobalPtr(tlsAlign, int64_t{1} << seg->alignment);
+        setGlobalPtr(ctx.sym.tlsAlign, int64_t{1} << seg->alignment);
       }
-      if (!ctx.arg.sharedMemory && ctx.sym.tlsBase) {
-        auto *tlsBase = cast<DefinedGlobal>(ctx.sym.tlsBase);
-        setGlobalPtr(tlsBase, memoryPtr);
-      }
+      fixedTLSBase = memoryPtr;
     }
 
+    if (ctx.sym.rodataStart && seg->name.starts_with(".rodata") &&
+        !ctx.sym.rodataStart->getVA())
+      ctx.sym.rodataStart->setVA(memoryPtr);
+
     memoryPtr += seg->size;
+
+    // Might get set more than once if segment merging is not enabled.
+    if (ctx.sym.rodataEnd && seg->name.starts_with(".rodata"))
+      ctx.sym.rodataEnd->setVA(memoryPtr);
+  }
+
+  // In single-threaded builds we set __tls_base statically.
+  // Even in the absense of any actual TLS data, this symbol can still be
+  // referenced (for example by __builtin_thread_pointer, which should not
+  // return NULL).
+  if (!ctx.arg.sharedMemory && ctx.sym.tlsBase) {
+    setGlobalPtr(ctx.sym.tlsBase, fixedTLSBase);
   }
 
   // Make space for the memory initialization flag
@@ -618,6 +641,16 @@ void Writer::populateTargetFeatures() {
       return segment->live && segment->isTLS();
     };
     tlsUsed = tlsUsed || llvm::any_of(file->segments, isTLS);
+
+    // Ensure that we're not mixing incompatible thread context models
+    if (ctx.arg.libcallThreadContext &&
+        llvm::any_of(file->getSymbols(), [](const auto &sym) {
+          return sym && sym->getName() == "__stack_pointer" &&
+                 sym->kind() == Symbol::UndefinedGlobalKind &&
+                 sym->importModule && sym->importModule == "env";
+        }))
+      error(fileName + ": object file uses globals for thread context, "
+                       "but --libcall-thread-context was specified");
   }
 
   if (inferFeatures)
@@ -628,20 +661,20 @@ void Writer::populateTargetFeatures() {
     goto done;
 
   if (ctx.arg.sharedMemory) {
-    if (disallowed.count("shared-mem"))
+    if (disallowed.contains("shared-mem"))
       error("--shared-memory is disallowed by " + disallowed["shared-mem"] +
             " because it was not compiled with 'atomics' or 'bulk-memory' "
             "features.");
 
     for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.count(feature))
+      if (!allowed.contains(feature))
         error(StringRef("'") + feature +
               "' feature must be used in order to use shared memory");
   }
 
   if (tlsUsed) {
     for (auto feature : {"atomics", "bulk-memory"})
-      if (!allowed.count(feature))
+      if (!allowed.contains(feature))
         error(StringRef("'") + feature +
               "' feature must be used in order to use thread-local storage");
   }
@@ -649,7 +682,7 @@ void Writer::populateTargetFeatures() {
   // Validate that used features are allowed in output
   if (!inferFeatures) {
     for (const auto &feature : used.keys()) {
-      if (!allowed.count(std::string(feature)))
+      if (!allowed.contains(std::string(feature)))
         error(Twine("Target feature '") + feature + "' used by " +
               used[feature] + " is not allowed.");
     }
@@ -663,7 +696,7 @@ void Writer::populateTargetFeatures() {
       if (feature.Prefix == WASM_FEATURE_PREFIX_DISALLOWED)
         continue;
       objectFeatures.insert(feature.Name);
-      if (disallowed.count(feature.Name))
+      if (disallowed.contains(feature.Name))
         error(Twine("Target feature '") + feature.Name + "' used in " +
               fileName + " is disallowed by " + disallowed[feature.Name] +
               ". Use --no-check-features to suppress.");
@@ -678,10 +711,10 @@ done:
   // Finally, if we are emitting relocations, they may refer to locations within
   // the bss segments, so these segments need to exist in the binary.
   if (ctx.arg.emitRelocs ||
-      (ctx.arg.memoryImport.has_value() && !allowed.count("bulk-memory")))
+      (ctx.arg.memoryImport.has_value() && !allowed.contains("bulk-memory")))
     ctx.emitBssSegments = true;
 
-  if (allowed.count("extended-const"))
+  if (allowed.contains("extended-const"))
     ctx.arg.extendedConst = true;
 
   for (auto &feature : allowed)
@@ -692,7 +725,7 @@ void Writer::checkImportExportTargetFeatures() {
   if (ctx.arg.relocatable || !ctx.arg.checkFeatures)
     return;
 
-  if (out.targetFeaturesSec->features.count("mutable-globals") == 0) {
+  if (!out.targetFeaturesSec->features.contains("mutable-globals")) {
     for (const Symbol *sym : out.importSec->importedSymbols) {
       if (auto *global = dyn_cast<GlobalSymbol>(sym)) {
         if (global->getGlobalType()->Mutable) {
@@ -748,7 +781,7 @@ static bool shouldImport(Symbol *sym) {
   if (ctx.isPic || ctx.arg.relocatable || ctx.arg.importUndefined ||
       ctx.arg.unresolvedSymbols == UnresolvedPolicy::ImportDynamic)
     return true;
-  if (ctx.arg.allowUndefinedSymbols.count(sym->getName()) != 0)
+  if (ctx.arg.allowUndefinedSymbols.contains(sym->getName()))
     return true;
 
   return sym->isImported();
@@ -785,7 +818,7 @@ void Writer::calculateExports() {
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
 
   bool hasMutableGlobals =
-      out.targetFeaturesSec->features.count("mutable-globals") > 0;
+      out.targetFeaturesSec->features.contains("mutable-globals");
 
   for (Symbol *sym : symtab->symbols()) {
     if (!sym->isExported())
@@ -1042,7 +1075,7 @@ void Writer::createOutputSegments() {
       if (ctx.arg.relocatable && !segment->getComdatName().empty()) {
         s = createOutputSegment(name);
       } else {
-        if (segmentMap.count(name) == 0)
+        if (!segmentMap.contains(name))
           segmentMap[name] = createOutputSegment(name);
         s = segmentMap[name];
       }
@@ -1109,7 +1142,7 @@ void Writer::combineOutputSegments() {
     }
   }
 
-  segments = newSegments;
+  segments = std::move(newSegments);
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {
@@ -1175,7 +1208,7 @@ void Writer::createSyntheticInitFunctions() {
 
     auto hasTLSRelocs = [](const OutputSegment *segment) {
       if (segment->isTLS())
-        for (const auto* is: segment->inputSegments)
+        for (const auto *is : segment->inputSegments)
           if (is->getRelocations().size())
             return true;
       return false;
@@ -1339,9 +1372,9 @@ void Writer::createInitMemoryFunction() {
                   "i32.add");
         }
 
-        // When we initialize the TLS segment we also set the `__tls_base`
-        // global.  This allows the runtime to use this static copy of the
-        // TLS data for the first/main thread.
+        // When we initialize the TLS segment we also set the TLS base.
+        // This allows the runtime to use this static copy of the TLS data
+        // for the first/main thread.
         if (ctx.arg.sharedMemory && s->isTLS()) {
           if (ctx.isPic) {
             // Cache the result of the addionion in local 0
@@ -1350,8 +1383,7 @@ void Writer::createInitMemoryFunction() {
           } else {
             writePtrConst(os, s->startVA, is64, "destination address");
           }
-          writeU8(os, WASM_OPCODE_GLOBAL_SET, "GLOBAL_SET");
-          writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "__tls_base");
+          writeSetTLSBase(ctx, os);
           if (ctx.isPic) {
             writeU8(os, WASM_OPCODE_LOCAL_GET, "local.tee");
             writeUleb128(os, 1, "local 1");
@@ -1624,10 +1656,10 @@ void Writer::createInitTLSFunction() {
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
 
-      writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
-      writeUleb128(os, ctx.sym.tlsBase->getGlobalIndex(), "global index");
+      writeSetTLSBase(ctx, os);
 
-      // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend op.
+      // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend
+      // op.
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
       writeUleb128(os, 0, "local index");
 
@@ -1713,8 +1745,8 @@ void Writer::createSyntheticSectionsPostLayout() {
 void Writer::run() {
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
-  if (!ctx.isPic && ctx.sym.definedTableBase)
-    ctx.sym.definedTableBase->setVA(ctx.arg.tableBase);
+  if (!ctx.isPic && ctx.sym.tableBase)
+    setGlobalPtr(cast<DefinedGlobal>(ctx.sym.tableBase), ctx.arg.tableBase);
 
   log("-- createOutputSegments");
   createOutputSegments();
@@ -1893,4 +1925,4 @@ void Writer::createHeader() {
 
 void writeResult() { Writer().run(); }
 
-} // namespace wasm::lld
+} // namespace lld::wasm

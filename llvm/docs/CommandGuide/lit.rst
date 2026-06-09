@@ -120,6 +120,11 @@ OUTPUT OPTIONS
 
  Do not use curses based progress bar.
 
+.. option:: --min-output-interval INTERVAL
+
+ Only output updates to the progress bar and status line at most once per
+ INTERVAL seconds. Has no effect if the curses based progress bar is not used.
+
 .. option:: --show-excluded
 
  Show excluded tests.
@@ -314,6 +319,11 @@ The timing data is stored in the `test_exec_root` in a file named
   place of this option, which is especially useful in environments where the
   call to ``lit`` is issued indirectly.
 
+.. option:: --filter-failed
+
+  Run only those tests that previously failed. Tests that have been newly added
+  but not yet run are not included.
+
 .. option:: --xfail LIST
 
   Treat those tests whose name is in the semicolon separated list ``LIST`` as
@@ -355,6 +365,27 @@ The timing data is stored in the `test_exec_root` in a file named
   including an :option:`--xfail` appearing later on the command line.  The
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
+
+.. option:: --unsupported LIST
+
+  Treat those tests whose name is in the semicolon separated list ``LIST`` as
+  ``UNSUPPORTED``. This can be helpful when one does not want to modify the test
+  suite. The environment variable ``LIT_UNSUPPORTED`` can be also used in place
+  of this option, which is especially useful in environments where the call to
+  ``lit`` is issued indirectly.
+
+  The syntax for specifying test names is the same as for :option:`--xfail` and
+  ``LIT_XFAIL``. A test name can be specified as a file name relative to the
+  test suite directory or as the full test name reported in LIT output.
+
+.. option:: --unsupported-not LIST
+
+  Do not treat the specified tests as ``UNSUPPORTED``.  The environment variable
+  ``LIT_UNSUPPORTED_NOT`` can also be used in place of this option.  The syntax
+  is the same as for :option:`--unsupported` and ``LIT_UNSUPPORTED``.
+  :option:`--unsupported-not` and ``LIT_UNSUPPORTED_NOT`` always override all
+  other ``UNSUPPORTED`` specifications, including an :option:`--unsupported`
+  appearing later on the command line.
 
 .. option:: --exclude-xfail
 
@@ -628,7 +659,7 @@ TestRunner.py:
  %{fs-src-root}          root component of file system paths pointing to the LLVM checkout
  %{fs-tmp-root}          root component of file system paths pointing to the test's temporary directory
  %{fs-sep}               file system path separator
- %t                      temporary file name unique to the test
+ %t                      a path unique to the test (which may be used to make files or directories)
  %basename_t             The last path component of %t but without the ``.tmp`` extension (deprecated, use ``%{t:stem}`` instead)
  %%                      %
  %/s                     %s but ``\`` is replaced by ``/``
@@ -641,7 +672,6 @@ TestRunner.py:
  %{S:real}               %S after expanding all symbolic links and substitute drives
  %{p:real}               %p after expanding all symbolic links and substitute drives
  %{t:real}               %t after expanding all symbolic links and substitute drives
- %{T:real}               %T after expanding all symbolic links and substitute drives
  %{/s:real}              %/s after expanding all symbolic links and substitute drives
  %{/S:real}              %/S after expanding all symbolic links and substitute drives
  %{/p:real}              %/p after expanding all symbolic links and substitute drives

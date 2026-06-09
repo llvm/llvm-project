@@ -9,17 +9,17 @@ subroutine test_master()
   !PARSE-TREE: OmpBeginDirective
   !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = master
   !CHECK: !$omp master
-  !$omp master 
+  !$omp master
   c = c + 1
   !$omp end master
 end subroutine
 
 subroutine test_master_taskloop_simd()
   integer :: i, j = 1
-  !PARSE-TREE: OmpBeginLoopDirective
+  !PARSE-TREE: OmpBeginDirective
   !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = master taskloop simd
   !CHECK: !$omp master taskloop simd
-  !$omp master taskloop simd 
+  !$omp master taskloop simd
   do i=1,10
    j = j + 1
   end do
@@ -28,14 +28,14 @@ end subroutine
 
 subroutine test_master_taskloop
   integer :: i, j = 1
-  !PARSE-TREE: OmpBeginLoopDirective
+  !PARSE-TREE: OmpBeginDirective
   !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = master taskloop
   !CHECK: !$omp master taskloop
   !$omp master taskloop
   do i=1,10
    j = j + 1
   end do
-  !$omp end master taskloop 
+  !$omp end master taskloop
 end subroutine
 
 subroutine test_parallel_master
@@ -50,10 +50,10 @@ end subroutine
 
 subroutine test_parallel_master_taskloop_simd
   integer :: i, j = 1
-  !PARSE-TREE: OmpBeginLoopDirective
+  !PARSE-TREE: OmpBeginDirective
   !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel master taskloop simd
   !CHECK: !$omp parallel master taskloop simd
-  !$omp parallel master taskloop simd 
+  !$omp parallel master taskloop simd
   do i=1,10
    j = j + 1
   end do
@@ -62,12 +62,12 @@ end subroutine
 
 subroutine test_parallel_master_taskloop
   integer :: i, j = 1
-  !PARSE-TREE: OmpBeginLoopDirective
+  !PARSE-TREE: OmpBeginDirective
   !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel master taskloop
   !CHECK: !$omp parallel master taskloop
   !$omp parallel master taskloop
   do i=1,10
    j = j + 1
   end do
-  !$omp end parallel master taskloop 
+  !$omp end parallel master taskloop
 end subroutine

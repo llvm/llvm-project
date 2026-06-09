@@ -30,7 +30,7 @@ void CloexecOpenCheck::registerMatchers(MatchFinder *Finder) {
 void CloexecOpenCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>(FuncDeclBindingStr);
   assert(FD->param_size() > 1);
-  int ArgPos = (FD->param_size() > 2) ? 2 : 1;
+  const int ArgPos = (FD->param_size() > 2) ? 2 : 1;
   insertMacroFlag(Result, /*MacroFlag=*/"O_CLOEXEC", ArgPos);
 }
 

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -56,8 +56,7 @@ public:
   using ClassDefId = std::pair<SourceLocation, std::string>;
 
   using ClassDefiningSpecialMembersMap =
-      llvm::DenseMap<ClassDefId,
-                     llvm::SmallVector<SpecialMemberFunctionData, 5>>;
+      llvm::DenseMap<ClassDefId, SmallVector<SpecialMemberFunctionData, 5>>;
 
 private:
   void checkForMissingMembers(
@@ -84,32 +83,16 @@ struct DenseMapInfo<
   using ClassDefId =
       clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId;
 
-  static inline ClassDefId getEmptyKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getEmptyKey(), "EMPTY"};
-  }
-
-  static inline ClassDefId getTombstoneKey() {
-    return {DenseMapInfo<clang::SourceLocation>::getTombstoneKey(),
-            "TOMBSTONE"};
-  }
-
-  static unsigned getHashValue(ClassDefId Val) {
-    assert(Val != getEmptyKey() && "Cannot hash the empty key!");
-    assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
-
-    std::hash<ClassDefId::second_type> SecondHash;
+  static unsigned getHashValue(const ClassDefId &Val) {
+    const std::hash<ClassDefId::second_type> SecondHash;
     return Val.first.getHashValue() + SecondHash(Val.second);
   }
 
   static bool isEqual(const ClassDefId &LHS, const ClassDefId &RHS) {
-    if (RHS == getEmptyKey())
-      return LHS == getEmptyKey();
-    if (RHS == getTombstoneKey())
-      return LHS == getTombstoneKey();
     return LHS == RHS;
   }
 };
 
 } // namespace llvm
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIAL_MEMBER_FUNCTIONS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_SPECIALMEMBERFUNCTIONSCHECK_H

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/main.h"
+#include "io-api-gpu.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/terminator.h"
 #include <cfenv>
@@ -29,10 +30,10 @@ static void ConfigureFloatingPoint() {
 extern "C" {
 void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[],
     const EnvironmentDefaultList *envDefaults) {
-  std::atexit(Fortran::runtime::NotifyOtherImagesOfNormalEnd);
   Fortran::runtime::executionEnvironment.Configure(
       argc, argv, envp, envDefaults);
   ConfigureFloatingPoint();
+  Fortran::runtime::io::RegisterRPCHandlers();
   // I/O is initialized on demand so that it works for non-Fortran main().
 }
 

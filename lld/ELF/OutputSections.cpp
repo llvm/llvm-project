@@ -91,7 +91,8 @@ static bool canMergeToProgbits(Ctx &ctx, unsigned type) {
   return type == SHT_NOBITS || type == SHT_PROGBITS || type == SHT_INIT_ARRAY ||
          type == SHT_PREINIT_ARRAY || type == SHT_FINI_ARRAY ||
          type == SHT_NOTE ||
-         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64);
+         (type == SHT_X86_64_UNWIND && ctx.arg.emachine == EM_X86_64) ||
+         type == SHT_LLVM_CFI_JUMP_TABLE;
 }
 
 // Record that isec will be placed in the OutputSection. isec does not become
@@ -303,8 +304,6 @@ static void nopInstrFill(Ctx &ctx, uint8_t *buf, size_t size) {
   if (size == 0)
     return;
   unsigned i = 0;
-  if (size == 0)
-    return;
   std::vector<std::vector<uint8_t>> nopFiller = *ctx.target->nopInstrs;
   unsigned num = size / nopFiller.back().size();
   for (unsigned c = 0; c < num; ++c) {
@@ -538,12 +537,6 @@ void OutputSection::writeTo(Ctx &ctx, uint8_t *buf, parallel::TaskGroup &tg) {
   if (nonZeroFiller)
     fill(buf, sections.empty() ? size : sections[0]->outSecOff, filler);
 
-  if (type == SHT_CREL && !(flags & SHF_ALLOC)) {
-    buf += encodeULEB128(crelHeader, buf);
-    memcpy(buf, crelBody.data(), crelBody.size());
-    return;
-  }
-
   auto fn = [=, &ctx](size_t begin, size_t end) {
     size_t numSections = sections.size();
     for (size_t i = begin; i != end; ++i) {
@@ -627,7 +620,7 @@ static void finalizeShtGroup(Ctx &ctx, OutputSection *os,
   // new size. The content will be rewritten in InputSection::copyShtGroup.
   DenseSet<uint32_t> seen;
   ArrayRef<InputSectionBase *> sections = section->file->getSections();
-  for (const uint32_t &idx : section->getDataAs<uint32_t>().slice(1))
+  for (auto &idx : section->getDataAs<std::array<char, 4>>().slice(1))
     if (OutputSection *osec = sections[read32(ctx, &idx)]->getOutputSection())
       seen.insert(osec->sectionIndex);
   os->size = (1 + seen.size()) * sizeof(uint32_t);

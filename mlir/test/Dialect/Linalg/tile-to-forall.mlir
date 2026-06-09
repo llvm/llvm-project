@@ -723,3 +723,61 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Tiling a rank-0 linalg op with tile_sizes should not crash even when
+// tileUsingSCF produces no loops. (https://github.com/llvm/llvm-project/issues/187073)
+#rankZeroMap = affine_map<() -> ()>
+// CHECK-LABEL: @tile_rank_zero_op_no_forall
+func.func @tile_rank_zero_op_no_forall(%arg0: tensor<i64>) -> tensor<i64> {
+  // CHECK-NOT: scf.forall
+  // CHECK: return %{{.*}} : tensor<i64>
+  %empty = tensor.empty() : tensor<i64>
+  %copy = linalg.generic {indexing_maps = [#rankZeroMap, #rankZeroMap], iterator_types = []}
+      ins(%arg0 : tensor<i64>) outs(%empty : tensor<i64>) {
+  ^bb0(%in: i64, %out: i64):
+    linalg.yield %in : i64
+  } -> tensor<i64>
+  return %copy : tensor<i64>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %arg0: !transform.any_op {transform.readonly}) {
+    %ops = transform.structured.match ops{["linalg.generic"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %tiled, %forall = transform.structured.tile_using_forall %ops tile_sizes [32]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Tiling a rank-0 linalg op with num_threads should also not crash.
+// (https://github.com/llvm/llvm-project/issues/187073)
+#rankZeroMap = affine_map<() -> ()>
+// CHECK-LABEL: @tile_rank_zero_op_no_forall_num_threads
+func.func @tile_rank_zero_op_no_forall_num_threads(%arg0: tensor<i64>) -> tensor<i64> {
+  // CHECK-NOT: scf.forall
+  // CHECK: return %{{.*}} : tensor<i64>
+  %empty = tensor.empty() : tensor<i64>
+  %copy = linalg.generic {indexing_maps = [#rankZeroMap, #rankZeroMap], iterator_types = []}
+      ins(%arg0 : tensor<i64>) outs(%empty : tensor<i64>) {
+  ^bb0(%in: i64, %out: i64):
+    linalg.yield %in : i64
+  } -> tensor<i64>
+  return %copy : tensor<i64>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(
+      %arg0: !transform.any_op {transform.readonly}) {
+    %ops = transform.structured.match ops{["linalg.generic"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %tiled, %forall = transform.structured.tile_using_forall %ops num_threads [4]
+        : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}

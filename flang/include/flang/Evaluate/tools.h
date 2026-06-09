@@ -50,6 +50,9 @@ struct IsVariableHelper
   Result operator()(const CoarrayRef &) const { return true; }
   Result operator()(const ComplexPart &) const { return true; }
   Result operator()(const ProcedureDesignator &) const;
+  template <typename T> Result operator()(const ConditionalExpr<T> &) const {
+    return false;
+  }
   template <typename T> Result operator()(const Expr<T> &x) const {
     if constexpr (common::HasMember<T, AllIntrinsicTypes> ||
         std::is_same_v<T, SomeDerived>) {
@@ -1089,6 +1092,10 @@ extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeInteger> &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const ProcedureDesignator &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Assignment &);
 
 // Collects Symbols of interest for the CUDA data transfer in an expression
 template <typename A>
@@ -1109,6 +1116,9 @@ bool IsArraySection(const Expr<SomeType> &expr);
 
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
+
+// Predicate: Does an expression contain a component
+bool HasStructureComponent(const Expr<SomeType> &expr);
 
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
@@ -1289,16 +1299,15 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool IsCUDADeviceSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-      return true;
-    }
-  }
-  return false;
-}
+// Get the symbol vectors of the expression where symbols are grouped together
+// if they are part of the same component expression.
+//
+// Example: a%b + c%d
+// Will be grouped as: [(a, b), (c, d)]
+std::vector<SymbolVector> GetSymbolVectors(const Expr<SomeType> &expr);
+
+bool IsCUDADeviceSymbol(const Symbol &sym);
+bool IsCUDADeviceOnlySymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1309,6 +1318,28 @@ inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
       return true;
     }
   }
+  return false;
+}
+
+// Non-allocatable module-level managed/unified variables use pointer
+// indirection through a companion global in __nv_managed_data__.
+// Explicit data transfers (cudaMemcpy) must be avoided for these
+// variables since they would target the shadow address rather than
+// the actual unified memory address.
+inline bool IsNonAllocatableModuleCUDAManagedSymbol(const Symbol &sym) {
+  const Symbol &ultimate = sym.GetUltimate();
+  if (!IsCUDAManagedOrUnifiedSymbol(ultimate))
+    return false;
+  if (ultimate.attrs().test(semantics::Attr::ALLOCATABLE))
+    return false;
+  return ultimate.owner().IsModule();
+}
+
+template <typename A>
+inline bool HasNonAllocatableModuleCUDAManagedSymbols(const A &expr) {
+  for (const Symbol &sym : CollectCudaSymbols(expr))
+    if (IsNonAllocatableModuleCUDAManagedSymbol(sym))
+      return true;
   return false;
 }
 
@@ -1323,6 +1354,9 @@ template <typename A> inline int GetNbOfCUDADeviceSymbols(const A &expr) {
   }
   return symbols.size();
 }
+
+// Get the number of unique symbols with CUDA device attribute.
+int GetNbOfUniqueCUDADeviceSymbols(const Expr<SomeType> &expr);
 
 // Get the number of distinct symbols with CUDA managed or unified
 // attribute in the expression.
@@ -1347,14 +1381,26 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
 // device attribute.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
-  int lhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
-  int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
+  int lhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
+  int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
-  // Special case where only managed or unifed symbols are involved. This is
-  // performed on the host.
-  if (lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
-      rhsNbSymbols == 1) {
+  if (HasNonAllocatableModuleCUDAManagedSymbols(lhs))
+    return false;
+
+  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
+      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Managed arrays initialization is performed on the device.
+  }
+
+  // Cases where no explicit data transfer is needed:
+  // - Both sides involve only managed/unified symbols (host-accessible).
+  // - LHS is host-only and RHS has only managed/unified symbols.
+  // - LHS is managed/unified and RHS is host-only.
+  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+      (lhsNbManagedSymbols == 0 && !HasCUDADeviceAttrs(lhs) &&
+          rhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+      (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }
   return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
@@ -1377,6 +1423,7 @@ enum class Operator {
   Call,
   Constant,
   Convert,
+  Conditional,
   Div,
   Eq,
   Eqv,
@@ -1546,6 +1593,8 @@ inline bool IsAlternateEntry(const Symbol *symbol) {
 bool IsVariableName(const Symbol &);
 bool IsPureProcedure(const Symbol &);
 bool IsPureProcedure(const Scope &);
+bool IsSimpleProcedure(const Symbol &);
+bool IsSimpleProcedure(const Scope &);
 bool IsExplicitlyImpureProcedure(const Symbol &);
 bool IsElementalProcedure(const Symbol &);
 bool IsFunction(const Symbol &);
@@ -1638,6 +1687,9 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
+
+// Given a Cray pointee symbol, returns the related Cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 } // namespace Fortran::semantics
 

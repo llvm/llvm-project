@@ -94,15 +94,7 @@ static bool isCrossCopy(const MachineRegisterInfo &MRI,
   }
   }
 
-  unsigned PreA, PreB; // Unused.
-  if (SrcSubIdx && DstSubIdx)
-    return !TRI.getCommonSuperRegClass(SrcRC, SrcSubIdx, DstRC, DstSubIdx, PreA,
-                                       PreB);
-  if (SrcSubIdx)
-    return !TRI.getMatchingSuperRegClass(SrcRC, DstRC, SrcSubIdx);
-  if (DstSubIdx)
-    return !TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSubIdx);
-  return !TRI.getCommonSubClass(SrcRC, DstRC);
+  return !TRI.findCommonRegClass(SrcRC, SrcSubIdx, DstRC, DstSubIdx);
 }
 
 void DeadLaneDetector::addUsedLanesOnOperand(const MachineOperand &MO,

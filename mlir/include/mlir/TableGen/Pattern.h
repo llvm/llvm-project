@@ -643,8 +643,10 @@ public:
   using IdentifierLine = std::pair<StringRef, unsigned>;
 
   // Returns the file location of the pattern (buffer identifier + line number
-  // pair).
-  std::vector<IdentifierLine> getLocation() const;
+  // pair). If `forSourceOutput` is true, replace absolute paths in the buffer
+  // identifier with just their filename so that we don't leak build paths into
+  // the generated code.
+  std::vector<IdentifierLine> getLocation(bool forSourceOutput = false) const;
 
   // Recursively collects all bound symbols inside the DAG tree rooted
   // at `tree` and updates the given `infoMap`.
@@ -670,14 +672,6 @@ private:
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::tblgen::DagNode> {
-  static mlir::tblgen::DagNode getEmptyKey() {
-    return mlir::tblgen::DagNode(
-        llvm::DenseMapInfo<llvm::DagInit *>::getEmptyKey());
-  }
-  static mlir::tblgen::DagNode getTombstoneKey() {
-    return mlir::tblgen::DagNode(
-        llvm::DenseMapInfo<llvm::DagInit *>::getTombstoneKey());
-  }
   static unsigned getHashValue(mlir::tblgen::DagNode node) {
     return llvm::hash_value(node.getAsOpaquePointer());
   }
@@ -688,14 +682,6 @@ struct DenseMapInfo<mlir::tblgen::DagNode> {
 
 template <>
 struct DenseMapInfo<mlir::tblgen::DagLeaf> {
-  static mlir::tblgen::DagLeaf getEmptyKey() {
-    return mlir::tblgen::DagLeaf(
-        llvm::DenseMapInfo<llvm::Init *>::getEmptyKey());
-  }
-  static mlir::tblgen::DagLeaf getTombstoneKey() {
-    return mlir::tblgen::DagLeaf(
-        llvm::DenseMapInfo<llvm::Init *>::getTombstoneKey());
-  }
   static unsigned getHashValue(mlir::tblgen::DagLeaf leaf) {
     return llvm::hash_value(leaf.getAsOpaquePointer());
   }

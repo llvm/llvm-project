@@ -19,7 +19,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Diagnostic.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -36,8 +35,12 @@ namespace clang::tidy {
 // NoLintType
 //===----------------------------------------------------------------------===//
 
+namespace {
+
 // The type - one of NOLINT[NEXTLINE/BEGIN/END].
 enum class NoLintType { NoLint, NoLintNextLine, NoLintBegin, NoLintEnd };
+
+} // namespace
 
 // Convert a string like "NOLINTNEXTLINE" to its enum `Type::NoLintNextLine`.
 // Return `std::nullopt` if the string is unrecognized.
@@ -109,7 +112,7 @@ private:
 
 // Consume the entire buffer and return all `NoLintToken`s that were found.
 static SmallVector<NoLintToken> getNoLints(StringRef Buffer) {
-  static constexpr llvm::StringLiteral NOLINT = "NOLINT";
+  static constexpr StringRef NOLINT = "NOLINT";
   SmallVector<NoLintToken> NoLints;
 
   size_t Pos = 0;
@@ -134,7 +137,7 @@ static SmallVector<NoLintToken> getNoLints(StringRef Buffer) {
     // Get checks, if specified.
     std::optional<StringRef> Checks;
     if (Pos < Buffer.size() && Buffer[Pos] == '(') {
-      size_t ClosingBracket = Buffer.find_first_of("\n)", ++Pos);
+      const size_t ClosingBracket = Buffer.find_first_of("\n)", ++Pos);
       if (ClosingBracket != StringRef::npos && Buffer[ClosingBracket] == ')') {
         Checks = Buffer.slice(Pos, ClosingBracket);
         Pos = ClosingBracket + 1;
@@ -183,13 +186,13 @@ static tooling::Diagnostic makeNoLintError(const SourceManager &SrcMgr,
   tooling::Diagnostic Error;
   Error.DiagLevel = tooling::Diagnostic::Error;
   Error.DiagnosticName = "clang-tidy-nolint";
-  StringRef Message =
+  const StringRef Message =
       (NoLint.Type == NoLintType::NoLintBegin)
           ? ("unmatched 'NOLINTBEGIN' comment without a subsequent 'NOLINT"
              "END' comment")
           : ("unmatched 'NOLINTEND' comment without a previous 'NOLINT"
              "BEGIN' comment");
-  SourceLocation Loc = SrcMgr.getComposedLoc(File, NoLint.Pos);
+  const SourceLocation Loc = SrcMgr.getComposedLoc(File, NoLint.Pos);
   Error.Message = tooling::DiagnosticMessage(Message, SrcMgr, Loc);
   return Error;
 }
@@ -210,18 +213,19 @@ formNoLintBlocks(SmallVector<NoLintToken> NoLints, const SourceManager &SrcMgr,
   // inner-most block first, then the next level up, and so on. This is
   // essentially a last-in-first-out/stack system.
   for (NoLintToken &NoLint : NoLints) {
-    if (NoLint.Type == NoLintType::NoLintBegin)
+    if (NoLint.Type == NoLintType::NoLintBegin) {
       // A new block is being started. Add it to the stack.
       Stack.emplace_back(std::move(NoLint));
-    else if (NoLint.Type == NoLintType::NoLintEnd) {
+    } else if (NoLint.Type == NoLintType::NoLintEnd) {
       if (!Stack.empty() && Stack.back().checks() == NoLint.checks()) {
         // The previous block is being closed. Pop one element off the stack.
         CompletedBlocks.emplace_back(Stack.back().Pos, NoLint.Pos,
                                      std::move(Stack.back().ChecksGlob));
         Stack.pop_back();
-      } else
+      } else {
         // Trying to close the wrong block.
         NoLintErrors.emplace_back(makeNoLintError(SrcMgr, File, NoLint));
+      }
     }
   }
 
@@ -294,8 +298,8 @@ bool NoLintDirectiveHandler::Impl::diagHasNoLintInMacro(
 // this line.
 static std::pair<size_t, size_t> getLineStartAndEnd(StringRef Buffer,
                                                     size_t From) {
-  size_t StartPos = Buffer.find_last_of('\n', From) + 1;
-  size_t EndPos = std::min(Buffer.find('\n', From), Buffer.size());
+  const size_t StartPos = Buffer.find_last_of('\n', From) + 1;
+  const size_t EndPos = std::min(Buffer.find('\n', From), Buffer.size());
   return {StartPos, EndPos};
 }
 

@@ -10,8 +10,8 @@
 
 #include "ObjCLanguage.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -192,7 +192,7 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
 
   if (objc_method->IsClassMethod() || objc_method->IsInstanceMethod()) {
     if (!name_sans_category.empty())
-      variant_names.emplace_back(ConstString(name_sans_category.c_str()),
+      variant_names.emplace_back(ConstString(name_sans_category),
                                  lldb::eFunctionNameTypeFull);
   } else {
     StreamString strm;
@@ -235,7 +235,7 @@ ObjCLanguage::GetFunctionNameInfo(ConstString name) const {
   return {func_name_type, std::nullopt};
 }
 
-bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
+bool ObjCLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
   ConstString demangled_name = mangled.GetDemangledName();
   if (!demangled_name)
     return false;
@@ -1064,4 +1064,11 @@ ObjCLanguage::GetBooleanFromString(llvm::StringRef str) const {
       .Case("YES", {true})
       .Case("NO", {false})
       .Default({});
+}
+
+bool ObjCLanguage::IsPossibleObjCMethodName(llvm::StringRef name) {
+  if (!name.starts_with("-[") && !name.starts_with("+["))
+    return false;
+
+  return name.ends_with("]");
 }

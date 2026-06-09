@@ -261,7 +261,7 @@ FailureOr<PromotionInfo> mlir::linalg::promoteSubviewAsNewBuffer(
       FailureOr<int64_t> upperBound =
           ValueBoundsConstraintSet::computeConstantBound(
               presburger::BoundType::UB, rangeValue.size,
-              /*stopCondition=*/nullptr, /*closedUB=*/true);
+              /*stopCondition=*/nullptr, ValueBoundsOptions{/*closedUB=*/true});
       size = failed(upperBound)
                  ? getValueOrCreateConstantIndexOp(b, loc, rangeValue.size)
                  : arith::ConstantIndexOp::create(b, loc, *upperBound);
@@ -322,7 +322,7 @@ promoteSubViews(ImplicitLocOpBuilder &b,
                 tmp = arith::ConstantOp::create(b, IntegerAttr::get(et, 0));
               return complex::CreateOp::create(b, t, tmp, tmp);
             })
-            .Default([](auto) { return Value(); });
+            .Default(nullptr);
     if (!fillVal)
       return failure();
     linalg::FillOp::create(b, fillVal, promotionInfo->fullLocalView);

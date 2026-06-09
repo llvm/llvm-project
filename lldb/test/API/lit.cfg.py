@@ -90,6 +90,8 @@ def find_python_interpreter():
     )
 
     shutil.copy(real_python, copied_python)
+    # macOS 15+ restricts injecting the ASAN runtime to only user-compiled code.
+    subprocess.check_call(["/usr/bin/codesign", "--remove-signature", copied_python])
 
     # Now make sure the copied Python works. The Python in Xcode has a relative
     # RPATH and cannot be copied.
@@ -168,6 +170,13 @@ if is_configured("shared_libs"):
             "unable to inject shared library path on '{}'".format(platform.system())
         )
 
+# Windows has no rpath: drivers built by API tests link against
+# liblldb.dll and need its directory on PATH at launch.
+if platform.system() == "Windows":
+    config.environment["PATH"] = os.path.pathsep.join(
+        (config.llvm_shlib_dir, config.environment.get("PATH", ""))
+    )
+
 lldb_use_simulator = lit_config.params.get("lldb-run-with-simulator", None)
 if lldb_use_simulator:
     if lldb_use_simulator == "ios":
@@ -185,12 +194,16 @@ if lldb_use_simulator:
     else:
         lit_config.error("Unknown simulator id '{}'".format(lldb_use_simulator))
 
+# Simulator tests can interfer with each other when they access the same device
+# kind, so prevent them from running at the same time.
+lit_config.parallelism_groups["apple-simulator"] = 1
+
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
 # requires that killProcessAndChildren() is supported on the platform and
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    lit_config.maxIndividualTestTime = 600
+    config.maxIndividualTestTime = 600
 else:
     lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
@@ -230,8 +243,8 @@ for env_var in ("ASAN_OPTIONS", "DYLD_INSERT_LIBRARIES"):
     if env_var in config.environment:
         dotest_cmd += ["--inferior-env", env_var + "=" + config.environment[env_var]]
 
-if is_configured("test_arch"):
-    dotest_cmd += ["--arch", config.test_arch]
+if is_configured("test_triple"):
+    dotest_cmd += ["--triple", config.test_triple]
 
 if is_configured("lldb_build_directory"):
     dotest_cmd += ["--build-dir", config.lldb_build_directory]
@@ -246,6 +259,18 @@ if is_configured("clang_module_cache"):
 
 if is_configured("lldb_executable"):
     dotest_cmd += ["--executable", config.lldb_executable]
+    try:
+        version_output = subprocess.check_output(
+            [config.lldb_executable, "--version"],
+            stderr=subprocess.STDOUT,
+            text=True,
+        ).strip()
+        for line in version_output.splitlines():
+            lit_config.note(line.strip())
+    except (subprocess.CalledProcessError, OSError) as e:
+        lit_config.warning(
+            "Could not get lldb version from {}: {}".format(config.lldb_executable, e)
+        )
 
 if is_configured("test_compiler"):
     dotest_cmd += ["--compiler", config.test_compiler]
@@ -298,6 +323,12 @@ if is_configured("enabled_plugins"):
     for plugin in config.enabled_plugins:
         dotest_cmd += ["--enable-plugin", plugin]
 
+if getattr(config, "lldb_enable_mte", False):
+    dotest_cmd += ["--enable-mte"]
+
+if getattr(config, "lldb_enable_arm64e_debugserver", False):
+    dotest_cmd += ["--arm64e-debugserver"]
+
 # `dotest` args come from three different sources:
 # 1. Derived by CMake based on its configs (LLDB_TEST_COMMON_ARGS), which end
 # up in `dotest_common_args_str`.
@@ -349,6 +380,14 @@ if platform.system() == "Windows":
     for v in ["SystemDrive"]:
         if v in os.environ:
             config.environment[v] = os.environ[v]
+
+    if getattr(config, "lldb_use_lldb_server", False):
+        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
+
+    # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
+    # escape sequences into the output stream, which breaks tests that check
+    # for specific stdout/stderr content.
+    dotest_cmd += ["--env", "LLDB_LAUNCH_FLAG_USE_PIPES=1"]
 
 # Some steps required to initialize the tests dynamically link with python.dll
 # and need to know the location of the Python libraries. This ensures that we

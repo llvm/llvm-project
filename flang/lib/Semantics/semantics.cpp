@@ -160,22 +160,23 @@ private:
   SemanticsContext &context_;
 };
 
+static bool WasDefined(const SemanticsContext &context, const Symbol &symbol) {
+  return context.IsSymbolDefined(symbol) ||
+      IsInitialized(symbol, /*ignoreDataStatements=*/true,
+          /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
+}
+
 static void WarnUndefinedFunctionResult(
     SemanticsContext &context, const Scope &scope) {
-  auto WasDefined{[&context](const Symbol &symbol) {
-    return context.IsSymbolDefined(symbol) ||
-        IsInitialized(symbol, /*ignoreDataStatements=*/true,
-            /*ignoreAllocatable=*/true, /*ignorePointer=*/true);
-  }};
   if (const Symbol * symbol{scope.symbol()}) {
     if (const auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
       if (subp->isFunction() && !subp->isInterface() && !subp->stmtFunction()) {
-        bool wasDefined{WasDefined(subp->result())};
+        bool wasDefined{WasDefined(context, subp->result())};
         if (!wasDefined) {
           // Definitions of ENTRY result variables also count.
           for (const auto &pair : scope) {
             const Symbol &local{*pair.second};
-            if (IsFunctionResult(local) && WasDefined(local)) {
+            if (IsFunctionResult(local) && WasDefined(context, local)) {
               wasDefined = true;
               break;
             }
@@ -191,6 +192,43 @@ static void WarnUndefinedFunctionResult(
   if (!scope.IsModuleFile()) {
     for (const Scope &child : scope.children()) {
       WarnUndefinedFunctionResult(context, child);
+    }
+  }
+}
+
+static void WarnUnusedOrUndefinedLocal(
+    SemanticsContext &context, const Scope &scope) {
+  if (scope.kind() == Scope::Kind::Subprogram ||
+      scope.kind() == Scope::Kind::MainProgram ||
+      scope.kind() == Scope::Kind::BlockConstruct) {
+    for (const auto &[_, symbolRef] : scope) {
+      const Symbol &symbol{*symbolRef};
+      if ((symbol.has<semantics::ObjectEntityDetails>() ||
+              (symbol.has<semantics::ProcEntityDetails>() &&
+                  IsProcedurePointer(symbol))) &&
+          !IsFunctionResult(symbol) && !IsNamedConstant(symbol) &&
+          !IsDummy(symbol) && !FindEquivalenceSet(symbol) &&
+          !FindCommonBlockContaining(symbol)) {
+        if (context.IsSymbolUsed(symbol)) {
+          if (!WasDefined(context, symbol)) {
+            context.Warn(common::UsageWarning::UsedUndefinedVariable,
+                symbol.name(),
+                "Value of uninitialized local variable '%s' is used but never defined"_warn_en_US,
+                symbol.name());
+          }
+        } else {
+          if (!context.IsSymbolDefined(symbol)) { // ignore initialization
+            context.Warn(common::UsageWarning::UnusedVariable, symbol.name(),
+                "Value of local variable '%s' is never used"_warn_en_US,
+                symbol.name());
+          }
+        }
+      }
+    }
+  }
+  if (!scope.IsModuleFile()) {
+    for (const Scope &child : scope.children()) {
+      WarnUnusedOrUndefinedLocal(context, child);
     }
   }
 }
@@ -223,9 +261,8 @@ static bool PerformStatementSemantics(
   }
   if (!context.messages().AnyFatalError()) {
     WarnUndefinedFunctionResult(context, context.globalScope());
-  }
-  if (!context.AnyFatalError()) {
     pass2.CompileDataInitializationsIntoInitializers();
+    WarnUnusedOrUndefinedLocal(context, context.globalScope());
   }
   return !context.AnyFatalError();
 }
@@ -344,14 +381,16 @@ SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
     const common::LangOptions &langOpts,
-    parser::AllCookedSources &allCookedSources)
+    parser::AllCookedSources &allCookedSources,
+    common::FPMaxminBehavior fpMaxminBehavior)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
       langOpts_{langOpts}, allCookedSources_{allCookedSources},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
       foldingContext_{parser::ContextualMessages{&messages_}, defaultKinds_,
-          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_} {}
+          intrinsics_, targetCharacteristics_, languageFeatures_, tempNames_,
+          fpMaxminBehavior} {}
 
 SemanticsContext::~SemanticsContext() {}
 
@@ -449,6 +488,15 @@ void SemanticsContext::UpdateScopeIndex(
     }
     scopeIndex_.erase(iter);
     scopeIndex_.emplace(newSource, scope);
+  }
+}
+
+void SemanticsContext::DumpScopeIndex(llvm::raw_ostream &out) const {
+  out << "scopeIndex_:\n";
+  for (const auto &[source, scope] : scopeIndex_) {
+    out << "source '" << source.ToString() << "' -> scope " << scope
+        << "... whose source range is '" << scope.sourceRange().ToString()
+        << "'\n";
   }
 }
 
@@ -578,20 +626,31 @@ void SemanticsContext::UsePPCBuiltinTypesModule() {
   }
 }
 
-const Scope &SemanticsContext::GetCUDABuiltinsScope() {
-  if (!cudaBuiltinsScope_) {
-    cudaBuiltinsScope_ = GetBuiltinModule("__cuda_builtins");
-    CHECK(cudaBuiltinsScope_.value() != nullptr);
-  }
-  return **cudaBuiltinsScope_;
+static void SayMissingCUDAIntrinsicModule(
+    SemanticsContext &context, const char *moduleName) {
+  context.messages().Say(context.location().value_or(parser::CharBlock{}),
+      "Cannot read required CUDA intrinsic module '%s'; check -fintrinsic-modules-path or rebuild the Fortran intrinsic modules"_err_en_US,
+      moduleName);
 }
 
-const Scope &SemanticsContext::GetCUDADeviceScope() {
+const Scope *SemanticsContext::GetCUDABuiltinsScope() {
+  if (!cudaBuiltinsScope_) {
+    cudaBuiltinsScope_ = GetBuiltinModule("__cuda_builtins");
+    if (cudaBuiltinsScope_.value() == nullptr) {
+      SayMissingCUDAIntrinsicModule(*this, "__cuda_builtins");
+    }
+  }
+  return cudaBuiltinsScope_.value();
+}
+
+const Scope *SemanticsContext::GetCUDADeviceScope() {
   if (!cudaDeviceScope_) {
     cudaDeviceScope_ = GetBuiltinModule("cudadevice");
-    CHECK(cudaDeviceScope_.value() != nullptr);
+    if (cudaDeviceScope_.value() == nullptr) {
+      SayMissingCUDAIntrinsicModule(*this, "cudadevice");
+    }
   }
-  return **cudaDeviceScope_;
+  return cudaDeviceScope_.value();
 }
 
 void SemanticsContext::UsePPCBuiltinsModule() {
@@ -612,12 +671,15 @@ bool Semantics::Perform() {
     const auto *frontModule{std::get_if<common::Indirection<parser::Module>>(
         &program_.v.front().u)};
     if (frontModule &&
-        (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                    .statement.v.source == "__fortran_builtins" ||
-            std::get<parser::Statement<parser::ModuleStmt>>(
-                frontModule->value().t)
-                    .statement.v.source == "__ppc_types")) {
+        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                .statement.v.source == "__fortran_builtins") {
       // Don't try to read the builtins module when we're actually building it.
+    } else if (frontModule &&
+        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                .statement.v.source == "__ppc_types") {
+      // Don't try to read the UsePPCBuiltinTypesModule() we are currently
+      // building, but __fortran_builtins is needed to build it.
+      context_.UseFortranBuiltinsModule();
     } else if (frontModule &&
         (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
                     .statement.v.source == "__ppc_intrinsics" ||
@@ -637,15 +699,24 @@ bool Semantics::Perform() {
       }
     }
   }
-  return ValidateLabels(context_, program_) &&
-      parser::CanonicalizeDo(program_) && // force line break
-      CanonicalizeAcc(context_.messages(), program_) &&
-      CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
-      PerformStatementSemantics(context_, program_) &&
-      CanonicalizeDirectives(context_.messages(), program_) &&
-      ModFileWriter{context_}
-          .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
-          .WriteAll();
+  if (!(ValidateLabels(context_, program_) &&
+          parser::CanonicalizeDo(program_) && // force line break
+          CanonicalizeAcc(context_.messages(), program_) &&
+          CanonicalizeOmp(context_, program_) && CanonicalizeCUDA(program_) &&
+          PerformStatementSemantics(context_, program_) &&
+          CanonicalizeDirectives(context_.messages(), program_))) {
+    return false;
+  }
+
+  // When compiling with offloading, write only the host's module file. The
+  // device invocations would otherwise overwrite the host's mod file.
+  if (context_.langOptions().OffloadDevice) {
+    return true;
+  }
+
+  return ModFileWriter{context_}
+      .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
+      .WriteAll();
 }
 
 void Semantics::EmitMessages(llvm::raw_ostream &os) {
@@ -768,6 +839,19 @@ void SemanticsContext::NoteDefinedSymbol(const Symbol &symbol) {
 
 bool SemanticsContext::IsSymbolDefined(const Symbol &symbol) const {
   return isDefined_.find(symbol) != isDefined_.end();
+}
+
+void SemanticsContext::NoteUsedSymbol(const Symbol &symbol) {
+  isUsed_.insert(symbol);
+}
+void SemanticsContext::NoteUsedSymbols(const UnorderedSymbolSet &set) {
+  for (const Symbol &symbol : set) {
+    NoteUsedSymbol(symbol);
+  }
+}
+
+bool SemanticsContext::IsSymbolUsed(const Symbol &symbol) const {
+  return isUsed_.find(symbol) != isUsed_.end();
 }
 
 } // namespace Fortran::semantics

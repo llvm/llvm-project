@@ -49,10 +49,10 @@ public:
       GetStats().PostFixupTotalBlockSize = 0;
 
     if (Instance)
-      S.ObjLayer.addPlugin(std::move(Instance));
+      S.ObjLayer->addPlugin(std::move(Instance));
   }
 
-  ~StatsPlugin() { publish(dbgs()); }
+  ~StatsPlugin() override { publish(dbgs()); }
 
   void publish(raw_ostream &OS);
 

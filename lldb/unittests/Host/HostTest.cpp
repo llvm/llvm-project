@@ -125,7 +125,7 @@ TEST(Host, FindProcesses) {
     }
   }
   ASSERT_TRUE(foundPID);
-  auto clean_up = llvm::make_scope_exit([&] {
+  llvm::scope_exit clean_up([&] {
     Host::Kill(info.GetProcessID(), SIGKILL);
     exit_status.get_future().get();
   });
@@ -157,8 +157,7 @@ TEST(Host, LaunchProcessDuplicatesHandle) {
       "--gtest_filter=Host.LaunchProcessDuplicatesHandle");
   info.GetArguments().AppendArgument(
       ("--test-arg=" + llvm::Twine((uint64_t)pipe.GetWritePipe())).str());
-  info.AppendDuplicateFileAction((uint64_t)pipe.GetWritePipe(),
-                                 (uint64_t)pipe.GetWritePipe());
+  info.AppendDuplicateFileAction(pipe.GetWritePipe(), pipe.GetWritePipe());
   info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback);
   ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), llvm::Succeeded());
   pipe.CloseWriteFileDescriptor();

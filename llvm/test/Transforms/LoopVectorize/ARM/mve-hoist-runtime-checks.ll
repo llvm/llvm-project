@@ -70,9 +70,9 @@ define void @diff_checks(ptr nocapture noundef writeonly %dst, ptr nocapture nou
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 [[N]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP7]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP11]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison), !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP11]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison), !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP8]], i32 [[INDEX]]
-; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr [[TMP12]], i32 4, <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[WIDE_MASKED_LOAD]], ptr align 4 [[TMP12]], <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

@@ -59,11 +59,9 @@ namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 enum class ConversionType { E, F, G };
-using StorageType = fputil::FPBits<long double>::StorageType;
 
 constexpr unsigned MAX_DIGITS = 39;
 constexpr size_t DF_BITS = 320;
-constexpr char DECIMAL_POINT = '.';
 
 struct DigitsInput {
   // Input mantissa, stored with the explicit leading 1 bit (if any) at the
@@ -80,8 +78,7 @@ struct DigitsInput {
   // Constructor which accepts a mantissa direct from a floating-point format,
   // and shifts it up to the top of the UInt128 so that a function consuming
   // this struct afterwards doesn't have to remember which format it came from.
-  DigitsInput(int32_t fraction_len, StorageType mantissa_, int exponent_,
-              Sign sign)
+  DigitsInput(int32_t fraction_len, UInt128 mantissa_, int exponent_, Sign sign)
       : mantissa(UInt128(mantissa_) << (127 - fraction_len)),
         exponent(exponent_), sign(sign) {
     if (!(mantissa & (UInt128(1) << 127)) && mantissa != 0) {
@@ -363,8 +360,8 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
       // we made it from and doing the decimal conversion all over again.)
       for (size_t i = output.ndigits; i-- > 0;) {
         if (output.digits[i] != '9') {
-          output.digits[i] = static_cast<char>(internal::int_to_b36_char(
-              internal::b36_char_to_int(output.digits[i]) + 1));
+          output.digits[i] = internal::int_to_b36_char(
+              internal::b36_char_to_int(output.digits[i]) + 1);
           break;
         } else {
           output.digits[i] = '0';
@@ -379,8 +376,9 @@ DigitsOutput decimal_digits(DigitsInput input, int precision, bool e_mode) {
 template <WriteMode write_mode>
 LIBC_INLINE int
 convert_float_inner(Writer<write_mode> *writer, const FormatSection &to_conv,
-                    int32_t fraction_len, int exponent, StorageType mantissa,
+                    int32_t fraction_len, int exponent, UInt128 mantissa,
                     Sign sign, ConversionType ctype) {
+  constexpr char DECIMAL_POINT = '.';
   // If to_conv doesn't specify a precision, the precision defaults to 6.
   unsigned precision = to_conv.precision < 0 ? 6 : to_conv.precision;
 
@@ -633,6 +631,7 @@ template <WriteMode write_mode>
 LIBC_INLINE int convert_float_outer(Writer<write_mode> *writer,
                                     const FormatSection &to_conv,
                                     ConversionType ctype) {
+#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
@@ -640,7 +639,9 @@ LIBC_INLINE int convert_float_outer(Writer<write_mode> *writer,
       return convert_float_typed<long double>(writer, to_conv, float_bits,
                                               ctype);
     }
-  } else {
+  } else
+#endif // !LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  {
     fputil::FPBits<double>::StorageType float_raw =
         static_cast<fputil::FPBits<double>::StorageType>(to_conv.conv_val_raw);
     fputil::FPBits<double> float_bits(float_raw);

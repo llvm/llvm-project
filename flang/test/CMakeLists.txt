@@ -2,11 +2,31 @@
 # for use by Lit, and delegates to LLVM's lit test handlers.
 add_subdirectory(lib)
 
+set(FLANG_TEST_Fortran_FLAGS "" CACHE STRING "Additional Fortran flags for running tests, such as -fintrinsic-modules-path=<path>")
+
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set(FLANG_TEST_ENABLE_MODULES_default ON)
+else ()
+  set(FLANG_TEST_ENABLE_MODULES_default OFF)
+endif ()
+option(FLANG_TEST_ENABLE_MODULES "Force-enable tests that require intrinsic modules from Flang-RT" "${FLANG_TEST_ENABLE_MODULES_default}")
+
+
+if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND FLANG_TEST_ENABLE_MODULES AND NOT FLANG_STANDALONE_BUILD)
+  set(FLANG_TEST_ENABLE_OPENMP_default ON)
+else ()
+  set(FLANG_TEST_ENABLE_OPENMP_default OFF)
+endif ()
+option(FLANG_TEST_ENABLE_OPENMP "Force-enable tests that require modules from OpenMP" "${FLANG_TEST_ENABLE_OPENMP_default}")
+
+
 llvm_canonicalize_cmake_booleans(
   FLANG_STANDALONE_BUILD
-  LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
+  LLVM_INCLUDE_EXAMPLES
+  FLANG_TEST_ENABLE_MODULES
+  FLANG_TEST_ENABLE_OPENMP
 )
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
@@ -59,7 +79,6 @@ set(FLANG_TEST_PARAMS
 
 set(FLANG_TEST_DEPENDS
   flang
-  module_files
   fir-opt
   tco
   bbc
@@ -72,6 +91,7 @@ if (NOT FLANG_STANDALONE_BUILD)
     FileCheck
     count
     not
+    llvm-bcanalyzer
     llvm-dis
     llvm-objcopy
     llvm-objdump
@@ -82,7 +102,7 @@ if (NOT FLANG_STANDALONE_BUILD)
   )
 endif ()
 
-if (LLVM_BUILD_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT (WIN32 OR CYGWIN) AND NOT FLANG_STANDALONE_BUILD)
+if (LLVM_INCLUDE_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT (WIN32 OR CYGWIN) AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 
@@ -92,7 +112,7 @@ if (FLANG_INCLUDE_TESTS)
   endif()
 endif()
 
-if (LLVM_BUILD_EXAMPLES)
+if (LLVM_INCLUDE_EXAMPLES)
   list(APPEND FLANG_TEST_DEPENDS
     flangPrintFunctionNames
     flangOmpReport
@@ -100,8 +120,10 @@ if (LLVM_BUILD_EXAMPLES)
     )
 endif ()
 
-if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
-  list(APPEND FLANG_TEST_DEPENDS "libomp-mod")
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT FLANG_STANDALONE_BUILD)
+  # Flang tests need runtimes module files (flang-rt-mod, libomp-mod, etc.).
+  add_custom_target(flang-rt-test-deps)
+  list(APPEND FLANG_TEST_DEPENDS flang-rt-test-deps)
 endif ()
 
 add_custom_target(flang-test-depends DEPENDS ${FLANG_TEST_DEPENDS})

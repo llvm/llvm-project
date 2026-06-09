@@ -21,10 +21,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.06
   %0 = load i32, ptr %arrayidx, align 4
@@ -37,10 +37,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -56,10 +56,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.06
   %0 = load float, ptr %arrayidx, align 4
@@ -72,10 +72,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -84,15 +84,14 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: We can vectorize this loop!
 define i32 @redi(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
-  %cmp5 = icmp eq i32 %N, 0
-  br i1 %cmp5, label %for.end, label %for.body.preheader
+  br label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %Red.06 = phi i32 [ %add, %for.body ], [ undef, %for.body.preheader ]
+  %Red.06 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.07
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds i32, ptr %b, i32 %i.07
@@ -103,13 +102,12 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi i32 [ undef, %entry ], [ %add.lcssa, %for.end.loopexit ]
-  ret i32 %Red.0.lcssa
+for.end:
+  ret i32 %add.lcssa
 }
 
 ; Floating-point loops need fast-math to be vectorizeable
@@ -121,15 +119,14 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; DARWIN: We can vectorize this loop!
 define float @redf(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
-  %cmp5 = icmp eq i32 %N, 0
-  br i1 %cmp5, label %for.end, label %for.body.preheader
+  br label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %Red.06 = phi float [ %add, %for.body ], [ undef, %for.body.preheader ]
+  %Red.06 = phi float [ %add, %for.body ], [ 0.0e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
   %0 = load float, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds float, ptr %b, i32 %i.07
@@ -140,13 +137,12 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   %add.lcssa = phi float [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi float [ undef, %entry ], [ %add.lcssa, %for.end.loopexit ]
-  ret float %Red.0.lcssa
+for.end:
+  ret float %add.lcssa
 }
 
 ; Make sure calls that turn into builtins are also covered
@@ -159,7 +155,7 @@ entry:
   %cmp10 = icmp eq i32 %N, 0
   br i1 %cmp10, label %for.end, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.011
   %0 = load float, ptr %arrayidx, align 4
@@ -173,7 +169,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
@@ -185,10 +181,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.06
   %0 = load i32, ptr %arrayidx, align 4
@@ -201,10 +197,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -216,10 +212,10 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.06
   %0 = load float, ptr %arrayidx, align 4
@@ -232,10 +228,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
   ret void
 }
 
@@ -247,12 +243,12 @@ entry:
   %cmp5 = icmp eq i32 %N, 0
   br i1 %cmp5, label %for.end, label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %Red.06 = phi i32 [ %add, %for.body ], [ undef, %for.body.preheader ]
+  %Red.06 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.07
   %0 = load i32, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds i32, ptr %b, i32 %i.07
@@ -263,12 +259,12 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   %add.lcssa = phi i32 [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi i32 [ undef, %entry ], [ %add.lcssa, %for.end.loopexit ]
+for.end:
+  %Red.0.lcssa = phi i32 [ 0, %entry ], [ %add.lcssa, %for.end.loopexit ]
   ret i32 %Red.0.lcssa
 }
 
@@ -277,15 +273,14 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK: We can vectorize this loop!
 define float @redf_fast(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
-  %cmp5 = icmp eq i32 %N, 0
-  br i1 %cmp5, label %for.end, label %for.body.preheader
+  br label %for.body.preheader
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %Red.06 = phi float [ %add, %for.body ], [ undef, %for.body.preheader ]
+  %Red.06 = phi float [ %add, %for.body ], [ 0.0e+00, %for.body.preheader ]
   %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
   %0 = load float, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds float, ptr %b, i32 %i.07
@@ -296,13 +291,12 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   %add.lcssa = phi float [ %add, %for.body ]
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
-  %Red.0.lcssa = phi float [ undef, %entry ], [ %add.lcssa, %for.end.loopexit ]
-  ret float %Red.0.lcssa
+for.end:
+  ret float %add.lcssa
 }
 
 ; Make sure calls that turn into builtins are also covered
@@ -313,13 +307,13 @@ entry:
   %cmp10 = icmp eq i32 %N, 0
   br i1 %cmp10, label %for.end, label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.011
   %0 = load float, ptr %arrayidx, align 4
   %arrayidx1 = getelementptr inbounds float, ptr %B, i32 %i.011
   %1 = load float, ptr %arrayidx1, align 4
-  %fabsf = tail call fast float @fabsf(float %1) #2
+  %fabsf = tail call fast float @fabsf(float %1) #1
   %conv3 = fmul fast float %fabsf, %0
   %arrayidx4 = getelementptr inbounds float, ptr %C, i32 %i.011
   store float %conv3, ptr %arrayidx4, align 4
@@ -327,11 +321,10 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end, label %for.body
 
-for.end:                                          ; preds = %for.body, %entry
+for.end:
   ret void
 }
 
 declare float @fabsf(float)
 
-attributes #1 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a8" "target-features"="+dsp,+neon,+vfp3" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-a8" "target-features"="+dsp,+neon,+vfp3" "unsafe-fp-math"="true" "use-soft-float"="false" }
+attributes #1 = { readnone }

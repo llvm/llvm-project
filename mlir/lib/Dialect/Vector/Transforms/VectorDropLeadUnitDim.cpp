@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/STLExtras.h"
 
 #define DEBUG_TYPE "vector-drop-unit-dim"
 
@@ -337,7 +338,7 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   VectorType oldAccType = dyn_cast<VectorType>(contractOp.getAccType());
   if (oldAccType == nullptr)
     return failure();
-  if (oldAccType.getRank() < 2)
+  if (oldAccType.getRank() < 1)
     return failure();
   if (oldAccType.getShape()[0] != 1)
     return failure();
@@ -536,6 +537,101 @@ public:
     return success();
   }
 };
+} // namespace
+
+// Drops `dropDim` leading dimensions from `operand` using vector.extract when
+// those dims are all non-scalable units (the cheap, structural rewrite); falls
+// back to vector.shape_cast otherwise.
+static Value dropLeadingOneDimsFromOperand(OpBuilder &b, Location loc,
+                                           Value operand, int64_t nDropped) {
+  auto oldType = cast<VectorType>(operand.getType());
+  ArrayRef<int64_t> leadingShape = oldType.getShape().take_front(nDropped);
+  ArrayRef<bool> leadingScalable =
+      oldType.getScalableDims().take_front(nDropped);
+  bool extractable =
+      llvm::all_of(leadingShape, [](int64_t d) { return d == 1; }) &&
+      llvm::none_of(leadingScalable, [](bool s) { return s; });
+  if (extractable)
+    return vector::ExtractOp::create(b, loc, operand, splatZero(nDropped));
+  VectorType newType = VectorType::get(
+      oldType.getShape().drop_front(nDropped), oldType.getElementType(),
+      oldType.getScalableDims().drop_front(nDropped));
+  return vector::ShapeCastOp::create(b, loc, newType, operand);
+}
+
+namespace {
+
+// Drops leading 1 dimensions from load-like memory operaitons. REmoves leading
+// unit dimensions from the result types and then broadcasts back in those 1s,
+// while also extracting (or shape_cast-ing) any leading unit dimensions on
+// the input operands.
+template <typename OpTy>
+struct CastAwayLoadLikeLeadingOneDim : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    VectorType oldResultType = op.getVectorType();
+    VectorType newResultType = trimLeadingOneDims(oldResultType);
+    if (newResultType == oldResultType)
+      return failure();
+    int64_t nDropped = oldResultType.getRank() - newResultType.getRank();
+
+    Location loc = op.getLoc();
+    SmallVector<Value> newOperands;
+    newOperands.reserve(op->getNumOperands());
+    for (Value operand : op->getOperands()) {
+      if (isa<VectorType>(operand.getType())) {
+        newOperands.push_back(
+            dropLeadingOneDimsFromOperand(rewriter, loc, operand, nDropped));
+      } else {
+        newOperands.push_back(operand);
+      }
+    }
+
+    Operation *newOp =
+        rewriter.create(loc, op->getName().getIdentifier(), newOperands,
+                        TypeRange{newResultType}, op->getAttrs());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, oldResultType,
+                                                     newOp->getResult(0));
+    return success();
+  }
+};
+
+// Drops leading 1 dimensions from store-like memory ops. Extracts or
+// `shape_cast`s away those leading unit dimensions and leaves any scalar
+// operands alone.
+template <typename OpTy>
+struct CastAwayStoreLikeLeadingOneDim : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(OpTy op,
+                                PatternRewriter &rewriter) const override {
+    VectorType oldVecType = op.getVectorType();
+    VectorType newVecType = trimLeadingOneDims(oldVecType);
+    if (newVecType == oldVecType)
+      return failure();
+    int64_t nDropped = oldVecType.getRank() - newVecType.getRank();
+
+    Location loc = op.getLoc();
+    SmallVector<Value> newOperands;
+    newOperands.reserve(op->getNumOperands());
+    for (Value operand : op->getOperands()) {
+      if (isa<VectorType>(operand.getType())) {
+        newOperands.push_back(
+            dropLeadingOneDimsFromOperand(rewriter, loc, operand, nDropped));
+      } else {
+        newOperands.push_back(operand);
+      }
+    }
+
+    Operation *newOp =
+        rewriter.create(loc, op->getName().getIdentifier(), newOperands,
+                        op->getResultTypes(), op->getAttrs());
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
 
 // Drops leading 1 dimensions from vector.constant_mask and inserts a
 // vector.broadcast back to the original shape.
@@ -557,8 +653,7 @@ struct CastAwayConstantMaskLeadingOneDim
     // If any of the dropped unit dims has a size of `0`, the entire mask is a
     // zero mask, else the unit dim has no effect on the mask.
     int64_t flatLeadingSize =
-        std::accumulate(dimSizes.begin(), dimSizes.begin() + dropDim + 1,
-                        static_cast<int64_t>(1), std::multiplies<int64_t>());
+        llvm::product_of(dimSizes.take_front(dropDim + 1));
     SmallVector<int64_t> newDimSizes = {flatLeadingSize};
     newDimSizes.append(dimSizes.begin() + dropDim + 1, dimSizes.end());
 
@@ -578,5 +673,14 @@ void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
            CastAwayInsertStridedSliceLeadingOneDim, CastAwayInsertLeadingOneDim,
            CastAwayConstantMaskLeadingOneDim, CastAwayTransferReadLeadingOneDim,
            CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
-           CastAwayContractionLeadingOneDim>(patterns.getContext(), benefit);
+           CastAwayContractionLeadingOneDim,
+           CastAwayLoadLikeLeadingOneDim<vector::LoadOp>,
+           CastAwayLoadLikeLeadingOneDim<vector::MaskedLoadOp>,
+           CastAwayLoadLikeLeadingOneDim<vector::ExpandLoadOp>,
+           CastAwayLoadLikeLeadingOneDim<vector::GatherOp>,
+           CastAwayStoreLikeLeadingOneDim<vector::StoreOp>,
+           CastAwayStoreLikeLeadingOneDim<vector::MaskedStoreOp>,
+           CastAwayStoreLikeLeadingOneDim<vector::CompressStoreOp>,
+           CastAwayStoreLikeLeadingOneDim<vector::ScatterOp>>(
+          patterns.getContext(), benefit);
 }

@@ -11,9 +11,9 @@ end program
 !UNPARSE: !$OMP DECLARE_TARGET ENTER(AUTOMAP: x)
 !UNPARSE: END PROGRAM
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareTargetConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareTargetDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare target
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Enter -> OmpEnterClause
 !PARSE-TREE: | | Modifier -> OmpAutomapModifier -> Value = Automap
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | Flags = None
+!PARSE-TREE: | Flags = {}
