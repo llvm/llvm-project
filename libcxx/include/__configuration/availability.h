@@ -39,6 +39,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_22_ATTRIBUTE /* nothing */
 
@@ -69,6 +72,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 23
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_23_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 22
 // TODO: Fill this in
