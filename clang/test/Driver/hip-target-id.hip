@@ -11,7 +11,7 @@
 // RUN:   --offload-arch=gfx908:xnack+:sramecc- \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   --no-offload-new-driver -save-temps \
-// RUN:   %s 2>&1 | FileCheck --check-prefixes=CHECK %s
+// RUN:   %s 2>&1 | FileCheck --check-prefixes=CHECK,TMP %s
 
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip \
@@ -25,6 +25,11 @@
 // CHECK-SAME: "-target-cpu" "gfx908"
 // CHECK-SAME: "-target-feature" "+sramecc"
 // CHECK-SAME: "-target-feature" "+xnack"
+
+// TMP: [[CLANG:"[^"]*clang[^"]*"]] "-cc1as" "-triple" "amdgcn-amd-amdhsa"
+// TMP-SAME: "-target-cpu" "gfx908"
+// TMP-SAME: "-target-feature" "+sramecc"
+// TMP-SAME: "-target-feature" "+xnack"
 
 // CHECK: [[LLD:"[^"]*lld[^"]*"]] {{.*}} "-plugin-opt=mcpu=gfx908"
 // CHECK-SAME: "-plugin-opt=-mattr=+sramecc,+xnack"

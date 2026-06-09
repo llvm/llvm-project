@@ -468,8 +468,8 @@ public:
   virtual LTOKind getDefaultLTOMode() const;
 
   /// Resolve the requested LTO mode for this toolchain.
-  virtual LTOKind getLTOMode(const llvm::opt::ArgList &Args,
-                             Action::OffloadKind Kind = Action::OFK_None) const;
+  LTOKind getLTOMode(const llvm::opt::ArgList &Args,
+                     Action::OffloadKind Kind = Action::OFK_None) const;
 
   /// Returns true if LTO is active for this toolchain given the args.
   bool isUsingLTO(const llvm::opt::ArgList &Args,
