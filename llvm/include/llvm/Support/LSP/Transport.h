@@ -73,7 +73,7 @@ private:
 };
 
 /// Concrete implementation of the JSONTransportInput that reads from a file.
-class JSONTransportInputOverFile : public JSONTransportInput {
+class LLVM_ABI JSONTransportInputOverFile : public JSONTransportInput {
 public:
   explicit JSONTransportInputOverFile(
       std::FILE *In, JSONStreamStyle Style = JSONStreamStyle::Standard)
@@ -82,8 +82,8 @@ public:
   bool hasError() const final { return ferror(In); }
   bool isEndOfInput() const final { return feof(In); }
 
-  LLVM_ABI_FOR_TEST LogicalResult readDelimitedMessage(std::string &Json) final;
-  LLVM_ABI_FOR_TEST LogicalResult readStandardMessage(std::string &Json) final;
+  LogicalResult readDelimitedMessage(std::string &Json) final;
+  LogicalResult readStandardMessage(std::string &Json) final;
 
 private:
   std::FILE *In;
@@ -161,9 +161,11 @@ class MessageHandler {
 public:
   MessageHandler(JSONTransport &Transport) : Transport(Transport) {}
 
-  bool onNotify(StringRef Method, llvm::json::Value Value);
-  bool onCall(StringRef Method, llvm::json::Value Params, llvm::json::Value Id);
-  bool onReply(llvm::json::Value Id, llvm::Expected<llvm::json::Value> Result);
+  LLVM_ABI bool onNotify(StringRef Method, llvm::json::Value Value);
+  LLVM_ABI bool onCall(StringRef Method, llvm::json::Value Params,
+                       llvm::json::Value Id);
+  LLVM_ABI bool onReply(llvm::json::Value Id,
+                        llvm::Expected<llvm::json::Value> Result);
 
   template <typename T>
   static llvm::Expected<T> parse(const llvm::json::Value &Raw,

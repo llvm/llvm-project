@@ -34,8 +34,14 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
   const auto BinaryPointerCheckCondition = binaryOperator(hasOperands(
       anyOf(cxxNullPtrLiteralExpr(), integerLiteral(equals(0))), PointerExpr));
 
+  const auto IfWithScopedCondition =
+      ifStmt(anyOf(hasInitStatement(stmt()),
+                   hasConditionVariableStatement(declStmt())))
+          .bind("ifWithScopedCondition");
+
   Finder->addMatcher(
       ifStmt(hasCondition(anyOf(PointerExpr, BinaryPointerCheckCondition)),
+             optionally(IfWithScopedCondition),
              hasThen(anyOf(
                  DeleteExpr, DeleteMemberExpr,
                  compoundStmt(anyOf(has(DeleteExpr), has(DeleteMemberExpr)),
@@ -47,12 +53,14 @@ void DeleteNullPointerCheck::registerMatchers(MatchFinder *Finder) {
 
 void DeleteNullPointerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *IfWithDelete = Result.Nodes.getNodeAs<IfStmt>("ifWithDelete");
+  const bool HasScopedCondition =
+      Result.Nodes.getNodeAs<IfStmt>("ifWithScopedCondition") != nullptr;
   const auto *Compound = Result.Nodes.getNodeAs<CompoundStmt>("compound");
 
   auto Diag = diag(
       IfWithDelete->getBeginLoc(),
       "'if' statement is unnecessary; deleting null pointer has no effect");
-  if (IfWithDelete->hasElseStorage())
+  if (HasScopedCondition || IfWithDelete->hasElseStorage())
     return;
   // FIXME: generate fixit for this case.
 

@@ -9,6 +9,8 @@
 #ifndef LLVM_OBJCOPY_DXCONTAINER_DXCONTAINEROBJCOPY_H
 #define LLVM_OBJCOPY_DXCONTAINER_DXCONTAINEROBJCOPY_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Error;
 class raw_ostream;
@@ -25,10 +27,10 @@ namespace dxbc {
 /// Apply the transformations described by \p Config and \p DXContainerConfig
 /// to \p In and writes the result into \p Out.
 /// \returns any Error encountered whilst performing the operation.
-Error executeObjcopyOnBinary(const CommonConfig &Config,
-                             const DXContainerConfig &,
-                             object::DXContainerObjectFile &In,
-                             raw_ostream &Out);
+LLVM_ABI Error executeObjcopyOnBinary(const CommonConfig &Config,
+                                      const DXContainerConfig &,
+                                      object::DXContainerObjectFile &In,
+                                      raw_ostream &Out);
 } // end namespace dxbc
 } // end namespace objcopy
 } // end namespace llvm

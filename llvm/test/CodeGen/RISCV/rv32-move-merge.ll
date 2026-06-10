@@ -44,3 +44,97 @@ define i64 @mv_to_fmv(i64 %a, i64 %b) nounwind {
   call void @foo()
   ret i64 %1
 }
+
+; RV32 P-ext packed splat constants flow through the ABI as i64, get split
+; by SelectionDAG into two i32 halves materialized as single-reg pli/plui;
+; MoveMerger folds matching pairs into pli.db/pli.dh/plui.dh.
+
+define i64 @pli_b_pair() nounwind {
+; CHECK32ZDINX-LABEL: pli_b_pair:
+; CHECK32ZDINX:       # %bb.0:
+; CHECK32ZDINX-NEXT:    lui a0, 20560
+; CHECK32ZDINX-NEXT:    addi a0, a0, 1285
+; CHECK32ZDINX-NEXT:    mv a1, a0
+; CHECK32ZDINX-NEXT:    ret
+;
+; CHECK32P-LABEL: pli_b_pair:
+; CHECK32P:       # %bb.0:
+; CHECK32P-NEXT:    pli.db a0, 5
+; CHECK32P-NEXT:    ret
+  ret i64 361700864190383365
+}
+
+define i64 @pli_b_pair_negative() nounwind {
+; CHECK32ZDINX-LABEL: pli_b_pair_negative:
+; CHECK32ZDINX:       # %bb.0:
+; CHECK32ZDINX-NEXT:    lui a0, 1040352
+; CHECK32ZDINX-NEXT:    addi a0, a0, -515
+; CHECK32ZDINX-NEXT:    mv a1, a0
+; CHECK32ZDINX-NEXT:    ret
+;
+; CHECK32P-LABEL: pli_b_pair_negative:
+; CHECK32P:       # %bb.0:
+; CHECK32P-NEXT:    pli.db a0, -3
+; CHECK32P-NEXT:    ret
+  ret i64 -144680345676153347
+}
+
+define i64 @pli_h_pair() nounwind {
+; CHECK32ZDINX-LABEL: pli_h_pair:
+; CHECK32ZDINX:       # %bb.0:
+; CHECK32ZDINX-NEXT:    lui a0, 672
+; CHECK32ZDINX-NEXT:    addi a0, a0, 42
+; CHECK32ZDINX-NEXT:    mv a1, a0
+; CHECK32ZDINX-NEXT:    ret
+;
+; CHECK32P-LABEL: pli_h_pair:
+; CHECK32P:       # %bb.0:
+; CHECK32P-NEXT:    pli.dh a0, 42
+; CHECK32P-NEXT:    ret
+  ret i64 11822129413226538
+}
+
+define i64 @pli_h_pair_negative() nounwind {
+; CHECK32ZDINX-LABEL: pli_h_pair_negative:
+; CHECK32ZDINX:       # %bb.0:
+; CHECK32ZDINX-NEXT:    lui a0, 1048512
+; CHECK32ZDINX-NEXT:    addi a0, a0, -5
+; CHECK32ZDINX-NEXT:    mv a1, a0
+; CHECK32ZDINX-NEXT:    ret
+;
+; CHECK32P-LABEL: pli_h_pair_negative:
+; CHECK32P:       # %bb.0:
+; CHECK32P-NEXT:    pli.dh a0, -5
+; CHECK32P-NEXT:    ret
+  ret i64 -1125917086973957
+}
+
+define i64 @plui_h_pair() nounwind {
+; CHECK32ZDINX-LABEL: plui_h_pair:
+; CHECK32ZDINX:       # %bb.0:
+; CHECK32ZDINX-NEXT:    lui a0, 221187
+; CHECK32ZDINX-NEXT:    addi a0, a0, 1536
+; CHECK32ZDINX-NEXT:    mv a1, a0
+; CHECK32ZDINX-NEXT:    ret
+;
+; CHECK32P-LABEL: plui_h_pair:
+; CHECK32P:       # %bb.0:
+; CHECK32P-NEXT:    plui.dh a0, 216
+; CHECK32P-NEXT:    ret
+  ret i64 3891169452581991936
+}
+
+define i64 @plui_h_pair_negative() nounwind {
+; CHECK32ZDINX-LABEL: plui_h_pair_negative:
+; CHECK32ZDINX:       # %bb.0:
+; CHECK32ZDINX-NEXT:    lui a0, 1032208
+; CHECK32ZDINX-NEXT:    addi a0, a0, -1024
+; CHECK32ZDINX-NEXT:    mv a1, a0
+; CHECK32ZDINX-NEXT:    ret
+;
+; CHECK32P-LABEL: plui_h_pair_negative:
+; CHECK32P:       # %bb.0:
+; CHECK32P-NEXT:    plui.dh a0, -16
+; CHECK32P-NEXT:    ret
+  ret i64 -287953294993589248
+}

@@ -137,3 +137,20 @@ define spir_kernel void @trunc_v2i50_to_v2i32(ptr addrspace(1) %arg, <2 x i50> %
   store <2 x i32> %tr, ptr addrspace(1) %arg
   ret void
 }
+
+; CHECK: OpFunction
+; CHECK: %[[#TArg:]] = OpFunctionParameter
+; CHECK-EXT: %[[#TTr:]] = OpUConvert %[[#ExtInt32]] %[[#TArg]]
+; CHECK-EXT: %[[#TZext:]] = OpBitwiseAnd %[[#ExtInt32]] %[[#TTr]] %[[#]]
+; CHECK-EXT: %[[#]] = OpIAdd %[[#ExtInt32]] %[[#TZext]] %[[#]]
+; CHECK-NOEXT: %[[#TAnd:]] = OpBitwiseAnd %[[#Int64]] %[[#TArg]] %[[#]]
+; CHECK-NOEXT: %[[#TConv:]] = OpUConvert %[[#Int32]] %[[#TAnd]]
+; CHECK-NOEXT: %[[#TZext:]] = OpBitwiseAnd %[[#Int32]] %[[#TConv]] %[[#]]
+; CHECK-NOEXT: %[[#]] = OpIAdd %[[#Int32]] %[[#TZext]] %[[#]]
+define spir_kernel void @trunc_i64_to_i5_zext_to_i32(i64 %val, ptr addrspace(1) %out) {
+  %tr = trunc i64 %val to i5
+  %z = zext i5 %tr to i32
+  %r = add i32 %z, 1
+  store i32 %r, ptr addrspace(1) %out
+  ret void
+}
