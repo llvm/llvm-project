@@ -5753,11 +5753,6 @@ AST_MATCHER_P(IfStmt, hasElse, internal::Matcher<Stmt>, InnerMatcher) {
   return (Else != nullptr && InnerMatcher.matches(*Else, Finder, Builder));
 }
 
-/// Matches a declaration if it declares the same entity as the node.
-AST_MATCHER_P(Decl, declaresSameEntityAsNode, const Decl *, Other) {
-  return clang::declaresSameEntity(&Node, Other);
-}
-
 /// Matches if a node equals a previously bound node.
 ///
 /// Matches a node if it equals the node previously bound to \p ID.
