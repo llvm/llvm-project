@@ -555,7 +555,7 @@ static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
 // Returns true if the token at `BeginLocation` is immediately preceded by an
 // identifier or keyword token with no space between them.
 static bool
-isPrecededByAdjacentIdentifierOrKeyword(SourceManager &SourceMgr,
+isPrecededByAdjacentIdentifierOrKeyword(const SourceManager &SourceMgr,
                                         const LangOptions &LangOpts,
                                         SourceLocation BeginLocation) {
   std::optional<Token> PrevToken =
@@ -572,7 +572,7 @@ isPrecededByAdjacentIdentifierOrKeyword(SourceManager &SourceMgr,
 // with the preceding token. This occurs when `*it` is immediately adjacent to
 // a keyword, e.g. `delete*it`, where replacing `*it` with `it` would
 // incorrectly produce `deleteit`. So we insert a space b/w `delete` and `it`.
-static bool requiresLeadingSpace(SourceManager &SourceMgr,
+static bool requiresLeadingSpace(const SourceManager &SourceMgr,
                                  const LangOptions &LangOpts,
                                  SourceLocation BeginLocation) {
   Token StarToken;
