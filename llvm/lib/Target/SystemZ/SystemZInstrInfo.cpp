@@ -2426,6 +2426,9 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
   using namespace SystemZII;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_SYMBOL_MODIFIER, "systemz-symbol-modifier"},
+      {MO_GOT, "systemz-got"},
+      {MO_INDNTPOFF, "systemz-indntpoff"},
       {MO_ADA_DATA_SYMBOL_ADDR, "systemz-ada-datasymboladdr"},
       {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
       {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
