@@ -1897,6 +1897,46 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, WidenScalarMergeValuesFloat) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  constexpr ElementCount EC0 = ElementCount::getFixed(0);
+  const LLT I8 = LLT(LLT::Kind::INTEGER, EC0, 8);
+  const LLT I16 = LLT(LLT::Kind::INTEGER, EC0, 16);
+  const LLT F16 = LLT::float16();
+
+  DefineLegalizerInfo(A, {});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
+  auto Lo = B.buildTrunc(I8, Copies[0]);
+  auto Hi = B.buildTrunc(I8, Copies[1]);
+
+  auto Merge = B.buildMergeLikeInstr(F16, {Lo, Hi});
+
+  B.setInstr(*Merge);
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*Merge, 1, I16));
+
+  const auto *CheckStr = R"(
+  CHECK: [[TRUNC0:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[TRUNC1:%[0-9]+]]:_(i8) = G_TRUNC
+  CHECK: [[ZEXT_TRUNC0:%[0-9]+]]:_(i16) = G_ZEXT [[TRUNC0]]
+  CHECK: [[ZEXT_TRUNC1:%[0-9]+]]:_(i16) = G_ZEXT [[TRUNC1]]
+  CHECK: [[SHIFT_AMT:%[0-9]+]]:_(i16) = G_CONSTANT i16 8
+  CHECK: [[SHL:%[0-9]+]]:_(i16) = G_SHL [[ZEXT_TRUNC1]]:_, [[SHIFT_AMT]]
+  CHECK: [[OR:%[0-9]+]]:_(i16) = G_OR [[ZEXT_TRUNC0]]:_, [[SHL]]
+  CHECK: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[OR]]:_(i16)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 TEST_F(AArch64GISelMITest, WidenSEXTINREG) {
   setUp();
   if (!TM)
