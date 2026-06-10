@@ -463,6 +463,9 @@ Changes in existing checks
     std::move(b))``). The tuple assignment writes back through the stored
     references, which fully reinitializes the captured variables.
 
+  - Avoid false positives when forwarding a derived object to initialize a base
+    class subobject.
+
 - Improved :doc:`cert-err33-c
   <clang-tidy/checks/cert/err33-c>` check by not inheriting
   `CheckedReturnTypes` option from :doc:`bugprone-unused-return-value
