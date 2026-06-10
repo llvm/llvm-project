@@ -2,19 +2,18 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1150 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=GFX_SRC1_SGPR
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --check-prefix=GFX_SRC1_SGPR
 
-# GFX_SRC1_SGPR-NOT: *** Bad machine code: DPP src1 cannot be SGPR on this subtarget ***
+# GFX_SRC1_SGPR-NOT: *** Bad machine code: DPP src1 cannot be an immediate on this subtarget ***
 
 ---
-name: dpp_sgpr_src1
+name: dpp_imm_src1
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0, $sgpr0
+    liveins: $vgpr0
 
     %0:vgpr_32 = COPY $vgpr0
-    %1:sreg_32 = COPY $sgpr0
 
-    ; GFX_NO_SRC1_SGPR: *** Bad machine code: DPP src1 cannot be SGPR on this subtarget ***
+    ; GFX_NO_SRC1_SGPR: *** Bad machine code: DPP src1 cannot be an immediate on this subtarget ***
     ; GFX_NO_SRC1_SGPR: V_ADD_CO_U32_e64_dpp
-    %2:vgpr_32, %3:sreg_32_xexec = V_ADD_CO_U32_e64_dpp %0:vgpr_32, %0:vgpr_32, %1:sreg_32, 0, 228, 12, 15, 0, implicit $exec
+    %1:vgpr_32, %2:sreg_32_xexec = V_ADD_CO_U32_e64_dpp %0:vgpr_32, %0:vgpr_32, 42, 0, 228, 12, 15, 0, implicit $exec
 ...
