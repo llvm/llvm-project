@@ -1,9 +1,6 @@
 ; RUN: llc -mtriple=x86_64-linux -no-stack-coloring=false -debug-only=stack-coloring < %s -o /dev/null 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
-; Test that volatile stack slots accessed after setjmp are not merged.
-; Volatile variables must retain their values across longjmp, so their
-; stack slots cannot be reused even if their lifetimes don't overlap.
 
 declare i32 @setjmp(ptr) returns_twice
 declare void @baz(ptr)
@@ -15,6 +12,10 @@ declare dso_local void @use(ptr noundef) local_unnamed_addr
 ; CHECK-LABEL: setjmp_test
 ; CHECK: Conservative slots : { 1 1 }
 ; CHECK: Merge 0 slots
+
+; Test that volatile stack slots accessed after setjmp are not merged.
+; Volatile variables must retain their values across longjmp, so their
+; stack slots cannot be reused even if their lifetimes don't overlap.
 
 define void @setjmp_test(ptr %jump_buffer) {
 entry:
@@ -47,6 +48,10 @@ exit:
 ; CHECK: Conservative slots : { 1 1 }
 ; CHECK: Merge 0 slots
 
+; test1 and test2 cannot be merged because they are passed to functions (stash
+; and use). Lack of volatile doesn't change anything -- here we don't expect
+; the values of test1 and test2 to be preserved, but their addresses/location
+; on stack.
 
 %struct.T = type { [100 x i32] }
 
