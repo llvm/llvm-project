@@ -8,9 +8,10 @@ struct [[gsl::Owner]] MyObj {
 };
 
 struct [[gsl::Pointer()]] View {
-  View(const MyObj&); // Borrows from MyObj
+  View(const MyObj& obj [[clang::noescape]]); // Borrows from MyObj
   View();
   void use() const;
+  void let_parameter_escape(const MyObj& obj) const;
 };
 
 View return_noescape_directly(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
@@ -104,13 +105,13 @@ View identity_lifetimebound(View v [[clang::lifetimebound]]) { return v; }
 
 View escape_through_lifetimebound_call(
     const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
-  return identity_lifetimebound(in); // expected-note {{returned here}}
+  return identity_lifetimebound(in); // expected-note {{escapes through this call}}
 }
 
 View no_annotation_identity(View v) { return v; }
 
 View escape_through_unannotated_call(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
-  return no_annotation_identity(in); // expected-note {{returned here}}
+  return no_annotation_identity(in); // expected-note {{escapes through this call}}
 }
 
 View global_view; // expected-note {{escapes to this global storage}}
@@ -150,9 +151,8 @@ struct ObjConsumer {
   View member_view; // expected-note {{escapes to this field}}
 };
 
-// FIXME: Escaping through another param is not detected.
-void escape_through_param(const MyObj& in, std::vector<View> &v) {
-  v.push_back(in);
+void escape_through_param(const MyObj& in [[clang::noescape]], std::vector<View> &v) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
+  v.push_back(in); // expected-note {{escapes through this call}}
 }
 
 View reassign_to_second(

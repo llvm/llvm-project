@@ -398,6 +398,17 @@ public:
           << EscapeGlobal->getEndLoc();
   }
 
+  void reportNoescapeViolationThroughCall(const ParmVarDecl *ParmWithNoescape,
+                                          const Expr *EscapeCall) override {
+    S.Diag(ParmWithNoescape->getBeginLoc(),
+           diag::warn_lifetime_safety_noescape_escapes)
+        << ParmWithNoescape->getSourceRange();
+
+    S.Diag(EscapeCall->getBeginLoc(),
+           diag::note_lifetime_safety_escapes_through_call_here)
+        << EscapeCall->getSourceRange();
+  }
+
   void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) override {
     S.addLifetimeBoundToImplicitThis(const_cast<CXXMethodDecl *>(MD));
   }

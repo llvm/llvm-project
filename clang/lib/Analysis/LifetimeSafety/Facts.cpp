@@ -77,6 +77,13 @@ void GlobalEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << ", via Global)\n";
 }
 
+void CallEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                          const OriginManager &OM) const {
+  OS << "CallEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Call)\n";
+}
+
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                    const OriginManager &OM) const {
   OS << "Use (";
