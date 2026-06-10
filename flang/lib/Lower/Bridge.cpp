@@ -3689,11 +3689,15 @@ private:
 
       if (curEval->lowerAsStructured()) {
         curEval = &curEval->getFirstNestedEvaluation();
-        for (uint64_t i = 1; i < loopCount; i++) {
-          if (!curEval->hasNestedEvaluations())
-            break;
-          curEval = &*std::next(curEval->getNestedEvaluations().begin());
-        }
+        // A DO CONCURRENT holds all controls in one construct; the per-level
+        // descent would overshoot into its body and drop it.
+        const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
+        if (!(outerDo && outerDo->IsDoConcurrent()))
+          for (uint64_t i = 1; i < loopCount; i++) {
+            if (!curEval->hasNestedEvaluations())
+              break;
+            curEval = &*std::next(curEval->getNestedEvaluations().begin());
+          }
       }
     }
 

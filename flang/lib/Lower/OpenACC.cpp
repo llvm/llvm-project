@@ -2385,9 +2385,32 @@ static mlir::acc::LoopOp createLoopOp(
   uint64_t loopsToProcess =
       Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
 
-  if (outerDoConstruct.IsDoConcurrent() &&
-      Fortran::lower::getCollapseSizeAndForce(accClauseList).first > 1)
-    TODO(currentLocation, "OpenACC LOOP COLLAPSE with DO CONCURRENT");
+  if (outerDoConstruct.IsDoConcurrent()) {
+    uint64_t collapseValue =
+        Fortran::lower::getCollapseSizeAndForce(accClauseList).first;
+    if (collapseValue > 1) {
+      // N>C reaches here only via mixed DO CONCURRENT + inner DO; semantics
+      // rejects the straight-line N>C case.
+      const Fortran::parser::LoopControl *loopControl =
+          &*outerDoConstruct.GetLoopControl();
+      const auto &concurrent =
+          std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
+      const auto &concurrentHeader =
+          std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
+      const auto &controls =
+          std::get<std::list<Fortran::parser::ConcurrentControl>>(
+              concurrentHeader.t);
+      uint64_t controlCount = controls.size();
+      if (collapseValue > controlCount)
+        TODO(currentLocation,
+             "OpenACC LOOP COLLAPSE greater than DO CONCURRENT control count");
+      if (collapseValue < controlCount)
+        TODO(currentLocation,
+             "OpenACC LOOP COLLAPSE less than DO CONCURRENT control count");
+      // N==C falls through; its body relies on Bridge.cpp not descending into
+      // the DO CONCURRENT.
+    }
+  }
 
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
