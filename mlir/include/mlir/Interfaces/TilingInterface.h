@@ -66,6 +66,39 @@ struct MergeResult {
   SmallVector<Value> replacements;
 };
 
+/// Per-dimension alignment of a loop tile size to a `linalg.pack` /
+/// `linalg.unpack` inner tile size, supplied by the caller (which performed the
+/// tiling and knows both the tile sizes and the inner tiles) so that
+/// pack/unpack TilingInterface implementations need not re-derive it from the
+/// materialized IR. An absent entry (or `Unknown`) means "no information": the
+/// implementation must fall back to its prior behavior for that dimension.
+///   - `Multiple`: the loop tile size is an integer multiple of the pack/unpack
+///   inner tile.
+///   - `Equal`:    the loop tile size equals the pack/unpack inner tile size.
+enum class InnerTileAlignment : int64_t { Unknown = 0, Multiple, Equal };
+
+/// Returns true iff `value` is a valid `InnerTileAlignment` enumerator.
+inline bool isValidInnerTileAlignment(int64_t value) {
+  switch (static_cast<InnerTileAlignment>(value)) {
+  case InnerTileAlignment::Unknown:
+  case InnerTileAlignment::Multiple:
+  case InnerTileAlignment::Equal:
+    return true;
+  }
+  return false;
+}
+
+/// Verifies that every entry of a raw `inner_tile_alignments` integer array is
+/// a valid `InnerTileAlignment`, emitting the standard op error on `op`
+/// otherwise.
+LogicalResult verifyInnerTileAlignments(Operation *op,
+                                        ArrayRef<int64_t> alignments);
+
+/// Maps a validated `inner_tile_alignments` integer array onto the
+/// per-dimension `InnerTileAlignment` hints consumed by the tiling driver.
+SmallVector<InnerTileAlignment>
+convertInnerTileAlignments(ArrayRef<int64_t> alignments);
+
 } // namespace mlir
 
 /// Include the ODS generated interface header files.
