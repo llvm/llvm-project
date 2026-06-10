@@ -159,7 +159,7 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
   if (SourceLocations.empty()) {
     // If there are no includes in this file, add it in the first line.
     // FIXME: insert after the file comment or the header guard, if present.
-    IncludeStmt.append(LineEnding.data(), LineEnding.size());
+    IncludeStmt.append(LineEnding);
     return FixItHint::CreateInsertion(
         SourceMgr->getLocForStartOfFile(CurrentFileID), IncludeStmt);
   }
@@ -205,7 +205,7 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
     const std::string &LastInclude = IncludeBucket[NonEmptyKind].back();
     const SourceRange LastIncludeLocation =
         IncludeLocations[LastInclude].back();
-    IncludeStmt.insert(0, LineEnding.data(), LineEnding.size());
+    IncludeStmt.insert(0, LineEnding);
     return FixItHint::CreateInsertion(LastIncludeLocation.getEnd(),
                                       IncludeStmt);
   }
@@ -213,7 +213,7 @@ IncludeSorter::createIncludeInsertion(StringRef FileName, bool IsAngled) {
   const std::string &FirstInclude = IncludeBucket[NonEmptyKind][0];
   const SourceRange FirstIncludeLocation =
       IncludeLocations[FirstInclude].back();
-  IncludeStmt.append(LineEnding.data(), LineEnding.size());
+  IncludeStmt.append(LineEnding);
   return FixItHint::CreateInsertion(FirstIncludeLocation.getBegin(),
                                     IncludeStmt);
 }
