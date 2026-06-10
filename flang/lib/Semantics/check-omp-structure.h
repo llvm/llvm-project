@@ -334,9 +334,11 @@ private:
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
   void CheckTypeParamInquiry(
-      const parser::CharBlock &source, const parser::OmpObject &object);
+      const parser::CharBlock &source, const parser::OmpObject &object,
+      llvm::omp::Directive dirId);
   void CheckTypeParamInquiry(
-      const parser::CharBlock &source, const parser::OmpObjectList &objects);
+      const parser::CharBlock &source, const parser::OmpObject &object,
+      llvm::omp::Clause clauseId);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObject &object, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
