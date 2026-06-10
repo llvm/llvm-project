@@ -1241,14 +1241,14 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 /// an intrinsic ID.
 static std::optional<std::pair<bool, unsigned>>
 getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
+  Intrinsic::ID IID = vputils::getIntrinsicID(R);
+  if (IID != Intrinsic::not_intrinsic)
+    return std::make_pair(true, IID);
   return TypeSwitch<const VPSingleDefRecipe *,
                     std::optional<std::pair<bool, unsigned>>>(R)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-      .Case([](const VPWidenIntrinsicRecipe *I) {
-        return std::make_pair(true, I->getVectorIntrinsicID());
-      })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -1286,10 +1286,16 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
-      if (R.getNumOperands() != 2)
-        return nullptr;
       unsigned ID = OpcodeOrIID->second;
-      return Folder.FoldBinaryIntrinsic(ID, Ops[0], Ops[1], R.getScalarType());
+      if (R.getNumOperands() == 2)
+        return Folder.FoldBinaryIntrinsic(
+            ID, Ops[0], Ops[1], R.getScalarType(),
+            cast<VPRecipeWithIRFlags>(R).getFastMathFlagsOrNone());
+      if (R.getNumOperands() == 1)
+        return Folder.FoldUnaryIntrinsic(
+            ID, Ops[0], R.getScalarType(),
+            cast<VPRecipeWithIRFlags>(R).getFastMathFlagsOrNone());
+      return nullptr;
     }
     unsigned Opcode = OpcodeOrIID->second;
     if (Instruction::isBinaryOp(Opcode))
