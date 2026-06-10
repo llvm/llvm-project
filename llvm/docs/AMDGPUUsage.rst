@@ -830,6 +830,55 @@ For example:
 
      =============== ============================ ==================================================
 
+.. _amdgpu-module-flags:
+
+Module Flags
+------------
+
+AMDGPU-specific behaviour can be controlled via LLVM module flags (see
+`Module Flags Metadata
+<https://llvm.org/docs/LangRef.html#module-flags-metadata>`_ in the language
+reference). These flags are set by frontends and are
+consumed by the AMDGPU backend during code generation.
+
+.. list-table:: AMDGPU Module Flags
+   :name: amdgpu-module-flags-table
+   :header-rows: 1
+
+   * - Flag Name
+     - Type
+     - Merge
+     - Description
+   * - ``amdgpu.buffer.oob.mode``
+     - ``i32``
+     - Max
+     - Controls out-of-bounds semantics for untyped buffer
+       instructions (``buffer_load`` / ``buffer_store``).
+
+       - ``0`` (or absent): **any**. The module does not care about OOB
+         semantics. This is an alias of **strict** that is allowed to link
+         with any other module. Code generation is identical to **strict**.
+       - ``1``: **relaxed**. The backend may merge misaligned buffer
+         accesses for performance, even if that changes OOB behaviour.
+       - ``2``: **strict**. The backend preserves per-byte OOB guarantees
+         by preventing merging of misaligned buffer accesses that could
+         straddle an OOB boundary (e.g. as required by Vulkan
+         ``robustBufferAccess2``).
+
+   * - ``amdgpu.tbuffer.oob.mode``
+     - ``i32``
+     - Max
+     - Same as above, but for typed buffer instructions (``tbuffer_load`` /
+       ``tbuffer_store``).
+
+.. note::
+
+   Frontends that require misaligned-access merging for performance should
+   set both flags to ``1`` (relaxed).  Frontends that require strict
+   per-byte OOB guarantees should set the flags to ``2`` (strict) as needed.
+   Modules that do not use buffer operations or are indifferent to OOB semantics
+   (e.g. device libraries) should leave the flags absent.
+
 .. _amdgpu-target-id:
 
 Target ID
@@ -1829,7 +1878,6 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    * Flat pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
 
   llvm.amdgcn.global.load.monitor                  Available on GFX12.5 only.
                                                    Corresponds to ``global_load_monitor_b32/64/128`` (``.b32/64/128`` suffixes)
@@ -1839,10 +1887,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
                                                    This intrinsic has 3 operands:
 
-                                                   * Flat pointer.
+                                                   * Global pointer.
                                                    * :ref:`Load Atomic Ordering<amdgpu-intrinsics-c-abi-atomic-memory-ordering-operand>`.
                                                    * :ref:`Synchronization Scope<amdgpu-intrinsics-syncscope-metadata-operand>`.
-                                                     Note that the scope used must ensure that the L2 cache will be hit.
 
   llvm.amdgcn.ds.atomic.barrier.arrive.rtn.b64     Available starting GFX12.5.
                                                    Corresponds to ``ds_atomic_barrier_arrive_rtn_b64``.
@@ -2085,6 +2132,18 @@ Example:
   %0 = tail call i32 @llvm.amdgcn.cooperative.atomic.load.32x4B.p0(ptr %addr, i32 4, metadata !0)
 
   !0 = !{ !"agent" }
+
+.. _amdgpu_unsupported_constructs:
+
+Unsupported IR Constructs
+-------------------------
+
+The following LLVM IR constructs are not supported by the AMDGPU backend:
+
+* atomic accesses with less than natural alignment or an access size of
+  more than 64 bits
+
+This list is not exhaustive.
 
 .. _amdgpu_metadata:
 
@@ -2576,6 +2635,9 @@ As part of the AMDGPU MC layer, AMDGPU provides the following target-specific
      =================== ================= ========================================================
      ``max(arg, ...)``   1 or more         Variadic signed operation that returns the maximum
                                            value of all its arguments.
+
+     ``min(arg, ...)``   1 or more         Variadic signed operation that returns the minimum
+                                           value of all its arguments
 
      ``or(arg, ...)``    1 or more         Variadic signed operation that returns the bitwise-or
                                            result of all its arguments.
@@ -7162,15 +7224,6 @@ orderings (``acquire``, ``release``, ``acq_rel``, or ``seq_cst``).
 The memory model does not support the region address space which is treated as
 non-atomic.
 
-Acquire memory ordering is not meaningful on store atomic instructions and is
-treated as non-atomic.
-
-Release memory ordering is not meaningful on load atomic instructions and is
-treated as non-atomic.
-
-Acquire-release memory ordering is not meaningful on load or store atomic
-instructions and is treated as acquire and release respectively.
-
 The memory order also adds the single thread optimization constraints defined in
 table
 :ref:`amdgpu-amdhsa-memory-model-single-thread-optimization-constraints-table`.
@@ -7208,7 +7261,11 @@ table
      ============ ==============================================================
 
 The code sequences used to implement the memory model are defined in the
-following sections:
+sections listed below.
+
+**Note:** The presence of :ref:`AV metadata<amdgpu-av-metadata>` can **suppress
+cache operations** (such as write-back or invalidate) that are usually part of
+these sequences.
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
@@ -17479,7 +17536,8 @@ For GFX125x:
 
   * In order to monitor a cache line in the L2 cache, these instructions must
     ensure that the L2 cache is always hit by setting the ``SCOPE`` of the instruction
-    appropriately.
+    appropriately. The compiler may adjust the scope of the instruction accordingly
+    to ensure this is the case.
   * For non-atomic and atomic code sequences, it is valid to replace
     ``global_load_b32/64/128`` with a ``global_load_monitor_b32/64/128`` and a
     ``flat_load_b32/64/128`` with a ``flat_load_monitor_b32/64/128``.

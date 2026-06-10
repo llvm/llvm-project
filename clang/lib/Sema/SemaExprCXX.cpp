@@ -5343,9 +5343,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     case ICK_HLSL_Matrix_Truncation: {
       auto *FromMat = From->getType()->castAs<ConstantMatrixType>();
       QualType TruncTy = FromMat->getElementType();
-      if (auto *ToMat = ToType->getAs<ConstantMatrixType>())
-        TruncTy = Context.getConstantMatrixType(TruncTy, ToMat->getNumRows(),
-                                                ToMat->getNumColumns());
+      // Preserve any sugar (e.g. `row_major`/`column_major` HLSL TypeAttrs) on
+      // `ToType` so that downstream CodeGen can query the destination layout
+      // from the cast node itself rather than falling back to the TU default.
+      if (ToType->getAs<ConstantMatrixType>())
+        TruncTy = ToType;
       From = ImpCastExprToType(From, TruncTy, CK_HLSLMatrixTruncation,
                                From->getValueKind())
                  .get();

@@ -1967,6 +1967,7 @@ Familiar template syntax for generic lambdas  __cpp_generic_lambdas            C
 Designated initializers                       __cpp_designated_initializers    C++20         C++03
 Conditional ``explicit``                      __cpp_conditional_explicit       C++20         C++03
 ``using enum``                                __cpp_using_enum                 C++20         C++03
+``auto`` parameters                                                            C++20         C++03
 ``if consteval``                              __cpp_if_consteval               C++23         C++20
 ``static operator()``                         __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                               C++23         C++11
@@ -5262,6 +5263,8 @@ builtin function, and are named with a ``__opencl_`` prefix. The macros
 and ``__OPENCL_MEMORY_SCOPE_SUB_GROUP`` are provided, with values
 corresponding to the enumerators of OpenCL's ``memory_scope`` enumeration.)
 
+.. _langext-__scoped_atomic:
+
 __scoped_atomic builtins
 ------------------------
 
@@ -5756,6 +5759,32 @@ Given a wave-uniform bitmask, ``__builtin_amdgcn_inverse_ballot_w{32,64}(mask)``
 returns the bit at the position of the current lane. It is almost equivalent to
 ``(mask & (1 << lane_id)) != 0``, except that its behavior is only defined if
 the given mask has the same value for all active lanes of the current wave.
+
+
+__builtin_amdgcn_av_{load,store}_b128
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Signature:
+
+.. code-block:: c
+
+    typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u;
+
+    v4u __builtin_amdgcn_av_load_b128(v4u *src, int scope);
+
+    void __builtin_amdgcn_av_store_b128(v4u *dst, v4u data, int scope);
+
+Load or store a vector of 4 unsigned integers from or to memory with cache
+behavior specified by ``scope``, which is one of the ``__MEMORY_SCOPE_*`` macros
+defined for :ref:`scoped atomic builtins<langext-__c11_atomic>`.
+
+The pointer argument must point to the global or generic address space.
+
+These builtins are supported on gfx9, gfx10, gfx11, and gfx12 targets.
+
+They map to the LLVM intrinsics ``llvm.amdgcn.av.load.b128`` and
+``llvm.amdgcn.av.store.b128`` documented in `User Guide for AMDGPU Backend
+<https://llvm.org/docs/AMDGPUUsage.html>`_.
 
 ARM/AArch64 Language Extensions
 -------------------------------

@@ -38,8 +38,6 @@ TEST_F(LlvmLibcGmTimeR, EndOf32BitEpochYear) {
 }
 
 TEST_F(LlvmLibcGmTimeR, Max64BitYear) {
-  if (sizeof(time_t) == 4)
-    return;
   // Test for Tue Jan 1 12:50:50 in 2,147,483,647th year.
   time_t seconds = 67767976202043050;
   struct tm tm_data;

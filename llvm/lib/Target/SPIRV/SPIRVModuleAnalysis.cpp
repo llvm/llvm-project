@@ -341,7 +341,23 @@ bool SPIRVModuleAnalysis::isDeclSection(const MachineRegisterInfo &MRI,
     return true;
   }
   if (GR->hasConstFunPtr() && Opcode == SPIRV::OpUndef) {
+    // The OpUndef may be a placeholder for a function reference recorded by
+    // selectGlobalValue. Skip emitting it if any user consumes it as a
+    // function-pointer-like operand (OpConstantFunctionPointerINTEL operand 2,
+    // or OpEnqueueKernel's Invoke operand at index 8). The rewrite happens
+    // in visitFunPtrUse, which aliases the OpUndef's vreg to the function's
+    // global <id>.
     Register DefReg = MI.getOperand(0).getReg();
+    if (GR->getFunctionDefinitionByUse(&MI.getOperand(0))) {
+      for (MachineInstr &UseMI : MRI.use_instructions(DefReg)) {
+        unsigned UseOp = UseMI.getOpcode();
+        if (UseOp == SPIRV::OpConstantFunctionPointerINTEL ||
+            UseOp == SPIRV::OpEnqueueKernel) {
+          MAI.setSkipEmission(&MI);
+          return false;
+        }
+      }
+    }
     for (MachineInstr &UseMI : MRI.use_instructions(DefReg)) {
       if (UseMI.getOpcode() != SPIRV::OpConstantFunctionPointerINTEL)
         continue;
@@ -563,6 +579,26 @@ void SPIRVModuleAnalysis::collectDeclarations(const Module &M) {
           if (DefMO.isReg() && isDeclSection(MRI, MI) &&
               !MAI.hasRegisterAlias(MF, DefMO.getReg()))
             visitDecl(MRI, SignatureToGReg, GlobalToGReg, MF, MI);
+          // OpEnqueueKernel is not a decl, but its Invoke operand may be a
+          // function-pointer placeholder OpUndef recorded by selectGlobalValue.
+          // Resolve it to the OpFunction's global <id> via visitFunPtrUse.
+          if (Opcode == SPIRV::OpEnqueueKernel && MI.getNumOperands() > 8) {
+            const MachineOperand &InvokeMO = MI.getOperand(8);
+            if (InvokeMO.isReg()) {
+              Register InvokeReg = InvokeMO.getReg();
+              if (!MAI.hasRegisterAlias(MF, InvokeReg)) {
+                if (const MachineInstr *DefMI =
+                        MRI.getUniqueVRegDef(InvokeReg)) {
+                  if (DefMI->getOpcode() == SPIRV::OpUndef) {
+                    const MachineOperand *FunPtrOp = &DefMI->getOperand(0);
+                    if (GR->getFunctionDefinitionByUse(FunPtrOp))
+                      visitFunPtrUse(InvokeReg, FunPtrOp, SignatureToGReg,
+                                     GlobalToGReg, MF);
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -1159,7 +1195,10 @@ static void AddAtomicVectorFloatRequirements(const MachineInstr &MI,
         "The element type for the result type of an atomic vector float "
         "instruction must be a 16-bit floating-point scalar");
 
-  if (isBFloat16Type(EltTypeDef))
+  // The extension is defined for fp16, but the AMD target lets a bf16 vector
+  // use the same instruction so it can lower to a packed bf16 atomic.
+  if (isBFloat16Type(EltTypeDef) &&
+      ST.getTargetTriple().getVendor() != Triple::AMD)
     reportFatalUsageError(
         "The element type for the result type of an atomic vector float "
         "instruction cannot be a bfloat16 scalar");
@@ -1442,7 +1481,8 @@ void addPrintfRequirements(const MachineInstr &MI,
                            SPIRV::RequirementHandler &Reqs,
                            const SPIRVSubtarget &ST) {
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-  SPIRVTypeInst PtrType = GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg());
+  SPIRVTypeInst PtrType =
+      GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg(), MI.getMF());
   if (PtrType) {
     MachineOperand ASOp = PtrType->getOperand(1);
     if (ASOp.isImm()) {
@@ -1636,6 +1676,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpTypeDeviceEvent:
   case SPIRV::OpTypeQueue:
   case SPIRV::OpBuildNDRange:
+  case SPIRV::OpEnqueueKernel:
     Reqs.addCapability(SPIRV::Capability::DeviceEnqueue);
     break;
   case SPIRV::OpDecorate:

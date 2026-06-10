@@ -111,6 +111,61 @@ def SignlessLikeVariadic : TEST_Op<"signless_like_variadic"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test Token Type
+//===----------------------------------------------------------------------===//
+
+// Produce a builtin `!token` value.
+def TestTokenProduceOp : TEST_Op<"token.produce"> {
+  let results = (outs Token:$token);
+  let assemblyFormat = "attr-dict";
+}
+
+// Produce a builtin `!token` value via an opt-in result type without the
+// producer trait. ODS only auto-derives the trait when the declared type is
+// statically `Token`, so this op (whose result type accepts any type
+// including tokens) exercises the runtime trait check.
+def TestTokenProduceWithoutTraitOp
+    : TEST_Op<"token.produce_without_trait"> {
+  let results = (outs Type<CPred<"true">>:$token);
+  let assemblyFormat = "attr-dict `:` type($token)";
+}
+
+// Consume a builtin `!token` value (token-only operand). The consumer trait
+// is auto-derived by ODS from the statically-typed `Token` operand.
+def TestTokenConsumeOp : TEST_Op<"token.consume"> {
+  let arguments = (ins Token:$token);
+  let assemblyFormat = "$token attr-dict";
+}
+
+// Consume a builtin `!token` value via an opt-in operand type without the
+// consumer trait. ODS only auto-derives the trait when the declared type is
+// statically `Token`, so this op (whose operand type accepts any type
+// including tokens) exercises the runtime trait check.
+def TestTokenConsumeWithoutTraitOp
+    : TEST_Op<"token.consume_without_trait"> {
+  let arguments = (ins Type<CPred<"true">>:$token);
+  let assemblyFormat = "$token attr-dict `:` type($token)";
+}
+
+// Op that uses the default `AnyType` predicate. Tokens are excluded by
+// default and should be rejected by the verifier when passed here.
+def TestTokenAnyTypeOp : TEST_Op<"token.any_type", [TokenConsumerTrait]> {
+  let arguments = (ins AnyType:$value);
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+}
+
+// Op whose region entry blocks may produce builtin `!token` values.
+def TestTokenRegionOp : TEST_Op<"token.region", [TokenProducerTrait]> {
+  let regions = (region AnyRegion:$body);
+}
+
+// Op whose regions do not opt in to producing builtin `!token` values.
+def TestTokenRegionWithoutTraitOp
+    : TEST_Op<"token.region_without_trait"> {
+  let regions = (region AnyRegion:$body);
+}
+
+//===----------------------------------------------------------------------===//
 // Test Symbols
 //===----------------------------------------------------------------------===//
 
@@ -3967,6 +4022,26 @@ def TestTransparentCastAlias : TEST_Op<"transparent_cast_alias",
   let arguments = (ins MemRefOf<[I32, F32]>:$source);
   let results = (outs MemRefOf<[I32, F32]>:$result);
   let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
+// Records the value last stored to a memref slot to test
+// `PromotableOpInterface::visitReplacedValues`.
+def TestSlotTracker : TEST_Op<"slot_tracker",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses",
+                                "requiresReplacedValues",
+                                "visitReplacedValues"]>]> {
+  let arguments = (ins AnyMemRef:$source, StrAttr:$name);
+  let assemblyFormat =
+      "$source `,` $name attr-dict `:` type($source)";
+}
+
+// Marker emitted by `test.slot_tracker` at each reaching-definition store.
+def TestTrackedValue : TEST_Op<"tracked_value"> {
+  let arguments = (ins AnyType:$value, StrAttr:$name);
+  let assemblyFormat =
+      "$value `,` $name attr-dict `:` type($value)";
 }
 
 // Transparent alias of a memref slot exposing two simultaneously-usable

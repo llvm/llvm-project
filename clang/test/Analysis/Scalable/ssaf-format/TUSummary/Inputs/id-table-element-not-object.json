@@ -1,0 +1,9 @@
+{
+  "tu_namespace": {
+    "kind": "CompilationUnit",
+    "name": "test.cpp"
+  },
+  "id_table": [123],
+  "linkage_table": [],
+  "data": []
+}
