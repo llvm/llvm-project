@@ -26,15 +26,12 @@ jobs:
       image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
     if: github.event.issue.pull_request && startswith(github.event.comment.body, '/test-suite')
     steps:
-      - name: Check permissions
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      - name: Check Permissions
+        uses: ./.github/workflows/require-team-membership
         with:
-          script: |
-            await github.rest.teams.getMembershipForUserInOrg({
-               org: 'llvm',
-               team_slug: 'llvm-committers',
-               username: context.actor
-            })
+          team-slug: llvm-committers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
       - name: Get pull request
         id: get-pr
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
