@@ -71,8 +71,8 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
 }
 
 void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
-    const OmpClauseSet &clauses, parser::CharBlock name,
-    std::optional<common::OmpDeviceType> deviceType) const {
+    const OmpClauseSet &clauses, llvm::omp::Directive dir,
+    parser::CharBlock name) const {
   auto toLower = parser::ToLowerCaseLetters;
 
   size_t idx{0}, size{clauses.count()};
@@ -83,8 +83,13 @@ void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
       os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
       break;
     case llvm::omp::Clause::OMPC_device_type: {
-      common::OmpDeviceType dt{deviceType ? *deviceType : *ompDeviceType()};
-      os << '(' << toLower(EnumToString(dt)) << ')';
+      // device_type is carried by several directives; print the value
+      // recorded for the one being emitted.
+      const std::optional<common::OmpDeviceType> &dt{
+          dir == llvm::omp::Directive::OMPD_groupprivate
+              ? ompGroupprivateDeviceType()
+              : ompDeclTargetDeviceType()};
+      os << '(' << toLower(EnumToString(*dt)) << ')';
       break;
     }
     case llvm::omp::Clause::OMPC_enter:
@@ -111,18 +116,17 @@ llvm::raw_ostream &operator<<(
 
   if (const OmpClauseSet &reqs{x.ompRequires()}; reqs.count()) {
     os << " OmpRequirements:(";
-    x.printClauseSet(os, reqs);
+    x.printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
     os << ')';
   }
   if (const OmpClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
     os << " OmpDeclareTargetFlags:(";
-    x.printClauseSet(os, dtgt);
+    x.printClauseSet(os, dtgt, llvm::omp::Directive::OMPD_declare_target);
     os << ')';
   }
   if (const OmpClauseSet &gp{x.ompGroupprivate()}; gp.count()) {
     os << " OmpGroupprivateFlags:(";
-    x.printClauseSet(
-        os, gp, parser::CharBlock{}, x.ompGroupprivateDeviceType());
+    x.printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
     os << ')';
   }
   return os;

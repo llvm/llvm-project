@@ -69,11 +69,11 @@ public:
   const OmpClauseSet &ompDeclTarget() const { return ompDeclTarget_; }
   void set_ompDeclTarget(OmpClauseSet clauses) { ompDeclTarget_ = clauses; }
 
-  const std::optional<common::OmpDeviceType> &ompDeviceType() const {
-    return ompDeviceType_;
+  const std::optional<common::OmpDeviceType> &ompDeclTargetDeviceType() const {
+    return ompDeclTargetDeviceType_;
   }
   void set_ompDeclTarget(common::OmpDeviceType device) {
-    ompDeviceType_ = device;
+    ompDeclTargetDeviceType_ = device;
   }
 
   const OmpClauseSet &ompGroupprivate() const { return ompGroupprivate_; }
@@ -83,15 +83,15 @@ public:
   ompGroupprivateDeviceType() const {
     return ompGroupprivateDeviceType_;
   }
-  void set_ompGroupprivateDeviceType(common::OmpDeviceType device) {
+  void set_ompGroupprivate(common::OmpDeviceType device) {
     ompGroupprivateDeviceType_ = device;
   }
 
-  // \p deviceType overrides the DEVICE_TYPE clause value to print (used for
-  // GROUPPRIVATE); when absent the DECLARE_TARGET device_type is used.
+  // \p dir selects which directive's DEVICE_TYPE value to print, since the
+  // clause can be carried by both DECLARE_TARGET and GROUPPRIVATE.
   void printClauseSet(llvm::raw_ostream &os, const OmpClauseSet &clauses,
-      parser::CharBlock name = parser::CharBlock{},
-      std::optional<common::OmpDeviceType> deviceType = std::nullopt) const;
+      llvm::omp::Directive dir,
+      parser::CharBlock name = parser::CharBlock{}) const;
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const WithOmpDeclarative &);
 
@@ -112,7 +112,7 @@ private:
   OmpClauseSet ompDeclTarget_;
   // The argument to DEVICE_TYPE clause. Only needed when the clause is
   // present in the ompDeclTarget_ set.
-  std::optional<common::OmpDeviceType> ompDeviceType_;
+  std::optional<common::OmpDeviceType> ompDeclTargetDeviceType_;
   // The set of clauses on a GROUPPRIVATE directive declaring this symbol.
   OmpClauseSet ompGroupprivate_;
   // The argument to a DEVICE_TYPE clause on a GROUPPRIVATE directive declaring

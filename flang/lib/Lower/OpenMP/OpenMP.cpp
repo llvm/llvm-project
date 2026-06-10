@@ -53,6 +53,7 @@
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -834,7 +835,7 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
                                                     deviceTypeEnum);
 
     // omp.groupprivate takes a flat symbol reference and returns
-    // the address of the per-team copy of the global variable.
+    // the address of the per-contention group copy of the global variable.
     return mlir::omp::GroupprivateOp::create(
         firOpBuilder, currentLocation, global.resultType(), global.getSymbol(),
         deviceTypeAttr);
@@ -845,20 +846,18 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
                              semantics::Symbol::Flag::OmpGroupPrivate,
                              /*collectSymbols=*/true,
                              /*collectHostAssociatedSymbols=*/true);
-  std::set<semantics::SourceName> groupprivateSymNames;
+  llvm::SmallSet<semantics::SourceName, 8> groupprivateSymNames;
 
   // For a COMMON block, the GroupprivateOp is generated for the block itself
   // instead of its members.
   llvm::SetVector<const semantics::Symbol *> commonSyms;
 
-  for (std::size_t i = 0; i < groupprivateSyms.size(); i++) {
-    const semantics::Symbol *sym = groupprivateSyms[i];
+  for (const semantics::Symbol *sym : groupprivateSyms) {
     mlir::Value symGroupprivateValue;
     // The variable may be used more than once, and each reference has one
     // symbol with the same name. Only do once for references of one variable.
-    if (groupprivateSymNames.find(sym->name()) != groupprivateSymNames.end())
+    if (!groupprivateSymNames.insert(sym->name()).second)
       continue;
-    groupprivateSymNames.insert(sym->name());
 
     if (const semantics::Symbol *common =
             semantics::FindCommonBlockContaining(sym->GetUltimate())) {
@@ -881,9 +880,8 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
       symGroupprivateValue = genGroupprivateOp(*sym);
     }
 
-    if (!symGroupprivateValue) {
+    if (!symGroupprivateValue)
       continue;
-    }
 
     fir::ExtendedValue sexv = converter.getSymbolExtendedValue(*sym);
     fir::ExtendedValue symGroupprivateExv =
@@ -1451,9 +1449,9 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     }
   }
 
-  if (info.dir == llvm::omp::Directive::OMPD_teams) {
+  // TODO: groupprivate is currently only materialised for `teams` constructs.
+  if (info.dir == llvm::omp::Directive::OMPD_teams)
     groupprivatizeVars(info.converter, info.eval);
-  }
 
   if (!info.genSkeletonOnly) {
     if (ConstructQueue::const_iterator next = std::next(item);
@@ -3144,7 +3142,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       return;
 
     // Skip groupprivate symbols - they don't need to be mapped because
-    // groupprivate creates its own LDS storage.
+    // groupprivate creates its own storage.
     if (sym.GetUltimate().test(semantics::Symbol::Flag::OmpGroupPrivate))
       return;
 
@@ -4747,8 +4745,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    lower::pft::Evaluation &eval,
                    const parser::OmpGroupprivateDirective &directive) {
   // The semantic analysis sets the flag and device_type on the
-  // symbols; omp.groupprivate is materialised on first use in a teams region
-  // by groupprivatizeVars.
+  // symbols; omp.groupprivate is materialised by groupprivatizeVars.
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -5540,8 +5537,7 @@ void Fortran::lower::genGroupprivateOp(lower::AbstractConverter &converter,
       globalInitialization(converter, firOpBuilder, sym, var, currentLocation);
   }
 
-  // The actual omp.groupprivate operation is created by groupprivatizeVars
-  // when entering a teams region.
+  // The actual omp.groupprivate operation is created by groupprivatizeVars.
 }
 
 void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,
