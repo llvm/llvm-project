@@ -47,6 +47,12 @@ jobs:
     needs:
       - permission-check
     steps:
+      - name: Check Permissions
+        uses: ./.github/workflows/require-team-membership
+        with:
+          team-slug: llvm-committers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
       - name: Get pull request
         id: get-pr
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
