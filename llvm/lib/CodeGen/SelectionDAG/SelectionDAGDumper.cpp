@@ -45,8 +45,12 @@
 #include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <limits>
+#include <type_traits>
 
 using namespace llvm;
 
@@ -59,113 +63,99 @@ static cl::opt<bool>
     PrintSDNodeAddrs("print-sdnode-addrs", cl::Hidden,
                      cl::desc("Print addresses of SDNodes when dumping"));
 
+namespace {
+
+// Keep the names in one byte blob so the constant table has no pointers or
+// relocations. Dense integer tables map built-in opcodes to the blob.
+struct FixedOperationNameData {
+#define DAG_NODE_NAME(OPCODE, NAME) char OPCODE[sizeof(NAME)];
+#include "llvm/CodeGen/SelectionDAGOperationNames.def"
+#undef DAG_NODE_NAME
+};
+
+constexpr FixedOperationNameData FixedOperationNames = {
+#define DAG_NODE_NAME(OPCODE, NAME) NAME,
+#include "llvm/CodeGen/SelectionDAGOperationNames.def"
+#undef DAG_NODE_NAME
+};
+
+static_assert(sizeof(FixedOperationNames) <=
+              std::numeric_limits<uint16_t>::max());
+static_assert(alignof(FixedOperationNameData) == alignof(char));
+static_assert(std::is_standard_layout_v<FixedOperationNameData>);
+
+#define DAG_NODE_NAME(OPCODE, NAME)                                            \
+  static_assert(ISD::OPCODE < ISD::BUILTIN_OP_END);                            \
+  static_assert(sizeof(NAME) - 1 <= std::numeric_limits<uint8_t>::max());
+#include "llvm/CodeGen/SelectionDAGOperationNames.def"
+#undef DAG_NODE_NAME
+
+template <typename ValueType, bool StoreLengths>
+constexpr std::array<ValueType, ISD::BUILTIN_OP_END>
+makeFixedOperationNameTable() {
+  std::array<ValueType, ISD::BUILTIN_OP_END> Result{};
+#define DAG_NODE_NAME(OPCODE, NAME)                                            \
+  Result[ISD::OPCODE] = static_cast<ValueType>(                                \
+      StoreLengths ? sizeof(NAME) - 1                                          \
+                   : offsetof(FixedOperationNameData, OPCODE));
+#include "llvm/CodeGen/SelectionDAGOperationNames.def"
+#undef DAG_NODE_NAME
+  return Result;
+}
+
+constexpr auto FixedOperationNameOffsets =
+    makeFixedOperationNameTable<uint16_t, false>();
+constexpr auto FixedOperationNameLengths =
+    makeFixedOperationNameTable<uint8_t, true>();
+static_assert(sizeof(FixedOperationNameOffsets) ==
+              ISD::BUILTIN_OP_END * sizeof(uint16_t));
+static_assert(sizeof(FixedOperationNameLengths) ==
+              ISD::BUILTIN_OP_END * sizeof(uint8_t));
+
+} // namespace
+
 std::string SDNode::getOperationName(const SelectionDAG *G) const {
-  switch (getOpcode()) {
+  const unsigned Opcode = getOpcode();
+  if (Opcode < FixedOperationNameLengths.size()) {
+    const uint8_t Length = FixedOperationNameLengths[Opcode];
+    if (Length != 0) {
+      const char *Names = reinterpret_cast<const char *>(&FixedOperationNames);
+      return std::string(Names + FixedOperationNameOffsets[Opcode], Length);
+    }
+  }
+
+  switch (Opcode) {
   default:
-    if (getOpcode() < ISD::BUILTIN_OP_END)
+    if (Opcode < ISD::BUILTIN_OP_END)
       return "<<Unknown DAG Node>>";
     if (isMachineOpcode()) {
       if (G)
         if (const TargetInstrInfo *TII = G->getSubtarget().getInstrInfo())
           if (getMachineOpcode() < TII->getNumOpcodes())
             return std::string(TII->getName(getMachineOpcode()));
-      return "<<Unknown Machine Node #" + utostr(getOpcode()) + ">>";
+      return "<<Unknown Machine Node #" + utostr(Opcode) + ">>";
     }
     if (G) {
       const SelectionDAGTargetInfo &TSI = G->getSelectionDAGInfo();
-      if (const char *Name = TSI.getTargetNodeName(getOpcode()))
+      if (const char *Name = TSI.getTargetNodeName(Opcode))
         return Name;
       const TargetLowering &TLI = G->getTargetLoweringInfo();
-      const char *Name = TLI.getTargetNodeName(getOpcode());
-      if (Name) return Name;
-      return "<<Unknown Target Node #" + utostr(getOpcode()) + ">>";
+      const char *Name = TLI.getTargetNodeName(Opcode);
+      if (Name)
+        return Name;
+      return "<<Unknown Target Node #" + utostr(Opcode) + ">>";
     }
-    return "<<Unknown Node #" + utostr(getOpcode()) + ">>";
+    return "<<Unknown Node #" + utostr(Opcode) + ">>";
 
-    // clang-format off
 #ifndef NDEBUG
-  case ISD::DELETED_NODE:               return "<<Deleted Node!>>";
+  case ISD::DELETED_NODE:
+    return "<<Deleted Node!>>";
 #endif
-  case ISD::PREFETCH:                   return "Prefetch";
-  case ISD::MEMBARRIER:                 return "MemBarrier";
-  case ISD::ATOMIC_FENCE:               return "AtomicFence";
-  case ISD::ATOMIC_CMP_SWAP:            return "AtomicCmpSwap";
-  case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: return "AtomicCmpSwapWithSuccess";
-  case ISD::ATOMIC_SWAP:                return "AtomicSwap";
-  case ISD::ATOMIC_LOAD_ADD:            return "AtomicLoadAdd";
-  case ISD::ATOMIC_LOAD_SUB:            return "AtomicLoadSub";
-  case ISD::ATOMIC_LOAD_AND:            return "AtomicLoadAnd";
-  case ISD::ATOMIC_LOAD_CLR:            return "AtomicLoadClr";
-  case ISD::ATOMIC_LOAD_OR:             return "AtomicLoadOr";
-  case ISD::ATOMIC_LOAD_XOR:            return "AtomicLoadXor";
-  case ISD::ATOMIC_LOAD_NAND:           return "AtomicLoadNand";
-  case ISD::ATOMIC_LOAD_MIN:            return "AtomicLoadMin";
-  case ISD::ATOMIC_LOAD_MAX:            return "AtomicLoadMax";
-  case ISD::ATOMIC_LOAD_UMIN:           return "AtomicLoadUMin";
-  case ISD::ATOMIC_LOAD_UMAX:           return "AtomicLoadUMax";
-  case ISD::ATOMIC_LOAD_FADD:           return "AtomicLoadFAdd";
-  case ISD::ATOMIC_LOAD_FSUB:           return "AtomicLoadFSub";
-  case ISD::ATOMIC_LOAD_FMIN:           return "AtomicLoadFMin";
-  case ISD::ATOMIC_LOAD_FMAX:           return "AtomicLoadFMax";
-  case ISD::ATOMIC_LOAD_FMINIMUM:       return "AtomicLoadFMinimum";
-  case ISD::ATOMIC_LOAD_FMAXIMUM:       return "AtomicLoadFMaximum";
-  case ISD::ATOMIC_LOAD_UINC_WRAP:
-    return "AtomicLoadUIncWrap";
-  case ISD::ATOMIC_LOAD_UDEC_WRAP:
-    return "AtomicLoadUDecWrap";
-  case ISD::ATOMIC_LOAD_USUB_COND:
-    return "AtomicLoadUSubCond";
-  case ISD::ATOMIC_LOAD_USUB_SAT:
-    return "AtomicLoadUSubSat";
-  case ISD::ATOMIC_LOAD:                return "AtomicLoad";
-  case ISD::ATOMIC_STORE:               return "AtomicStore";
-  case ISD::PCMARKER:                   return "PCMarker";
-  case ISD::READCYCLECOUNTER:           return "ReadCycleCounter";
-  case ISD::READSTEADYCOUNTER:          return "ReadSteadyCounter";
-  case ISD::SRCVALUE:                   return "SrcValue";
-  case ISD::MDNODE_SDNODE:              return "MDNode";
-  case ISD::EntryToken:                 return "EntryToken";
-  case ISD::TokenFactor:                return "TokenFactor";
-  case ISD::AssertSext:                 return "AssertSext";
-  case ISD::AssertZext:                 return "AssertZext";
-  case ISD::AssertNoFPClass:            return "AssertNoFPClass";
-  case ISD::AssertAlign:                return "AssertAlign";
 
-  case ISD::BasicBlock:                 return "BasicBlock";
-  case ISD::VALUETYPE:                  return "ValueType";
-  case ISD::Register:                   return "Register";
-  case ISD::RegisterMask:               return "RegisterMask";
   case ISD::Constant:
     if (cast<ConstantSDNode>(this)->isOpaque())
       return "OpaqueConstant";
     return "Constant";
-  case ISD::ConstantFP:                 return "ConstantFP";
-  case ISD::GlobalAddress:              return "GlobalAddress";
-  case ISD::GlobalTLSAddress:           return "GlobalTLSAddress";
-  case ISD::PtrAuthGlobalAddress:       return "PtrAuthGlobalAddress";
-  case ISD::FrameIndex:                 return "FrameIndex";
-  case ISD::JumpTable:                  return "JumpTable";
-  case ISD::JUMP_TABLE_DEBUG_INFO:
-    return "JUMP_TABLE_DEBUG_INFO";
-  case ISD::GLOBAL_OFFSET_TABLE:        return "GLOBAL_OFFSET_TABLE";
-  case ISD::RETURNADDR:                 return "RETURNADDR";
-  case ISD::ADDROFRETURNADDR:           return "ADDROFRETURNADDR";
-  case ISD::FRAMEADDR:                  return "FRAMEADDR";
-  case ISD::SPONENTRY:                  return "SPONENTRY";
-  case ISD::STACKADDRESS:               return "STACKADDRESS";
-  case ISD::LOCAL_RECOVER:              return "LOCAL_RECOVER";
-  case ISD::READ_REGISTER:              return "READ_REGISTER";
-  case ISD::WRITE_REGISTER:             return "WRITE_REGISTER";
-  case ISD::FRAME_TO_ARGS_OFFSET:       return "FRAME_TO_ARGS_OFFSET";
-  case ISD::EH_DWARF_CFA:               return "EH_DWARF_CFA";
-  case ISD::EH_RETURN:                  return "EH_RETURN";
-  case ISD::EH_SJLJ_SETJMP:             return "EH_SJLJ_SETJMP";
-  case ISD::EH_SJLJ_LONGJMP:            return "EH_SJLJ_LONGJMP";
-  case ISD::EH_SJLJ_SETUP_DISPATCH:     return "EH_SJLJ_SETUP_DISPATCH";
-  case ISD::ConstantPool:               return "ConstantPool";
-  case ISD::TargetIndex:                return "TargetIndex";
-  case ISD::ExternalSymbol:             return "ExternalSymbol";
-  case ISD::BlockAddress:               return "BlockAddress";
   case ISD::INTRINSIC_WO_CHAIN:
   case ISD::INTRINSIC_VOID:
   case ISD::INTRINSIC_W_CHAIN: {
@@ -178,454 +168,67 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     llvm_unreachable("Invalid intrinsic ID");
   }
 
-  case ISD::BUILD_VECTOR:               return "BUILD_VECTOR";
   case ISD::TargetConstant:
     if (cast<ConstantSDNode>(this)->isOpaque())
       return "OpaqueTargetConstant";
     return "TargetConstant";
 
-  case ISD::TargetConstantFP:           return "TargetConstantFP";
-  case ISD::TargetGlobalAddress:        return "TargetGlobalAddress";
-  case ISD::TargetGlobalTLSAddress:     return "TargetGlobalTLSAddress";
-  case ISD::TargetFrameIndex:           return "TargetFrameIndex";
-  case ISD::TargetJumpTable:            return "TargetJumpTable";
-  case ISD::TargetConstantPool:         return "TargetConstantPool";
-  case ISD::TargetExternalSymbol:       return "TargetExternalSymbol";
-  case ISD::MCSymbol:                   return "MCSymbol";
-  case ISD::TargetBlockAddress:         return "TargetBlockAddress";
-
-  case ISD::CopyToReg:                  return "CopyToReg";
-  case ISD::CopyFromReg:                return "CopyFromReg";
-  case ISD::UNDEF:                      return "undef";
-  case ISD::POISON:                     return "poison";
-  case ISD::VSCALE:                     return "vscale";
-  case ISD::MERGE_VALUES:               return "merge_values";
-  case ISD::INLINEASM:                  return "inlineasm";
-  case ISD::INLINEASM_BR:               return "inlineasm_br";
-  case ISD::EH_LABEL:                   return "eh_label";
-  case ISD::ANNOTATION_LABEL:           return "annotation_label";
-  case ISD::HANDLENODE:                 return "handlenode";
-
-  // Unary operators
-  case ISD::FABS:                       return "fabs";
-  case ISD::FMINNUM:                    return "fminnum";
-  case ISD::STRICT_FMINNUM:             return "strict_fminnum";
-  case ISD::FMAXNUM:                    return "fmaxnum";
-  case ISD::STRICT_FMAXNUM:             return "strict_fmaxnum";
-  case ISD::FMINNUM_IEEE:               return "fminnum_ieee";
-  case ISD::FMAXNUM_IEEE:               return "fmaxnum_ieee";
-  case ISD::FMINIMUM:                   return "fminimum";
-  case ISD::STRICT_FMINIMUM:            return "strict_fminimum";
-  case ISD::FMAXIMUM:                   return "fmaximum";
-  case ISD::STRICT_FMAXIMUM:            return "strict_fmaximum";
-  case ISD::FMINIMUMNUM:                return "fminimumnum";
-  case ISD::FMAXIMUMNUM:                return "fmaximumnum";
-  case ISD::FNEG:                       return "fneg";
-  case ISD::FSQRT:                      return "fsqrt";
-  case ISD::STRICT_FSQRT:               return "strict_fsqrt";
-  case ISD::FCBRT:                      return "fcbrt";
-  case ISD::FSIN:                       return "fsin";
-  case ISD::STRICT_FSIN:                return "strict_fsin";
-  case ISD::FCOS:                       return "fcos";
-  case ISD::STRICT_FCOS:                return "strict_fcos";
-  case ISD::FSINCOS:                    return "fsincos";
-  case ISD::FSINCOSPI:                  return "fsincospi";
-  case ISD::FMODF:                      return "fmodf";
-  case ISD::FTAN:                       return "ftan";
-  case ISD::STRICT_FTAN:                return "strict_ftan";
-  case ISD::FASIN:                      return "fasin";
-  case ISD::STRICT_FASIN:               return "strict_fasin";
-  case ISD::FACOS:                      return "facos";
-  case ISD::STRICT_FACOS:               return "strict_facos";
-  case ISD::FATAN:                      return "fatan";
-  case ISD::STRICT_FATAN:               return "strict_fatan";
-  case ISD::FATAN2:                     return "fatan2";
-  case ISD::STRICT_FATAN2:              return "strict_fatan2";
-  case ISD::FSINH:                      return "fsinh";
-  case ISD::STRICT_FSINH:               return "strict_fsinh";
-  case ISD::FCOSH:                      return "fcosh";
-  case ISD::STRICT_FCOSH:               return "strict_fcosh";
-  case ISD::FTANH:                      return "ftanh";
-  case ISD::STRICT_FTANH:               return "strict_ftanh";
-  case ISD::FTRUNC:                     return "ftrunc";
-  case ISD::STRICT_FTRUNC:              return "strict_ftrunc";
-  case ISD::FFLOOR:                     return "ffloor";
-  case ISD::STRICT_FFLOOR:              return "strict_ffloor";
-  case ISD::FCEIL:                      return "fceil";
-  case ISD::STRICT_FCEIL:               return "strict_fceil";
-  case ISD::FRINT:                      return "frint";
-  case ISD::STRICT_FRINT:               return "strict_frint";
-  case ISD::FNEARBYINT:                 return "fnearbyint";
-  case ISD::STRICT_FNEARBYINT:          return "strict_fnearbyint";
-  case ISD::FROUND:                     return "fround";
-  case ISD::STRICT_FROUND:              return "strict_fround";
-  case ISD::FROUNDEVEN:                 return "froundeven";
-  case ISD::STRICT_FROUNDEVEN:          return "strict_froundeven";
-  case ISD::FEXP:                       return "fexp";
-  case ISD::STRICT_FEXP:                return "strict_fexp";
-  case ISD::FEXP2:                      return "fexp2";
-  case ISD::STRICT_FEXP2:               return "strict_fexp2";
-  case ISD::FEXP10:                     return "fexp10";
-  case ISD::FLOG:                       return "flog";
-  case ISD::STRICT_FLOG:                return "strict_flog";
-  case ISD::FLOG2:                      return "flog2";
-  case ISD::STRICT_FLOG2:               return "strict_flog2";
-  case ISD::FLOG10:                     return "flog10";
-  case ISD::STRICT_FLOG10:              return "strict_flog10";
-
-  // Binary operators
-  case ISD::ADD:                        return "add";
-  case ISD::PTRADD:                     return "ptradd";
-  case ISD::SUB:                        return "sub";
-  case ISD::MUL:                        return "mul";
-  case ISD::MULHU:                      return "mulhu";
-  case ISD::MULHS:                      return "mulhs";
-  case ISD::AVGFLOORU:                  return "avgflooru";
-  case ISD::AVGFLOORS:                  return "avgfloors";
-  case ISD::AVGCEILU:                   return "avgceilu";
-  case ISD::AVGCEILS:                   return "avgceils";
-  case ISD::ABDS:                       return "abds";
-  case ISD::ABDU:                       return "abdu";
-  case ISD::SDIV:                       return "sdiv";
-  case ISD::UDIV:                       return "udiv";
-  case ISD::SREM:                       return "srem";
-  case ISD::UREM:                       return "urem";
-  case ISD::SMUL_LOHI:                  return "smul_lohi";
-  case ISD::UMUL_LOHI:                  return "umul_lohi";
-  case ISD::SDIVREM:                    return "sdivrem";
-  case ISD::UDIVREM:                    return "udivrem";
-  case ISD::AND:                        return "and";
-  case ISD::OR:                         return "or";
-  case ISD::XOR:                        return "xor";
-  case ISD::SHL:                        return "shl";
-  case ISD::SRA:                        return "sra";
-  case ISD::SRL:                        return "srl";
-  case ISD::ROTL:                       return "rotl";
-  case ISD::ROTR:                       return "rotr";
-  case ISD::FSHL:                       return "fshl";
-  case ISD::FSHR:                       return "fshr";
-  case ISD::CLMUL:                      return "clmul";
-  case ISD::CLMULR:                     return "clmulr";
-  case ISD::CLMULH:                     return "clmulh";
-  case ISD::PEXT:                       return "pext";
-  case ISD::PDEP:                       return "pdep";
-  case ISD::FADD:                       return "fadd";
-  case ISD::STRICT_FADD:                return "strict_fadd";
-  case ISD::FSUB:                       return "fsub";
-  case ISD::STRICT_FSUB:                return "strict_fsub";
-  case ISD::FMUL:                       return "fmul";
-  case ISD::STRICT_FMUL:                return "strict_fmul";
-  case ISD::FDIV:                       return "fdiv";
-  case ISD::STRICT_FDIV:                return "strict_fdiv";
-  case ISD::FMA:                        return "fma";
-  case ISD::STRICT_FMA:                 return "strict_fma";
-  case ISD::FMAD:                       return "fmad";
-  case ISD::FMULADD:                    return "fmuladd";
-  case ISD::FREM:                       return "frem";
-  case ISD::STRICT_FREM:                return "strict_frem";
-  case ISD::FCOPYSIGN:                  return "fcopysign";
-  case ISD::FGETSIGN:                   return "fgetsign";
-  case ISD::FCANONICALIZE:              return "fcanonicalize";
-  case ISD::IS_FPCLASS:                 return "is_fpclass";
-  case ISD::FPOW:                       return "fpow";
-  case ISD::STRICT_FPOW:                return "strict_fpow";
-  case ISD::SMIN:                       return "smin";
-  case ISD::SMAX:                       return "smax";
-  case ISD::UMIN:                       return "umin";
-  case ISD::UMAX:                       return "umax";
-  case ISD::SCMP:                       return "scmp";
-  case ISD::UCMP:                       return "ucmp";
-
-  case ISD::FLDEXP:                     return "fldexp";
-  case ISD::STRICT_FLDEXP:              return "strict_fldexp";
-  case ISD::FFREXP:                     return "ffrexp";
-  case ISD::FPOWI:                      return "fpowi";
-  case ISD::STRICT_FPOWI:               return "strict_fpowi";
-  case ISD::SETCC:                      return "setcc";
-  case ISD::SETCCCARRY:                 return "setcccarry";
-  case ISD::STRICT_FSETCC:              return "strict_fsetcc";
-  case ISD::STRICT_FSETCCS:             return "strict_fsetccs";
-  case ISD::FPTRUNC_ROUND:              return "fptrunc_round";
-  case ISD::SELECT:                     return "select";
-  case ISD::VSELECT:                    return "vselect";
-  case ISD::SELECT_CC:                  return "select_cc";
-  case ISD::INSERT_VECTOR_ELT:          return "insert_vector_elt";
-  case ISD::EXTRACT_VECTOR_ELT:         return "extract_vector_elt";
-  case ISD::CONCAT_VECTORS:             return "concat_vectors";
-  case ISD::INSERT_SUBVECTOR:           return "insert_subvector";
-  case ISD::EXTRACT_SUBVECTOR:          return "extract_subvector";
-  case ISD::VECTOR_DEINTERLEAVE:        return "vector_deinterleave";
-  case ISD::VECTOR_INTERLEAVE:          return "vector_interleave";
-  case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
-  case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
-  case ISD::VECTOR_SPLICE_LEFT:         return "vector_splice_left";
-  case ISD::VECTOR_SPLICE_RIGHT:        return "vector_splice_right";
-  case ISD::SPLAT_VECTOR:               return "splat_vector";
-  case ISD::SPLAT_VECTOR_PARTS:         return "splat_vector_parts";
-  case ISD::VECTOR_REVERSE:             return "vector_reverse";
-  case ISD::STEP_VECTOR:                return "step_vector";
-  case ISD::CARRY_FALSE:                return "carry_false";
-  case ISD::ADDC:                       return "addc";
-  case ISD::ADDE:                       return "adde";
-  case ISD::UADDO_CARRY:                return "uaddo_carry";
-  case ISD::SADDO_CARRY:                return "saddo_carry";
-  case ISD::SADDO:                      return "saddo";
-  case ISD::UADDO:                      return "uaddo";
-  case ISD::SSUBO:                      return "ssubo";
-  case ISD::USUBO:                      return "usubo";
-  case ISD::SMULO:                      return "smulo";
-  case ISD::UMULO:                      return "umulo";
-  case ISD::SUBC:                       return "subc";
-  case ISD::SUBE:                       return "sube";
-  case ISD::USUBO_CARRY:                return "usubo_carry";
-  case ISD::SSUBO_CARRY:                return "ssubo_carry";
-  case ISD::SHL_PARTS:                  return "shl_parts";
-  case ISD::SRA_PARTS:                  return "sra_parts";
-  case ISD::SRL_PARTS:                  return "srl_parts";
-
-  case ISD::SADDSAT:                    return "saddsat";
-  case ISD::UADDSAT:                    return "uaddsat";
-  case ISD::SSUBSAT:                    return "ssubsat";
-  case ISD::USUBSAT:                    return "usubsat";
-  case ISD::SSHLSAT:                    return "sshlsat";
-  case ISD::USHLSAT:                    return "ushlsat";
-
-  case ISD::SMULFIX:                    return "smulfix";
-  case ISD::SMULFIXSAT:                 return "smulfixsat";
-  case ISD::UMULFIX:                    return "umulfix";
-  case ISD::UMULFIXSAT:                 return "umulfixsat";
-
-  case ISD::SDIVFIX:                    return "sdivfix";
-  case ISD::SDIVFIXSAT:                 return "sdivfixsat";
-  case ISD::UDIVFIX:                    return "udivfix";
-  case ISD::UDIVFIXSAT:                 return "udivfixsat";
-
-  // Conversion operators.
-  case ISD::SIGN_EXTEND:                return "sign_extend";
-  case ISD::ZERO_EXTEND:                return "zero_extend";
-  case ISD::ANY_EXTEND:                 return "any_extend";
-  case ISD::SIGN_EXTEND_INREG:          return "sign_extend_inreg";
-  case ISD::ANY_EXTEND_VECTOR_INREG:    return "any_extend_vector_inreg";
-  case ISD::SIGN_EXTEND_VECTOR_INREG:   return "sign_extend_vector_inreg";
-  case ISD::ZERO_EXTEND_VECTOR_INREG:   return "zero_extend_vector_inreg";
-  case ISD::TRUNCATE:                   return "truncate";
-  case ISD::TRUNCATE_SSAT_S:            return "truncate_ssat_s";
-  case ISD::TRUNCATE_SSAT_U:            return "truncate_ssat_u";
-  case ISD::TRUNCATE_USAT_U:            return "truncate_usat_u";
-  case ISD::FP_ROUND:                   return "fp_round";
-  case ISD::STRICT_FP_ROUND:            return "strict_fp_round";
-  case ISD::FP_EXTEND:                  return "fp_extend";
-  case ISD::STRICT_FP_EXTEND:           return "strict_fp_extend";
-
-  case ISD::SINT_TO_FP:                 return "sint_to_fp";
-  case ISD::STRICT_SINT_TO_FP:          return "strict_sint_to_fp";
-  case ISD::UINT_TO_FP:                 return "uint_to_fp";
-  case ISD::STRICT_UINT_TO_FP:          return "strict_uint_to_fp";
-  case ISD::FP_TO_SINT:                 return "fp_to_sint";
-  case ISD::STRICT_FP_TO_SINT:          return "strict_fp_to_sint";
-  case ISD::FP_TO_UINT:                 return "fp_to_uint";
-  case ISD::STRICT_FP_TO_UINT:          return "strict_fp_to_uint";
-  case ISD::FP_TO_SINT_SAT:             return "fp_to_sint_sat";
-  case ISD::FP_TO_UINT_SAT:             return "fp_to_uint_sat";
-  case ISD::BITCAST:                    return "bitcast";
-  case ISD::ADDRSPACECAST:              return "addrspacecast";
-  case ISD::FP16_TO_FP:                 return "fp16_to_fp";
-  case ISD::STRICT_FP16_TO_FP:          return "strict_fp16_to_fp";
-  case ISD::FP_TO_FP16:                 return "fp_to_fp16";
-  case ISD::STRICT_FP_TO_FP16:          return "strict_fp_to_fp16";
-  case ISD::BF16_TO_FP:                 return "bf16_to_fp";
-  case ISD::STRICT_BF16_TO_FP:          return "strict_bf16_to_fp";
-  case ISD::FP_TO_BF16:                 return "fp_to_bf16";
-  case ISD::STRICT_FP_TO_BF16:          return "strict_fp_to_bf16";
-  case ISD::CONVERT_FROM_ARBITRARY_FP:  return "convert_from_arbitrary_fp";
-  case ISD::CONVERT_TO_ARBITRARY_FP:    return "convert_to_arbitrary_fp";
-  case ISD::LROUND:                     return "lround";
-  case ISD::STRICT_LROUND:              return "strict_lround";
-  case ISD::LLROUND:                    return "llround";
-  case ISD::STRICT_LLROUND:             return "strict_llround";
-  case ISD::LRINT:                      return "lrint";
-  case ISD::STRICT_LRINT:               return "strict_lrint";
-  case ISD::LLRINT:                     return "llrint";
-  case ISD::STRICT_LLRINT:              return "strict_llrint";
-
-    // Control flow instructions
-  case ISD::BR:                         return "br";
-  case ISD::BRIND:                      return "brind";
-  case ISD::BR_JT:                      return "br_jt";
-  case ISD::BRCOND:                     return "brcond";
-  case ISD::BR_CC:                      return "br_cc";
-  case ISD::CALLSEQ_START:              return "callseq_start";
-  case ISD::CALLSEQ_END:                return "callseq_end";
-
-    // EH instructions
-  case ISD::CATCHRET:                   return "catchret";
-  case ISD::CLEANUPRET:                 return "cleanupret";
-
-    // Other operators
-  case ISD::LOAD:                       return "load";
-  case ISD::STORE:                      return "store";
-  case ISD::MLOAD:                      return "masked_load";
-  case ISD::MSTORE:                     return "masked_store";
-  case ISD::MGATHER:                    return "masked_gather";
-  case ISD::MSCATTER:                   return "masked_scatter";
-  case ISD::VECTOR_COMPRESS:            return "vector_compress";
-  case ISD::VAARG:                      return "vaarg";
-  case ISD::VACOPY:                     return "vacopy";
-  case ISD::VAEND:                      return "vaend";
-  case ISD::VASTART:                    return "vastart";
-  case ISD::DYNAMIC_STACKALLOC:         return "dynamic_stackalloc";
-  case ISD::EXTRACT_ELEMENT:            return "extract_element";
-  case ISD::BUILD_PAIR:                 return "build_pair";
-  case ISD::STACKSAVE:                  return "stacksave";
-  case ISD::STACKRESTORE:               return "stackrestore";
-  case ISD::TRAP:                       return "trap";
-  case ISD::DEBUGTRAP:                  return "debugtrap";
-  case ISD::UBSANTRAP:                  return "ubsantrap";
-  case ISD::LIFETIME_START:             return "lifetime.start";
-  case ISD::LIFETIME_END:               return "lifetime.end";
-  case ISD::FAKE_USE:
-    return "fake_use";
-  case ISD::RELOC_NONE:
-    return "reloc_none";
-  case ISD::COND_LOOP:
-    return "cond_loop";
-  case ISD::PSEUDO_PROBE:
-    return "pseudoprobe";
-  case ISD::GC_TRANSITION_START:        return "gc_transition.start";
-  case ISD::GC_TRANSITION_END:          return "gc_transition.end";
-  case ISD::GET_DYNAMIC_AREA_OFFSET:    return "get.dynamic.area.offset";
-  case ISD::FREEZE:                     return "freeze";
-  case ISD::PREALLOCATED_SETUP:
-    return "call_setup";
-  case ISD::PREALLOCATED_ARG:
-    return "call_alloc";
-
-  // Floating point environment manipulation
-  case ISD::GET_ROUNDING:               return "get_rounding";
-  case ISD::SET_ROUNDING:               return "set_rounding";
-  case ISD::GET_FPENV:                  return "get_fpenv";
-  case ISD::SET_FPENV:                  return "set_fpenv";
-  case ISD::RESET_FPENV:                return "reset_fpenv";
-  case ISD::GET_FPENV_MEM:              return "get_fpenv_mem";
-  case ISD::SET_FPENV_MEM:              return "set_fpenv_mem";
-  case ISD::GET_FPMODE:                 return "get_fpmode";
-  case ISD::SET_FPMODE:                 return "set_fpmode";
-  case ISD::RESET_FPMODE:               return "reset_fpmode";
-
-  // Convergence control instructions
-  case ISD::CONVERGENCECTRL_ANCHOR:     return "convergencectrl_anchor";
-  case ISD::CONVERGENCECTRL_ENTRY:      return "convergencectrl_entry";
-  case ISD::CONVERGENCECTRL_LOOP:       return "convergencectrl_loop";
-  case ISD::CONVERGENCECTRL_GLUE:       return "convergencectrl_glue";
-
-  // Bit manipulation
-  case ISD::ABS:                        return "abs";
-  case ISD::ABS_MIN_POISON:             return "abs_min_poison";
-  case ISD::BITREVERSE:                 return "bitreverse";
-  case ISD::BSWAP:                      return "bswap";
-  case ISD::CTPOP:                      return "ctpop";
-  case ISD::CTTZ:                       return "cttz";
-  case ISD::CTTZ_ZERO_POISON:           return "cttz_zero_poison";
-  case ISD::CTLZ:                       return "ctlz";
-  case ISD::CTLZ_ZERO_POISON:           return "ctlz_zero_poison";
-  case ISD::CTLS:                       return "ctls";
-  case ISD::PARITY:                     return "parity";
-
-  // Trampolines
-  case ISD::INIT_TRAMPOLINE:            return "init_trampoline";
-  case ISD::ADJUST_TRAMPOLINE:          return "adjust_trampoline";
-
-    // clang-format on
-
   case ISD::CONDCODE:
     switch (cast<CondCodeSDNode>(this)->get()) {
-    default: llvm_unreachable("Unknown setcc condition!");
-    case ISD::SETOEQ:                   return "setoeq";
-    case ISD::SETOGT:                   return "setogt";
-    case ISD::SETOGE:                   return "setoge";
-    case ISD::SETOLT:                   return "setolt";
-    case ISD::SETOLE:                   return "setole";
-    case ISD::SETONE:                   return "setone";
+    default:
+      llvm_unreachable("Unknown setcc condition!");
+    case ISD::SETOEQ:
+      return "setoeq";
+    case ISD::SETOGT:
+      return "setogt";
+    case ISD::SETOGE:
+      return "setoge";
+    case ISD::SETOLT:
+      return "setolt";
+    case ISD::SETOLE:
+      return "setole";
+    case ISD::SETONE:
+      return "setone";
 
-    case ISD::SETO:                     return "seto";
-    case ISD::SETUO:                    return "setuo";
-    case ISD::SETUEQ:                   return "setueq";
-    case ISD::SETUGT:                   return "setugt";
-    case ISD::SETUGE:                   return "setuge";
-    case ISD::SETULT:                   return "setult";
-    case ISD::SETULE:                   return "setule";
-    case ISD::SETUNE:                   return "setune";
+    case ISD::SETO:
+      return "seto";
+    case ISD::SETUO:
+      return "setuo";
+    case ISD::SETUEQ:
+      return "setueq";
+    case ISD::SETUGT:
+      return "setugt";
+    case ISD::SETUGE:
+      return "setuge";
+    case ISD::SETULT:
+      return "setult";
+    case ISD::SETULE:
+      return "setule";
+    case ISD::SETUNE:
+      return "setune";
 
-    case ISD::SETEQ:                    return "seteq";
-    case ISD::SETGT:                    return "setgt";
-    case ISD::SETGE:                    return "setge";
-    case ISD::SETLT:                    return "setlt";
-    case ISD::SETLE:                    return "setle";
-    case ISD::SETNE:                    return "setne";
+    case ISD::SETEQ:
+      return "seteq";
+    case ISD::SETGT:
+      return "setgt";
+    case ISD::SETGE:
+      return "setge";
+    case ISD::SETLT:
+      return "setlt";
+    case ISD::SETLE:
+      return "setle";
+    case ISD::SETNE:
+      return "setne";
 
-    case ISD::SETTRUE:                  return "settrue";
-    case ISD::SETTRUE2:                 return "settrue2";
-    case ISD::SETFALSE:                 return "setfalse";
-    case ISD::SETFALSE2:                return "setfalse2";
+    case ISD::SETTRUE:
+      return "settrue";
+    case ISD::SETTRUE2:
+      return "settrue2";
+    case ISD::SETFALSE:
+      return "setfalse";
+    case ISD::SETFALSE2:
+      return "setfalse2";
     }
-  case ISD::VECREDUCE_FADD:             return "vecreduce_fadd";
-  case ISD::VECREDUCE_SEQ_FADD:         return "vecreduce_seq_fadd";
-  case ISD::VECREDUCE_FMUL:             return "vecreduce_fmul";
-  case ISD::VECREDUCE_SEQ_FMUL:         return "vecreduce_seq_fmul";
-  case ISD::VECREDUCE_ADD:              return "vecreduce_add";
-  case ISD::VECREDUCE_MUL:              return "vecreduce_mul";
-  case ISD::VECREDUCE_AND:              return "vecreduce_and";
-  case ISD::VECREDUCE_OR:               return "vecreduce_or";
-  case ISD::VECREDUCE_XOR:              return "vecreduce_xor";
-  case ISD::VECREDUCE_SMAX:             return "vecreduce_smax";
-  case ISD::VECREDUCE_SMIN:             return "vecreduce_smin";
-  case ISD::VECREDUCE_UMAX:             return "vecreduce_umax";
-  case ISD::VECREDUCE_UMIN:             return "vecreduce_umin";
-  case ISD::VECREDUCE_FMAX:             return "vecreduce_fmax";
-  case ISD::VECREDUCE_FMIN:             return "vecreduce_fmin";
-  case ISD::VECREDUCE_FMAXIMUM:         return "vecreduce_fmaximum";
-  case ISD::VECREDUCE_FMINIMUM:         return "vecreduce_fminimum";
-  case ISD::STACKMAP:
-    return "stackmap";
-  case ISD::PATCHPOINT:
-    return "patchpoint";
-  case ISD::CLEAR_CACHE:
-    return "clear_cache";
-
-  case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
-    return "histogram";
-
-  case ISD::CTTZ_ELTS:
-    return "cttz_elts";
-  case ISD::CTTZ_ELTS_ZERO_POISON:
-    return "cttz_elts_zero_poison";
-
-  case ISD::VECTOR_FIND_LAST_ACTIVE:
-    return "find_last_active";
-
-  case ISD::GET_ACTIVE_LANE_MASK:
-    return "get_active_lane_mask";
-
-  case ISD::PARTIAL_REDUCE_UMLA:
-    return "partial_reduce_umla";
-  case ISD::PARTIAL_REDUCE_SMLA:
-    return "partial_reduce_smla";
-  case ISD::PARTIAL_REDUCE_SUMLA:
-    return "partial_reduce_sumla";
-  case ISD::PARTIAL_REDUCE_FMLA:
-    return "partial_reduce_fmla";
-  case ISD::LOOP_DEPENDENCE_WAR_MASK:
-    return "loop_dep_war";
-  case ISD::LOOP_DEPENDENCE_RAW_MASK:
-    return "loop_dep_raw";
-  case ISD::MASKED_UDIV:
-    return "masked_udiv";
-  case ISD::MASKED_SDIV:
-    return "masked_sdiv";
-  case ISD::MASKED_UREM:
-    return "masked_urem";
-  case ISD::MASKED_SREM:
-    return "masked_srem";
 
     // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(SDID, LEGALARG, NAME, ...)                    \
