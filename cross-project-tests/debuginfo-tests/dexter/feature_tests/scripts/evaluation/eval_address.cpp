@@ -1,5 +1,6 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --use-script --binary %t -- %s \
+// RUN:   | FileCheck %s
 
 // Test evaluation of !address nodes in Dexter.
 
@@ -23,7 +24,7 @@ struct SubRange {
 };
 
 int main() {
-  char Data[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+  char Data[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   char *Start = Data;
   char *FalseStart = Data + 1;
   char *EvenFalserStart = Data + 2;
@@ -39,7 +40,8 @@ int main() {
 
 /*
 ---
-# `Start` will be correct and `FalseStart` will be incorrect, because `Start` is evaluated first.
+# `Start` will be correct and `FalseStart` will be incorrect, because `Start` is
+# evaluated first.
 !where {lines: !label begin}:
     !value Start: !address data
     !value FalseStart: !address data
