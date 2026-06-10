@@ -1516,25 +1516,72 @@ static SmallVector<LayoutRepresentation>
 getValidLayouts(ArrayRef<int64_t> wgShape, ArrayRef<int64_t> instData,
                 int64_t sgCount);
 
-/// Generic anchor-layout setup for ND ops (store_nd, prefetch_nd) that pick
-/// their own layout without considering a consumer.
+/// Validates whether `instData` is a hardware-viable inst_data for an ND op
+/// with the given block params and lane factor. Specifically:
+///  - leading batch dims must be 1
+///  - innermost dim must be a divisor of `dataShape.back()`, a multiple of
+///    `bWidths.front()` (smallest supported block width), and ≤ a small
+///    multiple of the largest supported block width
+///  - second-to-innermost dim must be in the supported heights for rank >= 2
+///  - each dim must be a multiple of `lane_layout[dim] * lane_data[dim]`
+static bool isValidNdInstData(ArrayRef<int64_t> instData,
+                              ArrayRef<int64_t> dataShape,
+                              ArrayRef<int> bWidths, ArrayRef<int> bHeights,
+                              ArrayRef<int64_t> laneLayout,
+                              ArrayRef<int64_t> laneData) {
+  int rank = dataShape.size();
+  if (static_cast<int>(instData.size()) != rank)
+    return false;
+
+  for (int dim = 0; dim < rank - 2; ++dim)
+    if (instData[dim] != 1)
+      return false;
+
+  int64_t inner = instData.back();
+  if (inner <= 0 || dataShape.back() % inner != 0)
+    return false;
+  int minWidth = *llvm::min_element(bWidths);
+  int maxWidth = *llvm::max_element(bWidths);
+  if (inner % minWidth != 0 || inner > maxWidth * /*maxBlockCount*/ 4)
+    return false;
+
+  if (rank >= 2) {
+    int64_t height = instData[rank - 2];
+    if (!llvm::is_contained(bHeights, static_cast<int>(height)))
+      return false;
+  }
+
+  for (int dim = 0; dim < rank; ++dim) {
+    int64_t laneProduct = laneLayout[dim] * laneData[dim];
+    if (laneProduct == 0 || instData[dim] % laneProduct != 0)
+      return false;
+  }
+  return true;
+}
+
+/// Generic anchor-layout setup for ND ops (load_nd, store_nd, prefetch_nd).
 ///
 /// Given hardware-supported block widths/heights, picks the largest divisor
-/// of the trailing two dims of `dataShape` and uses that as `inst_data`. The
+/// of the trailing two dims of `dataShape` as the default `inst_data`. The
 /// lane layout is the standard 2D-block-IO default (subgroupSize lanes on the
-/// innermost dim, optional packing on the innermost or second-to-innermost
-/// for vnni).
+/// innermost dim, optional packing on the innermost dim).
 ///
-/// For Lane kind: returns just the lane layout / lane data.
-/// For InstData kind: returns inst_data + the lane layout it must be a
-///   multiple of (Category A: inst_data = k * lane_layout * lane_data, k>=1).
-/// For Subgroup kind: requires `numSg`, picks the most balanced sg_layout
-///   that evenly divides the shape and where sg_data is a multiple of the
-///   chosen inst_data.
+/// `consumerLayout` (optional) is honored when its parameters are valid w.r.t.
+/// the uArch constraints; otherwise the helper falls back to defaults.
+///
+/// For Lane kind: returns just the lane layout / lane data (consumer ignored;
+///   lane layout is fully determined by hardware).
+/// For InstData kind: returns inst_data + lane_layout/lane_data (Category A:
+///   inst_data = k * lane_layout * lane_data, k >= 1). Honors consumer's
+///   inst_data when it is uArch-valid.
+/// For Subgroup kind: if the consumer specifies a workgroup-level layout,
+///   reuses it directly; otherwise picks the most balanced sg_layout via
+///   `getValidLayouts` (requires `numSg`).
 static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     ArrayRef<int64_t> dataShape, Type elemTy, ArrayRef<int> bWidths,
-    ArrayRef<int> bHeights, unsigned packingSize, int numSg,
+    ArrayRef<int> bHeights, unsigned packingSize,
+    xegpu::DistributeLayoutAttr consumerLayout, int numSg,
     const xegpu::uArch::uArch *uArch) {
   int rank = dataShape.size();
   assert(rank >= 1 && "Expected at least 1D shape for ND op");
@@ -1550,8 +1597,15 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
   if (layoutKind == xegpu::LayoutKind::Lane)
     return buildLaneLayout(context, laneLayout, laneData);
 
-  // Compute inst_data from hardware block params: pick the largest supported
-  // block width/height that divides the corresponding tensor dim.
+  // Subgroup-kind fast path: if the consumer already specifies a
+  // workgroup-level layout, reuse it directly. Skip the inst_data
+  // computation, which can fail for very small shapes (e.g. dpas_mx scale
+  // operands like 128x16 where no supported block width divides 16).
+  if (layoutKind == xegpu::LayoutKind::Subgroup && consumerLayout &&
+      consumerLayout.isForWorkgroup())
+    return consumerLayout;
+
+  // Compute the default inst_data from hardware block params.
   SmallVector<int64_t> instData(rank, 1);
   int instWidth = xegpu::getLargestDivisor(
       static_cast<int>(dataShape.back()), bWidths);
@@ -1566,8 +1620,17 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
     instData[rank - 2] = instHeight;
   }
 
-  // Validate Category A invariant: inst_data must be a multiple of
-  // lane_layout * lane_data on each dim (k >= 1).
+  // Honor the consumer's inst_data if it is uArch-valid.
+  if (consumerLayout) {
+    SmallVector<int64_t> consumerInstData =
+        consumerLayout.getEffectiveInstDataAsInt();
+    if (!consumerInstData.empty() &&
+        isValidNdInstData(consumerInstData, dataShape, bWidths, bHeights,
+                          laneLayout, laneData))
+      instData.assign(consumerInstData.begin(), consumerInstData.end());
+  }
+
+  // Category A invariant: inst_data is a multiple of lane_layout * lane_data.
   for (int dim = 0; dim < rank; ++dim) {
     int64_t laneProduct = laneLayout[dim] * laneData[dim];
     assert(instData[dim] % laneProduct == 0 &&
@@ -1579,12 +1642,12 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
     return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
 
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    assert(numSg > 0 &&
-           "Number of subgroups must be provided for sg layout creation.");
-    // Subgroup-kind layout creation currently only supports rank-2 shapes
-    // (mirrors getValidLayouts).
     if (rank != 2)
       return nullptr;
+    // The consumer-fast-path above already returned for the case where the
+    // consumer carries a workgroup-level layout, so here numSg must be set.
+    assert(numSg > 0 &&
+           "Number of subgroups must be provided for sg layout creation.");
     auto sgLayouts = getValidLayouts(dataShape, instData, numSg);
     if (sgLayouts.empty())
       return nullptr;
@@ -1627,7 +1690,7 @@ xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   return setupGenericNdAnchorLayout(layoutKind, context, srcVecTy.getShape(),
                                     elemTy, bWidths, bHeights, packingSize,
-                                    numSg, uArch);
+                                    /*consumerLayout=*/nullptr, numSg, uArch);
 }
 
 /// Sets up the anchor layout for a prefetch_nd operation. PrefetchNd has no
@@ -1654,7 +1717,49 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   return setupGenericNdAnchorLayout(layoutKind, context, tdescTy.getShape(),
                                     elemTy, bWidths, bHeights, packingSize,
-                                    numSg, uArch);
+                                    /*consumerLayout=*/nullptr, numSg, uArch);
+}
+
+/// Sets up the anchor layout for a load_nd operation. LoadNd takes a
+/// consumer layout (from its result's downstream uses) and validates it
+/// against uArch constraints; if valid, the consumer's `inst_data` /
+/// `sg_layout` are honored. Otherwise the helper falls back to defaults
+/// derived from uArch block parameters.
+xegpu::DistributeLayoutAttr xegpu::setupLoadNdAnchorLayout(
+    xegpu::LayoutKind layoutKind, VectorType resVecTy,
+    xegpu::DistributeLayoutAttr consumerLayout, int numSg,
+    const xegpu::uArch::uArch *uArch) {
+  auto context = resVecTy.getContext();
+  Type elemTy = resVecTy.getElementType();
+
+  // Subgroup-kind fast path: if the consumer already specifies a complete
+  // workgroup-level layout, reuse it directly. We don't need the uArch block
+  // params at all (which may be unavailable for unusual element types like
+  // sub-byte floats used in dpas_mx scale operands).
+  if (layoutKind == xegpu::LayoutKind::Subgroup && consumerLayout &&
+      consumerLayout.isForWorkgroup())
+    return consumerLayout;
+
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
+          uArch->getInstruction(
+              xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
+  if (!uArchInstruction)
+    return nullptr;
+  // Transform / transpose / upConv are lane-level concerns; treat them as
+  // no-op at the propagation stage (consistent with the existing
+  // visitLoadNdOp, which warns on transpose).
+  auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
+      elemTy, /*hasTransform=*/false, /*hasTranspose=*/false,
+      /*upConv=*/false);
+  if (!blockWHC)
+    return nullptr;
+  auto [bWidths, bHeights, bCounts] = blockWHC.value();
+  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
+
+  return setupGenericNdAnchorLayout(layoutKind, context, resVecTy.getShape(),
+                                    elemTy, bWidths, bHeights, packingSize,
+                                    consumerLayout, numSg, uArch);
 }
 
 // Returns the default (lane_layout, lane_data) pair for a given 1D/2D vector
