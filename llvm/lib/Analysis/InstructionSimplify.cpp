@@ -7221,9 +7221,9 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
 Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                ArrayRef<Value *> Args, FastMathFlags FMF,
-                               const SimplifyQuery &Q,
+                               const SimplifyQuery &Q, Function *CxtF,
                                fp::ExceptionBehavior ExBehavior,
-                               RoundingMode Rounding, Function *CxtF) {
+                               RoundingMode Rounding) {
   unsigned NumOperands = Args.size();
   if (IID != Intrinsic::not_intrinsic && intrinsicPropagatesPoison(IID) &&
       any_of(Args, IsaPred<PoisonValue>))
@@ -7234,8 +7234,9 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
-      ConstantRange CR =
-          CxtF ? getVScaleRange(CxtF, 64) : ConstantRange::getFull(64);
+      if (!CxtF)
+        return nullptr;
+      ConstantRange CR = getVScaleRange(CxtF, 64);
       if (const APInt *C = CR.getSingleElement())
         return ConstantInt::get(ReturnType, C->getZExtValue());
       return nullptr;
@@ -7450,8 +7451,8 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
       Rounding = Constrained->getRoundingMode().value_or(Rounding);
     }
     return simplifyIntrinsic(IID, ReturnType, Args,
-                             Call->getFastMathFlagsOrNone(), Q, ExBehavior,
-                             Rounding, Call->getFunction());
+                             Call->getFastMathFlagsOrNone(), Q,
+                             Call->getFunction(), ExBehavior, Rounding);
   }
   }
 }

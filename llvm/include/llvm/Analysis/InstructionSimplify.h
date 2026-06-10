@@ -205,13 +205,15 @@ LLVM_ABI Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                         FastMathFlags FMF,
                                         const SimplifyQuery &Q);
 
-/// Given operands for an intrinsic, fold the result or return null.
+/// Given operands for an intrinsic, fold the result or return null. Context
+/// Function is passed as \p CxtF. \p ExBehavior and \p Rounding only apply to
+/// constrained FP intrinsics.
 LLVM_ABI Value *
 simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType, ArrayRef<Value *> Args,
                   FastMathFlags FMF, const SimplifyQuery &Q,
+                  Function *CxtF = nullptr,
                   fp::ExceptionBehavior ExBehavior = fp::ebIgnore,
-                  RoundingMode Rounding = RoundingMode::NearestTiesToEven,
-                  Function *CxtF = nullptr);
+                  RoundingMode Rounding = RoundingMode::NearestTiesToEven);
 
 /// Given operands for a ShuffleVectorInst, fold the result or return null.
 /// See class ShuffleVectorInst for a description of the mask representation.
