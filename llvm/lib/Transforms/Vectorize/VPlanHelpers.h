@@ -422,8 +422,8 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
-  /// Lazily created ModuleSlotTracker, used only when unnamed IR instructions
-  /// require slot tracking.
+  /// Lazily created ModuleSlotTracker, used to print unnamed IR instructions
+  /// and metadata nodes referenced by recipes.
   std::unique_ptr<ModuleSlotTracker> MST;
 
   /// Cached metadata kind names from the Module's LLVMContext.
@@ -432,10 +432,17 @@ class VPSlotTracker {
   /// Cached Module pointer for printing metadata.
   const Module *M = nullptr;
 
+  /// Temporary ids for metadata nodes referenced by recipes that have no module
+  /// slot (e.g. alias.scope/noalias added by loop versioning).
+  DenseMap<const MDNode *, unsigned> MetadataTmpIds;
+
   void assignName(const VPValue *V);
   LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
   std::string getName(const Value *V);
+
+  /// Lazily create the ModuleSlotTracker for module \p Mod.
+  ModuleSlotTracker &getOrCreateMST(const Module *Mod, const Function *F);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
@@ -457,6 +464,9 @@ public:
       M->getContext().getMDKindNames(MDNames);
     return MDNames;
   }
+
+  /// Print a reference to metadata node \p N to \p O.
+  void printMetadataAsOperand(raw_ostream &O, const MDNode *N);
 
   /// Returns the cached Module pointer.
   const Module *getModule() const { return M; }

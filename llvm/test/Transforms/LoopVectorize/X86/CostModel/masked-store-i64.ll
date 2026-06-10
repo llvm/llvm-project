@@ -31,28 +31,28 @@ define void @test(ptr %C) {
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX1:  Cost of 8 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX1:  Cost of 8 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX1:  Cost of 16 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX1:  Cost of 32 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX1:  Cost of 64 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
+; AVX1:  Cost of 8 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX1:  Cost of 8 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX1:  Cost of 16 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX1:  Cost of 32 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX1:  Cost of 64 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX2:  Cost of 8 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX2:  Cost of 8 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX2:  Cost of 16 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX2:  Cost of 32 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX2:  Cost of 64 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
+; AVX2:  Cost of 8 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX2:  Cost of 8 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX2:  Cost of 16 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX2:  Cost of 32 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX2:  Cost of 64 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i64 %valB, ptr %out, align 8
-; AVX512:  Cost of 1 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX512:  Cost of 1 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX512:  Cost of 1 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX512:  Cost of 2 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX512:  Cost of 4 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
-; AVX512:  Cost of 8 for VF 64: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope {{.*}}, !noalias {{.*}})
+; AVX512:  Cost of 1 for VF 2: WIDEN store vp<[[VP7:%[0-9]+]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX512:  Cost of 1 for VF 4: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX512:  Cost of 1 for VF 8: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX512:  Cost of 2 for VF 16: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX512:  Cost of 4 for VF 32: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
+; AVX512:  Cost of 8 for VF 64: WIDEN store vp<[[VP7]]>, ir<%valB>, ir<%canStore> (!alias.scope !tmp2, !noalias !tmp3)
 ;
 entry:
   br label %for.body

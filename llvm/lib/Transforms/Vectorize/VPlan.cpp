@@ -1598,6 +1598,17 @@ void VPSlotTracker::assignNames(const VPBasicBlock *VPBB) {
       assignName(Def);
 }
 
+ModuleSlotTracker &VPSlotTracker::getOrCreateMST(const Module *Mod,
+                                                 const Function *F) {
+  if (!MST)
+    MST = std::make_unique<ModuleSlotTracker>(Mod);
+  // Incorporate the function even if the MST already existed; this is a no-op
+  // if \p F is already incorporated.
+  if (F)
+    MST->incorporateFunction(*F);
+  return *MST;
+}
+
 std::string VPSlotTracker::getName(const Value *V) {
   std::string Name;
   raw_string_ostream S(Name);
@@ -1606,20 +1617,25 @@ std::string VPSlotTracker::getName(const Value *V) {
     return Name;
   }
 
-  if (!MST) {
-    // Lazily create the ModuleSlotTracker when we first hit an unnamed
-    // instruction.
-    auto *I = cast<Instruction>(V);
-    // This check is required to support unit tests with incomplete IR.
-    if (I->getParent()) {
-      MST = std::make_unique<ModuleSlotTracker>(I->getModule());
-      MST->incorporateFunction(*I->getFunction());
-    } else {
-      MST = std::make_unique<ModuleSlotTracker>(nullptr);
-    }
-  }
-  V->printAsOperand(S, false, *MST);
+  auto *I = cast<Instruction>(V);
+  // The parent check is required to support unit tests with incomplete IR.
+  ModuleSlotTracker &MST =
+      I->getParent() ? getOrCreateMST(I->getModule(), I->getFunction())
+                     : getOrCreateMST(nullptr, nullptr);
+  V->printAsOperand(S, false, MST);
   return Name;
+}
+
+void VPSlotTracker::printMetadataAsOperand(raw_ostream &O, const MDNode *N) {
+  // Use the module slot if \p N has already been numbered.
+  if (int Slot = getOrCreateMST(M, /*F=*/nullptr).getMetadataSlot(N);
+      Slot != -1) {
+    O << '!' << Slot;
+    return;
+  }
+  // Otherwise manually number metadata not attached to the module yet.
+  O << "!tmp"
+    << MetadataTmpIds.try_emplace(N, MetadataTmpIds.size()).first->second;
 }
 
 std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
