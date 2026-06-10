@@ -345,10 +345,6 @@ private:
   void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
-  void CheckSymbolName(
-      const parser::CharBlock &source, const parser::OmpObject &object);
-  void CheckSymbolNames(
-      const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCrayPointee(const parser::OmpObjectList &objectList,

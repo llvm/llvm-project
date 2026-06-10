@@ -509,6 +509,24 @@ public:
       return math::CosOp::create(builder, arg.getLoc(), arg);
     case UnaryFn::tan:
       return math::TanOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::acos:
+      return math::AcosOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::acosh:
+      return math::AcoshOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::asin:
+      return math::AsinOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::asinh:
+      return math::AsinhOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::atan:
+      return math::AtanOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::atanh:
+      return math::AtanhOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log10:
+      return math::Log10Op::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log1p:
+      return math::Log1pOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::log2:
+      return math::Log2Op::create(builder, arg.getLoc(), arg);
     }
     if (emitError) {
       emitError() << "unsupported unary function";
