@@ -319,38 +319,48 @@ TEST_F(SpecialCaseListTest, DotSlash) {
       makeSpecialCaseList(IgnoreList, /*Version=*/3);
   std::unique_ptr<SpecialCaseList> SCL4 = makeSpecialCaseList(IgnoreList,
                                                               /*Version=*/4);
+  std::unique_ptr<SpecialCaseList> SCL5 = makeSpecialCaseList(IgnoreList,
+                                                              /*Version=*/5);
 
   EXPECT_TRUE(SCL2->inSection("dot", "fun", "./foo"));
   EXPECT_TRUE(SCL3->inSection("dot", "fun", "./foo"));
   EXPECT_TRUE(SCL4->inSection("dot", "fun", "./foo"));
+  EXPECT_TRUE(SCL5->inSection("dot", "fun", "./foo"));
 
   EXPECT_FALSE(SCL2->inSection("dot", "fun", "foo"));
   EXPECT_FALSE(SCL3->inSection("dot", "fun", "foo"));
   EXPECT_FALSE(SCL4->inSection("dot", "fun", "foo"));
+  EXPECT_FALSE(SCL5->inSection("dot", "fun", "foo"));
 
   EXPECT_TRUE(SCL2->inSection("dot", "src", "./bar"));
-  EXPECT_FALSE(SCL3->inSection("dot", "src", "./bar"));
-  EXPECT_FALSE(SCL4->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL3->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL4->inSection("dot", "src", "./bar"));
+  EXPECT_FALSE(SCL5->inSection("dot", "src", "./bar"));
 
   EXPECT_FALSE(SCL2->inSection("dot", "src", "bar"));
   EXPECT_FALSE(SCL3->inSection("dot", "src", "bar"));
   EXPECT_FALSE(SCL4->inSection("dot", "src", "bar"));
+  EXPECT_FALSE(SCL5->inSection("dot", "src", "bar"));
 
   EXPECT_FALSE(SCL2->inSection("not", "fun", "./foo"));
   EXPECT_FALSE(SCL3->inSection("not", "fun", "./foo"));
   EXPECT_FALSE(SCL4->inSection("not", "fun", "./foo"));
+  EXPECT_FALSE(SCL5->inSection("not", "fun", "./foo"));
 
   EXPECT_TRUE(SCL2->inSection("not", "fun", "foo"));
   EXPECT_TRUE(SCL3->inSection("not", "fun", "foo"));
   EXPECT_TRUE(SCL4->inSection("not", "fun", "foo"));
+  EXPECT_TRUE(SCL5->inSection("not", "fun", "foo"));
 
   EXPECT_FALSE(SCL2->inSection("not", "src", "./bar"));
-  EXPECT_TRUE(SCL3->inSection("not", "src", "./bar"));
+  EXPECT_FALSE(SCL3->inSection("not", "src", "./bar"));
   EXPECT_TRUE(SCL4->inSection("not", "src", "./bar"));
+  EXPECT_TRUE(SCL5->inSection("not", "src", "./bar"));
 
   EXPECT_TRUE(SCL2->inSection("not", "src", "bar"));
   EXPECT_TRUE(SCL3->inSection("not", "src", "bar"));
   EXPECT_TRUE(SCL4->inSection("not", "src", "bar"));
+  EXPECT_TRUE(SCL5->inSection("not", "src", "bar"));
 }
 
 TEST_F(SpecialCaseListTest, LinesInSection) {
