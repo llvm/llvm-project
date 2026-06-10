@@ -10765,7 +10765,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_wave_reduce_max:
   case Intrinsic::amdgcn_wave_reduce_umax:
   case Intrinsic::amdgcn_wave_reduce_add:
-  case Intrinsic::amdgcn_wave_reduce_sub: {
+  case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_and:
+  case Intrinsic::amdgcn_wave_reduce_or:
+  case Intrinsic::amdgcn_wave_reduce_xor: {
     EVT SrcVT = Op.getOperand(1).getValueType();
     if (SrcVT == MVT::i16) {
       bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
