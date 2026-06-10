@@ -4,6 +4,6 @@
 ; CHECK-LABEL: Contents of section .literal.func:
 ; CHECK:       0000 88130000                             ....
 
-define i32 @func() #0 {
+define i32 @func() {
   ret i32 5000
 }
