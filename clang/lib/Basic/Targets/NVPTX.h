@@ -43,6 +43,7 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     3, // sycl_local
     0, // sycl_private
     0, // sycl_generic
+    0, // sycl_constant
     0, // ptr32_sptr
     0, // ptr32_uptr
     0, // ptr64

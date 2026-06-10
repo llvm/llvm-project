@@ -595,6 +595,8 @@ public:
       return LangAS::sycl_private;
     case ParsedAttr::AT_SYCLGenericAddressSpace:
       return LangAS::sycl_generic;
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+      return LangAS::sycl_constant;
     default:
       return LangAS::Default;
     }

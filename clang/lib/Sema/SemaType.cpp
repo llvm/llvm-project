@@ -6684,13 +6684,11 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
     if (S.getLangOpts().HLSL)
       ASIdx = Attr.asHLSLLangAS();
 
-    if (ASIdx == LangAS::Default) {
-      if (Attr.getKind() == ParsedAttr::AT_SYCLConstantAddressSpace) {
-        S.Diag(Attr.getLoc(), diag::warn_deprecated_sycl_constant);
-      } else {
-        llvm_unreachable("Invalid address space");
-      }
-    }
+    if (ASIdx == LangAS::sycl_constant)
+      S.Diag(Attr.getLoc(), diag::warn_deprecated_sycl_constant);
+
+    if (ASIdx == LangAS::Default)
+      llvm_unreachable("Invalid address space");
 
     if (DiagnoseMultipleAddrSpaceAttributes(S, Type.getAddressSpace(), ASIdx,
                                             Attr.getLoc())) {

@@ -2822,7 +2822,8 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         ASString = "CLgeneric";
         break;
       //  <SYCL-addrspace> ::= "SY" [ "global" | "local" | "private" |
-      //                              "generic" | "device" | "host" ]
+      //                              "generic" | "constant" | "device" | "host"
+      //                              ]
       case LangAS::sycl_global:
         ASString = "SYglobal";
         break;
@@ -2840,6 +2841,9 @@ void CXXNameMangler::mangleQualifiers(Qualifiers Quals, const DependentAddressSp
         break;
       case LangAS::sycl_generic:
         ASString = "SYgeneric";
+        break;
+      case LangAS::sycl_constant:
+        ASString = "SYconstant";
         break;
       //  <CUDA-addrspace> ::= "CU" [ "device" | "constant" | "shared" ]
       case LangAS::cuda_device:

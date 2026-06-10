@@ -15,6 +15,7 @@ void usages() {
   int [[clang::sycl_global]] *GLOB;
   int [[clang::sycl_private]] *PRIV;
   int [[clang::sycl_local]] *LOC;
+  int [[clang::sycl_constant]] *CONST; // expected-warning {{'sycl_constant' address space attribute is deprecated}}
   int *NoAS;
 
   GLOB = PRIV;                                                     // expected-error {{assigning 'sycl_private int *' to 'sycl_global int *' changes address space of pointer}}
@@ -77,4 +78,31 @@ void usages() {
   GLOB = GLOB_DEVICE;
   GLOB_DEVICE = GLOB; // expected-error {{assigning 'sycl_global int *' to '__global_device int *' changes address space of pointer}}
   GLOB_DEVICE = static_cast<__attribute__((opencl_global_device)) int *>(GLOB); // expected-error {{static_cast from 'sycl_global int *' to '__global_device int *' is not allowed}}
+
+  // Test sycl_constant conversions
+  // constant -> constant: OK
+  int [[clang::sycl_constant]] *c2 = CONST; // expected-warning {{'sycl_constant' address space attribute is deprecated}}
+  (void)c2;
+
+  // constant -> other named: ERROR (disjoint address spaces)
+  GLOB = CONST; // expected-error {{assigning 'sycl_constant int *' to 'sycl_global int *' changes address space of pointer}}
+  PRIV = CONST; // expected-error {{assigning 'sycl_constant int *' to 'sycl_private int *' changes address space of pointer}}
+  LOC = CONST;  // expected-error {{assigning 'sycl_constant int *' to 'sycl_local int *' changes address space of pointer}}
+
+  // constant -> generic: ERROR (constant not a subset of generic)
+  NoAS = CONST; // expected-error {{assigning 'sycl_constant int *' to 'int *' changes address space of pointer}}
+
+  // generic -> constant: ERROR (constant not a superset of generic)
+  CONST = NoAS; // expected-error {{assigning 'int *' to 'sycl_constant int *' changes address space of pointer}}
+
+  // other named -> constant: ERROR (disjoint address spaces)
+  CONST = GLOB; // expected-error {{assigning 'sycl_global int *' to 'sycl_constant int *' changes address space of pointer}}
+  CONST = PRIV; // expected-error {{assigning 'sycl_private int *' to 'sycl_constant int *' changes address space of pointer}}
+  CONST = LOC;  // expected-error {{assigning 'sycl_local int *' to 'sycl_constant int *' changes address space of pointer}}
+
+  // Explicit casts between constant and other spaces are disallowed
+  GLOB = (int [[clang::sycl_global]] *)CONST;   // expected-error {{C-style cast from 'sycl_constant int *' to 'sycl_global int *' converts between mismatching address spaces}}
+  CONST = (int [[clang::sycl_constant]] *)GLOB; // expected-warning {{'sycl_constant' address space attribute is deprecated}} expected-error {{C-style cast from 'sycl_global int *' to 'sycl_constant int *' converts between mismatching address spaces}}
+  PRIV = static_cast<int [[clang::sycl_private]] *>(CONST); // expected-error {{static_cast from 'sycl_constant int *' to 'sycl_private int *' is not allowed}}
+  CONST = static_cast<int [[clang::sycl_constant]] *>(PRIV); // expected-warning {{'sycl_constant' address space attribute is deprecated}} expected-error {{static_cast from 'sycl_private int *' to 'sycl_constant int *' is not allowed}}
 }

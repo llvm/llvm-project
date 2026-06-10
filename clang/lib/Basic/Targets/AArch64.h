@@ -42,6 +42,7 @@ static const unsigned ARM64AddrSpaceMap[] = {
     0, // sycl_local
     0, // sycl_private
     0, // sycl_generic
+    0, // sycl_constant
     static_cast<unsigned>(AArch64AddrSpace::ptr32_sptr),
     static_cast<unsigned>(AArch64AddrSpace::ptr32_uptr),
     static_cast<unsigned>(AArch64AddrSpace::ptr64),

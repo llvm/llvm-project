@@ -45,6 +45,7 @@ static const LangASMap FakeAddrSpaceMap = {
     3,  // sycl_local
     0,  // sycl_private
     4,  // sycl_generic
+    2,  // sycl_constant
     10, // ptr32_sptr
     11, // ptr32_uptr
     12, // ptr64

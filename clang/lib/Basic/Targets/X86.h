@@ -43,6 +43,7 @@ static const unsigned X86AddrSpaceMap[] = {
     0,   // sycl_local
     0,   // sycl_private
     0,   // sycl_generic
+    0,   // sycl_constant
     270, // ptr32_sptr
     271, // ptr32_uptr
     272, // ptr64
