@@ -258,5 +258,295 @@ entry:
   %r1 = insertvalue { <4 x i16>, <4 x i32> } %r0, <4 x i32> %wand, 1
   ret { <4 x i16>, <4 x i32> } %r1
 }
+
+;; v4i32 integer source operands - same BSP shape built from icmp inputs.
+
+define <4 x i32> @bsp_v4i1_select_mask_sext_int(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LE-LABEL: bsp_v4i1_select_mask_sext_int:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    and v2.16b, v0.16b, v1.16b
+; CHECK-LE-NEXT:    cmgt v3.4s, v1.4s, v0.4s
+; CHECK-LE-NEXT:    cmgt v4.4s, v0.4s, v1.4s
+; CHECK-LE-NEXT:    cmeq v0.4s, v0.4s, v1.4s
+; CHECK-LE-NEXT:    cmge v2.4s, v2.4s, #0
+; CHECK-LE-NEXT:    xtn v1.4h, v3.4s
+; CHECK-LE-NEXT:    xtn v3.4h, v4.4s
+; CHECK-LE-NEXT:    mvn v0.16b, v0.16b
+; CHECK-LE-NEXT:    xtn v2.4h, v2.4s
+; CHECK-LE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-LE-NEXT:    bit v1.8b, v3.8b, v2.8b
+; CHECK-LE-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-LE-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bsp_v4i1_select_mask_sext_int:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    and v2.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    cmgt v3.4s, v1.4s, v0.4s
+; CHECK-BE-NEXT:    cmgt v4.4s, v0.4s, v1.4s
+; CHECK-BE-NEXT:    cmeq v0.4s, v0.4s, v1.4s
+; CHECK-BE-NEXT:    cmge v2.4s, v2.4s, #0
+; CHECK-BE-NEXT:    xtn v1.4h, v3.4s
+; CHECK-BE-NEXT:    xtn v3.4h, v4.4s
+; CHECK-BE-NEXT:    mvn v0.16b, v0.16b
+; CHECK-BE-NEXT:    xtn v2.4h, v2.4s
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BE-NEXT:    bit v1.8b, v3.8b, v2.8b
+; CHECK-BE-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-BE-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %une = icmp ne <4 x i32> %a, %b
+  %lt = icmp slt <4 x i32> %a, %b
+  %gt = icmp sgt <4 x i32> %a, %b
+  %and = and <4 x i32> %a, %b
+  %sign = icmp sge <4 x i32> %and, zeroinitializer
+  %sel = select <4 x i1> %sign, <4 x i1> %gt, <4 x i1> %lt
+  %mask = and <4 x i1> %une, %sel
+  %result = sext <4 x i1> %mask to <4 x i32>
+  ret <4 x i32> %result
+}
+
+;; Mask AND with mixed-width sources: the i1 mask comes from an i16 compare
+;; while the select arms come from i32 compares, so only the select side of
+;; the outer AND goes through the trunc-hoisted shape.
+
+define <4 x i32> @bsp_v4i1_select_mixed_width_mask(<4 x i32> %a, <4 x i16> %b) {
+; CHECK-LE-LABEL: bsp_v4i1_select_mixed_width_mask:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    cmlt v2.4s, v0.4s, #0
+; CHECK-LE-NEXT:    cmgt v3.4s, v0.4s, #0
+; CHECK-LE-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-LE-NEXT:    cmeq v1.4h, v1.4h, #0
+; CHECK-LE-NEXT:    xtn v3.4h, v3.4s
+; CHECK-LE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-LE-NEXT:    xtn v2.4h, v2.4s
+; CHECK-LE-NEXT:    bsl v0.8b, v2.8b, v3.8b
+; CHECK-LE-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CHECK-LE-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bsp_v4i1_select_mixed_width_mask:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v1.4h, v1.4h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    cmeq v1.4h, v1.4h, #0
+; CHECK-BE-NEXT:    cmlt v2.4s, v0.4s, #0
+; CHECK-BE-NEXT:    cmgt v3.4s, v0.4s, #0
+; CHECK-BE-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-BE-NEXT:    xtn v3.4h, v3.4s
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BE-NEXT:    xtn v2.4h, v2.4s
+; CHECK-BE-NEXT:    bsl v0.8b, v2.8b, v3.8b
+; CHECK-BE-NEXT:    bic v0.8b, v0.8b, v1.8b
+; CHECK-BE-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %une = icmp ne <4 x i16> %b, zeroinitializer
+  %lt = icmp slt <4 x i32> %a, zeroinitializer
+  %gt = icmp sgt <4 x i32> %a, zeroinitializer
+  %sign = icmp sge <4 x i32> %a, zeroinitializer
+  %sel = select <4 x i1> %sign, <4 x i1> %lt, <4 x i1> %gt
+  %mask = and <4 x i1> %une, %sel
+  %result = sext <4 x i1> %mask to <4 x i32>
+  ret <4 x i32> %result
+}
+
+;; The four tests below feed the matched shape
+;;   (or (trunc (and A B)) (and (xor (trunc A) -1) C))
+;; directly and flip one pair of commutative operands at a time, so every
+;; operand order of the OR, both ANDs and the XOR is covered.
+
+;; Mask is the first operand of the wide AND: (and A B).
+define <4 x i16> @bsp_trunc_and_mask_first(<4 x i32> %m, <4 x i32> %b, <4 x i16> %c) {
+; CHECK-LE-LABEL: bsp_trunc_and_mask_first:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-LE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-LE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bsp_trunc_and_mask_first:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4h, v2.4h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-BE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ret
+  %andw = and <4 x i32> %m, %b
+  %t1 = trunc <4 x i32> %andw to <4 x i16>
+  %tm = trunc <4 x i32> %m to <4 x i16>
+  %notm = xor <4 x i16> %tm, splat (i16 -1)
+  %a2 = and <4 x i16> %notm, %c
+  %or = or <4 x i16> %t1, %a2
+  ret <4 x i16> %or
+}
+
+;; Mask is the second operand of the wide AND: (and B A).
+define <4 x i16> @bsp_trunc_and_mask_second(<4 x i32> %m, <4 x i32> %b, <4 x i16> %c) {
+; CHECK-LE-LABEL: bsp_trunc_and_mask_second:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-LE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-LE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bsp_trunc_and_mask_second:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4h, v2.4h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-BE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ret
+  %andw = and <4 x i32> %b, %m
+  %t1 = trunc <4 x i32> %andw to <4 x i16>
+  %tm = trunc <4 x i32> %m to <4 x i16>
+  %notm = xor <4 x i16> %tm, splat (i16 -1)
+  %a2 = and <4 x i16> %notm, %c
+  %or = or <4 x i16> %t1, %a2
+  ret <4 x i16> %or
+}
+
+;; OR operands and the operands of the narrow AND are both swapped.
+define <4 x i16> @bsp_trunc_or_and_swapped(<4 x i32> %m, <4 x i32> %b, <4 x i16> %c) {
+; CHECK-LE-LABEL: bsp_trunc_or_and_swapped:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-LE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-LE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bsp_trunc_or_and_swapped:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4h, v2.4h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-BE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ret
+  %andw = and <4 x i32> %m, %b
+  %t1 = trunc <4 x i32> %andw to <4 x i16>
+  %tm = trunc <4 x i32> %m to <4 x i16>
+  %notm = xor <4 x i16> %tm, splat (i16 -1)
+  %a2 = and <4 x i16> %c, %notm
+  %or = or <4 x i16> %a2, %t1
+  ret <4 x i16> %or
+}
+
+;; XOR with the all-ones constant as the first operand.
+define <4 x i16> @bsp_trunc_xor_const_first(<4 x i32> %m, <4 x i32> %b, <4 x i16> %c) {
+; CHECK-LE-LABEL: bsp_trunc_xor_const_first:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-LE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-LE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bsp_trunc_xor_const_first:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4h, v2.4h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-BE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ret
+  %andw = and <4 x i32> %m, %b
+  %t1 = trunc <4 x i32> %andw to <4 x i16>
+  %tm = trunc <4 x i32> %m to <4 x i16>
+  %notm = xor <4 x i16> splat (i16 -1), %tm
+  %a2 = and <4 x i16> %notm, %c
+  %or = or <4 x i16> %t1, %a2
+  ret <4 x i16> %or
+}
+
+;; All commutative operands flipped at once: inner AND (B A), narrow AND
+;; (C xor), OR (a2 t1) and the xor constant first. Exercises every commutable
+;; node in the matched shape simultaneously.
+define <4 x i16> @bsp_trunc_all_swapped(<4 x i32> %m, <4 x i32> %b, <4 x i16> %c) {
+; CHECK-LE-LABEL: bsp_trunc_all_swapped:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-LE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-LE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bsp_trunc_all_swapped:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4h, v2.4h
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
+; CHECK-BE-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-BE-NEXT:    ret
+  %andw = and <4 x i32> %b, %m
+  %t1 = trunc <4 x i32> %andw to <4 x i16>
+  %tm = trunc <4 x i32> %m to <4 x i16>
+  %notm = xor <4 x i16> splat (i16 -1), %tm
+  %a2 = and <4 x i16> %c, %notm
+  %or = or <4 x i16> %a2, %t1
+  ret <4 x i16> %or
+}
+
+;; Negative test: a non-BSP pattern that must not fold. The NOT expression
+;; is not the same variable that participates in the inner AND.
+
+define <4 x i32> @bsp_nonbsp_unrelated_not(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
+; CHECK-LE-LABEL: bsp_nonbsp_unrelated_not:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-LE-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-LE-NEXT:    orn v0.16b, v0.16b, v2.16b
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: bsp_nonbsp_unrelated_not:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    cmge v0.4s, v0.4s, #0
+; CHECK-BE-NEXT:    bsl v0.16b, v1.16b, v2.16b
+; CHECK-BE-NEXT:    orn v0.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %sign = icmp sge <4 x i32> %a, zeroinitializer
+  %sel = select <4 x i1> %sign, <4 x i32> %b, <4 x i32> %c
+  %not_c = xor <4 x i32> %c, splat (i32 -1)
+  %or = or <4 x i32> %sel, %not_c
+  ret <4 x i32> %or
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

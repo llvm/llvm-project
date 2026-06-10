@@ -15795,18 +15795,6 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(Inst, DL, VT, X, Y, Imm);
 }
 
-// Matches (xor (trunc x), -1) and binds x; uses isBitwiseNot so post-legalize
-// splats with wider element storage than the lane width still match.
-struct BitwiseNotOfTruncMatch {
-  SDValue &Wide;
-  template <typename Ctx> bool match(const Ctx &, SDValue N) const {
-    if (!isBitwiseNot(N) || N.getOperand(0).getOpcode() != ISD::TRUNCATE)
-      return false;
-    Wide = N.getOperand(0).getOperand(0);
-    return true;
-  }
-};
-
 static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   assert(VT.isVector() && "Expected vector type in tryLowerToBSL\n");
@@ -15823,14 +15811,20 @@ static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   // Match the trunc-hoisted shape that hides BSP from the cases below:
   //   (or (trunc (and A B)) (and C (xor (trunc A) -1)))
   //     => BSP(trunc A, trunc B, C)
+  // m_Or, m_And and m_Xor match operands in any order. The xor constant uses
+  // m_ConstInt + isAllOnes() rather than m_AllOnes because m_AllOnes rejects
+  // post-legalize splats whose element storage is wider than the lane.
   if (VT.isFixedLengthVector() && Subtarget.isNeonAvailable()) {
     using namespace SDPatternMatch;
     SDValue InnerLHS, InnerRHS, MaskWide, C;
-    if (sd_match(
-            N, m_Or(m_OneUse(m_Trunc(
-                        m_OneUse(m_And(m_Value(InnerLHS), m_Value(InnerRHS))))),
-                    m_And(BitwiseNotOfTruncMatch{MaskWide}, m_Value(C))))) {
-      if (MaskWide == InnerLHS || MaskWide == InnerRHS) {
+    APInt NotMask;
+    if (sd_match(N, m_Or(m_OneUse(m_Trunc(m_OneUse(
+                             m_And(m_Value(InnerLHS), m_Value(InnerRHS))))),
+                         m_And(m_Xor(m_Trunc(m_Value(MaskWide)),
+                                     m_ConstInt(NotMask)),
+                               m_Value(C))))) {
+      if (NotMask.isAllOnes() &&
+          (MaskWide == InnerLHS || MaskWide == InnerRHS)) {
         SDValue WideB = MaskWide == InnerLHS ? InnerRHS : InnerLHS;
         return DAG.getNode(AArch64ISD::BSP, DL, VT,
                            DAG.getNode(ISD::TRUNCATE, DL, VT, MaskWide),
