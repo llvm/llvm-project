@@ -1675,14 +1675,14 @@ void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
   if (p.first == p.second)
     return;
 
-  StringRef toName = getMergeDestination(p.first, p.second);
+  StringRef toSection = getMergeDestination(p.first, p.second);
 
   OutputSection *from = findSection(p.first);
-  OutputSection *to = findSection(toName);
+  OutputSection *to = findSection(toSection);
   if (!from)
     return;
   if (!to) {
-    from->name = toName;
+    from->name = toSection;
     return;
   }
   to->merge(from);
@@ -1726,14 +1726,14 @@ void Writer::mergeSections() {
   auto it = ctx.config.merge.find(".bss");
   if (it != ctx.config.merge.end()) {
     // Resolve the final merge target name following the chain.
-    StringRef toName = getMergeDestination(it->first, it->second);
+    StringRef toSection = getMergeDestination(it->first, it->second);
     // Don't merge .bss into a shared section. MSVC link.exe keeps .bss
     // separate when the target has IMAGE_SCN_MEM_SHARED, preventing unexpected
     // sharing across processes.
-    auto secIt = ctx.config.section.find(toName);
+    auto secIt = ctx.config.section.find(toSection);
     if (secIt == ctx.config.section.end() ||
         !(secIt->second & IMAGE_SCN_MEM_SHARED))
-      mergeSection({it->first, toName});
+      mergeSection({it->first, toSection});
   }
 }
 
