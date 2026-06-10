@@ -1226,6 +1226,7 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     // downstream paths see a fully-populated layout.
     requiredAnchorLayoutAttr = xegpu::completeLoadGatherLayoutFromInstData(
         anchorLayoutAttr, resVecTy.getElementType(), uArch);
+    load.setLayoutAttr(requiredAnchorLayoutAttr);
   } else {
     if (!resVecTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
@@ -1270,6 +1271,7 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     // downstream paths see a fully-populated layout.
     requiredAnchorLayoutAttr = xegpu::completeStoreScatterLayoutFromInstData(
         anchorLayoutAttr, srcVecTy.getElementType(), uArch);
+    storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   } else {
     if (!srcVecTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
@@ -1340,6 +1342,7 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     // a lane factorization derived from the store-side Lane setup.
     auto completed = xegpu::completeStoreScatterLayoutFromInstData(
         anchorLayout, srcVecTy.getElementType(), uArch);
+    storeMatrix.setLayoutAttr(completed);
     layout = LayoutInfo(completed);
   } else {
     int chunkSize =
