@@ -2,7 +2,7 @@
 
 void acc_kernels(int cond) {
   // CHECK: cir.func{{.*}} @acc_kernels(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
+  // CHECK-NEXT: %[[COND:.*]] = cir.alloca "cond" {{.*}} init : !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 #pragma acc kernels
   {}
@@ -419,8 +419,8 @@ void acc_kernels(int cond) {
 
 void acc_kernels_data_clauses(int *arg1, int *arg2) {
   // CHECK: cir.func{{.*}} @acc_kernels_data_clauses(%[[ARG1_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}, %[[ARG2_PARAM:.*]]: !cir.ptr<!s32i>{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg1", init]
-  // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["arg2", init]
+  // CHECK-NEXT: %[[ARG1:.*]] = cir.alloca "arg1" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+  // CHECK-NEXT: %[[ARG2:.*]] = cir.alloca "arg2" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG1_PARAM]], %[[ARG1]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG2_PARAM]], %[[ARG2]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 

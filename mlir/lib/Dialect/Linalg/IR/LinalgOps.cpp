@@ -503,6 +503,12 @@ public:
       return math::TanhOp::create(builder, arg.getLoc(), arg);
     case UnaryFn::erf:
       return math::ErfOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::sin:
+      return math::SinOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::cos:
+      return math::CosOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::tan:
+      return math::TanOp::create(builder, arg.getLoc(), arg);
     }
     if (emitError) {
       emitError() << "unsupported unary function";
@@ -5879,11 +5885,14 @@ static bool haveSameTiles(PackOp packOp, UnPackOp unPackOp) {
 /// Returns true if the pack op does not need a padding value.
 static bool paddingIsNotNeeded(PackOp op) {
   auto srcType = op.getSourceType();
-  if (llvm::any_of(op.getInnerDimsPos(),
-                   [&](int64_t pos) { return srcType.isDynamicDim(pos); }))
+  auto innerDimsPos = op.getInnerDimsPos();
+  auto innerTiles = op.getStaticInnerTiles();
+  if (ShapedType::isDynamicShape(innerTiles))
     return false;
-  if (ShapedType::isDynamicShape(op.getStaticInnerTiles()))
-    return false;
+  for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
+    if (srcType.isDynamicDim(pos) && tileSize != 1)
+      return false;
+  }
   return !PackOp::requirePaddingValue(
       srcType.getShape(), op.getInnerDimsPos(), op.getDestType().getShape(),
       op.getOuterDimsPerm(), op.getMixedTiles());

@@ -11,6 +11,7 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
@@ -838,9 +839,11 @@ ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
 }
 
 void AMDGPUToolChain::addClangTargetOptions(
-    const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  assert(DeviceOffloadingKind == Action::OFK_None && BoundArch.empty() &&
+         "this toolchain is for non-offloading cases");
+
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
@@ -953,8 +956,8 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
 
 void ROCMToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args,
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
                                          DeviceOffloadingKind);
 
   // For the OpenCL case where there is no offload target, accept -nostdlib to

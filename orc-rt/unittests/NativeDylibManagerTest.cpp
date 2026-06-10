@@ -82,6 +82,26 @@ TEST(NativeDylibManagerTest, LoadNonExistent) {
   consumeError(LoadResult.takeError());
 }
 
+TEST(NativeDylibManagerTest, LoadEmptyPathReturnsGlobalHandle) {
+  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+            noErrors);
+  SimpleSymbolTable ST;
+  auto NDM = cantFail(NativeDylibManager::Create(S, ST));
+
+  // The global handle's value is implementation-defined, so verify by looking
+  // up through it.
+  auto LoadResult = syncLoad(*NDM, "");
+  ASSERT_TRUE(!!LoadResult) << toString(LoadResult.takeError());
+  void *Handle = *LoadResult;
+
+  auto Result = syncLookup(*NDM, Handle, {{"malloc", Req}});
+  ASSERT_TRUE(!!Result) << toString(Result.takeError());
+  ASSERT_EQ(Result->size(), 1U);
+  ASSERT_TRUE((*Result)[0].has_value())
+      << "malloc should be findable via the process's global lookup handle";
+  EXPECT_NE(*(*Result)[0], nullptr);
+}
+
 TEST(NativeDylibManagerTest, LookupSingleSymbol) {
   Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
             noErrors);

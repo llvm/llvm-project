@@ -94,11 +94,11 @@ static bool isReadable(const Pointer &P) {
 static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(QT->isSignedIntegerOrEnumerationType() ||
          QT->isUnsignedIntegerOrEnumerationType());
-  OptPrimType T = S.getContext().classify(QT);
+  OptPrimType T = *S.getContext().classify(QT);
   assert(T);
-  unsigned BitWidth = S.getASTContext().getIntWidth(QT);
 
   if (T == PT_IntAPS) {
+    unsigned BitWidth = S.getASTContext().getIntWidth(QT);
     auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
     Result.copy(Val);
     S.Stk.push<IntegralAP<true>>(Result);
@@ -106,6 +106,7 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   }
 
   if (T == PT_IntAP) {
+    unsigned BitWidth = S.getASTContext().getIntWidth(QT);
     auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
     Result.copy(Val);
     S.Stk.push<IntegralAP<false>>(Result);
@@ -114,11 +115,11 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
 
   if (QT->isSignedIntegerOrEnumerationType()) {
     int64_t V = Val.getSExtValue();
-    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
+    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
   } else {
     assert(QT->isUnsignedIntegerOrEnumerationType());
     uint64_t V = Val.getZExtValue();
-    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
+    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
   }
 }
 
@@ -1025,7 +1026,8 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   if (CarryOutPtr.canBeInitialized())
     CarryOutPtr.initialize();
 
-  assert(Call->getType() == Call->getArg(0)->getType());
+  assert(S.getASTContext().hasSimilarType(Call->getType(),
+                                          Call->getArg(0)->getType()));
   pushInteger(S, Result, Call->getType());
   return true;
 }
@@ -6707,15 +6709,21 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   if (DestDesc->isPrimitiveArray()) {
     if (!SrcDesc->isPrimitiveArray())
       return false;
+    // For floating types, check the actual QualType so we don't accidentally
+    // mix up semantics.
+    if (SrcDesc->getPrimType() == PT_Float) {
+      if (!S.getASTContext().hasSimilarType(SrcDesc->getElemQualType(),
+                                            DestDesc->getElemQualType()))
+        return false;
+    }
+
     assert(SrcDesc->isPrimitiveArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    assert(SrcDesc->getPrimType() == DestDesc->getPrimType());
     PrimType ET = DestDesc->getPrimType();
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
-      Pointer DestElem = Dest.atIndex(I);
-      TYPE_SWITCH(ET, {
-        DestElem.deref<T>() = Src.elem<T>(I);
-        DestElem.initialize();
-      });
+      TYPE_SWITCH(ET, { Dest.elem<T>(I) = Src.elem<T>(I); });
+      Dest.initializeElement(I);
     }
     return true;
   }

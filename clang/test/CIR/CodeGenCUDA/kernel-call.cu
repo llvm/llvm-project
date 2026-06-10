@@ -31,11 +31,11 @@
 // CUDA-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelif
 //
 // Check kernel arguments are allocated as local variables
-// CUDA-NEW-DAG: cir.alloca !s32i, {{.*}} ["x", init]
-// CUDA-NEW-DAG: cir.alloca !cir.float, {{.*}} ["y", init]
+// CUDA-NEW-DAG: cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
+// CUDA-NEW-DAG: cir.alloca "y" {{.*}}  init : !cir.ptr<!cir.float>
 //
 // Check void *args[] array is created with correct size (2 args)
-// CUDA-NEW: cir.alloca !cir.array<!cir.ptr<!void> x 2>, {{.*}} ["kernel_args"]
+// CUDA-NEW: cir.alloca "kernel_args" {{.*}} : !cir.ptr<!cir.array<!cir.ptr<!void> x 2>>
 // CUDA-NEW: cir.cast array_to_ptrdecay
 //
 // Check arguments are stored in the args array via ptr_stride indexing
@@ -49,12 +49,12 @@
 // CUDA-NEW: cir.store {{.*}} !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 //
 // Check dim3 grid_dim and block_dim allocas for launch configuration
-// CUDA-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["grid_dim"]
-// CUDA-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["block_dim"]
+// CUDA-NEW-DAG: cir.alloca "grid_dim" {{.*}} : !cir.ptr<!rec_dim3>
+// CUDA-NEW-DAG: cir.alloca "block_dim" {{.*}} : !cir.ptr<!rec_dim3>
 //
 // Check shared_mem (size_t) and stream allocas
-// CUDA-NEW-DAG: cir.alloca !u64i, {{.*}} ["shared_mem"]
-// CUDA-NEW-DAG: cir.alloca !cir.ptr<!rec_cudaStream>, {{.*}} ["stream"]
+// CUDA-NEW-DAG: cir.alloca "shared_mem" {{.*}} : !cir.ptr<!u64i>
+// CUDA-NEW-DAG: cir.alloca "stream" {{.*}} : !cir.ptr<!cir.ptr<!rec_cudaStream>>
 //
 // Check __cudaPopCallConfiguration is called with correct argument types
 // CUDA-NEW: cir.call @__cudaPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_cudaStream>>) -> !s32i
@@ -68,7 +68,7 @@
 //
 // HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.ptr<!cir.func<(!s32i, !cir.float)>> {alignment = 8 : i64}
 // HIP-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelif
-// HIP-NEW: cir.alloca !cir.ptr<!rec_hipStream>, {{.*}} ["stream"]
+// HIP-NEW: cir.alloca "stream" {{.*}} : !cir.ptr<!cir.ptr<!rec_hipStream>>
 // HIP-NEW: cir.call @__hipPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_hipStream>>) -> !s32i
 // HIP-NEW: cir.get_global @_Z6kernelif : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.float)>>>
 // HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void> {{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_hipStream>{{.*}}) -> (!u32i {llvm.noundef})
@@ -88,10 +88,10 @@ __global__ void kernel(int x, float y) {}
 // HIP-NEW-LABEL: cir.func {{.*}} @main
 int main(void) {
   // Check dim3 temporaries are allocated for grid and block dimensions
-  // CUDA-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["agg.tmp0"]
-  // CUDA-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["agg.tmp1"]
-  // HIP-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["agg.tmp0"]
-  // HIP-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["agg.tmp1"]
+  // CUDA-NEW-DAG: cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_dim3>
+  // CUDA-NEW-DAG: cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<!rec_dim3>
+  // HIP-NEW-DAG: cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_dim3>
+  // HIP-NEW-DAG: cir.alloca "agg.tmp1" {{.*}} : !cir.ptr<!rec_dim3>
   //
   // Check dim3 constructors are called for grid and block dimensions
   // CUDA-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3> {llvm.align = 4 : i64, llvm.dereferenceable = 12 : i64, llvm.nonnull, llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}, !u32i {llvm.noundef}) -> ()

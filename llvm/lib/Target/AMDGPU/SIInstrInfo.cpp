@@ -1737,7 +1737,8 @@ void SIInstrInfo::storeRegToStackSlotImpl(
 
   MachineRegisterInfo &MRI = MF->getRegInfo();
   if (RI.isSGPRClass(RC)) {
-    MFI->setHasSpilledSGPRs();
+    if (FrameInfo.getStackID(FrameIndex) == TargetStackID::SGPRSpill)
+      MFI->setHasSpilledSGPRs();
     assert(SrcReg != AMDGPU::M0 && "m0 should not be spilled");
     assert(SrcReg != AMDGPU::EXEC_LO && SrcReg != AMDGPU::EXEC_HI &&
            SrcReg != AMDGPU::EXEC && "exec should not be spilled");
@@ -1759,8 +1760,6 @@ void SIInstrInfo::storeRegToStackSlotImpl(
       .addMemOperand(MMO)
       .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
-    if (RI.spillSGPRToVGPR())
-      FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     return;
   }
 
@@ -1949,7 +1948,8 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       FrameInfo.getObjectAlign(FrameIndex));
 
   if (RI.isSGPRClass(RC)) {
-    MFI->setHasSpilledSGPRs();
+    if (FrameInfo.getStackID(FrameIndex) == TargetStackID::SGPRSpill)
+      MFI->setHasSpilledSGPRs();
     assert(DestReg != AMDGPU::M0 && "m0 should not be reloaded into");
     assert(DestReg != AMDGPU::EXEC_LO && DestReg != AMDGPU::EXEC_HI &&
            DestReg != AMDGPU::EXEC && "exec should not be spilled");
@@ -1962,8 +1962,6 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MRI.constrainRegClass(DestReg, &AMDGPU::SReg_32_XM0_XEXECRegClass);
     }
 
-    if (RI.spillSGPRToVGPR())
-      FrameInfo.setStackID(FrameIndex, TargetStackID::SGPRSpill);
     BuildMI(MBB, MI, DL, OpDesc, DestReg)
       .addFrameIndex(FrameIndex) // addr
       .addMemOperand(MMO)
@@ -10993,6 +10991,9 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
   // Result is computed from uniform SP and uniform wave-wide max size.
   if (Opcode == TargetOpcode::G_DYN_STACKALLOC)
     return ValueUniformity::AlwaysUniform;
+
+  if (Opcode == AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_SETUP)
+    return ValueUniformity::NeverUniform;
 
   return ValueUniformity::Default;
 }
