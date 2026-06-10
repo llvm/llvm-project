@@ -155,9 +155,8 @@ define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
 ; GCN-NEXT:    s_add_u32 s14, s14, needs_align16_default_stack_align@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s15, s15, needs_align16_default_stack_align@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 2
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    s_mov_b32 s14, s16
@@ -188,9 +187,8 @@ define amdgpu_kernel void @kernel_call_align16_from_5() #6 {
 ; GCN-NEXT:    s_add_u32 s14, s14, needs_align16_default_stack_align@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s15, s15, needs_align16_default_stack_align@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 2
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    s_mov_b32 s14, s16
@@ -221,9 +219,8 @@ define amdgpu_kernel void @kernel_call_align4_from_5() #6 {
 ; GCN-NEXT:    s_add_u32 s14, s14, needs_align16_stack_align4@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s15, s15, needs_align16_stack_align4@gotpcrel32@hi+12
 ; GCN-NEXT:    s_load_dwordx2 s[18:19], s[14:15], 0x0
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
+; GCN-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 2
 ; GCN-NEXT:    v_or_b32_e32 v31, v0, v2
 ; GCN-NEXT:    s_mov_b32 s14, s16

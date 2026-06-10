@@ -14250,10 +14250,9 @@ define amdgpu_kernel void @uniform_fadd_f16(ptr addrspace(1) %result, ptr addrsp
 ; GFX8-NEXT:  .LBB18_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v0, s10, v1
-; GFX8-NEXT:    v_add_f16_e32 v0, s11, v0
 ; GFX8-NEXT:    v_and_b32_e32 v2, s2, v1
-; GFX8-NEXT:    v_lshlrev_b32_e32 v0, s10, v0
-; GFX8-NEXT:    v_or_b32_e32 v0, v2, v0
+; GFX8-NEXT:    v_add_f16_e32 v0, s11, v0
+; GFX8-NEXT:    v_lshl_or_b32 v0, v0, s10, v2
 ; GFX8-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX8-NEXT:    buffer_atomic_cmpswap v[2:3], off, s[4:7], 0 glc

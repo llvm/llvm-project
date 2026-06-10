@@ -105,8 +105,7 @@ define double @copysign_known_signmask_f64_known_positive_mag(double nofpclass(n
 ; GFX9-LABEL: copysign_known_signmask_f64_known_positive_mag:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 31, v2
-; GFX9-NEXT:    v_or_b32_e32 v1, v1, v2
+; GFX9-NEXT:    v_lshl_or_b32 v1, v2, 31, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %signmask = shl i64 %sign, 63
   %signmask.bitcast = bitcast i64 %signmask to double

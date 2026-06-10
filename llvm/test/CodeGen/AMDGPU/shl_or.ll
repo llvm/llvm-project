@@ -11,8 +11,7 @@
 define amdgpu_ps float @shl_or(i32 %a, i32 %b, i32 %c) {
 ; VI-LABEL: shl_or:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v2
+; VI-NEXT:    v_lshl_or_b32 v0, v0, v1, v2
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: shl_or:
@@ -56,8 +55,7 @@ define amdgpu_ps float @shl_or_vgpr_c(i32 inreg %a, i32 inreg %b, i32 %c) {
 define amdgpu_ps float @shl_or_vgpr_all2(i32 %a, i32 %b, i32 %c) {
 ; VI-LABEL: shl_or_vgpr_all2:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
-; VI-NEXT:    v_or_b32_e32 v0, v2, v0
+; VI-NEXT:    v_lshl_or_b32 v0, v0, v1, v2
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: shl_or_vgpr_all2:
@@ -78,8 +76,7 @@ define amdgpu_ps float @shl_or_vgpr_all2(i32 %a, i32 %b, i32 %c) {
 define amdgpu_ps float @shl_or_vgpr_ac(i32 %a, i32 inreg %b, i32 %c) {
 ; VI-LABEL: shl_or_vgpr_ac:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_lshlrev_b32_e32 v0, s2, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    v_lshl_or_b32 v0, v0, s2, v1
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: shl_or_vgpr_ac:
@@ -100,8 +97,7 @@ define amdgpu_ps float @shl_or_vgpr_ac(i32 %a, i32 inreg %b, i32 %c) {
 define amdgpu_ps float @shl_or_vgpr_const(i32 %a, i32 %b) {
 ; VI-LABEL: shl_or_vgpr_const:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_lshlrev_b32_e32 v0, v1, v0
-; VI-NEXT:    v_or_b32_e32 v0, 6, v0
+; VI-NEXT:    v_lshl_or_b32 v0, v0, v1, 6
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: shl_or_vgpr_const:
@@ -122,8 +118,7 @@ define amdgpu_ps float @shl_or_vgpr_const(i32 %a, i32 %b) {
 define amdgpu_ps float @shl_or_vgpr_const2(i32 %a, i32 %b) {
 ; VI-LABEL: shl_or_vgpr_const2:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 6, v0
-; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    v_lshl_or_b32 v0, v0, 6, v1
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: shl_or_vgpr_const2:
@@ -166,8 +161,7 @@ define amdgpu_ps float @shl_or_vgpr_const_scalar1(i32 inreg %a, i32 %b) {
 define amdgpu_ps float @shl_or_vgpr_const_scalar2(i32 %a, i32 inreg %b) {
 ; VI-LABEL: shl_or_vgpr_const_scalar2:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 6, v0
-; VI-NEXT:    v_or_b32_e32 v0, s2, v0
+; VI-NEXT:    v_lshl_or_b32 v0, v0, 6, s2
 ; VI-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: shl_or_vgpr_const_scalar2:

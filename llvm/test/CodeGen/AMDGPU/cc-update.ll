@@ -70,10 +70,9 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX803-NEXT:    s_add_i32 s12, s12, s17
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s17
-; GFX803-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX803-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
 ; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX803-NEXT:    s_mov_b32 s13, s15
 ; GFX803-NEXT:    s_mov_b32 s12, s14
@@ -154,10 +153,9 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX803-NEXT:    s_add_i32 s12, s12, s17
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s17
-; GFX803-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX803-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
 ; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX803-NEXT:    s_mov_b32 s13, s15
 ; GFX803-NEXT:    s_mov_b32 s12, s14
@@ -321,10 +319,9 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX803-NEXT:    s_add_i32 s12, s12, s17
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s17
-; GFX803-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX803-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
 ; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX803-NEXT:    s_mov_b32 s13, s15
 ; GFX803-NEXT:    s_mov_b32 s12, s14
@@ -427,10 +424,9 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX803-NEXT:    s_add_i32 s12, s12, s17
 ; GFX803-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX803-NEXT:    s_add_u32 s0, s0, s17
-; GFX803-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; GFX803-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX803-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; GFX803-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX803-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
 ; GFX803-NEXT:    s_mov_b32 s33, 0
 ; GFX803-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX803-NEXT:    s_mov_b32 s13, s15

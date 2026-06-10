@@ -591,10 +591,9 @@ define i32 @v_uaddsat_v4i8(i32 %lhs.arg, i32 %rhs.arg) {
 ; GFX8-NEXT:    v_lshlrev_b16_e32 v4, 8, v7
 ; GFX8-NEXT:    v_add_u16_e64 v3, v3, v4 clamp
 ; GFX8-NEXT:    v_mov_b32_e32 v4, 0xff
-; GFX8-NEXT:    v_and_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_and_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
-; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
-; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX8-NEXT:    v_and_b32_sdwa v1, v1, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
+; GFX8-NEXT:    v_lshl_or_b32 v0, v1, 8, v0
 ; GFX8-NEXT:    v_and_b32_sdwa v1, v2, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    v_and_b32_sdwa v1, v3, v4 dst_sel:BYTE_3 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD

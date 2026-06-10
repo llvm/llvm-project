@@ -1483,7 +1483,6 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned_multiuse(ptr addrspace(1
 ; VI-NEXT:    s_mov_b32 s8, s2
 ; VI-NEXT:    s_mov_b32 s9, s3
 ; VI-NEXT:    s_waitcnt vmcnt(3)
-; VI-NEXT:    v_lshlrev_b32_e32 v5, 8, v6
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v6
 ; VI-NEXT:    s_waitcnt vmcnt(2)
 ; VI-NEXT:    v_lshlrev_b32_e32 v7, 8, v2
@@ -1491,7 +1490,7 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned_multiuse(ptr addrspace(1
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v4
-; VI-NEXT:    v_or_b32_e32 v4, v5, v4
+; VI-NEXT:    v_lshl_or_b32 v4, v6, 8, v4
 ; VI-NEXT:    v_or_b32_e32 v5, v7, v3
 ; VI-NEXT:    v_mov_b32_e32 v3, v1
 ; VI-NEXT:    v_perm_b32 v4, v4, v5, s12

@@ -760,20 +760,19 @@ define amdgpu_kernel void @v8i8_multiuse_multiblock(ptr addrspace(1) %src1, ptr 
 ; GFX942-NEXT:  ; %bb.3: ; %bb.2
 ; GFX942-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
 ; GFX942-NEXT:    v_and_b32_e32 v4, 0xffffff00, v1
-; GFX942-NEXT:    v_and_b32_e32 v5, 0xffffff00, v0
-; GFX942-NEXT:    s_mov_b32 s2, 0xc0c0001
 ; GFX942-NEXT:    v_or_b32_sdwa v3, v0, v3 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX942-NEXT:    v_or_b32_sdwa v4, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX942-NEXT:    v_or_b32_sdwa v5, v1, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX942-NEXT:    v_perm_b32 v1, 0, v1, s2
+; GFX942-NEXT:    v_and_b32_e32 v5, 0xffffff00, v0
+; GFX942-NEXT:    s_mov_b32 s2, 0xc0c0001
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX942-NEXT:    v_or_b32_sdwa v3, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX942-NEXT:    v_or_b32_sdwa v5, v1, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-NEXT:    v_perm_b32 v6, 0, v0, s2
 ; GFX942-NEXT:    s_mov_b32 s3, 0xffff0000
-; GFX942-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX942-NEXT:    v_perm_b32 v1, 0, v1, s2
 ; GFX942-NEXT:    v_and_or_b32 v7, v0, s3, v6
 ; GFX942-NEXT:    v_or_b32_sdwa v4, v4, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX942-NEXT:    v_or_b32_e32 v1, v6, v1
+; GFX942-NEXT:    v_lshl_or_b32 v1, v1, 16, v6
 ; GFX942-NEXT:    global_store_dword v2, v3, s[14:15]
 ; GFX942-NEXT:    global_store_dword v2, v4, s[14:15] offset:8
 ; GFX942-NEXT:    global_store_dword v2, v7, s[14:15] offset:16

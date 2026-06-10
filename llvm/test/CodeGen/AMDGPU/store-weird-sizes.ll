@@ -94,8 +94,7 @@ define amdgpu_kernel void @local_store_i55(ptr addrspace(3) %ptr, i55 %arg) #0 {
 ; FIJI-NEXT:    v_mov_b32_e32 v1, s2
 ; FIJI-NEXT:    ds_write_b16 v1, v2 offset:4
 ; FIJI-NEXT:    s_waitcnt vmcnt(0)
-; FIJI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; FIJI-NEXT:    v_or_b32_e32 v0, s4, v0
+; FIJI-NEXT:    v_lshl_or_b32 v0, v0, 16, s4
 ; FIJI-NEXT:    v_bfe_u32 v0, v0, 16, 7
 ; FIJI-NEXT:    ds_write_b8 v1, v0 offset:6
 ; FIJI-NEXT:    ds_write_b32 v1, v3
