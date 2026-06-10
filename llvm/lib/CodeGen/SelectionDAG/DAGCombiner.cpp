@@ -29537,8 +29537,7 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
 
     // If the insert replaces a whole concat operand, optimize into a single
     // concat_vectors.
-    if (RelativeIdx == 0 && ConcatOpVT == InsVT &&
-        ConcatOpVT.isScalableVector() == InsVT.isScalableVector()) {
+    if (RelativeIdx == 0 && ConcatOpVT == InsVT) {
       SmallVector<SDValue, 8> Ops(N0->ops());
       Ops[ConcatOpIdx] = N1;
       return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
