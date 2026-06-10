@@ -54,7 +54,7 @@ enum class NdTdescOffset : uint32_t {
   BasePtr = 0,    // Base pointer (i64)
   BaseShapeW = 2, // Base shape width (i32)
   BaseShapeH = 3, // Base shape height (i32)
-  BasePitch = 4,  // Base pitch (i32)
+  BasePitch = 4,  // Base pitch/stride of dim rank-2 (i32)
 };
 
 static int32_t getNumericXeVMAddrSpace(xegpu::MemorySpace xeGpuMemspace) {
@@ -186,9 +186,6 @@ class CreateNdDescToXeVMPattern
   matchAndRewrite(xegpu::CreateNdDescOp op,
                   xegpu::CreateNdDescOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    SmallVector<OpFoldResult> mixedOffsets = op.getMixedOffsets();
-    if (mixedOffsets.size() != 0)
-      return rewriter.notifyMatchFailure(op, "Offsets not supported.");
     auto loc = op.getLoc();
     auto source = op.getSource();
     // Op is lowered to a code sequence that populates payload.
@@ -243,11 +240,12 @@ class CreateNdDescToXeVMPattern
       val = getValueOrCreateCastToIndexLike(rewriter, loc, payloadElemTy, val);
       return val;
     };
-    // Get shape values from op fold results.
-    baseShapeW = createOffset(mixedSizes, 1);
-    baseShapeH = createOffset(mixedSizes, 0);
-    // Get pitch value from op fold results.
-    Value basePitch = createOffset(mixedStrides, 0);
+    // For ND descriptors, the last 2 dimensions are the 2D tile (H, W).
+    // Any leading dimensions are batch dims with associated strides.
+    baseShapeW = createOffset(mixedSizes, rank - 1);
+    baseShapeH = createOffset(mixedSizes, rank - 2);
+    // Pitch is the stride of dim rank-2 (the row stride of the 2D tile).
+    Value basePitch = createOffset(mixedStrides, rank - 2);
     // Populate payload.
     Value payLoadAsI64 =
         vector::BitCastOp::create(rewriter, loc, payloadI64Ty, payload);
@@ -346,7 +344,7 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
     // Get address space from tensor descriptor memory space.
     auto ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
-    if (tileRank == 2) {
+    if (tileRank >= 2) {
       // Compute element byte size.
       Value elemByteSize = arith::ConstantIntOp::create(
           rewriter, loc, rewriter.getI32Type(), elemBitSize / 8);
@@ -362,14 +360,16 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BaseShapeH));
       Value basePitch = vector::ExtractOp::create(
           rewriter, loc, tdesc, static_cast<int>(NdTdescOffset::BasePitch));
-      // Offsets are provided by the op.
-      // convert them to i32.
-      Value offsetW =
-          getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[1]);
+
+      // For rank > 2, leading (batch) dim offsets should be 0 after unrolling
+      // (batch is baked into the base pointer via memref.subview during
+      // blocking). Use only the last 2 offsets for the 2D block operation.
+      Value offsetW = getValueOrCreateConstantIntOp(rewriter, loc,
+                                                    mixedOffsets[tileRank - 1]);
       offsetW = getValueOrCreateCastToIndexLike(rewriter, loc,
                                                 rewriter.getI32Type(), offsetW);
-      Value offsetH =
-          getValueOrCreateConstantIntOp(rewriter, loc, mixedOffsets[0]);
+      Value offsetH = getValueOrCreateConstantIntOp(rewriter, loc,
+                                                    mixedOffsets[tileRank - 2]);
       offsetH = getValueOrCreateCastToIndexLike(rewriter, loc,
                                                 rewriter.getI32Type(), offsetH);
       // Convert base pointer (i64) to LLVM pointer type.
@@ -396,8 +396,8 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
         offsetW =
             arith::ShRSIOp::create(rewriter, loc, offsetW, wScaleFactorValLog2);
       }
-      // Get tile height from the tensor descriptor type.
-      auto tileH = tdescTy.getDimSize(0);
+      // Get tile height from the tensor descriptor type (second-to-last dim).
+      auto tileH = tdescTy.getDimSize(tileRank - 2);
       // Get vblocks from the tensor descriptor type.
       int32_t vblocks = tdescTy.getArrayLength();
       if constexpr (std::is_same_v<OpType, xegpu::StoreNdOp>) {
@@ -438,6 +438,18 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
           auto transposeValue = op.getTranspose();
           bool transpose =
               transposeValue.has_value() && transposeValue.value()[0] == 1;
+          // Handle tranpose request on small element size
+          // Transpose needs to be requested on 32bit element type.
+          // offsetW and tileW needs to be adjusted to account for element type
+          // change.
+          if (transpose && elemBitSize < 32) {
+            int32_t scale = 32 / elemBitSize;
+            Value scaleLog2 = arith::ConstantIntOp::create(
+                rewriter, loc, rewriter.getI32Type(), llvm::Log2_64(scale));
+            offsetW = arith::ShRSIOp::create(rewriter, loc, offsetW, scaleLog2);
+            tileW = tileW * elemBitSize / 32;
+            elemBitSize = 32;
+          }
           VectorType loadedTy = encodeVectorTypeTo(
               dstVecTy, vnni ? rewriter.getI32Type()
                              : rewriter.getIntegerType(elemBitSize));
@@ -545,7 +557,6 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
       return rewriter.notifyMatchFailure(op, "Expected offset to be provided.");
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
-    auto tdescTy = op.getTensorDescType();
     Value basePtrI64;
     // Load result or Store valye Type can be vector or scalar.
     Type valOrResTy;
@@ -567,10 +578,6 @@ class LoadStoreToXeVMPattern : public OpConversionPattern<OpType> {
     // Default memory space is global.
     LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
-    // If tensor descriptor is available, we use its memory space.
-    if (tdescTy)
-      ptrTypeLLVM = LLVM::LLVMPointerType::get(
-          ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     // Base pointer can come from source (load) or dest (store).
     // If they are memrefs, we use their memory space.
     if constexpr (std::is_same_v<OpType, xegpu::LoadGatherOp>) {
@@ -771,10 +778,11 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
 
     if (valOrResVecTy.getNumElements() >= 1) {
       auto chipOpt = xegpu::getChipStr(op);
-      if (!chipOpt || (*chipOpt != "pvc" && *chipOpt != "bmg")) {
-        // the lowering for chunk load only works for pvc and bmg
+      if (!chipOpt ||
+          (*chipOpt != "pvc" && *chipOpt != "bmg" && *chipOpt != "cri")) {
+        // the lowering for chunk load only works for pvc, bmg or cri
         return rewriter.notifyMatchFailure(
-            op, "The lowering is specific to pvc or bmg.");
+            op, "The lowering is specific to pvc, bmg or cri.");
       }
     }
 
@@ -805,7 +813,6 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
     auto ctxt = rewriter.getContext();
-    auto tdescTy = op.getTensorDescType();
     Value basePtrI64 = adaptor.getSource();
     // Base pointer is passed as i32 or i64 by adaptor, cast to i64 if needed.
     if (basePtrI64.getType() != rewriter.getI64Type())
@@ -821,12 +828,8 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
       } else {
         int64_t elemBitWidth{0};
         int64_t elemByteSize;
-        // Element byte size can come from three sources:
-        if (tdescTy) {
-          // If tensor descriptor is available, we use its element type to
-          // determine element byte size.
-          elemBitWidth = tdescTy.getElementType().getIntOrFloatBitWidth();
-        } else if (auto memRefTy = dyn_cast<MemRefType>(op.getSourceType())) {
+        // Element byte size can come from two sources:
+        if (auto memRefTy = dyn_cast<MemRefType>(op.getSourceType())) {
           // If memref is available, we use its element type to
           // determine element byte size.
           elemBitWidth = memRefTy.getElementType().getIntOrFloatBitWidth();
@@ -847,10 +850,6 @@ class PrefetchToXeVMPattern : public OpConversionPattern<xegpu::PrefetchOp> {
     // Default memory space is global.
     LLVM::LLVMPointerType ptrTypeLLVM = LLVM::LLVMPointerType::get(
         ctxt, getNumericXeVMAddrSpace(xegpu::MemorySpace::Global));
-    // If tensor descriptor is available, we use its memory space.
-    if (tdescTy)
-      ptrTypeLLVM = LLVM::LLVMPointerType::get(
-          ctxt, getNumericXeVMAddrSpace(tdescTy.getMemorySpace()));
     // If source is a memref, we use its memory space.
     if (auto memRefTy = dyn_cast<MemRefType>(op.getSource().getType())) {
       auto addrSpace = memRefTy.getMemorySpaceAsInt();
@@ -900,6 +899,49 @@ class FenceToXeVMPattern : public OpConversionPattern<xegpu::FenceOp> {
   }
 };
 
+static auto encodePrecision = [](Type type) -> xevm::ElemType {
+  if (type.isBF16())
+    return xevm::ElemType::BF16;
+  else if (type.isF16())
+    return xevm::ElemType::F16;
+  else if (type.isTF32())
+    return xevm::ElemType::TF32;
+  else if (type.isInteger(8)) {
+    if (type.isUnsignedInteger())
+      return xevm::ElemType::U8;
+    return xevm::ElemType::S8;
+  } else if (type.isF32())
+    return xevm::ElemType::F32;
+  else if (type.isInteger(32))
+    return xevm::ElemType::S32;
+  else if (type.isF8E5M2())
+    return xevm::ElemType::BF8;
+  else if (type.isF8E4M3FN())
+    return xevm::ElemType::F8;
+  else if (mlir::isa<Float4E2M1FNType>(type))
+    return xevm::ElemType::E2M1;
+  llvm_unreachable("add more support for ElemType");
+};
+
+static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
+  switch (pTy) {
+  case xevm::ElemType::TF32:
+    return 1;
+  case xevm::ElemType::BF16:
+  case xevm::ElemType::F16:
+    return 2;
+  case xevm::ElemType::U8:
+  case xevm::ElemType::S8:
+  case xevm::ElemType::F8:
+  case xevm::ElemType::BF8:
+    return 4;
+  case xevm::ElemType::E2M1:
+    return 8;
+  default:
+    llvm_unreachable("unsupported xevm::ElemType");
+  }
+}
+
 class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -945,23 +987,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
       return rewriter.notifyMatchFailure(
           op, "result/accumulator element type not supported by target uArch");
 
-    auto encodePrecision = [&](Type type) -> xevm::ElemType {
-      if (type == rewriter.getBF16Type())
-        return xevm::ElemType::BF16;
-      else if (type == rewriter.getF16Type())
-        return xevm::ElemType::F16;
-      else if (type == rewriter.getTF32Type())
-        return xevm::ElemType::TF32;
-      else if (type.isInteger(8)) {
-        if (type.isUnsignedInteger())
-          return xevm::ElemType::U8;
-        return xevm::ElemType::S8;
-      } else if (type == rewriter.getF32Type())
-        return xevm::ElemType::F32;
-      else if (type.isInteger(32))
-        return xevm::ElemType::S32;
-      llvm_unreachable("add more support for ElemType");
-    };
     xevm::ElemType precATy = encodePrecision(aTy.getElementType());
     xevm::ElemType precBTy = encodePrecision(bTy.getElementType());
     Value c = op.getAcc();
@@ -995,22 +1020,6 @@ class DpasToXeVMPattern : public OpConversionPattern<xegpu::DpasOp> {
       dpasRes = vector::ShapeCastOp::create(rewriter, loc, resultType, dpasRes);
     rewriter.replaceOp(op, dpasRes);
     return success();
-  }
-
-private:
-  static unsigned getNumOperandsPerDword(xevm::ElemType pTy) {
-    switch (pTy) {
-    case xevm::ElemType::TF32:
-      return 1;
-    case xevm::ElemType::BF16:
-    case xevm::ElemType::F16:
-      return 2;
-    case xevm::ElemType::U8:
-    case xevm::ElemType::S8:
-      return 4;
-    default:
-      llvm_unreachable("unsupported xevm::ElemType");
-    }
   }
 };
 
@@ -1079,6 +1088,72 @@ class AtomicRMWToXeVMPattern : public OpConversionPattern<xegpu::AtomicRMWOp> {
       resVec = vector::InsertOp::create(rewriter, loc, newVal, resVec, i);
     }
     rewriter.replaceOp(op, resVec);
+    return success();
+  }
+};
+
+class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(xegpu::DpasMxOp op, xegpu::DpasMxOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto ctxt = rewriter.getContext();
+    auto aTy = op.getA().getType();
+    auto bTy = op.getB().getType();
+    auto resVecTy =
+        cast<VectorType>(getTypeConverter()->convertType(op.getType()));
+
+    auto chipStr = xegpu::getChipStr(op);
+    if (!chipStr)
+      return rewriter.notifyMatchFailure(op, "cannot determine target chip");
+
+    const auto *uArch = xegpu::uArch::getUArch(*chipStr);
+    if (!uArch)
+      return rewriter.notifyMatchFailure(op, "unsupported target uArch");
+
+    // TODO: Add supported shape check
+
+    xevm::ElemType precATy = encodePrecision(aTy.getElementType());
+    xevm::ElemType precBTy = encodePrecision(bTy.getElementType());
+    Value c = adaptor.getAcc();
+    if (!c) {
+      auto elementTy = resVecTy.getElementType();
+      Attribute initValueAttr;
+      if (isa<FloatType>(elementTy))
+        initValueAttr = FloatAttr::get(elementTy, 0.0);
+      else
+        initValueAttr = IntegerAttr::get(elementTy, 0);
+      c = arith::ConstantOp::create(
+          rewriter, loc, DenseElementsAttr::get(resVecTy, initValueAttr));
+    }
+
+    Value aVec = adaptor.getA();
+    Value bVec = adaptor.getB();
+    auto aVecTy = cast<VectorType>(aVec.getType());
+    auto bVecTy = cast<VectorType>(bVec.getType());
+    if (aVecTy.getElementTypeBitWidth() == 4)
+      aVec = vector::BitCastOp::create(
+          rewriter, loc,
+          VectorType::get(aVecTy.getNumElements() / 2, rewriter.getI8Type()),
+          aVec);
+    if (bVecTy.getElementTypeBitWidth() == 4)
+      bVec = vector::BitCastOp::create(
+          rewriter, loc,
+          VectorType::get(bVecTy.getNumElements() / 2, rewriter.getI8Type()),
+          bVec);
+    auto cVecTy = cast<VectorType>(c.getType());
+    xevm::ElemType precCTy = encodePrecision(cVecTy.getElementType());
+    xevm::ElemType precDTy = encodePrecision(resVecTy.getElementType());
+    Value scaleA = adaptor.getScaleA();
+    Value scaleB = adaptor.getScaleB();
+    Value dpasMxRes = xevm::MMAMxOp::create(
+        rewriter, loc, resVecTy, aVec, bVec, scaleA, scaleB, c,
+        xevm::MMAShapeAttr::get(ctxt, cVecTy.getNumElements(), executionSize,
+                                systolicDepth *
+                                    getNumOperandsPerDword(precATy)),
+        xevm::MMATypesAttr::get(ctxt, precDTy, precATy, precBTy, precCTy));
+    rewriter.replaceOp(op, dpasMxRes);
     return success();
   }
 };
@@ -1397,4 +1472,5 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
                CreateMemDescOpPattern>(typeConverter, patterns.getContext());
   patterns.add<FenceToXeVMPattern, DpasToXeVMPattern>(typeConverter,
                                                       patterns.getContext());
+  patterns.add<DpasMxToXeVMPattern>(typeConverter, patterns.getContext());
 }

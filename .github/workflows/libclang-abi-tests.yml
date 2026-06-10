@@ -38,7 +38,7 @@ jobs:
       LLVM_VERSION_PATCH: ${{ steps.version.outputs.patch }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           fetch-depth: 250
@@ -49,10 +49,13 @@ jobs:
 
       - name: Setup Variables
         id: vars
+        env:
+          VERSION_MAJOR: ${{ steps.version.outputs.major }}
+          VERSION_PATCH: ${{ steps.version.outputs.patch }}
         run: |
           remote_repo='https://github.com/llvm/llvm-project'
-          if [ ${{ steps.version.outputs.patch }} -eq 0 ]; then
-            major_version=$(( ${{ steps.version.outputs.major }} - 1))
+          if [ $VERSION_PATCH -eq 0 ]; then
+            major_version=$(( $VERSION_MAJOR - 1))
             baseline_ref="llvmorg-$major_version.1.0"
 
             # If there is a minor release, we want to use that as the base line.
@@ -74,8 +77,8 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           else
             {
-              echo "BASELINE_VERSION_MAJOR=${{ steps.version.outputs.major }}"
-              echo "BASELINE_REF=llvmorg-${{ steps.version.outputs.major }}.1.0"
+              echo "BASELINE_VERSION_MAJOR=$VERSION_MAJOR"
+              echo "BASELINE_REF=llvmorg-$VERSION_MAJOR.1.0"
               echo "ABI_HEADERS=."
               echo "ABI_LIBS=libclang.so libclang-cpp.so"
             } >> "$GITHUB_OUTPUT"
@@ -86,7 +89,7 @@ jobs:
     needs: abi-dump-setup
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:ef869c1d087258db22c2b19b93f585d53c0d0e70952aaf02d45866ad26a200a0" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:cb3aea3ecdd521194ca12cfa239ab5a53f9e160a13a55ae3abdc1dfbf134476e" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
     strategy:
       matrix:
         name:
@@ -103,7 +106,7 @@ jobs:
             repo: ${{ github.repository }}
     steps:
       - name: Download source code
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           ref: ${{ matrix.ref }}
@@ -113,16 +116,21 @@ jobs:
           mkdir install
           cmake -B build -S llvm -G Ninja -DLLVM_ENABLE_PROJECTS=clang -DCMAKE_BUILD_TYPE=Debug -DLLVM_TARGETS_TO_BUILD="" -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DCMAKE_INSTALL_PREFIX="$(pwd)"/install llvm
       - name: Build
-        run: ninja -C build/ ${{ needs.abi-dump-setup.outputs.ABI_LIBS }} install-clang-headers
+        env:
+          ABI_LIBS: ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}
+        run: ninja -C build/ $ABI_LIBS install-clang-headers
       - name: Dump ABI
+        env:
+          REF: ${{ matrix.ref }}
+          ABI_HEADERS: ${{ needs.abi-dump-setup.outputs.ABI_HEADERS }}
         run: |
-          parallel abi-dumper -lver ${{ matrix.ref }} -skip-cxx -public-headers ./install/include/${{ needs.abi-dump-setup.outputs.ABI_HEADERS }} -o {}-${{ matrix.ref }}.abi ./build/lib/{} ::: ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}
-          for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do
+          parallel abi-dumper -lver "$REF" -skip-cxx -public-headers ./install/include/$ABI_HEADERS -o {}-$REF.abi ./build/lib/{} ::: $ABI_LIBS
+          for lib in $ABI_LIBS; do
             # Remove symbol versioning from dumps, so we can compare across major versions.
-            sed -i 's/LLVM_[0-9]\+/LLVM_NOVERSION/' $lib-${{ matrix.ref }}.abi
+            sed -i 's/LLVM_[0-9]\+/LLVM_NOVERSION/' $lib-$REF.abi
           done
       - name: Upload ABI file
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.name }}
           path: '*${{ matrix.ref }}.abi'
@@ -131,7 +139,7 @@ jobs:
     if: github.repository_owner == 'llvm'
     runs-on: ubuntu-24.04
     container:
-      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:ef869c1d087258db22c2b19b93f585d53c0d0e70952aaf02d45866ad26a200a0" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
+      image: "ghcr.io/llvm/ci-ubuntu-24.04-abi-tests@sha256:cb3aea3ecdd521194ca12cfa239ab5a53f9e160a13a55ae3abdc1dfbf134476e" #ghcr.io/llvm/ci-ubuntu-24.04-abi-tests:9524b37c503f
     needs:
       - abi-dump-setup
       - abi-dump
@@ -148,13 +156,15 @@ jobs:
           path: build-latest
 
       - name: Compare ABI
+        env:
+          ABI_LIBS: ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}
         run: |
-          for lib in ${{ needs.abi-dump-setup.outputs.ABI_LIBS }}; do
+          for lib in $ABI_LIBS; do
             abi-compliance-checker -lib $lib -old build-baseline/$lib*.abi -new build-latest/$lib*.abi
           done
       - name: Upload ABI Comparison
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: compat-report-${{ github.sha }}
           path: compat_reports/

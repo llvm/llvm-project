@@ -40,6 +40,9 @@ namespace {
 
     void VisitStmt(const Stmt *S);
 
+    /// Fold a scalar value into the profile
+    void VisitInteger(uint64_t Value) { ID.AddInteger(Value); }
+
     void VisitStmtNoChildren(const Stmt *S) {
       HandleStmtClass(S->getStmtClass());
     }
@@ -658,7 +661,18 @@ void OMPClauseProfiler::VisitOMPSIMDClause(const OMPSIMDClause *) {}
 void OMPClauseProfiler::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseProfiler::VisitOMPInitClause(const OMPInitClause *C) {
-  VisitOMPClauseList(C);
+  // Enumerate per pref-spec so the {fr, attr} grouping is part of the profile.
+  Profiler->VisitStmt(C->getInteropVar());
+  Profiler->VisitInteger(C->hasPreferAttrs() ? 1 : 0);
+  Profiler->VisitInteger(C->varlist_size() - 1);
+  for (OMPInitClause::PrefView P : C->prefs()) {
+    Profiler->VisitInteger(P.Fr ? 1 : 0);
+    if (P.Fr)
+      Profiler->VisitStmt(P.Fr);
+    Profiler->VisitInteger(P.Attrs.size());
+    for (const Expr *A : P.Attrs)
+      Profiler->VisitStmt(A);
+  }
 }
 
 void OMPClauseProfiler::VisitOMPUseClause(const OMPUseClause *C) {
@@ -2362,14 +2376,14 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
 }
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
-  VisitExpr(E->getIndexExpr());
-
+  VisitStmtNoChildren(E);
+  Visit(E->getIndexExpr());
   if (E->expandsToEmptyPack() || E->getExpressions().size() != 0) {
     ID.AddInteger(E->getExpressions().size());
     for (const Expr *Sub : E->getExpressions())
       Visit(Sub);
   } else {
-    VisitExpr(E->getPackIdExpression());
+    Visit(E->getPackIdExpression());
   }
 }
 
@@ -2400,27 +2414,18 @@ void StmtProfiler::VisitMaterializeTemporaryExpr(
 }
 
 void StmtProfiler::VisitCXXFoldExpr(const CXXFoldExpr *S) {
-  // For CXXFoldExpr, do not profile the callee as it may
-  // be affected by the context. e.g.,
+  VisitStmtNoChildren(S);
+  // The callee sub-expression is not part of how the expression is written,
+  // so it's not added to the profile.
   //
-  // "a.h"
+  // Example:
+  // template <typename... T> requires ((sizeof(T) > 0) && ...) void f() {}
+  // class A;
+  // void operator&&(A, A);
+  // template <typename... T> requires ((sizeof(T) > 0) && ...) void f() {}
   //
-  //   struct F {
-  //     template <typename... T> requires ((sizeof(T) > 0) && ...)
-  //     void operator()(T...) {}
-  //   } f;
-  //
-  // and
-  //
-  // "c.h"
-  //
-  //   void operator&&(struct X, struct X);
-  //   #include "a.h"
-  //
-  // Here we may give different profile results to F::operator() in
-  // "c.h" vs other use cases of "a.h". This is problematic in
-  // cases where we may have expression coming from different
-  // headers, e.g., modules.
+  // Both definitions have identically written fold expressions, but semantic
+  // analysis adds the overloaded operator to the second one.
   if (S->getLHS())
     Visit(S->getLHS());
   else

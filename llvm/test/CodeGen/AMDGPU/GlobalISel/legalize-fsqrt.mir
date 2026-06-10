@@ -15,9 +15,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x39F0000000000000
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x0F800000
     ; GCN-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[C]](s32), [[COPY]]
-    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41F0000000000000
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F800000
     ; GCN-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[COPY]], [[C1]]
     ; GCN-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[FMUL]], [[COPY]]
     ; GCN-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sqrt), [[SELECT]](s32)
@@ -34,7 +34,7 @@ body: |
     ; GCN-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[FCMP1]](s1), [[ADD]], [[INT]]
     ; GCN-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[FMA1]](s32), [[C4]]
     ; GCN-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[FCMP2]](s1), [[ADD1]], [[SELECT1]]
-    ; GCN-NEXT: [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3EF0000000000000
+    ; GCN-NEXT: [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x37800000
     ; GCN-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[SELECT2]], [[C5]]
     ; GCN-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[FMUL1]], [[SELECT2]]
     ; GCN-NEXT: [[IS_FPCLASS:%[0-9]+]]:_(s1) = G_IS_FPCLASS [[SELECT]](s32), 608
@@ -55,7 +55,7 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x1000000000000000
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x1000000000000000
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[COPY]](s64), [[C]]
     ; GCN-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
@@ -97,7 +97,7 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x1000000000000000
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x1000000000000000
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[COPY]](s64), [[C]]
     ; GCN-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 256
@@ -181,9 +181,9 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x39F0000000000000
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x0F800000
     ; GCN-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[C]](s32), [[UV]]
-    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41F0000000000000
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F800000
     ; GCN-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[UV]], [[C1]]
     ; GCN-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[FMUL]], [[UV]]
     ; GCN-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sqrt), [[SELECT]](s32)
@@ -200,7 +200,7 @@ body: |
     ; GCN-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[FCMP1]](s1), [[ADD]], [[INT]]
     ; GCN-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[FMA1]](s32), [[C4]]
     ; GCN-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[FCMP2]](s1), [[ADD1]], [[SELECT1]]
-    ; GCN-NEXT: [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3EF0000000000000
+    ; GCN-NEXT: [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x37800000
     ; GCN-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[SELECT2]], [[C5]]
     ; GCN-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[FMUL1]], [[SELECT2]]
     ; GCN-NEXT: [[IS_FPCLASS:%[0-9]+]]:_(s1) = G_IS_FPCLASS [[SELECT]](s32), 608
@@ -241,9 +241,9 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x39F0000000000000
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x0F800000
     ; GCN-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[C]](s32), [[UV]]
-    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x41F0000000000000
+    ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x4F800000
     ; GCN-NEXT: [[FMUL:%[0-9]+]]:_(s32) = G_FMUL [[UV]], [[C1]]
     ; GCN-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[FMUL]], [[UV]]
     ; GCN-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sqrt), [[SELECT]](s32)
@@ -260,7 +260,7 @@ body: |
     ; GCN-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[FCMP1]](s1), [[ADD]], [[INT]]
     ; GCN-NEXT: [[FCMP2:%[0-9]+]]:_(s1) = G_FCMP floatpred(ogt), [[FMA1]](s32), [[C4]]
     ; GCN-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[FCMP2]](s1), [[ADD1]], [[SELECT1]]
-    ; GCN-NEXT: [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x3EF0000000000000
+    ; GCN-NEXT: [[C5:%[0-9]+]]:_(s32) = G_FCONSTANT float f0x37800000
     ; GCN-NEXT: [[FMUL1:%[0-9]+]]:_(s32) = G_FMUL [[SELECT2]], [[C5]]
     ; GCN-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[FMUL1]], [[SELECT2]]
     ; GCN-NEXT: [[IS_FPCLASS:%[0-9]+]]:_(s1) = G_IS_FPCLASS [[SELECT]](s32), 608
@@ -319,7 +319,7 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 0x1000000000000000
+    ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x1000000000000000
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](s64), [[C]]
     ; GCN-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 256

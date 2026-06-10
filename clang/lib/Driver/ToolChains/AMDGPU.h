@@ -15,7 +15,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <map>
 
@@ -76,9 +76,11 @@ public:
   TranslateArgs(const llvm::opt::DerivedArgList &Args, StringRef BoundArch,
                 Action::OffloadKind DeviceOffloadKind) const override;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
+                        Action::OffloadKind DeviceOffloadKind) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
@@ -94,18 +96,13 @@ public:
   static bool isWave64(const llvm::opt::ArgList &DriverArgs,
                        llvm::AMDGPU::GPUKind Kind);
   /// Needed for using lto.
-  bool HasNativeLLVMSupport() const override {
-    return true;
-  }
+  bool HasNativeLLVMSupport() const override { return true; }
 
   /// Needed for translating LTO options.
   const char *getDefaultLinker() const override { return "ld.lld"; }
 
-  /// Should skip sanitize option.
-  bool shouldSkipSanitizeOption(const ToolChain &TC,
-                                const llvm::opt::ArgList &DriverArgs,
-                                StringRef TargetID,
-                                const llvm::opt::Arg *A) const;
+  StringRef getSanitizerRequirement(SanitizerMask Kinds,
+                                    StringRef BoundArch) const override;
 
   /// Uses amdgpu-arch tool to get arch of the system GPU. Will return error
   /// if unable to find one.
@@ -134,6 +131,10 @@ protected:
   /// Common warning options shared by AMDGPU HIP, OpenCL and OpenMP toolchains.
   /// Language specific warning options should go to derived classes.
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
+
+  SanitizerMask
+  getSupportedSanitizers(StringRef BoundArch,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
@@ -143,17 +144,14 @@ public:
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   // Returns a list of device library names shared by different languages
   llvm::SmallVector<BitCodeLibraryInfo, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                          const std::string &GPUArch,
+                          llvm::StringRef TargetID, llvm::StringRef GPUArch,
                           Action::OffloadKind DeviceOffloadingKind) const;
-
-  SanitizerMask getSupportedSanitizers() const override {
-    return SanitizerKind::Address;
-  }
 
   bool diagnoseUnsupportedOption(const llvm::opt::Arg *A,
                                  const llvm::opt::DerivedArgList &DAL,
@@ -177,56 +175,6 @@ public:
               : clang::diag::warn_drv_unsupported_option_for_target;
       Diags.Report(DiagID) << A->getAsString(DAL) << getTriple().str();
     }
-    return true;
-  }
-
-  bool handleSanitizeOption(const ToolChain &TC, llvm::opt::DerivedArgList &DAL,
-                            const llvm::opt::ArgList &DriverArgs,
-                            StringRef TargetID, const llvm::opt::Arg *A) const {
-    if (TargetID.empty())
-      return false;
-    // If we shouldn't do sanitizing, skip it.
-    if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                            options::OPT_fno_gpu_sanitize, true))
-      return true;
-    const llvm::opt::Option &Opt = A->getOption();
-    // Sanitizer coverage is currently not supported for AMDGPU, so warn/error
-    // on every related option.
-    if (Opt.matches(options::OPT_fsan_cov_Group)) {
-      diagnoseUnsupportedOption(A, DAL, DriverArgs);
-    }
-    // If this isn't a sanitizer option, don't handle it.
-    if (!Opt.matches(options::OPT_fsanitize_EQ))
-      return false;
-
-    SmallVector<const char *, 4> SupportedSanitizers;
-    SmallVector<const char *, 4> UnSupportedSanitizers;
-
-    for (const char *Value : A->getValues()) {
-      SanitizerMask K = parseSanitizerValue(Value, /*Allow Groups*/ false);
-      if (K & ROCMToolChain::getSupportedSanitizers())
-        SupportedSanitizers.push_back(Value);
-      else
-        UnSupportedSanitizers.push_back(Value);
-    }
-
-    // If there are no supported sanitizers, drop the whole argument.
-    if (SupportedSanitizers.empty()) {
-      diagnoseUnsupportedOption(A, DAL, DriverArgs);
-      return true;
-    }
-    // If only some sanitizers are unsupported, report each one individually.
-    if (!UnSupportedSanitizers.empty()) {
-      for (const char *Value : UnSupportedSanitizers) {
-        diagnoseUnsupportedOption(A, DAL, DriverArgs, Value);
-      }
-    }
-    // If we know the target arch, check if the sanitizer is supported for it.
-    if (shouldSkipSanitizeOption(TC, DriverArgs, TargetID, A))
-      return true;
-
-    // Add a new argument with only the supported sanitizers.
-    DAL.AddJoinedArg(A, A->getOption(), llvm::join(SupportedSanitizers, ","));
     return true;
   }
 };

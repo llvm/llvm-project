@@ -1119,6 +1119,9 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   }
 
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
+
+  finishTargetUnitAttributes(*DIUnit, NewCU);
+
   StringRef SysRoot = DIUnit->getSysRoot();
   if (!SysRoot.empty())
     NewCU.addString(Die, dwarf::DW_AT_LLVM_sysroot, SysRoot);
@@ -3186,7 +3189,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
   // need to reference a base_type DIE the offset of that DIE is not yet known.
   // To deal with this we instead insert a placeholder early and then extract
   // it here and replace it with the real reference.
-  unsigned PtrSize = Asm->MAI->getCodePointerSize();
+  unsigned PtrSize = Asm->MAI.getCodePointerSize();
   DWARFDataExtractor Data(StringRef(DebugLocs.getBytes(Entry).data(),
                                     DebugLocs.getBytes(Entry).size()),
                           Asm->getDataLayout().isLittleEndian(), PtrSize);
@@ -3409,7 +3412,7 @@ emitRangeList(DwarfDebug &DD, AsmPrinter *Asm, MCSymbol *Sym, const Ranges &R,
               unsigned OffsetPair, unsigned StartxLength, unsigned StartxEndx,
               unsigned EndOfList, StringRef (*StringifyEnum)(unsigned),
               bool ShouldUseBaseAddress, PayloadEmitter EmitPayload) {
-  auto Size = Asm->MAI->getCodePointerSize();
+  auto Size = Asm->MAI.getCodePointerSize();
   bool UseDwarf5 = DD.getDwarfVersion() >= 5;
 
   // Emit our symbol so we can find the beginning of the range.
@@ -3660,7 +3663,7 @@ void DwarfDebug::emitDebugARanges() {
   Asm->OutStreamer->switchSection(
       Asm->getObjFileLowering().getDwarfARangesSection());
 
-  unsigned PtrSize = Asm->MAI->getCodePointerSize();
+  unsigned PtrSize = Asm->MAI.getCodePointerSize();
 
   // Build a list of CUs used.
   std::vector<DwarfCompileUnit *> CUs;

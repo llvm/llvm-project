@@ -97,7 +97,6 @@ define float @extractelt_v4f32(<4 x float> %a) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <4 x float> %a, i32 2
   ret float %b
 }
@@ -108,7 +107,6 @@ define double @extractelt_v2f64(<2 x double> %a) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <2 x double> %a, i32 0
   ret double %b
 }
@@ -120,7 +118,6 @@ define i8 @extractelt_v32i8(<32 x i8> %a) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <32 x i8> %a, i32 7
   ret i8 %b
 }
@@ -132,7 +129,6 @@ define i16 @extractelt_v16i16(<16 x i16> %a) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <16 x i16> %a, i32 7
   ret i16 %b
 }
@@ -144,7 +140,6 @@ define i32 @extractelt_v8i32(<8 x i32> %a) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <8 x i32> %a, i32 6
   ret i32 %b
 }
@@ -152,9 +147,9 @@ define i32 @extractelt_v8i32(<8 x i32> %a) nounwind {
 define i64 @extractelt_v4i64(<4 x i64> %a) nounwind {
 ; RV32-LABEL: extractelt_v4i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 3
-; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsrl.vx v10, v8, a0
 ; RV32-NEXT:    vmv.x.s a1, v10
 ; RV32-NEXT:    vmv.x.s a0, v8
@@ -166,7 +161,6 @@ define i64 @extractelt_v4i64(<4 x i64> %a) nounwind {
 ; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
-;
   %b = extractelement <4 x i64> %a, i32 3
   ret i64 %b
 }
@@ -179,7 +173,6 @@ define bfloat @extractelt_v16bf16(<16 x bfloat> %a) nounwind {
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <16 x bfloat> %a, i32 7
   ret bfloat %b
 }
@@ -199,7 +192,6 @@ define half @extractelt_v16f16(<16 x half> %a) nounwind {
 ; ZVFHMIN-NEXT:    vmv.x.s a0, v8
 ; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZVFHMIN-NEXT:    ret
-;
   %b = extractelement <16 x half> %a, i32 7
   ret half %b
 }
@@ -211,7 +203,6 @@ define float @extractelt_v8f32(<8 x float> %a) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <8 x float> %a, i32 2
   ret float %b
 }
@@ -222,7 +213,6 @@ define double @extractelt_v4f64(<4 x double> %a) nounwind {
 ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <4 x double> %a, i32 0
   ret double %b
 }
@@ -236,8 +226,8 @@ define i64 @extractelt_v3i64(<3 x i64> %a) nounwind {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v10, v8, 4
-; RV32-NEXT:    vslidedown.vi v8, v8, 5
 ; RV32-NEXT:    vmv.x.s a0, v10
+; RV32-NEXT:    vslidedown.vi v8, v8, 5
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    ret
 ;
@@ -247,7 +237,6 @@ define i64 @extractelt_v3i64(<3 x i64> %a) nounwind {
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
-;
   %b = extractelement <3 x i64> %a, i32 2
   ret i64 %b
 }
@@ -289,7 +278,6 @@ define i32 @extractelt_v32i32(<32 x i32> %a) nounwind {
 ; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 256
 ; RV64-NEXT:    ret
-;
   %b = extractelement <32 x i32> %a, i32 31
   ret i32 %b
 }
@@ -331,7 +319,6 @@ define i32 @extractelt_v64i32(<64 x i32> %a) nounwind {
 ; RV64-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 256
 ; RV64-NEXT:    ret
-;
   %b = extractelement <64 x i32> %a, i32 63
   ret i32 %b
 }
@@ -343,7 +330,6 @@ define i8 @extractelt_v16i8_idx(<16 x i8> %a, i32 zeroext %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <16 x i8> %a, i32 %idx
   ret i8 %b
 }
@@ -355,7 +341,6 @@ define i16 @extractelt_v8i16_idx(<8 x i16> %a, i32 zeroext %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <8 x i16> %a, i32 %idx
   ret i16 %b
 }
@@ -368,7 +353,6 @@ define i32 @extractelt_v4i32_idx(<4 x i32> %a, i32 zeroext %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = add <4 x i32> %a, %a
   %c = extractelement <4 x i32> %b, i32 %idx
   ret i32 %c
@@ -377,9 +361,9 @@ define i32 @extractelt_v4i32_idx(<4 x i32> %a, i32 zeroext %idx) nounwind {
 define i64 @extractelt_v2i64_idx(<2 x i64> %a, i32 zeroext %idx) nounwind {
 ; RV32-LABEL: extractelt_v2i64_idx:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vslidedown.vx v8, v8, a0
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
@@ -394,7 +378,6 @@ define i64 @extractelt_v2i64_idx(<2 x i64> %a, i32 zeroext %idx) nounwind {
 ; RV64-NEXT:    vslidedown.vx v8, v8, a0
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
-;
   %b = add <2 x i64> %a, %a
   %c = extractelement <2 x i64> %b, i32 %idx
   ret i64 %c
@@ -413,7 +396,6 @@ define bfloat @extractelt_v8bf16_idx(<8 x bfloat> %a, i32 zeroext %idx) nounwind
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
-;
   %b = fadd <8 x bfloat> %a, %a
   %c = extractelement <8 x bfloat> %b, i32 %idx
   ret bfloat %c
@@ -440,7 +422,6 @@ define half @extractelt_v8f16_idx(<8 x half> %a, i32 zeroext %idx) nounwind {
 ; ZVFHMIN-NEXT:    vmv.x.s a0, v8
 ; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZVFHMIN-NEXT:    ret
-;
   %b = fadd <8 x half> %a, %a
   %c = extractelement <8 x half> %b, i32 %idx
   ret half %c
@@ -454,7 +435,6 @@ define float @extractelt_v4f32_idx(<4 x float> %a, i32 zeroext %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
-;
   %b = fadd <4 x float> %a, %a
   %c = extractelement <4 x float> %b, i32 %idx
   ret float %c
@@ -468,7 +448,6 @@ define double @extractelt_v2f64_idx(<2 x double> %a, i32 zeroext %idx) nounwind 
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
-;
   %b = fadd <2 x double> %a, %a
   %c = extractelement <2 x double> %b, i32 %idx
   ret double %c
@@ -481,7 +460,6 @@ define i8 @extractelt_v32i8_idx(<32 x i8> %a, i32 zeroext %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <32 x i8> %a, i32 %idx
   ret i8 %b
 }
@@ -493,7 +471,6 @@ define i16 @extractelt_v16i16_idx(<16 x i16> %a, i32 zeroext %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <16 x i16> %a, i32 %idx
   ret i16 %b
 }
@@ -506,7 +483,6 @@ define i32 @extractelt_v8i32_idx(<8 x i32> %a, i32 zeroext %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = add <8 x i32> %a, %a
   %c = extractelement <8 x i32> %b, i32 %idx
   ret i32 %c
@@ -515,9 +491,9 @@ define i32 @extractelt_v8i32_idx(<8 x i32> %a, i32 zeroext %idx) nounwind {
 define i64 @extractelt_v4i64_idx(<4 x i64> %a, i32 zeroext %idx) nounwind {
 ; RV32-LABEL: extractelt_v4i64_idx:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vslidedown.vx v8, v8, a0
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
@@ -532,7 +508,6 @@ define i64 @extractelt_v4i64_idx(<4 x i64> %a, i32 zeroext %idx) nounwind {
 ; RV64-NEXT:    vslidedown.vx v8, v8, a0
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
-;
   %b = add <4 x i64> %a, %a
   %c = extractelement <4 x i64> %b, i32 %idx
   ret i64 %c
@@ -551,7 +526,6 @@ define bfloat @extractelt_v16bf16_idx(<16 x bfloat> %a, i32 zeroext %idx) nounwi
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
-;
   %b = fadd <16 x bfloat> %a, %a
   %c = extractelement <16 x bfloat> %b, i32 %idx
   ret bfloat %c
@@ -578,7 +552,6 @@ define half @extractelt_v16f16_idx(<16 x half> %a, i32 zeroext %idx) nounwind {
 ; ZVFHMIN-NEXT:    vmv.x.s a0, v8
 ; ZVFHMIN-NEXT:    fmv.h.x fa0, a0
 ; ZVFHMIN-NEXT:    ret
-;
   %b = fadd <16 x half> %a, %a
   %c = extractelement <16 x half> %b, i32 %idx
   ret half %c
@@ -592,7 +565,6 @@ define float @extractelt_v8f32_idx(<8 x float> %a, i32 zeroext %idx) nounwind {
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
-;
   %b = fadd <8 x float> %a, %a
   %c = extractelement <8 x float> %b, i32 %idx
   ret float %c
@@ -606,7 +578,6 @@ define double @extractelt_v4f64_idx(<4 x double> %a, i32 zeroext %idx) nounwind 
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
-;
   %b = fadd <4 x double> %a, %a
   %c = extractelement <4 x double> %b, i32 %idx
   ret double %c
@@ -619,12 +590,12 @@ define double @extractelt_v4f64_idx(<4 x double> %a, i32 zeroext %idx) nounwind 
 define i64 @extractelt_v3i64_idx(<3 x i64> %a, i32 zeroext %idx) nounwind {
 ; RV32-LABEL: extractelt_v3i64_idx:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    addi a1, a0, 1
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    add a0, a0, a0
 ; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v10, v8, a0
-; RV32-NEXT:    addi a1, a0, 1
 ; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a1, v8
@@ -637,7 +608,6 @@ define i64 @extractelt_v3i64_idx(<3 x i64> %a, i32 zeroext %idx) nounwind {
 ; RV64-NEXT:    vslidedown.vx v8, v8, a0
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
-;
   %b = add <3 x i64> %a, %a
   %c = extractelement <3 x i64> %b, i32 %idx
   ret i64 %c
@@ -659,9 +629,9 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV32NOM-NEXT:    li a1, 32
 ; RV32NOM-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32NOM-NEXT:    vle32.v v8, (s1)
+; RV32NOM-NEXT:    vadd.vv v8, v8, v8
 ; RV32NOM-NEXT:    mv a1, sp
 ; RV32NOM-NEXT:    add a0, a1, a0
-; RV32NOM-NEXT:    vadd.vv v8, v8, v8
 ; RV32NOM-NEXT:    vse32.v v8, (a1)
 ; RV32NOM-NEXT:    lw a0, 0(a0)
 ; RV32NOM-NEXT:    addi sp, s0, -256
@@ -678,14 +648,14 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV32M-NEXT:    sw s0, 248(sp) # 4-byte Folded Spill
 ; RV32M-NEXT:    addi s0, sp, 256
 ; RV32M-NEXT:    andi sp, sp, -128
-; RV32M-NEXT:    andi a1, a1, 31
 ; RV32M-NEXT:    li a2, 32
 ; RV32M-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32M-NEXT:    vle32.v v8, (a0)
+; RV32M-NEXT:    vadd.vv v8, v8, v8
+; RV32M-NEXT:    andi a1, a1, 31
 ; RV32M-NEXT:    slli a1, a1, 2
 ; RV32M-NEXT:    mv a0, sp
 ; RV32M-NEXT:    or a1, a0, a1
-; RV32M-NEXT:    vadd.vv v8, v8, v8
 ; RV32M-NEXT:    vse32.v v8, (a0)
 ; RV32M-NEXT:    lw a0, 0(a1)
 ; RV32M-NEXT:    addi sp, s0, -256
@@ -709,9 +679,9 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64NOM-NEXT:    li a1, 32
 ; RV64NOM-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV64NOM-NEXT:    vle32.v v8, (s1)
+; RV64NOM-NEXT:    vadd.vv v8, v8, v8
 ; RV64NOM-NEXT:    mv a1, sp
 ; RV64NOM-NEXT:    add a0, a1, a0
-; RV64NOM-NEXT:    vadd.vv v8, v8, v8
 ; RV64NOM-NEXT:    vse32.v v8, (a1)
 ; RV64NOM-NEXT:    lw a0, 0(a0)
 ; RV64NOM-NEXT:    addi sp, s0, -256
@@ -728,14 +698,14 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64M-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
 ; RV64M-NEXT:    addi s0, sp, 256
 ; RV64M-NEXT:    andi sp, sp, -128
-; RV64M-NEXT:    andi a1, a1, 31
 ; RV64M-NEXT:    li a2, 32
 ; RV64M-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV64M-NEXT:    vle32.v v8, (a0)
+; RV64M-NEXT:    vadd.vv v8, v8, v8
+; RV64M-NEXT:    andi a1, a1, 31
 ; RV64M-NEXT:    slli a1, a1, 2
 ; RV64M-NEXT:    mv a0, sp
 ; RV64M-NEXT:    or a1, a0, a1
-; RV64M-NEXT:    vadd.vv v8, v8, v8
 ; RV64M-NEXT:    vse32.v v8, (a0)
 ; RV64M-NEXT:    lw a0, 0(a1)
 ; RV64M-NEXT:    addi sp, s0, -256
@@ -743,7 +713,28 @@ define i32 @extractelt_v32i32_idx(ptr %x, i32 zeroext %idx) nounwind {
 ; RV64M-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
 ; RV64M-NEXT:    addi sp, sp, 256
 ; RV64M-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_v32i32_idx:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    addi sp, sp, -256
+; VISNI-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
+; VISNI-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
+; VISNI-NEXT:    addi s0, sp, 256
+; VISNI-NEXT:    andi sp, sp, -128
+; VISNI-NEXT:    li a2, 32
+; VISNI-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; VISNI-NEXT:    vle32.v v8, (a0)
+; VISNI-NEXT:    vadd.vv v8, v8, v8
+; VISNI-NEXT:    andi a1, a1, 31
+; VISNI-NEXT:    slli a1, a1, 2
+; VISNI-NEXT:    mv a0, sp
+; VISNI-NEXT:    or a1, a0, a1
+; VISNI-NEXT:    vse32.v v8, (a0)
+; VISNI-NEXT:    lw a0, 0(a1)
+; VISNI-NEXT:    addi sp, s0, -256
+; VISNI-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
+; VISNI-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
+; VISNI-NEXT:    addi sp, sp, 256
+; VISNI-NEXT:    ret
   %a = load <32 x i32>, ptr %x
   %b = add <32 x i32> %a, %a
   %c = extractelement <32 x i32> %b, i32 %idx
@@ -758,16 +749,16 @@ define i32 @extractelt_v64i32_idx(<64 x i32> %a, i32 zeroext %idx) nounwind {
 ; RV32-NEXT:    sw s0, 376(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    addi s0, sp, 384
 ; RV32-NEXT:    andi sp, sp, -128
+; RV32-NEXT:    li a1, 32
+; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV32-NEXT:    vadd.vv v16, v16, v16
+; RV32-NEXT:    addi a1, sp, 128
+; RV32-NEXT:    vse32.v v16, (a1)
+; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    andi a0, a0, 63
 ; RV32-NEXT:    mv a1, sp
-; RV32-NEXT:    li a2, 32
-; RV32-NEXT:    addi a3, sp, 128
 ; RV32-NEXT:    slli a0, a0, 2
-; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    vadd.vv v16, v16, v16
 ; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    vse32.v v16, (a3)
 ; RV32-NEXT:    vse32.v v8, (a1)
 ; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    addi sp, s0, -384
@@ -783,16 +774,16 @@ define i32 @extractelt_v64i32_idx(<64 x i32> %a, i32 zeroext %idx) nounwind {
 ; RV64-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    addi s0, sp, 384
 ; RV64-NEXT:    andi sp, sp, -128
+; RV64-NEXT:    li a1, 32
+; RV64-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; RV64-NEXT:    vadd.vv v16, v16, v16
+; RV64-NEXT:    addi a1, sp, 128
+; RV64-NEXT:    vse32.v v16, (a1)
+; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    andi a0, a0, 63
 ; RV64-NEXT:    mv a1, sp
-; RV64-NEXT:    li a2, 32
-; RV64-NEXT:    addi a3, sp, 128
 ; RV64-NEXT:    slli a0, a0, 2
-; RV64-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV64-NEXT:    vadd.vv v8, v8, v8
-; RV64-NEXT:    vadd.vv v16, v16, v16
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    vse32.v v16, (a3)
 ; RV64-NEXT:    vse32.v v8, (a1)
 ; RV64-NEXT:    lw a0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -384
@@ -800,7 +791,30 @@ define i32 @extractelt_v64i32_idx(<64 x i32> %a, i32 zeroext %idx) nounwind {
 ; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 384
 ; RV64-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_v64i32_idx:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    addi sp, sp, -384
+; VISNI-NEXT:    sd ra, 376(sp) # 8-byte Folded Spill
+; VISNI-NEXT:    sd s0, 368(sp) # 8-byte Folded Spill
+; VISNI-NEXT:    addi s0, sp, 384
+; VISNI-NEXT:    andi sp, sp, -128
+; VISNI-NEXT:    li a1, 32
+; VISNI-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; VISNI-NEXT:    vadd.vv v16, v16, v16
+; VISNI-NEXT:    addi a1, sp, 128
+; VISNI-NEXT:    vse32.v v16, (a1)
+; VISNI-NEXT:    vadd.vv v8, v8, v8
+; VISNI-NEXT:    andi a0, a0, 63
+; VISNI-NEXT:    mv a1, sp
+; VISNI-NEXT:    slli a0, a0, 2
+; VISNI-NEXT:    add a0, a1, a0
+; VISNI-NEXT:    vse32.v v8, (a1)
+; VISNI-NEXT:    lw a0, 0(a0)
+; VISNI-NEXT:    addi sp, s0, -384
+; VISNI-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
+; VISNI-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
+; VISNI-NEXT:    addi sp, sp, 384
+; VISNI-NEXT:    ret
   %b = add <64 x i32> %a, %a
   %c = extractelement <64 x i32> %b, i32 %idx
   ret i32 %c
@@ -813,7 +827,6 @@ define void @store_extractelt_v16i8(<16 x i8> %a, ptr %p) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <16 x i8> %a, i32 7
   store i8 %b, ptr %p
   ret void
@@ -826,7 +839,6 @@ define void @store_extractelt_v8i16(<8 x i16> %a, ptr %p) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <8 x i16> %a, i32 7
   store i16 %b, ptr %p
   ret void
@@ -839,7 +851,6 @@ define void @store_extractelt_v4i32(<4 x i32> %a, ptr %p) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <4 x i32> %a, i32 2
   store i32 %b, ptr %p
   ret void
@@ -849,14 +860,14 @@ define void @store_extractelt_v4i32(<4 x i32> %a, ptr %p) nounwind {
 define void @store_extractelt_v2i64(<2 x i64> %a, ptr %p) nounwind {
 ; RV32-LABEL: store_extractelt_v2i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
-; RV32-NEXT:    li a1, 32
 ; RV32-NEXT:    vsrl.vx v9, v8, a1
-; RV32-NEXT:    vmv.x.s a1, v8
-; RV32-NEXT:    vmv.x.s a2, v9
-; RV32-NEXT:    sw a1, 0(a0)
-; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    vmv.x.s a1, v9
+; RV32-NEXT:    vmv.x.s a2, v8
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    sw a1, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: store_extractelt_v2i64:
@@ -865,7 +876,6 @@ define void @store_extractelt_v2i64(<2 x i64> %a, ptr %p) nounwind {
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-NEXT:    vse64.v v8, (a0)
 ; RV64-NEXT:    ret
-;
   %b = extractelement <2 x i64> %a, i64 1
   store i64 %b, ptr %p
   ret void
@@ -878,7 +888,6 @@ define void @store_extractelt_v2f64(<2 x double> %a, ptr %p) nounwind {
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <2 x double> %a, i64 1
   store double %b, ptr %p
   ret void
@@ -900,7 +909,6 @@ define i32 @extractelt_add_v4i32(<4 x i32> %x) {
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    addiw a0, a0, 13
 ; RV64-NEXT:    ret
-;
   %bo = add <4 x i32> %x, <i32 11, i32 12, i32 13, i32 14>
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -924,7 +932,13 @@ define i32 @extractelt_sub_v4i32(<4 x i32> %x) {
 ; RV64-NEXT:    li a1, 13
 ; RV64-NEXT:    subw a0, a1, a0
 ; RV64-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_sub_v4i32:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    li a0, 13
+; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; VISNI-NEXT:    ri.vextract.x.v a1, v8, 2
+; VISNI-NEXT:    subw a0, a0, a1
+; VISNI-NEXT:    ret
   %bo = sub <4 x i32> <i32 11, i32 12, i32 13, i32 14>, %x
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -966,7 +980,13 @@ define i32 @extractelt_mul_v4i32(<4 x i32> %x) {
 ; RV64M-NEXT:    li a1, 13
 ; RV64M-NEXT:    mulw a0, a0, a1
 ; RV64M-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_mul_v4i32:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    li a0, 13
+; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; VISNI-NEXT:    ri.vextract.x.v a1, v8, 2
+; VISNI-NEXT:    mulw a0, a1, a0
+; VISNI-NEXT:    ret
   %bo = mul <4 x i32> %x, <i32 11, i32 12, i32 13, i32 14>
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -975,21 +995,21 @@ define i32 @extractelt_mul_v4i32(<4 x i32> %x) {
 define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV32NOM-LABEL: extractelt_sdiv_v4i32:
 ; RV32NOM:       # %bb.0:
+; RV32NOM-NEXT:    lui a0, 1044480
+; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32NOM-NEXT:    vmv.s.x v9, a0
 ; RV32NOM-NEXT:    lui a0, %hi(.LCPI46_0)
 ; RV32NOM-NEXT:    addi a0, a0, %lo(.LCPI46_0)
-; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32NOM-NEXT:    vle32.v v9, (a0)
-; RV32NOM-NEXT:    lui a0, 1044480
-; RV32NOM-NEXT:    vmv.s.x v10, a0
-; RV32NOM-NEXT:    lui a0, 12320
-; RV32NOM-NEXT:    addi a0, a0, 257
-; RV32NOM-NEXT:    vsext.vf4 v11, v10
-; RV32NOM-NEXT:    vand.vv v10, v8, v11
-; RV32NOM-NEXT:    vmulh.vv v8, v8, v9
-; RV32NOM-NEXT:    vmv.s.x v9, a0
+; RV32NOM-NEXT:    vle32.v v10, (a0)
 ; RV32NOM-NEXT:    vsext.vf4 v11, v9
-; RV32NOM-NEXT:    vadd.vv v8, v8, v10
-; RV32NOM-NEXT:    vsra.vv v9, v8, v11
+; RV32NOM-NEXT:    vmulh.vv v9, v8, v10
+; RV32NOM-NEXT:    lui a0, 12320
+; RV32NOM-NEXT:    vand.vv v8, v8, v11
+; RV32NOM-NEXT:    addi a0, a0, 257
+; RV32NOM-NEXT:    vmv.s.x v10, a0
+; RV32NOM-NEXT:    vadd.vv v8, v9, v8
+; RV32NOM-NEXT:    vsext.vf4 v9, v10
+; RV32NOM-NEXT:    vsra.vv v9, v8, v9
 ; RV32NOM-NEXT:    vsrl.vi v8, v8, 31
 ; RV32NOM-NEXT:    vadd.vv v8, v9, v8
 ; RV32NOM-NEXT:    vslidedown.vi v8, v8, 2
@@ -998,11 +1018,11 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ;
 ; RV32M-LABEL: extractelt_sdiv_v4i32:
 ; RV32M:       # %bb.0:
+; RV32M-NEXT:    lui a0, 322639
+; RV32M-NEXT:    addi a0, a0, -945
 ; RV32M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32M-NEXT:    vslidedown.vi v8, v8, 2
-; RV32M-NEXT:    lui a0, 322639
 ; RV32M-NEXT:    vmv.x.s a1, v8
-; RV32M-NEXT:    addi a0, a0, -945
 ; RV32M-NEXT:    mulh a0, a1, a0
 ; RV32M-NEXT:    srli a1, a0, 31
 ; RV32M-NEXT:    srai a0, a0, 2
@@ -1011,21 +1031,21 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ;
 ; RV64NOM-LABEL: extractelt_sdiv_v4i32:
 ; RV64NOM:       # %bb.0:
+; RV64NOM-NEXT:    lui a0, 1044480
+; RV64NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64NOM-NEXT:    vmv.s.x v9, a0
 ; RV64NOM-NEXT:    lui a0, %hi(.LCPI46_0)
 ; RV64NOM-NEXT:    addi a0, a0, %lo(.LCPI46_0)
-; RV64NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64NOM-NEXT:    vle32.v v9, (a0)
-; RV64NOM-NEXT:    lui a0, 1044480
-; RV64NOM-NEXT:    vmv.s.x v10, a0
+; RV64NOM-NEXT:    vle32.v v10, (a0)
+; RV64NOM-NEXT:    vsext.vf4 v11, v9
+; RV64NOM-NEXT:    vmulh.vv v9, v8, v10
 ; RV64NOM-NEXT:    lui a0, 12320
+; RV64NOM-NEXT:    vand.vv v8, v8, v11
 ; RV64NOM-NEXT:    addi a0, a0, 257
-; RV64NOM-NEXT:    vsext.vf4 v11, v10
-; RV64NOM-NEXT:    vand.vv v10, v8, v11
-; RV64NOM-NEXT:    vmulh.vv v8, v8, v9
-; RV64NOM-NEXT:    vmv.s.x v9, a0
-; RV64NOM-NEXT:    vadd.vv v8, v8, v10
-; RV64NOM-NEXT:    vsext.vf4 v10, v9
-; RV64NOM-NEXT:    vsra.vv v8, v8, v10
+; RV64NOM-NEXT:    vmv.s.x v10, a0
+; RV64NOM-NEXT:    vadd.vv v8, v9, v8
+; RV64NOM-NEXT:    vsext.vf4 v9, v10
+; RV64NOM-NEXT:    vsra.vv v8, v8, v9
 ; RV64NOM-NEXT:    vsrl.vi v9, v8, 31
 ; RV64NOM-NEXT:    vadd.vv v8, v8, v9
 ; RV64NOM-NEXT:    vslidedown.vi v8, v8, 2
@@ -1034,17 +1054,28 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ;
 ; RV64M-LABEL: extractelt_sdiv_v4i32:
 ; RV64M:       # %bb.0:
+; RV64M-NEXT:    lui a0, 322639
+; RV64M-NEXT:    addi a0, a0, -945
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64M-NEXT:    vslidedown.vi v8, v8, 2
-; RV64M-NEXT:    lui a0, 322639
 ; RV64M-NEXT:    vmv.x.s a1, v8
-; RV64M-NEXT:    addi a0, a0, -945
 ; RV64M-NEXT:    mul a0, a1, a0
 ; RV64M-NEXT:    srli a1, a0, 63
 ; RV64M-NEXT:    srai a0, a0, 34
 ; RV64M-NEXT:    add a0, a0, a1
 ; RV64M-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_sdiv_v4i32:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    lui a0, 322639
+; VISNI-NEXT:    addi a0, a0, -945
+; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; VISNI-NEXT:    ri.vextract.x.v a1, v8, 2
+; VISNI-NEXT:    sext.w a1, a1
+; VISNI-NEXT:    mul a0, a1, a0
+; VISNI-NEXT:    srli a1, a0, 63
+; VISNI-NEXT:    srai a0, a0, 34
+; VISNI-NEXT:    add a0, a0, a1
+; VISNI-NEXT:    ret
   %bo = sdiv <4 x i32> %x, <i32 11, i32 12, i32 13, i32 14>
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -1067,10 +1098,10 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ; RV32M:       # %bb.0:
 ; RV32M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32M-NEXT:    vslidedown.vi v8, v8, 2
-; RV32M-NEXT:    lui a0, 322639
-; RV32M-NEXT:    vmv.x.s a1, v8
-; RV32M-NEXT:    addi a0, a0, -945
-; RV32M-NEXT:    mulhu a0, a1, a0
+; RV32M-NEXT:    vmv.x.s a0, v8
+; RV32M-NEXT:    lui a1, 322639
+; RV32M-NEXT:    addi a1, a1, -945
+; RV32M-NEXT:    mulhu a0, a0, a1
 ; RV32M-NEXT:    srli a0, a0, 2
 ; RV32M-NEXT:    ret
 ;
@@ -1090,16 +1121,26 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ; RV64M-LABEL: extractelt_udiv_v4i32:
 ; RV64M:       # %bb.0:
 ; RV64M-NEXT:    lui a0, 322639
+; RV64M-NEXT:    addi a0, a0, -945
+; RV64M-NEXT:    slli a0, a0, 32
 ; RV64M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64M-NEXT:    vslidedown.vi v8, v8, 2
-; RV64M-NEXT:    addi a0, a0, -945
 ; RV64M-NEXT:    vmv.x.s a1, v8
-; RV64M-NEXT:    slli a0, a0, 32
 ; RV64M-NEXT:    slli a1, a1, 32
 ; RV64M-NEXT:    mulhu a0, a1, a0
 ; RV64M-NEXT:    srli a0, a0, 34
 ; RV64M-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_udiv_v4i32:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    lui a0, 322639
+; VISNI-NEXT:    addi a0, a0, -945
+; VISNI-NEXT:    slli a0, a0, 32
+; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; VISNI-NEXT:    ri.vextract.x.v a1, v8, 2
+; VISNI-NEXT:    slli a1, a1, 32
+; VISNI-NEXT:    mulhu a0, a1, a0
+; VISNI-NEXT:    srli a0, a0, 34
+; VISNI-NEXT:    ret
   %bo = udiv <4 x i32> %x, <i32 11, i32 12, i32 13, i32 14>
   %ext = extractelement <4 x i32> %bo, i32 2
   ret i32 %ext
@@ -1108,14 +1149,22 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 define float @extractelt_fadd_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: extractelt_fadd_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 267520
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    lui a0, 267520
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    fmv.w.x fa4, a0
-; CHECK-NEXT:    fadd.s fa0, fa5, fa4
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fadd.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_fadd_v4f32:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    lui a0, 267520
+; VISNI-NEXT:    fmv.w.x fa5, a0
+; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; VISNI-NEXT:    vslidedown.vi v8, v8, 2
+; VISNI-NEXT:    vfmv.f.s fa4, v8
+; VISNI-NEXT:    fadd.s fa0, fa4, fa5
+; VISNI-NEXT:    ret
   %bo = fadd <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2
   ret float %ext
@@ -1124,14 +1173,22 @@ define float @extractelt_fadd_v4f32(<4 x float> %x) {
 define float @extractelt_fsub_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: extractelt_fsub_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 267520
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    lui a0, 267520
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    fmv.w.x fa4, a0
-; CHECK-NEXT:    fsub.s fa0, fa4, fa5
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fsub.s fa0, fa5, fa4
 ; CHECK-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_fsub_v4f32:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    lui a0, 267520
+; VISNI-NEXT:    fmv.w.x fa5, a0
+; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; VISNI-NEXT:    vslidedown.vi v8, v8, 2
+; VISNI-NEXT:    vfmv.f.s fa4, v8
+; VISNI-NEXT:    fsub.s fa0, fa5, fa4
+; VISNI-NEXT:    ret
   %bo = fsub <4 x float> <float 11.0, float 12.0, float 13.0, float 14.0>, %x
   %ext = extractelement <4 x float> %bo, i32 2
   ret float %ext
@@ -1140,14 +1197,22 @@ define float @extractelt_fsub_v4f32(<4 x float> %x) {
 define float @extractelt_fmul_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: extractelt_fmul_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 267520
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    lui a0, 267520
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    fmv.w.x fa4, a0
-; CHECK-NEXT:    fmul.s fa0, fa5, fa4
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fmul.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_fmul_v4f32:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    lui a0, 267520
+; VISNI-NEXT:    fmv.w.x fa5, a0
+; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; VISNI-NEXT:    vslidedown.vi v8, v8, 2
+; VISNI-NEXT:    vfmv.f.s fa4, v8
+; VISNI-NEXT:    fmul.s fa0, fa4, fa5
+; VISNI-NEXT:    ret
   %bo = fmul <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2
   ret float %ext
@@ -1156,14 +1221,22 @@ define float @extractelt_fmul_v4f32(<4 x float> %x) {
 define float @extractelt_fdiv_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: extractelt_fdiv_v4f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 267520
+; CHECK-NEXT:    fmv.w.x fa5, a0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    lui a0, 267520
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    fmv.w.x fa4, a0
-; CHECK-NEXT:    fdiv.s fa0, fa5, fa4
+; CHECK-NEXT:    vfmv.f.s fa4, v8
+; CHECK-NEXT:    fdiv.s fa0, fa4, fa5
 ; CHECK-NEXT:    ret
-;
+; VISNI-LABEL: extractelt_fdiv_v4f32:
+; VISNI:       # %bb.0:
+; VISNI-NEXT:    lui a0, 267520
+; VISNI-NEXT:    fmv.w.x fa5, a0
+; VISNI-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; VISNI-NEXT:    vslidedown.vi v8, v8, 2
+; VISNI-NEXT:    vfmv.f.s fa4, v8
+; VISNI-NEXT:    fdiv.s fa0, fa4, fa5
+; VISNI-NEXT:    ret
   %bo = fdiv <4 x float> %x, <float 11.0, float 12.0, float 13.0, float 14.0>
   %ext = extractelement <4 x float> %bo, i32 2
   ret float %ext
@@ -1176,7 +1249,6 @@ define i32 @extractelt_v16i32_idx7_exact_vlen(<16 x i32> %a) nounwind vscale_ran
 ; CHECK-NEXT:    vslidedown.vi v8, v9, 3
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <16 x i32> %a, i32 7
   ret i32 %b
 }
@@ -1188,7 +1260,6 @@ define i32 @extractelt_v16i32_idx15_exact_vlen(<16 x i32> %a) nounwind vscale_ra
 ; CHECK-NEXT:    vslidedown.vi v8, v11, 3
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
-;
   %b = extractelement <16 x i32> %a, i32 15
   ret i32 %b
 }

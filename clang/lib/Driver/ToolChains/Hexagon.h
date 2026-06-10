@@ -75,9 +75,11 @@ public:
                    const llvm::opt::ArgList &Args);
   ~HexagonToolChain() override;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
+                        Action::OffloadKind DeviceOffloadKind) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
@@ -116,6 +118,10 @@ public:
                               ToolChain::path_list &LibPaths) const;
 
   std::string getCompilerRTPath() const override;
+
+  bool isPIEDefault(const llvm::opt::ArgList &Args) const override {
+    return getTriple().isOSLinux() && Linux::isPIEDefault(Args);
+  }
 
   static bool isAutoHVXEnabled(const llvm::opt::ArgList &Args);
   static StringRef GetDefaultCPU();

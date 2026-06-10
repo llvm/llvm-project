@@ -1,8 +1,7 @@
-add_header_library(
-  posix_semaphore
-  HDRS
-    posix_semaphore.h
-  DEPENDS
-    libc.src.__support.CPP.atomic
-    libc.src.__support.threads.futex_utils
-)
+if(NOT TARGET libc.src.__support.OSUtil.osutil)
+  return()
+endif()
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()

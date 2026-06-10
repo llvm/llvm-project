@@ -96,6 +96,8 @@ canonicalizations include:
   rewriting `tensor.insert_slice(%src, tensor.cast(%dst))` (where the cast
   converts from `tensor<5xf32>` to `tensor<?xf32>`) as
   `tensor.cast(tensor.insert_slice(%src, %dst))`.
+* Replacing poisoned results with `ub.poison`. E.g., replacing
+  `arith.divsi(%c5, %c2, exact)` with `ub.poison`.
 
 
 Note: Some canonicalizations do not apply when they would lead to IR size

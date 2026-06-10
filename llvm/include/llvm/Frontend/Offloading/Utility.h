@@ -13,6 +13,9 @@
 #include <cstdint>
 #include <memory>
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
@@ -82,12 +85,16 @@ LLVM_ABI StructType *getEntryTy(Module &M);
 /// \param Data Extra data storage associated with the entry.
 /// \param SectionName The section this entry will be placed at.
 /// \param AuxAddr An extra pointer if needed.
+/// Returns the section name for offloading entries based on the target triple.
+/// ELF: "llvm_offload_entries", COFF: "llvm_offload_entries",
+/// Mach-O: "__LLVM,offload_entries".
+LLVM_ABI StringRef getOffloadEntrySection(Module &M);
+
 /// \return The emitted global variable containing the offloading entry.
-LLVM_ABI GlobalVariable *
-emitOffloadingEntry(Module &M, object::OffloadKind Kind, Constant *Addr,
-                    StringRef Name, uint64_t Size, uint32_t Flags,
-                    uint64_t Data, Constant *AuxAddr = nullptr,
-                    StringRef SectionName = "llvm_offload_entries");
+LLVM_ABI GlobalVariable *emitOffloadingEntry(
+    Module &M, object::OffloadKind Kind, Constant *Addr, StringRef Name,
+    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr = nullptr,
+    GlobalValue::LinkageTypes Linkage = GlobalValue::WeakAnyLinkage);
 
 /// Create a constant struct initializer used to register this global at
 /// runtime.
@@ -100,7 +107,7 @@ getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
 /// Creates a pair of globals used to iterate the array of offloading entries by
 /// accessing the section variables provided by the linker.
 LLVM_ABI std::pair<GlobalVariable *, GlobalVariable *>
-getOffloadEntryArray(Module &M, StringRef SectionName = "llvm_offload_entries");
+getOffloadEntryArray(Module &M);
 
 namespace amdgpu {
 /// Check if an image is compatible with current system's environment. The
@@ -148,6 +155,10 @@ struct AMDGPUKernelMetaData {
   uint32_t WavefrontSize = KInvalidValue;
   /// Maximum flat work-group size supported by the kernel in work-items.
   uint32_t MaxFlatWorkgroupSize = KInvalidValue;
+  /// Per-argument {offset, size} in bytes, read from the ".args" array in code
+  /// object metadata. Explicit user arguments are first, followed by
+  /// hidden arguments.
+  SmallVector<std::pair<uint32_t, uint32_t>, 8> ArgMDs;
 };
 
 /// Reads AMDGPU specific metadata from the ELF file and propagates the
@@ -175,6 +186,43 @@ LLVM_ABI Error containerizeImage(std::unique_ptr<MemoryBuffer> &Binary,
                                  object::OffloadKind OffloadKind,
                                  int32_t ImageFlags,
                                  MapVector<StringRef, StringRef> &MetaData);
+
+namespace sycl {
+
+/// Serialized symbol table stored in the "symbols" entry of a SYCL
+/// OffloadBinary. The in-memory layout of the blob is:
+///   [ SymbolTableHeader               ]
+///   [ SymbolTableEntry  Entries[N]    ]  -- N == Header.Count
+///   [ char              StringData[]  ]  -- packed null-terminated names
+/// Use writeSymbolTable() to produce the blob and forEachSymbol() to consume
+/// it; both encapsulate all pointer arithmetic.
+
+struct SymbolTableHeader {
+  uint32_t Count; ///< Number of symbol entries.
+};
+struct SymbolTableEntry {
+  uint32_t OffsetToSymbol; ///< Byte offset from blob start to the symbol name.
+  uint32_t SymbolSize;     ///< Length of the symbol name in bytes, excluding
+                           ///< the null terminator.
+};
+
+/// Serialize \p Names into \p Out.
+LLVM_ABI void writeSymbolTable(ArrayRef<StringRef> Names, SmallString<0> &Out);
+
+/// Invoke \p Callback with a \c StringRef for each symbol in \p Symbols,
+/// the raw serialized symbol-table blob.
+template <typename Fn> void forEachSymbol(StringRef Symbols, Fn &&Callback) {
+  assert(Symbols.size() >= sizeof(SymbolTableHeader) &&
+         "symbols blob smaller than header");
+  const char *Base = Symbols.data();
+  const auto &Header = *reinterpret_cast<const SymbolTableHeader *>(Base);
+  const auto *Entries = reinterpret_cast<const SymbolTableEntry *>(&Header + 1);
+  for (uint32_t I = 0; I < Header.Count; ++I)
+    Callback(
+        StringRef(Base + Entries[I].OffsetToSymbol, Entries[I].SymbolSize));
+}
+
+} // namespace sycl
 
 namespace intel {
 /// Containerizes an OpenMP SPIR-V image into an OffloadBinary image.

@@ -38,9 +38,9 @@ int g3() {
 
 // lambda operator()
 // CIR: cir.func no_inline lambda internal private dso_local @_ZZ2g3vENK3$_0clERKi(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3:.*]]> {{.*}}, %[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}})
-// CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca !cir.ptr<![[REC_LAM_G3]]>, !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>, ["this", init]
-// CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca {{.*}} ["i", init, const]
-// CIR:   %[[RETVAL:.*]] = cir.alloca {{.*}} ["__retval"]
+// CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>
+// CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init const
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval"
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]
 // CIR:   cir.store %[[REF_I_ARG]], %[[REF_I_ALLOCA]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]]
@@ -67,9 +67,9 @@ int g3() {
 
 // lambda invoker
 // CIR: cir.func no_inline internal private dso_local @_ZZ2g3vEN3$_08__invokeERKi(%[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}}) -> (!s32i{{.*}}) {{.*}} {
-// CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca {{.*}} ["i", init, const]
-// CIR:   %[[RETVAL:.*]] = cir.alloca {{.*}} ["__retval"]
-// CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca ![[REC_LAM_G3]], !cir.ptr<![[REC_LAM_G3]]>, ["unused.capture"]
+// CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init const
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval"
+// CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca "unused.capture" {{.*}} : !cir.ptr<![[REC_LAM_G3]]>
 // CIR:   cir.store %[[REF_I_ARG]], %[[REF_I_ALLOCA]]
 // CIR:   %[[REF_I:.*]] = cir.load{{.*}} %[[REF_I_ALLOCA]]
 // CIR:   %[[LAM_RESULT:.*]] = cir.call @_ZZ2g3vENK3$_0clERKi(%2, %3) : (!cir.ptr<![[REC_LAM_G3]]> {{.*}}, !cir.ptr<!s32i> {{.*}}) -> (!s32i{{.*}})
@@ -92,8 +92,8 @@ int g3() {
 
 // lambda operator int (*)(int const&)()
 // CIR:   cir.func no_inline internal private dso_local @_ZZ2g3vENK3$_0cvPFiRKiEEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3]]> {{.*}}) -> (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>{{.*}}){{.*}} {
-// CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca !cir.ptr<![[REC_LAM_G3]]>, !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>, ["this", init]
-// CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>, ["__retval"]
+// CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]]
 // CIR:   %[[INVOKER:.*]] = cir.get_global @_ZZ2g3vEN3$_08__invokeERKi : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>
@@ -113,11 +113,11 @@ int g3() {
 // In OGCG, the _ZZ2g3vENK3$_0cvPFiRKiEEv function is emitted just after the _Z2g3v function, see above.
 
 // CIR: cir.func{{.*}} @_Z2g3v() -> (!s32i{{.*}}){{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:   %[[FN_ADDR:.*]] = cir.alloca !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>, ["fn", init]
-// CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca ![[REC_LAM_G3]], !cir.ptr<![[REC_LAM_G3]]>, ["ref.tmp0"]
-// CIR:   %[[TASK:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["task", init]
-// CIR:   %[[REF_TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp1", init]
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[FN_ADDR:.*]] = cir.alloca "fn" {{.*}} init : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>
+// CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[REC_LAM_G3]]>
+// CIR:   %[[TASK:.*]] = cir.alloca "task" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} init : !cir.ptr<!s32i>
 
 // 1. Use `operator int (*)(int const&)()` to retrieve the fnptr to `__invoke()`.
 // CIR:   %[[OPERATOR_RESULT:.*]] = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%[[LAM_ALLOCA]]){{.*}}
@@ -154,6 +154,98 @@ int g3() {
 
 // The definition for _Z2g3v in OGCG is first among the functions for the g3 test, see above.
 
+
+void use_void_lambda() {
+  auto L = [](auto x) { (void)x; };
+  void (*p)(int) = L;
+}
+
+// lambda operator()
+// CIR: cir.func no_inline lambda internal private dso_local @_ZZ15use_void_lambdavENK3$_0clIiEEDaT_(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_VOID_LAMBDA:.*]]> {{.*}}, %[[X_ARG:.*]]: !s32i {{.*}})
+// CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_VOID_LAMBDA]]>>
+// CIR:   %[[X:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]
+// CIR:   cir.store %[[X_ARG]], %[[X]]
+// CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]]
+// CIR:   cir.return
+
+// lambda invoker
+// CIR: cir.func no_inline internal private dso_local @_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_(%[[X_ARG:.*]]: !s32i {{.*}})
+// CIR:   %[[X_ALLOCA:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[UNUSED_CAPTURE:.*]] = cir.alloca "unused.capture" {{.*}} : !cir.ptr<![[REC_LAM_VOID_LAMBDA]]>
+// CIR:   cir.store %[[X_ARG]], %[[X_ALLOCA]]
+// CIR:   %[[X:.*]] = cir.load{{.*}} %[[X_ALLOCA]]
+// CIR:   cir.call @_ZZ15use_void_lambdavENK3$_0clIiEEDaT_(%[[UNUSED_CAPTURE]], %[[X]]) : (!cir.ptr<![[REC_LAM_VOID_LAMBDA]]> {{.*}}, !s32i {{.*}}) -> ()
+// CIR:   cir.return
+
+// lambda operator void (*)(int)()
+// CIR: cir.func no_inline internal private dso_local @_ZZ15use_void_lambdavENK3$_0cvPFDaT_EIiEEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_VOID_LAMBDA]]> {{.*}}) -> (!cir.ptr<!cir.func<(!s32i)>>{{.*}})
+// CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_VOID_LAMBDA]]>>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i)>>>
+// CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]
+// CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]]
+// CIR:   %[[INVOKER:.*]] = cir.get_global @_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_ : !cir.ptr<!cir.func<(!s32i)>>
+// CIR:   cir.store %[[INVOKER]], %[[RETVAL]]
+// CIR:   %[[RET:.*]] = cir.load %[[RETVAL]]
+// CIR:   cir.return %[[RET]]
+
+// CIR: cir.func no_inline dso_local @_Z15use_void_lambdav()
+// CIR:   %[[L_ALLOCA:.*]] = cir.alloca "L" {{.*}} : !cir.ptr<![[REC_LAM_VOID_LAMBDA]]>
+// CIR:   %[[P_ALLOCA:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!cir.func<(!s32i)>>>
+// CIR:   %[[LAMBDA:.*]] = cir.call @_ZZ15use_void_lambdavENK3$_0cvPFDaT_EIiEEv(%[[L_ALLOCA]])
+// CIR:   cir.store{{.*}} %[[LAMBDA]], %[[P_ALLOCA]]
+// CIR:   cir.return
+
+// lambda operator()
+// LLVM: define internal void @"_ZZ15use_void_lambdavENK3$_0clIiEEDaT_"(ptr {{.*}} %[[THIS_ARG:.*]], i32 {{.*}} %[[X_ARG:.*]])
+// LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
+// LLVM:   %[[X_ALLOCA:.*]] = alloca i32
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
+// LLVM:   store i32 %[[X_ARG]], ptr %[[X_ALLOCA]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
+// LLVM:   ret void
+
+// lambda invoker
+// LLVM: define internal void @"_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_"(i32 {{.*}} %[[X_ARG:.*]])
+// LLVM:   %[[X_ALLOCA:.*]] = alloca i32
+// LLVM:   %[[UNUSED_CAPTURE:.*]] = alloca %[[REC_LAM_VOID_LAMBDA:.*]]
+// LLVM:   store i32 %[[X_ARG]], ptr %[[X_ALLOCA]]
+// LLVM:   %[[X:.*]] = load i32, ptr %[[X_ALLOCA]]
+// LLVM:   call void @"_ZZ15use_void_lambdavENK3$_0clIiEEDaT_"(ptr {{.*}} %[[UNUSED_CAPTURE]], i32 {{.*}} %[[X]])
+// LLVM:   ret void
+
+// lambda operator void (*)(int)()
+// LLVM: define internal noundef ptr @"_ZZ15use_void_lambdavENK3$_0cvPFDaT_EIiEEv"(ptr {{.*}} %[[THIS_ARG:.*]])
+// LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
+// LLVM:   %[[RETVAL:.*]] = alloca ptr
+// LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
+// LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
+// LLVM:   store ptr @"_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_", ptr %[[RETVAL]]
+// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
+// LLVM:   ret ptr %[[RET]]
+
+// LLVM: define dso_local void @_Z15use_void_lambdav()
+// LLVM:   %[[L_ALLOCA:.*]] = alloca %[[REC_LAM_VOID_LAMBDA]]
+// LLVM:   %[[P_ALLOCA:.*]] = alloca ptr
+// LLVM:   %[[LAMBDA:.*]] = call {{.*}} ptr @"_ZZ15use_void_lambdavENK3$_0cvPFDaT_EIiEEv"(ptr {{.*}} %[[L_ALLOCA]])
+// LLVM:   store ptr %[[LAMBDA]], ptr %[[P_ALLOCA]]
+// LLVM:   ret void
+
+// OGCG: define dso_local void @_Z15use_void_lambdav()
+// OGCG:   %[[L_ALLOCA:.*]] = alloca %[[REC_LAM_VOID_LAMBDA:.*]]
+// OGCG:   %[[P_ALLOCA:.*]] = alloca ptr
+// OGCG:   %[[LAMBDA:.*]] = call {{.*}} ptr @"_ZZ15use_void_lambdavENK3$_0cvPFDaT_EIiEEv"(ptr {{.*}} %[[L_ALLOCA]])
+// OGCG:   store ptr %[[LAMBDA]], ptr %[[P_ALLOCA]]
+// OGCG:   ret void
+
+// lambda operator void (*)(int)()
+// OGCG: define internal noundef ptr @"_ZZ15use_void_lambdavENK3$_0cvPFDaT_EIiEEv"(ptr {{.*}} %[[THIS_ARG:.*]])
+// OGCG:   %[[THIS_ALLOCA:.*]] = alloca ptr
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
+// OGCG:   ret ptr @"_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_"
+
+
 // The functions below are emitted later in OGCG, see above for the corresponding LLVM checks.
 
 // OGCG: define internal noundef i32 @"_ZZ2g3vEN3$_08__invokeERKi"(ptr {{.*}} %[[I_ARG:.*]])
@@ -173,3 +265,20 @@ int g3() {
 // OGCG:   %[[I_PTR:.*]] = load ptr, ptr %[[I_ADDR]]
 // OGCG:   %[[I:.*]] = load i32, ptr %[[I_PTR]]
 // OGCG:   ret i32 %[[I]]
+
+// lambda invoker
+// OGCG: define internal void @"_ZZ15use_void_lambdavEN3$_08__invokeIiEEDaT_"(i32 {{.*}} %[[X_ARG:.*]])
+// OGCG:   %[[X_ALLOCA:.*]] = alloca i32
+// OGCG:   %[[UNUSED_CAPTURE:.*]] = alloca %[[REC_LAM_VOID_LAMBDA]]
+// OGCG:   store i32 %[[X_ARG]], ptr %[[X_ALLOCA]]
+// OGCG:   %[[X:.*]] = load i32, ptr %[[X_ALLOCA]]
+// OGCG:   call void @"_ZZ15use_void_lambdavENK3$_0clIiEEDaT_"(ptr {{.*}} %[[UNUSED_CAPTURE]], i32 {{.*}} %[[X]])
+// OGCG:   ret void
+
+// OGCG: define internal void @"_ZZ15use_void_lambdavENK3$_0clIiEEDaT_"(ptr {{.*}} %[[THIS_ARG:.*]], i32 {{.*}} %[[X_ARG:.*]])
+// OGCG:   %[[THIS_ALLOCA:.*]] = alloca ptr
+// OGCG:   %[[X_ALLOCA:.*]] = alloca i32
+// OGCG:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
+// OGCG:   store i32 %[[X_ARG]], ptr %[[X_ALLOCA]]
+// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
+// OGCG:   ret void

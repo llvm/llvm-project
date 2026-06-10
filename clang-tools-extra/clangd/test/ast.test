@@ -10,7 +10,7 @@
 #      CHECK:  "id": 1,
 # CHECK-NEXT:  "jsonrpc": "2.0",
 # CHECK-NEXT:  "result": {
-# CHECK-NEXT:    "arcana": "VarDecl {{.*}} x 'int'",
+# CHECK-NEXT:    "arcana": "VarDecl {{.*}} x 'int' external-linkage",
 # CHECK-NEXT:    "children": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "arcana": "QualType {{.*}} 'int' ",

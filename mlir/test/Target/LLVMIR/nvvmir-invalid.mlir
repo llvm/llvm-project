@@ -1,12 +1,5 @@
 // RUN: mlir-translate -verify-diagnostics -split-input-file -mlir-to-llvmir %s
 
-llvm.func @kernel_func(%numberOfThreads : i32) {
-  // expected-error @below {{'nvvm.barrier' op barrier id is missing, it should be set between 0 to 15}}
-  nvvm.barrier number_of_threads = %numberOfThreads
-}
-
-// -----
-
 // expected-error @below {{'"nvvm.minctasm"' attribute must be integer constant}}
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.minctasm = "foo"} {
   llvm.return
@@ -226,7 +219,7 @@ llvm.func @nvvm_cvt_f32x2_to_f4x2_invalid_type(%a : f32, %b : f32) {
 // -----
 
 llvm.func @nvvm_cvt_f8x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{Only 'f8E4M3FN' and 'f8E5M2' types are supported for conversions from f8x2 to f16x2.}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E4M3FN type or f8E5M2 type}}
   %res = nvvm.convert.f8x2.to.f16x2 %src : vector<2xi8> (f8E4M3) -> vector<2xf16>
   llvm.return
 }
@@ -234,24 +227,88 @@ llvm.func @nvvm_cvt_f8x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
 // -----
 
 llvm.func @nvvm_cvt_f8x2_to_bf16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{Only 'f8E8M0FNU' type is supported for conversions from f8x2 to bf16x2.}}
-  %res = nvvm.convert.f8x2.to.bf16x2 %src : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f8E8M0FNU type or f8E4M3FN type or f8E5M2 type}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src : vector<2xi8> (f8E4M3) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_ue8m0_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{Only NONE saturation mode is supported for conversions from 'f8E8M0FNU' type}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src {sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> (f8E8M0FNU) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_ue8m0_invalid_scale(%src : vector<2xi8>, %sf : i16) {
+  // expected-error @below {{scaleFactor not supported for conversions from 'f8E8M0FNU' type}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src, %sf : vector<2xi8> (f8E8M0FNU) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_ue8m0_invalid_relu(%src : vector<2xi8>) {
+  // expected-error @below {{relu not supported for conversions from 'f8E8M0FNU' type}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src {relu = true} : vector<2xi8> (f8E8M0FNU) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f8x2_to_bf16x2_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f8x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f6x2_to_bf16x2_invalid_sat(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f4x2_to_bf16x2_invalid_sat(%src : i8) {
+  // expected-error @below {{op attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, satfinite}}}
+  %res = nvvm.convert.f4x2.to.bf16x2 %src {sat = #nvvm.sat_mode<sat>} : i8 (f4E2M1FN) -> vector<2xbf16>
   llvm.return
 }
 
 // -----
 
 llvm.func @nvvm_cvt_f6x2_to_f16x2_invalid_type(%src : vector<2xi8>) {
-  // expected-error @below {{Only 'f6E2M3FN' and 'f6E3M2FN' types are supported for conversions from f6x2 to f16x2.}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f6E2M3FN type or f6E3M2FN type}}
   %res = nvvm.convert.f6x2.to.f16x2 %src : vector<2xi8> (f8E4M3FN) -> vector<2xf16>
   llvm.return
 }
 
 // -----
 
+llvm.func @nvvm_cvt_f6x2_to_bf16x2_invalid_type(%src : vector<2xi8>) {
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f6E2M3FN type or f6E3M2FN type}}
+  %res = nvvm.convert.f6x2.to.bf16x2 %src : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// -----
+
 llvm.func @nvvm_cvt_f4x2_to_f16x2_invalid_type(%src : i8) {
-  // expected-error @below {{Only 'f4E2M1FN' type is supported for conversions from f4x2 to f16x2.}}
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f4E2M1FN type}}
   %res = nvvm.convert.f4x2.to.f16x2 %src : i8 (f6E2M3FN) -> vector<2xf16>
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_cvt_f4x2_to_bf16x2_invalid_type(%src : i8) {
+  // expected-error @below {{op attribute 'srcType' failed to satisfy constraint: type attribute of f4E2M1FN type}}
+  %res = nvvm.convert.f4x2.to.bf16x2 %src : i8 (f6E2M3FN) -> vector<2xbf16>
   llvm.return
 }
 
@@ -541,6 +598,34 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<3>) {
 
 // -----
 
+llvm.func @mov_matrix(%src : i32) -> i32 {
+  // expected-error@+1 {{'nvvm.movmatrix' op expected shape to be 8x8}}
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 16>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
+}
+
+// -----
+
+llvm.func @mov_matrix(%src : i32) -> i32 {
+  // expected-error@+1 {{'nvvm.movmatrix' op expected layout to be col}}
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              layout = #nvvm.mma_layout<row>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
+}
+
+// -----
+
+llvm.func @mov_matrix(%src : i32) -> i32 {
+  // expected-error@+1 {{'nvvm.movmatrix' op expected element type to be b16}}
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b8>} : i32
+  llvm.return %dst : i32
+}
+
+// -----
+
 llvm.func @clusterlaunchcontrol_query_cancel_is_canceled_invalid_return_type(%try_cancel_response: i128) {
   // expected-error@+1 {{'nvvm.clusterlaunchcontrol.query.cancel' op is_canceled query type returns an i1}}
   %res = nvvm.clusterlaunchcontrol.query.cancel query = is_canceled, %try_cancel_response : i32
@@ -590,9 +675,9 @@ llvm.func @nvvm_wmma_load_a_f64(%arg0: !llvm.ptr, %arg1 : i32) {
 
 // -----
 
-// Test that nvvm.barrier0 at module scope (outside any function) produces a
+// Test that nvvm.barrier at module scope (outside any function) produces a
 // proper error instead of crashing with a null dereference in
 // createIntrinsicCall. See https://github.com/llvm/llvm-project/issues/186642
-// expected-error @+2 {{'nvvm.barrier0' op cannot be translated to LLVM IR without an active insertion point}}
-// expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier0}}
-nvvm.barrier0
+// expected-error @+2 {{'nvvm.barrier' op cannot be translated to LLVM IR without an active insertion point}}
+// expected-error @+1 {{LLVM Translation failed for operation: nvvm.barrier}}
+nvvm.barrier

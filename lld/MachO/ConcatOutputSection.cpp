@@ -65,6 +65,9 @@ DenseMap<ThunkKey, ThunkInfo, ThunkMapKeyInfo> lld::macho::thunkMap;
 bool TextOutputSection::needsThunks() const {
   if (!target->usesThunks())
     return false;
+  // FIXME: It is not enough to just estimate the size of this section. We
+  // should compute parent->needsThunks by estimating the size of all __text
+  // sections. See https://github.com/llvm/llvm-project/issues/195387
   uint64_t isecAddr = addr;
   for (ConcatInputSection *isec : inputs)
     isecAddr = alignToPowerOf2(isecAddr, isec->align) + isec->getSize();
@@ -191,9 +194,47 @@ void TextOutputSection::createThunk(const ConcatInputSection &isec,
   thunks.push_back(thunkInfo.isec);
 }
 
+std::optional<uint64_t>
+TextOutputSection::estimateStubsEndVA(unsigned numPotentialThunks) const {
+  if (!parent)
+    return std::nullopt;
+
+  auto sections =
+      ArrayRef(parent->getSections())
+          .drop_until([&](const OutputSection *osec) { return osec == this; });
+
+  // Walk backwards to find the last stubs section
+  while (!sections.empty()) {
+    auto *osec = sections.back();
+    if (osec->isNeeded() && (osec == in.stubs || osec == in.objcStubs))
+      break;
+    sections.consume_back();
+  }
+  if (sections.empty())
+    return std::nullopt;
+
+  assert(inputs.empty() || inputs.back()->isFinal);
+  uint64_t estimatedStubsEnd =
+      addr + size + numPotentialThunks * target->thunkSize;
+  for (auto *osec : sections) {
+    if (osec == this)
+      continue;
+    if (!osec->isNeeded())
+      continue;
+    // Check if we will emit any more sections before the last stubs section
+    if (osec != in.stubs && osec != in.stubHelper && osec != in.objcStubs)
+      return std::nullopt;
+    estimatedStubsEnd =
+        alignToPowerOf2(estimatedStubsEnd, osec->align) + osec->getSize();
+  }
+  return estimatedStubsEnd;
+}
+
 bool TextOutputSection::isTargetStubsAndInRange(
     const ConcatInputSection &isec, const Relocation &r,
-    uint64_t estimatedStubsEnd) const {
+    std::optional<uint64_t> estimatedStubsEnd) const {
+  if (!estimatedStubsEnd.has_value())
+    return false;
   auto *funcSym = cast<Symbol *>(r.referent);
   if (!funcSym->isInStubs() && !(in.objcStubs && in.objcStubs->isNeeded() &&
                                  ObjCStubsSection::isObjCStubSymbol(funcSym)))
@@ -201,7 +242,7 @@ bool TextOutputSection::isTargetStubsAndInRange(
   if (r.addend)
     return false;
   uint64_t highVA = isec.getVA() + r.offset + target->forwardBranchRange;
-  return estimatedStubsEnd <= highVA;
+  return *estimatedStubsEnd <= highVA;
 }
 
 void TextOutputSection::markBranchAsResolved(const Relocation *r,
@@ -234,8 +275,7 @@ void TextOutputSection::finalize() {
     while (!branchesToProcess.empty()) {
       auto [callerIsec, r] = branchesToProcess.front();
       assert(callerIsec->isFinal);
-      auto *funcSym = cast<Symbol *>(r->referent);
-      auto &thunkInfo = thunkMap[{funcSym, r->addend}];
+      auto &thunkInfo = thunkMap[*r];
       if (isTargetKnownInRange(*callerIsec, *r)) {
         markBranchAsResolved(r, thunkInfo);
         branchesToProcess.pop_front();
@@ -285,8 +325,7 @@ void TextOutputSection::finalize() {
         continue;
       if (isTargetKnownInRange(*isec, r))
         continue;
-      auto *funcSym = cast<Symbol *>(r.referent);
-      auto &thunkInfo = thunkMap[{funcSym, r.addend}];
+      auto &thunkInfo = thunkMap[r];
       if (auto *thunk = getThunkInRange(*isec, r, thunkInfo)) {
         deferredBranchRedirects.emplace_back(isec, &r, thunk);
         continue;
@@ -302,17 +341,16 @@ void TextOutputSection::finalize() {
     auto [callerIsec, r] = pair;
     if (!isTargetKnownInRange(*callerIsec, *r))
       return false;
-    auto *funcSym = cast<Symbol *>(r->referent);
-    auto &thunkInfo = thunkMap[{funcSym, r->addend}];
-    markBranchAsResolved(r, thunkInfo);
+    markBranchAsResolved(r, thunkMap[*r]);
     return true;
   });
-
 #ifndef NDEBUG
+  // Count distinct unresolved branch targets that still lack an in-range thunk.
+  // We use this as an upper bound on the number of thunks we may still create
+  // when estimating where __stubs / __objc_stubs could end up.
   DenseSet<ThunkKey, ThunkMapKeyInfo> branchTargets;
   for (auto [callerIsec, r] : branchesToProcess) {
-    auto *funcSym = cast<Symbol *>(r->referent);
-    ThunkKey thunkKey{funcSym, r->addend};
+    ThunkKey thunkKey(*r);
     auto &thunkInfo = thunkMap[thunkKey];
     if (!getThunkInRange(*callerIsec, *r, thunkInfo))
       branchTargets.insert(thunkKey);
@@ -320,15 +358,7 @@ void TextOutputSection::finalize() {
   assert(numPendingThunkTargets == branchTargets.size());
 #endif
 
-  uint64_t estimatedTextEnd =
-      addr + size + numPendingThunkTargets * target->thunkSize;
-  uint64_t estimatedStubsEnd =
-      alignToPowerOf2(estimatedTextEnd, in.stubs->align) + in.stubs->getSize();
-  if (in.objcStubs && in.objcStubs->isNeeded())
-    estimatedStubsEnd =
-        alignToPowerOf2(estimatedStubsEnd, in.objcStubs->align) +
-        in.objcStubs->getSize();
-
+  auto estimatedStubsEnd = estimateStubsEndVA(numPendingThunkTargets);
   for (auto [isec, r, thunk] : deferredBranchRedirects) {
     if (isTargetKnownInRange(*isec, *r))
       continue;
@@ -338,8 +368,7 @@ void TextOutputSection::finalize() {
   }
 
   for (auto [isec, r] : branchesToProcess) {
-    auto *funcSym = cast<Symbol *>(r->referent);
-    auto &thunkInfo = thunkMap[{funcSym, r->addend}];
+    auto &thunkInfo = thunkMap[*r];
 #ifndef NDEBUG
     markBranchAsResolved(r, thunkInfo);
 #endif

@@ -1,3 +1,18 @@
+add_header_library(
+  socket_test_support
+  HDRS
+    socket_test_support.h
+  DEPENDS
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.socklen_t
+    libc.hdr.types.struct_sockaddr_un
+    libc.src.__support.common
+    libc.src.__support.CPP.string_view
+    libc.src.string.strncpy
+    libc.src.string.strnlen
+)
+
 add_custom_target(libc_sys_socket_unittests)
 
 add_libc_unittest(
@@ -22,14 +37,20 @@ add_libc_unittest(
   SRCS
     bind_test.cpp
   DEPENDS
+    .socket_test_support
     libc.include.sys_socket
+    libc.hdr.netinet_in_macros
     libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_sockaddr_in
     libc.hdr.types.struct_sockaddr_un
+    libc.src.arpa.inet.htonl
     libc.src.errno.errno
     libc.src.sys.socket.socket
     libc.src.sys.socket.bind
+    libc.src.sys.socket.getsockname
     libc.src.stdio.remove
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -41,20 +62,23 @@ add_libc_unittest(
   SRCS
     connect_accept_test.cpp
   DEPENDS
+    .socket_test_support
     libc.include.sys_socket
+    libc.hdr.fcntl_macros
     libc.hdr.sys_socket_macros
     libc.hdr.types.size_t
     libc.hdr.types.struct_sockaddr_un
     libc.src.errno.errno
+    libc.src.fcntl.fcntl
     libc.src.sys.socket.accept
+    libc.src.sys.socket.accept4
     libc.src.sys.socket.bind
     libc.src.sys.socket.connect
     libc.src.sys.socket.listen
     libc.src.sys.socket.socket
-    libc.src.string.strlen
-    libc.src.string.strncpy
     libc.src.stdio.remove
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -66,6 +90,7 @@ add_libc_unittest(
   SRCS
     listen_test.cpp
   DEPENDS
+    .socket_test_support
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_sockaddr_un
@@ -75,6 +100,7 @@ add_libc_unittest(
     libc.src.sys.socket.listen
     libc.src.stdio.remove
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -89,12 +115,20 @@ add_libc_unittest(
     libc.include.sys_socket
     libc.hdr.sys_socket_macros
     libc.hdr.types.socklen_t
+    libc.hdr.types.struct_linger
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.struct_timeval
     libc.src.errno.errno
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.socket
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.recv
+    libc.src.time.clock_gettime
     libc.src.unistd.close
     libc.src.unistd.pipe
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -115,18 +149,45 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  sockname_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sockname_test.cpp
+  DEPENDS
+    .socket_test_support
+    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_sockaddr_un
+    libc.src.errno.errno
+    libc.src.sys.socket.accept
+    libc.src.sys.socket.bind
+    libc.src.sys.socket.connect
+    libc.src.sys.socket.getpeername
+    libc.src.sys.socket.getsockname
+    libc.src.sys.socket.listen
+    libc.src.sys.socket.socket
+    libc.src.stdio.remove
+    libc.src.unistd.close
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
   send_recv_test
   SUITE
     libc_sys_socket_unittests
   SRCS
     send_recv_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
     libc.src.errno.errno
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.send
     libc.src.sys.socket.recv
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -144,6 +205,27 @@ add_libc_unittest(
     libc.src.sys.socket.sendto
     libc.src.sys.socket.recvfrom
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  sendmmsg_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sendmmsg_test.cpp
+  DEPENDS
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_mmsghdr
+    libc.src.errno.errno
+    libc.src.string.strlen
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.sendmmsg
+    libc.src.sys.socket.recvmsg
+    libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -155,12 +237,51 @@ add_libc_unittest(
   SRCS
     sendmsg_recvmsg_test.cpp
   DEPENDS
-    libc.include.sys_socket
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_cmsghdr
     libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.string.memcpy
+    libc.src.string.memset
+    libc.src.sys.socket.getsockopt
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendmsg
     libc.src.sys.socket.recvmsg
     libc.src.unistd.close
+    libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  shutdown_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    shutdown_test.cpp
+  DEPENDS
+    libc.include.sys_socket
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.ssize_t
+    libc.src.__support.CPP.scope
+    libc.src.errno.errno
+    libc.src.sys.socket.shutdown
+    libc.src.sys.socket.socketpair
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  sockaddr_storage_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sockaddr_storage_test.cpp
+    sockaddr_storage_helper.cpp
+  DEPENDS
+    libc.hdr.types.struct_sockaddr_storage
+    libc.hdr.types.struct_sockaddr_un
 )

@@ -19,13 +19,12 @@ declare void @llvm.memcpy.inline.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; Check that one of the memcpy's are removed.
-;; FIXME: PR 8643 We should be able to eliminate the last memcpy here.
 define void @test1(ptr sret(%0)  %agg.result, x86_fp80 %z.0, x86_fp80 %z.1) nounwind  {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca [[TMP0:%.*]], align 16
 ; CHECK-NEXT:    [[MEMTMP:%.*]] = alloca [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub x86_fp80 0xK80000000000000000000, [[Z_1:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub x86_fp80 -0.000000e+00, [[Z_1:%.*]]
 ; CHECK-NEXT:    call void @ccoshl(ptr sret([[TMP0]]) [[TMP2]], x86_fp80 [[TMP5]], x86_fp80 [[Z_0:%.*]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 16 [[AGG_RESULT:%.*]], ptr align 16 [[TMP2]], i32 32, i1 false)
 ; CHECK-NEXT:    ret void

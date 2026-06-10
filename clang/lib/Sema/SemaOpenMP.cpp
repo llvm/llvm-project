@@ -6778,6 +6778,10 @@ StmtResult SemaOpenMP::ActOnOpenMPExecutableDirective(
   case OMPD_begin_declare_variant:
   case OMPD_end_declare_variant:
     llvm_unreachable("OpenMP Directive is not allowed");
+  case OMPD_taskgraph:
+    Diag(StartLoc, diag::err_omp_unexpected_directive)
+        << 1 << getOpenMPDirectiveName(OMPD_taskgraph);
+    return StmtError();
   case OMPD_unknown:
   default:
     llvm_unreachable("Unknown OpenMP directive");
@@ -18967,18 +18971,43 @@ OMPClause *SemaOpenMP::ActOnOpenMPInitClause(
   if (!isValidInteropVariable(SemaRef, InteropVar, VarLoc, OMPC_init))
     return nullptr;
 
-  // Check prefer_type values.  These foreign-runtime-id values are either
-  // string literals or constant integral expressions.
-  for (const Expr *E : InteropInfo.PreferTypes) {
-    if (E->isValueDependent() || E->isTypeDependent() ||
-        E->isInstantiationDependent() || E->containsUnexpandedParameterPack())
-      continue;
-    if (E->isIntegerConstantExpr(getASTContext()))
-      continue;
-    if (isa<StringLiteral>(E))
-      continue;
-    Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
-    return nullptr;
+  // Check prefer_type values. fr() arguments are either string literals or
+  // constant integral expressions; null Fr is only valid in OMP 6.0.
+  // attr() arguments must be ext-string-literals with the 'ompx_' prefix
+  // (OpenMP 6.0 spec, section 16.1.3).
+  for (const OMPInteropPref &P : InteropInfo.Prefs) {
+    const Expr *E = P.Fr;
+    if (!E) {
+      assert(InteropInfo.HasPreferAttrs && "null Fr requires OMP 6.0 syntax");
+    } else if (!E->isValueDependent() && !E->isTypeDependent() &&
+               !E->isInstantiationDependent() &&
+               !E->containsUnexpandedParameterPack()) {
+      if (!E->isIntegerConstantExpr(getASTContext()) &&
+          !isa<StringLiteral>(E)) {
+        Diag(E->getExprLoc(), diag::err_omp_interop_prefer_type);
+        return nullptr;
+      }
+    }
+    for (const Expr *A : P.Attrs) {
+      if (A->isValueDependent() || A->isTypeDependent() ||
+          A->isInstantiationDependent() || A->containsUnexpandedParameterPack())
+        continue;
+      const auto *SL = dyn_cast<StringLiteral>(A);
+      if (!SL) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_not_string);
+        return nullptr;
+      }
+      if (!SL->getString().starts_with("ompx_")) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_missing_ompx_prefix)
+            << SL->getString();
+        return nullptr;
+      }
+      if (SL->getString().contains(',')) {
+        Diag(A->getExprLoc(), diag::err_omp_interop_attr_contains_comma)
+            << SL->getString();
+        return nullptr;
+      }
+    }
   }
 
   return OMPInitClause::Create(getASTContext(), InteropVar, InteropInfo,
@@ -22318,11 +22347,35 @@ OMPClause *SemaOpenMP::ActOnOpenMPDeviceClause(
   Expr *ValExpr = Device;
   Stmt *HelperValStmt = nullptr;
 
-  // OpenMP [2.9.1, Restrictions]
-  // The device expression must evaluate to a non-negative integer value.
-  ErrorFound = !isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_device,
-                                          /*StrictlyPositive=*/false) ||
-               ErrorFound;
+  // OpenMP 5.2 [1.3, Execution Model]: a conforming device number is either
+  // a non-negative integer that is less than or equal to omp_get_num_devices()
+  // or equal to omp_initial_device or omp_invalid_device. The predefined
+  // identifiers were introduced in OpenMP 5.2; earlier versions require a
+  // non-negative integer.
+  if (getLangOpts().OpenMP >= 52) {
+    if (!ValExpr->isTypeDependent() && !ValExpr->isValueDependent() &&
+        !ValExpr->isInstantiationDependent()) {
+      SourceLocation Loc = ValExpr->getExprLoc();
+      ExprResult Value = PerformOpenMPImplicitIntegerConversion(Loc, ValExpr);
+      if (Value.isInvalid()) {
+        ErrorFound = true;
+      } else {
+        ValExpr = Value.get();
+        if (std::optional<llvm::APSInt> Result =
+                ValExpr->getIntegerConstantExpr(getASTContext())) {
+          if (Result->isSigned() && Result->slt(-2)) {
+            Diag(Loc, diag::err_omp_device_expression_invalid)
+                << ValExpr->getSourceRange();
+            ErrorFound = true;
+          }
+        }
+      }
+    }
+  } else {
+    ErrorFound = !isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_device,
+                                            /*StrictlyPositive=*/false) ||
+                 ErrorFound;
+  }
   if (ErrorFound)
     return nullptr;
 
@@ -24835,13 +24888,18 @@ void SemaOpenMP::ActOnOpenMPDeclareTargetName(
     if (!IndirectE)
       IsIndirect = true;
   }
-  // FIXME: 'local' clause is not yet implemented in CodeGen. For now, it is
-  // treated as 'enter'. For host compilation, 'local' is a no-op.
+  // FIXME: 'local' with 'device_type(nohost)' is not yet fully supported
+  // in codegen. Treat as 'device_type(any)' for now. The variable will
+  // exist on both host and device, but the host copy is unused.
+  auto DT = DTCI.DT;
   if (MT == OMPDeclareTargetDeclAttr::MT_Local &&
-      getLangOpts().OpenMPIsTargetDevice)
-    Diag(Loc, diag::warn_omp_declare_target_local_not_implemented);
+      DT == OMPDeclareTargetDeclAttr::DT_NoHost) {
+    Diag(Loc, diag::warn_omp_declare_target_local_nohost);
+    DT = OMPDeclareTargetDeclAttr::DT_Any;
+  }
+
   auto *A = OMPDeclareTargetDeclAttr::CreateImplicit(
-      getASTContext(), MT, DTCI.DT, IndirectE, IsIndirect, Level,
+      getASTContext(), MT, DT, IndirectE, IsIndirect, Level,
       SourceRange(Loc, Loc));
   ND->addAttr(A);
   if (ASTMutationListener *ML = getASTContext().getASTMutationListener())

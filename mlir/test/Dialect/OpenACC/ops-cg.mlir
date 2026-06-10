@@ -225,6 +225,18 @@ func.func @compute_region_launch_only() {
 
 // -----
 
+// CHECK-LABEL: func @compute_region_empty
+func.func @compute_region_empty() {
+  acc.compute_region {
+  } {origin = "acc.parallel"}
+  return
+}
+// CHECK: acc.compute_region {
+// CHECK:   acc.yield
+// CHECK: } {origin = "acc.parallel"}
+
+// -----
+
 // CHECK-LABEL: func @compute_region_all_fields
 // CHECK-SAME: (%{{.*}}: memref<1024xf32>, %[[STREAM:.*]]: !gpu.async.token)
 func.func @compute_region_all_fields(%data: memref<1024xf32>,
@@ -258,6 +270,56 @@ func.func @compute_region_all_fields(%data: memref<1024xf32>,
 
 // -----
 
+// CHECK-LABEL: func @parallel_reduction_pattern
+func.func @parallel_reduction_pattern(%data: memref<8xi32>, %shared: memref<i32>) {
+  %c0 = arith.constant 0 : index
+  %c8 = arith.constant 8 : index
+  %c1 = arith.constant 1 : index
+  %c0_i32 = arith.constant 0 : i32
+  %private = memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>} : memref<i32>
+  memref.store %c0_i32, %private[] : memref<i32>
+  %partial = scf.parallel (%iv) = (%c0) to (%c8) step (%c1) init (%c0_i32) -> i32 {
+    %v = memref.load %data[%iv] : memref<8xi32>
+    scf.reduce(%v : i32) {
+    ^bb0(%lhs: i32, %rhs: i32):
+      %sum = arith.addi %lhs, %rhs : i32
+      scf.reduce.return %sum : i32
+    }
+  } {acc.par_dims = #acc<par_dims[thread_x]>}
+  acc.reduction_accumulate %partial to %private <add>
+      : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
+  acc.reduction_combine %private into %shared <add> : memref<i32>
+      {acc.par_dims = #acc<par_dims[thread_x]>}
+  return
+}
+// CHECK: memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>}
+// CHECK: scf.parallel
+// CHECK: scf.reduce
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
+// CHECK: acc.reduction_combine %{{.*}} into %{{.*}} <add> : memref<i32> {acc.par_dims = #acc<par_dims[thread_x]>}
+
+// -----
+
+// CHECK-LABEL: func @reduction_accumulate_thread_x
+func.func @reduction_accumulate_thread_x(%partial: f32, %private: memref<f32>) {
+  acc.reduction_accumulate %partial to %private <add>
+      : f32 -> memref<f32> {par_dims = #acc<par_dims[thread_x]>}
+  return
+}
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : f32 -> memref<f32> {par_dims = #acc<par_dims[thread_x]>}
+
+// -----
+
+// CHECK-LABEL: func @reduction_accumulate_block_thread
+func.func @reduction_accumulate_block_thread(%partial: i32, %private: memref<i32>) {
+  acc.reduction_accumulate %partial to %private <add>
+      : i32 -> memref<i32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+  return
+}
+// CHECK: acc.reduction_accumulate %{{.*}} to %{{.*}} <add> : i32 -> memref<i32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+
+// -----
+
 // CHECK-LABEL: func @compute_region_with_results
 func.func @compute_region_with_results() -> i32 {
   %w0 = acc.par_width {par_dim = #acc.par_dim<thread_x>}
@@ -271,3 +333,89 @@ func.func @compute_region_with_results() -> i32 {
 // CHECK: {{.*}} = acc.compute_region launch(%{{.*}} = %[[W]]) -> i32 {
 // CHECK:   acc.yield
 // CHECK: } {origin = "acc.parallel"}
+
+// -----
+
+// CHECK-LABEL: func @predicate_region_gang_vector_atomics
+func.func @predicate_region_gang_vector_atomics(%c1: memref<i32>, %c2: memref<i32>) {
+  %c3 = arith.constant 3 : index
+  %c16 = arith.constant 16 : index
+  %copy_c1 = acc.copyin varPtr(%c1 : memref<i32>) -> memref<i32> {dataClause = #acc<data_clause acc_copy>}
+  %copy_c2 = acc.copyin varPtr(%c2 : memref<i32>) -> memref<i32> {dataClause = #acc<data_clause acc_copy>}
+  acc.kernel_environment dataOperands(%copy_c1, %copy_c2 : memref<i32>, memref<i32>) {
+    %w_gang = acc.par_width %c3 {par_dim = #acc.par_dim<block_x>}
+    %w_vector = acc.par_width %c16 {par_dim = #acc.par_dim<thread_x>}
+    acc.compute_region launch(%arg0 = %w_gang, %arg1 = %w_vector)
+        ins(%arg2 = %copy_c1, %arg3 = %copy_c2) : (memref<i32>, memref<i32>) {
+      %c1_idx = arith.constant 1 : index
+      %c10 = arith.constant 10 : index
+      scf.parallel (%i) = (%c1_idx) to (%c10) step (%c1_idx) {
+        acc.predicate_region {
+          acc.atomic.update %arg2 : memref<i32> {
+          ^bb0(%old: i32):
+            %one = arith.constant 1 : i32
+            %sum = arith.addi %old, %one : i32
+            acc.yield %sum : i32
+          }
+        }
+        scf.parallel (%j) = (%c1_idx) to (%c10) step (%c1_idx) {
+          acc.atomic.update %arg3 : memref<i32> {
+          ^bb0(%old: i32):
+            %one = arith.constant 1 : i32
+            %sum = arith.addi %old, %one : i32
+            acc.yield %sum : i32
+          }
+          scf.reduce
+        } {acc.par_dims = #acc<par_dims[thread_x]>}
+        scf.reduce
+      } {acc.par_dims = #acc<par_dims[block_x]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+  }
+  acc.copyout accPtr(%copy_c1 : memref<i32>) to varPtr(%c1 : memref<i32>) {dataClause = #acc<data_clause acc_copy>}
+  acc.copyout accPtr(%copy_c2 : memref<i32>) to varPtr(%c2 : memref<i32>) {dataClause = #acc<data_clause acc_copy>}
+  return
+}
+// CHECK: acc.predicate_region {
+// CHECK:   acc.atomic.update
+// CHECK: }
+
+// -----
+
+// CHECK-LABEL: func @predicate_region_gang_redundant_setup
+func.func @predicate_region_gang_redundant_setup(%idx: memref<i32>, %table: memref<10xi32>) {
+  %c3 = arith.constant 3 : index
+  %c16 = arith.constant 16 : index
+  %copy_idx = acc.copyin varPtr(%idx : memref<i32>) -> memref<i32> {dataClause = #acc<data_clause acc_copy>}
+  %copy_table = acc.copyin varPtr(%table : memref<10xi32>) -> memref<10xi32>
+  acc.kernel_environment dataOperands(%copy_idx, %copy_table : memref<i32>, memref<10xi32>) {
+    %w_gang = acc.par_width %c3 {par_dim = #acc.par_dim<block_x>}
+    %w_vector = acc.par_width %c16 {par_dim = #acc.par_dim<thread_x>}
+    acc.compute_region launch(%arg0 = %w_gang, %arg1 = %w_vector)
+        ins(%arg2 = %copy_idx, %arg3 = %copy_table) : (memref<i32>, memref<10xi32>) {
+      %c0 = arith.constant 0 : index
+      %c1 = arith.constant 1 : index
+      %c10 = arith.constant 10 : index
+      %v = memref.load %arg3[%c0] : memref<10xi32>
+      acc.predicate_region {
+        memref.store %v, %arg2[] : memref<i32>
+      }
+      scf.parallel (%i) = (%c1) to (%c10) step (%c1) {
+        %i_val = memref.load %arg2[] : memref<i32>
+        %twice = arith.addi %i_val, %i_val : i32
+        memref.store %twice, %arg2[] : memref<i32>
+        scf.parallel (%j) = (%c1) to (%c10) step (%c1) {
+          scf.reduce
+        } {acc.par_dims = #acc<par_dims[thread_x]>}
+        scf.reduce
+      } {acc.par_dims = #acc<par_dims[block_x]>}
+      acc.yield
+    } {origin = "acc.kernels"}
+  }
+  acc.copyout accPtr(%copy_idx : memref<i32>) to varPtr(%idx : memref<i32>) {dataClause = #acc<data_clause acc_copy>}
+  acc.delete accPtr(%copy_table : memref<10xi32>)
+  return
+}
+// CHECK: acc.predicate_region {
+// CHECK:   memref.store
+// CHECK: }

@@ -134,7 +134,7 @@ TEST_F(OpenMPUtilsTest, AffectedNestDepthNoClauses) {
     // | | ImplicitPart ->
     // | ExecutionPart -> Block
     // | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-    // | | | OmpBeginLoopDirective
+    // | | | OmpBeginDirective
     // | | | | OmpDirectiveName -> llvm::omp::Directive = do
     // | | | | OmpClauseList ->
     // | | | | Flags = {}

@@ -14,7 +14,7 @@
 // This is the sockaddr specialization for AF_UNIX or AF_LOCAL sockets, as
 // defined by posix.
 
-struct sockaddr_un {
+struct __attribute__((may_alias)) sockaddr_un {
   sa_family_t sun_family; /* AF_UNIX */
   char sun_path[108];     /* Pathname */
 };

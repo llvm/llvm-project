@@ -18,10 +18,10 @@ void binary_assign(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @binary_assign()
-// CIR:         %[[B:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b"]
-// CIR:         %[[C:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["c"]
-// CIR:         %[[F:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f"]
-// CIR:         %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"]
+// CIR:         %[[B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s8i>
+// CIR:         %[[F:.*]] = cir.alloca "f" {{.*}} : !cir.ptr<!cir.float>
+// CIR:         %[[I:.*]] = cir.alloca "i" {{.*}} : !cir.ptr<!s32i>
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store{{.*}} %[[TRUE]], %[[B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:         %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s8i
@@ -39,7 +39,7 @@ void binary_assign(void) {
 // LLVM:         %[[I_PTR:.*]] = alloca i32
 // LLVM:         store i8 1, ptr %[[B_PTR]]
 // LLVM:         store i8 65, ptr %[[C_PTR]]
-// LLVM:         store float 0x40091EB860000000, ptr %[[F_PTR]]
+// LLVM:         store float 3.140000e+00, ptr %[[F_PTR]]
 // LLVM:         store i32 42, ptr %[[I_PTR]]
 // LLVM:         ret void
 
@@ -50,7 +50,7 @@ void binary_assign(void) {
 // OGCG:         %[[I_PTR:.*]] = alloca i32
 // OGCG:         store i8 1, ptr %[[B_PTR]]
 // OGCG:         store i8 65, ptr %[[C_PTR]]
-// OGCG:         store float 0x40091EB860000000, ptr %[[F_PTR]]
+// OGCG:         store float 3.140000e+00, ptr %[[F_PTR]]
 // OGCG:         store i32 42, ptr %[[I_PTR]]
 // OGCG:         ret void
 
@@ -78,8 +78,8 @@ void binary_assign_struct() {
 }
 
 // CIR: cir.func{{.*}} @binary_assign_struct()
-// CIR:   %[[LS:.*]] = cir.alloca ![[REC_S:.*]], !cir.ptr<![[REC_S]]>, ["ls"]
-// CIR:   %[[LSV:.*]] = cir.alloca ![[REC_SV:.*]], !cir.ptr<![[REC_SV]]>, ["lsv"]
+// CIR:   %[[LS:.*]] = cir.alloca "ls" {{.*}} : !cir.ptr<![[REC_S:.*]]>
+// CIR:   %[[LSV:.*]] = cir.alloca "lsv" {{.*}} : !cir.ptr<![[REC_SV:.*]]>
 // CIR:   %[[GS_PTR:.*]] = cir.get_global @gs : !cir.ptr<![[REC_S]]>
 // CIR:   cir.copy %[[GS_PTR]] to %[[LS]] : !cir.ptr<![[REC_S]]>
 // CIR:   %[[GSV_PTR:.*]] = cir.get_global @gsv : !cir.ptr<![[REC_SV]]>
@@ -112,18 +112,19 @@ int ignore_result_assign() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @ignore_result_assign() -> !s32i
-// CIR:         %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
-// CIR:         %[[ARR:.*]] = cir.alloca !cir.array<!s32i x 10>, !cir.ptr<!cir.array<!s32i x 10>>, ["arr"]
-// CIR:         %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"]
-// CIR:         %[[J:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["j"]
-// CIR:         %[[P:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["p"]
-// CIR:         %[[Q:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["q", init]
+// CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:         %[[ARR:.*]] = cir.alloca "arr" {{.*}} : !cir.ptr<!cir.array<!s32i x 10>>
+// CIR:         %[[I:.*]] = cir.alloca "i" {{.*}} : !cir.ptr<!s32i>
+// CIR:         %[[J:.*]] = cir.alloca "j" {{.*}} : !cir.ptr<!s32i>
+// CIR:         %[[P:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:         %[[Q:.*]] = cir.alloca "q" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:         %[[VAL_123:.*]] = cir.const #cir.int<123> : !s32i
 // CIR:         cir.store{{.*}} %[[VAL_123]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.store{{.*}} %[[VAL_123]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[VAL_5:.*]] = cir.const #cir.int<5> : !s32i
 // CIR:         cir.store{{.*}} %[[VAL_5]], %[[I]] : !s32i, !cir.ptr<!s32i>
-// CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5]] : !s32i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CIR:         %[[VAL_5_64:.*]] = cir.const #cir.int<5> : !s64i
+// CIR:         %[[ARR_ELEM:.*]] = cir.get_element %[[ARR]][%[[VAL_5_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR:         %[[ARR_LOAD:.*]] = cir.load{{.*}} %[[ARR_ELEM]] : !cir.ptr<!s32i>, !s32i
 // CIR:         cir.store{{.*}} %[[ARR_LOAD]], %[[J]] : !s32i, !cir.ptr<!s32i>
 // CIR:         %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!s32i>

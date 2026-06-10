@@ -996,11 +996,13 @@ ExprResult SemaOpenACC::ActOnArraySectionExpr(Expr *Base, SourceLocation LBLoc,
     }
   }
 
-  // Adding two APSInts requires matching sign, so extract that here.
+  // Adding two APSInts requires matching sign and width, so extract those here.
   auto AddAPSInt = [](llvm::APSInt LHS, llvm::APSInt RHS) -> llvm::APSInt {
-    if (LHS.isSigned() == RHS.isSigned())
+    if (LHS.isSigned() == RHS.isSigned() &&
+        LHS.getBitWidth() == RHS.getBitWidth())
       return LHS + RHS;
 
+    // Width is + 1 so that unsigned->signed conversion just works.
     unsigned Width = std::max(LHS.getBitWidth(), RHS.getBitWidth()) + 1;
     return llvm::APSInt(LHS.sext(Width) + RHS.sext(Width), /*Signed=*/true);
   };
@@ -2660,8 +2662,9 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
     return nullptr;
 
   if (IK == InitKind::Zero) {
-    Expr *InitExpr = new (Context)
-        InitListExpr(Context, ExprRange.getBegin(), {}, ExprRange.getEnd());
+    Expr *InitExpr =
+        new (Context) InitListExpr(Context, ExprRange.getBegin(), {},
+                                   ExprRange.getEnd(), /*isExplicit=*/false);
     InitExpr->setType(Context.VoidTy);
     return InitExpr;
   }
@@ -2737,8 +2740,9 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
     }
   }
 
-  Expr *InitExpr = new (Context)
-      InitListExpr(Context, ExprRange.getBegin(), Exprs, ExprRange.getEnd());
+  Expr *InitExpr =
+      new (Context) InitListExpr(Context, ExprRange.getBegin(), Exprs,
+                                 ExprRange.getEnd(), /*isExplicit=*/false);
   InitExpr->setType(Ty);
   return InitExpr;
 }
@@ -2746,8 +2750,10 @@ Expr *GenerateReductionInitRecipeExpr(ASTContext &Context,
 VarDecl *CreateAllocaDecl(ASTContext &Ctx, DeclContext *DC,
                           SourceLocation BeginLoc, IdentifierInfo *VarName,
                           QualType VarTy) {
-  return VarDecl::Create(Ctx, DC, BeginLoc, BeginLoc, VarName, VarTy,
-                         Ctx.getTrivialTypeSourceInfo(VarTy), SC_Auto);
+  auto *VD = VarDecl::Create(Ctx, DC, BeginLoc, BeginLoc, VarName, VarTy,
+                             Ctx.getTrivialTypeSourceInfo(VarTy), SC_Auto);
+  VD->markUsed(Ctx);
+  return VD;
 }
 
 ExprResult FinishValueInit(Sema &S, InitializedEntity &Entity,
@@ -2885,8 +2891,9 @@ SemaOpenACC::CreateFirstPrivateInitRecipe(const Expr *VarExpr) {
     Args.push_back(ElemRes.get());
   }
 
-  Expr *InitExpr = new (getASTContext()) InitListExpr(
-      getASTContext(), VarExpr->getBeginLoc(), Args, VarExpr->getEndLoc());
+  Expr *InitExpr = new (getASTContext())
+      InitListExpr(getASTContext(), VarExpr->getBeginLoc(), Args,
+                   VarExpr->getEndLoc(), /*isExplicit=*/false);
   InitExpr->setType(VarTy);
 
   ExprResult Init = FinishValueInit(SemaRef.SemaRef, Entity,

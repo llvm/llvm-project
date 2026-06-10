@@ -52,14 +52,13 @@ ScriptLexer::Buffer::Buffer(Ctx &ctx, MemoryBufferRef mb)
 }
 
 ScriptLexer::ScriptLexer(Ctx &ctx, MemoryBufferRef mb)
-    : ctx(ctx), curBuf(ctx, mb), mbs(1, mb) {
+    : ctx(ctx), curBuf(ctx, mb) {
   activeFilenames.insert(mb.getBufferIdentifier());
 }
 
 // Returns a whole line containing the current token.
 StringRef ScriptLexer::getLine() {
-  StringRef s = getCurrentMB().getBuffer();
-
+  StringRef s(curBuf.begin, curBuf.s.end() - curBuf.begin);
   size_t pos = s.rfind('\n', prevTok.data() - s.data());
   if (pos != StringRef::npos)
     s = s.substr(pos + 1);
@@ -72,8 +71,7 @@ size_t ScriptLexer::getColumnNumber() {
 }
 
 std::string ScriptLexer::getCurrentLocation() {
-  std::string filename = std::string(getCurrentMB().getBufferIdentifier());
-  return (filename + ":" + Twine(prevTokLine)).str();
+  return (curBuf.filename + ":" + Twine(prevTokLine)).str();
 }
 
 // We don't want to record cascading errors. Keep only the first one.
@@ -93,15 +91,10 @@ void ScriptLexer::lex() {
     StringRef &s = curBuf.s;
     s = skipSpace(s);
     if (s.empty()) {
-      // If this buffer is from an INCLUDE command, switch to the "return
-      // value"; otherwise, mark EOF.
-      if (buffers.empty()) {
-        eof = true;
-        return;
-      }
-      activeFilenames.erase(curBuf.filename);
-      curBuf = buffers.pop_back_val();
-      continue;
+      // If this buffer is from an INCLUDE, the caller is responsible for
+      // popping to the parent buffer.
+      eof = true;
+      return;
     }
     curTokState = lexState;
 
@@ -274,18 +267,4 @@ ScriptLexer::Token ScriptLexer::till(StringRef tok) {
   prevTok = {};
   setError("unexpected EOF");
   return {};
-}
-
-// Returns true if S encloses T.
-static bool encloses(StringRef s, StringRef t) {
-  return s.bytes_begin() <= t.bytes_begin() && t.bytes_end() <= s.bytes_end();
-}
-
-MemoryBufferRef ScriptLexer::getCurrentMB() {
-  // Find input buffer containing the current token.
-  assert(!mbs.empty());
-  for (MemoryBufferRef mb : mbs)
-    if (encloses(mb.getBuffer(), curBuf.s))
-      return mb;
-  llvm_unreachable("getCurrentMB: failed to find a token");
 }

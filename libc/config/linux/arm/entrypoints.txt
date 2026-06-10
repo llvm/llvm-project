@@ -177,11 +177,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.ioctl.ioctl
 
     # sys/mman.h entrypoints
+    libc.src.sys.mman.memfd_create
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
 
     # sys/prctl.h entrypoints
     libc.src.sys.prctl.prctl
+
+    # sys/personality.h entrypoints
+    libc.src.sys.personality.personality
 
     # sys/epoll.h entrypoints
     # Disabled due to epoll_wait syscalls not being available on this platform.
@@ -480,6 +484,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -552,6 +557,21 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ufromfpbf16
   libc.src.math.ufromfpxbf16
 )
+
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND TARGET_LIBC_ENTRYPOINTS
+      # regex.h entrypoints
+      libc.src.regex.regcomp
+      libc.src.regex.regexec
+      libc.src.regex.regerror
+      libc.src.regex.regfree
+
+      # sys/ptrace.h entrypoints
+      libc.src.sys.ptrace.ptrace
+    )
+  endif()
+endif()
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}

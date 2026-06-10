@@ -377,13 +377,13 @@ namespace GH150709 {
   static_assert((c1.*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d1.*mp)() == 1, "");
   static_assert((f.*mp)() == 1, "");
-  static_assert((c2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((c2[0].*mp)() == 1, ""); // both-error {{constant expression}}
   static_assert((d2[0].*mp)() == 1, "");
 
   // incorrectly undiagnosed before fix of GH150709
-  static_assert((e1.*mp)() == 1, ""); // ref-error {{constant expression}}
-  static_assert((e2[0].*mp)() == 1, ""); // ref-error {{constant expression}}
-  static_assert((g.*mp)() == 1, ""); // ref-error {{constant expression}}
+  static_assert((e1.*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((e2[0].*mp)() == 1, ""); // both-error {{constant expression}}
+  static_assert((g.*mp)() == 1, ""); // both-error {{constant expression}}
 }
 
 namespace DiscardedAddrLabel {
@@ -404,13 +404,12 @@ constexpr int PassByValue(Counter c) { return c.copies; }
 static_assert(PassByValue(Counter(0)) == 0, "expect no copies");
 
 namespace PointerCast {
-  /// The two interpreters disagree here.
   struct S { int x, y; } s;
   constexpr S* sptr = &s;
   struct U {};
   struct Str {
-    int e : (Str*)(sptr) == (Str*)(sptr); // expected-error {{not an integral constant expression}} \
-                                          // expected-note {{cast that performs the conversions of a reinterpret_cast}}
+    int e : (Str*)(sptr) == (Str*)(sptr);
+    int f : &(U&)(*sptr) == &(U&)(*sptr);
   };
 }
 

@@ -79,8 +79,8 @@ void init() {
 }
 
 // CIR: cir.func{{.*}} @_Z4initv()
-// CIR:   %[[S1:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s1", init]
-// CIR:   %[[S2:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s2", init]
+// CIR:   %[[S1:.*]] = cir.alloca "s1" {{.*}} init : !cir.ptr<!rec_S>
+// CIR:   %[[S2:.*]] = cir.alloca "s2" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:   %[[CONST_1:.*]] = cir.get_global @[[INIT_S1]] : !cir.ptr<!rec_S>
 // CIR:   cir.copy %[[CONST_1]] to %[[S1]] : !cir.ptr<!rec_S>
 // CIR:   %[[CONST_2:.*]] = cir.get_global @[[INIT_S2]] : !cir.ptr<!rec_S>
@@ -106,9 +106,9 @@ void init_var(int a, int b) {
 }
 
 // CIR: cir.func{{.*}} @_Z8init_varii(%[[A_ARG:.*]]: !s32i {{.*}}, %[[B_ARG:.*]]: !s32i {{.*}})
-// CIR:   %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR:   %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
+// CIR:   %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:   cir.store{{.*}} %[[A_ARG]], %[[A_PTR]]
 // CIR:   cir.store{{.*}} %[[B_ARG]], %[[B_PTR]]
 // CIR:   %[[S_A:.*]] = cir.get_member %[[S]][0] {name = "a"}
@@ -125,10 +125,10 @@ void init_var(int a, int b) {
 // LLVM:   %[[S:.*]] = alloca %struct.S
 // LLVM:   store i32 %[[A_ARG]], ptr %[[A_PTR]]
 // LLVM:   store i32 %[[B_ARG]], ptr %[[B_PTR]]
-// LLVM:   %[[S_A:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 0
+// LLVM:   %[[S_A:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 0
 // LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]] 
 // LLVM:   store i32 %[[A]], ptr %[[S_A]]
-// LLVM:   %[[S_B:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 1
+// LLVM:   %[[S_B:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 1
 // LLVM:   %[[B:.*]] = load i32, ptr %[[B_PTR]]
 // LLVM:   store i32 %[[B]], ptr %[[S_B]]
 // LLVM:   ret void
@@ -154,10 +154,10 @@ void init_expr(int a, int b, int c) {
 }
 
 // CIR: cir.func{{.*}} @_Z9init_expriii(%[[A_ARG:.*]]: !s32i {{.*}}, %[[B_ARG:.*]]: !s32i {{.*}}, %[[C_ARG:.*]]: !s32i {{.*}})
-// CIR:   %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR:   %[[B_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR:   %[[C_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["c", init]
-// CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
+// CIR:   %[[A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[B_PTR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[C_PTR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!s32i>
+// CIR:   %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_S>
 // CIR:   cir.store{{.*}} %[[A_ARG]], %[[A_PTR]]
 // CIR:   cir.store{{.*}} %[[B_ARG]], %[[B_PTR]]
 // CIR:   cir.store{{.*}} %[[C_ARG]], %[[C_PTR]]
@@ -186,15 +186,15 @@ void init_expr(int a, int b, int c) {
 // LLVM:   store i32 %[[A_ARG]], ptr %[[A_PTR]]
 // LLVM:   store i32 %[[B_ARG]], ptr %[[B_PTR]]
 // LLVM:   store i32 %[[C_ARG]], ptr %[[C_PTR]]
-// LLVM:   %[[S_A:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 0
+// LLVM:   %[[S_A:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 0
 // LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]] 
 // LLVM:   %[[A_PLUS_ONE:.*]] = add nsw i32 %[[A]], 1
 // LLVM:   store i32 %[[A_PLUS_ONE]], ptr %[[S_A]]
-// LLVM:   %[[S_B:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 1
+// LLVM:   %[[S_B:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 1
 // LLVM:   %[[B:.*]] = load i32, ptr %[[B_PTR]]
 // LLVM:   %[[B_PLUS_TWO:.*]] = add nsw i32 %[[B]], 2
 // LLVM:   store i32 %[[B_PLUS_TWO]], ptr %[[S_B]]
-// LLVM:   %[[S_C:.*]] = getelementptr %struct.S, ptr %[[S]], i32 0, i32 2
+// LLVM:   %[[S_C:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[S]], i32 0, i32 2
 // LLVM:   %[[C:.*]] = load i32, ptr %[[C_PTR]]
 // LLVM:   %[[C_PLUS_THREE:.*]] = add nsw i32 %[[C]], 3
 // LLVM:   store i32 %[[C_PLUS_THREE]], ptr %[[S_C]]
@@ -230,13 +230,13 @@ void cxx_default_init_with_struct_field() {
   Parent p = Parent{};
 }
 
-// CIR: %[[P_ADDR:.*]] = cir.alloca !rec_Parent, !cir.ptr<!rec_Parent>, ["p", init]
+// CIR: %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!rec_Parent>
 // CIR: %[[P_ELEM_0_PTR:.*]] = cir.get_member %[[P_ADDR]][0] {name = "a"} : !cir.ptr<!rec_Parent> -> !cir.ptr<!s32i>
 // CIR: %[[METHOD_CALL:.*]] = cir.call @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(%[[P_ADDR]]) : (!cir.ptr<!rec_Parent>{{.*}}) -> (!s32i {llvm.noundef})
 // CIR: cir.store{{.*}} %[[METHOD_CALL]], %[[P_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, i64 1, align 4
-// LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
+// LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
 // LLVM: %[[METHOD_CALL:.*]] = call noundef i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr {{.*}} %[[P_ADDR]])
 // LLVM: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4
 

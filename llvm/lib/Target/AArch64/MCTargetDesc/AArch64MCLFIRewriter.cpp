@@ -16,6 +16,7 @@
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -64,10 +65,12 @@ static bool isPrivilegedTPAccess(const MCInst &Inst) {
   return false;
 }
 
-bool AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
-  return mayModifyRegister(Inst, LFIAddrReg) ||
-         mayModifyRegister(Inst, LFIBaseReg) ||
-         mayModifyRegister(Inst, LFICtxReg);
+MCRegister AArch64MCLFIRewriter::mayModifyReserved(const MCInst &Inst) const {
+  for (MCRegister Reg : {LFIAddrReg, LFIBaseReg, LFICtxReg}) {
+    if (mayModifyRegister(Inst, Reg))
+      return Reg;
+  }
+  return {};
 }
 
 void AArch64MCLFIRewriter::emitInst(const MCInst &Inst, MCStreamer &Out,
@@ -98,6 +101,17 @@ void AArch64MCLFIRewriter::emitBranch(unsigned Opcode, MCRegister Target,
   emitInst(Branch, Out, STI);
 }
 
+void AArch64MCLFIRewriter::emitPendingTLSDescCall(MCStreamer &Out,
+                                                  const MCSubtargetInfo &STI) {
+  if (!PendingTLSDescCall)
+    return;
+  MCInst Marker;
+  Marker.setOpcode(AArch64::TLSDESCCALL);
+  Marker.addOperand(MCOperand::createExpr(PendingTLSDescCall));
+  PendingTLSDescCall = nullptr;
+  emitInst(Marker, Out, STI);
+}
+
 void AArch64MCLFIRewriter::emitMov(MCRegister Dest, MCRegister Src,
                                    MCStreamer &Out,
                                    const MCSubtargetInfo &STI) {
@@ -109,6 +123,53 @@ void AArch64MCLFIRewriter::emitMov(MCRegister Dest, MCRegister Src,
   Inst.addOperand(MCOperand::createReg(Src));
   Inst.addOperand(MCOperand::createImm(0));
   emitInst(Inst, Out, STI);
+}
+
+// {br,blr} xN
+// ->
+// add x28, x27, wN, uxtw
+// {br,blr} x28
+void AArch64MCLFIRewriter::rewriteIndirectBranch(const MCInst &Inst,
+                                                 MCStreamer &Out,
+                                                 const MCSubtargetInfo &STI) {
+  assert(Inst.getNumOperands() >= 1 && Inst.getOperand(0).isReg() &&
+         "expected register operand");
+  MCRegister BranchReg = Inst.getOperand(0).getReg();
+
+  // Guard the branch target through X28.
+  emitAddMask(LFIAddrReg, BranchReg, Out, STI);
+
+  emitPendingTLSDescCall(Out, STI);
+
+  emitBranch(Inst.getOpcode(), LFIAddrReg, Out, STI);
+}
+
+// ret xN (where xN != x30)
+// ->
+// add x28, x27, wN, uxtw
+// ret x28
+//
+// ret (x30) is safe since x30 is always within the sandbox.
+void AArch64MCLFIRewriter::rewriteReturn(const MCInst &Inst, MCStreamer &Out,
+                                         const MCSubtargetInfo &STI) {
+  assert(Inst.getNumOperands() >= 1 && Inst.getOperand(0).isReg() &&
+         "expected register operand");
+  // RET through LR is safe since LR is always within sandbox.
+  if (Inst.getOperand(0).getReg() != AArch64::LR)
+    rewriteIndirectBranch(Inst, Out, STI);
+  else
+    emitInst(Inst, Out, STI);
+}
+
+// modify x30
+// ->
+// modify x30
+// add x30, x27, w30, uxtw
+void AArch64MCLFIRewriter::rewriteLRModification(const MCInst &Inst,
+                                                 MCStreamer &Out,
+                                                 const MCSubtargetInfo &STI) {
+  emitInst(Inst, Out, STI);
+  emitAddMask(AArch64::LR, AArch64::LR, Out, STI);
 }
 
 // svc #0
@@ -171,9 +232,15 @@ void AArch64MCLFIRewriter::rewriteTPWrite(const MCInst &Inst, MCStreamer &Out,
 // AArch64InstrInfo::getLFIInstSizeInBytes must be updated to match.
 void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
                                          const MCSubtargetInfo &STI) {
+  if (Inst.getOpcode() == AArch64::TLSDESCCALL) {
+    PendingTLSDescCall = Inst.getOperand(0).getExpr();
+    return;
+  }
+
   // Reserved register modification is an error.
-  if (mayModifyReserved(Inst)) {
-    error(Inst, "illegal modification of reserved LFI register");
+  if (MCRegister Reg = mayModifyReserved(Inst)) {
+    error(Inst, Twine("illegal modification of reserved LFI register ") +
+                    RegInfo->getName(Reg));
     return;
   }
 
@@ -191,6 +258,19 @@ void AArch64MCLFIRewriter::doRewriteInst(const MCInst &Inst, MCStreamer &Out,
     error(Inst, "illegal access to privileged thread pointer register");
     return;
   }
+
+  // Control flow.
+  switch (Inst.getOpcode()) {
+  case AArch64::RET:
+    return rewriteReturn(Inst, Out, STI);
+  case AArch64::BR:
+  case AArch64::BLR:
+    return rewriteIndirectBranch(Inst, Out, STI);
+  }
+
+  // Link register modification.
+  if (explicitlyModifiesRegister(Inst, AArch64::LR))
+    return rewriteLRModification(Inst, Out, STI);
 
   emitInst(Inst, Out, STI);
 }

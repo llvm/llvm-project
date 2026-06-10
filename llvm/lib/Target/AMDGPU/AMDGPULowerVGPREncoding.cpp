@@ -238,23 +238,13 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
   LLVM_DEBUG(dbgs() << "    Rewritten=" << Rewritten << " after update\n");
 
   if (MostRecentModeSet && !Rewritten) {
-    // Update MostRecentModeSet with the new mode. It can be either
-    // S_SET_VGPR_MSB or S_SETREG_IMM32_B32 (with Size <= 12).
-    if (MostRecentModeSet->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
-      MachineOperand &Op = MostRecentModeSet->getOperand(0);
-      // Carry old mode bits from the existing instruction.
-      int64_t OldModeBits = Op.getImm() & (ModeMask << ModeWidth);
-      Op.setImm(CurrentMode.encode() | OldModeBits);
-      LLVM_DEBUG(dbgs() << "    -> piggybacked onto S_SET_VGPR_MSB: "
-                        << *MostRecentModeSet);
-    } else {
-      assert(MostRecentModeSet->getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-             "unexpected MostRecentModeSet opcode");
-      updateSetregModeImm(*MostRecentModeSet, CurrentMode.encode());
-      LLVM_DEBUG(dbgs() << "    -> piggybacked onto S_SETREG_IMM32_B32: "
-                        << *MostRecentModeSet);
-    }
-
+    // Update MostRecentModeSet with the new mode.
+    MachineOperand &Op = MostRecentModeSet->getOperand(0);
+    // Carry old mode bits from the existing instruction.
+    int64_t OldModeBits = Op.getImm() & (ModeMask << ModeWidth);
+    Op.setImm(CurrentMode.encode() | OldModeBits);
+    LLVM_DEBUG(dbgs() << "    -> piggybacked onto S_SET_VGPR_MSB: "
+                      << *MostRecentModeSet);
     return true;
   }
 
@@ -506,6 +496,9 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
     return false;
   }
 
+  // MostRecentModeSet is clobbered by SETREG and not relevant anymore.
+  MostRecentModeSet = nullptr;
+
   int64_t ModeValue = CurrentMode.encode();
   LLVM_DEBUG({
     dbgs() << "    CurrentMode=";
@@ -520,16 +513,9 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   if (!Offset || Size <= VGPRMSBShift) {
     // Set imm32[12:19] to the correct VGPR MSBs.
     LLVM_DEBUG(dbgs() << "    Case 1: Size(" << Size << ") <= VGPRMSBShift("
-                      << VGPRMSBShift
-                      << "), treating as mode scope boundary\n");
-    // This instruction is at the boundary of the old mode's control range.
-    // Reset CurrentMode so that the next setMode call can freely piggyback
-    // the required mode into bits[12:19] without triggering Rewritten.
-    MostRecentModeSet = &MI;
-    CurrentMode = {};
-    bool Changed = updateSetregModeImm(MI, 0);
-    LLVM_DEBUG(dbgs() << "    -> reset CurrentMode, cleared bits[12:19]: "
-                      << MI);
+                      << VGPRMSBShift << "), update mode bits[12:19]\n");
+    bool Changed = updateSetregModeImm(MI, ModeValue);
+    LLVM_DEBUG(dbgs() << "    -> " << MI);
     return Changed;
   }
 
@@ -546,13 +532,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
                     << " SetregModeValue=0x"
                     << Twine::utohexstr(SetregModeValue) << '\n');
   if (ImmBits12To19 == SetregModeValue) {
-    // Already correct, but we must invalidate MostRecentModeSet because this
-    // instruction will overwrite mode[12:19]. We can't update this instruction
-    // via piggybacking (bits[12:19] are meaningful), so if CurrentMode changes,
-    // a new s_set_vgpr_msb will be inserted after this instruction.
-    MostRecentModeSet = nullptr;
-    LLVM_DEBUG(dbgs() << "    -> bits[12:19] already correct, "
-                         "invalidated MostRecentModeSet\n");
+    LLVM_DEBUG(dbgs() << "    -> bits[12:19] already correct\n");
     return false;
   }
 
@@ -564,7 +544,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   BuildMI(*MBB, InsertPt, MI.getDebugLoc(), TII->get(AMDGPU::S_NOP)).addImm(0);
   MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
                               TII->get(AMDGPU::S_SET_VGPR_MSB))
-                          .addImm(ModeValue);
+                          .addImm(ModeValue | (ModeValue << ModeWidth));
   LLVM_DEBUG(dbgs() << "    -> inserted S_SET_VGPR_MSB after setreg: "
                     << *MostRecentModeSet);
   return true;

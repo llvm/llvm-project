@@ -22,16 +22,10 @@ namespace llvm {
 
 class OptimizationLevel final {
   unsigned SpeedLevel = 2;
-  unsigned SizeLevel = 0;
-  OptimizationLevel(unsigned SpeedLevel, unsigned SizeLevel)
-      : SpeedLevel(SpeedLevel), SizeLevel(SizeLevel) {
-    // Check that only valid combinations are passed.
+  OptimizationLevel(unsigned SpeedLevel) : SpeedLevel(SpeedLevel) {
+    // Check that only valid values are passed.
     assert(SpeedLevel <= 3 &&
            "Optimization level for speed should be 0, 1, 2, or 3");
-    assert(SizeLevel <= 2 &&
-           "Optimization level for size should be 0, 1, or 2");
-    assert((SizeLevel == 0 || SpeedLevel == 2) &&
-           "Optimize for size should be encoded with speedup level == 2");
   }
 
 public:
@@ -88,40 +82,17 @@ public:
   /// reasonably. This does not preclude very substantial constant factor
   /// costs though.
   LLVM_ABI static const OptimizationLevel O3;
-  /// Similar to \c O2 but tries to optimize for small code size instead of
-  /// fast execution without triggering significant incremental execution
-  /// time slowdowns.
-  ///
-  /// The logic here is exactly the same as \c O2, but with code size and
-  /// execution time metrics swapped.
-  ///
-  /// A consequence of the different core goal is that this should in general
-  /// produce substantially smaller executables that still run in
-  /// a reasonable amount of time.
-  LLVM_ABI static const OptimizationLevel Os;
-  /// A very specialized mode that will optimize for code size at any and all
-  /// costs.
-  ///
-  /// This is useful primarily when there are absolute size limitations and
-  /// any effort taken to reduce the size is worth it regardless of the
-  /// execution time impact. You should expect this level to produce rather
-  /// slow, but very small, code.
-  LLVM_ABI static const OptimizationLevel Oz;
 
-  bool isOptimizingForSpeed() const { return SizeLevel == 0 && SpeedLevel > 0; }
-
-  bool isOptimizingForSize() const { return SizeLevel > 0; }
+  bool isOptimizingForSpeed() const { return SpeedLevel > 0; }
 
   bool operator==(const OptimizationLevel &Other) const {
-    return SizeLevel == Other.SizeLevel && SpeedLevel == Other.SpeedLevel;
+    return SpeedLevel == Other.SpeedLevel;
   }
   bool operator!=(const OptimizationLevel &Other) const {
-    return SizeLevel != Other.SizeLevel || SpeedLevel != Other.SpeedLevel;
+    return SpeedLevel != Other.SpeedLevel;
   }
 
   unsigned getSpeedupLevel() const { return SpeedLevel; }
-
-  unsigned getSizeLevel() const { return SizeLevel; }
 };
 } // namespace llvm
 

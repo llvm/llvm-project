@@ -155,11 +155,11 @@ if(COMPILER_RT_PROFILE_BAREMETAL)
      -DCOMPILER_RT_PROFILE_BAREMETAL=1)
 endif()
 
-if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+if(COMPILER_RT_TARGET_AMDGPU OR "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
   append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding EXTRA_FLAGS)
   append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib EXTRA_FLAGS)
   append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto EXTRA_FLAGS)
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+  if(COMPILER_RT_TARGET_AMDGPU)
     append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                    "SHELL:-Xclang -mcode-object-version=none" EXTRA_FLAGS)
   elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "nvptx")
@@ -186,6 +186,15 @@ append_list_if(COMPILER_RT_HAS_WD4221_FLAG /wd4221 EXTRA_FLAGS)
 # Disable 'nonstandard extension used: translation unit is empty'.
 append_list_if(COMPILER_RT_HAS_WD4206_FLAG /wd4206 EXTRA_FLAGS)
 
+# In the GPU runtimes build, link `runtimes-libc-headers` for its
+# `-isystem` include dir and for waiting on header generation.
+# The target is created at compiler-rt top level from `HandleLibC.cmake`
+# when `LLVM_RUNTIMES_BUILD` is set.
+set(PROFILE_LINK_LIBS)
+if(COMPILER_RT_GPU_BUILD AND TARGET runtimes-libc-headers)
+  list(APPEND PROFILE_LINK_LIBS runtimes-libc-headers)
+endif()
+
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.profile
     STATIC
@@ -194,6 +203,7 @@ if(APPLE)
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+    LINK_LIBS ${PROFILE_LINK_LIBS}
     PARENT_TARGET profile)
 else()
   add_compiler_rt_runtime(clang_rt.profile
@@ -202,5 +212,57 @@ else()
     CFLAGS ${EXTRA_FLAGS}
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+    LINK_LIBS ${PROFILE_LINK_LIBS}
+    PARENT_TARGET profile)
+endif()
+
+set(PROFILE_ROCM_SUPPORTED_OS OFF)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "^(Linux|Windows)$")
+  set(PROFILE_ROCM_SUPPORTED_OS ON)
+endif()
+
+# clang_rt.profile_rocm: self-contained host-side profile runtime for HIP/ROCm
+# device PGO on Linux and Windows. It is a superset of clang_rt.profile (all
+# base sources plus InstrProfilingPlatformROCm.cpp and its interceptor
+# dependency), built entirely /MD on Windows so a single CRT model holds within
+# the archive and clang_rt.profile is left untouched (/MT, no ROCm). The driver
+# links it ahead of clang_rt.profile, which then stays inert.
+if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
+   AND PROFILE_ROCM_SUPPORTED_OS AND COMPILER_RT_HAS_INTERCEPTION
+   AND TARGET RTInterception.${COMPILER_RT_DEFAULT_TARGET_ARCH}
+   AND TARGET RTSanitizerCommon.${COMPILER_RT_DEFAULT_TARGET_ARCH}
+   AND TARGET RTSanitizerCommonLibc.${COMPILER_RT_DEFAULT_TARGET_ARCH})
+
+  set(PROFILE_ROCM_SOURCES ${PROFILE_SOURCES} InstrProfilingPlatformROCm.cpp)
+
+  # Enables the device-collection call in InstrProfilingFile.c.
+  set(PROFILE_ROCM_FLAGS ${EXTRA_FLAGS} -DCOMPILER_RT_BUILD_PROFILE_ROCM=1)
+
+  # The archive is linked from C, so the C++ ROCm source must not emit an
+  # exception personality (__gxx_personality_v0).
+  append_list_if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG -fno-exceptions
+                 PROFILE_ROCM_FLAGS)
+
+  # The interceptor path needs sanitizer_common symbols; merge the same object
+  # libs as clang_rt.cfi so the archive stays self-contained.
+  set(PROFILE_ROCM_OBJECT_LIBS
+    RTInterception
+    RTSanitizerCommon
+    RTSanitizerCommonLibc)
+
+  if(MSVC)
+    # These merged object libs are built /MD; match it so the archive is
+    # CRT-consistent. clang_rt.profile stays /MT.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreadedDLL)
+  endif()
+
+  add_compiler_rt_runtime(clang_rt.profile_rocm
+    STATIC
+    ARCHS ${PROFILE_SUPPORTED_ARCH}
+    OBJECT_LIBS ${PROFILE_ROCM_OBJECT_LIBS}
+    CFLAGS ${PROFILE_ROCM_FLAGS}
+    SOURCES ${PROFILE_ROCM_SOURCES}
+    ADDITIONAL_HEADERS ${PROFILE_HEADERS}
+    LINK_LIBS ${PROFILE_LINK_LIBS}
     PARENT_TARGET profile)
 endif()

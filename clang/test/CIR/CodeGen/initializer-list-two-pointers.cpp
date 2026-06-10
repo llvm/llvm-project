@@ -16,8 +16,8 @@ void initalizer_list_with_two_pointers_layout() {
   std::initializer_list<int> a = {10, 20, 30};
 }
 
-// CIR: %[[ARR_ADDR:.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["ref.tmp0"]
-// CIR: %[[A_ADDR:.*]] = cir.alloca !rec_std3A3Ainitializer_list3Cint3E, !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, ["a", init]
+// CIR: %[[ARR_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!cir.array<!s32i x 3>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>
 // CIR: %[[ARR_PTR:.*]] = cir.cast array_to_ptrdecay %[[ARR_ADDR]] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_S32_10:.*]] = cir.const #cir.int<10> : !s32i
 // CIR: cir.store {{.*}} %[[CONST_S32_10]], %[[ARR_PTR]] : !s32i, !cir.ptr<!s32i>
@@ -46,9 +46,9 @@ void initalizer_list_with_two_pointers_layout() {
 // LLVM: store i32 20, ptr %[[ARR_ELEM_1_PTR]], align 4
 // LLVM: %[[ARR_ELEM_2_PTR:.*]] = getelementptr i32, ptr %[[ARR_ELEM_0_PTR]], i64 2
 // LLVM: store i32 30, ptr %[[ARR_ELEM_2_PTR]], align 4
-// LLVM: %[[BEGIN_PTR:.*]] = getelementptr %"class.std::initializer_list<int>", ptr %[[A_ADDR]], i32 0, i32 0
+// LLVM: %[[BEGIN_PTR:.*]] = getelementptr inbounds nuw %"class.std::initializer_list<int>", ptr %[[A_ADDR]], i32 0, i32 0
 // LLVM: store ptr %[[ARR_ADDR]], ptr %[[BEGIN_PTR]], align 8
-// LLVM: %[[END_PTR:.*]] = getelementptr %"class.std::initializer_list<int>", ptr %[[A_ADDR]], i32 0, i32 1
+// LLVM: %[[END_PTR:.*]] = getelementptr inbounds nuw %"class.std::initializer_list<int>", ptr %[[A_ADDR]], i32 0, i32 1
 // LLVM: %[[ARR_END:.*]] = getelementptr [3 x i32], ptr %[[ARR_ADDR]], i64 3
 // LLVM: store ptr %[[ARR_END]], ptr %[[END_PTR]], align 8
 // LLVM: ret void

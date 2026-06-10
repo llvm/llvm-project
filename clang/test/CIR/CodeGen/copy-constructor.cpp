@@ -13,8 +13,8 @@ struct HasScalarArrayMember {
 HasScalarArrayMember::HasScalarArrayMember(const HasScalarArrayMember &) = default;
 
 // CIR-LABEL: cir.func {{.*}} @_ZN20HasScalarArrayMemberC2ERKS_(
-// CIR-NEXT:    %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_HasScalarArrayMember>
-// CIR-NEXT:    %[[OTHER:.*]] = cir.alloca !cir.ptr<!rec_HasScalarArrayMember>
+// CIR-NEXT:    %[[THIS:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!rec_HasScalarArrayMember>>
+// CIR-NEXT:    %[[OTHER:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!rec_HasScalarArrayMember>>
 // CIR-NEXT:    cir.store %arg0, %[[THIS]]
 // CIR-NEXT:    cir.store %arg1, %[[OTHER]]
 // CIR-NEXT:    %[[THIS_LOAD:.*]] = cir.load{{.*}} %[[THIS]]
@@ -31,9 +31,9 @@ HasScalarArrayMember::HasScalarArrayMember(const HasScalarArrayMember &) = defau
 // LLVM-NEXT:    store ptr %[[ARG0]], ptr %[[THIS]]
 // LLVM-NEXT:    store ptr %[[ARG1]], ptr %[[OTHER]]
 // LLVM-NEXT:    %[[THIS_LOAD:.*]] = load ptr, ptr %[[THIS]]
-// LLVM-NEXT:    %[[THIS_ARR:.*]] = getelementptr %struct.HasScalarArrayMember, ptr %[[THIS_LOAD]], i32 0, i32 0
+// LLVM-NEXT:    %[[THIS_ARR:.*]] = getelementptr inbounds nuw %struct.HasScalarArrayMember, ptr %[[THIS_LOAD]], i32 0, i32 0
 // LLVM-NEXT:    %[[OTHER_LOAD:.*]] = load ptr, ptr %[[OTHER]]
-// LLVM-NEXT:    %[[OTHER_ARR:.*]] = getelementptr %struct.HasScalarArrayMember, ptr %[[OTHER_LOAD]], i32 0, i32 0
+// LLVM-NEXT:    %[[OTHER_ARR:.*]] = getelementptr inbounds nuw %struct.HasScalarArrayMember, ptr %[[OTHER_LOAD]], i32 0, i32 0
 // LLVM-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr %[[THIS_ARR]], ptr %[[OTHER_ARR]], i64 16, i1 false)
 // LLVM-NEXT:    ret void
 

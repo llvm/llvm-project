@@ -24,9 +24,9 @@ void init_vec_using_initalizer_list() {
   Vector vec = {0, 1, 2};
 }
 
-// CIR: %[[VEC_ADDR:.*]] = cir.alloca !rec_Vector, !cir.ptr<!rec_Vector>, ["vec", init]
-// CIR: %[[AGG_ADDR:.*]] = cir.alloca !rec_std3A3Ainitializer_list3Cint3E, !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>, ["agg.tmp0"]
-// CIR: %[[INIT_LIST_ADDR:.*]] = cir.alloca !cir.array<!s32i x 3>, !cir.ptr<!cir.array<!s32i x 3>>, ["ref.tmp0"]
+// CIR: %[[VEC_ADDR:.*]] = cir.alloca "vec" {{.*}} init : !cir.ptr<!rec_Vector>
+// CIR: %[[AGG_ADDR:.*]] = cir.alloca "agg.tmp0" {{.*}} : !cir.ptr<!rec_std3A3Ainitializer_list3Cint3E>
+// CIR: %[[INIT_LIST_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!cir.array<!s32i x 3>>
 // CIR: %[[INIT_LIST_PTR:.*]] = cir.cast array_to_ptrdecay %[[INIT_LIST_ADDR]] : !cir.ptr<!cir.array<!s32i x 3>> -> !cir.ptr<!s32i>
 // CIR: %[[CONST_S32_0:.*]] = cir.const #cir.int<0> : !s32i
 // CIR: cir.store {{.*}} %[[CONST_S32_0]], %[[INIT_LIST_PTR]] : !s32i, !cir.ptr<!s32i>
@@ -62,9 +62,9 @@ void init_vec_using_initalizer_list() {
 // LLVM:   store i32 1, ptr %[[ELEM_1_PTR]], align 4
 // LLVM:   %[[ELEM_2_PTR:.*]] = getelementptr i32, ptr %[[INIT_LIST_PTR]], i64 2
 // LLVM:   store i32 2, ptr %[[ELEM_2_PTR]], align 4
-// LLVM:   %[[DATA_PTR:.*]] = getelementptr %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 0
+// LLVM:   %[[DATA_PTR:.*]] = getelementptr inbounds nuw %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 0
 // LLVM:   store ptr %[[INIT_LIST_ADDR]], ptr %[[DATA_PTR]], align 8
-// LLVM:   %[[SIZE_PTR:.*]] = getelementptr %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 1
+// LLVM:   %[[SIZE_PTR:.*]] = getelementptr inbounds nuw %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], i32 0, i32 1
 // LLVM:   store i64 3, ptr %[[SIZE_PTR]], align 8
 // LLVM:   %[[TMP_AGG:.*]] = load %"class.std::initializer_list<int>", ptr %[[AGG_ADDR]], align 8
 // LLVM:   call void @_ZN6VectorC1ESt16initializer_listIiE(ptr noundef nonnull align 1 dereferenceable(1) %[[VEC_ADDR]], %"class.std::initializer_list<int>" %[[TMP_AGG]])
