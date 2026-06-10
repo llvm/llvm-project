@@ -267,6 +267,8 @@ static bool containsGCPtrType(Type *Ty) {
 }
 
 // Debugging aid -- prints a [Begin, End) range of values.
+// Only used inside LLVM_DEBUG below, so it has no instantiations in release
+// builds (NDEBUG); [[maybe_unused]] avoids -Wunused-template in that case.
 template <typename IteratorTy>
 [[maybe_unused]] static void PrintValueSet(raw_ostream &OS, IteratorTy Begin,
                                            IteratorTy End) {
