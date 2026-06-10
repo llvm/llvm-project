@@ -2374,6 +2374,7 @@ public:
   /// be a terminator and \p DefIdx must refer to a virtual register def; use
   /// isTerminatorDivergent() to query branch divergence for terminators.
   virtual ValueUniformity getValueUniformity(const MachineInstr &MI,
+                                             const MachineRegisterInfo &MRI,
                                              unsigned DefIdx) const {
     return ValueUniformity::Default;
   }

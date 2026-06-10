@@ -11009,6 +11009,7 @@ bool SIInstrInfo::isTerminatorDivergent(const MachineInstr &MI) const {
 }
 
 ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI,
+                                                const MachineRegisterInfo &MRI,
                                                 unsigned DefIdx) const {
   assert(!MI.isTerminator() &&
          "use isTerminatorDivergent() to query terminator divergence");
@@ -11024,7 +11025,7 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI,
   // instruction's semantics. Resolve that here so the generic
   // MachineUniformityAnalysis seeding stays target-agnostic and does not need
   // to consult the register bank itself.
-  if (RI.isUniformReg(MI.getMF()->getRegInfo(), *ST.getRegBankInfo(), DefReg))
+  if (RI.isUniformReg(MRI, *ST.getRegBankInfo(), DefReg))
     return ValueUniformity::Default;
 
   if (isNeverUniform(MI))
@@ -11087,7 +11088,6 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI,
     return ValueUniformity::Default;
   }
 
-  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const AMDGPURegisterBankInfo *RBI = ST.getRegBankInfo();
 
   // Fallback: the result is divergent if any source operand is divergent. This

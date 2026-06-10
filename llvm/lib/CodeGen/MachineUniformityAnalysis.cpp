@@ -64,6 +64,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
   }
 
   const TargetInstrInfo &InstrInfo = *F.getSubtarget().getInstrInfo();
+  const MachineRegisterInfo &MRI = F.getRegInfo();
 
   for (const MachineBasicBlock &MBB : F) {
     for (const MachineInstr &MI : MBB) {
@@ -85,7 +86,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
           ++DefIdx;
           continue;
         }
-        switch (InstrInfo.getValueUniformity(MI, DefIdx++)) {
+        switch (InstrInfo.getValueUniformity(MI, MRI, DefIdx++)) {
         case ValueUniformity::AlwaysUniform:
           addUniformOverride(Reg);
           break;
