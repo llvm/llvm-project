@@ -268,3 +268,27 @@ module  {
   // CHECK-SAME: #cir.int<-1> : !s8i, #cir.int<-1> : !s8i]> : !cir.vector<4 x !s8i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s8i>
 }
+
+// -----
+
+// Test folding when the result element type is a 1-bit signed integer. The
+// all-ones (true) bit pattern is printed as -1 and all-zeros (false) as 0,
+// since -1 and 1 share the same bit pattern at width 1.
+
+!s32i = !cir.int<s, 32>
+!s1i = !cir.int<s, 1>
+
+module  {
+  cir.func @fold_cmp_vector_op_test_i1_result() -> !cir.vector<4 x !s1i> {
+    %vec_1 = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<3> : !s32i, #cir.int<5> : !s32i, #cir.int<7> : !s32i]> : !cir.vector<4 x !s32i>
+    %vec_2 = cir.const #cir.const_vector<[#cir.int<2> : !s32i, #cir.int<4> : !s32i, #cir.int<6> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
+    %new_vec = cir.vec.cmp(lt, %vec_1, %vec_2) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s1i>
+    cir.return %new_vec : !cir.vector<4 x !s1i>
+  }
+
+  // 1<2, 3<4, 5<6, 7<8 are all true -> [-1, -1, -1, -1]
+  // CHECK:  cir.func{{.*}} @fold_cmp_vector_op_test_i1_result() -> !cir.vector<4 x !cir.int<s, 1>> {
+  // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>,
+  // CHECK-SAME: #cir.int<-1> : !cir.int<s, 1>, #cir.int<-1> : !cir.int<s, 1>]> : !cir.vector<4 x !cir.int<s, 1>>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !cir.int<s, 1>>
+}
