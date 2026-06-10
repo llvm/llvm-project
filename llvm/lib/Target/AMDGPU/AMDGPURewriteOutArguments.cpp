@@ -262,7 +262,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
         // MDA stops at the first may-aliasing store, which need not be to this
         // argument; only fold a store whose pointer is exactly OutArg.
-        if (SI && SI->getPointerOperand()->stripPointerCasts() != OutArg)
+        if (SI && SI->getPointerOperand() != OutArg)
           SI = nullptr;
 
         if (SI) {
