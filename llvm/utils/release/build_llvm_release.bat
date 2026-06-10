@@ -188,7 +188,6 @@ set common_cmake_flags=^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" ^
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
   -DCPACK_GENERATOR="WIX" ^
-  -DCPACK_WIX_LIGHT_EXTRA_FLAGS="-sval" ^
   -DCOMPILER_RT_BUILD_ORC=OFF
 
 if "%force-msvc%" == "" (
