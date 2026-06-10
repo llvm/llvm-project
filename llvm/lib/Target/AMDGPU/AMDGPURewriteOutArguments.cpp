@@ -182,7 +182,10 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   MDA = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
 
   unsigned ReturnNumRegs = 0;
-  SmallDenseMap<int, Type *, 4> OutArgIndexes;
+  // Maps an out-argument number to its field index in the return struct.
+  // Fields are in processing order, which the retry loop below can reorder
+  // relative to argument order, so the index must be tracked, not recomputed.
+  SmallDenseMap<unsigned, unsigned, 4> OutArgIndexes;
   SmallVector<Type *, 4> ReturnTypes;
   Type *RetTy = F.getReturnType();
   if (!RetTy->isVoidTy()) {
@@ -226,11 +229,10 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
     // Keep retrying if we are able to successfully eliminate an argument. This
     // helps with cases with multiple arguments which may alias, such as in a
-    // sincos implementation. If we have 2 stores to arguments, on the first
-    // attempt the MDA query will succeed for the second store but not the
-    // first. On the second iteration we've removed that out clobbering argument
-    // (by effectively moving it into another function) and will find the second
-    // argument is OK to move.
+    // sincos implementation. With 2 stores to may-aliasing arguments, MDA
+    // returns the second store for the first argument too; the identity guard
+    // below rejects it, and a later iteration folds the first argument once the
+    // second store has been removed.
     for (const auto &Pair : OutArgs) {
       bool ThisReplaceable = true;
       SmallVector<std::pair<ReturnInst *, StoreInst *>, 4> ReplaceableStores;
@@ -257,6 +259,11 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
         StoreInst *SI = nullptr;
         if (Q.isDef())
           SI = dyn_cast<StoreInst>(Q.getInst());
+
+        // MDA stops at the first may-aliasing store, which need not be to this
+        // argument; only fold a store whose pointer is exactly OutArg.
+        if (SI && SI->getPointerOperand()->stripPointerCasts() != OutArg)
+          SI = nullptr;
 
         if (SI) {
           LLVM_DEBUG(dbgs() << "Found out argument store: " << *SI << '\n');
@@ -288,8 +295,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
       }
 
       if (ThisReplaceable) {
+        OutArgIndexes.insert({OutArg->getArgNo(), ReturnTypes.size()});
         ReturnTypes.push_back(ArgTy);
-        OutArgIndexes.insert({OutArg->getArgNo(), ArgTy});
         ++NumOutArgumentsReplaced;
         Changing = true;
       }
@@ -334,15 +341,17 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     IRBuilder<> B(RI);
     B.SetCurrentDebugLocation(RI->getDebugLoc());
 
-    int RetIdx = 0;
     Value *NewRetVal = PoisonValue::get(NewRetTy);
 
     Value *RetVal = RI->getReturnValue();
     if (RetVal)
-      NewRetVal = B.CreateInsertValue(NewRetVal, RetVal, RetIdx++);
+      NewRetVal = B.CreateInsertValue(NewRetVal, RetVal, 0);
 
-    for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second)
-      NewRetVal = B.CreateInsertValue(NewRetVal, ReturnPoint.second, RetIdx++);
+    // Use OutArgIndexes so body and stub agree on the field for each argument.
+    for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second) {
+      unsigned FieldIdx = OutArgIndexes.lookup(ReturnPoint.first->getArgNo());
+      NewRetVal = B.CreateInsertValue(NewRetVal, ReturnPoint.second, FieldIdx);
+    }
 
     if (RetVal)
       RI->setOperand(0, NewRetVal);
@@ -367,17 +376,17 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   IRBuilder<> B(StubBB);
   CallInst *StubCall = B.CreateCall(NewFunc, StubCallArgs);
 
-  int RetIdx = RetTy->isVoidTy() ? 0 : 1;
   for (Argument &Arg : F.args()) {
     auto It = OutArgIndexes.find(Arg.getArgNo());
     if (It == OutArgIndexes.end())
       continue;
 
-    Type *EltTy = It->second;
+    unsigned FieldIdx = It->second;
+    Type *EltTy = NewRetTy->getElementType(FieldIdx);
     const auto Align =
         DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 
-    Value *Val = B.CreateExtractValue(StubCall, RetIdx++);
+    Value *Val = B.CreateExtractValue(StubCall, FieldIdx);
     B.CreateAlignedStore(Val, &Arg, Align);
   }
 
