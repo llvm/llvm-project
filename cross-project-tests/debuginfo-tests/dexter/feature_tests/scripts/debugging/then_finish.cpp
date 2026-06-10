@@ -1,5 +1,6 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t \
+// RUN:   -- %s | FileCheck %s
 
 /// Test that when we use !then finish, we finish the entire test immediately,
 /// without observing any more steps afterwards.
@@ -9,19 +10,19 @@ void buzz() {}
 void fizzbuzz() {}
 
 void doFizzbuzz(int N) {
-// CHECK: then_finish.cpp([[# @LINE + 1 ]]:14)
-    for (int I = 1; I < N; ++I) {
-// CHECK-COUNT-15: then_finish.cpp([[# @LINE + 1 ]]:13)
-        if (I % 3 == 0) {  // !dex_label loop_top
-            if (I % 5 == 0)
-// CHECK: then_finish.cpp([[# @LINE + 1 ]]:17)
-                fizzbuzz(); // !dex_label fizzbuzz
-            else
-                fizz();
-        } else if (I % 5 == 0) {
-            buzz();
-        }
+  // CHECK: then_finish.cpp([[# @LINE + 1 ]]:12)
+  for (int I = 1; I < N; ++I) {
+    // CHECK-COUNT-15: then_finish.cpp([[# @LINE + 1 ]]:9)
+    if (I % 3 == 0) { // !dex_label loop_top
+      if (I % 5 == 0)
+        // CHECK: then_finish.cpp([[# @LINE + 1 ]]:9)
+        fizzbuzz(); // !dex_label fizzbuzz
+      else
+        fizz();
+    } else if (I % 5 == 0) {
+      buzz();
     }
+  }
 }
 /// We'll see main in "Frame 1" at the same step that we exit from; we should
 /// not see it (or doFizzbuzz) afterwards.
