@@ -204,25 +204,26 @@ exit:
 
 declare void @may_modify_or_free_pointer(ptr %p)
 
-; TODO: Despite the fact that the function may free memory in general, it
-; cannot free memory allocated by alloca.
 define i32 @test_load_on_cold_path_may_free_memory_alloca() {
 ; CHECK-LABEL: @test_load_on_cold_path_may_free_memory_alloca(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    call void @may_modify_or_free_pointer(ptr [[P]])
+; CHECK-NEXT:    [[X_PRE1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ [[X_PRE1]], [[ENTRY:%.*]] ], [ [[X2:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[COND]], label [[HOT_PATH:%.*]], label [[COLD_PATH:%.*]]
 ; CHECK:       hot_path:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
 ; CHECK-NEXT:    call void @may_modify_or_free_pointer(ptr [[P]])
+; CHECK-NEXT:    [[X_PRE:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
+; CHECK-NEXT:    [[X2]] = phi i32 [ [[X_PRE]], [[COLD_PATH]] ], [ [[X]], [[HOT_PATH]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
@@ -420,7 +421,7 @@ define i32 @test_load_on_exiting_cold_path_02(ptr %p) gc "statepoint-example" pe
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       cold_path:
 ; CHECK-NEXT:    invoke void @side_effect()
-; CHECK-NEXT:    to label [[BACKEDGE]] unwind label [[COLD_EXIT:%.*]]
+; CHECK-NEXT:            to label [[BACKEDGE]] unwind label [[COLD_EXIT:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
@@ -429,7 +430,7 @@ define i32 @test_load_on_exiting_cold_path_02(ptr %p) gc "statepoint-example" pe
 ; CHECK-NEXT:    ret i32 [[X]]
 ; CHECK:       cold_exit:
 ; CHECK-NEXT:    [[LANDING_PAD:%.*]] = landingpad token
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret i32 -1
 ;
 entry:
@@ -651,7 +652,7 @@ define i32 @test_inner_loop(ptr %p, i1 %arg) {
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner_loop:
 ; CHECK-NEXT:    call void @side_effect() #[[ATTR0]]
-; CHECK-NEXT:    br i1 %arg, label [[INNER_LOOP]], label [[BACKEDGE]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[INNER_LOOP]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], [[X]]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
