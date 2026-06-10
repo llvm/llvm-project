@@ -442,9 +442,6 @@ static Constant *getReturnValue(Function &F) {
 // This function checks whether the instruction I can be used
 // to perform accumulator recursion elimination for the
 // call instruction CI.
-// In the presence of pseudo-associative operations, it returns
-// the base case constant value in BaseCaseConst to both indicate success and
-// provide the value needed to initialize the accumulator.
 static Constant *canTransformAccumulatorRecursion(Instruction *I,
                                                   CallInst *CI) {
   auto IsPseudoAssociative = isPseudoAssociative(I);
