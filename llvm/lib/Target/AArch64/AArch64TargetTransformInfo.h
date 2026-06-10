@@ -21,7 +21,6 @@
 #include "AArch64TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
@@ -49,7 +48,6 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
 
   const AArch64Subtarget *ST;
   const AArch64TargetLowering *TLI;
-  TargetSchedModel SchedModel;
 
   static const FeatureBitset InlineInverseFeatures;
 
@@ -84,9 +82,7 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
 public:
   explicit AArch64TTIImpl(const AArch64TargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
-        TLI(ST->getTargetLowering()) {
-    SchedModel.init(ST);
-  }
+        TLI(ST->getTargetLowering()) {}
 
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override;

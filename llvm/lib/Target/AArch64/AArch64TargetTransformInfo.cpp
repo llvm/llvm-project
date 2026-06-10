@@ -5105,7 +5105,10 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
         llvm_unreachable("Unexpected integer type");
       }
     }
-    return (LT.first - 1) + SchedModel.computeInstrLatency(Inst);
+    const MCSchedModel &Sched = ST->getSchedModel();
+    const TargetInstrInfo *TII = ST->getInstrInfo();
+    unsigned SchedClass = TII->get(Inst).getSchedClass();
+    return (LT.first - 1) + Sched.computeInstrLatency(*ST, SchedClass);
   }
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
