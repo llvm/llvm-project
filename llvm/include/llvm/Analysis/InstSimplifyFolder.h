@@ -123,6 +123,8 @@ public:
   Value *FoldIntrinsic(Intrinsic::ID ID, ArrayRef<Value *> Ops, Type *Ty,
                        FastMathFlags FMF = {},
                        Function *CtxF = nullptr) const override {
+    if (Value *V = ConstFolder.FoldIntrinsic(ID, Ops, Ty, FMF))
+      return V;
     return simplifyIntrinsic(ID, Ty, Ops, FMF, SQ, CtxF);
   }
 
