@@ -340,6 +340,9 @@ Non-comprehensive list of changes in this release
   and ``__builtin___get_unsafe_stack_start`` are now deprecated. Use the
   corresponding functions from ``<sanitizer/safestack_interface.h>`` instead.
 
+- Clang now implicitly includes ``stdc-predef.h`` for non-freestanding
+  compilations targeting musl-based Linux systems, matching GCC behavior.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
