@@ -3,6 +3,9 @@
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html -check-prefix=HTML-GLOBAL
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html -check-prefix=HTML-GLOBAL
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV6Vector.html -check-prefix=HTML-VECTOR
+// RUN: clang-doc --format=md_mustache --output=%t --executor=standalone %s
+// RUN: FileCheck %s < %t/md/GlobalNamespace/index.md -check-prefix=MD-MUSTACHE-GLOBAL
+// RUN: FileCheck %s < %t/md/GlobalNamespace/_ZTV6Vector.md -check-prefix=MD-MUSTACHE-VECTOR
 
 /// \brief This is u_long
 using u_long = unsigned long;
@@ -80,3 +83,16 @@ using IntVec = Vector<int>;
 // HTML-VECTOR-NEXT:         <p>Defined at line 16 of file {{.*}}typedef-alias.cpp</p>
 // HTML-VECTOR-NEXT:     </div>
 // HTML-VECTOR-NEXT: </section>
+
+// MD-MUSTACHE-GLOBAL: # Global Namespace
+// MD-MUSTACHE-GLOBAL: ## Records
+// MD-MUSTACHE-GLOBAL: * [Vector](Vector.md)
+// MD-MUSTACHE-GLOBAL-NOT: ## Typedefs
+// MD-MUSTACHE-GLOBAL-NOT: u_long
+// MD-MUSTACHE-GLOBAL-NOT: IntPtr
+// MD-MUSTACHE-GLOBAL-NOT: IntVec
+
+// MD-MUSTACHE-VECTOR: # class Vector
+// MD-MUSTACHE-VECTOR: *Defined at {{.*}}typedef-alias.cpp#17*
+// MD-MUSTACHE-VECTOR-NOT: ## Typedefs
+// MD-MUSTACHE-VECTOR-NOT: using Ptr
