@@ -10135,7 +10135,7 @@ entry:
   ret <2 x i64> %B
 }
 
-; 23-bit sdiv, can use expandDivRem23Impl
+; 23-bit sdiv, can use expandDivRemToFloatImpl
 define amdgpu_kernel void @sdiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
 ; GFX6-LABEL: sdiv23:
 ; GFX6:       ; %bb.0:
@@ -10196,7 +10196,7 @@ define amdgpu_kernel void @sdiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
   ret void
 }
 
-; 24-bit sdiv, cannot use expandDivRem23Impl
+; 24-bit sdiv, cannot use expandDivRemToFloatImpl
 define amdgpu_kernel void @sdiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
 ; GFX6-LABEL: sdiv24:
 ; GFX6:       ; %bb.0:
@@ -10282,7 +10282,7 @@ define amdgpu_kernel void @sdiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
   ret void
 }
 
-; 22-bit udiv, can use expandDivRem23Impl
+; 22-bit udiv, can use expandDivRemToFloatImpl
 define amdgpu_kernel void @udiv22(ptr addrspace(1) %out, i22 %x, i22 %y) {
 ; GFX6-LABEL: udiv22:
 ; GFX6:       ; %bb.0:
@@ -10332,7 +10332,7 @@ define amdgpu_kernel void @udiv22(ptr addrspace(1) %out, i22 %x, i22 %y) {
   ret void
 }
 
-; 23-bit udiv, cannot use expandDivRem23Impl
+; 23-bit udiv, cannot use expandDivRemToFloatImpl
 define amdgpu_kernel void @udiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
 ; GFX6-LABEL: udiv23:
 ; GFX6:       ; %bb.0:
@@ -10408,7 +10408,7 @@ define amdgpu_kernel void @udiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
   ret void
 }
 
-; 24-bit udiv, cannot use expandDivRem23Impl
+; 24-bit udiv, cannot use expandDivRemToFloatImpl
 define amdgpu_kernel void @udiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
 ; GFX6-LABEL: udiv24:
 ; GFX6:       ; %bb.0:
