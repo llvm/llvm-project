@@ -14,7 +14,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/SymbolTable.h"
-#include "clang/CIR/MissingFeatures.h"
 
 static unsigned getIntOrBoolBitWidth(mlir::Type ty) {
   if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
