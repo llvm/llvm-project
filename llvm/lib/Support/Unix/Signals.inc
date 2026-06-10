@@ -130,8 +130,9 @@ public:
     // Reuse a node with a null filename (left behind by erase) if one exists.
     // There are two cases where Filename can be special:
     // - nullptr: a node left behind by a previous file that we had to remove
-    // - InvalidPathSentinel: a node whose file is actively being removed by a signal handler right
-    //   now, in which case, it's OK if this file doesn't get removed.
+    // - InvalidPathSentinel: a node whose file is actively being removed by a
+    //   signal handler right now, in which case it's OK if this file doesn't
+    //   get removed.
     char *NewFilename = strdup(Filename.c_str());
     std::atomic<FileToRemoveList *> *InsertionPoint = &Head;
     for (FileToRemoveList *Current = Head.load(); Current;
@@ -169,7 +170,7 @@ public:
         // if we still own the pointer.
         char *Expected = OldFilename;
         while (!Current->Filename.compare_exchange_strong(Expected, nullptr)) {
-          if (Expected == nullptr  || Expected == InvalidPathSentinel)
+          if (Expected == nullptr || Expected == InvalidPathSentinel)
             break;
         }
         if (Expected == OldFilename)
@@ -206,11 +207,15 @@ public:
          currentFile = currentFile->Next.load()) {
       // Take exclusive ownership by swapping in the sentinel (signal-safe: no
       // allocation or free). Then put the path back so we don't leak.
-      if (char *path = currentFile->Filename.exchange(InvalidPathSentinel)) {
-        removeFile(path);
+      char *Path = currentFile->Filename.exchange(InvalidPathSentinel);
+      if (!Path) {
+        // Restore an empty slot so future insertions can reuse it.
+        currentFile->Filename.exchange(nullptr);
+      } else if (Path != InvalidPathSentinel) {
+        removeFile(Path);
         // Add the path back to the list to create a global root referencing the
         // heap allocation, which will pacify leak checkers that run at exit.
-        currentFile->Filename.exchange(path);
+        currentFile->Filename.exchange(Path);
       }
     }
 
