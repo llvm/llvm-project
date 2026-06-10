@@ -5,9 +5,9 @@
 
 define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp i32 [[Y:%.*]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp fast i32 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP2]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP2]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP4:%.*]] = fptoui float [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 0, [[Y]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP4]]
@@ -45,7 +45,7 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s5
 ; GFX6-NEXT:    s_sub_i32 s2, 0, s5
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s2, v0
@@ -76,7 +76,7 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GFX9-NEXT:    s_sub_i32 s4, 0, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
@@ -104,9 +104,9 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 
 define amdgpu_kernel void @urem_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; CHECK-LABEL: @urem_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp i32 [[Y:%.*]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = uitofp fast i32 [[Y:%.*]] to float
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP2]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float [[TMP2]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP4:%.*]] = fptoui float [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 0, [[Y]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP4]]
@@ -142,7 +142,7 @@ define amdgpu_kernel void @urem_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s5
 ; GFX6-NEXT:    s_sub_i32 s2, 0, s5
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s2, v0
@@ -170,7 +170,7 @@ define amdgpu_kernel void @urem_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GFX9-NEXT:    s_sub_i32 s4, 0, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
@@ -203,9 +203,9 @@ define amdgpu_kernel void @sdiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[Y]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 [[TMP5]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = uitofp i32 [[TMP7]] to float
+; CHECK-NEXT:    [[TMP8:%.*]] = uitofp fast i32 [[TMP7]] to float
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast float [[TMP9]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul fast float [[TMP9]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP11:%.*]] = fptoui float [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 0, [[TMP7]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul i32 [[TMP12]], [[TMP11]]
@@ -247,7 +247,7 @@ define amdgpu_kernel void @sdiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX6-NEXT:    s_sub_i32 s2, 0, s6
 ; GFX6-NEXT:    s_abs_i32 s7, s4
 ; GFX6-NEXT:    s_xor_b32 s4, s4, s5
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 31
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
@@ -285,7 +285,7 @@ define amdgpu_kernel void @sdiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX9-NEXT:    s_sub_i32 s5, 0, s4
 ; GFX9-NEXT:    s_xor_b32 s3, s2, s3
 ; GFX9-NEXT:    s_abs_i32 s2, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_ashr_i32 s3, s3, 31
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -322,9 +322,9 @@ define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[Y]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[TMP7:%.*]] = uitofp i32 [[TMP6]] to float
+; CHECK-NEXT:    [[TMP7:%.*]] = uitofp fast i32 [[TMP6]] to float
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP8]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP8]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP10:%.*]] = fptoui float [[TMP9]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 0, [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul i32 [[TMP11]], [[TMP10]]
@@ -364,7 +364,7 @@ define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX6-NEXT:    s_sub_i32 s2, 0, s5
 ; GFX6-NEXT:    s_abs_i32 s6, s4
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 31
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -398,7 +398,7 @@ define amdgpu_kernel void @srem_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX9-NEXT:    s_sub_i32 s5, 0, s3
 ; GFX9-NEXT:    s_ashr_i32 s4, s2, 31
 ; GFX9-NEXT:    s_abs_i32 s2, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v0
@@ -428,8 +428,8 @@ define amdgpu_kernel void @udiv_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; CHECK-LABEL: @udiv_i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
@@ -457,7 +457,7 @@ define amdgpu_kernel void @udiv_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; GFX6-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v3, v2
@@ -478,7 +478,7 @@ define amdgpu_kernel void @udiv_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v4, v2
@@ -497,8 +497,8 @@ define amdgpu_kernel void @urem_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; CHECK-LABEL: @urem_i16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
@@ -527,7 +527,7 @@ define amdgpu_kernel void @urem_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; GFX6-NEXT:    s_and_b32 s0, s6, 0xffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX6-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; GFX6-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v3, v2
@@ -550,7 +550,7 @@ define amdgpu_kernel void @urem_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; GFX9-NEXT:    s_and_b32 s0, s2, 0xffff
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s0
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v3, v2
@@ -575,8 +575,8 @@ define amdgpu_kernel void @sdiv_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP3]], 30
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP7:%.*]] = sitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = sitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP7:%.*]] = sitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
@@ -606,7 +606,7 @@ define amdgpu_kernel void @sdiv_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; GFX6-NEXT:    s_sext_i32_i16 s5, s6
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -631,7 +631,7 @@ define amdgpu_kernel void @sdiv_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; GFX9-NEXT:    s_sext_i32_i16 s2, s2
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s2
 ; GFX9-NEXT:    s_xor_b32 s2, s2, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    s_or_b32 s4, s2, 1
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
@@ -656,8 +656,8 @@ define amdgpu_kernel void @srem_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP3]], 30
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP7:%.*]] = sitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = sitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP7:%.*]] = sitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
@@ -687,7 +687,7 @@ define amdgpu_kernel void @srem_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; GFX6-NEXT:    s_sext_i32_i16 s2, s6
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s2
 ; GFX6-NEXT:    s_xor_b32 s2, s2, s7
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX6-NEXT:    s_or_b32 s4, s2, 1
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -715,7 +715,7 @@ define amdgpu_kernel void @srem_i16(ptr addrspace(1) %out, i16 %x, i16 %y) {
 ; GFX9-NEXT:    s_sext_i32_i16 s2, s6
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s2
 ; GFX9-NEXT:    s_xor_b32 s2, s2, s7
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    s_or_b32 s4, s2, 1
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -740,8 +740,8 @@ define amdgpu_kernel void @udiv_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
@@ -766,7 +766,7 @@ define amdgpu_kernel void @udiv_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_cvt_f32_ubyte1_e32 v0, s6
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v2, s6
 ; GFX6-NEXT:    v_mul_f32_e32 v1, v2, v1
 ; GFX6-NEXT:    v_trunc_f32_e32 v1, v1
@@ -784,7 +784,7 @@ define amdgpu_kernel void @udiv_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_ubyte1_e32 v0, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v3, s2
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v3, v1
 ; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
@@ -803,8 +803,8 @@ define amdgpu_kernel void @urem_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; CHECK-LABEL: @urem_i8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
@@ -830,7 +830,7 @@ define amdgpu_kernel void @urem_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    v_cvt_f32_ubyte1_e32 v0, s6
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v2, s6
 ; GFX6-NEXT:    s_lshr_b32 s2, s6, 8
 ; GFX6-NEXT:    v_mul_f32_e32 v1, v2, v1
@@ -851,7 +851,7 @@ define amdgpu_kernel void @urem_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_cvt_f32_ubyte1_e32 v0, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v2, s2
 ; GFX9-NEXT:    s_lshr_b32 s3, s2, 8
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v2, v1
@@ -877,8 +877,8 @@ define amdgpu_kernel void @sdiv_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP3]], 30
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP7:%.*]] = sitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = sitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP7:%.*]] = sitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
@@ -908,7 +908,7 @@ define amdgpu_kernel void @sdiv_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; GFX6-NEXT:    s_sext_i32_i8 s5, s6
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -933,7 +933,7 @@ define amdgpu_kernel void @sdiv_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; GFX9-NEXT:    s_sext_i32_i8 s2, s2
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s2
 ; GFX9-NEXT:    s_xor_b32 s2, s2, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    s_or_b32 s4, s2, 1
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
@@ -958,8 +958,8 @@ define amdgpu_kernel void @srem_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP3]], 30
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP7:%.*]] = sitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = sitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP7:%.*]] = sitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
@@ -989,7 +989,7 @@ define amdgpu_kernel void @srem_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; GFX6-NEXT:    s_sext_i32_i8 s3, s6
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s3
 ; GFX6-NEXT:    s_xor_b32 s2, s3, s2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX6-NEXT:    s_lshr_b32 s4, s6, 8
 ; GFX6-NEXT:    s_or_b32 s5, s2, 1
@@ -1018,7 +1018,7 @@ define amdgpu_kernel void @srem_i8(ptr addrspace(1) %out, i8 %x, i8 %y) {
 ; GFX9-NEXT:    s_sext_i32_i8 s3, s6
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s3
 ; GFX9-NEXT:    s_xor_b32 s2, s3, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    s_lshr_b32 s4, s6, 8
 ; GFX9-NEXT:    s_or_b32 s5, s2, 1
@@ -1044,9 +1044,9 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-LABEL: @udiv_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP6:%.*]] = fptoui float [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 0, [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP7]], [[TMP6]]
@@ -1076,9 +1076,9 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <4 x i32> poison, i32 [[TMP31]], i64 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[Y]], i64 1
-; CHECK-NEXT:    [[TMP35:%.*]] = uitofp i32 [[TMP34]] to float
+; CHECK-NEXT:    [[TMP35:%.*]] = uitofp fast i32 [[TMP34]] to float
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP35]])
-; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP36]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP36]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP38:%.*]] = fptoui float [[TMP37]] to i32
 ; CHECK-NEXT:    [[TMP39:%.*]] = sub i32 0, [[TMP34]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = mul i32 [[TMP39]], [[TMP38]]
@@ -1108,9 +1108,9 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <4 x i32> [[TMP32]], i32 [[TMP63]], i64 1
 ; CHECK-NEXT:    [[TMP65:%.*]] = extractelement <4 x i32> [[X]], i64 2
 ; CHECK-NEXT:    [[TMP66:%.*]] = extractelement <4 x i32> [[Y]], i64 2
-; CHECK-NEXT:    [[TMP67:%.*]] = uitofp i32 [[TMP66]] to float
+; CHECK-NEXT:    [[TMP67:%.*]] = uitofp fast i32 [[TMP66]] to float
 ; CHECK-NEXT:    [[TMP68:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP67]])
-; CHECK-NEXT:    [[TMP69:%.*]] = fmul fast float [[TMP68]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP69:%.*]] = fmul fast float [[TMP68]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP70:%.*]] = fptoui float [[TMP69]] to i32
 ; CHECK-NEXT:    [[TMP71:%.*]] = sub i32 0, [[TMP66]]
 ; CHECK-NEXT:    [[TMP72:%.*]] = mul i32 [[TMP71]], [[TMP70]]
@@ -1140,9 +1140,9 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP96:%.*]] = insertelement <4 x i32> [[TMP64]], i32 [[TMP95]], i64 2
 ; CHECK-NEXT:    [[TMP97:%.*]] = extractelement <4 x i32> [[X]], i64 3
 ; CHECK-NEXT:    [[TMP98:%.*]] = extractelement <4 x i32> [[Y]], i64 3
-; CHECK-NEXT:    [[TMP99:%.*]] = uitofp i32 [[TMP98]] to float
+; CHECK-NEXT:    [[TMP99:%.*]] = uitofp fast i32 [[TMP98]] to float
 ; CHECK-NEXT:    [[TMP100:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP99]])
-; CHECK-NEXT:    [[TMP101:%.*]] = fmul fast float [[TMP100]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP101:%.*]] = fmul fast float [[TMP100]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP102:%.*]] = fptoui float [[TMP101]] to i32
 ; CHECK-NEXT:    [[TMP103:%.*]] = sub i32 0, [[TMP98]]
 ; CHECK-NEXT:    [[TMP104:%.*]] = mul i32 [[TMP103]], [[TMP102]]
@@ -1184,13 +1184,13 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    s_sub_i32 s0, 0, s12
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v2, s13
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v4, s14
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v6, s15
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v4
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v6, v6
+; GFX6-NEXT:    v_rcp_f32_e32 v6, v6
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s0, v0
 ; GFX6-NEXT:    v_mul_hi_u32 v1, v0, v1
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
@@ -1281,8 +1281,8 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s13
 ; GFX9-NEXT:    s_sub_i32 s2, 0, s12
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v2, s14
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
@@ -1307,7 +1307,7 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_mul_i32 s3, s3, s4
 ; GFX9-NEXT:    s_mul_hi_u32 s3, s4, s3
 ; GFX9-NEXT:    s_add_i32 s4, s4, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v2
 ; GFX9-NEXT:    s_mul_hi_u32 s3, s9, s4
 ; GFX9-NEXT:    s_mul_i32 s4, s3, s13
 ; GFX9-NEXT:    s_sub_i32 s4, s9, s4
@@ -1327,7 +1327,7 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_mul_i32 s4, s4, s5
 ; GFX9-NEXT:    s_mul_hi_u32 s4, s5, s4
 ; GFX9-NEXT:    s_add_i32 s5, s5, s4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_mul_hi_u32 s4, s10, s5
 ; GFX9-NEXT:    s_mul_i32 s5, s4, s14
 ; GFX9-NEXT:    s_sub_i32 s5, s10, s5
@@ -1371,9 +1371,9 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-LABEL: @urem_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP6:%.*]] = fptoui float [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 0, [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP7]], [[TMP6]]
@@ -1401,9 +1401,9 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> poison, i32 [[TMP29]], i64 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[Y]], i64 1
-; CHECK-NEXT:    [[TMP33:%.*]] = uitofp i32 [[TMP32]] to float
+; CHECK-NEXT:    [[TMP33:%.*]] = uitofp fast i32 [[TMP32]] to float
 ; CHECK-NEXT:    [[TMP34:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP33]])
-; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP34]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP34]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP36:%.*]] = fptoui float [[TMP35]] to i32
 ; CHECK-NEXT:    [[TMP37:%.*]] = sub i32 0, [[TMP32]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = mul i32 [[TMP37]], [[TMP36]]
@@ -1431,9 +1431,9 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP60:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP59]], i64 1
 ; CHECK-NEXT:    [[TMP61:%.*]] = extractelement <4 x i32> [[X]], i64 2
 ; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <4 x i32> [[Y]], i64 2
-; CHECK-NEXT:    [[TMP63:%.*]] = uitofp i32 [[TMP62]] to float
+; CHECK-NEXT:    [[TMP63:%.*]] = uitofp fast i32 [[TMP62]] to float
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP63]])
-; CHECK-NEXT:    [[TMP65:%.*]] = fmul fast float [[TMP64]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP65:%.*]] = fmul fast float [[TMP64]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP66:%.*]] = fptoui float [[TMP65]] to i32
 ; CHECK-NEXT:    [[TMP67:%.*]] = sub i32 0, [[TMP62]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = mul i32 [[TMP67]], [[TMP66]]
@@ -1461,9 +1461,9 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP90:%.*]] = insertelement <4 x i32> [[TMP60]], i32 [[TMP89]], i64 2
 ; CHECK-NEXT:    [[TMP91:%.*]] = extractelement <4 x i32> [[X]], i64 3
 ; CHECK-NEXT:    [[TMP92:%.*]] = extractelement <4 x i32> [[Y]], i64 3
-; CHECK-NEXT:    [[TMP93:%.*]] = uitofp i32 [[TMP92]] to float
+; CHECK-NEXT:    [[TMP93:%.*]] = uitofp fast i32 [[TMP92]] to float
 ; CHECK-NEXT:    [[TMP94:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP93]])
-; CHECK-NEXT:    [[TMP95:%.*]] = fmul fast float [[TMP94]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP95:%.*]] = fmul fast float [[TMP94]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP96:%.*]] = fptoui float [[TMP95]] to i32
 ; CHECK-NEXT:    [[TMP97:%.*]] = sub i32 0, [[TMP92]]
 ; CHECK-NEXT:    [[TMP98:%.*]] = mul i32 [[TMP97]], [[TMP96]]
@@ -1501,8 +1501,8 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s12
 ; GFX6-NEXT:    s_sub_i32 s0, 0, s12
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v2, s13
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s0, v0
@@ -1523,7 +1523,7 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    s_cselect_b32 s6, s1, s0
 ; GFX6-NEXT:    s_sub_i32 s0, 0, s13
 ; GFX6-NEXT:    v_mul_lo_u32 v0, s0, v1
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    v_mul_hi_u32 v0, v1, v0
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; GFX6-NEXT:    v_mul_hi_u32 v0, s9, v0
@@ -1541,7 +1541,7 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    s_cselect_b32 s7, s1, s0
 ; GFX6-NEXT:    s_sub_i32 s0, 0, s14
 ; GFX6-NEXT:    v_mul_lo_u32 v0, s0, v1
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    v_mul_hi_u32 v0, v1, v0
 ; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
 ; GFX6-NEXT:    v_mul_hi_u32 v0, s10, v0
@@ -1589,9 +1589,9 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s13
 ; GFX9-NEXT:    s_sub_i32 s2, 0, s12
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v2, s14
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v1, v1
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v1, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
@@ -1631,7 +1631,7 @@ define amdgpu_kernel void @urem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_mul_i32 s4, s4, s5
 ; GFX9-NEXT:    s_mul_hi_u32 s4, s5, s4
 ; GFX9-NEXT:    s_add_i32 s5, s5, s4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_mul_hi_u32 s4, s10, s5
 ; GFX9-NEXT:    s_mul_i32 s4, s4, s14
 ; GFX9-NEXT:    s_sub_i32 s4, s10, s4
@@ -1679,9 +1679,9 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i32 [[TMP7]], [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = uitofp i32 [[TMP9]] to float
+; CHECK-NEXT:    [[TMP10:%.*]] = uitofp fast i32 [[TMP9]] to float
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP10]])
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast float [[TMP11]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast float [[TMP11]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptoui float [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 0, [[TMP9]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[TMP14]], [[TMP13]]
@@ -1720,9 +1720,9 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP48:%.*]] = add i32 [[TMP43]], [[TMP45]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = xor i32 [[TMP47]], [[TMP44]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = xor i32 [[TMP48]], [[TMP45]]
-; CHECK-NEXT:    [[TMP51:%.*]] = uitofp i32 [[TMP50]] to float
+; CHECK-NEXT:    [[TMP51:%.*]] = uitofp fast i32 [[TMP50]] to float
 ; CHECK-NEXT:    [[TMP52:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP51]])
-; CHECK-NEXT:    [[TMP53:%.*]] = fmul fast float [[TMP52]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP53:%.*]] = fmul fast float [[TMP52]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP54:%.*]] = fptoui float [[TMP53]] to i32
 ; CHECK-NEXT:    [[TMP55:%.*]] = sub i32 0, [[TMP50]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = mul i32 [[TMP55]], [[TMP54]]
@@ -1761,9 +1761,9 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP89:%.*]] = add i32 [[TMP84]], [[TMP86]]
 ; CHECK-NEXT:    [[TMP90:%.*]] = xor i32 [[TMP88]], [[TMP85]]
 ; CHECK-NEXT:    [[TMP91:%.*]] = xor i32 [[TMP89]], [[TMP86]]
-; CHECK-NEXT:    [[TMP92:%.*]] = uitofp i32 [[TMP91]] to float
+; CHECK-NEXT:    [[TMP92:%.*]] = uitofp fast i32 [[TMP91]] to float
 ; CHECK-NEXT:    [[TMP93:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP92]])
-; CHECK-NEXT:    [[TMP94:%.*]] = fmul fast float [[TMP93]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP94:%.*]] = fmul fast float [[TMP93]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP95:%.*]] = fptoui float [[TMP94]] to i32
 ; CHECK-NEXT:    [[TMP96:%.*]] = sub i32 0, [[TMP91]]
 ; CHECK-NEXT:    [[TMP97:%.*]] = mul i32 [[TMP96]], [[TMP95]]
@@ -1802,9 +1802,9 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP130:%.*]] = add i32 [[TMP125]], [[TMP127]]
 ; CHECK-NEXT:    [[TMP131:%.*]] = xor i32 [[TMP129]], [[TMP126]]
 ; CHECK-NEXT:    [[TMP132:%.*]] = xor i32 [[TMP130]], [[TMP127]]
-; CHECK-NEXT:    [[TMP133:%.*]] = uitofp i32 [[TMP132]] to float
+; CHECK-NEXT:    [[TMP133:%.*]] = uitofp fast i32 [[TMP132]] to float
 ; CHECK-NEXT:    [[TMP134:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP133]])
-; CHECK-NEXT:    [[TMP135:%.*]] = fmul fast float [[TMP134]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP135:%.*]] = fmul fast float [[TMP134]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP136:%.*]] = fptoui float [[TMP135]] to i32
 ; CHECK-NEXT:    [[TMP137:%.*]] = sub i32 0, [[TMP132]]
 ; CHECK-NEXT:    [[TMP138:%.*]] = mul i32 [[TMP137]], [[TMP136]]
@@ -1848,7 +1848,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s0
 ; GFX6-NEXT:    s_sub_i32 s1, 0, s0
 ; GFX6-NEXT:    s_xor_b32 s2, s8, s12
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s1, v0
@@ -1872,7 +1872,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    s_sub_i32 s3, 0, s2
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX6-NEXT:    s_xor_b32 s6, s9, s13
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
 ; GFX6-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s[0:1]
 ; GFX6-NEXT:    v_mul_f32_e32 v2, 0x4f7ffffe, v2
@@ -1899,7 +1899,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    s_sub_i32 s7, 0, s6
 ; GFX6-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
 ; GFX6-NEXT:    v_add_i32_e32 v3, vcc, 1, v2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v4
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v4
 ; GFX6-NEXT:    v_mul_f32_e32 v4, 0x4f7ffffe, v4
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v4, v4
 ; GFX6-NEXT:    v_mul_lo_u32 v5, s7, v4
@@ -1924,7 +1924,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    s_sub_i32 s0, 0, s12
 ; GFX6-NEXT:    v_cndmask_b32_e32 v4, v4, v5, vcc
 ; GFX6-NEXT:    v_add_i32_e32 v5, vcc, 1, v4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v1, v6
+; GFX6-NEXT:    v_rcp_f32_e32 v1, v6
 ; GFX6-NEXT:    s_abs_i32 s1, s11
 ; GFX6-NEXT:    v_subrev_i32_e32 v0, vcc, s8, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
@@ -1969,7 +1969,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_sub_i32 s3, 0, s0
 ; GFX9-NEXT:    s_abs_i32 s2, s8
 ; GFX9-NEXT:    s_xor_b32 s1, s8, s12
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_ashr_i32 s1, s1, 31
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -1992,7 +1992,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX9-NEXT:    s_sub_i32 s7, 0, s2
 ; GFX9-NEXT:    s_sub_i32 s8, s0, s1
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_abs_i32 s6, s9
 ; GFX9-NEXT:    s_xor_b32 s3, s9, s13
 ; GFX9-NEXT:    s_ashr_i32 s3, s3, 31
@@ -2018,7 +2018,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s3
 ; GFX9-NEXT:    s_sub_i32 s7, 0, s1
 ; GFX9-NEXT:    s_sub_i32 s3, s0, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_abs_i32 s6, s10
 ; GFX9-NEXT:    s_xor_b32 s2, s10, s14
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 31
@@ -2045,7 +2045,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    s_xor_b32 s5, s6, s2
 ; GFX9-NEXT:    s_sub_i32 s6, 0, s7
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX9-NEXT:    s_sub_i32 s2, s5, s2
 ; GFX9-NEXT:    s_abs_i32 s4, s11
 ; GFX9-NEXT:    s_xor_b32 s3, s11, s15
@@ -2090,9 +2090,9 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = uitofp i32 [[TMP8]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = uitofp fast i32 [[TMP8]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP10]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP10]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptoui float [[TMP11]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 0, [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], [[TMP12]]
@@ -2128,9 +2128,9 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP44:%.*]] = add i32 [[TMP40]], [[TMP42]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i32 [[TMP43]], [[TMP41]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = xor i32 [[TMP44]], [[TMP42]]
-; CHECK-NEXT:    [[TMP47:%.*]] = uitofp i32 [[TMP46]] to float
+; CHECK-NEXT:    [[TMP47:%.*]] = uitofp fast i32 [[TMP46]] to float
 ; CHECK-NEXT:    [[TMP48:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP47]])
-; CHECK-NEXT:    [[TMP49:%.*]] = fmul fast float [[TMP48]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP49:%.*]] = fmul fast float [[TMP48]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP50:%.*]] = fptoui float [[TMP49]] to i32
 ; CHECK-NEXT:    [[TMP51:%.*]] = sub i32 0, [[TMP46]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = mul i32 [[TMP51]], [[TMP50]]
@@ -2166,9 +2166,9 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP82:%.*]] = add i32 [[TMP78]], [[TMP80]]
 ; CHECK-NEXT:    [[TMP83:%.*]] = xor i32 [[TMP81]], [[TMP79]]
 ; CHECK-NEXT:    [[TMP84:%.*]] = xor i32 [[TMP82]], [[TMP80]]
-; CHECK-NEXT:    [[TMP85:%.*]] = uitofp i32 [[TMP84]] to float
+; CHECK-NEXT:    [[TMP85:%.*]] = uitofp fast i32 [[TMP84]] to float
 ; CHECK-NEXT:    [[TMP86:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP85]])
-; CHECK-NEXT:    [[TMP87:%.*]] = fmul fast float [[TMP86]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP87:%.*]] = fmul fast float [[TMP86]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP88:%.*]] = fptoui float [[TMP87]] to i32
 ; CHECK-NEXT:    [[TMP89:%.*]] = sub i32 0, [[TMP84]]
 ; CHECK-NEXT:    [[TMP90:%.*]] = mul i32 [[TMP89]], [[TMP88]]
@@ -2204,9 +2204,9 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; CHECK-NEXT:    [[TMP120:%.*]] = add i32 [[TMP116]], [[TMP118]]
 ; CHECK-NEXT:    [[TMP121:%.*]] = xor i32 [[TMP119]], [[TMP117]]
 ; CHECK-NEXT:    [[TMP122:%.*]] = xor i32 [[TMP120]], [[TMP118]]
-; CHECK-NEXT:    [[TMP123:%.*]] = uitofp i32 [[TMP122]] to float
+; CHECK-NEXT:    [[TMP123:%.*]] = uitofp fast i32 [[TMP122]] to float
 ; CHECK-NEXT:    [[TMP124:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP123]])
-; CHECK-NEXT:    [[TMP125:%.*]] = fmul fast float [[TMP124]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP125:%.*]] = fmul fast float [[TMP124]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP126:%.*]] = fptoui float [[TMP125]] to i32
 ; CHECK-NEXT:    [[TMP127:%.*]] = sub i32 0, [[TMP122]]
 ; CHECK-NEXT:    [[TMP128:%.*]] = mul i32 [[TMP127]], [[TMP126]]
@@ -2245,7 +2245,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s0
 ; GFX6-NEXT:    s_sub_i32 s1, 0, s0
 ; GFX6-NEXT:    s_ashr_i32 s2, s8, 31
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s1, v0
@@ -2267,7 +2267,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    s_sub_i32 s3, 0, s1
 ; GFX6-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX6-NEXT:    s_sub_i32 s7, s0, s2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    s_ashr_i32 s6, s9, 31
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -2290,7 +2290,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    s_sub_i32 s2, 0, s1
 ; GFX6-NEXT:    s_xor_b32 s0, s0, s6
 ; GFX6-NEXT:    s_sub_i32 s6, s0, s6
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    s_ashr_i32 s8, s10, 31
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
@@ -2313,7 +2313,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s10
 ; GFX6-NEXT:    s_sub_i32 s0, 0, s10
 ; GFX6-NEXT:    s_mov_b32 s2, -1
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v2, v0
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s7
@@ -2354,7 +2354,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_sub_i32 s3, 0, s0
 ; GFX9-NEXT:    s_abs_i32 s2, s8
 ; GFX9-NEXT:    s_ashr_i32 s1, s8, 31
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v0
@@ -2375,7 +2375,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s1
 ; GFX9-NEXT:    s_sub_i32 s7, 0, s2
 ; GFX9-NEXT:    s_sub_i32 s8, s0, s1
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_abs_i32 s6, s9
 ; GFX9-NEXT:    s_ashr_i32 s3, s9, 31
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
@@ -2398,7 +2398,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s3
 ; GFX9-NEXT:    s_sub_i32 s7, 0, s1
 ; GFX9-NEXT:    s_sub_i32 s3, s0, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_abs_i32 s6, s10
 ; GFX9-NEXT:    s_ashr_i32 s2, s10, 31
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
@@ -2421,7 +2421,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NEXT:    s_xor_b32 s5, s6, s2
 ; GFX9-NEXT:    s_sub_i32 s6, 0, s7
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v1
 ; GFX9-NEXT:    s_sub_i32 s2, s5, s2
 ; GFX9-NEXT:    s_abs_i32 s4, s11
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
@@ -2460,8 +2460,8 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP6:%.*]] = uitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP5:%.*]] = uitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
@@ -2480,8 +2480,8 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext i16 [[TMP21]] to i32
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i16 [[TMP22]] to i32
-; CHECK-NEXT:    [[TMP25:%.*]] = uitofp i32 [[TMP23]] to float
-; CHECK-NEXT:    [[TMP26:%.*]] = uitofp i32 [[TMP24]] to float
+; CHECK-NEXT:    [[TMP25:%.*]] = uitofp fast i32 [[TMP23]] to float
+; CHECK-NEXT:    [[TMP26:%.*]] = uitofp fast i32 [[TMP24]] to float
 ; CHECK-NEXT:    [[TMP27:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP26]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = fmul fast float [[TMP25]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.trunc.f32(float [[TMP28]])
@@ -2500,8 +2500,8 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <4 x i16> [[Y]], i64 2
 ; CHECK-NEXT:    [[TMP43:%.*]] = zext i16 [[TMP41]] to i32
 ; CHECK-NEXT:    [[TMP44:%.*]] = zext i16 [[TMP42]] to i32
-; CHECK-NEXT:    [[TMP45:%.*]] = uitofp i32 [[TMP43]] to float
-; CHECK-NEXT:    [[TMP46:%.*]] = uitofp i32 [[TMP44]] to float
+; CHECK-NEXT:    [[TMP45:%.*]] = uitofp fast i32 [[TMP43]] to float
+; CHECK-NEXT:    [[TMP46:%.*]] = uitofp fast i32 [[TMP44]] to float
 ; CHECK-NEXT:    [[TMP47:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP46]])
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul fast float [[TMP45]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = call fast float @llvm.trunc.f32(float [[TMP48]])
@@ -2520,8 +2520,8 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP62:%.*]] = extractelement <4 x i16> [[Y]], i64 3
 ; CHECK-NEXT:    [[TMP63:%.*]] = zext i16 [[TMP61]] to i32
 ; CHECK-NEXT:    [[TMP64:%.*]] = zext i16 [[TMP62]] to i32
-; CHECK-NEXT:    [[TMP65:%.*]] = uitofp i32 [[TMP63]] to float
-; CHECK-NEXT:    [[TMP66:%.*]] = uitofp i32 [[TMP64]] to float
+; CHECK-NEXT:    [[TMP65:%.*]] = uitofp fast i32 [[TMP63]] to float
+; CHECK-NEXT:    [[TMP66:%.*]] = uitofp fast i32 [[TMP64]] to float
 ; CHECK-NEXT:    [[TMP67:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP66]])
 ; CHECK-NEXT:    [[TMP68:%.*]] = fmul fast float [[TMP65]], [[TMP67]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = call fast float @llvm.trunc.f32(float [[TMP68]])
@@ -2552,10 +2552,10 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    s_and_b32 s4, s8, 0xffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v2, s5
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX6-NEXT:    s_lshr_b32 s4, s8, 16
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v4, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v5, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v5, v2
 ; GFX6-NEXT:    v_mul_f32_e32 v3, v1, v3
 ; GFX6-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX6-NEXT:    v_mad_f32 v1, -v3, v0, v1
@@ -2570,7 +2570,7 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v6, vcc
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v6, v4
+; GFX6-NEXT:    v_rcp_f32_e32 v6, v4
 ; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v2
 ; GFX6-NEXT:    v_addc_u32_e32 v2, vcc, 0, v1, vcc
 ; GFX6-NEXT:    v_mul_f32_e32 v1, v5, v6
@@ -2581,7 +2581,7 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    s_lshr_b32 s4, s9, 16
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v6, s4
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v7, v5
+; GFX6-NEXT:    v_rcp_f32_e32 v7, v5
 ; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v4
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX6-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -2609,12 +2609,12 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    s_and_b32 s6, s0, 0xffff
 ; GFX9-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v2, s6
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; GFX9-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, s0
 ; GFX9-NEXT:    v_mul_f32_e32 v4, v2, v4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v5, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v1
 ; GFX9-NEXT:    v_trunc_f32_e32 v4, v4
 ; GFX9-NEXT:    s_and_b32 s0, s3, 0xffff
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v7, v4
@@ -2626,7 +2626,7 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v7, vcc
 ; GFX9-NEXT:    v_trunc_f32_e32 v2, v5
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v7, v4
+; GFX9-NEXT:    v_rcp_f32_e32 v7, v4
 ; GFX9-NEXT:    v_mad_f32 v3, -v2, v1, v3
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v1
 ; GFX9-NEXT:    s_lshr_b32 s0, s3, 16
@@ -2637,7 +2637,7 @@ define amdgpu_kernel void @udiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX9-NEXT:    s_lshr_b32 s0, s1, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v7, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v8, v5
+; GFX9-NEXT:    v_rcp_f32_e32 v8, v5
 ; GFX9-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v4
@@ -2667,8 +2667,8 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP6:%.*]] = uitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP5:%.*]] = uitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
@@ -2689,8 +2689,8 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <4 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i16 [[TMP23]] to i32
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i16 [[TMP24]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = uitofp i32 [[TMP25]] to float
-; CHECK-NEXT:    [[TMP28:%.*]] = uitofp i32 [[TMP26]] to float
+; CHECK-NEXT:    [[TMP27:%.*]] = uitofp fast i32 [[TMP25]] to float
+; CHECK-NEXT:    [[TMP28:%.*]] = uitofp fast i32 [[TMP26]] to float
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP28]])
 ; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast float [[TMP27]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.trunc.f32(float [[TMP30]])
@@ -2711,8 +2711,8 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <4 x i16> [[Y]], i64 2
 ; CHECK-NEXT:    [[TMP47:%.*]] = zext i16 [[TMP45]] to i32
 ; CHECK-NEXT:    [[TMP48:%.*]] = zext i16 [[TMP46]] to i32
-; CHECK-NEXT:    [[TMP49:%.*]] = uitofp i32 [[TMP47]] to float
-; CHECK-NEXT:    [[TMP50:%.*]] = uitofp i32 [[TMP48]] to float
+; CHECK-NEXT:    [[TMP49:%.*]] = uitofp fast i32 [[TMP47]] to float
+; CHECK-NEXT:    [[TMP50:%.*]] = uitofp fast i32 [[TMP48]] to float
 ; CHECK-NEXT:    [[TMP51:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP50]])
 ; CHECK-NEXT:    [[TMP52:%.*]] = fmul fast float [[TMP49]], [[TMP51]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.trunc.f32(float [[TMP52]])
@@ -2733,8 +2733,8 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP68:%.*]] = extractelement <4 x i16> [[Y]], i64 3
 ; CHECK-NEXT:    [[TMP69:%.*]] = zext i16 [[TMP67]] to i32
 ; CHECK-NEXT:    [[TMP70:%.*]] = zext i16 [[TMP68]] to i32
-; CHECK-NEXT:    [[TMP71:%.*]] = uitofp i32 [[TMP69]] to float
-; CHECK-NEXT:    [[TMP72:%.*]] = uitofp i32 [[TMP70]] to float
+; CHECK-NEXT:    [[TMP71:%.*]] = uitofp fast i32 [[TMP69]] to float
+; CHECK-NEXT:    [[TMP72:%.*]] = uitofp fast i32 [[TMP70]] to float
 ; CHECK-NEXT:    [[TMP73:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP72]])
 ; CHECK-NEXT:    [[TMP74:%.*]] = fmul fast float [[TMP71]], [[TMP73]]
 ; CHECK-NEXT:    [[TMP75:%.*]] = call fast float @llvm.trunc.f32(float [[TMP74]])
@@ -2767,10 +2767,10 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    s_and_b32 s4, s8, 0xffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v2, s5
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX6-NEXT:    s_lshr_b32 s4, s8, 16
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v4, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v5, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v5, v2
 ; GFX6-NEXT:    v_mul_f32_e32 v3, v1, v3
 ; GFX6-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v6, v3
@@ -2788,7 +2788,7 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    v_mul_lo_u32 v1, v1, s5
 ; GFX6-NEXT:    s_and_b32 s5, s9, 0xffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v3, s5
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v2
 ; GFX6-NEXT:    v_sub_i32_e32 v5, vcc, s4, v1
 ; GFX6-NEXT:    s_lshr_b32 s4, s11, 16
 ; GFX6-NEXT:    v_mul_f32_e32 v1, v3, v4
@@ -2796,7 +2796,7 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    v_mul_lo_u32 v0, v0, s10
 ; GFX6-NEXT:    s_lshr_b32 s5, s9, 16
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v6, s5
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v7, v4
+; GFX6-NEXT:    v_rcp_f32_e32 v7, v4
 ; GFX6-NEXT:    v_trunc_f32_e32 v1, v1
 ; GFX6-NEXT:    v_sub_i32_e32 v0, vcc, s8, v0
 ; GFX6-NEXT:    v_mad_f32 v3, -v1, v2, v3
@@ -2834,10 +2834,10 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v2, s8
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX9-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v5, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v4, v2, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v4, v4
 ; GFX9-NEXT:    s_and_b32 s4, s3, 0xffff
@@ -2852,7 +2852,7 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    v_mad_f32 v3, -v2, v1, v3
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, s5
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v7, v4
+; GFX9-NEXT:    v_rcp_f32_e32 v7, v4
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v2, vcc
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v5, v7
@@ -2864,7 +2864,7 @@ define amdgpu_kernel void @urem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    s_lshr_b32 s1, s1, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v7, s1
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v2, v2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v8, v5
+; GFX9-NEXT:    v_rcp_f32_e32 v8, v5
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v4
 ; GFX9-NEXT:    v_mul_lo_u32 v0, v0, s9
 ; GFX9-NEXT:    v_addc_co_u32_e32 v2, vcc, 0, v2, vcc
@@ -2900,8 +2900,8 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr i32 [[TMP5]], 30
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP9:%.*]] = sitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP8:%.*]] = sitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
@@ -2924,8 +2924,8 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP29:%.*]] = xor i32 [[TMP27]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = ashr i32 [[TMP29]], 30
 ; CHECK-NEXT:    [[TMP31:%.*]] = or i32 [[TMP30]], 1
-; CHECK-NEXT:    [[TMP32:%.*]] = sitofp i32 [[TMP27]] to float
-; CHECK-NEXT:    [[TMP33:%.*]] = sitofp i32 [[TMP28]] to float
+; CHECK-NEXT:    [[TMP32:%.*]] = sitofp fast i32 [[TMP27]] to float
+; CHECK-NEXT:    [[TMP33:%.*]] = sitofp fast i32 [[TMP28]] to float
 ; CHECK-NEXT:    [[TMP34:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP33]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP32]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.trunc.f32(float [[TMP35]])
@@ -2948,8 +2948,8 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP53:%.*]] = xor i32 [[TMP51]], [[TMP52]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = ashr i32 [[TMP53]], 30
 ; CHECK-NEXT:    [[TMP55:%.*]] = or i32 [[TMP54]], 1
-; CHECK-NEXT:    [[TMP56:%.*]] = sitofp i32 [[TMP51]] to float
-; CHECK-NEXT:    [[TMP57:%.*]] = sitofp i32 [[TMP52]] to float
+; CHECK-NEXT:    [[TMP56:%.*]] = sitofp fast i32 [[TMP51]] to float
+; CHECK-NEXT:    [[TMP57:%.*]] = sitofp fast i32 [[TMP52]] to float
 ; CHECK-NEXT:    [[TMP58:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP57]])
 ; CHECK-NEXT:    [[TMP59:%.*]] = fmul fast float [[TMP56]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = call fast float @llvm.trunc.f32(float [[TMP59]])
@@ -2972,8 +2972,8 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP77:%.*]] = xor i32 [[TMP75]], [[TMP76]]
 ; CHECK-NEXT:    [[TMP78:%.*]] = ashr i32 [[TMP77]], 30
 ; CHECK-NEXT:    [[TMP79:%.*]] = or i32 [[TMP78]], 1
-; CHECK-NEXT:    [[TMP80:%.*]] = sitofp i32 [[TMP75]] to float
-; CHECK-NEXT:    [[TMP81:%.*]] = sitofp i32 [[TMP76]] to float
+; CHECK-NEXT:    [[TMP80:%.*]] = sitofp fast i32 [[TMP75]] to float
+; CHECK-NEXT:    [[TMP81:%.*]] = sitofp fast i32 [[TMP76]] to float
 ; CHECK-NEXT:    [[TMP82:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP81]])
 ; CHECK-NEXT:    [[TMP83:%.*]] = fmul fast float [[TMP80]], [[TMP82]]
 ; CHECK-NEXT:    [[TMP84:%.*]] = call fast float @llvm.trunc.f32(float [[TMP83]])
@@ -3004,7 +3004,7 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    s_sext_i32_i16 s5, s8
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -3019,7 +3019,7 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    v_add_i32_e32 v2, vcc, s4, v2
 ; GFX6-NEXT:    s_ashr_i32 s4, s8, 16
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX6-NEXT:    s_xor_b32 s4, s4, s5
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
@@ -3035,7 +3035,7 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    v_add_i32_e32 v3, vcc, s4, v3
 ; GFX6-NEXT:    s_sext_i32_i16 s4, s9
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX6-NEXT:    s_xor_b32 s4, s4, s5
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
@@ -3051,7 +3051,7 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, s4, v4
 ; GFX6-NEXT:    s_ashr_i32 s4, s9, 16
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v4, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v5, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v5, v0
 ; GFX6-NEXT:    s_xor_b32 s4, s4, s5
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
@@ -3083,7 +3083,7 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    s_sext_i32_i16 s5, s0
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX9-NEXT:    s_xor_b32 s4, s5, s4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX9-NEXT:    s_or_b32 s8, s4, 1
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v1, v3
@@ -3097,7 +3097,7 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 16
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s0
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_sext_i32_i16 s2, s3
@@ -3114,7 +3114,7 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    v_add_u32_e32 v4, s0, v4
 ; GFX9-NEXT:    s_sext_i32_i16 s0, s1
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v5, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v0
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_or_b32 s0, s0, 1
@@ -3130,7 +3130,7 @@ define amdgpu_kernel void @sdiv_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    v_add_u32_e32 v1, s0, v5
 ; GFX9-NEXT:    s_ashr_i32 s0, s1, 16
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v5, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v6, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v6, v0
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_or_b32 s2, s0, 1
@@ -3162,8 +3162,8 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr i32 [[TMP5]], 30
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP9:%.*]] = sitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP8:%.*]] = sitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
@@ -3188,8 +3188,8 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP31:%.*]] = xor i32 [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = ashr i32 [[TMP31]], 30
 ; CHECK-NEXT:    [[TMP33:%.*]] = or i32 [[TMP32]], 1
-; CHECK-NEXT:    [[TMP34:%.*]] = sitofp i32 [[TMP29]] to float
-; CHECK-NEXT:    [[TMP35:%.*]] = sitofp i32 [[TMP30]] to float
+; CHECK-NEXT:    [[TMP34:%.*]] = sitofp fast i32 [[TMP29]] to float
+; CHECK-NEXT:    [[TMP35:%.*]] = sitofp fast i32 [[TMP30]] to float
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP35]])
 ; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP34]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.trunc.f32(float [[TMP37]])
@@ -3214,8 +3214,8 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP57:%.*]] = xor i32 [[TMP55]], [[TMP56]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = ashr i32 [[TMP57]], 30
 ; CHECK-NEXT:    [[TMP59:%.*]] = or i32 [[TMP58]], 1
-; CHECK-NEXT:    [[TMP60:%.*]] = sitofp i32 [[TMP55]] to float
-; CHECK-NEXT:    [[TMP61:%.*]] = sitofp i32 [[TMP56]] to float
+; CHECK-NEXT:    [[TMP60:%.*]] = sitofp fast i32 [[TMP55]] to float
+; CHECK-NEXT:    [[TMP61:%.*]] = sitofp fast i32 [[TMP56]] to float
 ; CHECK-NEXT:    [[TMP62:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP61]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = fmul fast float [[TMP60]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.trunc.f32(float [[TMP63]])
@@ -3240,8 +3240,8 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; CHECK-NEXT:    [[TMP83:%.*]] = xor i32 [[TMP81]], [[TMP82]]
 ; CHECK-NEXT:    [[TMP84:%.*]] = ashr i32 [[TMP83]], 30
 ; CHECK-NEXT:    [[TMP85:%.*]] = or i32 [[TMP84]], 1
-; CHECK-NEXT:    [[TMP86:%.*]] = sitofp i32 [[TMP81]] to float
-; CHECK-NEXT:    [[TMP87:%.*]] = sitofp i32 [[TMP82]] to float
+; CHECK-NEXT:    [[TMP86:%.*]] = sitofp fast i32 [[TMP81]] to float
+; CHECK-NEXT:    [[TMP87:%.*]] = sitofp fast i32 [[TMP82]] to float
 ; CHECK-NEXT:    [[TMP88:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP87]])
 ; CHECK-NEXT:    [[TMP89:%.*]] = fmul fast float [[TMP86]], [[TMP88]]
 ; CHECK-NEXT:    [[TMP90:%.*]] = call fast float @llvm.trunc.f32(float [[TMP89]])
@@ -3274,7 +3274,7 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    s_sext_i32_i16 s5, s8
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -3290,7 +3290,7 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    s_ashr_i32 s5, s8, 16
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v2, s5
 ; GFX6-NEXT:    v_mul_lo_u32 v0, v0, s10
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v1
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_lshr_b32 s6, s8, 16
@@ -3312,7 +3312,7 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
 ; GFX6-NEXT:    v_sub_i32_e32 v3, vcc, s6, v1
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v2
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -3329,7 +3329,7 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX6-NEXT:    s_ashr_i32 s5, s9, 16
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v4, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v5, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v5, v2
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_lshr_b32 s6, s9, 16
 ; GFX6-NEXT:    s_lshr_b32 s7, s11, 16
@@ -3365,7 +3365,7 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    s_sext_i32_i16 s9, s0
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s9
 ; GFX9-NEXT:    s_xor_b32 s4, s9, s8
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX9-NEXT:    s_or_b32 s10, s4, 1
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v1, v3
@@ -3382,7 +3382,7 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    v_add_u32_e32 v1, s4, v3
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v3, s10
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX9-NEXT:    s_or_b32 s2, s2, 1
 ; GFX9-NEXT:    v_mul_lo_u32 v1, v1, s8
 ; GFX9-NEXT:    s_sext_i32_i16 s8, s1
@@ -3399,7 +3399,7 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v4, s8
 ; GFX9-NEXT:    v_mul_lo_u32 v0, v0, s0
 ; GFX9-NEXT:    s_xor_b32 s0, s8, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v5, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v3
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_or_b32 s0, s0, 1
 ; GFX9-NEXT:    v_sub_u32_e32 v0, s10, v0
@@ -3416,7 +3416,7 @@ define amdgpu_kernel void @srem_v4i16(ptr addrspace(1) %out, <4 x i16> %x, <4 x 
 ; GFX9-NEXT:    v_mul_lo_u32 v3, v3, s2
 ; GFX9-NEXT:    s_ashr_i32 s2, s1, 16
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v5, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v6, v4
+; GFX9-NEXT:    v_rcp_f32_e32 v6, v4
 ; GFX9-NEXT:    s_xor_b32 s0, s2, s3
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_or_b32 s4, s0, 1
@@ -3447,8 +3447,8 @@ define amdgpu_kernel void @udiv_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; CHECK-LABEL: @udiv_i3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i3 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i3 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
@@ -3473,7 +3473,7 @@ define amdgpu_kernel void @udiv_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_bfe_u32 s2, s6, 0x30008
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v0, s2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX6-NEXT:    s_and_b32 s4, s6, 7
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v2, s4
 ; GFX6-NEXT:    s_mov_b32 s2, -1
@@ -3495,7 +3495,7 @@ define amdgpu_kernel void @udiv_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_bfe_u32 s3, s2, 0x30008
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v0, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX9-NEXT:    s_and_b32 s2, s2, 7
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v3, s2
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v3, v1
@@ -3516,8 +3516,8 @@ define amdgpu_kernel void @urem_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; CHECK-LABEL: @urem_i3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i3 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i3 [[Y:%.*]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP4:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP5:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP4]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.trunc.f32(float [[TMP6]])
@@ -3543,7 +3543,7 @@ define amdgpu_kernel void @urem_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_bfe_u32 s2, s6, 0x30008
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v0, s2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX6-NEXT:    s_and_b32 s3, s6, 7
 ; GFX6-NEXT:    v_cvt_f32_ubyte0_e32 v2, s3
 ; GFX6-NEXT:    s_lshr_b32 s2, s6, 8
@@ -3567,7 +3567,7 @@ define amdgpu_kernel void @urem_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_bfe_u32 s0, s2, 0x30008
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v0, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v1, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v1, v0
 ; GFX9-NEXT:    s_and_b32 s1, s2, 7
 ; GFX9-NEXT:    v_cvt_f32_ubyte0_e32 v2, s1
 ; GFX9-NEXT:    s_lshr_b32 s0, s2, 8
@@ -3597,8 +3597,8 @@ define amdgpu_kernel void @sdiv_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP3]], 30
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP7:%.*]] = sitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = sitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP7:%.*]] = sitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
@@ -3628,7 +3628,7 @@ define amdgpu_kernel void @sdiv_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; GFX6-NEXT:    s_bfe_i32 s5, s6, 0x30000
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -3654,7 +3654,7 @@ define amdgpu_kernel void @sdiv_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; GFX9-NEXT:    s_bfe_i32 s2, s2, 0x30000
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s2
 ; GFX9-NEXT:    s_xor_b32 s2, s2, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    s_or_b32 s4, s2, 1
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
@@ -3680,8 +3680,8 @@ define amdgpu_kernel void @srem_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = ashr i32 [[TMP3]], 30
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = sitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[TMP7:%.*]] = sitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = sitofp fast i32 [[TMP1]] to float
+; CHECK-NEXT:    [[TMP7:%.*]] = sitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP8:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP7]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast float [[TMP6]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.trunc.f32(float [[TMP9]])
@@ -3711,7 +3711,7 @@ define amdgpu_kernel void @srem_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; GFX6-NEXT:    s_bfe_i32 s3, s6, 0x30000
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s3
 ; GFX6-NEXT:    s_xor_b32 s2, s3, s2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX6-NEXT:    s_lshr_b32 s4, s6, 8
 ; GFX6-NEXT:    s_or_b32 s5, s2, 1
@@ -3740,7 +3740,7 @@ define amdgpu_kernel void @srem_i3(ptr addrspace(1) %out, i3 %x, i3 %y) {
 ; GFX9-NEXT:    s_bfe_i32 s1, s2, 0x30000
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s1
 ; GFX9-NEXT:    s_xor_b32 s0, s1, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_lshr_b32 s3, s2, 8
 ; GFX9-NEXT:    s_or_b32 s6, s0, 1
@@ -3771,8 +3771,8 @@ define amdgpu_kernel void @udiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i16> [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP6:%.*]] = uitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP5:%.*]] = uitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
@@ -3791,8 +3791,8 @@ define amdgpu_kernel void @udiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <3 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext i16 [[TMP21]] to i32
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i16 [[TMP22]] to i32
-; CHECK-NEXT:    [[TMP25:%.*]] = uitofp i32 [[TMP23]] to float
-; CHECK-NEXT:    [[TMP26:%.*]] = uitofp i32 [[TMP24]] to float
+; CHECK-NEXT:    [[TMP25:%.*]] = uitofp fast i32 [[TMP23]] to float
+; CHECK-NEXT:    [[TMP26:%.*]] = uitofp fast i32 [[TMP24]] to float
 ; CHECK-NEXT:    [[TMP27:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP26]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = fmul fast float [[TMP25]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.trunc.f32(float [[TMP28]])
@@ -3811,8 +3811,8 @@ define amdgpu_kernel void @udiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <3 x i16> [[Y]], i64 2
 ; CHECK-NEXT:    [[TMP43:%.*]] = zext i16 [[TMP41]] to i32
 ; CHECK-NEXT:    [[TMP44:%.*]] = zext i16 [[TMP42]] to i32
-; CHECK-NEXT:    [[TMP45:%.*]] = uitofp i32 [[TMP43]] to float
-; CHECK-NEXT:    [[TMP46:%.*]] = uitofp i32 [[TMP44]] to float
+; CHECK-NEXT:    [[TMP45:%.*]] = uitofp fast i32 [[TMP43]] to float
+; CHECK-NEXT:    [[TMP46:%.*]] = uitofp fast i32 [[TMP44]] to float
 ; CHECK-NEXT:    [[TMP47:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP46]])
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul fast float [[TMP45]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = call fast float @llvm.trunc.f32(float [[TMP48]])
@@ -3843,10 +3843,10 @@ define amdgpu_kernel void @udiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    s_and_b32 s4, s8, 0xffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v2, s5
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX6-NEXT:    s_lshr_b32 s4, s8, 16
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v4, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v5, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v5, v2
 ; GFX6-NEXT:    v_mul_f32_e32 v3, v1, v3
 ; GFX6-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX6-NEXT:    v_mad_f32 v1, -v3, v0, v1
@@ -3860,7 +3860,7 @@ define amdgpu_kernel void @udiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    s_and_b32 s4, s9, 0xffff
 ; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v6, vcc
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v6, v4
+; GFX6-NEXT:    v_rcp_f32_e32 v6, v4
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v2
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -3888,10 +3888,10 @@ define amdgpu_kernel void @udiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    s_lshr_b32 s2, s2, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s2
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v2, s6
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX9-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v5, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v4, v2, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v4, v4
 ; GFX9-NEXT:    s_and_b32 s0, s3, 0xffff
@@ -3906,7 +3906,7 @@ define amdgpu_kernel void @udiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    v_mad_f32 v3, -v2, v1, v3
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v7, v4
+; GFX9-NEXT:    v_rcp_f32_e32 v7, v4
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v2, vcc
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v5, v7
@@ -3933,8 +3933,8 @@ define amdgpu_kernel void @urem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i16> [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP6:%.*]] = uitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP5:%.*]] = uitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
@@ -3955,8 +3955,8 @@ define amdgpu_kernel void @urem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <3 x i16> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i16 [[TMP23]] to i32
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i16 [[TMP24]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = uitofp i32 [[TMP25]] to float
-; CHECK-NEXT:    [[TMP28:%.*]] = uitofp i32 [[TMP26]] to float
+; CHECK-NEXT:    [[TMP27:%.*]] = uitofp fast i32 [[TMP25]] to float
+; CHECK-NEXT:    [[TMP28:%.*]] = uitofp fast i32 [[TMP26]] to float
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP28]])
 ; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast float [[TMP27]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.trunc.f32(float [[TMP30]])
@@ -3977,8 +3977,8 @@ define amdgpu_kernel void @urem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <3 x i16> [[Y]], i64 2
 ; CHECK-NEXT:    [[TMP47:%.*]] = zext i16 [[TMP45]] to i32
 ; CHECK-NEXT:    [[TMP48:%.*]] = zext i16 [[TMP46]] to i32
-; CHECK-NEXT:    [[TMP49:%.*]] = uitofp i32 [[TMP47]] to float
-; CHECK-NEXT:    [[TMP50:%.*]] = uitofp i32 [[TMP48]] to float
+; CHECK-NEXT:    [[TMP49:%.*]] = uitofp fast i32 [[TMP47]] to float
+; CHECK-NEXT:    [[TMP50:%.*]] = uitofp fast i32 [[TMP48]] to float
 ; CHECK-NEXT:    [[TMP51:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP50]])
 ; CHECK-NEXT:    [[TMP52:%.*]] = fmul fast float [[TMP49]], [[TMP51]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.trunc.f32(float [[TMP52]])
@@ -4011,10 +4011,10 @@ define amdgpu_kernel void @urem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    s_and_b32 s4, s8, 0xffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v2, s5
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX6-NEXT:    s_lshr_b32 s4, s8, 16
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v4, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v5, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v5, v2
 ; GFX6-NEXT:    v_mul_f32_e32 v3, v1, v3
 ; GFX6-NEXT:    v_trunc_f32_e32 v3, v3
 ; GFX6-NEXT:    v_mad_f32 v1, -v3, v0, v1
@@ -4029,7 +4029,7 @@ define amdgpu_kernel void @urem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    v_mul_lo_u32 v0, v0, s10
 ; GFX6-NEXT:    s_and_b32 s6, s9, 0xffff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v5, s6
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v6, v4
+; GFX6-NEXT:    v_rcp_f32_e32 v6, v4
 ; GFX6-NEXT:    v_sub_i32_e32 v0, vcc, s8, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, v2
@@ -4063,9 +4063,9 @@ define amdgpu_kernel void @urem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    s_and_b32 s8, s0, 0xffff
 ; GFX9-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v2, s8
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v5, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v1
 ; GFX9-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX9-NEXT:    v_mul_f32_e32 v4, v2, v4
 ; GFX9-NEXT:    v_trunc_f32_e32 v4, v4
@@ -4080,7 +4080,7 @@ define amdgpu_kernel void @urem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v6, vcc
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v4, v5
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, s1
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v6, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v6, v3
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v2|, v1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v4, vcc
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v5, v6
@@ -4115,8 +4115,8 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr i32 [[TMP5]], 30
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP9:%.*]] = sitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP8:%.*]] = sitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
@@ -4139,8 +4139,8 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP29:%.*]] = xor i32 [[TMP27]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = ashr i32 [[TMP29]], 30
 ; CHECK-NEXT:    [[TMP31:%.*]] = or i32 [[TMP30]], 1
-; CHECK-NEXT:    [[TMP32:%.*]] = sitofp i32 [[TMP27]] to float
-; CHECK-NEXT:    [[TMP33:%.*]] = sitofp i32 [[TMP28]] to float
+; CHECK-NEXT:    [[TMP32:%.*]] = sitofp fast i32 [[TMP27]] to float
+; CHECK-NEXT:    [[TMP33:%.*]] = sitofp fast i32 [[TMP28]] to float
 ; CHECK-NEXT:    [[TMP34:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP33]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP32]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.trunc.f32(float [[TMP35]])
@@ -4163,8 +4163,8 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP53:%.*]] = xor i32 [[TMP51]], [[TMP52]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = ashr i32 [[TMP53]], 30
 ; CHECK-NEXT:    [[TMP55:%.*]] = or i32 [[TMP54]], 1
-; CHECK-NEXT:    [[TMP56:%.*]] = sitofp i32 [[TMP51]] to float
-; CHECK-NEXT:    [[TMP57:%.*]] = sitofp i32 [[TMP52]] to float
+; CHECK-NEXT:    [[TMP56:%.*]] = sitofp fast i32 [[TMP51]] to float
+; CHECK-NEXT:    [[TMP57:%.*]] = sitofp fast i32 [[TMP52]] to float
 ; CHECK-NEXT:    [[TMP58:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP57]])
 ; CHECK-NEXT:    [[TMP59:%.*]] = fmul fast float [[TMP56]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = call fast float @llvm.trunc.f32(float [[TMP59]])
@@ -4195,7 +4195,7 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    s_sext_i32_i16 s5, s8
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -4210,7 +4210,7 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    v_add_i32_e32 v1, vcc, s4, v2
 ; GFX6-NEXT:    s_ashr_i32 s4, s8, 16
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v2, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX6-NEXT:    s_xor_b32 s4, s4, s5
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
@@ -4226,7 +4226,7 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    v_add_i32_e32 v2, vcc, s4, v3
 ; GFX6-NEXT:    s_sext_i32_i16 s4, s9
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v3, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX6-NEXT:    s_xor_b32 s4, s4, s5
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
@@ -4256,7 +4256,7 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    s_sext_i32_i16 s5, s0
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s5
 ; GFX9-NEXT:    s_xor_b32 s4, s5, s4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX9-NEXT:    s_or_b32 s8, s4, 1
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
@@ -4271,7 +4271,7 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 16
 ; GFX9-NEXT:    v_add_u32_e32 v2, s4, v3
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v3, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_sext_i32_i16 s2, s3
@@ -4287,7 +4287,7 @@ define amdgpu_kernel void @sdiv_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    v_add_u32_e32 v3, s0, v4
 ; GFX9-NEXT:    s_sext_i32_i16 s0, s1
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v4, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v5, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v0
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s2
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_or_b32 s2, s0, 1
@@ -4318,8 +4318,8 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr i32 [[TMP5]], 30
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP9:%.*]] = sitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP8:%.*]] = sitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
@@ -4344,8 +4344,8 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP31:%.*]] = xor i32 [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = ashr i32 [[TMP31]], 30
 ; CHECK-NEXT:    [[TMP33:%.*]] = or i32 [[TMP32]], 1
-; CHECK-NEXT:    [[TMP34:%.*]] = sitofp i32 [[TMP29]] to float
-; CHECK-NEXT:    [[TMP35:%.*]] = sitofp i32 [[TMP30]] to float
+; CHECK-NEXT:    [[TMP34:%.*]] = sitofp fast i32 [[TMP29]] to float
+; CHECK-NEXT:    [[TMP35:%.*]] = sitofp fast i32 [[TMP30]] to float
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP35]])
 ; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP34]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.trunc.f32(float [[TMP37]])
@@ -4370,8 +4370,8 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; CHECK-NEXT:    [[TMP57:%.*]] = xor i32 [[TMP55]], [[TMP56]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = ashr i32 [[TMP57]], 30
 ; CHECK-NEXT:    [[TMP59:%.*]] = or i32 [[TMP58]], 1
-; CHECK-NEXT:    [[TMP60:%.*]] = sitofp i32 [[TMP55]] to float
-; CHECK-NEXT:    [[TMP61:%.*]] = sitofp i32 [[TMP56]] to float
+; CHECK-NEXT:    [[TMP60:%.*]] = sitofp fast i32 [[TMP55]] to float
+; CHECK-NEXT:    [[TMP61:%.*]] = sitofp fast i32 [[TMP56]] to float
 ; CHECK-NEXT:    [[TMP62:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP61]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = fmul fast float [[TMP60]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.trunc.f32(float [[TMP63]])
@@ -4404,7 +4404,7 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    s_sext_i32_i16 s5, s8
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -4420,7 +4420,7 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    s_ashr_i32 s5, s8, 16
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v2, s5
 ; GFX6-NEXT:    v_mul_lo_u32 v0, v0, s10
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v1
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_lshr_b32 s6, s8, 16
@@ -4440,7 +4440,7 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX6-NEXT:    s_sext_i32_i16 s5, s9
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v3, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v2
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    v_mul_lo_u32 v1, v1, s7
 ; GFX6-NEXT:    s_or_b32 s7, s4, 1
@@ -4472,7 +4472,7 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    s_sext_i32_i16 s9, s0
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s9
 ; GFX9-NEXT:    s_xor_b32 s4, s9, s8
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX9-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX9-NEXT:    s_or_b32 s10, s4, 1
 ; GFX9-NEXT:    v_mul_f32_e32 v2, v1, v2
@@ -4489,7 +4489,7 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    v_add_u32_e32 v1, s4, v2
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s10
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_or_b32 s2, s2, 1
 ; GFX9-NEXT:    v_mul_lo_u32 v1, v1, s8
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
@@ -4505,7 +4505,7 @@ define amdgpu_kernel void @srem_v3i16(ptr addrspace(1) %out, <3 x i16> %x, <3 x 
 ; GFX9-NEXT:    s_sext_i32_i16 s3, s1
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v3, s3
 ; GFX9-NEXT:    v_mul_lo_u32 v0, v0, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v2
 ; GFX9-NEXT:    s_xor_b32 s0, s3, s2
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 30
 ; GFX9-NEXT:    s_or_b32 s4, s0, 1
@@ -4538,8 +4538,8 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i15> [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i15 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i15 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP6:%.*]] = uitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP5:%.*]] = uitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
@@ -4558,8 +4558,8 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <3 x i15> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext i15 [[TMP21]] to i32
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i15 [[TMP22]] to i32
-; CHECK-NEXT:    [[TMP25:%.*]] = uitofp i32 [[TMP23]] to float
-; CHECK-NEXT:    [[TMP26:%.*]] = uitofp i32 [[TMP24]] to float
+; CHECK-NEXT:    [[TMP25:%.*]] = uitofp fast i32 [[TMP23]] to float
+; CHECK-NEXT:    [[TMP26:%.*]] = uitofp fast i32 [[TMP24]] to float
 ; CHECK-NEXT:    [[TMP27:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP26]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = fmul fast float [[TMP25]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.trunc.f32(float [[TMP28]])
@@ -4578,8 +4578,8 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <3 x i15> [[Y]], i64 2
 ; CHECK-NEXT:    [[TMP43:%.*]] = zext i15 [[TMP41]] to i32
 ; CHECK-NEXT:    [[TMP44:%.*]] = zext i15 [[TMP42]] to i32
-; CHECK-NEXT:    [[TMP45:%.*]] = uitofp i32 [[TMP43]] to float
-; CHECK-NEXT:    [[TMP46:%.*]] = uitofp i32 [[TMP44]] to float
+; CHECK-NEXT:    [[TMP45:%.*]] = uitofp fast i32 [[TMP43]] to float
+; CHECK-NEXT:    [[TMP46:%.*]] = uitofp fast i32 [[TMP44]] to float
 ; CHECK-NEXT:    [[TMP47:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP46]])
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul fast float [[TMP45]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = call fast float @llvm.trunc.f32(float [[TMP48]])
@@ -4612,7 +4612,7 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    s_and_b32 s6, s10, 0x7fff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s6
 ; GFX6-NEXT:    s_lshr_b64 s[6:7], s[4:5], 30
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_bfe_u32 s4, s4, 0xf000f
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v3, s4
 ; GFX6-NEXT:    s_mov_b32 s1, s9
@@ -4620,7 +4620,7 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; GFX6-NEXT:    v_trunc_f32_e32 v2, v2
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v4, s9
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v5, v3
+; GFX6-NEXT:    v_rcp_f32_e32 v5, v3
 ; GFX6-NEXT:    s_and_b32 s5, s6, 0x7fff
 ; GFX6-NEXT:    v_mad_f32 v1, -v2, v0, v1
 ; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, v0
@@ -4631,7 +4631,7 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_mad_f32 v4, -v0, v3, v4
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v5, s8
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v6, v1
+; GFX6-NEXT:    v_rcp_f32_e32 v6, v1
 ; GFX6-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
 ; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v4|, v3
 ; GFX6-NEXT:    v_addc_u32_e32 v3, vcc, 0, v0, vcc
@@ -4666,13 +4666,13 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    s_bfe_u32 s8, s2, 0xf000f
 ; GFX9-NEXT:    s_lshr_b64 s[2:3], s[6:7], 30
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s5
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_bfe_u32 s3, s6, 0xf000f
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v4, s3
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, s8
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v1, v3
 ; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v6, v4
+; GFX9-NEXT:    v_rcp_f32_e32 v6, v4
 ; GFX9-NEXT:    s_and_b32 s2, s2, 0x7fff
 ; GFX9-NEXT:    v_mad_f32 v1, -v3, v0, v1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, v0
@@ -4684,7 +4684,7 @@ define amdgpu_kernel void @udiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    v_mad_f32 v5, -v0, v4, v5
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v6, s4
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v7, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v7, v1
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v5|, v4
 ; GFX9-NEXT:    v_addc_co_u32_e32 v4, vcc, 0, v0, vcc
@@ -4715,8 +4715,8 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i15> [[Y:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i15 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i15 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP5:%.*]] = uitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP6:%.*]] = uitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP5:%.*]] = uitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP7:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast float [[TMP5]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call fast float @llvm.trunc.f32(float [[TMP8]])
@@ -4737,8 +4737,8 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <3 x i15> [[Y]], i64 1
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i15 [[TMP23]] to i32
 ; CHECK-NEXT:    [[TMP26:%.*]] = zext i15 [[TMP24]] to i32
-; CHECK-NEXT:    [[TMP27:%.*]] = uitofp i32 [[TMP25]] to float
-; CHECK-NEXT:    [[TMP28:%.*]] = uitofp i32 [[TMP26]] to float
+; CHECK-NEXT:    [[TMP27:%.*]] = uitofp fast i32 [[TMP25]] to float
+; CHECK-NEXT:    [[TMP28:%.*]] = uitofp fast i32 [[TMP26]] to float
 ; CHECK-NEXT:    [[TMP29:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP28]])
 ; CHECK-NEXT:    [[TMP30:%.*]] = fmul fast float [[TMP27]], [[TMP29]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = call fast float @llvm.trunc.f32(float [[TMP30]])
@@ -4759,8 +4759,8 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <3 x i15> [[Y]], i64 2
 ; CHECK-NEXT:    [[TMP47:%.*]] = zext i15 [[TMP45]] to i32
 ; CHECK-NEXT:    [[TMP48:%.*]] = zext i15 [[TMP46]] to i32
-; CHECK-NEXT:    [[TMP49:%.*]] = uitofp i32 [[TMP47]] to float
-; CHECK-NEXT:    [[TMP50:%.*]] = uitofp i32 [[TMP48]] to float
+; CHECK-NEXT:    [[TMP49:%.*]] = uitofp fast i32 [[TMP47]] to float
+; CHECK-NEXT:    [[TMP50:%.*]] = uitofp fast i32 [[TMP48]] to float
 ; CHECK-NEXT:    [[TMP51:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP50]])
 ; CHECK-NEXT:    [[TMP52:%.*]] = fmul fast float [[TMP49]], [[TMP51]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = call fast float @llvm.trunc.f32(float [[TMP52]])
@@ -4795,7 +4795,7 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    s_and_b32 s6, s10, 0x7fff
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s6
 ; GFX6-NEXT:    s_lshr_b64 s[6:7], s[4:5], 30
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_and_b32 s5, s6, 0x7fff
 ; GFX6-NEXT:    s_bfe_u32 s6, s4, 0xf000f
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v3, s6
@@ -4808,7 +4808,7 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s11
 ; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v2, vcc
 ; GFX6-NEXT:    v_mul_lo_u32 v0, v0, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v3
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v3
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v5, s8
 ; GFX6-NEXT:    s_lshr_b32 s4, s4, 15
 ; GFX6-NEXT:    v_sub_i32_e32 v4, vcc, s10, v0
@@ -4817,7 +4817,7 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_trunc_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mad_f32 v1, -v0, v3, v1
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v6, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v6, v2
 ; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, v3
 ; GFX6-NEXT:    s_mov_b32 s1, s9
 ; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v0, vcc
@@ -4856,7 +4856,7 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    s_and_b32 s3, s2, 0x7fff
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s3
 ; GFX9-NEXT:    s_and_b32 s8, s4, 0x7fff
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_lshr_b64 s[4:5], s[6:7], 30
 ; GFX9-NEXT:    s_bfe_u32 s5, s6, 0xf000f
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v4, s5
@@ -4868,13 +4868,13 @@ define amdgpu_kernel void @urem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    s_and_b32 s3, s4, 0x7fff
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, v0
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v5, s9
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v6, v4
+; GFX9-NEXT:    v_rcp_f32_e32 v6, v4
 ; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v3, vcc
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v3, s3
 ; GFX9-NEXT:    v_mul_f32_e32 v1, v5, v6
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v6, s8
 ; GFX9-NEXT:    v_trunc_f32_e32 v1, v1
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v7, v3
+; GFX9-NEXT:    v_rcp_f32_e32 v7, v3
 ; GFX9-NEXT:    v_mad_f32 v5, -v1, v4, v5
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v5|, v4
@@ -4917,8 +4917,8 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr i32 [[TMP5]], 30
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP9:%.*]] = sitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP8:%.*]] = sitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
@@ -4941,8 +4941,8 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP29:%.*]] = xor i32 [[TMP27]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = ashr i32 [[TMP29]], 30
 ; CHECK-NEXT:    [[TMP31:%.*]] = or i32 [[TMP30]], 1
-; CHECK-NEXT:    [[TMP32:%.*]] = sitofp i32 [[TMP27]] to float
-; CHECK-NEXT:    [[TMP33:%.*]] = sitofp i32 [[TMP28]] to float
+; CHECK-NEXT:    [[TMP32:%.*]] = sitofp fast i32 [[TMP27]] to float
+; CHECK-NEXT:    [[TMP33:%.*]] = sitofp fast i32 [[TMP28]] to float
 ; CHECK-NEXT:    [[TMP34:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP33]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP32]], [[TMP34]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.trunc.f32(float [[TMP35]])
@@ -4965,8 +4965,8 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP53:%.*]] = xor i32 [[TMP51]], [[TMP52]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = ashr i32 [[TMP53]], 30
 ; CHECK-NEXT:    [[TMP55:%.*]] = or i32 [[TMP54]], 1
-; CHECK-NEXT:    [[TMP56:%.*]] = sitofp i32 [[TMP51]] to float
-; CHECK-NEXT:    [[TMP57:%.*]] = sitofp i32 [[TMP52]] to float
+; CHECK-NEXT:    [[TMP56:%.*]] = sitofp fast i32 [[TMP51]] to float
+; CHECK-NEXT:    [[TMP57:%.*]] = sitofp fast i32 [[TMP52]] to float
 ; CHECK-NEXT:    [[TMP58:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP57]])
 ; CHECK-NEXT:    [[TMP59:%.*]] = fmul fast float [[TMP56]], [[TMP58]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = call fast float @llvm.trunc.f32(float [[TMP59]])
@@ -5000,7 +5000,7 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    s_lshr_b64 s[8:9], s[4:5], 30
 ; GFX6-NEXT:    s_bfe_i32 s5, s10, 0xf0000
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_xor_b32 s5, s5, s7
 ; GFX6-NEXT:    s_ashr_i32 s5, s5, 30
 ; GFX6-NEXT:    s_or_b32 s5, s5, 1
@@ -5016,7 +5016,7 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_add_i32_e32 v2, vcc, s5, v2
 ; GFX6-NEXT:    s_bfe_i32 s5, s10, 0xf000f
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s5
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s7, s4, 1
@@ -5032,7 +5032,7 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    v_add_i32_e32 v3, vcc, s4, v3
 ; GFX6-NEXT:    s_bfe_i32 s4, s6, 0xf0000
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX6-NEXT:    s_xor_b32 s4, s4, s5
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
@@ -5068,7 +5068,7 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    s_bfe_i32 s5, s2, 0xf0000
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s5
 ; GFX9-NEXT:    s_xor_b32 s3, s5, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
 ; GFX9-NEXT:    s_ashr_i32 s3, s3, 30
 ; GFX9-NEXT:    s_lshr_b64 s[8:9], s[6:7], 30
 ; GFX9-NEXT:    s_or_b32 s3, s3, 1
@@ -5083,7 +5083,7 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    s_bfe_i32 s2, s2, 0xf000f
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s2
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v0
 ; GFX9-NEXT:    s_xor_b32 s2, s2, s5
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    v_add_u32_e32 v3, s3, v3
@@ -5100,7 +5100,7 @@ define amdgpu_kernel void @sdiv_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    v_add_u32_e32 v4, s2, v4
 ; GFX9-NEXT:    s_bfe_i32 s2, s4, 0xf0000
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v5, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v5, v0
 ; GFX9-NEXT:    s_xor_b32 s2, s2, s3
 ; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
 ; GFX9-NEXT:    s_or_b32 s4, s2, 1
@@ -5136,8 +5136,8 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr i32 [[TMP5]], 30
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i32 [[TMP6]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = sitofp i32 [[TMP3]] to float
-; CHECK-NEXT:    [[TMP9:%.*]] = sitofp i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP8:%.*]] = sitofp fast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = sitofp fast i32 [[TMP4]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP9]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call fast float @llvm.trunc.f32(float [[TMP11]])
@@ -5162,8 +5162,8 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP31:%.*]] = xor i32 [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = ashr i32 [[TMP31]], 30
 ; CHECK-NEXT:    [[TMP33:%.*]] = or i32 [[TMP32]], 1
-; CHECK-NEXT:    [[TMP34:%.*]] = sitofp i32 [[TMP29]] to float
-; CHECK-NEXT:    [[TMP35:%.*]] = sitofp i32 [[TMP30]] to float
+; CHECK-NEXT:    [[TMP34:%.*]] = sitofp fast i32 [[TMP29]] to float
+; CHECK-NEXT:    [[TMP35:%.*]] = sitofp fast i32 [[TMP30]] to float
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP35]])
 ; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP34]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = call fast float @llvm.trunc.f32(float [[TMP37]])
@@ -5188,8 +5188,8 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; CHECK-NEXT:    [[TMP57:%.*]] = xor i32 [[TMP55]], [[TMP56]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = ashr i32 [[TMP57]], 30
 ; CHECK-NEXT:    [[TMP59:%.*]] = or i32 [[TMP58]], 1
-; CHECK-NEXT:    [[TMP60:%.*]] = sitofp i32 [[TMP55]] to float
-; CHECK-NEXT:    [[TMP61:%.*]] = sitofp i32 [[TMP56]] to float
+; CHECK-NEXT:    [[TMP60:%.*]] = sitofp fast i32 [[TMP55]] to float
+; CHECK-NEXT:    [[TMP61:%.*]] = sitofp fast i32 [[TMP56]] to float
 ; CHECK-NEXT:    [[TMP62:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP61]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = fmul fast float [[TMP60]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = call fast float @llvm.trunc.f32(float [[TMP63]])
@@ -5225,7 +5225,7 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    s_bfe_i32 s12, s10, 0xf0000
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s12
 ; GFX6-NEXT:    s_xor_b32 s5, s12, s5
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX6-NEXT:    s_lshr_b64 s[6:7], s[10:11], 30
 ; GFX6-NEXT:    s_ashr_i32 s5, s5, 30
 ; GFX6-NEXT:    s_and_b32 s7, s6, 0x7fff
@@ -5247,7 +5247,7 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    s_bfe_i32 s5, s10, 0xf000f
 ; GFX6-NEXT:    v_sub_i32_e32 v2, vcc, s10, v0
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v0, s5
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v3, v1
+; GFX6-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s10, s4, 1
@@ -5264,7 +5264,7 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX6-NEXT:    s_bfe_i32 s5, s6, 0xf0000
 ; GFX6-NEXT:    v_cvt_f32_i32_e32 v3, s5
 ; GFX6-NEXT:    s_xor_b32 s4, s5, s4
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v4, v1
+; GFX6-NEXT:    v_rcp_f32_e32 v4, v1
 ; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX6-NEXT:    s_or_b32 s6, s4, 1
 ; GFX6-NEXT:    v_mul_lo_u32 v0, v0, s14
@@ -5302,7 +5302,7 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    s_lshr_b64 s[8:9], s[6:7], 30
 ; GFX9-NEXT:    s_bfe_i32 s7, s2, 0xf0000
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, s7
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
 ; GFX9-NEXT:    s_xor_b32 s5, s7, s5
 ; GFX9-NEXT:    s_ashr_i32 s5, s5, 30
 ; GFX9-NEXT:    s_lshr_b32 s3, s2, 15
@@ -5323,7 +5323,7 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    v_mul_lo_u32 v0, v0, s6
 ; GFX9-NEXT:    s_bfe_i32 s6, s2, 0xf000f
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s6
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v3, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v1
 ; GFX9-NEXT:    s_xor_b32 s5, s6, s5
 ; GFX9-NEXT:    s_ashr_i32 s5, s5, 30
 ; GFX9-NEXT:    s_or_b32 s5, s5, 1
@@ -5340,7 +5340,7 @@ define amdgpu_kernel void @srem_v3i15(ptr addrspace(1) %out, <3 x i15> %x, <3 x 
 ; GFX9-NEXT:    s_bfe_i32 s4, s4, 0xf0000
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v3, s4
 ; GFX9-NEXT:    s_xor_b32 s4, s4, s5
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; GFX9-NEXT:    v_rcp_f32_e32 v4, v2
 ; GFX9-NEXT:    s_ashr_i32 s4, s4, 30
 ; GFX9-NEXT:    s_or_b32 s6, s4, 1
 ; GFX9-NEXT:    v_mul_lo_u32 v1, v1, s13
@@ -5577,9 +5577,9 @@ define amdgpu_kernel void @udiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> splat (i32 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP6:%.*]] = fptoui float [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 0, [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP7]], [[TMP6]]
@@ -5609,9 +5609,9 @@ define amdgpu_kernel void @udiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; CHECK-NEXT:    [[TMP32:%.*]] = insertelement <2 x i32> poison, i32 [[TMP31]], i64 0
 ; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 1
-; CHECK-NEXT:    [[TMP35:%.*]] = uitofp i32 [[TMP34]] to float
+; CHECK-NEXT:    [[TMP35:%.*]] = uitofp fast i32 [[TMP34]] to float
 ; CHECK-NEXT:    [[TMP36:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP35]])
-; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP36]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP37:%.*]] = fmul fast float [[TMP36]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP38:%.*]] = fptoui float [[TMP37]] to i32
 ; CHECK-NEXT:    [[TMP39:%.*]] = sub i32 0, [[TMP34]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = mul i32 [[TMP39]], [[TMP38]]
@@ -5654,8 +5654,8 @@ define amdgpu_kernel void @udiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX6-NEXT:    s_sub_i32 s1, 0, s0
 ; GFX6-NEXT:    s_lshl_b32 s2, 0x1000, s11
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v2, s2
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s1, v0
@@ -5708,9 +5708,9 @@ define amdgpu_kernel void @udiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX9-NEXT:    s_lshl_b32 s6, 0x1000, s3
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s6
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_sub_i32 s4, 0, s7
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
@@ -5920,9 +5920,9 @@ define amdgpu_kernel void @urem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; CHECK-NEXT:    [[SHL_Y:%.*]] = shl <2 x i32> splat (i32 4096), [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp fast i32 [[TMP2]] to float
 ; CHECK-NEXT:    [[TMP4:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast float [[TMP4]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP6:%.*]] = fptoui float [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 0, [[TMP2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i32 [[TMP7]], [[TMP6]]
@@ -5950,9 +5950,9 @@ define amdgpu_kernel void @urem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> poison, i32 [[TMP29]], i64 0
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <2 x i32> [[X]], i64 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <2 x i32> [[SHL_Y]], i64 1
-; CHECK-NEXT:    [[TMP33:%.*]] = uitofp i32 [[TMP32]] to float
+; CHECK-NEXT:    [[TMP33:%.*]] = uitofp fast i32 [[TMP32]] to float
 ; CHECK-NEXT:    [[TMP34:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP33]])
-; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP34]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP35:%.*]] = fmul fast float [[TMP34]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP36:%.*]] = fptoui float [[TMP35]] to i32
 ; CHECK-NEXT:    [[TMP37:%.*]] = sub i32 0, [[TMP32]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = mul i32 [[TMP37]], [[TMP36]]
@@ -5992,8 +5992,8 @@ define amdgpu_kernel void @urem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX6-NEXT:    s_sub_i32 s6, 0, s2
 ; GFX6-NEXT:    s_lshl_b32 s3, 0x1000, s3
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v2, s3
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s6, v0
@@ -6041,9 +6041,9 @@ define amdgpu_kernel void @urem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX9-NEXT:    s_lshl_b32 s6, 0x1000, s3
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s6
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_sub_i32 s4, 0, s7
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v1, v1
+; GFX9-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v1, 0x4f7ffffe, v1
@@ -6373,9 +6373,9 @@ define amdgpu_kernel void @sdiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = xor i32 [[TMP7]], [[TMP4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = uitofp i32 [[TMP9]] to float
+; CHECK-NEXT:    [[TMP10:%.*]] = uitofp fast i32 [[TMP9]] to float
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP10]])
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast float [[TMP11]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast float [[TMP11]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP13:%.*]] = fptoui float [[TMP12]] to i32
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i32 0, [[TMP9]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i32 [[TMP14]], [[TMP13]]
@@ -6414,9 +6414,9 @@ define amdgpu_kernel void @sdiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; CHECK-NEXT:    [[TMP48:%.*]] = add i32 [[TMP43]], [[TMP45]]
 ; CHECK-NEXT:    [[TMP49:%.*]] = xor i32 [[TMP47]], [[TMP44]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = xor i32 [[TMP48]], [[TMP45]]
-; CHECK-NEXT:    [[TMP51:%.*]] = uitofp i32 [[TMP50]] to float
+; CHECK-NEXT:    [[TMP51:%.*]] = uitofp fast i32 [[TMP50]] to float
 ; CHECK-NEXT:    [[TMP52:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP51]])
-; CHECK-NEXT:    [[TMP53:%.*]] = fmul fast float [[TMP52]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP53:%.*]] = fmul fast float [[TMP52]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP54:%.*]] = fptoui float [[TMP53]] to i32
 ; CHECK-NEXT:    [[TMP55:%.*]] = sub i32 0, [[TMP50]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = mul i32 [[TMP55]], [[TMP54]]
@@ -6459,7 +6459,7 @@ define amdgpu_kernel void @sdiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s6
 ; GFX6-NEXT:    s_sub_i32 s7, 0, s6
 ; GFX6-NEXT:    s_lshl_b32 s3, 0x1000, s3
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s7, v0
@@ -6486,7 +6486,7 @@ define amdgpu_kernel void @sdiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX6-NEXT:    s_sub_i32 s6, 0, s2
 ; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GFX6-NEXT:    s_xor_b32 s3, s1, s3
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v2, v2
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v2
 ; GFX6-NEXT:    s_abs_i32 s1, s1
 ; GFX6-NEXT:    v_xor_b32_e32 v0, s0, v0
 ; GFX6-NEXT:    v_subrev_i32_e32 v0, vcc, s0, v0
@@ -6528,7 +6528,7 @@ define amdgpu_kernel void @sdiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX9-NEXT:    s_lshl_b32 s7, 0x1000, s3
 ; GFX9-NEXT:    s_abs_i32 s3, s0
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s2
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_sub_i32 s2, 0, s6
 ; GFX9-NEXT:    s_ashr_i32 s0, s0, 31
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
@@ -6553,7 +6553,7 @@ define amdgpu_kernel void @sdiv_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_xor_b32 s5, s6, s0
 ; GFX9-NEXT:    s_sub_i32 s6, 0, s8
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_sub_i32 s0, s5, s0
 ; GFX9-NEXT:    s_xor_b32 s4, s1, s7
 ; GFX9-NEXT:    s_abs_i32 s1, s1
@@ -6824,9 +6824,9 @@ define amdgpu_kernel void @srem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = xor i32 [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor i32 [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = uitofp i32 [[TMP8]] to float
+; CHECK-NEXT:    [[TMP9:%.*]] = uitofp fast i32 [[TMP8]] to float
 ; CHECK-NEXT:    [[TMP10:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP9]])
-; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP10]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast float [[TMP10]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP12:%.*]] = fptoui float [[TMP11]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub i32 0, [[TMP8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i32 [[TMP13]], [[TMP12]]
@@ -6862,9 +6862,9 @@ define amdgpu_kernel void @srem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; CHECK-NEXT:    [[TMP44:%.*]] = add i32 [[TMP40]], [[TMP42]]
 ; CHECK-NEXT:    [[TMP45:%.*]] = xor i32 [[TMP43]], [[TMP41]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = xor i32 [[TMP44]], [[TMP42]]
-; CHECK-NEXT:    [[TMP47:%.*]] = uitofp i32 [[TMP46]] to float
+; CHECK-NEXT:    [[TMP47:%.*]] = uitofp fast i32 [[TMP46]] to float
 ; CHECK-NEXT:    [[TMP48:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[TMP47]])
-; CHECK-NEXT:    [[TMP49:%.*]] = fmul fast float [[TMP48]], 0x41EFFFFFC0000000
+; CHECK-NEXT:    [[TMP49:%.*]] = fmul fast float [[TMP48]], f0x4F7FFFFE
 ; CHECK-NEXT:    [[TMP50:%.*]] = fptoui float [[TMP49]] to i32
 ; CHECK-NEXT:    [[TMP51:%.*]] = sub i32 0, [[TMP46]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = mul i32 [[TMP51]], [[TMP50]]
@@ -6905,7 +6905,7 @@ define amdgpu_kernel void @srem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s2
 ; GFX6-NEXT:    s_sub_i32 s6, 0, s2
 ; GFX6-NEXT:    s_lshl_b32 s3, 0x1000, s3
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX6-NEXT:    v_mul_lo_u32 v1, s6, v0
@@ -6928,7 +6928,7 @@ define amdgpu_kernel void @srem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX6-NEXT:    s_sub_i32 s6, 0, s3
 ; GFX6-NEXT:    s_abs_i32 s8, s1
 ; GFX6-NEXT:    s_xor_b32 s2, s2, s0
-; GFX6-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX6-NEXT:    s_sub_i32 s0, s2, s0
 ; GFX6-NEXT:    s_ashr_i32 s1, s1, 31
 ; GFX6-NEXT:    s_mov_b32 s7, 0xf000
@@ -6966,7 +6966,7 @@ define amdgpu_kernel void @srem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX9-NEXT:    s_sub_i32 s7, 0, s2
 ; GFX9-NEXT:    s_ashr_i32 s6, s0, 31
 ; GFX9-NEXT:    s_abs_i32 s0, s0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_lshl_b32 s3, 0x1000, s3
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -6988,7 +6988,7 @@ define amdgpu_kernel void @srem_v2i32_pow2_shl_denom(ptr addrspace(1) %out, <2 x
 ; GFX9-NEXT:    s_xor_b32 s0, s0, s6
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_sub_i32 s5, 0, s7
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    s_sub_i32 s0, s0, s6
 ; GFX9-NEXT:    s_ashr_i32 s4, s1, 31
 ; GFX9-NEXT:    s_abs_i32 s1, s1
@@ -10131,4 +10131,249 @@ define <2 x i64> @srem_zero_zero() {
 entry:
   %B = srem <2 x i64> zeroinitializer, zeroinitializer
   ret <2 x i64> %B
+}
+
+; 23-bit sdiv, can use expandDivRem24Impl
+define amdgpu_kernel void @sdiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
+; GFX6-LABEL: sdiv23:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX6-NEXT:    s_bfe_i32 s5, s5, 0x170000
+; GFX6-NEXT:    v_cvt_f32_i32_e32 v0, s5
+; GFX6-NEXT:    s_bfe_i32 s4, s4, 0x170000
+; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s4
+; GFX6-NEXT:    s_xor_b32 s4, s4, s5
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
+; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
+; GFX6-NEXT:    s_or_b32 s6, s4, 1
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
+; GFX6-NEXT:    v_trunc_f32_e32 v2, v2
+; GFX6-NEXT:    v_mad_f32 v1, -v2, v0, v1
+; GFX6-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; GFX6-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v1|, |v0|
+; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX6-NEXT:    s_cselect_b32 s4, s6, 0
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, s4, v2
+; GFX6-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX6-NEXT:    s_waitcnt expcnt(0)
+; GFX6-NEXT:    v_bfe_u32 v0, v0, 16, 7
+; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
+; GFX6-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sdiv23:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_bfe_i32 s3, s3, 0x170000
+; GFX9-NEXT:    v_cvt_f32_i32_e32 v0, s3
+; GFX9-NEXT:    s_bfe_i32 s2, s2, 0x170000
+; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s2
+; GFX9-NEXT:    s_xor_b32 s2, s2, s3
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
+; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
+; GFX9-NEXT:    s_or_b32 s4, s2, 1
+; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
+; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
+; GFX9-NEXT:    v_mad_f32 v2, -v3, v0, v2
+; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
+; GFX9-NEXT:    v_cmp_ge_f32_e64 s[2:3], |v2|, |v0|
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-NEXT:    s_cselect_b32 s2, s4, 0
+; GFX9-NEXT:    v_add_u32_e32 v0, s2, v3
+; GFX9-NEXT:    global_store_short v1, v0, s[0:1]
+; GFX9-NEXT:    v_and_b32_e32 v0, 0x7fffff, v0
+; GFX9-NEXT:    global_store_byte_d16_hi v1, v0, s[0:1] offset:2
+; GFX9-NEXT:    s_endpgm
+  %r = sdiv i23 %x, %y
+  store i23 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; 24-bit sdiv, can use expandDivRem24Impl
+define amdgpu_kernel void @sdiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
+; GFX6-LABEL: sdiv24:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_mov_b64 s[4:5], s[2:3]
+; GFX6-NEXT:    s_bfe_i32 s5, s5, 0x180000
+; GFX6-NEXT:    v_cvt_f32_i32_e32 v0, s5
+; GFX6-NEXT:    s_bfe_i32 s4, s4, 0x180000
+; GFX6-NEXT:    v_cvt_f32_i32_e32 v1, s4
+; GFX6-NEXT:    s_xor_b32 s4, s4, s5
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
+; GFX6-NEXT:    s_ashr_i32 s4, s4, 30
+; GFX6-NEXT:    s_or_b32 s6, s4, 1
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
+; GFX6-NEXT:    v_trunc_f32_e32 v2, v2
+; GFX6-NEXT:    v_mad_f32 v1, -v2, v0, v1
+; GFX6-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; GFX6-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v1|, |v0|
+; GFX6-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX6-NEXT:    s_cselect_b32 s4, s6, 0
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, s4, v2
+; GFX6-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX6-NEXT:    s_waitcnt expcnt(0)
+; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
+; GFX6-NEXT:    s_endpgm
+;
+; GFX9-LABEL: sdiv24:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_bfe_i32 s3, s3, 0x180000
+; GFX9-NEXT:    v_cvt_f32_i32_e32 v0, s3
+; GFX9-NEXT:    s_bfe_i32 s2, s2, 0x180000
+; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, s2
+; GFX9-NEXT:    s_xor_b32 s2, s2, s3
+; GFX9-NEXT:    v_rcp_f32_e32 v3, v0
+; GFX9-NEXT:    s_ashr_i32 s2, s2, 30
+; GFX9-NEXT:    s_or_b32 s4, s2, 1
+; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v3
+; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
+; GFX9-NEXT:    v_mad_f32 v2, -v3, v0, v2
+; GFX9-NEXT:    v_cvt_i32_f32_e32 v3, v3
+; GFX9-NEXT:    v_cmp_ge_f32_e64 s[2:3], |v2|, |v0|
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-NEXT:    s_cselect_b32 s2, s4, 0
+; GFX9-NEXT:    v_add_u32_e32 v0, s2, v3
+; GFX9-NEXT:    global_store_byte_d16_hi v1, v0, s[0:1] offset:2
+; GFX9-NEXT:    global_store_short v1, v0, s[0:1]
+; GFX9-NEXT:    s_endpgm
+  %r = sdiv i24 %x, %y
+  store i24 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; 23-bit udiv, can use expandDivRem24Impl
+define amdgpu_kernel void @udiv23(ptr addrspace(1) %out, i23 %x, i23 %y) {
+; GFX6-LABEL: udiv23:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_and_b32 s3, s3, 0x7fffff
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s3
+; GFX6-NEXT:    s_and_b32 s2, s2, 0x7fffff
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v1, s2
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    v_rcp_f32_e32 v2, v0
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_mul_f32_e32 v2, v1, v2
+; GFX6-NEXT:    v_trunc_f32_e32 v2, v2
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v3, v2
+; GFX6-NEXT:    v_mad_f32 v1, -v2, v0, v1
+; GFX6-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, v0
+; GFX6-NEXT:    v_addc_u32_e32 v0, vcc, 0, v3, vcc
+; GFX6-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX6-NEXT:    s_waitcnt expcnt(0)
+; GFX6-NEXT:    v_bfe_u32 v0, v0, 16, 7
+; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
+; GFX6-NEXT:    s_endpgm
+;
+; GFX9-LABEL: udiv23:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_and_b32 s3, s3, 0x7fffff
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
+; GFX9-NEXT:    s_and_b32 s2, s2, 0x7fffff
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v1, s2
+; GFX9-NEXT:    v_rcp_f32_e32 v2, v0
+; GFX9-NEXT:    v_mul_f32_e32 v2, v1, v2
+; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
+; GFX9-NEXT:    v_cvt_u32_f32_e32 v4, v2
+; GFX9-NEXT:    v_mad_f32 v1, -v2, v0, v1
+; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, v0
+; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v4, vcc
+; GFX9-NEXT:    global_store_short v3, v0, s[0:1]
+; GFX9-NEXT:    v_and_b32_e32 v0, 0x7fffff, v0
+; GFX9-NEXT:    global_store_byte_d16_hi v3, v0, s[0:1] offset:2
+; GFX9-NEXT:    s_endpgm
+  %r = udiv i23 %x, %y
+  store i23 %r, ptr addrspace(1) %out
+  ret void
+}
+
+; 24-bit udiv, cannot use expandDivRem24Impl
+define amdgpu_kernel void @udiv24(ptr addrspace(1) %out, i24 %x, i24 %y) {
+; GFX6-LABEL: udiv24:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    s_and_b32 s4, s3, 0xffffff
+; GFX6-NEXT:    v_cvt_f32_u32_e32 v0, s4
+; GFX6-NEXT:    s_sub_i32 s3, 0, s4
+; GFX6-NEXT:    s_and_b32 s5, s2, 0xffffff
+; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; GFX6-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX6-NEXT:    v_mul_lo_u32 v1, s3, v0
+; GFX6-NEXT:    s_mov_b32 s3, 0xf000
+; GFX6-NEXT:    v_mul_hi_u32 v1, v0, v1
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
+; GFX6-NEXT:    v_mul_hi_u32 v0, s5, v0
+; GFX6-NEXT:    v_readfirstlane_b32 s6, v0
+; GFX6-NEXT:    s_mul_i32 s6, s6, s4
+; GFX6-NEXT:    s_sub_i32 s5, s5, s6
+; GFX6-NEXT:    s_sub_i32 s6, s5, s4
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
+; GFX6-NEXT:    s_cmp_ge_u32 s5, s4
+; GFX6-NEXT:    s_cselect_b64 vcc, -1, 0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX6-NEXT:    s_cselect_b32 s5, s6, s5
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 1, v0
+; GFX6-NEXT:    s_cmp_ge_u32 s5, s4
+; GFX6-NEXT:    s_cselect_b64 vcc, -1, 0
+; GFX6-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GFX6-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; GFX6-NEXT:    s_waitcnt expcnt(0)
+; GFX6-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX6-NEXT:    buffer_store_byte v0, off, s[0:3], 0 offset:2
+; GFX6-NEXT:    s_endpgm
+;
+; GFX9-LABEL: udiv24:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_and_b32 s3, s3, 0xffffff
+; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
+; GFX9-NEXT:    s_sub_i32 s4, 0, s3
+; GFX9-NEXT:    s_and_b32 s2, s2, 0xffffff
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
+; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX9-NEXT:    s_mul_i32 s4, s4, s5
+; GFX9-NEXT:    s_mul_hi_u32 s4, s5, s4
+; GFX9-NEXT:    s_add_i32 s5, s5, s4
+; GFX9-NEXT:    s_mul_hi_u32 s4, s2, s5
+; GFX9-NEXT:    s_mul_i32 s5, s4, s3
+; GFX9-NEXT:    s_sub_i32 s2, s2, s5
+; GFX9-NEXT:    s_add_i32 s6, s4, 1
+; GFX9-NEXT:    s_sub_i32 s5, s2, s3
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
+; GFX9-NEXT:    s_cselect_b32 s4, s6, s4
+; GFX9-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX9-NEXT:    s_add_i32 s5, s4, 1
+; GFX9-NEXT:    s_cmp_ge_u32 s2, s3
+; GFX9-NEXT:    s_cselect_b32 s2, s5, s4
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
+; GFX9-NEXT:    global_store_byte_d16_hi v1, v0, s[0:1] offset:2
+; GFX9-NEXT:    global_store_short v1, v0, s[0:1]
+; GFX9-NEXT:    s_endpgm
+  %r = udiv i24 %x, %y
+  store i24 %r, ptr addrspace(1) %out
+  ret void
 }

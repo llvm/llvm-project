@@ -235,11 +235,10 @@ bool areParensNeededForStatement(const Stmt &Node) {
   if (isa<ParenExpr>(&Node))
     return false;
 
-  if (isa<clang::BinaryOperator>(&Node) || isa<UnaryOperator>(&Node))
+  if (isa<BinaryOperator, UnaryOperator>(&Node))
     return true;
 
-  if (isa<clang::ConditionalOperator>(&Node) ||
-      isa<BinaryConditionalOperator>(&Node))
+  if (isa<ConditionalOperator, BinaryConditionalOperator>(&Node))
     return true;
 
   if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&Node))
@@ -268,10 +267,8 @@ bool areParensNeededForStatement(const Stmt &Node) {
 // prefix unary operator, e.g. when it is a binary or ternary operator
 // syntactically.
 static bool needParensAfterUnaryOperator(const Expr &ExprNode) {
-  if (isa<clang::BinaryOperator>(&ExprNode) ||
-      isa<clang::ConditionalOperator>(&ExprNode)) {
+  if (isa<BinaryOperator, ConditionalOperator>(&ExprNode))
     return true;
-  }
   if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&ExprNode)) {
     return Op->getNumArgs() == 2 && Op->getOperator() != OO_PlusPlus &&
            Op->getOperator() != OO_MinusMinus && Op->getOperator() != OO_Call &&
@@ -283,7 +280,7 @@ static bool needParensAfterUnaryOperator(const Expr &ExprNode) {
 // Format a pointer to an expression: prefix with '*' but simplify
 // when it already begins with '&'.  Return empty string on failure.
 std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
-  if (const auto *Op = dyn_cast<clang::UnaryOperator>(&ExprNode)) {
+  if (const auto *Op = dyn_cast<UnaryOperator>(&ExprNode)) {
     if (Op->getOpcode() == UO_AddrOf) {
       // Strip leading '&'.
       return std::string(

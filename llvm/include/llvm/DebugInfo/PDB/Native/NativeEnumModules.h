@@ -16,7 +16,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeEnumModules : public IPDBEnumChildren<PDBSymbol> {
+class LLVM_ABI NativeEnumModules : public IPDBEnumChildren<PDBSymbol> {
 public:
   NativeEnumModules(NativeSession &Session, uint32_t Index = 0);
 

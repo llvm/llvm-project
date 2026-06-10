@@ -1600,7 +1600,7 @@ define i32 @test_inf_zero_only(float nofpclass(nan norm sub) %x) {
 ; Make sure that the signbit is cleared.
 define i32 @test_ninf_only(double %x) {
 ; CHECK-LABEL: @test_ninf_only(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[X:%.*]], 0xFFF0000000000000
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq double [[X:%.*]], -inf
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i32 0
@@ -1703,7 +1703,7 @@ if.else:
 define i1 @test_simplify_icmp2(double %x) {
 ; CHECK-LABEL: @test_simplify_icmp2(
 ; CHECK-NEXT:    [[ABS:%.*]] = tail call double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq double [[ABS]], 0x7FF0000000000000
+; CHECK-NEXT:    [[COND:%.*]] = fcmp oeq double [[ABS]], +inf
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    ret i1 false
@@ -1787,7 +1787,7 @@ define i32 @test_none(float nofpclass(all) %x) {
 ; when the input is a negative value (except for -0).
 define i1 @pr92217() {
 ; CHECK-LABEL: @pr92217(
-; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float 0xC6DEBE9E60000000)
+; CHECK-NEXT:    [[X:%.*]] = call float @llvm.sqrt.f32(float f0xF6F5F4F3)
 ; CHECK-NEXT:    [[Y:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]

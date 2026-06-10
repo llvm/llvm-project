@@ -1632,11 +1632,11 @@ define amdgpu_ps void @load_uniform_P4_v2i32(ptr addrspace(4) inreg %ptra, ptr a
 ; GFX11-NEXT:    global_load_b64 v[2:3], v2, s[0:1]
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_add_i32 s0, s2, s0
 ; GFX11-NEXT:    s_add_i32 s1, s3, s1
+; GFX11-NEXT:    s_add_i32 s0, s2, s0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX11-NEXT:    global_store_b64 v[0:1], v[2:3], off
@@ -1648,11 +1648,11 @@ define amdgpu_ps void @load_uniform_P4_v2i32(ptr addrspace(4) inreg %ptra, ptr a
 ; GFX12-NEXT:    global_load_b64 v[2:3], v2, s[0:1]
 ; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_add_co_i32 s0, s2, s0
 ; GFX12-NEXT:    s_add_co_i32 s1, s3, s1
+; GFX12-NEXT:    s_add_co_i32 s0, s2, s0
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s1 :: v_dual_mov_b32 v2, s0
 ; GFX12-NEXT:    global_store_b64 v[0:1], v[2:3], off

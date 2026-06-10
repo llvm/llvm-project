@@ -28,7 +28,7 @@ class DataExtractor;
 
 namespace symbolize {
 
-class SymbolizableObjectFile : public SymbolizableModule {
+class LLVM_ABI SymbolizableObjectFile : public SymbolizableModule {
 public:
   static Expected<std::unique_ptr<SymbolizableObjectFile>>
   create(const object::ObjectFile *Obj, std::unique_ptr<DIContext> DICtx,
@@ -73,6 +73,13 @@ private:
   const object::ObjectFile *Module;
   std::unique_ptr<DIContext> DebugInfoContext;
   bool UntagAddresses;
+
+  /// WebAssembly linked files use file offsets for code symbol addresses, but
+  /// DWARF uses section-relative offsets. This helper method converts a module
+  /// file offset into its corresponding section-relative offset, but only if
+  /// the address falls within a Wasm code section.
+  object::SectionedAddress
+  convertDwarfOffsetForWasm(object::SectionedAddress ModuleOffset) const;
 
   struct SymbolDesc {
     uint64_t Addr;

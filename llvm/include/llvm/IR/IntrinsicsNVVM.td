@@ -97,8 +97,8 @@
 //   * llvm.nvvm.clz.ll              --> trunc i64 llvm.ctlz.i64(x) to i32
 //   * llvm.nvvm.popc.i              --> llvm.ctpop.i32
 //   * llvm.nvvm.popc.ll             --> trunc i64 llvm.ctpop.i64 to i32
-//   * llvm.nvvm.abs.i               --> select(x >= -x, x, -x)
-//   * llvm.nvvm.abs.ll              --> ibid.
+//   * llvm.nvvm.abs.i               --> llvm.abs.i32(x, true)
+//   * llvm.nvvm.abs.ll              --> llvm.abs.i64(x, true)
 //   * llvm.nvvm.max.i               --> select(x sge y, x, y)
 //   * llvm.nvvm.max.ll              --> ibid.
 //   * llvm.nvvm.max.ui              --> select(x uge y, x, y)
@@ -1795,6 +1795,11 @@ let TargetPrefix = "nvvm" in {
           
       def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
         : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+      
+      foreach satfinite = ["", "_satfinite"] in {
+        def int_nvvm_ # type # _to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
+            : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+      }
     }
   }
 
@@ -1820,6 +1825,11 @@ let TargetPrefix = "nvvm" in {
 
     def int_nvvm_bf16x2_to_e2m1x2_rn # relu # _satfinite
       : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+    
+    foreach satfinite = ["", "_satfinite"] in {
+      def int_nvvm_e2m1x2_to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
+        : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+    }
   }
 
   // RS rounding mode (Stochastic Rounding) conversions for f4x4 type
@@ -1843,6 +1853,11 @@ let TargetPrefix = "nvvm" in {
 
       def int_nvvm_bf16x2_to_ # type # _rn # relu # _satfinite
         : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+      
+      foreach satfinite = ["", "_satfinite"] in {
+        def int_nvvm_ # type # _to_bf16x2_rn # relu # satfinite # _scale_n2_ue8m0
+            : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+      }
     }
   }
 
@@ -1870,41 +1885,6 @@ let TargetPrefix = "nvvm" in {
 
   def int_nvvm_ue8m0x2_to_bf16x2 : NVVMBuiltin,
       PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
-
-  //
-  // Atomic operations
-  //
-  class SCOPED_ATOMIC2_impl<LLVMType elty>
-        : Intrinsic<[elty],
-          [llvm_anyptr_ty, LLVMMatchType<0>],
-          [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
-  class SCOPED_ATOMIC3_impl<LLVMType elty>
-        : Intrinsic<[elty],
-          [llvm_anyptr_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-          [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
-
-  multiclass PTXAtomicWithScope2<LLVMType elty> {
-    def _cta : SCOPED_ATOMIC2_impl<elty>;
-    def _sys : SCOPED_ATOMIC2_impl<elty>;
-  }
-  multiclass PTXAtomicWithScope3<LLVMType elty> {
-    def _cta : SCOPED_ATOMIC3_impl<elty>;
-    def _sys : SCOPED_ATOMIC3_impl<elty>;
-  }
-  multiclass PTXAtomicWithScope2_fi {
-    defm _f : PTXAtomicWithScope2<llvm_anyfloat_ty>;
-    defm _i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  }
-  defm int_nvvm_atomic_add_gen    : PTXAtomicWithScope2_fi;
-  defm int_nvvm_atomic_inc_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_dec_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_exch_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_xor_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_max_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_min_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_or_gen_i   : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_and_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_cas_gen_i  : PTXAtomicWithScope3<llvm_anyint_ty>;
 
   //
   // Bar.Sync
@@ -2352,7 +2332,8 @@ foreach vec = [TV_I8, TV_I16, TV_I32,
 // Accessing special registers.
 //
 class PTXReadSRegIntrinsicNB_r32<list<IntrinsicProperty> properties = [], string name = "">
-  : NVVMPureIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>] # properties, name>;
+  : NVVMPureIntrinsic<[llvm_i32_ty], [], [NoUndef<RetIndex>] # properties,
+                      !if(!eq(name, ""), "", !strconcat("llvm.nvvm.read.ptx.sreg.", name))>;
 
 class PTXReadSRegIntrinsic_r32<list<IntrinsicProperty> properties = []>
   : PTXReadSRegIntrinsicNB_r32<properties>, NVVMBuiltin;
@@ -2452,23 +2433,46 @@ defm int_nvvm_read_ptx_sreg_cluster_nctaid : PTXReadSRegIntrinsicNB_v4i32<MAX_GR
 def int_nvvm_read_ptx_sreg_cluster_ctarank : PTXReadSRegIntrinsicNB_r32;
 def int_nvvm_read_ptx_sreg_cluster_nctarank : PTXReadSRegIntrinsicNB_r32;
 
+//
+// Reserved Shared Memory Intrinsics
+//
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_begin
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_begin">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_end
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_end">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_cap
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_cap">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_0
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_0">;
+def int_nvvm_read_ptx_sreg_reserved_smem_offset_1
+  : PTXReadSRegIntrinsicNB_r32<name = "reserved_smem_offset_1">;
+
 def int_nvvm_read_ptx_sreg_total_smem_size :
-    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.total_smem_size">;
+    PTXReadSRegIntrinsicNB_r32<name = "total_smem_size">;
 def int_nvvm_read_ptx_sreg_aggr_smem_size :
-    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.aggr_smem_size">;
+    PTXReadSRegIntrinsicNB_r32<name = "aggr_smem_size">;
 def int_nvvm_read_ptx_sreg_dynamic_smem_size :
-    PTXReadSRegIntrinsicNB_r32<name = "llvm.nvvm.read.ptx.sreg.dynamic_smem_size">;
+    PTXReadSRegIntrinsicNB_r32<name = "dynamic_smem_size">;
 
 //
 // SHUFFLE
 //
-// Generate intrinsics for all variants of shfl instruction.
-let IntrProperties = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback] in {
-  foreach sync = [false, true] in {
+// Non-sync SHFL variants are pure functions of their SSA operands and the active
+// thread mask. Memory properties (IntrReadMem + IntrInaccessibleMemOnly + IntrWillReturn) 
+// model reading the implicit mask state to ensure correct ordering with other convergent
+// operations, preventing unsafe reordering while allowing DCE of truly dead code.
+//
+// Sync shfl variants have synchronization side effects modeled as
+// inaccessible memory accesses to prevent DCE and reordering.
+foreach is_sync = [false, true] in {
+  defvar CommonIntrinsicProps = [IntrInaccessibleMemOnly, IntrConvergent, IntrNoCallback];
+  defvar IntrinsicProps = !if(is_sync, CommonIntrinsicProps,
+                              !listconcat(CommonIntrinsicProps, [IntrReadMem, IntrWillReturn]));
+  let IntrProperties = IntrinsicProps in {
     foreach mode = ["up", "down", "bfly", "idx"] in {
       foreach type = ["i32", "f32"] in {
         foreach return_pred = [false, true] in {
-          defvar i = SHFL_INFO<sync, mode, type, return_pred>;
+          defvar i = SHFL_INFO<is_sync, mode, type, return_pred>;
           if i.withGccBuiltin then
             def i.Name : NVVMBuiltin, Intrinsic<i.RetTy, i.ArgsTy>;
           else
@@ -2786,6 +2790,12 @@ foreach transposed = [0, 1] in {
     }
   }
 }
+
+// movmatrix
+def int_nvvm_movmatrix_sync_aligned_m8n8_trans_b16
+  : Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
+              [IntrInaccessibleMemOnly, IntrConvergent,
+               IntrNoCallback, IntrNoFree]>;
 
 // MAPA
 let IntrProperties = [IntrNoMem, IntrSpeculatable, NoCapture<ArgIndex<0>>] in {

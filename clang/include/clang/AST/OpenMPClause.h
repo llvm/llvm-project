@@ -39,6 +39,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
+#include <climits>
 #include <cstddef>
 #include <iterator>
 #include <utility>
@@ -1023,6 +1024,106 @@ public:
   }
 };
 
+/// This represents the 'counts' clause in the '#pragma omp split' directive.
+///
+/// \code
+/// #pragma omp split counts(3, omp_fill, 2)
+/// for (int i = 0; i < n; ++i) { ... }
+/// \endcode
+class OMPCountsClause final
+    : public OMPClause,
+      private llvm::TrailingObjects<OMPCountsClause, Expr *> {
+  friend class OMPClauseReader;
+  friend class llvm::TrailingObjects<OMPCountsClause, Expr *>;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// Number of count expressions in the clause.
+  unsigned NumCounts = 0;
+
+  /// 0-based index of the omp_fill list item.
+  std::optional<unsigned> OmpFillIndex;
+
+  /// Source location of the omp_fill keyword.
+  SourceLocation OmpFillLoc;
+
+  /// Build an empty clause.
+  explicit OMPCountsClause(int NumCounts)
+      : OMPClause(llvm::omp::OMPC_counts, SourceLocation(), SourceLocation()),
+        NumCounts(NumCounts) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  void setOmpFillIndex(std::optional<unsigned> Idx) { OmpFillIndex = Idx; }
+  void setOmpFillLoc(SourceLocation Loc) { OmpFillLoc = Loc; }
+
+  /// Sets the count expressions.
+  void setCountsRefs(ArrayRef<Expr *> VL) {
+    assert(VL.size() == NumCounts);
+    llvm::copy(VL, getCountsRefs().begin());
+  }
+
+public:
+  /// Build a 'counts' AST node.
+  ///
+  /// \param C         Context of the AST.
+  /// \param StartLoc  Location of the 'counts' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Counts    Content of the clause.
+  static OMPCountsClause *Create(const ASTContext &C, SourceLocation StartLoc,
+                                 SourceLocation LParenLoc,
+                                 SourceLocation EndLoc, ArrayRef<Expr *> Counts,
+                                 std::optional<unsigned> FillIdx,
+                                 SourceLocation FillLoc);
+
+  /// Build an empty 'counts' AST node for deserialization.
+  ///
+  /// \param C          Context of the AST.
+  /// \param NumCounts   Number of items in the clause.
+  static OMPCountsClause *CreateEmpty(const ASTContext &C, unsigned NumCounts);
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the number of list items.
+  unsigned getNumCounts() const { return NumCounts; }
+
+  std::optional<unsigned> getOmpFillIndex() const { return OmpFillIndex; }
+  SourceLocation getOmpFillLoc() const { return OmpFillLoc; }
+  bool hasOmpFill() const { return OmpFillIndex.has_value(); }
+
+  /// Returns the count expressions.
+  MutableArrayRef<Expr *> getCountsRefs() {
+    return getTrailingObjects(NumCounts);
+  }
+  ArrayRef<Expr *> getCountsRefs() const {
+    return getTrailingObjects(NumCounts);
+  }
+
+  child_range children() {
+    MutableArrayRef<Expr *> Counts = getCountsRefs();
+    return child_range(reinterpret_cast<Stmt **>(Counts.begin()),
+                       reinterpret_cast<Stmt **>(Counts.end()));
+  }
+  const_child_range children() const {
+    ArrayRef<Expr *> Counts = getCountsRefs();
+    return const_child_range(reinterpret_cast<Stmt *const *>(Counts.begin()),
+                             reinterpret_cast<Stmt *const *>(Counts.end()));
+  }
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_counts;
+  }
+};
+
 /// This class represents the 'permutation' clause in the
 /// '#pragma omp interchange' directive.
 ///
@@ -1506,7 +1607,9 @@ public:
 /// clause with OpenMP keyword 'omp_not_impex`. Other valid keywords that may
 /// appear in this clause are 'omp_import', 'omp_export' and 'omp_impex'.
 ///
-class OMPTransparentClause final : public OMPClause {
+class OMPTransparentClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_transparent, OMPClause>,
+      public OMPClauseWithPreInit {
   friend class OMPClauseReader;
 
   /// Location of '('.
@@ -1530,15 +1633,18 @@ public:
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param EndLoc Ending location of the clause.
-  OMPTransparentClause(Expr *ImpexTypeKind, SourceLocation StartLoc,
-                       SourceLocation LParenLoc, SourceLocation EndLoc)
-      : OMPClause(llvm::omp::OMPC_transparent, StartLoc, EndLoc),
-        LParenLoc(LParenLoc), ImpexType(ImpexTypeKind) {}
+  OMPTransparentClause(Expr *ImpexTypeKind, Stmt *HelperValStmt,
+                       OpenMPDirectiveKind CaptureRegion,
+                       SourceLocation StartLoc, SourceLocation LParenLoc,
+                       SourceLocation EndLoc)
+      : OMPOneStmtClause(ImpexTypeKind, StartLoc, LParenLoc, EndLoc),
+        OMPClauseWithPreInit(this), LParenLoc(LParenLoc),
+        ImpexType(ImpexTypeKind) {
+    setPreInitStmt(HelperValStmt, CaptureRegion);
+  }
 
   /// Build an empty clause.
-  OMPTransparentClause()
-      : OMPClause(llvm::omp::OMPC_transparent, SourceLocation(),
-                  SourceLocation()) {}
+  OMPTransparentClause() : OMPOneStmtClause(), OMPClauseWithPreInit(this) {}
 
   /// Returns the location of '('.
   SourceLocation getLParenLoc() const { return LParenLoc; }
@@ -8745,7 +8851,7 @@ public:
 /// \endcode
 class OMPInitClause final
     : public OMPVarListClause<OMPInitClause>,
-      private llvm::TrailingObjects<OMPInitClause, Expr *> {
+      private llvm::TrailingObjects<OMPInitClause, Expr *, unsigned> {
   friend class OMPClauseReader;
   friend OMPVarListClause;
   friend TrailingObjects;
@@ -8755,12 +8861,52 @@ class OMPInitClause final
 
   bool IsTarget = false;
   bool IsTargetSync = false;
+  bool HasPreferAttrs = false;
+
+  /// Total number of attr() exprs across all pref-specs; equals the last entry
+  /// of the trailing unsigned[] of cumulative end offsets (or 0 if no prefs).
+  unsigned NumAttrs = 0;
+
+  /// Trailing-objects layout (single contiguous Expr* array):
+  ///   Expr*[ varlist_size() + NumAttrs ]:
+  ///     [0]                    = InteropVar
+  ///     [1 .. NumPrefs]        = Fr expr per pref-spec (null if attr-only)
+  ///     [varlist_size() ..]    = flat list of attr exprs, concatenated in
+  ///                              pref-spec order
+  ///   unsigned[ NumPrefs ]:
+  ///     [i]                    = end offset of pref-spec i's attrs in the flat
+  ///                              attr block (inclusive cumulative attr count);
+  ///                              spec i's attrs are [ends[i-1], ends[i]), with
+  ///                              an implicit 0 before ends[0]
+  ///
+  /// varlist_size() = 1 + NumPrefs, so OMPVarListClause iteration covers
+  /// InteropVar + the Fr block.
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return varlist_size() + NumAttrs;
+  }
+  size_t numTrailingObjects(OverloadToken<unsigned>) const {
+    return getNumPrefs();
+  }
 
   void setInteropVar(Expr *E) { varlist_begin()[0] = E; }
 
   void setIsTarget(bool V) { IsTarget = V; }
 
   void setIsTargetSync(bool V) { IsTargetSync = V; }
+
+  void setHasPreferAttrs(bool V) { HasPreferAttrs = V; }
+
+  void setAttrs(ArrayRef<unsigned> Counts, ArrayRef<Expr *> Attrs);
+
+  /// Number of pref-specs in prefer_type(...).
+  unsigned getNumPrefs() const { return varlist_size() - 1; }
+
+  /// Per-pref-spec attr end offsets: entry i is the inclusive cumulative attr
+  /// count through pref-spec i (one past its last attr in the flat attr block).
+  ArrayRef<unsigned> getAttrEnds() const {
+    return getTrailingObjects<unsigned>(getNumPrefs());
+  }
 
   /// Sets the location of the interop variable.
   void setVarLoc(SourceLocation Loc) { VarLoc = Loc; }
@@ -8773,7 +8919,7 @@ class OMPInitClause final
   /// \param LParenLoc Location of '('.
   /// \param VarLoc Location of the interop variable.
   /// \param EndLoc Ending location of the clause.
-  /// \param N Number of expressions.
+  /// \param N Number of varlist entries (1 + NumPrefs).
   OMPInitClause(bool IsTarget, bool IsTargetSync, SourceLocation StartLoc,
                 SourceLocation LParenLoc, SourceLocation VarLoc,
                 SourceLocation EndLoc, unsigned N)
@@ -8788,6 +8934,14 @@ class OMPInitClause final
   }
 
 public:
+  struct PrefView {
+    /// Foreign-runtime-id expression. Null for attr-only specs.
+    Expr *Fr;
+    /// attr() string-literal expressions. Empty for fr-only or OMP 5.1
+    /// flat specs.
+    ArrayRef<Expr *> Attrs;
+  };
+
   /// Creates a fully specified clause.
   ///
   /// \param C AST context.
@@ -8803,11 +8957,14 @@ public:
                                SourceLocation LParenLoc, SourceLocation VarLoc,
                                SourceLocation EndLoc);
 
-  /// Creates an empty clause with \a N expressions.
+  /// Creates an empty clause sized for \a NumPrefs pref-specs and \a NumAttrs
+  /// total attr() exprs across them.
   ///
   /// \param C AST context.
-  /// \param N Number of expression items.
-  static OMPInitClause *CreateEmpty(const ASTContext &C, unsigned N);
+  /// \param NumPrefs Number of pref-specs (length of the Fr block).
+  /// \param NumAttrs Total attr() exprs across all pref-specs.
+  static OMPInitClause *CreateEmpty(const ASTContext &C, unsigned NumPrefs,
+                                    unsigned NumAttrs);
 
   /// Returns the location of the interop variable.
   SourceLocation getVarLoc() const { return VarLoc; }
@@ -8822,9 +8979,19 @@ public:
   /// Returns true is interop-type 'targetsync' is used.
   bool getIsTargetSync() const { return IsTargetSync; }
 
+  /// Returns true if OMP 6.0 {fr/attr} syntax is used.
+  bool hasPreferAttrs() const { return HasPreferAttrs; }
+
+  /// All attr() exprs across every pref-spec, in pref-spec order (flat block).
+  ArrayRef<Expr *> attrs() const {
+    return ArrayRef<Expr *>(getTrailingObjects<Expr *>() + varlist_size(),
+                            NumAttrs);
+  }
+
   child_range children() {
-    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
-                       reinterpret_cast<Stmt **>(varlist_end()));
+    return child_range(
+        reinterpret_cast<Stmt **>(varlist_begin()),
+        reinterpret_cast<Stmt **>(varlist_begin() + varlist_size() + NumAttrs));
   }
 
   const_child_range children() const {
@@ -8838,18 +9005,19 @@ public:
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
 
-  using prefs_iterator = MutableArrayRef<Expr *>::iterator;
-  using const_prefs_iterator = ArrayRef<const Expr *>::iterator;
-  using prefs_range = llvm::iterator_range<prefs_iterator>;
-  using const_prefs_range = llvm::iterator_range<const_prefs_iterator>;
-
-  prefs_range prefs() {
-    return prefs_range(reinterpret_cast<Expr **>(std::next(varlist_begin())),
-                       reinterpret_cast<Expr **>(varlist_end()));
-  }
-
-  const_prefs_range prefs() const {
-    return const_prefs_range(const_cast<OMPInitClause *>(this)->prefs());
+  /// Returns a range of PrefView objects, one per preference-specification,
+  /// each carrying the fr() expression (or null) and the attr() exprs.
+  auto prefs() const {
+    unsigned N = getNumPrefs();
+    Expr *const *E = getTrailingObjects<Expr *>();
+    ArrayRef<unsigned> Ends = getAttrEnds();
+    return llvm::map_range(llvm::seq<unsigned>(0, N), [=](unsigned I) {
+      unsigned Start = (I == 0) ? 0 : Ends[I - 1];
+      return PrefView{
+          const_cast<Expr *>(E[1 + I]),
+          ArrayRef<Expr *>(const_cast<Expr **>(E) + varlist_size() + Start,
+                           Ends[I] - Start)};
+    });
   }
 
   static bool classof(const OMPClause *T) {

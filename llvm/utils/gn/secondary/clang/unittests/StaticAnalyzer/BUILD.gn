@@ -13,11 +13,13 @@ unittest("StaticAnalysisTests") {
   ]
   sources = [
     "APSIntTypeTest.cpp",
+    "AnalyzerFormattingTest.cpp",
     "AnalyzerOptionsTest.cpp",
     "BlockEntranceCallbackTest.cpp",
     "BugReportInterestingnessTest.cpp",
     "CallDescriptionTest.cpp",
     "CallEventTest.cpp",
+    "CheckLifetimeEndTest.cpp",
     "ConflictingEvalCallsTest.cpp",
     "ExprEngineVisitTest.cpp",
     "FalsePositiveRefutationBRVisitorTest.cpp",

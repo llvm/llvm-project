@@ -28,6 +28,7 @@ class Loop;
 class PredicatedScalarEvolution;
 class ScalarEvolution;
 class SCEV;
+class SCEVPredicate;
 class StoreInst;
 
 /// These are the kinds of recurrences that we support.
@@ -46,6 +47,8 @@ enum class RecurKind {
   UMin,     ///< Unsigned integer min implemented in terms of select(cmp()).
   UMax,     ///< Unsigned integer max implemented in terms of select(cmp()).
   FAdd,     ///< Sum of floats.
+  FAddChainWithSubs, ///< A chain of fadds and fsubs.
+  FSub,     ///< Subtraction of floats.
   FMul,     ///< Product of floats.
   FMin,     ///< FP min implemented in terms of select(cmp()).
   FMax,     ///< FP max implemented in terms of select(cmp()).
@@ -151,9 +154,10 @@ public:
   /// advances the instruction pointer 'I' from the compare instruction to the
   /// select instruction and stores this pointer in 'PatternLastInst' member of
   /// the returned struct.
-  LLVM_ABI static InstDesc
-  isRecurrenceInstr(Loop *L, PHINode *Phi, Instruction *I, RecurKind Kind,
-                    InstDesc &Prev, FastMathFlags FuncFMF, ScalarEvolution *SE);
+  LLVM_ABI static InstDesc isRecurrenceInstr(Loop *L, PHINode *Phi,
+                                             Instruction *I, RecurKind Kind,
+                                             InstDesc &Prev,
+                                             ScalarEvolution *SE);
 
   /// Returns true if instruction I has multiple uses in Insts
   LLVM_ABI static bool hasMultipleUsesOf(Instruction *I,
@@ -195,9 +199,9 @@ public:
   /// computed.
   LLVM_ABI static bool
   AddReductionVar(PHINode *Phi, RecurKind Kind, Loop *TheLoop,
-                  FastMathFlags FuncFMF, RecurrenceDescriptor &RedDes,
-                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
-                  DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
+                  RecurrenceDescriptor &RedDes, DemandedBits *DB = nullptr,
+                  AssumptionCache *AC = nullptr, DominatorTree *DT = nullptr,
+                  ScalarEvolution *SE = nullptr);
 
   /// Returns true if Phi is a reduction in TheLoop. The RecurrenceDescriptor
   /// is returned in RedDes. If either \p DB is non-null or \p AC and \p DT are
@@ -243,6 +247,9 @@ public:
 
   /// Returns true if the recurrence kind is a floating point kind.
   LLVM_ABI static bool isFloatingPointRecurrenceKind(RecurKind Kind);
+
+  /// Returns true if the recurrence kind is for a sub operation.
+  LLVM_ABI static bool isSubRecurrenceKind(RecurKind Kind);
 
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
@@ -379,6 +386,11 @@ public:
   /// Default constructor - creates an invalid induction.
   InductionDescriptor() = default;
 
+  /// Returns the canonical integer induction for type \p Ty with start = 0
+  /// and step = 1.
+  LLVM_ABI static InductionDescriptor
+  getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE);
+
   Value *getStartValue() const { return StartValue; }
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
@@ -394,9 +406,13 @@ public:
   /// analysis, it can be passed through \p Expr. If the def-use chain
   /// associated with the phi includes casts (that we know we can ignore
   /// under proper runtime checks), they are passed through \p CastsToIgnore.
+  /// SCEV predicates checking potential overflow for \p Phi to be an induction,
+  /// if any, are passed via \p NoWrapPreds and recorded.
   LLVM_ABI static bool
   isInductionPHI(PHINode *Phi, const Loop *L, ScalarEvolution *SE,
-                 InductionDescriptor &D, const SCEV *Expr = nullptr,
+                 InductionDescriptor &D,
+                 ArrayRef<const SCEVPredicate *> NoWrapPreds = {},
+                 const SCEV *Expr = nullptr,
                  SmallVectorImpl<Instruction *> *CastsToIgnore = nullptr);
 
   /// Returns true if \p Phi is a floating point induction in the loop \p L.
@@ -438,11 +454,18 @@ public:
   /// SCEV overflow check.
   ArrayRef<Instruction *> getCastInsts() const { return RedundantCasts; }
 
+  /// Returns the SCEV predicates associated with this induction.
+  ArrayRef<const SCEVPredicate *> getNoWrapPredicates() const {
+    return NoWrapPredicates;
+  }
+
 private:
-  /// Private constructor - used by \c isInductionPHI.
+  /// Private constructor - used by \c isInductionPHI and
+  /// \c getCanonicalIntInduction.
   InductionDescriptor(Value *Start, InductionKind K, const SCEV *Step,
                       BinaryOperator *InductionBinOp = nullptr,
-                      SmallVectorImpl<Instruction *> *Casts = nullptr);
+                      SmallVectorImpl<Instruction *> *Casts = nullptr,
+                      ArrayRef<const SCEVPredicate *> NoWrapPreds = {});
 
   /// Start value.
   TrackingVH<Value> StartValue;
@@ -455,6 +478,8 @@ private:
   // Instructions used for type-casts of the induction variable,
   // that are redundant when guarded with a runtime SCEV overflow check.
   SmallVector<Instruction *, 2> RedundantCasts;
+  // SCEV predicates checking overflow needed for this induction.
+  SmallVector<const SCEVPredicate *, 2> NoWrapPredicates;
 };
 
 } // end namespace llvm

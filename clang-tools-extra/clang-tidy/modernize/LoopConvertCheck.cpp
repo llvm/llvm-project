@@ -552,6 +552,39 @@ static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
   return false;
 }
 
+// Returns true if the token at `BeginLocation` is immediately preceded by an
+// identifier or keyword token with no space between them.
+static bool
+isPrecededByAdjacentIdentifierOrKeyword(const SourceManager &SourceMgr,
+                                        const LangOptions &LangOpts,
+                                        SourceLocation BeginLocation) {
+  std::optional<Token> PrevToken =
+      Lexer::findPreviousToken(BeginLocation, SourceMgr, LangOpts, true);
+  if (!PrevToken)
+    return false;
+  // Check whether the token at `BeginLocation` is immediately adjacent to
+  // the previous token with no space between them.
+  const bool IsAdjacentToPrevToken = PrevToken->getEndLoc() == BeginLocation;
+  return PrevToken->isAnyIdentifier() && IsAdjacentToPrevToken;
+}
+
+// Returns true if the replacement text needs a leading space to avoid merging
+// with the preceding token. This occurs when `*it` is immediately adjacent to
+// a keyword, e.g. `delete*it`, where replacing `*it` with `it` would
+// incorrectly produce `deleteit`. So we insert a space b/w `delete` and `it`.
+static bool requiresLeadingSpace(const SourceManager &SourceMgr,
+                                 const LangOptions &LangOpts,
+                                 SourceLocation BeginLocation) {
+  Token StarToken;
+  if (!Lexer::getRawToken(BeginLocation, StarToken, SourceMgr, LangOpts,
+                          false) &&
+      StarToken.is(tok::star)) {
+    return isPrecededByAdjacentIdentifierOrKeyword(SourceMgr, LangOpts,
+                                                   BeginLocation);
+  }
+  return false;
+}
+
 LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
       MaxCopySize(Options.get("MaxCopySize", 16ULL)),
@@ -650,7 +683,7 @@ void LoopConvertCheck::doConversion(
 
       VarNameOrStructuredBinding.erase(VarNameOrStructuredBinding.size() - 2,
                                        2);
-      VarNameOrStructuredBinding += "]";
+      VarNameOrStructuredBinding += ']';
     } else {
       VarNameOrStructuredBinding = AliasVar->getName().str();
 
@@ -698,11 +731,15 @@ void LoopConvertCheck::doConversion(
       std::string ReplaceText;
       SourceRange Range = Usage.Range;
       if (Usage.Expression) {
+        if (Usage.Kind == Usage::UK_Default &&
+            requiresLeadingSpace(Context->getSourceManager(), getLangOpts(),
+                                 Usage.Range.getBegin()))
+          ReplaceText = " ";
         // If this is an access to a member through the arrow operator, after
         // the replacement it must be accessed through the '.' operator.
-        ReplaceText = Usage.Kind == Usage::UK_MemberThroughArrow
-                          ? VarNameOrStructuredBinding + "."
-                          : VarNameOrStructuredBinding;
+        ReplaceText += Usage.Kind == Usage::UK_MemberThroughArrow
+                           ? VarNameOrStructuredBinding + "."
+                           : VarNameOrStructuredBinding;
         const DynTypedNodeList Parents = Context->getParents(*Usage.Expression);
         if (Parents.size() == 1) {
           if (const auto *Paren = Parents[0].get<ParenExpr>()) {
@@ -711,7 +748,10 @@ void LoopConvertCheck::doConversion(
             // removed except in case of a `sizeof` operator call.
             const DynTypedNodeList GrandParents = Context->getParents(*Paren);
             if (GrandParents.size() != 1 ||
-                GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr) {
+                (GrandParents[0].get<UnaryExprOrTypeTraitExpr>() == nullptr &&
+                 !isPrecededByAdjacentIdentifierOrKeyword(
+                     Context->getSourceManager(), getLangOpts(),
+                     Parents[0].getSourceRange().getBegin()))) {
               Range = Paren->getSourceRange();
             }
           } else if (const auto *UOP = Parents[0].get<UnaryOperator>()) {
@@ -1074,7 +1114,7 @@ void LoopConvertCheck::check(const MatchFinder::MatchResult &Result) {
                Finder.aliasFromForInit(), Loop, Descriptor);
 }
 
-llvm::StringRef LoopConvertCheck::getReverseFunction() const {
+StringRef LoopConvertCheck::getReverseFunction() const {
   if (!ReverseFunction.empty())
     return ReverseFunction;
   if (UseReverseRanges)
@@ -1082,7 +1122,7 @@ llvm::StringRef LoopConvertCheck::getReverseFunction() const {
   return "";
 }
 
-llvm::StringRef LoopConvertCheck::getReverseHeader() const {
+StringRef LoopConvertCheck::getReverseHeader() const {
   if (!ReverseHeader.empty())
     return ReverseHeader;
   if (UseReverseRanges && ReverseFunction.empty())

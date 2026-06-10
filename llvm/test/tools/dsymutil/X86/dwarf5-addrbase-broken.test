@@ -12,7 +12,8 @@
 # RUN: echo '    symbols:' >> %t2.map
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
-# RUN: dsymutil -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker classic -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+# RUN: dsymutil --linker parallel -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
 
 # CHECK: file format Mach-O 64-bit x86-64
 # CHECK: .debug_info contents:
@@ -25,14 +26,14 @@
 # CHECK: DW_TAG_variable
 # CHECK: DW_AT_name{{.*}}"var1"
 # CHECK: DW_AT_location        (DW_OP_addr
-# CHECK: 0x00000043:   NULL
+# CHECK: 0x{{[0-9a-f]+}}:   NULL
 # CHECK: Compile Unit:
 # CHECK: DW_TAG_compile_unit
 # CHECK-NOT: DW_AT_low_pc
 # CHECK: DW_AT_name{{.*}}"BadCU"
 # CHECK-NOT: DW_TAG_subprogram
 # CHECK-NOT: DW_TAG_variable
-# CHECK: 0x0000005b:   NULL
+# CHECK: 0x{{[0-9a-f]+}}:   NULL
 
 --- !mach-o
 FileHeader:

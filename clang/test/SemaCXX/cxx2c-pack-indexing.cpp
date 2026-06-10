@@ -344,3 +344,13 @@ namespace GH123033 {
       convert<int, int>(12.34);
   }
 }
+
+namespace PackIndexExprEquivalency1 {
+  template <int... Ts, int... Us>
+    requires (Ts...[0] != 0)
+    void f() {}
+
+  template <int... Ts, int... Us>
+    requires (Us...[0] != 0)
+    void f() {}
+} // namespace PackIndexExprEquivalency1

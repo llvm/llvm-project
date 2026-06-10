@@ -12,6 +12,30 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
+# Module sources that are required by other modules
+set(intrinsics_sources
+  __fortran_builtins.f90
+  __cuda_builtins.f90
+)
+
+# Fortran sources for builtin .mod files
+set(module_sources
+  __fortran_ieee_exceptions.f90
+  __fortran_type_info.f90
+  flang_debug.f90
+  iso_fortran_env.f90
+  iso_fortran_env_impl.f90
+  ieee_arithmetic.f90
+  ieee_exceptions.f90
+  ieee_features.f90
+  iso_c_binding.f90
+
+  __cuda_device.f90
+  cooperative_groups.f90
+  cuda_runtime_api.f90
+  cudadevice.f90
+)
+
 # List of files that are buildable for all devices.
 set(supported_sources
   ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
@@ -29,15 +53,22 @@ set(supported_sources
   derived.cpp
   descriptor-io.cpp
   descriptor.cpp
-  dot-product.cpp
+  dot-product-integer.cpp
+  dot-product-real.cpp
+  dot-product-complex.cpp
   edit-input.cpp
   edit-output.cpp
   environment.cpp
   exceptions.cpp
   external-unit.cpp
-  extrema.cpp
+  extrema-maxloc.cpp
+  extrema-minloc.cpp
+  extrema-maxloc-dim.cpp
+  extrema-minloc-dim.cpp
+  extrema-value.cpp
   file.cpp
-  findloc.cpp
+  findloc-total.cpp
+  findloc-dim.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
@@ -46,8 +77,18 @@ set(supported_sources
   io-error.cpp
   io-stmt.cpp
   iostat.cpp
-  matmul-transpose.cpp
-  matmul.cpp
+  matmul-transpose-integer.cpp
+  matmul-transpose-real.cpp
+  matmul-transpose-complex.cpp
+  matmul-transpose-extypes-int16.cpp
+  matmul-transpose-extypes-real10.cpp
+  matmul-transpose-extypes-real16.cpp
+  matmul-integer.cpp
+  matmul-real.cpp
+  matmul-complex.cpp
+  matmul-extypes-int16.cpp
+  matmul-extypes-real10.cpp
+  matmul-extypes-real16.cpp
   memory.cpp
   misc-intrinsic.cpp
   namelist.cpp
@@ -59,6 +100,7 @@ set(supported_sources
   ragged.cpp
   reduction.cpp
   stat.cpp
+  stl-overrides.cpp
   stop.cpp
   sum.cpp
   support.cpp
@@ -74,7 +116,7 @@ set(supported_sources
 
 # List of source not used for GPU offloading.
 set(host_sources
-  ${FLANG_SOURCE_DIR}/module/iso_fortran_env_impl.f90
+  iso_fortran_env_impl.cpp
   command.cpp
   complex-powi.cpp
   complex-reduction.c
@@ -88,11 +130,10 @@ set(host_sources
   stop.cpp
   temporary-stack.cpp
   time-intrinsic.cpp
+  trampoline.cpp
   unit-map.cpp
+  io-api-server.cpp
 )
-if (TARGET llvm-libc-common-utilities)
-  list(APPEND host_sources io-api-server.cpp)
-endif()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -109,16 +150,35 @@ set(gpu_sources
   copy.cpp
   derived-api.cpp
   derived.cpp
-  dot-product.cpp
+  descriptor.cpp
+  dot-product-integer.cpp
+  dot-product-real.cpp
+  dot-product-complex.cpp
   edit-output.cpp
-  extrema.cpp
-  findloc.cpp
+  extrema-maxloc.cpp
+  extrema-minloc.cpp
+  extrema-maxloc-dim.cpp
+  extrema-minloc-dim.cpp
+  extrema-value.cpp
+  environment.cpp
+  findloc-total.cpp
+  findloc-dim.cpp
   format.cpp
   inquiry.cpp
   internal-unit.cpp
   iostat.cpp
-  matmul-transpose.cpp
-  matmul.cpp
+  matmul-transpose-integer.cpp
+  matmul-transpose-real.cpp
+  matmul-transpose-complex.cpp
+  matmul-transpose-extypes-int16.cpp
+  matmul-transpose-extypes-real10.cpp
+  matmul-transpose-extypes-real16.cpp
+  matmul-integer.cpp
+  matmul-real.cpp
+  matmul-complex.cpp
+  matmul-extypes-int16.cpp
+  matmul-extypes-real10.cpp
+  matmul-extypes-real16.cpp
   memory.cpp
   misc-intrinsic.cpp
   non-tbp-dio.cpp
@@ -127,6 +187,7 @@ set(gpu_sources
   product.cpp
   ragged.cpp
   stat.cpp
+  stop.cpp
   sum.cpp
   support.cpp
   terminator.cpp
@@ -153,33 +214,127 @@ file(GLOB_RECURSE private_headers
   "${FLANG_SOURCE_DIR}/lib/Common/*.h"
   )
 
-
-# Import changes from flang_rt.quadmath
-get_target_property(f128_sources
-  FortranFloat128MathILib INTERFACE_SOURCES
+if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
+  list(APPEND intrinsics_sources
+    __ppc_types.f90
   )
-if (f128_sources)
-  # The interface may define special macros for Float128Math files,
-  # so we need to propagate them.
-  get_target_property(f128_defs
-    FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
-    )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY COMPILE_DEFINITIONS
-    ${f128_defs}
-    )
-  get_target_property(f128_include_dirs
-    FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
-    )
-  set_property(SOURCE ${f128_sources}
-    APPEND PROPERTY INCLUDE_DIRECTORIES
-    ${f128_include_dirs}
-    )
-else ()
-  set(f128_sources "")
+  list(APPEND module_sources
+    __ppc_intrinsics.f90
+    mma.f90
+  )
 endif ()
 
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
+# Compile as CUDA-Fortran, not directly supported by CMake
+set_property(SOURCE
+    __cuda_device.f90
+    cooperative_groups.f90
+    cuda_runtime_api.f90
+    cudadevice.f90
+  APPEND PROPERTY
+    COMPILE_OPTIONS --offload-host-only -xcuda
+)
+
+# Import changes from flang_rt.quadmath
+set(f128_sources "")
+if (TARGET FortranFloat128MathILib)
+  get_target_property(f128_sources
+    FortranFloat128MathILib INTERFACE_SOURCES
+    )
+  if (f128_sources)
+    # The interface may define special macros for Float128Math files,
+    # so we need to propagate them.
+    get_target_property(f128_defs
+      FortranFloat128MathILib INTERFACE_COMPILE_DEFINITIONS
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY COMPILE_DEFINITIONS
+      ${f128_defs}
+      )
+    get_target_property(f128_include_dirs
+      FortranFloat128MathILib INTERFACE_INCLUDE_DIRECTORIES
+      )
+    set_property(SOURCE ${f128_sources}
+      APPEND PROPERTY INCLUDE_DIRECTORIES
+      ${f128_include_dirs}
+      )
+  else ()
+    # Change `f128_sources-NOTFOUND` to "no additional sources"
+    set(f128_sources "")
+  endif ()
+endif ()
+
+
+# When a target depends on an object library, CMake seems to try to only build
+# the object files that the target actual needs. If we are only interested
+# in the module files, nothing get is built at all. To ensure that the module
+# files are built, insert a custom target that is opaque to CMake so it cannot
+# apply this optimization. Dependees on module files must depend on this
+# barrier instead. An actual COMMAND (that does nothing) seems to be necessary
+# on Windows to work.
+function (add_module_barrier barriername objlib)
+  add_custom_target(${barriername}
+    COMMAND ${CMAKE_COMMAND} -E true
+  )
+  add_dependencies(${barriername} ${objlib})
+endfunction ()
+
+
+# Build module files if requested.
+# The object files written by Flang for these are unused. In the future parts
+# of flang-rt may itself be implemented in Fortran in which case these Fortran
+# sources need to be added to ${sources} to be included in
+# libflang_rt.runtime{.a/.so}. If they also provide an importable .mod, add them
+# to flang_module_target(... PUBLIC).
+if (FLANG_RT_FORTRAN_MODULES)
+  # CMake ignores intrinsic USE dependencies
+  # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES
+  # to disable this behavior, unfortunately it does not work with Ninja
+  # (https://gitlab.kitware.com/cmake/cmake/-/issues/26803)
+  # As a workaround, we build those intrinsic modules first such that the main
+  # runtime can depend on it.
+  add_flangrt_library(flang_rt.mod.intrinsics OBJECT
+    ${intrinsics_sources}
+  )
+  flang_module_target(flang_rt.mod.intrinsics PUBLIC)
+  add_module_barrier(flang_rt.mod.intrinsics.barrier flang_rt.mod.intrinsics)
+
+  # The modules themselves
+  add_flangrt_library(flang_rt.mod OBJECT
+    ${module_sources}
+  )
+  add_dependencies(flang_rt.mod flang_rt.mod.intrinsics.barrier)
+  flang_module_target(flang_rt.mod PUBLIC)
+  add_module_barrier(flang-rt-mod flang_rt.mod)
+
+  if (RUNTIMES_FORTRAN_MODULES)
+    set(_mod_install_dest "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
+    cmake_path(NORMAL_PATH _mod_install_dest)
+    install(DIRECTORY "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}"
+      DESTINATION "${_mod_install_dest}"
+      COMPONENT flang-rt-mod
+      EXCLUDE_FROM_ALL
+    )
+
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+      add_custom_target(install-flang-rt-mod
+        DEPENDS flang-rt-mod
+        COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                --component flang-rt-mod)
+      add_custom_target(install-flang-rt-mod-stripped
+        DEPENDS flang-rt-mod
+        COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+                --component flang-rt-mod --strip)
+    endif ()
+  endif ()
+endif ()
+
+
+# Skip building libraries if not requested
+if (NOT FLANG_RT_ENABLE_STATIC AND NOT FLANG_RT_ENABLE_SHARED)
+  return ()
+endif ()
+
+if ("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx")
   set(sources ${gpu_sources})
 elseif(FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT STREQUAL "CUDA")
   set(sources ${supported_sources})
@@ -196,12 +351,13 @@ if (NOT WIN32)
     ADDITIONAL_HEADERS ${public_headers} ${private_headers}
   )
 
-  enable_cuda_compilation(flang_rt.runtime "${supported_sources}")
-  enable_omp_offload_compilation(flang_rt.runtime "${supported_sources}")
+  enable_cuda_compilation(flang_rt.runtime "${sources}")
 
   # Select a default runtime, which is used for unit and regression tests.
-  get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
-  add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  if (TARGET flang_rt.runtime.default)
+    get_target_property(default_target flang_rt.runtime.default ALIASED_TARGET)
+    add_library(flang_rt.runtime.unittest ALIAS "${default_target}")
+  endif ()
 else()
   # Target for building all versions of the runtime
   add_custom_target(flang_rt.runtime)
@@ -231,7 +387,6 @@ else()
       )
 
     enable_cuda_compilation(${name} "${supported_sources}")
-    enable_omp_offload_compilation(${name} "${supported_sources}")
     add_dependencies(flang_rt.runtime ${name})
   endfunction ()
 

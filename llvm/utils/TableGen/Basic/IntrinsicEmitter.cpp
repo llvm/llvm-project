@@ -54,13 +54,15 @@ public:
   void run(raw_ostream &OS, bool Enums);
 
   void EmitEnumInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
-  void EmitArgKind(raw_ostream &OS);
+  void EmitAnyKind(raw_ostream &OS);
   void EmitIITInfo(raw_ostream &OS);
   void EmitTargetInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitIntrinsicToNameTable(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
   void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
+  void EmitIntrinsicToScalarizableTable(const CodeGenIntrinsicTable &Ints,
+                                        raw_ostream &OS);
   void EmitIntrinsicToPrettyPrintTable(const CodeGenIntrinsicTable &Ints,
                                        raw_ostream &OS);
   void EmitIntrinsicBitTable(
@@ -97,8 +99,8 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
     // Emit the enum information.
     EmitEnumInfo(Ints, OS);
 
-    // Emit ArgKind for Intrinsics.h.
-    EmitArgKind(OS);
+    // Emit AnyKind for Intrinsics.h.
+    EmitAnyKind(OS);
   } else {
     // Emit IIT_Info constants.
     EmitIITInfo(OS);
@@ -111,6 +113,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic ID -> overload table.
     EmitIntrinsicToOverloadTable(Ints, OS);
+
+    // Emit the intrinsic ID -> trivially scalarizable table.
+    EmitIntrinsicToScalarizableTable(Ints, OS);
 
     // Emit the intrinsic declaration generator.
     EmitGenerator(Ints, OS);
@@ -199,16 +204,16 @@ void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
     OS << "}; // enum\n";
 }
 
-void IntrinsicEmitter::EmitArgKind(raw_ostream &OS) {
+void IntrinsicEmitter::EmitAnyKind(raw_ostream &OS) {
   if (!IntrinsicPrefix.empty())
     return;
-  IfDefEmitter IfDef(OS, "GET_INTRINSIC_ARGKIND");
-  OS << "// llvm::Intrinsic::IITDescriptor::ArgKind.\n";
-  if (const auto RecArgKind = Records.getDef("ArgKind")) {
-    for (const auto &RV : RecArgKind->getValues())
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_ANYKIND");
+  OS << "// llvm::Intrinsic::IITDescriptor::AnyKind.\n";
+  if (const auto RecAnyKind = Records.getDef("AnyKind")) {
+    for (const auto &RV : RecAnyKind->getValues())
       OS << "    AK_" << RV.getName() << " = " << *RV.getValue() << ",\n";
   } else {
-    OS << "#error \"ArgKind is not defined\"\n";
+    OS << "#error \"AnyKind is not defined\"\n";
   }
 }
 
@@ -224,6 +229,8 @@ void IntrinsicEmitter::EmitIITInfo(raw_ostream &OS) {
     RecsByNumber[Number] = Rec->getName();
   }
   if (IIT_Base.size() > 0) {
+    if (RecsByNumber[0] != "IIT_Done")
+      PrintFatalError("IIT_Done expected to have value 0");
     for (unsigned I = 0, E = RecsByNumber.size(); I < E; ++I)
       if (!RecsByNumber[I].empty())
         OS << "  " << RecsByNumber[I] << " = " << I << ",\n";
@@ -307,6 +314,14 @@ void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
       [](const CodeGenIntrinsic &Int) { return Int.isOverloaded; });
 }
 
+void IntrinsicEmitter::EmitIntrinsicToScalarizableTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  EmitIntrinsicBitTable(
+      Ints, OS, "GET_INTRINSIC_SCALARIZABLE_TABLE", "STable",
+      "Intrinsic ID to trivially scalarizable bitset.",
+      [](const CodeGenIntrinsic &Int) { return Int.isTriviallyScalarizable; });
+}
+
 using TypeSigTy = SmallVector<unsigned char>;
 
 /// Computes type signature of the intrinsic \p Int.
@@ -351,7 +366,11 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   // If we can compute a 16/32-bit fixed encoding for this intrinsic, do so and
   // capture it in this vector, otherwise store a ~0U.
   std::vector<FixedEncodingTy> FixedEncodings;
-  SequenceToOffsetTable<TypeSigTy> LongEncodingTable;
+
+  // Each IIT encoding sequence in the long encoding table is terminated by
+  // IIT_Done(=0) token.
+  constexpr unsigned char IIT_Done = 0;
+  SequenceToOffsetTable<TypeSigTy> LongEncodingTable(IIT_Done);
 
   FixedEncodings.reserve(Ints.size());
 

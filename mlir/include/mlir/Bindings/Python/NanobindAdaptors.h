@@ -19,7 +19,6 @@
 #ifndef MLIR_BINDINGS_PYTHON_NANOBINDADAPTORS_H
 #define MLIR_BINDINGS_PYTHON_NANOBINDADAPTORS_H
 
-#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -35,41 +34,6 @@
 namespace mlir {
 namespace python {
 namespace {
-
-// Safely calls Python initialization code on first use, avoiding deadlocks.
-template <typename T>
-class SafeInit {
-public:
-  typedef std::unique_ptr<T> (*F)();
-
-  explicit SafeInit(F init_fn) : initFn(init_fn) {}
-
-  T &get() {
-    if (T *result = output.load()) {
-      return *result;
-    }
-
-    // Note: init_fn() may be called multiple times if, for example, the GIL is
-    // released during its execution. The intended use case is for module
-    // imports which are safe to perform multiple times. We are careful not to
-    // hold a lock across init_fn() to avoid lock ordering problems.
-    std::unique_ptr<T> m = initFn();
-    {
-      nanobind::ft_lock_guard lock(mu);
-      if (T *result = output.load()) {
-        return *result;
-      }
-      T *p = m.release();
-      output.store(p);
-      return *p;
-    }
-  }
-
-private:
-  nanobind::ft_mutex mu;
-  std::atomic<T *> output{nullptr};
-  F initFn;
-};
 
 nanobind::module_ &irModule() {
   static SafeInit<nanobind::module_> init([]() {
@@ -108,6 +72,17 @@ mlirApiObjectToCapsule(nanobind::handle apiObject) {
   return api;
 }
 
+/// Clears the Python error indicator if the given condition `val` is false and
+/// returns the condition. This is needed in `from_python` of the type casters
+/// below, where a failed conversion from a Python capsule sets the Python error
+/// indicator but the caller of the caster expects or may even need a clean
+/// error indicator.
+inline bool pyErrClearIfFalse(bool val) {
+  if (!val)
+    PyErr_Clear();
+  return val;
+}
+
 // Note: Currently all of the following support cast from nanobind::object to
 // the Mlir* C-API type, but only a few light-weight, context-bound ones
 // implicitly cast the other way because the use case has not yet emerged and
@@ -121,7 +96,7 @@ struct type_caster<MlirAffineMap> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAffineMap(capsule->ptr());
-      return !mlirAffineMapIsNull(value);
+      return pyErrClearIfFalse(!mlirAffineMapIsNull(value));
     }
     return false;
   }
@@ -144,7 +119,7 @@ struct type_caster<MlirAttribute> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAttribute(capsule->ptr());
-      return !mlirAttributeIsNull(value);
+      return pyErrClearIfFalse(!mlirAttributeIsNull(value));
     }
     return false;
   }
@@ -167,7 +142,7 @@ struct type_caster<MlirBlock> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToBlock(capsule->ptr());
-      return !mlirBlockIsNull(value);
+      return pyErrClearIfFalse(!mlirBlockIsNull(value));
     }
     return false;
   }
@@ -186,15 +161,16 @@ struct type_caster<MlirContext> {
     // If there is no context, including thread-bound, emit a warning (since
     // this function is not allowed to throw) and fail to cast.
     if (src.is_none()) {
-      PyErr_Warn(
+      PyErr_WarnEx(
           PyExc_RuntimeWarning,
           "Passing None as MLIR Context is only allowed inside "
-          "the " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " context manager.");
+          "the " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " context manager.",
+          /*stacklevel=*/1);
       return false;
     }
     if (std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToContext(capsule->ptr());
-      return !mlirContextIsNull(value);
+      return pyErrClearIfFalse(!mlirContextIsNull(value));
     }
     return false;
   }
@@ -208,7 +184,7 @@ struct type_caster<MlirDialectRegistry> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToDialectRegistry(capsule->ptr());
-      return !mlirDialectRegistryIsNull(value);
+      return pyErrClearIfFalse(!mlirDialectRegistryIsNull(value));
     }
     return false;
   }
@@ -235,7 +211,7 @@ struct type_caster<MlirLocation> {
     }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToLocation(capsule->ptr());
-      return !mlirLocationIsNull(value);
+      return pyErrClearIfFalse(!mlirLocationIsNull(value));
     }
     return false;
   }
@@ -257,7 +233,7 @@ struct type_caster<MlirModule> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToModule(capsule->ptr());
-      return !mlirModuleIsNull(value);
+      return pyErrClearIfFalse(!mlirModuleIsNull(value));
     }
     return false;
   }
@@ -281,7 +257,7 @@ struct type_caster<MlirFrozenRewritePatternSet> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule->ptr());
-      return value.ptr != nullptr;
+      return pyErrClearIfFalse(value.ptr != nullptr);
     }
     return false;
   }
@@ -304,7 +280,7 @@ struct type_caster<MlirOperation> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToOperation(capsule->ptr());
-      return !mlirOperationIsNull(value);
+      return pyErrClearIfFalse(!mlirOperationIsNull(value));
     }
     return false;
   }
@@ -328,7 +304,7 @@ struct type_caster<MlirValue> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToValue(capsule->ptr());
-      return !mlirValueIsNull(value);
+      return pyErrClearIfFalse(!mlirValueIsNull(value));
     }
     return false;
   }
@@ -354,7 +330,7 @@ struct type_caster<MlirPassManager> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToPassManager(capsule->ptr());
-      return !mlirPassManagerIsNull(value);
+      return pyErrClearIfFalse(!mlirPassManagerIsNull(value));
     }
     return false;
   }
@@ -367,7 +343,7 @@ struct type_caster<MlirTypeID> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToTypeID(capsule->ptr());
-      return !mlirTypeIDIsNull(value);
+      return pyErrClearIfFalse(!mlirTypeIDIsNull(value));
     }
     return false;
   }
@@ -391,7 +367,7 @@ struct type_caster<MlirType> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToType(capsule->ptr());
-      return !mlirTypeIsNull(value);
+      return pyErrClearIfFalse(!mlirTypeIsNull(value));
     }
     return false;
   }
@@ -495,8 +471,11 @@ public:
         std::forward<Func>(f),
         nanobind::name(name), // nanobind::scope(thisClass),
         extra...);
-    thisClass.attr(name) =
-        nanobind::borrow<nanobind::object>(PyClassMethod_New(cf.ptr()));
+    static SafeInit<nanobind::object> classmethodFn([]() {
+      return std::make_unique<nanobind::object>(
+          nanobind::module_::import_("builtins").attr("classmethod"));
+    });
+    thisClass.attr(name) = classmethodFn.get()(cf);
     return *this;
   }
 

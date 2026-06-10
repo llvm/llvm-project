@@ -448,6 +448,16 @@ suppression file in a ``UBSAN_OPTIONS`` environment variable.
 
     UBSAN_OPTIONS=suppressions=MyUBSan.supp
 
+Alternatively, you can provide default suppressions by defining a
+``__ubsan_default_suppressions`` function:
+
+.. code-block:: c++
+
+    extern "C" const char *__ubsan_default_suppressions() {
+      return "signed-integer-overflow:file-with-known-overflow.cpp\n"
+             "alignment:function_doing_unaligned_access\n";
+    }
+
 You need to specify a :ref:`check <ubsan-checks>` you are suppressing and the
 bug location. For example:
 

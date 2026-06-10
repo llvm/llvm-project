@@ -12,10 +12,14 @@
 #include "flang/Common/enum-class.h"
 #include "flang/Common/enum-set.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallVector.h"
+#include <memory>
 
 namespace fir {
 
@@ -137,6 +141,117 @@ struct AliasAnalysis {
       bool isData{false};
     };
 
+    /// Represents a step in the access path from a root variable to the
+    /// memory location being queried. Built during the backward walk in
+    /// getSource() and stored in forward (root-to-leaf) order.
+    struct PathStep {
+      enum class Kind {
+        /// Named component access, e.g. x%field.
+        Component,
+        /// Loading a POINTER box (fir.load of !fir.box<!fir.ptr<...>>).
+        /// The resulting address depends on pointer association at runtime.
+        PointerDeref,
+        /// Loading an ALLOCATABLE box (fir.load of !fir.box<!fir.heap<...>>).
+        AllocDeref,
+      };
+      Kind kind;
+      /// For Component steps: the field name from hlfir.designate's component
+      /// attribute or fir.coordinate_of's field_indices (mapped through the
+      /// record type). Null for non-Component steps.
+      mlir::StringAttr component;
+
+      bool operator==(const PathStep &o) const {
+        return kind == o.kind && component == o.component;
+      }
+      bool operator!=(const PathStep &o) const { return !(*this == o); }
+    };
+
+    /// The access path from the root variable to the queried memory location.
+    /// For example, given:
+    ///   type(outer) :: x   ! outer has component "in" of type inner
+    ///                      ! inner has pointer component "p"
+    /// the target address of x%in%p (i.e. the data x%in%p points to) is:
+    ///   [{Component,"in"}, {Component,"p"}, {PointerDeref}]
+    /// where PointerDeref represents loading the pointer descriptor and
+    /// extracting the target address (fir.load + fir.box_addr in the IR).
+    /// This enables disambiguation of accesses to different components of
+    /// the same derived-type variable and tracks pointer dereferences for
+    /// pointer/target aliasing (Fortran 2018 8.5.7, 15.5.2.13).
+    struct AccessPath {
+      llvm::SmallVector<PathStep, 4> steps;
+
+      /// Whether the path is approximate (e.g. contains array indexing or
+      /// went through PackArrayOp). An approximate path cannot yield
+      /// MustAlias.
+      bool isApproximate{false};
+
+      /// Return true if any step is a PointerDeref.
+      bool hasPointerDeref() const {
+        return llvm::any_of(steps, [](const PathStep &s) {
+          return s.kind == PathStep::Kind::PointerDeref;
+        });
+      }
+
+      bool operator==(const AccessPath &o) const {
+        return isApproximate == o.isApproximate && steps == o.steps;
+      }
+      bool operator!=(const AccessPath &o) const { return !(*this == o); }
+
+      void print(llvm::raw_ostream &os) const;
+    };
+
+    /// A snapshot taken when getSource() walks through an [hl]fir.declare.
+    /// Records the Fortran procedure scope of the declare (the dummy_scope
+    /// SSA value -- nullptr for non-dummy frames), the declare's result SSA
+    /// value, and the access path and attributes accumulated FROM THE LEAF
+    /// UP TO (and including) this declare. alias() uses these snapshots to
+    /// rebuild intermediate Sources rooted at shared-scope declares via
+    /// buildSourceAtDeclare().
+    ///
+    /// Relationship to the enclosing Source's top-level fields:
+    ///   - Source::accessPath / Source::attributes / Source::approximateSource
+    ///     describe the walk's TERMINAL stop ("root-of-walk to leaf"). They
+    ///     are what every existing alias rule and external consumer reads.
+    ///   - The root-closest ScopedOrigin is a snapshot at the last
+    ///     declare crossed before that terminal stop. Because getSource()
+    ///     walks backwards (leaf -> root) and push_back()s each snapshot,
+    ///     this is the LAST element pushed, i.e. scopedOrigins.back() --
+    ///     see the ordering note on the scopedOrigins member below (front
+    ///     = leaf-closest, back = root-closest). Its accessPath is a
+    ///     prefix-truncation of Source::accessPath, and its attributes are
+    ///     a subset of Source::attributes; in the common case where the
+    ///     terminal stop IS a declare (dummy with dummy_scope, host-assoc,
+    ///     OpenMP private), they coincide.
+    /// We keep both because:
+    ///   1. alias(Source, Source, ...) and external consumers (AddAliasTags,
+    ///      print, downstream analyses) read the top-level fields.
+    ///   2. When the terminal stop is not a declare (e.g. fir.alloca,
+    ///      fir.address_of with TARGET-attributed global), the top-level
+    ///      captures attributes the root-closest snapshot does not.
+    ///   3. When the walk terminates at Unknown without crossing any
+    ///      declare, scopedOrigins is empty and the top-level is the only
+    ///      answer.
+    struct ScopedOrigin {
+      /// The dummy_scope SSA value governing the declare. May be null Value
+      /// when the declare has no explicit dummy_scope and no fir.dummy_scope
+      /// op dominates it (e.g. globals at module scope).
+      mlir::Value scope;
+      /// Result SSA value of the [hl]fir.declare op.
+      mlir::Value declValue;
+      /// Path from the declare (treated as root) to the leaf Value the
+      /// original getSource() call was started from, in root-to-leaf order.
+      AccessPath accessPath;
+      /// Attributes accumulated from the leaf up to and including this
+      /// declare (includes getAttrsFromVariable(declare) and any
+      /// path-acquired bits such as Pointer from intermediate box loads).
+      Attributes attributes;
+      /// Whether the path is approximate at the moment of the snapshot.
+      bool approximateSource{false};
+      /// Whether the walk was following data (vs. a box reference) at the
+      /// moment of the snapshot.
+      bool isData{false};
+    };
+
     SourceOrigin origin;
 
     /// Kind of the memory source.
@@ -148,8 +263,15 @@ struct AliasAnalysis {
     /// Have we lost precision following the source such that
     /// even an exact match cannot be MustAlias?
     bool approximateSource;
+    /// The structured access path from the root variable.
+    AccessPath accessPath;
     /// Source object is used in an internal procedure via host association.
     bool isCapturedInInternalProcedure{false};
+    /// Per-declare checkpoints collected as getSource() walked through
+    /// [hl]fir.declare operations, ordered from leaf-closest (front) to
+    /// root-closest (back). Empty when no declare was crossed (e.g. the
+    /// walk terminated at Unknown).
+    llvm::SmallVector<ScopedOrigin, 4> scopedOrigins;
 
     /// Print information about the memory source to `os`.
     void print(llvm::raw_ostream &os) const;
@@ -225,14 +347,34 @@ struct AliasAnalysis {
   /// If getLastInstantiationPoint is true, the search for the source
   /// will stop at [hl]fir.declare if it represents a dummy
   /// argument declaration (i.e. it has the dummy_scope operand).
+  /// If collectScopedOrigins is false, the per-declare ScopedOrigin
+  /// snapshots are not collected, and getSource performs only the
+  /// SourceKind/origin classification without that bookkeeping side
+  /// effect.
   fir::AliasAnalysis::Source getSource(mlir::Value,
-                                       bool getLastInstantiationPoint = false);
+                                       bool getLastInstantiationPoint = false,
+                                       bool collectScopedOrigins = true);
 
   /// Return true, if `ty` is a reference type to a boxed
   /// POINTER object or a raw fir::PointerType.
   static bool isPointerReference(mlir::Type ty);
 
 private:
+  /// Build an intermediate Source rooted at the declare captured by the
+  /// snapshot. Reuses getSource(declValue) for the SourceKind / origin
+  /// classification (with collectScopedOrigins=false), then overrides
+  /// accessPath/attributes/approximateSource/origin.isData from the
+  /// snapshot so the returned Source represents "declare-as-root,
+  /// original-query-as-leaf".
+  Source buildSourceAtDeclare(const Source::ScopedOrigin &so);
+
+  /// Return the dummy_scope SSA value governing \p declareOp.
+  /// Prefers the declare's explicit getDummyScope() operand; otherwise
+  /// falls back to the result of the dominating fir.dummy_scope op in
+  /// the parent func. Returns a null Value when no scope is found
+  /// (e.g. globals at module scope).
+  mlir::Value getDeclarationScope(mlir::Operation *declareOp);
+
   /// Return true, if `ty` is a reference type to an object of derived type
   /// that contains a component with POINTER attribute.
   static bool isRecordWithPointerComponent(mlir::Type ty);
@@ -271,6 +413,24 @@ private:
   /// a few values that are likely not globals.
   /// We can have both modes for different clients.
   llvm::DenseMap<mlir::Operation *, mlir::SymbolTable> symTabMap;
+
+  /// Per-function caches used by getDeclarationScope() to map a
+  /// fir.declare without an explicit dummy_scope operand to its
+  /// dominating fir.dummy_scope op. Lazily populated. Mirrors the
+  /// logic in flang/lib/Optimizer/Transforms/AddAliasTags.cpp::
+  /// PassState::processFunctionScopes / getDeclarationScope. The cache
+  /// stores fir.dummy_scope ops as mlir::Operation * pointers to avoid
+  /// pulling FIROps.h into this header; the .cpp casts back as needed.
+  ///
+  /// TODO: this duplicates the scope-mapping logic in AddAliasTags.cpp.
+  /// AddAliasTags should reuse AliasAnalysis::getDeclarationScope (and
+  /// the ScopedOrigin snapshots collected by getSource) instead of
+  /// maintaining its own PassState::processFunctionScopes, so the two
+  /// places cannot diverge.
+  llvm::DenseMap<mlir::Operation *, std::unique_ptr<mlir::DominanceInfo>>
+      domInfoCache;
+  llvm::DenseMap<mlir::Operation *, llvm::SmallVector<mlir::Operation *, 16>>
+      sortedScopeCache;
 };
 
 inline bool operator==(const AliasAnalysis::Source::SourceOrigin &lhs,

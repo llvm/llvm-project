@@ -403,6 +403,11 @@ static constexpr IntrinsicHandler cudaHandlers[]{
          &CI::genCUDASetDefaultStream),
      {{{"stream", asValue}}},
      /*isElemental=*/false},
+    {"cudastreamdestroy",
+     static_cast<CUDAIntrinsicLibrary::ExtendedGenerator>(
+         &CI::genCUDAStreamDestroy),
+     {{{"stream", asValue}}},
+     /*isElemental=*/false},
     {"fence_proxy_async",
      static_cast<CUDAIntrinsicLibrary::SubroutineGenerator>(
          &CI::genFenceProxyAsync),
@@ -1130,6 +1135,8 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStream(
   assert(args.size() == 1);
   mlir::Value stream = fir::getBase(args[0]);
   mlir::Type i64Ty = builder.getI64Type();
+  // Widen to i64 to accept smaller integer-kind actuals (e.g. literal 0).
+  stream = builder.createConvert(loc, i64Ty, stream);
   auto ctx = builder.getContext();
   mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
   auto funcOp =
@@ -1158,6 +1165,21 @@ fir::ExtendedValue CUDAIntrinsicLibrary::genCUDASetDefaultStreamArray(
   auto funcOp =
       builder.createFunction(loc, RTNAME_STRING(CUFSetAssociatedStream), ftype);
   auto call = fir::CallOp::create(builder, loc, funcOp, {voidPtr, stream});
+  return call.getResult(0);
+}
+
+// CUDASTREAMDESTROY
+fir::ExtendedValue CUDAIntrinsicLibrary::genCUDAStreamDestroy(
+    mlir::Type resTy, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value stream = fir::getBase(args[0]);
+  mlir::Type i64Ty = builder.getI64Type();
+  stream = builder.createConvert(loc, i64Ty, stream);
+  auto ctx = builder.getContext();
+  mlir::FunctionType ftype = mlir::FunctionType::get(ctx, {i64Ty}, {resTy});
+  auto funcOp =
+      builder.createFunction(loc, RTNAME_STRING(CUFStreamDestroy), ftype);
+  auto call = fir::CallOp::create(builder, loc, funcOp, {stream});
   return call.getResult(0);
 }
 
@@ -1309,7 +1331,7 @@ CUDAIntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
 // SYNCTHREADS
 void CUDAIntrinsicLibrary::genSyncThreads(
     llvm::ArrayRef<fir::ExtendedValue> args) {
-  mlir::NVVM::Barrier0Op::create(builder, loc);
+  mlir::NVVM::BarrierOp::create(builder, loc);
 }
 
 // SYNCTHREADS_AND
@@ -1317,12 +1339,12 @@ mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsAnd(mlir::Type resultType,
                                         llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
-             builder, loc, resultType, {}, {},
+  return mlir::NVVM::BarrierReductionOp::create(
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::AND),
              arg)
-      .getResult(0);
+      .getResult();
 }
 
 // SYNCTHREADS_COUNT
@@ -1330,12 +1352,12 @@ mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsCount(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
-             builder, loc, resultType, {}, {},
+  return mlir::NVVM::BarrierReductionOp::create(
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::POPC),
              arg)
-      .getResult(0);
+      .getResult();
 }
 
 // SYNCTHREADS_OR
@@ -1343,12 +1365,12 @@ mlir::Value
 CUDAIntrinsicLibrary::genSyncThreadsOr(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   mlir::Value arg = builder.createConvert(loc, builder.getI32Type(), args[0]);
-  return mlir::NVVM::BarrierOp::create(
-             builder, loc, resultType, {}, {},
+  return mlir::NVVM::BarrierReductionOp::create(
+             builder, loc, resultType, /*barrierId=*/mlir::Value{},
              mlir::NVVM::BarrierReductionAttr::get(
                  builder.getContext(), mlir::NVVM::BarrierReduction::OR),
              arg)
-      .getResult(0);
+      .getResult();
 }
 
 // SYNCWARP

@@ -1,4 +1,4 @@
-//===-- freelist_heap_fuzz.cpp --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
+/// \file
 /// Fuzzing test for llvm-libc freelist-based heap implementation.
 ///
 //===----------------------------------------------------------------------===//
@@ -26,6 +27,7 @@ _end:
 __llvm_libc_heap_limit:
 )");
 
+using LIBC_NAMESPACE::BlockRef;
 using LIBC_NAMESPACE::FreeListHeap;
 using LIBC_NAMESPACE::inline_memset;
 using LIBC_NAMESPACE::cpp::nullopt;
@@ -147,7 +149,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t remainder) {
 
       // Perform allocation.
       void *ptr = nullptr;
-      size_t alignment = Block::MIN_ALIGN;
+      size_t alignment = BlockRef::MIN_ALIGN;
       switch (alloc_type) {
       case AllocType::MALLOC:
         ptr = heap.allocate(alloc_size);
@@ -172,7 +174,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t remainder) {
                           alloc_size - alloc.size);
           alloc.ptr = ptr;
           alloc.size = alloc_size;
-          alloc.alignment = Block::MIN_ALIGN;
+          alloc.alignment = BlockRef::MIN_ALIGN;
         }
         break;
       }
@@ -194,8 +196,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t remainder) {
 
       if (ptr) {
         // aligned_allocate should automatically apply a minimum alignment.
-        if (alignment < Block::MIN_ALIGN)
-          alignment = Block::MIN_ALIGN;
+        if (alignment < BlockRef::MIN_ALIGN)
+          alignment = BlockRef::MIN_ALIGN;
         // Check alignment.
         if (reinterpret_cast<uintptr_t>(ptr) % alignment)
           __builtin_trap();

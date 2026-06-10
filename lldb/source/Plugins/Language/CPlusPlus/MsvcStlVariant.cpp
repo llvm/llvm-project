@@ -147,15 +147,6 @@ public:
     Update();
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
-    auto optional_idx = formatters::ExtractIndexFromString(name.GetCString());
-    if (!optional_idx) {
-      return llvm::createStringError("Type has no child named '%s'",
-                                     name.AsCString());
-    }
-    return *optional_idx;
-  }
-
   lldb::ChildCacheState Update() override;
   llvm::Expected<uint32_t> CalculateNumChildren() override { return m_size; }
   ValueObjectSP GetChildAtIndex(uint32_t idx) override;
@@ -191,7 +182,7 @@ ValueObjectSP VariantFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!head_sp)
     return nullptr;
 
-  return head_sp->Clone(ConstString("Value"));
+  return head_sp->Clone("Value");
 }
 
 SyntheticChildrenFrontEnd *formatters::MsvcStlVariantSyntheticFrontEndCreator(

@@ -451,6 +451,7 @@ define void @v32_asm_def_use(float %v0, float %v1) #4 {
 ; GFX90A-LABEL: v32_asm_def_use:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_accvgpr_read_b32 v35, a32 ; Reload Reuse
 ; GFX90A-NEXT:    v_mov_b32_e32 v34, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v33, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -478,8 +479,8 @@ define void @v32_asm_def_use(float %v0, float %v1) #4 {
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; copy
 ; GFX90A-NEXT:    ;;#ASMEND
-; GFX90A-NEXT:    v_accvgpr_read_b32 v35, a32 ; Reload Reuse
 ; GFX90A-NEXT:    v_accvgpr_mov_b32 a32, a1
+; GFX90A-NEXT:    s_nop 0
 ; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v34, v33, a[16:31]
 ; GFX90A-NEXT:    ;;#ASMSTART
 ; GFX90A-NEXT:    ; copy
@@ -520,7 +521,8 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_sub_i32 s1, 0, s7
 ; GFX908-NEXT:    v_cvt_f32_f16_e32 v18, s0
 ; GFX908-NEXT:    v_mov_b32_e32 v17, 0
-; GFX908-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX908-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX908-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX908-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX908-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX908-NEXT:    v_readfirstlane_b32 s2, v0
@@ -541,11 +543,10 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX908-NEXT:    v_cvt_f32_f16_e32 v19, s2
 ; GFX908-NEXT:    s_lshl_b64 s[6:7], s[4:5], 5
-; GFX908-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-NEXT:    s_lshl_b64 s[14:15], s[10:11], 5
 ; GFX908-NEXT:    s_and_b64 s[0:1], exec, s[0:1]
 ; GFX908-NEXT:    s_lshl_b64 s[16:17], s[8:9], 5
-; GFX908-NEXT:    v_mov_b32_e32 v1, 0
+; GFX908-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_readfirstlane_b32 s2, v16
 ; GFX908-NEXT:    s_and_b32 s2, 0xffff, s2
@@ -683,7 +684,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    s_sub_i32 s1, 0, s7
 ; GFX90A-NEXT:    v_mov_b32_e32 v19, 0
 ; GFX90A-NEXT:    v_pk_mov_b32 v[2:3], 0, 0
-; GFX90A-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX90A-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX90A-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX90A-NEXT:    v_cvt_u32_f32_e32 v1, v0
 ; GFX90A-NEXT:    v_cvt_f32_f16_e32 v0, s0
@@ -1054,6 +1055,7 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-LABEL: no_free_vgprs_at_sgpr_to_agpr_copy:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX90A-NEXT:    v_accvgpr_read_b32 v34, a32 ; Reload Reuse
 ; GFX90A-NEXT:    v_mov_b32_e32 v33, v0
 ; GFX90A-NEXT:    v_mov_b32_e32 v32, v1
 ; GFX90A-NEXT:    ;;#ASMSTART
@@ -1075,8 +1077,7 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a18, s2
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a17, s1
 ; GFX90A-NEXT:    v_accvgpr_write_b32 a16, s0
-; GFX90A-NEXT:    v_accvgpr_read_b32 v34, a32 ; Reload Reuse
-; GFX90A-NEXT:    s_nop 0
+; GFX90A-NEXT:    s_nop 1
 ; GFX90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v33, v32, a[16:31]
 ; GFX90A-NEXT:    s_nop 10
 ; GFX90A-NEXT:    buffer_store_dword a0, off, s[0:3], s32 ; 4-byte Folded Spill
@@ -1139,9 +1140,9 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 declare <16 x float> @llvm.amdgcn.mfma.f32.16x16x1f32(float, float, <16 x float>, i32 immarg, i32 immarg, i32 immarg) #1
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 
-attributes #0 = { "amdgpu-waves-per-eu"="6,6" }
+attributes #0 = { "amdgpu-waves-per-eu"="6,6" nounwind }
 attributes #1 = { convergent nounwind readnone willreturn }
 attributes #2 = { nounwind readnone willreturn }
-attributes #3 = { "amdgpu-waves-per-eu"="7,7" "amdgpu-agpr-alloc"="0" }
-attributes #4 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-flat-work-group-size"="1024,1024" }
-attributes #5 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-agpr-alloc"="0" }
+attributes #3 = { "amdgpu-waves-per-eu"="7,7" "amdgpu-agpr-alloc"="0" nounwind }
+attributes #4 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-flat-work-group-size"="1024,1024" nounwind }
+attributes #5 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-agpr-alloc"="0" nounwind }

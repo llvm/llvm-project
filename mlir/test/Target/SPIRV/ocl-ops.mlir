@@ -17,6 +17,14 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %3 = spirv.CL.cos %arg0 : f32
     // CHECK: {{%.*}} = spirv.CL.log {{%.*}} : f32
     %4 = spirv.CL.log %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.exp2 {{%.*}} : f32
+    %exp2 = spirv.CL.exp2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.exp10 {{%.*}} : f32
+    %exp10 = spirv.CL.exp10 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.log2 {{%.*}} : f32
+    %log2 = spirv.CL.log2 %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.log10 {{%.*}} : f32
+    %log10 = spirv.CL.log10 %arg0 : f32
     // CHECK: {{%.*}} = spirv.CL.sqrt {{%.*}} : f32
     %5 = spirv.CL.sqrt %arg0 : f32
     // CHECK: {{%.*}} = spirv.CL.ceil {{%.*}} : f32
@@ -29,12 +37,20 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
     %9 = spirv.CL.rsqrt %arg0 : f32
     // CHECK: {{%.*}} = spirv.CL.erf {{%.*}} : f32
     %10 = spirv.CL.erf %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.erfc {{%.*}} : f32
+    %erfc = spirv.CL.erfc %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.trunc {{%.*}} : f32
+    %11 = spirv.CL.trunc %arg0 : f32
+    // CHECK: {{%.*}} = spirv.CL.cbrt {{%.*}} : f32
+    %12 = spirv.CL.cbrt %arg0 : f32
     spirv.Return
   }
 
   spirv.func @integer_insts(%arg0 : i32) "None" {
     // CHECK: {{%.*}} = spirv.CL.s_abs {{%.*}} : i32
     %0 = spirv.CL.s_abs %arg0 : i32
+    // CHECK: {{%.*}} = spirv.CL.clz {{%.*}} : i32
+    %1 = spirv.CL.clz %arg0 : i32
     spirv.Return
   }
 
@@ -47,6 +63,26 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Vec
   spirv.func @fma(%arg0 : f32, %arg1 : f32, %arg2 : f32) "None" {
     // CHECK: spirv.CL.fma {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
     %13 = spirv.CL.fma %arg0, %arg1, %arg2 : f32
+    spirv.Return
+  }
+
+  spirv.func @float_int_insts(%arg0 : f32, %arg1 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %0 = spirv.CL.ldexp %arg0, %arg1 : f32, i32 -> f32
+    // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %1 = spirv.CL.pown %arg0, %arg1 : f32, i32 -> f32
+    // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : f32, i32 -> f32
+    %2 = spirv.CL.rootn %arg0, %arg1 : f32, i32 -> f32
+    spirv.Return
+  }
+
+  spirv.func @float_int_vec_insts(%arg0 : vector<3xf32>, %arg1 : vector<3xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.CL.ldexp {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %0 = spirv.CL.ldexp %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    // CHECK: {{%.*}} = spirv.CL.pown {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %1 = spirv.CL.pown %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    // CHECK: {{%.*}} = spirv.CL.rootn {{%.*}}, {{%.*}} : vector<3xf32>, vector<3xi32> -> vector<3xf32>
+    %2 = spirv.CL.rootn %arg0, %arg1 : vector<3xf32>, vector<3xi32> -> vector<3xf32>
     spirv.Return
   }
 

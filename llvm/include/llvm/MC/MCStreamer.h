@@ -62,6 +62,7 @@ struct DefRangeRegisterRelHeader;
 struct DefRangeSubfieldRegisterHeader;
 struct DefRangeRegisterHeader;
 struct DefRangeFramePointerRelHeader;
+struct DefRangeRegisterRelIndirHeader;
 }
 
 using MCSectionSubPair = std::pair<MCSection *, uint32_t>;
@@ -234,6 +235,9 @@ class LLVM_ABI MCStreamer {
 
   WinEH::FrameInfo *CurrentWinFrameInfo;
   size_t CurrentProcWinFrameInfoStartIndex;
+
+  /// Default unwind version for new WinCFI frames.
+  uint8_t DefaultWinCFIUnwindVersion = 1;
 
   /// This is stack of current and previous section values saved by
   /// pushSection.
@@ -468,7 +472,7 @@ public:
   void switchSectionNoPrint(MCSection *Section);
 
   /// Create the default sections and set the initial one.
-  virtual void initSections(bool NoExecStack, const MCSubtargetInfo &STI);
+  virtual void initSections(const MCSubtargetInfo &STI);
 
   MCSymbol *endSection(MCSection *Section);
 
@@ -845,7 +849,8 @@ public:
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
-  virtual void emitPrefAlign(Align A);
+  virtual void emitPrefAlign(Align A, const MCSymbol &End, bool EmitNops,
+                             uint8_t Fill, const MCSubtargetInfo &STI);
 
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
@@ -978,6 +983,10 @@ public:
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       codeview::DefRangeFramePointerRelHeader DRHdr);
 
+  virtual void emitCVDefRangeDirective(
+      ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
+      codeview::DefRangeRegisterRelIndirHeader DRHdr);
+
   /// This implements the CodeView '.cv_stringtable' assembler directive.
   virtual void emitCVStringTableDirective() {}
 
@@ -1028,6 +1037,23 @@ public:
                                SMLoc Loc = {});
   virtual void emitCFIWindowSave(SMLoc Loc = {});
   virtual void emitCFINegateRAState(SMLoc Loc = {});
+  virtual void emitCFILLVMRegisterPair(int64_t Register, int64_t R1,
+                                       int64_t R1SizeInBits, int64_t R2,
+                                       int64_t R2SizeInBits, SMLoc Loc = {});
+  virtual void emitCFILLVMVectorRegisters(
+      int64_t Register, ArrayRef<MCCFIInstruction::VectorRegisterWithLane> VRs,
+      SMLoc Loc = {});
+  virtual void emitCFILLVMVectorOffset(int64_t Register,
+                                       int64_t RegisterSizeInBits,
+                                       int64_t MaskRegister,
+                                       int64_t MaskRegisterSizeInBits,
+                                       int64_t Offset, SMLoc Loc = {});
+  virtual void
+  emitCFILLVMVectorRegisterMask(int64_t Register, int64_t SpillRegister,
+                                int64_t SpillRegisterLaneSizeInBits,
+                                int64_t MaskRegister,
+                                int64_t MaskRegisterSizeInBits, SMLoc Loc = {});
+
   virtual void emitCFINegateRAStateWithPC(SMLoc Loc = {});
   virtual void emitCFILabelDirective(SMLoc Loc, StringRef Name);
   virtual void emitCFIValOffset(int64_t Register, int64_t Offset,
@@ -1042,6 +1068,8 @@ public:
   virtual void emitWinCFIFuncletOrFuncEnd(SMLoc Loc = SMLoc());
   virtual void emitWinCFISplitChained(SMLoc Loc = SMLoc());
   virtual void emitWinCFIPushReg(MCRegister Register, SMLoc Loc = SMLoc());
+  virtual void emitWinCFIPush2Regs(MCRegister Reg1, MCRegister Reg2,
+                                   SMLoc Loc = SMLoc());
   virtual void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                                   SMLoc Loc = SMLoc());
   virtual void emitWinCFIAllocStack(unsigned Size, SMLoc Loc = SMLoc());
@@ -1055,6 +1083,11 @@ public:
   virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinCFIUnwindV2Start(SMLoc Loc = SMLoc());
   virtual void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc = SMLoc());
+
+  /// Set the default unwind version for new WinCFI frames.
+  void setDefaultWinCFIUnwindVersion(uint8_t V) {
+    DefaultWinCFIUnwindVersion = V;
+  }
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());

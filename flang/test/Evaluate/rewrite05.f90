@@ -5,11 +5,11 @@ program main
   end type
   type(t) :: x
   call init(10)
-  !CHECK: PRINT *, [INTEGER(4)::int(lbound(x%component,dim=1,kind=8),kind=4)]
+  !CHECK: PRINT *, [INTEGER(4)::__builtin_int(lbound(x%component,dim=1,kind=8),kind=4)]
   print *, lbound(x%component)
-  !CHECK: PRINT *, [INTEGER(4)::int(size(x%component,dim=1,kind=8)+lbound(x%component,dim=1,kind=8)-1_8,kind=4)]
+  !CHECK: PRINT *, [INTEGER(4)::__builtin_int(size(x%component,dim=1,kind=8)+lbound(x%component,dim=1,kind=8)-1_8,kind=4)]
   print *, ubound(x%component)
-  !CHECK: PRINT *, int(size(x%component,dim=1,kind=8),kind=4)
+  !CHECK: PRINT *, __builtin_int(size(x%component,dim=1,kind=8),kind=4)
   print *, size(x%component)
   !CHECK: PRINT *, 4_8*size(x%component,dim=1,kind=8)
   print *, sizeof(x%component)

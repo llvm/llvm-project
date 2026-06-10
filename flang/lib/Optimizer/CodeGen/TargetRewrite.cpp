@@ -780,13 +780,13 @@ public:
 
     for (auto fn : mod.getOps<mlir::func::FuncOp>()) {
       if (targetCPUAttr)
-        fn->setAttr("target_cpu", targetCPUAttr);
+        fn->setAttr("llvm.target_cpu", targetCPUAttr);
 
       if (tuneCPUAttr)
-        fn->setAttr("tune_cpu", tuneCPUAttr);
+        fn->setAttr("llvm.tune_cpu", tuneCPUAttr);
 
       if (targetFeaturesAttr)
-        fn->setAttr("target_features", targetFeaturesAttr);
+        fn->setAttr("llvm.target_features", targetFeaturesAttr);
 
       convertSignature<mlir::func::ReturnOp, mlir::func::FuncOp>(fn);
     }

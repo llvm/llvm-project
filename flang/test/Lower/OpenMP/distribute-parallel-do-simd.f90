@@ -1,8 +1,10 @@
 ! This test checks lowering of OpenMP DISTRIBUTE PARALLEL DO SIMD composite
 ! constructs.
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
+! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
+! RUN: bbc -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,OPENMP52
+! RUN: %flang_fc1 -fopenmp -fopenmp-version=52 -emit-hlfir %s -o - | FileCheck %s --check-prefixes=CHECK,OPENMP52
 
 ! CHECK-LABEL: func.func @_QPdistribute_parallel_do_simd_num_threads(
 subroutine distribute_parallel_do_simd_num_threads()
@@ -11,7 +13,8 @@ subroutine distribute_parallel_do_simd_num_threads()
   ! CHECK:      omp.parallel num_threads({{.*}}) {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd num_threads(10)
   do index_ = 1, 10
@@ -28,7 +31,8 @@ subroutine distribute_parallel_do_simd_dist_schedule()
   ! CHECK:      omp.parallel  {
   ! CHECK:      omp.distribute dist_schedule_static dist_schedule_chunk_size({{.*}}) {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd dist_schedule(static, 4)
   do index_ = 1, 10
@@ -45,7 +49,8 @@ subroutine distribute_parallel_do_simd_schedule()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop schedule(static = {{.*}}) {
-  ! CHECK-NEXT: omp.simd linear({{.*}}) private({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd schedule(static, 4)
   do index_ = 1, 10
@@ -62,7 +67,8 @@ subroutine distribute_parallel_do_simd_simdlen()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd linear({{.*}}) simdlen(4) private({{.*}}) {
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) simdlen(4) {
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) simdlen(4) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd simdlen(4)
   do index_ = 1, 10
@@ -86,11 +92,12 @@ subroutine distribute_parallel_do_simd_private()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! CHECK-NEXT: omp.simd linear(%{{.*}}) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^,]+]],
-  ! CHECK-SAME:                  @{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:.*]] : !fir.ref<i64>, !fir.ref<i32>) {
+  ! DEFAULT-NEXT: omp.simd linear(%{{.*}}) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! DEFAULT-SAME:                  : !fir.ref<i64>) {
+  ! OPENMP52-NEXT: omp.simd linear(val(%{{.*}})) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! OPENMP52-SAME:                  : !fir.ref<i64>) {
   ! CHECK-NEXT: omp.loop_nest
   ! CHECK:      %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]
-  ! CHECK:      %[[INDEX_PRIV:.*]]:2 = hlfir.declare %[[INDEX_ARG]]
   !$omp distribute parallel do simd private(x)
   do index_ = 1, 10
   end do
@@ -142,4 +149,17 @@ integer :: i,j
     do j=y_min,y_max
     enddo
   enddo
+end subroutine
+
+! CHECK-LABEL:   func.func @_QPtarget_teams_distribute_parallel_do_simd_linear
+subroutine target_teams_distribute_parallel_do_simd_linear()
+  implicit none
+  integer :: iv
+
+  ! CHECK: omp.target
+  ! CHECK: %[[IV:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtarget_teams_distribute_parallel_do_simd_linearEiv"}
+  ! CHECK: omp.simd private(@_QFtarget_teams_distribute_parallel_do_simd_linearEiv_private_i32 %[[IV]]#0 -> %{{.*}} : !fir.ref<i32>)
+  !$omp target teams distribute parallel do simd
+  do iv = 1, 10
+  end do
 end subroutine

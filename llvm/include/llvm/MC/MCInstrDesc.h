@@ -618,6 +618,11 @@ public:
     return -1;
   }
 
+  /// Return true if this instruction explicitly defines the specified physical
+  /// register.
+  LLVM_ABI bool hasExplicitDefOfPhysReg(const MCInst &MI, MCRegister Reg,
+                                        const MCRegisterInfo &RI) const;
+
   /// Return true if this instruction defines the specified physical
   /// register, either explicitly or implicitly.
   LLVM_ABI bool hasDefOfPhysReg(const MCInst &MI, MCRegister Reg,

@@ -8,7 +8,7 @@ define void @i32_subscript(ptr %a) {
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %a.addr, align 4 --> Dst: store i32 %1, ptr %a.addr.2, align 4
 ; CHECK-NEXT:    da analyze - anti [*|<]!
 ; CHECK-NEXT:  Src: store i32 %1, ptr %a.addr.2, align 4 --> Dst: store i32 %1, ptr %a.addr.2, align 4
-; CHECK-NEXT:    da analyze - consistent output [S]!
+; CHECK-NEXT:    da analyze - output [S]!
 ;
 entry:
   br label %for.body
@@ -43,7 +43,7 @@ for.end:
 define void @t(ptr noalias %a, i32 %n) nounwind {
 ; CHECK-LABEL: 't'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr @g, align 4 --> Dst: %0 = load i32, ptr @g, align 4
-; CHECK-NEXT:    da analyze - consistent input [S]!
+; CHECK-NEXT:    da analyze - input [S]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr @g, align 4 --> Dst: store i32 %0, ptr %arrayidx, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %0, ptr %arrayidx, align 4 --> Dst: store i32 %0, ptr %arrayidx, align 4
@@ -98,7 +98,7 @@ for.end:
 define void @i8_stride_wrap(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: 'i8_stride_wrap'
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %idx, align 4 --> Dst: %0 = load i32, ptr %idx, align 4
-; CHECK-NEXT:    da analyze - consistent input [S]!
+; CHECK-NEXT:    da analyze - input [S]!
 ; CHECK-NEXT:  Src: %0 = load i32, ptr %idx, align 4 --> Dst: store i32 %1, ptr %idx.2, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 %1, ptr %idx.2, align 4 --> Dst: store i32 %1, ptr %idx.2, align 4

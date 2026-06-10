@@ -36,6 +36,7 @@
 {'is_defined': True, 'name': '_ZNKSt16nested_exception14rethrow_nestedEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt18bad_variant_access4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt19bad_optional_access4whatEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNKSt29__bad_variant_access_with_msg4whatEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__110__time_put8__do_putEPcRS1_PK2tmcc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__110__time_put8__do_putEPwRS1_PK2tmcc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNKSt3__110error_code7messageEv', 'type': 'FUNC'}
@@ -1209,7 +1210,7 @@
 {'is_defined': True, 'name': '_ZNSt3__133__atomic_wait_native_with_timeoutILm4EEEvPKvS2_m', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__134__construct_barrier_algorithm_baseERl', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__139__atomic_wait_global_table_with_timeoutEPKvim', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__13cinE', 'size': 280, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__13cinE', 'size': 168, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD2Ev', 'type': 'FUNC'}
@@ -1277,9 +1278,9 @@
 {'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem8__removeERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem8__renameERKNS1_4pathES4_PNS_10error_codeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__14__fs10filesystem8__statusERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__14cerrE', 'size': 264, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt3__14clogE', 'size': 264, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt3__14coutE', 'size': 264, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__14cerrE', 'size': 160, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__14clogE', 'size': 160, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__14coutE', 'size': 160, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__14stodERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__14stodERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__14stofERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPm', 'type': 'FUNC'}
@@ -1288,7 +1289,7 @@
 {'is_defined': True, 'name': '_ZNSt3__14stoiERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__14stolERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPmi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__14stolERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__14wcinE', 'size': 280, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__14wcinE', 'size': 168, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__15alignEmmRPvRm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__15ctypeIcE10table_sizeE', 'size': 8, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__15ctypeIcE13classic_tableEv', 'type': 'FUNC'}
@@ -1313,9 +1314,9 @@
 {'is_defined': True, 'name': '_ZNSt3__15stollERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__15stoulERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEEPmi', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__15stoulERKNS_12basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEEEPmi', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__15wcerrE', 'size': 264, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt3__15wclogE', 'size': 264, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt3__15wcoutE', 'size': 264, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__15wcerrE', 'size': 160, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__15wclogE', 'size': 160, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__15wcoutE', 'size': 160, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__16__clocEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__itoa8__u32toaEjPc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16__itoa8__u64toaEmPc', 'type': 'FUNC'}
@@ -1489,7 +1490,6 @@
 {'is_defined': True, 'name': '_ZNSt3__18ios_base7unitbufE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base8internalE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base8showbaseE', 'size': 4, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt3__18ios_base9__xindex_E', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base9basefieldE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base9boolalphaE', 'size': 4, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__18ios_base9showpointE', 'size': 4, 'type': 'OBJECT'}
@@ -1721,6 +1721,7 @@
 {'is_defined': True, 'name': '_ZTISt16nested_exception', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTISt18bad_variant_access', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTISt19bad_optional_access', 'size': 24, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTISt29__bad_variant_access_with_msg', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt12experimental15fundamentals_v112bad_any_castE', 'size': 50, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt12experimental19bad_optional_accessE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__110__time_getE', 'size': 21, 'type': 'OBJECT'}
@@ -1854,6 +1855,7 @@
 {'is_defined': True, 'name': '_ZTSSt16nested_exception', 'size': 21, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSSt18bad_variant_access', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSSt19bad_optional_access', 'size': 24, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTSSt29__bad_variant_access_with_msg', 'size': 34, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTTNSt3__110istrstreamE', 'size': 32, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTTNSt3__110ostrstreamE', 'size': 32, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTTNSt3__113basic_istreamIcNS_11char_traitsIcEEEE', 'size': 16, 'type': 'OBJECT'}
@@ -1979,6 +1981,7 @@
 {'is_defined': True, 'name': '_ZTVSt16nested_exception', 'size': 32, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVSt18bad_variant_access', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVSt19bad_optional_access', 'size': 40, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTVSt29__bad_variant_access_with_msg', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZThn16_NSt3__114basic_iostreamIcNS_11char_traitsIcEEED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZThn16_NSt3__114basic_iostreamIcNS_11char_traitsIcEEED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZThn16_NSt3__19strstreamD0Ev', 'type': 'FUNC'}

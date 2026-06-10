@@ -128,6 +128,35 @@ LLVM_ABI unsigned encodeVTYPE(VLMUL VLMUL, unsigned SEW, bool TailAgnostic,
 
 LLVM_ABI unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt);
 
+namespace IME {
+inline static bool isValidLambda(unsigned Lambda) {
+  return Lambda == 0 || (isPowerOf2_32(Lambda) && Lambda <= 64);
+}
+
+LLVM_ABI unsigned encodeLambda(unsigned Lambda);
+
+LLVM_ABI std::optional<unsigned> decodeLambda(unsigned Encoding);
+
+LLVM_ABI uint64_t getVTypeFieldsMask(unsigned XLen);
+
+LLVM_ABI uint64_t encodeVTypeFields(unsigned XLen, unsigned Lambda,
+                                    bool AltFmtA, bool AltFmtB,
+                                    bool BlockSize16);
+
+LLVM_ABI uint64_t addVTypeFields(uint64_t VType, unsigned XLen, unsigned Lambda,
+                                 bool AltFmtA, bool AltFmtB, bool BlockSize16);
+
+LLVM_ABI unsigned getLambdaEncoding(uint64_t VType, unsigned XLen);
+
+LLVM_ABI std::optional<unsigned> getLambda(uint64_t VType, unsigned XLen);
+
+LLVM_ABI bool isAltFmtA(uint64_t VType, unsigned XLen);
+
+LLVM_ABI bool isAltFmtB(uint64_t VType, unsigned XLen);
+
+LLVM_ABI bool isBlockSize16(uint64_t VType, unsigned XLen);
+} // namespace IME
+
 inline static VLMUL getVLMUL(unsigned VType) {
   unsigned VLMul = VType & 0x7;
   return static_cast<VLMUL>(VLMul);
@@ -174,16 +203,22 @@ inline static unsigned getXSfmmWiden(unsigned VType) {
   return 1 << (TWiden - 1);
 }
 
-static inline bool isValidXSfmmVType(unsigned VTypeI) {
-  return (VTypeI & ~0x738) == 0 && RISCVVType::hasXSfmmWiden(VTypeI) &&
-         RISCVVType::getSEW(VTypeI) * RISCVVType::getXSfmmWiden(VTypeI) <= 64;
-}
-
 inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
 
 inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 
 inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
+
+inline static bool isValidVType(unsigned VType) {
+  return getSEW(VType) <= 64 && getVLMUL(VType) != LMUL_RESERVED &&
+         (!isAltFmt(VType) || getSEW(VType) < 32);
+}
+
+static inline bool isValidXSfmmVType(unsigned VTypeI) {
+  return (VTypeI & ~0x738) == 0 && RISCVVType::hasXSfmmWiden(VTypeI) &&
+         RISCVVType::getSEW(VTypeI) * RISCVVType::getXSfmmWiden(VTypeI) <= 64 &&
+         isValidVType(VTypeI);
+}
 
 LLVM_ABI void printVType(unsigned VType, raw_ostream &OS);
 

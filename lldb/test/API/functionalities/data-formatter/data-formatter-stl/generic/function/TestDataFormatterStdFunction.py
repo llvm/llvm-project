@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdFunctionTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     # Run frame var for a variable twice. Verify we do not hit the cache
     # the first time but do the second time.
     def run_frame_var_check_cache_use(

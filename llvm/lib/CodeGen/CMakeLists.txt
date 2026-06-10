@@ -57,7 +57,6 @@ add_llvm_component_library(LLVMCodeGen
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
   ExpandIRInsts.cpp
-  ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
   ExpandVectorPredication.cpp
@@ -129,6 +128,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineFunctionPass.cpp
   MachineFunctionPrinterPass.cpp
   MachineFunctionSplitter.cpp
+  MachineIDFSSAUpdater.cpp
   MachineInstrBundle.cpp
   MachineInstr.cpp
   MachineLateInstrsCleanup.cpp
@@ -267,6 +267,9 @@ add_llvm_component_library(LLVMCodeGen
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
+
+  PRECOMPILE_HEADERS
+  [["llvm/CodeGen/pch.h"]]
 
   LINK_LIBS ${LLVM_PTHREAD_LIB} ${MLLinkDeps}
 
