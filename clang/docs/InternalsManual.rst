@@ -1057,10 +1057,6 @@ comma-separated string values and elements of the array within
     NormalizedValuesScope<"LangOptions::ThreadModelKind">,
     MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
 
-..
-  Intentionally omitting MarshallingInfoBitfieldFlag. It's adding some
-  complexity to the marshalling infrastructure and might be removed.
-
 It is also possible to define relationships between options.
 
 **Implication**

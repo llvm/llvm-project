@@ -248,14 +248,6 @@ class MarshallingInfoNegativeFlag<KeyPathAndMacro kpm, code defaultvalue = "true
   code Denormalizer = "denormalizeSimpleFlag";
 }
 
-// Marshalled option - single flag contributing to a bitfield.
-class MarshallingInfoBitfieldFlag<KeyPathAndMacro kpm, code value>
-  : MarshallingInfoFlag<kpm, "0u"> {
-  code Normalizer = "makeFlagToValueNormalizer("#value#")";
-  code ValueMerger = "mergeMaskValue";
-  code ValueExtractor = "(extractMaskValue<unsigned, decltype("#value#"), "#value#">)";
-}
-
 // Implementation detail of BoolOption.
 class MarshallingInfoBooleanFlag<KeyPathAndMacro kpm, code defaultvalue, code value,
                                  code other_value, code other_name>

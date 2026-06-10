@@ -515,18 +515,8 @@ static T mergeForwardValue(T KeyPath, U Value) {
   return static_cast<T>(Value);
 }
 
-template <typename T, typename U>
-[[maybe_unused]] static T mergeMaskValue(T KeyPath, U Value) {
-  return KeyPath | Value;
-}
-
 template <typename T> static T extractForwardValue(T KeyPath) {
   return KeyPath;
-}
-
-template <typename T, typename U, U Value>
-[[maybe_unused]] static T extractMaskValue(T KeyPath) {
-  return ((KeyPath & Value) == Value) ? static_cast<T>(Value) : T();
 }
 
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
