@@ -6,6 +6,9 @@
 //   (which we don't know in advance). This checks the record file by searching
 //   for a name with a 40-char USR name.
 // RUN: find %t/docs -regex ".*/[0-9A-F]*.yaml" -exec cat {} ";" | FileCheck %s --check-prefix=CHECK
+// RUN: clang-doc --doxygen --public --format=md_mustache --output=%t --executor=standalone %s
+// RUN: FileCheck %s --input-file=%t/md/GlobalNamespace/index.md --check-prefix=MD-MUSTACHE-GLOBAL
+// RUN: FileCheck %s --input-file=%t/md/GlobalNamespace/_ZTV6Record.md --check-prefix=MD-MUSTACHE-RECORD
 
 class Record {
 private:
@@ -60,3 +63,13 @@ void Record::function_public() {}
 // CHECK-NEXT:         QualName:        'void'
 // CHECK-NEXT:     Access:			Public
 // CHECK-NEXT: ...
+
+// MD-MUSTACHE-GLOBAL: # Global Namespace
+// MD-MUSTACHE-GLOBAL: ## Records
+// MD-MUSTACHE-GLOBAL: * [Record](Record.md)
+
+// MD-MUSTACHE-RECORD: # class Record
+// MD-MUSTACHE-RECORD: ## Functions
+// MD-MUSTACHE-RECORD: ### function_public
+// MD-MUSTACHE-RECORD: *public void function_public()*
+// MD-MUSTACHE-RECORD-NOT: function_private
