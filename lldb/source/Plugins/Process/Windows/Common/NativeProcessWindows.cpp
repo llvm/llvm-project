@@ -605,10 +605,6 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
         exit(1);
       }
     }
-    if (!m_threads.empty()) {
-      auto first = static_cast<NativeThreadWindows *>(m_threads[0].get());
-      first->SetStopReason(signal_info, "interrupt");
-    }
     SetCurrentThreadID(thread_id);
     if (NativeThreadWindows *injected = GetThreadByID(thread_id))
       injected->SetStopReason(signal_info, "interrupt");
