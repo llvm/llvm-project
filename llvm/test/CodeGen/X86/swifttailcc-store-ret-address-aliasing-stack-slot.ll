@@ -26,6 +26,8 @@ define swifttailcc void @test(ptr %0, ptr swiftasync %1, i64 %2, i64 %3, ptr %4,
 ; CHECK-NEXT:    callq _foo
 ; CHECK-NEXT:    movq %r14, (%rax)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rax, %r14
 ; CHECK-NEXT:    movq %r13, %rdi
 ; CHECK-NEXT:    movq %r15, %rsi
@@ -33,6 +35,7 @@ define swifttailcc void @test(ptr %0, ptr swiftasync %1, i64 %2, i64 %3, ptr %4,
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    addq $16, %rsp
 ; CHECK-NEXT:    jmp _tc_fn ## TAILCALL
 entry:
   %res = tail call ptr @foo()

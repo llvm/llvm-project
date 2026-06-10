@@ -166,7 +166,7 @@ LogicalResult ConvertUToPtrOp::verify() {
   auto operandType = cast<spirv::ScalarType>(getOperand().getType());
   auto resultType = cast<spirv::PointerType>(getResult().getType());
   if (!operandType || !operandType.isSignlessInteger())
-    return emitError("result must be a scalar type of unsigned integer");
+    return emitError("operand must be a scalar type of unsigned integer");
   auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
   if (!spirvModule)
     return success();
