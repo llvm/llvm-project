@@ -8,6 +8,7 @@
  * correctly implemented.
  */
 
+#include <assert.h>
 #include <stdio.h>
 
 #include <omp-tools.h>
@@ -54,6 +55,7 @@ int main(void) {
   uint64_t retrieved_device_num;
   ompt_id_t retrieved_target_id;
   ompt_id_t retrieved_host_op_id;
+  assert(ompt_get_target_info && "ompt_get_target_info should not be NULL");
   int in_target_region = ompt_get_target_info(
       &retrieved_device_num, &retrieved_target_id, &retrieved_host_op_id);
 
