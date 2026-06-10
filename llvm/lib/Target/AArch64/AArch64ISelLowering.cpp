@@ -15804,10 +15804,6 @@ static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   if (VT.isScalableVector() && !Subtarget.hasSVE2())
     return SDValue();
 
-  // BSP has TableGen patterns only for legal NEON vector types.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
   // Match the trunc-hoisted shape that hides BSP from the cases below:
   //   (or (trunc (and A B)) (and C (xor (trunc A) -1)))
   //     => BSP(trunc A, trunc B, C)
@@ -21119,12 +21115,6 @@ static SDValue performORCombine(SDNode *N,
 
   if (SDValue R = performANDORDUPNOTCombine(N, DAG))
     return R;
-
-  // Re-try BSL post-legalize: the trunc-hoisted BSP shape only appears after
-  // LowerVectorOR (and its early tryLowerToBSL call) has run.
-  if (!DCI.isBeforeLegalizeOps() && N->getValueType(0).isVector())
-    if (SDValue R = tryLowerToBSL(SDValue(N, 0), DAG))
-      return R;
 
   return SDValue();
 }
