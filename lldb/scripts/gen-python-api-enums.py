@@ -15,15 +15,15 @@ import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-# Matches the start of an enum declaration up to and including the opening
-# brace, capturing the enum name. Covers plain `enum Name {`, scoped
-# `enum Name : type {`, and the `FLAGS_ENUM(Name){` / `FLAGS_ANONYMOUS_ENUM()`
-# macros from lldb-enumerations.h. Enum bodies never contain nested braces, so
-# the matching `}` is simply the next one in the text.
+# Matches a full enum declaration, capturing the name and the body. Covers
+# plain `enum Name { ... }`, scoped `enum Name : type { ... }`, and the
+# `FLAGS_ENUM(Name){ ... }` / `FLAGS_ANONYMOUS_ENUM(){ ... }` macros from
+# lldb-enumerations.h. Capturing the body up to the first `}` relies on no `}`
+# appearing inside an enum body or its comments, which holds for that header.
 ENUM_RE = re.compile(
     r"(?:enum\s+(?P<name>\w+)\s*(?::\s*[\w:]+\s*)?"
     r"|FLAGS_ENUM\(\s*(?P<flags_name>\w+)\s*\)"
-    r"|FLAGS_ANONYMOUS_ENUM\(\s*\))\s*\{"
+    r"|FLAGS_ANONYMOUS_ENUM\(\s*\))\s*\{\s*(?P<body>[^}]+)\s*\}"
 )
 
 # Doxygen inline commands that wrap a following word for emphasis or reference.
@@ -159,8 +159,7 @@ def parse_enums(text: str) -> Iterator[tuple[str, list[str], list[Member]]]:
         name = match.group("name") or match.group("flags_name")
         if name is None:
             continue  # anonymous flag enums have no name to document
-        close = text.index("}", match.end())
-        members = parse_enum_body(text[match.end() : close])
+        members = parse_enum_body(match.group("body"))
         if not members:
             continue
         yield name, leading_description(text[: match.start()]), members
