@@ -832,6 +832,11 @@ bool HasAllocatableDirectComponent(const DerivedTypeSpec &derived) {
   return std::any_of(directs.begin(), directs.end(), IsAllocatable);
 }
 
+bool HasPointerDirectComponent(const DerivedTypeSpec &derived) {
+  DirectComponentIterator directs{derived};
+  return std::any_of(directs.begin(), directs.end(), IsPointer);
+}
+
 static bool MayHaveDefinedAssignment(
     const DerivedTypeSpec &derived, std::set<const Scope *> &checked) {
   if (const Scope *scope{derived.GetScope()};

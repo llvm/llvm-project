@@ -122,6 +122,15 @@ hasAllocatableDirectComponent(const Fortran::semantics::Symbol &sym) {
             *derivedTypeSpec);
   return false;
 }
+// Does this variable have a pointer  direct component?
+static bool hasPointerDirectComponent(const Fortran::semantics::Symbol &sym) {
+  if (sym.has<Fortran::semantics::ObjectEntityDetails>())
+    if (const Fortran::semantics::DeclTypeSpec *declTypeSpec = sym.GetType())
+      if (const Fortran::semantics::DerivedTypeSpec *derivedTypeSpec =
+              declTypeSpec->AsDerived())
+        return Fortran::semantics::HasPointerDirectComponent(*derivedTypeSpec);
+  return false;
+}
 //===----------------------------------------------------------------===//
 // Global variables instantiation (not for alias and common)
 //===----------------------------------------------------------------===//
@@ -702,9 +711,10 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
   fir::GlobalOp global;
 
   if (Fortran::evaluate::IsCoarray(sym))
-    if (hasFinalization(sym) || hasAllocatableDirectComponent(sym))
-      TODO(loc, "Coarray with an allocatable direct component and/or requiring "
-                "finalization.");
+    if (hasFinalization(sym) || hasAllocatableDirectComponent(sym) ||
+        hasPointerDirectComponent(sym))
+      TODO(loc, "Coarray with a pointer/allocatable direct component and/or "
+                "requiring finalization.");
 
   if (var.isModuleOrSubmoduleVariable()) {
     // A non-intrinsic module global is defined when lowering the module.
