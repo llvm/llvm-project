@@ -10779,12 +10779,9 @@ SDValue SITargetLowering::lowerFromFP8ToF32(SDValue Op, bool IsBF8,
                                             SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
-  unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f32_bf8
-                          : Intrinsic::amdgcn_cvt_pk_f32_fp8;
+  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_F32_BF8 : AMDGPUISD::CVT_PK_F32_FP8;
   SDValue PackedI32 = packBytesToI32(DAG, SL, Src);
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f32,
-                     DAG.getTargetConstant(IntrID, SL, MVT::i32), PackedI32,
-                     DAG.getTargetConstant(0, SL, MVT::i1));
+  return DAG.getNode(Opc, SL, MVT::v2f32, PackedI32);
 }
 
 SDValue SITargetLowering::lowerFromFP8ToF16(SDValue Op, bool IsBF8,
@@ -10793,12 +10790,10 @@ SDValue SITargetLowering::lowerFromFP8ToF16(SDValue Op, bool IsBF8,
          "fp8/bf8 -> f16 conversion requires FP8F16ConversionInsts");
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
-  unsigned IntrID = IsBF8 ? Intrinsic::amdgcn_cvt_pk_f16_bf8
-                          : Intrinsic::amdgcn_cvt_pk_f16_fp8;
+  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_F16_BF8 : AMDGPUISD::CVT_PK_F16_FP8;
   SDValue PackedI32 = packBytesToI32(DAG, SL, Src);
   SDValue PackedI16 = DAG.getNode(ISD::TRUNCATE, SL, MVT::i16, PackedI32);
-  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::v2f16,
-                     DAG.getTargetConstant(IntrID, SL, MVT::i32), PackedI16);
+  return DAG.getNode(Opc, SL, MVT::v2f16, PackedI16);
 }
 
 SDValue

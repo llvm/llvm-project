@@ -748,13 +748,23 @@ class Cvt_PK_F32_F8_Pat<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
-let SubtargetPredicate = HasFP8ConversionInsts, OtherPredicates = [HasSDWA] in {
+let SubtargetPredicate = HasFP8ConversionInsts, OtherPredicates = [isGFX9Only] in {
   foreach Index = [0, -1] in {
     def : Cvt_PK_F32_F8_Pat<int_amdgcn_cvt_pk_f32_fp8, Index,
                             V_CVT_PK_F32_FP8_e32, V_CVT_PK_F32_FP8_sdwa>;
     def : Cvt_PK_F32_F8_Pat<int_amdgcn_cvt_pk_f32_bf8, Index,
                             V_CVT_PK_F32_BF8_e32, V_CVT_PK_F32_BF8_sdwa>;
   }
+}
+
+class Cvt_PK_F32_F8_Conv_Pat<SDPatternOperator node, Instruction inst> : GCNPat<
+    (v2f32 (node i32:$src)),
+    (inst $src)
+>;
+
+let SubtargetPredicate = HasFP8ConversionInsts, OtherPredicates = [isGFX9Only] in {
+  def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_fp8, V_CVT_PK_F32_FP8_e32>;
+  def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_bf8, V_CVT_PK_F32_BF8_e32>;
 }
 
 let HasClamp = 0, HasOMod = 0, HasExtDPP = 0, HasExtVOP3DPP = 0,
@@ -843,6 +853,11 @@ let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts] 
   }
 }
 
+let SubtargetPredicate = isGFX11Plus, OtherPredicates = [HasFP8ConversionInsts] in {
+  def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_fp8, V_CVT_PK_F32_FP8_fake16_e32>;
+  def : Cvt_PK_F32_F8_Conv_Pat<AMDGPUcvt_pk_f32_bf8, V_CVT_PK_F32_BF8_fake16_e32>;
+}
+
 // FIXME-TRUE16: True16 versions of these instructions are untested.
 let HasExtSDWA = 0, HasOpSel = 1, EmitDstSel = 0, HasOMod = 0, HasModifiers = 1 in {
 def VOPProfile_CVT_PK_F16_F8 : VOPProfile<[v2f16, i16, untyped, untyped]>;
@@ -860,10 +875,10 @@ let SubtargetPredicate = HasFP8F16ConversionInsts in {
       cvt_from_bf8>;
     defm V_CVT_PK_F16_FP8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_fp8",
       VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
-      int_amdgcn_cvt_pk_f16_fp8>;
+      cvt_pk_f16_fp8>;
     defm V_CVT_PK_F16_BF8 : VOP1Inst_t16_with_profiles<"v_cvt_pk_f16_bf8",
       VOPProfile_CVT_PK_F16_F8, VOPProfile_CVT_PK_F16_F8_true16, VOPProfile_CVT_PK_F16_F8_fake16,
-      int_amdgcn_cvt_pk_f16_bf8>;
+      cvt_pk_f16_bf8>;
   }
 
   let True16Predicate = UseRealTrue16Insts in {
