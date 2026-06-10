@@ -2,28 +2,11 @@
 
 #include "llvm/ExecutionEngine/EJIT/EJitCache.h"
 #include "llvm/ADT/SmallVector.h"
-#include <algorithm>
+#include <cassert>
 #include <mutex>
 #include <shared_mutex>
-#ifndef EJIT_FREESTANDING
-#include <chrono>
-#endif
 
 using namespace llvm::ejit;
-
-namespace {
-
-#ifdef EJIT_FREESTANDING
-uint64_t getTimestamp() { return 0; }
-#else
-uint64_t getTimestamp() {
-  return std::chrono::duration_cast<std::chrono::milliseconds>(
-             std::chrono::steady_clock::now().time_since_epoch())
-      .count();
-}
-#endif
-
-} // namespace
 
 EJitCache::EJitCache(size_t maxEntries, size_t maxTotalSize,
                      size_t maxSingleFuncSize)
@@ -31,22 +14,19 @@ EJitCache::EJitCache(size_t maxEntries, size_t maxTotalSize,
       maxSingleFuncSize_(maxSingleFuncSize) {}
 
 void *EJitCache::getOrNull(uint64_t cacheKey) {
-  std::shared_lock<decltype(mutex_)> lock(mutex_);
-  auto it = cache_.find(cacheKey);
+  // unique_lock is required because splice() writes to the list's internal
+  // pointers — a write operation that would race under shared_lock.
+  // On bare-metal (BareMetalMutex no-op) this has zero overhead vs shared_lock.
+  std::unique_lock<decltype(mutex_)> lock(mutex_);
+  auto it = cache_.find(cacheKey);       // single hash lookup
   if (it == cache_.end()) {
     misses_++;
     return nullptr;
   }
 
   hits_++;
-  it->second.lastAccessTime = getTimestamp();
-
-  auto lruIt = lruIter_.find(cacheKey);
-  if (lruIt != lruIter_.end()) {
-    lruList_.splice(lruList_.begin(), lruList_, lruIt->second);
-    lruIter_[cacheKey] = lruList_.begin();
-  }
-
+  // O(1) LRU bump via embedded iterator — no second hash lookup
+  lruList_.splice(lruList_.begin(), lruList_, it->second.lruIt);
   return it->second.funcPtr;
 }
 
@@ -58,20 +38,14 @@ bool EJitCache::put(uint64_t cacheKey, void *funcPtr,
   if (codeSize > maxSingleFuncSize_)
     return false;
 
-  // If the same cacheKey already exists, clean up the old entry before
-  // inserting the new one. This handles the rare race where two async
-  // compilations produce the same key.
-  auto [it, inserted] = cache_.try_emplace(cacheKey);
-  if (!inserted) {
-    currentTotalSize_ -= it->second.codeSize;
-    // Remove old LRU node so the key doesn't appear twice in the list.
-    auto lruIt = lruIter_.find(cacheKey);
-    if (lruIt != lruIter_.end()) {
-      lruList_.erase(lruIt->second);
-      lruIter_.erase(lruIt);
-    }
-    // Remove old period dependencies from the index.
-    for (const auto &dep : it->second.periodDeps) {
+  // 1. Remove old entry for the same key if present (re-compilation after
+  //    deactivate).  Done first so the entry is never in an intermediate
+  //    "in cache_ but not in lruList_" state.
+  auto oldIt = cache_.find(cacheKey);
+  if (oldIt != cache_.end()) {
+    currentTotalSize_ -= oldIt->second.codeSize;
+    lruList_.erase(oldIt->second.lruIt);
+    for (const auto &dep : oldIt->second.periodDeps) {
       auto pit = periodIndex_.find(dep);
       if (pit != periodIndex_.end()) {
         pit->second.erase(cacheKey);
@@ -79,20 +53,21 @@ bool EJitCache::put(uint64_t cacheKey, void *funcPtr,
           periodIndex_.erase(pit);
       }
     }
+    cache_.erase(oldIt);
   }
 
+  // 2. Evict LRU entries until there is room for the new entry.
   while (!cache_.empty() &&
          (cache_.size() >= maxEntries_ ||
           currentTotalSize_ + codeSize > maxTotalSize_))
     evictLRU();
 
-  it->second = {funcPtr, codeSize, getTimestamp(),
-                SmallVector<std::string, 4>(periodDeps.begin(),
-                                            periodDeps.end())};
-  currentTotalSize_ += codeSize;
-
+  // 3. Insert fully-formed Entry — no orphan window, no re-find.
   lruList_.push_front(cacheKey);
-  lruIter_[cacheKey] = lruList_.begin();
+  Entry e{funcPtr, codeSize, lruList_.begin(),
+          SmallVector<std::string, 4>(periodDeps.begin(), periodDeps.end())};
+  cache_.emplace(cacheKey, std::move(e));
+  currentTotalSize_ += codeSize;
 
   for (const auto &dep : periodDeps)
     periodIndex_[dep].insert(cacheKey);
@@ -113,12 +88,8 @@ void EJitCache::invalidateByPeriod(const std::string &periodName,
     auto cacheIt = cache_.find(key);
     if (cacheIt != cache_.end()) {
       currentTotalSize_ -= cacheIt->second.codeSize;
+      lruList_.erase(cacheIt->second.lruIt);  // O(1) via embedded iterator
       cache_.erase(cacheIt);
-    }
-    auto lruIt = lruIter_.find(key);
-    if (lruIt != lruIter_.end()) {
-      lruList_.erase(lruIt->second);
-      lruIter_.erase(lruIt);
     }
   }
   periodIndex_.erase(it);
@@ -128,7 +99,6 @@ void EJitCache::clear() {
   std::unique_lock<decltype(mutex_)> lock(mutex_);
   cache_.clear();
   lruList_.clear();
-  lruIter_.clear();
   periodIndex_.clear();
   currentTotalSize_ = 0;
 }
@@ -158,24 +128,28 @@ void EJitCache::evictLRU() {
   if (lruList_.empty())
     return;
 
+  // Invariant: every key in lruList_ has a corresponding entry in cache_.
+  // This is maintained by put() (insert + push_front together) and
+  // invalidateByPeriod() (erase from both together).
   uint64_t key = lruList_.back();
+  lruList_.pop_back();
+
   auto it = cache_.find(key);
-  if (it != cache_.end()) {
-    currentTotalSize_ -= it->second.codeSize;
+  assert(it != cache_.end() && "lruList_/cache_ invariant broken");
+  if (it == cache_.end())
+    return;
 
-    for (const auto &dep : it->second.periodDeps) {
-      auto pit = periodIndex_.find(dep);
-      if (pit != periodIndex_.end()) {
-        pit->second.erase(key);
-        if (pit->second.empty())
-          periodIndex_.erase(pit);
-      }
+  currentTotalSize_ -= it->second.codeSize;
+
+  for (const auto &dep : it->second.periodDeps) {
+    auto pit = periodIndex_.find(dep);
+    if (pit != periodIndex_.end()) {
+      pit->second.erase(key);
+      if (pit->second.empty())
+        periodIndex_.erase(pit);
     }
-
-    cache_.erase(it);
   }
 
-  lruIter_.erase(key);
-  lruList_.pop_back();
+  cache_.erase(it);
   evictions_++;
 }

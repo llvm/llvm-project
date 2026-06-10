@@ -26,7 +26,8 @@
 namespace llvm {
 namespace ejit {
 
-/// Thread-safe LRU code cache with size and entry limits.
+/// Thread-safe LRU code cache. Uses iterator embedding in Entry to keep
+/// LRU maintenance at a single hash lookup per getOrNull (no reverse map).
 /// Cache key: uint64_t = funcIdx(32b) | dim3(8b) | dim2(8b) | dim1(8b) | dim0(8b)
 class EJitCache {
 public:
@@ -35,11 +36,13 @@ public:
 #else
   using MutexType = std::shared_mutex;
 #endif
+  using LruList = std::list<uint64_t>;
+
   struct Entry {
     void *funcPtr;
     size_t codeSize;
-    uint64_t lastAccessTime;
-    SmallVector<std::string, 4> periodDeps; // 0-4 typical, avoids heap alloc
+    LruList::iterator lruIt;           // embedded iterator → O(1) splice/erase
+    SmallVector<std::string, 4> periodDeps;
   };
 
   struct Stats {
@@ -54,7 +57,7 @@ public:
   EJitCache(size_t maxEntries = 256, size_t maxTotalSize = 32 * 1024 * 1024,
             size_t maxSingleFuncSize = 512 * 1024);
 
-  /// Look up a cache entry. Returns nullptr on miss.
+  /// Look up a cache entry. Single hash find + O(1) LRU bump via embedded iterator.
   void *getOrNull(uint64_t cacheKey);
 
   /// Insert a compiled function into the cache.
@@ -79,8 +82,7 @@ private:
 
   mutable MutexType mutex_;
   std::unordered_map<uint64_t, Entry> cache_;
-  std::list<uint64_t> lruList_;
-  std::unordered_map<uint64_t, std::list<uint64_t>::iterator> lruIter_;
+  LruList lruList_;                                     // uint64_t keys in LRU order
   std::unordered_map<std::string, std::set<uint64_t>> periodIndex_;
 
   size_t maxEntries_;
