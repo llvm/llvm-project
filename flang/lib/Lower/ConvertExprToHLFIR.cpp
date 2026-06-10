@@ -1851,13 +1851,18 @@ private:
     llvm_unreachable("unknown descriptor inquiry");
   }
 
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::RankOneBoundElement &x) {
+    TODO(getLoc(), "rank-1 bound element lowering");
+  }
+
   /// Generate a conditional expression as an hlfir.conditional op whose
   /// regions yield the then/else values. Materialization into memory is
   /// deferred to the bufferization pass.
   template <typename T>
   hlfir::Entity
   genConditionalOp(const Fortran::evaluate::ConditionalExpr<T> &condExpr,
-                   mlir::Type elementType, bool isPolymorphic) {
+                   mlir::Type elementType, bool isPolymorphic) {  
     const mlir::Location loc{getLoc()};
     fir::FirOpBuilder &builder{getBuilder()};
     // Lower the condition to i1.
