@@ -133,6 +133,18 @@ entry:
   ret float %call
 }
 
+define float @test_rootn_afn_f32__2_nsz_ninf(float %x) #0 {
+; CHECK-LABEL: define float @test_rootn_afn_f32__2_nsz_ninf(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ninf nsz afn float @llvm.sqrt.f32(float [[X]]), !fpmath [[META0:![0-9]+]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+entry:
+  %call = tail call afn nsz ninf float @_Z5rootnfi(float %x, i32 2)
+  ret float %call
+}
+
 define <2 x float> @test_rootn_afn_v2f32__2(<2 x float> %x) #0 {
 ; CHECK-LABEL: define <2 x float> @test_rootn_afn_v2f32__2(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) #[[ATTR0]] {
@@ -443,3 +455,6 @@ declare <2 x half> @_Z5rootnDv2_DhDv2_i(<2 x half>, <2 x i32>) #0
 attributes #0 = { mustprogress nofree norecurse nounwind willreturn memory(none) }
 attributes #1 = { mustprogress nofree nounwind willreturn memory(none) }
 
+;.
+; CHECK: [[META0]] = !{float 2.000000e+00}
+;.
