@@ -11,8 +11,8 @@ module {
   cir.func @promote_simple_stack_slots() -> !s32i {
     // CHECK: %[[CONST:.*]] = cir.const #cir.int<42>
     // CHECK: cir.return %[[CONST]]
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
-    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init] {alignment = 4 : i64}
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+    %1 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
     %2 = cir.const #cir.int<42> : !s32i
     cir.store %2, %1 : !s32i, !cir.ptr<!s32i>
     %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
