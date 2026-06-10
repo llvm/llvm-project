@@ -16,7 +16,7 @@
 ; SPIRV64-DAG: %[[#Int64:]] = OpTypeInt 64 0
 ; SPIRV64-DAG: %[[#Int64Ptr:]] = OpTypePointer Generic %[[#Int64]]
 
-define ptr addrspace(4)  @load_ptr(ptr addrspace(4) %ptr) {
+define ptr addrspace(4) @load_ptr(ptr addrspace(4) %ptr) {
 ; CHECK-LABEL: OpFunction %[[#]]
 ; CHECK:       %[[#Ptr:]] = OpFunctionParameter %[[#PtrInt8Ptr]]
 ; SPIRV32:       %[[#ConvertPtr:]] = OpBitcast %[[#Int32Ptr]] %[[#Ptr]]
