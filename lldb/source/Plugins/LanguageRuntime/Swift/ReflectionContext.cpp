@@ -67,6 +67,10 @@ struct DescriptorFinderForwarder : public swift::reflection::DescriptorFinder {
     m_image_added |= image_added;
   }
 
+  /// Record that LLDB has encountered an Embedded Swift type and thus that the
+  /// external descriptor finder should be enabled.
+  void SetEmbedded() { m_embedded = true; }
+
 private:
   bool shouldConsultDescriptorFinder() {
     switch (ModuleList::GetGlobalModuleListProperties()
@@ -76,8 +80,12 @@ private:
     case lldb_private::AutoBool::False:
       return false;
     case lldb_private::AutoBool::Auto:
-      // Full DWARF debugging is auto-enabled if there is no reflection metadata
-      // to read from.
+      // Embedded Swift never has reflection metadata for its types, so the
+      // external descriptor finder is the only source of type information.
+      if (m_embedded)
+        return true;
+      // Otherwise, full DWARF debugging is auto-enabled if there is no
+      // reflection metadata to read from.
       return !m_image_added;
     }
   }
@@ -85,6 +93,7 @@ private:
   llvm::SmallVector<swift::reflection::DescriptorFinder *, 1>
       m_descriptor_finders;
   bool m_image_added = false;
+  bool m_embedded = false;
 };
 
 /// An implementation of the generic ReflectionContextInterface that
@@ -188,6 +197,11 @@ public:
   llvm::Expected<const swift::reflection::TypeInfo &>
   GetTypeInfo(CompilerType type, swift::remote::TypeInfoProvider *provider,
               swift::reflection::DescriptorFinder *descriptor_finder) override {
+    if (SwiftLanguageRuntime::GetManglingFlavor(
+            type.GetMangledTypeName().GetStringRef()) ==
+        swift::Mangle::ManglingFlavor::Embedded)
+      m_forwader.SetEmbedded();
+
     auto type_ref_or_err = GetCanonicalTypeRef(type);
     if (!type_ref_or_err)
       return type_ref_or_err.takeError();
