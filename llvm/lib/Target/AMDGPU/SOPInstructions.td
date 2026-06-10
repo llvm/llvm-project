@@ -494,11 +494,6 @@ let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in {
                  (S_CVT_I32_F32 (f32 $src0))>;
     def : GCNPat<(i32 (UniformBinFrag<fp_to_uint_sat> f32:$src0, i32)),
                  (S_CVT_U32_F32 (f32 $src0))>;
-
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_sint_sat_gi> f32:$src0)),
-                 (S_CVT_I32_F32 (f32 $src0))>;
-    def : GCNPat<(i32 (UniformUnaryFrag<fp_to_uint_sat_gi> f32:$src0)),
-                 (S_CVT_U32_F32 (f32 $src0))>;
 }
 
 let hasSideEffects = 1 in {
