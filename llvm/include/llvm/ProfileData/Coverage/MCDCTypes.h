@@ -61,7 +61,7 @@ using Parameters =
 /// \tparam MaybeConstMCDCParameters Expected inferred. May be const.
 /// \param MCDCParams May be const.
 template <class MaybeConstInnerParameters, class MaybeConstMCDCParameters>
-static auto &getParams(MaybeConstMCDCParameters &MCDCParams) {
+auto &getParams(MaybeConstMCDCParameters &MCDCParams) {
   using InnerParameters =
       typename std::remove_const<MaybeConstInnerParameters>::type;
   MaybeConstInnerParameters *Params = std::get_if<InnerParameters>(&MCDCParams);

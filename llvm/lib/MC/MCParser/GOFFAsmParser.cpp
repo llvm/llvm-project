@@ -13,14 +13,6 @@ using namespace llvm;
 namespace {
 
 class GOFFAsmParser : public MCAsmParserExtension {
-  template <bool (GOFFAsmParser::*HandlerMethod)(StringRef, SMLoc)>
-  void addDirectiveHandler(StringRef Directive) {
-    MCAsmParser::ExtensionDirectiveHandler Handler =
-        std::make_pair(this, HandleDirective<GOFFAsmParser, HandlerMethod>);
-
-    getParser().addDirectiveHandler(Directive, Handler);
-  }
-
 public:
   GOFFAsmParser() = default;
 
