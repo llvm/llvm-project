@@ -622,7 +622,7 @@ static Cl::Kinds ClassifyBinaryOp(ASTContext &Ctx, const BinaryOperator *E) {
   // expressions can be either lvalues or prvalues depending on whether they
   // might resolve to an overloaded operator.
   if (E->getType() == Ctx.DependentTy)
-    return ClassifyExprValueKind(Ctx.getLangOpts(), E, E->getValueKind());
+    return ClassifyInternal(Ctx, E);
 
   // C++ [expr.ass]p1: All [...] return an lvalue referring to the left operand.
   // Except we override this for writes to ObjC properties.
