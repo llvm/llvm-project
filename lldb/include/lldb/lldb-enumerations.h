@@ -75,7 +75,7 @@ enum StateType {
   eStateInvalid = 0,
   eStateUnloaded,  ///< Process is object is valid, but not currently loaded
   eStateConnected, ///< Process is connected to remote debug services, but not
-                   /// launched or attached to anything yet
+                   ///< launched or attached to anything yet
   eStateAttaching, ///< Process is currently trying to attach
   eStateLaunching, ///< Process is in the process of launching
   // The state changes eStateAttaching and eStateLaunching are both sent while
@@ -85,7 +85,7 @@ enum StateType {
   eStateStopped,   ///< Process or thread is stopped and can be examined.
   eStateRunning,   ///< Process or thread is running and can't be examined.
   eStateStepping,  ///< Process or thread is in the process of stepping and can
-                   /// not be examined.
+                   ///< not be examined.
   eStateCrashed,   ///< Process or thread has crashed and can be examined.
   eStateDetached,  ///< Process has been detached and can't be examined.
   eStateExited,    ///< Process has exited and can't be examined.
@@ -99,13 +99,13 @@ enum StateType {
 FLAGS_ENUM(LaunchFlags){
     eLaunchFlagNone = 0u,
     eLaunchFlagExec = (1u << 0),  ///< Exec when launching and turn the calling
-                                  /// process into a new process
+                                  ///< process into a new process
     eLaunchFlagDebug = (1u << 1), ///< Stop as soon as the process launches to
-                                  /// allow the process to be debugged
+                                  ///< allow the process to be debugged
     eLaunchFlagStopAtEntry = (1u
                               << 2), ///< Stop at the program entry point
-                                     /// instead of auto-continuing when
-                                     /// launching or attaching at entry point
+                                     ///< instead of auto-continuing when
+                                     ///< launching or attaching at entry point
     eLaunchFlagDisableASLR =
         (1u << 3), ///< Disable Address Space Layout Randomization
     eLaunchFlagDisableSTDIO =
@@ -1321,10 +1321,10 @@ enum DWIMPrintVerbosity {
 
 enum WatchpointValueKind {
   eWatchPointValueKindInvalid = 0,
-  ///< Watchpoint was created watching a variable
+  /// Watchpoint was created watching a variable
   eWatchPointValueKindVariable = 1,
-  ///< Watchpoint was created watching the result of an expression that was
-  ///< evaluated at creation time.
+  /// Watchpoint was created watching the result of an expression that was
+  /// evaluated at creation time.
   eWatchPointValueKindExpression = 2,
 };
 
