@@ -3754,7 +3754,8 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
           SFINAETrap Trap(*this);
           CheckTemplateArgumentInfo CTAI;
           TemplateArgumentLoc Arg(
-              TemplateArgument(StringLit, /*IsCanonical=*/false), StringLit);
+              TemplateArgument(StringLit, /*CanonKind=*/std::nullopt),
+              StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
                   /*ArgumentPackIndex=*/0, CTAI, CTAK_Specified) ||

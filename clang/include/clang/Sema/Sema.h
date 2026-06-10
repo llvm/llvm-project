@@ -3275,7 +3275,11 @@ public:
   /// dependent and not the current instantiation).
   DeclContext *computeDeclContext(const CXXScopeSpec &SS,
                                   bool EnteringContext = false);
-  bool isDependentScopeSpecifier(const CXXScopeSpec &SS);
+
+  // FIXME: Make this a method of CXXScopeSpec.
+  static bool isDependentScopeSpecifier(const CXXScopeSpec &SS) {
+    return SS.getScopeRep().isDependent();
+  }
 
   /// If the given nested name specifier refers to the current
   /// instantiation, return the declaration that corresponds to that
@@ -10282,6 +10286,8 @@ public:
   /// If `Reversed` is true, the parameters of `NewType` will be compared in
   /// reverse order. That's useful if one of the functions is being used as a
   /// C++20 synthesized operator overload with a reversed parameter order.
+  /// The parameter types are assumed to be in functional canonical form
+  /// (CanonicalizationKind::Functional).
   bool FunctionParamTypesAreEqual(ArrayRef<QualType> Old,
                                   ArrayRef<QualType> New,
                                   unsigned *ArgPos = nullptr,

@@ -426,13 +426,9 @@ void TemplateArgument::Profile(llvm::FoldingSetNodeID &ID,
     break;
 
   case Expression: {
-    const Expr *E = getAsExpr();
-    bool IsCanonical = isCanonicalExpr();
-    ID.AddBoolean(IsCanonical);
-    if (IsCanonical)
-      E->Profile(ID, Context, true);
-    else
-      ID.AddPointer(E);
+    CanonicalizationKindOrNone Kind = getExprCanonKind();
+    ID.AddInteger(Kind.toInternalRepresentation());
+    getAsExpr()->Profile(ID, Context, Kind);
     break;
   }
 
@@ -453,7 +449,7 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
     return TypeOrValue.V == Other.TypeOrValue.V;
   case Expression:
     return TypeOrValue.V == Other.TypeOrValue.V &&
-           TypeOrValue.IsCanonicalExpr == Other.TypeOrValue.IsCanonicalExpr;
+           TypeOrValue.ExprCanonKind == Other.TypeOrValue.ExprCanonKind;
 
   case Template:
   case TemplateExpansion:
@@ -499,7 +495,7 @@ TemplateArgument TemplateArgument::getPackExpansionPattern() const {
 
   case Expression:
     return TemplateArgument(cast<PackExpansionExpr>(getAsExpr())->getPattern(),
-                            isCanonicalExpr());
+                            getExprCanonKind());
 
   case TemplateExpansion:
     return TemplateArgument(getAsTemplateOrTemplatePattern());
@@ -572,7 +568,7 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
 
   case Expression: {
     PrintingPolicy ExprPolicy = Policy;
-    ExprPolicy.PrintAsCanonical = isCanonicalExpr();
+    ExprPolicy.PrintAsCanonical = bool(getExprCanonKind());
     getAsExpr()->printPretty(Out, nullptr, ExprPolicy);
     break;
   }

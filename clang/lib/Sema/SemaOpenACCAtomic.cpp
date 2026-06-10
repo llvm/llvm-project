@@ -424,9 +424,9 @@ class AtomicOperandChecker {
 
     llvm::FoldingSetNodeID LHS_ID, InnerLHS_ID, InnerRHS_ID;
     AssignInf.LHS->Profile(LHS_ID, SemaRef.getASTContext(),
-                           /*Canonical=*/true);
+                           CanonicalizationKind::Structural);
     BinInf->LHS->Profile(InnerLHS_ID, SemaRef.getASTContext(),
-                         /*Canonical=*/true);
+                         CanonicalizationKind::Structural);
 
     // This is X = X binop expr;
     // Check the RHS is an expression.
@@ -440,7 +440,7 @@ class AtomicOperandChecker {
           IDACInfo::AssignBinOp, AssignInf.LHS};
 
     BinInf->RHS->Profile(InnerRHS_ID, SemaRef.getASTContext(),
-                         /*Canonical=*/true);
+                         CanonicalizationKind::Structural);
     // This is X = expr binop X;
     // Check the LHS is an expression
     if (LHS_ID == InnerRHS_ID)
@@ -581,11 +581,7 @@ class AtomicOperandChecker {
 
   bool CheckVarRefsSame(IDACInfo::ExprKindTy FirstKind, const Expr *FirstX,
                         IDACInfo::ExprKindTy SecondKind, const Expr *SecondX) {
-    llvm::FoldingSetNodeID First_ID, Second_ID;
-    FirstX->Profile(First_ID, SemaRef.getASTContext(), /*Canonical=*/true);
-    SecondX->Profile(Second_ID, SemaRef.getASTContext(), /*Canonical=*/true);
-
-    if (First_ID == Second_ID)
+    if (SemaRef.getASTContext().hasSameExpr(FirstX, SecondX))
       return false;
 
     PartialDiagnostic PD =

@@ -1412,13 +1412,12 @@ TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(
   }
 
   case TemplateArgument::Expression: {
-    PackExpansionExpr *Expansion
-      = cast<PackExpansionExpr>(Argument.getAsExpr());
-    Expr *Pattern = Expansion->getPattern();
+    auto *Expansion = cast<PackExpansionExpr>(OrigLoc.getSourceExpression());
     Ellipsis = Expansion->getEllipsisLoc();
     NumExpansions = Expansion->getNumExpansions();
+    Expr *Pattern = Expansion->getPattern();
     return TemplateArgumentLoc(
-        TemplateArgument(Pattern, Argument.isCanonicalExpr()), Pattern);
+        TemplateArgument(Pattern, /*CanonKind=*/std::nullopt), Pattern);
   }
 
   case TemplateArgument::TemplateExpansion:

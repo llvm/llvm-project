@@ -129,7 +129,7 @@ namespace PR45083 {
   template<typename> void f() {
     decltype(({})) x; // expected-error {{incomplete type}}
   }
-  template void f<int>(); // expected-note {{instantiation of}}
+  template void f<int>();
 
   template<typename> auto g() {
     auto c = [](auto, int) -> decltype(({})) {};

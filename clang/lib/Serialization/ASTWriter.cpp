@@ -518,6 +518,7 @@ void TypeLocWriter::VisitTypeOfTypeLoc(TypeOfTypeLoc TL) {
 }
 
 void TypeLocWriter::VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
+  Record.AddStmt(TL.getUnderlyingExpr());
   addSourceLocation(TL.getDecltypeLoc());
   addSourceLocation(TL.getRParenLoc());
 }

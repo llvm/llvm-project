@@ -11069,10 +11069,10 @@ bool Sema::CheckSizeofMemaccessArgument(const Expr *LenExpr, const Expr *Dest,
   QualType PointeeTy = DestPtrTy->getPointeeType();
 
   if (SizeOfArgID == llvm::FoldingSetNodeID())
-    SizeOfArg->Profile(SizeOfArgID, Context, true);
+    SizeOfArg->Profile(SizeOfArgID, Context, CanonicalizationKind::Structural);
 
   llvm::FoldingSetNodeID DestID;
-  Dest->Profile(DestID, Context, true);
+  Dest->Profile(DestID, Context, CanonicalizationKind::Structural);
   if (DestID == SizeOfArgID) {
     // TODO: For strncpy() and friends, this could suggest sizeof(dst)
     //       over sizeof(src) as well.

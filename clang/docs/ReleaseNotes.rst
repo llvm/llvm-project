@@ -215,6 +215,12 @@ Resolutions to C++ Defect Reports
 - Implemented `CWG1780 Explicit instantiation/specialization of generic lambda
   operator() <https://cplusplus.github.io/CWG/issues/1780.html>`_
 
+- Clang now implements the proposed direction for CWG1980: now it's possible to overload on signatures with
+  differing requirements for instantiation failure, effectively supporting SFINAE on `void_t`. (#GH190388)
+- Clang now implements CWG2064: `decltype(expr)` is not dependent anymore when the value of the expression
+  is dependent. (#GH8740) (#GH61818)
+- Clang now implements CWG3179: SFINAE tricks on void function parameters are
+  not allowed.
 - Clang now allows omitting ``typename`` before a template name in a
   conversion operator, implementing `CWG2413 <https://wg21.link/cwg2413>`_.
 

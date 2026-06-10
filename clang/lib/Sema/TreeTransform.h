@@ -4078,7 +4078,7 @@ public:
         return TemplateArgumentLoc();
 
       return TemplateArgumentLoc(TemplateArgument(Result.get(),
-                                                  /*IsCanonical=*/false),
+                                                  /*CanonKind=*/std::nullopt),
                                  Result.get());
     }
 
@@ -5109,7 +5109,7 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
     if (E.isInvalid())
       return true;
     Output = TemplateArgumentLoc(
-        TemplateArgument(E.get(), /*IsCanonical=*/false), E.get());
+        TemplateArgument(E.get(), /*CanonKind=*/std::nullopt), E.get());
     return false;
   }
   }
@@ -7057,17 +7057,15 @@ QualType TreeTransform<Derived>::TransformTypeOfType(TypeLocBuilder &TLB,
   return Result;
 }
 
-template<typename Derived>
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,
                                                        DecltypeTypeLoc TL) {
-  const DecltypeType *T = TL.getTypePtr();
-
   // decltype expressions are not potentially evaluated contexts
   EnterExpressionEvaluationContext Unevaluated(
       SemaRef, Sema::ExpressionEvaluationContext::Unevaluated, nullptr,
       Sema::ExpressionEvaluationContextRecord::EK_Decltype);
 
-  ExprResult E = getDerived().TransformExpr(T->getUnderlyingExpr());
+  ExprResult E = getDerived().TransformExpr(TL.getUnderlyingExpr());
   if (E.isInvalid())
     return QualType();
 
@@ -7076,15 +7074,14 @@ QualType TreeTransform<Derived>::TransformDecltypeType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() ||
-      E.get() != T->getUnderlyingExpr()) {
+  if (getDerived().AlwaysRebuild() || E.get() != TL.getUnderlyingExpr()) {
     Result = getDerived().RebuildDecltypeType(E.get(), TL.getDecltypeLoc());
     if (Result.isNull())
       return QualType();
   }
-  else E.get();
 
   DecltypeTypeLoc NewTL = TLB.push<DecltypeTypeLoc>(Result);
+  NewTL.setUnderlyingExpr(E.get());
   NewTL.setDecltypeLoc(TL.getDecltypeLoc());
   NewTL.setRParenLoc(TL.getRParenLoc());
   return Result;
@@ -16556,7 +16553,7 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
         ArgStorage = TemplateArgument(
             new (getSema().Context)
                 PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt),
-            /*IsCanonical=*/false);
+            /*CanonKind=*/std::nullopt);
       }
       PackArgs = ArgStorage;
     }
@@ -16761,9 +16758,11 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     Replacement = E->getReplacement();
   }
 
+  // FIXME: Track in SubstNonTypeTemplateParmExpr the canonical kind of the
+  // expression.
   return getDerived().RebuildSubstNonTypeTemplateParmExpr(
       AssociatedDecl, E->getIndex(), ParamType, E->getNameLoc(),
-      TemplateArgument(Replacement.get(), /*IsCanonical=*/false),
+      TemplateArgument(Replacement.get(), /*CanonKind=*/std::nullopt),
       E->getPackIndex(), E->getFinal());
 }
 

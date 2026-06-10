@@ -1339,7 +1339,8 @@ void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
   OS << "decltype(";
   if (const Expr *E = T->getUnderlyingExpr()) {
     PrintingPolicy ExprPolicy = Policy;
-    ExprPolicy.PrintAsCanonical = T->isCanonicalUnqualified();
+    // FIXME: Support printing as functionally equivalent canonical type.
+    ExprPolicy.PrintAsCanonical = bool(T->getExprCanonicalizationKind());
     E->printPretty(OS, nullptr, ExprPolicy);
   }
   OS << ')';

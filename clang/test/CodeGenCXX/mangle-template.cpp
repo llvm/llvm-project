@@ -383,9 +383,7 @@ namespace fixed_size_parameter_pack {
 namespace type_qualifier {
   template<typename T> using int_t = int;
   template<typename T> void f(decltype(int_t<T*>() + 1)) {}
-  // FIXME: This mangling doesn't work: we need to mangle the
-  // instantiation-dependent 'int_t' operand.
-  // CHECK: @_ZN14type_qualifier1fIPiEEvDTplcvi_ELi1EE
+  // CHECK: @_ZN14type_qualifier1fIPiEEvDTplcvNS_5int_tIPT_EE_ELi1EE
   template void f<int*>(int);
 
   // Note that this template has different constraints but would mangle the
@@ -395,9 +393,47 @@ namespace type_qualifier {
   struct impl { using type = void; };
   template<typename T> using alias = impl;
   template<typename T> void g(decltype(alias<T*>::type(), 1)) {}
-  // FIXME: Similarly we need to mangle the `T*` in here.
-  // CHECK: @_ZN14type_qualifier1gIPiEEvDTcmcvv_ELi1EE
+  // CHECK: @_ZN14type_qualifier1gIPiEEvDTcmcvNS_5aliasIPT_E4typeE_ELi1EE
   template void g<int*>(int);
+
+  struct impl2 : private impl { using impl::type; };
+  template<typename T> using alias2 = impl2;
+  template<typename T> void h(decltype(alias2<T*>::type(), 1)) {}
+  // CHECK: @_ZN14type_qualifier1hIPiEEvDTcmcvNS_6alias2IPT_E4typeE_ELi1EE
+  template void h<int*>(int);
+
+  struct impl3 {
+    template<class> using type = void;
+  };
+  template<typename T> using alias3 = impl3;
+  template<typename T> void i(decltype(alias3<T*>::type<char>(), 1)) {}
+  // CHECK: @_ZN14type_qualifier1iIPiEEvDTcmcvNS_6alias3IPT_E4typeIcEE_ELi1EE
+  template void i<int*>(int);
+
+  struct impl4 : impl3 {
+    using impl3::type;
+  };
+  template<typename T> using alias4 = impl4;
+  template<typename T> void j(decltype(alias4<T*>::type<char>(), 1)) {}
+  // CHECK: @_ZN14type_qualifier1jIPiEEvDTcmcvNS_6alias4IPT_E4typeIcEE_ELi1EE
+  template void j<int*>(int);
+
+  struct impl5 {
+    struct type {};
+  };
+  template<typename T> using alias5 = impl5;
+  template<typename T> void k(decltype(alias5<T*>::type(), 1)) {}
+  // CHECK: @_ZN14type_qualifier1kIPiEEvDTcmcvNS_6alias5IPT_E4typeE_ELi1EE
+  template void k<int*>(int);
+
+  struct impl6 {
+    template<class> struct type {};
+  };
+  template<typename T> using alias6 = impl6;
+  template<template <class> class> struct foo {};
+  template<typename T> void l(foo<alias6<T*>::type>) {}
+  // CHECK: @_ZN14type_qualifier1lIPiEEvNS_3fooINS_6alias6IPT_E4typeEEE
+  template void l<int*>(foo<impl6::type>);
 }
 
 namespace unresolved_template_specialization_type {

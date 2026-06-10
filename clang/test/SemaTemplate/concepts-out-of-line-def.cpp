@@ -517,15 +517,15 @@ concept something_interesting = requires {
 
 template <class T>
 struct X { // #defined-here
-      void foo() requires requires { requires is_not_same_v<T, int>; };
-      void bar(decltype(requires { requires is_not_same_v<T, int>; }));
+      void foo() requires requires { requires is_not_same_v<T, int>; }; // #foo-decl
+      void bar(decltype(requires { requires is_not_same_v<T, int>; })); // #bar-decl
 };
 
 template <class T>
 void X<T>::foo() requires requires { requires something_interesting<T>; } {}
 // expected-error@-1{{definition of 'foo' does not match any declaration}}
 // expected-note@#defined-here{{defined here}}
-// expected-note@-8{{member declaration nearly matches}}
+// expected-note@#foo-decl{{member declaration nearly matches}}
 
 template <class T>
 void X<T>::foo() requires requires { requires is_not_same_v<T, int>; } {} // ok
@@ -534,6 +534,7 @@ template <class T>
 void X<T>::bar(decltype(requires { requires something_interesting<T>; })) {}
 // expected-error@-1{{definition of 'bar' does not match any declaration}}
 // expected-note@#defined-here{{defined here}}
+// expected-note@#bar-decl{{member declaration nearly matches}}
 
 template <class T>
 void X<T>::bar(decltype(requires { requires is_not_same_v<T, int>; })) {}

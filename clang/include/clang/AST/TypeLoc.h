@@ -2275,6 +2275,7 @@ public:
 // FIXME: add LParenLoc, it is tricky to support due to the limitation of
 // annotated-decltype token.
 struct DecltypeTypeLocInfo {
+  Expr *UnderlyingExpr;
   SourceLocation DecltypeLoc;
   SourceLocation RParenLoc;
 };
@@ -2282,7 +2283,8 @@ class DecltypeTypeLoc
     : public ConcreteTypeLoc<UnqualTypeLoc, DecltypeTypeLoc, DecltypeType,
                              DecltypeTypeLocInfo> {
 public:
-  Expr *getUnderlyingExpr() const { return getTypePtr()->getUnderlyingExpr(); }
+  Expr *getUnderlyingExpr() const { return getLocalData()->UnderlyingExpr; }
+  void setUnderlyingExpr(Expr *E) { getLocalData()->UnderlyingExpr = E; }
 
   SourceLocation getDecltypeLoc() const { return getLocalData()->DecltypeLoc; }
   void setDecltypeLoc(SourceLocation Loc) { getLocalData()->DecltypeLoc = Loc; }
@@ -2295,6 +2297,7 @@ public:
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setUnderlyingExpr(getTypePtr()->getUnderlyingExpr());
     setDecltypeLoc(Loc);
     setRParenLoc(Loc);
   }

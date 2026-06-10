@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -triple x86_64 -std=c++26 -ast-dump -ast-dump-filter=Test %s \
-// RUN: | FileCheck --match-full-lines %s
+// RUN: | FileCheck --match-full-lines --check-prefixes CHECK,CHECK-SRC %s
 
 // Test with serialization:
 // RUN: %clang_cc1 -triple x86_64 -std=c++26 -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple x86_64 -x c++ -std=c++26 -include-pch %t -ast-dump-all -ast-dump-filter=Test /dev/null \
 // RUN: | sed -e "s/ <undeserialized declarations>//" -e "s/ imported//" \
-// RUN: | FileCheck --match-full-lines %s
+// RUN: | FileCheck --match-full-lines --check-prefixes CHECK,CHECK-PCH %s
 
 namespace TestClassRedecl {
   template <class T> struct A {};
@@ -71,22 +71,25 @@ namespace TestNestedClassRedecl {
   template <class T> struct A;
   template <class T> template <class U> struct A<T>::B {};
   template struct A<int>::B<char>;
+// FIXME: Serialization doesn't preserve exact parent because DeclContext merging doesn't discriminate redeclarations properly.
 // CHECK-LABEL: Dumping TestNestedClassRedecl:
-// CHECK: |-ClassTemplateDecl 0x[[TestNestedClassRedecl_A_T1:[^ ]+]] <line:[[@LINE-7]]:{{.+}} A external-linkage
-// CHECK: | |-CXXRecordDecl 0x[[TestNestedClassRedecl_A_D1:[^ ]+]] <{{.+}}line:[[@LINE-6]]:{{.+}}> line:[[@LINE-8]]:{{.+}} struct A definition
-// CHECK: | | `-ClassTemplateDecl 0x[[TestNestedClassRedecl_B_T1:[^ ]+]] <line:[[@LINE-8]]:{{.+}} B external-linkage
+// CHECK: |-ClassTemplateDecl 0x[[TestNestedClassRedecl_A_T1:[^ ]+]] <line:[[@LINE-8]]:{{.+}} A external-linkage
+// CHECK: | |-CXXRecordDecl 0x[[TestNestedClassRedecl_A_D1:[^ ]+]] <{{.+}}line:[[@LINE-7]]:{{.+}}> line:[[@LINE-9]]:{{.+}} struct A definition
+// CHECK: | | `-ClassTemplateDecl 0x[[TestNestedClassRedecl_B_T1:[^ ]+]] <line:[[@LINE-9]]:{{.+}} B external-linkage
 // CHECK: | |   `-CXXRecordDecl 0x[[TestNestedClassRedecl_B_D1:[^ ]+]] {{.+}} struct B
-// CHECK: | `-ClassTemplateSpecializationDecl 0x[[TestNestedClassRedecl_A_S1:[^ ]+]] <line:[[@LINE-8]]:{{.+}} line:[[@LINE-11]]:{{.+}} struct A definition external-linkage instantiated_from 0x[[TestNestedClassRedecl_A_D2:[^ ]+]] implicit_instantiation
-// CHECK: |   |-ClassTemplateDecl 0x{{.+}} <line:[[@LINE-11]]:{{.+}} B external-linkage
+// CHECK: | `-ClassTemplateSpecializationDecl 0x[[TestNestedClassRedecl_A_S1:[^ ]+]] <line:[[@LINE-9]]:{{.+}} line:[[@LINE-12]]:{{.+}} struct A definition external-linkage instantiated_from 0x[[TestNestedClassRedecl_A_D2:[^ ]+]] implicit_instantiation
+// CHECK: |   |-ClassTemplateDecl 0x{{.+}} <line:[[@LINE-12]]:{{.+}} B external-linkage
 // CHECK: |   | |-CXXRecordDecl 0x{{.+}} struct B
 // CHECK: |   | `-ClassTemplateSpecialization  0x[[TestNestedClassRedecl_B_S1:[^ ]+]] 'B'
-// CHECK: |   `-ClassTemplateSpecializationDecl 0x[[TestNestedClassRedecl_B_S1]] <line:[[@LINE-10]]:{{.+}} struct B definition external-linkage instantiated_from 0x[[TestNestedClassRedecl_B_D1]] explicit_instantiation_definition
-// CHECK: |-ClassTemplateDecl 0x{{.+}} prev 0x[[TestNestedClassRedecl_A_T1]] <line:[[@LINE-13]]:{{.+}} A external-linkage
+// CHECK: |   `-ClassTemplateSpecializationDecl 0x[[TestNestedClassRedecl_B_S1]] <line:[[@LINE-11]]:{{.+}} struct B definition external-linkage instantiated_from 0x[[TestNestedClassRedecl_B_D1]] explicit_instantiation_definition
+// CHECK: |-ClassTemplateDecl 0x{{.+}} prev 0x[[TestNestedClassRedecl_A_T1]] <line:[[@LINE-14]]:{{.+}} A external-linkage
 // CHECK: | |-CXXRecordDecl 0x[[TestNestedClassRedecl_A_D2]] prev 0x[[TestNestedClassRedecl_A_D1]] {{.+}} struct A
 // CHECK: | `-ClassTemplateSpecialization 0x[[TestNestedClassRedecl_A_S1]] 'A'
-// CHECK: |-ClassTemplateDecl 0x{{.+}} parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_T1]] <line:[[@LINE-15]]:{{.+}} B external-linkage
-// CHECK: | `-CXXRecordDecl 0x[[TestNestedClassRedecl_B_D2:[^ ]+]] parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_D1]] {{.+}} struct B definition
-// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-16]]:{{.+}} 'B'
+// CHECK-SRC: |-ClassTemplateDecl 0x{{.+}} parent 0x[[TestNestedClassRedecl_A_D2]] prev 0x[[TestNestedClassRedecl_B_T1]] <line:[[@LINE-16]]:{{.+}} B external-linkage
+// CHECK-SRC: | `-CXXRecordDecl 0x[[TestNestedClassRedecl_B_D2:[^ ]+]] parent 0x[[TestNestedClassRedecl_A_D2]] prev 0x[[TestNestedClassRedecl_B_D1]] {{.+}} struct B definition
+// CHECK-PCH: |-ClassTemplateDecl 0x{{.+}} parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_T1]] <line:[[@LINE-18]]:{{.+}} B external-linkage
+// CHECK-PCH: | `-CXXRecordDecl 0x[[TestNestedClassRedecl_B_D2:[^ ]+]] parent 0x[[TestNestedClassRedecl_A_D1]] prev 0x[[TestNestedClassRedecl_B_D1]] {{.+}} struct B definition
+// CHECK: `-ExplicitInstantiationDecl {{.+}} <line:[[@LINE-19]]:{{.+}} 'B'
 // CHECK:   |-NestedNameSpecifier TypeSpec {{.+}}
 // CHECK:   |-ClassTemplateSpecialization 0x[[TestNestedClassRedecl_B_S1]] 'B'
 // CHECK:   `-TemplateArgument {{.+}} type 'char'

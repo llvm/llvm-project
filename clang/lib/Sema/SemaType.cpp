@@ -5291,6 +5291,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
               // Reject, but continue to parse 'float(const void)'.
               if (ParamTy.hasQualifiers())
                 S.Diag(DeclType.Loc, diag::err_void_param_qualified);
+              else if (!Context.hasEquivalentType(ParamTy, Context.VoidTy))
+                S.Diag(DeclType.Loc,
+                       diag::err_void_param_not_equivalent_to_void);
 
               for (const auto *A : Param->attrs()) {
                 S.Diag(A->getLoc(), diag::warn_attribute_on_void_param)
@@ -6083,6 +6086,7 @@ namespace {
     }
     void VisitDecltypeTypeLoc(DecltypeTypeLoc TL) {
       assert(DS.getTypeSpecType() == DeclSpec::TST_decltype);
+      TL.setUnderlyingExpr(DS.getRepAsExpr());
       TL.setDecltypeLoc(DS.getTypeSpecTypeLoc());
       TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
     }
@@ -10080,7 +10084,8 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
     // used to build SFINAE gadgets.
     Diag(E->getExprLoc(), diag::warn_side_effects_unevaluated_context);
   }
-  return Context.getDecltypeType(E, getDecltypeForExpr(E));
+  return Context.getDecltypeType(E, /*ExprCanonKind=*/std::nullopt,
+                                 getDecltypeForExpr(E));
 }
 
 QualType Sema::ActOnPackIndexingType(QualType Pattern, Expr *IndexExpr,

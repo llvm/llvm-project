@@ -69,7 +69,7 @@ namespace NS {
 
 namespace NS {
   // CHECK: @_ZN2NS1fERNS_1CE
-  void f(C&) { } 
+  void f(C&) { }
 }
 
 namespace Test1 {
@@ -122,4 +122,12 @@ struct Inst : public A::Impl<A::Wrap> {};
 
 void Test() { Inst a; }
 
+}
+
+namespace InstantiationDependentDecltype {
+  struct a { a(char); };
+  struct b { a c(); };
+  // CHECK: @_ZN30InstantiationDependentDecltype1fINS_1bEEEvDTcvNS_1aEcldtcvT__E1cEES4_S3_S3_S2_S2_
+  template<typename d> void f(decltype(a(d().c())), decltype(a(d().c())), d, d, a, a);
+  void g(a a, b b) { f(a, a, b, b, a, a); }
 }

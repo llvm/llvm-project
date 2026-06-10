@@ -295,6 +295,14 @@ namespace cwg1968 { // cwg1968: no
 #endif
 } // namespace cwg1968
 
+namespace cwg1980 { // cwg1980: 23 drafting 2014-10-01
+#if __cplusplus >= 201103L
+  template<typename T, typename U> using X = T;
+  template<typename T> X<void, typename T::type> f() {}
+  template<typename T> X<void, typename T::other> f() {}
+#endif
+} // namespace cwg1980
+
 namespace cwg1991 { // cwg1991: 3.9
 #if __cplusplus >= 201103L
   struct A {

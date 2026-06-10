@@ -3513,13 +3513,14 @@ getAllocatorKind(Sema &S, DSAStackTy *Stack, Expr *Allocator) {
   auto AllocatorKindRes = OMPAllocateDeclAttr::OMPUserDefinedMemAlloc;
   llvm::FoldingSetNodeID AEId;
   const Expr *AE = Allocator->IgnoreParenImpCasts();
-  AE->IgnoreImpCasts()->Profile(AEId, S.getASTContext(), /*Canonical=*/true);
+  AE->IgnoreImpCasts()->Profile(AEId, S.getASTContext(),
+                                CanonicalizationKind::Structural);
   for (int I = 0; I < OMPAllocateDeclAttr::OMPUserDefinedMemAlloc; ++I) {
     auto AllocatorKind = static_cast<OMPAllocateDeclAttr::AllocatorTypeTy>(I);
     const Expr *DefAllocator = Stack->getAllocator(AllocatorKind);
     llvm::FoldingSetNodeID DAEId;
     DefAllocator->IgnoreImpCasts()->Profile(DAEId, S.getASTContext(),
-                                            /*Canonical=*/true);
+                                            CanonicalizationKind::Structural);
     if (AEId == DAEId) {
       AllocatorKindRes = AllocatorKind;
       break;
@@ -3541,12 +3542,8 @@ static bool checkPreviousOMPAllocateAttribute(
   if (AllocatorsMatch &&
       AllocatorKind == OMPAllocateDeclAttr::OMPUserDefinedMemAlloc &&
       Allocator && PrevAllocator) {
-    const Expr *AE = Allocator->IgnoreParenImpCasts();
-    const Expr *PAE = PrevAllocator->IgnoreParenImpCasts();
-    llvm::FoldingSetNodeID AEId, PAEId;
-    AE->Profile(AEId, S.Context, /*Canonical=*/true);
-    PAE->Profile(PAEId, S.Context, /*Canonical=*/true);
-    AllocatorsMatch = AEId == PAEId;
+    AllocatorsMatch = S.Context.hasSameExpr(
+        Allocator->IgnoreParenImpCasts(), PrevAllocator->IgnoreParenImpCasts());
   }
   if (!AllocatorsMatch) {
     SmallString<256> AllocatorBuffer;
@@ -11793,11 +11790,11 @@ bool OpenMPAtomicUpdateChecker::checkBinaryOperation(
         Expr *RHS = AtomicInnerBinOp->getRHS();
         llvm::FoldingSetNodeID XId, LHSId, RHSId;
         X->IgnoreParenImpCasts()->Profile(XId, SemaRef.getASTContext(),
-                                          /*Canonical=*/true);
+                                          CanonicalizationKind::Structural);
         LHS->IgnoreParenImpCasts()->Profile(LHSId, SemaRef.getASTContext(),
-                                            /*Canonical=*/true);
+                                            CanonicalizationKind::Structural);
         RHS->IgnoreParenImpCasts()->Profile(RHSId, SemaRef.getASTContext(),
-                                            /*Canonical=*/true);
+                                            CanonicalizationKind::Structural);
         if (XId == LHSId) {
           E = RHS;
           IsXLHSInRHSPart = true;
@@ -11939,7 +11936,8 @@ bool OpenMPAtomicUpdateChecker::checkStatement(Stmt *S, unsigned DiagId,
 /// Get the node id of the fixed point of an expression \a S.
 llvm::FoldingSetNodeID getNodeId(ASTContext &Context, const Expr *S) {
   llvm::FoldingSetNodeID Id;
-  S->IgnoreParenImpCasts()->Profile(Id, Context, true);
+  S->IgnoreParenImpCasts()->Profile(Id, Context,
+                                    CanonicalizationKind::Structural);
   return Id;
 }
 
@@ -13166,8 +13164,10 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
             // Check that the first expression has form v = x.
             Expr *PossibleX = BinOp->getRHS()->IgnoreParenImpCasts();
             llvm::FoldingSetNodeID XId, PossibleXId;
-            Checker.getX()->Profile(XId, Context, /*Canonical=*/true);
-            PossibleX->Profile(PossibleXId, Context, /*Canonical=*/true);
+            Checker.getX()->Profile(XId, Context,
+                                    CanonicalizationKind::Structural);
+            PossibleX->Profile(PossibleXId, Context,
+                               CanonicalizationKind::Structural);
             IsUpdateExprFound = XId == PossibleXId;
             if (IsUpdateExprFound) {
               V = BinOp->getLHS();
@@ -13197,8 +13197,10 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
               // Check that the second expression has form v = x.
               Expr *PossibleX = BinOp->getRHS()->IgnoreParenImpCasts();
               llvm::FoldingSetNodeID XId, PossibleXId;
-              Checker.getX()->Profile(XId, Context, /*Canonical=*/true);
-              PossibleX->Profile(PossibleXId, Context, /*Canonical=*/true);
+              Checker.getX()->Profile(XId, Context,
+                                      CanonicalizationKind::Structural);
+              PossibleX->Profile(PossibleXId, Context,
+                                 CanonicalizationKind::Structural);
               IsUpdateExprFound = XId == PossibleXId;
               if (IsUpdateExprFound) {
                 V = BinOp->getLHS();
@@ -13241,10 +13243,10 @@ StmtResult SemaOpenMP::ActOnOpenMPAtomicDirective(ArrayRef<OMPClause *> Clauses,
                   Expr *PossibleXLHSInSecond =
                       SecondBinOp->getLHS()->IgnoreParenImpCasts();
                   llvm::FoldingSetNodeID X1Id, X2Id;
-                  PossibleXRHSInFirst->Profile(X1Id, Context,
-                                               /*Canonical=*/true);
-                  PossibleXLHSInSecond->Profile(X2Id, Context,
-                                                /*Canonical=*/true);
+                  PossibleXRHSInFirst->Profile(
+                      X1Id, Context, CanonicalizationKind::Structural);
+                  PossibleXLHSInSecond->Profile(
+                      X2Id, Context, CanonicalizationKind::Structural);
                   IsUpdateExprFound = X1Id == X2Id;
                   if (IsUpdateExprFound) {
                     V = FirstBinOp->getLHS();
@@ -21183,13 +21185,9 @@ static bool actOnOMPReductionKindClause(
           (DeclareReductionRef.isUsable() && IsParentBOK) ||
           (IsParentBOK && BOK != ParentBOK) || IsParentReductionOp) {
         bool EmitError = true;
-        if (IsParentReductionOp && DeclareReductionRef.isUsable()) {
-          llvm::FoldingSetNodeID RedId, ParentRedId;
-          ParentReductionOp->Profile(ParentRedId, Context, /*Canonical=*/true);
-          DeclareReductionRef.get()->Profile(RedId, Context,
-                                             /*Canonical=*/true);
-          EmitError = RedId != ParentRedId;
-        }
+        if (IsParentReductionOp && DeclareReductionRef.isUsable())
+          EmitError = !Context.hasSameExpr(ParentReductionOp,
+                                           DeclareReductionRef.get());
         if (EmitError) {
           S.Diag(ReductionId.getBeginLoc(),
                  diag::err_omp_reduction_identifier_mismatch)

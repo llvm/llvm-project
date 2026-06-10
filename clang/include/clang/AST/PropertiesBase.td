@@ -148,6 +148,7 @@ def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnsignedOrNone : PropertyType;
+def CanonicalizationKindOrNone : PropertyType;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
 def VectorKind : EnumPropertyType<"VectorKind">;
 def TypeCoupledDeclRefInfo : PropertyType;
@@ -905,14 +906,14 @@ let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
   def : Property<"expression", ExprRef> {
     let Read = [{ node.getAsExpr() }];
   }
-  def : Property<"IsCanonical", Bool> {
-    let Read = [{ node.isCanonicalExpr() }];
+  def : Property<"CanonKind", CanonicalizationKindOrNone> {
+    let Read = [{ node.getExprCanonKind() }];
   }
   def : Property<"isDefaulted", Bool> {
     let Read = [{ node.getIsDefaulted() }];
   }
   def : Creator<[{
-    return TemplateArgument(expression, IsCanonical, isDefaulted);
+    return TemplateArgument(expression, CanonKind, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {

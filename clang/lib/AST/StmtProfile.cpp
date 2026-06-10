@@ -28,13 +28,16 @@ namespace {
   class StmtProfiler : public ConstStmtVisitor<StmtProfiler> {
   protected:
     llvm::FoldingSetNodeID &ID;
-    bool Canonical;
+    const ASTContext *Context;
+    CanonicalizationKindOrNone CanonKind;
     bool ProfileLambdaExpr;
+    bool AnyNonCanonical = false;
 
   public:
-    StmtProfiler(llvm::FoldingSetNodeID &ID, bool Canonical,
-                 bool ProfileLambdaExpr)
-        : ID(ID), Canonical(Canonical), ProfileLambdaExpr(ProfileLambdaExpr) {}
+    StmtProfiler(llvm::FoldingSetNodeID &ID, const ASTContext *Context,
+                 CanonicalizationKindOrNone CanonKind, bool ProfileLambdaExpr)
+        : ID(ID), Context(Context), CanonKind(CanonKind),
+          ProfileLambdaExpr(ProfileLambdaExpr) {}
 
     virtual ~StmtProfiler() {}
 
@@ -48,6 +51,8 @@ namespace {
     }
 
     virtual void HandleStmtClass(Stmt::StmtClass SC) = 0;
+
+    bool hasAnyNonCanonical() const { return AnyNonCanonical; }
 
 #define STMT(Node, Base) void Visit##Node(const Node *S);
 #include "clang/AST/StmtNodes.inc"
@@ -84,13 +89,12 @@ namespace {
   };
 
   class StmtProfilerWithPointers : public StmtProfiler {
-    const ASTContext &Context;
-
   public:
     StmtProfilerWithPointers(llvm::FoldingSetNodeID &ID,
-                             const ASTContext &Context, bool Canonical,
+                             const ASTContext &Context,
+                             CanonicalizationKindOrNone CanonKind,
                              bool ProfileLambdaExpr)
-        : StmtProfiler(ID, Canonical, ProfileLambdaExpr), Context(Context) {}
+        : StmtProfiler(ID, &Context, CanonKind, ProfileLambdaExpr) {}
 
   private:
     void HandleStmtClass(Stmt::StmtClass SC) override {
@@ -100,7 +104,7 @@ namespace {
     void VisitDecl(const Decl *D) override {
       ID.AddInteger(D ? D->getKind() : 0);
 
-      if (Canonical && D) {
+      if (CanonKind && D) {
         if (const NonTypeTemplateParmDecl *NTTP =
                 dyn_cast<NonTypeTemplateParmDecl>(D)) {
           ID.AddInteger(NTTP->getDepth());
@@ -114,7 +118,7 @@ namespace {
           //
           // TODO: Why do we need to include the type in the profile? It's not
           // part of the mangling.
-          VisitType(Context.getUnconstrainedType(NTTP->getType()));
+          VisitType(Context->getUnconstrainedType(NTTP->getType()));
           return;
         }
 
@@ -156,8 +160,8 @@ namespace {
     }
 
     void VisitType(QualType T) override {
-      if (Canonical && !T.isNull())
-        T = Context.getCanonicalType(T);
+      if (CanonKind && !T.isNull())
+        T = Context->getCanonicalType(T, *CanonKind, AnyNonCanonical);
 
       ID.AddPointer(T.getAsOpaquePtr());
     }
@@ -171,14 +175,16 @@ namespace {
     }
 
     void VisitNestedNameSpecifier(NestedNameSpecifier NNS) override {
-      if (Canonical)
-        NNS = NNS.getCanonical();
+      if (CanonKind)
+        NNS = Context->getCanonicalNestedNameSpecifier(NNS, *CanonKind,
+                                                       AnyNonCanonical);
       NNS.Profile(ID);
     }
 
     void VisitTemplateName(TemplateName Name) override {
-      if (Canonical)
-        Name = Context.getCanonicalTemplateName(Name);
+      if (CanonKind)
+        Name = Context->getCanonicalTemplateName(Name, /*IgnoreDeduced=*/false,
+                                                 *CanonKind, AnyNonCanonical);
 
       Name.Profile(ID);
     }
@@ -188,7 +194,8 @@ namespace {
     ODRHash &Hash;
   public:
     StmtProfilerWithoutPointers(llvm::FoldingSetNodeID &ID, ODRHash &Hash)
-        : StmtProfiler(ID, /*Canonical=*/false, /*ProfileLambdaExpr=*/false),
+        : StmtProfiler(ID, /*Context=*/nullptr, /*CanonKind=*/std::nullopt,
+                       /*ProfileLambdaExpr=*/false),
           Hash(Hash) {}
 
   private:
@@ -1418,10 +1425,10 @@ void StmtProfiler::VisitConstantExpr(const ConstantExpr *S) {
 
 void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   VisitExpr(S);
-  if (!Canonical)
+  if (!CanonKind)
     VisitNestedNameSpecifier(S->getQualifier());
   VisitDecl(S->getDecl());
-  if (!Canonical) {
+  if (!CanonKind) {
     ID.AddBoolean(S->hasExplicitTemplateArgs());
     if (S->hasExplicitTemplateArgs())
       VisitTemplateArguments(S->getTemplateArgs(), S->getNumTemplateArgs());
@@ -1454,8 +1461,8 @@ void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   S->getValue().Profile(ID);
 
   QualType T = S->getType();
-  if (Canonical)
-    T = T.getCanonicalType();
+  if (CanonKind)
+    T = Context->getCanonicalType(T, *CanonKind, AnyNonCanonical);
   ID.AddInteger(T->getTypeClass());
   if (auto BitIntT = T->getAs<BitIntType>())
     BitIntT->Profile(ID);
@@ -1575,7 +1582,7 @@ void StmtProfiler::VisitCallExpr(const CallExpr *S) {
 void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
   VisitExpr(S);
   VisitDecl(S->getMemberDecl());
-  if (!Canonical)
+  if (!CanonKind)
     VisitNestedNameSpecifier(S->getQualifier());
   ID.AddBoolean(S->isArrow());
 }
@@ -1583,6 +1590,7 @@ void StmtProfiler::VisitMemberExpr(const MemberExpr *S) {
 void StmtProfiler::VisitCompoundLiteralExpr(const CompoundLiteralExpr *S) {
   VisitExpr(S);
   ID.AddBoolean(S->isFileScope());
+  VisitType(S->getTypeSourceInfo()->getType());
 }
 
 void StmtProfiler::VisitCastExpr(const CastExpr *S) {
@@ -1629,6 +1637,7 @@ void StmtProfiler::VisitAddrLabelExpr(const AddrLabelExpr *S) {
 
 void StmtProfiler::VisitStmtExpr(const StmtExpr *S) {
   VisitExpr(S);
+  ID.AddInteger(S->getTemplateDepth());
 }
 
 void StmtProfiler::VisitShuffleVectorExpr(const ShuffleVectorExpr *S) {
@@ -2230,6 +2239,7 @@ void StmtProfiler::VisitCXXReflectExpr(const CXXReflectExpr *E) {
 void
 StmtProfiler::VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *S) {
   VisitExpr(S);
+  VisitType(S->getTypeSourceInfo()->getType());
 }
 
 void StmtProfiler::VisitCXXDeleteExpr(const CXXDeleteExpr *S) {
@@ -2270,6 +2280,7 @@ void StmtProfiler::VisitOverloadExpr(const OverloadExpr *S) {
   VisitExpr(S);
   bool DescribingDependentVarTemplate =
       S->getNumDecls() == 1 && isa<VarTemplateDecl>(*S->decls_begin());
+  ID.AddBoolean(DescribingDependentVarTemplate);
   if (DescribingDependentVarTemplate) {
     VisitDecl(*S->decls_begin());
   } else {
@@ -2983,10 +2994,21 @@ void StmtProfiler::VisitHLSLOutArgExpr(const HLSLOutArgExpr *S) {
   VisitStmt(S);
 }
 
-void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                   bool Canonical, bool ProfileLambdaExpr) const {
-  StmtProfilerWithPointers Profiler(ID, Context, Canonical, ProfileLambdaExpr);
+CanonicalizationKindOrNone Stmt::Profile(llvm::FoldingSetNodeID &ID,
+                                         const ASTContext &Context,
+                                         CanonicalizationKindOrNone CanonKind,
+                                         bool ProfileLambdaExpr) const {
+  StmtProfilerWithPointers Profiler(ID, Context, CanonKind, ProfileLambdaExpr);
   Profiler.Visit(this);
+
+  // FIXME: The profiler does not yet support returning the maximum
+  // canonicalization kind for the no-canonicalization case.
+  if (!CanonKind)
+    return std::nullopt;
+  auto Result = Profiler.hasAnyNonCanonical()
+                    ? std::max(CanonicalizationKind::Functional, *CanonKind)
+                    : CanonicalizationKind::Structural;
+  return Result;
 }
 
 void Stmt::ProcessODRHash(llvm::FoldingSetNodeID &ID,

@@ -368,11 +368,7 @@ checkDeducedTemplateArguments(ASTContext &Context,
     if (Y.getKind() != TemplateArgument::Expression)
       return checkDeducedTemplateArguments(Context, Y, X);
 
-    // Compare the expressions for equality
-    llvm::FoldingSetNodeID ID1, ID2;
-    X.getAsExpr()->Profile(ID1, Context, true);
-    Y.getAsExpr()->Profile(ID2, Context, true);
-    if (ID1 == ID2)
+    if (Context.hasSameExpr(X.getAsExpr(), Y.getAsExpr()))
       return X.wasDeducedFromArrayBound() ? Y : X;
 
     // Differing dependent expressions are incompatible.
@@ -550,8 +546,9 @@ DeduceNullPtrTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
                                                         : CK_NullToPointer)
                     .get();
   return DeduceNonTypeTemplateArgument(
-      S, TemplateParams, NTTP, TemplateArgument(Value, /*IsCanonical=*/false),
-      Value->getType(), Info, PartialOrdering, Deduced, HasDeducedAnyParam);
+      S, TemplateParams, NTTP,
+      TemplateArgument(Value, /*CanonKind=*/std::nullopt), Value->getType(),
+      Info, PartialOrdering, Deduced, HasDeducedAnyParam);
 }
 
 /// Deduce the value of the given non-type template parameter
@@ -565,8 +562,9 @@ DeduceNonTypeTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
                               SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                               bool *HasDeducedAnyParam) {
   return DeduceNonTypeTemplateArgument(
-      S, TemplateParams, NTTP, TemplateArgument(Value, /*IsCanonical=*/false),
-      Value->getType(), Info, PartialOrdering, Deduced, HasDeducedAnyParam);
+      S, TemplateParams, NTTP,
+      TemplateArgument(Value, /*CanonKind=*/std::nullopt), Value->getType(),
+      Info, PartialOrdering, Deduced, HasDeducedAnyParam);
 }
 
 /// Deduce the value of the given non-type template parameter
@@ -2874,7 +2872,8 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
       NTTPType = Arg.getParamTypeForDecl();
     Expr *E = BuildExpressionFromDeclTemplateArgument(Arg, NTTPType, Loc)
                   .getAs<Expr>();
-    return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
+    return TemplateArgumentLoc(TemplateArgument(E, /*CanonKind=*/std::nullopt),
+                               E);
   }
 
   case TemplateArgument::NullPtr: {
@@ -2889,7 +2888,8 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
   case TemplateArgument::Integral:
   case TemplateArgument::StructuralValue: {
     Expr *E = BuildExpressionFromNonTypeTemplateArgument(Arg, Loc).get();
-    return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
+    return TemplateArgumentLoc(TemplateArgument(E, /*CanonKind=*/std::nullopt),
+                               E);
   }
 
     case TemplateArgument::Template:
@@ -6246,11 +6246,14 @@ struct TemplateArgumentListAreEqual {
 
     for (unsigned I = 0, E = Args1.size(); I < E; ++I) {
       // We use profile, instead of structural comparison of the arguments,
-      // because canonicalization can't do the right thing for dependent
-      // expressions.
+      // because canonicalization can't do the right thing for expressions.
       llvm::FoldingSetNodeID IDA, IDB;
-      Args1[I].Profile(IDA, Ctx);
-      Args2[I].Profile(IDB, Ctx);
+      Ctx.getCanonicalTemplateArgument(Args1[I],
+                                       CanonicalizationKind::Functional)
+          .Profile(IDA, Ctx);
+      Ctx.getCanonicalTemplateArgument(Args2[I],
+                                       CanonicalizationKind::Functional)
+          .Profile(IDB, Ctx);
       if (IDA != IDB)
         return false;
     }
@@ -6265,13 +6268,14 @@ struct TemplateArgumentListAreEqual {
 
     for (unsigned I = 0, E = Args1.size(); I < E; ++I) {
       // We use profile, instead of structural comparison of the arguments,
-      // because canonicalization can't do the right thing for dependent
-      // expressions.
+      // because canonicalization can't do the right thing for expressions.
       llvm::FoldingSetNodeID IDA, IDB;
-      Args1[I].Profile(IDA, Ctx);
-      // Unlike the specialization arguments, the injected arguments are not
-      // always canonical.
-      Ctx.getCanonicalTemplateArgument(Args2[I]).Profile(IDB, Ctx);
+      Ctx.getCanonicalTemplateArgument(Args1[I],
+                                       CanonicalizationKind::Functional)
+          .Profile(IDA, Ctx);
+      Ctx.getCanonicalTemplateArgument(Args2[I],
+                                       CanonicalizationKind::Functional)
+          .Profile(IDB, Ctx);
       if (IDA != IDB)
         return false;
     }
@@ -6419,11 +6423,17 @@ Sema::getMoreSpecializedPartialSpecialization(
   assert(PS1->getSpecializedTemplate() == PS2->getSpecializedTemplate() &&
          "the partial specializations being compared should specialize"
          " the same template.");
+  SmallVector<TemplateArgument, 8> Ps1Args(PS1->getTemplateArgs().asArray());
+  Context.canonicalizeTemplateArguments(Ps1Args);
+
+  SmallVector<TemplateArgument, 8> Ps2Args(PS2->getTemplateArgs().asArray());
+  Context.canonicalizeTemplateArguments(Ps2Args);
+
   TemplateName Name(PS1->getSpecializedTemplate()->getCanonicalDecl());
   QualType PT1 = Context.getCanonicalTemplateSpecializationType(
-      ElaboratedTypeKeyword::None, Name, PS1->getTemplateArgs().asArray());
+      ElaboratedTypeKeyword::None, Name, Ps1Args);
   QualType PT2 = Context.getCanonicalTemplateSpecializationType(
-      ElaboratedTypeKeyword::None, Name, PS2->getTemplateArgs().asArray());
+      ElaboratedTypeKeyword::None, Name, Ps2Args);
 
   TemplateDeductionInfo Info(Loc);
   return getMoreSpecialized(*this, PT1, PT2, PS1, PS2, Info);
@@ -6438,10 +6448,14 @@ bool Sema::isMoreSpecializedThanPrimary(
       Primary->getInjectedTemplateArgs(Context));
   Context.canonicalizeTemplateArguments(PrimaryCanonArgs);
 
+  SmallVector<TemplateArgument, 8> PartialCanonArgs(
+      Spec->getTemplateArgs().asArray());
+  Context.canonicalizeTemplateArguments(PartialCanonArgs);
+
   QualType PrimaryT = Context.getCanonicalTemplateSpecializationType(
       ElaboratedTypeKeyword::None, Name, PrimaryCanonArgs);
   QualType PartialT = Context.getCanonicalTemplateSpecializationType(
-      ElaboratedTypeKeyword::None, Name, Spec->getTemplateArgs().asArray());
+      ElaboratedTypeKeyword::None, Name, PartialCanonArgs);
 
   VarTemplatePartialSpecializationDecl *MaybeSpec =
       getMoreSpecialized(*this, PartialT, PrimaryT, Spec, Primary, Info);

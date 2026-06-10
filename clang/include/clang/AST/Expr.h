@@ -7484,12 +7484,10 @@ public:
 /// range covered by the expression.
 ///
 /// By default, RecoveryExpr uses dependence-bits to take advantage of existing
-/// machinery to deal with dependent code in C++, e.g. RecoveryExpr is preserved
-/// in `decltype(<broken-expr>)` as part of the `DependentDecltypeType`. In
-/// addition to that, clang does not report most errors on dependent
-/// expressions, so we get rid of bogus errors for free. However, note that
-/// unlike other dependent expressions, RecoveryExpr can be produced in
-/// non-template contexts.
+/// machinery to deal with dependent code in C++. In addition to that, clang
+/// does not report most errors on dependent expressions, so we get rid of bogus
+/// errors for free. However, note that unlike other dependent expressions,
+/// RecoveryExpr can be produced in non-template contexts.
 ///
 /// We will preserve the type in RecoveryExpr when the type is known, e.g.
 /// preserving the return type for a broken non-overloaded function call, a

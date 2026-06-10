@@ -2569,10 +2569,9 @@ bool Sema::isIncompatibleTypedef(const TypeDecl *Old, TypedefNameDecl *New) {
     return true;
   }
 
-  if (OldType != NewType &&
-      !OldType->isDependentType() &&
+  if (OldType != NewType && !OldType->isDependentType() &&
       !NewType->isDependentType() &&
-      !Context.hasSameType(OldType, NewType)) {
+      !Context.hasEquivalentType(OldType, NewType)) {
     int Kind = isa<TypeAliasDecl>(Old) ? 1 : 0;
     Diag(New->getLocation(), diag::err_redefinition_different_typedef)
       << Kind << NewType << OldType;
@@ -4575,7 +4574,7 @@ void Sema::mergeObjCMethodDecls(ObjCMethodDecl *newMethod,
 }
 
 static void diagnoseVarDeclTypeMismatch(Sema &S, VarDecl *New, VarDecl* Old) {
-  assert(!S.Context.hasSameType(New->getType(), Old->getType()));
+  assert(!S.Context.hasEquivalentType(New->getType(), Old->getType()));
 
   S.Diag(New->getLocation(), New->isThisDeclarationADefinition()
          ? diag::err_redefinition_different_type
@@ -4600,7 +4599,8 @@ void Sema::MergeVarDeclTypes(VarDecl *New, VarDecl *Old,
     if (New->getType()->isUndeducedType()) {
       // We don't know what the new type is until the initializer is attached.
       return;
-    } else if (Context.hasSameType(New->getType(), Old->getType())) {
+    }
+    if (Context.hasEquivalentType(New->getType(), Old->getType())) {
       // These could still be something that needs exception specs checked.
       return MergeVarDeclExceptionSpecs(New, Old);
     }
@@ -4609,7 +4609,7 @@ void Sema::MergeVarDeclTypes(VarDecl *New, VarDecl *Old,
     //   object or function shall be identical, except that declarations for an
     //   array object can specify array types that differ by the presence or
     //   absence of a major array bound (8.3.4).
-    else if (Old->getType()->isArrayType() && New->getType()->isArrayType()) {
+    if (Old->getType()->isArrayType() && New->getType()->isArrayType()) {
       const ArrayType *OldArray = Context.getAsArrayType(Old->getType());
       const ArrayType *NewArray = Context.getAsArrayType(New->getType());
 
@@ -4623,26 +4623,28 @@ void Sema::MergeVarDeclTypes(VarDecl *New, VarDecl *Old,
           if (PrevVDTy->isIncompleteArrayType() || PrevVDTy->isDependentType())
             continue;
 
-          if (!Context.hasSameType(New->getType(), PrevVDTy))
+          if (!Context.hasEquivalentType(New->getType(), PrevVDTy))
             return diagnoseVarDeclTypeMismatch(*this, New, PrevVD);
         }
       }
 
-      if (OldArray->isIncompleteArrayType() && NewArray->isArrayType()) {
-        if (Context.hasSameType(OldArray->getElementType(),
-                                NewArray->getElementType()))
-          MergedT = New->getType();
+      if (NewArray->isIncompleteArrayType() ||
+          OldArray->isIncompleteArrayType()) {
+        if (Context.hasEquivalentType(OldArray->getElementType(),
+                                      NewArray->getElementType())) {
+          if (OldArray->isIncompleteArrayType()) {
+            MergedT = New->getType();
+          } else {
+            // FIXME: Check visibility. New is hidden but has a complete type.
+            // If New has no array bound, it should not inherit one from Old, if
+            // Old is not visible.
+            // FIXME: Rebuild array type with new element type, in order to
+            // preserve type sugar.
+            MergedT = Old->getType().getCanonicalType();
+          }
+        }
       }
-      // FIXME: Check visibility. New is hidden but has a complete type. If New
-      // has no array bound, it should not inherit one from Old, if Old is not
-      // visible.
-      else if (OldArray->isArrayType() && NewArray->isIncompleteArrayType()) {
-        if (Context.hasSameType(OldArray->getElementType(),
-                                NewArray->getElementType()))
-          MergedT = Old->getType();
-      }
-    }
-    else if (New->getType()->isObjCObjectPointerType() &&
+    } else if (New->getType()->isObjCObjectPointerType() &&
                Old->getType()->isObjCObjectPointerType()) {
       MergedT = Context.mergeObjCGCQualifiers(New->getType(),
                                               Old->getType());

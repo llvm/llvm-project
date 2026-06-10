@@ -42,7 +42,7 @@ struct X1 {
 
   void f3(X0<T>*); // expected-note{{previous}}
   void f3(X0<U>*);
-  void f3(::X0<type>*); // expected-error{{redeclar}}  
+  void f3(::X0<type>*); // expected-error{{redeclar}}
 
   void f4(typename T::template apply<U>*); // expected-note{{previous}}
   void f4(typename U::template apply<U>*);
@@ -59,7 +59,7 @@ struct X1 {
   void f6(typename N::X2<U>::template apply<U> *);
   void f6(typename N::X2<U>::template apply<T> *);
   void f6(typename ::N::X2<type>::template apply<U_type> *); // expected-error{{redeclar}}
-  
+
   void f7(typename N::X2<T>::template apply<U> *); // expected-note{{previous}}
   void f7(typename N::X2<U>::template apply<U> *);
   void f7(typename N::X2<U>::template apply<T> *);
@@ -148,9 +148,6 @@ namespace PR21289 {
   void g() { f<void, void, void>(); }
 
   template<typename ...Ts> void h(S<int>) {}
-  // Pending a core issue, it's not clear if these are redeclarations, but they
-  // are probably intended to be... even though substitution can succeed for one
-  // of them but fail for the other!
-  template<typename ...Ts> void h(S<X<Ts>...>) {} // expected-note {{previous}}
-  template<typename ...Ts> void h(S<Y<Ts, sizeof(Ts)>...>) {} // expected-error {{redefinition}}
+  template<typename ...Ts> void h(S<X<Ts>...>) {}
+  template<typename ...Ts> void h(S<Y<Ts, sizeof(Ts)>...>) {}
 }
