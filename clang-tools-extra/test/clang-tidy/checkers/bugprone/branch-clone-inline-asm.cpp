@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-branch-clone %t --
+// RUN: %check_clang_tidy %s bugprone-branch-clone %t
 
 int test_asm1(int argc, char**) {
   if (argc > 1) {
