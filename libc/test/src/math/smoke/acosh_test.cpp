@@ -32,6 +32,10 @@ TEST_F(LlvmLibcAcoshTest, SpecialNumbers) {
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acosh(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
+
+  // Large x: x^2 overflows in naive implementations; acosh(2^1000) =
+  // log(2^1001).
+  EXPECT_FP_EQ(0x1.5aeb8fdc01b22p9, LIBC_NAMESPACE::acosh(0x1.0p1000));
 }
 
 #ifdef LIBC_TEST_FTZ_DAZ

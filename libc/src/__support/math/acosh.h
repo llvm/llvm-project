@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ACOSH_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ACOSH_H
 
+#include "log.h"
 #include "log1p.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -74,8 +75,6 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   DoubleDouble v_dd_red = fputil::exact_add(v_hi_p, v_lo_p.hi);
   v_dd_red.lo += v_lo_p.lo;
 
-#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  // Fast path: polynomial only (no correct-rounding guarantee).
   double e_x = static_cast<double>(x_e);
   double hi = fputil::multiply_add(e_x, LOG_2_HI, LOG_R1_DD[idx].hi);
   double lo = fputil::multiply_add(e_x, LOG_2_LO, LOG_R1_DD[idx].lo);
@@ -85,12 +84,15 @@ LIBC_INLINE double acosh_log1p_dd(double u_hi, double u_lo) {
   double p1 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[3], P_COEFFS[2]);
   double p2 = fputil::multiply_add(v_dd_red.hi, P_COEFFS[5], P_COEFFS[4]);
   double p = fputil::polyeval(v_sq, (v_dd_red.lo + r1.lo) + lo, p0, p1, p2);
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   return r1.hi + p;
 #else
-  // Always use the Float128 accurate path for correct rounding.
-  // The Ziv fast-path is not used here because for some large-x inputs
-  // err << ULP(result), so the Ziv test always passes even when the
-  // polynomial is 1 ULP off.
+  constexpr double ERR_HI[2] = {0x1.0p-85, 0.0};
+  double err = fputil::multiply_add(v_sq, P_ERR, ERR_HI[hi == 0.0]);
+  double left = r1.hi + (p - err);
+  double right = r1.hi + (p + err);
+  if (LIBC_LIKELY(left == right))
+    return left;
   return log1p_accurate(x_e, idx, v_dd_red);
 #endif
 }
@@ -116,6 +118,20 @@ LIBC_INLINE double acosh(double x) {
       return FPBits::quiet_nan().get_val();
     }
     return x;
+  }
+
+  // For x >= 2^26, acosh(x) = log(2x) to within 0.5 ULP, and x^2 would
+  // overflow exact_mult for x > ~2^511. Redirect through math::log which
+  // performs its own Ziv test.
+  if (LIBC_UNLIKELY(xbits.uintval() >= 0x4190'0000'0000'0000ULL)) {
+    using namespace common_constants_internal;
+    // For x with biased exponent 2046 (x >= 2^1023), 2*x overflows; compute
+    // log(2x) = log(x/2) + 2*log(2) via compensated addition instead.
+    if (LIBC_UNLIKELY(xbits.uintval() >= 0x7FE0'0000'0000'0000ULL)) {
+      double log_xhalf = math::log(x * 0.5);
+      return (log_xhalf + 2.0 * LOG_2_HI) + 2.0 * LOG_2_LO;
+    }
+    return math::log(2.0 * x);
   }
 
   // acosh(x) = log1p(u),  u = (x-1) + sqrt(x^2-1).
