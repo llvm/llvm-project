@@ -195,7 +195,7 @@ static void test_codegen_fns(MyASTConsumer *my) {
           mytest_fn_ok = true;
         }
       }
-    } else if(CXXRecordDecl *rd = dyn_cast<CXXRecordDecl>(decl)) {
+    } else if (CXXRecordDecl *rd = dyn_cast<CXXRecordDecl>(decl)) {
       if (rd->getName() == "mytest_struct") {
         RecordDecl *def = rd->getDefinition();
         ASSERT_TRUE(def != NULL);
@@ -268,7 +268,7 @@ static void test_codegen_fns(MyASTConsumer *my) {
         unsigned pointerSizeInBits =
             dataLayout.getPointerTypeSizeInBits(c->getType());
         APInt offset(pointerSizeInBits, 0);
-        GEPOperator* gepOperator = dyn_cast<GEPOperator>(c);
+        GEPOperator *gepOperator = dyn_cast<GEPOperator>(c);
         ASSERT_NE(gepOperator, nullptr);
         gepOperator->accumulateConstantOffset(dataLayout, offset);
         // Itanium ABI has a couple of pointersi (offset to top, type info)

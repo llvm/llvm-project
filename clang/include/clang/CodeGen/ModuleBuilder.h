@@ -32,16 +32,16 @@ namespace llvm {
 inline constexpr llvm::StringRef ClangTrapPrefix = "__clang_trap_msg";
 
 namespace clang {
-  class BaseSubobject;
-  class CodeGenOptions;
-  class CoverageSourceInfo;
-  class Decl;
-  class DiagnosticsEngine;
-  class GlobalDecl;
-  class HeaderSearchOptions;
-  class LangOptions;
-  class PreprocessorOptions;
-  class CompilerInstance;
+class BaseSubobject;
+class CodeGenOptions;
+class CoverageSourceInfo;
+class Decl;
+class DiagnosticsEngine;
+class GlobalDecl;
+class HeaderSearchOptions;
+class LangOptions;
+class PreprocessorOptions;
+class CompilerInstance;
 
 namespace CodeGen {
   class CodeGenModule;
