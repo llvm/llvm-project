@@ -2270,6 +2270,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_kill, amdgcn_wqm_demote})
       .Any({{}, {{}, {IntrId, Vcc}}});
 
+  addRulesForIOpcs({amdgcn_set_inactive}, StandardB)
+      .Div(B32, {{VgprB32}, {IntrId, VgprB32, VgprB32}});
+
+  addRulesForIOpcs({amdgcn_set_inactive_chain_arg}, Standard)
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
+
   addRulesForIOpcs({amdgcn_ballot}, Standard)
       .Uni(S64, {{Sgpr64}, {IntrId, Vcc}})
       .Uni(S32, {{Sgpr32}, {IntrId, Vcc}});
