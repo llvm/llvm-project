@@ -223,7 +223,8 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                       first; `inst_data` is seeded from `lane_layout * lane_data` per new dim.
                       `order`, when present, is rewritten so the expanded dims appear
                       innermost-fastest in the original dim's slot; if the input has no
-                      `order`, the result has no `order` either.
+                      `order`, the result has no `order` either (the default FCD-first
+                      order `[rank-1, ..., 0]` is assumed).
                       Example: layout<sg_layout=[2, 16], sg_data=[1, 1]> with
                       expandDim(1, [2, 8]) -> layout<sg_layout=[2, 2, 8], sg_data=[1, 1, 1]>
                       (no order in, no order out).}],

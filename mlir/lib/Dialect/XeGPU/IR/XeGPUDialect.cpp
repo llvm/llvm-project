@@ -647,13 +647,14 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 // Derive a new layout by expanding a single dimension `dim` into multiple
 // adjacent dimensions whose extents are given by `targetShape`.
 //
-// The chosen distribution is the unique one under which a subsequent
-// `collapseDims` over the new dims reproduces the original layout with no
-// data movement across sg / lane boundaries. That requires sg_layout and
-// lane_layout to walk the new dims outer-to-inner (so each compute unit owns
-// a contiguous run after collapse), and sg_data / lane_data / inst_data to
-// fill innermost-first (so the per-unit data tile is contiguous in the
-// fastest-varying expanded dim).
+// Distribution is always outer-to-inner to make sure larger contiguous
+// chunks are given to each compute unit first. Concretely: sg_layout and
+// lane_layout walk the new dims outer-to-inner so each compute unit owns a
+// contiguous run after collapse; sg_data / lane_data / inst_data fill
+// innermost-first so the per-unit data tile is contiguous in the
+// fastest-varying expanded dim. The expanded dims are assumed to be in
+// row-major (FCD-first) order, which is intrinsic to `vector.shape_cast`'s
+// linear-order-preserving semantics.
 //
 // Distribution policy on the expanded src dims (replacing `dim`):
 //   - sg_layout / lane_layout: spread outer-to-inner; each dim takes

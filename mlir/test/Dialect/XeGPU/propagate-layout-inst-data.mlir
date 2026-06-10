@@ -535,6 +535,8 @@ func.func @dpas_mx_f4e2m1(%arg0: memref<16x128xf4E2M1FN>, %arg1: memref<128x32xf
 // shape_cast that collapses all src dims into a single innermost dst dim.
 // Consumer carries inst_data + lane_layout=[..,subgroupSize] + lane_data=[..,1]
 // (the canonical inst-level anchor for this code path).
+// Distribution is always outer-to-inner to make sure larger contiguous chunks
+// are given to each compute unit first.
 // srcShape=[8, 16, 32], resShape=[4096], consumer inst_data=[32],
 // lane_layout=[16], lane_data=[1]
 // lane_layout outer-to-inner: dim0 take=min(16,8)=8 (rem=2);
