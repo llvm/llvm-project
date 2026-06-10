@@ -126,3 +126,66 @@ llvm.func @keep_dbg_if_not_promoted() {
   llvm.call @use_ptr(%1) : (!llvm.ptr) -> ()
   llvm.return
 }
+
+// Regression test for https://github.com/llvm/llvm-project/issues/197158.
+
+// CHECK-LABEL: llvm.func @store_load_store_back
+// CHECK-NOT: = llvm.alloca
+// CHECK-NOT: llvm.intr.dbg.declare
+// CHECK-NOT: llvm.store
+// CHECK-NOT: llvm.load
+// CHECK: %[[CST:.*]] = llvm.mlir.constant({{.*}}) : i64
+// CHECK: llvm.intr.dbg.value #[[$VAR]] = %[[CST]] : i64
+// CHECK: llvm.return
+llvm.func @store_load_store_back() {
+  %one = llvm.mlir.constant(1 : i32) : i32
+  %cst = llvm.mlir.constant(42 : i64) : i64
+  %p = llvm.alloca %one x i64 : (i32) -> !llvm.ptr
+  llvm.intr.dbg.declare #di_local_variable = %p : !llvm.ptr
+  llvm.store %cst, %p : i64, !llvm.ptr
+  %v = llvm.load %p : !llvm.ptr -> i64
+  llvm.store %v, %p : i64, !llvm.ptr
+  llvm.return
+}
+
+// Regression test for https://github.com/llvm/llvm-project/issues/200844.
+
+// CHECK-LABEL: llvm.func @dbg_declare_with_store_type_conversion
+// CHECK-SAME: (%[[VAL:.*]]: f32)
+// CHECK-NOT: = llvm.alloca
+// CHECK-NOT: llvm.intr.dbg.declare
+// CHECK-NOT: llvm.store
+// CHECK-NOT: llvm.load
+// CHECK: %[[BITCAST:.*]] = llvm.bitcast %[[VAL]] : f32 to i32
+// CHECK: llvm.intr.dbg.value #[[$VAR]] = %[[BITCAST]] : i32
+// CHECK: llvm.return %[[BITCAST]] : i32
+llvm.func @dbg_declare_with_store_type_conversion(%val : f32) -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i32) -> !llvm.ptr
+  llvm.intr.dbg.declare #di_local_variable = %1 : !llvm.ptr
+  llvm.store %val, %1 {alignment = 4 : i64} : f32, !llvm.ptr
+  %2 = llvm.load %1 {alignment = 4 : i64} : !llvm.ptr -> i32
+  llvm.return %2 : i32
+}
+
+// CHECK-LABEL: llvm.func @nested_store_load_store_back
+// CHECK-NOT: = llvm.alloca
+// CHECK-NOT: llvm.intr.dbg.declare
+// CHECK-NOT: llvm.store
+// CHECK-NOT: llvm.load
+// CHECK: %[[CST:.*]] = llvm.mlir.constant({{.*}}) : f64
+// CHECK: scf.if
+// CHECK: llvm.intr.dbg.value #[[$VAR]] = %[[CST]] : f64
+// CHECK: llvm.return
+llvm.func @nested_store_load_store_back(%cdt1 : i1, %cdt2 : i1) {
+  %one = llvm.mlir.constant(1 : i32) : i32
+  %cst = llvm.mlir.constant(4.000000e+00 : f64) : f64
+  %p   = llvm.alloca %one x f64 : (i32) -> !llvm.ptr
+  llvm.intr.dbg.declare #di_local_variable = %p : !llvm.ptr
+  scf.if %cdt1 {
+   llvm.store %cst, %p : f64, !llvm.ptr
+   %v = llvm.load %p : !llvm.ptr -> f64
+   llvm.store %v, %p : f64, !llvm.ptr
+  }
+  llvm.return
+}

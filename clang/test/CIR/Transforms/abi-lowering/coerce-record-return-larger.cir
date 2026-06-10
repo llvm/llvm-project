@@ -33,7 +33,7 @@ module attributes {
   // and the store goes through a source-typed view of it; loading !rec_TwoI64
   // out of a !rec_Vec3-sized slot would read past the allocation.
   // CHECK:      cir.func{{.*}} @returns_vec3() -> !rec_TwoI64
-  // CHECK:        %[[SLOT:.*]] = cir.alloca !rec_TwoI64, !cir.ptr<!rec_TwoI64>, ["coerce"]
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_TwoI64>
   // CHECK:        %[[VAL:.*]] = cir.const #cir.zero : !rec_Vec3
   // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_TwoI64> -> !cir.ptr<!rec_Vec3>
   // CHECK:        cir.store %[[VAL]], %[[CAST]] : !rec_Vec3, !cir.ptr<!rec_Vec3>
@@ -43,7 +43,7 @@ module attributes {
   cir.func @caller() -> !s32i
       attributes { test_classify = #caller_ret_i32 } {
     %0 = cir.call @returns_vec3() : () -> !rec_Vec3
-    %1 = cir.alloca !rec_Vec3, !cir.ptr<!rec_Vec3>, ["r"] {alignment = 4 : i64}
+    %1 = cir.alloca "r" align(4) : !cir.ptr<!rec_Vec3>
     cir.store %0, %1 : !rec_Vec3, !cir.ptr<!rec_Vec3>
     %2 = cir.get_member %1[0] {name = "first"} : !cir.ptr<!rec_Vec3> -> !cir.ptr<!s32i>
     %3 = cir.load %2 : !cir.ptr<!s32i>, !s32i
