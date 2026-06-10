@@ -1734,13 +1734,12 @@ void SCCPInstVisitor::visitBinaryOperator(Instruction &I) {
     Value *R = simplifyBinOp(I.getOpcode(), V1, V2, SimplifyQuery(DL, &I));
     auto *C = dyn_cast_or_null<Constant>(R);
     if (C) {
-      // Conservatively assume that the result may be based on operands that may
-      // be undef. Note that we use mergeInValue to combine the constant with
-      // the existing lattice value for I, as different constants might be found
-      // after one of the operands go to overdefined, e.g. due to one operand
-      // being a special floating value.
+      bool MayIncludeUndef = V1State.isConstantRangeIncludingUndef() ||
+                             V1State.isConstantIncludingUndef() ||
+                             V2State.isConstantRangeIncludingUndef() ||
+                             V2State.isConstantIncludingUndef();
       ValueLatticeElement NewV;
-      NewV.markConstant(C, /*MayIncludeUndef=*/true);
+      NewV.markConstant(C, MayIncludeUndef);
       return (void)mergeInValue(ValueState[&I], &I, NewV);
     }
   }
