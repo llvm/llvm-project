@@ -57,10 +57,10 @@ struct Kernel32 {
   bool IsConPTYAvailable() { return isAvailable; }
 
 private:
-  HMODULE hModule;
-  CreatePseudoConsole_t CreatePseudoConsole_;
-  ClosePseudoConsole_t ClosePseudoConsole_;
-  bool isAvailable;
+  HMODULE hModule = nullptr;
+  CreatePseudoConsole_t CreatePseudoConsole_ = nullptr;
+  ClosePseudoConsole_t ClosePseudoConsole_ = nullptr;
+  bool isAvailable = false;
 };
 
 static Kernel32 kernel32;
@@ -93,7 +93,8 @@ llvm::Error PseudoConsole::CreateOverlappedPipePair(HANDLE &out_read,
 
 PseudoConsole::~PseudoConsole() { Reset(); }
 
-llvm::Error PseudoConsole::OpenPseudoConsole() {
+llvm::Error PseudoConsole::OpenPseudoConsole(uint16_t req_cols,
+                                             uint16_t req_rows) {
   Reset();
 
   if (!kernel32.IsConPTYAvailable())
@@ -124,13 +125,19 @@ llvm::Error PseudoConsole::OpenPseudoConsole() {
   // if we can't query the real console.
   int cursorRow = consoleSize.Y;
   int cursorCol = 1;
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
-    consoleSize = {
-        static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
-        static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
-    cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
-    cursorCol = csbi.dwCursorPosition.X + 1;
+  if (req_cols != 0 && req_rows != 0) {
+    consoleSize = {static_cast<SHORT>(req_cols), static_cast<SHORT>(req_rows)};
+    cursorRow = consoleSize.Y;
+    cursorCol = 1;
+  } else {
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+      consoleSize = {
+          static_cast<SHORT>(csbi.srWindow.Right - csbi.srWindow.Left + 1),
+          static_cast<SHORT>(csbi.srWindow.Bottom - csbi.srWindow.Top + 1)};
+      cursorRow = csbi.dwCursorPosition.Y - csbi.srWindow.Top + 1;
+      cursorCol = csbi.dwCursorPosition.X + 1;
+    }
   }
   HPCON hPC = INVALID_HANDLE_VALUE;
   HRESULT hr =

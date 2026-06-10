@@ -143,11 +143,11 @@ public:
   size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                       Status &error) override;
 
-  /// Override of ReadMemoryRanges that uses MultiMemRead to optimize this
-  /// operation.
+  /// Override of DoReadMemoryRanges that uses MultiMemRead to perform this
+  /// operation in a single packet.
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
-  ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
-                   llvm::MutableArrayRef<uint8_t> buf) override;
+  DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buf) override;
 
 private:
   llvm::Expected<StringExtractorGDBRemote>
@@ -486,6 +486,35 @@ private:
   /// Remove the breakpoints associated with thread creation from the Target.
   void RemoveNewThreadBreakpoints();
 
+  /// Handle a set of actions requested by an accelerator plugin. Currently this
+  /// only sets the breakpoints requested in \a actions.
+  llvm::Error HandleAcceleratorActions(const AcceleratorActions &actions);
+
+  /// Set the breakpoints requested by an accelerator plugin as internal
+  /// breakpoints with a callback that notifies the plugin when they are hit.
+  /// Returns an error if any breakpoint could not be set; the remaining
+  /// breakpoints are still set.
+  llvm::Error HandleAcceleratorBreakpoints(const AcceleratorActions &actions);
+
+  /// Breakpoint callback invoked when an accelerator-plugin-requested
+  /// breakpoint is hit. Resolves any requested symbol values, notifies the
+  /// plugin via the "jAcceleratorPluginBreakpointHit" packet, and handles the
+  /// response.
+  static bool AcceleratorBreakpointHitCallback(
+      void *baton, StoppointCallbackContext *context, lldb::user_id_t break_id,
+      lldb::user_id_t break_loc_id);
+
+  bool AcceleratorBreakpointHit(void *baton, StoppointCallbackContext *context,
+                                lldb::user_id_t break_id,
+                                lldb::user_id_t break_loc_id);
+
+  /// Tracks the last action identifier handled per accelerator plugin so the
+  /// same actions are not processed more than once. Accelerator actions can
+  /// arrive in a stop reply packet, and if the debugger re-requests the stop
+  /// reply with a '?' packet we can be handed the same actions again; this
+  /// guards against handling them (e.g. setting the same breakpoints) twice.
+  std::map<std::string, int64_t> m_processed_accelerator_actions;
+
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
   void HandleAsyncMisc(llvm::StringRef data) override;
@@ -501,15 +530,9 @@ private:
   // KeyInfo for the cached module spec DenseMap.
   // The invariant is that all real keys will have the file and architecture
   // set.
-  // The empty key has an empty file and an empty arch.
-  // The tombstone key has an invalid arch and an empty file.
   // The comparison and hash functions take the file name and architecture
   // triple into account.
   struct ModuleCacheInfo {
-    static ModuleCacheKey getEmptyKey() { return ModuleCacheKey(); }
-
-    static ModuleCacheKey getTombstoneKey() { return ModuleCacheKey("", "T"); }
-
     static unsigned getHashValue(const ModuleCacheKey &key) {
       return llvm::hash_combine(key.first, key.second);
     }

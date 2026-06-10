@@ -27,7 +27,7 @@ using namespace lldb_private;
 NativeThreadWindows::NativeThreadWindows(NativeProcessWindows &process,
                                          const HostThread &thread)
     : NativeThreadProtocol(process, thread.GetNativeThread().GetThreadId()),
-      m_stop_info(), m_stop_description(), m_host_thread(thread) {
+      m_host_thread(thread) {
   m_reg_context_up =
       (NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
           process.GetArchitecture(), *this));
@@ -81,6 +81,9 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
   }
 
   if (resume_state == eStateStepping || resume_state == eStateRunning) {
+    // Clear any stop info left over from a previous stop.
+    ClearStopInfo();
+
     DWORD previous_suspend_count = 0;
     HANDLE thread_handle = m_host_thread.GetNativeThread().GetSystemHandle();
     do {

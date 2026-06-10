@@ -2053,7 +2053,7 @@ static const fltSemantics *getFltSemantics(unsigned Size) {
 }
 
 static const fltSemantics *getFltSemantics(MVT VT) {
-  return getFltSemantics(VT.getSizeInBits() / 8);
+  return getFltSemantics(VT.getScalarSizeInBits() / 8);
 }
 
 static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
@@ -9372,7 +9372,8 @@ void AMDGPUAsmParser::onBeginOfFile() {
 /// Parse AMDGPU specific expressions.
 ///
 ///  expr ::= or(expr, ...) |
-///           max(expr, ...)
+///           max(expr, ...) |
+///           min(expr, ...)
 ///
 bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   using AGVK = AMDGPUMCExpr::VariantKind;
@@ -9381,6 +9382,7 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     StringRef TokenId = getTokenStr();
     AGVK VK = StringSwitch<AGVK>(TokenId)
                   .Case("max", AGVK::AGVK_Max)
+                  .Case("min", AGVK::AGVK_Min)
                   .Case("or", AGVK::AGVK_Or)
                   .Case("extrasgprs", AGVK::AGVK_ExtraSGPRs)
                   .Case("totalnumvgprs", AGVK::AGVK_TotalNumVGPRs)

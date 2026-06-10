@@ -3033,6 +3033,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic
       // change of bitcast.
+      // addrspacecast can only fold through a bitcast if the result remains a
+      // pointer. A pointer-to-byte bitcast must stay as a separate bitcast.
+      if (!DstTy->isPtrOrPtrVectorTy())
+        return 0;
       assert(
         SrcTy->isPtrOrPtrVectorTy() &&
         MidTy->isPtrOrPtrVectorTy() &&
@@ -3044,6 +3048,10 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       return firstOp;
     case 14:
       // bitcast, addrspacecast -> addrspacecast
+      // addrspacecast can only fold through a bitcast if the source was already
+      // a pointer. A byte-to-pointer bitcast must stay as a separate bitcast.
+      if (!SrcTy->isPtrOrPtrVectorTy())
+        return 0;
       return Instruction::AddrSpaceCast;
     case 15:
       // FIXME: this state can be merged with (1), but the following assert
@@ -4485,11 +4493,15 @@ FPExtInst *FPExtInst::cloneImpl() const {
 }
 
 UIToFPInst *UIToFPInst::cloneImpl() const {
-  return new UIToFPInst(getOperand(0), getType());
+  auto *Result = new UIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 SIToFPInst *SIToFPInst::cloneImpl() const {
-  return new SIToFPInst(getOperand(0), getType());
+  auto *Result = new SIToFPInst(getOperand(0), getType());
+  Result->FMF = FMF;
+  return Result;
 }
 
 FPToUIInst *FPToUIInst::cloneImpl() const {

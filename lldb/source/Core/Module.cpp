@@ -1675,3 +1675,11 @@ DataFileCache *Module::GetIndexCache() {
                             .GetPath());
   return g_data_file_cache;
 }
+
+lldb_private::ModuleSpecList Module::GetSeparateDebugInfoFiles() {
+  SymbolFile *symfile = GetSymbolFile(/*can_create=*/true);
+  if (!symfile)
+    return {};
+
+  return symfile->GetSeparateDebugInfoFiles();
+}

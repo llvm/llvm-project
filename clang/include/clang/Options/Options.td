@@ -2138,7 +2138,7 @@ defm objc_constant_literals : BoolFOption<"objc-constant-literals",
   LangOpts<"ObjCConstantLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant ObjC literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant ObjC literals">>;
 def fconstant_array_class_EQ : Joined<["-"], "fconstant-array-class=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<LangOpts<"ObjCConstantArrayClass">>;
@@ -2184,6 +2184,10 @@ def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">,
   Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Put crash-report files in <dir>">, MetaVarName<"<dir>">;
+def fcrash_diagnostics_tar : Joined<["-"], "fcrash-diagnostics-tar=">,
+  Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
+  Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Put crash-report tarball at <path>">, MetaVarName<"<path>">;
 def fcreate_profile : Flag<["-"], "fcreate-profile">, Group<f_Group>;
 defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,
@@ -2337,14 +2341,20 @@ defm assume_nothrow_exception_dtor: BoolFOption<"assume-nothrow-exception-dtor",
   LangOpts<"AssumeNothrowExceptionDtor">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume that exception objects' destructors are non-throwing">,
   NegFlag<SetFalse>>;
-def winx64_eh_unwindv2
-    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+def winx64_eh_unwind_EQ
+    : Joined<["-"], "fwinx64-eh-unwind=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Generate unwind v2 (epilog) information for x64 Windows">,
-      Values<"disabled,best-effort,required">,
-      NormalizedValues<["Disabled", "BestEffort", "Required"]>,
-      NormalizedValuesScope<"llvm::WinX64EHUnwindV2Mode">,
-      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwindV2">, "Disabled">;
+      HelpText<"Set x64 Windows unwind info version">,
+      Values<"v1,v2-best-effort,v2-required,v3">,
+      NormalizedValues<["V1", "V2BestEffort", "V2Required", "V3"]>,
+      NormalizedValuesScope<"llvm::WinX64EHUnwindMode">,
+      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwind">, "Default">;
+// Legacy flag — driver only, not passed to cc1. The driver translates it.
+def winx64_eh_unwindv2_EQ
+    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+    Visibility<[ClangOption]>,
+      HelpText<"(Legacy) Generate unwind v2 (epilog) information for x64 Windows">,
+      Values<"disabled,best-effort,required">;
 def win_cfg_mechanism
     : Joined<["-"], "fwin-cfg-mechanism=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
@@ -3816,17 +3826,17 @@ defm constant_nsnumber_literals : BoolFOption<"constant-nsnumber-literals",
   LangOpts<"ConstantNSNumberLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSNumber literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSNumber literals">>;
 defm constant_nsarray_literals : BoolFOption<"constant-nsarray-literals",
   LangOpts<"ConstantNSArrayLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSArray literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSArray literals">>;
 defm constant_nsdictionary_literals : BoolFOption<"constant-nsdictionary-literals",
   LangOpts<"ConstantNSDictionaryLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSDictionary literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSDictionary literals">>;
 def fno_common : Flag<["-"], "fno-common">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;
@@ -4832,9 +4842,9 @@ defm zero_initialized_in_bss : BoolFOption<"zero-initialized-in-bss",
   PosFlag<SetFalse>>;
 defm function_sections : BoolFOption<"function-sections",
   CodeGenOpts<"FunctionSections">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each function in its own section">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm basic_block_address_map : BoolFOption<"basic-block-address-map",
   CodeGenOpts<"BBAddrMap">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Emit the basic block address map section.">,
@@ -4847,9 +4857,9 @@ def fbasic_block_sections_EQ : Joined<["-"], "fbasic-block-sections=">, Group<f_
   MarshallingInfoString<CodeGenOpts<"BBSections">, [{"none"}]>;
 defm data_sections : BoolFOption<"data-sections",
   CodeGenOpts<"DataSections">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each data in its own section">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm experimental_call_graph_section
     : BoolFOption<"experimental-call-graph-section",
                   CodeGenOpts<"CallGraphSection">, DefaultFalse,
@@ -5602,6 +5612,10 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
       !eq(GlobalDocumentation.Program, "Flang") : "",
       true: " The value will be reflected in __riscv_v_fixed_vlen preprocessor define"),
     " (RISC-V only)")>;
+def mexperimental_mtune_syntax : Flag<["-"], "mexperimental-mtune-syntax">, Group<m_Group>,
+  HelpText<"Enable experimental syntax for the '-mtune' flag (RISC-V only)">;
+def mno_experimental_mtune_syntax : Flag<["-"], "mno-experimental-mtune-syntax">, Group<m_Group>,
+  HelpText<"Disable experimental syntax for the '-mtune' flag (RISC-V only)">;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/MIPSr6 only)">;
@@ -5623,6 +5637,10 @@ def mvector_strict_align : Flag<["-"], "mvector-strict-align">, Group<m_Group>,
   HelpText<"Force all vector memory accesses to be aligned (RISC-V only)">;
 def mno_vector_strict_align : Flag<["-"], "mno-vector-strict-align">, Group<m_Group>,
   HelpText<"Allow vector memory accesses to be unaligned (RISC-V only)">;
+def mzilsd_word_align : Flag<["-"], "mzilsd-word-align">, Group<m_Group>,
+  HelpText<"Allow Zilsd/Zclsd memory accesses to be 4-byte aligned (RISC-V only)">;
+def mzilsd_strict_align : Flag<["-"], "mzilsd-strict-align">, Group<m_Group>,
+  HelpText<"Force all Zilsd/Zclsd memory accesses to be 8-byte aligned (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;
@@ -9310,6 +9328,8 @@ def _SLASH_QIntel_jcc_erratum : CLFlag<"QIntel-jcc-erratum">,
   Alias<mbranches_within_32B_boundaries>;
 def _SLASH_arm64EC : CLFlag<"arm64EC">,
   HelpText<"Set build target to arm64ec">;
+def _SLASH_pathmap : CLCompileJoined<"pathmap:">,
+  Alias<ffile_prefix_map_EQ>;
 def : CLFlag<"Qgather-">, Alias<mno_gather>,
       HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
 def : CLFlag<"Qscatter-">, Alias<mno_scatter>,

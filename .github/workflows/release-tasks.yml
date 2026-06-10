@@ -61,13 +61,18 @@ jobs:
         run: |
           ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release "$RELEASE_VERSION" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" create
   release-documentation:
-    name: Build and Upload Release Documentation
+    name: Build and Upload Release Documentation and Man Pages
     needs:
       - validate-tag
+      - release-create
     uses: ./.github/workflows/release-documentation.yml
     with:
       release-version: ${{ needs.validate-tag.outputs.release-version }}
       upload: true
+    # Called workflows don't have access to secrets by default, so we need to explicitly pass secrets that we use.
+    secrets:
+      LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+      LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
   release-doxygen:
     name: Build and Upload Release Doxygen

@@ -98,12 +98,14 @@
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/TarWriter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -175,16 +177,15 @@ std::string CUIDOptions::getCUID(StringRef InputFile,
   }
   return CUID;
 }
-Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
+Driver::Driver(StringRef DriverExecutable, StringRef TargetTriple,
                DiagnosticsEngine &Diags, std::string Title,
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS)
     : Diags(Diags), VFS(std::move(VFS)), Mode(GCCMode),
       SaveTemps(SaveTempsNone), BitcodeEmbed(EmbedNone),
       Offload(OffloadHostDevice), CXX20HeaderType(HeaderMode_None),
-      ModulesModeCXX20(false), LTOMode(LTOK_None),
-      ClangExecutable(ClangExecutable), SysRoot(DEFAULT_SYSROOT),
-      DriverTitle(Title), CCCPrintBindings(false), CCPrintOptions(false),
-      CCLogDiagnostics(false), CCGenDiagnostics(false),
+      ModulesModeCXX20(false), DriverExecutable(DriverExecutable),
+      SysRoot(DEFAULT_SYSROOT), DriverTitle(Title), CCCPrintBindings(false),
+      CCPrintOptions(false), CCLogDiagnostics(false), CCGenDiagnostics(false),
       CCPrintProcessStats(false), CCPrintInternalStats(false),
       TargetTriple(TargetTriple), Saver(Alloc), PrependArg(nullptr),
       PreferredLinker(CLANG_DEFAULT_LINKER), CheckInputsExist(true),
@@ -193,8 +194,8 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
 
-  Name = std::string(llvm::sys::path::filename(ClangExecutable));
-  Dir = std::string(llvm::sys::path::parent_path(ClangExecutable));
+  Name = std::string(llvm::sys::path::filename(DriverExecutable));
+  Dir = std::string(llvm::sys::path::parent_path(DriverExecutable));
 
   if ((!SysRoot.empty()) && llvm::sys::path::is_relative(SysRoot)) {
     // Prepend InstalledDir if SysRoot is relative
@@ -222,7 +223,7 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
 #endif
 
   // Compute the path to the resource directory.
-  ResourceDir = GetResourcesPath(ClangExecutable);
+  ResourceDir = GetResourcesPath(DriverExecutable);
 }
 
 void Driver::setDriverMode(StringRef Value) {
@@ -840,50 +841,6 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   return Target;
 }
 
-// Parse the LTO options and record the type of LTO compilation
-// based on which -f(no-)?lto(=.*)? or -f(no-)?offload-lto(=.*)?
-// option occurs last.
-static driver::LTOKind parseLTOMode(Driver &D, const llvm::opt::ArgList &Args,
-                                    OptSpecifier OptEq, OptSpecifier OptNeg) {
-  if (!Args.hasFlag(OptEq, OptNeg, false))
-    return LTOK_None;
-
-  const Arg *A = Args.getLastArg(OptEq);
-  StringRef LTOName = A->getValue();
-
-  driver::LTOKind LTOMode = llvm::StringSwitch<LTOKind>(LTOName)
-                                .Case("full", LTOK_Full)
-                                .Case("thin", LTOK_Thin)
-                                .Default(LTOK_Unknown);
-
-  if (LTOMode == LTOK_Unknown) {
-    D.Diag(diag::err_drv_unsupported_option_argument)
-        << A->getSpelling() << A->getValue();
-    return LTOK_None;
-  }
-  return LTOMode;
-}
-
-// Parse the LTO options.
-void Driver::setLTOMode(const llvm::opt::ArgList &Args) {
-  LTOMode =
-      parseLTOMode(*this, Args, options::OPT_flto_EQ, options::OPT_fno_lto);
-
-  OffloadLTOMode = parseLTOMode(*this, Args, options::OPT_foffload_lto_EQ,
-                                options::OPT_fno_offload_lto);
-
-  // Try to enable `-foffload-lto=full` if `-fopenmp-target-jit` is on.
-  if (Args.hasFlag(options::OPT_fopenmp_target_jit,
-                   options::OPT_fno_openmp_target_jit, false)) {
-    if (Arg *A = Args.getLastArg(options::OPT_foffload_lto_EQ,
-                                 options::OPT_fno_offload_lto))
-      if (OffloadLTOMode != LTOK_Full)
-        Diag(diag::err_drv_incompatible_options)
-            << A->getSpelling() << "-fopenmp-target-jit";
-    OffloadLTOMode = LTOK_Full;
-  }
-}
-
 /// Compute the desired OpenMP runtime from the flags provided.
 Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   StringRef RuntimeName(CLANG_DEFAULT_OPENMP_RUNTIME);
@@ -1488,7 +1445,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // We look for the driver mode option early, because the mode can affect
   // how other options are parsed.
 
-  auto DriverMode = getDriverMode(ClangExecutable, ArgList.slice(1));
+  auto DriverMode = getDriverMode(DriverExecutable, ArgList.slice(1));
   if (!DriverMode.empty())
     setDriverMode(DriverMode);
 
@@ -1676,8 +1633,6 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     else
       Offload = OffloadHostDevice;
   }
-
-  setLTOMode(Args);
 
   // Process -fembed-bitcode= flags.
   if (Arg *A = Args.getLastArg(options::OPT_fembed_bitcode_EQ)) {
@@ -2009,10 +1964,9 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
   return false;
 }
 
-static const char BugReporMsg[] =
+static const char BugReportMsg[] =
     "\n********************\n\n"
-    "PLEASE ATTACH THE FOLLOWING FILES TO THE BUG REPORT:\n"
-    "Preprocessed source(s) and associated run script(s) are located at:";
+    "PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:";
 
 // When clang crashes, produce diagnostic information including the fully
 // preprocessed source file(s).  Request that the developer attach the
@@ -2022,6 +1976,8 @@ void Driver::generateCompilationDiagnostics(
     StringRef AdditionalInformation, CompilationDiagnosticReport *Report) {
   if (C.getArgs().hasArg(options::OPT_fno_crash_diagnostics))
     return;
+
+  bool HasCrashTar = C.getArgs().hasArg(options::OPT_fcrash_diagnostics_tar);
 
   unsigned Level = 1;
   if (Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_EQ)) {
@@ -2083,7 +2039,7 @@ void Driver::generateCompilationDiagnostics(
 
     // Redirect stdout/stderr to /dev/null.
     NewLLDInvocation.Execute({std::nullopt, {""}, {""}}, nullptr, nullptr);
-    Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReporMsg;
+    Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReportMsg;
     Diag(clang::diag::note_drv_command_failed_diag_msg) << TmpName;
     Diag(clang::diag::note_drv_command_failed_diag_msg)
         << "\n\n********************";
@@ -2224,12 +2180,13 @@ void Driver::generateCompilationDiagnostics(
     TempFiles.push_back(std::string(Path.begin(), Path.end()));
   }
 
-  Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReporMsg;
+  Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReportMsg;
 
   SmallString<128> VFS;
   SmallString<128> ReproCrashFilename;
   for (std::string &TempFile : TempFiles) {
-    Diag(clang::diag::note_drv_command_failed_diag_msg) << TempFile;
+    if (!HasCrashTar)
+      Diag(clang::diag::note_drv_command_failed_diag_msg) << TempFile;
     if (Report)
       Report->TemporaryFiles.push_back(TempFile);
     if (ReproCrashFilename.empty()) {
@@ -2271,7 +2228,69 @@ void Driver::generateCompilationDiagnostics(
                << "\n";
     if (Report)
       Report->TemporaryFiles.push_back(std::string(Script));
-    Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
+    TempFiles.push_back(std::string(Script));
+    ScriptOS.close();
+    if (!HasCrashTar)
+      Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
+  }
+
+  if (Arg *A = C.getArgs().getLastArg(options::OPT_fcrash_diagnostics_tar)) {
+    StringRef CrashDiagnosticsTar = A->getValue();
+    Expected<std::unique_ptr<llvm::TarWriter>> TarOrErr =
+        llvm::TarWriter::create(CrashDiagnosticsTar,
+                                llvm::sys::path::stem(CrashDiagnosticsTar));
+    if (!TarOrErr) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << (std::string("Error creating reproducer tarball: ") +
+              llvm::toString(TarOrErr.takeError()));
+    } else {
+      std::unique_ptr<llvm::TarWriter> &Tar = *TarOrErr;
+      for (const std::string &TempFile : TempFiles) {
+        if (llvm::sys::fs::is_directory(TempFile)) {
+          std::error_code EC;
+          for (llvm::sys::fs::recursive_directory_iterator I(TempFile, EC), E;
+               I != E && !EC; I.increment(EC)) {
+            if (llvm::sys::fs::is_regular_file(I->path())) {
+              auto BufferOrErr = llvm::MemoryBuffer::getFile(I->path());
+              if (BufferOrErr) {
+                // Construct path of file relative to TempFile.
+                llvm::SmallString<128> PathInTar =
+                    llvm::sys::path::filename(TempFile);
+                StringRef SubPath = I->path();
+                if (SubPath.consume_front(TempFile)) {
+                  if (!SubPath.empty() &&
+                      llvm::sys::path::is_separator(SubPath.front())) {
+                    SubPath = SubPath.drop_front();
+                  }
+                  llvm::sys::path::append(PathInTar, SubPath);
+                  Tar->append(PathInTar, (*BufferOrErr)->getBuffer());
+                }
+              } else {
+                Diag(clang::diag::note_drv_command_failed_diag_msg)
+                    << (std::string("Error reading file for tarball: ") +
+                        I->path());
+              }
+            }
+          }
+          if (EC) {
+            Diag(clang::diag::note_drv_command_failed_diag_msg)
+                << (std::string("Error iterating directory for tarball: ") +
+                    TempFile + " " + EC.message());
+          }
+        } else {
+          auto BufferOrErr = llvm::MemoryBuffer::getFile(TempFile);
+          if (BufferOrErr) {
+            Tar->append(llvm::sys::path::filename(TempFile),
+                        (*BufferOrErr)->getBuffer());
+          } else {
+            Diag(clang::diag::note_drv_command_failed_diag_msg)
+                << (std::string("Error reading file for tarball: ") + TempFile);
+          }
+        }
+      }
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << CrashDiagnosticsTar;
+    }
   }
 
   // On darwin, provide information about the .crash diagnostic report.
@@ -3648,7 +3667,8 @@ class OffloadingActionBuilder final {
               break;
 
             CudaDeviceActions[I] = C.getDriver().ConstructPhaseAction(
-                C, Args, Ph, CudaDeviceActions[I], Action::OFK_Cuda);
+                C, Args, Ph, CudaDeviceActions[I], Action::OFK_Cuda,
+                ToolChains[I]->getLTOMode(Args, Action::OFK_Cuda));
 
             if (Ph == phases::Assemble)
               break;
@@ -3799,7 +3819,7 @@ class OffloadingActionBuilder final {
         // a fat binary containing all the code objects for different GPU's.
         // The fat binary is then an input to the host action.
         for (unsigned I = 0, E = GpuArchList.size(); I != E; ++I) {
-          if (C.getDriver().isUsingOffloadLTO()) {
+          if (ToolChains[I]->isUsingLTO(Args, AssociatedOffloadKind)) {
             // When LTO is enabled, skip the backend and assemble phases and
             // use lld to link the bitcode.
             ActionList AL;
@@ -3824,10 +3844,13 @@ class OffloadingActionBuilder final {
                                      : types::TY_LLVM_BC;
               BackendAction =
                   C.MakeAction<BackendJobAction>(CudaDeviceActions[I], Output);
-            } else
+            } else {
+              auto DevLTO =
+                  ToolChains[I]->getLTOMode(Args, AssociatedOffloadKind);
               BackendAction = C.getDriver().ConstructPhaseAction(
                   C, Args, phases::Backend, CudaDeviceActions[I],
-                  AssociatedOffloadKind);
+                  AssociatedOffloadKind, DevLTO);
+            }
             auto AssembleAction = C.getDriver().ConstructPhaseAction(
                 C, Args, phases::Assemble, BackendAction,
                 AssociatedOffloadKind);
@@ -3892,9 +3915,10 @@ class OffloadingActionBuilder final {
       }
 
       // By default, we produce an action for each device arch.
-      for (Action *&A : CudaDeviceActions)
-        A = C.getDriver().ConstructPhaseAction(C, Args, CurPhase, A,
-                                               AssociatedOffloadKind);
+      for (unsigned I = 0, E = CudaDeviceActions.size(); I != E; ++I)
+        CudaDeviceActions[I] = C.getDriver().ConstructPhaseAction(
+            C, Args, CurPhase, CudaDeviceActions[I], AssociatedOffloadKind,
+            ToolChains[I]->getLTOMode(Args, AssociatedOffloadKind));
 
       if (CompileDeviceOnly && CurPhase == FinalPhase && BundleOutput &&
           *BundleOutput) {
@@ -4352,7 +4376,7 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
         !C.getDefaultToolChain().getTriple().isSPIRV())
       Diag(clang::diag::err_drv_emit_llvm_link);
     if (C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() &&
-        LTOMode != LTOK_None &&
+        C.getDefaultToolChain().isUsingLTO(Args) &&
         !Args.getLastArgValue(options::OPT_fuse_ld_EQ)
              .starts_with_insensitive("lld"))
       Diag(clang::diag::err_drv_lto_without_lld);
@@ -4445,8 +4469,10 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
         const types::ID HeaderType = lookupHeaderTypeForSourceType(InputType);
         // Build the pipeline for the pch file.
         Action *ClangClPch = C.MakeAction<InputAction>(*InputArg, HeaderType);
+        auto HostLTO = C.getDefaultToolChain().getLTOMode(Args);
         for (phases::ID Phase : types::getCompilationPhases(HeaderType))
-          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch);
+          ClangClPch = ConstructPhaseAction(C, Args, Phase, ClangClPch,
+                                            Action::OFK_None, HostLTO);
         assert(ClangClPch);
         Actions.push_back(ClangClPch);
         // The driver currently exits after the first failed command.  This
@@ -4586,7 +4612,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       // later actions in the same command line?
 
       // Otherwise construct the appropriate action.
-      Action *NewCurrent = ConstructPhaseAction(C, Args, Phase, Current);
+      Action *NewCurrent =
+          ConstructPhaseAction(C, Args, Phase, Current, Action::OFK_None,
+                               C.getDefaultToolChain().getLTOMode(Args));
 
       // We didn't create a new action, so we will just move to the next phase.
       if (NewCurrent == Current)
@@ -5073,7 +5101,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         // Propagate the ToolChain so we can use it in ConstructPhaseAction.
         A->propagateDeviceOffloadInfo(Kind, TCAndArch->second.data(),
                                       TCAndArch->first);
-        A = ConstructPhaseAction(C, Args, Phase, A, Kind);
+        A = ConstructPhaseAction(C, Args, Phase, A, Kind,
+                                 TCAndArch->first->getLTOMode(Args, Kind));
 
         if (isa<CompileJobAction>(A) && isa<CompileJobAction>(HostAction) &&
             Kind == Action::OFK_OpenMP &&
@@ -5104,22 +5133,10 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
           OffloadTriple && OffloadTriple->isSPIRV() &&
           (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
            OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
-      bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
-                                          options::OPT_no_use_spirv_backend,
-                                          /*Default=*/false);
-
-      // Special handling for the HIP SPIR-V toolchains in device-only.
-      // The translator path has a linking step, whereas the SPIR-V backend path
-      // does not to avoid any external dependency such as spirv-link. The
-      // linking step is skipped for the SPIR-V backend path.
-      bool IsAMDGCNSPIRVWithBackend =
-          IsHIPSPV && OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA &&
-          UseSPIRVBackend;
 
       if ((A->getType() != types::TY_Object && !IsHIPSPV &&
            A->getType() != types::TY_LTO_BC) ||
-          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
-          (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
+          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
@@ -5226,7 +5243,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
 
 Action *Driver::ConstructPhaseAction(
     Compilation &C, const ArgList &Args, phases::ID Phase, Action *Input,
-    Action::OffloadKind TargetDeviceOffloadKind) const {
+    Action::OffloadKind TargetDeviceOffloadKind, LTOKind TargetLTOMode) const {
   llvm::PrettyStackTraceString CrashInfo("Constructing phase actions");
 
   // Some types skip the assembler phase (e.g., llvm-bc), but we can't
@@ -5339,104 +5356,42 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
-    // Skip a redundant Backend phase for HIP device code when using the new
-    // offload driver, where mid-end is done in linker wrapper. With
-    // -save-temps, we still need the Backend phase to produce optimized IR.
-    if (TargetDeviceOffloadKind == Action::OFK_HIP &&
-        Args.hasFlag(options::OPT_offload_new_driver,
-                     options::OPT_no_offload_new_driver,
-                     C.getActiveOffloadKinds() != Action::OFK_None) &&
-        !offloadDeviceOnly() && !isSaveTempsEnabled() &&
-        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm)))
-      return Input;
-
-    if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
+    if (TargetLTOMode != LTOK_None) {
+      bool IsDeviceOffload = TargetDeviceOffloadKind != Action::OFK_None;
+      if (!IsDeviceOffload) {
+        types::ID Output;
+        if (Args.hasArg(options::OPT_ffat_lto_objects) &&
+            !Args.hasArg(options::OPT_emit_llvm))
+          Output = types::TY_PP_Asm;
+        else if (Args.hasArg(options::OPT_S))
+          Output = types::TY_LTO_IR;
+        else
+          Output = types::TY_LTO_BC;
+        return C.MakeAction<BackendJobAction>(Input, Output);
+      }
       types::ID Output;
-      if (Args.hasArg(options::OPT_ffat_lto_objects) &&
-          !Args.hasArg(options::OPT_emit_llvm))
+      if (Args.hasArg(options::OPT_emit_llvm)) {
+        Output =
+            Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
+      } else if (Args.hasArg(options::OPT_S) && offloadDeviceOnly() &&
+                 !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                               false)) {
+        // For non-RDC device-only compilations with -S, produce real assembly
+        // since the user explicitly requested assembly output.
         Output = types::TY_PP_Asm;
-      else if (Args.hasArg(options::OPT_S))
+      } else if (Args.hasArg(options::OPT_S)) {
         Output = types::TY_LTO_IR;
-      else
+      } else {
         Output = types::TY_LTO_BC;
+      }
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    if (isUsingOffloadLTO() && TargetDeviceOffloadKind != Action::OFK_None) {
-      types::ID Output =
-          Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
-      return C.MakeAction<BackendJobAction>(Input, Output);
-    }
-    bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
-                                        options::OPT_no_use_spirv_backend,
-                                        /*Default=*/false);
-
-    auto OffloadingToolChain = Input->getOffloadingToolChain();
-    // For AMD SPIRV, if offloadDeviceOnly(), we call the SPIRV backend unless
-    // LLVM bitcode was requested explicitly or RDC is set. If
-    // !offloadDeviceOnly, we emit LLVM bitcode, and clang-linker-wrapper will
-    // compile it to SPIRV.
-    bool UseSPIRVBackendForHipDeviceOnlyNoRDC =
-        TargetDeviceOffloadKind == Action::OFK_HIP && OffloadingToolChain &&
-        OffloadingToolChain->getTriple().isSPIRV() && UseSPIRVBackend &&
-        offloadDeviceOnly() &&
-        !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
-
-    auto &DefaultToolChain = C.getDefaultToolChain();
-    auto DefaultToolChainTriple = DefaultToolChain.getTriple();
-    // For regular C/C++ to AMD SPIRV emit bitcode to avoid spirv-link
-    // dependency, SPIRVAMDToolChain's linker takes care of the generation of
-    // the final SPIRV. The only exception is -S without -emit-llvm to output
-    // textual SPIRV assembly, which fits the default compilation path.
-    bool EmitBitcodeForNonOffloadAMDSPIRV =
-        !OffloadingToolChain && DefaultToolChainTriple.isSPIRV() &&
-        DefaultToolChainTriple.getVendor() == llvm::Triple::VendorType::AMD &&
-        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm));
-
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        EmitBitcodeForNonOffloadAMDSPIRV ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL ||
-        (((Input->getOffloadingToolChain() &&
-           Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&
-           TargetDeviceOffloadKind != Action::OFK_None) ||
-          TargetDeviceOffloadKind == Action::OFK_HIP) &&
-         !UseSPIRVBackendForHipDeviceOnlyNoRDC &&
-         ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                        false) ||
-           (Args.hasFlag(options::OPT_offload_new_driver,
-                         options::OPT_no_offload_new_driver,
-                         C.getActiveOffloadKinds() != Action::OFK_None) &&
-            !(Args.hasArg(options::OPT_S) &&
-              !Args.hasArg(options::OPT_emit_llvm)) &&
-            (!offloadDeviceOnly() ||
-             (Input->getOffloadingToolChain() &&
-              TargetDeviceOffloadKind == Action::OFK_HIP &&
-              Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
+        TargetDeviceOffloadKind == Action::OFK_SYCL) {
       types::ID Output =
-          Args.hasArg(options::OPT_S) &&
-                  (TargetDeviceOffloadKind == Action::OFK_None ||
-                   offloadDeviceOnly() ||
-                   (TargetDeviceOffloadKind == Action::OFK_HIP &&
-                    !Args.hasFlag(options::OPT_offload_new_driver,
-                                  options::OPT_no_offload_new_driver,
-                                  C.getActiveOffloadKinds() !=
-                                      Action::OFK_None)))
-              ? types::TY_LLVM_IR
-              : types::TY_LLVM_BC;
+          Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-
-    // The SPIRV backend compilation path for HIP must avoid external
-    // dependencies. The default compilation path assembles and links its
-    // output, but the SPIRV assembler and linker are external tools. This code
-    // ensures the backend emits binary SPIRV directly to bypass those steps and
-    // avoid failures. Without -save-temps, the compiler may already skip
-    // assembling and linking. With -save-temps, these steps must be explicitly
-    // disabled, as done here. We also force skipping these steps regardless of
-    // -save-temps to avoid relying on optimizations (unless -S is set).
-    // The current HIP bundling expects the type to be types::TY_Image
-    if (UseSPIRVBackendForHipDeviceOnlyNoRDC && !Args.hasArg(options::OPT_S))
-      return C.MakeAction<BackendJobAction>(Input, types::TY_Image);
 
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }
@@ -6203,7 +6158,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   ActionList CollapsedOffloadActions;
 
   ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(),
-                  embedBitcodeInObject() && !isUsingLTO());
+                  embedBitcodeInObject() && !TC->isUsingLTO(C.getArgs()));
   const Tool *T = TS.getTool(Inputs, CollapsedOffloadActions);
 
   if (!T)

@@ -724,3 +724,18 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.stdio.stdout
 )
+
+add_entrypoint_object(
+  swprintf
+  SRCS
+    swprintf.cpp
+  HDRS
+    swprintf.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.hdr.errno_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

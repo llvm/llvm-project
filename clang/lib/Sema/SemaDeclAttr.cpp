@@ -8193,9 +8193,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_HLSLParamModifier:
     S.HLSL().handleParamModifierAttr(D, AL);
     break;
-  case ParsedAttr::AT_HLSLMatrixLayout:
-    S.HLSL().handleMatrixLayoutAttr(D, AL);
-    break;
   case ParsedAttr::AT_HLSLUnparsedSemantic:
     S.HLSL().handleSemanticAttr(D, AL);
     break;

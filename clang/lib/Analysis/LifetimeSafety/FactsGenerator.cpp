@@ -631,23 +631,23 @@ void FactsGenerator::VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE) {
       Dst->getOuterOriginID(), Src->getOuterOriginID(), /*Kill=*/true));
 }
 
-void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
+bool FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
                                         OriginList *NewList) {
   // Model only the standard single-argument placement new form, where the
   // placement argument corresponds to a void* allocation-function parameter.
   // Other placement forms, such as std::nothrow, are not modeled as providing
   // storage for the returned pointer.
   if (NE->getNumPlacementArgs() != 1)
-    return;
+    return false;
 
   const FunctionDecl *OperatorNew = NE->getOperatorNew();
   if (OperatorNew->getNumParams() <= 1)
-    return;
+    return false;
 
   const auto *Arg =
       OperatorNew->getParamDecl(1)->getType()->getAs<PointerType>();
   if (!Arg || !Arg->isVoidPointerType())
-    return;
+    return false;
 
   // Use the placement argument before the implicit conversion to void*, so
   // inner origins are still available.
@@ -665,15 +665,23 @@ void FactsGenerator::handlePlacementNew(const CXXNewExpr *NE,
   if (PlacementList)
     CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
         NewList->getOuterOriginID(), PlacementList->getOuterOriginID(), true));
+  return true;
 }
 
 void FactsGenerator::VisitCXXNewExpr(const CXXNewExpr *NE) {
   OriginList *NewList = getOriginsList(*NE);
   const Expr *Init = NE->getInitializer();
 
-  if (NE->getNumPlacementArgs() == 1) {
-    handlePlacementNew(NE, NewList);
-  } else {
+  bool HandledAsPlacementNew = false;
+  if (NE->getNumPlacementArgs() == 1)
+    HandledAsPlacementNew = handlePlacementNew(NE, NewList);
+
+  // Treat ordinary new and replaceable global allocation forms as heap
+  // allocations.
+  const FunctionDecl *OperatorNew = NE->getOperatorNew();
+  if (!HandledAsPlacementNew &&
+      (NE->getNumPlacementArgs() == 0 ||
+       (OperatorNew && OperatorNew->isReplaceableGlobalAllocationFunction()))) {
     const Loan *L = createLoan(FactMgr, NE);
     CurrentBlockFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), NewList->getOuterOriginID()));
@@ -726,8 +734,8 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
 void FactsGenerator::handleFullExprCleanup(
     const CFGFullExprCleanup &FullExprCleanup) {
   for (const auto *MTE : FullExprCleanup.getExpiringMTEs())
-    CurrentBlockFacts.push_back(
-        FactMgr.createFact<ExpireFact>(AccessPath(MTE), MTE->getEndLoc()));
+    CurrentBlockFacts.push_back(FactMgr.createFact<ExpireFact>(
+        AccessPath(MTE), FullExprCleanup.getCleanupLoc()));
 }
 
 void FactsGenerator::handleExitBlock() {
@@ -878,6 +886,66 @@ void FactsGenerator::handleImplicitObjectFieldUses(const Expr *Call,
   });
 }
 
+void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
+                                             ArrayRef<const Expr *> Args) {
+  if (Args.empty())
+    return;
+  // FIXME: Add support for capture_by on constructors.
+  if (isa<CXXConstructorDecl>(FD))
+    return;
+  const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+  bool IsInstance =
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD);
+  auto getArgCaptureBy = [FD,
+                          IsInstance](unsigned I) -> LifetimeCaptureByAttr * {
+    const ParmVarDecl *PVD = nullptr;
+    if (IsInstance) {
+      // FIXME: Add support for I == 0 i.e. capture_by on function declarations
+      if (I > 0 && I - 1 < FD->getNumParams())
+        PVD = FD->getParamDecl(I - 1);
+    } else {
+      if (I < FD->getNumParams())
+        PVD = FD->getParamDecl(I);
+    }
+    return PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr;
+  };
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    const LifetimeCaptureByAttr *Attr = getArgCaptureBy(I);
+    if (!Attr)
+      continue;
+    OriginList *CapturedOriginList = getOriginsList(*Args[I]);
+    if (!CapturedOriginList)
+      continue;
+    if (!CapturedOriginList)
+      continue;
+    for (int CapturingArgIdx : Attr->params()) {
+      // FIXME: Add support for capturing to Global/unknown.
+      if (CapturingArgIdx == LifetimeCaptureByAttr::Global ||
+          CapturingArgIdx == LifetimeCaptureByAttr::Unknown ||
+          CapturingArgIdx == LifetimeCaptureByAttr::Invalid)
+        continue;
+      ArrayRef<const Expr *> CallArgs = IsInstance ? Args.drop_front() : Args;
+      const Expr *CapturedByArg =
+          (CapturingArgIdx == LifetimeCaptureByAttr::This)
+              ? Args[0]
+              : CallArgs[CapturingArgIdx];
+      assert(CapturedByArg && "Capturer expression must be valid");
+
+      OriginList *CapturingOriginList = getOriginsList(*CapturedByArg);
+      OriginList *Dest = getRValueOrigins(CapturedByArg, CapturingOriginList);
+      if (!Dest)
+        continue;
+      // KillDest=false because we cannot know if previous captures are being
+      // replaced or accumulated. Multiple successive captures into the same
+      // destination must all be tracked, so captured lifetimes are always
+      // merged.
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          Dest->getOuterOriginID(), CapturedOriginList->getOuterOriginID(),
+          /*KillDest=*/false));
+    }
+  }
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -894,6 +962,7 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   handleDestructiveCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   handleImplicitObjectFieldUses(Call, FD);
+  handleLifetimeCaptureBy(FD, Args);
   if (!CallList)
     return;
   if (isStdReferenceCast(FD)) {
