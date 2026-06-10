@@ -1701,13 +1701,23 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
   int rank = dataShape.size();
   assert(rank >= 1 && "Expected at least 1D shape for ND op");
 
-  // Compute the default 2D block IO lane layout / lane data.
+  // Compute the default 2D block IO lane layout / lane data. Cap each by
+  // the innermost shape so the product `lane_layout * lane_data` doesn't
+  // exceed it (e.g. ui8 with shape innermost=16 cannot use the full
+  // packing factor of 2 because subgroupSize * 2 = 32 > 16).
   unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
   int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
   SmallVector<int64_t> laneLayout(rank, 1);
   SmallVector<int64_t> laneData(rank, 1);
-  laneLayout.back() = uArch->getSubgroupSize();
-  laneData.back() = packingFactor;
+  int64_t innermostShape = dataShape.back();
+  int64_t lanesOnInnermost =
+      std::min<int64_t>(uArch->getSubgroupSize(), innermostShape);
+  laneLayout.back() = lanesOnInnermost;
+  if (lanesOnInnermost > 0)
+    laneData.back() = std::min<int64_t>(packingFactor,
+                                        innermostShape / lanesOnInnermost);
+  else
+    laneData.back() = 1;
 
   // Honor the consumer's lane info when valid. The consumer (e.g. dpas) may
   // require VNNI-style packing on a non-innermost dim that the load's own
