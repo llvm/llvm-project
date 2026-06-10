@@ -5,7 +5,36 @@ define <4 x i16> @test(<4 x i16> %a) {
 ; CHECK-LABEL: define <4 x i16> @test(
 ; CHECK-SAME: <4 x i16> [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[OP_RDX9:%.*]] = or <4 x i16> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i16> [[A]], <4 x i16> poison, <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <24 x i16> <i16 0, i16 0, i16 0, i16 0, i16 undef, i16 undef, i16 undef, i16 undef, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, <24 x i16> [[TMP0]], <24 x i32> <i32 0, i32 1, i32 2, i32 3, i32 24, i32 25, i32 26, i32 27, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <24 x i16> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <24 x i16> [[TMP2]], <24 x i16> poison, <48 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <48 x i16> [[TMP3]], <48 x i16> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <48 x i16> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i16> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[RDX_OP1:%.*]] = or <4 x i16> [[RDX_OP]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[RDX_OP2:%.*]] = or <4 x i16> [[RDX_OP1]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 16, i32 17, i32 18, i32 19>
+; CHECK-NEXT:    [[RDX_OP3:%.*]] = or <4 x i16> [[RDX_OP2]], [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 20, i32 21, i32 22, i32 23>
+; CHECK-NEXT:    [[RDX_OP4:%.*]] = or <4 x i16> [[RDX_OP3]], [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 24, i32 25, i32 26, i32 27>
+; CHECK-NEXT:    [[RDX_OP5:%.*]] = or <4 x i16> [[RDX_OP4]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[RDX_OP6:%.*]] = or <4 x i16> [[RDX_OP5]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 32, i32 33, i32 34, i32 35>
+; CHECK-NEXT:    [[RDX_OP7:%.*]] = or <4 x i16> [[RDX_OP6]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 36, i32 37, i32 38, i32 39>
+; CHECK-NEXT:    [[RDX_OP8:%.*]] = or <4 x i16> [[RDX_OP7]], [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 40, i32 41, i32 42, i32 43>
+; CHECK-NEXT:    [[RDX_OP9:%.*]] = or <4 x i16> [[RDX_OP8]], [[TMP16]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <48 x i16> [[TMP5]], <48 x i16> poison, <4 x i32> <i32 44, i32 45, i32 46, i32 47>
+; CHECK-NEXT:    [[RDX_OP10:%.*]] = or <4 x i16> [[RDX_OP9]], [[TMP17]]
+; CHECK-NEXT:    [[OP_RDX9:%.*]] = or <4 x i16> [[RDX_OP10]], [[TMP4]]
 ; CHECK-NEXT:    ret <4 x i16> [[OP_RDX9]]
 ;
 entry:
