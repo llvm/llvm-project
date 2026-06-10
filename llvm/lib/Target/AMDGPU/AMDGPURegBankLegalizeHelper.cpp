@@ -1449,6 +1449,28 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerAbsToNegMax(MI);
   case AbsToS32:
     return lowerAbsToS32(MI);
+  case IcmpI1ToBallot: {
+    // amdgcn.icmp(i1 src, i1 0, NE) -> ballot(src)
+    // The src operand has been converted to VCC by the Vcc mapping.
+    assert(cast<GIntrinsic>(&MI)->is(Intrinsic::amdgcn_icmp));
+
+    // Verify src1 is i1 false (constant 0).
+    Register Src1 = MI.getOperand(3).getReg();
+    auto Src1Const = getAnyConstantVRegValWithLookThrough(Src1, MRI);
+    if (!Src1Const || Src1Const->Value != 0)
+      return false;
+
+    // Verify predicate is ICMP_NE (33).
+    int64_t Pred = MI.getOperand(4).getImm();
+    if (Pred != CmpInst::ICMP_NE)
+      return false;
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(2).getReg();
+    B.buildIntrinsic(Intrinsic::amdgcn_ballot, Dst).addUse(Src);
+    MI.eraseFromParent();
+    return true;
+  }
   }
 
   return true;
