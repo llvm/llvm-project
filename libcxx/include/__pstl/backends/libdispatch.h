@@ -380,7 +380,7 @@ public:
       _RandomAccessIterator2 __result,
       _BinaryOperation __binary_op,
       _UnaryOperation __unary_op) noexcept {
-    using _Tp = invoke_result_t<_UnaryOperation, iter_reference_t<_RandomAccessIterator1>>;
+    using _Tp = invoke_result_t<_UnaryOperation, typename iterator_traits<_RandomAccessIterator1>::reference>;
     return __transform_inclusive_scan(
         std::move(__first),
         std::move(__last),
