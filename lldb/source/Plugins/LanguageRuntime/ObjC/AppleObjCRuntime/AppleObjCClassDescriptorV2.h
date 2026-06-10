@@ -29,7 +29,7 @@ public:
 
   ObjCLanguageRuntime::ClassDescriptorSP GetSuperclass() override;
 
-  ObjCLanguageRuntime::ClassDescriptorSP GetMetaclass() const override;
+  std::unique_ptr<ClassDescriptor> GetMetaclass() const override;
 
   bool IsValid() override {
     return true; // any Objective-C v2 runtime class descriptor we vend is valid
@@ -322,8 +322,8 @@ public:
     return ObjCLanguageRuntime::ClassDescriptorSP();
   }
 
-  ObjCLanguageRuntime::ClassDescriptorSP GetMetaclass() const override {
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+  std::unique_ptr<ClassDescriptor> GetMetaclass() const override {
+    return nullptr;
   }
 
   bool IsValid() override { return m_valid; }
