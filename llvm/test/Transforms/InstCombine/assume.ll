@@ -199,6 +199,27 @@ define void @align_on_gep_not_keeping_alignment(ptr %ptr, i64 %offset) {
   ret void
 }
 
+define void @align_on_i128_offset(ptr %p) {
+; CHECK-LABEL: @align_on_i128_offset(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P:%.*]], i64 16) ]
+; CHECK-NEXT:    ret void
+;
+  %gep = getelementptr i8, ptr %p, i128 18446744073709551616
+  call void @llvm.assume(i1 true) ["align"(ptr %gep, i64 16)]
+  ret void
+}
+
+define void @align_on_i128_offset_unaligned(ptr %p) {
+; CHECK-LABEL: @align_on_i128_offset_unaligned(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 -1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i64 16) ]
+; CHECK-NEXT:    ret void
+;
+  %gep = getelementptr i8, ptr %p, i128 18446744073709551615
+  call void @llvm.assume(i1 true) ["align"(ptr %gep, i64 16)]
+  ret void
+}
+
 define void @redundant_align() {
 ; CHECK-LABEL: @redundant_align(
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()

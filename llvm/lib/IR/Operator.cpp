@@ -109,7 +109,8 @@ Align GEPOperator::getMaxPreservedAlignment(const DataLayout &DL) const {
 
     if (StructType *STy = GTI.getStructTypeOrNull()) {
       const StructLayout *SL = DL.getStructLayout(STy);
-      Offset = SL->getElementOffset(OpC->getZExtValue());
+      Offset =
+          SL->getElementOffset(OpC->getValue().getLoBits(32).getZExtValue());
     } else {
       assert(GTI.isSequential() && "should be sequencial");
       /// If the index isn't known, we take 1 because it is the index that will
