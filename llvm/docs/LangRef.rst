@@ -15612,7 +15612,7 @@ Defined flag bits:
   Bit 1 (``1 << 1``) - specifies that the value of this index is non-negative.
   This is not necessarily implied by ``inbounds``. For exmaple, consider
 
-  .. code-black:: llvm
+  .. code-block:: llvm
       %q = sgep [8 x target("amdggpu.stridemark")], inbounds|nneg, ptr addrspace(9) %p, i32 4
       %r = sgep [8 x target("amdgpu.stridemark")], inbounds, ptr addrspace(9) %q, i32 %x
 

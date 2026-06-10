@@ -14,6 +14,7 @@
 
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -5038,37 +5039,46 @@ static Value *upgradeConvertIntrinsicCall(StringRef Name, CallBase *CI,
   return nullptr;
 }
 
+// Return the flags that represent the semantics of a structured GEP before
+// flags were added. Always sets `unsigned`. If the structered GEP is malformed,
+// will fill in one `unsigned` per index.
 static Constant *getLegacyStructuredGEPFlags(CallBase *CI) {
-  Type *CurrentType =
-      CI->getParamAttr(0, Attribute::ElementType).getValueAsType();
+  Type *CurrentType = nullptr;
+  if (CI->paramHasAttr(0, Attribute::ElementType))
+    CurrentType = CI->getParamAttr(0, Attribute::ElementType).getValueAsType();
 
   Type *Int32Ty = Type::getInt32Ty(CI->getContext());
-  SmallVector<Constant *> FlagValues;
   unsigned NumIndices = CI->arg_size() - 1;
-  FlagValues.reserve(NumIndices == 0 ? 1 : NumIndices);
-  for (unsigned I = 0; I < NumIndices; ++I) {
-    StructuredGEPFlags TheseFlags = StructuredGEPFlags::unsignedIndex();
+  SmallVector<StructuredGEPFlags> FlagValues(
+      std::max({NumIndices, 1u}), StructuredGEPFlags::unsignedIndex());
+  for (auto [I, Flags] : llvm::enumerate(FlagValues)) {
+    // Safety valve for malformed SGEP.
+    if (!CurrentType)
+      break;
+
     if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
       if (AT->getNumElements() != 0)
-        TheseFlags |= StructuredGEPFlags::inBounds();
+        Flags |= StructuredGEPFlags::inBounds();
       CurrentType = AT->getElementType();
     } else if (auto *VT = dyn_cast<VectorType>(CurrentType)) {
-      TheseFlags |= StructuredGEPFlags::inBounds();
+      Flags |= StructuredGEPFlags::inBounds();
       CurrentType = VT->getElementType();
     } else if (auto *ST = dyn_cast<StructType>(CurrentType)) {
-      TheseFlags |= StructuredGEPFlags::inBounds() | StructuredGEPFlags::nneg();
-      CurrentType = ST->getElementType(
-          cast<ConstantInt>(CI->getOperand(I + 1))->getZExtValue());
+      Flags |= StructuredGEPFlags::inBounds() | StructuredGEPFlags::nneg();
+      if (auto *ConstArg = dyn_cast<ConstantInt>(CI->getOperand(I + 1)))
+        CurrentType = ST->getElementType(ConstArg->getZExtValue());
+      else
+        break;
     } else {
       break;
     }
-
-    FlagValues.push_back(ConstantInt::get(Int32Ty, TheseFlags.getRaw()));
   }
 
-  if (FlagValues.empty())
-    FlagValues.push_back(ConstantInt::get(Int32Ty, 0));
-  return ConstantVector::get(FlagValues);
+  SmallVector<Constant *> FlagConsts =
+      llvm::map_to_vector(FlagValues, [&](auto V) {
+        return ConstantInt::get(Int32Ty, V.getRaw());
+      });
+  return ConstantVector::get(FlagConsts);
 }
 
 static Value *upgradeStructuredGEPIntrinsicCall(CallBase *CI, Function *F,
