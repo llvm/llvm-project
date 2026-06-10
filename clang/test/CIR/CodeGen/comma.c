@@ -17,10 +17,10 @@ void comma(void) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @comma()
-// CIR:         %[[B:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b"]
-// CIR:         %[[C:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["c"]
-// CIR:         %[[F:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f"]
-// CIR:         %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i"]
+// CIR:         %[[B:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:         %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!s8i>
+// CIR:         %[[F:.*]] = cir.alloca "f" {{.*}} : !cir.ptr<!cir.float>
+// CIR:         %[[I:.*]] = cir.alloca "i" {{.*}} : !cir.ptr<!s32i>
 // CIR:         %[[TRUE:.*]] = cir.const #true
 // CIR:         cir.store{{.*}} %[[TRUE]], %[[B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:         %[[CHAR_VAL:.*]] = cir.const #cir.int<65> : !s8i
@@ -40,7 +40,7 @@ void comma(void) {
 // LLVM:         %[[I_PTR:.*]] = alloca i32
 // LLVM:         store i8 1, ptr %[[B_PTR]]
 // LLVM:         store i8 65, ptr %[[C_PTR]]
-// LLVM:         store float 0x40091EB860000000, ptr %[[F_PTR]]
+// LLVM:         store float 3.140000e+00, ptr %[[F_PTR]]
 // LLVM:         store i32 42, ptr %[[I_PTR]]
 // LLVM:         store i32 100, ptr %[[I_PTR]]
 // LLVM:         ret void
@@ -52,7 +52,7 @@ void comma(void) {
 // OGCG:         %[[I_PTR:.*]] = alloca i32
 // OGCG:         store i8 1, ptr %[[B_PTR]]
 // OGCG:         store i8 65, ptr %[[C_PTR]]
-// OGCG:         store float 0x40091EB860000000, ptr %[[F_PTR]]
+// OGCG:         store float 3.140000e+00, ptr %[[F_PTR]]
 // OGCG:         store i32 42, ptr %[[I_PTR]]
 // OGCG:         store i32 100, ptr %[[I_PTR]]
 // OGCG:         ret void

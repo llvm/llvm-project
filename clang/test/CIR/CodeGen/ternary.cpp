@@ -11,8 +11,8 @@ int x(int y) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z1xi(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
-// CIR: [[Y:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
-// CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: [[Y:%.+]] = cir.alloca "y" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[RETVAL:%.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG0]], [[Y]] : !s32i, !cir.ptr<!s32i>
 // CIR: [[YVAL:%.+]] = cir.load{{.*}} [[Y]] : !cir.ptr<!s32i>, !s32i
 // CIR: [[ZERO:%.+]] = cir.const #cir.int<0> : !s32i
@@ -53,9 +53,9 @@ int foo(int a, int b) {
 
 // CIR-LABEL: cir.func{{.*}} @_Z3fooii(
 // CIR-SAME: %[[ARG0:.*]]: !s32i {{.*}}, %[[ARG1:.*]]: !s32i {{.*}}) -> (!s32i{{.*}}) attributes {{{.*}}nothrow} {
-// CIR: [[A:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: [[B:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR: [[RETVAL:%.+]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: [[A:%.+]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[B:%.+]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR: [[RETVAL:%.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG0]], [[A]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.store %[[ARG1]], [[B]] : !s32i, !cir.ptr<!s32i>
 // CIR: cir.scope {
@@ -152,9 +152,9 @@ void test_cond_lvalue_assign(bool flag) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z23test_cond_lvalue_assignb(
-// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[FLAG:.*]] = cir.alloca "flag" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]]
 // CIR: %[[TERNARY_PTR:.*]] = cir.ternary(%[[FLAG_VAL]], true {
 // CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
@@ -200,9 +200,9 @@ int& test_cond_lvalue_ref(bool cond, int x, int y) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z20test_cond_lvalue_refbii(
-// CIR: %[[COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cond", init]
-// CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
-// CIR: %[[Y:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
+// CIR: %[[COND:.*]] = cir.alloca "cond" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[X:.*]] = cir.alloca "x" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[Y:.*]] = cir.alloca "y" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[COND_VAL:.*]] = cir.load{{.*}} %[[COND]]
 // CIR: %[[REF_PTR:.*]] = cir.ternary(%[[COND_VAL]], true {
 // CIR:   cir.yield %[[X]] : !cir.ptr<!s32i>
@@ -255,9 +255,9 @@ void test_cond_lvalue_compound(bool flag) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z25test_cond_lvalue_compoundb(
-// CIR: %[[FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["flag", init]
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[FLAG:.*]] = cir.alloca "flag" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[FLAG_VAL:.*]] = cir.load{{.*}} %[[FLAG]]
 // CIR: %[[LVAL_PTR:.*]] = cir.ternary(%[[FLAG_VAL]], true {
 // CIR:   cir.yield %[[A]] : !cir.ptr<!s32i>
@@ -312,8 +312,8 @@ void test_cond_const_true_lvalue() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z27test_cond_const_true_lvaluev(
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR-NOT: cir.ternary
 // CIR: %[[NINETYNINE:.*]] = cir.const #cir.int<99> : !s32i
 // CIR: cir.store{{.*}} %[[NINETYNINE]], %[[A]] : !s32i, !cir.ptr<!s32i>
@@ -338,8 +338,8 @@ void test_cond_const_false_lvalue() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z28test_cond_const_false_lvaluev(
-// CIR: %[[A:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR: %[[B:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
+// CIR: %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR: %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
 // CIR-NOT: cir.ternary
 // CIR: %[[EIGHTYEIGHT:.*]] = cir.const #cir.int<88> : !s32i
 // CIR: cir.store{{.*}} %[[EIGHTYEIGHT]], %[[B]] : !s32i, !cir.ptr<!s32i>
@@ -362,7 +362,7 @@ void ternary_void(bool b) {
 }
 
 // CIR-LABEL: cir.func{{.*}}@_Z12ternary_voidb
-// CIR: %[[ARG:.*]] = cir.alloca !cir.bool
+// CIR: %[[ARG:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.bool>
 // CIR: %[[LOAD_ARG:.*]] = cir.load{{.*}}%[[ARG]] : !cir.ptr<!cir.bool>
 // CIR: cir.ternary(%[[LOAD_ARG]], true {
 // CIR-NEXT: cir.call @_Z3foov()

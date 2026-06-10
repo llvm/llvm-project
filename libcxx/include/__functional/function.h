@@ -17,6 +17,7 @@
 #include <__functional/binary_function.h>
 #include <__functional/unary_function.h>
 #include <__memory/addressof.h>
+#include <__new/placement_new_delete.h>
 #include <__type_traits/aligned_storage.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/invoke.h>
@@ -44,6 +45,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // bad_function_call
 
 _LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #  if !_LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_KEY_FUNCTION
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 #  endif
@@ -65,6 +67,7 @@ public:
   const char* what() const _NOEXCEPT override;
 #  endif
 };
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_DIAGNOSTIC_POP
 
 [[__noreturn__]] inline _LIBCPP_HIDE_FROM_ABI void __throw_bad_function_call() {
@@ -527,8 +530,12 @@ public:
 
 #  if _LIBCPP_HAS_BLOCKS_RUNTIME
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 extern "C" void* _Block_copy(const void*);
 extern "C" void _Block_release(const void*);
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Rp1, class... _ArgTypes1, class _Rp, class... _ArgTypes>
 class __func<_Rp1 (^)(_ArgTypes1...), _Rp(_ArgTypes...)> : public __base<_Rp(_ArgTypes...)> {

@@ -2467,6 +2467,8 @@ void OMPClauseEnqueue::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseEnqueue::VisitOMPInitClause(const OMPInitClause *C) {
   VisitOMPClauseList(C);
+  for (const Expr *A : C->attrs())
+    Visitor->AddStmt(A);
 }
 
 void OMPClauseEnqueue::VisitOMPUseClause(const OMPUseClause *C) {
@@ -9326,28 +9328,50 @@ CXString clang_Cursor_getBinaryOpcodeStr(enum CX_BinaryOperatorKind Op) {
       static_cast<CXBinaryOperatorKind>(Op));
 }
 
-CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {
-  if (!clang_isDeclaration(C.kind))
-    return clang_getNullRange();
-
-  const Decl *D = getCursorDecl(C);
+static const RawComment *getCursorRawComment(CXCursor C) {
+  if (!clang_isDeclaration(C.kind) && C.kind != CXCursor_MacroDefinition)
+    return nullptr;
   ASTContext &Context = getCursorContext(C);
-  const RawComment *RC = Context.getRawCommentForAnyRedecl(D);
+  if (clang_isDeclaration(C.kind))
+    return Context.getRawCommentForAnyRedecl(getCursorDecl(C));
+  if (C.kind == CXCursor_MacroDefinition) {
+    const MacroDefinitionRecord *Def = getCursorMacroDefinition(C);
+    if (!Def)
+      return nullptr;
+    Preprocessor &PP = getCursorASTUnit(C)->getPreprocessor();
+    // Walk the macro directive history to find the specific MacroInfo for
+    // this cursor's definition. Looking up by name alone would always return
+    // the latest definition, which is wrong for redefined macros.
+    for (const MacroDirective *MD =
+             PP.getLocalMacroDirectiveHistory(Def->getName());
+         MD; MD = MD->getPrevious()) {
+      const auto *DMD = dyn_cast<DefMacroDirective>(MD);
+      if (!DMD)
+        continue;
+      const MacroInfo *MI = DMD->getInfo();
+      if (MI && MI->getDefinitionLoc() == Def->getLocation())
+        return Context.getRawCommentForAnyRedecl(MI);
+    }
+  }
+  return nullptr;
+}
+
+CXSourceRange clang_Cursor_getCommentRange(CXCursor C) {
+  const RawComment *RC = getCursorRawComment(C);
   if (!RC)
     return clang_getNullRange();
 
+  ASTContext &Context = getCursorContext(C);
   return cxloc::translateSourceRange(Context, RC->getSourceRange());
 }
 
 CXString clang_Cursor_getRawCommentText(CXCursor C) {
-  if (!clang_isDeclaration(C.kind))
+  const RawComment *RC = getCursorRawComment(C);
+  if (!RC)
     return cxstring::createNull();
 
-  const Decl *D = getCursorDecl(C);
   ASTContext &Context = getCursorContext(C);
-  const RawComment *RC = Context.getRawCommentForAnyRedecl(D);
-  StringRef RawText =
-      RC ? RC->getRawText(Context.getSourceManager()) : StringRef();
+  StringRef RawText = RC->getRawText(Context.getSourceManager());
 
   // Don't duplicate the string because RawText points directly into source
   // code.
@@ -9355,22 +9379,16 @@ CXString clang_Cursor_getRawCommentText(CXCursor C) {
 }
 
 CXString clang_Cursor_getBriefCommentText(CXCursor C) {
-  if (!clang_isDeclaration(C.kind))
+  const RawComment *RC = getCursorRawComment(C);
+  if (!RC)
     return cxstring::createNull();
 
-  const Decl *D = getCursorDecl(C);
   const ASTContext &Context = getCursorContext(C);
-  const RawComment *RC = Context.getRawCommentForAnyRedecl(D);
+  StringRef BriefText = RC->getBriefText(Context);
 
-  if (RC) {
-    StringRef BriefText = RC->getBriefText(Context);
-
-    // Don't duplicate the string because RawComment ensures that this memory
-    // will not go away.
-    return cxstring::createRef(BriefText);
-  }
-
-  return cxstring::createNull();
+  // Don't duplicate the string because RawComment ensures that this memory
+  // will not go away.
+  return cxstring::createRef(BriefText);
 }
 
 CXModule clang_Cursor_getModule(CXCursor C) {

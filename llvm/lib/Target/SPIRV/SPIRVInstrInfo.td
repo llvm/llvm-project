@@ -98,6 +98,10 @@ def OpNop: SimpleOp<"OpNop", 0>;
 def OpUndef: Op<1, (outs ID:$res), (ins TYPE:$type), "$res = OpUndef $type">;
 def OpSizeOf: Op<321, (outs ID:$res), (ins TYPE:$ty, ID:$ptr), "$res = OpSizeOf $ty $ptr">;
 
+//  - SPV_KHR_poison_freeze : Poison values and freeze
+def OpPoisonKHR: Op<5158, (outs ID:$res), (ins TYPE:$type), "$res = OpPoisonKHR $type">;
+def OpFreezeKHR: Op<5159, (outs ID:$res), (ins TYPE:$type, ID:$val), "$res = OpFreezeKHR $type $val">;
+
 //  - SPV_KHR_expect_assume : Expect assume instructions
 def OpAssumeTrueKHR: Op<5630, (outs), (ins ID:$cond), "OpAssumeTrueKHR $cond">;
 def OpExpectKHR: Op<5631, (outs ID:$res), (ins TYPE:$ty, ID:$val, ID:$expected), "$res = OpExpectKHR $ty $val $expected">;
@@ -641,6 +645,8 @@ let isReturn = 1, hasDelaySlot = 0, isBarrier = 0, isTerminator = 1, isNotDuplic
   def OpReturn: SimpleOp<"OpReturn", 253>;
   def OpReturnValue: Op<254, (outs), (ins ID:$ret), "OpReturnValue $ret">;
   def OpUnreachable: SimpleOp<"OpUnreachable", 255>;
+  def OpAbortKHR: Op<5121, (outs), (ins TYPE:$msg_type, ID:$msg),
+                  "OpAbortKHR $msg_type $msg">;
 }
 def OpLifetimeStart: Op<256, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStart $ptr $sz">;
 def OpLifetimeStop: Op<257, (outs), (ins ID:$ptr, i32imm:$sz), "OpLifetimeStop $ptr $sz">;

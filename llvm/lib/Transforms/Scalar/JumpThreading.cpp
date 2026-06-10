@@ -1982,14 +1982,19 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
     // block, and if so, record them in UsesToRename.
+
+    SmallVector<Instruction *> LifetimeMarkers;
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
-      if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
-        if (UserPN->getIncomingBlock(U) == BB)
+      if (User->isLifetimeStartOrEnd()) {
+        LifetimeMarkers.push_back(User);
+      } else {
+        if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
+          if (UserPN->getIncomingBlock(U) == BB)
+            continue;
+        } else if (User->getParent() == BB)
           continue;
-      } else if (User->getParent() == BB)
-        continue;
-
+      }
       UsesToRename.push_back(&U);
     }
 
@@ -2018,6 +2023,15 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
       DbgVariableRecords.clear();
     }
 
+    // Lifetime markers cannot be rewritten through PHIs. If threading leaves
+    // one of them pointing at a PHI, drop the whole set.
+    bool HasPhiArg = any_of(LifetimeMarkers, [](Instruction *User) {
+      return isa<PHINode>(cast<CallBase>(User)->getOperand(0));
+    });
+    if (HasPhiArg) {
+      for (Instruction *User : LifetimeMarkers)
+        User->eraseFromParent();
+    }
     LLVM_DEBUG(dbgs() << "\n");
   }
 }
@@ -2689,11 +2703,22 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   BasicBlock::iterator BI = BB->begin();
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
     ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
+
+  // Clone noalias scope declarations in the duplicated instructions. Otherwise
+  // the duplicate would share the original block's scopes, and alias analysis
+  // could conclude two accesses on different paths do not alias when they may.
+  SmallVector<MDNode *> NoAliasScopes;
+  DenseMap<MDNode *, MDNode *> ClonedScopes;
+  LLVMContext &Context = PredBB->getContext();
+  identifyNoAliasScopesToClone(BI, BB->end(), NoAliasScopes);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+
   // Clone the non-phi instructions of BB into PredBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.
   for (; BI != BB->end(); ++BI) {
     Instruction *New = BI->clone();
     New->insertInto(PredBB, OldPredBranch->getIterator());
+    adaptNoAliasScopes(New, ClonedScopes, Context);
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
@@ -2789,6 +2814,12 @@ void JumpThreadingPass::unfoldSelectInstr(BasicBlock *Pred, BasicBlock *BB,
   PredTerm->removeFromParent();
   PredTerm->insertInto(NewBB, NewBB->end());
   // Create a conditional branch and update PHI nodes.
+  //
+  // FIXME: We should `freeze` the condition before using it in a conditional
+  // branch, unless we can prove it's not poison: select-on-poison isn't UB,
+  // but branch-on-poison is.  But doing this causes performance regressions,
+  // and we haven't been able to find an end-to-end correctness issue it fixes.
+  // https://github.com/llvm/llvm-project/pull/199408#issuecomment-4545013881.
   auto *BI = CondBrInst::Create(SI->getCondition(), NewBB, BB, Pred);
   BI->applyMergedLocation(PredTerm->getDebugLoc(), SI->getDebugLoc());
   BI->copyMetadata(*SI, {LLVMContext::MD_prof});

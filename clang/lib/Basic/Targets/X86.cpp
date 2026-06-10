@@ -729,6 +729,15 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
     break;
+  case CK_C86_4G_M4:
+    defineCPUMacros(Builder, "c86_4g_m4");
+    break;
+  case CK_C86_4G_M6:
+    defineCPUMacros(Builder, "c86_4g_m6");
+    break;
+  case CK_C86_4G_M7:
+    defineCPUMacros(Builder, "c86_4g_m7");
+    break;
   }
 
   // Target properties.
@@ -1657,6 +1666,10 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER4:
     case CK_ZNVER5:
     case CK_ZNVER6:
+    // Hygon
+    case CK_C86_4G_M4:
+    case CK_C86_4G_M6:
+    case CK_C86_4G_M7:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:
@@ -1851,4 +1864,13 @@ X86_64TargetInfo::getTargetBuiltins() const {
       {&X86_64::BuiltinStrings, X86_64::PrefixedBuiltinInfos,
        "__builtin_ia32_"},
   };
+}
+
+unsigned
+MicrosoftX86_64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
+                                             bool HasNonWeakDef) const {
+  unsigned Align =
+      WindowsX86_64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
+
+  return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
 }

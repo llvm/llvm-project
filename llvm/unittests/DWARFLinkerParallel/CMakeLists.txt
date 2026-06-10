@@ -10,6 +10,8 @@ add_llvm_unittest(DWARFLinkerParallelTests
   StringPoolTest.cpp
   )
 
-target_link_libraries(DWARFLinkerParallelTests PRIVATE LLVMTestingSupport)
+target_link_libraries(DWARFLinkerParallelTests PRIVATE
+  LLVMTestingSupport
+  )
 
 add_dependencies(DWARFLinkerParallelTests intrinsics_gen)

@@ -1176,6 +1176,51 @@ func.func @broadcast_same_shape(%input: tensor<2x3xf32>, %init: tensor<2x3xf32>)
 
 // -----
 
+// CHECK-LABEL: @broadcast_splat_constant_to_dense
+//       CHECK:   %[[CST:.+]] = arith.constant dense<1.000000e+00> : tensor<2x3xf32>
+//   CHECK-NOT:   linalg.broadcast
+//       CHECK:   return %[[CST]] : tensor<2x3xf32>
+func.func @broadcast_splat_constant_to_dense(%init: tensor<2x3xf32>) -> tensor<2x3xf32> {
+  %cst = arith.constant dense<1.000000e+00> : tensor<3xf32>
+  %0 = linalg.broadcast
+      ins(%cst: tensor<3xf32>)
+      outs(%init: tensor<2x3xf32>)
+      dimensions = [0]
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_splat_constant_dynamic_shape
+//       CHECK:   %[[CST:.+]] = arith.constant dense<1.000000e+00> : tensor<3xf32>
+//       CHECK:   %[[BROADCAST:.+]] = linalg.broadcast ins(%[[CST]] : tensor<3xf32>) outs({{.*}} : tensor<?x3xf32>) dimensions = [0]
+//       CHECK:   return %[[BROADCAST]] : tensor<?x3xf32>
+func.func @broadcast_splat_constant_dynamic_shape(%init: tensor<?x3xf32>) -> tensor<?x3xf32> {
+  %cst = arith.constant dense<1.000000e+00> : tensor<3xf32>
+  %0 = linalg.broadcast
+      ins(%cst: tensor<3xf32>)
+      outs(%init: tensor<?x3xf32>)
+      dimensions = [0]
+  return %0 : tensor<?x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @broadcast_non_splat_constant
+//       CHECK:   %[[CST:.+]] = arith.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf32>
+//       CHECK:   %[[BROADCAST:.+]] = linalg.broadcast ins(%[[CST]] : tensor<3xf32>) outs({{.*}} : tensor<2x3xf32>) dimensions = [0]
+//       CHECK:   return %[[BROADCAST]] : tensor<2x3xf32>
+func.func @broadcast_non_splat_constant(%init: tensor<2x3xf32>) -> tensor<2x3xf32> {
+  %cst = arith.constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf32>
+  %0 = linalg.broadcast
+      ins(%cst: tensor<3xf32>)
+      outs(%init: tensor<2x3xf32>)
+      dimensions = [0]
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @broadcast_broadcast_fold
 //  CHECK-SAME:     %[[INPUT:[a-zA-Z0-9]+]]: tensor<2xf32>
 //  CHECK-SAME:     %[[INIT1:[a-zA-Z0-9]+]]: tensor<2x3xf32>
@@ -1253,6 +1298,57 @@ func.func @transpose_identity_perm(%input: tensor<16x32x64xf32>,
 //  CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<16x32x64xf32>)
 //   CHECK-NOT:   linalg.transpose
 //       CHECK:   return %[[INPUT]] : tensor<16x32x64xf32>
+
+// -----
+
+// CHECK-LABEL: @transpose_splat_constant_to_dense
+//       CHECK:   %[[CST:.+]] = arith.constant dense<1.000000e+00> : tensor<3x2xf32>
+//   CHECK-NOT:   linalg.transpose
+//       CHECK:   return %[[CST]] : tensor<3x2xf32>
+func.func @transpose_splat_constant_to_dense(%init: tensor<3x2xf32>) -> tensor<3x2xf32> {
+  %cst = arith.constant dense<1.000000e+00> : tensor<2x3xf32>
+  %transpose = linalg.transpose
+      ins(%cst:tensor<2x3xf32>)
+      outs(%init:tensor<3x2xf32>)
+      permutation = [1, 0]
+  func.return %transpose : tensor<3x2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @transpose_splat_constant_same_shape_permutations
+//       CHECK:   %[[CST:.+]] = arith.constant dense<1.000000e+00> : tensor<3x3x3xf32>
+//   CHECK-NOT:   linalg.transpose
+//       CHECK:   return %[[CST]], %[[CST]] : tensor<3x3x3xf32>, tensor<3x3x3xf32>
+func.func @transpose_splat_constant_same_shape_permutations(
+    %init0: tensor<3x3x3xf32>,
+    %init1: tensor<3x3x3xf32>) -> (tensor<3x3x3xf32>, tensor<3x3x3xf32>) {
+  %cst = arith.constant dense<1.000000e+00> : tensor<3x3x3xf32>
+  %transpose0 = linalg.transpose
+      ins(%cst:tensor<3x3x3xf32>)
+      outs(%init0:tensor<3x3x3xf32>)
+      permutation = [0, 1, 2]
+  %transpose1 = linalg.transpose
+      ins(%cst:tensor<3x3x3xf32>)
+      outs(%init1:tensor<3x3x3xf32>)
+      permutation = [2, 0, 1]
+  func.return %transpose0, %transpose1 : tensor<3x3x3xf32>, tensor<3x3x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @transpose_non_splat_constant
+//       CHECK:   %[[CST:.+]] = arith.constant dense<{{\[}}[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32>
+//       CHECK:   %[[TRANSPOSE:.+]] = linalg.transpose ins(%[[CST]] : tensor<2x3xf32>) outs({{.*}} : tensor<3x2xf32>) permutation = [1, 0]
+//       CHECK:   return %[[TRANSPOSE]] : tensor<3x2xf32>
+func.func @transpose_non_splat_constant(%init: tensor<3x2xf32>) -> tensor<3x2xf32> {
+  %cst = arith.constant dense<[[1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf32>
+  %transpose = linalg.transpose
+      ins(%cst:tensor<2x3xf32>)
+      outs(%init:tensor<3x2xf32>)
+      permutation = [1, 0]
+  func.return %transpose : tensor<3x2xf32>
+}
 
 // -----
 
@@ -1514,7 +1610,46 @@ func.func @fold_padding_value_pack(%arg0: tensor<1200x500000xf32>) -> tensor<312
   return %pack : tensor<31250x1200x16x1xf32>
 }
 // CHECK-LABEL: func @fold_padding_value_pack
-// CHECK-NOT:     padding_value
+//       CHECK:   linalg.pack
+//   CHECK-NOT:   padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_dynamic_with_unit_tile_size(%arg0: tensor<?x500000xf32>) -> tensor<31250x?x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %dim0 = tensor.dim %arg0, %c0 : tensor<?x500000xf32>
+  %0 = tensor.empty(%dim0) : tensor<31250x?x16x1xf32>
+  %pack = linalg.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %0 : tensor<?x500000xf32> -> tensor<31250x?x16x1xf32>
+  return %pack : tensor<31250x?x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_dynamic_with_unit_tile_size
+//       CHECK:   linalg.pack
+//   CHECK-NOT:   padding_value
+
+// -----
+
+func.func @nofold_padding_value_pack_dynamic_with_non_unit_tile_size(%arg0: tensor<?x500000xf32>) -> tensor<31250x?x16x2xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %dim0 = tensor.dim %arg0, %c0 : tensor<?x500000xf32>
+  %0 = tensor.empty(%dim0) : tensor<31250x?x16x2xf32>
+  %pack = linalg.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 2]
+    into %0 : tensor<?x500000xf32> -> tensor<31250x?x16x2xf32>
+  return %pack : tensor<31250x?x16x2xf32>
+}
+// CHECK-LABEL: func @nofold_padding_value_pack_dynamic_with_non_unit_tile_size
+//       CHECK:   linalg.pack
+//       CHECK:   padding_value
 
 // -----
 

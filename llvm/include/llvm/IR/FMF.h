@@ -27,10 +27,7 @@ private:
   unsigned Flags = 0;
 
 public:
-  // This is how the bits are used in Value::SubclassOptionalData so they
-  // should fit there too.
-  // WARNING: We're out of space. SubclassOptionalData only has 7 bits. New
-  // functionality will require a change in how this information is stored.
+  /// Flag bits.
   enum {
     AllowReassoc    = (1 << 0),
     NoNaNs          = (1 << 1),

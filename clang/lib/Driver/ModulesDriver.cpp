@@ -146,7 +146,7 @@ void driver::modules::buildStdModuleManifestInputs(
   for (const auto &Entry : ManifestEntries) {
     auto *InputArg =
         makeInputArg(Args, Opts, Args.MakeArgString(Entry.SourcePath));
-    Inputs.emplace_back(types::TY_CXXModule, InputArg);
+    Inputs.emplace_back(types::TY_CXXStdModule, InputArg);
   }
 }
 
@@ -568,7 +568,7 @@ scanDependenciesForJob(const Command &Job, ScanningWorkerPool &WorkerPool,
     deps::FullDependencyConsumer DepConsumer(WorkerBundleHandle->SeenModules);
 
     if (WorkerBundleHandle->Worker->computeDependencies(
-            WorkingDirectory, CC1CommandLine, DepConsumer, LookupController,
+            WorkingDirectory, {CC1CommandLine}, DepConsumer, LookupController,
             DiagConsumer))
       MaybeTUDeps = DepConsumer.takeTranslationUnitDeps();
   }
@@ -1213,7 +1213,8 @@ static bool validateScannedJobInputKinds(
     const auto &MainInput = Job.getInputInfos().front();
     const bool DefinesNamedModule = !InputDeps.ModuleName.empty();
 
-    if (DefinesNamedModule && MainInput.getType() != types::TY_CXXModule) {
+    if (DefinesNamedModule && MainInput.getType() != types::TY_CXXModule &&
+        MainInput.getType() != types::TY_CXXStdModule) {
       Diags.Report(diag::err_module_defined_outside_of_module_source)
           << InputDeps.ModuleName << MainInput.getFilename();
       return false;
@@ -1293,7 +1294,7 @@ createClangModulePrecompileJob(Compilation &C, const Command &ImportingJob,
   const auto &D = C.getDriver();
   return std::make_unique<Command>(
       *PA, ImportingJob.getCreator(), ResponseFileSupport::AtFileUTF8(),
-      D.getClangProgramPath(), JobArgs,
+      D.getDriverProgramPath(), JobArgs,
       /*Inputs=*/ArrayRef<InputInfo>{},
       /*Outputs=*/ArrayRef<InputInfo>{}, D.getPrependArg());
 }
@@ -1597,6 +1598,18 @@ static void fixupNamedModuleCommandLines(Compilation &C,
       llvm::CastTo<NamedModuleJobNode>);
 
   for (NamedModuleJobNode *Node : NamedModuleNodes) {
+    const auto &Job = *Node->Job;
+
+    // For Standard library modules, the driver already creates the module
+    // output as a temp file, so we can use that path directly.
+    const bool IsStdModule =
+        Job.getInputInfos().front().getType() == types::TY_CXXStdModule;
+    if (IsStdModule) {
+      StringRef ModuleOutputPath = Job.getOutputFilenames().front();
+      propagateModuleFileMappingArg(C, *Node, ModuleOutputPath);
+      continue;
+    }
+
     const StringRef ModuleName = Node->InputDeps.ModuleName;
     const auto ModuleOutputPath = createModuleOutputPath(C, ModuleName);
     C.addTempFile(C.getArgs().MakeArgString(ModuleOutputPath));

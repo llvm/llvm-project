@@ -77,6 +77,9 @@ public:
   /// appropriate.
   LLVM_ABI static CmpPredicate get(const CmpInst *Cmp);
 
+  /// Get the inverse predicate of a CmpPredicate.
+  LLVM_ABI static CmpPredicate getInverse(CmpPredicate P);
+
   /// Get the swapped predicate of a CmpPredicate.
   LLVM_ABI static CmpPredicate getSwapped(CmpPredicate P);
 

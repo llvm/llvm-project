@@ -250,16 +250,17 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
                    options::OPT_fno_application_extension, false))
     CmdArgs.push_back("-application_extension");
 
-  if (D.isUsingLTO() && (Version >= VersionTuple(116) || LinkerIsLLD) &&
+  if (auto LTO = getToolChain().getLTOMode(Args);
+      LTO != LTOK_None && (Version >= VersionTuple(116) || LinkerIsLLD) &&
       NeedsTempPath(Inputs)) {
     std::string TmpPathName;
-    if (D.getLTOMode() == LTOK_Full) {
+    if (LTO == LTOK_Full) {
       // If we are using full LTO, then automatically create a temporary file
       // path for the linker to use, so that it's lifetime will extend past a
       // possible dsymutil step.
       TmpPathName =
           D.GetTemporaryPath("cc", types::getTypeTempSuffix(types::TY_Object));
-    } else if (D.getLTOMode() == LTOK_Thin)
+    } else if (LTO == LTOK_Thin)
       // If we are using thin LTO, then create a directory instead.
       TmpPathName = D.GetTemporaryDirectory("thinlto");
 
@@ -515,6 +516,12 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back(Args.MakeArgString(Twine("-cs-profile-path=") + Path));
     }
+  }
+
+  if (Arg *A = getLastProfileSampleUseArg(Args)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-sample-profile-file=") + A->getValue()));
   }
 }
 
@@ -1247,8 +1254,9 @@ void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
 }
 
 std::string Darwin::ComputeEffectiveClangTriple(const ArgList &Args,
+                                                llvm::StringRef BoundArch,
                                                 types::ID InputType) const {
-  llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
+  llvm::Triple Triple(ComputeLLVMTriple(Args, BoundArch, InputType));
 
   // If the target isn't initialized (e.g., an unknown Darwin platform, return
   // the default triple). Note: we intentionally do NOT call
@@ -1341,9 +1349,10 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
 
 void DarwinClang::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
 
-  Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  Darwin::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                DeviceOffloadKind);
 }
 
 /// Take a path that speculatively points into Xcode and return the
@@ -1377,7 +1386,7 @@ void DarwinClang::AddLinkARCArgs(const ArgList &Args,
       runtime.hasSubscripting())
     return;
 
-  SmallString<128> P(getDriver().ClangExecutable);
+  SmallString<128> P(getDriver().DriverExecutable);
   llvm::sys::path::remove_filename(P); // 'clang'
   llvm::sys::path::remove_filename(P); // 'bin'
   llvm::sys::path::append(P, "lib", "arc");
@@ -1671,7 +1680,7 @@ ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
           << Value << "darwin";
   }
 
-  return ToolChain::RLT_CompilerRT;
+  return ToolChain::GetRuntimeLibType(Args);
 }
 
 void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
@@ -3431,9 +3440,11 @@ bool Darwin::isSizedDeallocationUnavailable() const {
 
 void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args,
+                                  llvm::StringRef BoundArch,
                                   Action::OffloadKind DeviceOffloadKind) const {
 
-  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                   DeviceOffloadKind);
 
   // On arm64e, we enable all the features required for the Darwin userspace
   // ABI
@@ -3480,9 +3491,10 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
 
 void Darwin::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
 
-  MachO::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  MachO::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                               DeviceOffloadKind);
 
   // When compiling device code (e.g. SPIR-V for HIP), skip host-specific
   // flags like -faligned-alloc-unavailable and -fno-sized-deallocation
@@ -4039,10 +4051,13 @@ void Darwin::CheckObjCARC() const {
   getDriver().Diag(diag::err_arc_unsupported_on_toolchain);
 }
 
-SanitizerMask Darwin::getSupportedSanitizers() const {
+SanitizerMask
+Darwin::getSupportedSanitizers(StringRef BoundArch,
+                               Action::OffloadKind DeviceOffloadKind) const {
   const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
   const bool IsAArch64 = getTriple().getArch() == llvm::Triple::aarch64;
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;

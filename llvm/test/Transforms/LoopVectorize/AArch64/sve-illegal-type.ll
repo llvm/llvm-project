@@ -36,8 +36,8 @@ define void @loop_sve_f128(ptr nocapture %ptr, i64 %N) {
 ; CHECK: vector.body
 ; CHECK: %[[LOAD1:.*]] = load fp128, ptr
 ; CHECK-NEXT: %[[LOAD2:.*]] = load fp128, ptr
-; CHECK-NEXT: %[[FSUB1:.*]] = fsub fp128 %[[LOAD1]], 0xL00000000000000008000000000000000
-; CHECK-NEXT: %[[FSUB2:.*]] = fsub fp128 %[[LOAD2]], 0xL00000000000000008000000000000000
+; CHECK-NEXT: %[[FSUB1:.*]] = fsub fp128 %[[LOAD1]], -0.000000e+00
+; CHECK-NEXT: %[[FSUB2:.*]] = fsub fp128 %[[LOAD2]], -0.000000e+00
 ; CHECK-NEXT: store fp128 %[[FSUB1]], ptr {{.*}}
 ; CHECK-NEXT: store fp128 %[[FSUB2]], ptr {{.*}}
 entry:

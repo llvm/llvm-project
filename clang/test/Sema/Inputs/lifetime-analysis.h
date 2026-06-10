@@ -3,6 +3,11 @@ namespace __gnu_cxx {
 template <typename T>
 struct basic_iterator {
   basic_iterator operator++();
+  basic_iterator operator++(int);
+  basic_iterator operator--();
+  basic_iterator operator--(int);
+  basic_iterator operator+(int);
+  basic_iterator operator-(int);
   T& operator*() const;
   T* operator->() const;
 };
@@ -11,6 +16,10 @@ template<typename T>
 bool operator==(basic_iterator<T>, basic_iterator<T>);
 template<typename T>
 bool operator!=(basic_iterator<T>, basic_iterator<T>);
+template<typename T>
+basic_iterator<T> operator+(int, basic_iterator<T>);
+template<typename T>
+basic_iterator<T> operator-(int, basic_iterator<T>);
 }
 
 namespace std {
@@ -28,6 +37,9 @@ ForwardIt1 search( ForwardIt1 first, ForwardIt1 last,
 template<typename T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
 
+template<typename T>
+T &&forward(typename remove_reference<T>::type &t) noexcept;
+
 template <typename C>
 auto data(const C &c) -> decltype(c.data());
 
@@ -41,17 +53,46 @@ T *begin(T (&array)[N]);
 
 using size_t = decltype(sizeof(0));
 using nullptr_t = decltype(nullptr);
+enum class align_val_t : size_t {};
+struct nothrow_t {};
+extern const nothrow_t nothrow;
 
 template<typename T>
 struct initializer_list {
   const T* ptr; size_t sz;
 };
 template<typename T> class allocator {};
+
+template <typename Iterator>
+struct reverse_iterator {
+  reverse_iterator operator++();
+  reverse_iterator operator++(int);
+  reverse_iterator operator--();
+  reverse_iterator operator--(int);
+  reverse_iterator operator+(int) const;
+  reverse_iterator operator-(int) const;
+  decltype(*Iterator()) operator*() const;
+};
+
+template <typename Iterator>
+reverse_iterator<Iterator> operator+(int, reverse_iterator<Iterator>);
+template <typename Iterator>
+reverse_iterator<Iterator> operator-(int, reverse_iterator<Iterator>);
+
 template <typename T, typename Alloc = allocator<T>>
 struct vector {
-  typedef __gnu_cxx::basic_iterator<T> iterator;
+  using iterator = __gnu_cxx::basic_iterator<T>;
+  using const_iterator = __gnu_cxx::basic_iterator<const T>;
+  using reverse_iterator = std::reverse_iterator<iterator>;
+  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
   iterator begin();
   iterator end();
+  const_iterator cbegin() const;
+  const_iterator cend() const;
+  reverse_iterator rbegin();
+  reverse_iterator rend();
+  const_reverse_iterator crbegin() const;
+  const_reverse_iterator crend() const;
   const T *data() const;
   vector();
   ~vector();
@@ -156,6 +197,9 @@ struct basic_string_view {
   int size() const;
 };
 using string_view = basic_string_view<char>;
+
+template <typename T>
+basic_string_view<T>::basic_string_view(const T *) {}
 
 template<typename T>
 struct span {
@@ -315,3 +359,6 @@ public:
 
 void *operator new(std::size_t, void *) noexcept;
 void *operator new[](std::size_t, void *) noexcept;
+void *operator new(std::size_t, const std::nothrow_t &) noexcept;
+void *operator new(std::size_t, std::align_val_t,
+                   const std::nothrow_t &) noexcept;

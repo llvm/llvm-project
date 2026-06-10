@@ -275,6 +275,9 @@ public:
   constexpr bool isPointerOrPointerVector() const {
     return isPointer() || isPointerVector();
   }
+  constexpr bool isFloatOrFloatVector() const {
+    return isFloat() || isFloatVector();
+  }
 
   constexpr bool isScalar() const {
     return Info == Kind::ANY_SCALAR || Info == Kind::INTEGER ||
@@ -714,16 +717,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
 }
 
 template <> struct DenseMapInfo<LLT> {
-  static inline LLT getEmptyKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::POINTER;
-    return Invalid;
-  }
-  static inline LLT getTombstoneKey() {
-    LLT Invalid;
-    Invalid.Info = LLT::Kind::VECTOR_ANY;
-    return Invalid;
-  }
   static inline unsigned getHashValue(const LLT &Ty) {
     uint64_t Val = Ty.getUniqueRAWLLTData();
     return DenseMapInfo<uint64_t>::getHashValue(Val);

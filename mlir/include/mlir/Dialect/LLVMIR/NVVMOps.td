@@ -13,17 +13,19 @@
 #ifndef NVVMIR_OPS
 #define NVVMIR_OPS
 
-include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
+include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/LLVMIR/LLVMTypes.td"
+include "mlir/Dialect/LLVMIR/NVVMDialect.td"
+include "mlir/Dialect/LLVMIR/NVVMEnums.td"
 include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
-include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
+include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Dialect/LLVMIR/LLVMTypes.td"
-include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
@@ -32,85 +34,6 @@ def LLVM_PointerConst : LLVM_PointerInAddressSpace<4>;
 def LLVM_PointerLocal : LLVM_PointerInAddressSpace<5>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
 def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
-
-//===----------------------------------------------------------------------===//
-// NVVM dialect definitions
-//===----------------------------------------------------------------------===//
-
-def NVVM_Dialect : Dialect {
-  let name = "nvvm";
-  let cppNamespace = "::mlir::NVVM";
-  let dependentDialects = ["LLVM::LLVMDialect"];
-  let hasOperationAttrVerify = 1;
-
-  let extraClassDeclaration = [{
-    /// Get the name of the attribute used to annotate external kernel
-    /// functions.
-    static StringRef getKernelFuncAttrName() { return "nvvm.kernel"; }
-    /// Get the name of the attribute used to annotate max threads required
-    /// per CTA for kernel functions.
-    static StringRef getMaxntidAttrName() { return "nvvm.maxntid"; }
-    /// Get the name of the metadata names for each dimension
-    static StringRef getMaxntidXName() { return "maxntidx"; }
-    static StringRef getMaxntidYName() { return "maxntidy"; }
-    static StringRef getMaxntidZName() { return "maxntidz"; }
-
-    /// Get the name of the attribute used to annotate exact threads required
-    /// per CTA for kernel functions.
-    static StringRef getReqntidAttrName() { return "nvvm.reqntid"; }
-    /// Get the name of the metadata names for each dimension
-    static StringRef getReqntidXName() { return "reqntidx"; }
-    static StringRef getReqntidYName() { return "reqntidy"; }
-    static StringRef getReqntidZName() { return "reqntidz"; }
-
-    /// Get the name of the attribute used to annotate exact CTAs required
-    /// per cluster for kernel functions.
-    static StringRef getClusterDimAttrName() { return "nvvm.cluster_dim"; }
-    /// Get the name of the metadata names for each dimension
-    static StringRef getClusterDimXName() { return "cluster_dim_x"; }
-    static StringRef getClusterDimYName() { return "cluster_dim_y"; }
-    static StringRef getClusterDimZName() { return "cluster_dim_z"; }
-
-    /// Get the name of the attribute used to annotate maximum number of
-    /// CTAs per cluster for kernel functions.
-    static StringRef getClusterMaxBlocksAttrName() {  return "nvvm.cluster_max_blocks"; }
-
-    /// Get the name of the attribute used to annotate min CTA required
-    /// per SM for kernel functions.
-    static StringRef getMinctasmAttrName() { return "nvvm.minctasm"; }
-
-    /// Get the name of the attribute used to annotate max number of
-    /// registers that can be allocated per thread.
-    static StringRef getMaxnregAttrName() { return "nvvm.maxnreg"; }
-
-    /// Get the name of the attribute used to annotate kernel arguments that
-    /// are grid constants.
-    static StringRef getGridConstantAttrName() { return "nvvm.grid_constant"; }
-
-    /// Get the name of the attribute used to annotate the `.blocksareclusters`
-    /// PTX directive for kernel functions.
-    /// This attribute implies that the grid launch configuration for the
-    /// corresponding kernel function is specifying the number of clusters
-    /// instead of the number of thread blocks. This attribute is only
-    /// allowed for kernel functions and requires nvvm.reqntid and
-    /// nvvm.cluster_dim attributes.
-    static StringRef getBlocksAreClustersAttrName() { return "nvvm.blocksareclusters"; }
-
-    /// Get the name of the attribute used to annotate managed global variables.
-    static StringRef getManagedAttrName() { return "nvvm.managed"; }
-
-    /// Verify an attribute from this dialect on the argument at 'argIndex' for
-    /// the region at 'regionIndex' on the given operation. Returns failure if
-    /// the verification failed, success otherwise. This hook may optionally be
-    /// invoked from any operation containing a region.
-    LogicalResult verifyRegionArgAttribute(Operation *op,
-                                           unsigned regionIndex,
-                                           unsigned argIndex,
-                                           NamedAttribute argAttr) override;
-  }];
-
-  let useDefaultAttributePrinterParser = 1;
-}
 
 //===----------------------------------------------------------------------===//
 // NVVM op definitions
@@ -576,6 +499,34 @@ def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
     value. The `ftz` attribute, when set, flushes subnormal inputs and
     results to sign-preserving zero.
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM rsqrt op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_RsqrtOp
+    : NVVM_SingleResultIntrinsicOp<"rsqrt", [Pure, SameOperandsAndResultType]> {
+  let summary = "Reciprocal square root (fast approximation)";
+  let description = [{
+    Computes an approximation of the reciprocal of the square root of the
+    input value: `d = 1 / sqrt(a)`. Supports both f32 and f64. The maximum
+    relative error for the f32 form over the entire positive finite range
+    is 2^-22.9.
+
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
+    sign-preserving zero. For f64 inputs, `ftz=true` selects a coarser
+    approximation that uses only the upper 32 bits of the input (the lower
+    32 bits of the result are zeroed).
+
+    For more information, see PTX ISA:
+    [rsqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-rsqrt)
+  }];
+
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$src,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1172,66 +1123,96 @@ def BarrierReductionAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_BarrierOp : NVVM_SingleResultIntrinsicOp<"barrier",
-    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible]> {
+def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
+    [AttrSizedOperandSegments]> {
   let summary = "CTA Barrier Synchronization Op";
   let description = [{
     The `nvvm.barrier` operation performs barrier synchronization and communication 
     within a CTA (Cooperative Thread Array). It causes executing threads to wait for 
     all non-exited threads participating in the barrier to arrive.
 
-    The operation takes two optional operands:
+    The operation takes the following optional operands and attributes:
 
     - `barrierId`: Specifies a logical barrier resource with value 0 through 15. 
       Each CTA instance has sixteen barriers numbered 0..15. Defaults to 0 if not specified.
     - `numberOfThreads`: Specifies the number of threads participating in the barrier. 
       When specified, the value must be a multiple of the warp size. If not specified, 
       all threads in the CTA participate in the barrier.
-    - `reductionOp`: specifies the reduction operation (`popc`, `and`, `or`).
-    - `reductionPredicate`: specifies the predicate to be used with the
-      `reductionOp`. 
+    - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
+      underlying `@llvm.nvvm.barrier.cta.*` intrinsic family. Defaults to false.
+      Setting this to true requires every thread in the CTA to reach this same
+      barrier instruction, otherwise the behavior is undefined.
+
+    Reduction variants of the barrier instruction are modeled by the
+    `nvvm.barrier.reduction` op.
 
     The barrier operation guarantees that when the barrier completes, prior memory 
     accesses requested by participating threads are performed relative to all threads 
     participating in the barrier. It also ensures that no new memory access is 
     requested by participating threads before the barrier completes.
 
-    When a barrier completes, the waiting threads are restarted without delay, and 
+    When a barrier completes, the waiting threads are restarted without delay, and
     the barrier is reinitialized so that it can be immediately reused.
-
-    This operation generates an aligned barrier, indicating that all threads in the CTA 
-    will execute the same barrier instruction. Behavior is undefined if all threads in the 
-    CTA do not reach this instruction.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
 
-  let arguments = (ins Optional<I32>:$barrierId, Optional<I32>:$numberOfThreads,
-      OptionalAttr<BarrierReductionAttr>:$reductionOp,
-      Optional<I32>:$reductionPredicate);
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::BarrierOp::getIntrinsicIDAndArgs(
-                        *op, moduleTranslation, builder);
-    if ($reductionOp)
-      $res = builder.CreateZExt(createIntrinsicCall(builder, id, args),
-                                builder.getInt32Ty());
-    else 
-      createIntrinsicCall(builder, id, args);
-  }];
-  let results = (outs Optional<I32>:$res);
-
-  let hasVerifier = 1;
+  let arguments = (ins
+      Optional<I32>:$barrierId,
+      Optional<I32>:$numberOfThreads,
+      DefaultValuedAttr<BoolAttr, "false">:$aligned);
 
   let assemblyFormat =
       "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? "
-      "(qualified($reductionOp)^ $reductionPredicate)? (`->` type($res)^)? attr-dict";
+      "attr-dict";
 
   let builders = [OpBuilder<(ins), [{
-      return build($_builder, $_state, TypeRange{}, Value{}, Value{}, {}, Value{});
-    }]>,
-                  OpBuilder<(ins "Value":$barrierId), [{
-      return build($_builder, $_state, TypeRange{}, barrierId, Value{}, {}, Value{});
+      return build($_builder, $_state, Value{}, Value{});
     }]>];
+}
+
+def NVVM_BarrierReductionOp :
+    NVVM_IntrinsicLoweringOp<"barrier.reduction"> {
+  let summary = "CTA Barrier Reduction Op";
+  let description = [{
+    The `nvvm.barrier.reduction` operation performs barrier synchronization with a
+    reduction across the per-thread predicates contributed by participating threads
+    in a CTA.
+
+    - `barrierId`: Specifies a logical barrier resource with value 0 through 15.
+      Optional; defaults to barrier id 0 when not specified.
+    - `reductionOp`: The reduction kind (`popc`, `and`, `or`) applied across the
+      per-thread predicates.
+    - `reductionPredicate`: The per-thread i32 predicate. It is compared against
+      zero to form the i1 value fed into the reduction.
+    - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
+      underlying `@llvm.nvvm.barrier.cta.red.*` intrinsic family. Defaults to
+      false. Setting this to true requires every thread in the CTA to reach
+      this same barrier instruction, otherwise the behavior is undefined.
+
+    The result is the i32 reduction value computed across all threads
+    participating in the barrier.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+
+  let arguments = (ins
+      Optional<I32>:$barrierId,
+      BarrierReductionAttr:$reductionOp,
+      I32:$reductionPredicate,
+      DefaultValuedAttr<BoolAttr, "false">:$aligned);
+  let results = (outs I32:$res);
+
+  let assemblyFormat =
+      "qualified($reductionOp) $reductionPredicate "
+      "(`id` `=` $barrierId^)? `->` type($res) attr-dict";
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    $res = builder.CreateZExt(createIntrinsicCall(builder, id, args),
+                              builder.getInt32Ty());
+  }];
 }
 
 def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
@@ -1899,58 +1880,6 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arriv
 // NVVM Conversion Ops (for "cvt.*" family of PTX instructions)
 //===----------------------------------------------------------------------===//
 
-// Attributes for the floating point rounding modes supported by PTX
-def FPRoundingModeNone : I32EnumAttrCase<"NONE", 0, "none">;
-def FPRoundingModeRN   : I32EnumAttrCase<"RN",   1, "rn">;
-def FPRoundingModeRM   : I32EnumAttrCase<"RM",   2, "rm">;
-def FPRoundingModeRP   : I32EnumAttrCase<"RP",   3, "rp">;
-def FPRoundingModeRZ   : I32EnumAttrCase<"RZ",   4, "rz">;
-def FPRoundingModeRNA  : I32EnumAttrCase<"RNA",  5, "rna">;
-def FPRoundingModeRS   : I32EnumAttrCase<"RS",   6, "rs">;
-
-def FPRoundingMode : I32EnumAttr<"FPRoundingMode", "NVVM FPRoundingMode kind",
-  [FPRoundingModeNone, FPRoundingModeRN, FPRoundingModeRM,
-    FPRoundingModeRP, FPRoundingModeRZ, FPRoundingModeRNA, FPRoundingModeRS]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def FPRoundingModeAttr : EnumAttr<NVVM_Dialect, FPRoundingMode, "fp_rnd_mode"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def SaturationModeNone   : I32EnumAttrCase<"NONE", 0, "none">;
-def SaturationModeFinite : I32EnumAttrCase<"SATFINITE", 1, "satfinite">;
-def SaturationModeSat    : I32EnumAttrCase<"SAT", 2, "sat">;
-
-def SaturationMode : I32EnumAttr<"SaturationMode", "NVVM SaturationMode kind",
-  [SaturationModeNone, SaturationModeFinite, SaturationModeSat]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
-  let summary = "Describes the saturation mode";
-  let description = [{
-    A `nvvm.sat_mode` attribute specifies the saturation mode for instructions 
-    involving floating points or integers. It can be one of the following 
-    values:
-    - `none`: No saturation is applied.
-    - `satfinite`: If the absolute value of input (ignoring sign) is greater 
-      than the `MAX_NORM` of the specified destination format, then the result 
-      is the sign-preserved `MAX_NORM` of the destination format and a positive 
-      `MAX_NORM` in unsigned datatypes for which the destination sign is not 
-      supported. If the input is `NaN`, then the result can be `NaN` or th 
-      `MAX_NORM` of the destination format, depending on the format.
-    - `sat`: For integer destination types, this limits the value to `MININT..
-      MAXINT` and applies to both signed and unsigned integer datatypes. For 
-      floating point destination types (applies to only `F16`, `F32`, and `F64` 
-      types), this limits the value to the range `[0.0, 1.0]` and flushes NaN 
-      results to positive zero.
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt)
-}];
- let assemblyFormat = "`<` $value `>`";
-}
-
 def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   let summary = "Convert the given float input to TF32";
   let description = [{
@@ -2277,41 +2206,127 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   }];
 }
 
-class NVVM_ConvertToFP16x2Op_Base <string srcType, Type srcArgType, string dstType>
-: NVVM_SingleResultIntrinsicOp<"convert." # !tolower(srcType) # "x2.to." # !tolower(dstType) # "x2", [], "$dst"> {
-  let summary = "Convert a pair of " # !tolower(srcType) # " inputs to " # !tolower(dstType) # "x2";
-  let description = [{
-    This Op converts the given }] # !tolower(srcType) # [{ inputs in a }] #
-    !if(!eq(srcType, "F4"), "packed i8", "i8x2 vector") # [{ to }] #
-    !tolower(dstType) # [{.
+def SaturationModeSatfiniteOrNone :
+  ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr,
+                [SaturationModeNone, SaturationModeFinite]>]>;
 
-    The result `dst` is represented as a vector of }] # !tolower(dstType) # [{ elements.
-    }] #
-    !if(!eq(dstType, "F16"),
-    [{The `relu` attribute, when set, lowers to the '.relu' variant of 
-    the cvt instruction."}], "") # [{
-    
+class NVVM_ConvertToFP16x2Op_Base <string srcTypeStr, Type srcStorageType, string dstTypeStr, list<Type> supportedTypes, int needVerify = 0>
+: NVVM_SingleResultIntrinsicOp<"convert." # !tolower(srcTypeStr) # "x2.to." # !tolower(dstTypeStr) # "x2", [], "$dst"> {
+  let summary = "Convert a pair of " # !tolower(srcTypeStr) # " inputs to " # !tolower(dstTypeStr) # "x2";
+  let description = [{
+    This Op converts the given }] # !tolower(srcTypeStr) # [{ inputs in a }] #
+    !if(!eq(srcTypeStr, "F4"), "packed i8", "i8x2 vector") # [{ to }] #
+    !tolower(dstTypeStr) # [{.
+
+    The result `dst` is represented as a vector of }] # !tolower(dstTypeStr) # [{ elements.
+
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.}] #
+
+    !if(!eq(dstTypeStr, "BF16"),
+    [{
+
+    The `sat` attribute specifies the saturation mode.
+
+    The optional scaling-factors for each of the inputs are provided through
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported
+    as the type of the scale-factor currently.}], "") # [{
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
-  let results = (outs VectorOfLengthAndType<[2], [!cast<Type>(dstType)]>:$dst);
-  let arguments = !if(!eq(dstType, "F16"),
-    (ins srcArgType:$src,
-         DefaultValuedAttr<BoolAttr, "false">:$relu,
-         TypeAttr:$srcType),
-    (ins srcArgType:$src,
-         TypeAttr:$srcType));
-  let assemblyFormat = "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)";
-  let hasVerifier = 1;
+  let results = (outs VectorOfLengthAndType<[2], [!cast<Type>(dstTypeStr)]>:$dst);
+  let arguments = !if(!eq(dstTypeStr, "F16"),
+    (ins srcStorageType:$src,
+         TypeAttrOf<AnyTypeOf<supportedTypes>>:$srcType,
+         DefaultValuedAttr<BoolAttr, "false">:$relu),
+    (ins srcStorageType:$src,
+         Optional<I16>:$scaleFactor,
+         TypeAttrOf<AnyTypeOf<supportedTypes>>:$srcType,
+         DefaultValuedAttr<SaturationModeSatfiniteOrNone, "SaturationMode::NONE">:$sat,
+         DefaultValuedAttr<BoolAttr, "false">:$relu));
+  let assemblyFormat = 
+    !if(!eq(dstTypeStr, "F16"),
+      "$src attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)",
+      "$src (`,` $scaleFactor^)? attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)");
+  let hasVerifier = needVerify;
 }
 
 def NVVM_ConvertF8x2ToF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16">;
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16", 
+    [F8E4M3FN, F8E5M2]>;
 def NVVM_ConvertF8x2ToBF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "BF16">;
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "BF16",
+    [F8E8M0FNU, F8E4M3FN, F8E5M2], 1> {
+  let append description = [{
+
+    Example:
+
+    ```mlir
+    // Basic conversion from f8E4M3FN.
+    %res1 = nvvm.convert.f8x2.to.bf16x2 %src
+        : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+
+    // Conversion from f8E5M2 with relu and saturation.
+    %res2 = nvvm.convert.f8x2.to.bf16x2 %src
+        {relu = true, sat = #nvvm.sat_mode<satfinite>}
+        : vector<2xi8> (f8E5M2) -> vector<2xbf16>
+
+    // Conversion with a packed ue8m0 scale-factor.
+    %res3 = nvvm.convert.f8x2.to.bf16x2 %src, %scaleFactor
+        : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+    ```
+  }];
+}
 def NVVM_ConvertF6x2ToF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "F16">;
+  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "F16", 
+    [F6E2M3FN, F6E3M2FN]>;
+def NVVM_ConvertF6x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "BF16",
+    [F6E2M3FN, F6E3M2FN]> {
+  let append description = [{
+
+    Example:
+
+    ```mlir
+    // Basic conversion from f6E2M3FN.
+    %res1 = nvvm.convert.f6x2.to.bf16x2 %src
+        : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+
+    // Conversion from f6E3M2FN with relu and saturation.
+    %res2 = nvvm.convert.f6x2.to.bf16x2 %src
+        {relu = true, sat = #nvvm.sat_mode<satfinite>}
+        : vector<2xi8> (f6E3M2FN) -> vector<2xbf16>
+
+    // Conversion with a packed ue8m0 scale-factor.
+    %res3 = nvvm.convert.f6x2.to.bf16x2 %src, %scaleFactor
+        : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+    ```
+  }];
+}
 def NVVM_ConvertF4x2ToF16x2Op :
-  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16">;
+  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16", [F4E2M1FN]>;
+def NVVM_ConvertF4x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "BF16", [F4E2M1FN]> {
+  let append description = [{
+
+    Example:
+
+    ```mlir
+    // Basic conversion; the f4x2 source is packed in a single i8.
+    %res1 = nvvm.convert.f4x2.to.bf16x2 %src
+        : i8 (f4E2M1FN) -> vector<2xbf16>
+
+    // Conversion with relu and saturation.
+    %res2 = nvvm.convert.f4x2.to.bf16x2 %src
+        {relu = true, sat = #nvvm.sat_mode<satfinite>}
+        : i8 (f4E2M1FN) -> vector<2xbf16>
+
+    // Conversion with a packed ue8m0 scale-factor.
+    %res3 = nvvm.convert.f4x2.to.bf16x2 %src, %scaleFactor
+        : i8 (f4E2M1FN) -> vector<2xbf16>
+    ```
+  }];
+}
 
 def NVVM_ConvertF32x2ToS2F6x2Op : NVVM_Op<"convert.f32x2.to.s2f6x2"> {
   let summary = "Convert a pair of f32 inputs to S2F6x2";
@@ -6643,6 +6658,63 @@ def NVVM_FmaOp : NVVM_Op<"fma", [Pure, SameOperandsAndResultType]> {
   let llvmBuilder = [{
     NVVM::FmaOp::lowerFmaToLLVMIR(*op, moduleTranslation, builder);
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM sqrt op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_SqrtOp
+    : NVVM_SingleResultIntrinsicOp<"sqrt", [Pure, SameOperandsAndResultType]> {
+  let summary = "Take the square root of a value";
+  let description = [{
+    Compute sqrt(src) and store the result in res.
+
+    For more information, see PTX ISA:
+    [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$src, FPArithRoundingMode:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$src attr-dict `:` type($src)";
+  let hasVerifier = 1;
+}
+
+def NVVM_SqrtApproxOp : NVVM_F32UnaryApproxOp<"sqrt.approx"> {
+  let summary = "Square root (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the square root of the input value
+    (`res = sqrt(src)`). The maximum relative error over the entire positive
+    finite range is 2^-23.
+
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
+    sign-preserving zero.
+
+    For more information, see PTX ISA:
+    [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM div op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_DivFOp
+    : NVVM_SingleResultIntrinsicOp<"divf", [Pure, SameOperandsAndResultType]> {
+  let summary = "Divide one value by another";
+  let description = [{
+    Divides lhs by rhs, stores result in res (`res = lhs / rhs`).
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$lhs, AnyTypeOf<[F32, F64]>:$rhs,
+      DefaultValuedAttr<FPArithRoundingMode, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz,
+      DefaultValuedAttr<BoolAttr, "false">:$approx,
+      DefaultValuedAttr<BoolAttr, "false">:$full);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
