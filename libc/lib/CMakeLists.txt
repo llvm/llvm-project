@@ -1,15 +1,40 @@
+set(libc_subarchive_entrypoints "")
+if(ENABLE_LLVM_LIBC_MINOR_VARIANT)
+  if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
+    message(FATAL_ERROR
+            "ENABLE_LLVM_LIBC_MINOR_VARIANT is only supported on baremetal targets.")
+  endif()
+  if(NOT LLVM_LIBC_SUBARCHIVE_NAME)
+    message(FATAL_ERROR
+            "ENABLE_LLVM_LIBC_MINOR_VARIANT requires LLVM_LIBC_SUBARCHIVE_NAME to be set.")
+  endif()
+endif()
+
 set(libc_archive_targets "")
 set(libc_archive_names "")
 set(libc_archive_entrypoint_lists "")
-if(LLVM_LIBC_FULL_BUILD)
-  list(APPEND libc_archive_names c m mvec)
-  list(APPEND libc_archive_targets libc libm libmvec)
-  list(APPEND libc_archive_entrypoint_lists
-       TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
+if(NOT ENABLE_LLVM_LIBC_MINOR_VARIANT)
+  if(LLVM_LIBC_FULL_BUILD)
+    list(APPEND libc_archive_names c m mvec)
+    list(APPEND libc_archive_targets libc libm libmvec)
+    list(APPEND libc_archive_entrypoint_lists
+         TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
+  else()
+    list(APPEND libc_archive_names llvmlibc)
+    list(APPEND libc_archive_targets libc)
+    list(APPEND libc_archive_entrypoint_lists TARGET_LLVMLIBC_ENTRYPOINTS)
+  endif()
 else()
-  list(APPEND libc_archive_names llvmlibc)
-  list(APPEND libc_archive_targets libc)
-  list(APPEND libc_archive_entrypoint_lists TARGET_LLVMLIBC_ENTRYPOINTS)
+  foreach(entrypoint IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
+    if(entrypoint MATCHES "^libc\\.src\\.${LLVM_LIBC_SUBARCHIVE_NAME}\\.")
+      list(APPEND libc_subarchive_entrypoints ${entrypoint})
+    endif()
+  endforeach()
+  if(NOT libc_subarchive_entrypoints)
+    message(FATAL_ERROR
+            "ENABLE_LLVM_LIBC_MINOR_VARIANT requires matching entrypoints for "
+            "'${LLVM_LIBC_SUBARCHIVE_NAME}'.")
+  endif()
 endif()
 
 set(added_archive_targets "")
@@ -55,6 +80,27 @@ foreach(archive IN ZIP_LISTS
     list(APPEND added_bitcode_targets ${archive_1}bitcode)
   endif()
 endforeach()
+
+if(libc_subarchive_entrypoints)
+  add_entrypoint_library(
+    ${LLVM_LIBC_SUBARCHIVE_NAME}
+    DEPENDS
+      ${libc_subarchive_entrypoints}
+  )
+  set_target_properties(
+    ${LLVM_LIBC_SUBARCHIVE_NAME}
+    PROPERTIES
+      PREFIX ""
+      ARCHIVE_OUTPUT_NAME llvm${LLVM_LIBC_SUBARCHIVE_NAME}
+  )
+  if(LLVM_LIBC_FULL_BUILD)
+    target_link_libraries(${LLVM_LIBC_SUBARCHIVE_NAME} PUBLIC libc-headers)
+    if(TARGET libc-startup)
+      add_dependencies(${LLVM_LIBC_SUBARCHIVE_NAME} libc-startup)
+    endif()
+  endif()
+  list(APPEND added_archive_targets ${LLVM_LIBC_SUBARCHIVE_NAME})
+endif()
 
 install(
   TARGETS ${added_archive_targets}
