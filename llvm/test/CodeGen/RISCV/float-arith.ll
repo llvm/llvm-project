@@ -278,8 +278,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    mv s0, a0
 ; RV32I-NEXT:    call __addsf3
-; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    lui a1, 524288
+; RV32I-NEXT:    not a0, a0
 ; RV32I-NEXT:    slli s0, s0, 1
 ; RV32I-NEXT:    and a0, a0, a1
 ; RV32I-NEXT:    srli s0, s0, 1
@@ -296,8 +296,8 @@ define float @fsgnjn_s(float %a, float %b) nounwind {
 ; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    mv s0, a0
 ; RV64I-NEXT:    call __addsf3
-; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    slli s0, s0, 33
 ; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    srli s0, s0, 33
@@ -1189,8 +1189,8 @@ define float @fnmadd_s_contract(float %a, float %b, float %c) nounwind {
 ;
 ; CHECKIZFINX-LABEL: fnmadd_s_contract:
 ; CHECKIZFINX:       # %bb.0:
-; CHECKIZFINX-NEXT:    fadd.s a0, a0, zero
 ; CHECKIZFINX-NEXT:    fadd.s a1, a1, zero
+; CHECKIZFINX-NEXT:    fadd.s a0, a0, zero
 ; CHECKIZFINX-NEXT:    fadd.s a2, a2, zero
 ; CHECKIZFINX-NEXT:    fnmadd.s a0, a0, a1, a2
 ; CHECKIZFINX-NEXT:    ret

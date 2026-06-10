@@ -456,8 +456,9 @@ static bool allCallersPassValidPointerForArgument(
   APInt Bytes(64, NeededDerefBytes);
 
   // Check if the argument itself is marked dereferenceable and aligned.
-  if (isDereferenceableAndAlignedPointer(Arg, NeededAlign, Bytes, DL,
-                                         &Callee->getEntryBlock().front()))
+  if (isDereferenceableAndAlignedPointer(
+          Arg, NeededAlign, Bytes,
+          SimplifyQuery(DL, &Callee->getEntryBlock().front())))
     return true;
 
   // Look at all call sites of the function.  At this point we know we only have
@@ -492,7 +493,8 @@ static bool allCallersPassValidPointerForArgument(
       return true;
 
     return isDereferenceableAndAlignedPointer(CB.getArgOperand(Arg->getArgNo()),
-                                              NeededAlign, Bytes, DL, &CB);
+                                              NeededAlign, Bytes,
+                                              SimplifyQuery(DL, &CB));
   });
 }
 

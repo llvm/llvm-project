@@ -6,19 +6,22 @@ define void @matmul_min(ptr %vptr, ptr %scalars, ptr %acc0_ptr, ptr %acc1_ptr) {
 ; CHECK-LABEL: matmul_min:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a4, 64
+; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a2)
 ; CHECK-NEXT:    li a5, 32
 ; CHECK-NEXT:    vsetvli zero, a5, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v16, (a0)
 ; CHECK-NEXT:    lb a0, 0(a1)
-; CHECK-NEXT:    lb a1, 1(a1)
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a2)
 ; CHECK-NEXT:    vle8.v v12, (a3)
+; CHECK-NEXT:    lb a1, 1(a1)
 ; CHECK-NEXT:    vsetvli zero, a5, e8, m2, ta, ma
 ; CHECK-NEXT:    vwmacc.vx v8, a0, v16
-; CHECK-NEXT:    vwmacc.vx v12, a1, v16
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a2)
+; CHECK-NEXT:    vsetvli zero, a5, e8, m2, ta, ma
+; CHECK-NEXT:    vwmacc.vx v12, a1, v16
+; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; CHECK-NEXT:    vse8.v v12, (a3)
 ; CHECK-NEXT:    ret
 entry:

@@ -311,7 +311,7 @@ def ZeroIntAPS : Opcode {
 // [] -> [Pointer]
 def Null : Opcode {
   let Types = [PtrTypeClass];
-  let Args = [ArgUint64, ArgDesc];
+  let Args = [ArgUint64, ArgTypePtr];
   let HasGroup = 1;
 }
 
@@ -596,7 +596,7 @@ def GetFnPtr : Opcode {
 
 def GetIntPtr : Opcode {
   let Types = [AluTypeClass];
-  let Args = [ArgDesc];
+  let Args = [ArgTypePtr];
   let HasGroup = 1;
 }
 
