@@ -113,7 +113,9 @@ struct TestOneShotModuleBufferizePass
       }
       return rhsLayout ? y : x;
     };
-    opt.inferFunctionResultLayout = this->inferFunctionResultLayout;
+    // Function signature update only works with memref.cast. Disable it to
+    // align behaviour for upstream and user casts.
+    opt.inferFunctionResultLayout = false;
 
     bufferization::BufferizationState bufferizationState;
 
@@ -121,12 +123,6 @@ struct TestOneShotModuleBufferizePass
                                                         bufferizationState)))
       signalPassFailure();
   }
-
-  Option<bool> inferFunctionResultLayout{
-      *this, "infer-function-result-layout",
-      llvm::cl::desc(
-          "Allows to change the function signature. By default, set to true."),
-      llvm::cl::init(true)};
 };
 } // namespace
 

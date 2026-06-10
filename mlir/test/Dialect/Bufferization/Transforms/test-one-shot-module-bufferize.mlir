@@ -1,5 +1,4 @@
 // RUN: mlir-opt %s -test-one-shot-module-bufferize -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -test-one-shot-module-bufferize="infer-function-result-layout=0" -split-input-file | FileCheck %s --check-prefix=PRESERVE-SIGNATURE
 
 #enc1 = #test.tensor_encoding<"hello">
 #enc2 = #test.tensor_encoding<"not hello">
@@ -306,23 +305,18 @@ module @BufferizeEncodingForCustomOpsInsideScf {
 
 module @BufferizeLayoutForFunction {
   // CHECK: func.func @layout_for_func
-  // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+  // CHECK-SAME: -> memref<10xf32>
   func.func @layout_for_func() -> tensor<10xf32> {
     // CHECK: %[[memref:.*]] = "test.create_memref_op"
     // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
-    // CHECK: return %[[memref]]
     %memref = "test.tensor_with_future_layout"() {layout = #layout1}
       : () -> tensor<10xf32>
+
+    // CHECK: %[[out:.*]] = memref.cast %[[memref]]
+    // CHECK-SAME:  to memref<10xf32>
+    // CHECK: return %[[out]]
     return %memref : tensor<10xf32>
   }
-
-  // PRESERVE-SIGNATURE: func.func @layout_for_func
-  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
-  // PRESERVE-SIGNATURE: %[[memref:.*]] = "test.create_memref_op"
-  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
-  // PRESERVE-SIGNATURE: %[[cast:.*]] = memref.cast %[[memref]]
-  // PRESERVE-SIGNATURE-SAME: to memref<10xf32>
-  // PRESERVE-SIGNATURE: return %[[cast]]
 }
 
 // -----
@@ -333,9 +327,9 @@ module @BufferizeLayoutForFunction {
 // CHECK-LABEL: @BufferizeLayoutMismatchInsideScfIf
 module @BufferizeLayoutMismatchInsideScfIf {
   // CHECK: func.func @mismatch_in_if
-  // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+  // CHECK-SAME: -> memref<10xf32>
   func.func @mismatch_in_if(%cond: i1) -> tensor<10xf32> {
-    // CHECK: %[[ret:.*]] = scf.if
+    // CHECK: %[[if:.*]] = scf.if
     // CHECK-SAME: -> (memref<10xf32, #test.memref_layout<"layout_a">>)
     %ret = scf.if %cond -> tensor<10xf32> {
       // CHECK: %[[one:.*]] = "test.create_memref_op"
@@ -355,12 +349,11 @@ module @BufferizeLayoutMismatchInsideScfIf {
       scf.yield %another : tensor<10xf32>
     }
 
-    // CHECK: return %[[ret]]
+    // CHECK: %[[out:.*]] = memref.cast %[[if]]
+    // CHECK-SAME: to memref<10xf32>
+    // CHECK: return %[[out]]
     return %ret : tensor<10xf32>
   }
-
-  // PRESERVE-SIGNATURE: func.func @mismatch_in_if
-  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
 }
 
 // -----
@@ -372,9 +365,9 @@ module @BufferizeLayoutMismatchInsideScfIf {
 // CHECK-LABEL: @BufferizeLayoutMismatchInsideScfSwitch
 module @BufferizeLayoutMismatchInsideScfSwitch {
   // CHECK: func.func @mismatch_in_switch
-  // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+  // CHECK-SAME:  -> memref<10xf32>
   func.func @mismatch_in_switch(%idx: index) -> tensor<10xf32> {
-    // CHECK: %[[ret:.*]] = scf.index_switch
+    // CHECK: %[[switch:.*]] = scf.index_switch
     // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
     %ret = scf.index_switch %idx -> tensor<10xf32>
     case 0 {
@@ -406,12 +399,11 @@ module @BufferizeLayoutMismatchInsideScfSwitch {
       scf.yield %yet_another : tensor<10xf32>
     }
 
-    // CHECK: return %[[ret]]
+    // CHECK: %[[out:.*]] = memref.cast %[[switch]]
+    // CHECK-SAME: to memref<10xf32>
+    // CHECK: return %[[out]]
     return %ret : tensor<10xf32>
   }
-
-  // PRESERVE-SIGNATURE: func.func @mismatch_in_switch
-  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
 }
 
 // -----
@@ -422,7 +414,7 @@ module @BufferizeLayoutMismatchInsideScfSwitch {
 // CHECK-LABEL: @BufferizeLayoutMismatchInsideScfFor
 module @BufferizeLayoutMismatchInsideScfFor {
   // CHECK: func.func @mismatch_in_for
-  // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+  // CHECK-SAME:  -> memref<10xf32>
   func.func @mismatch_in_for(
       %lb: index, %ub: index, %step: index)
       -> tensor<10xf32> {
@@ -446,12 +438,11 @@ module @BufferizeLayoutMismatchInsideScfFor {
       scf.yield %conflict : tensor<10xf32>
     }
 
-    // CHECK: return %[[loop]]
+    // CHECK: %[[out:.*]] = memref.cast %[[loop]]
+    // CHECK-SAME: to memref<10xf32>
+    // CHECK: return %[[out]]
     return %loop : tensor<10xf32>
   }
-
-  // PRESERVE-SIGNATURE: func.func @mismatch_in_for
-  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
 }
 
 // -----
@@ -468,7 +459,7 @@ module @BufferizeLayoutMismatchInsideScfFor {
 // CHECK-LABEL: @BufferizeLayoutMismatchInsideScfForWithSubviews
 module @BufferizeLayoutMismatchInsideScfForWithSubviews {
   // CHECK: func.func @mismatch_in_for
-  // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+  // CHECK-SAME:  -> memref<10xf32>
   func.func @mismatch_in_for(
       %lb: index, %ub: index, %step: index)
       -> tensor<10xf32> {
@@ -504,12 +495,11 @@ module @BufferizeLayoutMismatchInsideScfForWithSubviews {
       scf.yield %out : tensor<10xf32>
     }
 
-    // CHECK: return %[[loop]]
+    // CHECK: %[[out:.*]] = memref.cast %[[loop]]
+    // CHECK-SAME: to memref<10xf32>
+    // CHECK: return %[[out]]
     return %loop : tensor<10xf32>
   }
-
-  // PRESERVE-SIGNATURE: func.func @mismatch_in_for
-  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
 }
 
 // -----
@@ -520,9 +510,9 @@ module @BufferizeLayoutMismatchInsideScfForWithSubviews {
 // CHECK-LABEL: @BufferizeLayoutMismatchInScfExecuteRegion
 module @BufferizeLayoutMismatchInScfExecuteRegion {
   // CHECK: func.func @mismatch_in_scf_execute_region
-  // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
+  // CHECK-SAME: -> memref<10xf32>
   func.func @mismatch_in_scf_execute_region(%cond: i1) -> tensor<10xf32> {
-    // CHECK: %[[out:.*]] = scf.execute_region
+    // CHECK: %[[region:.*]] = scf.execute_region
     // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
     %out = scf.execute_region -> tensor<10xf32> {
       cf.cond_br %cond, ^bb1, ^bb2
@@ -549,12 +539,12 @@ module @BufferizeLayoutMismatchInScfExecuteRegion {
         // CHECK: scf.yield {{%.*}} : memref<10xf32, #test.memref_layout<"layout_a">>
         scf.yield %res : tensor<10xf32>
     }
+
+    // CHECK: %[[out:.*]] = memref.cast %[[region]]
+    // CHECK-SAME: to memref<10xf32>
     // CHECK: return %[[out]]
     return %out : tensor<10xf32>
   }
-
-  // PRESERVE-SIGNATURE: func.func @mismatch_in_scf_execute_region
-  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
 }
 
 // -----
@@ -565,7 +555,7 @@ module @BufferizeLayoutMismatchInScfExecuteRegion {
 // CHECK-LABEL: @BufferizeLayoutMismatchInArithSelect
 module @BufferizeLayoutMismatchInArithSelect {
   // CHECK: func.func @mismatch_in_select(%[[cond:.*]]: i1)
-  // CHECK-SAME:  -> memref<10xf32, #test.memref_layout<"layout_a">>
+  // CHECK-SAME:  -> memref<10xf32>
   func.func @mismatch_in_select(%cond: i1) -> tensor<10xf32> {
     // CHECK: %[[memref1:.*]] = "test.create_memref_op"
     // CHECK-SAME: -> memref<10xf32, #test.memref_layout<"layout_a">>
@@ -581,10 +571,10 @@ module @BufferizeLayoutMismatchInArithSelect {
 
     // CHECK: %[[select:.*]] = arith.select %[[cond]], %[[memref1]], %[[cast]]
     %select = arith.select %cond, %tensor1, %tensor2 : i1, tensor<10xf32>
-    // CHECK: return %[[select]]
+
+    // CHECK: %[[out:.*]] = memref.cast %[[select]]
+    // CHECK-SAME: to memref<10xf32>
+    // CHECK: return %[[out]]
     return %select : tensor<10xf32>
   }
-
-  // PRESERVE-SIGNATURE: func.func @mismatch_in_select
-  // PRESERVE-SIGNATURE-SAME: -> memref<10xf32>
 }
