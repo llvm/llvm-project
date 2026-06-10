@@ -9,6 +9,51 @@ from lldbsuite.test import lldbutil
 import lldbdap_testcase
 import os
 
+# The expected backtrace when loading the bundled linux-x86_64.core. Shared by
+# the tests that load this core through different mechanisms (the "coreFile"
+# attach key and "attachCommands") so we can assert they behave identically.
+EXPECTED_CORE_FRAMES = [
+    {
+        "column": 0,
+        "id": 524288,
+        "line": 4,
+        "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
+        "name": "bar",
+        "source": {
+            "name": "main.c",
+            "path": "/home/labath/test/main.c",
+            "presentationHint": "deemphasize",
+        },
+        "instructionPointerReference": "0x40011C",
+    },
+    {
+        "column": 0,
+        "id": 524289,
+        "line": 10,
+        "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
+        "name": "foo",
+        "source": {
+            "name": "main.c",
+            "path": "/home/labath/test/main.c",
+            "presentationHint": "deemphasize",
+        },
+        "instructionPointerReference": "0x400142",
+    },
+    {
+        "column": 0,
+        "id": 524290,
+        "line": 16,
+        "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
+        "name": "_start",
+        "source": {
+            "name": "main.c",
+            "path": "/home/labath/test/main.c",
+            "presentationHint": "deemphasize",
+        },
+        "instructionPointerReference": "0x40015F",
+    },
+]
+
 
 class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
     @skipIfLLVMTargetMissing("X86")
@@ -21,47 +66,7 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
         self.attach(program=exe_file, coreFile=core_file)
         self.dap_server.request_configurationDone()
 
-        expected_frames = [
-            {
-                "column": 0,
-                "id": 524288,
-                "line": 4,
-                "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
-                "name": "bar",
-                "source": {
-                    "name": "main.c",
-                    "path": "/home/labath/test/main.c",
-                    "presentationHint": "deemphasize",
-                },
-                "instructionPointerReference": "0x40011C",
-            },
-            {
-                "column": 0,
-                "id": 524289,
-                "line": 10,
-                "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
-                "name": "foo",
-                "source": {
-                    "name": "main.c",
-                    "path": "/home/labath/test/main.c",
-                    "presentationHint": "deemphasize",
-                },
-                "instructionPointerReference": "0x400142",
-            },
-            {
-                "column": 0,
-                "id": 524290,
-                "line": 16,
-                "moduleId": "01DF54A6-045E-657D-3F8F-FB9CE1118789-14F8BD6D",
-                "name": "_start",
-                "source": {
-                    "name": "main.c",
-                    "path": "/home/labath/test/main.c",
-                    "presentationHint": "deemphasize",
-                },
-                "instructionPointerReference": "0x40015F",
-            },
-        ]
+        expected_frames = EXPECTED_CORE_FRAMES
 
         self.assertEqual(self.get_stackFrames(), expected_frames)
 
@@ -72,6 +77,51 @@ class TestDAP_coreFile(lldbdap_testcase.DAPTestCaseBase):
 
         self.dap_server.request_next(threadId=32259)
         self.assertEqual(self.get_stackFrames(), expected_frames)
+
+    @skipIfLLVMTargetMissing("X86")
+    def test_core_file_attach_commands(self):
+        """Loading a core through "attachCommands" (e.g. `target create --core`)
+        should behave identically to using the "coreFile" attach key: the
+        session stops with the real crash reason and cannot be resumed."""
+        current_dir = os.path.dirname(__file__)
+        exe_file = os.path.join(current_dir, "linux-x86_64.out")
+        core_file = os.path.join(current_dir, "linux-x86_64.core")
+
+        self.create_debug_adapter()
+        # Bootstrap the core target purely through a custom attach command,
+        # mirroring how the "coreFile" key passes the same program.
+        self.attach(
+            program=exe_file,
+            attachCommands=['target create --core "%s" "%s"' % (core_file, exe_file)],
+        )
+
+        # configurationDone must succeed: a core is a non-live session, so the
+        # adapter must not try to resume it (resuming a core fails).
+        resp = self.dap_server.request_configurationDone()
+        self.assertTrue(
+            resp["success"],
+            "configurationDone should succeed for a core loaded via attachCommands",
+        )
+
+        # The backtrace must match the "coreFile" attach key exactly.
+        self.assertEqual(self.get_stackFrames(), EXPECTED_CORE_FRAMES)
+
+        # The stop must be reported with the real crash reason, not "entry".
+        self.dap_server.wait_for_stopped()
+        found_exception = any(
+            body.get("reason") == "exception"
+            for body in self.dap_server.thread_stop_reasons.values()
+        )
+        self.assertTrue(
+            found_exception,
+            f"Expected a thread stopped with reason 'exception', got: "
+            f"{self.dap_server.thread_stop_reasons}",
+        )
+
+        # Resuming should have no effect and keep the process stopped.
+        resp = self.dap_server.request_continue()
+        self.assertFalse(resp["success"])
+        self.assertEqual(self.get_stackFrames(), EXPECTED_CORE_FRAMES)
 
     def test_wrong_core_file(self):
         exe_file = self.getSourcePath("linux-x86_64.out")
