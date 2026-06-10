@@ -149,6 +149,7 @@ private:
     Outdent();
   }
   void Show(const evaluate::DescriptorInquiry &x);
+  void Show(const evaluate::RankOneBoundElement &x);
   void Show(const evaluate::SpecificIntrinsic &);
   void Show(const evaluate::ProcedureDesignator &x);
   void Show(const evaluate::ActualArgument &x);

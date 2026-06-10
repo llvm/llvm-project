@@ -1810,6 +1810,11 @@ private:
     llvm_unreachable("unknown descriptor inquiry");
   }
 
+  hlfir::EntityWithAttributes
+  gen(const Fortran::evaluate::RankOneBoundElement &x) {
+    TODO(getLoc(), "rank-1 bound element lowering");
+  }
+
   /// Build nested if-then-else chain by walking the right-skewed
   /// ConditionalExpr tree. The assignValue callback generates and assigns
   /// each value to avoid evaluating non-taken branches.

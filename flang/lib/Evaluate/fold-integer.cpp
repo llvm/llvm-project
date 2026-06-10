@@ -1554,6 +1554,20 @@ Expr<TypeParamInquiry::Result> FoldOperation(
   return AsExpr(std::move(inquiry));
 }
 
+Expr<RankOneBoundElement::Result> FoldOperation(
+    FoldingContext &context, RankOneBoundElement &&x) {
+  using ResultType = RankOneBoundElement::Result;
+  auto folded{Fold(context, Expr<ResultType>{x.base()})};
+  if (auto *c{UnwrapConstantValue<ResultType>(folded)}) {
+    // Base is a constant array; extract the element at dimension_ (0-based).
+    ConstantSubscripts at{c->lbounds()};
+    at[0] = c->lbounds()[0] + x.dimension();
+    return Expr<ResultType>{Constant<ResultType>{c->At(at)}};
+  }
+  return Expr<ResultType>{
+      RankOneBoundElement{std::move(folded), x.dimension()}};
+}
+
 std::optional<std::int64_t> ToInt64(const Expr<SomeInteger> &expr) {
   return common::visit(
       [](const auto &kindExpr) { return ToInt64(kindExpr); }, expr.u);

@@ -138,6 +138,8 @@ Expr<T> FoldOperation(FoldingContext &context, Designator<T> &&designator) {
 }
 Expr<TypeParamInquiry::Result> FoldOperation(
     FoldingContext &, TypeParamInquiry &&);
+Expr<RankOneBoundElement::Result> FoldOperation(
+    FoldingContext &, RankOneBoundElement &&);
 Expr<ImpliedDoIndex::Result> FoldOperation(
     FoldingContext &context, ImpliedDoIndex &&);
 template <typename T>

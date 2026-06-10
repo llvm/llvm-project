@@ -165,6 +165,7 @@ public:
 
   Result operator()(const ImpliedDoIndex &) const { return ScalarShape(); }
   Result operator()(const DescriptorInquiry &) const { return ScalarShape(); }
+  Result operator()(const RankOneBoundElement &) const { return ScalarShape(); }
   Result operator()(const TypeParamInquiry &) const { return ScalarShape(); }
   Result operator()(const BOZLiteralConstant &) const { return ScalarShape(); }
   Result operator()(const StaticDataObject::Pointer &) const {

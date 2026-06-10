@@ -764,6 +764,9 @@ bool DescriptorInquiry::operator==(const DescriptorInquiry &that) const {
   return field_ == that.field_ && base_ == that.base_ &&
       dimension_ == that.dimension_;
 }
+bool RankOneBoundElement::operator==(const RankOneBoundElement &that) const {
+  return dimension_ == that.dimension_ && base_ == that.base_;
+}
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)

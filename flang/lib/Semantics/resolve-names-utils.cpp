@@ -213,6 +213,13 @@ private:
   void MakeDeferred(int);
   Bound GetBound(const std::optional<parser::SpecificationExpr> &);
   Bound GetBound(const parser::SpecificationExpr &);
+  struct ExplicitShapeBoundsResult {
+    Bound ubound;
+    std::optional<Bound> lbound;
+    std::int64_t numDims;
+  };
+  std::optional<ExplicitShapeBoundsResult> checkExplicitShapeBoundsSpec(
+      const parser::ExplicitShapeBoundsSpec &x);
 };
 
 ArraySpec AnalyzeArraySpec(
@@ -343,11 +350,138 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
       std::get<parser::SpecificationExpr>(x.t));
 }
 
+std::optional<ArraySpecAnalyzer::ExplicitShapeBoundsResult>
+ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(
+    const parser::ExplicitShapeBoundsSpec &x) {
+  const auto &lowerBoundOpt{std::get<0>(x.t)};
+  const auto &upperBound{std::get<1>(x.t)};
+
+  // Analyze, validate, fold, and wrap one bound expression in a Bound.
+  // Returns the Bound and, for rank-1, the constant extent; for scalar
+  // the extent is 0 (meaning "broadcast").
+  bool hasError{false};
+  auto analyzeBound =
+      [&](const auto &parseBound,
+          bool isUpper) -> std::optional<std::pair<Bound, std::int64_t>> {
+    MaybeExpr expr{AnalyzeExpr(context_, parseBound.thing)};
+    if (expr->Rank() > 1) {
+      context_.Say(parser::FindSourceLocation(parseBound),
+          "Integer array used as %s bounds in DECLARATION must be rank-1 "
+          "but is rank-%d"_err_en_US,
+          isUpper ? "upper" : "lower", expr->Rank());
+      hasError = true;
+      return std::nullopt;
+    }
+    auto folded{evaluate::Fold(context_.foldingContext(), std::move(*expr))};
+    const auto *someInt{evaluate::UnwrapExpr<SomeIntExpr>(folded)};
+    if (!someInt) {
+      hasError = true;
+      return std::nullopt;
+    }
+    auto asSI{evaluate::Fold(context_.foldingContext(),
+        evaluate::ConvertToType<evaluate::SubscriptInteger>(
+            common::Clone(*someInt)))};
+    if (folded.Rank() == 0) {
+      return std::make_pair(
+          Bound{MaybeSubscriptIntExpr{std::move(asSI)}}, std::int64_t{0});
+    }
+    // Rank-1: must have constant extent.
+    auto extents{
+        evaluate::GetConstantExtents(context_.foldingContext(), folded)};
+    if (!extents) {
+      context_.Say(parser::FindSourceLocation(parseBound),
+          "Rank-1 integer array used as %s bounds in DECLARATION must "
+          "have constant size"_err_en_US,
+          isUpper ? "upper" : "lower");
+      hasError = true;
+      return std::nullopt;
+    }
+    return std::make_pair(
+        Bound{MaybeSubscriptIntExpr{std::move(asSI)}}, (*extents)[0]);
+  };
+
+  // Upper bound (required)
+  auto ubResult{analyzeBound(upperBound, /*isUpper=*/true)};
+
+  // Lower bound (optional)
+  std::optional<std::pair<Bound, std::int64_t>> lbResult;
+  if (lowerBoundOpt) {
+    lbResult = analyzeBound(*lowerBoundOpt, /*isUpper=*/false);
+  }
+
+  if (hasError) {
+    return std::nullopt;
+  }
+
+  std::int64_t ubExtent{ubResult->second};
+  std::int64_t lbExtent{lbResult ? lbResult->second : 0};
+
+  // Determine numDims from whichever is rank-1 (extent > 0).
+  std::int64_t numDims{std::max(ubExtent, lbExtent)};
+
+  // Size mismatch check (only when both are rank-1).
+  if (ubExtent > 0 && lbExtent > 0 && ubExtent != lbExtent) {
+    context_.Say(parser::FindSourceLocation(x),
+        "DECLARATION bounds integer rank-1 arrays must have the same size; "
+        "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
+        lbExtent, ubExtent);
+    return std::nullopt;
+  }
+
+  std::optional<Bound> lb;
+  if (lbResult) {
+    lb.emplace(std::move(lbResult->first));
+  }
+  return ExplicitShapeBoundsResult{
+      std::move(ubResult->first), std::move(lb), numDims};
+}
+
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
-  context_.Say("TODO: Analyze overload for ExplicitShapeBoundsSpec"_todo_en_US);
-  // prevent CHECK abort in Analyze(ArraySpec), otherwise it'll abort before
-  // printing error message
-  arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+  auto result{checkExplicitShapeBoundsSpec(x)};
+  // Every path that results in result being false emits an error. In the event
+  // that we bail early without emitting an error, we silently pass the fallback
+  // Bound{1} WITHOUT failing. This check ensures that if we failed, we emitted
+  // an error message. This way we can pass the
+  //   CHECK(!arraySpec_.empty());
+  // in Analyze(ArraySpec). If we don't, it'll crash before getting to emit
+  // the real (user) error messages.
+  if (!result) {
+    CHECK(context_.AnyFatalError());
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+    return;
+  }
+  // For rank-1 bounds, emit N ShapeSpecs each wrapping a scalar
+  // RankOneBoundElement that extracts element [dim] from the rank-1
+  // expression.  This makes all downstream consumers see scalar bounds.
+  int numDims = static_cast<int>(result->numDims);
+  for (int dim = 0; dim < numDims; ++dim) {
+    // Upper bound
+    MaybeSubscriptIntExpr ubExpr;
+    if (auto &ubOrig = result->ubound.GetExplicit()) {
+      if (ubOrig->Rank() > 0) {
+        ubExpr = SubscriptIntExpr{
+            evaluate::RankOneBoundElement{common::Clone(*ubOrig), dim}};
+      } else {
+        ubExpr = common::Clone(*ubOrig);
+      }
+    }
+    // Lower bound
+    MaybeSubscriptIntExpr lbExpr;
+    if (result->lbound) {
+      if (auto &lbOrig = result->lbound->GetExplicit()) {
+        if (lbOrig->Rank() > 0) {
+          lbExpr = SubscriptIntExpr{
+              evaluate::RankOneBoundElement{common::Clone(*lbOrig), dim}};
+        } else {
+          lbExpr = common::Clone(*lbOrig);
+        }
+      }
+    }
+    Bound lb{lbExpr ? std::move(lbExpr)
+                    : MaybeSubscriptIntExpr{SubscriptIntExpr{1}}};
+    Bound ub{std::move(ubExpr)};
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(std::move(lb), std::move(ub)));
+  }
 }
 
 void ArraySpecAnalyzer::Analyze(const parser::AssumedImpliedSpec &x) {
