@@ -279,7 +279,7 @@ public:
 /// \p Extractor provides address extraction and the underlying DataExtractor.
 /// \p PGOAnalyses if non-null, receives the decoded PGO analysis data. On
 ///   error, \p PGOAnalyses may be partially populated.
-Expected<std::vector<BBAddrMap>>
+LLVM_ABI Expected<std::vector<BBAddrMap>>
 decodeBBAddrMapPayload(AddressExtractor &Extractor,
                        std::vector<PGOAnalysisMap> *PGOAnalyses = nullptr);
 

@@ -2319,16 +2319,6 @@ void PostOrderFunctionAttrsPass::printPipeline(
     OS << "<skip-non-recursive-function-attrs>";
 }
 
-template <typename AARGetterT>
-static bool runImpl(CallGraphSCC &SCC, AARGetterT AARGetter) {
-  SmallVector<Function *, 8> Functions;
-  for (CallGraphNode *I : SCC) {
-    Functions.push_back(I->getFunction());
-  }
-
-  return !deriveAttrsInPostOrder(Functions, AARGetter).empty();
-}
-
 static bool addNoRecurseAttrsTopDown(Function &F) {
   if (F.doesNotRecurse())
     return false;

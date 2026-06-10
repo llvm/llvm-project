@@ -121,13 +121,12 @@ bool ParseTrieEntriesImpl(DataExtractor &data, lldb::offset_t offset,
     const size_t prevSize = prefix.size();
     prefix.append(cstr);
     lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
-    if (childNodeOffset) {
-      if (!ParseTrieEntriesImpl(data, childNodeOffset, is_arm,
-                                text_seg_base_addr, prefix, resolver_addresses,
-                                reexports, ext_symbols, visited_nodes)) {
-        return false;
-      }
-    }
+    // A child offset of 0 points back at the root; like any other repeated
+    // offset it is a cycle, which ParseTrieEntriesImpl rejects as corrupt.
+    if (!ParseTrieEntriesImpl(data, childNodeOffset, is_arm, text_seg_base_addr,
+                              prefix, resolver_addresses, reexports,
+                              ext_symbols, visited_nodes))
+      return false;
     prefix.resize(prevSize);
   }
   return true;
