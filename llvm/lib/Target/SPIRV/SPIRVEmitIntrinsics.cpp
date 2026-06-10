@@ -1424,8 +1424,8 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       Value *Root = Ref->getPointerOperand()->stripPointerCasts();
       if (!isa<AllocaInst>(Root))
         return;
-      KnownElemTy = getTypedPointerWrapper(
-          LoadedElemTy, getPointerAddressSpace(KnownElemTy));
+      KnownElemTy = getTypedPointerWrapper(LoadedElemTy,
+                                           getPointerAddressSpace(KnownElemTy));
     }
     Type *PointeeTy = GR->findDeducedElementType(Ref->getPointerOperand());
     if (PointeeTy && !isUntypedPointerTy(PointeeTy))
