@@ -16,6 +16,7 @@
 #include <deque>
 #include <list>
 #include <map>
+#include <optional>
 #include <shared_mutex>
 #include <variant>
 #include <vector>
@@ -41,6 +42,7 @@
 #include "omp-tools.h"
 #endif
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"

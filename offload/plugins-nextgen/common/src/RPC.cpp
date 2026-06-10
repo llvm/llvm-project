@@ -8,10 +8,13 @@
 
 #include "RPC.h"
 
+#include "Sanitizer.h"
 #include "Shared/Debug.h"
 #include "Shared/RPCOpcodes.h"
 
 #include "PluginInterface.h"
+
+#include "sanitizer/gpu_sanitizer.h"
 
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
@@ -60,6 +63,14 @@ rpc::RPCStatus handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
     Port.send([&](rpc::Buffer *Buffer, uint32_t ID) {
       Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
       delete[] reinterpret_cast<char *>(Args[ID]);
+    });
+    break;
+  }
+  case TSAN_GPU_REPORT_OPCODE: {
+    static_assert(sizeof(__tsan_gpu_race) <= sizeof(rpc::Buffer));
+    Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+      reportGPUCSanRace(Device, Device.getRPCServer()->getSanitizerTables(),
+                        *reinterpret_cast<__tsan_gpu_race *>(Buffer->data));
     });
     break;
   }
@@ -180,12 +191,15 @@ void RPCServerTy::ServerThread::run() {
 }
 
 RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
-    : Buffers(std::make_unique<void *[]>(Plugin.getNumDevices())),
+    : Sanitizers(std::make_unique<SanitizerTables>()),
+      Buffers(std::make_unique<void *[]>(Plugin.getNumDevices())),
       Devices(std::make_unique<plugin::GenericDeviceTy *[]>(
           Plugin.getNumDevices())),
       Thread(new ServerThread(Buffers.get(), Devices.get(),
                               Plugin.getNumDevices(), BufferMutex, Callbacks)) {
 }
+
+RPCServerTy::~RPCServerTy() = default;
 
 llvm::Error RPCServerTy::startThread() {
   Thread->startThread();
