@@ -44,6 +44,7 @@ class RegexMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
+  StringRef findRule(unsigned LineNo) const;
 
 private:
   struct Reg {
@@ -61,6 +62,7 @@ class GlobMatcher {
 public:
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
+  StringRef findRule(unsigned LineNo) const;
 
 private:
   struct Glob {
@@ -99,6 +101,9 @@ public:
 
   std::variant<RegexMatcher, GlobMatcher> M;
   bool RemoveDotSlash;
+
+private:
+  StringRef findRule(unsigned LineNo) const;
 };
 
 Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -130,6 +135,14 @@ unsigned RegexMatcher::match(StringRef Query) const {
     if (R.Rg.match(Query))
       return R.LineNo;
   return 0;
+}
+
+StringRef RegexMatcher::findRule(unsigned LineNo) const {
+  for (const auto &R : RegExes)
+    if (R.LineNo == LineNo)
+      return R.Name;
+  llvm_unreachable("`findRule` should be called only with correct `LineNo`");
+  return {};
 }
 
 Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -218,6 +231,14 @@ unsigned GlobMatcher::match(StringRef Query) const {
   return Best < 0 ? 0 : Globs[Best].LineNo;
 }
 
+StringRef GlobMatcher::findRule(unsigned LineNo) const {
+  for (const auto &G : Globs)
+    if (G.LineNo == LineNo)
+      return G.Name;
+  llvm_unreachable("`findRule` should be called only with correct `LineNo`");
+  return {};
+}
+
 Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
     : RemoveDotSlash(RemoveDotSlash) {
   if (UseGlobs)
@@ -234,6 +255,11 @@ unsigned Matcher::match(StringRef Query) const {
   if (RemoveDotSlash)
     Query = llvm::sys::path::remove_leading_dotslash(Query);
   return std::visit([&](auto &V) -> unsigned { return V.match(Query); }, M);
+}
+
+StringRef Matcher::findRule(unsigned LineNo) const {
+  return std::visit([&](auto &V) -> StringRef { return V.findRule(LineNo); },
+                    M);
 }
 } // namespace
 
