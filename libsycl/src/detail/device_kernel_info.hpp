@@ -40,6 +40,9 @@ public:
   /// \return the name of this kernel.
   std::string_view getName() { return MName; }
 
+  /// \return the device image containing the device code of this kernel.
+  DeviceImageManager &getDeviceImage() const { return MDeviceImage; }
+
 private:
   std::unordered_map<ol_device_handle_t, ol_symbol_handle_t> MBuiltKernels;
 
@@ -57,9 +60,6 @@ private:
       return nullptr;
     return KernelIt->second;
   }
-
-  /// \return the device image containing the device code of this kernel.
-  DeviceImageManager &getDeviceImage() const { return MDeviceImage; }
 
   /// Attaches a liboffload kernel handle to this device kernel info object.
   /// \param Device the device the kernel symbol was created for.

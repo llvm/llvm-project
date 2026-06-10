@@ -6106,7 +6106,7 @@ define void @test_optimized_cast_induction_feeding_first_order_recurrence(i64 %n
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; UNROLL-NO-IC-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[N_VEC]] to i32
 ; UNROLL-NO-IC-NEXT:    [[IND_END:%.*]] = mul i32 [[DOTCAST]], [[STEP]]
-; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = mul <2 x i32> splat (i32 2), [[BROADCAST_SPLAT]]
+; UNROLL-NO-IC-NEXT:    [[TMP17:%.*]] = shl <2 x i32> [[BROADCAST_SPLAT]], splat (i32 1)
 ; UNROLL-NO-IC-NEXT:    [[TMP19:%.*]] = mul nsw <2 x i32> <i32 0, i32 1>, [[BROADCAST_SPLAT]]
 ; UNROLL-NO-IC-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; UNROLL-NO-IC:       vector.body:

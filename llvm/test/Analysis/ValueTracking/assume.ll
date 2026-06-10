@@ -173,8 +173,7 @@ define i1 @test_dereferenceable_unknown_size_not_nonnull(ptr %ptr, i32 %bytes) {
 
 define i1 @test_dereferenceable_zero_size_not_nonnull(ptr %ptr) {
 ; CHECK-LABEL: @test_dereferenceable_zero_size_not_nonnull(
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[TMP0:%.*]], i32 0) ]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0:%.*]], null
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %ptr, i32 0)]
