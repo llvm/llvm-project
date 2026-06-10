@@ -198,7 +198,7 @@ public:
 
     virtual bool IsPossibleTaggedPointer(lldb::addr_t ptr) = 0;
 
-    virtual ObjCLanguageRuntime::ClassDescriptorSP
+    virtual std::unique_ptr<ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) = 0;
 
   protected:
