@@ -26,7 +26,7 @@ define i32 @f(i32 %z) {
 ; XTENSA-ESP32S2-NEXT:  # %bb.0:
 ; XTENSA-ESP32S2-NEXT:    entry a1, 32
 ; XTENSA-ESP32S2-NEXT:    .cfi_def_cfa_offset 32
-; XTENSA-ESP32S2-NEXT:    movi.n a2, 0
+; XTENSA-ESP32S2-NEXT:    movi a2, 0
 ; XTENSA-ESP32S2-NEXT:    retw.n
 ;
 ; XTENSA-GENERIC-LABEL: f:
