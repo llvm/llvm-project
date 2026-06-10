@@ -1351,14 +1351,14 @@ class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
       constexpr int kLutE2M1ToBF16 = 5;
       int lutIndex =
           (dstEtype == ExtfDstElemTypes::F16) ? kLutE2M1ToF16 : kLutE2M1ToBF16;
-      Value lutIdx = LLVM::ConstantOp::create(
-          rewriter, op.getLoc(), rewriter.getI32Type(), lutIndex);
+      Value lutIdx = LLVM::ConstantOp::create(rewriter, op.getLoc(),
+                                              rewriter.getI32Type(), lutIndex);
       Type lutTy = VectorType::get(16, rewriter.getI32Type());
-      Value lut = createDeviceFunctionCall(
-                      rewriter, "__builtin_IB_shfl_idx4_lut", lutTy,
-                      {lutIdx.getType()}, {lutIdx}, {}, funcAttrs,
-                      op.getOperation())
-                      ->getResult(0);
+      Value lut =
+          createDeviceFunctionCall(rewriter, "__builtin_IB_shfl_idx4_lut",
+                                   lutTy, {lutIdx.getType()}, {lutIdx}, {},
+                                   funcAttrs, op.getOperation())
+              ->getResult(0);
       Type packedResTy = VectorType::get(8, rewriter.getI32Type());
       SmallVector<Type> convArgTypes{lut.getType(), src.getType()};
       SmallVector<Value> convArgs{lut, src};
@@ -1787,29 +1787,30 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
     return !op->hasAttr("cache_control");
   });
   target.addIllegalDialect<XeVMDialect>();
-  patterns.add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
-               LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
-               LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>,
-               MMAToOCLPattern, MemfenceToOCLPattern, PrefetchToOCLPattern,
-               LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
-               LLVMLoadStoreToOCLPattern<LLVM::StoreOp>,
-               BlockLoadStore1DToOCLPattern<BlockLoadOp>,
-               BlockLoadStore1DToOCLPattern<BlockStoreOp>,
-               LaunchConfigOpToOCLPattern<WorkitemIdXOp>,
-               LaunchConfigOpToOCLPattern<WorkitemIdYOp>,
-               LaunchConfigOpToOCLPattern<WorkitemIdZOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupDimXOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupDimYOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupDimZOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupIdXOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupIdYOp>,
-               LaunchConfigOpToOCLPattern<WorkgroupIdZOp>,
-               LaunchConfigOpToOCLPattern<GridDimXOp>,
-               LaunchConfigOpToOCLPattern<GridDimYOp>,
-               LaunchConfigOpToOCLPattern<GridDimZOp>,
-               SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
-               SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
-               SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>,
-               TruncfToOCLPattern, ExtfToOCLPattern, MMAMxToOCLPattern,
-               AllocaToGlobalPattern>(patterns.getContext());
+  patterns
+      .add<LoadStorePrefetchToOCLPattern<BlockLoad2dOp>,
+           LoadStorePrefetchToOCLPattern<BlockStore2dOp>,
+           LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>, MMAToOCLPattern,
+           MemfenceToOCLPattern, PrefetchToOCLPattern,
+           LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
+           LLVMLoadStoreToOCLPattern<LLVM::StoreOp>,
+           BlockLoadStore1DToOCLPattern<BlockLoadOp>,
+           BlockLoadStore1DToOCLPattern<BlockStoreOp>,
+           LaunchConfigOpToOCLPattern<WorkitemIdXOp>,
+           LaunchConfigOpToOCLPattern<WorkitemIdYOp>,
+           LaunchConfigOpToOCLPattern<WorkitemIdZOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupDimXOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupDimYOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupDimZOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupIdXOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupIdYOp>,
+           LaunchConfigOpToOCLPattern<WorkgroupIdZOp>,
+           LaunchConfigOpToOCLPattern<GridDimXOp>,
+           LaunchConfigOpToOCLPattern<GridDimYOp>,
+           LaunchConfigOpToOCLPattern<GridDimZOp>,
+           SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
+           SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
+           SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>, TruncfToOCLPattern,
+           ExtfToOCLPattern, MMAMxToOCLPattern, AllocaToGlobalPattern>(
+          patterns.getContext());
 }
