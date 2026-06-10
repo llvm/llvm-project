@@ -371,15 +371,15 @@ void SampleProfileMatcher::runStaleProfileMatching(
   for (const auto &IR : IRAnchors) {
     bool ProfileConflicted = false;
     const auto &Loc = IR.first;
+    Function *Callee = M.getFunction(IR.second.stringRef());
+    if (!Callee)
+      continue;
     FunctionId ProfAnchor;
     auto AnchorLoc = MatchedAnchors.find(Loc);
     if (AnchorLoc == MatchedAnchors.end()) {
       // Search within the module and find if we have conflicts in pre-matched
       // profiles for this anchor
-      Function *Sub = M.getFunction(IR.second.stringRef());
-      if (!Sub)
-        continue;
-      auto PreMatched = FuncToProfileNameMap.find(Sub);
+      auto PreMatched = FuncToProfileNameMap.find(Callee);
       if (PreMatched == FuncToProfileNameMap.end())
         continue;
       ProfAnchor = PreMatched->second;
@@ -408,10 +408,11 @@ void SampleProfileMatcher::runStaleProfileMatching(
       if (!FSForMatching)
         continue;
 
-      FunctionId NewAnchor(FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
+      FunctionId NewAnchor(
+          FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
       FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
       NewFS.merge(*FSForMatching);
-      FuncToProfileNameMap[const_cast<Function *>(&F)] = NewAnchor;
+      FuncToProfileNameMap[Callee] = NewAnchor;
       IRToProfileLocationMap = getIRToProfileLocationMap(NewFS);
 
       // Update profile in the sample profile reader

@@ -64,11 +64,11 @@
 ; CHECK: Callsite with callee:_Z3subi is matched from 1 to 11
 ; CHECK: Run stale profile matching for _Z3subi
 ; CHECK: Run stale profile matching for _Z3midl
-; CHECK: Profile Function _Z3topll has already been matched to another IR function.
-; CHECK: Profile Function _Z3midl has already been matched to another IR function.
-; CHECK: Profile Function _Z3midi has already been matched to another IR function.
 ; CHECK: Function processing order:
 ; CHECK: _Z3topll
+; CHECK: _Z3midl
+; CHECK: _Z3fool
+; CHECK: _Z3topl
 ; CHECK: _Z3midll
 ; CHECK: _Z3subi
 ; CHECK: _Z3barl
