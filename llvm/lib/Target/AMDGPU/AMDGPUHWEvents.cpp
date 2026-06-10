@@ -110,81 +110,97 @@ static HWEvent getVmemHWEvent(const MachineInstr &Inst, const GCNSubtarget &ST,
   return HWEvent::VMEM_ACCESS;
 }
 
+static HWEventSet getEventsForImpl(const MachineInstr &Inst,
+                                   const GCNSubtarget &ST,
+                                   const SIInstrInfo &TII) {
+  if (TII.isDS(Inst) && TII.usesLGKM_CNT(Inst)) {
+    if (TII.isAlwaysGDS(Inst.getOpcode()) ||
+        TII.hasModifiersSet(Inst, AMDGPU::OpName::gds))
+      return {HWEvent::GDS_ACCESS, HWEvent::GDS_GPR_LOCK};
+
+    return {HWEvent::LDS_ACCESS};
+  }
+
+  if (TII.isFLAT(Inst)) {
+    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode()))
+      return {getVmemHWEvent(Inst, ST, TII)};
+
+    assert(Inst.mayLoadOrStore());
+    HWEventSet S;
+    if (TII.mayAccessVMEMThroughFlat(Inst)) {
+      if (ST.hasWaitXcnt())
+        S.insert(HWEvent::VMEM_GROUP);
+      S.insert(getVmemHWEvent(Inst, ST, TII));
+    }
+
+    if (TII.mayAccessLDSThroughFlat(Inst))
+      S.insert(HWEvent::LDS_ACCESS);
+    return S;
+  }
+
+  if (SIInstrInfo::isVMEM(Inst) &&
+      (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
+       Inst.getOpcode() == AMDGPU::BUFFER_WBL2)) {
+    // BUFFER_WBL2 is included here because unlike invalidates, has to be
+    // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
+    // completed.
+    HWEventSet S = {getVmemHWEvent(Inst, ST, TII)};
+    if (ST.hasWaitXcnt())
+      S.insert(HWEvent::VMEM_GROUP);
+    if (ST.vmemWriteNeedsExpWaitcnt() &&
+        (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst)))
+      S.insert(HWEvent::VMW_GPR_LOCK);
+
+    return S;
+  }
+
+  if (TII.isSMRD(Inst)) {
+    if (ST.hasWaitXcnt())
+      return {HWEvent::SMEM_GROUP, HWEvent::SMEM_ACCESS};
+    return {HWEvent::SMEM_ACCESS};
+  }
+
+  if (SIInstrInfo::isLDSDIR(Inst)) {
+    return {HWEvent::EXP_LDS_ACCESS};
+  }
+
+  if (SIInstrInfo::isEXP(Inst)) {
+    unsigned Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
+    if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
+      return {HWEvent::EXP_PARAM_ACCESS};
+    if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)
+      return {HWEvent::EXP_POS_ACCESS};
+    return {HWEvent::EXP_GPR_LOCK};
+  }
+
+  if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
+    return {HWEvent::SCC_WRITE};
+  }
+
+  switch (Inst.getOpcode()) {
+  case AMDGPU::S_SENDMSG:
+  case AMDGPU::S_SENDMSG_RTN_B32:
+  case AMDGPU::S_SENDMSG_RTN_B64:
+  case AMDGPU::S_SENDMSGHALT:
+    return {HWEvent::SQ_MESSAGE};
+  case AMDGPU::S_MEMTIME:
+  case AMDGPU::S_MEMREALTIME:
+  case AMDGPU::S_GET_BARRIER_STATE_M0:
+  case AMDGPU::S_GET_BARRIER_STATE_IMM:
+    return {HWEvent::SMEM_ACCESS};
+  }
+
+  return {};
+}
+
 HWEventSet getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
                         bool IsExpertMode) {
   const SIInstrInfo &TII = *ST.getInstrInfo();
 
-  HWEventSet Events;
   if (IsExpertMode)
-    Events |= getExpertSchedulingEventType(Inst, TII);
-
-  if (TII.isDS(Inst) && TII.usesLGKM_CNT(Inst)) {
-    if (TII.isAlwaysGDS(Inst.getOpcode()) ||
-        TII.hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
-      Events.insert(HWEvent::GDS_ACCESS);
-      Events.insert(HWEvent::GDS_GPR_LOCK);
-    } else {
-      Events.insert(HWEvent::LDS_ACCESS);
-    }
-  } else if (TII.isFLAT(Inst)) {
-    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
-      Events.insert(getVmemHWEvent(Inst, ST, TII));
-    } else {
-      assert(Inst.mayLoadOrStore());
-      if (TII.mayAccessVMEMThroughFlat(Inst)) {
-        if (ST.hasWaitXcnt())
-          Events.insert(HWEvent::VMEM_GROUP);
-        Events.insert(getVmemHWEvent(Inst, ST, TII));
-      }
-      if (TII.mayAccessLDSThroughFlat(Inst))
-        Events.insert(HWEvent::LDS_ACCESS);
-    }
-  } else if (SIInstrInfo::isVMEM(Inst) &&
-             (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
-              Inst.getOpcode() == AMDGPU::BUFFER_WBL2)) {
-    // BUFFER_WBL2 is included here because unlike invalidates, has to be
-    // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
-    // completed.
-    if (ST.hasWaitXcnt())
-      Events.insert(HWEvent::VMEM_GROUP);
-    Events.insert(getVmemHWEvent(Inst, ST, TII));
-    if (ST.vmemWriteNeedsExpWaitcnt() &&
-        (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst))) {
-      Events.insert(HWEvent::VMW_GPR_LOCK);
-    }
-  } else if (TII.isSMRD(Inst)) {
-    if (ST.hasWaitXcnt())
-      Events.insert(HWEvent::SMEM_GROUP);
-    Events.insert(HWEvent::SMEM_ACCESS);
-  } else if (SIInstrInfo::isLDSDIR(Inst)) {
-    Events.insert(HWEvent::EXP_LDS_ACCESS);
-  } else if (SIInstrInfo::isEXP(Inst)) {
-    unsigned Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
-    if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
-      Events.insert(HWEvent::EXP_PARAM_ACCESS);
-    else if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)
-      Events.insert(HWEvent::EXP_POS_ACCESS);
-    else
-      Events.insert(HWEvent::EXP_GPR_LOCK);
-  } else if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
-    Events.insert(HWEvent::SCC_WRITE);
-  } else {
-    switch (Inst.getOpcode()) {
-    case AMDGPU::S_SENDMSG:
-    case AMDGPU::S_SENDMSG_RTN_B32:
-    case AMDGPU::S_SENDMSG_RTN_B64:
-    case AMDGPU::S_SENDMSGHALT:
-      Events.insert(HWEvent::SQ_MESSAGE);
-      break;
-    case AMDGPU::S_MEMTIME:
-    case AMDGPU::S_MEMREALTIME:
-    case AMDGPU::S_GET_BARRIER_STATE_M0:
-    case AMDGPU::S_GET_BARRIER_STATE_IMM:
-      Events.insert(HWEvent::SMEM_ACCESS);
-      break;
-    }
-  }
-  return Events;
+    return getEventsForImpl(Inst, ST, TII) |
+           getExpertSchedulingEventType(Inst, TII);
+  return getEventsForImpl(Inst, ST, TII);
 }
 } // namespace AMDGPU
 } // namespace llvm
