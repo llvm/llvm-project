@@ -7081,6 +7081,11 @@ def CIR_VAArgOp : CIR_Op<"va_arg"> {
   let assemblyFormat = [{
     $arg_list attr-dict `:` functional-type(operands, $result)
   }];
+
+  // Aggregate (record-typed) results are expanded into the target's variadic
+  // register-save-area sequence by the CXXABILowering pass; scalar results
+  // keep their generic LLVM lowering to `llvm.va_arg`.
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//

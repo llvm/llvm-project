@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LoweringPrepareCXXABI.h"
 #include "PassDetail.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
@@ -94,7 +93,6 @@ struct LoweringPreparePass
   void lowerGetGlobalOp(cir::GetGlobalOp op);
   void lowerGlobalOp(cir::GlobalOp op);
   void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
-  void lowerVAArgOp(cir::VAArgOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
@@ -282,9 +280,6 @@ struct LoweringPreparePass
   /// -----------
 
   clang::ASTContext *astCtx;
-
-  /// Target-specific ABI hooks, selected from `astCtx` in `setASTContext`.
-  std::unique_ptr<cir::LoweringPrepareCXXABI> cxxABI;
 
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
@@ -505,10 +500,7 @@ struct LoweringPreparePass
     builder.createYield(loc); // Outermost IfOp
   }
 
-  void setASTContext(clang::ASTContext *c) {
-    astCtx = c;
-    cxxABI = cir::LoweringPrepareCXXABI::create(c->getTargetInfo().getTriple());
-  }
+  void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
 } // namespace
@@ -1730,21 +1722,6 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   op.erase();
 }
 
-// Lower a `cir.va_arg`.  Scalar results continue to lower to an `llvm.va_arg`
-// instruction, which Selection-DAG handles.  Aggregate results would crash
-// Selection-DAG as an `llvm.va_arg` ("Unknown type!"), so they are expanded
-// here through the target ABI hook, which either rewrites the op or reports
-// the case as not-yet-implemented.
-void LoweringPreparePass::lowerVAArgOp(cir::VAArgOp op) {
-  if (!mlir::isa<cir::RecordType>(op.getType()))
-    return;
-
-  CIRBaseBuilderTy builder(getContext());
-  cir::CIRDataLayout dataLayout(mlirModule);
-  if (mlir::failed(cxxABI->lowerAggregateVAArg(builder, op, dataLayout)))
-    signalPassFailure();
-}
-
 template <typename AttributeTy>
 static llvm::SmallVector<mlir::Attribute>
 prepareCtorDtorAttrList(mlir::MLIRContext *context,
@@ -2277,8 +2254,6 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerUnaryOp(unaryOp);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
-  } else if (auto vaArgOp = dyn_cast<cir::VAArgOp>(op)) {
-    lowerVAArgOp(vaArgOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
     lowerStoreOfConstAggregate(storeOp);
   } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
@@ -2900,7 +2875,7 @@ void LoweringPreparePass::runOnOperation() {
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
                   cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
-                  cir::MinusOp, cir::NotOp, cir::LocalInitOp, cir::VAArgOp>(op))
+                  cir::MinusOp, cir::NotOp, cir::LocalInitOp>(op))
       opsToTransform.push_back(op);
   });
 

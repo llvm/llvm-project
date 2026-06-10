@@ -57,6 +57,8 @@ createTargetLoweringInfo(LowerModule &lm) {
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
     return createSPIRVTargetLoweringInfo();
+  case llvm::Triple::x86_64:
+    return createX86_64TargetLoweringInfo();
   default:
     assert(!cir::MissingFeatures::targetLoweringInfo());
     return std::make_unique<TargetLoweringInfo>();

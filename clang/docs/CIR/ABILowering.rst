@@ -572,11 +572,12 @@ the same target ABI classification that the design above will ultimately
 provide through the LLVM ABI library.
 
 On the **callee** side, ``__builtin_va_arg`` of an aggregate is expanded by
-the ``cir-lowering-prepare`` pass into the x86-64 System V register-save-area
-sequence (the ``gp_offset`` / ``reg_save_area`` / ``overflow_arg_area``
-dance).  The eightbyte classifier determines whether the argument arrives in
-integer registers, SSE registers, or the overflow (stack) area; the pass
-reconstructs the aggregate from whichever slot the ABI designates.
+the CXXABILowering pass into the x86-64 System V register-save-area sequence
+(the ``gp_offset`` / ``reg_save_area`` / ``overflow_arg_area`` dance), through
+a per-target hook on ``TargetLoweringInfo``.  The eightbyte classifier
+determines whether the argument arrives in integer registers, SSE registers,
+or the overflow (stack) area; the pass reconstructs the aggregate from
+whichever slot the ABI designates.
 
 On the **caller** side, an aggregate passed through the variadic ellipsis is
 coerced into eightbyte-sized pieces: integer and pointer eightbytes occupy

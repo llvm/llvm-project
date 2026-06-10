@@ -8,6 +8,7 @@
 
 #include "PassDetail.h"
 #include "TargetLowering/LowerModule.h"
+#include "TargetLowering/TargetLoweringInfo.h"
 
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.h.inc"
@@ -267,7 +268,8 @@ public:
     if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::BaseMethodOp,
                   cir::CastOp, cir::CmpOp, cir::ConstantOp, cir::DeleteArrayOp,
                   cir::DerivedDataMemberOp, cir::DerivedMethodOp, cir::FuncOp,
-                  cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
+                  cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp,
+                  cir::VAArgOp>(op))
       return mlir::failure();
 
     const mlir::TypeConverter *typeConverter = getTypeConverter();
@@ -771,6 +773,38 @@ mlir::LogicalResult CIRVTableGetTypeInfoOpABILowering::matchAndRewrite(
   mlir::Value loweredResult =
       lowerModule->getCXXABI().lowerVTableGetTypeInfo(op, rewriter);
   rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRVAArgOpABILowering::matchAndRewrite(
+    cir::VAArgOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // Scalar and complex va_arg keep their generic llvm.va_arg lowering; this
+  // pattern only needs to apply the CXX ABI type conversion to the operand and
+  // result (e.g. the record-typed va_list pointer), exactly as the generic
+  // pattern would.
+  if (!mlir::isa<cir::RecordType>(op.getType())) {
+    mlir::Type loweredResultType =
+        getTypeConverter()->convertType(op.getType());
+    if (!loweredResultType)
+      return mlir::failure();
+    rewriter.replaceOpWithNewOp<cir::VAArgOp>(op, loweredResultType,
+                                              adaptor.getArgList());
+    return mlir::success();
+  }
+
+  // An aggregate llvm.va_arg cannot be lowered by Selection-DAG, so a
+  // record-typed va_arg is expanded into the target's register-save-area
+  // sequence through the target ABI hook.  Unsupported aggregates (SSE
+  // members, over-aligned) emit a not-yet-implemented diagnostic and fail the
+  // conversion rather than leaving an aggregate llvm.va_arg behind.
+  CIRBaseBuilderTy builder(rewriter);
+  cir::CIRDataLayout dataLayout(op->getParentOfType<mlir::ModuleOp>());
+  mlir::Value result = lowerModule->getTargetLoweringInfo().lowerAggregateVAArg(
+      builder, op, adaptor.getArgList(), dataLayout);
+  if (!result)
+    return mlir::failure();
+  rewriter.replaceOp(op, result);
   return mlir::success();
 }
 
