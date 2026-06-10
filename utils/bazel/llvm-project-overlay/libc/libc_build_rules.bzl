@@ -169,6 +169,7 @@ def libc_release_library(
         name,
         libc_functions,
         weak_symbols = [],
+        srcs = [],
         **kwargs):
     """Create the release version of a libc library.
 
@@ -177,6 +178,7 @@ def libc_release_library(
         libc_functions: List of functions to include in the library. They should be
             created by libc_function macro.
         weak_symbols: List of function names that should be marked as weak symbols.
+        srcs: Additional sources for the cc_library.
         **kwargs: Other arguments relevant to cc_library.
     """
 
@@ -200,7 +202,7 @@ def libc_release_library(
     ]
     cc_library(
         name = name,
-        srcs = [":" + name + "_srcs"],
+        srcs = [":" + name + "_srcs"] + srcs,
         copts = libc_common_copts() + libc_release_copts(),
         local_defines = weak_attributes + LIBC_CONFIGURE_OPTIONS,
         deps = [
