@@ -163,7 +163,8 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       setOperationAction(ISD::FP_TO_FP16, VT, Custom);
     }
 
-    setTargetDAGCombine({ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR});
+    setTargetDAGCombine(
+        {ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR, ISD::FP_TO_UINT});
   }
 
   if (!Subtarget.useSoftFloat()) {
@@ -1245,6 +1246,23 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Convert (fp_to_uint (fp16_to_fp x)) into (fp_to_sint (fp16_to_fp x)).
+static SDValue performFP_TO_UINTCombine(SDNode *N, SelectionDAG &DAG) {
+  SDValue Src = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+
+  // Use a trick from TargetLowering::expandFP_TO_UINT: we know that every
+  // integer value that can be represented by f16 is <= 65504, i.e. a signed
+  // integer of 17 bits or more can represent all values and fptoui and fptosi
+  // are equivalent.
+  //
+  // NOTE: the result of fptoui is poison when the value does not fit in the
+  // destination type (e.g. because it is negative).
+  if (Src.getOpcode() != ISD::FP16_TO_FP || VT.getScalarSizeInBits() < 17)
+    return SDValue();
+  return DAG.getNode(ISD::FP_TO_SINT, SDLoc(N), VT, Src);
+}
+
 SDValue
 MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -1273,6 +1291,9 @@ MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
     break;
   case ISD::SETCC:
     Val = performSETCCCombine(N, DAG);
+    break;
+  case ISD::FP_TO_UINT:
+    Val = performFP_TO_UINTCombine(N, DAG);
     break;
   }
 
