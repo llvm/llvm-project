@@ -420,6 +420,8 @@ void DynamicLoaderAIXDYLD::DidAttach() {
         // FIXME: .tdata, .bss
       }
     } else {
+      // First entry is the main executable - update data section with runtime address
+      UpdateLoadedSectionsByType(executable, LLDB_INVALID_ADDRESS, (lldb::addr_t)ptr->ldinfo_dataorg, false, 2);
       skip_current = false;
     }
     if (ptr->ldinfo_next == 0) {
@@ -481,6 +483,8 @@ void DynamicLoaderAIXDYLD::DidLaunch() {
         // FIXME: .tdata, .bss
       }
     } else {
+      // First entry is the main executable - update data section with runtime address
+      UpdateLoadedSectionsByType(executable, LLDB_INVALID_ADDRESS, (lldb::addr_t)ptr->ldinfo_dataorg, false, 2);
       skip_current = false;
     }
     if (ptr->ldinfo_next == 0) {

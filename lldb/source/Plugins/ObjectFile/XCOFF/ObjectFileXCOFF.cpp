@@ -239,14 +239,30 @@ bool ObjectFileXCOFF::SetLoadAddressByType(Target &target, lldb::addr_t value,
         SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
         if (type_id == 1 && section_sp && strcmp(section_sp->GetName().AsCString(nullptr), ".text") == 0) {
           if (!section_sp->IsThreadSpecific()) {
+            // - If value_is_offset is true: add value to file offset
+            // - If value_is_offset is false: value is the absolute runtime address
+            lldb::addr_t load_addr;
+            if (value_is_offset) {
+              load_addr = section_sp->GetFileOffset() + value;
+            } else {
+              load_addr = value;
+            }
             if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
-                    section_sp, section_sp->GetFileOffset() + value))
+                    section_sp, load_addr))
               ++num_loaded_sections;
           }
         } else if (type_id == 2 && section_sp && strcmp(section_sp->GetName().AsCString(nullptr), ".data") == 0) {
           if (!section_sp->IsThreadSpecific()) {
+            // - If value_is_offset is true: add value to file address
+            // - If value_is_offset is false: value is the absolute runtime address
+            lldb::addr_t load_addr;
+            if (value_is_offset) {
+              load_addr = section_sp->GetFileAddress() + value;
+            } else {
+              load_addr = value;
+            }
             if (target.GetSectionLoadListPublic().SetSectionLoadAddress(
-                    section_sp, section_sp->GetFileAddress() + value))
+                    section_sp, load_addr))
               ++num_loaded_sections;
           }
         }
