@@ -1510,6 +1510,26 @@ ReoptimizeBlock:
       }
     }
 
+    // If we have a block that consists of a single conditional branch
+    // instruction that is exactly identical to the terminator in the previous
+    // block, we can remove this block.
+    bool AreConditionalsEqual =
+        CurCond.size() > 0 &&
+        llvm::equal(CurCond, PriorCond,
+                    [](const MachineOperand &LHS, const MachineOperand &RHS) {
+                      return LHS.isIdenticalTo(RHS);
+                    });
+    if (MBB->size() == 1 && PrevBB.canFallThrough() && CurTBB == PriorTBB &&
+        AreConditionalsEqual) {
+      TII->removeBranch(*MBB);
+      // We leave the actual deletion of the block to later cleanup, but this
+      // requires a valid CFG.
+      MBB->removeSuccessor(CurTBB);
+      MadeChange = true;
+      ++NumBranchOpts;
+      goto ReoptimizeBlock;
+    }
+
     // If this block has no successors (e.g. it is a return block or ends with
     // a call to a no-return function like abort or __cxa_throw) and if the pred
     // falls through into this block, and if it would otherwise fall through

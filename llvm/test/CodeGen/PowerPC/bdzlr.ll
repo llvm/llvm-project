@@ -52,14 +52,14 @@ for.end:                                          ; preds = %for.body, %if.end, 
   ret void
 
 ; CHECK: @lua_xmove
-; CHECK: bnelr
-; CHECK: bnelr
+; CHECK: beq
+; CHECK: blr
 ; CHECK: bdzlr
 ; CHECK-NOT: blr
 
 ; CHECK-CRB: @lua_xmove
-; CHECK-CRB: bclr 12,
-; CHECK-CRB: bclr 12,
+; CHECK-CRB: bc
+; CHECK-CRB: blr
 ; CHECK-CRB: bdzlr
 ; CHECK-CRB-NOT: blr
 }
