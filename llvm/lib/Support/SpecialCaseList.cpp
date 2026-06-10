@@ -335,7 +335,6 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   // original behavior using regexes if "#!special-case-list-v1" is the
   // first line of the file. For more details, see
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
-
   bool UseGlobs = MinVersion(2);
 
   bool RemoveDotSlash = MinVersion(3);
