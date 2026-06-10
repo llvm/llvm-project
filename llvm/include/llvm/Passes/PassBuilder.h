@@ -1006,9 +1006,7 @@ enum class PrintPipelinePassesFormat {
 
 struct PrintPipelinePassesFormatParser
     : public cl::parser<std::optional<PrintPipelinePassesFormat>> {
-  // using cl::parser<std::optional<PrintPipelinePassesFormat>>::parser;
-  PrintPipelinePassesFormatParser(cl::Option &O)
-      : cl::parser<std::optional<PrintPipelinePassesFormat>>(O) {}
+  using cl::parser<std::optional<PrintPipelinePassesFormat>>::parser;
   LLVM_ABI bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
                       std::optional<PrintPipelinePassesFormat> &Val);
 };
