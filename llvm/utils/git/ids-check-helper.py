@@ -18,8 +18,9 @@ Run idt on the headers changed in a PR and (optionally) post the resulting
 LLVM_ABI annotation diff as a PR comment.
 
 The heavy lifting (per-category clang flags, system-header-prefix isolation,
-output filtering, the `hasBody` / out-of-line distinction) lives in
-`llvm/utils/idt/idt.cc`. This script is a thin orchestrator: it picks which
+output filtering, the `hasBody` / out-of-line distinction) lives in `idt`
+itself (the standalone `compnerd/ids` tool, built separately and passed
+via `--idt-path`). This script is a thin orchestrator: it picks which
 headers to check, finds a translation unit for each (since LLVM's compile
 database doesn't list headers), and forwards the list to idt batched by
 category.
