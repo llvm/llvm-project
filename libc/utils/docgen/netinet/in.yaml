@@ -59,3 +59,12 @@ macros:
     in-latest-posix: ''
   IN6_IS_ADDR_MC_GLOBAL:
     in-latest-posix: ''
+functions:
+  htonl:
+    in-latest-posix: ''
+  htons:
+    in-latest-posix: ''
+  ntohl:
+    in-latest-posix: ''
+  ntohs:
+    in-latest-posix: ''
