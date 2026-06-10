@@ -11109,6 +11109,9 @@ SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI) const {
   if (Opcode == TargetOpcode::G_DYN_STACKALLOC)
     return ValueUniformity::AlwaysUniform;
 
+  if (Opcode == AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_SETUP)
+    return ValueUniformity::NeverUniform;
+
   return ValueUniformity::Default;
 }
 

@@ -3132,6 +3132,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
       return replaceOperand(*II, 0, X);
 
+    // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
+    // copysign ignores the sign bit of its magnitude argument (implicit fabs),
+    // so replacing floor(fabs(X)) with trunc(X) is correct for all inputs
+    // including NaN without requiring nnan. The m_FAbs match also ensures
+    // the floor argument is non-negative, so floor == trunc.
+    Value *FAbsArg;
+    if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Value(FAbsArg)))) &&
+        FAbsArg == Sign) {
+      Value *Trunc = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, Sign, II);
+      return replaceOperand(*II, 0, Trunc);
+    }
+
     Type *SignEltTy = Sign->getType()->getScalarType();
 
     Value *CastSrc;
@@ -3643,25 +3655,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return nullptr;
     break;
   case Intrinsic::assume: {
-    Value *IIOperand = II->getArgOperand(0);
-
-    // Canonicalize assume(a && b) -> assume(a); assume(b);
-    // Note: New assumption intrinsics created here are registered by
-    // the InstCombineIRInserter object.
-    Value *A, *B;
-    if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-      Builder.CreateAssumption(A);
-      Builder.CreateAssumption(B);
-      return eraseInstFromFunction(*II);
-    }
-    // assume(!(a || b)) -> assume(!a); assume(!b);
-    if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Builder.CreateAssumption(Builder.CreateNot(A));
-      Builder.CreateAssumption(Builder.CreateNot(B));
-      return eraseInstFromFunction(*II);
-    }
-
     for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
+      auto RemoveBundle = [&, Idx = Idx]() -> Instruction * {
+        if (II->getNumOperandBundles() == 1)
+          return eraseInstFromFunction(*II);
+        return CallBase::removeOperandBundleAt(II, Idx);
+      };
+
       switch (getBundleAttrFromOBU(OBU)) {
       case BundleAttr::None:
         llvm_unreachable("Unexpected Attribute");
@@ -3675,7 +3675,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Remove align 1 and non-power-of-two bundles; they don't add any
         // useful information.
         if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
 
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
@@ -3689,23 +3689,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
             Log2_64(*Alignment))
           continue;
-        return CallBase::removeOperandBundleAt(II, Idx);
+        return RemoveBundle();
       }
 
       case BundleAttr::Dereferenceable: {
         auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
 
         if (Count && *Count == 0)
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
         break;
       }
+
+      case BundleAttr::Ignore:
+        return RemoveBundle();
 
       case BundleAttr::NonNull: {
         auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
         // Drop assume if we can prove nonnull without it
         if (isKnownNonZero(Ptr, getSimplifyQuery().getWithInstruction(II)))
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
 
         // Fold the assume into metadata if it's valid at the load
         if (auto *LI = dyn_cast<LoadInst>(Ptr);
@@ -3714,7 +3717,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           MDNode *MD = MDNode::get(II->getContext(), {});
           LI->setMetadata(LLVMContext::MD_nonnull, MD);
           LI->setMetadata(LLVMContext::MD_noundef, MD);
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
         }
 
         if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
@@ -3722,7 +3725,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             !NullPointerIsDefined(II->getFunction(),
                                   Ptr->getType()->getPointerAddressSpace())) {
           Builder.CreateNonnullAssumption(GEP->stripInBoundsOffsets());
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
         }
 
         // TODO: apply nonnull return attributes to calls and invokes
@@ -3749,7 +3752,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
-      case BundleAttr::Ignore:
       case BundleAttr::NoUndef:
         break;
 
@@ -3757,6 +3759,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       case BundleAttr::Cold:
         break;
       }
+    }
+
+    // If the assume has operand bundles, the folds below will never work, so
+    // don't bother trying.
+    if (II->hasOperandBundles())
+      break;
+
+    Value *IIOperand = II->getArgOperand(0);
+
+    // Canonicalize assume(a && b) -> assume(a); assume(b);
+    // Note: New assumption intrinsics created here are registered by
+    // the InstCombineIRInserter object.
+    Value *A, *B;
+    if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
+      Builder.CreateAssumption(A);
+      Builder.CreateAssumption(B);
+      return eraseInstFromFunction(*II);
+    }
+    // assume(!(a || b)) -> assume(!a); assume(!b);
+    if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
+      Builder.CreateAssumption(Builder.CreateNot(A));
+      Builder.CreateAssumption(Builder.CreateNot(B));
+      return eraseInstFromFunction(*II);
     }
 
     // Convert nonnull assume like:
@@ -3803,7 +3828,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
     computeKnownBits(IIOperand, Known, II);
-    if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
+    if (Known.isAllOnes())
       return eraseInstFromFunction(*II);
 
     // assume(false) is unreachable.

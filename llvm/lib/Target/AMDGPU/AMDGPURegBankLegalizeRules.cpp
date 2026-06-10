@@ -1334,6 +1334,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniP3}, {{SgprP3}, {SgprP3, Sgpr32}}})
       .Any({{DivP3}, {{VgprP3}, {VgprP3, Vgpr32}}});
 
+  addRulesForGOpcs({G_DYN_STACKALLOC})
+      .Any({{UniP5, UniS32}, {{SgprP5}, {Sgpr32}, DynStackAlloc}})
+      .Any({{UniP5, DivS32}, {{SgprP5}, {Vgpr32}, DynStackAlloc}});
+
   addRulesForGOpcs({G_ABS}, Standard)
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}})
       .Div(S16, {{Vgpr16}, {Vgpr16}, AbsToNegMax})
@@ -1376,6 +1380,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniP8}, {{SgprP8}, {}}});
 
   addRulesForGOpcs({G_AMDGPU_WAVE_ADDRESS}).Any({{UniP5}, {{SgprP5}, {}}});
+
+  addRulesForGOpcs({G_AMDGPU_SPONENTRY}, Standard).Uni(S32, {{Sgpr32}, {}});
 
   addRulesForGOpcs({G_SI_CALL})
       .Any({{_, UniP0}, {{None}, {SgprP0}}})
@@ -1646,6 +1652,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B64, {{VgprB64}, {VgprPtr64}})
       .Uni(B128, {{UniInVgprB128}, {SgprPtr64}})
       .Div(B128, {{VgprB128}, {VgprPtr64}});
+
+  addRulesForGOpcs({G_AMDGPU_WHOLE_WAVE_FUNC_SETUP})
+      .Any({{DivS1}, {{Vcc}, {}}});
+
+  addRulesForGOpcs({G_AMDGPU_WHOLE_WAVE_FUNC_RETURN}).Any({{}, {{}, {Vcc}}});
 
   using namespace Intrinsic;
 
@@ -2475,8 +2486,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr32}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr32}});
 
-  // TODO: Add handling for GFX90A+ which should use VGPRs instead of AGPRs.
   bool HasGFX90AInsts = ST->hasGFX90AInsts();
+
+  // On gfx90a+ both AGPR-form and VGPR-form exists
   addRulesForIOpcs({amdgcn_mfma_f32_32x32x1f32,  amdgcn_mfma_f32_16x16x1f32,
                     amdgcn_mfma_f32_4x4x1f32,    amdgcn_mfma_f32_32x32x2f32,
                     amdgcn_mfma_f32_16x16x4f32,  amdgcn_mfma_f32_32x32x4f16,
@@ -2489,7 +2501,39 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_mfma_f32_32x32x4bf16, amdgcn_mfma_f32_16x16x8bf16})
       .Any({{DivAnyTy},
             {{AgprAnyTy}, {IntrId, VgprAnyTy, VgprAnyTy, AgprAnyTy}}},
-           !HasGFX90AInsts);
+           !HasGFX90AInsts)
+      .Any({{DivAnyTy},
+            {{VgprOrAgprAnyTy},
+             {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy}}},
+           HasGFX90AInsts);
+
+  // gfx90a+ only MFMAs
+  addRulesForIOpcs(
+      {amdgcn_mfma_f32_32x32x4bf16_1k, amdgcn_mfma_f32_16x16x4bf16_1k,
+       amdgcn_mfma_f32_4x4x4bf16_1k, amdgcn_mfma_f32_32x32x8bf16_1k,
+       amdgcn_mfma_f32_16x16x16bf16_1k, amdgcn_mfma_f64_16x16x4f64,
+       amdgcn_mfma_f64_4x4x4f64, amdgcn_mfma_i32_16x16x32_i8,
+       amdgcn_mfma_i32_32x32x16_i8, amdgcn_mfma_f32_16x16x8_xf32,
+       amdgcn_mfma_f32_32x32x4_xf32, amdgcn_mfma_f32_16x16x32_bf8_bf8,
+       amdgcn_mfma_f32_16x16x32_bf8_fp8, amdgcn_mfma_f32_16x16x32_fp8_bf8,
+       amdgcn_mfma_f32_16x16x32_fp8_fp8, amdgcn_mfma_f32_32x32x16_bf8_bf8,
+       amdgcn_mfma_f32_32x32x16_bf8_fp8, amdgcn_mfma_f32_32x32x16_fp8_bf8,
+       amdgcn_mfma_f32_32x32x16_fp8_fp8})
+      .Any({{DivAnyTy},
+            {{VgprOrAgprAnyTy},
+             {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy}}});
+
+  addRulesForIOpcs(
+      {amdgcn_smfmac_f32_16x16x32_f16, amdgcn_smfmac_f32_32x32x16_f16,
+       amdgcn_smfmac_f32_16x16x32_bf16, amdgcn_smfmac_f32_32x32x16_bf16,
+       amdgcn_smfmac_i32_16x16x64_i8, amdgcn_smfmac_i32_32x32x32_i8,
+       amdgcn_smfmac_f32_16x16x64_bf8_bf8, amdgcn_smfmac_f32_16x16x64_bf8_fp8,
+       amdgcn_smfmac_f32_16x16x64_fp8_bf8, amdgcn_smfmac_f32_16x16x64_fp8_fp8,
+       amdgcn_smfmac_f32_32x32x32_bf8_bf8, amdgcn_smfmac_f32_32x32x32_bf8_fp8,
+       amdgcn_smfmac_f32_32x32x32_fp8_bf8, amdgcn_smfmac_f32_32x32x32_fp8_fp8})
+      .Any({{DivAnyTy},
+            {{VgprOrAgprAnyTy},
+             {IntrId, VgprAnyTy, VgprAnyTy, VgprOrAgprAnyTy, VgprAnyTy}}});
 
   // WMMA/SWMMAC intrinsics: all register operands map to VGPR.
   addRulesForIOpcs(

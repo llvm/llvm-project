@@ -588,7 +588,7 @@ bool ClassDescriptorV2::Describe(
   }
 
   if (class_method_func) {
-    AppleObjCRuntime::ClassDescriptorSP metaclass(GetMetaclass());
+    std::unique_ptr<ClassDescriptor> metaclass = GetMetaclass();
 
     // We don't care about the metaclass's superclass, or its class methods.
     // Its instance methods are our class methods.
@@ -670,21 +670,22 @@ ObjCLanguageRuntime::ClassDescriptorSP ClassDescriptorV2::GetSuperclass() {
       objc_class->m_superclass);
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP ClassDescriptorV2::GetMetaclass() const {
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
+ClassDescriptorV2::GetMetaclass() const {
   lldb_private::Process *process = m_runtime.GetProcess();
 
   if (!process)
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
   if (!objc_class) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
   }
 
   lldb::addr_t candidate_isa = m_runtime.GetPointerISA(objc_class->m_isa);
 
-  return ObjCLanguageRuntime::ClassDescriptorSP(
+  return std::unique_ptr<ClassDescriptor>(
       new ClassDescriptorV2(m_runtime, candidate_isa, nullptr));
 }
 

@@ -567,6 +567,8 @@ end program
   unexpected behavior. This is for compatibility with
   legacy code; legacy code should be updated to be correct.
   This could be removed at any time.
+  Use `-Wrelaxed-c-loc-checks` (alongside `-frelaxed-c-loc-checks`) to
+  enable a diagnostic warning for affected call sites.
   [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported

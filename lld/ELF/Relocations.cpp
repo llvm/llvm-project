@@ -1801,8 +1801,7 @@ static bool isThunkSectionCompatible(InputSection *source, Thunk &thunk) {
 
   // Thunks in a different Overlay Output Section can't be reused
   // as we can't guarantee that the Overlay will be in memory.
-  return (source->getOutputSection() == targetOS->getOutputSection() ||
-          !targetOS->inOverlay);
+  return (sourceOS == targetOS || !targetOS->inOverlay);
 }
 
 std::pair<Thunk *, bool> ThunkCreator::getThunk(InputSection *isec,
