@@ -940,22 +940,11 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
       if (getEffectiveSgLayoutAsInt() == other.getEffectiveSgLayoutAsInt() &&
           getEffectiveSgDataAsInt() == other.getEffectiveSgDataAsInt())
         return true;
-    if (level == xegpu::LayoutKind::Lane) {
-      auto laneLayout = getEffectiveLaneLayoutAsInt();
-      auto otherLaneLayout = other.getEffectiveLaneLayoutAsInt();
-      auto laneData = getEffectiveLaneDataAsInt();
-      auto otherLaneData = other.getEffectiveLaneDataAsInt();
-      if (laneLayout == otherLaneLayout) {
-        return laneData == otherLaneData;
-      } else if (laneData == otherLaneData) {
-        if (laneLayout.size() == 2 && otherLaneLayout.size() == 2) {
-          // Target LaneLayout may be a fraction of this along distributed dim
-            return laneLayout[1] % otherLaneLayout[1] == 0;
-          else if (laneLayout[1] == otherLaneLayout[1])
-            return laneLayout[0] % otherLaneLayout[0] == 0;
-        }
-      }
-    }
+    if (level == xegpu::LayoutKind::Lane)
+      if (getEffectiveLaneLayoutAsInt() ==
+              other.getEffectiveLaneLayoutAsInt() &&
+          getEffectiveLaneDataAsInt() == other.getEffectiveLaneDataAsInt())
+        return true;
   }
 
   auto compareCoordsForAllIds = [&](int64_t size) {
