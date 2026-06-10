@@ -1507,21 +1507,9 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerAbsToS32(MI);
   case IcmpI1ToBallot: {
     // amdgcn.icmp(i1 src, i1 0, NE) -> ballot(src)
+    // The rule predicate verified src1 == 0 and predicate == NE.
     // The src operand has been converted to VCC by the Vcc mapping.
     assert(cast<GIntrinsic>(&MI)->is(Intrinsic::amdgcn_icmp));
-
-    Register Src1 = MI.getOperand(3).getReg();
-    auto Src1Const =
-        getAnyConstantVRegValWithLookThrough(Src1, MRI,
-                                             /*LookThroughInstrs=*/true,
-                                             /*LookThroughAnyExt=*/true);
-    if (!Src1Const || Src1Const->Value != 0)
-      return false;
-
-    int64_t Pred = MI.getOperand(4).getImm();
-    if (Pred != CmpInst::ICMP_NE)
-      return false;
-
     Register Dst = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(2).getReg();
     B.buildIntrinsic(Intrinsic::amdgcn_ballot, Dst).addUse(Src);

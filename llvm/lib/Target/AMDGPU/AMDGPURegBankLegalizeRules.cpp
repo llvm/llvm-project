@@ -1633,14 +1633,29 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs({returnaddress}).Any({{UniP0}, {{SgprP0}, {}}});
 
+  // amdgcn.icmp(i1 src, i1 0, NE) is the only valid form with i1 inputs.
+  // Check that src1 is constant 0 and predicate is NE.
+  Predicate isIcmpI1NeZero([](const MachineInstr &MI) -> bool {
+    // Check predicate is ICMP_NE (operand 4 for intrinsic).
+    int64_t Pred = MI.getOperand(4).getImm();
+    if (Pred != CmpInst::ICMP_NE)
+      return false;
+
+    // Check src1 (operand 3) is constant 0.
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    Register Src1 = MI.getOperand(3).getReg();
+    auto Src1Const = getAnyConstantVRegValWithLookThrough(Src1, MRI);
+    return Src1Const && Src1Const->Value == 0;
+  });
+
   addRulesForIOpcs({amdgcn_icmp})
-      .Any({{UniS64, _, S1},
+      .Any({{{UniS64, _, S1}, isIcmpI1NeZero},
             {{Sgpr64}, {IntrId, Vcc, Sgpr32AExt}, IcmpI1ToBallot}})
       .Any({{UniS64, _, S16}, {{Sgpr64}, {IntrId, Vgpr16, Vgpr16}}})
       .Any({{UniS64, _, S32}, {{Sgpr64}, {IntrId, Vgpr32, Vgpr32}}})
       .Any({{UniS64, _, S64}, {{Sgpr64}, {IntrId, Vgpr64, Vgpr64}}})
 
-      .Any({{UniS32, _, S1},
+      .Any({{{UniS32, _, S1}, isIcmpI1NeZero},
             {{Sgpr32}, {IntrId, Vcc, Sgpr32AExt}, IcmpI1ToBallot}})
       .Any({{UniS32, _, S16}, {{Sgpr32}, {IntrId, Vgpr16, Vgpr16}}})
       .Any({{UniS32, _, S32}, {{Sgpr32}, {IntrId, Vgpr32, Vgpr32}}})
