@@ -44,7 +44,7 @@ ifeq "$(OS)" "Windows_NT"
 	CP_R = xcopy $(subst /,\,$(1)) $(subst /,\,$(2)) /s /e /y
 	RM = del $(subst /,\,$(1)) > nul 2>&1 || (exit 0)
 	RM_F = del /f /q $(subst /,\,$(1))
-	RM_RF = rd /s /q $(subst /,\,$(1))
+	RM_RF = $(if $(strip $(1)),rd /s /q $(subst /,\,$(1)) > nul 2>&1 || (exit 0))
 	LN_SF = mklink /D "$(subst /,\,$(2))" "$(subst /,\,$(1))"
 	ECHO = echo $(1);
 	ECHO_TO_FILE = printf "%s\n" $(1) > "$(subst /,\,$(2))"
