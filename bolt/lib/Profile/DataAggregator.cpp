@@ -1569,7 +1569,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   /// The number of fields to parse, set based on \p Type.
   int AddrNum = 0;
+  int CounterNum = 0;
   /// Storage for parsed fields.
+  StringRef EventName;
   std::optional<Location> Addr[3];
   int64_t Counters[2] = {0};
 
@@ -1584,8 +1586,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     StringRef Str = StrOrErr.get();
 
     if (Type == EVENT_NAME) {
-      EventNames.insert(Str);
-      return std::error_code();
+      EventName = Str;
+      break;
     }
 
     Type = StringSwitch<AggregatedLBREntry>(Str)
@@ -1605,7 +1607,9 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum = SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Default(2);
+    AddrNum =
+        SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Case("E", 0).Default(2);
+    CounterNum = Str != "E";
   }
 
   /// Parse locations depending on entry type, recording them in \p Addr array.
@@ -1624,10 +1628,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   /// Parse counters depending on entry type.
-  const bool HasMispreds =
-      (Type == BRANCH || Type == TRACE || Type == RETURN) &&
-      ParsingBuf.split('\n').first.contains(FieldSeparator);
-  const int CounterNum = 1 + HasMispreds;
+  if (Type == BRANCH || Type == TRACE || Type == RETURN)
+    CounterNum += ParsingBuf.split('\n').first.contains(FieldSeparator);
   for (int I = 0; I < CounterNum; ++I) {
     while (checkAndConsumeFS()) {
     }
@@ -1648,6 +1650,12 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   int64_t Mispreds = Counters[1];
 
   switch (Type) {
+  /// Record event name into \p EventNames and return.
+  case EVENT_NAME: {
+    EventNames.insert(EventName);
+    return std::error_code();
+  }
+
   /// Record basic IP sample into \p BasicSamples and return.
   case SAMPLE: {
     const uint64_t FromOffset = Addr[0]->Offset;
