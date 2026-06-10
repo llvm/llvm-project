@@ -54,6 +54,7 @@ cc_test(
     deps = [
         "//flang:DecimalHeaders",
         "//flang/lib/Decimal:FortranDecimal",
+        "//llvm:Support",
     ],
 )
 
