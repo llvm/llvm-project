@@ -1131,7 +1131,6 @@ template <typename T>
 Symbol *DirectiveAttributeVisitor<T>::DeclareNewAccessEntity(
     const SourceName &name, const Symbol &object, Symbol::Flag flag,
     Scope &scope) {
-  assert(object.owner() != currScope());
   auto &symbol{MakeAssocSymbol(name, object, scope)};
   symbol.set(flag);
   if (flag == Symbol::Flag::OmpCopyIn) {
@@ -1144,13 +1143,7 @@ Symbol *DirectiveAttributeVisitor<T>::DeclareNewAccessEntity(
 template <typename T>
 Symbol *DirectiveAttributeVisitor<T>::DeclareNewAccessEntity(
     const Symbol &object, Symbol::Flag flag, Scope &scope) {
-  auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
-  symbol.set(flag);
-  if (flag == Symbol::Flag::OmpCopyIn) {
-    // The symbol in copyin clause must be threadprivate entity.
-    symbol.set(Symbol::Flag::OmpThreadprivate);
-  }
-  return &symbol;
+  return DeclareNewAccessEntity(object.name(), object, flag, scope);
 }
 
 template <typename T>

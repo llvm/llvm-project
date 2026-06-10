@@ -26,7 +26,9 @@ program test
     end do
   !$omp end parallel do
 end program
-! The loop variable is private and predetermined.
-! CHECK: i (OmpPrivate, OmpPreDetermined): HostAssoc
 ! The OMP region must create a host-association for s_ary under its alias name.
-! CHECK: s_ary (OmpShared): HostAssoc
+! CHECK:  MainProgram scope: TEST
+! CHECK:    OtherConstruct scope:
+! CHECK:      ary (OmpShared): HostAssoc => ary
+! CHECK:      i (OmpPrivate, OmpPreDetermined): HostAssoc => i
+! CHECK:      s_ary (OmpShared): HostAssoc => ary
