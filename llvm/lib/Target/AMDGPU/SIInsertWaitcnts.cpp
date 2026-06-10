@@ -509,9 +509,6 @@ public:
 #endif // NDEBUG
   }
 
-  std::optional<HWEvent>
-  getExpertSchedulingEventType(const MachineInstr &Inst) const;
-
   bool isAsync(const MachineInstr &MI) const {
     if (!SIInstrInfo::isLDSDMA(MI))
       return false;
@@ -2701,43 +2698,6 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
   ScoreBrackets.applyWaitcnt(Wait);
 
   return Modified;
-}
-
-std::optional<HWEvent>
-SIInsertWaitcnts::getExpertSchedulingEventType(const MachineInstr &Inst) const {
-  if (TII.isVALU(Inst, /*AllowLDSDMA=*/true) && !SIInstrInfo::isLDSDMA(Inst)) {
-    // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
-    // out-of-order with respect to each other, so each of these classes
-    // has its own event.
-
-    if (TII.isXDL(Inst))
-      return HWEvent::VGPR_XDL_WRITE;
-
-    if (TII.isTRANS(Inst))
-      return HWEvent::VGPR_TRANS_WRITE;
-
-    if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-      return HWEvent::VGPR_DPMACC_WRITE;
-
-    return HWEvent::VGPR_CSMACC_WRITE;
-  }
-
-  // FLAT and LDS instructions may read their VGPR sources out-of-order
-  // with respect to each other and all other VMEM instructions, so
-  // each of these also has a separate event.
-
-  if (TII.isFLAT(Inst))
-    return HWEvent::VGPR_FLAT_READ;
-
-  if (TII.isDS(Inst))
-    return HWEvent::VGPR_LDS_READ;
-
-  if (TII.isVMEM(Inst) || TII.isVIMAGE(Inst) || TII.isVSAMPLE(Inst))
-    return HWEvent::VGPR_VMEM_READ;
-
-  // Otherwise, no hazard.
-
-  return {};
 }
 
 bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
