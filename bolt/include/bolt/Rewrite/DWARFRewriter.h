@@ -49,12 +49,6 @@ public:
   struct BucketLocalWriter {
     std::unique_ptr<DebugRangeListsSectionWriter> RngListsWriter;
     std::unique_ptr<DebugRangesSectionWriter> LegacyRangesWriter;
-
-    /// Release whichever writer was initialized.
-    void clear() {
-      RngListsWriter.reset();
-      LegacyRangesWriter.reset();
-    }
   };
 
 private:

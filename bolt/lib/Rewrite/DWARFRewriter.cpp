@@ -593,30 +593,14 @@ static void emitDWOBuilder(const std::string &DWOName,
                          StrOffstsWriter, StrWriter, TempRangesSectionWriter);
 }
 
-static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
+static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx,
+                                                          const size_t Size) {
   SmallVector<DWARFUnit *, 0> AllCUs;
-  AllCUs.reserve(std::distance(DwCtx.compile_units().begin(),
-                               DwCtx.compile_units().end()));
+  AllCUs.reserve(Size);
   for (auto &CU : DwCtx.compile_units())
     AllCUs.push_back(CU.get());
   if (AllCUs.empty())
     return {};
-  llvm::sort(AllCUs, [](const DWARFUnit *A, const DWARFUnit *B) {
-    return A->getOffset() < B->getOffset();
-  });
-  auto FindCuForOffset = [&](uint64_t Offset) -> DWARFUnit * {
-    auto *It =
-        llvm::upper_bound(AllCUs, Offset, [](uint64_t Off, DWARFUnit *U) {
-          return Off < U->getOffset();
-        });
-    if (It == AllCUs.begin())
-      return nullptr;
-    DWARFUnit *TargetCU = *--It;
-    // Ensure offset falls within TargetCU's range.
-    if (Offset >= TargetCU->getNextUnitOffset())
-      return nullptr;
-    return TargetCU;
-  };
 
   DenseSet<DWARFUnit *> CrossRefSet;
   EquivalenceClasses<DWARFUnit *> EC;
@@ -655,8 +639,8 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
             auto OptRef = Attr.Value.getAsDebugInfoReference();
             if (!OptRef)
               continue;
-            DWARFUnit *TargetCU = FindCuForOffset(*OptRef);
-            if (!TargetCU)
+            DWARFUnit *TargetCU = DwCtx.getUnitForOffset(*OptRef);
+            if (!TargetCU || TargetCU == CU)
               continue;
             if (CrossRefSet.insert(CU).second)
               EC.insert(CU);
@@ -702,9 +686,7 @@ static SmallVector<SmallVector<DWARFUnit *>> partitionCUs(DWARFContext &DwCtx) {
 }
 
 static std::unordered_map<uint64_t, std::string>
-getDWONameMap(DWARFContext &DwCtx) {
-  const size_t Size =
-      std::distance(DwCtx.compile_units().begin(), DwCtx.compile_units().end());
+getDWONameMap(DWARFContext &DwCtx, const size_t Size) {
   std::unordered_map<uint64_t, std::string> DWOIDToNameMap(Size);
   std::unordered_map<std::string, uint32_t> NameToIndexMap(Size);
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx.compile_units()) {
@@ -1052,7 +1034,7 @@ void DWARFRewriter::updateDebugInfo() {
   if (!opts::DwarfOutputPath.empty() && !sys::fs::exists(opts::DwarfOutputPath))
     (void)sys::fs::create_directories(opts::DwarfOutputPath);
   std::unordered_map<uint64_t, std::string> DWOToNameMap =
-      getDWONameMap(*BC.DwCtx);
+      getDWONameMap(*BC.DwCtx, CUSize);
   DWARF5AcceleratorTable DebugNamesTable(opts::CreateDebugNames, BC,
                                          *StrWriter);
   if (DebugNamesTable.isCreated())
@@ -1069,7 +1051,8 @@ void DWARFRewriter::updateDebugInfo() {
       *TheTriple, *ObjOS, "TypeStreamer", DIEBlder, GDBIndexSection);
   CUOffsetMap OffsetMap =
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
-  SmallVector<SmallVector<DWARFUnit *>> PartVec = partitionCUs(*BC.DwCtx);
+  SmallVector<SmallVector<DWARFUnit *>> PartVec =
+      partitionCUs(*BC.DwCtx, CUSize);
   const unsigned int ThreadCount =
       std::min(opts::DebugThreadCount, opts::ThreadCount);
   llvm::ThreadPoolInterface &ThreadPool =
@@ -1091,8 +1074,11 @@ void DWARFRewriter::updateDebugInfo() {
                                 DWOToNameMap, Accum);
     finalizeCompileUnits(*BucketDIEBlder, DIEBlder, *Streamer, OffsetMap,
                          BucketDIEBlder->getProcessedCUs(), *FinalAddrWriter);
+
+    // Release memory for this bucket.
     BucketDIEBlders[Idx].reset();
-    LocalWriters[Idx].clear();
+    LocalWriters[Idx].RngListsWriter.reset();
+    LocalWriters[Idx].LegacyRangesWriter.reset();
   };
 
   for (size_t I = 0; I < TotalTasks; ++I) {
