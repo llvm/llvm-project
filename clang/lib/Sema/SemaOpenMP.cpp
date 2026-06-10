@@ -8044,7 +8044,7 @@ public:
     VarDecl *V = VD->getPotentiallyDecomposedVarDecl();
     if (V->getType()->isReferenceType()) {
       VarDecl *VD = V->getDefinition();
-      if (VD->hasInit()) {
+      if (VD && VD->hasInit()) {
         Expr *I = VD->getInit();
         DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(I);
         if (!DRE)
