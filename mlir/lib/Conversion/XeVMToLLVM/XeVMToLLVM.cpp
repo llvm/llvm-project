@@ -1307,6 +1307,129 @@ class TruncfToOCLPattern : public OpConversionPattern<TruncfOp> {
   }
 };
 
+class ExtfToOCLPattern : public OpConversionPattern<ExtfOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ExtfOp op, ExtfOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // `xevm.extf` is the inverse of `xevm.truncf`. Supported source and result
+    // types are restricted for now, mirroring the truncf lowering.
+    auto srcEtype = op.getSrcEtype().getEtype();
+    auto dstEtype = op.getDstEtype().getEtype();
+    // Scalar case is not supported until usage case become clear.
+    auto vecSrcTy = dyn_cast<VectorType>(op.getSrc().getType());
+    if (!vecSrcTy)
+      return rewriter.notifyMatchFailure(op, "Scalar src is not supported.");
+    auto vecDstTy = dyn_cast<VectorType>(op.getDst().getType());
+    if (!vecDstTy)
+      return rewriter.notifyMatchFailure(op, "Scalar dst is not supported.");
+    Value src = op.getSrc();
+    auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+        /*other=*/LLVM::ModRefInfo::NoModRef,
+        /*argMem=*/LLVM::ModRefInfo::NoModRef,
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
+    auto funcAttrs = convergentNoUnwindWillReturnAttrs;
+    funcAttrs.memEffectsAttr = memAttr;
+
+    // Handle the case where src type is fp4 (e2m1) first.
+    if (srcEtype == ExtfSrcElemTypes::E2M1) {
+      // 16 fp4 values are packed into vector<8xi8>, the result is a
+      // vector<16xf16> or vector<16xbf16>.
+      // Use:
+      //   uint16 __builtin_IB_shfl_idx4_lut(int lut_index)
+      //   uint8  __builtin_IB_shfl_idx4_to_fp16_8_packed(uint16 lut,
+      //                                                  char8 source)
+      // The lookup table selects the target format:
+      //   7 = e2m1 -> f16, 5 = e2m1 -> bf16.
+      if (vecSrcTy.getNumElements() != 8 || vecDstTy.getNumElements() != 16)
+        return rewriter.notifyMatchFailure(
+            op, "fp4 src expects a vector<8xi8> src and a 16 element dst");
+      constexpr int kLutE2M1ToF16 = 7;
+      constexpr int kLutE2M1ToBF16 = 5;
+      int lutIndex =
+          (dstEtype == ExtfDstElemTypes::F16) ? kLutE2M1ToF16 : kLutE2M1ToBF16;
+      Value lutIdx = LLVM::ConstantOp::create(
+          rewriter, op.getLoc(), rewriter.getI32Type(), lutIndex);
+      Type lutTy = VectorType::get(16, rewriter.getI32Type());
+      Value lut = createDeviceFunctionCall(
+                      rewriter, "__builtin_IB_shfl_idx4_lut", lutTy,
+                      {lutIdx.getType()}, {lutIdx}, {}, funcAttrs,
+                      op.getOperation())
+                      ->getResult(0);
+      Type packedResTy = VectorType::get(8, rewriter.getI32Type());
+      SmallVector<Type> convArgTypes{lut.getType(), src.getType()};
+      SmallVector<Value> convArgs{lut, src};
+      Value result =
+          createDeviceFunctionCall(
+              rewriter, "__builtin_IB_shfl_idx4_to_fp16_8_packed", packedResTy,
+              convArgTypes, convArgs, {}, funcAttrs, op.getOperation())
+              ->getResult(0);
+      // The builtin returns the f16/bf16 bits packed as i32, bitcast to the
+      // f16/bf16 dst type.
+      result = LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, result);
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    // Handle the case where src type is fp8 (bf8/hf8).
+    // Only 16 input elements are supported, see TruncfToOCLPattern for details.
+    if (vecSrcTy.getNumElements() != 16)
+      return rewriter.notifyMatchFailure(
+          op, "Only vector src of 16 elements is supported");
+
+    // Step 1: Extend fp8 (bf8/hf8) to F16.
+    //   bf8 -> half: half16 __builtin_IB_bf8tohf_16(char16)
+    //   hf8 -> half: half16 __builtin_IB_hf8tohf_16(char16)
+    std::string fnName = (srcEtype == ExtfSrcElemTypes::BF8)
+                             ? "__builtin_IB_bf8tohf_16"
+                             : "__builtin_IB_hf8tohf_16";
+    Type f16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF16Type());
+    SmallVector<Type> argTypes{src.getType()};
+    SmallVector<Value> args{src};
+    Value result =
+        createDeviceFunctionCall(rewriter, fnName, f16Ty, argTypes, args, {},
+                                 funcAttrs, op.getOperation())
+            ->getResult(0);
+
+    // When the destination is F16, we are done.
+    if (dstEtype == ExtfDstElemTypes::F16) {
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    // BF16 destination needs some postprocessing.
+    // First extend F16 to F32 and then truncate to BF16.
+    // Step 2: Extend to F32.
+    // Use float16 convert_float16(half16)
+    std::string convFnName = "convert_float16";
+    SmallVector<Type> convArgTypes{result.getType()};
+    SmallVector<Value> convArgs{result};
+    convFnName = mangle(convFnName, convArgTypes);
+    Type f32Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getF32Type());
+    result =
+        createDeviceFunctionCall(rewriter, convFnName, f32Ty, convArgTypes,
+                                 convArgs, {}, funcAttrs, op.getOperation())
+            ->getResult(0);
+    // Step 3: Truncate F32 to BF16.
+    // Use short16 __builtin_IB_ftobf_16(float16)
+    std::string ftobfFnName = "__builtin_IB_ftobf_16";
+    SmallVector<Type> ftobfArgTypes{result.getType()};
+    SmallVector<Value> ftobfArgs{result};
+    Type i16Ty = VectorType::get(vecSrcTy.getShape(), rewriter.getI16Type());
+    result =
+        createDeviceFunctionCall(rewriter, ftobfFnName, i16Ty, ftobfArgTypes,
+                                 ftobfArgs, {}, funcAttrs, op.getOperation())
+            ->getResult(0);
+    // The builtin returns the bf16 bits as i16, bitcast to the bf16 dst type.
+    result = LLVM::BitcastOp::create(rewriter, op.getLoc(), vecDstTy, result);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 class MMAMxToOCLPattern : public OpConversionPattern<MMAMxOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -1687,6 +1810,6 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>,
-               TruncfToOCLPattern, MMAMxToOCLPattern, AllocaToGlobalPattern>(
-      patterns.getContext());
+               TruncfToOCLPattern, ExtfToOCLPattern, MMAMxToOCLPattern,
+               AllocaToGlobalPattern>(patterns.getContext());
 }

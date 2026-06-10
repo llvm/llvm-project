@@ -377,6 +377,26 @@ LogicalResult TruncfOp::verify() {
   return success();
 }
 
+LogicalResult ExtfOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type dstTy = getDst().getType();
+  if (isa<VectorType>(srcTy) && !isa<VectorType>(dstTy))
+    return emitOpError("both src and dst should be vector types or both should "
+                       "be scalar types");
+  if (isa<VectorType>(srcTy)) {
+    VectorType srcVecTy = dyn_cast<VectorType>(srcTy);
+    VectorType dstVecTy = dyn_cast<VectorType>(dstTy);
+    if (srcVecTy.getElementTypeBitWidth() >= dstVecTy.getElementTypeBitWidth())
+      return emitError(
+          "dst element bitwidth should be greater than src element bitwidth");
+  } else {
+    if (srcTy.getIntOrFloatBitWidth() >= dstTy.getIntOrFloatBitWidth())
+      return emitError(
+          "dst element bitwidth should be greater than src element bitwidth");
+  }
+  return success();
+}
+
 LogicalResult
 XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
                        StringRef triple, StringRef chip, DictionaryAttr flags,
