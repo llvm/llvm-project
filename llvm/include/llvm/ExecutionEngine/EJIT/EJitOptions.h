@@ -22,9 +22,9 @@ enum class OptimizationLevel { L1 = 1, L2 = 2, L3 = 3 };
 struct Config {
   CompileMode compileMode = CompileMode::Sync;
   OptimizationLevel optLevel = OptimizationLevel::L2;
-  size_t maxCodeMemory = 384 * 1024;
+  size_t maxCodeMemory = 2 * 1024 * 1024;
   size_t maxDataMemory = 128 * 1024;
-  size_t maxCacheEntries = 256;
+  size_t maxCacheEntries = 4096;
   size_t maxCacheSize = 32 * 1024 * 1024;
   size_t maxSingleFuncSize = 512 * 1024;
   bool enableLogger = true;
