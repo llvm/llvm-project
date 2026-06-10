@@ -6,8 +6,6 @@
 ; fcmp+select built by createMinMaxOp. That select is not derived from any
 ; existing branch, so in a profiled function its branch weights must be marked
 ; explicitly unknown to keep profile verification happy.
-
-
 define float @fmax_reduction_profiled(ptr %a, i64 %n) !prof !0 {
 ; CHECK-LABEL: define float @fmax_reduction_profiled(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) !prof [[PROF0:![0-9]+]] {
