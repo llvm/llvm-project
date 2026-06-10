@@ -20,6 +20,9 @@
 #include "src/__support/time/abs_timeout.h"
 #include <linux/errno.h>
 #include <linux/futex.h>
+#if defined(SYS_futex_time64)
+#include <linux/time_types.h>
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -52,12 +55,34 @@ public:
       if (this->load(cpp::MemoryOrder::RELAXED) != expected)
         return 0;
 
+#if defined(SYS_futex_time64)
+      __kernel_timespec ts64{};
+      void *timeout_arg = nullptr;
+      if (timeout) {
+        // In overlay mode on 32-bit platforms, the system timespec (which we
+        // use) may be 32-bit (8 bytes), while the kernel's __kernel_timespec
+        // (used by _time64 syscalls) is 64-bit (16 bytes). If they match, we
+        // can pass the pointer directly. Otherwise, we must convert to avoid
+        // stack corruption.
+        if constexpr (sizeof(timespec) == sizeof(__kernel_timespec)) {
+          timeout_arg = const_cast<timespec *>(&timeout->get_timespec());
+        } else {
+          ts64.tv_sec = timeout->get_timespec().tv_sec;
+          ts64.tv_nsec = timeout->get_timespec().tv_nsec;
+          timeout_arg = &ts64;
+        }
+      }
+#else
+      void *timeout_arg =
+          timeout ? const_cast<timespec *>(&timeout->get_timespec()) : nullptr;
+#endif
+
       int ret = syscall_impl<int>(
           /*syscall_number=*/FUTEX_SYSCALL_ID,
           /*futex_addr=*/this,
           /*op=*/op,
           /*expected=*/expected,
-          /*timeout=*/timeout ? &timeout->get_timespec() : nullptr,
+          /*timeout=*/timeout_arg,
           /*ignored=*/nullptr,
           /*bitset=*/FUTEX_BITSET_MATCH_ANY);
 

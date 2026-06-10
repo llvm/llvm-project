@@ -15,15 +15,37 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/struct_timespec.h"
-#include <sys/syscall.h> // For syscall numbers
+#include <sys/syscall.h>
+#if defined(SYS_utimensat_time64)
+#include <linux/time_types.h>
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> utimensat(int dirfd, const char *path,
-                                   const struct timespec times[2], int flags) {
+                                   const timespec times[2], int flags) {
 #if defined(SYS_utimensat_time64)
-  int ret = syscall_impl<int>(SYS_utimensat_time64, dirfd, path, times, flags);
+  int ret;
+  // In overlay mode on 32-bit platforms, the system timespec (which we use)
+  // may be 32-bit (8 bytes), while the kernel's __kernel_timespec (used by
+  // _time64 syscalls) is 64-bit (16 bytes). If they match, we can pass the
+  // pointer directly. Otherwise, we must convert to avoid stack corruption.
+  if constexpr (sizeof(timespec) == sizeof(__kernel_timespec)) {
+    ret = syscall_impl<int>(SYS_utimensat_time64, dirfd, path, times, flags);
+  } else {
+    if (times != nullptr) {
+      __kernel_timespec ts64[2];
+      ts64[0].tv_sec = times[0].tv_sec;
+      ts64[0].tv_nsec = times[0].tv_nsec;
+      ts64[1].tv_sec = times[1].tv_sec;
+      ts64[1].tv_nsec = times[1].tv_nsec;
+      ret = syscall_impl<int>(SYS_utimensat_time64, dirfd, path, ts64, flags);
+    } else {
+      ret =
+          syscall_impl<int>(SYS_utimensat_time64, dirfd, path, nullptr, flags);
+    }
+  }
 #elif defined(SYS_utimensat)
   static_assert(
       sizeof(timespec::tv_nsec) == sizeof(long),
