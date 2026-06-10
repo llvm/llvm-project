@@ -3119,12 +3119,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
     // copysign ignores the sign bit of its magnitude argument (implicit fabs),
     // so replacing floor(fabs(X)) with trunc(X) is correct for all inputs
-    // including NaN without requiring nnan. The m_FAbs ensures the floor arg
-    // is non-negative; stripSignOnlyFPOps handles sign variants inside fabs
-    // such as fabs(copysign(X,Y)).
+    // including NaN without requiring nnan. The m_FAbs match also ensures
+    // the floor argument is non-negative, so floor == trunc.
     Value *FAbsArg;
     if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Value(FAbsArg)))) &&
-        stripSignOnlyFPOps(FAbsArg) == Sign) {
+        FAbsArg == Sign) {
       Value *Trunc = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, Sign, II);
       return replaceOperand(*II, 0, Trunc);
     }
