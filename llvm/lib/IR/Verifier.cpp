@@ -119,6 +119,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
@@ -126,12 +127,14 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <queue>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 using namespace llvm;
@@ -161,6 +164,93 @@ struct llvm::VerifierSupport {
         Context(M.getContext()) {}
 
 private:
+  enum class DiagnosticOperandKind : uint8_t {
+    Module,
+    Value,
+    DbgRecord,
+    DbgLocationType,
+    Metadata,
+    NamedMDNode,
+    Type,
+    Comdat,
+    APInt,
+    Unsigned,
+    Attribute,
+    AttributeSet,
+    AttributeList,
+    InstructionArray,
+  };
+
+  // Non-owning operand data used only while reporting a failed check.
+  struct DiagnosticOperand {
+    DiagnosticOperandKind Kind;
+    const void *Data;
+    uintptr_t Value;
+  };
+
+  template <DiagnosticOperandKind Kind, typename T>
+  static DiagnosticOperand makePointerOperand(const T *V) {
+    return {Kind, V, 0};
+  }
+
+  static DiagnosticOperand makeDiagnosticOperand(const Module *M) {
+    return makePointerOperand<DiagnosticOperandKind::Module>(M);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const Value *V) {
+    return makePointerOperand<DiagnosticOperandKind::Value>(V);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const Value &V) {
+    return makeDiagnosticOperand(&V);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const DbgRecord *DR) {
+    return makePointerOperand<DiagnosticOperandKind::DbgRecord>(DR);
+  }
+  static DiagnosticOperand
+  makeDiagnosticOperand(DbgVariableRecord::LocationType Type) {
+    return {DiagnosticOperandKind::DbgLocationType, nullptr,
+            static_cast<uintptr_t>(Type)};
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const Metadata *MD) {
+    return makePointerOperand<DiagnosticOperandKind::Metadata>(MD);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const Metadata &MD) {
+    return makeDiagnosticOperand(&MD);
+  }
+  template <class T>
+  static DiagnosticOperand
+  makeDiagnosticOperand(const MDTupleTypedArrayWrapper<T> &MD) {
+    return makeDiagnosticOperand(MD.get());
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const NamedMDNode *NMD) {
+    return makePointerOperand<DiagnosticOperandKind::NamedMDNode>(NMD);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(Type *T) {
+    return makePointerOperand<DiagnosticOperandKind::Type>(T);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const Comdat *C) {
+    return makePointerOperand<DiagnosticOperandKind::Comdat>(C);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const APInt *AI) {
+    return makePointerOperand<DiagnosticOperandKind::APInt>(AI);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(unsigned I) {
+    return {DiagnosticOperandKind::Unsigned, nullptr, I};
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const Attribute *A) {
+    return makePointerOperand<DiagnosticOperandKind::Attribute>(A);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const AttributeSet *AS) {
+    return makePointerOperand<DiagnosticOperandKind::AttributeSet>(AS);
+  }
+  static DiagnosticOperand makeDiagnosticOperand(const AttributeList *AL) {
+    return makePointerOperand<DiagnosticOperandKind::AttributeList>(AL);
+  }
+  static DiagnosticOperand
+  makeDiagnosticOperand(ArrayRef<Instruction *> Instructions) {
+    return {DiagnosticOperandKind::InstructionArray, Instructions.data(),
+            Instructions.size()};
+  }
+
   void Write(const Module *M) {
     *OS << "; ModuleID = '" << M->getModuleIdentifier() << "'\n";
   }
@@ -217,10 +307,6 @@ private:
     *OS << '\n';
   }
 
-  template <class T> void Write(const MDTupleTypedArrayWrapper<T> &MD) {
-    Write(MD.get());
-  }
-
   void Write(const NamedMDNode *NMD) {
     if (!NMD)
       return;
@@ -228,7 +314,7 @@ private:
     *OS << '\n';
   }
 
-  void Write(Type *T) {
+  void Write(const Type *T) {
     if (!T)
       return;
     *OS << ' ' << *T;
@@ -271,11 +357,6 @@ private:
 
   void Write(Printable P) { *OS << P << '\n'; }
 
-  template <typename T> void Write(ArrayRef<T> Vs) {
-    for (const T &V : Vs)
-      Write(V);
-  }
-
   template <typename T1, typename... Ts>
   void WriteTs(const T1 &V1, const Ts &... Vs) {
     Write(V1);
@@ -284,12 +365,65 @@ private:
 
   template <typename... Ts> void WriteTs() {}
 
+  LLVM_ATTRIBUTE_NOINLINE
+  void WriteOperands(ArrayRef<DiagnosticOperand> Operands) {
+    for (const DiagnosticOperand &Operand : Operands) {
+      switch (Operand.Kind) {
+      case DiagnosticOperandKind::Module:
+        Write(static_cast<const Module *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::Value:
+        Write(static_cast<const Value *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::DbgRecord:
+        Write(static_cast<const DbgRecord *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::DbgLocationType:
+        Write(static_cast<DbgVariableRecord::LocationType>(Operand.Value));
+        break;
+      case DiagnosticOperandKind::Metadata:
+        Write(static_cast<const Metadata *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::NamedMDNode:
+        Write(static_cast<const NamedMDNode *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::Type:
+        Write(static_cast<const Type *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::Comdat:
+        Write(static_cast<const Comdat *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::APInt:
+        Write(static_cast<const APInt *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::Unsigned:
+        Write(static_cast<unsigned>(Operand.Value));
+        break;
+      case DiagnosticOperandKind::Attribute:
+        Write(static_cast<const Attribute *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::AttributeSet:
+        Write(static_cast<const AttributeSet *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::AttributeList:
+        Write(static_cast<const AttributeList *>(Operand.Data));
+        break;
+      case DiagnosticOperandKind::InstructionArray:
+        for (Instruction *I :
+             ArrayRef(static_cast<Instruction *const *>(Operand.Data),
+                      Operand.Value))
+          Write(I);
+        break;
+      }
+    }
+  }
+
 public:
   /// A check failed, so printout out the condition and the message.
   ///
   /// This provides a nice place to put a breakpoint if you want to see why
   /// something is not correct.
-  void CheckFailed(const Twine &Message) {
+  LLVM_ATTRIBUTE_NOINLINE void CheckFailed(const Twine &Message) {
     if (OS)
       *OS << Message << '\n';
     Broken = true;
@@ -302,12 +436,21 @@ public:
   template <typename T1, typename... Ts>
   void CheckFailed(const Twine &Message, const T1 &V1, const Ts &... Vs) {
     CheckFailed(Message);
-    if (OS)
-      WriteTs(V1, Vs...);
+    if (OS) {
+      if constexpr ((std::is_same_v<std::decay_t<T1>, Printable> || ... ||
+                     std::is_same_v<std::decay_t<Ts>, Printable>)) {
+        // Preserve Printable's copy-before-print behavior.
+        WriteTs(V1, Vs...);
+      } else {
+        std::array Operands = {makeDiagnosticOperand(V1),
+                               makeDiagnosticOperand(Vs)...};
+        WriteOperands(Operands);
+      }
+    }
   }
 
   /// A debug info check failed.
-  void DebugInfoCheckFailed(const Twine &Message) {
+  LLVM_ATTRIBUTE_NOINLINE void DebugInfoCheckFailed(const Twine &Message) {
     if (OS)
       *OS << Message << '\n';
     Broken |= TreatBrokenDebugInfoAsError;
@@ -319,8 +462,16 @@ public:
   void DebugInfoCheckFailed(const Twine &Message, const T1 &V1,
                             const Ts &... Vs) {
     DebugInfoCheckFailed(Message);
-    if (OS)
-      WriteTs(V1, Vs...);
+    if (OS) {
+      if constexpr ((std::is_same_v<std::decay_t<T1>, Printable> || ... ||
+                     std::is_same_v<std::decay_t<Ts>, Printable>)) {
+        WriteTs(V1, Vs...);
+      } else {
+        std::array Operands = {makeDiagnosticOperand(V1),
+                               makeDiagnosticOperand(Vs)...};
+        WriteOperands(Operands);
+      }
+    }
   }
 };
 
