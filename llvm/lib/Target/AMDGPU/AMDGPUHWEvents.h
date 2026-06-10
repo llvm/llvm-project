@@ -13,6 +13,8 @@
 #include "llvm/ADT/StringRef.h"
 
 namespace llvm {
+class GCNSubtarget;
+class MachineInstr;
 class raw_ostream;
 
 namespace AMDGPU {
@@ -115,6 +117,10 @@ public:
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 };
+
+/// \returns all HWEvents triggered by \p Inst
+HWEventSet getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
+                        bool IsExpertMode);
 
 } // namespace AMDGPU
 } // namespace llvm
