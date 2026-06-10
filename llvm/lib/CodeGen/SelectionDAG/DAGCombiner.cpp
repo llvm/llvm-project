@@ -27562,6 +27562,8 @@ SDValue DAGCombiner::foldExtractSubvectorFromConcatVectors(EVT VT, SDValue V,
   assert(V.getOpcode() == ISD::CONCAT_VECTORS &&
          "Expected a CONCAT_VECTORS operand");
   ElementCount ExtNumElts = VT.getVectorElementCount();
+  assert(ExtIdx % ExtNumElts.getKnownMinValue() == 0 &&
+         "subvector extract is alligned");
   EVT ConcatSrcVT = V.getOperand(0).getValueType();
 
   ElementCount ConcatSrcNumElts = ConcatSrcVT.getVectorElementCount();
@@ -27593,7 +27595,6 @@ SDValue DAGCombiner::foldExtractSubvectorFromConcatVectors(EVT VT, SDValue V,
       ExtIdx % ConcatSrcNumElts.getKnownMinValue() == 0 &&
       (!LegalOperations || hasOperation(ISD::CONCAT_VECTORS, VT))) {
     unsigned NumConcatOps = ExtNumElts.getKnownScalarFactor(ConcatSrcNumElts);
-
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT,
                        V->ops().slice(ConcatOpIdx, NumConcatOps));
   }
