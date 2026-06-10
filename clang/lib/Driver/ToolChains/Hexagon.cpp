@@ -779,6 +779,7 @@ unsigned HexagonToolChain::getOptimizationLevel(
 
 void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args,
+                                             StringRef BoundArch,
                                              Action::OffloadKind) const {
 
   bool UseInitArrayDefault = getTriple().isMusl();
