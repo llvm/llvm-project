@@ -33,7 +33,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<%n> + vp<[[VP5]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<%evl>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[VP7]]>, ir<-1>
-; CHECK-NEXT:      CLONE ir<%idxprom> = zext ir<%i.0>
+; CHECK-NEXT:      EMIT-SCALAR ir<%idxprom> = zext ir<%i.0> to i64
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%B>, ir<%idxprom>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer ir<%arrayidx>, vp<%evl>
 ; CHECK-NEXT:      WIDEN ir<%0> = vp.load vp<[[VP8]]>, vp<%evl>
