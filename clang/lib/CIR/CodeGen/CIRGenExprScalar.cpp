@@ -691,14 +691,7 @@ public:
       }
     } else if (type->isVectorType()) {
       if (type->hasIntegerRepresentation()) {
-        mlir::Location loc = cgf.getLoc(e->getSourceRange());
-        int amount = e->isIncrementOp() ? 1 : -1;
-        mlir::Type vecElemTy =
-            mlir::cast<cir::VectorType>(value.getType()).getElementType();
-        cir::ConstantOp constAmt = builder.getConstInt(loc, vecElemTy, amount);
-        auto amtVec =
-            cir::VecSplatOp::create(builder, loc, value.getType(), constAmt);
-        value = builder.createAdd(loc, value, amtVec);
+        value = emitIncOrDec(e, input, /*nsw=*/false);
       } else {
         cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec vector of float");
         return {};
