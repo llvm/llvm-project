@@ -1320,8 +1320,8 @@ entry:
   ret void
 }
 
-define <8 x i1> @siinstrinfo_vector_f32_ole() {
-; SDAG-GFX1150-LABEL: siinstrinfo_vector_f32_ole:
+define <8 x i1> @vector_f32_ole() {
+; SDAG-GFX1150-LABEL: vector_f32_ole:
 ; SDAG-GFX1150:       ; %bb.0: ; %entry
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -1349,7 +1349,7 @@ define <8 x i1> @siinstrinfo_vector_f32_ole() {
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX1150-LABEL: siinstrinfo_vector_f32_ole:
+; GISEL-GFX1150-LABEL: vector_f32_ole:
 ; GISEL-GFX1150:       ; %bb.0: ; %entry
 ; GISEL-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -1390,7 +1390,7 @@ define <8 x i1> @siinstrinfo_vector_f32_ole() {
 ; GISEL-GFX1150-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
 ; GISEL-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX1200-LABEL: siinstrinfo_vector_f32_ole:
+; SDAG-GFX1200-LABEL: vector_f32_ole:
 ; SDAG-GFX1200:       ; %bb.0: ; %entry
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1200-NEXT:    s_wait_expcnt 0x0
@@ -1430,7 +1430,7 @@ define <8 x i1> @siinstrinfo_vector_f32_ole() {
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v7, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX1200-LABEL: siinstrinfo_vector_f32_ole:
+; GISEL-GFX1200-LABEL: vector_f32_ole:
 ; GISEL-GFX1200:       ; %bb.0: ; %entry
 ; GISEL-GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-GFX1200-NEXT:    s_wait_expcnt 0x0
@@ -1483,8 +1483,8 @@ entry:
   ret <8 x i1> %C
 }
 
-define <4 x i1> @siinstrinfo_vector_f32_ogt() {
-; SDAG-GFX1150-LABEL: siinstrinfo_vector_f32_ogt:
+define <4 x i1> @vector_f32_ogt() {
+; SDAG-GFX1150-LABEL: vector_f32_ogt:
 ; SDAG-GFX1150:       ; %bb.0: ; %entry
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -1500,7 +1500,7 @@ define <4 x i1> @siinstrinfo_vector_f32_ogt() {
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX1150-LABEL: siinstrinfo_vector_f32_ogt:
+; GISEL-GFX1150-LABEL: vector_f32_ogt:
 ; GISEL-GFX1150:       ; %bb.0: ; %entry
 ; GISEL-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -1523,7 +1523,7 @@ define <4 x i1> @siinstrinfo_vector_f32_ogt() {
 ; GISEL-GFX1150-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GISEL-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX1200-LABEL: siinstrinfo_vector_f32_ogt:
+; SDAG-GFX1200-LABEL: vector_f32_ogt:
 ; SDAG-GFX1200:       ; %bb.0: ; %entry
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1200-NEXT:    s_wait_expcnt 0x0
@@ -1547,7 +1547,7 @@ define <4 x i1> @siinstrinfo_vector_f32_ogt() {
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX1200-LABEL: siinstrinfo_vector_f32_ogt:
+; GISEL-GFX1200-LABEL: vector_f32_ogt:
 ; GISEL-GFX1200:       ; %bb.0: ; %entry
 ; GISEL-GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-GFX1200-NEXT:    s_wait_expcnt 0x0
@@ -1580,8 +1580,8 @@ entry:
   ret <4 x i1> %C
 }
 
-define <32 x i1> @siinstrinfo_vector_f32_ueq() {
-; SDAG-GFX1150-LABEL: siinstrinfo_vector_f32_ueq:
+define <32 x i1> @vector_f32_ueq() {
+; SDAG-GFX1150-LABEL: vector_f32_ueq:
 ; SDAG-GFX1150:       ; %bb.0: ; %entry
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -1676,7 +1676,7 @@ define <32 x i1> @siinstrinfo_vector_f32_ueq() {
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v31, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX1150-LABEL: siinstrinfo_vector_f32_ueq:
+; GISEL-GFX1150-LABEL: vector_f32_ueq:
 ; GISEL-GFX1150:       ; %bb.0: ; %entry
 ; GISEL-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -1820,7 +1820,7 @@ define <32 x i1> @siinstrinfo_vector_f32_ueq() {
 ; GISEL-GFX1150-NEXT:    v_dual_mov_b32 v30, s40 :: v_dual_mov_b32 v31, s41
 ; GISEL-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX1200-LABEL: siinstrinfo_vector_f32_ueq:
+; SDAG-GFX1200-LABEL: vector_f32_ueq:
 ; SDAG-GFX1200:       ; %bb.0: ; %entry
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1200-NEXT:    s_wait_expcnt 0x0
@@ -1951,7 +1951,7 @@ define <32 x i1> @siinstrinfo_vector_f32_ueq() {
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v31, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX1200-LABEL: siinstrinfo_vector_f32_ueq:
+; GISEL-GFX1200-LABEL: vector_f32_ueq:
 ; GISEL-GFX1200:       ; %bb.0: ; %entry
 ; GISEL-GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-GFX1200-NEXT:    s_wait_expcnt 0x0
@@ -2116,8 +2116,8 @@ entry:
   ret <32 x i1> %C
 }
 
-define <4 x i1> @siinstrinfo_vector_f32_ugt() {
-; SDAG-GFX1150-LABEL: siinstrinfo_vector_f32_ugt:
+define <4 x i1> @vector_f32_ugt() {
+; SDAG-GFX1150-LABEL: vector_f32_ugt:
 ; SDAG-GFX1150:       ; %bb.0: ; %entry
 ; SDAG-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -2133,7 +2133,7 @@ define <4 x i1> @siinstrinfo_vector_f32_ugt() {
 ; SDAG-GFX1150-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; SDAG-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX1150-LABEL: siinstrinfo_vector_f32_ugt:
+; GISEL-GFX1150-LABEL: vector_f32_ugt:
 ; GISEL-GFX1150:       ; %bb.0: ; %entry
 ; GISEL-GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-GFX1150-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0
@@ -2156,7 +2156,7 @@ define <4 x i1> @siinstrinfo_vector_f32_ugt() {
 ; GISEL-GFX1150-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GISEL-GFX1150-NEXT:    s_setpc_b64 s[30:31]
 ;
-; SDAG-GFX1200-LABEL: siinstrinfo_vector_f32_ugt:
+; SDAG-GFX1200-LABEL: vector_f32_ugt:
 ; SDAG-GFX1200:       ; %bb.0: ; %entry
 ; SDAG-GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1200-NEXT:    s_wait_expcnt 0x0
@@ -2180,7 +2180,7 @@ define <4 x i1> @siinstrinfo_vector_f32_ugt() {
 ; SDAG-GFX1200-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; SDAG-GFX1200-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GISEL-GFX1200-LABEL: siinstrinfo_vector_f32_ugt:
+; GISEL-GFX1200-LABEL: vector_f32_ugt:
 ; GISEL-GFX1200:       ; %bb.0: ; %entry
 ; GISEL-GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GISEL-GFX1200-NEXT:    s_wait_expcnt 0x0
