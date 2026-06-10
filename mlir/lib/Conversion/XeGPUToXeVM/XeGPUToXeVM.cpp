@@ -1231,7 +1231,8 @@ class ExtFE8M0ToFloatXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
       // bf16 exponent field is bits [14:7]: shift the exponent into place.
       Value c7 = createIntConst(rewriter, loc, i16Ty, 7);
       Value shifted = arith::ShLIOp::create(rewriter, loc, e, c7);
-      // A plain shift turns E8M0 NaN (0xFF) into +inf; force a bf16 NaN instead.
+      // A plain shift turns E8M0 NaN (0xFF) into +inf; force a bf16 NaN
+      // instead.
       Value c255 = createIntConst(rewriter, loc, i16Ty, 0xFF);
       Value cNaN = createIntConst(rewriter, loc, i16Ty, 0x7FC0);
       Value isNaN = arith::CmpIOp::create(rewriter, loc,
@@ -1284,7 +1285,8 @@ class TruncFFloatToE8M0XeVMPattern
                   ConversionPatternRewriter &rewriter) const override {
     Type srcTy = op.getIn().getType();
     if (!isF16OrBF16(srcTy) || !isF8E8M0(op.getType()))
-      return rewriter.notifyMatchFailure(op, "not truncf f16/bf16 -> f8E8M0FNU");
+      return rewriter.notifyMatchFailure(op,
+                                         "not truncf f16/bf16 -> f8E8M0FNU");
     if (op.getRoundingmodeAttr())
       return rewriter.notifyMatchFailure(op, "only default rounding supported");
 
