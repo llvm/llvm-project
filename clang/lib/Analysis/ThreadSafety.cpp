@@ -1278,7 +1278,8 @@ public:
   void warnIfMutexNotHeld(const FactSet &FSet, const NamedDecl *D,
                           const Expr *Exp, AccessKind AK, Expr *MutexExp,
                           ProtectedOperationKind POK, til::SExpr *Self,
-                          SourceLocation Loc);
+                          SourceLocation Loc,
+                          const bool NegateCapability = false);
   void warnIfAnyMutexNotHeldForRead(const FactSet &FSet, const NamedDecl *D,
                                     const Expr *Exp,
                                     llvm::ArrayRef<Expr *> Args,
@@ -1518,15 +1519,24 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
   LDat->handleUnlock(FSet, FactMan, Cp, UnlockLoc, FullyRemove, Handler);
 }
 
+static bool requiresNegativeCapability(const Attr *Attr) {
+  if (const auto *A = dyn_cast<RequiresCapabilityAttr>(Attr))
+    return A->isNegative();
+  return false;
+}
+
 /// Extract the list of mutexIDs from the attribute on an expression,
 /// and push them onto Mtxs, discarding any duplicates.
 template <typename AttrType>
 void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
                                        const Expr *Exp, const NamedDecl *D,
                                        til::SExpr *Self) {
+  const bool NegateCapability = requiresNegativeCapability(Attr);
   if (Attr->args_size() == 0) {
     // The mutex held is the "this" object.
     CapabilityExpr Cp = SxBuilder.translateAttrExpr(nullptr, D, Exp, Self);
+    if (NegateCapability)
+      Cp = !Cp;
     if (Cp.isInvalid()) {
       warnInvalidLock(Handler, nullptr, D, Exp, Cp.getKind());
       return;
@@ -1539,6 +1549,8 @@ void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
 
   for (const auto *Arg : Attr->args()) {
     CapabilityExpr Cp = SxBuilder.translateAttrExpr(Arg, D, Exp, Self);
+    if (NegateCapability)
+      Cp = !Cp;
     if (Cp.isInvalid()) {
       warnInvalidLock(Handler, nullptr, D, Exp, Cp.getKind());
       continue;
@@ -1798,9 +1810,11 @@ public:
 void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
     const FactSet &FSet, const NamedDecl *D, const Expr *Exp, AccessKind AK,
     Expr *MutexExp, ProtectedOperationKind POK, til::SExpr *Self,
-    SourceLocation Loc) {
+    SourceLocation Loc, const bool NegateCapability) {
   LockKind LK = getLockKindFromAccessKind(AK);
   CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
+  if (NegateCapability)
+    Cp = !Cp;
   if (Cp.isInvalid()) {
     warnInvalidLock(Handler, MutexExp, D, Exp, Cp.getKind());
     return;
@@ -2148,7 +2162,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         for (auto *Arg : A->args()) {
           Analyzer->warnIfMutexNotHeld(FSet, D, Exp,
                                        A->isShared() ? AK_Read : AK_Written,
-                                       Arg, POK_FunctionCall, Self, Loc);
+                                       Arg, POK_FunctionCall, Self, Loc,
+                                       /*NegateCapability=*/A->isNegative());
           // use for adopting a lock
           if (!Scp.shouldIgnore())
             Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, Self);
@@ -2214,7 +2229,8 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
           for (auto *Arg : A->args())
             Analyzer->warnIfMutexNotHeld(FSet, D, Exp,
                                          A->isShared() ? AK_Read : AK_Written,
-                                         Arg, POK_FunctionCall, Self, Loc);
+                                         Arg, POK_FunctionCall, Self, Loc,
+                                         /*NegateCapability=*/A->isNegative());
           Analyzer->getMutexIDs(DeclaredLocks, A, Exp, D, Self);
           break;
         }

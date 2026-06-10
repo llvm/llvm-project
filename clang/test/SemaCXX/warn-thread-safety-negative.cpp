@@ -6,6 +6,8 @@
 
 #include "thread-safety-annotations.h"
 
+namespace NegativeExclusiveLockFunctionTests {
+
 class LOCKABLE Mutex {
  public:
   void Lock() EXCLUSIVE_LOCK_FUNCTION();
@@ -128,7 +130,7 @@ Mutex globalMutex;
 namespace ScopeTest {
 
 void f() EXCLUSIVE_LOCKS_REQUIRED(!globalMutex);
-void fq() EXCLUSIVE_LOCKS_REQUIRED(!::globalMutex);
+void fq() EXCLUSIVE_LOCKS_REQUIRED(!::NegativeExclusiveLockFunctionTests::globalMutex);
 
 namespace ns {
   Mutex globalMutex;
@@ -195,3 +197,239 @@ class TemplateClass {
 void test() { TemplateClass<int> TC; }
 
 }  // end namespace DoubleAttribute
+
+} // end namespace NegativeExclusiveLockFunctionTests
+
+namespace RequiresNegativeCapabilityTests {
+
+class LOCKABLE Mutex {
+ public:
+  void Lock() EXCLUSIVE_LOCK_FUNCTION();
+  void ReaderLock() SHARED_LOCK_FUNCTION();
+  void Unlock() UNLOCK_FUNCTION();
+  bool TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(true);
+  bool ReaderTryLock() SHARED_TRYLOCK_FUNCTION(true);
+  void AssertHeld()       ASSERT_EXCLUSIVE_LOCK();
+  void AssertReaderHeld() ASSERT_SHARED_LOCK();
+};
+
+class LOCKABLE MutexWithOperatorNot {
+public:
+  void Lock() EXCLUSIVE_LOCK_FUNCTION();
+  void ReaderLock() SHARED_LOCK_FUNCTION();
+  void Unlock() UNLOCK_FUNCTION();
+  bool TryLock() EXCLUSIVE_TRYLOCK_FUNCTION(true);
+  bool ReaderTryLock() SHARED_TRYLOCK_FUNCTION(true);
+
+  const MutexWithOperatorNot& operator!() const { return *this; }
+
+  void AssertHeld()       ASSERT_EXCLUSIVE_LOCK();
+  void AssertReaderHeld() ASSERT_SHARED_LOCK();
+};
+
+class LOCKABLE REENTRANT_CAPABILITY ReentrantMutex {
+public:
+  void Lock() EXCLUSIVE_LOCK_FUNCTION();
+  void Unlock() UNLOCK_FUNCTION();
+};
+
+class SCOPED_LOCKABLE MutexLock {
+public:
+  MutexLock(Mutex *mu) EXCLUSIVE_LOCK_FUNCTION(mu);
+  MutexLock(Mutex *mu, bool adopt) EXCLUSIVE_LOCKS_REQUIRED(mu);
+  ~MutexLock() UNLOCK_FUNCTION();
+};
+
+namespace SimpleTest {
+
+class Bar {
+  Mutex mu;
+  int a GUARDED_BY(mu);
+
+public:
+  void baz() REQUIRES_NEGATIVE(mu) {
+    mu.Lock();
+    a = 0;
+    mu.Unlock();
+  }
+};
+
+
+class Foo {
+  Mutex mu;
+  int a GUARDED_BY(mu);
+
+public:
+  void foo() {
+    mu.Lock();    // expected-warning {{acquiring mutex 'mu' requires negative capability '!mu'}}
+    baz();        // expected-warning {{cannot call function 'baz' while mutex 'mu' is held}}
+    bar();
+    mu.Unlock();
+  }
+
+  void bar() {
+    baz();        // expected-warning {{calling function 'baz' requires negative capability '!mu'}}
+  }
+
+  void baz() REQUIRES_NEGATIVE(mu) {
+    mu.Lock();
+    a = 0;
+    mu.Unlock();
+  }
+
+  void test() {
+    Bar b;
+    b.baz();     // no warning -- in different class.
+  }
+
+  void test2() {
+    mu.Lock();   // expected-warning {{acquiring mutex 'mu' requires negative capability '!mu'}}
+    a = 0;
+    mu.Unlock();
+    baz();       // no warning -- !mu in set.
+  }
+
+  void test3() REQUIRES_NEGATIVE(mu) {
+    mu.Lock();
+    a = 0;
+    mu.Unlock();
+    baz();       // no warning -- !mu in set.
+  }
+
+  void test4() {
+    MutexLock lock(&mu); // expected-warning {{acquiring mutex 'mu' requires negative capability '!mu'}}
+  }
+};
+
+class Reentrant {
+  ReentrantMutex mu;
+
+public:
+  void acquire() {
+    mu.Lock();   // no warning -- reentrant mutex
+    mu.Unlock();
+  }
+
+  void requireNegative() REQUIRES_NEGATIVE(mu) { // warning?
+    mu.Lock();
+    mu.Unlock();
+  }
+
+  void callRequireNegative() {
+    requireNegative(); // expected-warning{{calling function 'requireNegative' requires negative capability '!mu'}}
+  }
+
+  void callHaveNegative() REQUIRES_NEGATIVE(mu) {
+    requireNegative();
+  }
+};
+
+class DoubleNegativeTest {
+  MutexWithOperatorNot mu;
+  int a GUARDED_BY(mu);
+
+public:
+  void test1() {
+    mu.Lock(); // expected-warning {{acquiring mutex 'mu' requires negative capability '!mu'}}
+    baz();
+    bar();
+    mu.Unlock();
+  }
+
+  void bar() {
+    baz();     // expected-warning {{calling function 'baz' requires holding mutex 'mu' exclusively}}
+  }
+
+  void baz() REQUIRES_NEGATIVE(!mu) {
+    a = 0;
+  }
+
+  void test2() REQUIRES_NEGATIVE(mu) {
+    mu.Lock();
+    a = 0;
+    mu.Unlock();
+    baz();     // expected-warning {{calling function 'baz' requires holding mutex 'mu' exclusively}}
+  }
+
+  void test3() REQUIRES_NEGATIVE(!mu) {
+    a = 0;
+    baz();
+  }
+};
+
+}  // end namespace SimpleTest
+
+Mutex globalMutex;
+
+namespace ScopeTest {
+
+void f() REQUIRES_NEGATIVE(globalMutex);
+void fq() REQUIRES_NEGATIVE(::RequiresNegativeCapabilityTests::globalMutex);
+
+namespace ns {
+  Mutex globalMutex;
+  void f() REQUIRES_NEGATIVE(globalMutex);
+  void fq() REQUIRES_NEGATIVE(ns::globalMutex);
+}
+
+void testGlobals() REQUIRES_NEGATIVE(ns::globalMutex) {
+  f();     // expected-warning {{calling function 'f' requires negative capability '!globalMutex'}}
+  fq();    // expected-warning {{calling function 'fq' requires negative capability '!globalMutex'}}
+  ns::f();
+  ns::fq();
+}
+
+void testNamespaceGlobals() REQUIRES_NEGATIVE(globalMutex) {
+  f();
+  fq();
+  ns::f();  // expected-warning {{calling function 'f' requires negative capability '!globalMutex'}}
+  ns::fq(); // expected-warning {{calling function 'fq' requires negative capability '!globalMutex'}}
+}
+
+class StaticMembers {
+public:
+  void pub() REQUIRES_NEGATIVE(publicMutex);
+  void prot() REQUIRES_NEGATIVE(protectedMutex);
+  void priv() REQUIRES_NEGATIVE(privateMutex);
+  void test() {
+    pub();
+    prot();
+    priv();
+  }
+
+  static Mutex publicMutex;
+
+protected:
+  static Mutex protectedMutex;
+
+private:
+  static Mutex privateMutex;
+};
+
+void testStaticMembers() {
+  StaticMembers x;
+  x.pub();
+  x.prot();
+  x.priv();
+}
+
+}  // end namespace ScopeTest
+
+namespace DoubleAttribute {
+
+struct Foo {
+  Mutex &mutex();
+};
+
+template <typename A>
+class TemplateClass {
+  template <typename B>
+  static void Function(Foo *F)
+      EXCLUSIVE_LOCKS_REQUIRED(F->mutex()) UNLOCK_FUNCTION(F->mutex()) {}
+};
+
+void test() { TemplateClass<int> TC; }
+
+}  // end namespace DoubleAttribute
+
+} // end namespace RequiresNegativeCapabilityTests

@@ -1090,6 +1090,12 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_REQUIRES_CAPABILITY(...)
 #  endif
 
+#  if __has_attribute(__requires_negative_capability__)
+#    define _LIBCPP_REQUIRES_NEGATIVE_CAPABILITY(...) __attribute__((__requires_negative_capability__(__VA_ARGS__)))
+#  else
+#    define _LIBCPP_REQUIRES_NEGATIVE_CAPABILITY(...)
+#  endif
+
 #  if defined(_LIBCPP_ABI_MICROSOFT) && __has_declspec_attribute(empty_bases)
 #    define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
 #  else

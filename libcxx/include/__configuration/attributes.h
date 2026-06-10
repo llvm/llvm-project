@@ -351,6 +351,12 @@
 #  define _LIBCPP_REQUIRES_CAPABILITY(...)
 #endif
 
+#if __has_attribute(__requires_negative_capability__)
+#  define _LIBCPP_REQUIRES_NEGATIVE_CAPABILITY(...) __attribute__((__requires_negative_capability__(__VA_ARGS__)))
+#else
+#  define _LIBCPP_REQUIRES_NEGATIVE_CAPABILITY(...)
+#endif
+
 #if __has_cpp_attribute(_Clang::__no_thread_safety_analysis__)
 #  define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS [[_Clang::__no_thread_safety_analysis__]]
 #else

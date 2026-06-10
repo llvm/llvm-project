@@ -454,6 +454,11 @@ Attribute Changes in Clang
   Only plain function pointers are supported; pointers-to-member functions,
   blocks, or wrappers (e.g. ``std::function``) are not yet supported.
 
+- Added the :doc:`ThreadSafetyAnalysis` attribute
+  ``requires_negative_capability``. It expresses a negative capability
+  requirement without requiring ``!capability`` to be a well-formed C++
+  expression.
+
 - The ``[[clang::unsafe_buffer_usage]]`` attribute is now supported in API
   notes. For example:
   

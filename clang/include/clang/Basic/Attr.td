@@ -4179,7 +4179,8 @@ def RequiresCapability : InheritableAttr {
   let Spellings = [Clang<"requires_capability", 0>,
                    Clang<"exclusive_locks_required", 0>,
                    Clang<"requires_shared_capability", 0>,
-                   Clang<"shared_locks_required", 0>];
+                   Clang<"shared_locks_required", 0>,
+                   Clang<"requires_negative_capability", 0>];
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
   let LateParsed = LateAttrParseStandard;
@@ -4189,7 +4190,9 @@ def RequiresCapability : InheritableAttr {
   let ParseArgsInFunctionScope = 1;
   let Subjects = SubjectList<[Function, Var, Field]>;
   let Accessors = [Accessor<"isShared", [Clang<"requires_shared_capability", 0>,
-                                         Clang<"shared_locks_required", 0>]>];
+                                         Clang<"shared_locks_required", 0>]>,
+                   Accessor<"isNegative",
+                     [Clang<"requires_negative_capability", 0>]>];
   let Documentation = [Undocumented];
 }
 
