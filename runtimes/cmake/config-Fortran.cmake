@@ -91,11 +91,21 @@ if (CMAKE_Fortran_COMPILER)
     # Force the compiler ID so CMake does not try to run the compiler for
     # identification. In a bootstrapping build the Flang binary may not be
     # built yet at configure time (only CMAKE_Fortran_COMPILER_WORKS is set).
+    # FIXME: flang has has not equivalent to clang-cl, so
+    # CMAKE_Fortran_SIMULATE_ID=GNU should be the only correct value. CMake may
+    # imply that supports different toolchains for each language but in
+    # practice is doesn't. In particular, the last enabled
+    # language will overwrite global variables such as CMAKE_LINK_LIBRARY_FLAG
+    # depending on CMAKE_<lang>_SIMULATE_ID, i.e. they cannot be different.
+    # Fortunately, "MSVC" still works for Flang.
     set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
     set(CMAKE_Fortran_COMPILER_ID_RUN TRUE)
     set(CMAKE_Fortran_COMPILER_FORCED TRUE)
-    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}")
-    set(CMAKE_Fortran_SIMULATE_ID "GNU")
+    set(CMAKE_Fortran_COMPILER_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+    set(CMAKE_Fortran_SIMULATE_ID "${CMAKE_CXX_SIMULATE_ID}")
+    set(CMAKE_Fortran_SIMULATE_VERSION "${CMAKE_CXX_SIMULATE_VERSION}")
+    set(CMAKE_Fortran_COMPILER_SUPPORTS_F90 1)
+    set(CMAKE_Fortran_PLATFORM_ID "${CMAKE_CXX_PLATFORM_ID}")
 
     # CMake 3.24 is the first version of CMake that directly recognizes Flang.
     # LLVM's requirement is only CMake 3.20, teach CMake 3.20-3.23 how to use Flang, if used.
