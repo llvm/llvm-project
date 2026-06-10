@@ -3516,7 +3516,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
             (IsVariable(*expr) && GetLastTarget(GetSymbolVector(*expr))))) {
       if (context.languageFeatures().IsEnabled(
               common::LanguageFeature::RelaxedCLocChecks)) {
-        context.Warn(common::LanguageFeature::RelaxedCLocChecks, arguments[0]->sourceLocation(),
+        context.Warn(common::LanguageFeature::RelaxedCLocChecks,
+            arguments[0]->sourceLocation(),
             "C_LOC() argument should be a data pointer or target"_warn_en_US);
       } else {
         context.messages().Say(arguments[0]->sourceLocation(),
