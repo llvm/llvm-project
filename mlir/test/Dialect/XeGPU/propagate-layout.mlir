@@ -157,19 +157,19 @@ func.func @load_gather_with_coalesce_chunksize(%arg0: memref<8x16xf16>, %arg1: m
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @scatter_ops_coalesce_chunksize(
-// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<16x8xf16>) {
-// CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16x8xi1>
-// CHECK: %[[OFFSETS:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<12> : vector<16x8xindex>
-// CHECK: %[[LOAD_VEC:.*]] = xegpu.load %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>}>
-// CHECK-SAME: memref<16x8xf16>, vector<16x8xindex>, vector<16x8xi1> -> vector<16x8xf16>
-// CHECK: xegpu.store %[[LOAD_VEC]], %[[ARG0]][%[[OFFSETS]]], %[[MASK]]  <{layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 8]>}> : vector<16x8xf16>, memref<16x8xf16>, vector<16x8xindex>, vector<16x8xi1>
-func.func @scatter_ops_coalesce_chunksize(%src: memref<16x8xf16>) {
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<128xf16>) {
+// CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 1]>} dense<true> : vector<16x8xi1>
+// CHECK: %[[OFFSETS:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 1]>} dense<12> : vector<16x8xindex>
+// CHECK: %[[LOAD_VEC:.*]] = xegpu.load %[[ARG0]][%[[OFFSETS]]], %[[MASK]] <{layout = #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 1]>}>
+// CHECK-SAME: memref<128xf16>, vector<16x8xindex>, vector<16x8xi1> -> vector<16x8xf16>
+// CHECK: xegpu.store %[[LOAD_VEC]], %[[ARG0]][%[[OFFSETS]]], %[[MASK]]  <{layout = #xegpu.layout<lane_layout = [1, 8], lane_data = [1, 1]>}> : vector<16x8xf16>, memref<128xf16>, vector<16x8xindex>, vector<16x8xi1>
+func.func @scatter_ops_coalesce_chunksize(%src: memref<128xf16>) {
   %1 = arith.constant dense<1>: vector<16x8xi1>
   %offset = arith.constant dense<12> : vector<16x8xindex>
   %3 = xegpu.load %src[%offset], %1
-      : memref<16x8xf16>, vector<16x8xindex>, vector<16x8xi1> -> vector<16x8xf16>
+      : memref<128xf16>, vector<16x8xindex>, vector<16x8xi1> -> vector<16x8xf16>
   xegpu.store %3, %src[%offset], %1
-      : vector<16x8xf16>, memref<16x8xf16>, vector<16x8xindex>, vector<16x8xi1>
+      : vector<16x8xf16>, memref<128xf16>, vector<16x8xindex>, vector<16x8xi1>
   return
 }
 }
