@@ -667,10 +667,10 @@ private:
 
 #define ASSERT_EQ_ROUNDING_MODE(expected, actual, rounding_mode)               \
   do {                                                                         \
-    using namespace LIBC_NAMESPACE::fputil::testing;                            \
-    ForceRoundingMode __r((rounding_mode));                                     \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
     if (__r.success) {                                                         \
-      ASSERT_EQ((expected), (actual));                                          \
+      ASSERT_EQ((expected), (actual));                                         \
     }                                                                          \
   } while (0)
 
@@ -708,10 +708,10 @@ private:
 
 #define EXPECT_EQ_ROUNDING_MODE(expected, actual, rounding_mode)               \
   do {                                                                         \
-    using namespace LIBC_NAMESPACE::fputil::testing;                            \
-    ForceRoundingMode __r((rounding_mode));                                     \
+    using namespace LIBC_NAMESPACE::fputil::testing;                           \
+    ForceRoundingMode __r((rounding_mode));                                    \
     if (__r.success) {                                                         \
-      EXPECT_EQ((expected), (actual));                                          \
+      EXPECT_EQ((expected), (actual));                                         \
     }                                                                          \
   } while (0)
 

@@ -144,8 +144,7 @@ public:
       for (auto mpfr_mode : FPTest::ROUNDING_MODES) {
         for (FloatType x : FRACTIONS) {
           long mpfr_long_result;
-          bool erangeflag =
-              mpfr::round_to_long(x, mpfr_mode, mpfr_long_result);
+          bool erangeflag = mpfr::round_to_long(x, mpfr_mode, mpfr_long_result);
           ASSERT_FALSE(erangeflag);
           ASSERT_EQ_ROUNDING_MODE(IntType(mpfr_long_result), func(x),
                                   mpfr_mode);
@@ -249,8 +248,7 @@ public:
           LIBC_NAMESPACE::fputil::testing::ForceRoundingMode _r(m);
           if (_r.success) {
             if (erangeflag)
-              test_one_input(func, x,
-                             x > 0 ? INTEGER_MAX : INTEGER_MIN, true);
+              test_one_input(func, x, x > 0 ? INTEGER_MAX : INTEGER_MIN, true);
             else
               test_one_input(func, x, IntType(mpfr_long_result), false);
           }

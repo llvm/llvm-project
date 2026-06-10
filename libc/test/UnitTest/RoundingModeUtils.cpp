@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cfenv>
 #undef LIBC_MATH_USE_SYSTEM_FENV
 
 #include "RoundingModeUtils.h"
