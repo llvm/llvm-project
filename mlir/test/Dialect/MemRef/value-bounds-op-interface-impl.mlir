@@ -127,3 +127,30 @@ func.func @memref_subview(%m: memref<?xf32>, %sz: index) -> index {
   %1 = "test.reify_bound"(%0) {dim = 0} : (memref<?xf32, strided<[1], offset: 2>>) -> (index)
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @memref_subview_result_dim_le_source_dim(
+func.func @memref_subview_result_dim_le_source_dim(%m: memref<?xf32>, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.subview %m[2][%sz][1] : memref<?xf32> to memref<?xf32, strided<[1], offset: 2>>
+  %source_dim = memref.dim %m, %c0 : memref<?xf32>
+  %subview_dim = memref.dim %0, %c0 : memref<?xf32, strided<[1], offset: 2>>
+  // expected-remark @below{{true}}
+  "test.compare"(%subview_dim, %source_dim) {cmp = "LE"} : (index, index) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_subview_result_dim_le_source_dim_minus_offset(
+func.func @memref_subview_result_dim_le_source_dim_minus_offset(%m: memref<?xf32>, %offset: index, %sz: index) {
+  %c0 = arith.constant 0 : index
+  %0 = memref.subview %m[%offset][%sz][1] : memref<?xf32> to memref<?xf32, strided<[1], offset: ?>>
+  %source_dim = memref.dim %m, %c0 : memref<?xf32>
+  %source_dim_minus_offset = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%source_dim, %offset]
+  %subview_dim = memref.dim %0, %c0 : memref<?xf32, strided<[1], offset: ?>>
+  // expected-remark @below{{true}}
+  "test.compare"(%subview_dim, %source_dim_minus_offset) {cmp = "LE"} : (index, index) -> ()
+  return
+}
