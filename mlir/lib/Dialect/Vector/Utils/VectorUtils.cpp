@@ -498,17 +498,14 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   } else {
     indices.assign(customIndices.begin(), customIndices.end());
   }
+  // A null permutation map means the builder defaults to a minor identity map.
   auto transferReadOp =
-      permutationMap
-          ? vector::TransferReadOp::create(builder, loc, vecToReadTy, source,
-                                           indices, padValue, permutationMap,
-                                           inBoundsVal)
-          : vector::TransferReadOp::create(builder, loc,
-                                           /*vectorType=*/vecToReadTy,
-                                           /*source=*/source,
-                                           /*indices=*/indices,
-                                           /*padding=*/padValue,
-                                           /*inBounds=*/inBoundsVal);
+      vector::TransferReadOp::create(builder, loc, /*vectorType=*/vecToReadTy,
+                                     /*source=*/source,
+                                     /*indices=*/indices,
+                                     /*padding=*/padValue,
+                                     /*permutationMap=*/permutationMap,
+                                     /*inBounds=*/inBoundsVal);
 
   if (useInBoundsInsteadOfMasking)
     return transferReadOp;
@@ -571,17 +568,15 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
     writeIndices.assign(destRank, zero);
   }
 
-  // Generate the xfer_write Op
+  // Generate the xfer_write Op. A null permutation map means the builder
+  // defaults to a minor identity map.
   Operation *write =
-      permutationMap
-          ? vector::TransferWriteOp::create(builder, loc, vecToStore, dest,
-                                            writeIndices, permutationMap,
-                                            inBoundsVal)
-          : vector::TransferWriteOp::create(builder, loc,
-                                            /*vector=*/vecToStore,
-                                            /*dest=*/dest,
-                                            /*indices=*/writeIndices,
-                                            /*inBounds=*/inBoundsVal);
+      vector::TransferWriteOp::create(builder, loc,
+                                      /*vector=*/vecToStore,
+                                      /*dest=*/dest,
+                                      /*indices=*/writeIndices,
+                                      /*permutationMap=*/permutationMap,
+                                      /*inBounds=*/inBoundsVal);
 
   // If masking is disabled, exit.
   if (useInBoundsInsteadOfMasking)
