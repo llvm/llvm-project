@@ -120,10 +120,10 @@ LIBC_INLINE double acosh(double x) {
     return x;
   }
 
-  // For x >= 2^26, acosh(x) = log(2x) to within 0.5 ULP, and x^2 would
-  // overflow exact_mult for x > ~2^511. Redirect through math::log which
-  // performs its own Ziv test.
-  if (LIBC_UNLIKELY(xbits.uintval() >= 0x4190'0000'0000'0000ULL)) {
+  // For x >= 2^52, the dropped term 1/(4x^2) is far below 0.5 ULP of
+  // acosh(x) = log(2x), and x^2 would overflow exact_mult for x > ~2^511.
+  // Redirect through math::log, which performs its own Ziv test.
+  if (LIBC_UNLIKELY(xbits.uintval() >= 0x4330'0000'0000'0000ULL)) {
     using namespace common_constants_internal;
     // For x with biased exponent 2046 (x >= 2^1023), 2*x overflows; compute
     // log(2x) = log(x/2) + 2*log(2) via compensated addition instead.
