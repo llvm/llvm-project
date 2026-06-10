@@ -77,7 +77,7 @@ cpp::expected<Expr *, int> ExprPool::intern(const Expr &e) {
 
   // 1. Calculate the initial bucket for the given structural definition.
   uint64_t h = hash_expr(e);
-  size_t idx = h & (HASH_TABLE_SIZE - 1);
+  size_t idx = h % HASH_TABLE_SIZE;
 
   // 2. Linear Probing: Search for an existing node with identical content.
   //    Because pointers are unique, O(1) comparison is guaranteed if
@@ -86,7 +86,7 @@ cpp::expected<Expr *, int> ExprPool::intern(const Expr &e) {
   while (hashtable[idx]) {
     if (*hashtable[idx] == e)
       return hashtable[idx];
-    idx = (idx + 1) & (HASH_TABLE_SIZE - 1);
+    idx = (idx + 1) % HASH_TABLE_SIZE;
     if (idx == start_idx) {
       // Table full (invariant check: HASH_TABLE_SIZE >> MAX_NODE_LIMIT)
       return cpp::unexpected(REG_ESPACE);
@@ -112,7 +112,8 @@ cpp::expected<Expr *, int> ExprPool::intern(const Expr &e) {
   }
 
   // 5. Node Initialisation: Copy the structural definition into the arena.
-  Expr *new_node = &current->nodes[current->used++];
+  Expr *new_node = &current->nodes[current->used];
+  ++current->used;
   LIBC_CRASH_ON_NULLPTR(new_node);
   *new_node = e;
   hashtable[idx] = new_node;
