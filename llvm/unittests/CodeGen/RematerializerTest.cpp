@@ -97,6 +97,8 @@ public:
     LLVMInitializeAMDGPUTargetInfo();
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetMC();
+#else
+    GTEST_SKIP();
 #endif
   }
 
