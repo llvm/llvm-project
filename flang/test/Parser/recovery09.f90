@@ -12,8 +12,10 @@ module m
    contains
      procedure, public :: init
 ! CHECK: error: component definition must precede CONTAINS in a derived type
+! CHECK-NEXT: {{.*}}integer, public :: n(3) = 1
      integer, public :: n(3) = 1
 ! CHECK: error: component definition must precede CONTAINS in a derived type
+! CHECK-NEXT: {{.*}}real, pointer, dimension(:,:,:), public :: gpoint => null()
      real, pointer, dimension(:,:,:), public :: gpoint => null()
 ! CHECK-NOT: expected 'FINAL'
 ! CHECK-NOT: expected 'GENERIC'
