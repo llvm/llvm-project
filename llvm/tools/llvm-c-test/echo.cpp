@@ -38,14 +38,6 @@ struct CAPIDenseMap {};
 template<typename T>
 struct CAPIDenseMap<T*> {
   struct CAPIDenseMapInfo {
-    static inline T* getEmptyKey() {
-      uintptr_t Val = static_cast<uintptr_t>(-1);
-      return reinterpret_cast<T*>(Val);
-    }
-    static inline T* getTombstoneKey() {
-      uintptr_t Val = static_cast<uintptr_t>(-2);
-      return reinterpret_cast<T*>(Val);
-    }
     static unsigned getHashValue(const T *PtrVal) {
       return hash_value(PtrVal);
     }

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "hdr/wchar_macros.h" // For WEOF
 #include "src/stdio/fclose.h"
 #include "src/stdio/ferror.h"

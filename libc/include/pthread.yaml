@@ -218,7 +218,8 @@ functions:
     arguments:
       - type: void *
   - name: pthread_getattr_np
-    standards: gnu
+    standards:
+      - gnu
     return_type: int
     arguments:
       - type: pthread_t

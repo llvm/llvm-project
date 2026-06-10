@@ -1829,6 +1829,10 @@ def OpenACC_ParallelOp
     mlir::Operation::operand_range
     getNumGangsValues(mlir::acc::DeviceType deviceType);
 
+    /// Return true if the op has any num_gangs, num_workers, or vector_length
+    /// clause for the given device_type.
+    bool hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType);
+
     /// Return true if the op has the wait attribute for the
     /// mlir::acc::DeviceType::None device_type.
     bool hasWaitOnly();
@@ -2155,6 +2159,10 @@ def OpenACC_KernelsOp
     /// present.
     mlir::Operation::operand_range
     getNumGangsValues(mlir::acc::DeviceType deviceType);
+
+    /// Return true if the op has any num_gangs, num_workers, or vector_length
+    /// clause for the given device_type.
+    bool hasAnyGangWorkerVector(mlir::acc::DeviceType deviceType);
 
     /// Return true if the op has the wait attribute for the
     /// mlir::acc::DeviceType::None device_type.
@@ -2807,6 +2815,10 @@ def OpenACC_LoopOp
     // Return whether this LoopOp has a gang, worker, or vector applying to the
     // 'default'/None device-type.
     bool hasDefaultGangWorkerVector();
+
+    // Return whether this LoopOp has a gang, worker, or vector for the given
+    // device-type.
+    bool hasAnyGangWorkerVector(DeviceType deviceType);
 
     // Used to obtain the parallelism mode for the requested device type.
     // This first checks if the mode is set for the device_type requested.

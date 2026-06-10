@@ -117,7 +117,7 @@ void *assume_aligned(void *ptr) {
 }
 
 // CIR: @_Z14assume_alignedPv
-// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16 : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} align(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: @_Z14assume_alignedPv
@@ -133,7 +133,7 @@ void *assume_aligned_misalignment(void *ptr, unsigned misalignment) {
 }
 
 // CIR: @_Z27assume_aligned_misalignmentPvj
-// CIR:   %{{.+}} = cir.assume_aligned %{{.+}} alignment 16[offset %{{.+}} : !u64i] : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} align(%{{.+}}, %{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i, !u64i) : !cir.bool
 // CIR: }
 
 // LLVM: @_Z27assume_aligned_misalignmentPvj
@@ -149,7 +149,7 @@ void assume_separate_storage(void *p1, void *p2) {
 }
 
 // CIR: cir.func{{.*}} @_Z23assume_separate_storagePvS_
-// CIR:   cir.assume_separate_storage %{{.+}}, %{{.+}} : !cir.ptr<!void>
+// CIR:   cir.assume %{{.+}} separate_storage(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !cir.ptr<!void>) : !cir.bool
 // CIR: }
 
 // LLVM: define {{.*}}void @_Z23assume_separate_storagePvS_
@@ -158,6 +158,54 @@ void assume_separate_storage(void *p1, void *p2) {
 
 // OGCG: define {{.*}}void @_Z23assume_separate_storagePvS_
 // OGCG:   call void @llvm.assume(i1 true) [ "separate_storage"(ptr %{{.+}}, ptr %{{.+}}) ]
+// OGCG: }
+
+void assume_dereferenceable(void *p, unsigned long n) {
+  __builtin_assume_dereferenceable(p, n);
+}
+
+// CIR: cir.func{{.*}} @_Z22assume_dereferenceablePvm
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z22assume_dereferenceablePvm
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z22assume_dereferenceablePvm
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// OGCG: }
+
+void assume_dereferenceable_const(void *p) {
+  __builtin_assume_dereferenceable(p, 16);
+}
+
+// CIR: cir.func{{.*}} @_Z28assume_dereferenceable_constPv
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z28assume_dereferenceable_constPv
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 16) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z28assume_dereferenceable_constPv
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 16) ]
+// OGCG: }
+
+void assume_dereferenceable_narrow_size(void *p, unsigned n) {
+  __builtin_assume_dereferenceable(p, n);
+}
+
+// CIR: cir.func{{.*}} @_Z34assume_dereferenceable_narrow_sizePvj
+// CIR:   cir.assume %{{.+}} dereferenceable(%{{.+}}, %{{.+}} : !cir.ptr<!void>, !u64i) : !cir.bool
+// CIR: }
+
+// LLVM: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj
+// LLVM:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
+// LLVM: }
+
+// OGCG: define {{.*}}void @_Z34assume_dereferenceable_narrow_sizePvj
+// OGCG:   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %{{.+}}, i64 %{{.+}}) ]
 // OGCG: }
 
 void expect(int x, int y) {
@@ -276,7 +324,7 @@ void *test_alloca(unsigned long n) {
 }
 
 // CIR-LABEL: @_Z11test_allocam(
-// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
+// CIR:         %{{.+}} = cir.alloca "bi_alloca" {{.*}} size(%{{.+}}) : !cir.ptr<!u8i>
 
 // LLVM-LABEL: @_Z11test_allocam(
 // LLVM:         alloca i8, i64 %{{.+}}
@@ -291,8 +339,8 @@ bool test_multiple_allocas(unsigned long n) {
 }
 
 // CIR-LABEL: @_Z21test_multiple_allocasm(
-// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
-// CIR:         %{{.+}} = cir.alloca !u8i, !cir.ptr<!u8i>, %{{.+}} : !u64i, ["bi_alloca"]
+// CIR:         %{{.+}} = cir.alloca "bi_alloca" {{.*}} size(%{{.+}}) : !cir.ptr<!u8i>
+// CIR:         %{{.+}} = cir.alloca "bi_alloca" {{.*}} size(%{{.+}}) : !cir.ptr<!u8i>
 
 // LLVM-LABEL: @_Z21test_multiple_allocasm(
 // LLVM:         alloca i8, i64 %{{.+}}

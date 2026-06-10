@@ -172,9 +172,9 @@ std::atomic<size_t> ol_queue_impl_t::IdCounter(0);
 
 struct ol_event_impl_t {
   ol_event_impl_t(void *EventInfo, ol_device_handle_t Device,
-                  ol_queue_handle_t Queue)
-      : EventInfo(EventInfo), Device(Device), QueueId(Queue->Id), Queue(Queue) {
-  }
+                  ol_queue_handle_t Queue, bool ProfilingEnabled)
+      : EventInfo(EventInfo), Device(Device), QueueId(Queue->Id), Queue(Queue),
+        ProfilingEnabled(ProfilingEnabled) {}
   // Opaque backend-specific event state. This is expected to be non-null for
   // backends that materialize real events.
   void *EventInfo;
@@ -184,6 +184,7 @@ struct ol_event_impl_t {
   // It is provided only to implement OL_EVENT_INFO_QUEUE. Use QueueId to check
   // for queue equality instead.
   ol_queue_handle_t Queue;
+  bool ProfilingEnabled;
 };
 
 struct ol_program_impl_t {
@@ -859,6 +860,12 @@ Error olSyncEvent_impl(ol_event_handle_t Event) {
 Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
                                  ol_event_handle_t EndEvent,
                                  float *ElapsedTime) {
+  if (!StartEvent->ProfilingEnabled || !EndEvent->ProfilingEnabled)
+    return createOffloadError(
+        ErrorCode::INVALID_ARGUMENT,
+        "olGetEventElapsedTime requires both events to be created with "
+        "OL_EVENT_FLAGS_ENABLE_PROFILING");
+
   if (StartEvent->Device != EndEvent->Device)
     return createOffloadError(
         ErrorCode::INVALID_DEVICE,
@@ -875,7 +882,8 @@ Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
 
 Error olDestroyEvent_impl(ol_event_handle_t Event) {
   if (Event->EventInfo)
-    if (auto Res = Event->Device->Device->destroyEvent(Event->EventInfo))
+    if (auto Res = Event->Device->Device->destroyEvent(Event->EventInfo,
+                                                       Event->ProfilingEnabled))
       return Res;
 
   return olDestroy(Event);
@@ -922,17 +930,21 @@ Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
   return olGetEventInfoImplDetail(Event, PropName, 0, nullptr, PropSizeRet);
 }
 
-Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
-  auto Event = std::make_unique<ol_event_impl_t>(nullptr, Queue->Device, Queue);
+Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
+                         ol_event_handle_t *EventOut) {
+  bool EnableProfiling = Flags == OL_EVENT_FLAGS_ENABLE_PROFILING;
+  auto Event = std::make_unique<ol_event_impl_t>(nullptr, Queue->Device, Queue,
+                                                 EnableProfiling);
 
-  if (auto Err = Queue->Device->Device->createEvent(&Event->EventInfo))
+  if (auto Err = Queue->Device->Device->createEvent(&Event->EventInfo,
+                                                    EnableProfiling))
     return Err;
 
-  if (auto Err = Queue->Device->Device->recordEvent(Event->EventInfo,
-                                                    Queue->AsyncInfo)) {
+  if (auto Err = Queue->Device->Device->recordEvent(
+          Event->EventInfo, Queue->AsyncInfo, EnableProfiling)) {
     if (Event->EventInfo) {
-      if (auto DestroyErr =
-              Queue->Device->Device->destroyEvent(Event->EventInfo))
+      if (auto DestroyErr = Queue->Device->Device->destroyEvent(
+              Event->EventInfo, EnableProfiling))
         return joinErrors(std::move(Err), std::move(DestroyErr));
     }
 
@@ -1086,10 +1098,11 @@ Error olGetKernelMaxCooperativeGroupCount_impl(
 }
 
 Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
-                          ol_symbol_handle_t Kernel, const void *ArgumentsData,
-                          size_t ArgumentsSize,
+                          ol_symbol_handle_t Kernel,
                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
-                          const ol_kernel_launch_prop_t *Properties) {
+                          const ol_kernel_launch_prop_t *Properties,
+                          size_t NumArgs, void **ArgPtrs,
+                          const size_t *ArgSizes) {
   auto *DeviceImpl = Device->Device;
   if (Queue && Device != Queue->Device) {
     return createOffloadError(
@@ -1103,6 +1116,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   KernelArgsTy LaunchArgs{};
+  LaunchArgs.NumArgs = static_cast<uint32_t>(NumArgs);
   LaunchArgs.UserNumBlocks[0] = LaunchSizeArgs->NumGroups.x;
   LaunchArgs.UserNumBlocks[1] = LaunchSizeArgs->NumGroups.y;
   LaunchArgs.UserNumBlocks[2] = LaunchSizeArgs->NumGroups.z;
@@ -1110,6 +1124,7 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
+  LaunchArgs.Flags.StrictBlocksAndThreads = true;
 
   while (Properties && Properties->type != OL_KERNEL_LAUNCH_PROP_TYPE_NONE) {
     switch (Properties->type) {
@@ -1126,12 +1141,10 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   }
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, QueueImpl);
-  KernelLaunchParamsTy Params;
-  Params.Data = const_cast<void *>(ArgumentsData);
-  Params.Size = ArgumentsSize;
-  LaunchArgs.ArgPtrs = reinterpret_cast<void **>(&Params);
-  // Don't do anything with pointer indirection; use arg data as-is
-  LaunchArgs.Flags.IsCUDA = true;
+  LaunchArgs.ArgPtrs = ArgPtrs;
+  LaunchArgs.ArgSizes =
+      reinterpret_cast<int64_t *>(const_cast<size_t *>(ArgSizes));
+  LaunchArgs.Flags.IsPtrArgs = true;
 
   auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
   auto Err = KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs, nullptr,

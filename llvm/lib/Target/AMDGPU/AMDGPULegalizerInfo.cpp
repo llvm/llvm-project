@@ -1431,7 +1431,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .widenScalarToNextPow2(0)
           .scalarize(0)
           .lower();
-      if (ST.hasIntMinMax64()) {
+      if (ST.hasMinMaxI64Insts()) {
         getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
             .legalFor({S32, S16, S64, V2S16})
             .clampMaxNumElements(0, S16, 2)
@@ -1735,23 +1735,31 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   // FIXME: Unaligned accesses not lowered.
-  auto &ExtLoads = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-                       .legalForTypesWithMemDesc({{S32, GlobalPtr, S8, 8},
-                                                  {S32, GlobalPtr, S16, 2 * 8},
-                                                  {S32, LocalPtr, S8, 8},
-                                                  {S32, LocalPtr, S16, 16},
-                                                  {S32, PrivatePtr, S8, 8},
-                                                  {S32, PrivatePtr, S16, 16},
-                                                  {S32, ConstantPtr, S8, 8},
-                                                  {S32, ConstantPtr, S16, 2 * 8}})
-                       .legalIf(
-                         [=](const LegalityQuery &Query) -> bool {
-                           return isLoadStoreLegal(ST, Query);
-                         });
+  auto &ExtLoads =
+      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+          .legalForTypesWithMemDesc({{S32, GlobalPtr, S8, 8},
+                                     {S32, GlobalPtr, S16, 2 * 8},
+                                     {S32, LocalPtr, S8, 8},
+                                     {S32, LocalPtr, S16, 16},
+                                     {S32, PrivatePtr, S8, 8},
+                                     {S32, PrivatePtr, S16, 16},
+                                     {S32, ConstantPtr, S8, 8},
+                                     {S32, ConstantPtr, S16, 2 * 8}})
+          .legalForTypesWithMemDesc(ST.useRealTrue16Insts(),
+                                    {{S16, GlobalPtr, S8, GlobalAlign8},
+                                     {S16, LocalPtr, S8, GlobalAlign8},
+                                     {S16, PrivatePtr, S8, GlobalAlign8},
+                                     {S16, ConstantPtr, S8, GlobalAlign8}})
+          .legalIf([=](const LegalityQuery &Query) -> bool {
+            return isLoadStoreLegal(ST, Query);
+          });
 
   if (ST.hasFlatAddressSpace()) {
     ExtLoads.legalForTypesWithMemDesc(
         {{S32, FlatPtr, S8, 8}, {S32, FlatPtr, S16, 16}});
+
+    ExtLoads.legalForTypesWithMemDesc(ST.useRealTrue16Insts(),
+                                      {{S16, FlatPtr, S8, GlobalAlign8}});
   }
 
   // Constant 32-bit is handled by addrspacecasting the 32-bit pointer to
@@ -8160,6 +8168,34 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     }
 
     return false;
+  }
+  case Intrinsic::amdgcn_wave_reduce_min:
+  case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_max:
+  case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_add:
+  case Intrinsic::amdgcn_wave_reduce_sub:
+  case Intrinsic::amdgcn_wave_reduce_and:
+  case Intrinsic::amdgcn_wave_reduce_or:
+  case Intrinsic::amdgcn_wave_reduce_xor: {
+    Register SrcReg = MI.getOperand(2).getReg();
+    if (MRI.getType(SrcReg) != LLT::scalar(16))
+      return true;
+    Register DstReg = MI.getOperand(0).getReg();
+    bool NeedsSignExt = IntrID == Intrinsic::amdgcn_wave_reduce_min ||
+                        IntrID == Intrinsic::amdgcn_wave_reduce_max ||
+                        IntrID == Intrinsic::amdgcn_wave_reduce_add ||
+                        IntrID == Intrinsic::amdgcn_wave_reduce_sub;
+    auto Ext = NeedsSignExt ? B.buildSExt(LLT::scalar(32), SrcReg)
+                            : B.buildZExt(LLT::scalar(32), SrcReg);
+    auto NewDst = MRI.createGenericVirtualRegister(LLT::scalar(32));
+    B.buildIntrinsic(IntrID, ArrayRef<Register>{NewDst},
+                     /*hasSideEffects=*/false, /*isConvergent=*/true)
+        .addUse(Ext.getReg(0))
+        .addImm(MI.getOperand(3).getImm()); // strategy
+    B.buildTrunc(DstReg, NewDst);
+    MI.eraseFromParent();
+    return true;
   }
   case Intrinsic::amdgcn_addrspacecast_nonnull:
     return legalizeAddrSpaceCast(MI, MRI, B);

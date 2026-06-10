@@ -205,6 +205,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (TC.getVFS().exists(LibPath))
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
   }
+  for (const auto &LibPath : TC.getFilePaths()) {
+    if (LibPath.length() > 0)
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
+  }
   auto CRTPath = TC.getCompilerRTPath();
   if (TC.getVFS().exists(CRTPath))
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + CRTPath));
@@ -282,7 +286,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (C.getDriver().isUsingLTO()) {
+  if (TC.isUsingLTO(Args)) {
     if (Arg *A = tools::getLastProfileSampleUseArg(Args))
       CmdArgs.push_back(Args.MakeArgString(std::string("-lto-sample-profile:") +
                                            A->getValue()));
@@ -332,12 +336,24 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(TC, TC.getDriver(), CmdArgs, Args);
   }
 
-  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ,
-                                          TC.getDriver().getPreferredLinker());
-  if (Linker.empty())
-    Linker = "link";
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  StringRef Linker = A ? A->getValue() : TC.getDriver().getPreferredLinker();
+
+  if (Linker.empty()) {
+    // If DWARF is requested, use LLD, because MSVC's link.exe will silently
+    // truncate the .debug_* sections to eight characters. PE/COFF doesn't allow
+    // section names longer than eight bytes in executables - LLD uses the same
+    // name length extension as in object files (where long names are allowed).
+    if (Args.hasArg(options::OPT_gdwarf, options::OPT_gdwarf_2,
+                    options::OPT_gdwarf_3, options::OPT_gdwarf_4,
+                    options::OPT_gdwarf_5, options::OPT_gdwarf_6))
+      Linker = "lld-link";
+    else
+      Linker = "link";
+  }
+
   // We need to translate 'lld' into 'lld-link'.
-  else if (Linker.equals_insensitive("lld"))
+  if (Linker.equals_insensitive("lld"))
     Linker = "lld-link";
 
   if (Linker == "lld-link") {
@@ -345,7 +361,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(
           Args.MakeArgString(std::string("/vfsoverlay:") + A->getValue()));
 
-    if (C.getDriver().isUsingLTO() &&
+    if (TC.isUsingLTO(Args) &&
         Args.hasFlag(options::OPT_gsplit_dwarf, options::OPT_gno_split_dwarf,
                      false))
       CmdArgs.push_back(Args.MakeArgString(Twine("/dwodir:") +
@@ -511,6 +527,8 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
       llvm::findVCToolChainViaSetupConfig(getVFS(), VCToolsVersion,
                                           VCToolChainPath, VSLayout) ||
       llvm::findVCToolChainViaRegistry(VCToolChainPath, VSLayout);
+
+  loadMultilibsFromYAML(Args, D);
 }
 
 Tool *MSVCToolChain::buildLinker() const {
@@ -580,6 +598,13 @@ void MSVCToolChain::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
     CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
                                        RocmInstallation->getLibPath()),
                     "amdhip64.lib"});
+
+    // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
+    // self-contained superset of clang_rt.profile, emitted first so the base
+    // archive stays inert (avoiding a /MD-vs-/MT CRT mix in the host image).
+    if (needsProfileRT(Args) &&
+        getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static)))
+      CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
   }
 }
 
@@ -755,6 +780,18 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (getDriver().getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
+
   // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
   // paths set by vcvarsall.bat. Skip if the user expressly set any of the
   // Windows SDK or VC Tools options.
@@ -895,8 +932,10 @@ std::string MSVCToolChain::ComputeEffectiveClangTriple(
   return Triple.getTriple();
 }
 
-SanitizerMask MSVCToolChain::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask MSVCToolChain::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -1089,7 +1128,7 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 }
 
 void MSVCToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadKind) const {
   // MSVC STL kindly allows removing all usages of typeid by defining
   // _HAS_STATIC_RTTI to 0. Do so, when compiling with -fno-rtti

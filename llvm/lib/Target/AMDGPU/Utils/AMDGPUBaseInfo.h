@@ -233,6 +233,9 @@ inline raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
+/// \returns Instruction cache line size in bytes for given subtarget \p STI.
+unsigned getInstCacheLineSize(const MCSubtargetInfo &STI);
+
 /// \returns Wavefront size for given subtarget \p STI.
 unsigned getWavefrontSize(const MCSubtargetInfo &STI);
 
@@ -338,6 +341,9 @@ unsigned getArchVGPRAllocGranule();
 
 /// \returns Total number of VGPRs for given subtarget \p STI.
 unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI);
+
+/// Maximum number of VGPR blocks that can be allocated in dynamic VGPR mode.
+static constexpr unsigned MaxDynamicVGPRBlocks = 8;
 
 /// \returns Addressable number of architectural VGPRs for a given subtarget \p
 /// STI.

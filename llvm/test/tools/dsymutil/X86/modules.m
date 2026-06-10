@@ -18,18 +18,17 @@ EOF
    clang -c -g odr_violation.c -o 2.o
 */
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules \
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/modules \
 // RUN:   -y %p/dummy-debug-map.map -o - \
-// RUN:     | llvm-dwarfdump -v --debug-info - | FileCheck %s
+// RUN:     | llvm-dwarfdump -v --debug-info - \
+// RUN:     | FileCheck %s --check-prefixes=CHECK,CLASSIC
 
-// RUN: dsymutil -f -oso-prepend-path=%p/../Inputs/modules -y \
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%p/../Inputs/modules -y \
+// RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s
+// RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/modules -y \
 // RUN:   %p/dummy-debug-map.map -o %t 2>&1 | FileCheck --check-prefix=WARN %s
 
-// Verify both linkers emit a valid .debug_names section for input with
-// -gmodules skeleton CUs. In the parallel linker, without dropping
-// DW_AT_GNU_dwo_id and giving each compile unit a unique ID, .debug_names
-// entries are misattributed to the wrong CU and CUs look like skeleton CUs
-// needing a (non-existent) .dwo.
+// The classic linker drops DW_AT_GNU_dwo_id; the parallel linker keeps it.
 // RUN: rm -rf %t.classic.dSYM
 // RUN: dsymutil --linker classic --accelerator Dwarf -verify -f \
 // RUN:   -oso-prepend-path=%p/../Inputs/modules \
@@ -51,7 +50,7 @@ EOF
 #ifdef BAR_H
 // ---------------------------------------------------------------------
 // CHECK:            DW_TAG_compile_unit
-// CHECK-NOT:          DW_AT_GNU_dwo_id
+// CLASSIC-NOT:        DW_AT_GNU_dwo_id
 // CHECK-NOT:        DW_TAG
 // CHECK:              DW_TAG_module
 // CHECK-NEXT:           DW_AT_name{{.*}}"Bar"
@@ -76,7 +75,7 @@ struct PruneMeNot;
 #ifdef FOO_H
 // ---------------------------------------------------------------------
 // CHECK:               DW_TAG_compile_unit
-// CHECK-NOT:             DW_AT_GNU_dwo_id
+// CLASSIC-NOT:           DW_AT_GNU_dwo_id
 // CHECK-NOT:             DW_TAG
 // CHECK: 0x0[[FOO:.*]]:  DW_TAG_module
 // CHECK-NEXT:              DW_AT_name{{.*}}"Foo"
@@ -115,7 +114,7 @@ Bar odr_violation = { 42 };
 // ---------------------------------------------------------------------
 
 // CHECK:    DW_TAG_compile_unit
-// CHECK-NOT:  DW_AT_GNU_dwo_id
+// CLASSIC-NOT: DW_AT_GNU_dwo_id
 // CHECK:      DW_AT_low_pc
 // CHECK-NOT:  DW_TAG_module
 // CHECK-NOT:  DW_TAG_typedef
@@ -154,7 +153,7 @@ int main(int argc, char **argv) {
 #endif
 
 // CHECK:     DW_TAG_compile_unit
-// CHECK-NOT:   DW_AT_GNU_dwo_id
+// CLASSIC-NOT: DW_AT_GNU_dwo_id
 // CHECK:       DW_AT_name {{.*}}"odr_violation.c"
 // CHECK: DW_TAG_variable
 // CHECK:   DW_AT_name {{.*}}"odr_violation"

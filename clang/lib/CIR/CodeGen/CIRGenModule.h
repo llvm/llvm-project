@@ -431,9 +431,34 @@ public:
     llvm_unreachable("unknown visibility!");
   }
 
+  static cir::VisibilityKind getCIRVisibilityKind(Visibility v) {
+    switch (v) {
+    case DefaultVisibility:
+      return cir::VisibilityKind::Default;
+    case HiddenVisibility:
+      return cir::VisibilityKind::Hidden;
+    case ProtectedVisibility:
+      return cir::VisibilityKind::Protected;
+    }
+
+    llvm_unreachable("unknown visibility!");
+  }
+
   llvm::DenseMap<mlir::Attribute, cir::GlobalOp> constantStringMap;
   llvm::DenseMap<const UnnamedGlobalConstantDecl *, cir::GlobalOp>
       unnamedGlobalConstantDeclMap;
+  llvm::DenseMap<const CompoundLiteralExpr *, cir::GlobalOp>
+      emittedCompoundLiterals;
+
+  cir::GlobalOp
+  getAddrOfConstantCompoundLiteralIfEmitted(const CompoundLiteralExpr *e) {
+    return emittedCompoundLiterals.lookup(e);
+  }
+  void setAddrOfConstantCompoundLiteral(const CompoundLiteralExpr *e,
+                                        cir::GlobalOp gv) {
+    [[maybe_unused]] bool ok = emittedCompoundLiterals.insert({e, gv}).second;
+    assert(ok && "compound literal global already emitted");
+  }
 
   /// Return a constant array for the given string.
   mlir::Attribute getConstantArrayFromStringLiteral(const StringLiteral *e);
@@ -602,7 +627,8 @@ public:
   mlir::Type convertType(clang::QualType type);
 
   /// Set the visibility for the given global.
-  void setGlobalVisibility(mlir::Operation *op, const NamedDecl *d) const;
+  void setGlobalVisibility(cir::CIRGlobalValueInterface gv,
+                           const NamedDecl *d) const;
   void setDSOLocal(mlir::Operation *op) const;
   void setDSOLocal(cir::CIRGlobalValueInterface gv) const;
 
@@ -612,8 +638,10 @@ public:
   void setGVPropertiesAux(mlir::Operation *op, const NamedDecl *d) const;
 
   /// Set TLS mode for the given operation based on the given variable
-  /// declaration.
-  void setTLSMode(mlir::Operation *op, const VarDecl &d);
+  /// declaration. If `isExtendingDecl` is true, then the operation is a
+  /// temporary whose lifetime is extended by the variable declared by `d`.
+  void setTLSMode(mlir::Operation *op, const VarDecl &d,
+                  bool isExtendingDecl = false);
 
   /// Get TLS mode from CodeGenOptions.
   cir::TLS_Model getDefaultCIRTLSModel() const;
@@ -726,6 +754,13 @@ public:
   // Whether a global variable should be emitted by CUDA/HIP host/device
   // related attributes.
   bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
+
+  /// Print the postfix for externalized static variable or kernels for single
+  /// source offloading languages CUDA and HIP. The unique postfix is created
+  /// using either the CUID argument, or the file's UniqueID and active macros.
+  /// The fallback method without a CUID requires that the offloading toolchain
+  /// does not define separate macros via the -cc1 options.
+  void printPostfixForExternalizedDecl(llvm::raw_ostream &os, const Decl *d);
 
   /// Replace all uses of the old global with the new global, updating types
   /// and references as needed. Erases the old global when done.
