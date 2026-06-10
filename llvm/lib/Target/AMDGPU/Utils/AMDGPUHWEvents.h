@@ -47,7 +47,8 @@ static constexpr StringLiteral toString(HWEvent Event) {
 /// and \c MaxEvent (exclusive, default value yields an enumeration over
 /// all counters).
 // NOLINTNEXTLINE
-inline iota_range<HWEvent> hw_events(HWEvent MaxEvent = HWEvent::NUM_WAIT_EVENTS) {
+inline iota_range<HWEvent>
+hw_events(HWEvent MaxEvent = HWEvent::NUM_WAIT_EVENTS) {
   return enum_seq(HWEvent::FIRST_WAIT_EVENT, MaxEvent);
 }
 
