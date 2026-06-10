@@ -1882,7 +1882,9 @@ class CIR_UnaryOp<string mnemonic, Type type, list<Trait> traits = []>
         DeclareOpInterfaceMethods<CIR_UnaryOpInterface>
       ], traits)>
 {
-  let arguments = (ins type:$input);
+  dag commonArgs = (ins type:$input);
+
+  let arguments = commonArgs;
 
   let results = (outs type:$result);
 
@@ -2019,7 +2021,18 @@ def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
     %3 = cir.fneg %2 : !cir.double
     %5 = cir.fneg %4 : !cir.vector<4 x !cir.float>
     ```
+
+    The optional `fenv` attribute describes constraints on the floating-point
+    handling of the operation.
   }];
+
+  let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$input), [{
+      build($_builder, $_state, input, cir::FenvAttr{});
+    }]>
+  ];
 
   let hasFolder = 1;
 
@@ -2487,10 +2500,12 @@ class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = []>
         DeclareOpInterfaceMethods<CIR_BinaryOpInterface>
       ], traits)>
 {
-  let arguments = (ins
+  dag commonArgs = (ins
     type:$lhs,
     type:$rhs
   );
+
+  let arguments = commonArgs;
 
   let results = (outs type:$result);
 
@@ -2667,9 +2682,20 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 
 // Base class for floating-point binary arithmetic operations. The lhs, rhs,
 // and result must all be the same floating-point scalar or vector type.
+//
+// The optional `fenv` attribute describes constraints on the floating-point
+// handling of the operation.
 class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = []>
     : CIR_BinaryOp<mnemonic, CIR_AnyFloatOrVecOfFloatType,
-                   !listconcat([Pure], traits)>;
+                   !listconcat([Pure], traits)> {
+  let arguments = !con(commonArgs, (ins OptionalAttr<CIR_FenvAttr>:$fenv));
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
+}
 
 //===----------------------------------------------------------------------===//
 // FAddOp
@@ -6811,10 +6837,17 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
 {
-  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src);
+  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src,
+                       OptionalAttr<CIR_FenvAttr>:$fenv);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = "$src `:` type($src) attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$src), [{
+      build($_builder, $_state, src, cir::FenvAttr{});
+    }]>
+  ];
 
   let llvmOp = llvmOpName;
 }
@@ -7127,7 +7160,8 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
 
   let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$lhs,
-    CIR_AnyFloatOrVecOfFloatType:$rhs
+    CIR_AnyFloatOrVecOfFloatType:$rhs,
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
@@ -7135,6 +7169,13 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
   }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
+    }]>
+  ];
 
   let llvmOp = llvmOpName;
 }
