@@ -91,13 +91,12 @@ if (CMAKE_Fortran_COMPILER)
     # Force the compiler ID so CMake does not try to run the compiler for
     # identification. In a bootstrapping build the Flang binary may not be
     # built yet at configure time (only CMAKE_Fortran_COMPILER_WORKS is set).
-    # FIXME: flang has has not equivalent to clang-cl, so
+    # FIXME: flang has no equivalent to clang-cl, so
     # CMAKE_Fortran_SIMULATE_ID=GNU should be the only correct value. CMake may
     # imply that supports different toolchains for each language but in
     # practice is doesn't. In particular, the last enabled
     # language will overwrite global variables such as CMAKE_LINK_LIBRARY_FLAG
     # depending on CMAKE_<lang>_SIMULATE_ID, i.e. they cannot be different.
-    # Fortunately, "MSVC" still works for Flang.
     set(CMAKE_Fortran_COMPILER_ID "LLVMFlang")
     set(CMAKE_Fortran_COMPILER_ID_RUN TRUE)
     set(CMAKE_Fortran_COMPILER_FORCED TRUE)
