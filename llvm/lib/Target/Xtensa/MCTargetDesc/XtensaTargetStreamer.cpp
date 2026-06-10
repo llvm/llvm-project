@@ -62,9 +62,12 @@ void XtensaTargetAsmStreamer::emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
     LiteralStr << CE->getValue() << "\n";
   } else if (auto SRE = dyn_cast<MCSymbolRefExpr>(Value)) {
     const MCSymbol &Sym = SRE->getSymbol();
-    Xtensa::Specifier Spec = (Xtensa::Specifier)SRE->getSpecifier();
-    StringRef Modifier = (Spec == Xtensa::S_TPOFF) ? "@TPOFF" : "";
-    LiteralStr << Sym.getName() << Modifier << "\n";
+    Xtensa::Specifier Spec =
+        static_cast<Xtensa::Specifier>(SRE->getSpecifier());
+    LiteralStr << Sym.getName();
+    if (Spec == Xtensa::S_TPOFF)
+      LiteralStr << "@TPOFF";
+    LiteralStr << '\n';
   } else {
     llvm_unreachable("unexpected constant pool entry type");
   }
