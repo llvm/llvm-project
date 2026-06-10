@@ -20,20 +20,6 @@ def FormExpressionsPass : Pass<"form-expressions"> {
   let dependentDialects = ["emitc::EmitCDialect"];
 }
 
-def MLGOScalarizeSingleElementTensorReturnPass
-    : Pass<"mlgo-scalarize-single-element-tensor-return", "ModuleOp"> {
-  let summary = "Scalarize private tensor-returning functions for EmitC lowering of MLGO models";
-  let description = [{
-    Rewrites private functions returning exactly one statically shaped ranked
-    tensor of exactly one element into functions returning the tensor element
-    type, provided all transitive users can be updated safely.
-  }];
-  let dependentDialects = [
-      "arith::ArithDialect", "emitc::EmitCDialect", "func::FuncDialect",
-      "tensor::TensorDialect"
-  ];
-}
-
 def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
   let summary = "Wrap functions in classes, using arguments as fields.";
   let description = [{

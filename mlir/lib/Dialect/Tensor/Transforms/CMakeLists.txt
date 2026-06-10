@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   ExtractSliceFromReshapeUtils.cpp
   FoldTensorSubsetOps.cpp
   IndependenceTransforms.cpp
+  MLGOScalarizeFunctionResult.cpp # MLGO related
   ReshapePatterns.cpp
   RewriteAsConstant.cpp
   RuntimeOpVerification.cpp
@@ -25,6 +26,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRArithDialect
   MLIRArithUtils
   MLIRDialectUtils
+  MLIRFuncDialect # MLGO related
   MLIRIR
   MLIRLinalgDialect
   MLIRMemRefDialect

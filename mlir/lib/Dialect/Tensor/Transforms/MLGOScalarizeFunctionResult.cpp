@@ -7,20 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/EmitC/IR/EmitC.h"
-#include "mlir/Dialect/EmitC/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 #include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
-namespace emitc {
+namespace tensor {
 #define GEN_PASS_DEF_MLGOSCALARIZESINGLEELEMENTTENSORRETURNPASS
-#include "mlir/Dialect/EmitC/Transforms/Passes.h.inc"
-} // namespace emitc
+#include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
+} // namespace tensor
 } // namespace mlir
 
 using namespace mlir;
@@ -304,7 +303,7 @@ MLGOScalarizeSingleElementTensorReturns(ModuleOp module,
 }
 
 struct MLGOScalarizeSingleElementTensorReturnPass
-    : public emitc::impl::MLGOScalarizeSingleElementTensorReturnPassBase<
+    : public tensor::impl::MLGOScalarizeSingleElementTensorReturnPassBase<
           MLGOScalarizeSingleElementTensorReturnPass> {
   using Base::Base;
 
