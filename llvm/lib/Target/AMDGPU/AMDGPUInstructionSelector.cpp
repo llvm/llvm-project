@@ -2539,6 +2539,10 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectSGetBarrierState(I, IntrinsicID);
   case Intrinsic::amdgcn_s_barrier_signal_isfirst:
     return selectSBarrierSignalIsfirst(I, IntrinsicID);
+  case Intrinsic::amdgcn_waterfall_begin:
+  case Intrinsic::amdgcn_waterfall_readfirstlane:
+  case Intrinsic::amdgcn_waterfall_end:
+    return selectWaterfallIntrinsic(I, IntrinsicID);
   }
   return selectImpl(I, *CoverageInfo);
 }
@@ -4455,6 +4459,33 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
     .addReg(WaveAddr);
 
   MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectWaterfallIntrinsic(
+    MachineInstr &I, Intrinsic::ID IntrID) const {
+  // op0=result, op1=intrinsicID, op2=token_input, op3=value
+  MachineBasicBlock *MBB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register DstReg = I.getOperand(0).getReg();
+  Register TokReg = I.getOperand(2).getReg();
+  Register ValReg = I.getOperand(3).getReg();
+
+  unsigned SizeBits;
+  if (IntrID == Intrinsic::amdgcn_waterfall_begin)
+    SizeBits = MRI->getType(ValReg).getSizeInBits();
+  else
+    SizeBits = MRI->getType(DstReg).getSizeInBits();
+
+  unsigned SizeDwords = SizeBits / 32;
+  unsigned Opc = AMDGPU::getWaterfallPseudoOpcode(IntrID, SizeDwords);
+  if (!Opc)
+    return false;
+
+  MachineInstrBuilder MIB =
+      BuildMI(*MBB, &I, DL, TII.get(Opc), DstReg).addReg(TokReg).addReg(ValReg);
+  I.eraseFromParent();
+  constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   return true;
 }
 

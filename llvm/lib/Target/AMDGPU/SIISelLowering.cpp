@@ -11821,6 +11821,27 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     DAG.setNodeMemRefs(NewNode, {MemRef});
     return SDValue(NewNode, 0);
   }
+  case Intrinsic::amdgcn_waterfall_readfirstlane: {
+    if (!Op->getOperand(3)->isDivergent()) {
+      // If waterfall_readfirstlane is uniform, it can be removed
+      SDValue InChain = Op.getOperand(0);
+      SDValue OutChain = Op.getValue(1);
+      DAG.ReplaceAllUsesOfValueWith(OutChain, InChain);
+      DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), Op.getOperand(3));
+      return SDValue();
+    }
+    return Op;
+  }
+  case Intrinsic::amdgcn_waterfall_begin: {
+    // If the index in a waterfall.begin is uniform, it can be removed
+    if (!Op->getOperand(3)->isDivergent()) {
+      SDValue InChain = Op.getOperand(0);
+      SDValue OutChain = Op.getValue(1);
+      DAG.ReplaceAllUsesOfValueWith(OutChain, InChain);
+      DAG.ReplaceAllUsesOfValueWith(Op.getValue(0), Op.getOperand(2));
+    }
+    return Op;
+  }
   case Intrinsic::amdgcn_global_atomic_fmin_num:
   case Intrinsic::amdgcn_global_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num:

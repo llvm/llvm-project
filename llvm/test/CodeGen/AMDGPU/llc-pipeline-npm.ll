@@ -57,6 +57,7 @@
 ; GCN-O0-NEXT: localstackalloc)))
 ; GCN-O0-NEXT: require<reg-usage>
 ; GCN-O0-NEXT: cgscc(function(machine-function(reg-usage-propagation
+; GCN-O0-NEXT: si-insert-waterfall
 ; GCN-O0-NEXT: phi-node-elimination
 ; GCN-O0-NEXT: si-lower-control-flow
 ; GCN-O0-NEXT: two-address-instruction
@@ -186,6 +187,7 @@
 ; GCN-O2-NEXT: si-shrink-instructions)))
 ; GCN-O2-NEXT: require<reg-usage>
 ; GCN-O2-NEXT: cgscc(function(machine-function(reg-usage-propagation
+; GCN-O2-NEXT: si-insert-waterfall
 ; GCN-O2-NEXT: amdgpu-prepare-agpr-alloc
 ; GCN-O2-NEXT: detect-dead-lanes
 ; GCN-O2-NEXT: dead-mi-elimination
@@ -355,6 +357,7 @@
 ; GCN-O3-NEXT: si-shrink-instructions)))
 ; GCN-O3-NEXT: require<reg-usage>
 ; GCN-O3-NEXT: cgscc(function(machine-function(reg-usage-propagation
+; GCN-O3-NEXT: si-insert-waterfall
 ; GCN-O3-NEXT: amdgpu-prepare-agpr-alloc
 ; GCN-O3-NEXT: detect-dead-lanes
 ; GCN-O3-NEXT: dead-mi-elimination

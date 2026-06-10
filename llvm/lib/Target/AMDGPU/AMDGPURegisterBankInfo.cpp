@@ -5533,6 +5533,33 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
     }
+    case Intrinsic::amdgcn_waterfall_begin: {
+      unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned SizeSrc2 = getSizeInBits(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeDst);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeSrc2);
+      break;
+    }
+    case Intrinsic::amdgcn_waterfall_readfirstlane: {
+      unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned SizeSrc2 = getSizeInBits(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeDst);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeSrc2);
+      break;
+    }
+    case Intrinsic::amdgcn_waterfall_end: {
+      unsigned SizeDst = getSizeInBits(MI.getOperand(0).getReg(), MRI, *TRI);
+      unsigned SizeSrc1 = getSizeInBits(MI.getOperand(2).getReg(), MRI, *TRI);
+      unsigned SizeSrc2 = getSizeInBits(MI.getOperand(3).getReg(), MRI, *TRI);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeDst);
+      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, SizeSrc1);
+      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, SizeSrc2);
+      break;
+    }
     case Intrinsic::amdgcn_ds_gws_init:
     case Intrinsic::amdgcn_ds_gws_barrier:
     case Intrinsic::amdgcn_ds_gws_sema_br: {

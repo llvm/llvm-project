@@ -3248,6 +3248,24 @@ void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
   CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), SDValue(InterpP1LV, 0));
 }
 
+void AMDGPUDAGToDAGISel::SelectWaterfallIntrinsic(SDNode *N, unsigned IntrID) {
+  // op0=chain, op1=intrinsicID, op2=token(Untyped), op3=value
+  SDValue Chain = N->getOperand(0);
+  SDValue Tok = N->getOperand(2);
+  SDValue Val = N->getOperand(3);
+  unsigned SizeDwords = Val.getValueSizeInBits() / 32;
+  unsigned Opc = AMDGPU::getWaterfallPseudoOpcode(IntrID, SizeDwords);
+  assert(Opc && "Unsupported waterfall intrinsic value size");
+
+  SDVTList VTs;
+  if (IntrID == Intrinsic::amdgcn_waterfall_begin)
+    VTs = CurDAG->getVTList(MVT::i32, MVT::Other);
+  else
+    VTs = CurDAG->getVTList(N->getValueType(0), MVT::Other);
+
+  CurDAG->SelectNodeTo(N, Opc, VTs, {Tok, Val, Chain});
+}
+
 void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   unsigned IntrID = N->getConstantOperandVal(1);
   switch (IntrID) {
@@ -3269,6 +3287,11 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
         .getInfo<SIMachineFunctionInfo>()
         ->setInitWholeWave();
     break;
+  case Intrinsic::amdgcn_waterfall_begin:
+  case Intrinsic::amdgcn_waterfall_readfirstlane:
+  case Intrinsic::amdgcn_waterfall_end:
+    SelectWaterfallIntrinsic(N, IntrID);
+    return;
   }
 
   SelectCode(N);

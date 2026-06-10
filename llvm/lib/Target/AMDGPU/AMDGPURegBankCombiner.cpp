@@ -20,11 +20,14 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define GET_GICOMBINER_DEPS
@@ -93,6 +96,19 @@ public:
   void applyClamp(MachineInstr &MI, Register &Reg) const;
 
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
+
+  struct RmUniformWFMatchInfo {
+    Register Dst, WFReplaceReg;
+  };
+
+  // Combine support to remove amdgcn_waterfall_readfirstlane or
+  // amdgcn_waterfall_begin intrinsics if the index is determined to be
+  // uniform. The AMDGPUInsertWaterfall pass can handle their removal and in
+  // some cases remove the waterfall altogether
+  bool matchRmUniformWF(MachineInstr &MI,
+                        RmUniformWFMatchInfo &MatchInfo) const;
+  void applyRmUniformWF(MachineInstr &MI,
+                        RmUniformWFMatchInfo &MatchInfo) const;
 
   bool combineD16Load(MachineInstr &MI) const;
   bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
@@ -404,6 +420,44 @@ void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
   MRI.setRegBank(Mask.getReg(0), RB);
   MRI.setRegBank(And.getReg(0), RB);
   MI.eraseFromParent();
+}
+
+bool AMDGPURegBankCombinerImpl::matchRmUniformWF(
+    MachineInstr &MI, RmUniformWFMatchInfo &MatchInfo) const {
+  auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
+  Register Dst, WFReplaceReg;
+
+  switch (IntrID) {
+  case Intrinsic::amdgcn_waterfall_readfirstlane: {
+    Register IdxReg = MI.getOperand(3).getReg();
+    Register IdxSrcReg = getSrcRegIgnoringCopies(IdxReg, MRI);
+    if (!isVgprRegBank(IdxSrcReg)) {
+      WFReplaceReg = IdxSrcReg;
+      break;
+    }
+    return false;
+  }
+  case Intrinsic::amdgcn_waterfall_begin: {
+    Register IdxReg = MI.getOperand(3).getReg();
+    if (!isVgprRegBank(getSrcRegIgnoringCopies(IdxReg, MRI))) {
+      WFReplaceReg = MI.getOperand(2).getReg();
+      break;
+    }
+    return false;
+  }
+  default:
+    return false;
+  }
+
+  Dst = MI.getOperand(0).getReg();
+  MatchInfo = {Dst, WFReplaceReg};
+  return true;
+}
+
+void AMDGPURegBankCombinerImpl::applyRmUniformWF(
+    MachineInstr &MI, RmUniformWFMatchInfo &MatchInfo) const {
+  MI.eraseFromParent();
+  Helper.replaceRegWith(MRI, MatchInfo.Dst, MatchInfo.WFReplaceReg);
 }
 
 bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {

@@ -8061,6 +8061,10 @@ bool AMDGPULegalizerInfo::legalizeSetFPEnv(MachineInstr &MI,
   return true;
 }
 
+static void legalizeWaterfallTokenReg(MachineRegisterInfo &MRI, Register Reg) {
+  MRI.setType(Reg, LLT::scalar(32));
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -8561,6 +8565,17 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         .addMemOperand(*MI.memoperands_begin());
     MI.eraseFromParent();
     return true;
+  case Intrinsic::amdgcn_waterfall_begin:
+    // op0=token_result, op1=intrinsicID, op2=token_input, op3=value
+    legalizeWaterfallTokenReg(MRI, MI.getOperand(0).getReg());
+    legalizeWaterfallTokenReg(MRI, MI.getOperand(2).getReg());
+    return true;
+  case Intrinsic::amdgcn_waterfall_readfirstlane:
+  case Intrinsic::amdgcn_waterfall_end:
+    // op0=value_result, op1=intrinsicID, op2=token_input, op3=value
+    legalizeWaterfallTokenReg(MRI, MI.getOperand(2).getReg());
+    return true;
+
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

@@ -2015,6 +2015,125 @@ enabled this should map to ``scope:SCOPE_SE``.
 
 **Note:** Cache control bits for Store are not affected by WGP mode.
 
+'``llvm.amdgcn.waterfall``' Intrinsics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``llvm.amdgcn.waterfall`` :ref:`family of intrinsics<amdgpu-waterfall-intrinsics-table>`
+describes how to generate a waterfall loop around a region of code.
+
+:Background:
+
+A waterfall loop handles the case where an operation that requires a uniform
+operand (e.g., in an SGPR) is applied to a non-uniform operand (held in a
+VGPR, with values varying per lane).
+
+Each iteration of the waterfall loop activates a subset of lanes that share
+the same value of the non-uniform operand (the value in the first active
+lane). The operation is then executed using that value as the uniform
+operand.
+
+If the operand is already uniform, the waterfall loop executes only
+once. The worst case for a waterfall loop is one iteration per lane (all
+lanes have different values of the operand), but this is not common in
+practice.
+
+:Motivation:
+
+The ``llvm.amdgcn.waterfall.*`` intrinsics provide a practical way for a
+frontend to combine several operations into a single waterfall loop with an
+efficient iteration strategy over multiple non-uniform operands.
+
+In particular, a frontend can specify a set of values that
+is sufficient to use as the "index" to loop over, i.e., lanes that have the
+same index values must have the same values for all
+non-uniform operands that need to be uniform. It is hard for the
+backend to find a fitting index, but it can be easy
+for a frontend.
+
+:Implementation:
+
+A group of waterfall intrinsics that depend on the same token defines a
+single waterfall loop. The group identifies a region of code, the
+non-uniform operands that need to be made uniform, and the values
+to use as the "index" of the loop.
+
+A waterfall group must contain at least one
+``waterfall.begin``, at least one ``waterfall.readfirstlane``, and at least one
+``waterfall.end`` intrinsic.
+A group can contain more than one of each of the waterfall intrinsics.
+The token on the final
+``waterfall.begin`` must be used for other waterfall intrinsics in the same
+group. The waterfall loop will enclose all instructions from the earliest
+``waterfall.begin`` to the latest ``waterfall.end`` intrinsic in the group.
+
+Each ``waterfall.begin`` specifies a value that is part of the index. Each
+``waterfall.readfirstlane`` specifies a non-uniform operand that needs to be
+uniform. The index can be disjoint from the non-uniform operands. For
+example, ``waterfall.begin`` can take an index while
+``waterfall.readfirstlane`` takes a descriptor derived from that index.
+
+For example::
+
+  %tok0 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx0)
+  %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok, i32 %idx1)
+  %s_rsrc = call <8 x i32> @llvm.amdgcn.waterfall.readfirstlane.v8i32.v8i32(token %tok1, <8 x i32> %rsrc)
+  %s_srsrc = call <4 x i32> @llvm.amdgcn.waterfall.readfirstlane.v4i32.v4i32(token %tok1, <4 x i32> %srsrc)
+  %r = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(..., <8 x i32> %s_rsrc, <4 x i32> %s_srsrc, ...)
+  %r1 = call <4 x float> @llvm.amdgcn.waterfall.end.v4f32(token %tok1, <4 x float> %r)
+  ...
+
+Each waterfall group must be contained within a single basic block.
+A single basic block can contain more than one waterfall group.
+Waterfall regions must not overlap.
+
+Later compiler passes can remove parts of the index that are statically determined to be uniform
+(i.e., remove the corresponding ``waterfall.begin`` intrinsics).
+If all parts of the index are uniform, the compiler will not insert the waterfall loop.
+
+.. table:: AMDGPU Waterfall Intrinsics
+  :name: amdgpu-waterfall-intrinsics-table
+
+  ==============================================   =========================================================================
+  LLVM Intrinsic                                   Description
+  ==============================================   =========================================================================
+  ``llvm.amdgcn.waterfall.begin``                  Marks the beginning of a waterfall region of code.
+                                                   Specifies a value to be used as (part of) the index for the waterfall
+                                                   loop to iterate over.
+
+                                                   Multiple values of different types can be combined as
+                                                   an index by threading tokens through multiple ``waterfall.begin`` intrinsics::
+
+                                                     %tok0 = call token @llvm.amdgcn.waterfall.begin.i32(token poison, i32 %idx0)
+                                                     %tok1 = call token @llvm.amdgcn.waterfall.begin.i32(token %tok0, i32 %idx1)
+                                                     ...
+
+                                                   The intrinsic takes a token and a non-uniform value.
+                                                   Use ``poison`` as a token if this is the first ``waterfall.begin`` in a
+                                                   waterfall group.
+
+                                                   The intrinsic returns a new token that must be threaded through the
+                                                   corresponding ``waterfall.readfirstlane`` and ``waterfall.end``
+                                                   intrinsics.
+
+  ``llvm.amdgcn.waterfall.readfirstlane``          Reads the first active lane's value of a given non-uniform operand and
+                                                   returns it as a uniform value for use within a waterfall region.
+
+                                                   Takes a token from the final ``waterfall.begin`` in the waterfall
+                                                   group and a non-uniform operand. Returns the uniform result.
+
+                                                   The correctness requirement is that lanes with the same index values
+                                                   must have the same values for all ``waterfall.readfirstlane`` operands.
+
+                                                   The ``waterfall.readfirstlane`` intrinsic is a no-op if the index value
+                                                   is used directly in the body of the waterfall loop.
+
+  ``llvm.amdgcn.waterfall.end``                    Marks the end of a waterfall region.
+                                                   Takes the token from the final ``waterfall.begin`` in the group and
+                                                   a value that needs to be available after the waterfall loop.
+                                                   Effectively a no-op tagging a value as the end of the section.
+
+  ==============================================   =========================================================================
+
 '``llvm.amdgcn.cooperative.atomic``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

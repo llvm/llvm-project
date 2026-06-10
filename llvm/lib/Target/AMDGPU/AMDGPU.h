@@ -53,6 +53,7 @@ FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
+FunctionPass *createAMDGPUInsertWaterfallPass();
 FunctionPass *createSIPreAllocateWWMRegsLegacyPass();
 FunctionPass *createSIFormMemoryClausesLegacyPass();
 
@@ -243,6 +244,9 @@ extern char &SILateBranchLoweringPassID;
 
 void initializeSIOptimizeExecMaskingLegacyPass(PassRegistry &);
 extern char &SIOptimizeExecMaskingLegacyID;
+
+void initializeAMDGPUInsertWaterfallPass(PassRegistry &);
+extern char &AMDGPUInsertWaterfallID;
 
 void initializeSIPreAllocateWWMRegsLegacyPass(PassRegistry &);
 extern char &SIPreAllocateWWMRegsLegacyID;

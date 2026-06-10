@@ -129,6 +129,13 @@ struct WMMAInstInfo {
   bool HasMatrixScale;
 };
 
+struct WaterfallPseudoInfo {
+  unsigned Intr;
+  uint8_t SizeDwords;
+  unsigned Opcode;
+};
+
+#define GET_WaterfallPseudoTable_DECL
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
@@ -1919,6 +1926,9 @@ private:
 
   Kind AttrKind = Kind::Unknown;
 };
+
+LLVM_READONLY
+unsigned getWaterfallPseudoOpcode(unsigned IntrID, unsigned SizeDwords);
 
 } // namespace AMDGPU
 

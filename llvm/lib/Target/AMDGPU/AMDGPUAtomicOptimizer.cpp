@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
@@ -88,6 +89,8 @@ private:
 
   void optimizeAtomic(Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
                       bool ValDivergent) const;
+
+  void processBB(BasicBlock &BB);
 
 public:
   AMDGPUAtomicOptimizerImpl() = delete;
@@ -157,7 +160,8 @@ bool AMDGPUAtomicOptimizerImpl::run() {
   if (ST.isSingleLaneExecution(F))
     return false;
 
-  visit(F);
+  for (auto &BB : F)
+    processBB(BB);
   if (ToReplace.empty())
     return false;
 
@@ -178,6 +182,71 @@ static bool isLegalCrossLaneType(Type *Ty) {
   }
   default:
     return false;
+  }
+}
+
+static Instruction *findLastInWaterfall(Instruction &Begin) {
+  // Given Begin as the first begin for a waterfall group, look through the
+  // instructions tagged as part of the waterfall and return the last use.
+  // If the group is malformed, then return nullptr.
+
+  Instruction *FinalBegin = &Begin;
+
+  // Drill through any begin intrinsics
+  while (FinalBegin->hasOneUse()) {
+    IntrinsicInst *Intrin = dyn_cast<IntrinsicInst>(*FinalBegin->user_begin());
+    if (!Intrin ||
+        Intrin->getIntrinsicID() != Intrinsic::amdgcn_waterfall_begin)
+      break;
+    FinalBegin = Intrin;
+  }
+
+  Instruction *Last = FinalBegin;
+
+  for (auto Use : FinalBegin->users()) {
+    if (auto *Intrin = dyn_cast<IntrinsicInst>(Use)) {
+      switch (Intrin->getIntrinsicID()) {
+      default: {
+        // Unexpected intrinsic
+        return nullptr;
+      }
+      case Intrinsic::amdgcn_waterfall_begin:
+        // Badly formed WF group - should already have discovered the last begin
+        // intrinsic before entering this loop.
+        return nullptr;
+      case Intrinsic::amdgcn_waterfall_end:
+        if (Last->comesBefore(Intrin))
+          Last = Intrin;
+        break;
+      case Intrinsic::amdgcn_waterfall_readfirstlane:
+        // Always in the middle of a group - so doesn't have any effect on group
+        // detection
+        break;
+      }
+    }
+  }
+
+  return Last;
+}
+
+void AMDGPUAtomicOptimizerImpl::processBB(BasicBlock &BB) {
+  // Visit all instructions in a BB unless they're inside a waterfall loop
+  for (auto I = BB.begin(); I != BB.end(); ++I) {
+    if (auto *Intrin = dyn_cast<IntrinsicInst>(&*I)) {
+      if (Intrin->getIntrinsicID() == Intrinsic::amdgcn_waterfall_begin) {
+        auto *Last = findLastInWaterfall(*I);
+        if (!Last) {
+          // Malformed waterfall group - assume that all instructions in this
+          // BB are inside a waterfall group
+          return;
+        }
+        I = Last->getIterator();
+        continue;
+      }
+    }
+    // Safe to perform transformations on this instruction
+    // which is not inside a waterfall group
+    visit(*I);
   }
 }
 

@@ -109,6 +109,7 @@
 ; GCN-O0-NEXT:        Finalize ISel and expand pseudo-instructions
 ; GCN-O0-NEXT:        Local Stack Slot Allocation
 ; GCN-O0-NEXT:        Register Usage Information Propagation
+; GCN-O0-NEXT:        AMDGPU Insert waterfalls
 ; GCN-O0-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O0-NEXT:        SI Lower control flow pseudo instructions
 ; GCN-O0-NEXT:        Two-Address instruction pass
@@ -343,6 +344,7 @@
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        SI Shrink Instructions
 ; GCN-O1-NEXT:        Register Usage Information Propagation
+; GCN-O1-NEXT:        AMDGPU Insert waterfalls
 ; GCN-O1-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O1-NEXT:        Detect Dead Lanes
 ; GCN-O1-NEXT:        Remove dead machine instructions
@@ -351,6 +353,7 @@
 ; GCN-O1-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O1-NEXT:        Live Variable Analysis
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
+; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O1-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-NEXT:        SI Lower control flow pseudo instructions
@@ -361,6 +364,7 @@
 ; GCN-O1-NEXT:        Register Coalescer
 ; GCN-O1-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-NEXT:        Rewrite Partial Register Uses
+; GCN-O1-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Instruction Scheduler
 ; GCN-O1-NEXT:        SI Whole Quad Mode
 ; GCN-O1-NEXT:        SI optimize exec mask operations pre-RA
@@ -661,6 +665,7 @@
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        SI Shrink Instructions
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Propagation
+; GCN-O1-OPTS-NEXT:        AMDGPU Insert waterfalls
 ; GCN-O1-OPTS-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O1-OPTS-NEXT:        Detect Dead Lanes
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
@@ -668,6 +673,8 @@
 ; GCN-O1-OPTS-NEXT:        Process Implicit Definitions
 ; GCN-O1-OPTS-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O1-OPTS-NEXT:        Live Variable Analysis
+; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
+; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O1-OPTS-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O1-OPTS-NEXT:        SI Lower control flow pseudo instructions
@@ -678,6 +685,7 @@
 ; GCN-O1-OPTS-NEXT:        Register Coalescer
 ; GCN-O1-OPTS-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-OPTS-NEXT:        Rewrite Partial Register Uses
+; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Instruction Scheduler
 ; GCN-O1-OPTS-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O1-OPTS-NEXT:        SI Whole Quad Mode
@@ -983,6 +991,7 @@
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        SI Shrink Instructions
 ; GCN-O2-NEXT:        Register Usage Information Propagation
+; GCN-O2-NEXT:        AMDGPU Insert waterfalls
 ; GCN-O2-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O2-NEXT:        Detect Dead Lanes
 ; GCN-O2-NEXT:        Remove dead machine instructions
@@ -990,6 +999,8 @@
 ; GCN-O2-NEXT:        Process Implicit Definitions
 ; GCN-O2-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O2-NEXT:        Live Variable Analysis
+; GCN-O2-NEXT:        MachineDominator Tree Construction
+; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O2-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O2-NEXT:        SI Lower control flow pseudo instructions
@@ -1000,6 +1011,7 @@
 ; GCN-O2-NEXT:        Register Coalescer
 ; GCN-O2-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O2-NEXT:        Rewrite Partial Register Uses
+; GCN-O2-NEXT:        Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Instruction Scheduler
 ; GCN-O2-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O2-NEXT:        SI Whole Quad Mode
@@ -1319,6 +1331,7 @@
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Shrink Instructions
 ; GCN-O3-NEXT:        Register Usage Information Propagation
+; GCN-O3-NEXT:        AMDGPU Insert waterfalls
 ; GCN-O3-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions
@@ -1326,6 +1339,8 @@
 ; GCN-O3-NEXT:        Process Implicit Definitions
 ; GCN-O3-NEXT:        Remove unreachable machine basic blocks
 ; GCN-O3-NEXT:        Live Variable Analysis
+; GCN-O3-NEXT:        MachineDominator Tree Construction
+; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        SI Optimize VGPR LiveRange
 ; GCN-O3-NEXT:        Eliminate PHI nodes for register allocation
 ; GCN-O3-NEXT:        SI Lower control flow pseudo instructions
@@ -1336,6 +1351,7 @@
 ; GCN-O3-NEXT:        Register Coalescer
 ; GCN-O3-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O3-NEXT:        Rewrite Partial Register Uses
+; GCN-O3-NEXT:        Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Instruction Scheduler
 ; GCN-O3-NEXT:        AMDGPU Pre-RA optimizations
 ; GCN-O3-NEXT:        SI Whole Quad Mode

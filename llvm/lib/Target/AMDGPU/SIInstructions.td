@@ -1413,6 +1413,51 @@ def : GCNPat <
   (COPY $src) // Return the SGPRs representing i1 src
 >;
 
+// Waterfall pseudo ops - these are effectively specialized control flow pseudo
+// instructions.
+// They are tagged as defining SCC since the loop that gets inserted
+// will usually clobber it.
+// Selection is done in custom C++ because TableGen pattern matching fails for intrinsics
+// with token. TableGen type inference requires intrinsics and instruction types to be consistent,
+// but llvm_token_ty maps to MVT::token that cannot appear in any register class type list.
+// TODO: better definition for WaterfallTokenType. Tokens are eliminated
+// by AMDGPUInsertWaterfall pass, so WaterfallTokenType can use a dedicated "untyped"
+// zero-size non-allocatable type, but that would involve more changes in selection.
+def WaterfallTokenType : RegisterOperand<SReg_32>;
+
+let UseNamedOperandTable = 1, Defs = [SCC] in {
+
+class SI_WATERFALL_BEGIN<RegisterClass idx_rc> : SPseudoInstSI <
+  (outs WaterfallTokenType:$tok_ret),
+  (ins WaterfallTokenType:$tok, idx_rc:$idx)>;
+
+class SI_WATERFALL_READFIRSTLANE<RegisterClass dst_rc, RegisterClass src_rc> : SPseudoInstSI <
+  (outs dst_rc:$dst),
+  (ins WaterfallTokenType:$tok, src_rc:$src)>;
+
+class SI_WATERFALL_END<RegisterClass rc> : SPseudoInstSI <
+  (outs rc:$dst),
+  (ins WaterfallTokenType:$tok, rc:$src)>;
+
+} // End UseNamedOperandTable = 1
+
+// TODO: Do we still need the size variants (_V1, _V2, etc.) when selection
+// is in custom code?
+def SI_WATERFALL_BEGIN_V1 : SI_WATERFALL_BEGIN<VGPR_32>;
+def SI_WATERFALL_BEGIN_V2 : SI_WATERFALL_BEGIN<VReg_64>;
+def SI_WATERFALL_BEGIN_V4 : SI_WATERFALL_BEGIN<VReg_128>;
+def SI_WATERFALL_BEGIN_V8 : SI_WATERFALL_BEGIN<VReg_256>;
+
+def SI_WATERFALL_READFIRSTLANE_V1 : SI_WATERFALL_READFIRSTLANE<SReg_32_XM0, VGPR_32>;
+def SI_WATERFALL_READFIRSTLANE_V2 : SI_WATERFALL_READFIRSTLANE<SReg_64, VReg_64>;
+def SI_WATERFALL_READFIRSTLANE_V4 : SI_WATERFALL_READFIRSTLANE<SGPR_128, VReg_128>;
+def SI_WATERFALL_READFIRSTLANE_V8 : SI_WATERFALL_READFIRSTLANE<SReg_256, VReg_256>;
+
+def SI_WATERFALL_END_V1 : SI_WATERFALL_END<VGPR_32>;
+def SI_WATERFALL_END_V2 : SI_WATERFALL_END<VReg_64>;
+def SI_WATERFALL_END_V4 : SI_WATERFALL_END<VReg_128>;
+def SI_WATERFALL_END_V8 : SI_WATERFALL_END<VReg_256>;
+
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//

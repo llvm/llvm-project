@@ -62,6 +62,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUHazardLatency.cpp
   AMDGPUHSAMetadataStreamer.cpp
   AMDGPUInsertDelayAlu.cpp
+  AMDGPUInsertWaterfall.cpp
   AMDGPUInstCombineIntrinsic.cpp
   AMDGPUUniformIntrinsicCombine.cpp
   AMDGPUInstrInfo.cpp

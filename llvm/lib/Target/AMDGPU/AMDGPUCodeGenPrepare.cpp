@@ -267,6 +267,7 @@ public:
   bool visitMbcntHi(IntrinsicInst &I) const;
   bool visitVectorReduceAdd(IntrinsicInst &I);
   bool visitSaturatingAdd(IntrinsicInst &I);
+
   bool run();
 };
 
