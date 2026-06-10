@@ -16,6 +16,53 @@ body: |
     $al = SETCCr 5, implicit $eflags
 ...
 ---
+name: opt_zerocmp_logical_carry_cc
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_zerocmp_logical_carry_cc
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
+    ; CHECK-NEXT: [[OR32rr:%[0-9]+]]:gr32 = OR32rr [[COPY]], [[COPY1]], implicit-def $eflags
+    ; CHECK-NEXT: $al = SETCCr 7, implicit $eflags
+    %0:gr32 = COPY $esi
+    %1:gr32 = COPY $edi
+    %2:gr32 = OR32rr %0, %1, implicit-def dead $eflags
+    ; TEST should be removed. OR clears CF like TEST and sets the same ZF.
+    TEST32rr %2, %2, implicit-def $eflags
+    $al = SETCCr 7, implicit $eflags
+...
+---
+name: opt_zerocmp_logical_carry_cc_subreg
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_zerocmp_logical_carry_cc_subreg
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: [[AND32ri:%[0-9]+]]:gr32 = AND32ri [[COPY]], i32 255, implicit-def $eflags
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[AND32ri]], %subreg.sub_32bit
+    ; CHECK-NEXT: $al = SETCCr 7, implicit $eflags
+    %0:gr32 = COPY $esi
+    %1:gr32 = AND32ri %0, i32 255, implicit-def dead $eflags
+    %2:gr64 = SUBREG_TO_REG %1, %subreg.sub_32bit
+    ; TEST should be removed. AND clears CF like TEST and sets the same ZF.
+    TEST64rr %2, %2, implicit-def $eflags
+    $al = SETCCr 7, implicit $eflags
+...
+---
+name: opt_zerocmp_arith_carry_cc_noopt
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_zerocmp_arith_carry_cc_noopt
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
+    ; CHECK-NEXT: [[ADD32ri:%[0-9]+]]:gr32 = ADD32ri [[COPY]], i32 1, implicit-def dead $eflags
+    ; CHECK-NEXT: TEST32rr [[ADD32ri]], [[ADD32ri]], implicit-def $eflags
+    ; CHECK-NEXT: $al = SETCCr 7, implicit $eflags
+    %0:gr32 = COPY $esi
+    %1:gr32 = ADD32ri %0, i32 1, implicit-def dead $eflags
+    ; TEST should not be removed. ADD does not clear CF like TEST.
+    TEST32rr %1, %1, implicit-def $eflags
+    $al = SETCCr 7, implicit $eflags
+...
+---
 name: opt_zerocmp_1
 body: |
   bb.0:

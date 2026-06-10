@@ -1031,7 +1031,8 @@ static bool
 findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
                        const MachineRegisterInfo *MRI, MachineInstr **AndInstr,
                        const TargetRegisterInfo *TRI, const X86Subtarget &ST,
-                       bool &NoSignFlag, bool &ClearsOverflowFlag) {
+                       bool &NoSignFlag, bool &ClearsOverflowFlag,
+                       bool &ClearsCarryFlag) {
   if (!(CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG &&
         CmpInstr.getOpcode() == X86::TEST64rr) &&
       !(CmpValDefInstr.getOpcode() == X86::COPY &&
@@ -1136,6 +1137,7 @@ findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
     NoSignFlag = true;
     // ClearsOverflowFlag is true for AND operation (no surprise).
     ClearsOverflowFlag = true;
+    ClearsCarryFlag = true;
     return true;
   }
   return false;
@@ -4989,9 +4991,11 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
 /// Check whether the definition can be converted
 /// to remove a comparison against zero.
 inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
-                                    bool &ClearsOverflowFlag) {
+                                    bool &ClearsOverflowFlag,
+                                    bool &ClearsCarryFlag) {
   NoSignFlag = false;
   ClearsOverflowFlag = false;
+  ClearsCarryFlag = false;
 
   // "ELF Handling for Thread-Local Storage" specifies that x86-64 GOTTPOFF, and
   // i386 GOTNTPOFF/INDNTPOFF relocations can convert an ADD to a LEA during
@@ -5155,6 +5159,9 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   CASE_ND(OR32rm)
   CASE_ND(OR16rm)
   CASE_ND(OR8rm)
+    ClearsOverflowFlag = true;
+    ClearsCarryFlag = true;
+    return true;
   case X86::ANDN32rr:
   case X86::ANDN32rm:
   case X86::ANDN64rr:
@@ -5348,6 +5355,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   SmallVector<std::pair<MachineInstr *, unsigned>, 4> InstsToUpdate;
   bool NoSignFlag = false;
   bool ClearsOverflowFlag = false;
+  bool ClearsCarryFlag = false;
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
   bool HasNF = Subtarget.hasNF();
@@ -5368,7 +5376,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       //     testl %eax, %eax   // <-- can be removed
       if (&Inst == SrcRegDef) {
         if (IsCmpZero &&
-            isDefConvertible(Inst, NoSignFlag, ClearsOverflowFlag)) {
+            isDefConvertible(Inst, NoSignFlag, ClearsOverflowFlag,
+                             ClearsCarryFlag)) {
           MI = &Inst;
           break;
         }
@@ -5389,7 +5398,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         MachineInstr *AndInstr = nullptr;
         if (IsCmpZero &&
             findRedundantFlagInstr(CmpInstr, Inst, MRI, &AndInstr, TRI,
-                                   Subtarget, NoSignFlag, ClearsOverflowFlag)) {
+                                   Subtarget, NoSignFlag, ClearsOverflowFlag,
+                                   ClearsCarryFlag)) {
           assert(AndInstr != nullptr && X86::isAND(AndInstr->getOpcode()));
           MI = AndInstr;
           break;
@@ -5504,8 +5514,10 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       case X86::COND_AE:
       case X86::COND_B:
       case X86::COND_BE:
-        // CF is used, we can't perform this optimization.
-        return false;
+        // If CF is used, the instruction needs to clear it like CmpZero does.
+        if (!ClearsCarryFlag)
+          return false;
+        break;
       case X86::COND_G:
       case X86::COND_GE:
       case X86::COND_L:
