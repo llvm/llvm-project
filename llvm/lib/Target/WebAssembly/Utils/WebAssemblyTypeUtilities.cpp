@@ -67,7 +67,7 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
 }
 
 void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                                    ArrayRef<MVT> VTs) {
+                                    ArrayRef<MVT> VTs, bool Mutable) {
   assert(!Sym->getType());
 
   // Tables are represented as Arrays in LLVM IR therefore
@@ -94,6 +94,6 @@ void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
     Sym->setTableType(ValTy);
   } else {
     Sym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-    Sym->setGlobalType(wasm::WasmGlobalType{uint8_t(ValTy), /*Mutable=*/true});
+    Sym->setGlobalType(wasm::WasmGlobalType{uint8_t(ValTy), Mutable});
   }
 }

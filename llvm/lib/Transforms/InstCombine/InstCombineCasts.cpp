@@ -412,8 +412,18 @@ private:
     // done and and ready to have a positive verdict, we should double-check all
     // of the pending users and ensure that we visited them. allPendingVisited
     // predicate checks exactly that.
-    if (!I->hasOneUse())
-      llvm::append_range(Pending, I->users());
+    if (!I->hasOneUse()) {
+      for (Use &U : I->uses()) {
+        // For most instructions, evaluating them in a different type will
+        // change the type of all operands. This is not the case for select
+        // conditions. Make sure we don't retain an extra use via the select
+        // condition.
+        if (isa<SelectInst>(U.getUser()) && U.getOperandNo() == 0)
+          return false;
+
+        Pending.push_back(U.getUser());
+      }
+    }
 
     const bool Result = Pred(V, Ty);
     // We have to set result this way and not via It because Pred is recursive
