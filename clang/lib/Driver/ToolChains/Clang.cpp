@@ -8911,10 +8911,11 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back("-mno-incremental-linker-compatible");
   }
 
-  if (Args.hasFlag(options::OPT__SLASH_d1nodatetime,
-                   options::OPT__SLASH_d1nodatetime_, false)) {
+  bool HasNoDateTime = Args.hasFlag(options::OPT__SLASH_d1nodatetime,
+                                    options::OPT__SLASH_d1nodatetime_, false);
+
+  if (HasNoDateTime)
     CmdArgs.push_back("-init-datetime-macros=undefined");
-  }
 
   // /Brepro is an alias for -mincremental-linker-compatible option.
   if (!Args.hasFlag(options::OPT_mincremental_linker_compatible,
@@ -8924,10 +8925,8 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
                         .isDefaultIncrementalLinkerCompatibleByDefault())) {
     // Redefine the date/time macros only if /d1nodatetime wasn't specified.
     // This options does not allow the user redifinitions for these macros.
-    if (!Args.hasFlag(options::OPT__SLASH_d1nodatetime,
-                      options::OPT__SLASH_d1nodatetime_, false)) {
+    if (!HasNoDateTime)
       CmdArgs.push_back("-init-datetime-macros=literalone");
-    }
   }
 }
 
