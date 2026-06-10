@@ -2109,6 +2109,13 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
   if (NElems <= 1)
     return true;
 
+  Pointer FirstPtr = Ptr.atIndex(BaseIdx);
+  if (FirstPtr.isConst()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_modify_const_type)
+        << FirstPtr.getType();
+    return false;
+  }
+
   PrimType ElemT = *S.getContext().classify(ElemTy);
 
   for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {

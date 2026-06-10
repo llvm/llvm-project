@@ -286,4 +286,12 @@ constexpr bool test_uninit() {
 }
 static_assert(test_uninit(), ""); // both-error{{not an integral constant expression}} both-note{{in call to 'test_uninit()'}}
 
+// Reversing const-qualified array: must be rejected in a constant expression.
+constexpr bool test_const_violation_array() { // both-error{{constexpr function never produces a constant expression}}
+  const unsigned char buf[4] = {0x01, 0x02, 0x03, 0x04};
+  __builtin_stdc_memreverse8(4, const_cast<unsigned char *>(buf)); // both-note 2{{modification of object of const-qualified type 'const unsigned char' is not allowed in a constant expression}}
+  return true;
+}
+static_assert(test_const_violation_array(), ""); // both-error{{not an integral constant expression}} both-note{{in call to 'test_const_violation_array()'}}
+
 } // namespace test_negative
