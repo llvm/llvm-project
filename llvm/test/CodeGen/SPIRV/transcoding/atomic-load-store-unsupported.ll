@@ -10,7 +10,7 @@
 
 ; RUN: not llc -O0 -mtriple=spirv %t/load-ptr-vulkan.ll -o /dev/null 2>&1 | FileCheck --check-prefix=FAIL-LOAD-PTR %s
 
-; FAIL-LOAD-VEC: error:{{.*}}atomic load is only allowed for integer or floating point types
+; FAIL-LOAD-VEC: error:{{.*}}atomic load is only allowed for integer, floating point or pointer types
 ; FAIL-STORE-VEC: error:{{.*}}atomic store is only allowed for integer or floating point types
 ; FAIL-STORE-PTR: error:{{.*}}atomic store is only allowed for pointer types for physical addressing model
 ; FAIL-LOAD-PTR: error:{{.*}}atomic load is only allowed for pointer types for physical addressing model
