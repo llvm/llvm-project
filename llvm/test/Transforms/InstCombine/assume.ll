@@ -178,6 +178,27 @@ define void @align_with_variable_offset(ptr %ptr, i64 %offset) {
   ret void
 }
 
+define void @align_on_gep_keeping_alignment(ptr %ptr, i64 %offset) {
+; CHECK-LABEL: @align_on_gep_keeping_alignment(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8) ]
+  ret void
+}
+
+define void @align_on_gep_not_keeping_alignment(ptr %ptr, i64 %offset) {
+; CHECK-LABEL: @align_on_gep_not_keeping_alignment(
+; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr [4 x i8], ptr [[PTR:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [4 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8) ]
+  ret void
+}
+
 define void @redundant_align() {
 ; CHECK-LABEL: @redundant_align(
 ; CHECK-NEXT:    [[PTR:%.*]] = call ptr @get_ptr()

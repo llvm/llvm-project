@@ -3665,6 +3665,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
           return RemoveBundle();
 
+        if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
+            GEP &&
+            GEP->getMaxPreservedAlignment(getDataLayout()) >= *Alignment) {
+          Builder.CreateAlignmentAssumption(
+              getDataLayout(), GEP->getPointerOperand(), *Alignment);
+          return RemoveBundle();
+        }
+
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
         // the align argument attribute disappears.
