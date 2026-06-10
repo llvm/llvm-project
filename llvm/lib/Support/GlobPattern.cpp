@@ -138,10 +138,10 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
 }
 
 static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
+  const char *Metas =
+      SlashAgnostic ? PrefixMetacharactersWithSlash : PrefixMetacharacters;
   StringRef Best;
   while (!S.empty()) {
-    const char *Metas =
-        SlashAgnostic ? PrefixMetacharactersWithSlash : PrefixMetacharacters;
     size_t PrefixSize = S.find_first_of(Metas);
     if (PrefixSize == std::string::npos)
       PrefixSize = S.size();
