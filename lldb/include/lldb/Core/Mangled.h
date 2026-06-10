@@ -332,6 +332,9 @@ private:
   /// parts of the name (e.g., basename, arguments, etc.) begin and end.
   mutable std::unique_ptr<DemangledNameInfo> m_demangled_info;
 };
+static_assert(sizeof(Mangled) <= 2 * sizeof(ConstString) +
+                                     sizeof(std::unique_ptr<DemangledNameInfo>),
+              "High-volume object, size of object must be increased with care");
 
 Stream &operator<<(Stream &s, const Mangled &obj);
 

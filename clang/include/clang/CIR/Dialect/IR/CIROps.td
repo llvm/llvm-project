@@ -1868,8 +1868,9 @@ class CIR_UnaryOpWithOverflowFlag<string mnemonic, Type type,
 // IncOp
 //===----------------------------------------------------------------------===//
 
-def CIR_IncOp : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyType> {
-  let summary = "Increment by one";
+def CIR_IncOp
+    : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Increment an integer by one";
   let description = [{
     The `cir.inc` operation increments the operand by one. The operand and
     result must have the same type.
@@ -1892,8 +1893,9 @@ def CIR_IncOp : CIR_UnaryOpWithOverflowFlag<"inc", CIR_AnyType> {
 // DecOp
 //===----------------------------------------------------------------------===//
 
-def CIR_DecOp : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyType> {
-  let summary = "Decrement by one";
+def CIR_DecOp
+    : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Decrement an integer by one";
   let description = [{
     The `cir.dec` operation decrements the operand by one. The operand and
     result must have the same type.
@@ -1916,8 +1918,9 @@ def CIR_DecOp : CIR_UnaryOpWithOverflowFlag<"dec", CIR_AnyType> {
 // MinusOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
-  let summary = "Unary minus (negation)";
+def CIR_MinusOp
+    : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyIntOrVecOfIntType> {
+  let summary = "Integer unary minus (negation)";
   let description = [{
     The `cir.minus` operation negates the operand. The operand and result
     must have the same type.
@@ -1931,7 +1934,6 @@ def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
     ```
     %1 = cir.minus %0 : !s32i
     %3 = cir.minus nsw %2 : !s32i
-    %5 = cir.minus %4 : !cir.float
     ```
   }];
 
@@ -1942,7 +1944,7 @@ def CIR_MinusOp : CIR_UnaryOpWithOverflowFlag<"minus", CIR_AnyType> {
 // NotOp
 //===----------------------------------------------------------------------===//
 
-def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyType, [Involution]> {
+def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyBitwiseType, [Involution]> {
   let summary = "Bitwise NOT / logical NOT";
   let description = [{
     The `cir.not` operation performs a bitwise NOT on integer types or a
@@ -1958,6 +1960,30 @@ def CIR_NotOp : CIR_UnaryOp<"not", CIR_AnyType, [Involution]> {
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// FNegOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FNegOp : CIR_UnaryOp<"fneg", CIR_AnyFloatOrVecOfFloatType> {
+  let summary = "Floating-point negation";
+  let description = [{
+    The `cir.fneg` operation negates the operand. The operand and result must
+    have the same type.
+
+    Example:
+
+    ```
+    %1 = cir.fneg %0 : !cir.float
+    %3 = cir.fneg %2 : !cir.double
+    %5 = cir.fneg %4 : !cir.vector<4 x !cir.float>
+    ```
+  }];
+
+  let hasFolder = 1;
+
+  let llvmOp = "FNegOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2436,7 +2462,7 @@ def CIR_AddOp
   let description = [{
     The `cir.add` operation performs addition on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type. Floating-point addition is performed by `cir.fadd`.
+    type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2466,7 +2492,7 @@ def CIR_SubOp
   let description = [{
     The `cir.sub` operation performs subtraction on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type. Floating-point subtraction is performed by `cir.fsub`.
+    type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -2494,7 +2520,7 @@ def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOfIntType> {
   let description = [{
     The `cir.mul` operation performs multiplication on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
-    type. Floating-point multiplication is performed by `cir.fmul`.
+    type.
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
@@ -4850,6 +4876,7 @@ def CIR_LifetimeStartOp : CIR_Op<"lifetime.start"> {
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
   let hasVerifier = 1;
+  let llvmOp = "LifetimeStartOp";
 }
 
 def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
@@ -4885,6 +4912,7 @@ def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
   let hasVerifier = 1;
+  let llvmOp = "LifetimeEndOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6060,6 +6088,34 @@ def CIR_ComplexDivOp : CIR_ComplexRangeBinOp<"complex.div"> {
     %2 = cir.complex.div %0, %1 range(full) : !cir.complex<!cir.float>
     ```
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexConjOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ComplexConjOp
+    : CIR_Op<"complex.conj", [Pure, SameOperandsAndResultType]> {
+  let summary = "Complex conjugate";
+  let description = [{
+    The `cir.complex.conj` operation takes a complex number and returns its
+    complex conjugate, which is formed by negating the imaginary part.
+
+    Example:
+
+    ```
+    %1 = cir.complex.conj %0 : !cir.complex<!cir.float>
+    ```
+  }];
+
+  let arguments = (ins CIR_ComplexType:$operand);
+  let results = (outs CIR_ComplexType:$result);
+
+  let assemblyFormat = [{
+    $operand `:` qualified(type($operand)) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
 }
 
 //===----------------------------------------------------------------------===//

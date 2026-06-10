@@ -383,13 +383,20 @@ ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
   result.m_alignment = extractor.GetU32_unchecked(&cursor);
   result.m_size = extractor.GetU32_unchecked(&cursor);
 
-  process->ReadCStringFromMemory(result.m_name_ptr, result.m_name, error);
-  if (error.Fail())
-    return error.takeError();
+  llvm::SmallVector<std::optional<std::string>> strs =
+      process->ReadCStringsFromMemory({result.m_name_ptr, result.m_type_ptr});
 
-  process->ReadCStringFromMemory(result.m_type_ptr, result.m_type, error);
-  if (error.Fail())
-    return error.takeError();
+  if (!strs[0])
+    return llvm::createStringErrorV(
+        "failed to read ivar_t::m_name_str at address {0:x}",
+        result.m_name_ptr);
+  if (!strs[1])
+    return llvm::createStringErrorV(
+        "failed to read ivar_t::m_type_str at address {0:x}",
+        result.m_type_ptr);
+
+  result.m_name = std::move(*strs[0]);
+  result.m_type = std::move(*strs[1]);
   return result;
 }
 
@@ -527,19 +534,12 @@ llvm::Error ClassDescriptorV2::ProcessRelativeMethodLists(
     if (!method_list)
       return method_list.takeError();
 
-    // 5. Cache the result so we don't need to reconstruct it later.
-    m_image_to_method_lists[entry.m_image_index].emplace_back(*method_list);
-
-    // 6. If the relevant image is loaded, add the methods to the Decl
+    // 5. If the relevant image is loaded, add the methods to the Decl
     if (!m_runtime.IsSharedCacheImageLoaded(entry.m_image_index))
       continue;
 
     ProcessMethodList(instance_method_func, *method_list);
   }
-
-  // We need to keep track of the last time we updated so we can re-update the
-  // type information in the future
-  m_last_version_updated = m_runtime.GetSharedCacheImageHeaderVersion();
 
   return llvm::Error::success();
 }

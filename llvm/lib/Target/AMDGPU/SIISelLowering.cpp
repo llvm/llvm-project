@@ -4492,6 +4492,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         SDValue Cpy =
             DAG.getMemcpy(Chain, DL, DstAddr, Arg, SizeNode,
                           Outs[i].Flags.getNonZeroByValAlign(),
+                          Outs[i].Flags.getNonZeroByValAlign(),
                           /*isVol = */ false, /*AlwaysInline = */ true,
                           /*CI=*/nullptr, std::nullopt, DstInfo,
                           MachinePointerInfo(AMDGPUAS::PRIVATE_ADDRESS));
@@ -16279,7 +16280,7 @@ SDValue SITargetLowering::performMinMaxCombine(SDNode *N,
     unsigned BitWidth = FfbhSrc.getValueType().getScalarSizeInBits();
     if (Clamp >= BitWidth) {
       KnownBits Known = DAG.computeKnownBits(FfbhSrc);
-      if (Known.isNonZero() && !Known.isAllOnes())
+      if (Known.isNonZero() && Known.Zero.getBoolValue())
         return Op0;
     }
   }
