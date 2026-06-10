@@ -18,8 +18,8 @@
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
-#include "SIMachineFunctionInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -1316,13 +1316,12 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     Register AllocSize = MI.getOperand(1).getReg();
     Align Alignment = assumeAligned(MI.getOperand(2).getImm());
 
-    // After lowering Dst is used by another instruction, need to erase old MI
-    // to avoid hitting multiple Dst assert since we use CSE builder
+    // Erase before building new instrs to avoid hitting multiple Dst assert
+    // with CSE.
     B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
     MI.eraseFromParent();
 
-    const RegisterBank *SizeBank = MRI.getRegBank(AllocSize);
-    if (SizeBank != SgprRB) {
+    if (MRI.getRegBank(AllocSize) != SgprRB) {
       auto WaveReduction =
           B.buildIntrinsic(Intrinsic::amdgcn_wave_reduce_umax, {SgprRB_S32})
               .addUse(AllocSize)
@@ -1331,7 +1330,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     }
 
     LLT PtrTy = MRI.getType(Dst);
-    LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
+    assert(PtrTy.getSizeInBits() == 32 &&
+           "Expected 32-bit pointer for stack allocation");
     const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
     Register SPReg = Info->getStackPtrOffsetReg();
 
@@ -1342,31 +1342,23 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     Register AdjustedSize = AllocSize;
     if (!HasFlatScratch) {
       auto WaveSize = B.buildConstant(SgprRB_S32, WavefrontSizeLog2);
-      AdjustedSize =
-          B.buildShl({SgprRB, IntPtrTy}, AllocSize, WaveSize).getReg(0);
+      AdjustedSize = B.buildShl(SgprRB_S32, AllocSize, WaveSize).getReg(0);
     }
-    auto OldSP = B.buildCopy({SgprRB, PtrTy}, SPReg);
-
     if (Alignment > TFI.getStackAlign()) {
       const uint64_t EffectiveAlignment =
-          HasFlatScratch ? Alignment.value()
-                         : (Alignment.value() << WavefrontSizeLog2);
-      const uint64_t StackAlignMask = EffectiveAlignment - 1;
+          Alignment.value() << (HasFlatScratch ? 0 : WavefrontSizeLog2);
+      auto OldSP = B.buildCopy({SgprRB, PtrTy}, SPReg);
       auto Tmp1 =
           B.buildPtrAdd({SgprRB, PtrTy}, OldSP,
-                        B.buildConstant({SgprRB, IntPtrTy}, StackAlignMask));
-      auto MaskReg = B.buildConstant(
-          {SgprRB, IntPtrTy},
-          maskTrailingZeros<uint64_t>(HasFlatScratch ? Log2(Alignment)
-                                                     : Log2(Alignment) +
-                                                           WavefrontSizeLog2));
-      B.buildPtrMask(Dst, Tmp1, MaskReg);
+                        B.buildConstant(SgprRB_S32, EffectiveAlignment - 1));
+      uint64_t Mask = maskTrailingZeros<uint64_t>(Log2_64(EffectiveAlignment));
+      B.buildPtrMask(Dst, Tmp1, B.buildConstant(SgprRB_S32, Mask));
     } else {
-      B.buildCopy(Dst, OldSP);
+      B.buildCopy(Dst, SPReg);
     }
     auto PtrAdd = B.buildPtrAdd({SgprRB, PtrTy}, Dst, AdjustedSize);
     B.buildCopy(SPReg, PtrAdd);
-    break;
+    return true;
   }
   case WidenLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
