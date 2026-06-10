@@ -99,34 +99,27 @@
 
 /// DEMANGLE_ABI is the export/visibility macro used to mark symbols declared in
 /// llvm/Demangle as exported when built as a shared library.
+// clang-format off
+// Autoformatting removes indentation, making this harder to read.
 #if !defined(DEMANGLE_ABI)
-
-#if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
-
-#define DEMANGLE_ABI
-
-#else // !(defined(LLVM_BUILD_STATIC) || [...])
-
-#if defined(_WIN32) && !defined(__MINGW32__)
-
-#if defined(LLVM_EXPORTS)
-#define DEMANGLE_ABI __declspec(dllexport)
-#else // !defined(LLVM_EXPORTS)
-#define DEMANGLE_ABI __declspec(dllimport)
-#endif // defined(LLVM_EXPORTS)
-
-#else // !(defined(_WIN32) && !defined(__MINGW32__))
-
-#if __has_attribute(visibility)
-#define DEMANGLE_ABI __attribute__((__visibility__("default")))
-#else // !__has_attribute(visibility)
-#define DEMANGLE_ABI
-#endif // __has_attribute(visibility)
-
-#endif // defined(_WIN32) && !defined(__MINGW32__)
-
-#endif // defined(LLVM_BUILD_STATIC) || [...]
-
-#endif // !defined(DEMANGLE_ABI)
+# if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
+#  define DEMANGLE_ABI
+# else
+#  if defined(_WIN32) && !defined(__MINGW32__)
+#   if defined(LLVM_EXPORTS)
+#    define DEMANGLE_ABI __declspec(dllexport)
+#   else
+#    define DEMANGLE_ABI __declspec(dllimport)
+#   endif
+#  else
+#   if __has_attribute(visibility)
+#    define DEMANGLE_ABI __attribute__((__visibility__("default")))
+#   else
+#    define DEMANGLE_ABI
+#   endif
+#  endif
+# endif
+#endif
+// clang-format on
 
 #endif
