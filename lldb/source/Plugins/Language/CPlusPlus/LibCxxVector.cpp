@@ -86,7 +86,9 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
   // delete m_finish;
 }
 
-static llvm::Expected<uint32_t> CalculateNumChildrenUsingPointerArithmetic(ValueObject* begin, ValueObject* end, uint64_t value_type_size) {
+static llvm::Expected<uint32_t>
+CalculateNumChildrenUsingPointerArithmetic(ValueObject *begin, ValueObject *end,
+                                           uint64_t value_type_size) {
   uint64_t start_val = begin->GetValueAsUnsigned(0);
   uint64_t finish_val = end->GetValueAsUnsigned(0);
 
@@ -111,9 +113,10 @@ static llvm::Expected<uint32_t> CalculateNumChildrenUsingPointerArithmetic(Value
   return num_children / value_type_size;
 }
 
-static llvm::Expected<uint32_t> GetNumChildren(ValueObject* size) {
+static llvm::Expected<uint32_t> GetNumChildren(ValueObject *size) {
   if (!size->GetCompilerType().IsInteger())
-    return llvm::createStringError("size data member must be a built-in integer type");
+    return llvm::createStringError(
+        "size data member must be a built-in integer type");
   return size->GetValueAsUnsigned(0);
 }
 
@@ -124,10 +127,11 @@ llvm::Expected<uint32_t> lldb_private::formatters::
         "failed to determine start/end of vector data");
 
   switch (m_layout) {
-    case VectorLayout::Pointer:
-      return CalculateNumChildrenUsingPointerArithmetic(m_start, m_finish, m_element_size);
-    case VectorLayout::Size:
-      return GetNumChildren(m_finish);
+  case VectorLayout::Pointer:
+    return CalculateNumChildrenUsingPointerArithmetic(m_start, m_finish,
+                                                      m_element_size);
+  case VectorLayout::Size:
+    return GetNumChildren(m_finish);
   }
 }
 
