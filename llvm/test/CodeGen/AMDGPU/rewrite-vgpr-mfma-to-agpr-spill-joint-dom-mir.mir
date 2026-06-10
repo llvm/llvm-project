@@ -12,14 +12,9 @@
 # CHECK: Skipping ${{[a-zA-Z0-9_]+}}: some reachable load not jointly dominated by stores
 
 --- |
-  define amdgpu_kernel void @rewrite_vgpr_mfma_to_agpr_spill_joint_dom(i1 %arg, <16 x float> %.sroa.366.2) #0 {
-    %kernarg.segment = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
-    %.kernarg.offset.align.down66 = bitcast ptr addrspace(4) %kernarg.segment to ptr addrspace(4)
-    %.sroa.366.2.kernarg.offset = getelementptr inbounds i8, ptr addrspace(4) %kernarg.segment, i64 64
-    unreachable
+  define amdgpu_kernel void @rewrite_vgpr_mfma_to_agpr_spill_joint_dom() #0 {
+    ret void
   }
-
-  declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 
   attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
 ...
@@ -34,7 +29,7 @@ body:             |
     liveins: $sgpr4_sgpr5
 
     %0:sgpr_64 = COPY killed $sgpr4_sgpr5
-    %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0 :: (dereferenceable invariant load (s32) from %ir..kernarg.offset.align.down66, align 16, addrspace 4)
+    %1:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %0, 0, 0 :: (dereferenceable invariant load (s32), align 16, addrspace 4)
     S_BITCMP1_B32 killed %1, 0, implicit-def $scc
     %2:sreg_64_xexec = S_CSELECT_B64 -1, 0, implicit killed $scc
     %3:sreg_64 = S_MOV_B64 -1
@@ -57,7 +52,7 @@ body:             |
     %7.sub13:av_512_align2 = COPY %6
     %7.sub14:av_512_align2 = COPY %6
     %7.sub15:av_512_align2 = COPY %6
-    early-clobber %8:sgpr_512 = S_LOAD_DWORDX16_IMM_ec killed %0, 64, 0 :: (dereferenceable invariant load (s512) from %ir..sroa.366.2.kernarg.offset, align 16, addrspace 4)
+    early-clobber %8:sgpr_512 = S_LOAD_DWORDX16_IMM_ec killed %0, 64, 0 :: (dereferenceable invariant load (s512), align 16, addrspace 4)
     %9:sreg_64 = S_MOV_B64 0
     %10:vreg_512_align2 = COPY %7, implicit $exec
     %11:sreg_64 = S_AND_B64 $exec, killed %4, implicit-def dead $scc
