@@ -452,6 +452,94 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
   newCall->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, newArgAttrs));
 }
 
+/// Rewrite an indirect-return (sret) call site: prepend a return-slot
+/// pointer as operand 0, make the call return void, and either reuse a
+/// dominating single-use store destination as the slot (so construction
+/// flows directly into it) or allocate a fresh slot and load the result
+/// back out.  \p newArgs is the already-shaped (Ignore-dropped,
+/// coercion-applied) non-sret argument list.  The caller guarantees the
+/// call has a result and an indirect-return classification.
+void rewriteIndirectReturnCall(cir::CallOp call,
+                               const FunctionClassification &fc,
+                               llvm::ArrayRef<mlir::Value> newArgs,
+                               mlir::Type origRetTy, mlir::OpBuilder &builder) {
+  mlir::MLIRContext *ctx = call->getContext();
+  auto ptrTy = cir::PointerType::get(origRetTy);
+  builder.setInsertionPoint(call);
+  uint64_t sretAlign = fc.returnInfo.indirectAlign.value();
+
+  // CIRGen emits `cir.store %callResult, %dest` when the call's result is
+  // bound to a local (e.g. `T s = make();`).  Allocating a fresh sret slot
+  // and copying into %dest would byte-copy the record, which is wrong for
+  // non-trivially-copyable types (the libstdc++ SSO `_M_p` pointer
+  // survives a byte-copy but ends up pointing at the dying temp's local
+  // buffer, so the destination's destructor later `free()`s a stack
+  // pointer).  When the result has a single store-into-%dest use, use
+  // %dest as the sret slot directly so construction flows into it,
+  // matching classic CodeGen's "pass %s as sret" pattern.  %dest must
+  // dominate the call so the rewritten call (which takes it as operand 0)
+  // does not use a value before its definition.
+  mlir::Value sretSlot = nullptr;
+  cir::StoreOp reuseStore = nullptr;
+  if (call.getResult().hasOneUse()) {
+    mlir::Operation *user = *call.getResult().getUsers().begin();
+    if (auto store = mlir::dyn_cast<cir::StoreOp>(user))
+      if (store.getValue() == call.getResult() &&
+          store.getAddr().getType() == ptrTy &&
+          mlir::DominanceInfo().properlyDominates(store.getAddr(), call)) {
+        sretSlot = store.getAddr();
+        reuseStore = store;
+      }
+  }
+  if (!sretSlot) {
+    auto alloca = cir::AllocaOp::create(
+        builder, call.getLoc(), ptrTy, origRetTy,
+        /*name=*/builder.getStringAttr("sret"),
+        /*alignment=*/builder.getI64IntegerAttr(sretAlign));
+    sretSlot = alloca;
+  }
+
+  llvm::SmallVector<mlir::Value> sretArgs;
+  sretArgs.push_back(sretSlot);
+  sretArgs.append(newArgs.begin(), newArgs.end());
+
+  mlir::Type sretVoidTy = cir::VoidType::get(ctx);
+  auto newCall = cir::CallOp::create(
+      builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
+  for (mlir::NamedAttribute attr : call->getAttrs())
+    if (!newCall->hasAttr(attr.getName()))
+      newCall->setAttr(attr.getName(), attr.getValue());
+
+  // Shape the per-argument attrs exactly as the non-sret path does
+  // (signext / zeroext for Extend, drop Ignore slots) before prepending
+  // the sret slot, so sret composes correctly with Extend / Ignore args.
+  mlir::ArrayAttr argAttrs = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
+  bool needsArgAttrUpdate =
+      llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
+      });
+  if (needsArgAttrUpdate)
+    argAttrs = updateArgAttrs(ctx, argAttrs, fc);
+  applySretSlotAttrs(newCall, argAttrs, origRetTy, sretAlign, builder);
+
+  if (reuseStore) {
+    // The callee now constructs directly into the destination slot, so the
+    // original store-from-result is redundant; dropping it avoids a
+    // byte-copy of the record.
+    reuseStore->erase();
+  } else {
+    builder.setInsertionPointAfter(newCall);
+    auto load = cir::LoadOp::create(builder, call.getLoc(), origRetTy, sretSlot,
+                                    /*isDeref=*/mlir::UnitAttr(),
+                                    /*isVolatile=*/mlir::UnitAttr(),
+                                    /*alignment=*/mlir::IntegerAttr(),
+                                    /*sync_scope=*/cir::SyncScopeKindAttr(),
+                                    /*mem_order=*/cir::MemOrderAttr());
+    call.getResult().replaceAllUsesWith(load);
+  }
+  call->erase();
+}
+
 } // namespace
 
 mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
@@ -678,87 +766,12 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   mlir::Type origRetTy =
       hasResult ? call.getResult().getType() : cir::VoidType::get(ctx);
 
-  // sret return: prepend a return-slot pointer to the call, make the call
-  // return void, and load the result back out of the slot.  Handled as an
-  // early return because the coerce / extend / ignore return handling below
-  // does not apply to an indirect return.
+  // An indirect (sret) return has a different call shape than the coerce /
+  // extend / ignore return handling further down (the value is returned
+  // through a prepended pointer slot, not as a result), so dispatch to a
+  // dedicated helper for it; everything below handles the by-value returns.
   if (fc.returnInfo.kind == ArgKind::Indirect && hasResult) {
-    auto ptrTy = cir::PointerType::get(origRetTy);
-    builder.setInsertionPoint(call);
-    uint64_t sretAlign = fc.returnInfo.indirectAlign.value();
-
-    // CIRGen emits `cir.store %callResult, %dest` when the call's result is
-    // bound to a local (e.g. `T s = make();`).  Allocating a fresh sret slot
-    // and copying into %dest would byte-copy the record, which is wrong for
-    // non-trivially-copyable types (the libstdc++ SSO `_M_p` pointer
-    // survives a byte-copy but ends up pointing at the dying temp's local
-    // buffer, so the destination's destructor later `free()`s a stack
-    // pointer).  When the result has a single store-into-%dest use, use
-    // %dest as the sret slot directly so construction flows into it,
-    // matching classic CodeGen's "pass %s as sret" pattern.  %dest must
-    // dominate the call so the rewritten call (which takes it as operand 0)
-    // does not use a value before its definition.
-    mlir::Value sretSlot = nullptr;
-    cir::StoreOp reuseStore = nullptr;
-    if (call.getResult().hasOneUse()) {
-      mlir::Operation *user = *call.getResult().getUsers().begin();
-      if (auto store = mlir::dyn_cast<cir::StoreOp>(user))
-        if (store.getValue() == call.getResult() &&
-            store.getAddr().getType() == ptrTy &&
-            mlir::DominanceInfo().properlyDominates(store.getAddr(), call)) {
-          sretSlot = store.getAddr();
-          reuseStore = store;
-        }
-    }
-    if (!sretSlot) {
-      auto alloca = cir::AllocaOp::create(
-          builder, call.getLoc(), ptrTy, origRetTy,
-          /*name=*/builder.getStringAttr("sret"),
-          /*alignment=*/builder.getI64IntegerAttr(sretAlign));
-      sretSlot = alloca;
-    }
-
-    llvm::SmallVector<mlir::Value> sretArgs;
-    sretArgs.push_back(sretSlot);
-    sretArgs.append(newArgs.begin(), newArgs.end());
-
-    mlir::Type sretVoidTy = cir::VoidType::get(ctx);
-    auto newCall = cir::CallOp::create(
-        builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
-    for (mlir::NamedAttribute attr : call->getAttrs())
-      if (!newCall->hasAttr(attr.getName()))
-        newCall->setAttr(attr.getName(), attr.getValue());
-
-    // Shape the per-argument attrs exactly as the non-sret path does
-    // (signext / zeroext for Extend, drop Ignore slots) before prepending
-    // the sret slot, so sret composes correctly with Extend / Ignore args.
-    mlir::ArrayAttr argAttrs =
-        call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
-    bool needsArgAttrUpdate =
-        llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-          return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
-        });
-    if (needsArgAttrUpdate)
-      argAttrs = updateArgAttrs(ctx, argAttrs, fc);
-    applySretSlotAttrs(newCall, argAttrs, origRetTy, sretAlign, builder);
-
-    if (reuseStore) {
-      // The callee now constructs directly into the destination slot, so the
-      // original store-from-result is redundant; dropping it avoids a
-      // byte-copy of the record.
-      reuseStore->erase();
-    } else {
-      builder.setInsertionPointAfter(newCall);
-      auto load =
-          cir::LoadOp::create(builder, call.getLoc(), origRetTy, sretSlot,
-                              /*isDeref=*/mlir::UnitAttr(),
-                              /*isVolatile=*/mlir::UnitAttr(),
-                              /*alignment=*/mlir::IntegerAttr(),
-                              /*sync_scope=*/cir::SyncScopeKindAttr(),
-                              /*mem_order=*/cir::MemOrderAttr());
-      call.getResult().replaceAllUsesWith(load);
-    }
-    call->erase();
+    rewriteIndirectReturnCall(call, fc, newArgs, origRetTy, builder);
     return mlir::success();
   }
 
