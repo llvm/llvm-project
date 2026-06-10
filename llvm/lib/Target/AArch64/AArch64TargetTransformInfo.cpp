@@ -4391,7 +4391,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
 
     // fp128 all go via libcalls
     if (Ty->getScalarType()->isFP128Ty())
-      return CostKind == TTI::TCK_CodeSize ? 1 : 10 * LT.first;
+      return (CostKind == TTI::TCK_CodeSize ? 1 : 10) * LT.first;
   }
 
   // If the operation is a widening instruction (smull or umull) and both
