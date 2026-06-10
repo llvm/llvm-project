@@ -567,21 +567,7 @@ def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
-class CIR_AllocaTypesMatchWith<
-  string summary, string lhsArg, string rhsArg, string transform,
-  string comparator = "std::equal_to<>()"
-> : PredOpTrait<summary, CPred<comparator # "(" #
-      !subst("$_self", "$" # lhsArg # ".getType()", transform) #
-             ", $" # rhsArg # ")">
-> {
-  string lhs = lhsArg;
-  string rhs = rhsArg;
-  string transformer = transform;
-}
-
 def CIR_AllocaOp : CIR_Op<"alloca", [
-  CIR_AllocaTypesMatchWith<"'allocaType' matches pointee type of 'addr'",
-    "addr", "allocaType", "mlir::cast<cir::PointerType>($_self).getPointee()">,
   DeclareOpInterfaceMethods<PromotableAllocationOpInterface>
 ]> {
   let summary = "Defines a scope-local variable";
@@ -605,17 +591,16 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
 
     ```
     // int count;
-    %0 = cir.alloca i32, !cir.ptr<i32>, ["count"] {alignment = 4 : i64}
+    %0 = cir.alloca "count" align(4) : !cir.ptr<i32>
 
     // int *ptr;
-    %1 = cir.alloca !cir.ptr<i32>, !cir.ptr<!cir.ptr<i32>>, ["ptr"] {alignment = 8 : i64}
+    %1 = cir.alloca "ptr" align(8) : !cir.ptr<!cir.ptr<i32>>
     ...
     ```
   }];
 
   let arguments = (ins
-    Optional<CIR_AnyFundamentalIntType>:$dynAllocSize,
-    TypeAttr:$allocaType,
+    Optional<CIR_UInt64>:$dynAllocSize,
     StrAttr:$name,
     UnitAttr:$init,
     UnitAttr:$constant,
@@ -630,36 +615,36 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "mlir::Type":$addr,
-                   "mlir::Type":$allocaType,
                    "llvm::StringRef":$name,
                    "mlir::IntegerAttr":$alignment)>,
 
     OpBuilder<(ins "mlir::Type":$addr,
-                   "mlir::Type":$allocaType,
                    "llvm::StringRef":$name,
                    "mlir::IntegerAttr":$alignment,
                    "mlir::Value":$dynAllocSize),
     [{
       if (dynAllocSize)
         $_state.addOperands(dynAllocSize);
-      build($_builder, $_state, addr, allocaType, name, alignment);
+      build($_builder, $_state, addr, name, alignment);
     }]>
   ];
 
   let extraClassDeclaration = [{
+    mlir::Type getAllocaType() {
+      return mlir::cast<cir::PointerType>(getAddr().getType()).getPointee();
+    }
     // Whether the alloca input type is a pointer.
     bool isPointerType() { return ::mlir::isa<::cir::PointerType>(getAllocaType()); }
     bool isDynamic() { return (bool)getDynAllocSize(); }
   }];
 
   let assemblyFormat = [{
-    $allocaType `,` qualified(type($addr)) `,`
-    ($dynAllocSize^ `:` type($dynAllocSize) `,`)?
-    `[` $name
-       (`,` `init` $init^)?
-       (`,` `const` $constant^)?
-       (`,` `cleanup_dest_slot` $cleanup_dest_slot^)?
-    `]`
+    $name
+    `align` `(` $alignment `)`
+    oilist( `init`              $init
+          | `const`             $constant
+          | `cleanup_dest_slot` $cleanup_dest_slot)
+    (`size` `(` $dynAllocSize^ `)`)? `:` qualified(type($addr))
     ($annotations^)? attr-dict
   }];
 
@@ -4823,7 +4808,7 @@ def CIR_StackRestoreOp : CIR_Op<"stackrestore"> {
     This operation corresponds to LLVM intrinsic `stackrestore`.
 
     ```
-    %0 = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"] {alignment = 8 : i64}
+    %0 = cir.alloca "saved_stack" align(8) : !cir.ptr<!cir.ptr<!u8i>>
     %1 = cir.stacksave : <!u8i>
     cir.store %1, %0 : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
     %2 = cir.load %0 : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
@@ -4953,8 +4938,8 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
     !rec_22anon2E022 = !cir.record<struct "anon.0" {!cir.int<s, 32>, !cir.int<s, 32>}>
     !rec_22anon2E122 = !cir.record<struct "anon.1" {!cir.int<s, 32>, !cir.int<s, 32>}>
     ...
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
-    %1 = cir.alloca !s32i, !cir.ptr<!s32i>, ["y", init]
+    %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+    %1 = cir.alloca "y" align(4) init : !cir.ptr<!s32i>
     ...
     %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
     %3 = cir.load %1 : !cir.ptr<!s32i>, !s32i
@@ -8040,7 +8025,7 @@ def CIR_InitCatchParamOp : CIR_Op<"init_catch_param"> {
     ```
     %catch_token, %exn_ptr = cir.begin_catch %eh_token
       : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
-    %param_addr = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+    %param_addr = cir.alloca "e" align(4) init : !cir.ptr<!s32i>
     cir.init_catch_param %exn_ptr to %param_addr
       : !cir.ptr<!void>, !cir.ptr<!s32i>
     ```
@@ -8410,8 +8395,7 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
 
     Example:
     ```
-    %1 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init]
-                                                          {alignment = 8 : i64}
+    %1 = cir.alloca "ptr" align(8) init : !cir.ptr<!cir.ptr<!void>>
     %addr = cir.block_address <@c, "label1"> : !cir.ptr<!cir.void>
     cir.store align(8) %addr, %1 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
     cir.br ^bb1
@@ -8514,7 +8498,7 @@ def CIR_LaunderOp : CIR_Op<"launder", [SameOperandsAndResultType]> {
 
   Example:
   ```
-    %0 = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+    %0 = cir.alloca "" align(8) : !cir.ptr<!cir.ptr<!rec_S>>
     %1 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
     %2 = cir.launder(%1) : !cir.ptr<!rec_S>
   ```
