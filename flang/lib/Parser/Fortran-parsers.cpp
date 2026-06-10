@@ -562,7 +562,10 @@ TYPE_CONTEXT_PARSER("type bound procedure binding"_en_US,
     recovery(
         first(construct<TypeBoundProcBinding>(Parser<TypeBoundProcedureStmt>{}),
             construct<TypeBoundProcBinding>(Parser<TypeBoundGenericStmt>{}),
-            construct<TypeBoundProcBinding>(Parser<FinalProcedureStmt>{})),
+            construct<TypeBoundProcBinding>(Parser<FinalProcedureStmt>{}),
+            Parser<DataComponentDefStmt>{} >>
+                fail<TypeBoundProcBinding>(
+                    "component definition must precede CONTAINS in a derived type"_err_en_US)),
         construct<TypeBoundProcBinding>(
             !"END"_tok >> SkipTo<'\n'>{} >> construct<ErrorRecovery>())))
 
