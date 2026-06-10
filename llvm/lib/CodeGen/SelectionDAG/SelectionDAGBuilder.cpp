@@ -4172,7 +4172,7 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   SDValue LegalRotateAmount = DAG.getZExtOrTrunc(RotateAmount, dl, ShiftAmtTy);
 
   SDValue RotatedBase =
-      DAG.getNode(ISD::ROTL, dl, BaseVT, Base, LegalRotateAmount);
+      DAG.getNode(ISD::ROTR, dl, BaseVT, Base, LegalRotateAmount);
 
   unsigned BaseBitWidth = BaseVT.getScalarSizeInBits();
   APInt ClearMask =
@@ -4184,7 +4184,7 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
   SDValue Inserted = DAG.getNode(ISD::OR, dl, BaseVT, ClearedBase, ExtVal);
 
   SDValue Result =
-      DAG.getNode(ISD::ROTR, dl, BaseVT, Inserted, LegalRotateAmount);
+      DAG.getNode(ISD::ROTL, dl, BaseVT, Inserted, LegalRotateAmount);
   setValue(&I, Result);
 }
 
@@ -4216,8 +4216,8 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
   SDValue LegalRotateAmount = DAG.getZExtOrTrunc(RotateAmount, dl, ShiftAmtTy);
 
-  // Rotate left by (Offset + ResultWidth) — brings target field to bit 0
-  SDValue Rotated = DAG.getNode(ISD::ROTL, dl, SrcVT, Src, LegalRotateAmount);
+  // Rotate left by (Offset + ResultWidth) - brings target field to bit 0
+  SDValue Rotated = DAG.getNode(ISD::ROTR, dl, SrcVT, Src, LegalRotateAmount);
 
   // Truncating to ResultVT discards the high bits for free
   setValue(&I, DAG.getZExtOrTrunc(Rotated, dl, ResultVT));

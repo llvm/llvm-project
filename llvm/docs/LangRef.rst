@@ -11551,7 +11551,7 @@ The '``bitextract``' instruction returns a value of the specified type.
 The returned value is first extracted from the source, starting at the
 bit specified by the offset, and then bitcasted to the return type.
 If the range offset+ty.bitwidth exceeds the source width, it returns
-poison. Bit 0 is the most significant bit.
+poison. Bit 0 is the least significant bit.
 
 Example:
 """"""""
@@ -11590,7 +11590,7 @@ The returned value is of the same byte type as the first argument.
 It returns the first argument where the bits in the range
 [offset, offset + ty.bitlength - 1] have been replaced with val.
 If the range (offset + ty.bitwidth) is greater than the bitwidth of
-the first argument, it returns poison. Bit 0 is the most significant bit.
+the first argument, it returns poison. Bit 0 is the least significant bit.
 
 Example:
 """"""""
