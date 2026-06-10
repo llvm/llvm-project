@@ -805,6 +805,8 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
                    Info.NumberOfOps, "      ");
 
   // Epilog descriptors
+  uint8_t BaseEpilogFlags = 0;
+  bool HaveBaseEpilog = false;
   for (unsigned I = 0; I < Info.NumberOfEpilogs; ++I) {
     const DecodedEpilogV3 &Epi = Info.Epilogs[I];
 
@@ -836,6 +838,14 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
         WithColor::warning(errs())
             << "first epilog cannot inherit (NumberOfOps=0)\n";
       } else {
+        // Per the V3 spec, Flags bits 0 and 1 are producer-replicated into an
+        // inherited descriptor, so they must match the base epilog. Warn if a
+        // non-compliant producer left them inconsistent.
+        if (HaveBaseEpilog && (Epi.Flags & 0x03) != (BaseEpilogFlags & 0x03))
+          WithColor::warning(errs())
+              << format("inherited epilog flags (0x%X) do not match base "
+                        "epilog flags (0x%X)\n",
+                        Epi.Flags & 0x03, BaseEpilogFlags & 0x03);
         // Surface the values inherited from the base epilog so a
         // reader can see what the unwinder will actually execute.
         outs() << format("      (inherits from base epilog: FirstOp=0x%X, "
@@ -853,6 +863,10 @@ static void printWin64EHUnwindInfoV3(ArrayRef<uint8_t> Data) {
           Epi.FirstOp);
       printWODSequence(Info.WODPool, Epi.FirstOp, ArrayRef(Epi.IpOffsets),
                        Epi.NumberOfOps, "      ");
+      // This is a full descriptor; it becomes the base that subsequent
+      // inherited descriptors replicate their flags from.
+      BaseEpilogFlags = Epi.Flags;
+      HaveBaseEpilog = true;
     }
   }
 

@@ -297,6 +297,14 @@ Win64EH::decodeUnwindInfoV3(ArrayRef<uint8_t> Data) {
     if (Epi.NumberOfOps == 0) {
       if (BaseEpilogIdx >= 0) {
         const DecodedEpilogV3 &Base = Info.Epilogs[BaseEpilogIdx];
+        // Flags bits 0 and 1 are producer-replicated, not inherited: a
+        // compliant producer must have written the base's values into this
+        // descriptor's own flags byte, so they should already match the base.
+        // We intentionally keep this record's own bits (rather than copying
+        // the base's) so a non-compliant producer is not silently masked. This
+        // decoder runs on potentially-malformed object files, so a mismatch is
+        // not asserted here; downstream consumers (the dumpers) surface a
+        // warning when the replicated bits disagree with the base.
         Epi.FirstOp = Base.FirstOp;
         Epi.IpOffsetOfLastInstruction = Base.IpOffsetOfLastInstruction;
         Epi.IpOffsets = Base.IpOffsets;

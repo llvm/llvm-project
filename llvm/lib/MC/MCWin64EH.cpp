@@ -584,16 +584,22 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
   // array from the first preceding descriptor with NumberOfOps != 0 (the
   // "base"), not necessarily the immediately preceding descriptor. An epilog
   // can therefore use the inherited (3-byte) descriptor when FirstOp,
-  // NumberOfOps, NeedsLarge, and relative IP offsets all match that base.
+  // NumberOfOps, and relative IP offsets all match that base. NeedsLarge is a
+  // deterministic function of those fields (it is set when an IP offset exceeds
+  // the 1-byte range), so a matching FirstOp/NumberOfOps and IP offsets imply a
+  // matching NeedsLarge; we assert that invariant rather than test it.
   for (unsigned I = 1, Base = 0; I < EpilogInfos.size(); ++I) {
     auto &BaseEI = EpilogInfos[Base];
     auto &Curr = EpilogInfos[I];
     if (Curr.FirstOp == BaseEI.FirstOp &&
         Curr.NumberOfOps == BaseEI.NumberOfOps &&
-        Curr.NeedsLarge == BaseEI.NeedsLarge &&
-        EpilogIpOffsetsMatch(*Curr.Epilog, *BaseEI.Epilog, OS->getAssembler()))
+        EpilogIpOffsetsMatch(*Curr.Epilog, *BaseEI.Epilog,
+                             OS->getAssembler())) {
+      assert(Curr.NeedsLarge == BaseEI.NeedsLarge &&
+             "NeedsLarge must follow from matching FirstOp, NumberOfOps, and "
+             "IP offsets");
       Curr.Inherited = true;
-    else
+    } else
       Base = I; // Curr is a full descriptor; it becomes the new base.
   }
 
