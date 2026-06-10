@@ -394,8 +394,11 @@ def EmitC_MemberCallOpaqueOp : EmitC_Op<"member_call_opaque", [CExpressionInterf
 }
 
 def EmitC_CastOp : EmitC_Op<"cast",
-    [Pure, CExpressionInterface,
-     DeclareOpInterfaceMethods<CastOpInterface>]> {
+    [CExpressionInterface,
+     DeclareOpInterfaceMethods<CastOpInterface>,
+     DeclareOpInterfaceMethods<ConditionallySpeculatable>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+    ]> {
   let summary = "Cast operation";
   let description = [{
     The `emitc.cast` operation performs an explicit type conversion and is emitted
@@ -414,7 +417,10 @@ def EmitC_CastOp : EmitC_Op<"cast",
     ```
   }];
 
-  let arguments = (ins EmitCType:$source);
+  let arguments = (ins EmitCType:$source,
+    UnitAttr:$pure
+  );
+
   let results = (outs EmitCType:$dest);
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
 
@@ -422,6 +428,8 @@ def EmitC_CastOp : EmitC_Op<"cast",
     bool hasSideEffects() {
       return false;
     }
+
+    bool isPure();
   }];
 }
 
