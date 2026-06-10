@@ -2156,7 +2156,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
             FindIVPhiR->getBackedgeValue());
     assert(FindIVResult &&
            "must be able to retrieve the FindIVResult VPInstruction");
-    RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
+    RecurKind FindIVMinMaxKind = FindIVResult->getRecurrenceKind();
     if (FindIVMinMaxKind != RecurKind::SMax &&
         FindIVMinMaxKind != RecurKind::UMax)
       return false;

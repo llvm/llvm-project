@@ -388,12 +388,8 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 }
 
 FastMathFlags VPIRFlags::getFastMathFlagsOrNone() const {
-  assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
-          OpType == OperationType::ReductionOp ||
-          OpType == OperationType::Other) &&
-         "recipe doesn't have fast math flags");
-  if (OpType == OperationType::Other)
-    return FastMathFlags();
+  if (!hasFastMathFlags())
+    return {};
   const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
   Res.setAllowReassoc(F.AllowReassoc);
@@ -864,7 +860,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                        Builder.getInt32(0));
   }
   case VPInstruction::ComputeReductionResult: {
-    RecurKind RK = getRecurKind();
+    RecurKind RK = getRecurrenceKind();
     bool IsOrdered = isReductionOrdered();
     bool IsInLoop = isReductionInLoop();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
@@ -1513,8 +1509,7 @@ void VPInstruction::execute(VPTransformState &State) {
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
-  if (hasFastMathFlags())
-    State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
+  State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *GeneratedValue = generate(State);
   if (!hasResult())
     return;
@@ -2619,7 +2614,7 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     break;
   case OperationType::ReductionOp: {
     O << " (";
-    printRecurrenceKind(O, getRecurKind());
+    printRecurrenceKind(O, getRecurrenceKind());
     if (isReductionInLoop())
       O << ", in-loop";
     if (isReductionOrdered())
