@@ -1489,6 +1489,82 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
                                        srcShape, subgroupSize);
 }
 
+/// If `consumerLayout` has inst_data set but no lane_layout/lane_data,
+/// derive a lane factorization by re-running the load-side Lane setup with
+/// inst_data as the destination shape, and merge the result back so the
+/// returned LayoutAttr carries inst_data + lane_layout + lane_data. This
+/// guarantees the lane factorization the downstream load setup will see is
+/// the same one its own Lane-kind setup would produce.
+xegpu::DistributeLayoutAttr xegpu::completeLoadGatherLayoutFromInstData(
+    xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
+    const xegpu::uArch::uArch *uArch) {
+  if (!consumerLayout)
+    return consumerLayout;
+  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
+  if (instData.empty())
+    return consumerLayout;
+  if (!consumerLayout.getEffectiveLaneLayoutAsInt().empty() &&
+      !consumerLayout.getEffectiveLaneDataAsInt().empty())
+    return consumerLayout;
+
+  // Reuse the load-side setup with inst_data as the destination shape.
+  const int subgroupSize = uArch->getSubgroupSize();
+  auto *context = consumerLayout.getContext();
+  auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+  if (!uArchInstruction)
+    return consumerLayout;
+  int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
+
+  auto laneOnly = setupGenericLoadAnchorLayout(
+      xegpu::LayoutKind::Lane, context, /*consumerLayout=*/nullptr,
+      maxChunkSize, instData, subgroupSize);
+  if (!laneOnly)
+    return consumerLayout;
+
+  SmallVector<int64_t> laneLayout = laneOnly.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> laneData = laneOnly.getEffectiveLaneDataAsInt();
+  return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
+}
+
+/// If `consumerLayout` has inst_data set but no lane_layout/lane_data,
+/// derive a lane factorization by re-running the store-side Lane setup with
+/// inst_data as the destination shape, and merge the result back. Returned
+/// LayoutAttr carries inst_data + lane_layout + lane_data.
+xegpu::DistributeLayoutAttr xegpu::completeStoreScatterLayoutFromInstData(
+    xegpu::DistributeLayoutAttr consumerLayout, Type elemTy,
+    const xegpu::uArch::uArch *uArch) {
+  if (!consumerLayout)
+    return consumerLayout;
+  SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
+  if (instData.empty())
+    return consumerLayout;
+  if (!consumerLayout.getEffectiveLaneLayoutAsInt().empty() &&
+      !consumerLayout.getEffectiveLaneDataAsInt().empty())
+    return consumerLayout;
+
+  const int subgroupSize = uArch->getSubgroupSize();
+  auto *context = consumerLayout.getContext();
+  auto elemBitWidth = elemTy.getIntOrFloatBitWidth();
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
+  if (!uArchInstruction)
+    return consumerLayout;
+  int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
+
+  auto laneOnly = setupGenericStoreAnchorLayout(
+      xegpu::LayoutKind::Lane, context, maxChunkSize, instData, subgroupSize);
+  if (!laneOnly)
+    return consumerLayout;
+
+  SmallVector<int64_t> laneLayout = laneOnly.getEffectiveLaneLayoutAsInt();
+  SmallVector<int64_t> laneData = laneOnly.getEffectiveLaneDataAsInt();
+  return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
+}
+
 // Forward declaration: defined later in the file.
 using LayoutRepresentation = std::pair<int64_t, int64_t>;
 static SmallVector<LayoutRepresentation>
