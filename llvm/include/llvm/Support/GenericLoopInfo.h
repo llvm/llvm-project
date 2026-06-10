@@ -33,7 +33,7 @@
 // non-loop SCC might contain a sub-SCC which is a Loop.
 //
 // For an overview of terminology used in this API (and thus all of our loop
-// analyses or transforms), see docs/LoopTerminology.rst.
+// analyses or transforms), see docs/LoopTerminology.md.
 //
 //===----------------------------------------------------------------------===//
 

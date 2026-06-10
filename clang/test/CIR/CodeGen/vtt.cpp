@@ -94,7 +94,8 @@ void D::y() {}
 // LLVM-RTTI-SAME:      [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr @_ZTI1D, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:       @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
+// OGCG-NO-RTTI:      @_ZTV1D = unnamed_addr constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
+// OGCG-RTTI:         @_ZTV1D = constant { [5 x ptr], [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // OGCG-RTTI-SAME:      [5 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1D, ptr @_ZN1B1wEv, ptr @_ZN1D1yEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr inttoptr (i64 -16 to ptr), ptr null, ptr @_ZN1C1xEv],
@@ -161,7 +162,8 @@ void D::y() {}
 // LLVM-RTTI-SAME:    [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr @_ZTI1B, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:       @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
+// OGCG-NO-RTTI:      @_ZTC1D0_1B = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
+// OGCG-RTTI:         @_ZTC1D0_1B = constant { [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr null, ptr @_ZN1B1wEv],
 // OGCG-RTTI-SAME:      [4 x ptr] [ptr inttoptr (i64 40 to ptr), ptr null, ptr @_ZTI1B, ptr @_ZN1B1wEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -40 to ptr), ptr null, ptr @_ZN1A1vEv]
@@ -199,7 +201,8 @@ void D::y() {}
 // LLVM-RTTI-SAME:      [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr @_ZTI1C, ptr @_ZN1A1vEv]
 // LLVM-COMMON-SAME:  }, align 8
 
-// OGCG-COMMON:        @_ZTC1D16_1C = constant { [4 x ptr], [4 x ptr] } {
+// OGCG-NO-RTTI:       @_ZTC1D16_1C = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
+// OGCG-RTTI:          @_ZTC1D16_1C = constant { [4 x ptr], [4 x ptr] } {
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr null, ptr @_ZN1C1xEv],
 // OGCG-RTTI-SAME:      [4 x ptr] [ptr inttoptr (i64 24 to ptr), ptr null, ptr @_ZTI1C, ptr @_ZN1C1xEv],
 // OGCG-NO-RTTI-SAME:   [4 x ptr] [ptr null, ptr inttoptr (i64 -24 to ptr), ptr null, ptr @_ZN1A1vEv]
@@ -274,8 +277,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1BC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_B>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -340,8 +343,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1CC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_C>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -406,8 +409,8 @@ D::D() {}
 // CIR-COMMON:      cir.func {{.*}} @_ZN1DC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_D>
 // CIR-COMMON-SAME:                      %[[VTT_ARG:.*]]: !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca {{.*}} ["vtt", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR-COMMON:        %[[VTT_ADDR:.*]] = cir.alloca "vtt" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        cir.store %[[VTT_ARG]], %[[VTT_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
@@ -477,7 +480,7 @@ D::D() {}
 
 // CIR-COMMON:      cir.func {{.*}} @_ZN1AC2Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_A>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[VPTR:.*]] = cir.vtable.address_point(@_ZTV1A, address_point = <index = 0, offset = 2>) : !cir.vptr
@@ -496,7 +499,7 @@ D::D() {}
 
 // CIR-COMMON:      cir.func {{.*}} @_ZN1DC1Ev
 // CIR-COMMON-SAME:                      %[[THIS_ARG:.*]]: !cir.ptr<!rec_D>
-// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR-COMMON:        %[[THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[A_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [40] -> !cir.ptr<!rec_A>

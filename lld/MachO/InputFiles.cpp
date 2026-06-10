@@ -482,18 +482,26 @@ static InputSection *findContainingSubsection(const Section &section,
   return it->isec;
 }
 
-// Find a symbol at offset `off` within `isec`.
-static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
-                                   uint64_t off) {
+// Try to find a symbol at offset `off` within `isec`.
+// Returns nullptr if no symbol exists at that offset.
+static Defined *tryFindSymbolAtOffset(const ConcatInputSection *isec,
+                                      uint64_t off) {
   auto it = llvm::lower_bound(isec->symbols, off, [](Defined *d, uint64_t off) {
     return d->value < off;
   });
-  // The offset should point at the exact address of a symbol (with no addend.)
-  if (it == isec->symbols.end() || (*it)->value != off) {
-    assert(isec->wasCoalesced);
+  if (it == isec->symbols.end() || (*it)->value != off)
     return nullptr;
-  }
   return *it;
+}
+
+// Find a symbol at offset `off` within `isec`.
+// If no symbol is found, assume the section must have been coalesced.
+static Defined *findSymbolAtOffset(const ConcatInputSection *isec,
+                                   uint64_t off) {
+  Defined *d = tryFindSymbolAtOffset(isec, off);
+  // The offset should point at the exact address of a symbol (with no addend.)
+  assert(d || isec->wasCoalesced);
+  return d;
 }
 
 template <class SectionHeader>
@@ -1192,10 +1200,30 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
       // The functionAddress relocations are typically section relocations.
       // However, unwind info operates on a per-symbol basis, so we search for
       // the function symbol here.
-      Defined *d = findSymbolAtOffset(referentIsec, add);
+      Defined *d = tryFindSymbolAtOffset(referentIsec, add);
       if (!d) {
-        ++it;
-        continue;
+        // If there's no symbol at the function address (e.g. for temporary
+        // local labels that are not in the symtab), synthesize a local one so
+        // we still emit correct unwind info.
+
+        // Avoid creating symbols for coalesced sections; those functions were
+        // folded away.
+        if (referentIsec->wasCoalesced) {
+          ++it;
+          continue;
+        }
+
+        d = make<Defined>(saver().save(Twine("Lcu.") + referentIsec->getName() +
+                                       "." + Twine::utohexstr(add)),
+                          this, referentIsec, add,
+                          /*size=*/0, /*isWeakDef=*/false,
+                          /*isExternal=*/false, /*isPrivateExtern=*/false,
+                          /*includeInSymtab=*/false,
+                          /*isReferencedDynamically=*/false,
+                          /*noDeadStrip=*/false);
+        // Also add to the file-level symbol list so that scanSymbols() in
+        // Writer picks it up and registers it with UnwindInfoSection.
+        symbols.push_back(d);
       }
       d->originalUnwindEntry = isec;
       // Now that the symbol points to the unwind entry, we can remove the reloc

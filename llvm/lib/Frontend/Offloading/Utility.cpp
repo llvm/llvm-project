@@ -112,6 +112,11 @@ GlobalVariable *offloading::emitOffloadingEntry(
   auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
       M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
 
+  // Common linkage is not suitable because we don't zero initialize the entry.
+  // Weak is the closest alternative that should work fine.
+  if (Linkage == GlobalValue::CommonLinkage)
+    Linkage = GlobalValue::WeakAnyLinkage;
+
   StringRef Prefix =
       Triple.isNVPTX() ? "$offloading$entry$" : ".offloading.entry.";
   auto *Entry =
