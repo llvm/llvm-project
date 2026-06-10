@@ -101,6 +101,10 @@ static hipGetDevicePropertiesTy pHipGetDeviceProperties = nullptr;
 static int NumDevices = 0;
 /* 256 matches hipDeviceProp_t::gcnArchName, the source field width. */
 static char (*DeviceArchNames)[256] = nullptr;
+#if defined(__linux__) && !defined(_WIN32)
+static unsigned char *UsedDevices = nullptr;
+static int AnyDeviceUsed = 0;
+#endif
 
 /* -------------------------------------------------------------------------- */
 /*  Device-to-host copies                                                     */
@@ -160,6 +164,11 @@ static void doEnsureHipLoaded(void) {
         PROF_ERR("%s\n", "failed to allocate device arch name table");
         return;
       }
+#if defined(__linux__) && !defined(_WIN32)
+      UsedDevices = (unsigned char *)calloc(Count, sizeof(*UsedDevices));
+      if (!UsedDevices && isVerboseMode())
+        PROF_NOTE("%s\n", "Device-use tracking disabled");
+#endif
       HipDevicePropMinimal Prop;
       for (int i = 0; i < Count; ++i) {
         __builtin_memset(&Prop, 0, sizeof(Prop));
@@ -233,6 +242,26 @@ static int hipSetDevice(int DeviceId) {
   ensureHipLoaded();
   return pHipSetDevice ? pHipSetDevice(DeviceId) : -1;
 }
+
+#if defined(__linux__) && !defined(_WIN32)
+static void markCurrentDeviceUsed(void) {
+  int DeviceId = -1;
+  if (hipGetDevice(&DeviceId) != 0 || DeviceId < 0 || DeviceId >= NumDevices ||
+      !UsedDevices)
+    return;
+  __atomic_store_n(&UsedDevices[DeviceId], 1, __ATOMIC_RELAXED);
+  __atomic_store_n(&AnyDeviceUsed, 1, __ATOMIC_RELEASE);
+}
+
+static int shouldCollectDevice(int DeviceId) {
+  if (UsedDevices && __atomic_load_n(&AnyDeviceUsed, __ATOMIC_ACQUIRE) &&
+      !__atomic_load_n(&UsedDevices[DeviceId], __ATOMIC_RELAXED))
+    return 0;
+  return 1;
+}
+#else
+static int shouldCollectDevice(int) { return 1; }
+#endif
 
 static const char *getDeviceArchName(int DeviceId) {
   if (DeviceId < 0 || DeviceId >= NumDevices || !DeviceArchNames[DeviceId][0])
@@ -1046,6 +1075,11 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
     hipGetDevice(&OrigDevice);
 
     for (int Dev = 0; Dev < NumDevices; ++Dev) {
+      if (!shouldCollectDevice(Dev)) {
+        if (isVerboseMode())
+          PROF_NOTE("Skipping unused device %d\n", Dev);
+        continue;
+      }
       if (hipSetDevice(Dev) != 0) {
         if (isVerboseMode())
           PROF_NOTE("Failed to set device %d, skipping\n", Dev);
@@ -1094,9 +1128,40 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
   return Ret;
 }
 
-/* Interceptors for hipModuleLoad* / hipModuleUnload. Linux only. */
+/* Linux HIP interceptors. */
 
 #if defined(__linux__) && !defined(_WIN32)
+
+typedef struct {
+  unsigned int x;
+  unsigned int y;
+  unsigned int z;
+} HipDim3;
+
+typedef void *HipFunction;
+typedef void *HipStream;
+
+static int recordHipLaunchResult(int Rc) {
+  if (Rc == 0)
+    markCurrentDeviceUsed();
+  return Rc;
+}
+
+INTERCEPTOR(int, hipLaunchKernel, const void *Function, HipDim3 GridDim,
+            HipDim3 BlockDim, void **Args, size_t SharedMemBytes,
+            HipStream Stream) {
+  return recordHipLaunchResult(REAL(hipLaunchKernel)(
+      Function, GridDim, BlockDim, Args, SharedMemBytes, Stream));
+}
+
+INTERCEPTOR(int, hipModuleLaunchKernel, HipFunction Function, unsigned GridDimX,
+            unsigned GridDimY, unsigned GridDimZ, unsigned BlockDimX,
+            unsigned BlockDimY, unsigned BlockDimZ, unsigned SharedMemBytes,
+            HipStream Stream, void **KernelParams, void **Extra) {
+  return recordHipLaunchResult(REAL(hipModuleLaunchKernel)(
+      Function, GridDimX, GridDimY, GridDimZ, BlockDimX, BlockDimY, BlockDimZ,
+      SharedMemBytes, Stream, KernelParams, Extra));
+}
 
 INTERCEPTOR(int, hipModuleLoad, void **module, const char *fname) {
   int rc = REAL(hipModuleLoad)(module, fname);
@@ -1127,20 +1192,33 @@ INTERCEPTOR(int, hipModuleUnload, void *module) {
   return REAL(hipModuleUnload)(module);
 }
 
-__attribute__((constructor)) static void installHipModuleInterceptors() {
-  /* Skip when the HIP runtime is not loaded. INTERCEPT_FUNCTION uses the
-   * sanitizer interception framework, which can perturb dlsym/PLT state for
-   * the rest of the process even when the target symbol is absent; non-HIP
-   * programs linked with libclang_rt.profile.a must see zero side effects. */
-  if (!dlsym(RTLD_DEFAULT, "hipModuleLoad"))
+__attribute__((constructor)) static void installHipInterceptors() {
+  /* Avoid interception unless the HIP runtime is already loaded. */
+  int HasLaunchKernel = dlsym(RTLD_DEFAULT, "hipLaunchKernel") != nullptr;
+  int HasModuleLaunchKernel =
+      dlsym(RTLD_DEFAULT, "hipModuleLaunchKernel") != nullptr;
+  int HasModuleLoad = dlsym(RTLD_DEFAULT, "hipModuleLoad") != nullptr;
+  if (!HasLaunchKernel && !HasModuleLaunchKernel && !HasModuleLoad)
     return;
-  if (!INTERCEPT_FUNCTION(hipModuleLoad))
+  int InstalledLaunch = 0;
+  if (HasLaunchKernel)
+    InstalledLaunch |= INTERCEPT_FUNCTION(hipLaunchKernel);
+  if (HasModuleLaunchKernel)
+    InstalledLaunch |= INTERCEPT_FUNCTION(hipModuleLaunchKernel);
+  int InstalledAny = InstalledLaunch;
+  if (HasModuleLoad) {
+    HasModuleLoad = INTERCEPT_FUNCTION(hipModuleLoad);
+    InstalledAny |= HasModuleLoad;
+  }
+  if (!InstalledAny)
     return;
   if (isVerboseMode())
-    PROF_NOTE("%s", "Installing hipModuleLoad*/hipModuleUnload interceptors\n");
-  INTERCEPT_FUNCTION(hipModuleLoadData);
-  INTERCEPT_FUNCTION(hipModuleLoadDataEx);
-  INTERCEPT_FUNCTION(hipModuleUnload);
+    PROF_NOTE("%s", "Installing HIP interceptors\n");
+  if (HasModuleLoad) {
+    INTERCEPT_FUNCTION(hipModuleLoadData);
+    INTERCEPT_FUNCTION(hipModuleLoadDataEx);
+    INTERCEPT_FUNCTION(hipModuleUnload);
+  }
 }
 
 #endif /* __linux__ */
