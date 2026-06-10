@@ -572,9 +572,10 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
     // For each spill reload, every path from entry to the reload must pass
     // through at least one spill store to the same stack slot.
     SmallPtrSet<MachineBasicBlock *, 4> StoreBlocks;
-    for (MachineInstr *MI : SpillReferences->second)
+    for (MachineInstr *MI : SpillReferences->second) {
       if (MI->mayStore() && MDT.isReachableFromEntry(MI->getParent()))
         StoreBlocks.insert(MI->getParent());
+    }
 
     if (StoreBlocks.empty()) {
       LLVM_DEBUG(dbgs() << "Skipping " << printReg(Slot, &TRI)
