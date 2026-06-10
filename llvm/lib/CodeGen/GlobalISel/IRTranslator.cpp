@@ -1835,7 +1835,8 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   ICall.addMemOperand(
       MF->getMachineMemOperand(MachinePointerInfo(CI.getArgOperand(0)),
                                StoreFlags, 1, DstAlign, AAInfo));
-  if (Opcode != TargetOpcode::G_MEMSET)
+  if (Opcode != TargetOpcode::G_MEMSET &&
+      Opcode != TargetOpcode::G_MEMSET_INLINE)
     ICall.addMemOperand(MF->getMachineMemOperand(
         MachinePointerInfo(SrcPtr), LoadFlags, 1, SrcAlign, AAInfo));
 
@@ -2445,6 +2446,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMMOVE);
   case Intrinsic::memset:
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMSET);
+  case Intrinsic::memset_inline:
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMSET_INLINE);
   case Intrinsic::eh_typeid_for: {
     GlobalValue *GV = ExtractTypeInfo(CI.getArgOperand(0));
     Register Reg = getOrCreateVReg(CI);

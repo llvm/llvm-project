@@ -1376,6 +1376,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     getActionDefinitionsBuilder(G_MEMCPY_INLINE)
         .legalForCartesianProduct({p0}, {p0}, {s64});
 
+    getActionDefinitionsBuilder(G_MEMSET_INLINE)
+        .legalForCartesianProduct({p0}, {s64}, {s64})
+        .customForCartesianProduct({p0}, {s8}, {s64});
   } else {
     getActionDefinitionsBuilder({G_BZERO, G_MEMCPY, G_MEMMOVE, G_MEMSET})
         .libcall();

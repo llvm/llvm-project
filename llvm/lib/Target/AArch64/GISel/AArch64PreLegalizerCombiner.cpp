@@ -793,6 +793,8 @@ bool AArch64PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   switch (Opc) {
   case TargetOpcode::G_MEMCPY_INLINE:
     return Helper.tryEmitMemcpyInline(MI);
+  case TargetOpcode::G_MEMSET_INLINE:
+    return Helper.tryEmitMemsetInline(MI);
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET: {

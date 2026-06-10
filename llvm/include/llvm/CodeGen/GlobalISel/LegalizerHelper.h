@@ -304,7 +304,7 @@ private:
 
   // Memcpy family legalization helpers.
   LegalizeResult lowerMemset(MachineInstr &MI, Register Dst, Register Val,
-                             uint64_t KnownLen, Align Alignment,
+                             uint64_t KnownLen, uint64_t Limit, Align Alignment,
                              bool IsVolatile);
   LegalizeResult lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
                              uint64_t KnownLen, uint64_t Limit, Align DstAlign,

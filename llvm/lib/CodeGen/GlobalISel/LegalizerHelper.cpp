@@ -10811,7 +10811,7 @@ static Register getMemsetValue(Register Val, LLT Ty, MachineIRBuilder &MIB) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
-                             uint64_t KnownLen, Align Alignment,
+                             uint64_t KnownLen, uint64_t Limit, Align Alignment,
                              bool IsVolatile) {
   auto &MF = *MI.getParent()->getParent();
   const auto &TLI = *MF.getSubtarget().getTargetLowering();
@@ -10822,13 +10822,11 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
 
   bool DstAlignCanChange = false;
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool OptSize = shouldLowerMemFuncForSize(MF);
 
   MachineInstr *FIDef = getOpcodeDef(TargetOpcode::G_FRAME_INDEX, Dst, MRI);
   if (FIDef && !MFI.isFixedObjectIndex(FIDef->getOperand(1).getIndex()))
     DstAlignCanChange = true;
 
-  unsigned Limit = TLI.getMaxStoresPerMemset(OptSize);
   std::vector<LLT> MemOps;
 
   const auto &DstMMO = **MI.memoperands_begin();
@@ -11143,7 +11141,8 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   // matcher function.
   assert((Opc == TargetOpcode::G_MEMCPY ||
           Opc == TargetOpcode::G_MEMCPY_INLINE ||
-          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET) &&
+          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET ||
+          Opc == TargetOpcode::G_MEMSET_INLINE) &&
          "Expected memcpy like instruction");
 
   auto MMOIt = MI.memoperands_begin();
@@ -11153,7 +11152,7 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   Align SrcAlign;
   auto [Dst, Src, Len] = MI.getFirst3Regs();
 
-  if (Opc != TargetOpcode::G_MEMSET) {
+  if (Opc != TargetOpcode::G_MEMSET && Opc != TargetOpcode::G_MEMSET_INLINE) {
     assert(MMOIt != MI.memoperands_end() && "Expected a second MMO on MI");
     MemOp = *(++MMOIt);
     SrcAlign = MemOp->getBaseAlign();
@@ -11162,8 +11161,9 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   // See if this is a constant length copy
   auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
   if (!LenVRegAndVal) {
-    // FIXME: support dynamically sized G_MEMCPY_INLINE
+    // FIXME: support dynamically sized G_MEMCPY_INLINE and G_MEMSET_INLINE
     assert(Opc != TargetOpcode::G_MEMCPY_INLINE &&
+           Opc != TargetOpcode::G_MEMSET_INLINE &&
            "inline memcpy with dynamic size is not yet supported");
     return UnableToLegalize;
   }
@@ -11174,7 +11174,8 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
     return Legalized;
   }
 
-  if (Opc != TargetOpcode::G_MEMCPY_INLINE && MaxLen && KnownLen > MaxLen)
+  if (Opc != TargetOpcode::G_MEMCPY_INLINE &&
+      Opc != TargetOpcode::G_MEMSET_INLINE && MaxLen && KnownLen > MaxLen)
     return UnableToLegalize;
 
   bool IsVolatile = MemOp->isVolatile();
@@ -11190,7 +11191,13 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   }
   if (Opc == TargetOpcode::G_MEMMOVE)
     return lowerMemmove(MI, Dst, Src, KnownLen, DstAlign, SrcAlign, IsVolatile);
-  if (Opc == TargetOpcode::G_MEMSET)
-    return lowerMemset(MI, Dst, Src, KnownLen, DstAlign, IsVolatile);
+  if (Opc == TargetOpcode::G_MEMSET || Opc == TargetOpcode::G_MEMSET_INLINE) {
+    auto &MF = *MI.getParent()->getParent();
+    bool OptSize = shouldLowerMemFuncForSize(MF);
+    uint64_t Limit = Opc == TargetOpcode::G_MEMSET_INLINE
+                         ? std::numeric_limits<uint64_t>::max()
+                         : TLI.getMaxStoresPerMemset(OptSize);
+    return lowerMemset(MI, Dst, Src, KnownLen, Limit, DstAlign, IsVolatile);
+  }
   return UnableToLegalize;
 }

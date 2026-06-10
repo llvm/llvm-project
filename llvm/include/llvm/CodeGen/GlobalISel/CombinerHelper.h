@@ -866,6 +866,10 @@ public:
   ///       and rename: s/bool tryEmit/void emit/
   LLVM_ABI bool tryEmitMemcpyInline(MachineInstr &MI) const;
 
+  /// Emit stores that perform the given memset.
+  /// Assumes \p MI is a G_MEMSET_INLINE
+  LLVM_ABI bool tryEmitMemsetInline(MachineInstr &MI) const;
+
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)
   ///   (G_SMULO x, 2) -> (G_SADDO x, x)

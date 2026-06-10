@@ -1863,6 +1863,13 @@ def G_BZERO : GenericInstruction {
   let mayStore = true;
 }
 
+def G_MEMSET_INLINE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins ptype0:$dst_addr, type1:$value, type2:$size, untyped_imm_0:$tailcall);
+  let hasSideEffects = false;
+  let mayStore = true;
+}
+
 //------------------------------------------------------------------------------
 // Trap intrinsics
 //------------------------------------------------------------------------------
