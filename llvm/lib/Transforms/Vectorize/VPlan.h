@@ -2197,14 +2197,6 @@ protected:
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
-  bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  }
-
 public:
   VPWidenGEPRecipe(Type *SourceElementTy, ArrayRef<VPValue *> Operands,
                    const VPIRFlags &Flags = {},
