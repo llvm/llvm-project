@@ -561,47 +561,6 @@ SDValue MipsSETargetLowering::lowerFP_TO_FP16(SDValue Op,
   return Res;
 }
 
-SDValue MipsSETargetLowering::lowerINT_TO_FP(SDValue Op,
-                                             SelectionDAG &DAG) const {
-  // The f32/f64 case is already legal.
-  if (Op.getValueType() != MVT::f16)
-    return Op;
-
-  // For f16, first convert the integer to f32, then convert to f16.
-  SDLoc DL(Op);
-  SDValue FP = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Op.getOperand(0));
-  return DAG.getFPExtendOrRound(FP, DL, MVT::f16);
-}
-
-SDValue MipsSETargetLowering::lowerFP_TO_INT(SDValue Op,
-                                             SelectionDAG &DAG) const {
-  SDValue InOp = Op.getOperand(0);
-
-  // For f16, first convert to f32 and go from there.
-  if (InOp.getValueType() == MVT::f16) {
-    EVT VT = Op.getValueType();
-
-    assert((VT == MVT::i32 || VT == MVT::i64 || VT == MVT::i128) &&
-           "Unexpected result type for f16 -> integer conversion");
-
-    SDLoc DL(Op);
-    SDValue FP = DAG.getFPExtendOrRound(InOp, DL, MVT::f32);
-
-    // Use a trick from TargetLowering::expandFP_TO_UINT: we know that every
-    // integer value that can be represented by f16 is representable by i32, so
-    // fptoui and fptosi are equivalent.
-    //
-    // NOTE: the result of fptoui is poison when the value does not fit in the
-    // destination type (e.g. because it is negative).
-    return DAG.getNode(ISD::FP_TO_SINT, DL, VT, FP);
-  }
-
-  // Use the default lowering for f32/f64.
-  if (!isTypeLegal(Op.getValueType()))
-    return SDValue();
-  return MipsTargetLowering::LowerOperation(Op, DAG);
-}
-
 bool MipsSETargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   MVT::SimpleValueType SVT = VT.getSimpleVT().SimpleTy;
@@ -648,12 +607,8 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::EXTRACT_VECTOR_ELT: return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:       return lowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:     return lowerVECTOR_SHUFFLE(Op, DAG);
-  case ISD::SELECT:             return lowerSELECT(Op, DAG);
-  case ISD::SINT_TO_FP:
-    return lowerINT_TO_FP(Op, DAG);
-  case ISD::FP_TO_SINT:
-  case ISD::FP_TO_UINT:
-    return lowerFP_TO_INT(Op, DAG);
+  case ISD::SELECT:
+    return lowerSELECT(Op, DAG);
   case ISD::FP16_TO_FP:
   case ISD::STRICT_FP16_TO_FP:
     return lowerFP16_TO_FP(Op, DAG);
