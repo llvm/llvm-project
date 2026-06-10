@@ -21,17 +21,17 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV32-NEXT:    srai a5, a5, 24
 ; RV32-NEXT:    srai a6, a6, 24
 ; RV32-NEXT:    sgtz a6, a6
-; RV32-NEXT:    sgtz a5, a5
 ; RV32-NEXT:    sgtz a4, a4
+; RV32-NEXT:    sgtz a5, a5
 ; RV32-NEXT:    neg a4, a4
 ; RV32-NEXT:    neg a5, a5
-; RV32-NEXT:    neg a6, a6
 ; RV32-NEXT:    and a3, a4, a3
 ; RV32-NEXT:    and a0, a5, a0
-; RV32-NEXT:    and a2, a6, a2
 ; RV32-NEXT:    slli a3, a3, 8
 ; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    neg a4, a6
 ; RV32-NEXT:    or a0, a0, a3
+; RV32-NEXT:    and a2, a4, a2
 ; RV32-NEXT:    sh a0, 0(a1)
 ; RV32-NEXT:    sb a2, 2(a1)
 ; RV32-NEXT:    ret
@@ -48,17 +48,17 @@ define void @vec3_setcc_crash(ptr %in, ptr %out) {
 ; RV64-NEXT:    srai a5, a5, 56
 ; RV64-NEXT:    srai a6, a6, 56
 ; RV64-NEXT:    sgtz a6, a6
-; RV64-NEXT:    sgtz a5, a5
 ; RV64-NEXT:    sgtz a4, a4
+; RV64-NEXT:    sgtz a5, a5
 ; RV64-NEXT:    neg a4, a4
 ; RV64-NEXT:    neg a5, a5
-; RV64-NEXT:    neg a6, a6
 ; RV64-NEXT:    and a3, a4, a3
 ; RV64-NEXT:    and a0, a5, a0
-; RV64-NEXT:    and a2, a6, a2
 ; RV64-NEXT:    slli a3, a3, 8
 ; RV64-NEXT:    zext.b a0, a0
+; RV64-NEXT:    neg a4, a6
 ; RV64-NEXT:    or a0, a0, a3
+; RV64-NEXT:    and a2, a4, a2
 ; RV64-NEXT:    sh a0, 0(a1)
 ; RV64-NEXT:    sb a2, 2(a1)
 ; RV64-NEXT:    ret
