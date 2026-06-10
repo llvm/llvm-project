@@ -2296,7 +2296,7 @@ ProcessGDBRemote::SetThreadStopInfo(StructuredData::Dictionary *thread_dict) {
   static constexpr llvm::StringLiteral g_key_registers("registers");
   static constexpr llvm::StringLiteral g_key_memory("memory");
   static constexpr llvm::StringLiteral g_key_memory_region_info(
-      "memory-region-info");
+      "memory-region-infos");
   static constexpr llvm::StringLiteral g_key_description("description");
   static constexpr llvm::StringLiteral g_key_signal("signal");
   static constexpr llvm::StringLiteral g_key_added_binaries("added-binaries");
@@ -2618,7 +2618,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
               m_memory_cache.AddL1CacheData(mem_cache_addr, data_buffer_sp);
           }
         }
-      } else if (key.compare("memory-region-info") == 0) {
+      } else if (key.compare("memory-region-infos") == 0) {
         StringExtractor json_extractor(value);
         std::string json;
         // Now convert the HEX bytes into a string value.

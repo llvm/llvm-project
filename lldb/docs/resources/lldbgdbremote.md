@@ -787,20 +787,18 @@ JSON and uses JSON arrays where applicable. The JSON output looks like:
           {"address":140734799804592,"bytes":"c8f8bf5fff7f0000c9a59e8cff7f0000"},
           {"address":140734799804616,"bytes":"00000000000000000100000000000000"}
         ]
-        [
+        "memory-region-infos": [
           {
-            "memory-region-info": {
-              "start": 6096306176,
-              "size": 557056,
-              "permissions": "rw",
-              "flags": [],
-              "dirty_pages": [
-                6096830464
-              ],
-              "types": [
-                "stack"
-              ]
-            }
+            "start": 6096306176,
+            "size": 557056,
+            "permissions": "rw",
+            "flags": [],
+            "dirty_pages": [
+              6096830464
+            ],
+            "types": [
+              "stack"
+            ]
           }
         ]
       }
@@ -840,9 +838,9 @@ things we expedite are usually not thread-specific; this packet
 could have been structured as a Dictionary with a `threads` array
 and separate keys for non-thread specific things like this.
 
-`memory-region-info` is an array of memory region information; a
+`memory-region-infos` is an array of memory region information; a
 thread may want to provide region information about both the program
-counter and the stack pointer.  Note that the keys in `memory-region-info`
+counter and the stack pointer.  Note that the keys in `memory-region-infos`
 like `dirty_pages` and `types` are significant in their presence
 or absence.  If a stub can correctly identify which pages of memory
 have been modified (are dirty), it can include `"dirty_pages":[]`
@@ -2419,10 +2417,10 @@ following keys and values:
   being added at this stop are provided.  The value is asciihex
   encoded JSON.  It must be asciihex encoded in case a filename
   includes one of the gdb RSP packet metacharacters or a semicolon.
-* `memory-region-info`: An array of memory region informations for 
+* `memory-region-infos`: An array of memory region informations for 
   this thread's stack region may be expedited.  This will be an 
   asciihex encoded JSON reply with the same key-values that appear 
-  in the jThreadsInfo `memory-region-info` entry.  A stub may want to
+  in the jThreadsInfo `memory-region-infos` entry.  A stub may want to
   expedite the memory region of the stack and the pc, so this is
   an array of memory regions.
 

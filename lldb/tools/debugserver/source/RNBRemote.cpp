@@ -3039,7 +3039,7 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
             JSONGenerator::ArraySP containing_arr_sp =
                 std::make_shared<JSONGenerator::Array>();
             containing_arr_sp->AddItem(obj_sp);
-            ostrm << "memory-region-info:";
+            ostrm << "memory-region-infos:";
             std::ostringstream json_strm;
             containing_arr_sp->Dump(json_strm);
             append_hexified_string(ostrm, json_strm.str());
@@ -5936,7 +5936,7 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
               JSONGenerator::ArraySP containing_arr_sp =
                   std::make_shared<JSONGenerator::Array>();
               containing_arr_sp->AddItem(obj_sp);
-              thread_dict_sp->AddItem("memory-region-info", containing_arr_sp);
+              thread_dict_sp->AddItem("memory-region-infos", containing_arr_sp);
             }
           }
         }
