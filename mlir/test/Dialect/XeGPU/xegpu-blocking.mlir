@@ -1,5 +1,21 @@
 // RUN: mlir-opt --xegpu-blocking -split-input-file %s | FileCheck %s
 
+// CHECK-LABEL: func.func @while_results_without_iter_args
+func.func @while_results_without_iter_args() -> i32 {
+  %c0_i32 = arith.constant 0 : i32
+  %c0_i64 = arith.constant 0 : i64
+  %true = arith.constant true
+  %0:2 = scf.while : () -> (i32, i64) {
+    scf.condition(%true) %c0_i32, %c0_i64 : i32, i64
+  } do {
+  ^bb0(%arg0: i32, %arg1: i64):
+    scf.yield
+  }
+  return %0#0 : i32
+}
+
+// -----
+
 #a = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>
 #b = #xegpu.layout<inst_data = [16, 16], lane_layout = [1, 16], lane_data = [16, 1]>
 #c = #xegpu.layout<inst_data = [8, 16], lane_layout = [1, 16], lane_data = [8, 1]>
