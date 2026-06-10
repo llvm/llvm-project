@@ -307,7 +307,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(typeIs(0, p9), typeIs(1, p9)))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allPtrs)));
 
-  getActionDefinitionsBuilder(G_MEMSET, G_MEMSET_INLINE)
+  getActionDefinitionsBuilder({G_MEMSET, G_MEMSET_INLINE})
       .unsupportedIf(typeIs(0, p9))
       .legalIf(all(typeInSet(0, allPtrs), typeInSet(1, allIntScalars)));
 
