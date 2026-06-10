@@ -1711,6 +1711,16 @@ add_header_library(
 )
 
 add_header_library(
+  isnanf128
+  HDRS
+    isnanf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   isnanl
   HDRS
     isnanl.h
