@@ -29,7 +29,7 @@ func main() -> Int {
     
     var float32 = Float32(1.25)
     var float64 = 2.5
-#if arch(x86_64)
+#if arch(x86_64) && !os(Windows)
     var float80 = Float80(1.0625)
 #endif
     var float = Float(3.75)
