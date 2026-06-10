@@ -24,6 +24,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -167,6 +168,20 @@ static std::string getPhdrIndexForError(const ELFFile<ELFT> &Obj,
 static inline Error defaultWarningHandler(const Twine &Msg) {
   return createError(Msg);
 }
+
+namespace elf_detail {
+
+template <typename... Values>
+LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_MINSIZE inline Error
+createELFSectionError(const char *Format, const std::string &SectionIndex,
+                      uint64_t Value1, uint64_t Value2, Values... ExtraValues) {
+  static_assert((std::is_integral_v<Values> && ...));
+  return createError(formatv(Format, SectionIndex, Value1, Value2,
+                             static_cast<uint64_t>(ExtraValues)...)
+                         .str());
+}
+
+} // namespace elf_detail
 
 template <class ELFT>
 static bool checkSectionOffsets(const typename ELFT::Phdr &Phdr,
@@ -689,29 +704,28 @@ template <typename T>
 Expected<ArrayRef<T>>
 ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr &Sec) const {
   if (Sec.sh_entsize != sizeof(T) && sizeof(T) != 1)
-    return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has invalid sh_entsize: expected " + Twine(sizeof(T)) +
-                       ", but got " + Twine(Sec.sh_entsize));
+    return elf_detail::createELFSectionError(
+        "section {0} has invalid sh_entsize: expected {1}, but got {2}",
+        getSecIndexForError(*this, Sec), sizeof(T), Sec.sh_entsize);
 
   uintX_t Offset = Sec.sh_offset;
   uintX_t Size = Sec.sh_size;
 
   if (Size % sizeof(T))
-    return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has an invalid sh_size (" + Twine(Size) +
-                       ") which is not a multiple of its sh_entsize (" +
-                       Twine(Sec.sh_entsize) + ")");
+    return elf_detail::createELFSectionError(
+        "section {0} has an invalid sh_size ({1}) which is not a multiple of "
+        "its sh_entsize ({2})",
+        getSecIndexForError(*this, Sec), Size, Sec.sh_entsize);
   if (std::numeric_limits<uintX_t>::max() - Offset < Size)
-    return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has a sh_offset (0x" + Twine::utohexstr(Offset) +
-                       ") + sh_size (0x" + Twine::utohexstr(Size) +
-                       ") that cannot be represented");
+    return elf_detail::createELFSectionError(
+        "section {0} has a sh_offset (0x{1:x-}) + sh_size (0x{2:x-}) that "
+        "cannot be represented",
+        getSecIndexForError(*this, Sec), Offset, Size);
   if (Offset + Size > Buf.size())
-    return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has a sh_offset (0x" + Twine::utohexstr(Offset) +
-                       ") + sh_size (0x" + Twine::utohexstr(Size) +
-                       ") that is greater than the file size (0x" +
-                       Twine::utohexstr(Buf.size()) + ")");
+    return elf_detail::createELFSectionError(
+        "section {0} has a sh_offset (0x{1:x-}) + sh_size (0x{2:x-}) that is "
+        "greater than the file size (0x{3:x-})",
+        getSecIndexForError(*this, Sec), Offset, Size, Buf.size());
 
   if (Offset % alignof(T))
     // TODO: this error is untested.
