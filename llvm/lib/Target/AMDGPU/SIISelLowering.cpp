@@ -1065,6 +1065,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::SMAX,
                        ISD::UMIN,
                        ISD::UMAX,
+                       ISD::USUBSAT,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
@@ -8805,6 +8806,7 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   case ISD::SRL:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     return ISD::ZERO_EXTEND;
   case ISD::ADD:
   case ISD::SUB:
@@ -8833,7 +8835,8 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
          Opc == ISD::SRL || Opc == ISD::SRA || Opc == ISD::AND ||
          Opc == ISD::OR || Opc == ISD::XOR || Opc == ISD::MUL ||
          Opc == ISD::SETCC || Opc == ISD::SELECT || Opc == ISD::SMIN ||
-         Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX);
+         Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX ||
+         Opc == ISD::USUBSAT);
 
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
@@ -18583,6 +18586,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;
