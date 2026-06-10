@@ -111,8 +111,9 @@ computeNewReturnType(mlir::Type origRetTy, const ArgClassification &retInfo,
     // llvm.signext / llvm.zeroext res attribute attached separately below.
     return origRetTy;
   case ArgKind::Indirect:
-    // sret: the value is returned through a hidden pointer argument that
-    // rewriteFunctionDefinition prepends to the argument list, so the wire
+    // sret: the value is returned through a pointer argument that the ABI
+    // synthesizes (rewriteFunctionDefinition prepends it to the argument
+    // list); it is not part of the source-level signature, so the wire
     // return type becomes void.
     return cir::VoidType::get(ctx);
   }
@@ -410,6 +411,9 @@ llvm::SmallVector<mlir::NamedAttribute>
 buildSretSlotAttrs(mlir::OpBuilder &builder, mlir::Type retTy, uint64_t align,
                    bool withNoalias) {
   llvm::SmallVector<mlir::NamedAttribute> attrs;
+  // The sret type must be carried explicitly: LLVM's sret attribute requires
+  // it, and once the CIR `!cir.ptr<retTy>` lowers to an opaque LLVM `ptr` the
+  // pointee type can no longer be recovered from the pointer.
   attrs.push_back(
       builder.getNamedAttr("llvm.sret", mlir::TypeAttr::get(retTy)));
   attrs.push_back(
@@ -440,10 +444,11 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
   newArgAttrs.reserve(newCall.getArgOperands().size());
   newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, sretAttrs));
   if (argAttrs)
-    for (mlir::Attribute a : argAttrs)
-      newArgAttrs.push_back(a);
-  while (newArgAttrs.size() < newCall.getArgOperands().size())
-    newArgAttrs.push_back(mlir::DictionaryAttr::get(ctx));
+    llvm::append_range(newArgAttrs, argAttrs);
+  assert(newArgAttrs.size() <= newCall.getArgOperands().size() &&
+         "arg_attrs wider than the rewritten call's operand list");
+  newArgAttrs.resize(newCall.getArgOperands().size(),
+                     mlir::DictionaryAttr::get(ctx));
   newCall->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, newArgAttrs));
 }
 
@@ -485,10 +490,12 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     return mlir::failure();
   llvm::SmallVector<mlir::Type> newResultTypes = {newRetTy};
 
-  // sret return: the value is returned through a hidden pointer prepended as
-  // argument 0.  The wire return type was already set to void by
-  // computeNewReturnType.  Every classification index therefore maps to a
-  // block argument shifted by one in the body handling below.
+  // sret return: the value is returned through a pointer the ABI inserts as
+  // argument 0.  This pointer is not part of the function's source-level
+  // signature -- it is synthesized here -- and the wire return type was
+  // already set to void by computeNewReturnType.  Every classification index
+  // therefore maps to a block argument shifted by one in the body handling
+  // below.
   bool hasSRet =
       fc.returnInfo.kind == ArgKind::Indirect && !oldResultTypes.empty();
   if (hasSRet)
@@ -531,21 +538,21 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       // passed at the ABI level, so any remaining uses are vacuous;
       // poison says exactly that.  Iterate in reverse so that earlier
       // indices stay stable as later ones are erased.
-      for (int blockIdx = static_cast<int>(fc.argInfos.size()) - 1;
-           blockIdx >= 0; --blockIdx) {
-        if (fc.argInfos[blockIdx].kind != ArgKind::Ignore)
+      for (int argInfoIdx = static_cast<int>(fc.argInfos.size()) - 1;
+           argInfoIdx >= 0; --argInfoIdx) {
+        if (fc.argInfos[argInfoIdx].kind != ArgKind::Ignore)
           continue;
-        unsigned realIdx = static_cast<unsigned>(blockIdx) + hasSRet;
-        if (realIdx >= entry.getNumArguments())
+        unsigned blockIdx = static_cast<unsigned>(argInfoIdx) + hasSRet;
+        if (blockIdx >= entry.getNumArguments())
           continue;
-        mlir::BlockArgument arg = entry.getArgument(realIdx);
+        mlir::BlockArgument arg = entry.getArgument(blockIdx);
         if (!arg.use_empty()) {
           builder.setInsertionPointToStart(&entry);
           mlir::Value poison =
               createIgnoredValue(builder, funcOp.getLoc(), arg.getType());
           arg.replaceAllUsesWith(poison);
         }
-        entry.eraseArgument(realIdx);
+        entry.eraseArgument(blockIdx);
       }
     }
 
@@ -592,8 +599,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
           /*withNoalias=*/funcOp.isDefinition());
       llvm::SmallVector<mlir::Attribute> withSret;
       withSret.push_back(mlir::DictionaryAttr::get(ctx, sretAttrs));
-      for (mlir::Attribute a : updated)
-        withSret.push_back(a);
+      llvm::append_range(withSret, updated);
       funcOp->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, withSret));
     } else {
       funcOp->setAttr("arg_attrs", updated);

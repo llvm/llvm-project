@@ -32,6 +32,11 @@
   args   = [ ]
 }
 
+#direct_ptr_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "direct" } ]
+}
+
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
     #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
@@ -51,12 +56,12 @@ module attributes {
   // The indirect return becomes a hidden sret pointer prepended as argument 0,
   // the wire return type becomes void, the __retval alloca is rewired to the
   // sret pointer, and the trailing load/return collapses to a bare return.
-  // CHECK:      cir.func{{.*}} @returns_big(%[[SRET:.*]]: !cir.ptr<!rec_Big>
+  // CHECK:      cir.func{{.*}} @returns_big(%[[SRET:.*]]: !cir.ptr<!rec_Big> {
   // CHECK-SAME:     llvm.align = 8 : i64
   // CHECK-SAME:     llvm.dead_on_unwind
   // CHECK-SAME:     llvm.noalias
   // CHECK-SAME:     llvm.sret = !rec_Big
-  // CHECK-SAME:     llvm.writable
+  // CHECK-SAME:     llvm.writable}
   // CHECK-NOT:    -> !rec_Big
   // CHECK:        %[[Z:.*]] = cir.const #cir.zero : !rec_Big
   // CHECK:        cir.store %[[Z]], %[[SRET]] : !rec_Big, !cir.ptr<!rec_Big>
@@ -98,13 +103,15 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @caller_multi() -> !s32i
+  // CHECK:        %[[A:.*]] = cir.alloca !rec_Big, {{.*}} ["a"]
+  // CHECK:        %[[B:.*]] = cir.alloca !rec_Big, {{.*}} ["b"]
   // CHECK:        %[[SLOT:.*]] = cir.alloca !rec_Big, {{.*}} ["sret"]
   // CHECK:        cir.call @returns_big(%[[SLOT]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:     -> ()
   // CHECK:        %[[LD:.*]] = cir.load %[[SLOT]] : !cir.ptr<!rec_Big>, !rec_Big
-  // CHECK:        cir.store %[[LD]], %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
-  // CHECK:        cir.store %[[LD]], %{{.*}} : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.store %[[LD]], %[[A]] : !rec_Big, !cir.ptr<!rec_Big>
+  // CHECK:        cir.store %[[LD]], %[[B]] : !rec_Big, !cir.ptr<!rec_Big>
 
   // sret composes with an Extend argument: the sret slot is prepended and the
   // s8 argument is still extended to s32 with llvm.signext on both the callee
@@ -118,7 +125,7 @@ module attributes {
     cir.return %1 : !rec_Big
   }
 
-  // CHECK:      cir.func{{.*}} @returns_big_ext(%[[SRET2:.*]]: !cir.ptr<!rec_Big>
+  // CHECK:      cir.func{{.*}} @returns_big_ext(%[[SRET2:.*]]: !cir.ptr<!rec_Big> {
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:   %{{.*}}: !s8i {llvm.signext}
   // CHECK-NOT:    -> !rec_Big
@@ -158,13 +165,43 @@ module attributes {
     cir.return %r2 : !rec_Big
   }
 
-  // CHECK:      cir.func{{.*}} @returns_big_cond(%[[SRETC:.*]]: !cir.ptr<!rec_Big>
+  // CHECK:      cir.func{{.*}} @returns_big_cond(%[[SRETC:.*]]: !cir.ptr<!rec_Big> {
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-NOT:    -> !rec_Big
   // CHECK:        cir.store %{{.*}}, %[[SRETC]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK:        cir.return
   // CHECK:        cir.store %{{.*}}, %[[SRETC]] : !rec_Big, !cir.ptr<!rec_Big>
   // CHECK:        cir.return
+  // CHECK-NOT:    cir.return %{{.*}} : !rec_Big
+
+  // Multiple returns whose value is constructed in place via a call into
+  // __retval (no const store).  After lowering, __retval is rewired to the
+  // sret pointer, so both constructor calls take the sret pointer directly,
+  // both returns collapse to a bare cir.return, and nothing is stored to the
+  // sret slot at all.
+  cir.func private @make_big(!cir.ptr<!rec_Big>)
+      attributes { test_classify = #direct_ptr_arg }
+
+  cir.func @returns_big_ctor(%cond: !cir.bool) -> !rec_Big
+      attributes { test_classify = #indirect_return_bool } {
+    %0 = cir.alloca !rec_Big, !cir.ptr<!rec_Big>, ["__retval"] {alignment = 8 : i64}
+    cir.if %cond {
+      cir.call @make_big(%0) : (!cir.ptr<!rec_Big>) -> ()
+      %r1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+      cir.return %r1 : !rec_Big
+    }
+    cir.call @make_big(%0) : (!cir.ptr<!rec_Big>) -> ()
+    %r2 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
+    cir.return %r2 : !rec_Big
+  }
+
+  // CHECK:      cir.func{{.*}} @returns_big_ctor(%[[SRETCTOR:.*]]: !cir.ptr<!rec_Big> {
+  // CHECK-SAME:     llvm.sret = !rec_Big
+  // CHECK-NOT:    -> !rec_Big
+  // CHECK:        cir.call @make_big(%[[SRETCTOR]]) : (!cir.ptr<!rec_Big>) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK:        cir.call @make_big(%[[SRETCTOR]]) : (!cir.ptr<!rec_Big>) -> ()
+  // CHECK-NEXT:   cir.return
   // CHECK-NOT:    cir.return %{{.*}} : !rec_Big
 
   // sret composes with an Ignore argument: the ignored arg is dropped from the
@@ -178,7 +215,7 @@ module attributes {
     cir.return %1 : !rec_Big
   }
 
-  // CHECK:      cir.func{{.*}} @returns_big_ignore(%[[SRETI:.*]]: !cir.ptr<!rec_Big>
+  // CHECK:      cir.func{{.*}} @returns_big_ignore(%[[SRETI:.*]]: !cir.ptr<!rec_Big> {
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-NOT:    !s32i
   // CHECK-NOT:    -> !rec_Big
@@ -192,7 +229,7 @@ module attributes {
   cir.func private @returns_big_decl() -> !rec_Big
       attributes { test_classify = #indirect_return }
 
-  // CHECK:      cir.func{{.*}} @returns_big_decl(!cir.ptr<!rec_Big>
+  // CHECK:      cir.func{{.*}} @returns_big_decl(!cir.ptr<!rec_Big> {
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-NOT:    llvm.noalias
   // CHECK-NOT:    -> !rec_Big
