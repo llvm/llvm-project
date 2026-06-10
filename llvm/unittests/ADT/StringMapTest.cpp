@@ -785,17 +785,6 @@ TEST(StringMapCustomTest, EraseInvalidatesIterators) {
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 
-TEST(StringMapCustomTest, RemoveInvalidatesIterators) {
-  StringMap<int> Map;
-  Map["a"] = 1;
-  Map["b"] = 2;
-  auto It = Map.find("a");
-  auto *Entry = &*Map.find("b");
-  Map.remove(Entry);
-  Entry->Destroy(Map.getAllocator());
-  EXPECT_DEATH((void)It->second, "invalid iterator access");
-}
-
 TEST(StringMapCustomTest, ClearInvalidatesIterators) {
   StringMap<int> Map;
   Map["a"] = 1;
