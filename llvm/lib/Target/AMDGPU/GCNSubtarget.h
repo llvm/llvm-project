@@ -755,6 +755,14 @@ public:
 
   bool hasFmaLegacy32Insts() const { return hasGFX10_3Insts(); }
 
+  /// \returns true if the VALU has a fast-forward path from v_add/sub with
+  /// carry-out -> v_add/sub with carry-in instructions.
+  bool hasCarryOutCarryInFastForward() const {
+    // GFX10 onwards definitely does. For GFX9 and earlier the documentation is
+    // inconclusive.
+    return HasGFX10Insts;
+  }
+
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
     return AMDGPU::IsaInfo::getSGPRAllocGranule(*this);

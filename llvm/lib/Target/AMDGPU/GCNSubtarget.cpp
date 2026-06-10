@@ -838,7 +838,7 @@ void GCNSubtarget::adjustSchedDependency(
   case AMDGPU::V_ADDC_U32_e64:
   case AMDGPU::V_SUBB_U32_e64:
   case AMDGPU::V_SUBBREV_U32_e64:
-    if (getGeneration() < GFX10)
+    if (!hasCarryOutCarryInFastForward())
       break;
     [[fallthrough]];
   case AMDGPU::V_CNDMASK_B32_e64:
