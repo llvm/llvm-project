@@ -1979,7 +1979,7 @@ bool llvm::promoteLoopAccessesToScalars(
   // store is never executed, but the exit blocks are not executed either.
 
   bool DereferenceableInPH = false;
-  bool StoreIsGuanteedToExecute = false;
+  bool StoreIsGuaranteedToExecute = false;
   bool LoadIsGuaranteedToExecute = false;
   bool FoundLoadToPromote = false;
 
@@ -2075,7 +2075,7 @@ bool llvm::promoteLoopAccessesToScalars(
         Align InstAlignment = Store->getAlign();
         bool GuaranteedToExecute =
             SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
-        StoreIsGuanteedToExecute |= GuaranteedToExecute;
+        StoreIsGuaranteedToExecute |= GuaranteedToExecute;
         if (GuaranteedToExecute) {
           DereferenceableInPH = true;
           if (StoreSafety == StoreSafetyUnknown)
@@ -2195,13 +2195,13 @@ bool llvm::promoteLoopAccessesToScalars(
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, ExitBlocks, InsertPts,
                         MSSAInsertPts, PIC, MSSAU, *LI, DL, Alignment,
                         SawUnorderedAtomic,
-                        StoreIsGuanteedToExecute ? AATags : AAMDNodes(),
+                        StoreIsGuaranteedToExecute ? AATags : AAMDNodes(),
                         *SafetyInfo, StoreSafety == StoreSafe);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
   LoadInst *PreheaderLoad = nullptr;
-  if (FoundLoadToPromote || !StoreIsGuanteedToExecute) {
+  if (FoundLoadToPromote || !StoreIsGuaranteedToExecute) {
     PreheaderLoad =
         new LoadInst(AccessTy, SomePtr, SomePtr->getName() + ".promoted",
                      Preheader->getTerminator()->getIterator());
