@@ -267,7 +267,7 @@ public:
                        // operations; used by X86.
     CmpArithIntrinsic, // Use a target-specific intrinsic for special compare
                        // operations; used by X86.
-    Expand,            // Generic expansion in terms of other atomic operations.
+    Xchg,              // Expand a store into an atomicrmw xchg.
     CustomExpand,      // Custom target-specific expansion using TLI hooks.
 
     // Rewrite to a non-atomic form for use in a known non-preemptible
@@ -2461,8 +2461,8 @@ public:
   }
 
   /// Returns how the given (atomic) store should be expanded by the IR-level
-  /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
-  /// will try to use an atomicrmw xchg.
+  /// AtomicExpand pass. For instance, AtomicExpansionKind::Xchg expands the
+  /// store to an atomicrmw xchg.
   virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }

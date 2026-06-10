@@ -638,7 +638,7 @@ bool AtomicExpandImpl::tryExpandAtomicStore(StoreInst *SI) {
   case TargetLoweringBase::AtomicExpansionKind::CustomExpand:
     TLI->emitExpandAtomicStore(SI);
     return true;
-  case TargetLoweringBase::AtomicExpansionKind::Expand:
+  case TargetLoweringBase::AtomicExpansionKind::Xchg:
     expandAtomicStoreToXChg(SI);
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
