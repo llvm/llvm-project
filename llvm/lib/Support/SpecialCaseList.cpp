@@ -89,10 +89,15 @@ private:
   mutable bool Initialized = false;
 };
 
+struct QueryOptions {
+  bool UseGlobs = true;
+  bool RemoveDotSlash = false;
+};
+
 /// Represents a set of patterns and their line numbers
 class Matcher {
 public:
-  Matcher(bool UseGlobs, bool RemoveDotSlash);
+  Matcher(QueryOptions QOpts);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
@@ -100,7 +105,7 @@ public:
   bool matchAny(StringRef Query) const { return match(Query); }
 
   std::variant<RegexMatcher, GlobMatcher> M;
-  bool RemoveDotSlash;
+  QueryOptions Options;
 
 private:
   StringRef findRule(unsigned LineNo) const;
@@ -239,9 +244,8 @@ StringRef GlobMatcher::findRule(unsigned LineNo) const {
   return {};
 }
 
-Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash)
-    : RemoveDotSlash(RemoveDotSlash) {
-  if (UseGlobs)
+Matcher::Matcher(QueryOptions QOpts) : Options(QOpts) {
+  if (Options.UseGlobs)
     M.emplace<GlobMatcher>();
   else
     M.emplace<RegexMatcher>();
@@ -252,7 +256,7 @@ Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
 }
 
 unsigned Matcher::match(StringRef Query) const {
-  if (RemoveDotSlash)
+  if (Options.RemoveDotSlash)
     Query = llvm::sys::path::remove_leading_dotslash(Query);
   return std::visit([&](auto &V) -> unsigned { return V.match(Query); }, M);
 }
@@ -269,8 +273,7 @@ public:
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
-  explicit SectionImpl(bool UseGlobs)
-      : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false) {}
+  explicit SectionImpl(QueryOptions QOpts) : SectionMatcher(QOpts) {}
 
   Matcher SectionMatcher;
   SectionEntries Entries;
@@ -410,10 +413,13 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
       return false;
     }
 
+    QueryOptions QOpts;
+    QOpts.UseGlobs = UseGlobs;
+    if (llvm::is_contained(PathPrefixes, Prefix))
+      QOpts.RemoveDotSlash = RemoveDotSlash;
+
     auto [Pattern, Category] = Postfix.split("=");
-    auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
-        Category, UseGlobs,
-        RemoveDotSlash && llvm::is_contained(PathPrefixes, Prefix));
+    auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(Category, QOpts);
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
@@ -451,7 +457,8 @@ SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
 SpecialCaseList::Section::Section(StringRef Str, unsigned FileIdx,
                                   bool UseGlobs)
     : Name(Str), FileIdx(FileIdx),
-      Impl(std::make_unique<SectionImpl>(UseGlobs)) {}
+      Impl(std::make_unique<SectionImpl>(
+          QueryOptions{UseGlobs, /*RemoveDotSlash=*/false})) {}
 
 SpecialCaseList::Section::Section(Section &&) = default;
 
