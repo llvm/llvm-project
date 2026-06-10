@@ -145,6 +145,17 @@ void Statusline::UpdateScrollWindow(ScrollWindowMode mode, uint64_t prev_width,
       if (first_row < 1)
         first_row = 1;
 
+      // A height shrink can leave the prompt on the row the statusline is about
+      // to occupy, because the terminal reclaims the row below the cursor
+      // instead of scrolling the cursor up. Scroll up one row to lift the
+      // prompt clear, like EnableStatusline; the overlap is only ever the
+      // single statusline row, and this is a no-op unless the cursor sits at
+      // the bottom of the scroll region.
+      if (prev_height > m_terminal_height) {
+        locked_stream << '\n';
+        locked_stream.Printf(ANSI_UP_ROWS, 1);
+      }
+
       locked_stream << ANSI_SAVE_CURSOR;
       locked_stream.Printf(ANSI_TO_START_OF_ROW, first_row);
       locked_stream << ANSI_CLEAR_BELOW;
