@@ -2081,12 +2081,6 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
   bool IsArray = Desc->isArray();
   QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
 
-  if (ElemTy->isIncompleteType()) {
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_ltor_incomplete_type)
-        << ElemTy;
-    return false;
-  }
   if (!isOneByteCharacterType(ElemTy)) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memchr_unsupported)

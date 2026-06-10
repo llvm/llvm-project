@@ -21118,10 +21118,6 @@ public:
         return false;
 
       QualType CharTy = Ptr.Designator.getType(Info.Ctx);
-      if (CharTy->isIncompleteType()) {
-        Info.FFDiag(E, diag::note_constexpr_ltor_incomplete_type) << CharTy;
-        return false;
-      }
       if (!isOneByteCharacterType(CharTy)) {
         Info.FFDiag(E, diag::note_constexpr_memchr_unsupported)
             << Info.Ctx.BuiltinInfo.getQuotedName(E->getBuiltinCallee())
