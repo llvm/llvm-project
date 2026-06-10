@@ -102,10 +102,10 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) {
 ; CHECK-LABEL: define void @interleave_group_with_countable_early_exit(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 38)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
@@ -163,10 +163,10 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) {
 ; EPILOGUE-LABEL: define void @interleave_group_with_countable_early_exit(
 ; EPILOGUE-SAME: i64 [[N:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
-; EPILOGUE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; EPILOGUE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; EPILOGUE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
 ; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 40)
+; EPILOGUE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; EPILOGUE:       [[VECTOR_SCEVCHECK]]:

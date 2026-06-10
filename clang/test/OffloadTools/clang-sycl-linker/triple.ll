@@ -31,7 +31,7 @@
 ; Test error when neither -triple= nor any input supplies a triple.
 ; RUN: not clang-sycl-linker --dry-run %t/no-triple.bc -o a.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NO-TRIPLE
-; NO-TRIPLE: Target triple must be specified or inferable from inputs
+; NO-TRIPLE: target triple must be specified or inferable from inputs
 
 ;--- input1.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
@@ -63,8 +63,6 @@ define spir_kernel void @kernel_c() #0 {
 attributes #0 = { "sycl-module-id"="TU3.cpp" }
 
 ;--- no-triple.ll
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
-
 define spir_kernel void @kernel_d() #0 {
   ret void
 }

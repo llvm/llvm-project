@@ -305,9 +305,9 @@ Value *InstCombinerImpl::simplifyMaskedLoad(IntrinsicInst &II) {
   }
 
   // If we can unconditionally load from this address, replace with a
-  // load/select idiom. TODO: use DT for context sensitive query
+  // load/select idiom.
   if (isDereferenceablePointer(LoadPtr, II.getType(),
-                               II.getDataLayout(), &II, &AC)) {
+                               SQ.getWithInstruction(&II))) {
     LoadInst *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                              "unmaskedload");
     LI->copyMetadata(II);
@@ -2494,7 +2494,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (auto *SkippedBarrier = simplifyInvariantGroupIntrinsic(*II, *this))
       return replaceInstUsesWith(*II, SkippedBarrier);
     break;
-  case Intrinsic::powi:
+  case Intrinsic::powi: {
     if (ConstantInt *Power = dyn_cast<ConstantInt>(II->getArgOperand(1))) {
       // 0 and 1 are handled in instsimplify
       // powi(x, -1) -> 1/x
@@ -2519,7 +2519,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           return replaceOperand(*II, 0, X);
       }
     }
+    if (ConstantFP *Base = dyn_cast<ConstantFP>(II->getArgOperand(0))) {
+      Value *Exp = II->getArgOperand(1);
+      Type *Ty = Base->getType();
+      // powi(2.0, p) -> ldexp(1.0, p)
+      if (II->hasApproxFunc() && Base->isExactlyValue(2.0)) {
+        ConstantFP *One = ConstantFP::get(Ty, 1.0);
+        if (auto *VTy = dyn_cast<VectorType>(Ty))
+          Exp = Builder.CreateVectorSplat(VTy->getElementCount(), Exp);
+        Value *Ldexp = Builder.CreateLdexp(One, Exp, II);
+        return replaceInstUsesWith(*II, Ldexp);
+      }
+    }
     break;
+  }
 
   case Intrinsic::cttz:
   case Intrinsic::ctlz:
@@ -3630,24 +3643,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return nullptr;
     break;
   case Intrinsic::assume: {
-    Value *IIOperand = II->getArgOperand(0);
-
-    // Canonicalize assume(a && b) -> assume(a); assume(b);
-    // Note: New assumption intrinsics created here are registered by
-    // the InstCombineIRInserter object.
-    Value *A, *B;
-    if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-      Builder.CreateAssumption(A);
-      Builder.CreateAssumption(B);
-      return eraseInstFromFunction(*II);
-    }
-    // assume(!(a || b)) -> assume(!a); assume(!b);
-    if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Builder.CreateAssumption(Builder.CreateNot(A));
-      Builder.CreateAssumption(Builder.CreateNot(B));
-      return eraseInstFromFunction(*II);
-    }
-
     for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
       switch (getBundleAttrFromOBU(OBU)) {
       case BundleAttr::None:
@@ -3679,6 +3674,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return CallBase::removeOperandBundleAt(II, Idx);
       }
 
+      case BundleAttr::Dereferenceable: {
+        auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
+
+        if (Count && *Count == 0)
+          return CallBase::removeOperandBundleAt(II, Idx);
+        break;
+      }
+
+      case BundleAttr::Ignore:
+        return CallBase::removeOperandBundleAt(II, Idx);
+
       case BundleAttr::NonNull: {
         auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
@@ -3693,6 +3699,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           MDNode *MD = MDNode::get(II->getContext(), {});
           LI->setMetadata(LLVMContext::MD_nonnull, MD);
           LI->setMetadata(LLVMContext::MD_noundef, MD);
+          return CallBase::removeOperandBundleAt(II, Idx);
+        }
+
+        if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
+            GEP && GEP->isInBounds() &&
+            !NullPointerIsDefined(II->getFunction(),
+                                  Ptr->getType()->getPointerAddressSpace())) {
+          Builder.CreateNonnullAssumption(GEP->stripInBoundsOffsets());
           return CallBase::removeOperandBundleAt(II, Idx);
         }
 
@@ -3719,9 +3733,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       } break;
 
       // TODO: Drop these assumes when they are redundant
-      case BundleAttr::Dereferenceable:
       case BundleAttr::DereferenceableOrNull:
-      case BundleAttr::Ignore:
       case BundleAttr::NoUndef:
         break;
 
@@ -3729,6 +3741,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       case BundleAttr::Cold:
         break;
       }
+    }
+
+    // If the assume has operand bundles, the folds below will never work, so
+    // don't bother trying.
+    if (II->hasOperandBundles())
+      break;
+
+    Value *IIOperand = II->getArgOperand(0);
+
+    // Canonicalize assume(a && b) -> assume(a); assume(b);
+    // Note: New assumption intrinsics created here are registered by
+    // the InstCombineIRInserter object.
+    Value *A, *B;
+    if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
+      Builder.CreateAssumption(A);
+      Builder.CreateAssumption(B);
+      return eraseInstFromFunction(*II);
+    }
+    // assume(!(a || b)) -> assume(!a); assume(!b);
+    if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
+      Builder.CreateAssumption(Builder.CreateNot(A));
+      Builder.CreateAssumption(Builder.CreateNot(B));
+      return eraseInstFromFunction(*II);
     }
 
     // Convert nonnull assume like:
@@ -3771,46 +3806,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    /// Canonicalize Knowledge in operand bundles.
-    if (EnableKnowledgeRetention && II->hasOperandBundles()) {
-      for (unsigned Idx = 0; Idx < II->getNumOperandBundles(); Idx++) {
-        auto &BOI = II->bundle_op_info_begin()[Idx];
-        RetainedKnowledge RK =
-          llvm::getKnowledgeFromBundle(cast<AssumeInst>(*II), BOI);
-        if (BOI.End - BOI.Begin > 2)
-          continue; // Prevent reducing knowledge in an align with offset since
-                    // extracting a RetainedKnowledge from them looses offset
-                    // information
-        RetainedKnowledge CanonRK =
-          llvm::simplifyRetainedKnowledge(cast<AssumeInst>(II), RK,
-                                          &getAssumptionCache(),
-                                          &getDominatorTree());
-        if (CanonRK == RK)
-          continue;
-        if (!CanonRK) {
-          if (BOI.End - BOI.Begin > 0) {
-            Worklist.pushValue(II->op_begin()[BOI.Begin]);
-            Value::dropDroppableUse(II->op_begin()[BOI.Begin]);
-          }
-          continue;
-        }
-        assert(RK.AttrKind == CanonRK.AttrKind);
-        if (BOI.End - BOI.Begin > 0)
-          II->op_begin()[BOI.Begin].set(CanonRK.WasOn);
-        if (BOI.End - BOI.Begin > 1)
-          II->op_begin()[BOI.Begin + 1].set(ConstantInt::get(
-              Type::getInt64Ty(II->getContext()), CanonRK.ArgValue));
-        if (RK.WasOn)
-          Worklist.pushValue(RK.WasOn);
-        return II;
-      }
-    }
-
     // If there is a dominating assume with the same condition as this one,
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
     computeKnownBits(IIOperand, Known, II);
-    if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
+    if (Known.isAllOnes())
       return eraseInstFromFunction(*II);
 
     // assume(false) is unreachable.
@@ -4256,17 +4256,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return I;
     break;
   case Intrinsic::frexp: {
-    Value *X;
-    // The first result is idempotent with the added complication of the struct
-    // return, and the second result is zero because the value is already
-    // normalized.
-    if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
-      if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
-        X = Builder.CreateInsertValue(
-            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
-            1);
-        return replaceInstUsesWith(*II, X);
-      }
+    // frexp(frexp(x).fract) -> { frexp(x).fract, 0 }: the fraction operand is
+    // already normalized, so the first result is idempotent and the second is
+    // zero.
+    if (match(II->getArgOperand(0),
+              m_ExtractValue<0>(m_Intrinsic<Intrinsic::frexp>(m_Value())))) {
+      Value *Res = Builder.CreateInsertValue(PoisonValue::get(II->getType()),
+                                             II->getArgOperand(0), 0);
+      Res = Builder.CreateInsertValue(
+          Res, Constant::getNullValue(II->getType()->getStructElementType(1)),
+          1);
+      return replaceInstUsesWith(*II, Res);
     }
     break;
   }

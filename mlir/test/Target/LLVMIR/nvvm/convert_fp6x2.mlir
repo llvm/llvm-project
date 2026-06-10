@@ -114,3 +114,45 @@ llvm.func @convert_f6x2_to_f16x2_e3m2(%src : vector<2xi8>) {
   %res2 = nvvm.convert.f6x2.to.f16x2 %src {relu = true} : vector<2xi8> (f6E3M2FN)-> vector<2xf16>
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @convert_f6x2_to_bf16x2_e2m3
+llvm.func @convert_f6x2_to_bf16x2_e2m3(%src : vector<2xi8>, %scale_factor : i16) {
+  // CHECK: %[[res1:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m3x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %[[res1]], i16 32639)
+  %res1 = nvvm.convert.f6x2.to.bf16x2 %src : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+  // CHECK: %[[res2:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m3x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %[[res2]], i16 32639)
+  %res2 = nvvm.convert.f6x2.to.bf16x2 %src {relu = true} : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+  // CHECK: %[[res3:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m3x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %[[res3]], i16 32639)
+  %res3 = nvvm.convert.f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+  // CHECK: %[[res4:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m3x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %[[res4]], i16 32639)
+  %res4 = nvvm.convert.f6x2.to.bf16x2 %src {relu = true, sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+  // CHECK: %[[res5:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e2m3x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %[[res5]], i16 %{{.*}})
+  %res5 = nvvm.convert.f6x2.to.bf16x2 %src, %scale_factor : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+  llvm.return
+}
+
+// CHECK-LABEL: @convert_f6x2_to_bf16x2_e3m2
+llvm.func @convert_f6x2_to_bf16x2_e3m2(%src : vector<2xi8>, %scale_factor : i16) {
+  // CHECK: %[[res1:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e3m2x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %[[res1]], i16 32639)
+  %res1 = nvvm.convert.f6x2.to.bf16x2 %src : vector<2xi8> (f6E3M2FN) -> vector<2xbf16>
+  // CHECK: %[[res2:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e3m2x2.to.bf16x2.rn.relu.scale.n2.ue8m0(i16 %[[res2]], i16 32639)
+  %res2 = nvvm.convert.f6x2.to.bf16x2 %src {relu = true} : vector<2xi8> (f6E3M2FN) -> vector<2xbf16>
+  // CHECK: %[[res3:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e3m2x2.to.bf16x2.rn.satfinite.scale.n2.ue8m0(i16 %[[res3]], i16 32639)
+  %res3 = nvvm.convert.f6x2.to.bf16x2 %src {sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> (f6E3M2FN) -> vector<2xbf16>
+  // CHECK: %[[res4:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e3m2x2.to.bf16x2.rn.relu.satfinite.scale.n2.ue8m0(i16 %[[res4]], i16 32639)
+  %res4 = nvvm.convert.f6x2.to.bf16x2 %src {relu = true, sat = #nvvm.sat_mode<satfinite>} : vector<2xi8> (f6E3M2FN) -> vector<2xbf16>
+  // CHECK: %[[res5:.*]] = bitcast <2 x i8> %{{.*}} to i16
+  // CHECK-NEXT: %{{.*}} = call <2 x bfloat> @llvm.nvvm.e3m2x2.to.bf16x2.rn.scale.n2.ue8m0(i16 %[[res5]], i16 %{{.*}})
+  %res5 = nvvm.convert.f6x2.to.bf16x2 %src, %scale_factor : vector<2xi8> (f6E3M2FN) -> vector<2xbf16>
+  llvm.return
+}

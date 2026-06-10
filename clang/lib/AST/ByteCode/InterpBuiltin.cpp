@@ -1025,7 +1025,8 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   if (CarryOutPtr.canBeInitialized())
     CarryOutPtr.initialize();
 
-  assert(Call->getType() == Call->getArg(0)->getType());
+  assert(S.getASTContext().hasSimilarType(Call->getType(),
+                                          Call->getArg(0)->getType()));
   pushInteger(S, Result, Call->getType());
   return true;
 }
@@ -2460,6 +2461,16 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
       if (Kind == 1)
         return std::nullopt;
     }
+    // For Type=1, defer to the runtime path on a true incomplete-array
+    // flexible array member (e.g. 'char fam[]') even when the base is a
+    // concrete local/global. Without this, the bytecode interpreter would
+    // happily fold &af.fam to 'NumElems * elemSize = 0' below; the default
+    // const-evaluator avoids the same trap, and CGBuiltin emits
+    // @llvm.objectsize for the correct layout-derived answer (matching
+    // GCC's __bos/__bdos on '&af.fam').
+    if (Kind == 1 && pointsToLastObject(Ptr) && Ptr.getFieldDesc()->isArray() &&
+        Ptr.getFieldDesc()->getType()->isIncompleteArrayType())
+      return std::nullopt;
   }
 
   // The "closest surrounding subobject" is NOT a base class,
@@ -6697,15 +6708,21 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   if (DestDesc->isPrimitiveArray()) {
     if (!SrcDesc->isPrimitiveArray())
       return false;
+    // For floating types, check the actual QualType so we don't accidentally
+    // mix up semantics.
+    if (SrcDesc->getPrimType() == PT_Float) {
+      if (!S.getASTContext().hasSimilarType(SrcDesc->getElemQualType(),
+                                            DestDesc->getElemQualType()))
+        return false;
+    }
+
     assert(SrcDesc->isPrimitiveArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    assert(SrcDesc->getPrimType() == DestDesc->getPrimType());
     PrimType ET = DestDesc->getPrimType();
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
-      Pointer DestElem = Dest.atIndex(I);
-      TYPE_SWITCH(ET, {
-        DestElem.deref<T>() = Src.elem<T>(I);
-        DestElem.initialize();
-      });
+      TYPE_SWITCH(ET, { Dest.elem<T>(I) = Src.elem<T>(I); });
+      Dest.initializeElement(I);
     }
     return true;
   }
