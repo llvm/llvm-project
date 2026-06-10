@@ -2834,10 +2834,22 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ExpOp(SDNode *N) {
   // we rewrite to a libcall here directly, letting makeLibCall handle promotion
   // if the target accepts it according to shouldSignExtendTypeInLibCall.
 
-  // The exponent should fit in a sizeof(int) type for the libcall to be valid.
-  assert(DAG.getLibInfo().getIntSize() ==
-             N->getOperand(1 + OpOffset).getValueType().getSizeInBits() &&
-         "POWI exponent should match with sizeof(int) when doing the libcall.");
+  // A wider-than-int exponent can't be passed in an int (there's no wider
+  // libcall), so bail like the soften/expand paths. A narrower one is
+  // sign-extended to int by the makeLibCall below.
+  if (N->getOperand(1 + OpOffset).getScalarValueSizeInBits() >
+      DAG.getLibInfo().getIntSize()) {
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+        Twine(IsPowI ? "powi" : "ldexp") +
+            " exponent does not match sizeof(int)",
+        Fn, N->getDebugLoc()));
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), Chain);
+    ReplaceValueWith(SDValue(N, 0), DAG.getPOISON(N->getValueType(0)));
+    return SDValue();
+  }
+
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setIsSigned(true);
   SDValue Ops[2] = {N->getOperand(0 + OpOffset), N->getOperand(1 + OpOffset)};

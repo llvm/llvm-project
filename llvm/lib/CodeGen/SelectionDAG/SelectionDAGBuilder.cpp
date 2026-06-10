@@ -6735,13 +6735,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memcpy.inline defines 0 and 1 to both mean no alignment.
     Align DstAlign = MCI.getDestAlign().valueOrOne();
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MCI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memcpy DAG
-    // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol,
-                               MCI.isForceInlined(), &I, std::nullopt,
+    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, DstAlign, SrcAlign,
+                               isVol, MCI.isForceInlined(), &I, std::nullopt,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)),
                                I.getAAMetadata(), BatchAA);
@@ -6774,16 +6771,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memmove defines 0 and 1 to both mean no alignment.
     Align DstAlign = MMI.getDestAlign().valueOrOne();
     Align SrcAlign = MMI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MMI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memmove DAG
-    // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MM = DAG.getMemmove(Root, sdl, Op1, Op2, Op3, Alignment, isVol, &I,
-                                /* OverrideTailCall */ std::nullopt,
-                                MachinePointerInfo(I.getArgOperand(0)),
-                                MachinePointerInfo(I.getArgOperand(1)),
-                                I.getAAMetadata(), BatchAA);
+    SDValue MM = DAG.getMemmove(
+        Root, sdl, Op1, Op2, Op3, DstAlign, SrcAlign, isVol, &I,
+        /* OverrideTailCall */ std::nullopt,
+        MachinePointerInfo(I.getArgOperand(0)),
+        MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MM);
     return;
   }
@@ -9546,8 +9540,6 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
 
   Align DstAlign = DAG.InferPtrAlign(Dst).valueOrOne();
   Align SrcAlign = DAG.InferPtrAlign(Src).valueOrOne();
-  // DAG::getMemcpy needs Alignment to be defined.
-  Align Alignment = std::min(DstAlign, SrcAlign);
 
   SDLoc sdl = getCurSDLoc();
 
@@ -9556,8 +9548,8 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // the copied memory.
   SDValue Root = getMemoryRoot();
   SDValue MC = DAG.getMemcpy(
-      Root, sdl, Dst, Src, Size, Alignment, false, false, /*CI=*/nullptr,
-      std::nullopt, MachinePointerInfo(I.getArgOperand(0)),
+      Root, sdl, Dst, Src, Size, DstAlign, SrcAlign, false, false,
+      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(I.getArgOperand(0)),
       MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata());
   assert(MC.getNode() != nullptr &&
          "** memcpy should not be lowered as TailCall in mempcpy context **");

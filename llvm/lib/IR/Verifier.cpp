@@ -555,7 +555,6 @@ private:
   void visitInlineHistoryMetadata(Instruction &I, MDNode *MD);
   void visitMemCacheHintMetadata(Instruction &I, MDNode *MD);
 
-  template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
 #include "llvm/IR/Metadata.def"
   void visitDIType(const DIType &N);
@@ -6117,8 +6116,11 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "dereferenceable assumptions should have 2 arguments", Call);
         Check(GetTypeAt(0)->isPointerTy(), "first argument should be a pointer",
               Call);
-        Check(GetTypeAt(1)->isIntegerTy(),
-              "second argument should be an integer", Call);
+        Check(GetTypeAt(1)->isIntegerTy() &&
+                  GetTypeAt(1)->getIntegerBitWidth() <= 64,
+              "second argument should be an integer with a maximum width of 64 "
+              "bits",
+              Call);
         break;
       case BundleAttr::Ignore:
         break;
@@ -7148,6 +7150,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "SGPR arguments must have the `inreg` attribute", &Call);
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
+
+    auto *FlagsArg = cast<ConstantInt>(Call.getArgOperand(4));
+    Check(FlagsArg->getValue().ult(2),
+          "flags must be 0 or 1 for llvm.amdgcn.cs.chain", &Call);
 
     auto *Next = Call.getNextNode();
     bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&

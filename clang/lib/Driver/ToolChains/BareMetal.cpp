@@ -352,6 +352,7 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void BareMetal::addClangTargetOptions(const ArgList &DriverArgs,
                                       ArgStringList &CC1Args,
+                                      StringRef BoundArch,
                                       Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 }

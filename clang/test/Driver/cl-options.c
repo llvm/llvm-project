@@ -856,11 +856,20 @@
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
 
 // RUN: %clang_cl /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWIND
-// EPILOGUNWIND: -fwinx64-eh-unwindv2=best-effort
+// EPILOGUNWIND: -fwinx64-eh-unwind=v2-best-effort
 
 // RUN: %clang_cl /d2epilogunwindrequirev2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
+// /d2epilogunwindrequirev2 always wins over /d2epilogunwind, regardless of
+// the order they appear on the command line (matches MSVC).
+// RUN: %clang_cl /d2epilogunwind /d2epilogunwindrequirev2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
 // RUN: %clang_cl /d2epilogunwindrequirev2 /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
-// EPILOGUNWINDREQUIREV2: -fwinx64-eh-unwindv2=require
+// EPILOGUNWINDREQUIREV2: -fwinx64-eh-unwind=v2-required
+
+// RUN: not %clang --target=x86_64-windows-msvc -fsyntax-only -fwinx64-eh-unwind=invalid %s 2>&1 | FileCheck %s --check-prefix=UNWIND_INVALID
+// UNWIND_INVALID: error: invalid value 'invalid' in '-fwinx64-eh-unwind=invalid'
+
+// RUN: not %clang --target=x86_64-windows-msvc -fwinx64-eh-unwindv2=invalid -### %s 2>&1 | FileCheck %s --check-prefix=UNWINDV2_INVALID
+// UNWINDV2_INVALID: error: invalid value 'invalid' in '-fwinx64-eh-unwindv2=invalid'
 
 // RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
 // FUNCOVERRIDE: -loader-replaceable-function=override_me1

@@ -211,4 +211,7 @@ void verifycpustrings(void) {
   (void)__builtin_cpu_is("znver5");
   (void)__builtin_cpu_is("znver6");
   (void)__builtin_cpu_is("diamondrapids");
+  (void)__builtin_cpu_is("c86-4g-m4");
+  (void)__builtin_cpu_is("c86-4g-m6");
+  (void)__builtin_cpu_is("c86-4g-m7");
 }
