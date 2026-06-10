@@ -1366,7 +1366,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   ErrorOr<StringRef> Rest = parseString(FieldSeparator, true);
   if (std::error_code EC = Rest.getError())
     return EC;
-  if (Rest.get().size() < 3) {
+  if (Rest.get().size() < 1) {
     reportError("expected rest of brstack entry");
     Diag << "Found: " << Rest.get() << "\n";
     return make_error_code(llvm::errc::io_error);
@@ -1569,9 +1569,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
 
   /// The number of fields to parse, set based on \p Type.
   int AddrNum = 0;
-  int CounterNum = 0;
   /// Storage for parsed fields.
-  StringRef EventName;
   std::optional<Location> Addr[3];
   int64_t Counters[2] = {0};
 
@@ -1586,8 +1584,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     StringRef Str = StrOrErr.get();
 
     if (Type == EVENT_NAME) {
-      EventName = Str;
-      break;
+      EventNames.insert(Str);
+      return std::error_code();
     }
 
     Type = StringSwitch<AggregatedLBREntry>(Str)
@@ -1607,9 +1605,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     }
 
     using SSI = StringSwitch<int>;
-    AddrNum =
-        SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Case("E", 0).Default(2);
-    CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
+    AddrNum = SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Default(2);
   }
 
   /// Parse locations depending on entry type, recording them in \p Addr array.
@@ -1628,6 +1624,10 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   /// Parse counters depending on entry type.
+  const bool HasMispreds =
+      (Type == BRANCH || Type == TRACE || Type == RETURN) &&
+      ParsingBuf.split('\n').first.contains(FieldSeparator);
+  const int CounterNum = 1 + HasMispreds;
   for (int I = 0; I < CounterNum; ++I) {
     while (checkAndConsumeFS()) {
     }
@@ -1648,12 +1648,6 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   int64_t Mispreds = Counters[1];
 
   switch (Type) {
-  /// Record event name into \p EventNames and return.
-  case EVENT_NAME: {
-    EventNames.insert(EventName);
-    return std::error_code();
-  }
-
   /// Record basic IP sample into \p BasicSamples and return.
   case SAMPLE: {
     const uint64_t FromOffset = Addr[0]->Offset;
@@ -2486,9 +2480,13 @@ DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
   if (EC)
     return EC;
 
-  for (const auto &[Trace, Info] : Traces)
-    OS << Trace << " " << Info.TakenCount << '\n';
-  OS << formatv("E {0:$[,]}\n", EventNames.keys());
+  for (const auto &[Trace, Info] : Traces) {
+    auto ReturnIt = Returns.find(Trace.Branch);
+    const bool IsRet = ReturnIt != Returns.end() && ReturnIt->second;
+    OS << (IsRet ? 'R' : 'T') << " " << Trace << " " << Info << '\n';
+  }
+  if (!EventNames.empty())
+    OS << formatv("E {0:$[,]}\n", EventNames.keys());
   for (const auto &[PC, Count] : BasicSamples)
     OS << formatv("S {0:x-} {1}\n", PC, Count);
 

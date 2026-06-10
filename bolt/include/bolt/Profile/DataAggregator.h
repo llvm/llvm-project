@@ -143,6 +143,7 @@ private:
     uint64_t TakenCount{0};
     uint64_t MispredCount{0};
   };
+  friend raw_ostream &operator<<(raw_ostream &OS, const TakenBranchInfo &TBI);
 
   /// Intermediate storage for profile data. We save the results of parsing
   /// and use them later for processing and assigning profile.
@@ -434,7 +435,7 @@ private:
   /// File format syntax:
   /// E <event>
   /// S <start> <count>
-  /// [TR] <start> <end> <ft_end> <count>
+  /// [TR] <start> <end> <ft_end> <count> [<mispred_count>]
   /// B <start> <end> <count> <mispred_count>
   /// [Ffr] <start> <end> <count>
   ///
@@ -473,6 +474,7 @@ private:
   ///
   /// Trace profile combining branches and fall-throughs:
   /// T 4b196f 4b19e0 4b19ef 2
+  /// T 4b196f 4b19e0 4b19ef 2 1
   ///
   /// Legacy branch profile with separate branches and fall-throughs:
   /// F 41be50 41be50 3
@@ -669,13 +671,20 @@ public:
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::LBREntry &L) {
-  OS << formatv("{0:x} -> {1:x}/{2}", L.From, L.To, L.Mispred ? 'M' : 'P');
+  OS << formatv("{0:x} -> {1:x}/{2}/{3}", L.From, L.To, L.Mispred ? 'M' : 'P',
+                L.IsReturn ? "RET" : "-");
   return OS;
 }
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::Trace &T) {
-  OS << formatv("T {0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
+  OS << formatv("{0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS,
+                               const DataAggregator::TakenBranchInfo &TBI) {
+  OS << TBI.TakenCount << " " << TBI.MispredCount;
   return OS;
 }
 
