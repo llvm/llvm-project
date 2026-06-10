@@ -26,10 +26,7 @@ class ExpectedValueRewriter:
         self.expect = expect
         self.root_value = value
         self.expected_value: Union[Dict, str, None] = None
-        print(value)
         if sub_values := self.root_value.sub_values:
-            for sub_value in sub_values:
-                print(f"  {sub_value}")
             self.expected_value = {
                 sub_value.expression: expected_value
                 for sub_value in sub_values
