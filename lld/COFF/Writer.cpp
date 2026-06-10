@@ -216,8 +216,7 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
-  StringRef getMergeDestination(const StringRef sectionName,
-                                const StringRef toName);
+  StringRef getMergeDestination(StringRef fromSection, StringRef toSection);
   void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
@@ -1658,19 +1657,18 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
-StringRef Writer::getMergeDestination(const StringRef sectionName,
-                                      const StringRef destName) {
-  StringRef toName = destName;
+StringRef Writer::getMergeDestination(StringRef fromSection,
+                                      StringRef toSection) {
   StringSet<> names;
   while (true) {
-    if (!names.insert(toName).second)
-      Fatal(ctx) << "/merge: cycle found for section '" << sectionName << "'";
-    auto i = ctx.config.merge.find(toName);
+    if (!names.insert(toSection).second)
+      Fatal(ctx) << "/merge: cycle found for section '" << fromSection << "'";
+    auto i = ctx.config.merge.find(toSection);
     if (i == ctx.config.merge.end())
       break;
-    toName = i->second;
+    toSection = i->second;
   }
-  return toName;
+  return toSection;
 }
 
 void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
