@@ -30300,57 +30300,61 @@ private:
     // If all of the reduced values are constant, the vector cost is 0, since
     // the reduction value can be calculated at the compile time.
     bool AllConsts = allConstant(ReducedVals);
-    auto EvaluateScalarCost = [&](function_ref<InstructionCost()> GenCostFn) {
-      InstructionCost Cost = 0;
-      // Scalar cost is repeated for N-1 elements.
-      int Cnt = ReducedVals.size();
-      for (Value *RdxVal : ReducedVals) {
-        if (!isa<Instruction>(RdxVal))
-          continue;
-        if (Cnt == 1) {
-          unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
-          Cost += (SameValueCount ? SameValueCount - 1 : 0) * GenCostFn();
-          break;
-        }
-        --Cnt;
-        if (RdxVal->hasNUsesOrMore(IsCmpSelMinMax ? 3 : 2)) {
-          unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
-          Cost += (SameValueCount ? SameValueCount : 1) * GenCostFn();
-          continue;
-        }
-        InstructionCost ScalarCost = 0;
-        for (User *U : RdxVal->users()) {
-          auto *RdxOp = cast<Instruction>(U);
-          if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
-            if (RdxKind == RecurKind::FAdd) {
-              InstructionCost FMACost = canConvertToFMA(
-                  RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
-              if (FMACost.isValid()) {
-                LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
-                if (auto *I = dyn_cast<Instruction>(RdxVal)) {
-                  // Also, exclude scalar fmul cost.
-                  InstructionCost FMulCost =
-                      TTI->getInstructionCost(I, CostKind);
-                  LLVM_DEBUG(dbgs() << "Minus FMul cost: " << FMulCost << "\n");
-                  FMACost -= FMulCost;
+    auto EvaluateScalarCost =
+        [&](function_ref<InstructionCost(Instruction *)> GenCostFn) {
+          InstructionCost Cost = 0;
+          // Scalar cost is repeated for N-1 elements.
+          int Cnt = ReducedVals.size();
+          for (auto [Idx, RdxVal] : enumerate(ReducedVals)) {
+            if (!isa<Instruction>(RdxVal))
+              continue;
+            Instruction *RdxOp = ReducedValsToOps[ReducedVals[Idx]].front();
+            if (Cnt == 1) {
+              unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
+              Cost +=
+                  (SameValueCount ? SameValueCount - 1 : 0) * GenCostFn(RdxOp);
+              break;
+            }
+            --Cnt;
+            if (RdxVal->hasNUsesOrMore(IsCmpSelMinMax ? 3 : 2)) {
+              unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
+              Cost += (SameValueCount ? SameValueCount : 1) * GenCostFn(RdxOp);
+              continue;
+            }
+            InstructionCost ScalarCost = 0;
+            for (User *U : RdxVal->users()) {
+              auto *RdxOp = cast<Instruction>(U);
+              if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
+                if (RdxKind == RecurKind::FAdd) {
+                  InstructionCost FMACost = canConvertToFMA(
+                      RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
+                  if (FMACost.isValid()) {
+                    LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
+                    if (auto *I = dyn_cast<Instruction>(RdxVal)) {
+                      // Also, exclude scalar fmul cost.
+                      InstructionCost FMulCost =
+                          TTI->getInstructionCost(I, CostKind);
+                      LLVM_DEBUG(dbgs()
+                                 << "Minus FMul cost: " << FMulCost << "\n");
+                      FMACost -= FMulCost;
+                    }
+                    ScalarCost += FMACost;
+                    continue;
+                  }
                 }
-                ScalarCost += FMACost;
+                ScalarCost += TTI->getInstructionCost(RdxOp, CostKind);
                 continue;
               }
+              ScalarCost = InstructionCost::getInvalid();
+              break;
             }
-            ScalarCost += TTI->getInstructionCost(RdxOp, CostKind);
-            continue;
+            if (ScalarCost.isValid())
+              Cost += ScalarCost;
+            else
+              Cost += GenCostFn(RdxOp);
           }
-          ScalarCost = InstructionCost::getInvalid();
-          break;
-        }
-        if (ScalarCost.isValid())
-          Cost += ScalarCost;
-        else
-          Cost += GenCostFn();
-      }
-      return Cost;
-    };
+          return Cost;
+        };
     // Require reduction cost if:
     // 1. This type is not a full register type and no other vectors with the
     // same type in the storage (first vector with small type).
@@ -30454,8 +30458,11 @@ private:
           }
         }
       }
-      ScalarCost = EvaluateScalarCost([&]() {
-        return TTI->getArithmeticInstrCost(RdxOpcode, ScalarTy, CostKind);
+      ScalarCost = EvaluateScalarCost([&](Instruction *RdxOp) {
+        return TTI->getArithmeticInstrCost(
+            RdxOpcode, ScalarTy, CostKind,
+            TTI::getOperandInfo(RdxOp->getOperand(0)),
+            TTI::getOperandInfo(RdxOp->getOperand(1)), {}, RdxOp);
       });
       break;
     }
@@ -30490,7 +30497,7 @@ private:
           }
         }
       }
-      ScalarCost = EvaluateScalarCost([&]() {
+      ScalarCost = EvaluateScalarCost([&](Instruction *RdxOp) {
         IntrinsicCostAttributes ICA(Id, ScalarTy, {ScalarTy, ScalarTy}, FMF);
         return TTI->getIntrinsicInstrCost(ICA, CostKind);
       });
