@@ -644,28 +644,10 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
                vputils::getSCEVExprForVPValue(Start, PSE))) &&
          "Start VPValue must match IndDesc's start value");
 
-  VPValue *BackedgeVal = PhiR->getOperand(1);
-  // Try to get the versioned step from the induction increment directly.
-  auto GetStep = [&]() -> VPValue * {
-    VPValue *Step;
-    if (match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue(Step))))
-      return Step;
+  VPValue *Step =
+      vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
 
-    // Pointer induction: scale the GEP index by the source element size.
-    Type *GEPSrcElemTy;
-    ArrayRef<VPValue *> GEPOps;
-    if (match(BackedgeVal, m_GetElementPtr(GEPSrcElemTy, GEPOps)) &&
-        GEPOps.size() == 2 && GEPOps[0] == PhiR) {
-      Type *StepTy = IndDesc.getStep()->getType();
-      const SCEV *Idx = vputils::getSCEVExprForVPValue(GEPOps[1], PSE);
-      if (!isa<SCEVCouldNotCompute>(Idx))
-        return vputils::getOrCreateVPValueForSCEVExpr(
-            Plan, SE.getMulExpr(SE.getTruncateOrSignExtend(Idx, StepTy),
-                                SE.getSizeOfExpr(StepTy, GEPSrcElemTy)));
-    }
-    return vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
-  };
-  VPValue *Step = GetStep();
+  VPValue *BackedgeVal = PhiR->getOperand(1);
 
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
   // recipes. optimizeInductionLiveOutUsers will later compute the proper
@@ -701,6 +683,12 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   assert((IndDesc.getKind() == InductionDescriptor::IK_IntInduction ||
           IndDesc.getKind() == InductionDescriptor::IK_FpInduction) &&
          "must have an integer or float induction at this point");
+
+  // Update wide induction increments to use the same step as the corresponding
+  // wide induction. This enables detecting induction increments directly in
+  // VPlan and removes redundant splats.
+  if (match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue())))
+    BackedgeVal->getDefiningRecipe()->setOperand(1, Step);
 
   // It is always safe to copy over the NoWrap and FastMath flags. In
   // particular, when folding tail by masking, the masked-off lanes are never
@@ -967,7 +955,6 @@ bool VPlanTransforms::createHeaderPhiRecipes(
         RdxDesc.hasUsesOutsideReductionChain());
   };
 
-  SmallVector<VPValue *> BackedgeVals;
   for (VPRecipeBase &R : make_early_inc_range(HeaderVPBB->phis())) {
     auto *PhiR = cast<VPPhi>(&R);
     VPHeaderPHIRecipe *HeaderPhiR = CreateHeaderPhiRecipe(PhiR);

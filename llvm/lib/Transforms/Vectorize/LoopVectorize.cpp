@@ -6520,6 +6520,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
     return nullptr;
   }
 
+  if (const LoopAccessInfo *LAI = Legal->getLAI())
+    RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *VPlan0, PSE,
+                   LAI->getSymbolicStrides());
+
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization = Hints.getForce() == LoopVectorizeHints::FK_Enabled;
   bool OptForSize =

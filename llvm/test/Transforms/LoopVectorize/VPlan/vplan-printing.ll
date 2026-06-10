@@ -489,7 +489,7 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP2]]> * ir<%inc>
+; CHECK-NEXT:    vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP2]]> * vp<[[VP4]]>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -497,8 +497,8 @@ define void @print_expand_scev(i64 %y, ptr %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, vp<[[VP4]]>, vp<[[VP0]]> (truncated to i8)
-; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * ir<%inc>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<%inc>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6]]> * vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, vp<[[VP4]]>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%v3> = add nuw ir<%iv>, ir<1>
 ; CHECK-NEXT:      REPLICATE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP8]]>
 ; CHECK-NEXT:      REPLICATE store ir<%v3>, ir<%gep>
