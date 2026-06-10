@@ -685,7 +685,7 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAArch64StackTaggingPass(
       /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
-  if (getOptLevel() == CodeGenOptLevel::Aggressive && EnableSVEShuffleOpt)
+  if (getOptLevel() >= CodeGenOptLevel::Default && EnableSVEShuffleOpt)
     addPass(createSVEShuffleOptsPass());
 
   // Match complex arithmetic patterns

@@ -66,12 +66,11 @@
 #include "AArch64.h"
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
-#include "Utils/AArch64BaseInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
@@ -80,12 +79,10 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include <array>
-#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -96,6 +93,7 @@ namespace {
 
 class SVEShuffleImpl {
   const AArch64TargetMachine *TM = nullptr;
+  const AArch64Subtarget *ST = nullptr;
   const LoopInfo *LI = nullptr;
 
 public:
@@ -136,17 +134,29 @@ using DeinterleaveMap = SmallDenseMap<CallInst *, std::array<CastInst *, 4>>;
 /// operations that we can combine into a tbl shuffle, add the deinterleave and
 /// the operations (currently only zext or uitofp) to the candidates map.
 static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
-                                 Loop &L) {
-  // This pass currently only handles legal SVE vector types.
-  if (I->getOperand(0)
-          ->getType()
-          ->getPrimitiveSizeInBits()
-          .getKnownMinValue() != AArch64::SVEBitsPerBlock)
-    return;
-
+                                 Loop &L, const AArch64TargetLowering &TL,
+                                 const DataLayout DL) {
   unsigned IntId = I->getIntrinsicID();
   assert(IntId == Intrinsic::vector_deinterleave4 &&
          "Only deinterleave4 supported currently");
+
+  // If our user count doesn't match the interleave factor, bail out.
+  if (I->getNumUses() != 4)
+    return;
+
+  // This pass currently only handles legal scalable vector types with an
+  // element type that is at least 16 bits. TBL zeroes elements with an
+  // out-of-bounds index, but for the largest possible SVE vector (2048b) a
+  // maximum value for i8 elements (256) is not large enough to encode an
+  // 'out of bounds' value.
+  // TODO: If we know vscale is 8 or less, then we could use tbls for bytes.
+  EVT InputVT = TL.getValueType(DL, I->getOperand(0)->getType());
+  if (!InputVT.isScalableVector() ||
+      InputVT.getVectorElementType().getFixedSizeInBits() < 16 ||
+      TL.getTypeConversion(I->getContext(), InputVT).first !=
+          TargetLoweringBase::TypeLegal)
+    return;
+
   std::array<CastInst *, 4> Extends = {};
   unsigned Opcode = 0;
   Type *DestTy = nullptr;
@@ -170,22 +180,11 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
     DestTy = Extend->getDestTy();
     Type *SrcTy = Extend->getSrcTy();
 
-    // For now, we only want to handle scalable vectors here.
-    if (!DestTy->isScalableTy())
-      return;
-
     unsigned SrcBits = SrcTy->getScalarSizeInBits();
     unsigned DestBits = DestTy->getScalarSizeInBits();
 
     // Looking to match the deinterleave factor.
     if (DestBits / SrcBits != 4)
-      return;
-
-    // TBL zeroes elements with an out-of-bounds index, but for the largest
-    // possible SVE vector (2048b) a maximum value for i8 elements (256) is not
-    // large enough to encode an 'out of bounds' value.
-    // TODO: If we know vscale is 8 or less, then we could use tbls for bytes.
-    if (SrcBits <= 8)
       return;
 
     Extends[Extract->getIndices().front()] = Extend;
@@ -235,11 +234,10 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
       StartIdx += Idx;
       IRBuilder<> Builder(Extend);
       Value *StepVector = Builder.CreateStepVector(StepVecTy);
-      Value *ScaledSteps = Builder.CreateMul(
-          StepVector, Builder.CreateVectorSplat(StepVecTy->getElementCount(),
-                                                ConstantInt::get(StepTy, 4)));
+      Value *ScaledSteps =
+          Builder.CreateNUWMul(StepVector, ConstantInt::get(StepVecTy, 4));
       Value *Start = ConstantInt::get(StepTy, StartIdx);
-      Value *ZextTbl = Builder.CreateAdd(
+      Value *ZextTbl = Builder.CreateNUWAdd(
           ScaledSteps,
           Builder.CreateVectorSplat(StepVecTy->getElementCount(), Start));
       Value *FinalMask = Builder.CreateBitCast(ZextTbl, InputTy);
@@ -256,6 +254,11 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
       Extend->replaceAllUsesWith(Widen);
       Extend->eraseFromParent();
     }
+
+    // Delete the unused extracts and deinterleave.
+    for (User *U : make_early_inc_range(Deinterleave->users()))
+      cast<Instruction>(U)->eraseFromParent();
+    Deinterleave->eraseFromParent();
   }
 }
 
@@ -268,7 +271,8 @@ bool SVEShuffleImpl::processLoop(Loop &L) {
   for (auto *BB : L.blocks())
     for (auto &I : *BB)
       if (match(&I, m_Intrinsic<Intrinsic::vector_deinterleave4>(m_Value())))
-        evaluateDeinterleave(cast<IntrinsicInst>(&I), Candidates, L);
+        evaluateDeinterleave(cast<IntrinsicInst>(&I), Candidates, L,
+                             *ST->getTargetLowering(), TM->createDataLayout());
 
   if (Candidates.empty())
     return false;
@@ -302,8 +306,9 @@ bool SVEShuffleImpl::runOnFunction(Function &F, Pass &P) {
   // Make sure we can use SVE
   TargetPassConfig &TPC = P.getAnalysis<TargetPassConfig>();
   TM = &TPC.getTM<AArch64TargetMachine>();
-  const AArch64Subtarget *ST = TM->getSubtargetImpl(F);
-  if (!ST->isSVEorStreamingSVEAvailable())
+  ST = TM->getSubtargetImpl(F);
+  if (!ST->isSVEorStreamingSVEAvailable() ||
+      TM->createDataLayout().isBigEndian())
     return false;
 
   LI = &P.getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
@@ -321,8 +326,9 @@ bool SVEShuffleImpl::runOnFunction(Function &F, Pass &P) {
 
 PreservedAnalyses SVEShuffleImpl::run(Function &F,
                                       FunctionAnalysisManager &FAM) {
-  const AArch64Subtarget *ST = TM->getSubtargetImpl(F);
-  if (!ST->isSVEorStreamingSVEAvailable())
+  ST = TM->getSubtargetImpl(F);
+  if (!ST->isSVEorStreamingSVEAvailable() ||
+      TM->createDataLayout().isBigEndian())
     return PreservedAnalyses::all();
 
   LI = &FAM.getResult<LoopAnalysis>(F);
