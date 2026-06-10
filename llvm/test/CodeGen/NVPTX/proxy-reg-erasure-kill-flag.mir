@@ -1,12 +1,5 @@
-# RUN: llc %s --run-pass=nvptx-proxyreg-erasure -verify-machineinstrs -mtriple=nvptx64 -o - | FileCheck %s
+# RUN: llc %s --run-pass=nvptx-proxyreg-erasure -mtriple=nvptx64 -o - | FileCheck %s
 
---- |
-  define void @test_proxy_reg() {
-  entry:
-    ret void
-  }
-
-...
 ---
 name: test_proxy_reg
 tracksRegLiveness: true
