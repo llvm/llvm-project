@@ -999,21 +999,52 @@ void LayoutInfoPropagation::visitLoadNdOp(
   if (hasParamsOfLayoutKind(anchorLayout)) {
     loadLayout = LayoutInfo(anchorLayout);
   } else {
-
     LayoutInfo valueLayout = results[0]->getValue();
-    // Need the layout of the value to propagate to the tensor descriptor.
     if (!valueLayout.isAssigned())
       return;
-    loadLayout = valueLayout;
-    // LoadNdOp has the transpose effect. However, at the stage of this analysis
-    // this effect is not expected and should be abstracted away. Emit a
-    // warning.
+
+    // LoadNdOp has a transpose effect. At this stage of analysis it is not
+    // expected and should be abstracted away; emit a warning and pre-transpose
+    // the consumer hint so it lines up with the load's source.
+    auto consumerLayoutAttr =
+        dyn_cast<xegpu::DistributeLayoutAttr>(valueLayout.get());
     if (auto transpose = load.getTranspose()) {
       load.emitWarning("Transpose effect is not expected for LoadNdOp at "
                        "LayoutInfoPropagation stage.");
-      loadLayout = valueLayout.transpose(transpose.value());
+      LayoutInfo transposed = valueLayout.transpose(transpose.value());
+      consumerLayoutAttr =
+          dyn_cast<xegpu::DistributeLayoutAttr>(transposed.get());
     }
-    load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
+
+    const uArch *uArch = getUArch(getChipStr(load).value_or(""));
+    if (!uArch)
+      return;
+
+    int numSg = 0;
+    // numSg is only needed when the helper has to derive a fresh sg_layout
+    // for Subgroup kind. If the consumer already provides a complete
+    // sg_layout, the helper will reuse it without consulting numSg.
+    bool consumerHasSgLayout =
+        consumerLayoutAttr &&
+        !consumerLayoutAttr.getEffectiveSgLayoutAsInt().empty();
+    if (layoutKind == xegpu::LayoutKind::Subgroup && !consumerHasSgLayout) {
+      auto numSgOrErr = getNumSg(load, uArch->getSubgroupSize());
+      if (failed(numSgOrErr)) {
+        load.emitWarning(
+            "Unable to determine the number of subgroups for the operation.");
+        return;
+      }
+      numSg = numSgOrErr.value();
+    }
+
+    auto layoutAttr = xegpu::setupLoadNdAnchorLayout(
+        layoutKind, load.getType(), consumerLayoutAttr, numSg, uArch);
+    if (!layoutAttr) {
+      load.emitWarning("Failed to determine required layout for load_nd.");
+      return;
+    }
+    loadLayout = LayoutInfo(layoutAttr);
+    load.setLayoutAttr(layoutAttr);
   }
   // Propagate the new layout to the tensor descriptor operand.
   propagateIfChanged(operands[0], operands[0]->meet(loadLayout));

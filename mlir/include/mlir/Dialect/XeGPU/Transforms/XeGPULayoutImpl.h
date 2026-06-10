@@ -246,6 +246,18 @@ DistributeLayoutAttr setupPrefetchNdAnchorLayout(LayoutKind layoutKind,
                                                  int numSg,
                                                  const uArch::uArch *uArch);
 
+/// Sets up the anchor layout for a load_nd operation. LoadNd takes a
+/// (downstream) consumer layout and validates it against uArch constraints;
+/// when valid, the consumer's `inst_data` / `sg_layout` are honored.
+/// Otherwise defaults derived from uArch block parameters are used.
+/// `consumerLayout` may be null. `numSg` is only used for Subgroup-kind
+/// layouts when the consumer does not already provide an sg_layout.
+DistributeLayoutAttr setupLoadNdAnchorLayout(LayoutKind layoutKind,
+                                             VectorType vectorTy,
+                                             DistributeLayoutAttr consumerLayout,
+                                             int numSg,
+                                             const uArch::uArch *uArch);
+
 /// Sets up the anchor layouts for a dpas operands (A, B, and C/D).
 /// The numSg and consumerLayout (optional) are only used by sg layout creation.
 std::optional<std::tuple<DistributeLayoutAttr, DistributeLayoutAttr,
