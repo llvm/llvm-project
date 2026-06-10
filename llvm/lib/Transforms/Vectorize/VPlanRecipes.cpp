@@ -3016,17 +3016,7 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenGEPRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
-  bool IsPointerLoopInvariant = getOperand(0)->isDefinedOutsideLoopRegions();
-  auto IsIndexLoopInvariant = [this](unsigned I) {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  };
-
   O << Indent << "WIDEN-GEP ";
-  O << (IsPointerLoopInvariant ? "Inv" : "Var");
-  for (size_t I = 0; I < getNumOperands() - 1; ++I)
-    O << "[" << (IsIndexLoopInvariant(I) ? "Inv" : "Var") << "]";
-
-  O << " ";
   printAsOperand(O, SlotTracker);
   O << " = getelementptr";
   printFlags(O);
