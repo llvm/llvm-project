@@ -369,8 +369,8 @@ public:
     // Multi-operand return: pack values into a struct.
     Location loc = returnOp.getLoc();
 
-    auto structType = getOrCreateMultiReturnType(rewriter, loc, returnOp,
-                                                 adaptor.getOperands());
+    auto structType = getOrCreateMultiReturnType(
+        rewriter, loc, returnOp, adaptor.getOperands().getTypes());
     if (failed(structType))
       return rewriter.notifyMatchFailure(returnOp,
                                          "incompatible multi-return struct");
