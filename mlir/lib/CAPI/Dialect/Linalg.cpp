@@ -152,6 +152,48 @@ mlirLinalgInferConvolutionDimensions(MlirOperation op) {
   return result;
 }
 
+MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
+mlirLinalgInferConvolutionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
+                                             size_t numMaps) {
+  MlirLinalgConvolutionDimensions result{};
+  if (!indexingMaps || numMaps == 0)
+    return result;
+
+  SmallVector<AffineMap, 3> maps;
+  maps.reserve(numMaps);
+  for (size_t i = 0; i < numMaps; ++i)
+    maps.push_back(unwrap(indexingMaps[i]));
+
+  FailureOr<linalg::ConvolutionDimensions> maybeDims =
+      linalg::inferConvolutionDims(maps);
+  if (failed(maybeDims))
+    return result;
+
+  const linalg::ConvolutionDimensions &dims = *maybeDims;
+  MLIRContext *ctx = maps[0].getContext();
+
+  auto toI32Attr =
+      [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
+    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
+  };
+
+  auto toI64Attr =
+      [&ctx](const SmallVector<int64_t, 2> &vals) -> MlirAttribute {
+    return wrap(DenseI64ArrayAttr::get(ctx, vals));
+  };
+
+  result.batch = toI32Attr(dims.batch);
+  result.outputImage = toI32Attr(dims.outputImage);
+  result.outputChannel = toI32Attr(dims.outputChannel);
+  result.filterLoop = toI32Attr(dims.filterLoop);
+  result.inputChannel = toI32Attr(dims.inputChannel);
+  result.depth = toI32Attr(dims.depth);
+  result.strides = toI64Attr(dims.strides);
+  result.dilations = toI64Attr(dims.dilations);
+
+  return result;
+}
+
 MLIR_CAPI_EXPORTED MlirAttribute
 mlirLinalgGetIndexingMapsAttribute(MlirOperation op) {
   auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
