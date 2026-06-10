@@ -3643,24 +3643,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return nullptr;
     break;
   case Intrinsic::assume: {
-    Value *IIOperand = II->getArgOperand(0);
-
-    // Canonicalize assume(a && b) -> assume(a); assume(b);
-    // Note: New assumption intrinsics created here are registered by
-    // the InstCombineIRInserter object.
-    Value *A, *B;
-    if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
-      Builder.CreateAssumption(A);
-      Builder.CreateAssumption(B);
-      return eraseInstFromFunction(*II);
-    }
-    // assume(!(a || b)) -> assume(!a); assume(!b);
-    if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
-      Builder.CreateAssumption(Builder.CreateNot(A));
-      Builder.CreateAssumption(Builder.CreateNot(B));
-      return eraseInstFromFunction(*II);
-    }
-
     for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
       switch (getBundleAttrFromOBU(OBU)) {
       case BundleAttr::None:
@@ -3761,6 +3743,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // If the assume has operand bundles, the folds below will never work, so
+    // don't bother trying.
+    if (II->hasOperandBundles())
+      break;
+
+    Value *IIOperand = II->getArgOperand(0);
+
+    // Canonicalize assume(a && b) -> assume(a); assume(b);
+    // Note: New assumption intrinsics created here are registered by
+    // the InstCombineIRInserter object.
+    Value *A, *B;
+    if (match(IIOperand, m_LogicalAnd(m_Value(A), m_Value(B)))) {
+      Builder.CreateAssumption(A);
+      Builder.CreateAssumption(B);
+      return eraseInstFromFunction(*II);
+    }
+    // assume(!(a || b)) -> assume(!a); assume(!b);
+    if (match(IIOperand, m_Not(m_LogicalOr(m_Value(A), m_Value(B))))) {
+      Builder.CreateAssumption(Builder.CreateNot(A));
+      Builder.CreateAssumption(Builder.CreateNot(B));
+      return eraseInstFromFunction(*II);
+    }
+
     // Convert nonnull assume like:
     // %A = icmp ne i32* %PTR, null
     // call void @llvm.assume(i1 %A)
@@ -3805,7 +3810,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
     computeKnownBits(IIOperand, Known, II);
-    if (Known.isAllOnes() && !II->hasOperandBundles())
+    if (Known.isAllOnes())
       return eraseInstFromFunction(*II);
 
     // assume(false) is unreachable.
