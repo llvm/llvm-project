@@ -20089,6 +20089,52 @@ X86TargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
   return Result;
 }
 
+struct OptimizedConstantArrayInfo {
+  Type *Ty;
+  Constant *Init;
+  uint64_t PeriodElems = 0;
+  bool Success = false;
+};
+
+static OptimizedConstantArrayInfo
+optimizeGlobalConstantArray(GlobalVariable *GV) {
+  auto *OldInit = GV->getInitializer();
+
+  auto *CDA = dyn_cast<ConstantDataArray>(OldInit);
+  if (!CDA)
+    return OptimizedConstantArrayInfo{OldInit->getType(), OldInit, 0};
+
+  constexpr unsigned PeriodElems = 4;
+
+  unsigned NumElems = CDA->getNumElements();
+  Type *EltTy = CDA->getElementType();
+
+  if (NumElems < PeriodElems || NumElems % PeriodElems != 0)
+    return OptimizedConstantArrayInfo{OldInit->getType(), OldInit, 0};
+
+  for (unsigned I = PeriodElems; I < NumElems; ++I) {
+    Constant *A = CDA->getElementAsConstant(I);
+    Constant *B = CDA->getElementAsConstant(I % PeriodElems);
+
+    if (A != B)
+      return OptimizedConstantArrayInfo{OldInit->getType(), OldInit, 0};
+  }
+
+  SmallVector<Constant *, PeriodElems> NewElems;
+  for (unsigned I = 0; I < PeriodElems; ++I)
+    NewElems.push_back(CDA->getElementAsConstant(I));
+
+  auto *NewArrTy = ArrayType::get(EltTy, PeriodElems);
+  Constant *NewInit = ConstantArray::get(NewArrTy, NewElems);
+
+  return OptimizedConstantArrayInfo{
+      NewInit->getType(),
+      NewInit,
+      PeriodElems,
+      true,
+  };
+}
+
 /// Creates target global address or external symbol nodes for calls or
 /// other uses.
 SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
@@ -54370,6 +54416,87 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  if (RegVT.is128BitVector()) {
+    SDValue Ptr = Ld->getBasePtr();
+
+    GlobalAddressSDNode *GA = nullptr;
+    int64_t OldByteOffset = 0;
+
+    if (Ptr.getOpcode() == ISD::ADD) {
+      SDValue LHS = Ptr.getOperand(0);
+      SDValue RHS = Ptr.getOperand(1);
+
+      if (auto *C = dyn_cast<ConstantSDNode>(RHS)) {
+        if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(LHS)) {
+          GA = MatchedGA;
+          OldByteOffset = GA->getOffset() + C->getSExtValue();
+        }
+      }
+    } else if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(Ptr)) {
+      GA = MatchedGA;
+      OldByteOffset = GA->getOffset();
+    }
+
+    if (!GA)
+      return SDValue();
+
+    auto *GVar =
+        const_cast<GlobalVariable *>(dyn_cast<GlobalVariable>(GA->getGlobal()));
+    if (!GVar)
+      return SDValue();
+
+    if (GVar->getName().ends_with(".x86.opt"))
+      return SDValue();
+
+    OptimizedConstantArrayInfo Info = optimizeGlobalConstantArray(GVar);
+    if (!Info.Success)
+      return SDValue();
+
+    const DataLayout &DL = DAG.getDataLayout();
+    auto *ArrTy = dyn_cast<ArrayType>(Info.Ty);
+    if (!ArrTy)
+      return SDValue();
+
+    uint64_t ElemBytes = DL.getTypeAllocSize(ArrTy->getElementType());
+    uint64_t PeriodBytes = ElemBytes * Info.PeriodElems;
+    if (PeriodBytes == 0)
+      return SDValue();
+
+    int64_t NewByteOffset = OldByteOffset % static_cast<int64_t>(PeriodBytes);
+    if (NewByteOffset < 0)
+      NewByteOffset += PeriodBytes;
+
+    uint64_t LoadBytes = Ld->getMemoryVT().getStoreSize();
+    if (static_cast<uint64_t>(NewByteOffset) + LoadBytes > PeriodBytes)
+      return SDValue();
+
+    Module *M = GVar->getParent();
+    std::string NewName = (GVar->getName() + ".x86.opt").str();
+
+    GlobalVariable *NewGV = M->getGlobalVariable(NewName, true);
+    if (!NewGV) {
+      NewGV = new GlobalVariable(
+          *M, Info.Ty,
+          /*isConstant=*/true, GlobalValue::PrivateLinkage, Info.Init, NewName,
+          /*InsertBefore=*/nullptr, GVar->getThreadLocalMode(),
+          GVar->getAddressSpace(),
+          /*isExternallyInitialized=*/false);
+
+      NewGV->setAlignment(GVar->getAlign());
+      NewGV->setUnnamedAddr(GVar->getUnnamedAddr());
+      NewGV->setDSOLocal(true);
+    }
+
+    SDLoc DLN(Ld);
+    EVT PtrVT = Ptr.getValueType();
+
+    SDValue NewPtr = DAG.getGlobalAddress(NewGV, DLN, PtrVT, NewByteOffset);
+
+    MachinePointerInfo MPI(NewGV, NewByteOffset);
+
+    return DAG.getLoad(Ld->getMemoryVT(), DLN, Ld->getChain(), NewPtr, MPI,
+                       Ld->getAlign(), Ld->getMemOperand()->getFlags());
+  }
   return SDValue();
 }
 
