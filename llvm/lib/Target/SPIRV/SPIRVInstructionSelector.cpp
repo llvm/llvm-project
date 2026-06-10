@@ -2001,7 +2001,7 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
         GR.getOrCreateSPIRVIntegerType(PtrSize, MIRBuilder);
     Register PtrToUVal =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
-    MRI->setRegClass(PtrToUVal, MRI->getRegClassOrNull(ResVReg));
+    MRI->setRegClass(PtrToUVal, GR.getRegClass(PtrAsIntSpirvType));
     GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
 
     Register PtrCastedToMatchValReg =
@@ -2031,15 +2031,16 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(ResType))
         .addUse(PtrToUVal)
         .constrainAllUses(TII, TRI, RBI);
-  } else {
-    auto AtomicLoad = MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
-                          .addDef(ResVReg)
-                          .addUse(GR.getSPIRVTypeID(ResType))
-                          .addUse(Ptr)
-                          .addUse(ScopeReg)
-                          .addUse(MemSemReg);
-    AtomicLoad.constrainAllUses(TII, TRI, RBI);
+    return true;
   }
+  auto AtomicLoad = MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
+                        .addDef(ResVReg)
+                        .addUse(GR.getSPIRVTypeID(ResType))
+                        .addUse(Ptr)
+                        .addUse(ScopeReg)
+                        .addUse(MemSemReg);
+  AtomicLoad.constrainAllUses(TII, TRI, RBI);
+
   return true;
 }
 
@@ -2142,7 +2143,7 @@ bool SPIRVInstructionSelector::selectAtomicStore(MachineInstr &I) const {
 
     Register PtrToUVal =
         MRI->createGenericVirtualRegister(LLT::scalar(PtrSize));
-    MRI->setRegClass(PtrToUVal, MRI->getRegClassOrNull(StoreVal));
+    MRI->setRegClass(PtrToUVal, GR.getRegClass(PtrAsIntSpirvType));
     GR.assignSPIRVTypeToVReg(PtrAsIntSpirvType, PtrToUVal, MIRBuilder.getMF());
     MIRBuilder.buildInstr(SPIRV::OpConvertPtrToU)
         .addDef(PtrToUVal)
