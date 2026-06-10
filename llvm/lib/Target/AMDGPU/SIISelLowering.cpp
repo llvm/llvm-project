@@ -4291,9 +4291,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       UsesDynamicVGPRs = true;
       std::for_each(CLI.Args.begin() + ChainCallArgIdx::NumVGPRs,
                     CLI.Args.end(), PushNodeOrTargetConstant);
-    } else {
-      return lowerUnhandledCall(CLI, InVals,
-                                "invalid flags value for amdgcn.cs.chain");
     }
   }
 

@@ -7152,6 +7152,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(!Call.paramHasAttr(3, Attribute::InReg),
           "VGPR arguments must not have the `inreg` attribute", &Call);
 
+    auto *FlagsArg = cast<ConstantInt>(Call.getArgOperand(4));
+    Check(FlagsArg->getValue().ult(2),
+          "flags must be 0 or 1 for llvm.amdgcn.cs.chain", &Call);
+
     auto *Next = Call.getNextNode();
     bool IsAMDUnreachable = Next && isa<IntrinsicInst>(Next) &&
                             cast<IntrinsicInst>(Next)->getIntrinsicID() ==
