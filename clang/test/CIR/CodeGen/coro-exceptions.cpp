@@ -89,7 +89,7 @@ TaskThrowingInit throwing_init_suspend() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z21throwing_init_suspendv
-// CIR: %[[RESUME_FLAG:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["resume.eh"] {alignment = 1 : i64}
+// CIR: %[[RESUME_FLAG:.*]] = cir.alloca "resume.eh" align(1) : !cir.ptr<!cir.bool>
 // CIR: }, resume : {
 // CIR:    %[[FALSE:.*]] = cir.const #false
 // CIR:    cir.store %[[FALSE]], %[[RESUME_FLAG]] : !cir.bool, !cir.ptr<!cir.bool>

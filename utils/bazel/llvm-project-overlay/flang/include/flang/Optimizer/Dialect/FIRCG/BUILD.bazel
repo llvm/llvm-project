@@ -1,0 +1,49 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "FIRCGHeaders",
+    hdrs = ["CGOps.h"],
+    strip_include_prefix = "/flang/include",
+    deps = [
+        ":CGOpsIncGen",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//mlir:IR",
+    ],
+)
+
+td_library(
+    name = "FIRCGTdFiles",
+    srcs = ["CGOps.td"],
+    includes = ["/flang/include"],
+    deps = [
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectTdFiles",
+        "//mlir:BuiltinDialectTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "CGOpsIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "CGOps.cpp.inc": ["-gen-op-defs"],
+        "CGOps.h.inc": ["-gen-op-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "CGOps.td",
+    deps = [":FIRCGTdFiles"],
+)

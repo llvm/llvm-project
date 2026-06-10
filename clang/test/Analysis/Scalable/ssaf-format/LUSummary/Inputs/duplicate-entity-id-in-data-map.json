@@ -1,0 +1,54 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "test.exe"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": "",
+        "namespace": [
+          {
+            "kind": "CompilationUnit",
+            "name": "test.cpp"
+          },
+          {
+            "kind": "LinkUnit",
+            "name": "test.exe"
+          }
+        ]
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "None"
+      }
+    }
+  ],
+  "data": [
+    {
+      "summary_name": "PairsEntitySummary",
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "pairs": []
+          }
+        },
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "pairs": []
+          }
+        }
+      ]
+    }
+  ]
+}
