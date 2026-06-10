@@ -588,33 +588,10 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
                << /* IsExtension */ true << TheCall->getSourceRange() << RF;
   }
 
-  auto CheckRequiredExtension = [&](StringRef RequiredExt) -> bool {
-    if (TI.hasFeature(RequiredExt) || FunctionFeatureMap.lookup(RequiredExt))
-      return false;
-    return Diag(TheCall->getBeginLoc(),
-                diag::err_riscv_builtin_requires_extension)
-           << /* IsExtension */ true << TheCall->getSourceRange()
-           << RequiredExt;
-  };
-
   // vmulh.vv, vmulh.vx, vmulhu.vv, vmulhu.vx, vmulhsu.vv, vmulhsu.vx,
   // vsmul.vv, vsmul.vx are not included for EEW=64 in Zve64*.
   switch (BuiltinID) {
   default:
-    break;
-  case RISCV::BI__builtin_riscv_cv_bitmanip_extract:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_extractu:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_insert:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_bclr:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_bset:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_ff1:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_fl1:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_clb:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_cnt:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_ror:
-  case RISCV::BI__builtin_riscv_cv_bitmanip_bitrev:
-    if (CheckRequiredExtension("xcvbitmanip"))
-      return true;
     break;
   case RISCVVector::BI__builtin_rvv_vmulhsu_vv:
   case RISCVVector::BI__builtin_rvv_vmulhsu_vx:
