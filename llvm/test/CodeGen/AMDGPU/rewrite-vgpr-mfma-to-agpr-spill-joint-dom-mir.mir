@@ -21,7 +21,7 @@
 
   declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 
-  attributes #0 = { "amdgpu-flat-work-group-size"="1, 256" }
+  attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
 ...
 ---
 name:            rewrite_vgpr_mfma_to_agpr_spill_joint_dom
