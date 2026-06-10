@@ -325,4 +325,14 @@ TEST_F(ImmutableListTest, IteratorPostIncrementInLoopTest) {
   EXPECT_THAT(Values, testing::ElementsAre(5, 4, 3));
 }
 
+TEST_F(ImmutableListTest, FilterRangeCompat) {
+  ImmutableList<Wrapper<int>>::Factory f;
+  ImmutableList<Wrapper<int>> L =
+      f.add(5, f.add(4, f.add(3, f.getEmptyList())));
+
+  auto IsOdd = [](int Val) { return Val % 2; };
+  auto OddElements = llvm::make_filter_range(L, IsOdd);
+  EXPECT_THAT(OddElements, testing::ElementsAre(5, 3));
+}
+
 } // namespace
