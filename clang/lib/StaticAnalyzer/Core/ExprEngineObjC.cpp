@@ -196,11 +196,8 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
 
       // Receiver is definitely nil, so run ObjCMessageNil callbacks and return.
       if (nilState && !notNilState) {
-        bool HasTag = Pred->getLocation().getTag();
         PreStmt PS(ME, Pred->getStackFrame(), nullptr);
         Pred = Engine.makeNode(PS, nilState, Pred);
-        assert((Pred || HasTag) && "Should have cached out already!");
-        (void)HasTag;
         if (!Pred)
           return;
 
@@ -215,10 +212,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
       // Generate a transition to the non-nil state, dropping any potential
       // nil flow.
       if (notNilState != State) {
-        bool HasTag = Pred->getLocation().getTag();
         Pred = Engine.makePostStmtNode(ME, notNilState, Pred);
-        assert((Pred || HasTag) && "Should have cached out already!");
-        (void)HasTag;
         if (!Pred)
           return;
       }
