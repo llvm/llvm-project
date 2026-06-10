@@ -1112,18 +1112,18 @@ inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
 /// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
 /// return nullptr;
 template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
+VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
   auto It = find_if(V->users(), match_fn(P));
   return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
 }
 
 /// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
 /// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
+template <unsigned Opcode> VPInstruction *findUserOf(VPValue *V) {
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
 
-template <typename RecipeTy> static RecipeTy *findUserOf(VPValue *V) {
+template <typename RecipeTy> RecipeTy *findUserOf(VPValue *V) {
   return cast_or_null<RecipeTy>(findUserOf(V, m_Isa<RecipeTy>()));
 }
 } // namespace llvm::VPlanPatternMatch
