@@ -5596,10 +5596,13 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
   if (F.hasFnAttribute(Attribute::Convergent))
     A.getOrCreateAAFor<AANonConvergent>(FPos);
 
-  const bool FunctionUsesSharedAlloc =
-      !DisableOpenMPOptDeglobalization &&
-      OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared].getUseVector(
-          const_cast<Function &>(F));
+  bool FunctionUsesSharedAlloc = false;
+  if (!DisableOpenMPOptDeglobalization) {
+    const OMPInformationCache::RuntimeFunctionInfo::UseVector *SharedAllocUses =
+        OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared].getUseVector(
+            const_cast<Function &>(F));
+    FunctionUsesSharedAlloc = SharedAllocUses != nullptr && !SharedAllocUses->empty();
+  }
   bool HasHeapToStackCandidate = false;
   const TargetLibraryInfo *TLI = nullptr;
 
@@ -5644,7 +5647,7 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
 
   if (FunctionUsesSharedAlloc)
     A.getOrCreateAAFor<AAHeapToShared>(FPos);
-  if (!DisableOpenMPOptDeglobalization && HasHeapToStackCandidate)
+  if (HasHeapToStackCandidate)
     A.getOrCreateAAFor<AAHeapToStack>(FPos);
 }
 
