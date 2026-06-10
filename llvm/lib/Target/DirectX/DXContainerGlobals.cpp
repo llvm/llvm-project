@@ -339,9 +339,6 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
 
 void DXContainerGlobals::addCompilerVersion(
     Module &M, SmallVector<GlobalValue *> &Globals) {
-  dxil::ModuleMetadataInfo &MMI =
-      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
-
   if (M.debug_compile_units().empty())
     return;
 
