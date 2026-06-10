@@ -3515,8 +3515,8 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
         !(IsObjectPointer(*expr) ||
             (IsVariable(*expr) && GetLastTarget(GetSymbolVector(*expr))))) {
       if (context.languageFeatures().IsEnabled(
-              common::LanguageFeature::RelaxedCLoc)) {
-        context.Warn(common::UsageWarning::CLoc, arguments[0]->sourceLocation(),
+              common::LanguageFeature::RelaxedCLocChecks)) {
+        context.Warn(common::LanguageFeature::RelaxedCLocChecks, arguments[0]->sourceLocation(),
             "C_LOC() argument should be a data pointer or target"_warn_en_US);
       } else {
         context.messages().Say(arguments[0]->sourceLocation(),
@@ -3566,7 +3566,7 @@ std::optional<SpecificCall> IntrinsicProcTable::Implementation::HandleC_Loc(
       specificCall.arguments.emplace_back(std::move(arguments[0]));
       return specificCall;
     } else if (context.languageFeatures().IsEnabled(
-                   common::LanguageFeature::RelaxedCLoc)) {
+                   common::LanguageFeature::RelaxedCLocChecks)) {
       if (!expr || !IsProcedurePointer(*expr)) {
         // There are more specific errors as to why the expression doesn't exist
         // or isn't characterizable as a data object or procedure.
