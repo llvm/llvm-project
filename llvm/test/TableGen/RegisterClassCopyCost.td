@@ -8,8 +8,8 @@
 include "llvm/Target/Target.td"
 
 // CHECK: extern const MCRegisterClass MyTargetMCRegisterClasses[] = {
-// CHECK-NEXT: { GPR32, GPR32Bits, 0, 2, sizeof(GPR32Bits), MyTarget::GPR32RegClassID, 32, 1, true, false },
-// CHECK-NEXT:   { SPECIAL_CLASS, SPECIAL_CLASSBits, 6, 1, sizeof(SPECIAL_CLASSBits), MyTarget::SPECIAL_CLASSRegClassID, 32, 255, true, false },
+// CHECK-NEXT: { GPR32, GPR32Bits, 0, 32, 2, sizeof(GPR32Bits), MyTarget::GPR32RegClassID, 1, true, false },
+// CHECK-NEXT:   { SPECIAL_CLASS, SPECIAL_CLASSBits, 6, 32, 1, sizeof(SPECIAL_CLASSBits), MyTarget::SPECIAL_CLASSRegClassID, 255, true, false },
 // CHECK-NEXT: };
 
 def MyTargetISA : InstrInfo;

@@ -48,6 +48,7 @@ Implemented Papers
 - P2164R9: ``views::enumerate`` (`Github <https://llvm.org/PR105251>`__)
 - P2322R6: ``ranges::fold`` (`Github <https://llvm.org/PR105208>`__)
 - P4144R1: Remove ``span``'s ``initializer_list`` constructor for C++26 (`Github <https://llvm.org/PR189612>`__)
+- P2542R8: ``views::concat`` (`Github <https://llvm.org/PR105419>`__)
 - P3383R3: ``mdspan.at()`` (`Github <https://llvm.org/PR175213>`__)
 - P3508R0: Wording for "constexpr for specialized memory algorithms" (`Github <https://llvm.org/PR118379>`__)
 
@@ -59,6 +60,10 @@ Improvements and New Features
   for ``std::deque<int>`` iterators.
 - ``std::copy(CharT*, CharT*, ostreambuf_iterator<CharT>)`` has been optimized, resulting in performance improvements
   of up to 25x.
+- ``std::bad_variant_access::what()`` now returns a message identifying the cause of the failure:
+  ``"std::visit: variant is valueless"``, ``"std::get: variant is valueless"``, or
+  ``"std::get: wrong alternative for variant"``. The standard only requires ``what()`` to return an
+  unspecified non-null string, so user code that does not match on the exact message remains correct.
 
 Deprecations and Removals
 -------------------------
@@ -74,6 +79,11 @@ Deprecations and Removals
 
 Potentially breaking changes
 ----------------------------
+
+- libc++ has dropped a lot of transitive includes in all language modes. This improves compile time significantly, but
+  causes programs which rely on these includes to not compile anymore. Any errors caused by this should be fixable by
+  including the correct header. To ease the transition ``_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23`` can be defined, which
+  includes the removed headers again. This macro will be removed in LLVM 24.
 
 Announcements About Future Releases
 -----------------------------------

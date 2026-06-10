@@ -11,3 +11,11 @@ namespace GH97646 {
     !x;
   }
 }
+
+// Ensure that __typeof_unqual / __typeof_unqual__ parse as a declaration
+// specifier in block scope, for symmetry with __typeof__.
+void block_scope_typeof_unqual() {
+  __typeof_unqual(int) a = 0;
+  __typeof_unqual__(int) b = 0;
+  (void)a; (void)b;
+}

@@ -231,14 +231,10 @@ static llvm::Error getMdFiles(const char *Argv0,
 static void sortUsrToInfo(llvm::StringMap<doc::Info *> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
-    if (Info->IT == doc::InfoType::IT_namespace) {
-      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info);
+    if (auto *Namespace = dyn_cast<doc::NamespaceInfo>(Info))
       Namespace->Children.sort();
-    }
-    if (Info->IT == doc::InfoType::IT_record) {
-      auto *Record = static_cast<clang::doc::RecordInfo *>(Info);
+    else if (auto *Record = dyn_cast<doc::RecordInfo>(Info))
       Record->Children.sort();
-    }
   }
 }
 
@@ -377,7 +373,7 @@ Example usage for a project using a compile commands database:
             for (const auto &Bitcode : Bitcodes) {
 
               llvm::scope_exit ArenaGuard(
-                  [] { clang::doc::TransientArena.Reset(); });
+                  [] { clang::doc::getTransientArena().Reset(); });
               llvm::BitstreamCursor Stream(Bitcode);
               doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
@@ -391,7 +387,8 @@ Example usage for a project using a compile commands database:
               }
               for (auto &I : *ReadInfos) {
                 if (auto Err = doc::mergeSingleInfo(
-                        Reduced, std::move(I), clang::doc::PersistentArena)) {
+                        Reduced, std::move(I),
+                        clang::doc::getPersistentArena())) {
                   std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
                   Diags.Report(DiagIDBitcodeMerging)
                       << toString(std::move(Err));

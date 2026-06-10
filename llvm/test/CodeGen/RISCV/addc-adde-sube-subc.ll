@@ -7,8 +7,8 @@
 define i64 @addc_adde(i64 %a, i64 %b) nounwind {
 ; RV32I-LABEL: addc_adde:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    add a2, a0, a2
+; RV32I-NEXT:    add a1, a1, a3
 ; RV32I-NEXT:    sltu a0, a2, a0
 ; RV32I-NEXT:    add a1, a1, a0
 ; RV32I-NEXT:    mv a0, a2

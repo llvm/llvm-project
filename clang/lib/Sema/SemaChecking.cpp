@@ -2920,6 +2920,22 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   FPOptions FPO;
   switch (BuiltinID) {
+  case Builtin::BI__builtin___get_unsafe_stack_start:
+  case Builtin::BI__builtin___get_unsafe_stack_bottom:
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << "__safestack_get_unsafe_stack_bottom";
+    break;
+  case Builtin::BI__builtin___get_unsafe_stack_top:
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << "__safestack_get_unsafe_stack_top";
+    break;
+  case Builtin::BI__builtin___get_unsafe_stack_ptr:
+    Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
+        << Context.BuiltinInfo.getQuotedName(BuiltinID)
+        << "__safestack_get_unsafe_stack_ptr";
+    break;
   case Builtin::BI__builtin_cpu_supports:
   case Builtin::BI__builtin_cpu_is:
     if (BuiltinCpu(*this, Context.getTargetInfo(), TheCall,
@@ -3931,6 +3947,19 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_stdc_rotate_right:
     if (BuiltinRotateGeneric(*this, TheCall))
       return ExprError();
+    break;
+
+  case Builtin::BI__builtin_stdc_memreverse8:
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64:
+    if (Context.getTargetInfo().getCharWidth() != 8) {
+      Diag(TheCall->getBeginLoc(), diag::err_builtin_requires_char_bit_8)
+          << TheCall->getDirectCallee()->getName();
+      return ExprError();
+    }
     break;
 
   case Builtin::BI__builtin_stdc_bit_floor:
@@ -7951,6 +7980,10 @@ protected:
                     const char *startSpecifier, unsigned specifierLen,
                     unsigned argIndex);
 
+  bool CheckUnsupportedType(const analyze_format_string::ArgType &AT,
+                            const Expr *E, const char *startSpecifier,
+                            unsigned specifierLen);
+
   template <typename Range>
   void EmitFormatDiagnostic(PartialDiagnostic PDiag, SourceLocation StringLoc,
                             bool IsStringLocation, Range StringRange,
@@ -7986,6 +8019,19 @@ void CheckFormatHandler::HandleIncompleteSpecifier(const char *startSpecifier,
                        getLocationOfByte(startSpecifier),
                        /*IsStringLocation*/ true,
                        getSpecifierRange(startSpecifier, specifierLen));
+}
+
+bool CheckFormatHandler::CheckUnsupportedType(
+    const analyze_format_string::ArgType &AT, const Expr *E,
+    const char *StartSpecifier, unsigned SpecifierLen) {
+  if (!AT.isUnsupported())
+    return false;
+
+  EmitFormatDiagnostic(S.PDiag(diag::warn_format_unsupported_type)
+                           << AT.getRepresentativeTypeName(S.Context),
+                       E->getExprLoc(), /*IsStringLocation=*/false,
+                       getSpecifierRange(StartSpecifier, SpecifierLen));
+  return true;
 }
 
 void CheckFormatHandler::HandleInvalidLengthModifier(
@@ -8391,7 +8437,7 @@ public:
 
 private:
   analyze_format_string::ArgType ArgType;
-  analyze_format_string::LengthModifier::Kind LengthMod;
+  analyze_format_string::LengthModifier LengthMod;
   StringRef SpecifierLetter;
   CharSourceRange Range;
   SourceLocation ElementLoc;
@@ -8405,7 +8451,7 @@ private:
 
 public:
   EquatableFormatArgument(CharSourceRange Range, SourceLocation ElementLoc,
-                          analyze_format_string::LengthModifier::Kind LengthMod,
+                          analyze_format_string::LengthModifier LengthMod,
                           StringRef SpecifierLetter,
                           analyze_format_string::ArgType ArgType,
                           FormatArgumentRole Role,
@@ -8420,7 +8466,7 @@ public:
   SourceLocation getSourceLocation() const { return ElementLoc; }
   CharSourceRange getSourceRange() const { return Range; }
   analyze_format_string::LengthModifier getLengthModifier() const {
-    return analyze_format_string::LengthModifier(nullptr, LengthMod);
+    return LengthMod;
   }
   void setModifierFor(unsigned V) { ModifierFor = V; }
 
@@ -8768,7 +8814,7 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
     Specs.emplace_back(
         getSpecifierRange(startSpecifier, specifierLen),
         getLocationOfByte(FieldWidth.getStart()),
-        analyze_format_string::LengthModifier::None, FieldWidth.getCharacters(),
+        analyze_format_string::LengthModifier(), FieldWidth.getCharacters(),
         FieldWidth.getArgType(S.Context),
         EquatableFormatArgument::FAR_FieldWidth,
         EquatableFormatArgument::SS_None,
@@ -8783,7 +8829,7 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
     Specs.emplace_back(
         getSpecifierRange(startSpecifier, specifierLen),
         getLocationOfByte(Precision.getStart()),
-        analyze_format_string::LengthModifier::None, Precision.getCharacters(),
+        analyze_format_string::LengthModifier(), Precision.getCharacters(),
         Precision.getArgType(S.Context), EquatableFormatArgument::FAR_Precision,
         EquatableFormatArgument::SS_None,
         Precision.usesPositionalArg() ? Precision.getPositionalArgIndex() - 1
@@ -8811,7 +8857,7 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
 
   Specs.emplace_back(
       getSpecifierRange(startSpecifier, specifierLen),
-      getLocationOfByte(CS.getStart()), FS.getLengthModifier().getKind(),
+      getLocationOfByte(CS.getStart()), FS.getLengthModifier(),
       CS.getCharacters(), FS.getArgType(S.Context, isObjCContext()),
       EquatableFormatArgument::FAR_Data, Sensitivity, SpecIndex, 0);
 
@@ -8820,7 +8866,7 @@ bool DecomposePrintfHandler::HandlePrintfSpecifier(
       CS.getKind() == analyze_format_string::ConversionSpecifier::FreeBSDDArg) {
     Specs.emplace_back(getSpecifierRange(startSpecifier, specifierLen),
                        getLocationOfByte(CS.getStart()),
-                       analyze_format_string::LengthModifier::None,
+                       analyze_format_string::LengthModifier(),
                        CS.getCharacters(),
                        analyze_format_string::ArgType::CStrTy,
                        EquatableFormatArgument::FAR_Auxiliary, Sensitivity,
@@ -9295,6 +9341,9 @@ bool CheckPrintfHandler::checkFormatExpr(
     return true;
   }
 
+  if (CheckUnsupportedType(AT, E, StartSpecifier, SpecifierLen))
+    return true;
+
   ArgType::MatchKind ImplicitMatch = ArgType::NoMatch;
   ArgType::MatchKind Match = AT.matchesType(S.Context, ExprTy);
   ArgType::MatchKind OrigMatch = Match;
@@ -9563,6 +9612,10 @@ bool CheckPrintfHandler::checkFormatExpr(
     // was deferred until now, we emit a warning for non-POD
     // arguments here.
     bool EmitTypeMismatch = false;
+    // Record and complex type arguments cannot be code generated for os_log
+    // and would crash CodeGen, so they are rejected with a hard error emitted
+    // after the switch below.
+    bool EmitOSLogError = false;
     switch (S.isValidVarArgType(ExprTy)) {
     case VarArgKind::Valid:
     case VarArgKind::ValidInCXX11: {
@@ -9582,22 +9635,26 @@ bool CheckPrintfHandler::checkFormatExpr(
         Diag = diag::warn_format_conversion_argument_type_mismatch_confusion;
         break;
       case ArgType::NoMatch:
-        Diag = isInvalidOSLogArgTypeForCodeGen(FSType, ExprTy)
-                   ? diag::err_format_conversion_argument_type_mismatch
-                   : diag::warn_format_conversion_argument_type_mismatch;
+        EmitOSLogError = isInvalidOSLogArgTypeForCodeGen(FSType, ExprTy);
+        Diag = diag::warn_format_conversion_argument_type_mismatch;
         break;
       }
 
-      EmitFormatDiagnostic(
-          S.PDiag(Diag) << AT.getRepresentativeTypeName(S.Context) << ExprTy
-                        << IsEnum << CSR << E->getSourceRange(),
-          E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
+      if (!EmitOSLogError)
+        EmitFormatDiagnostic(
+            S.PDiag(Diag) << AT.getRepresentativeTypeName(S.Context) << ExprTy
+                          << IsEnum << CSR << E->getSourceRange(),
+            E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
       break;
     }
     case VarArgKind::Undefined:
     case VarArgKind::MSVCUndefined:
       if (CallType == VariadicCallType::DoesNotApply) {
         EmitTypeMismatch = true;
+      } else if (isInvalidOSLogArgTypeForCodeGen(FSType, ExprTy)) {
+        // Emit a hard error rather than the -Wnon-pod-varargs warning, which
+        // does not stop compilation.
+        EmitOSLogError = true;
       } else {
         EmitFormatDiagnostic(
             S.PDiag(diag::warn_non_pod_vararg_with_format_string)
@@ -9627,6 +9684,13 @@ bool CheckPrintfHandler::checkFormatExpr(
             << AT.getRepresentativeTypeName(S.Context) << E->getSourceRange();
       break;
     }
+
+    if (EmitOSLogError)
+      EmitFormatDiagnostic(
+          S.PDiag(diag::err_format_conversion_argument_type_mismatch)
+              << AT.getRepresentativeTypeName(S.Context) << ExprTy << IsEnum
+              << CSR << E->getSourceRange(),
+          E->getBeginLoc(), /*IsStringLocation*/ false, CSR);
 
     if (EmitTypeMismatch) {
       // The function is not variadic, so we do not generate warnings about
@@ -9780,6 +9844,9 @@ bool CheckScanfHandler::HandleScanfSpecifier(
   if (!AT.isValid()) {
     return true;
   }
+
+  if (CheckUnsupportedType(AT, Ex, startSpecifier, specifierLen))
+    return true;
 
   analyze_format_string::ArgType::MatchKind Match =
       AT.matchesType(S.Context, Ex->getType());

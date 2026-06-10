@@ -6,16 +6,32 @@
 ; RUN: llvm-as %t/input1.ll -o %t/input1.bc
 ; RUN: llvm-as %t/input2.ll -o %t/input2.bc
 ;
+; Test --help
+; RUN: clang-sycl-linker --help | FileCheck %s --check-prefix=HELP
+; HELP: OVERVIEW: A utility that wraps around the SYCL device code linking process.
+; HELP: USAGE: clang-sycl-linker [options] <input bitcode files>
+; HELP: OPTIONS:
+;
+; Test --version
+; RUN: clang-sycl-linker --version | FileCheck %s --check-prefix=VERSION
+; VERSION: clang-sycl-linker version
+;
+; Test missing input files
+; RUN: not clang-sycl-linker -o %t.out 2>&1 | FileCheck %s --check-prefix=NO-INPUT
+; NO-INPUT: no input files provided
+;
+; Test non-existent input file
+; RUN: not clang-sycl-linker %t-missing.bc -o %t.out 2>&1 | FileCheck %s --check-prefix=MISSING
+; MISSING: input file '{{.*}}-missing.bc' does not exist
+;
 ; Test the dry run of a simple case to link two input files.
+; Test that IMG_SPIRV image kind is set for non-AOT compilation.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc -o %t/spirv.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SIMPLE-FO
 ; SIMPLE-FO:      link: inputs: {{.*}}.bc, {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
 ; SIMPLE-FO-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
+; SIMPLE-FO-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; SIMPLE-FO-NOT:  {{.+}}
-;
-; Test that IMG_SPIRV image kind is set for non-AOT compilation.
-; RUN: llvm-objdump --offloading %t/spirv.out | FileCheck %s --check-prefix=IMAGE-KIND-SPIRV
-; IMAGE-KIND-SPIRV: kind            spir-v
 ;
 ; Test the dry run of a simple case with device library files specified.
 ; RUN: mkdir -p %t/libs
@@ -25,6 +41,8 @@
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
 ; DEVLIBS:      link: inputs: {{.*}}.bc  libfiles: {{.*}}lib1.bc, {{.*}}lib2.bc  output: [[LLVMLINKOUT:.*]].bc
 ; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: a_0.spv
+; DEVLIBS-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
+; DEVLIBS-NOT:  {{.+}}
 ;
 ; Test -L short form (joined) and --bc-library= joined form.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc -L%t/libs --bc-library=lib1.bc -o a.spv 2>&1 \
@@ -48,7 +66,7 @@
 ; RUN: touch %t/dummy.o
 ; RUN: not clang-sycl-linker %t/dummy.o -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=FILETYPEERROR
-; FILETYPEERROR: Unsupported file type
+; FILETYPEERROR: unsupported file type
 ;
 ; Test to see if device library related errors are emitted.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc --bc-library lib3.bc -o a.spv 2>&1 \
@@ -69,32 +87,31 @@
 ; NO-DIR-AS-LIB: 'libs' library file not found
 ;
 ; Test AOT compilation for an Intel GPU.
+; Test that IMG_Object image kind is set for AOT compilation (Intel GPU).
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=bmg_g21 %t/input1.bc %t/input2.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-GPU
 ; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPIRVTRANSLATIONOUT]]_0.out -file [[SPIRVTRANSLATIONOUT]]_0.spv
-;
-; Test that IMG_Object image kind is set for AOT compilation (Intel GPU).
-; RUN: llvm-objdump --offloading %t/aot-gpu.out | FileCheck %s --check-prefix=IMAGE-KIND-OBJECT
-; IMAGE-KIND-OBJECT: kind            elf
+; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: bmg_g21
+; AOT-INTEL-GPU-NOT:  {{.+}}
 ;
 ; Test AOT compilation for an Intel CPU.
+; Test that IMG_Object image kind is set for AOT compilation (Intel CPU).
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \
 ; RUN:     --opencl-aot-options="-a -b" \
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-CPU
 ; AOT-INTEL-CPU:      link: inputs: {{.*}}.bc, {{.*}}.bc libfiles: output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-CPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPIRVTRANSLATIONOUT:.*]]_0.spv
 ; AOT-INTEL-CPU-NEXT: "{{.*}}opencl-aot{{.*}}" {{.*}}--device=cpu -a -b {{.*}}-o [[SPIRVTRANSLATIONOUT]]_0.out [[SPIRVTRANSLATIONOUT]]_0.spv
-;
-; Test that IMG_Object image kind is set for AOT compilation (Intel CPU).
-; RUN: llvm-objdump --offloading %t/aot-cpu.out | FileCheck %s --check-prefix=IMAGE-KIND-OBJECT
+; AOT-INTEL-CPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: graniterapids
+; AOT-INTEL-CPU-NOT:  {{.+}}
 ;
 ; Check that the output file must be specified.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NOOUTPUT
-; NOOUTPUT: Output file must be specified
+; NOOUTPUT: output file must be specified
 ;
 ; Check parser error reporting for unknown options.
 ; RUN: not clang-sycl-linker --dry-run --not-a-real-flag -triple=spirv64 %t/input1.bc -o a.out 2>&1 \
@@ -107,6 +124,18 @@
 ; RUN: llvm-objdump --offloading %t/no-entry-points.out | FileCheck %s --check-prefix=NO-ENTRY-POINTS
 ; NO-ENTRY-POINTS: OFFLOADING IMAGE [0]:
 ; NO-ENTRY-POINTS: producer        sycl
+;
+; Real (non-dry-run) run: input1/input2 have different
+; sycl-module-id values, so two images are produced and packaged on disk.
+; Covers write on disk logic not reachable under --dry-run.
+; RUN: clang-sycl-linker %t/input1.bc %t/input2.bc -o %t/srcsplit.out
+; RUN: llvm-objdump --offloading %t/srcsplit.out | FileCheck %s --check-prefix=SRCSPLIT
+; SRCSPLIT:      OFFLOADING IMAGE [0]:
+; SRCSPLIT:      kind            spir-v
+; SRCSPLIT:      triple          spirv64
+; SRCSPLIT:      OFFLOADING IMAGE [1]:
+; SRCSPLIT:      kind            spir-v
+; SRCSPLIT:      triple          spirv64
 
 ;--- input1.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"

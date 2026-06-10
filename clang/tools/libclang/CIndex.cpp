@@ -732,6 +732,7 @@ bool CursorVisitor::VisitClassTemplateSpecializationDecl(
   switch (D->getSpecializationKind()) {
   case TSK_Undeclared:
   case TSK_ImplicitInstantiation:
+  case TSK_FriendDeclaration:
     // Nothing to visit
     return false;
 
@@ -2467,6 +2468,8 @@ void OMPClauseEnqueue::VisitOMPNogroupClause(const OMPNogroupClause *) {}
 
 void OMPClauseEnqueue::VisitOMPInitClause(const OMPInitClause *C) {
   VisitOMPClauseList(C);
+  for (const Expr *A : C->attrs())
+    Visitor->AddStmt(A);
 }
 
 void OMPClauseEnqueue::VisitOMPUseClause(const OMPUseClause *C) {

@@ -722,9 +722,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 
   SymbolSourceMap symbols;
   auto &objects{std::get<parser::OmpObjectList>(x.v.t)};
+  CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, objects, "LINEAR");
   CheckCrayPointee(objects, "LINEAR", false);
   GetSymbolsInObjectList(objects, symbols);
-  CheckAssumedSizeArray(symbols, llvm::omp::Clause::OMPC_linear);
 
   auto CheckIntegerNoRef{[&](const Symbol *symbol, parser::CharBlock source) {
     if (!symbol->GetType()->IsNumeric(TypeCategory::Integer)) {
@@ -818,9 +818,9 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
           "The list item `%s` in a LINEAR clause must not be Cray Pointer or a variable with POINTER attribute"_err_en_US,
           symbol->name());
     }
-    if (FindCommonBlockContaining(*symbol)) {
+    if (symbol->has<CommonBlockDetails>()) {
       context_.Say(source,
-          "'%s' is a common block name and must not appear in an LINEAR clause"_err_en_US,
+          "'%s' is a common block name and must not appear in a LINEAR clause"_err_en_US,
           symbol->name());
     }
   }
