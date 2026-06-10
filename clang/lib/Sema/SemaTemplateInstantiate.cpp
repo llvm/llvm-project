@@ -1917,11 +1917,9 @@ TemplateInstantiator::TransformPredefinedExpr(PredefinedExpr *E) {
   return getSema().BuildPredefinedExpr(E->getLocation(), E->getIdentKind());
 }
 
-ExprResult
-TemplateInstantiator::TransformStringLiteral(StringLiteral *E) {
+ExprResult TemplateInstantiator::TransformStringLiteral(StringLiteral *E) {
   return StringLiteral::Create(
-      SemaRef.Context, E->getBytes(), E->getKind(), E->isPascal(),
-      E->getType(),
+      SemaRef.Context, E->getBytes(), E->getKind(), E->isPascal(), E->getType(),
       llvm::ArrayRef<SourceLocation>(E->tokloc_begin(), E->tokloc_end()));
 }
 
