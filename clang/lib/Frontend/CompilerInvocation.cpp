@@ -510,48 +510,32 @@ static std::optional<std::string> normalizeTriple(OptSpecifier Opt,
   return llvm::Triple::normalize(Arg->getValue());
 }
 
-template <typename T, typename U>
-static T mergeForwardValue(T KeyPath, U Value) {
-  return static_cast<T>(Value);
-}
-
-template <typename T> static T extractForwardValue(T KeyPath) {
-  return KeyPath;
-}
-
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
     ARGS, DIAGS, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS,         \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
     METAVAR, VALUES, SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, \
     DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+    TABLE_INDEX)                                                               \
   if ((VISIBILITY) & options::CC1Option) {                                     \
-    KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
+    KEYPATH = static_cast<decltype(KEYPATH)>(DEFAULT_VALUE);                   \
     if (IMPLIED_CHECK)                                                         \
-      KEYPATH = MERGER(KEYPATH, IMPLIED_VALUE);                                \
+      KEYPATH = static_cast<decltype(KEYPATH)>(IMPLIED_VALUE);                 \
     if (SHOULD_PARSE)                                                          \
       if (auto MaybeValue = NORMALIZER(OPT_##ID, TABLE_INDEX, ARGS, DIAGS))    \
-        KEYPATH =                                                              \
-            MERGER(KEYPATH, static_cast<decltype(KEYPATH)>(*MaybeValue));      \
+        KEYPATH = static_cast<decltype(KEYPATH)>(*MaybeValue);                 \
   }
 
-// Capture the extracted value as a lambda argument to avoid potential issues
-// with lifetime extension of the reference.
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
     CONSUMER, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS, \
     FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
     SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,   \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
-    TABLE_INDEX)                                                               \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, TABLE_INDEX)       \
   if ((VISIBILITY) & options::CC1Option) {                                     \
-    [&](const auto &Extracted) {                                               \
-      if (ALWAYS_EMIT ||                                                       \
-          (Extracted !=                                                        \
-           static_cast<decltype(KEYPATH)>((IMPLIED_CHECK) ? (IMPLIED_VALUE)    \
-                                                          : (DEFAULT_VALUE)))) \
-        DENORMALIZER(CONSUMER, SPELLING_OFFSET, Option::KIND##Class,           \
-                     TABLE_INDEX, Extracted);                                  \
-    }(EXTRACTOR(KEYPATH));                                                     \
+    if (ALWAYS_EMIT || (KEYPATH != static_cast<decltype(KEYPATH)>(             \
+                                       ((IMPLIED_CHECK) ? (IMPLIED_VALUE)      \
+                                                        : (DEFAULT_VALUE)))))  \
+      DENORMALIZER(CONSUMER, SPELLING_OFFSET, Option::KIND##Class,             \
+                   TABLE_INDEX, KEYPATH);                                      \
   }
 
 static StringRef GetInputKindName(InputKind IK);

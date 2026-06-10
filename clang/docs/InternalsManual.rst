@@ -901,11 +901,11 @@ command line:
       PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
       HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
       DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-      MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+      TABLE_INDEX)                                                               \
     PARSE_OPTION_WITH_MARSHALLING(Args, Diags, Success, ID, FLAGS, PARAM,        \
                                   SHOULD_PARSE, KEYPATH, DEFAULT_VALUE,          \
                                   IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER,      \
-                                  MERGER, TABLE_INDEX)
+                                  TABLE_INDEX)
   #include "clang/Options/Options.inc"
   #undef LANG_OPTION_WITH_MARSHALLING
 
@@ -921,10 +921,10 @@ command line:
       PREFIX_TYPE, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,        \
       HELPTEXT, METAVAR, VALUES, SPELLING, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH,   \
       DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-      MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+      TABLE_INDEX)                                                               \
     GENERATE_OPTION_WITH_MARSHALLING(                                            \
         Args, SA, KIND, FLAGS, SPELLING, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,    \
-        IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, EXTRACTOR, TABLE_INDEX)
+        IMPLIED_CHECK, IMPLIED_VALUE, DENORMALIZER, TABLE_INDEX)
   #include "clang/Options/Options.inc"
   #undef LANG_OPTION_WITH_MARSHALLING
 
