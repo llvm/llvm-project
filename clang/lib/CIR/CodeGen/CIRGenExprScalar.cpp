@@ -614,8 +614,6 @@ public:
 
     mlir::Value value;
     mlir::Value input;
-    mlir::Location loc = cgf.getLoc(e->getSourceRange());
-    int amount = e->isIncrementOp() ? 1 : -1;
 
     if (type->getAs<AtomicType>()) {
       cgf.cgm.errorNYI(e->getSourceRange(), "Atomic inc/dec");
@@ -685,12 +683,16 @@ public:
         value = cgf.getBuilder().createPtrStride(loc, value, numElts);
       } else {
         // For everything else, we can just do a simple increment.
+        mlir::Location loc = cgf.getLoc(e->getSourceRange());
+        int amount = e->isIncrementOp() ? 1 : -1;
         mlir::Value amt = builder.getSInt32(amount, loc);
         assert(!cir::MissingFeatures::sanitizers());
         value = builder.createPtrStride(loc, value, amt);
       }
     } else if (type->isVectorType()) {
       if (type->hasIntegerRepresentation()) {
+        mlir::Location loc = cgf.getLoc(e->getSourceRange());
+        int amount = e->isIncrementOp() ? 1 : -1;
         mlir::Type vecElemTy =
             mlir::cast<cir::VectorType>(value.getType()).getElementType();
         cir::ConstantOp constAmt = builder.getConstInt(loc, vecElemTy, amount);
