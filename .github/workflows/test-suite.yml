@@ -128,7 +128,7 @@ jobs:
           path: llvm-test-suite/results*.json
       - name: Create comment
         env:
-	  ARTIFACT_URL: ${{ steps.upload-diffs.outputs.artifact-url }}
+          ARTIFACT_URL: ${{ steps.upload-diffs.outputs.artifact-url }}
         run: |
           cat << EOF > comments
           [{"body" : "test-suite diff from $BASE_SHA...$HEAD_SHA: $ARTIFACT_URL"}]
