@@ -65,15 +65,17 @@ static bool Jmp(InterpState &S, CodePtr &PC, int32_t Offset) {
 static bool Jt(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (S.Stk.pop<bool>()) {
     PC += Offset;
+    return S.noteStep(PC);
   }
-  return S.noteStep(PC);
+  return true;
 }
 
 static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (!S.Stk.pop<bool>()) {
     PC += Offset;
+    return S.noteStep(PC);
   }
-  return S.noteStep(PC);
+  return true;
 }
 
 static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
@@ -1487,7 +1489,7 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   if (Ptr.isIntegralPointer()) {
     if (std::optional<IntPointer> IntPtr =
-            Ptr.asIntPointer().atOffset(S.getASTContext(), Off)) {
+            Ptr.asIntPointer().atOffset(S.Ctx, Off)) {
       S.Stk.push<Pointer>(std::move(*IntPtr));
       return true;
     }
@@ -1533,7 +1535,7 @@ static bool getBase(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   if (!Ptr.isBlockPointer()) {
     if (!Ptr.isIntegralPointer())
       return false;
-    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.getASTContext(), Off));
+    S.Stk.push<Pointer>(Ptr.asIntPointer().baseCast(S.Ctx, Off));
     return true;
   }
 
@@ -1726,7 +1728,9 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
-  const FunctionDecl *Definition = Func->getDecl()->getDefinition();
+  const FunctionDecl *Definition;
+  if (!Func->getDecl()->getBody(Definition))
+    return;
   if (!Definition)
     return;
 
@@ -1891,7 +1895,7 @@ static bool getDynamicDecl(InterpState &S, CodePtr OpPC, Pointer TypePtr,
 
   QualType DynamicType = TypePtr.getType();
   if (TypePtr.isStatic() || TypePtr.isConst()) {
-    if (const VarDecl *VD = TypePtr.getDeclDesc()->asVarDecl();
+    if (const VarDecl *VD = TypePtr.getRootVarDecl();
         VD && !VD->isConstexpr()) {
       const Expr *E = S.Current->getExpr(OpPC);
       APValue V = TypePtr.toAPValue(S.getASTContext());

@@ -276,3 +276,31 @@ define <vscale x 2 x i64> @urshr_i64(<vscale x 2 x i64> %x) {
   %sh = lshr <vscale x 2 x i64> %add, splat (i64 6)
   ret <vscale x 2 x i64> %sh
 }
+
+define void @store_duplicate_low_half_round_shift(ptr %dst, <vscale x 16 x i8> %x) #0 {
+; SVE-LABEL: store_duplicate_low_half_round_shift:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    uunpklo z0.h, z0.b
+; SVE-NEXT:    add z0.h, z0.h, #4 // =0x4
+; SVE-NEXT:    lsr z0.h, z0.h, #3
+; SVE-NEXT:    uzp1 z0.b, z0.b, z0.b
+; SVE-NEXT:    str z0, [x0]
+; SVE-NEXT:    ret
+;
+; SVE2-LABEL: store_duplicate_low_half_round_shift:
+; SVE2:       // %bb.0: // %entry
+; SVE2-NEXT:    uunpklo z0.h, z0.b
+; SVE2-NEXT:    rshrnb z0.b, z0.h, #3
+; SVE2-NEXT:    uzp1 z0.b, z0.b, z0.b
+; SVE2-NEXT:    str z0, [x0]
+; SVE2-NEXT:    ret
+entry:
+  %lo = call <vscale x 8 x i16> @llvm.aarch64.sve.uunpklo.nxv8i16(<vscale x 16 x i8> %x)
+  %ins0 = call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> poison, <vscale x 8 x i16> %lo, i64 0)
+  %ins1 = call <vscale x 16 x i16> @llvm.vector.insert.nxv16i16.nxv8i16(<vscale x 16 x i16> %ins0, <vscale x 8 x i16> %lo, i64 8)
+  %add = add <vscale x 16 x i16> %ins1, splat (i16 4)
+  %shr = lshr <vscale x 16 x i16> %add, splat (i16 3)
+  %tr = trunc <vscale x 16 x i16> %shr to <vscale x 16 x i8>
+  store <vscale x 16 x i8> %tr, ptr %dst, align 1
+  ret void
+}

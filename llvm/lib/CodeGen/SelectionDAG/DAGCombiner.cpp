@@ -10305,22 +10305,25 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
                                                LHS.getValueType());
     if (!LegalOperations ||
         TLI.isCondCodeLegal(NotCC, LHS.getSimpleValueType())) {
+      // Propagate fast-math-flags.
+      SDNodeFlags Flags = N0->getFlags();
       switch (N0Opcode) {
       default:
         llvm_unreachable("Unhandled SetCC Equivalent!");
       case ISD::SETCC:
-        return DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC);
+        return DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC, SDValue(),
+                            /*IsSignaling=*/false, Flags);
       case ISD::SELECT_CC:
         return DAG.getSelectCC(SDLoc(N0), LHS, RHS, N0.getOperand(2),
-                               N0.getOperand(3), NotCC);
+                               N0.getOperand(3), NotCC, Flags);
       case ISD::STRICT_FSETCC:
       case ISD::STRICT_FSETCCS: {
         if (N0.hasOneUse()) {
           // FIXME Can we handle multiple uses? Could we token factor the chain
           // results from the new/old setcc?
           SDValue SetCC =
-              DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC,
-                           N0.getOperand(0), N0Opcode == ISD::STRICT_FSETCCS);
+              DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC, N0.getOperand(0),
+                           N0Opcode == ISD::STRICT_FSETCCS, Flags);
           CombineTo(N, SetCC);
           DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), SetCC.getValue(1));
           recursivelyDeleteUnusedNodes(N0.getNode());
@@ -19962,8 +19965,7 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
       TLI.isOperationLegal(IntToFPOp, VT))
     return SDValue();
 
-  bool IsSignedZeroSafe = DAG.getTarget().Options.NoSignedZerosFPMath ||
-                          DAG.canIgnoreSignBitOfZero(SDValue(N, 0));
+  bool IsSignedZeroSafe = DAG.canIgnoreSignBitOfZero(SDValue(N, 0));
   // For signed conversions: The optimization changes signed zero behavior.
   if (IsSigned && !IsSignedZeroSafe)
     return SDValue();
@@ -23963,6 +23965,19 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
 
   if (LoadPos == 1)
     Mask = DAG.getNOT(Dl, Mask, Mask.getValueType());
+
+  // A masked store follows the IR convention of a vXi1 mask (one bit per
+  // element). A vselect condition may instead be a wider boolean vector, e.g.
+  // a vXi32/vXi64 comparison result produced on AVX512 targets without VLX.
+  // When the matching vXi1 type is legal, narrow the mask to it so that targets
+  // expecting a vXi1 mask lower it correctly. Targets where vXi1 is illegal
+  // (e.g. AVX/AVX2) keep the wide mask and lower it as a blend/vmaskmov.
+  EVT MaskVT = Mask.getValueType();
+  if (MaskVT.getVectorElementType() != MVT::i1) {
+    EVT BoolVT = MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1);
+    if (TLI.isTypeLegal(BoolVT))
+      Mask = DAG.getNode(ISD::TRUNCATE, Dl, BoolVT, Mask);
+  }
 
   return DAG.getMaskedStore(Store->getChain(), Dl, OtherVec, StorePtr,
                             StoreOffset, Mask, VT, Store->getMemOperand(),
