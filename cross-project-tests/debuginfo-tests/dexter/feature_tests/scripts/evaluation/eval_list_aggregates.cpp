@@ -1,16 +1,17 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --use-script --binary %t -- %s \
+// RUN:   | FileCheck %s
 
 /// Check that the debugger is able to correctly evaluate a list of expected
 /// aggregate values.
 
 struct Point {
-    int X;
-    int Y;
+  int X;
+  int Y;
 };
 
 int main() {
-  Point P { 1, 2 };
+  Point P{1, 2};
   P.X = 3; // !dex_label start
   P.Y = 0;
   P.X = 1;

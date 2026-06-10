@@ -1,24 +1,25 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
-// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t -- %s | FileCheck %s
+// RUN: %dexter_regression_test_run --use-script --skip-evaluate --binary %t \
+// RUN:   -- %s | FileCheck %s
 
 /// Check that the debugger is able to fetch the components of aggregate values.
 
 struct Point {
-    int X;
-    int Y;
-    int Z;
+  int X;
+  int Y;
+  int Z;
 };
 
 struct Rect {
-    Point TopLeft;
-    Point BottomRight;
+  Point TopLeft;
+  Point BottomRight;
 };
 
 int main() {
-  Point P { 1, 2, 3 };
+  Point P{1, 2, 3};
   int *I = &P.X;
-  Rect R { { 1, 1, 1 }, { 2, 2, 2 } };
-  int L[] = { 0, 1, 2, 3, 4 };
+  Rect R{{1, 1, 1}, {2, 2, 2}};
+  int L[] = {0, 1, 2, 3, 4};
   return 0; // !dex_label ret
 }
 
@@ -45,7 +46,6 @@ int main() {
 // CHECK-NEXT:      "X": (int) 2
 // CHECK-NEXT:      "Y": (int) 2
 // CHECK-NEXT:      "Z": (int) 2
-
 
 /*
 ---
