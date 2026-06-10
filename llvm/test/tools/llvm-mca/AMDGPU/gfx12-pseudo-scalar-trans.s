@@ -52,17 +52,17 @@ v_s_sqrt_f16 s5, s5
 # CHECK-NEXT: [6]   - HWVMEM
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]
-# CHECK-NEXT:  -      -      -     10.00   -     10.00   -
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
+# CHECK-NEXT:  -      -      -     10.00   -     10.00   -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_exp_f32 s0, s0
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_log_f32 s0, s0
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_rcp_f32 s1, s1
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_rsq_f32 s1, s0
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_sqrt_f32 s2, s1
-# CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_exp_f16 s3, s1
+# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_s_exp_f32 s0, s0
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_s_log_f32 s0, s0
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_s_rcp_f32 s1, s1
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_s_rsq_f32 s1, s0
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_s_sqrt_f32 s2, s1
+# CHECK-NEXT:  -      -      -     1.00    -     1.00    -      -     v_s_exp_f16 s3, s1
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_log_f16 s4, s1
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_rcp_f16 s5, s2
 # CHECK-NEXT:  -      -      -     1.00    -     1.00    -     v_s_rsq_f16 s5, s4
