@@ -31,8 +31,7 @@ namespace {
 class ConvertToEmitCPassInterface {
 public:
   ConvertToEmitCPassInterface(MLIRContext *context,
-                              ArrayRef<std::string> filterDialects,
-                              std::optional<bool> lowerToCpp);
+                              ArrayRef<std::string> filterDialects);
   virtual ~ConvertToEmitCPassInterface() = default;
 
   /// Get the dependent dialects used by `convert-to-emitc`.
@@ -61,7 +60,6 @@ protected:
   MLIRContext *context;
   /// List of dialects names to use as filters.
   ArrayRef<std::string> filterDialects;
-  std::optional<bool> lowerToCpp;
 };
 
 /// This DialectExtension can be attached to the context, which will invoke the
@@ -126,7 +124,7 @@ struct StaticConvertToEmitC : public ConvertToEmitCPassInterface {
     // Populate the patterns with the dialect interface.
     if (failed(visitInterfaces([&](ConvertToEmitCPatternInterface *iface) {
           iface->populateConvertToEmitCConversionPatterns(
-              *target, *typeConverter, tempPatterns, lowerToCpp);
+              *target, *typeConverter, tempPatterns);
         })))
       return failure();
     this->patterns =
@@ -162,11 +160,7 @@ public:
 
   LogicalResult initialize(MLIRContext *context) final {
     std::shared_ptr<ConvertToEmitCPassInterface> impl;
-    std::optional<bool> lowerToCppOverride;
-    if (this->lowerToCpp.hasValue())
-      lowerToCppOverride = this->lowerToCpp;
-    impl = std::make_shared<StaticConvertToEmitC>(context, filterDialects,
-                                                  lowerToCppOverride);
+    impl = std::make_shared<StaticConvertToEmitC>(context, filterDialects);
     if (failed(impl->initialize()))
       return failure();
     this->impl = impl;
@@ -186,10 +180,8 @@ public:
 //===----------------------------------------------------------------------===//
 
 ConvertToEmitCPassInterface::ConvertToEmitCPassInterface(
-    MLIRContext *context, ArrayRef<std::string> filterDialects,
-    std::optional<bool> lowerToCpp)
-    : context(context), filterDialects(filterDialects), lowerToCpp(lowerToCpp) {
-}
+    MLIRContext *context, ArrayRef<std::string> filterDialects)
+    : context(context), filterDialects(filterDialects) {}
 
 void ConvertToEmitCPassInterface::getDependentDialects(
     DialectRegistry &registry) {

@@ -26,8 +26,6 @@ def ConvertToEmitC : Pass<"convert-to-emitc"> {
   let options = [
     ListOption<"filterDialects", "filter-dialects", "std::string",
                "Test conversion patterns of only the specified dialects">,
-    Option<"lowerToCpp", "lower-to-cpp", "bool", "",
-           "Target C++ (true) instead of C (false)">,
   ];
 }
 
@@ -455,10 +453,6 @@ def ConvertControlFlowToSPIRVPass : Pass<"convert-cf-to-spirv"> {
 def ConvertFuncToEmitC : Pass<"convert-func-to-emitc", "ModuleOp"> {
   let summary = "Convert Func dialect to EmitC dialect";
   let dependentDialects = ["emitc::EmitCDialect"];
-  let options = [Option<
-      "lowerToCpp", "lower-to-cpp", "bool",
-      /*default=*/"true",
-      /*description=*/"Target C++ (true) instead of C (false)">];
 }
 
 //===----------------------------------------------------------------------===//
