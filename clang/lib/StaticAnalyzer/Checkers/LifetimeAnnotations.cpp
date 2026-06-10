@@ -9,26 +9,6 @@
 using namespace clang;
 using namespace ento;
 
-struct LifetimeMap {
-  SymbolRef SymRefType;
-  const MemRegion *MemRegType;
-
-  bool operator==(const LifetimeMap &Type) const {
-    return std::tie(SymRefType, MemRegType) ==
-           std::tie(Type.SymRefType, Type.MemRegType);
-  }
-
-  bool operator<(const LifetimeMap &Type) const {
-    return std::tie(SymRefType, MemRegType) <
-           std::tie(Type.SymRefType, Type.MemRegType);
-  }
-
-  void Profile(llvm::FoldingSetNodeID &ID) const {
-    ID.AddPointer(SymRefType);
-    ID.AddPointer(MemRegType);
-  }
-};
-
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(LifetimeSourceSet, const MemRegion *)
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SymbolRef, LifetimeSourceSet)
 
@@ -122,13 +102,13 @@ void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
     return;
 
   Out << Sep << "LifetimeBound bindings:" << NL;
-  for (auto &&[RetValSym, ArgValRegion] : LBMap) {
-    for (const auto *Region : ArgValRegion)
-      Out << " Origin " << RetValSym << " contains Loan " << Region << NL;
+  for (auto &&[OriginSym, SourceSet] : LBMap) {
+    for (const auto *Region : SourceSet)
+      Out << " Origin " << OriginSym << " contains Loan " << Region << NL;
   }
-  for (auto &&[RetVal, ArgValRegion] : LBMapVal) {
-    for (const auto *Region : ArgValRegion)
-      Out << " Origin " << RetVal << " contains Loan " << Region << NL;
+  for (auto &&[OriginRegion, SourceSet] : LBMapVal) {
+    for (const auto *Region : SourceSet)
+      Out << " Origin " << OriginRegion << " contains Loan " << Region << NL;
   }
 }
 
