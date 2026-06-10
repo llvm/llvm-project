@@ -1,6 +1,5 @@
-; RUN: opt %S/Inputs/SourceInfo.ll -dxil-embed -dxil-globals -S -o - | FileCheck %s
-; RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
-; REQUIRES: !zlib
+; RUN: opt %S/Inputs/SourceInfo.ll -compress-srci=none -dxil-embed -dxil-globals -S -o - | FileCheck %s
+; RUN: llc %S/Inputs/SourceInfo.ll -compress-srci=none --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 
 ; CHECK: @dx.srci = private constant [416 x i8] c"{{.*}}", section "SRCI", align 4
 

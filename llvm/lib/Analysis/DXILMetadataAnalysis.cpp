@@ -15,6 +15,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -22,6 +23,16 @@
 
 using namespace llvm;
 using namespace dxil;
+
+cl::OptionCategory DXContainerCategory("DXContainer Options");
+static cl::opt<dxbc::SourceInfo::Contents::CompressionType> CompressSRCI(
+    "compress-srci", cl::ValueOptional,
+    cl::desc("Choose SCRI part compression:"),
+    cl::values(clEnumValN(dxbc::SourceInfo::Contents::CompressionType::None,
+                          "none", "No compression"),
+               clEnumValN(dxbc::SourceInfo::Contents::CompressionType::Zlib,
+                          "zlib", "Use zlib")),
+    cl::cat(DXContainerCategory));
 
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
@@ -42,10 +53,15 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   NamedMDNode *ArgsNode = M.getNamedMetadata("dx.source.args");
   if (ContentsNode && ArgsNode) {
     MMDAI.SourceInfo.emplace();
-    MMDAI.SourceInfo->setCompressionType(
-        compression::zlib::isAvailable()
-            ? dxbc::SourceInfo::Contents::CompressionType::Zlib
-            : dxbc::SourceInfo::Contents::CompressionType::None);
+    if (CompressSRCI.getNumOccurrences() > 0) {
+      MMDAI.SourceInfo->setCompressionType(CompressSRCI);
+    } else {
+      // If the option is not specified, pick zlib if available.
+      MMDAI.SourceInfo->setCompressionType(
+          compression::zlib::isAvailable()
+              ? dxbc::SourceInfo::Contents::CompressionType::Zlib
+              : dxbc::SourceInfo::Contents::CompressionType::None);
+    }
     for (Metadata *FileInfoNode : ContentsNode->operands()) {
       auto *FileInfo = cast<MDTuple>(FileInfoNode);
       MMDAI.SourceInfo->addFile(
