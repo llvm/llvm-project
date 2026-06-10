@@ -2330,7 +2330,8 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
     return true;
 
   Register SrcReg = I.getOperand(1).getReg();
-  if (I.getOpcode() == TargetOpcode::G_MEMSET) {
+  if (I.getOpcode() == TargetOpcode::G_MEMSET ||
+      I.getOpcode() == TargetOpcode::G_MEMSET_INLINE) {
     Register VarReg = getOrCreateMemSetGlobal(I);
     if (!VarReg.isValid())
       return false;

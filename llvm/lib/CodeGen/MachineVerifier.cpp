@@ -2154,9 +2154,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (DstPtrTy.getAddressSpace() != MMOs[0]->getAddrSpace())
       report("inconsistent " + Twine(Name, " address space"), MI);
 
-    if (!MI->getOperand(MI->getNumOperands() - 1).isImm() ||
-        (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
-      report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
+    if (Opc != TargetOpcode::G_MEMSET_INLINE)
+      if (!MI->getOperand(MI->getNumOperands() - 1).isImm() ||
+          (MI->getOperand(MI->getNumOperands() - 1).getImm() & ~1LL))
+        report("'tail' flag (last operand) must be an immediate 0 or 1", MI);
 
     break;
   }
