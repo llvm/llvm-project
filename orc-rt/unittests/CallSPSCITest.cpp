@@ -53,15 +53,14 @@ TEST_F(CallSPSCITest, CallVoidVoid) {
   EXPECT_EQ(CallVoidVoidCount, 1);
 }
 
-static int CallMainArgc = -1;
-static std::vector<std::string> CallMainArgv;
-static bool CallMainArgvIsNullTerminated = false;
-static int callMainFn(int Argc, char *Argv[]) {
-  CallMainArgc = Argc;
-  for (int I = 0; I < Argc; ++I)
-    CallMainArgv.emplace_back(Argv[I]);
-  // Per the C standard, argv[argc] shall be a null pointer.
-  CallMainArgvIsNullTerminated = (Argv[Argc] == nullptr);
+static int CallMainArgC = -1;
+static std::vector<std::string> CallMainArgV;
+static bool CallMainArgVIsNullTerminated = false;
+static int callMainFn(int argc, char *argv[]) {
+  CallMainArgC = argc;
+  for (int I = 0; I < argc; ++I)
+    CallMainArgV.push_back(argv[I]);
+  CallMainArgVIsNullTerminated = (argv[argc] == nullptr);
   return 42;
 }
 
@@ -78,39 +77,39 @@ TEST_F(CallSPSCITest, CallMain) {
   ASSERT_TRUE(!!*Result) << toString(Result->takeError());
   EXPECT_EQ(**Result, 42);
 
-  EXPECT_EQ(CallMainArgc, 3)
+  EXPECT_EQ(CallMainArgC, 3)
       << "argc should equal the number of program arguments, "
          "not including the null terminator";
-  ASSERT_EQ(CallMainArgv.size(), 3U);
-  EXPECT_EQ(CallMainArgv[0], "prog");
-  EXPECT_EQ(CallMainArgv[1], "arg1");
-  EXPECT_EQ(CallMainArgv[2], "arg2");
-  EXPECT_TRUE(CallMainArgvIsNullTerminated)
+  ASSERT_EQ(CallMainArgV.size(), 3U);
+  EXPECT_EQ(CallMainArgV[0], "prog");
+  EXPECT_EQ(CallMainArgV[1], "arg1");
+  EXPECT_EQ(CallMainArgV[2], "arg2");
+  EXPECT_TRUE(CallMainArgVIsNullTerminated)
       << "argv[argc] must be a null pointer per the C standard";
 }
 
-static int CallMainEmptyArgvArgc = -1;
-static bool CallMainEmptyArgvIsNullTerminated = false;
-static int callMainEmptyArgvFn(int Argc, char *Argv[]) {
-  CallMainEmptyArgvArgc = Argc;
-  CallMainEmptyArgvIsNullTerminated = (Argv[Argc] == nullptr);
+static int CallMainEmptyArgVArgC = -1;
+static bool CallMainEmptyArgVIsNullTerminated = false;
+static int callMainEmptyArgVFn(int argc, char *argv[]) {
+  CallMainEmptyArgVArgC = argc;
+  CallMainEmptyArgVIsNullTerminated = (argv[argc] == nullptr);
   return 42;
 }
 
-TEST_F(CallSPSCITest, CallMainEmptyArgv) {
+TEST_F(CallSPSCITest, CallMainEmptyArgV) {
   using SPSSig = int64_t(SPSExecutorAddr, SPSSequence<SPSString>);
   std::optional<Expected<int64_t>> Result;
   std::vector<std::string> Args;
   SPSWrapperFunction<SPSSig>::call(
       caller("orc_rt_ci_sps_call_main"),
       [&](Expected<int64_t> R) { Result = std::move(R); },
-      reinterpret_cast<void *>(callMainEmptyArgvFn), Args);
+      reinterpret_cast<void *>(callMainEmptyArgVFn), Args);
 
   ASSERT_TRUE(Result.has_value());
   ASSERT_TRUE(!!*Result) << toString(Result->takeError());
   EXPECT_EQ(**Result, 42);
-  EXPECT_EQ(CallMainEmptyArgvArgc, 0);
-  EXPECT_TRUE(CallMainEmptyArgvIsNullTerminated);
+  EXPECT_EQ(CallMainEmptyArgVArgC, 0);
+  EXPECT_TRUE(CallMainEmptyArgVIsNullTerminated);
 }
 
 } // namespace
