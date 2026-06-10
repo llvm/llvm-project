@@ -3644,6 +3644,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   case Intrinsic::assume: {
     for (auto [Idx, OBU] : llvm::enumerate(II->operand_bundles())) {
+      auto RemoveBundle = [&, Idx = Idx]() -> Instruction * {
+        if (II->getNumOperandBundles() == 1)
+          return eraseInstFromFunction(*II);
+        return CallBase::removeOperandBundleAt(II, Idx);
+      };
+
       switch (getBundleAttrFromOBU(OBU)) {
       case BundleAttr::None:
         llvm_unreachable("Unexpected Attribute");
@@ -3657,7 +3663,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // Remove align 1 and non-power-of-two bundles; they don't add any
         // useful information.
         if (*Alignment == 1 || !isPowerOf2_64(*Alignment))
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
 
         // Don't try to remove align assumptions for pointers derived from
         // arguments. We might lose information if the function gets inline and
@@ -3671,26 +3677,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         if (computeKnownBits(Ptr, II).countMinTrailingZeros() <
             Log2_64(*Alignment))
           continue;
-        return CallBase::removeOperandBundleAt(II, Idx);
+        return RemoveBundle();
       }
 
       case BundleAttr::Dereferenceable: {
         auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
 
         if (Count && *Count == 0)
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
         break;
       }
 
       case BundleAttr::Ignore:
-        return CallBase::removeOperandBundleAt(II, Idx);
+        return RemoveBundle();
 
       case BundleAttr::NonNull: {
         auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
         // Drop assume if we can prove nonnull without it
         if (isKnownNonZero(Ptr, getSimplifyQuery().getWithInstruction(II)))
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
 
         // Fold the assume into metadata if it's valid at the load
         if (auto *LI = dyn_cast<LoadInst>(Ptr);
@@ -3699,7 +3705,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           MDNode *MD = MDNode::get(II->getContext(), {});
           LI->setMetadata(LLVMContext::MD_nonnull, MD);
           LI->setMetadata(LLVMContext::MD_noundef, MD);
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
         }
 
         if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
@@ -3707,7 +3713,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
             !NullPointerIsDefined(II->getFunction(),
                                   Ptr->getType()->getPointerAddressSpace())) {
           Builder.CreateNonnullAssumption(GEP->stripInBoundsOffsets());
-          return CallBase::removeOperandBundleAt(II, Idx);
+          return RemoveBundle();
         }
 
         // TODO: apply nonnull return attributes to calls and invokes
