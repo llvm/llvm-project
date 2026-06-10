@@ -421,18 +421,18 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 }
 
 /// Compute the in_bounds attribute for a transfer op given its permutation map
-/// and the memref being accessed. Dimension i is in-bounds when the map result
-/// is an AffineDimExpr pointing to a static memref dimension divisible by the
+/// and the source being accessed. Dimension i is in-bounds when the map result
+/// is an AffineDimExpr pointing to a static source dimension divisible by the
 /// vector size, or an AffineConstantExpr (broadcast).
 static SmallVector<bool> computeInBoundsFromPermutationMap(
-    AffineMap permutationMap, VectorType vectorType, MemRefType memrefType) {
+    AffineMap permutationMap, VectorType vectorType, ShapedType sourceType) {
   SmallVector<bool> inBounds(vectorType.getRank(), false);
   for (unsigned i = 0; i < (unsigned)vectorType.getRank(); ++i) {
     AffineExpr expr = permutationMap.getResult(i);
     if (auto dimExpr = dyn_cast<AffineDimExpr>(expr)) {
       unsigned memDim = dimExpr.getPosition();
-      if (!memrefType.isDynamicDim(memDim) &&
-          memrefType.getDimSize(memDim) % vectorType.getDimSize(i) == 0)
+      if (!sourceType.isDynamicDim(memDim) &&
+          sourceType.getDimSize(memDim) % vectorType.getDimSize(i) == 0)
         inBounds[i] = true;
     } else if (isa<AffineConstantExpr>(expr)) {
       inBounds[i] = true;
@@ -457,10 +457,16 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   int64_t vecToReadRank = vecToReadTy.getRank();
   auto vecToReadShape = vecToReadTy.getShape();
 
-  size_t expectedSourceRank =
-      permutationMap ? permutationMap.getNumDims() : vecToReadRank;
-  assert(sourceShape.size() == expectedSourceRank &&
+  // The permutation map maps the source's index space to the vector's, so its
+  // dims must match the source rank and its results the vector rank. Without a
+  // map, a minor identity is implied, requiring the two ranks to match.
+  assert(sourceShape.size() == (permutationMap
+                                    ? permutationMap.getNumDims()
+                                    : static_cast<size_t>(vecToReadRank)) &&
          "expected source rank to match permutation map dims or vector rank.");
+  assert((!permutationMap || permutationMap.getNumResults() ==
+                                 static_cast<size_t>(vecToReadRank)) &&
+         "expected permutation map results to match vector rank.");
   assert((!padValue.has_value() ||
           padValue.value().getType() == sourceShapedType.getElementType()) &&
          "expected same pad element type to match source element type");
@@ -469,9 +475,10 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 
   if (useInBoundsInsteadOfMasking) {
     if (permutationMap) {
+      // Update the inBounds attribute.
       // FIXME: This computation is too weak - it ignores the read indices.
       inBoundsVal = computeInBoundsFromPermutationMap(
-          permutationMap, vecToReadTy, cast<MemRefType>(source.getType()));
+          permutationMap, vecToReadTy, cast<ShapedType>(source.getType()));
     } else {
       // Update the inBounds attribute.
       // FIXME: This computation is too weak - it ignores the read indices.
@@ -480,10 +487,14 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
                          ShapedType::isStatic(sourceShape[i]);
     }
   }
+  // The transfer op expects one index per source dimension.
+  assert(
+      (customIndices.empty() || customIndices.size() == sourceShape.size()) &&
+      "expected as many custom indices as source dims.");
   SmallVector<Value> indices;
   if (customIndices.empty()) {
     auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
-    indices.assign(vecToReadRank, zero);
+    indices.assign(sourceShape.size(), zero);
   } else {
     indices.assign(customIndices.begin(), customIndices.end());
   }
@@ -536,9 +547,10 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   SmallVector<bool> inBoundsVal(vecToStoreRank, true);
   if (useInBoundsInsteadOfMasking) {
     if (permutationMap) {
+      // Update the inBounds attribute.
       // FIXME: This computation is too weak - it ignores the write indices.
       inBoundsVal = computeInBoundsFromPermutationMap(
-          permutationMap, vecToStoreType, cast<MemRefType>(dest.getType()));
+          permutationMap, vecToStoreType, cast<ShapedType>(dest.getType()));
     } else {
       // Update the inBounds attribute.
       // FIXME: This computation is too weak - it ignores the write indices.
