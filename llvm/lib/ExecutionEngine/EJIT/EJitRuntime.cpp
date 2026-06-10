@@ -160,7 +160,7 @@ bool ejit_is_active(const char *periodName, uint8_t cellIdx) {
   return gEJIT->isActive(periodName, cellIdx);
 }
 
-void *ejit_compile_or_get(const char *funcName,
+void *ejit_compile_or_get(uint32_t funcIdx,
                            const ejit_dim_t *dims, uint32_t count,
                            void **out_pfn) {
   if (!gEJIT)
@@ -170,7 +170,7 @@ void *ejit_compile_or_get(const char *funcName,
   for (uint32_t i = 0; i < count && i < 4; ++i)
     cppDims.push_back({dims[i].periodName, dims[i].index});
 
-  void *result = gEJIT->getOrCompile(funcName, cppDims.data(), count);
+  void *result = gEJIT->getOrCompile(funcIdx, cppDims.data(), count);
   if (out_pfn)
     *out_pfn = result;
   return result;

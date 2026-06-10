@@ -52,7 +52,6 @@ constexpr const char *FN_REGISTER_BITCODE = "ejit_register_bitcode";
 constexpr const char *FN_REGISTER_PERIOD_ARRAY = "ejit_register_period_array";
 constexpr const char *FN_REGISTER_STATIC_VAR = "ejit_register_static_var";
 constexpr const char *FN_COMPILE_OR_GET = "ejit_compile_or_get";
-constexpr const char *FN_COMPILE_OR_GET_V2 = "ejit_compile_or_get_v2";
 constexpr const char *FN_DEACTIVATE_ARRAY = "ejit_deactivate_array";
 constexpr const char *FN_ACTIVATE_ARRAY = "ejit_activate_array";
 

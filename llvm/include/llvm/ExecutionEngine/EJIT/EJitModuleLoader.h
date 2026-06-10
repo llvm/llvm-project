@@ -21,6 +21,8 @@ namespace ejit {
 
 /// Maintains funcName → bitcode data mapping. Bitcode is lazily loaded
 /// (first JIT compilation triggers module parsing via LLVMContext).
+/// Internally indexed by deterministic 32-bit hash of the function name
+/// (FNV-1a) to enable O(1) lookup via funcIdx in the hot path.
 class EJitModuleLoader {
 public:
   void registerBitcode(const std::string &funcName,
@@ -30,6 +32,9 @@ public:
   /// lifetime of the process (pointing to embedded .ejit.bitcode section).
   Expected<StringRef> getBitcode(const std::string &funcName) const;
 
+  /// O(1) funcIdx-based bitcode lookup for the cache-miss path.
+  Expected<StringRef> getBitcodeByFuncIdx(uint32_t funcIdx) const;
+
   /// Returns a unique uint32_t index for a function name.
   /// Assigns a new index on first call; stable thereafter.
   uint32_t getFuncIndex(const std::string &funcName);
@@ -37,15 +42,24 @@ public:
   /// Reverse lookup: index → function name. Returns "" if unknown.
   const std::string &getFuncName(uint32_t index) const;
 
+  /// funcIdx → function name for the cache-miss path (O(1)).
+  const std::string &getFuncNameByFuncIdx(uint32_t funcIdx) const;
+
+  /// Run collision detection for funcIdx hashes (call once after all
+  /// registrations). Returns true if a collision is detected.
+  bool detectHashCollisions() const;
+
   size_t getEntryCount() const;
   size_t getTotalBitcodeSize() const;
 
 private:
   struct Entry {
+    std::string funcName;
     const uint8_t *data;
     size_t size;
   };
   std::unordered_map<std::string, Entry> entries_;
+  std::unordered_map<uint32_t, Entry> entriesByFuncIdx_;
   std::unordered_map<std::string, uint32_t> funcToIndex_;
   std::vector<std::string> indexToFunc_;
   size_t totalSize_ = 0;

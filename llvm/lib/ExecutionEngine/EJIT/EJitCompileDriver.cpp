@@ -36,25 +36,23 @@ void EJitCompileDriver::registerSymbol(const std::string &name, void *addr) {
     syncEngine_->addUserSymbol(name, addr);
 }
 
-void *EJitCompileDriver::getOrCompile(
-    const std::string &funcName,
-    const std::pair<std::string, uint8_t> *dims,
-    unsigned count) {
-
-  // Build cache key: uint64_t = funcIdx(32b) | dim[0..3](4x8b)
-  uint32_t funcIdx = loader_.getFuncIndex(funcName);
-  uint64_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
-
-  // Check cache
-  if (void *cached = cache_.getOrNull(cacheKey))
-    return cached;
+// Common compile path (cache miss). Both string-based and funcIdx-based
+// overloads delegate here after computing the cacheKey.
+static void *compileMiss(EJitCompileDriver &D,
+                         const std::string &funcName,
+                         uint64_t cacheKey,
+                         const std::pair<std::string, uint8_t> *dims,
+                         unsigned count) {
+  EJitCache &cache_ = D.getCache();
+  EJitRuntimeState &runtimeState_ = D.getRuntimeState();
+  EJitModuleLoader &loader_ = D.getLoader();
 
   // Verify time-window state
   for (unsigned i = 0; i < count; ++i) {
     if (!runtimeState_.isActive(dims[i].first, dims[i].second)) {
 #ifndef EJIT_FREESTANDING
-      if (logger_)
-        logger_->log(ErrorCode::TimeWindowNotActive,
+      if (D.getLogger())
+        D.getLogger()->log(ErrorCode::TimeWindowNotActive,
                      "Time window not active for " + dims[i].first,
                      funcName, std::to_string(cacheKey));
 #endif
@@ -62,12 +60,15 @@ void *EJitCompileDriver::getOrCompile(
     }
   }
 
-  // Get bitcode
-  auto bitcodeOrErr = loader_.getBitcode(funcName);
+  // Get bitcode via funcIdx (O(1)) when possible, fall back to string lookup
+  uint32_t funcIdx = loader_.getFuncIndex(funcName);
+  auto bitcodeOrErr = loader_.getBitcodeByFuncIdx(funcIdx);
+  if (!bitcodeOrErr)
+    bitcodeOrErr = loader_.getBitcode(funcName);
   if (!bitcodeOrErr) {
 #ifndef EJIT_FREESTANDING
-    if (logger_)
-      logger_->log(ErrorCode::BitcodeNotFound,
+    if (D.getLogger())
+      D.getLogger()->log(ErrorCode::BitcodeNotFound,
                    "No bitcode for function", funcName, std::to_string(cacheKey));
 #endif
     return nullptr;
@@ -79,15 +80,15 @@ void *EJitCompileDriver::getOrCompile(
   SpecializationContext ctx;
   ctx.fnName = funcName;
   ctx.cacheKey = cacheKey;
-  ctx.optLevel = config_.optLevel;
+  ctx.optLevel = D.getConfig().optLevel;
   for (unsigned i = 0; i < count; ++i)
     ctx.dimensions.push_back({dims[i].first, dims[i].second});
 
-  // Sync compile
+  EJitOrcEngine *syncEngine_ = D.getSyncEngine();
   if (!syncEngine_) {
 #ifndef EJIT_FREESTANDING
-    if (logger_)
-      logger_->log(ErrorCode::NotActive,
+    if (D.getLogger())
+      D.getLogger()->log(ErrorCode::NotActive,
                    "Sync engine not initialized", funcName,
                    std::to_string(cacheKey));
 #endif
@@ -100,13 +101,11 @@ void *EJitCompileDriver::getOrCompile(
 
   syncEngine_->setActiveContext(&ctx);
 
-  // Load module with cacheKey as module ID and original funcName for
-  // symbol renaming (each specialization gets a unique symbol).
   if (auto Err = syncEngine_->loadBitcodeModule(bitcode, cacheKey, funcName)) {
     syncEngine_->setActiveContext(nullptr);
 #ifndef EJIT_FREESTANDING
-    if (logger_)
-      logger_->log(ErrorCode::CompilationFailed,
+    if (D.getLogger())
+      D.getLogger()->log(ErrorCode::CompilationFailed,
                    "Failed to load bitcode module", funcName, std::to_string(cacheKey));
 #else
     consumeError(std::move(Err));
@@ -119,8 +118,8 @@ void *EJitCompileDriver::getOrCompile(
 
   if (!addrOrErr) {
 #ifndef EJIT_FREESTANDING
-    if (logger_)
-      logger_->log(ErrorCode::CompilationFailed,
+    if (D.getLogger())
+      D.getLogger()->log(ErrorCode::CompilationFailed,
                    "Failed to look up compiled function", funcName, std::to_string(cacheKey));
 #else
     consumeError(addrOrErr.takeError());
@@ -130,11 +129,6 @@ void *EJitCompileDriver::getOrCompile(
 
   void *funcPtr = *addrOrErr;
 
-  // Cache the result.
-  // NOTE: codeSize is the bitcode size, not the compiled machine code size.
-  // Getting the actual machine code size from LLJIT/JITLink requires
-  // instrumenting the memory manager. For now, bitcode size serves as an
-  // approximation for cache eviction decisions.
   SmallVector<std::string, 4> periodDeps;
   for (unsigned i = 0; i < count; ++i)
     periodDeps.push_back(dims[i].first + "=" + std::to_string(dims[i].second));
@@ -142,4 +136,37 @@ void *EJitCompileDriver::getOrCompile(
   cache_.put(cacheKey, funcPtr, bitcode.size(), periodDeps);
 
   return funcPtr;
+}
+
+void *EJitCompileDriver::getOrCompile(
+    const std::string &funcName,
+    const std::pair<std::string, uint8_t> *dims,
+    unsigned count) {
+
+  uint32_t funcIdx = loader_.getFuncIndex(funcName);
+  uint64_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
+
+  if (void *cached = cache_.getOrNull(cacheKey))
+    return cached;
+
+  return compileMiss(*this, funcName, cacheKey, dims, count);
+}
+
+void *EJitCompileDriver::getOrCompile(
+    uint32_t funcIdx,
+    const std::pair<std::string, uint8_t> *dims,
+    unsigned count) {
+
+  uint64_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
+
+  // Cache hit: zero string operations in this path
+  if (void *cached = cache_.getOrNull(cacheKey))
+    return cached;
+
+  // Cache miss: resolve funcName from the module loader
+  const std::string &funcName = loader_.getFuncNameByFuncIdx(funcIdx);
+  if (funcName.empty())
+    return nullptr;
+
+  return compileMiss(*this, funcName, cacheKey, dims, count);
 }

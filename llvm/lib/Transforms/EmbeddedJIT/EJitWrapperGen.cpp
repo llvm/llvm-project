@@ -84,18 +84,20 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (EntryFuncs.empty())
     return PreservedAnalyses::all();
 
-  // Declare ejit_compile_or_get (only if we have entry functions)
+  // Declare ejit_compile_or_get(i32 funcIdx, ptr dims, i32 count, ptr out_pfn)
   M.getOrInsertFunction(FN_COMPILE_OR_GET,
-      FunctionType::get(PtrTy, {PtrTy, PtrTy, Type::getInt32Ty(Ctx), PtrTy}, false));
+      FunctionType::get(PtrTy, {Type::getInt32Ty(Ctx), PtrTy, Type::getInt32Ty(Ctx), PtrTy}, false));
 
   auto isAlreadyWrapped = [](Function &F) -> bool {
     if (!F.getEntryBlock().getName().starts_with("jit_entry"))
       return false;
     for (Instruction &I : F.getEntryBlock())
       if (auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->getCalledFunction() &&
-            CB->getCalledFunction()->getName() == FN_COMPILE_OR_GET)
-          return true;
+        if (CB->getCalledFunction()) {
+          auto Name = CB->getCalledFunction()->getName();
+          if (Name == FN_COMPILE_OR_GET)
+            return true;
+        }
     return false;
   };
 
@@ -178,13 +180,16 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
       CountVal = ConstantInt::get(Type::getInt32Ty(Ctx), DimCount);
     }
 
-    // Build funcName
-    Value *FuncNameStr = Builder.CreateGlobalString(F->getName());
+    // Compute deterministic funcIdx (FNV-1a hash of function name).
+    // The runtime uses the same hash to index bitcode data, eliminating
+    // the need for string→idx map lookups in the cache-hit path.
+    Value *FuncIdxVal = ConstantInt::get(Type::getInt32Ty(Ctx),
+                                        hashFuncName(F->getName()));
 
-    // Call ejit_compile_or_get(funcName, dims, count, null)
+    // Call ejit_compile_or_get(funcIdx, dims, count, null)
     FunctionCallee CompileFn = M.getFunction(FN_COMPILE_OR_GET);
     Value *JitResult = Builder.CreateCall(
-        CompileFn, {FuncNameStr, DimsPtr, CountVal,
+        CompileFn, {FuncIdxVal, DimsPtr, CountVal,
                     ConstantPointerNull::get(PtrTy)});
 
     // Null check branch

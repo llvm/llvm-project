@@ -41,6 +41,11 @@ public:
                      const std::pair<std::string, uint8_t> *dims,
                      unsigned count);
 
+  /// v2: funcIdx-based entry point. Zero string ops on cache hit.
+  void *getOrCompile(uint32_t funcIdx,
+                     const std::pair<std::string, uint8_t> *dims,
+                     unsigned count);
+
   // Cache management
   void clearCache();
   void invalidateByPeriod(const std::string &periodName, uint8_t cellIdx);

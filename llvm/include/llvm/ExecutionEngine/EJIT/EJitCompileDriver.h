@@ -49,8 +49,24 @@ public:
                      const std::pair<std::string, uint8_t> *dims,
                      unsigned count);
 
+  /// v2: funcIdx-based entry point (zero string ops on cache hit).
+  /// funcIdx is the deterministic FNV-1a hash of the function name,
+  /// emitted directly by the AOT wrapper. On cache miss, funcName is
+  /// recovered from the module loader for bitcode loading and JIT lookup.
+  void *getOrCompile(uint32_t funcIdx,
+                     const std::pair<std::string, uint8_t> *dims,
+                     unsigned count);
+
   EJitCache &getCache() { return cache_; }
   EJitRuntimeState &getRuntimeState() { return runtimeState_; }
+  EJitModuleLoader &getLoader() { return loader_; }
+  const Config &getConfig() { return config_; }
+  EJitOrcEngine *getSyncEngine() { return syncEngine_.get(); }
+#ifndef EJIT_FREESTANDING
+  EJitLogger *getLogger() { return logger_; }
+#else
+  EJitLogger *getLogger() { return nullptr; }
+#endif
 
   void setSyncEngine(std::unique_ptr<EJitOrcEngine> engine);
 

@@ -165,7 +165,7 @@ ejit_entry void jit_entry(ejit_period_arr_ind(cell) uint8_t cellIndex)
  bit 63-32              31-24      23-16      15-8       7-0
 ```
 
-- **funcIdx**：`EJitModuleLoader` 注册时自增分配，进程内唯一（32-bit）
+- **funcIdx**：FNV-1a 32-bit hash of 函数名，AOT 编译期计算，运行时一致
 - **d[0..3]**：每个维度 index 占 8-bit（完整 uint8_t，与 `ejit_dim_t.index` 一致），按 `ejit_period_arr_ind` 参数顺序排列
 - 无维度时低 32 位为 0
 - 相比旧方案（字符串拼接 `"fnName|cell=3,trp=1"`），uint64_t 直接比较/哈希，无内存分配
@@ -285,13 +285,13 @@ void ejit_register_symbol(const char *name, void *addr);
 ### 3.5 编译接口
 
 ```c
-void* ejit_compile_or_get(const char* func_name, ejit_dim_t* dims,
+void* ejit_compile_or_get(uint32_t funcIdx, ejit_dim_t* dims,
                           int count, void** out_pfn);
 ```
 
 | 参数 | 说明 |
 |------|------|
-| `func_name` | 函数名 |
+| `funcIdx` | FNV-1a 32-bit hash of 函数名（AOT 编译期计算） |
 | `dims` | 维度信息数组，包含维度名称和索引值 |
 | `count` | 维度数量（无维度时为 0，dims 为 NULL） |
 | `out_pfn` | 保留扩展参数，当前传 NULL |

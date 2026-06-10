@@ -58,8 +58,8 @@ EmbeddedJIT 运行时库基于 LLVM OrcJIT + JITLink 构建，支持同步 (Sync
 │  ┌─────────────────────────────────┴────────────────────────────────────┐   │
 │  │                      EJitCache (Code Cache)                           │   │
 │  │  ┌──────────────────────┐  ┌────────────────────────────────────┐    │   │
-│  │  │ 复合 Cache Key        │  │ LRU 淘汰 + 大小限制                │    │   │
-│  │  │ fnName|cell=1,trp=5  │  │ (maxCacheSize, maxEntries)         │    │   │
+│  │  uint64_t Cache Key    │  │ LRU 淘汰 + 大小限制                │    │   │
+│  │  funcIdx|dim[3..0]   │  │ (maxCacheSize, maxEntries)         │    │   │
 │  │  └──────────────────────┘  └────────────────────────────────────┘    │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
@@ -807,7 +807,7 @@ public:
 
     // 统一入口: 获取或编译特化函数
     // 返回 NULL 表示需要 fallback
-    void* getOrCompile(const std::string& funcName,
+    void* getOrCompile(uint32_t funcIdx,
                        ejit_dim_t* dims,
                        int count);
 
@@ -835,11 +835,11 @@ private:
 ```
 
 ```cpp
-void* EJitCompileDriver::getOrCompile(const std::string& funcName,
+void* EJitCompileDriver::getOrCompile(uint32_t funcIdx,
                                        ejit_dim_t* dims,
                                        int count) {
-    // Step 1: 构建 Cache key (uint64_t, 无字符串开销)
-    uint32_t funcIdx = loader_.getFuncIndex(funcName);
+    // Step 1: 构建 Cache key (funcIdx from wrapper, 无字符串开销)
+    uint32_t funcIdx = hashFuncName(funcName)  // deterministic, zero map lookup;
     uint64_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
 
     // Step 2: 查 Cache

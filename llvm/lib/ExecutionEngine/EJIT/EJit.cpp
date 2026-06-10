@@ -197,6 +197,12 @@ void *EJit::getOrCompile(const std::string &funcName,
   return compileDriver_->getOrCompile(funcName, dims, count);
 }
 
+void *EJit::getOrCompile(uint32_t funcIdx,
+                         const std::pair<std::string, uint8_t> *dims,
+                         unsigned count) {
+  return compileDriver_->getOrCompile(funcIdx, dims, count);
+}
+
 void EJit::clearCache() {
   cache_->clear();
 }

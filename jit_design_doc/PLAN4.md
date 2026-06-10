@@ -179,7 +179,7 @@ process_task_multi(idx, iter);  →  Wrapper 构建 dims
 **关键点**：
 
 - Cache 查询封装在 `ejit_compile_or_get` 内部，调用者不感知缓存逻辑
-- 根据 **函数名** + **ejit_period_arr_ind 参数值** 构建 Cache key
+- 根据 **funcIdx（FNV-1a hash）** + **ejit_period_arr_ind 参数值** 构建 Cache key
 - **常量读取时机**：JIT 编译时按需读取 `ejit_may_const` 字段值，从进程内存直接读取
 - 用户调用原函数名，实际执行 Wrapper 插桩代码
 
@@ -321,7 +321,7 @@ JIT 编译时读取常量:
 
 ```cpp
 // Cache Key: uint64_t = funcIdx(32b) | dim[3](8b) | dim[2](8b) | dim[1](8b) | dim[0](8b)
-// funcIdx 由 EJitModuleLoader 自增分配，dim 为 ejit_dim_t.index 的完整 uint8_t 值。
+// funcIdx 由 FNV-1a hash 确定（AOT 编译期计算，运行时一致），dim 为 ejit_dim_t.index 的完整 uint8_t 值。
 // 无维度时低 32 位为 0。
 
 // 缓存条目
@@ -400,7 +400,7 @@ void process_task_multi(uint8_t cellIdx, int iterations) {
     // === Wrapper 逻辑 (JIT 入口) ===
     // 使用 ejit_dim_t 结构传递 {name, index} 对
     ejit_dim_t dims[1] = {{"cell", cellIdx}};
-    PFN_process_task_multi pfn = (PFN_process_task_multi)ejit_compile_or_get("process_task_multi", dims, 1, NULL);
+    PFN_process_task_multi pfn = (PFN_process_task_multi)ejit_compile_or_get(funcIdx, dims, 1, NULL);
 
     if (pfn) {
         return pfn(cellIdx, iterations);  // JIT 成功，调用 specialized 版本
@@ -424,7 +424,7 @@ void process_task_multi(uint8_t cellIdx, uint8_t trpIdx, int iterations) {
         {"cell", cellIdx},   // cell 维度: g_cellCfg[cellIdx]
         {"trp", trpIdx}      // trp 维度: g_trpCfg[trpIdx]
     };
-    PFN_process_task_multi pfn = (PFN_process_task_multi)ejit_compile_or_get("process_task_multi", dims, 2, NULL);
+    PFN_process_task_multi pfn = (PFN_process_task_multi)ejit_compile_or_get(funcIdx, dims, 2, NULL);
 
     if (pfn) {
         return pfn(cellIdx, trpIdx, iterations);  // JIT 成功，调用 specialized 版本
@@ -444,7 +444,7 @@ void process_static_data(void) { ... }
 void process_static_data(void) {
     // === Wrapper 逻辑 (JIT 入口) ===
     // 无维度参数，dims 为 NULL，count 为 0
-    PFN_process_static_data pfn = (PFN_process_static_data)ejit_compile_or_get("process_static_data", NULL, 0, NULL);
+    PFN_process_static_data pfn = (PFN_process_static_data)ejit_compile_or_get(funcIdx, NULL, 0, NULL);
 
     if (pfn) {
         return pfn();  // JIT 成功，调用 specialized 版本
@@ -896,7 +896,7 @@ typedef struct {
 // 返回特化函数指针，NULL 表示编译失败继续执行原函数逻辑
 // ejit_dim_t 传递 {name, index} 结构化数据用于 JIT 特化
 // out_pfn 保留作为 future 扩展，用于跨平台适配或状态查询
-void* ejit_compile_or_get(const char* func_name, ejit_dim_t* dims,
+void* ejit_compile_or_get(uint32_t funcIdx, ejit_dim_t* dims,
                           int count, void** out_pfn);
 
 // 缓存管理

@@ -123,7 +123,10 @@ ejit_status_t ejit_deactivate_all(const char *periodName);
 bool ejit_is_active(const char *periodName, uint8_t cellIdx);
 
 // Compilation
-void *ejit_compile_or_get(const char *funcName,
+/// funcIdx is the deterministic FNV-1a hash of the function name, emitted
+/// directly by the AOT wrapper as an immediate. Eliminates runtime
+/// string→idx map lookups on every call.
+void *ejit_compile_or_get(uint32_t funcIdx,
                            const ejit_dim_t *dims, uint32_t count,
                            void **out_pfn);
 
