@@ -350,6 +350,28 @@ static inline bool isValidDecodeLogicalImmediate(uint64_t val,
   return true;
 }
 
+// isLegalArithImmed - \returns true if \p C is a legal immediate operand for an
+// arithmetic instruction.
+static inline bool isLegalArithImmed(const uint64_t C) {
+  return (C >> 12 == 0) || ((C & 0xFFFULL) == 0 && C >> 24 == 0);
+}
+
+// getArithImmedShift - assumes \p C is a legal immediate for arithmetic
+// instructions and \returns the required shift for this immediate.
+static inline unsigned getArithImmedShift(const uint64_t C) {
+  assert(isLegalArithImmed(C) &&
+         "Try to get shift amount for illegal immediate");
+  return C >> 12 == 0 ? 0 : 12;
+}
+
+// isLegalCmpImmed - \returns true if \p C is a legal immediate operand for a
+// comparison instruction.
+static inline bool isLegalCmpImmed(const APInt &C) {
+  // Works for negative immediates too, as it can be written as an ADDS
+  // instruction with a negated immediate.
+  return isLegalArithImmed(C.abs().getZExtValue());
+}
+
 //===----------------------------------------------------------------------===//
 // Floating-point Immediates
 //
