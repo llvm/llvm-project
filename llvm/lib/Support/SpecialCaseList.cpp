@@ -104,11 +104,12 @@ public:
 
   bool matchAny(StringRef Query) const { return match(Query); }
 
+private:
+  unsigned matchInternal(StringRef Query) const;
+  StringRef findRule(unsigned LineNo) const;
+
   std::variant<RegexMatcher, GlobMatcher> M;
   QueryOptions Options;
-
-private:
-  StringRef findRule(unsigned LineNo) const;
 };
 
 Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
@@ -258,6 +259,10 @@ Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
 unsigned Matcher::match(StringRef Query) const {
   if (Options.RemoveDotSlash)
     Query = llvm::sys::path::remove_leading_dotslash(Query);
+  return matchInternal(Query);
+}
+
+unsigned Matcher::matchInternal(StringRef Query) const {
   return std::visit([&](auto &V) -> unsigned { return V.match(Query); }, M);
 }
 
