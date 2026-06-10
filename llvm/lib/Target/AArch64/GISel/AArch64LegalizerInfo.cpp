@@ -1555,6 +1555,7 @@ bool AArch64LegalizerInfo::legalizeCustom(
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     return legalizeMemOps(MI, Helper);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, Helper);
@@ -2554,7 +2555,8 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
 
   // Tagged version MOPSMemorySetTagged is legalised in legalizeIntrinsic
-  if (MI.getOpcode() == TargetOpcode::G_MEMSET) {
+  if (MI.getOpcode() == TargetOpcode::G_MEMSET ||
+      MI.getOpcode() == TargetOpcode::G_MEMSET_INLINE) {
     // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
     // the instruction).
     auto &Value = MI.getOperand(1);
