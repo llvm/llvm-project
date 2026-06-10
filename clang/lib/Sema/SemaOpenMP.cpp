@@ -20919,15 +20919,24 @@ static bool actOnOMPReductionKindClause(
         // which yields the *additive* identity (e.g. std::complex(0,0)) and is
         // wrong for multiplication. Initialize from the integer literal '1'
         // instead and let the converting constructor build the multiplicative
-        // identity (e.g. std::complex(1) == (1,0)). If the type is not
-        // constructible from '1', AddInitializerToDecl below diagnoses it and
-        // the list item is dropped, so we never silently miscompile.
-        // Note: BO_Add deliberately keeps relying on value-initialization for
-        // class types, because there the (0,0) default is the correct additive
-        // identity for the common case; only '*' needs this special handling.
-        if (Type->isScalarType() || Type->isAnyComplexType() ||
-            (S.getLangOpts().CPlusPlus && Type->isRecordType())) {
+        // identity (e.g. std::complex(1) == (1,0)).
+        if (Type->isScalarType() || Type->isAnyComplexType()) {
           Init = S.ActOnIntegerConstant(ELoc, /*Val=*/1).get();
+        } else if (S.getLangOpts().CPlusPlus && Type->isRecordType()) {
+          // Only use '1' when the type is actually copy-initializable from it.
+          // Otherwise fall back to value-initialization (the previous behavior)
+          // rather than rejecting the reduction, so a class that used to
+          // compile keeps compiling. Such a class keeps its (possibly
+          // incorrect) value-initialized identity, matching the pre-existing
+          // behavior; BO_Add likewise relies on value-initialization for class
+          // types.
+          Expr *One = S.ActOnIntegerConstant(ELoc, /*Val=*/1).get();
+          InitializedEntity Entity =
+              InitializedEntity::InitializeTemporary(Type);
+          InitializationKind Kind = InitializationKind::CreateCopy(ELoc, ELoc);
+          InitializationSequence Seq(S, Entity, Kind, One);
+          if (Seq)
+            Init = One;
         }
         break;
       case BO_LAnd:

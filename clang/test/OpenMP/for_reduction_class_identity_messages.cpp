@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux-gnu -ferror-limit 100 %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-linux-gnu -ferror-limit 100 %s
+// expected-no-diagnostics
 
 // Multiplication reduction over a class type that *is* constructible from the
 // integer literal '1' (e.g. std::complex-like) is accepted: the multiplicative
@@ -22,9 +23,10 @@ void ok(WithInt *Data) {
 }
 
 // Multiplication reduction over a class type that is NOT constructible from '1'
-// must be diagnosed rather than silently miscompiled (it previously fell back
-// to value-initialization, producing the wrong (additive) identity).
-struct NoInt { // expected-note 2 {{candidate constructor}}
+// must NOT be rejected: we fall back to value-initialization (the pre-existing
+// behavior) instead of emitting a hard error, so code that used to compile keeps
+// compiling.
+struct NoInt {
   double V;
   NoInt &operator*=(const NoInt &RHS) {
     V *= RHS.V;
@@ -32,9 +34,9 @@ struct NoInt { // expected-note 2 {{candidate constructor}}
   }
 };
 
-void bad(NoInt *Data) {
+void fallback(NoInt *Data) {
   NoInt Product;
-#pragma omp parallel for reduction(* : Product) // expected-error {{no viable conversion from 'int' to 'NoInt'}}
+#pragma omp parallel for reduction(* : Product)
   for (int I = 0; I < 4; ++I)
     Product *= Data[I];
 }
