@@ -363,9 +363,9 @@ gpu.module @test_collapse_dims [#xevm.target<O = 3, chip = "pvc">] {
 gpu.module @test {
 // CHECK-LABEL: func.func @bitcast_ui8_to_f4(
 // CHECK-SAME: %[[ARG0:[0-9a-zA-Z]+]]: memref<256x16xui8>) {
-// CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<256x16xui8> -> !xegpu.tensor_desc<256x16xui8, #xegpu.layout<inst_data = [32, 16]>>
-// CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]][0, 0] <{layout = #xegpu.layout<inst_data = [32, 16]>}> :
-// CHECK-SAME: !xegpu.tensor_desc<256x16xui8, #xegpu.layout<inst_data = [32, 16]>> -> vector<256x16xui8>
+// CHECK: %[[TDESC:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<256x16xui8> -> !xegpu.tensor_desc<256x16xui8, #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [1, 1]>>
+// CHECK: %[[LOAD:.*]] = xegpu.load_nd %[[TDESC]][0, 0] <{layout = #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [1, 1]>}> :
+// CHECK-SAME: !xegpu.tensor_desc<256x16xui8, #xegpu.layout<inst_data = [32, 16], lane_layout = [1, 16], lane_data = [1, 1]>> -> vector<256x16xui8>
 // CHECK: %[[BC:.*]] = vector.bitcast %[[LOAD]] {layout_result_0 = #xegpu.layout<inst_data = [32, 32]>} : vector<256x16xui8> to vector<256x32xf4E2M1FN>
 // CHECK: xegpu.convert_layout %[[BC]]
 // CHECK-SAME: <{input_layout = #xegpu.layout<inst_data = [32, 32]>, target_layout = #xegpu.layout<inst_data = [32, 32]>}>
