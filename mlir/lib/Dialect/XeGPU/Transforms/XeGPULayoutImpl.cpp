@@ -1748,19 +1748,26 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
       consumerLayout.isForWorkgroup())
     return consumerLayout;
 
-  // Compute the default inst_data from hardware block params.
+  // Compute inst_data from hardware block params. For Nd ops, the lane
+  // factorization above (laneLayout / laneData) is rigid; inst_data must be
+  // a multiple of lane_layout * lane_data on each dim (Category A
+  // invariant). If block params are unavailable for this element type
+  // (e.g. sub-byte floats with no uArch entry), fall back to
+  // lane_layout * lane_data (k = 1).
   SmallVector<int64_t> instData(rank, 1);
   int instWidth = xegpu::getLargestDivisor(
       static_cast<int>(dataShape.back()), bWidths);
   if (instWidth == -1)
-    return nullptr;
-  instData.back() = instWidth;
+    instData.back() = laneLayout.back() * laneData.back();
+  else
+    instData.back() = instWidth;
   if (rank >= 2) {
     int instHeight = xegpu::getLargestDivisor(
         static_cast<int>(dataShape[rank - 2]), bHeights);
     if (instHeight == -1)
-      return nullptr;
-    instData[rank - 2] = instHeight;
+      instData[rank - 2] = laneLayout[rank - 2] * laneData[rank - 2];
+    else
+      instData[rank - 2] = instHeight;
   }
 
   // Honor the consumer's inst_data if it is uArch-valid.
@@ -2251,15 +2258,29 @@ createScaleLayout(mlir::MLIRContext *context, VectorType matrixTy,
     scaleLaneLayout.assign(laneLayout.begin(), laneLayout.end());
     scaleLaneData.assign(laneData.begin(), laneData.end());
     bool isRowMajor = uArchInstruction->isLaneLayoutRowMajorOrder();
-    if (isBScale ^ isRowMajor) {
+    if (isBScale ^ isRowMajor)
       std::swap(scaleLaneLayout[rank - 2], scaleLaneLayout[rank - 1]);
+    // Cap lane_layout by the per-instruction tile (inst_data) on each dim.
+    // Then derive lane_data = inst_data / lane_layout so the Category A
+    // invariant inst_data = lane_layout * lane_data * k (with k = 1) holds
+    // for the scale operand's load_nd consumer.
+    if (!scaleInstData.empty()) {
+      for (int64_t d = rank - 2; d < rank; ++d) {
+        scaleLaneLayout[d] =
+            std::min<int64_t>(scaleInstData[d], scaleLaneLayout[d]);
+        scaleLaneData[d] = std::max<int64_t>(
+            scaleInstData[d] / std::max<int64_t>(scaleLaneLayout[d], 1), 1);
+      }
+    } else {
+      // No inst_data on the matrix layout; fall back to capping by scale
+      // shape and deriving lane_data from it (legacy behavior).
       scaleLaneLayout[rank - 2] =
           std::min<int64_t>(scaleShape[rank - 2], scaleLaneLayout[rank - 2]);
+      scaleLaneData[rank - 2] = std::max<int64_t>(
+          scaleShape[rank - 2] / scaleLaneLayout[rank - 2], 1);
+      scaleLaneData[rank - 1] = std::max<int64_t>(
+          scaleShape[rank - 1] / scaleLaneLayout[rank - 1], 1);
     }
-    scaleLaneData[rank - 2] =
-        std::max<int64_t>(scaleShape[rank - 2] / scaleLaneLayout[rank - 2], 1);
-    scaleLaneData[rank - 1] =
-        std::max<int64_t>(scaleShape[rank - 1] / scaleLaneLayout[rank - 1], 1);
   }
   return xegpu::LayoutAttr::get(
       context,
