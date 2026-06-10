@@ -1507,10 +1507,21 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerAbsToS32(MI);
   case IcmpI1ToBallot: {
     // amdgcn.icmp(i1 src, i1 0, NE) -> ballot(src)
-    // This implements the "hack ballot" pattern from SIInstructions.td.
-    // For uniform i1: ballot returns -1 if true, 0 if false.
     // The src operand has been converted to VCC by the Vcc mapping.
     assert(cast<GIntrinsic>(&MI)->is(Intrinsic::amdgcn_icmp));
+
+    Register Src1 = MI.getOperand(3).getReg();
+    auto Src1Const =
+        getAnyConstantVRegValWithLookThrough(Src1, MRI,
+                                             /*LookThroughInstrs=*/true,
+                                             /*LookThroughAnyExt=*/true);
+    if (!Src1Const || Src1Const->Value != 0)
+      return false;
+
+    int64_t Pred = MI.getOperand(4).getImm();
+    if (Pred != CmpInst::ICMP_NE)
+      return false;
+
     Register Dst = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(2).getReg();
     B.buildIntrinsic(Intrinsic::amdgcn_ballot, Dst).addUse(Src);

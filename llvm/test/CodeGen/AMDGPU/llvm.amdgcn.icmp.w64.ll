@@ -1937,7 +1937,8 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; GISEL-GFX11-NEXT:    s_and_b32 s2, s2, s3
 ; GISEL-GFX11-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-GFX11-NEXT:    s_cselect_b64 s[2:3], exec, 0
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GISEL-GFX11-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, s3
 ; GISEL-GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
@@ -1954,6 +1955,7 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; GISEL-VI-NEXT:    s_and_b32 s2, s2, s3
 ; GISEL-VI-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-VI-NEXT:    s_cselect_b64 s[2:3], exec, 0
+; GISEL-VI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v3, s1
 ; GISEL-VI-NEXT:    v_mov_b32_e32 v1, s3
@@ -1973,6 +1975,7 @@ define amdgpu_kernel void @v_icmp_i1_ne0(ptr addrspace(1) %out, i32 %a, i32 %b) 
 ; GISEL-GFX9-NEXT:    s_and_b32 s2, s2, s3
 ; GISEL-GFX9-NEXT:    s_cmp_lg_u32 s2, 0
 ; GISEL-GFX9-NEXT:    s_cselect_b64 s[2:3], exec, 0
+; GISEL-GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GISEL-GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
