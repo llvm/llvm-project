@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "inline-asm-lowering"
@@ -24,6 +25,16 @@
 using namespace llvm;
 
 void InlineAsmLowering::anchor() {}
+
+/// Emit an inline asm error diagnostic and materialize undef values for the
+/// call results so that the rest of the function remains well-formed.
+static void emitInlineAsmError(MachineIRBuilder &MIRBuilder,
+                               const CallBase &Call, const Twine &Message,
+                               ArrayRef<Register> ResRegs) {
+  Call.getContext().diagnose(DiagnosticInfoInlineAsm(Call, Message));
+  for (Register Reg : ResRegs)
+    MIRBuilder.buildUndef(Reg);
+}
 
 namespace {
 
@@ -347,9 +358,12 @@ bool InlineAsmLowering::lowerInlineAsm(
 
         // Find a register that we can use.
         if (OpInfo.Regs.empty()) {
-          LLVM_DEBUG(dbgs()
-                     << "Couldn't allocate output register for constraint\n");
-          return false;
+          emitInlineAsmError(MIRBuilder, Call,
+                             "could not allocate output register for "
+                             "constraint '" +
+                                 Twine(OpInfo.ConstraintCode) + "'",
+                             GetOrCreateVRegs(Call));
+          return true;
         }
 
         // Add information to the INLINEASM instruction to know that this
@@ -528,10 +542,11 @@ bool InlineAsmLowering::lowerInlineAsm(
 
       // Copy the input into the appropriate registers.
       if (OpInfo.Regs.empty()) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Couldn't allocate input register for register constraint\n");
-        return false;
+        emitInlineAsmError(MIRBuilder, Call,
+                           "could not allocate input reg for constraint '" +
+                               Twine(OpInfo.ConstraintCode) + "'",
+                           GetOrCreateVRegs(Call));
+        return true;
       }
 
       unsigned NumRegs = OpInfo.Regs.size();

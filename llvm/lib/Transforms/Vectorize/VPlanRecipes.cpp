@@ -1821,6 +1821,17 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   }
 }
 
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // TODO: Compute cost for VPInstructions without underlying values.
+  if (!getUnderlyingValue())
+    return 0;
+  assert(Instruction::isCast(getOpcode()) &&
+         "only casts have underlying values currently");
+  return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                    Ctx);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
@@ -3004,67 +3015,19 @@ bool VPWidenGEPRecipe::usesFirstLaneOnly(const VPValue *Op) const {
 
 void VPWidenGEPRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
-  // Construct a vector GEP by widening the operands of the scalar GEP as
-  // necessary. We mark the vector GEP 'inbounds' if appropriate. A GEP
-  // results in a vector of pointers when at least one operand of the GEP
-  // is vector-typed. Thus, to keep the representation compact, we only use
-  // vector-typed operands for loop-varying values.
-
-  bool AllOperandsAreInvariant = all_of(operands(), [](VPValue *Op) {
-    return Op->isDefinedOutsideLoopRegions();
+  auto Ops = map_to_vector(operands(), [&](VPValue *Op) {
+    return State.get(Op, vputils::isSingleScalar(Op));
   });
-  if (AllOperandsAreInvariant) {
-    // If we are vectorizing, but the GEP has only loop-invariant operands,
-    // the GEP we build (by only using vector-typed operands for
-    // loop-varying values) would be a scalar pointer. Thus, to ensure we
-    // produce a vector of pointers, we need to either arbitrarily pick an
-    // operand to broadcast, or broadcast a clone of the original GEP.
-    // Here, we broadcast a clone of the original.
-
-    SmallVector<Value *> Ops;
-    for (unsigned I = 0, E = getNumOperands(); I != E; I++)
-      Ops.push_back(State.get(getOperand(I), VPLane(0)));
-
-    auto *NewGEP =
-        State.Builder.CreateGEP(getSourceElementType(), Ops[0], drop_begin(Ops),
-                                "", getGEPNoWrapFlags());
-    Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
-    State.set(this, Splat);
-    return;
-  }
-
-  // If the GEP has at least one loop-varying operand, we are sure to
-  // produce a vector of pointers unless VF is scalar.
-  // The pointer operand of the new GEP. If it's loop-invariant, we
-  // won't broadcast it.
-  auto *Ptr = State.get(getOperand(0), isPointerLoopInvariant());
-
-  // Collect all the indices for the new GEP. If any index is
-  // loop-invariant, we won't broadcast it.
-  SmallVector<Value *, 4> Indices;
-  for (unsigned I = 1, E = getNumOperands(); I < E; I++) {
-    VPValue *Operand = getOperand(I);
-    Indices.push_back(State.get(Operand, isIndexLoopInvariant(I - 1)));
-  }
-
-  // Create the new GEP. Note that this GEP may be a scalar if VF == 1,
-  // but it should be a vector, otherwise.
-  auto *NewGEP = State.Builder.CreateGEP(getSourceElementType(), Ptr, Indices,
-                                         "", getGEPNoWrapFlags());
-  assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
-         "NewGEP is not a pointer vector");
-  State.set(this, NewGEP);
+  auto *GEP =
+      State.Builder.CreateGEP(getSourceElementType(), Ops.front(),
+                              drop_begin(Ops), "wide.gep", getGEPNoWrapFlags());
+  State.set(this, GEP, vputils::isSingleScalar(this));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenGEPRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-GEP ";
-  O << (isPointerLoopInvariant() ? "Inv" : "Var");
-  for (size_t I = 0; I < getNumOperands() - 1; ++I)
-    O << "[" << (isIndexLoopInvariant(I) ? "Inv" : "Var") << "]";
-
-  O << " ";
   printAsOperand(O, SlotTracker);
   O << " = getelementptr";
   printFlags(O);
@@ -3508,6 +3471,8 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   auto *Red = cast<VPReductionRecipe>(ExpressionRecipes.back());
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
+  VPValue *RdxStart =
+      getOperand(getNumOperands() - (Red->isConditional() ? 2 : 1));
 
   switch (ExpressionType) {
   case ExpressionTypes::NegatedExtendedReduction:
@@ -3528,13 +3493,13 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       << *Ext0->getScalarType();
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << ")";
     break;
   }
   case ExpressionTypes::ExtNegatedMulAccReduction: {
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    RdxStart->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
@@ -3552,14 +3517,14 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
       << *Ext1->getScalarType() << ")";
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << "))";
     break;
   }
   case ExpressionTypes::MulAccReduction:
   case ExpressionTypes::ExtMulAccReduction: {
-    getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
+    RdxStart->printAsOperand(O, SlotTracker);
     O << " + " << (Red->isPartialReduction() ? "partial." : "") << "reduce.";
     O << Instruction::getOpcodeName(
              RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()))
@@ -3587,7 +3552,7 @@ void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     }
     if (Red->isConditional()) {
       O << ", ";
-      Red->getCondOp()->printAsOperand(O, SlotTracker);
+      getOperand(getNumOperands() - 1)->printAsOperand(O, SlotTracker);
     }
     O << ")";
     break;
@@ -3974,6 +3939,18 @@ void VPPredInstPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
 }
 #endif
+
+VPRecipeBase *VPWidenLoadRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenLoadRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenLoadEVLRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenLoadEVLRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenStoreRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenStoreRecipe::getAsRecipe() const { return this; }
+
+VPRecipeBase *VPWidenStoreEVLRecipe::getAsRecipe() { return this; }
+const VPRecipeBase *VPWidenStoreEVLRecipe::getAsRecipe() const { return this; }
 
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {

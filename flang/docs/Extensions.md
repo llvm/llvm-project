@@ -248,6 +248,7 @@ end
 * `ASSIGN` statement, assigned `GO TO`, and assigned format
 * `PAUSE` statement
 * Hollerith literals and edit descriptors
+* Binary logical edit descriptor B (1/0 vs T/F)
 * `NAMELIST` allowed in the execution part
 * Omitted colons on type declaration statements with attributes
 * COMPLEX constructor expression, e.g. `(x+y,z)`
@@ -566,6 +567,8 @@ end program
   unexpected behavior. This is for compatibility with
   legacy code; legacy code should be updated to be correct.
   This could be removed at any time.
+  Use `-Wrelaxed-c-loc-checks` (alongside `-frelaxed-c-loc-checks`) to
+  enable a diagnostic warning for affected call sites.
   [-frelaxed-c-loc-checks]
 
 ### Extensions and legacy features deliberately not supported

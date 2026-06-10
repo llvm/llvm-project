@@ -685,8 +685,9 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
 
       if (Flags.isByVal()) {
         SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i16);
-        MemOp = DAG.getMemcpy(Chain, dl, PtrOff, Arg, SizeNode,
-                              Flags.getNonZeroByValAlign(),
+        Align Alignment = Flags.getNonZeroByValAlign();
+        MemOp = DAG.getMemcpy(Chain, dl, PtrOff, Arg, SizeNode, Alignment,
+                              Alignment,
                               /*isVolatile*/ false,
                               /*AlwaysInline=*/true,
                               /*CI=*/nullptr, std::nullopt,

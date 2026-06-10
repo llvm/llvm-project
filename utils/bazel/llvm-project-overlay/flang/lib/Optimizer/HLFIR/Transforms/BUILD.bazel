@@ -1,0 +1,65 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "HLFIRTransforms",
+    srcs = glob(
+        [
+            "*.cpp",
+            "*.h",
+        ],
+        allow_empty = True,
+    ),
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:SupportHeaders",
+        "//flang/include/flang/Optimizer/Analysis:AnalysisHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectSupportHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRPassesIncGen",
+        "//flang/include/flang/Optimizer/OpenMP:OpenMPHeaders",
+        "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//flang/include/flang/Optimizer/Transforms:TransformsHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Optimizer/Analysis:FIRAnalysis",
+        "//flang/lib/Optimizer/Builder:FIRBuilder",
+        "//flang/lib/Optimizer/Dialect:FIRDialect",
+        "//flang/lib/Optimizer/Dialect/CUF/Attributes:CUFAttrs",
+        "//flang/lib/Optimizer/Dialect/Support:FIRDialectSupport",
+        "//flang/lib/Optimizer/HLFIR/IR:HLFIRDialect",
+        "//flang/lib/Optimizer/OpenMP:FlangOpenMPTransforms",
+        "//flang/lib/Optimizer/Support:FIRSupport",
+        "//flang/lib/Optimizer/Transforms:FIRTransforms",
+        "//flang/lib/Support:FortranSupport",
+        "//llvm:AsmParser",
+        "//llvm:CodeGen",
+        "//llvm:Remarks",
+        "//llvm:Support",
+        "//mlir:Analysis",
+        "//mlir:ArithDialect",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:OpenMPDialect",
+        "//mlir:Pass",
+        "//mlir:RegisterAllDialects",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:Support",
+        "//mlir:TransformUtils",
+    ],
+)
