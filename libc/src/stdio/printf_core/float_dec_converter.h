@@ -601,16 +601,9 @@ template <typename T, WriteMode write_mode,
 LIBC_INLINE int convert_float_dec_exp_typed(Writer<write_mode> *writer,
                                             const FormatSection &to_conv,
                                             fputil::FPBits<T> float_bits) {
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  using StorageType = UInt128;
-#else
-  using StorageType = fputil::FPBits<long double>::StorageType;
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-
   // signed because later we use -FRACTION_LEN
   constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   int exponent = float_bits.get_explicit_exponent();
-  StorageType mantissa = float_bits.get_explicit_mantissa();
 
   char sign_char = 0;
 
@@ -649,7 +642,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer<write_mode> *writer,
 
   // If the mantissa is 0, then the number is 0, meaning that looping until a
   // non-zero block is found will loop forever. The first block is just 0.
-  if (mantissa != 0) {
+  if (float_bits.get_explicit_mantissa() != 0) {
     // This loop finds the first block.
     while (digits == 0) {
       --cur_block;
@@ -769,16 +762,9 @@ template <typename T, WriteMode write_mode,
 LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
                                              const FormatSection &to_conv,
                                              fputil::FPBits<T> float_bits) {
-#ifdef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  using StorageType = UInt128;
-#else
-  using StorageType = fputil::FPBits<long double>::StorageType;
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-
   // signed because later we use -FRACTION_LEN
   constexpr int32_t FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
   int exponent = float_bits.get_explicit_exponent();
-  StorageType mantissa = float_bits.get_explicit_mantissa();
 
   // From the standard: Let P (init_precision) equal the precision if nonzero, 6
   // if the precision is omitted, or 1 if the precision is zero.
@@ -813,7 +799,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
 
   // If the mantissa is 0, then the number is 0, meaning that looping until a
   // non-zero block is found will loop forever.
-  if (mantissa != 0) {
+  if (float_bits.get_explicit_mantissa() != 0) {
     // This loop finds the first non-zero block.
     while (digits == 0) {
       --cur_block;
@@ -1142,8 +1128,17 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  if (to_conv.length_modifier == LengthModifier::Q) {
+    fputil::FPBits<float128>::StorageType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<float128> float_bits(float_raw);
+    if (!float_bits.is_inf_or_nan()) {
+      return convert_float_decimal_typed<float128>(writer, to_conv, float_bits);
+    }
+  } else
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  if (to_conv.length_modifier == LengthModifier::L) {
+      if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
@@ -1167,8 +1162,17 @@ LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  if (to_conv.length_modifier == LengthModifier::Q) {
+    fputil::FPBits<float128>::StorageType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<float128> float_bits(float_raw);
+    if (!float_bits.is_inf_or_nan()) {
+      return convert_float_dec_exp_typed<float128>(writer, to_conv, float_bits);
+    }
+  } else
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  if (to_conv.length_modifier == LengthModifier::L) {
+      if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {
@@ -1192,8 +1196,18 @@ LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
                                        const FormatSection &to_conv) {
+#if defined(LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128)
+  if (to_conv.length_modifier == LengthModifier::Q) {
+    fputil::FPBits<float128>::StorageType float_raw = to_conv.conv_val_raw;
+    fputil::FPBits<float128> float_bits(float_raw);
+    if (!float_bits.is_inf_or_nan()) {
+      return convert_float_dec_auto_typed<float128>(writer, to_conv,
+                                                    float_bits);
+    }
+  } else
+#endif // LIBC_INTERNAL_PRINTF_CONVERT_FLOAT128
 #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  if (to_conv.length_modifier == LengthModifier::L) {
+      if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::StorageType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
     if (!float_bits.is_inf_or_nan()) {

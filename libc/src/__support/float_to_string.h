@@ -385,6 +385,14 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
 
 } // namespace internal
 
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) ||                              \
+    defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE) ||                        \
+    defined(LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD)
+#define LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL
+#endif
+
+template <typename T, typename U = void> class FloatToString {};
+
 // Convert floating point values to their string representation.
 // Because the result may not fit in a reasonably sized array, the caller must
 // request blocks of digits and convert them from integers to strings themself.
@@ -401,8 +409,13 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const FPBits::StorageType mantissa,
 // be zero after the decimal point and before the non-zero digits. Additionally,
 // is_lowest_block will return if the current block is the lowest non-zero
 // block.
-template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-class FloatToString {
+template <typename T>
+class FloatToString<
+    T, cpp::enable_if_t<cpp::is_same_v<T, float> || cpp::is_same_v<T, double>
+#if defined(LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL)
+                        || cpp_is_same_v<T, long double>
+#endif // LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL
+                        >> {
   fputil::FPBits<T> float_bits;
   int exponent;
   FPBits::StorageType mantissa;
@@ -605,36 +618,46 @@ public:
   }
 };
 
-#if !defined(LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64) &&                             \
-    !defined(LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE) &&                       \
-    !defined(LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD)
-// --------------------------- LONG DOUBLE FUNCTIONS ---------------------------
+#if !defined(LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL) ||                    \
+    defined(LIBC_TYPES_HAS_FLOAT128)
+// -------------------- LONG DOUBLE / FLOAT128 FUNCTIONS -----------------------
 
-// this algorithm will work exactly the same for 80 bit and 128 bit long
+// This algorithm will work exactly the same for 80 bit and 128 bit long
 // doubles. They have the same max exponent, but even if they didn't the
 // constants should be calculated to be correct for any provided floating point
 // type.
 
-template <> class FloatToString<long double> {
-  fputil::FPBits<long double> float_bits;
+#if defined(LIBC_TYPES_HAS_FLOAT128)
+template <typename T> struct IsFloat128 : cpp::is_same<T, float128> {};
+#else
+template <typename T> struct IsFloat128 : cpp::bool_constant<false> {};
+#endif
+
+template <typename T>
+class FloatToString<T, cpp::enable_if_t<IsFloat128<T>::value
+#if defined(LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL)
+                                        && !cpp::is_same_v<T, long double>
+#else
+                                        || cpp::is_same_v<T, long double>
+#endif // LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL
+                                        >> {
+  fputil::FPBits<T> float_bits;
   bool is_negative = 0;
   int exponent = 0;
-  fputil::FPBits<long double>::StorageType mantissa = 0;
+  typename fputil::FPBits<T>::StorageType mantissa = 0;
 
-  static constexpr int FRACTION_LEN = fputil::FPBits<long double>::FRACTION_LEN;
-  static constexpr int EXP_BIAS = fputil::FPBits<long double>::EXP_BIAS;
+  static constexpr int FRACTION_LEN = fputil::FPBits<T>::FRACTION_LEN;
+  static constexpr int EXP_BIAS = fputil::FPBits<T>::EXP_BIAS;
   static constexpr size_t UINT_WORD_SIZE = 64;
 
   static constexpr size_t FLOAT_AS_INT_WIDTH =
       internal::div_ceil(
-          fputil::FPBits<long double>::MAX_BIASED_EXPONENT -
-              fputil::FPBits<long double>::EXP_BIAS +
+          fputil::FPBits<T>::MAX_BIASED_EXPONENT - fputil::FPBits<T>::EXP_BIAS +
               FRACTION_LEN, // Add fraction len to provide space for subnormals.
           UINT_WORD_SIZE) *
       UINT_WORD_SIZE;
   static constexpr size_t EXTRA_INT_WIDTH =
-      internal::div_ceil(sizeof(long double) * CHAR_BIT, UINT_WORD_SIZE) *
-      UINT_WORD_SIZE;
+      internal::div_ceil(sizeof(T) * CHAR_BIT, UINT_WORD_SIZE) * UINT_WORD_SIZE;
 
   using wide_int = UInt<FLOAT_AS_INT_WIDTH + EXTRA_INT_WIDTH>;
 
@@ -705,7 +728,7 @@ template <> class FloatToString<long double> {
       // if the shift amount would be negative, then the shift would cause a
       // loss of precision.
       LIBC_ASSERT(SHIFT_AMOUNT >= 0);
-      static_assert(EXTRA_INT_WIDTH >= sizeof(long double) * 8);
+      static_assert(EXTRA_INT_WIDTH >= sizeof(T) * 8);
       float_as_fixed <<= SHIFT_AMOUNT;
 
       // If there are still digits above the decimal point, handle those.
@@ -730,8 +753,7 @@ template <> class FloatToString<long double> {
   }
 
 public:
-  LIBC_INLINE constexpr FloatToString(long double init_float)
-      : float_bits(init_float) {
+  LIBC_INLINE constexpr FloatToString(T init_float) : float_bits(init_float) {
     is_negative = float_bits.is_neg();
     exponent = float_bits.get_explicit_exponent();
     mantissa = float_bits.get_explicit_mantissa();
@@ -834,8 +856,7 @@ public:
   }
 };
 
-#endif // !LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64 &&
-       // !LIBC_COPT_FLOAT_TO_STR_NO_SPECIALIZE_LD
+#endif // !LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL || LIBC_TYPES_HAS_FLOAT128
 
 } // namespace LIBC_NAMESPACE_DECL
 
