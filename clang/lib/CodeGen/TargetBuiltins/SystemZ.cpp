@@ -132,10 +132,10 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     return EmitAtomicCmpXchgForZOSIntrin(*this, E, Int128Ty, true);
   }
 
-    // Vector builtins.  Note that most vector builtins are mapped automatically
-    // to target-specific LLVM intrinsics.  The ones handled specially here can
-    // be represented via standard LLVM IR, which is preferable to enable common
-    // LLVM optimizations.
+  // Vector builtins.  Note that most vector builtins are mapped automatically
+  // to target-specific LLVM intrinsics.  The ones handled specially here can
+  // be represented via standard LLVM IR, which is preferable to enable common
+  // LLVM optimizations.
 
   case SystemZ::BI__builtin_s390_vclzb:
   case SystemZ::BI__builtin_s390_vclzh:
