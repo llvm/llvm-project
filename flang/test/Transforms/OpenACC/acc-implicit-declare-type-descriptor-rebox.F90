@@ -1,4 +1,4 @@
-!RUN: %bbc -emit-fir -fopenacc %s -o - | fir-opt --pass-pipeline="builtin.module(acc-initialize-fir-analyses,acc-implicit-declare)" | FileCheck %s
+!RUN: bbc -emit-fir -fopenacc %s -o - | fir-opt --pass-pipeline="builtin.module(acc-initialize-fir-analyses,acc-implicit-declare)" | FileCheck %s
 ! Test assumed-shape arguments to exercise fir.rebox with type descriptors
 
 module mm
