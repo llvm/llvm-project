@@ -46,20 +46,21 @@
 
 ;; Covers the IR-level FunctionPasses run by the legacy codegen pass manager.
 ;; atomic-expand lowers the wide atomic load below before instruction selection.
-; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=diff-quiet \
+; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=quiet \
 ; RUN:   -filter-passes=atomic-expand -filter-print-funcs=atomic_load %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=IR-PASS
 ; IR-PASS:      *** IR Dump After Expand Atomic instructions (atomic-expand) on atomic_load ***
-; IR-PASS-NEXT: define i128 @atomic_load
-; IR-PASS:      - %v = load atomic i128, ptr %p seq_cst, align 16
+; IR-PASS-NEXT: define i128 @atomic_load(ptr %p) {
+; IR-PASS-NEXT:   %1 = cmpxchg ptr %p, i128 0, i128 0 seq_cst seq_cst, align 16
 
 ;; Covers the module passes run by MPPassManager; pre-isel-intrinsic-lowering
 ;; lowers the llvm.load.relative call below.
-; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=diff-quiet \
+; RUN: llc -filetype=null -mtriple=aarch64 -O0 -print-changed=quiet \
 ; RUN:   -filter-passes=pre-isel-intrinsic-lowering %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=MODULE
 ; MODULE:      *** IR Dump After Pre-ISel Intrinsic Lowering (pre-isel-intrinsic-lowering) on {{.*}} ***
-; MODULE:      - %v = call ptr @llvm.load.relative.i32(ptr %p, i32 %n)
+; MODULE:      define ptr @lr(ptr %p, i32 %n) {
+; MODULE-NEXT:   %1 = getelementptr i8, ptr %p, i32 %n
 
 @var = global i32 0
 
