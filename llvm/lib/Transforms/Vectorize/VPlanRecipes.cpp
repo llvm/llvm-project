@@ -738,6 +738,16 @@ Value *VPInstruction::generate(VPTransformState &State) {
       applyFlags(*I);
     return Res;
   }
+  if (Instruction::isCast(getOpcode())) {
+    Value *Op = State.get(getOperand(0), VPLane(0));
+    Value *Res = State.Builder.CreateCast(Instruction::CastOps(getOpcode()), Op,
+                                          getScalarType());
+    if (auto *CastOp = dyn_cast<Instruction>(Res)) {
+      applyFlags(*CastOp);
+      applyMetadata(*CastOp);
+    }
+    return Res;
+  }
 
   switch (getOpcode()) {
   case VPInstruction::Not: {
@@ -1103,6 +1113,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
     return Result;
   }
+  case VPInstruction::StepVector:
+    return State.Builder.CreateStepVector(
+        VectorType::get(getScalarType(), State.VF));
+  case VPInstruction::VScale:
+    return State.Builder.CreateVScale(getScalarType());
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -1313,6 +1328,13 @@ InstructionCost VPRecipeWithIRFlags::getCostForRecipeWithOpcode(
 
 InstructionCost VPInstruction::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
+  // NOTE: At the moment it seems only possible to expose this path for
+  // the trunc, zext and sext opcodes. However, isScalarCast also covers
+  // int<>fp conversions, bitcasts, ptr<>int conversions, etc.
+  if (Instruction::isCast(getOpcode()))
+    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                      Ctx);
+
   if (Instruction::isBinaryOp(getOpcode())) {
     if (!getUnderlyingValue() && getOpcode() != Instruction::FMul) {
       // TODO: Compute cost for VPInstructions without underlying values once
@@ -1475,6 +1497,18 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                       CmpInst::makeCmpResultType(ValTy),
                                       CmpInst::ICMP_EQ, Ctx.CostKind);
   }
+  case VPInstruction::VScale: {
+    IntrinsicCostAttributes Attrs(Intrinsic::vscale, getScalarType(),
+                                  ArrayRef<Type *>());
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  case VPInstruction::StepVector:
+    // TODO: This isn't quite right since even if the step-vector is hoisted
+    // out of the loop it has a non-zero cost in the middle block, etc.
+    // Once the stepvector is correctly hoisted out of the vector loop by the
+    // licm transform we can add the cost here so that it doesn't incorrectly
+    // affect the choice of VF.
+    return 0;
   case Instruction::FCmp:
   case Instruction::ICmp:
     return getCostForRecipeWithOpcode(
@@ -1837,108 +1871,28 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::NumActiveLanes:
     O << "num-active-lanes";
     break;
-  default:
-    O << Instruction::getOpcodeName(getOpcode());
-  }
-
-  printFlags(O);
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPInstructionWithType::execute(VPTransformState &State) {
-  Type *ResultTy = getResultType();
-  if (Instruction::isCast(getOpcode())) {
-    Value *Op = State.get(getOperand(0), VPLane(0));
-    Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
-                                           Op, ResultTy);
-    if (auto *CastOp = dyn_cast<Instruction>(Cast)) {
-      applyFlags(*CastOp);
-      applyMetadata(*CastOp);
-    }
-    State.set(this, Cast, VPLane(0));
-    return;
-  }
-  switch (getOpcode()) {
-  case VPInstruction::StepVector: {
-    Value *StepVector =
-        State.Builder.CreateStepVector(VectorType::get(ResultTy, State.VF));
-    State.set(this, StepVector);
-    break;
-  }
-  case VPInstruction::VScale: {
-    Value *VScale = State.Builder.CreateVScale(ResultTy);
-    State.set(this, VScale, true);
-    break;
-  }
-
-  default:
-    llvm_unreachable("opcode not implemented yet");
-  }
-}
-
-InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
-                                                   VPCostContext &Ctx) const {
-  // NOTE: At the moment it seems only possible to expose this path for
-  // the trunc, zext and sext opcodes. However, isScalarCast also covers
-  // int<>fp conversions, bitcasts, ptr<>int conversions, etc.
-  if (Instruction::isCast(getOpcode()))
-    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                      Ctx);
-
-  switch (getOpcode()) {
-  case VPInstruction::VScale: {
-    Type *Ty = this->getScalarType();
-    ArrayRef<Type *> Tys;
-    IntrinsicCostAttributes Attrs(Intrinsic::vscale, Ty, Tys);
-    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
-  }
-  case VPInstruction::StepVector:
-    // TODO: This isn't quite right since even if the step-vector is hoisted
-    // out of the loop it has a non-zero cost in the middle block, etc.
-    // Once the stepvector is correctly hoisted out of the vector loop by the
-    // licm transform we can add the cost here so that it doesn't incorrectly
-    // affect the choice of VF.
-    return 0;
-  default:
-    // Although VPInstructionWithType is also used for
-    // VPInstruction::WideIVStep it isn't currently possible to expose cases
-    // where the cost is queried.
-    llvm_unreachable("Unhandled opcode");
-  }
-  return 0;
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
-                                        VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
-  printAsOperand(O, SlotTracker);
-  O << " = ";
-
-  Type *ResultTy = getResultType();
-  switch (getOpcode()) {
   case VPInstruction::WideIVStep:
-    O << "wide-iv-step ";
-    printOperands(O, SlotTracker);
+    O << "wide-iv-step";
     break;
   case VPInstruction::StepVector:
-    O << "step-vector " << *ResultTy;
+    O << "step-vector " << *getScalarType();
     break;
   case VPInstruction::VScale:
-    O << "vscale " << *ResultTy;
+    O << "vscale " << *getScalarType();
     break;
   case Instruction::Load:
-    O << "load ";
-    printOperands(O, SlotTracker);
+    O << "load";
     break;
   default:
-    assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
     O << Instruction::getOpcodeName(getOpcode());
+  }
+
+  if (!operands_empty()) {
     printFlags(O);
     printOperands(O, SlotTracker);
-    O << " to " << *ResultTy;
   }
+  if (Instruction::isCast(getOpcode()))
+    O << " to " << *getScalarType();
 }
 #endif
 

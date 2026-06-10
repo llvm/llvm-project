@@ -75,11 +75,11 @@ loop:
 TEST_F(VPInstructionTest, insertBefore) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPInstruction *I1 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I3 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -94,11 +94,11 @@ TEST_F(VPInstructionTest, insertBefore) {
 TEST_F(VPInstructionTest, eraseFromParent) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPInstruction *I1 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I3 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -118,11 +118,11 @@ TEST_F(VPInstructionTest, eraseFromParent) {
 TEST_F(VPInstructionTest, moveAfter) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPInstruction *I1 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I3 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -134,9 +134,9 @@ TEST_F(VPInstructionTest, moveAfter) {
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
   VPInstruction *I4 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I5 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
@@ -151,11 +151,11 @@ TEST_F(VPInstructionTest, moveAfter) {
 TEST_F(VPInstructionTest, moveBefore) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPInstruction *I1 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I3 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -167,9 +167,9 @@ TEST_F(VPInstructionTest, moveBefore) {
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
   VPInstruction *I4 =
-      new VPInstructionWithType(VPInstruction::VScale, {}, Int32);
+      new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
   VPInstruction *I5 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+      new VPInstruction(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
@@ -814,8 +814,8 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
 
 TEST_F(VPBasicBlockTest, splitAtEnd) {
   VPlan &Plan = getPlan();
-  VPInstruction *VPI = new VPInstructionWithType(VPInstruction::StepVector, {},
-                                                 IntegerType::get(C, 32));
+  VPInstruction *VPI = new VPInstruction(VPInstruction::StepVector, {}, {}, {},
+                                         {}, {}, IntegerType::get(C, 32));
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("VPBB1", VPI);
   VPBlockUtils::connectBlocks(Plan.getEntry(), VPBB);
   VPBlockUtils::connectBlocks(VPBB, Plan.getScalarHeader());
@@ -1785,8 +1785,8 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   // Create a new VPRecipeBase which defines 2 values and has 2 operands.
   LLVMContext C;
   IntegerType *Int32 = IntegerType::get(C, 32);
-  VPInstructionWithType Op0(VPInstruction::StepVector, {}, Int32);
-  VPInstructionWithType Op1(VPInstruction::VScale, {}, Int32);
+  VPInstruction Op0(VPInstruction::StepVector, {}, {}, {}, {}, {}, Int32);
+  VPInstruction Op1(VPInstruction::VScale, {}, {}, {}, {}, {}, Int32);
   VPDoubleValueDef DoubleValueDef({&Op0, &Op1}, IntegerType::get(C, 32));
 
   // Create a new users of the defined values.
@@ -1860,8 +1860,8 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();
 
   // isSingleScalar opcode without operands.
-  std::unique_ptr<VPInstruction> VScale(new VPInstructionWithType(
-      VPInstruction::VScale, {}, IntegerType::get(C, 32)));
+  std::unique_ptr<VPInstruction> VScale(new VPInstruction(
+      VPInstruction::VScale, {}, {}, {}, {}, {}, IntegerType::get(C, 32)));
   EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(VScale.get()));
 
   // isSingleScalar opcode with a uniform operand.
@@ -1871,14 +1871,14 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
 
   // isVectorToScalar opcode with a uniform operand.
   std::unique_ptr<VPInstruction> FirstActiveLane(
-      new VPInstructionWithType(VPInstruction::FirstActiveLane, {&Plan.getVF()},
-                                IntegerType::get(C, 32)));
+      new VPInstruction(VPInstruction::FirstActiveLane, {&Plan.getVF()}, {}, {},
+                        {}, {}, IntegerType::get(C, 32)));
   EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(FirstActiveLane.get()));
 
   // StepVector produces a distinct value per lane and is non-uniform; use it
   // as the non-single-scalar operand in the negative cases below.
-  std::unique_ptr<VPInstruction> StepVector(new VPInstructionWithType(
-      VPInstruction::StepVector, {}, IntegerType::get(C, 32)));
+  std::unique_ptr<VPInstruction> StepVector(new VPInstruction(
+      VPInstruction::StepVector, {}, {}, {}, {}, {}, IntegerType::get(C, 32)));
   EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(StepVector.get()));
 
   // isSingleScalar opcode with a non-single-scalar operand.
@@ -1888,8 +1888,8 @@ TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
 
   // isVectorToScalar opcode with a non-single-scalar operand.
   std::unique_ptr<VPInstruction> FirstActiveLaneNonUniform(
-      new VPInstructionWithType(VPInstruction::FirstActiveLane,
-                                {StepVector.get()}, IntegerType::get(C, 32)));
+      new VPInstruction(VPInstruction::FirstActiveLane, {StepVector.get()}, {},
+                        {}, {}, {}, IntegerType::get(C, 32)));
   EXPECT_FALSE(
       vputils::isUniformAcrossVFsAndUFs(FirstActiveLaneNonUniform.get()));
 }
@@ -1938,7 +1938,8 @@ TEST_F(VPRecipeTest, UFVScaleUserBeforeMaterialization) {
   VPBlockUtils::connectBlocks(Plan.getEntry(), LoopRegion);
   VPBlockUtils::connectBlocks(LoopRegion, Plan.getScalarHeader());
 
-  auto *VScale = new VPInstructionWithType(VPInstruction::VScale, {}, IVTy);
+  auto *VScale =
+      new VPInstruction(VPInstruction::VScale, {}, {}, {}, {}, {}, IVTy);
   Plan.getVectorPreheader()->appendRecipe(VScale);
 
   auto *Step = new VPInstruction(Instruction::Mul, {VScale, UF},
