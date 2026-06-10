@@ -77,8 +77,6 @@ exit:
 
 ; Without an entry count the function is not profiled, so the synthesized
 ; select must not be annotated.
-
-
 define float @fmax_reduction_not_profiled(ptr %a, i64 %n) {
 ; CHECK-LABEL: define float @fmax_reduction_not_profiled(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
