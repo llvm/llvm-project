@@ -7,30 +7,50 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines a standalone Markdown parsing library for the LLVM
-/// ecosystem. The parser takes plain text and returns a tree of typed nodes
-/// with no knowledge of comments, Doxygen, or Clang-Doc internals.
+/// Standalone Markdown parsing library for the LLVM ecosystem.
 ///
-/// This is a simple Markdown parser for use inside Clang-Doc's comment
-/// pipeline. You give it a paragraph of text and an arena allocator, and it
-/// gives back a list of typed nodes describing the Markdown structure it found.
+/// The parser takes plain paragraph text and returns a polymorphic tree of
+/// MDNode-derived objects allocated in a caller-supplied BumpPtrAllocator.
+/// Node types form a closed class hierarchy rooted at MDNode. Each concrete
+/// type carries exactly the fields it needs -- no overloaded Content field,
+/// no unused arrays. Use llvm::isa<>/cast<>/dyn_cast<> for type-safe
+/// downcasting; each concrete type provides classof() for this purpose.
 ///
-/// The main entry point is parseMarkdown(). If the text has no Markdown in it,
-/// you get back an empty list and can fall back to plain-text output. If it
-/// does, you get a tree of MDNode structs where each node has a kind, optional
-/// content (like the language tag on a code fence), and optional children.
+/// See
+/// https://llvm.org/docs/ProgrammerManual.html#the-isa-cast-and-dyn-cast-templates
 ///
-/// All nodes are allocated in the arena you pass in. You own the arena and are
-/// responsible for keeping it alive as long as you use the nodes.
+/// Field ordering in each derived struct is chosen to minimize padding:
+/// 4-byte fields (like Level or Start) are declared before 16-byte fields
+/// (ArrayRef, StringRef) so that no implicit padding is inserted between the
+/// base class's 4-byte Kind and the first derived field.
 ///
-/// The parser handles fenced code blocks, pipe tables, and unordered lists.
-/// Anything it does not recognize comes back as a plain text node. It will
-/// never crash on bad input.
+/// Inline nodes (appear inside ParagraphNode, HeadingNode, etc.):
+///   TextNode       -- plain text run
+///   SoftBreakNode  -- soft line break
+///   HardBreakNode  -- hard line break (trailing spaces or backslash)
+///   InlineCodeNode -- inline code span (`code`)
+///   EmphasisNode   -- emphasis (*text* or _text_)
+///   StrongNode     -- strong emphasis (**text** or __text__)
+///
+/// Block nodes:
+///   ParagraphNode     -- sequence of inline nodes
+///   HeadingNode       -- ATX heading (# through ######), level 1-6
+///   FencedCodeNode    -- fenced code block (``` or ~~~)
+///   TableNode         -- pipe table (raw row text; TODO: structured cells)
+///   UnorderedListNode -- bullet list (-, *, +)
+///   OrderedListNode   -- numbered list with explicit start number
+///   ListItemNode      -- single item inside a list
+///   BlockQuoteNode    -- block quote (>)
+///   ThematicBreakNode -- horizontal rule (---, ***, ___)
+///
+/// All nodes are arena-allocated. The caller owns the arena and must keep it
+/// alive for the lifetime of any returned nodes. The parser never crashes on
+/// malformed input; unrecognized text falls back to TextNode.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MARKDOWN_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MARKDOWN_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -38,35 +58,217 @@
 
 namespace clang::doc::markdown {
 
+/// Discriminator for all Markdown AST nodes. Inline kinds are grouped before
+/// block kinds so that the sentinels NK_LastInline and NK_FirstBlock enable
+/// cheap range-based checks in classof() implementations.
 enum class NodeKind {
+  // Inline nodes
+  NK_Text,
+  NK_SoftBreak,
+  NK_HardBreak,
+  NK_InlineCode,
+  NK_Emphasis,
+  NK_Strong,
+  NK_LastInline = NK_Strong, // sentinel -- all inline kinds are <= this
+
   // Block nodes
   NK_Paragraph,
+  NK_Heading,
   NK_FencedCode,
   NK_Table,
   NK_UnorderedList,
   NK_OrderedList,
   NK_ListItem,
+  NK_BlockQuote,
   NK_ThematicBreak,
-  // Inline nodes
-  NK_Text,
-  NK_InlineCode,
-  NK_Emphasis,
-  NK_Strong,
-  NK_SoftBreak,
+  NK_FirstBlock = NK_Paragraph, // sentinel -- all block kinds are >= this
 };
 
+/// Base type for all Markdown AST nodes. Carries only the kind discriminator.
+/// Nodes are arena-allocated and have no virtual destructor; use
+/// llvm::isa<>/cast<>/dyn_cast<> for type-safe downcasting.
 struct MDNode {
   NodeKind Kind;
-  llvm::StringRef Content; // lang tag for FencedCode, leaf text for Text
-  llvm::ArrayRef<MDNode> Children; // arena allocated
+  explicit MDNode(NodeKind K) : Kind(K) {}
 };
 
-/// Parses Markdown from a single comment paragraph's text.
-/// Returns an empty ArrayRef if no Markdown constructs are found,
-/// so generators can fall back to plain-text rendering at zero cost.
-llvm::ArrayRef<MDNode> parseMarkdown(llvm::StringRef ParagraphText,
-                                     llvm::BumpPtrAllocator &Arena);
+//===----------------------------------------------------------------------===//
+// Inline nodes
+//===----------------------------------------------------------------------===//
+
+/// Plain text run.
+struct TextNode : MDNode {
+  llvm::StringRef Text;
+  explicit TextNode(llvm::StringRef Text)
+      : MDNode(NodeKind::NK_Text), Text(Text) {}
+  static bool classof(const MDNode *N) { return N->Kind == NodeKind::NK_Text; }
+};
+
+/// Soft line break -- a newline that does not end the paragraph.
+struct SoftBreakNode : MDNode {
+  SoftBreakNode() : MDNode(NodeKind::NK_SoftBreak) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_SoftBreak;
+  }
+};
+
+/// Hard line break -- two trailing spaces or a backslash before a newline.
+struct HardBreakNode : MDNode {
+  HardBreakNode() : MDNode(NodeKind::NK_HardBreak) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_HardBreak;
+  }
+};
+
+/// Inline code span: `code`. Code does not include the surrounding backticks.
+struct InlineCodeNode : MDNode {
+  llvm::StringRef Code;
+  explicit InlineCodeNode(llvm::StringRef Code)
+      : MDNode(NodeKind::NK_InlineCode), Code(Code) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_InlineCode;
+  }
+};
+
+/// Emphasized text: *text* or _text_.
+struct EmphasisNode : MDNode {
+  llvm::ArrayRef<MDNode *> Children;
+  explicit EmphasisNode(llvm::ArrayRef<MDNode *> Children)
+      : MDNode(NodeKind::NK_Emphasis), Children(Children) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_Emphasis;
+  }
+};
+
+/// Strongly emphasized text: **text** or __text__.
+struct StrongNode : MDNode {
+  llvm::ArrayRef<MDNode *> Children;
+  explicit StrongNode(llvm::ArrayRef<MDNode *> Children)
+      : MDNode(NodeKind::NK_Strong), Children(Children) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_Strong;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Block nodes
+//===----------------------------------------------------------------------===//
+
+/// A paragraph -- sequence of inline nodes separated from other blocks by
+/// blank lines.
+struct ParagraphNode : MDNode {
+  llvm::ArrayRef<MDNode *> Children;
+  explicit ParagraphNode(llvm::ArrayRef<MDNode *> Children)
+      : MDNode(NodeKind::NK_Paragraph), Children(Children) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_Paragraph;
+  }
+};
+
+/// ATX heading: one to six leading # characters. Level is declared before
+/// Children to avoid padding between the base class's 4-byte Kind and the
+/// 8-byte-aligned ArrayRef, keeping sizeof(HeadingNode) at 24 bytes.
+struct HeadingNode : MDNode {
+  unsigned Level;                    // 1-6
+  llvm::ArrayRef<MDNode *> Children; // inline content
+  HeadingNode(unsigned Level, llvm::ArrayRef<MDNode *> Children)
+      : MDNode(NodeKind::NK_Heading), Level(Level), Children(Children) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_Heading;
+  }
+};
+
+/// Fenced code block opened with ``` or ~~~. Lang is the info string (e.g.
+/// "cpp"); empty when no language was specified. Lines contains the raw text
+/// of each interior line, without the opening or closing fence.
+///
+/// TODO: Follow CommonMark spec §4.5 -- the opening fence may be indented up
+/// to 3 spaces; the closing fence must use the same character and be at least
+/// as long as the opening fence; only spaces may follow the closing fence.
+struct FencedCodeNode : MDNode {
+  llvm::StringRef Lang;
+  llvm::ArrayRef<llvm::StringRef> Lines;
+  FencedCodeNode(llvm::StringRef Lang, llvm::ArrayRef<llvm::StringRef> Lines)
+      : MDNode(NodeKind::NK_FencedCode), Lang(Lang), Lines(Lines) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_FencedCode;
+  }
+};
+
+/// Pipe table. Rows contains the raw text of each row line including the
+/// header and separator rows.
+/// TODO: replace with a structured header/body/cell representation.
+struct TableNode : MDNode {
+  llvm::ArrayRef<llvm::StringRef> Rows;
+  explicit TableNode(llvm::ArrayRef<llvm::StringRef> Rows)
+      : MDNode(NodeKind::NK_Table), Rows(Rows) {}
+  static bool classof(const MDNode *N) { return N->Kind == NodeKind::NK_Table; }
+};
+
+/// A single list item. Children may contain block-level nodes for loose
+/// lists, or a single inline sequence for tight lists.
+struct ListItemNode : MDNode {
+  llvm::ArrayRef<MDNode *> Children;
+  explicit ListItemNode(llvm::ArrayRef<MDNode *> Children)
+      : MDNode(NodeKind::NK_ListItem), Children(Children) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_ListItem;
+  }
+};
+
+/// Unordered (bullet) list. Markers are -, *, or +.
+struct UnorderedListNode : MDNode {
+  llvm::ArrayRef<ListItemNode *> Items;
+  explicit UnorderedListNode(llvm::ArrayRef<ListItemNode *> Items)
+      : MDNode(NodeKind::NK_UnorderedList), Items(Items) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_UnorderedList;
+  }
+};
+
+/// Ordered (numbered) list. Start is the number on the first item. Start is
+/// declared before Items to avoid padding, keeping sizeof at 24 bytes.
+struct OrderedListNode : MDNode {
+  unsigned Start;
+  llvm::ArrayRef<ListItemNode *> Items;
+  OrderedListNode(unsigned Start, llvm::ArrayRef<ListItemNode *> Items)
+      : MDNode(NodeKind::NK_OrderedList), Start(Start), Items(Items) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_OrderedList;
+  }
+};
+
+/// Block quote (> ...). Children are block-level nodes inside the quote.
+struct BlockQuoteNode : MDNode {
+  llvm::ArrayRef<MDNode *> Children;
+  explicit BlockQuoteNode(llvm::ArrayRef<MDNode *> Children)
+      : MDNode(NodeKind::NK_BlockQuote), Children(Children) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_BlockQuote;
+  }
+};
+
+/// Thematic break: a line of three or more ---, ***, or ___ characters.
+struct ThematicBreakNode : MDNode {
+  ThematicBreakNode() : MDNode(NodeKind::NK_ThematicBreak) {}
+  static bool classof(const MDNode *N) {
+    return N->Kind == NodeKind::NK_ThematicBreak;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// Parser entry point
+//===----------------------------------------------------------------------===//
+
+/// Parse Markdown from a single paragraph of plain text. Returns a list of
+/// top-level block nodes allocated in Arena. Returns an empty ArrayRef if no
+/// Markdown constructs are found, letting callers fall back to plain-text
+/// rendering at zero cost. The parser never crashes on malformed input.
+///
+/// The caller must keep Arena alive for the lifetime of any returned nodes.
+llvm::ArrayRef<MDNode *> parseMarkdown(llvm::StringRef ParagraphText,
+                                       llvm::BumpPtrAllocator &Arena);
 
 } // namespace clang::doc::markdown
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_MARKDOWN_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H

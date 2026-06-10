@@ -18,8 +18,24 @@ using namespace llvm;
 
 namespace clang::doc::markdown {
 
-static MDNode makeText(StringRef S) {
-  return {NodeKind::NK_Text, S, {}};
+// Allocates a contiguous array of T in the arena and returns an ArrayRef.
+template <typename T>
+static ArrayRef<T> allocateArray(SmallVectorImpl<T> &Vec,
+                                 BumpPtrAllocator &Arena) {
+  if (Vec.empty())
+    return {};
+  T *Allocated = Arena.Allocate<T>(Vec.size());
+  std::uninitialized_copy(Vec.begin(), Vec.end(), Allocated);
+  return ArrayRef<T>(Allocated, Vec.size());
+}
+
+// Interns a StringRef into the arena so it outlives the parse loop.
+static StringRef internString(StringRef S, BumpPtrAllocator &Arena) {
+  if (S.empty())
+    return {};
+  char *Buf = Arena.Allocate<char>(S.size());
+  std::copy(S.begin(), S.end(), Buf);
+  return StringRef(Buf, S.size());
 }
 
 // A line is a table separator if it only contains |, -, :, and spaces,
@@ -36,24 +52,15 @@ static bool isListItem(StringRef Line) {
          Line.starts_with("+ ");
 }
 
-static ArrayRef<MDNode> allocateNodes(const SmallVectorImpl<MDNode> &Nodes,
-                                      BumpPtrAllocator &Arena) {
-  if (Nodes.empty())
-    return {};
-  MDNode *Allocated = Arena.Allocate<MDNode>(Nodes.size());
-  std::uninitialized_copy(Nodes.begin(), Nodes.end(), Allocated);
-  return ArrayRef<MDNode>(Allocated, Nodes.size());
-}
-
-ArrayRef<MDNode> parseMarkdown(StringRef ParagraphText,
-                               BumpPtrAllocator &Arena) {
+ArrayRef<MDNode *> parseMarkdown(StringRef ParagraphText,
+                                 BumpPtrAllocator &Arena) {
   if (ParagraphText.trim().empty())
     return {};
 
   SmallVector<StringRef, 16> Lines;
   ParagraphText.split(Lines, '\n');
 
-  SmallVector<MDNode> Nodes;
+  SmallVector<MDNode *> Nodes;
   size_t I = 0, E = Lines.size();
 
   while (I < E) {
@@ -71,8 +78,8 @@ ArrayRef<MDNode> parseMarkdown(StringRef ParagraphText,
     // case-by-case basis.
     if (Line.starts_with("```") || Line.starts_with("~~~")) {
       char Fence = Line[0];
-      StringRef Lang = Line.drop_front(3).trim();
-      SmallVector<MDNode> CodeLines;
+      StringRef Lang = internString(Line.drop_front(3).trim(), Arena);
+      SmallVector<StringRef> CodeLines;
       ++I;
       while (I < E) {
         StringRef CodeLine = Lines[I].trim();
@@ -80,15 +87,13 @@ ArrayRef<MDNode> parseMarkdown(StringRef ParagraphText,
             all_of(CodeLine.take_front(3),
                    [Fence](char C) { return C == Fence; }))
           break;
-        CodeLines.push_back(makeText(Lines[I]));
+        CodeLines.push_back(internString(Lines[I], Arena));
         ++I;
       }
       ++I; // skip closing fence
-      MDNode Code;
-      Code.Kind = NodeKind::NK_FencedCode;
-      Code.Content = Lang;
-      Code.Children = allocateNodes(CodeLines, Arena);
-      LDBG() << "emitting NK_FencedCode lang='" << Lang
+      auto *Code =
+          new (Arena) FencedCodeNode(Lang, allocateArray(CodeLines, Arena));
+      LDBG() << "emitting FencedCodeNode lang='" << Lang
              << "' lines=" << CodeLines.size();
       Nodes.push_back(Code);
       continue;
@@ -96,50 +101,45 @@ ArrayRef<MDNode> parseMarkdown(StringRef ParagraphText,
 
     // Pipe table: current line has | and next line is a separator row.
     if (Line.contains('|') && I + 1 < E && isSepRow(Lines[I + 1].trim())) {
-      SmallVector<MDNode> Rows;
+      SmallVector<StringRef> Rows;
       while (I < E && Lines[I].trim().contains('|')) {
-        Rows.push_back(makeText(Lines[I].trim()));
+        Rows.push_back(internString(Lines[I].trim(), Arena));
         ++I;
       }
-      MDNode Table;
-      Table.Kind = NodeKind::NK_Table;
-      Table.Content = {};
-      Table.Children = allocateNodes(Rows, Arena);
-      LDBG() << "emitting NK_Table rows=" << Rows.size();
+      auto *Table = new (Arena) TableNode(allocateArray(Rows, Arena));
+      LDBG() << "emitting TableNode rows=" << Rows.size();
       Nodes.push_back(Table);
       continue;
     }
 
     // Unordered list item.
     if (isListItem(Line)) {
-      SmallVector<MDNode> Items;
+      SmallVector<ListItemNode *> Items;
       while (I < E) {
         StringRef L = Lines[I].trim();
         if (!isListItem(L))
           break;
-        MDNode Item;
-        Item.Kind = NodeKind::NK_ListItem;
-        Item.Content = L.drop_front(2).trim();
-        Item.Children = {};
+        StringRef ItemText = internString(L.drop_front(2).trim(), Arena);
+        SmallVector<MDNode *> ItemChildren;
+        ItemChildren.push_back(new (Arena) TextNode(ItemText));
+        auto *Item =
+            new (Arena) ListItemNode(allocateArray(ItemChildren, Arena));
         Items.push_back(Item);
         ++I;
       }
-      MDNode List;
-      List.Kind = NodeKind::NK_UnorderedList;
-      List.Content = {};
-      List.Children = allocateNodes(Items, Arena);
-      LDBG() << "emitting NK_UnorderedList items=" << Items.size();
+      auto *List = new (Arena) UnorderedListNode(allocateArray(Items, Arena));
+      LDBG() << "emitting UnorderedListNode items=" << Items.size();
       Nodes.push_back(List);
       continue;
     }
 
     // Plain text fallback.
-    Nodes.push_back(makeText(Line));
+    Nodes.push_back(new (Arena) TextNode(internString(Line, Arena)));
     ++I;
   }
 
   LDBG() << "parseMarkdown done nodes=" << Nodes.size();
-  return allocateNodes(Nodes, Arena);
+  return allocateArray(Nodes, Arena);
 }
 
 } // namespace clang::doc::markdown

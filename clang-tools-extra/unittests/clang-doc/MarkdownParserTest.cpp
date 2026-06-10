@@ -8,9 +8,11 @@
 
 #include "support/Markdown.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "gtest/gtest.h"
 
 using namespace clang::doc::markdown;
+using namespace llvm;
 
 namespace {
 
@@ -31,9 +33,8 @@ TEST_F(MarkdownParserTest, WhitespaceOnlyInput) {
 TEST_F(MarkdownParserTest, PlainText) {
   auto Nodes = parseMarkdown("hello world", Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_Text);
-  EXPECT_EQ(N.Content, "hello world");
+  auto *N = cast<TextNode>(Nodes[0]);
+  EXPECT_EQ(N->Text, "hello world");
 }
 
 TEST_F(MarkdownParserTest, FencedCodeBlock) {
@@ -42,10 +43,9 @@ int x = 0;
 ````````)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  EXPECT_EQ(N.Content, "cpp");
-  ASSERT_EQ(N.Children.size(), 1u);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  EXPECT_EQ(N->Lang, "cpp");
+  ASSERT_EQ(N->Lines.size(), 1u);
 }
 
 TEST_F(MarkdownParserTest, FencedCodeBlockNoLang) {
@@ -54,9 +54,8 @@ some code
 ```````)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  EXPECT_TRUE(N.Content.empty());
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  EXPECT_TRUE(N->Lang.empty());
 }
 
 TEST_F(MarkdownParserTest, UnterminatedFenceReturnsEmpty) {
@@ -74,7 +73,7 @@ TEST_F(MarkdownParserTest, PipeTable) {
 | 1 | 2 |)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  EXPECT_EQ(Nodes[0].Kind, NodeKind::NK_Table);
+  EXPECT_TRUE(isa<TableNode>(Nodes[0]));
 }
 
 TEST_F(MarkdownParserTest, PipeCharacterWithoutSepRowIsPlainText) {
@@ -82,8 +81,8 @@ TEST_F(MarkdownParserTest, PipeCharacterWithoutSepRowIsPlainText) {
 c | d)",
                              Arena);
   // No separator row so should not be parsed as a table.
-  for (const auto &Node : Nodes)
-    EXPECT_NE(Node.Kind, NodeKind::NK_Table);
+  for (const auto *Node : Nodes)
+    EXPECT_FALSE(isa<TableNode>(Node));
 }
 
 TEST_F(MarkdownParserTest, UnorderedList) {
@@ -92,12 +91,11 @@ TEST_F(MarkdownParserTest, UnorderedList) {
 - baz)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_UnorderedList);
-  ASSERT_EQ(N.Children.size(), 3u);
-  EXPECT_EQ(N.Children[0].Content, "foo");
-  EXPECT_EQ(N.Children[1].Content, "bar");
-  EXPECT_EQ(N.Children[2].Content, "baz");
+  auto *N = cast<UnorderedListNode>(Nodes[0]);
+  ASSERT_EQ(N->Items.size(), 3u);
+  EXPECT_EQ(cast<TextNode>(N->Items[0]->Children[0])->Text, "foo");
+  EXPECT_EQ(cast<TextNode>(N->Items[1]->Children[0])->Text, "bar");
+  EXPECT_EQ(cast<TextNode>(N->Items[2]->Children[0])->Text, "baz");
 }
 
 TEST_F(MarkdownParserTest, MixedContent) {
@@ -117,10 +115,9 @@ int x = 0;
 ~~~)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  EXPECT_TRUE(N.Content.empty());
-  ASSERT_EQ(N.Children.size(), 1u);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  EXPECT_TRUE(N->Lang.empty());
+  ASSERT_EQ(N->Lines.size(), 1u);
 }
 
 // CommonMark §4.5 example 120: tilde fence with a language tag.
@@ -130,10 +127,9 @@ int x = 0;
 ~~~)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  EXPECT_EQ(N.Content, "cpp");
-  ASSERT_EQ(N.Children.size(), 1u);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  EXPECT_EQ(N->Lang, "cpp");
+  ASSERT_EQ(N->Lines.size(), 1u);
 }
 
 // CommonMark §4.5 example 122: a tilde line does not close a backtick fence.
@@ -144,10 +140,9 @@ aaa
 ````````)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
   // ~~~ is content, not a closing fence.
-  ASSERT_EQ(N.Children.size(), 2u);
+  ASSERT_EQ(N->Lines.size(), 2u);
 }
 
 // CommonMark §4.5 example 130: a code block can be empty.
@@ -156,18 +151,16 @@ TEST_F(MarkdownParserTest, EmptyFencedCodeBlock) {
 ```````)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  EXPECT_TRUE(N.Children.empty());
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  EXPECT_TRUE(N->Lines.empty());
 }
 
 // CommonMark §4.5 example 129: a code block may contain only blank lines.
 TEST_F(MarkdownParserTest, FencedCodeBlockBlankLineContent) {
   auto Nodes = parseMarkdown("```\n\n  \n```", Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  ASSERT_EQ(N.Children.size(), 2u);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  ASSERT_EQ(N->Lines.size(), 2u);
 }
 
 // CommonMark §4.5 example 142: lang tag is captured from the info string.
@@ -179,10 +172,9 @@ end
 ``````)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  EXPECT_EQ(N.Content, "ruby");
-  ASSERT_EQ(N.Children.size(), 3u);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  EXPECT_EQ(N->Lang, "ruby");
+  ASSERT_EQ(N->Lines.size(), 3u);
 }
 
 // CommonMark §4.5 example 146: tilde fence info string may contain backticks.
@@ -192,10 +184,9 @@ foo
 ~~~)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  EXPECT_EQ(N.Content, "aa ``` ~~~");
-  ASSERT_EQ(N.Children.size(), 1u);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  EXPECT_EQ(N->Lang, "aa ``` ~~~");
+  ASSERT_EQ(N->Lines.size(), 1u);
 }
 
 // CommonMark §4.5 example 124: closing fence must be at least as long as the
@@ -209,9 +200,8 @@ TEST_F(MarkdownParserTest, ClosingFenceLengthTODO) {
   // parser currently treats it as a closing fence. This test documents the
   // current (non-conformant) behavior.
   ASSERT_EQ(Nodes.size(), 1u);
-  const auto &N = Nodes[0];
-  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  ASSERT_EQ(N.Children.size(), 1u);
+  auto *N = cast<FencedCodeNode>(Nodes[0]);
+  ASSERT_EQ(N->Lines.size(), 1u);
 }
 
 } // namespace
