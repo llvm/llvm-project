@@ -5239,6 +5239,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::GET_ACTIVE_LANE_MASK:
     Res = WidenVecRes_GET_ACTIVE_LANE_MASK(N);
     break;
+  case ISD::VECTOR_DEINTERLEAVE:
+    WidenVecRes_VECTOR_DEINTERLEAVE(N);
+    break;
 
   case ISD::ADD: case ISD::VP_ADD:
   case ISD::AND: case ISD::VP_AND:
@@ -7390,6 +7393,48 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_REVERSE(SDNode *N) {
 SDValue DAGTypeLegalizer::WidenVecRes_GET_ACTIVE_LANE_MASK(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
   return DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, SDLoc(N), NVT, N->ops());
+}
+
+void DAGTypeLegalizer::WidenVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT EltVT = VT.getVectorElementType();
+  ElementCount OrigEC = VT.getVectorElementCount();
+  unsigned Factor = N->getNumOperands();
+  SDLoc DL(N);
+
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  ElementCount WidenEC = WidenVT.getVectorElementCount();
+  // We cannot just use the widened operands directly: since they might be
+  // individually widened, using them directly will result in de-interleaving
+  // the "padded" lanes that sit in the middle of the vector. Instead, we should
+  // not just concat but also "re-pack" these operands before extracting new
+  // operand vectors with the widened type.
+  auto PackedWidenVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                        WidenEC.multiplyCoefficientBy(Factor));
+  SDValue PackedWidenVec = DAG.getUNDEF(PackedWidenVT);
+  for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
+    const SDValue &Op = N->getOperand(Idx);
+    // Note that we insert these widened operands with offsets derived from
+    // the original vector length.
+    PackedWidenVec = DAG.getInsertSubvector(
+        DL, PackedWidenVec, GetWidenedVector(Op),
+        OrigEC.multiplyCoefficientBy(Idx).getKnownMinValue());
+  }
+
+  // Extract the new widened operand vectors.
+  SmallVector<SDValue, 8> NewOps(Factor, SDValue());
+  for (unsigned Idx = 0U; Idx < Factor; ++Idx) {
+    NewOps[Idx] = DAG.getExtractSubvector(
+        DL, WidenVT, PackedWidenVec,
+        WidenEC.multiplyCoefficientBy(Idx).getKnownMinValue());
+  }
+
+  SmallVector<EVT, 8> NewVTs(Factor, WidenVT);
+  SDNode *NewRes =
+      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, NewVTs, NewOps).getNode();
+  // Set the widened results manually.
+  for (unsigned Idx = 0U; Idx < Factor; ++Idx)
+    SetWidenedVector(SDValue(N, Idx), SDValue(NewRes, Idx));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
