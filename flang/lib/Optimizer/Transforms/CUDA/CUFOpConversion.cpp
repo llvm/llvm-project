@@ -72,6 +72,8 @@ static mlir::Value createConvertOp(mlir::PatternRewriter &rewriter,
   return val;
 }
 
+// Scalar CUDA constants have a host-visible global for host reads/writes and a
+// device constant symbol for kernels.
 static bool isScalarCudaConstantGlobal(fir::GlobalOp global) {
   return global && global.getDataAttr() &&
          *global.getDataAttr() == cuf::DataAttribute::Constant &&
@@ -288,6 +290,8 @@ struct CUFDataTransferOpConversion
 
       mlir::Value dst = op.getDst();
       mlir::Value src = op.getSrc();
+      // Host assignments to scalar CUDA constants update both the host-visible
+      // global and the device constant symbol.
       auto getAddrOf = [](mlir::Value val) -> fir::AddrOfOp {
         if (auto declareOp = val.getDefiningOp<fir::DeclareOp>())
           return declareOp.getMemref().getDefiningOp<fir::AddrOfOp>();
