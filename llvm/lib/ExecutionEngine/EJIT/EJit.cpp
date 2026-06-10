@@ -1,12 +1,14 @@
 //===-- EJit.cpp - EmbeddedJIT Main C++ API -------------------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJit.h"
+#include "llvm/Config/Targets.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCompileDriver.h"
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistryEntry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
@@ -17,6 +19,47 @@ extern "C" {
 extern const ejit_reg_entry_t __ejit_registry_bitcode[];
 extern const ejit_reg_entry_t __ejit_registry_period[];
 }
+
+namespace {
+
+void initializeEJitTargets() {
+#ifdef EJIT_TRIM_LLVM_BACKEND
+#ifdef EJIT_DEFAULT_TRIPLE
+  Triple TT(EJIT_DEFAULT_TRIPLE);
+#if LLVM_HAS_AARCH64_TARGET
+  if (TT.isAArch64()) {
+    LLVMInitializeAArch64TargetInfo();
+    LLVMInitializeAArch64Target();
+    LLVMInitializeAArch64TargetMC();
+    LLVMInitializeAArch64AsmPrinter();
+    return;
+  }
+#endif
+#if LLVM_HAS_X86_TARGET
+  if (TT.isX86()) {
+    LLVMInitializeX86TargetInfo();
+    LLVMInitializeX86Target();
+    LLVMInitializeX86TargetMC();
+    LLVMInitializeX86AsmPrinter();
+    return;
+  }
+#endif
+#endif
+#ifndef EJIT_FREESTANDING
+  if (!InitializeNativeTarget()) {
+    InitializeNativeTargetAsmPrinter();
+    return;
+  }
+#endif
+#endif
+
+  InitializeAllTargetInfos();
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmPrinters();
+}
+
+} // namespace
 
 EJit::EJit(const Config &config) : config_(config) {
   // Create all runtime components
@@ -95,10 +138,7 @@ EJit::EJit(const Config &config) : config_(config) {
   // Create sync JIT engine (target must be initialized first).
   // Use InitializeAll* instead of InitializeNative* so that cross-compiled
   // builds (e.g. AArch64 target built on x86 host) also work correctly.
-  InitializeAllTargetInfos();
-  InitializeAllTargets();
-  InitializeAllTargetMCs();
-  InitializeAllAsmPrinters();
+  initializeEJitTargets();
   auto engine = EJitOrcEngine::Create(config, runtimeState_->getRegistry(),
                                       *runtimeState_);
   if (engine) {

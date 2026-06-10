@@ -9,6 +9,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
+#endif
+
 #include "AArch64TargetMachine.h"
 #include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
@@ -249,13 +253,17 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PointerAuthPass(PR);
   initializeKCFIPass(PR);
   initializeAArch64SLSHardeningPass(PR);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeSMEABIPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
+#endif
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64StackTaggingPass(PR);
   initializeAArch64StackTaggingPreRAPass(PR);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeAArch64AdvSIMDScalarPass(PR);
+#endif
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
   initializeAArch64CollectLOHPass(PR);
@@ -266,7 +274,9 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoPass(PR);
   initializeAArch64LoadStoreOptPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeAArch64SIMDInstrOptPass(PR);
+#endif
 #ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeAArch64O0PreLegalizerCombinerPass(PR);
   initializeAArch64PreLegalizerCombinerPass(PR);
@@ -632,9 +642,11 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   // Expand any SVE vector library calls that we can't code generate directly.
+#ifndef EJIT_TRIM_LLVM_BACKEND
   if (EnableSVEIntrinsicOpts &&
       TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createSVEIntrinsicOptsPass());
+#endif
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
@@ -693,7 +705,9 @@ void AArch64PassConfig::addIRPasses() {
   // Expand any functions marked with SME attributes which require special
   // changes for the calling convention or that require the lazy-saving
   // mechanism specified in the SME ABI.
+#ifndef EJIT_TRIM_LLVM_BACKEND
   addPass(createSMEABIPass());
+#endif
 
   // Add Control Flow Guard checks.
 #ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
@@ -830,8 +844,10 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
     addPass(createSMEPeepholeOptPass());
+#endif
 
   // Run default MachineSSAOptimization first.
   TargetPassConfig::addMachineSSAOptimization();
@@ -853,7 +869,9 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(&EarlyIfConverterLegacyID);
   if (EnableStPairSuppress)
     addPass(createAArch64StorePairSuppressPass());
+#ifndef EJIT_TRIM_LLVM_BACKEND
   addPass(createAArch64SIMDInstrOptPass());
+#endif
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createAArch64StackTaggingPreRAPass());
   return true;
@@ -867,7 +885,9 @@ void AArch64PassConfig::addPreRegAlloc() {
 
   // Use AdvSIMD scalar instructions whenever profitable.
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAdvSIMDScalar) {
+#ifndef EJIT_TRIM_LLVM_BACKEND
     addPass(createAArch64AdvSIMDScalar());
+#endif
     // The AdvSIMD pass may produce copies that can be rewritten to
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerLegacyID);
