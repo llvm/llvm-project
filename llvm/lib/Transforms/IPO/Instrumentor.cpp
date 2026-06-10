@@ -1705,7 +1705,7 @@ Value *NumericIO::getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
     return PoisonValue::get(&Ty);
 }
 
-// NumericIO flag bitmask values
+// NumericIO flag bitmask values.
 enum NumericFlags : uint64_t {
   NUMERIC_FLAG_NONE = 0,
   NUMERIC_FLAG_NO_SIGNED_WRAP = 1 << 0,
@@ -1753,8 +1753,9 @@ Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
     break;
   }
 
-  if (auto *DI = dyn_cast<PossiblyDisjointInst>(&V); DI && DI->isDisjoint())
-    Flag |= NUMERIC_FLAG_IS_DISJOINT;
+  if (auto *DI = dyn_cast<PossiblyDisjointInst>(&V))
+    if (DI->isDisjoint())
+      Flag |= NUMERIC_FLAG_IS_DISJOINT;
 
   return getCI(&Ty, Flag);
 }
@@ -1792,10 +1793,10 @@ void NumericIO::init(InstrumentationConfig &IConf,
                IRTArg::REPLACABLE | ValArgOpts, getValue,
                Config.has(ReplaceResult) ? replaceValue : nullptr));
   if (Config.has(PassFlags))
-    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "flags",
-                             "A bitmask value signaling which flags are "
-                             "present in this LLVM instruction.",
-                             IRTArg::NONE, getFlags));
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "flags",
+               "A bitmask value signaling which instruction flags are present.",
+               IRTArg::NONE, getFlags));
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
   IConf.addChoice(*this, IIRB.Ctx);
 }
