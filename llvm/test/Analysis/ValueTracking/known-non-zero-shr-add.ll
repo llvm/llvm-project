@@ -3,11 +3,7 @@
 
 define i1 @lshr_add_nuw_lhs_has_high_bit(i32 %x, i32 %y) {
 ; CHECK-LABEL: @lshr_add_nuw_lhs_has_high_bit(
-; CHECK-NEXT:    [[X_HIGH:%.*]] = or i32 [[X:%.*]], 256
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X_HIGH]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHR]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_high = or i32 %x, 256
   %add = add nuw i32 %x_high, %y
@@ -18,11 +14,7 @@ define i1 @lshr_add_nuw_lhs_has_high_bit(i32 %x, i32 %y) {
 
 define i1 @lshr_add_nuw_rhs_has_high_bit(i32 %x, i32 %y) {
 ; CHECK-LABEL: @lshr_add_nuw_rhs_has_high_bit(
-; CHECK-NEXT:    [[Y_HIGH:%.*]] = or i32 [[Y:%.*]], 256
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X:%.*]], [[Y_HIGH]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHR]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %y_high = or i32 %y, 256
   %add = add nuw i32 %x, %y_high
@@ -33,11 +25,7 @@ define i1 @lshr_add_nuw_rhs_has_high_bit(i32 %x, i32 %y) {
 
 define i1 @lshr_add_nuw_rhs_has_high_bit_i13(i13 %x, i13 %y) {
 ; CHECK-LABEL: @lshr_add_nuw_rhs_has_high_bit_i13(
-; CHECK-NEXT:    [[Y_HIGH:%.*]] = or i13 [[Y:%.*]], 256
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i13 [[X:%.*]], [[Y_HIGH]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i13 [[ADD]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i13 [[SHR]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %y_high = or i13 %y, 256
   %add = add nuw i13 %x, %y_high
@@ -48,11 +36,7 @@ define i1 @lshr_add_nuw_rhs_has_high_bit_i13(i13 %x, i13 %y) {
 
 define <2 x i1> @lshr_add_nuw_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @lshr_add_nuw_vec(
-; CHECK-NEXT:    [[X_HIGH:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 256)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i32> [[X_HIGH]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> [[ADD]], splat (i32 4)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SHR]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x_high = or <2 x i32> %x, splat (i32 256)
   %add = add nuw <2 x i32> %x_high, %y
@@ -63,11 +47,7 @@ define <2 x i1> @lshr_add_nuw_vec(<2 x i32> %x, <2 x i32> %y) {
 
 define i1 @ashr_add_nuw_lhs_has_high_bit(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ashr_add_nuw_lhs_has_high_bit(
-; CHECK-NEXT:    [[X_HIGH:%.*]] = or i32 [[X:%.*]], 256
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[X_HIGH]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[ADD]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHR]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %x_high = or i32 %x, 256
   %add = add nuw i32 %x_high, %y
