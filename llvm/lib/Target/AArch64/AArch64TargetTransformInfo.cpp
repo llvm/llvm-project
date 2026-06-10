@@ -4645,6 +4645,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
             getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
                                nullptr, nullptr));
   case ISD::ADD:
+  case ISD::SUB:
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
