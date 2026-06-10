@@ -11165,7 +11165,7 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
     // FIXME: support dynamically sized G_MEMCPY_INLINE and G_MEMSET_INLINE
     assert(Opc != TargetOpcode::G_MEMCPY_INLINE &&
            Opc != TargetOpcode::G_MEMSET_INLINE &&
-           "inline memcpy with dynamic size is not yet supported");
+           "inline memcpy and memset with dynamic size are not yet supported");
     return UnableToLegalize;
   }
   uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
@@ -11182,7 +11182,6 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   bool IsVolatile = MemOp->isVolatile();
   if (Opc == TargetOpcode::G_MEMCPY || Opc == TargetOpcode::G_MEMCPY_INLINE) {
     auto &MF = *MI.getParent()->getParent();
-    const auto &TLI = *MF.getSubtarget().getTargetLowering();
     bool OptSize = shouldLowerMemFuncForSize(MF);
     uint64_t Limit = Opc == TargetOpcode::G_MEMCPY_INLINE
                          ? std::numeric_limits<uint64_t>::max()
