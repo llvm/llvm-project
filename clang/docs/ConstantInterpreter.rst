@@ -8,14 +8,15 @@ Constant Interpreter
 Introduction
 ============
 
-The bytecode interpreter aims to replace the existing tree evaluator in
-clang, improving performance on constructs which are executed inefficiently
-by the evaluator. The interpreter is activated using the following flags:
+The bytecode interpreter aims to replace the existing AST traversal-based
+evaluator clang, improving performance on constructs which are executed
+inefficiently by the evaluator. The interpreter is activated by passing
+``-fexperimental-new-constant-interpreter`` to clang.
 
-* ``-fexperimental-new-constant-interpreter`` enables the interpreter.
-
-Since clang 24, the bytecode interpreter can also be enabled by default
-by passing ``-DCLANG_USE_EXPERIMENTAL_CONST_INTERP=ON`` to cmake.
+Since clang 23, the bytecode interpreter can also be enabled by default
+by passing ``-DCLANG_USE_EXPERIMENTAL_CONST_INTERP=ON`` to cmake. In
+that case, it can be deactivated again via
+``-fno-experimental-new-constant-interpreter``.
 
 
 
