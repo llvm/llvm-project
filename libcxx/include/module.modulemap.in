@@ -4,10 +4,16 @@ module std_config [system] {
   @LIBCXX_CONFIG_SITE_MODULE_ENTRY@ // generated via CMake
   textual header "__config"
   textual header "__configuration/abi.h"
+  textual header "__configuration/attributes.h"
   textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
+  textual header "__configuration/diagnostic_suppression.h"
+  textual header "__configuration/experimental.h"
+  textual header "__configuration/hardening.h"
   textual header "__configuration/language.h"
+  textual header "__configuration/namespace.h"
   textual header "__configuration/platform.h"
+  textual header "__configuration/utility.h"
   textual header "version"
 }
 
@@ -122,10 +128,6 @@ module std_core [system] {
     }
     module is_base_of {
       header "__type_traits/is_base_of.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_bounded_array {
-      header "__type_traits/is_bounded_array.h"
       export std_core.type_traits.integral_constant
     }
     module is_callable {
@@ -253,24 +255,12 @@ module std_core [system] {
       header "__type_traits/is_polymorphic.h"
       export std_core.type_traits.integral_constant
     }
-    module is_primary_template {
-      header "__type_traits/is_primary_template.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_reference_wrapper {
       header "__type_traits/is_reference_wrapper.h"
       export std_core.type_traits.integral_constant
     }
     module is_reference {
       header "__type_traits/is_reference.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_referenceable {
-      header "__type_traits/is_referenceable.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_replaceable {
-      header "__type_traits/is_replaceable.h"
       export std_core.type_traits.integral_constant
     }
     module is_same {
@@ -325,10 +315,6 @@ module std_core [system] {
       header "__type_traits/is_trivially_relocatable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_unbounded_array {
-      header "__type_traits/is_unbounded_array.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_union {
       header "__type_traits/is_union.h"
       export std_core.type_traits.integral_constant
@@ -336,10 +322,6 @@ module std_core [system] {
     module is_unqualified { header "__type_traits/is_unqualified.h" }
     module is_unsigned {
       header "__type_traits/is_unsigned.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_valid_expansion {
-      header "__type_traits/is_valid_expansion.h"
       export std_core.type_traits.integral_constant
     }
     module is_void {
@@ -478,9 +460,13 @@ module std [system] {
     module mismatch {
       header "__algorithm/mismatch.h"
       export std.utility.pair // return type
+      export std.iterator.aliasing_iterator
     }
     module move_backward                          { header "__algorithm/move_backward.h" }
-    module move                                   { header "__algorithm/move.h" }
+    module move                                   {
+      header "__algorithm/move.h"
+      export std.algorithm.in_out_result
+    }
     module next_permutation                       { header "__algorithm/next_permutation.h" }
     module none_of                                { header "__algorithm/none_of.h" }
     module nth_element                            { header "__algorithm/nth_element.h" }
@@ -770,6 +756,12 @@ module std [system] {
       export std.functional.ranges_operations
       export std.algorithm.in_in_out_result
     }
+    module ranges_shift_left {
+      header "__algorithm/ranges_shift_left.h"
+    }
+    module ranges_shift_right {
+      header "__algorithm/ranges_shift_right.h"
+    }
     module ranges_shuffle {
       header "__algorithm/ranges_shuffle.h"
     }
@@ -839,19 +831,27 @@ module std [system] {
     module simd_utils                             { header "__algorithm/simd_utils.h" }
     module sort_heap                              { header "__algorithm/sort_heap.h" }
     module sort                                   { header "__algorithm/sort.h" }
+    module specialized_algorithms                 { header "__algorithm/specialized_algorithms.h" }
     module stable_partition                       { header "__algorithm/stable_partition.h" }
     module stable_sort {
       header "__algorithm/stable_sort.h"
       export std.memory.unique_temporary_buffer // TODO: Workaround for https://llvm.org/PR120108
     }
-    module swap_ranges                            { header "__algorithm/swap_ranges.h" }
+    module swap_ranges                            {
+      header "__algorithm/swap_ranges.h"
+      export std.algorithm.iterator_operations
+      export std.algorithm.iter_swap
+    }
     module three_way_comp_ref_type                { header "__algorithm/three_way_comp_ref_type.h" }
     module transform                              { header "__algorithm/transform.h" }
     module uniform_random_bit_generator_adaptor   { header "__algorithm/uniform_random_bit_generator_adaptor.h" }
     module unique_copy                            { header "__algorithm/unique_copy.h" }
     module unique                                 { header "__algorithm/unique.h" }
     module unwrap_iter                            { header "__algorithm/unwrap_iter.h" }
-    module unwrap_range                           { header "__algorithm/unwrap_range.h" }
+    module unwrap_range                           {
+      header "__algorithm/unwrap_range.h"
+      export std.utility.pair
+    }
     module upper_bound                            { header "__algorithm/upper_bound.h" }
 
     header "algorithm"
@@ -878,6 +878,8 @@ module std [system] {
     module atomic_lock_free       { header "__atomic/atomic_lock_free.h" }
     module atomic_ref             { header "__atomic/atomic_ref.h" }
     module atomic_sync            { header "__atomic/atomic_sync.h" }
+    module atomic_sync_timed      { header "__atomic/atomic_sync_timed.h" }
+    module atomic_waitable_traits { header "__atomic/atomic_waitable_traits.h" }
     module atomic {
       header "__atomic/atomic.h"
       export std.atomic.atomic_base // most of std::atomic methods are defined there
@@ -1074,6 +1076,7 @@ module std [system] {
     module class_or_enum            { header "__concepts/class_or_enum.h" }
     module common_reference_with    { header "__concepts/common_reference_with.h" }
     module common_with              { header "__concepts/common_with.h" }
+    module comparison_common_type   { header "__concepts/comparison_common_type.h" }
     module constructible            { header "__concepts/constructible.h" }
     module convertible_to           { header "__concepts/convertible_to.h" }
     module copyable                 { header "__concepts/copyable.h" }
@@ -1084,6 +1087,8 @@ module std [system] {
     module invocable                { header "__concepts/invocable.h" }
     module movable                  { header "__concepts/movable.h" }
     module predicate                { header "__concepts/predicate.h" }
+    module primary_template         { header "__concepts/primary_template.h" }
+    module referenceable            { header "__concepts/referenceable.h" }
     module regular                  { header "__concepts/regular.h" }
     module relation                 { header "__concepts/relation.h" }
     module same_as                  { header "__concepts/same_as.h" }
@@ -1363,7 +1368,15 @@ module std [system] {
     module format_string                      { header "__format/format_string.h" }
     module format_to_n_result                 { header "__format/format_to_n_result.h" }
     module formatter                          { header "__format/formatter.h" }
-    module formatter_bool                     { header "__format/formatter_bool.h" }
+    module formatter_bool                {
+      header "__format/formatter_bool.h"
+      export std.format.formatter
+    }
+    module formatter_bool_impl                {
+      header "__format/formatter_bool_impl.h"
+      export std.format.formatter_bool
+      export std.format.formatter
+    }
     module formatter_char                     { header "__format/formatter_char.h" }
     module formatter_floating_point           { header "__format/formatter_floating_point.h" }
     module formatter_integer                  { header "__format/formatter_integer.h" }
@@ -1551,6 +1564,7 @@ module std [system] {
     module sortable                   { header "__iterator/sortable.h" }
     module static_bounded_iter        { header "__iterator/static_bounded_iter.h" }
     module unreachable_sentinel       { header "__iterator/unreachable_sentinel.h" }
+    module capacity_aware_iterator    { header "__iterator/capacity_aware_iterator.h" }
     module wrap_iter                  { header "__iterator/wrap_iter.h" }
 
     header "iterator"
@@ -1587,22 +1601,26 @@ module std [system] {
     }
 
     module support_impl {
+      textual header "__locale_dir/support/aix.h"
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
+      textual header "__locale_dir/support/llvm_libc.h"
       textual header "__locale_dir/support/netbsd.h"
+      textual header "__locale_dir/support/no_locale/conversions.h"
+      textual header "__locale_dir/support/no_locale/formatting.h"
+      textual header "__locale_dir/support/newlib.h"
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
+      textual header "__locale_dir/support/openbsd.h"
       textual header "__locale_dir/support/windows.h"
     }
 
     module locale_base_api {
       textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h"
       textual header "__locale_dir/locale_base_api/ibm.h"
-      textual header "__locale_dir/locale_base_api/musl.h"
-      textual header "__locale_dir/locale_base_api/openbsd.h"
     }
     export *
   }
@@ -1639,7 +1657,6 @@ module std [system] {
   module memory {
     module addressof                          { header "__memory/addressof.h" }
     module align                              { header "__memory/align.h" }
-    module aligned_alloc                      { header "__memory/aligned_alloc.h" }
     module allocate_at_least                  { header "__memory/allocate_at_least.h" }
     module allocation_guard                   { header "__memory/allocation_guard.h" }
     module allocator {
@@ -1671,7 +1688,10 @@ module std [system] {
     }
     module raw_storage_iterator               { header "__memory/raw_storage_iterator.h" }
     module shared_count                       { header "__memory/shared_count.h" }
-    module shared_ptr                         { header "__memory/shared_ptr.h" }
+    module shared_ptr                         {
+      header "__memory/shared_ptr.h"
+      export std.functional.hash
+    }
     module swap_allocator                     { header "__memory/swap_allocator.h" }
     module temp_value                         { header "__memory/temp_value.h" }
     module temporary_buffer                   {
@@ -1680,10 +1700,12 @@ module std [system] {
     }
     module uninitialized_algorithms {
       header "__memory/uninitialized_algorithms.h"
+      export std.memory.destroy
       export std.utility.pair
     }
     module unique_ptr {
       header "__memory/unique_ptr.h"
+      export std.functional.hash
     }
     module unique_temporary_buffer {
       header "__memory/unique_temporary_buffer.h"
@@ -1693,6 +1715,7 @@ module std [system] {
     }
     module uses_allocator                     { header "__memory/uses_allocator.h" }
     module uses_allocator_construction        { header "__memory/uses_allocator_construction.h" }
+    module valid_range                        { header "__memory/valid_range.h" }
 
     header "memory"
     export *
@@ -1816,7 +1839,10 @@ module std [system] {
     module clamp_to_integral                  { header "__random/clamp_to_integral.h" }
     module default_random_engine              { header "__random/default_random_engine.h" }
     module discard_block_engine               { header "__random/discard_block_engine.h" }
-    module discrete_distribution              { header "__random/discrete_distribution.h" }
+    module discrete_distribution              {
+      header "__random/discrete_distribution.h"
+      export std.vector.vector
+    }
     module exponential_distribution           { header "__random/exponential_distribution.h" }
     module extreme_value_distribution         { header "__random/extreme_value_distribution.h" }
     module fisher_f_distribution              { header "__random/fisher_f_distribution.h" }
@@ -1856,6 +1882,8 @@ module std [system] {
 
   module ranges {
     module access                         { header "__ranges/access.h" }
+    module adjacent_transform_view        { header "__ranges/adjacent_transform_view.h" }
+    module adjacent_view                  { header "__ranges/adjacent_view.h" }
     module all                            {
       header "__ranges/all.h"
       export std.ranges.ref_view
@@ -1866,6 +1894,7 @@ module std [system] {
       export std.functional.bind_back
     }
     module common_view                    { header "__ranges/common_view.h" }
+    module concat_view                    { header "__ranges/concat_view.h" }
     module concepts                       { header "__ranges/concepts.h" }
     module container_compatible_range     { header "__ranges/container_compatible_range.h" }
     module counted {
@@ -1887,11 +1916,13 @@ module std [system] {
       header "__ranges/drop_while_view.h"
       export std.functional.bind_back
     }
+    module elements_of                    { header "__ranges/elements_of.h" }
     module elements_view                  { header "__ranges/elements_view.h" }
     module empty                          { header "__ranges/empty.h" }
     module empty_view                     { header "__ranges/empty_view.h" }
     module enable_borrowed_range          { header "__ranges/enable_borrowed_range.h" }
     module enable_view                    { header "__ranges/enable_view.h" }
+    module enumerate_view                 { header "__ranges/enumerate_view.h" }
     module filter_view {
       header "__ranges/filter_view.h"
       export std.functional.bind_back
@@ -1918,6 +1949,10 @@ module std [system] {
     module size                           { header "__ranges/size.h" }
     module split_view {
       header "__ranges/split_view.h"
+      export std.functional.bind_back
+    }
+    module stride_view {
+      header "__ranges/stride_view.h"
       export std.functional.bind_back
     }
     module subrange {
@@ -2124,7 +2159,7 @@ module std [system] {
     module tuple_like_no_subrange   { header "__tuple/tuple_like_no_subrange.h" }
     module tuple_like               { header "__tuple/tuple_like.h" }
     module tuple_size               { header "__tuple/tuple_size.h" }
-    module tuple_types              { header "__tuple/tuple_types.h" }
+    module tuple_trasnform          { header "__tuple/tuple_transform.h" }
 
     header "tuple"
     export *
@@ -2160,6 +2195,7 @@ module std [system] {
       export std_core.type_traits.decay // the macro expansion uses that trait
     }
     module cmp                             { header "__utility/cmp.h" }
+    module constant_wrapper                { header "__utility/constant_wrapper.h" }
     module convert_to_integral             { header "__utility/convert_to_integral.h" }
     module default_three_way_comparator    { header "__utility/default_three_way_comparator.h" }
     module element_count                   { header "__utility/element_count.h" }
@@ -2172,7 +2208,6 @@ module std [system] {
     }
     module integer_sequence                { header "__utility/integer_sequence.h" }
     module is_pointer_in_range             { header "__utility/is_pointer_in_range.h" }
-    module is_valid_range                  { header "__utility/is_valid_range.h" }
     module lazy_synth_three_way_comparator { header "__utility/lazy_synth_three_way_comparator.h" }
     module move                            { header "__utility/move.h" }
     module no_destroy                      { header "__utility/no_destroy.h" }
@@ -2364,7 +2399,10 @@ module std [system] {
   module hash_table           { header "__hash_table" }
   module node_handle          { header "__node_handle" }
   module split_buffer         { header "__split_buffer" }
-  module tree                 { header "__tree" }
+  module tree                 {
+    header "__tree"
+    export std.memory.unique_ptr
+  }
   module std_mbstate_t {
     header "__std_mbstate_t.h"
     export *
@@ -2400,6 +2438,7 @@ module std [system] {
 
     header "coroutine"
     export *
+    export std.functional.hash
   }
 } // module std
 
@@ -2412,24 +2451,8 @@ module std_complex_h [system] {
   header "complex.h"
   export *
 }
-module std_ctype_h [system] {
-  header "ctype.h"
-  export *
-}
 module std_errno_h [system] {
   header "errno.h"
-  export *
-}
-module std_fenv_h [system] {
-  header "fenv.h"
-  export *
-}
-module std_float_h [system] {
-  header "float.h"
-  export *
-}
-module std_inttypes_h [system] {
-  header "inttypes.h"
   export *
 }
 module std_math_h [system] {
@@ -2439,10 +2462,6 @@ module std_math_h [system] {
 module std_stdatomic_h [system] {
   header "stdatomic.h"
   export *
-}
-module std_stdbool_h [system] {
-  // <stdbool.h>'s __bool_true_false_are_defined macro requires textual inclusion.
-  textual header "stdbool.h"
 }
 module std_stddef_h [system] {
   // <stddef.h> supports being included multiple times with different pre-defined macros

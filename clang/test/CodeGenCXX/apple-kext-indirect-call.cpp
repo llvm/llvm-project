@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr @_ZTI5TemplIiE, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
+// CHECK: @_ZTV5TemplIiE = internal constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr @_ZTI5TemplIiE, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
 
 struct Base { 
   virtual void abc(void) const; 
@@ -12,7 +12,7 @@ void FUNC(Base* p) {
   p->Base::abc();
 }
 
-// CHECK: getelementptr inbounds (ptr, ptr @_ZTV4Base, i64 2)
+// CHECK: getelementptr inbounds nuw (i8, ptr @_ZTV4Base, i64 16)
 // CHECK-NOT: call void @_ZNK4Base3abcEv
 
 template<class T>
@@ -37,6 +37,6 @@ void f(SubTempl<int>* t) {
   t->Templ::f();
 }
 
-// CHECK: getelementptr inbounds (ptr, ptr @_ZTV5TemplIiE, i64 2)
+// CHECK: getelementptr inbounds nuw (i8, ptr @_ZTV5TemplIiE, i64 16)
 // CHECK: define internal void @_ZN5TemplIiE1fEv(ptr {{[^,]*}} %this)
 // CHECK: define internal void @_ZN5TemplIiE1gEv(ptr {{[^,]*}} %this)

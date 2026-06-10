@@ -38,4 +38,12 @@ program openacc_host_data_validity
   !$acc host_data use_device(aa, bb) if(.true.) if(ifCondition)
   !$acc end host_data
 
+  !ERROR: 'aa' appears in more than one USE_DEVICE clause on the same HOST_DATA directive
+  !$acc host_data use_device(aa) use_device(aa)
+  !$acc end host_data
+
+  !ERROR: 'bb' appears in more than one USE_DEVICE clause on the same HOST_DATA directive
+  !$acc host_data use_device(bb, bb)
+  !$acc end host_data
+
 end program openacc_host_data_validity

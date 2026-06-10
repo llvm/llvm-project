@@ -84,6 +84,7 @@ CHECK-NEXT:          -Wpotentially-evaluated-expression
 CHECK-NEXT:      -Wunused-variable
 CHECK-NEXT:        -Wunused-const-variable
 CHECK-NEXT:      -Wunused-but-set-variable
+CHECK-NEXT:        -Wunused-but-set-global
 CHECK-NEXT:      -Wunused-property-ivar
 CHECK-NEXT:    -Wvolatile-register-var
 CHECK-NEXT:    -Wobjc-missing-super-calls
@@ -109,6 +110,5 @@ CHECK-NEXT:  -Wmisleading-indentation
 CHECK-NEXT:  -Wpacked-non-pod
 CHECK-NEXT:  -Wvla-cxx-extension
 CHECK-NEXT:    -Wvla-extension-static-assert
-CHECK-NEXT:  -Wperf-constraint-implies-noexcept
 
 CHECK-NOT:-W

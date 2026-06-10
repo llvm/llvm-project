@@ -415,6 +415,10 @@ tileConsumerAndFuseProducersUsingSCF(RewriterBase &rewriter,
 /// tiled in a manner that is consistent for all the passed slices. Note that
 /// the method replaces the uses of `candidateSlices` with the tiled and fused
 /// consumer value but does not delete the slice operations.
+/// TODO(MaheshRavishankar): A more natural way of exposing the consumer fusion
+/// is to take the consumer operation, and find the slices to use for fusion
+/// by walking its operands to the `loops` and then into the body to get the
+/// slices used for fusion.
 struct SCFFuseConsumerOfSliceResult {
   // Original untiled consumer operands.
   SmallVector<OpOperand *> origConsumerOperands;
@@ -426,6 +430,14 @@ FailureOr<scf::SCFFuseConsumerOfSliceResult>
 tileAndFuseConsumerOfSlices(RewriterBase &rewriter,
                             ArrayRef<Operation *> candidateSlices,
                             MutableArrayRef<LoopLikeOpInterface> loops);
+
+/// Fuse the `consumer` operation into the loop nest provided by `loops`.
+/// The transformation looks for operands in the `consumer` that are defined
+/// by the outermost loop of the loop nest in `loops`. The nested loop is
+/// expected to have the structure of the loops generated through tiling.
+FailureOr<scf::SCFFuseConsumerOfSliceResult>
+tileAndFuseConsumer(RewriterBase &rewriter, Operation *consumer,
+                    MutableArrayRef<LoopLikeOpInterface> loops);
 
 /// Method to lower an `op` that implements the `TilingInterface` to
 /// loops/scalars.

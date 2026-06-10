@@ -24,6 +24,7 @@ target_link_libraries(CoreTests
   PRIVATE
   LLVMBOLTCore
   LLVMBOLTRewrite
+  LLVMBOLTPasses
   LLVMBOLTProfile
   LLVMBOLTUtils
   )

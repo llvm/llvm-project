@@ -14,7 +14,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H
 
 #include "AMDGPUArgumentUsageInfo.h"
-#include "AMDGPUMachineFunction.h"
+#include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -170,6 +170,7 @@ struct SIArgumentInfo {
   std::optional<SIArgument> DispatchID;
   std::optional<SIArgument> FlatScratchInit;
   std::optional<SIArgument> PrivateSegmentSize;
+  std::optional<SIArgument> FirstKernArgPreloadReg;
 
   std::optional<SIArgument> WorkGroupIDX;
   std::optional<SIArgument> WorkGroupIDY;
@@ -195,6 +196,7 @@ template <> struct MappingTraits<SIArgumentInfo> {
     YamlIO.mapOptional("dispatchID", AI.DispatchID);
     YamlIO.mapOptional("flatScratchInit", AI.FlatScratchInit);
     YamlIO.mapOptional("privateSegmentSize", AI.PrivateSegmentSize);
+    YamlIO.mapOptional("firstKernArgPreloadReg", AI.FirstKernArgPreloadReg);
 
     YamlIO.mapOptional("workGroupIDX", AI.WorkGroupIDX);
     YamlIO.mapOptional("workGroupIDY", AI.WorkGroupIDY);
@@ -265,7 +267,6 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   Align DynLDSAlign;
   bool IsEntryFunction = false;
   bool IsChainFunction = false;
-  bool NoSignedZerosFPMath = false;
   bool MemoryBound = false;
   bool WaveLimiter = false;
   bool HasSpilledSGPRs = false;
@@ -305,6 +306,10 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
+  unsigned NumKernargPreloadSGPRs = 0;
+
+  unsigned MinNumAGPRs = ~0u;
+
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
                         const TargetRegisterInfo &TRI,
@@ -324,7 +329,6 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("dynLDSAlign", MFI.DynLDSAlign, Align());
     YamlIO.mapOptional("isEntryFunction", MFI.IsEntryFunction, false);
     YamlIO.mapOptional("isChainFunction", MFI.IsChainFunction, false);
-    YamlIO.mapOptional("noSignedZerosFPMath", MFI.NoSignedZerosFPMath, false);
     YamlIO.mapOptional("memoryBound", MFI.MemoryBound, false);
     YamlIO.mapOptional("waveLimiter", MFI.WaveLimiter, false);
     YamlIO.mapOptional("hasSpilledSGPRs", MFI.HasSpilledSGPRs, false);
@@ -361,7 +365,9 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
+    YamlIO.mapOptional("numKernargPreloadSGPRs", MFI.NumKernargPreloadSGPRs, 0);
     YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
+    YamlIO.mapOptional("minNumAGPRs", MFI.MinNumAGPRs, ~0u);
   }
 };
 
@@ -408,7 +414,7 @@ struct VGPRBlock2IndexFunctor {
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
-class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
+class SIMachineFunctionInfo final : public AMDGPUMachineFunctionInfo,
                                     private MachineRegisterInfo::Delegate {
   friend class GCNTargetMachine;
 
@@ -752,6 +758,16 @@ public:
                    }) != PrologEpilogSGPRSpills.end();
   }
 
+  // Remove if an entry created for \p Reg.
+  void removePrologEpilogSGPRSpillEntry(Register Reg) {
+    auto I = find_if(PrologEpilogSGPRSpills,
+                     [&Reg](const auto &Spill) { return Spill.first == Reg; });
+    if (I == PrologEpilogSGPRSpills.end())
+      return;
+
+    PrologEpilogSGPRSpills.erase(I);
+  }
+
   const PrologEpilogSGPRSaveRestoreInfo &
   getPrologEpilogSGPRSaveRestoreInfo(Register Reg) const {
     const auto *I = find_if(PrologEpilogSGPRSpills, [&Reg](const auto &Spill) {
@@ -1014,7 +1030,9 @@ public:
   void setNumWaveDispatchVGPRs(unsigned Count) { NumWaveDispatchVGPRs = Count; }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {
-    return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    if (ArgInfo.PrivateSegmentWaveByteOffset)
+      return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
+    return MCRegister();
   }
 
   /// Returns the physical register reserved for use as the resource

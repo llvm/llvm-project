@@ -21,7 +21,6 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
-#include <utility>
 
 using namespace llvm;
 
@@ -80,10 +79,8 @@ class COFFAsmParser : public MCAsmParserExtension {
         ".seh_endproc");
     addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveEndFuncletOrFunc>(
         ".seh_endfunclet");
-    addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveStartChained>(
-        ".seh_startchained");
-    addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveEndChained>(
-        ".seh_endchained");
+    addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveSplitChained>(
+        ".seh_splitchained");
     addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveHandler>(
         ".seh_handler");
     addDirectiveHandler<&COFFAsmParser::parseSEHDirectiveHandlerData>(
@@ -143,8 +140,7 @@ class COFFAsmParser : public MCAsmParserExtension {
   bool parseSEHDirectiveStartProc(StringRef, SMLoc);
   bool parseSEHDirectiveEndProc(StringRef, SMLoc);
   bool parseSEHDirectiveEndFuncletOrFunc(StringRef, SMLoc);
-  bool parseSEHDirectiveStartChained(StringRef, SMLoc);
-  bool parseSEHDirectiveEndChained(StringRef, SMLoc);
+  bool parseSEHDirectiveSplitChained(StringRef, SMLoc);
   bool parseSEHDirectiveHandler(StringRef, SMLoc);
   bool parseSEHDirectiveHandlerData(StringRef, SMLoc);
   bool parseSEHDirectiveAllocStack(StringRef, SMLoc);
@@ -685,15 +681,9 @@ bool COFFAsmParser::parseSEHDirectiveEndFuncletOrFunc(StringRef, SMLoc Loc) {
   return false;
 }
 
-bool COFFAsmParser::parseSEHDirectiveStartChained(StringRef, SMLoc Loc) {
+bool COFFAsmParser::parseSEHDirectiveSplitChained(StringRef, SMLoc Loc) {
   Lex();
-  getStreamer().emitWinCFIStartChained(Loc);
-  return false;
-}
-
-bool COFFAsmParser::parseSEHDirectiveEndChained(StringRef, SMLoc Loc) {
-  Lex();
-  getStreamer().emitWinCFIEndChained(Loc);
+  getStreamer().emitWinCFISplitChained(Loc);
   return false;
 }
 
@@ -797,10 +787,4 @@ bool COFFAsmParser::parseAtUnwindOrAtExcept(bool &unwind, bool &except) {
   return false;
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createCOFFAsmParser() {
-  return new COFFAsmParser;
-}
-
-} // end namespace llvm
+MCAsmParserExtension *llvm::createCOFFAsmParser() { return new COFFAsmParser; }

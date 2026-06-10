@@ -95,6 +95,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -773,10 +774,31 @@ AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
 
 /// Matches an entity that has been implicitly added by the compiler (e.g.
 /// implicit default/copy constructors).
+///
+/// For example, given:
+/// \code
+///   int i, j;
+///   auto l = [&, j]() { return i; };
+/// \endcode
+/// lambdaCapture(isImplicit())
+///   matches the capture of i but not of j.
+/// Given:
+/// \code
+///   struct Outer {
+///     struct Inner {} inner;
+///   } outer = {};
+/// \endcode
+/// initListExpr(isImplicit())
+///   matches the implicitly added Inner initializer inside InitListExpr node
+///   for the explicit initializer of Outer.
 AST_POLYMORPHIC_MATCHER(isImplicit,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr,
-                                                        LambdaCapture)) {
-  return Node.isImplicit();
+                                                        LambdaCapture,
+                                                        InitListExpr)) {
+  if constexpr (std::is_same_v<NodeType, InitListExpr>)
+    return !Node.isExplicit();
+  else
+    return Node.isImplicit();
 }
 
 /// Matches templateSpecializationTypes, class template specializations,
@@ -5731,6 +5753,11 @@ AST_MATCHER_P(IfStmt, hasElse, internal::Matcher<Stmt>, InnerMatcher) {
   return (Else != nullptr && InnerMatcher.matches(*Else, Finder, Builder));
 }
 
+/// Matches a declaration if it declares the same entity as the node.
+AST_MATCHER_P(Decl, declaresSameEntityAsNode, const Decl *, Other) {
+  return clang::declaresSameEntity(&Node, Other);
+}
+
 /// Matches if a node equals a previously bound node.
 ///
 /// Matches a node if it equals the node previously bound to \p ID.
@@ -7003,6 +7030,32 @@ AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
   return ReferentMatcher.matches(Node.getPointeeLoc(), Finder, Builder);
 }
 
+/// Matches `ArrayTypeLoc`s.
+///
+/// Given
+/// \code
+///   int a[] = {1, 2};
+///   int b[3];
+///   void f() { int c[a[0]]; }
+/// \endcode
+/// arrayTypeLoc()
+///   matches "int a[]", "int b[3]" and "int c[a[0]]".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc>
+    arrayTypeLoc;
+
+/// Matches `FunctionTypeLoc`s.
+///
+/// Given
+/// \code
+///   void f(int);
+///   using g = double (char, float);
+///   char (*fn_ptr)();
+/// \endcode
+/// functionTypeLoc()
+///   matches "void (int)", "double (char, float)", and "char ()".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, FunctionTypeLoc>
+    functionTypeLoc;
+
 /// Matches template specialization `TypeLoc`s.
 ///
 /// Given
@@ -7017,9 +7070,9 @@ extern const internal::VariadicDynCastAllOfMatcher<
     templateSpecializationTypeLoc;
 
 /// Matches template specialization `TypeLoc`s, class template specializations,
-/// variable template specializations, and function template specializations
-/// that have at least one `TemplateArgumentLoc` matching the given
-/// `InnerMatcher`.
+/// variable template specializations, unresolved overloads, and function
+/// template specializations that have at least one `TemplateArgumentLoc`
+/// matching the given `InnerMatcher`.
 ///
 /// Given
 /// \code
@@ -7033,7 +7086,8 @@ AST_POLYMORPHIC_MATCHER_P(
     hasAnyTemplateArgumentLoc,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     VarTemplateSpecializationDecl, FunctionDecl,
-                                    DeclRefExpr, TemplateSpecializationTypeLoc),
+                                    DeclRefExpr, TemplateSpecializationTypeLoc,
+                                    OverloadExpr),
     internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
   auto Args = internal::getTemplateArgsWritten(Node);
   return matchesFirstInRange(InnerMatcher, Args.begin(), Args.end(), Finder,
@@ -7042,8 +7096,9 @@ AST_POLYMORPHIC_MATCHER_P(
 }
 
 /// Matches template specialization `TypeLoc`s, class template specializations,
-/// variable template specializations, and function template specializations
-/// where the n'th `TemplateArgumentLoc` matches the given `InnerMatcher`.
+/// variable template specializations, unresolved overloads, and function
+/// template specializations where the n'th `TemplateArgumentLoc` matches the
+/// given `InnerMatcher`.
 ///
 /// Given
 /// \code
@@ -7058,11 +7113,35 @@ AST_POLYMORPHIC_MATCHER_P2(
     hasTemplateArgumentLoc,
     AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
                                     VarTemplateSpecializationDecl, FunctionDecl,
-                                    DeclRefExpr, TemplateSpecializationTypeLoc),
+                                    DeclRefExpr, TemplateSpecializationTypeLoc,
+                                    OverloadExpr),
     unsigned, Index, internal::Matcher<TemplateArgumentLoc>, InnerMatcher) {
   auto Args = internal::getTemplateArgsWritten(Node);
   return Index < Args.size() &&
          InnerMatcher.matches(Args[Index], Finder, Builder);
+}
+
+/// Matches template specialization `TypeLoc`s, class template specializations,
+/// variable template specializations, unresolved overloads, and function
+/// template specializations that have exactly `MatchCount` number of
+/// `TemplateArgumentLoc`s.
+///
+/// Given
+/// \code
+///   template<typename T> class A {};
+///   A<int> a;
+/// \endcode
+/// varDecl(hasTypeLoc(templateSpecializationTypeLoc(templateArgumentLocCountIs(1))))
+///   matches `A<int> a`.
+AST_POLYMORPHIC_MATCHER_P(
+    templateArgumentLocCountIs,
+    AST_POLYMORPHIC_SUPPORTED_TYPES(ClassTemplateSpecializationDecl,
+                                    VarTemplateSpecializationDecl, FunctionDecl,
+                                    DeclRefExpr, TemplateSpecializationTypeLoc,
+                                    OverloadExpr),
+    unsigned, MatchCount) {
+  unsigned Count = internal::getNumTemplateArgsWritten(Node);
+  return Count == MatchCount;
 }
 
 /// Matches type \c bool.
@@ -8740,6 +8819,41 @@ AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
                                     Builder) != Clauses.end();
 }
 
+/// Matches any ``#pragma omp target update`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+///   #pragma omp target update to(b)
+/// \endcode
+///
+/// ``ompTargetUpdateDirective()`` matches both ``omp target update from(a)``
+/// and ``omp target update to(b)``.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   OMPTargetUpdateDirective>
+    ompTargetUpdateDirective;
+
+/// Matches any ``#pragma omp split`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp split counts(2, omp_fill)
+///   for (int i = 0; i < n; ++i) {}
+/// \endcode
+///
+/// ``ompSplitDirective()`` matches the split directive.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, OMPSplitDirective>
+    ompSplitDirective;
+
+/// Matches OpenMP ``counts`` clause used by ``#pragma omp split``.
+///
+/// Given ``#pragma omp split counts(1, 2, omp_fill)``, ``ompCountsClause()``
+/// matches the ``counts`` clause node.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPCountsClause>
+    ompCountsClause;
+
 /// Matches OpenMP ``default`` clause.
 ///
 /// Given
@@ -8852,6 +8966,30 @@ AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
       Node.getDirectiveKind(), CKind,
       Finder->getASTContext().getLangOpts().OpenMP);
 }
+
+/// Matches OpenMP ``from`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+/// \endcode
+///
+/// ``ompFromClause()`` matches ``from(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
+    ompFromClause;
+
+/// Matches OpenMP ``to`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update to(a)
+/// \endcode
+///
+/// ``ompToClause()`` matches ``to(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPToClause>
+    ompToClause;
 
 //----------------------------------------------------------------------------//
 // End OpenMP handling.

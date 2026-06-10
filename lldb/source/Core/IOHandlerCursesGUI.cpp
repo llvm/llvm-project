@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/IOHandlerCursesGUI.h"
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Host/Config.h"
 
 #if LLDB_ENABLE_CURSES
@@ -2952,7 +2953,10 @@ public:
   // Get the basename of the target's main executable if available, empty string
   // otherwise.
   std::string GetDefaultProcessName() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
     if (target == nullptr)
       return "";
 
@@ -2960,7 +2964,7 @@ public:
     if (!module_sp->IsExecutable())
       return "";
 
-    return module_sp->GetFileSpec().GetFilename().AsCString();
+    return module_sp->GetFileSpec().GetFilename().GetString();
   }
 
   bool StopRunningProcess() {
@@ -2987,7 +2991,10 @@ public:
   }
 
   Target *GetTarget() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
 
     if (target != nullptr)
       return target;
@@ -3345,7 +3352,10 @@ public:
   // Methods for setting the default value of the fields.
 
   void SetArgumentsFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3355,7 +3365,10 @@ public:
   }
 
   void SetTargetEnvironmentFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3364,7 +3377,10 @@ public:
   }
 
   void SetInheritedEnvironmentFieldDefaultValue() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return;
 
@@ -3375,7 +3391,10 @@ public:
   }
 
   std::string GetDefaultWorkingDirectory() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return "";
 
@@ -3384,7 +3403,10 @@ public:
   }
 
   bool GetDefaultDisableASLR() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return false;
 
@@ -3392,7 +3414,10 @@ public:
   }
 
   bool GetDefaultDisableStandardIO() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return true;
 
@@ -3400,7 +3425,10 @@ public:
   }
 
   bool GetDefaultDetachOnError() {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (target == nullptr)
       return true;
 
@@ -3411,7 +3439,10 @@ public:
   // ProcessLaunchInfo.
 
   void GetExecutableSettings(ProcessLaunchInfo &launch_info) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     ModuleSP executable_module = target->GetExecutableModule();
     llvm::StringRef target_settings_argv0 = target->GetArg0();
 
@@ -3427,7 +3458,10 @@ public:
   }
 
   void GetArguments(ProcessLaunchInfo &launch_info) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     Args arguments = m_arguments_field->GetArguments();
     launch_info.GetArguments().AppendArguments(arguments);
   }
@@ -3478,7 +3512,10 @@ public:
     if (!m_arch_field->IsSpecified())
       return;
 
-    TargetSP target_sp = m_debugger.GetSelectedTarget();
+    TargetSP target_sp = m_debugger
+                             .GetSelectedExecutionContext(
+                                 /*adopt_dummy_target=*/false)
+                             .GetTargetSP();
     PlatformSP platform_sp =
         target_sp ? target_sp->GetPlatform() : PlatformSP();
     launch_info.GetArchitecture() = Platform::GetAugmentedArchSpec(
@@ -3519,7 +3556,11 @@ public:
   }
 
   void GetInheritTCC(ProcessLaunchInfo &launch_info) {
-    if (m_debugger.GetSelectedTarget()->GetInheritTCC())
+    if (Target *target = m_debugger
+                             .GetSelectedExecutionContext(
+                                 /*adopt_dummy_target=*/false)
+                             .GetTargetPtr();
+        target && target->GetInheritTCC())
       launch_info.GetFlags().Set(eLaunchFlagInheritTCCFromParent);
   }
 
@@ -3566,7 +3607,10 @@ public:
   }
 
   Target *GetTarget() {
-    Target *target = m_debugger.GetSelectedTarget().get();
+    Target *target = m_debugger
+                         .GetSelectedExecutionContext(
+                             /*adopt_dummy_target=*/false)
+                         .GetTargetPtr();
 
     if (target == nullptr) {
       SetError("No target exists!");
@@ -5061,8 +5105,8 @@ public:
         const SymbolContext &sc =
             frame_sp->GetSymbolContext(eSymbolContextEverything);
         ExecutionContext exe_ctx(frame_sp);
-        if (FormatEntity::Format(m_format, strm, &sc, &exe_ctx, nullptr,
-                                 nullptr, false, false)) {
+        if (FormatEntity::Formatter(&sc, &exe_ctx, nullptr, false, false)
+                .Format(m_format, strm)) {
           int right_pad = 1;
           window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
         }
@@ -5119,8 +5163,8 @@ public:
     if (thread_sp) {
       StreamString strm;
       ExecutionContext exe_ctx(thread_sp);
-      if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
-                               nullptr, false, false)) {
+      if (FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+              .Format(m_format, strm)) {
         int right_pad = 1;
         window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
@@ -5218,8 +5262,8 @@ public:
     if (process_sp && process_sp->IsAlive()) {
       StreamString strm;
       ExecutionContext exe_ctx(process_sp);
-      if (FormatEntity::Format(m_format, strm, nullptr, &exe_ctx, nullptr,
-                               nullptr, false, false)) {
+      if (FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+              .Format(m_format, strm)) {
         int right_pad = 1;
         window.PutCStringTruncated(right_pad, strm.GetString().str().c_str());
       }
@@ -5396,7 +5440,8 @@ public:
       Address resolved_address;
       resolved_address.SetLoadAddress(breakpoint_site->GetLoadAddress(),
                                       &breakpoint_location->GetTarget());
-      Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
+      const Symbol *resolved_symbol =
+          resolved_address.CalculateSymbolContextSymbol();
       if (resolved_symbol) {
         StreamString indirect_target_stream;
         indirect_target_stream.PutCString("indirect target = ");
@@ -5453,7 +5498,10 @@ public:
   ~BreakpointTreeDelegate() override = default;
 
   BreakpointSP GetBreakpoint(const TreeItem &item) {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     BreakpointList &breakpoints = target->GetBreakpointList(false);
     return breakpoints.GetBreakpointAtIndex(item.GetIdentifier());
   }
@@ -5498,7 +5546,10 @@ public:
   ~BreakpointsTreeDelegate() override = default;
 
   bool TreeDelegateShouldDraw() override {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
     if (!target)
       return false;
 
@@ -5510,7 +5561,10 @@ public:
   }
 
   void TreeDelegateGenerateChildren(TreeItem &item) override {
-    TargetSP target = m_debugger.GetSelectedTarget();
+    TargetSP target = m_debugger
+                          .GetSelectedExecutionContext(
+                              /*adopt_dummy_target=*/false)
+                          .GetTargetSP();
 
     BreakpointList &breakpoints = target->GetBreakpointList(false);
     std::unique_lock<std::recursive_mutex> lock;
@@ -5932,7 +5986,9 @@ public:
       if (m_frame_block != frame_block) {
         m_frame_block = frame_block;
 
-        VariableList *locals = frame->GetVariableList(true, nullptr);
+        VariableList *locals = frame->GetVariableList(
+            /*get_file_globals=*/true, /*include_synthetic_vars=*/true,
+            nullptr);
         if (locals) {
           const DynamicValueType use_dynamic = eDynamicDontRunTarget;
           for (const VariableSP &local_sp : *locals) {
@@ -6750,8 +6806,9 @@ public:
 
       if (StateIsStoppedState(state, true)) {
         StreamString strm;
-        if (thread && FormatEntity::Format(m_format, strm, nullptr, &exe_ctx,
-                                           nullptr, nullptr, false, false)) {
+        if (thread &&
+            FormatEntity::Formatter(nullptr, &exe_ctx, nullptr, false, false)
+                .Format(m_format, strm)) {
           window.MoveCursor(40, 0);
           window.PutCStringTruncated(1, strm.GetString().str().c_str());
         }

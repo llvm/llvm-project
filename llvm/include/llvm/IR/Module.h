@@ -225,6 +225,8 @@ public:
     for (auto &F : *this) {
       F.convertToNewDbgValues();
     }
+
+    removeDebugIntrinsicDeclarations();
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
@@ -710,6 +712,17 @@ public:
     return make_range(begin(), end());
   }
 
+  /// Get an iterator range over all function definitions (excluding
+  /// declarations).
+  auto getFunctionDefs() {
+    return make_filter_range(functions(),
+                             [](Function &F) { return !F.isDeclaration(); });
+  }
+  auto getFunctionDefs() const {
+    return make_filter_range(
+        functions(), [](const Function &F) { return !F.isDeclaration(); });
+  }
+
 /// @}
 /// @name Alias Iteration
 /// @{
@@ -996,6 +1009,14 @@ public:
   int getStackProtectorGuardOffset() const;
   void setStackProtectorGuardOffset(int Offset);
 
+  /// Get/set the width in memory of the stack protector guard value.
+  std::optional<unsigned> getStackProtectorGuardValueWidth() const;
+  void setStackProtectorGuardValueWidth(unsigned Width);
+
+  // Get/set flag indicating whether to emit a __stack_protector_loc section.
+  bool hasStackProtectorGuardRecord() const;
+  void setStackProtectorGuardRecord(bool Flag);
+
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);
@@ -1045,6 +1066,9 @@ public:
   /// Get how unwind v2 (epilog) information should be generated for x64
   /// Windows.
   WinX64EHUnwindV2Mode getWinX64EHUnwindV2Mode() const;
+
+  /// Gets the Control Flow Guard mode.
+  ControlFlowGuardMode getControlFlowGuardMode() const;
 };
 
 /// Given "llvm.used" or "llvm.compiler.used" as a global name, collect the

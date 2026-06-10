@@ -14,6 +14,13 @@ func.func @function_returning_function() {
 
 // -----
 
+func.func @function_taking_opaque_struct() {
+  // expected-error @+1 {{invalid function argument type}}
+  "some.op"() : () -> !llvm.func<void(struct<"foo", opaque>)>
+}
+
+// -----
+
 func.func @function_taking_function() {
   // expected-error @+1 {{invalid function argument type}}
   "some.op"() : () -> !llvm.func<void (func<void ()>)>
@@ -92,6 +99,13 @@ func.func @unexpected_type() {
 func.func @unexpected_type() {
   // expected-error @+1 {{unknown LLVM type}}
   "some.op"() : () -> !llvm.ifoo
+}
+
+// -----
+
+func.func @invalid_di_derived_type_extra_data() {
+  // expected-error @+1 {{extraData must be a DINodeAttr or an IntegerAttr}}
+  "some.op"() {attr = #llvm.di_derived_type<tag = DW_TAG_member, sizeInBits = 64, extraData = "not debug info">} : () -> ()
 }
 
 // -----

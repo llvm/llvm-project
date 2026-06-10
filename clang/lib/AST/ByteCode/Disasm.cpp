@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Boolean.h"
+#include "Char.h"
 #include "Context.h"
 #include "EvaluationResult.h"
 #include "FixedPoint.h"
 #include "Floating.h"
 #include "Function.h"
-#include "FunctionPointer.h"
 #include "Integral.h"
 #include "IntegralAP.h"
 #include "InterpFrame.h"
@@ -28,6 +28,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -138,12 +139,26 @@ static size_t getNumDisplayWidth(size_t N) {
   return L;
 }
 
-LLVM_DUMP_METHOD void Function::dump() const { dump(llvm::errs()); }
+LLVM_DUMP_METHOD void Function::dump(CodePtr PC) const {
+  dump(llvm::errs(), PC);
+}
 
-LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
+LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
+                                     CodePtr OpPC) const {
+  if (OpPC) {
+    assert(OpPC >= getCodeBegin());
+    assert(OpPC <= getCodeEnd());
+  }
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_GREEN, true});
-    OS << getName() << " " << (const void *)this << "\n";
+    if (const FunctionDecl *FD = getDecl()) {
+      FD->getNameForDiagnostic(
+          OS, P.getContext().getASTContext().getPrintingPolicy(),
+          /*Qualified=*/true);
+    } else {
+      OS << getName();
+    }
+    OS << " " << (const void *)this << "\n";
   }
   OS << "frame size: " << getFrameSize() << "\n";
   OS << "arg size:   " << getArgSize() << "\n";
@@ -154,6 +169,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
     size_t Addr;
     std::string Op;
     bool IsJump;
+    bool CurrentOp = false;
     llvm::SmallVector<std::string> Args;
   };
 
@@ -171,6 +187,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
     auto Op = PC.read<Opcode>();
     Text.Addr = Addr;
     Text.IsJump = isJumpOpcode(Op);
+    Text.CurrentOp = (PC == OpPC);
     switch (Op) {
 #define GET_DISASM
 #include "Opcodes.inc"
@@ -198,9 +215,15 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
   Text.reserve(Code.size());
   size_t LongestLine = 0;
   // Print code to a string, one at a time.
-  for (auto C : Code) {
+  for (const auto &C : Code) {
     std::string Line;
     llvm::raw_string_ostream LS(Line);
+    if (OpPC) {
+      if (C.CurrentOp)
+        LS << " * ";
+      else
+        LS << "   ";
+    }
     LS << C.Addr;
     LS.indent(LongestAddr - getNumDisplayWidth(C.Addr) + 4);
     LS << C.Op;
@@ -299,6 +322,20 @@ static const char *primTypeToString(PrimType T) {
   llvm_unreachable("Unhandled PrimType");
 }
 
+static std::string formatBytes(size_t B) {
+  std::string Result;
+  llvm::raw_string_ostream SS(Result);
+
+  if (B < (1u << 10u))
+    SS << B << " B";
+  else if (B < (1u << 20u))
+    SS << llvm::formatv("{0:F2}", B / 1024.) << " KB";
+  else
+    SS << llvm::formatv("{0:F2}", B / 1024. / 1024.) << " MB";
+
+  return Result;
+}
+
 LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_RED, true});
@@ -307,8 +344,25 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
 
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::WHITE, true});
-    OS << "Total memory : " << Allocator.getTotalMemory() << " bytes\n";
-    OS << "Global Variables: " << Globals.size() << "\n";
+    size_t Bytes = 0;
+    Bytes += Allocator.getTotalMemory();
+    // All the maps.
+    Bytes += GlobalIndices.getMemorySize();
+    Bytes += Records.getMemorySize();
+    Bytes += DummyVariables.getMemorySize();
+
+    // All Records.
+    for (const Record *R : Records.values()) {
+      Bytes += sizeof(Record) + R->BaseMap.getMemorySize() +
+               R->VirtualBaseMap.getMemorySize();
+      Bytes += R->Fields.capacity_in_bytes() + R->Bases.capacity_in_bytes() +
+               R->VirtualBases.capacity_in_bytes();
+    }
+
+    // Globals are allocated via the allocator, so already counted.
+
+    OS << "Total memory : " << formatBytes(Bytes) << '\n';
+    OS << "Global Variables: " << Globals.size() << '\n';
   }
   unsigned GI = 0;
   for (const Global *G : Globals) {
@@ -394,13 +448,14 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   // Print a few interesting bits about the descriptor.
   if (isPrimitiveArray())
-    OS << " primitive-array";
+    OS << " primitive-array " << getNumElems() << ' '
+       << primTypeToString(getPrimType());
   else if (isCompositeArray())
-    OS << " composite-array";
+    OS << " composite-array " << getNumElems();
   else if (isUnion())
-    OS << " union";
+    OS << " union(" << ElemRecord->getName() << ")";
   else if (isRecord())
-    OS << " record";
+    OS << " record(" << ElemRecord->getName() << ")";
   else if (isPrimitive())
     OS << " primitive " << primTypeToString(getPrimType());
 
@@ -504,8 +559,14 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
     OS << " (" << F->getName() << ")";
   }
   OS << "\n";
-  OS.indent(Spaces) << "This: " << getThis() << "\n";
-  OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  if (hasThisPointer())
+    OS.indent(Spaces) << "This: " << getThis() << "\n";
+  else
+    OS.indent(Spaces) << "This: -\n";
+  if (Func && Func->hasRVO())
+    OS.indent(Spaces) << "RVO: " << getRVOPtr() << "\n";
+  else
+    OS.indent(Spaces) << "RVO: -\n";
   OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";

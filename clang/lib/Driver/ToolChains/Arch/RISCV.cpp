@@ -8,9 +8,10 @@
 
 #include "RISCV.h"
 #include "../Clang.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
@@ -130,17 +131,10 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 #undef RESERVE_REG
 
   // -mrelax is default, unless -mno-relax is specified.
-  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true)) {
+  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax, true))
     Features.push_back("+relax");
-    // -gsplit-dwarf -mrelax requires DW_AT_high_pc/DW_AT_ranges/... indexing
-    // into .debug_addr, which is currently not implemented.
-    Arg *A;
-    if (getDebugFissionKind(D, Args, A) != DwarfFissionKind::None)
-      D.Diag(clang::diag::err_drv_riscv_unsupported_with_linker_relaxation)
-          << A->getAsString(Args);
-  } else {
+  else
     Features.push_back("-relax");
-  }
 
   // If -mstrict-align, -mno-strict-align, -mscalar-strict-align, or
   // -mno-scalar-strict-align is passed, use it. Otherwise, the
@@ -174,6 +168,35 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     }
   } else if (CPUFastVectorUnaligned || Triple.isAndroid()) {
     Features.push_back("+unaligned-vector-mem");
+  }
+
+  if (Triple.isRISCV32()) {
+    // Handle `-mzilsd-word-align` and `-mzilsd-strict-align` on rv32. These
+    // interact with the scalar alignment options - if unaligned scalar memory
+    // is allowed then that takes precedence over this option, as zilsd accesses
+    // can be 1-byte aligned in this case. Otherwise, the option
+    // `-mzilsd-word-align` option allows zilsd accesses to be 4-byte aligned
+    // rather than the usual 8-byte aligned (`-mzilsd-strict-align`).
+    if (const Arg *A = Args.getLastArg(
+            options::OPT_mstrict_align, options::OPT_mscalar_strict_align,
+            options::OPT_mzilsd_word_align, options::OPT_mno_strict_align,
+            options::OPT_mno_scalar_strict_align,
+            options::OPT_mzilsd_strict_align)) {
+      if (A->getOption().matches(options::OPT_mno_strict_align) ||
+          A->getOption().matches(options::OPT_mno_scalar_strict_align) ||
+          A->getOption().matches(options::OPT_mzilsd_word_align)) {
+        Features.push_back("+zilsd-word-align");
+      } else {
+        Features.push_back("-zilsd-word-align");
+      }
+    }
+  } else {
+    // Zilsd is not available on RV64, so report an error for these options.
+    if (const Arg *A = Args.getLastArg(options::OPT_mzilsd_word_align,
+                                       options::OPT_mzilsd_strict_align)) {
+      D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Triple.getTriple();
+    }
   }
 
   // Now add any that the user explicitly requested on the command line,

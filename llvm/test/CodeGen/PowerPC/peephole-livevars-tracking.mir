@@ -1,0 +1,83 @@
+# RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux  \
+# RUN:   -run-pass=ppc-mi-peepholes %s -o - | FileCheck %s
+
+# Test that peephole optimizations correctly update LiveVariables tracking.
+# XXPERMDI splat optimization skipped when splat register has multiple uses.
+# ISEL to COPY conversion tracks removed operand registers to prevent
+# LiveVariables corruption.
+
+---
+name: test_xxpermdi_splat_multiple_uses
+alignment: 16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vrrc }
+  - { id: 28, class: vrrc }
+  - { id: 31, class: f8rc }
+  - { id: 34, class: vrrc }
+  - { id: 35, class: vrrc }
+body: |
+  bb.0:
+    liveins: $f1
+
+    %28:vrrc = XXLXORz
+    %31:f8rc = COPY $f1
+    %0:vrrc = XXPERMDIs %31, 0
+    %34:vrrc = XXPERMDI %28, %0, 3
+    %35:vrrc = XXPERMDI %0, %0, 3
+
+    ; CHECK-LABEL: name: test_xxpermdi_splat_multiple_uses
+    ; CHECK: %1:vrrc = XXLXORz
+    ; CHECK-NEXT: %2:f8rc = COPY killed $f1
+    ; CHECK-NEXT: %0:vrrc = XXPERMDIs killed %2, 0
+    ; CHECK-NEXT: %3:vrrc = XXPERMDI killed %1, %0, 3
+    ; CHECK-NEXT: %4:vrrc = XXPERMDI killed %0, %0, 3
+...
+---
+name: test_swap_isel_livevars
+alignment: 16
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 16, alignment: 16 }
+registers:
+  - { id: 2, class: vrrc }
+  - { id: 3, class: gprc_and_gprc_nor0 }
+  - { id: 4, class: gprc }
+  - { id: 7, class: gprc }
+  - { id: 8, class: gprc }
+  - { id: 21, class: vsrc }
+  - { id: 22, class: g8rc_and_g8rc_nox0 }
+  - { id: 25, class: vsrc }
+  - { id: 26, class: vsrc }
+  - { id: 29, class: crrc }
+  - { id: 31, class: vsrc }
+body: |
+  bb.0:
+    %7:gprc = LI 0
+    %8:gprc = LI 1
+    %21:vsrc = XXLXORz
+    %22:g8rc_and_g8rc_nox0 = ADDI8 %stack.0, 0
+    %29:crrc = CMPLWI %7, 0
+
+    STXVD2X %21, $zero8, %22 :: (store (s128) into %stack.0)
+    %25:vsrc = LXVD2X $zero8, %22 :: (load (s128) from %stack.0)
+    %26:vsrc = XXPERMDI %25, %25, 2
+    %2:vrrc = COPY %26
+    %31:vsrc = XXPERMDI %2, %2, 2
+    %3:gprc_and_gprc_nor0 = LI 0
+    %4:gprc = ISEL %3, %8, %29.sub_eq
+
+    ; CHECK-LABEL: name: test_swap_isel_livevars
+    ; CHECK: %3:gprc = LI 0
+    ; CHECK-NEXT: %4:gprc = LI 1
+    ; CHECK-NEXT: %5:vsrc = XXLXORz
+    ; CHECK-NEXT: %6:g8rc_and_g8rc_nox0 = ADDI8 %stack.0, 0
+    ; CHECK-NEXT: %9:crrc = CMPLWI killed %3, 0
+    ; CHECK-NEXT: STXVD2X killed %5, $zero8, %6
+    ; CHECK-NEXT: %7:vsrc = LXVD2X $zero8, killed %6
+    ; CHECK-NEXT: %8:vsrc = XXPERMDI %7, %7, 2
+    ; CHECK-NEXT: %0:vrrc = COPY killed %8
+    ; CHECK-NEXT: %10:vsrc = COPY killed %7
+    ; CHECK-NEXT: %1:gprc_and_gprc_nor0 = LI 0
+    ; CHECK-NEXT: %2:gprc = COPY killed %1
+...

@@ -22,11 +22,14 @@
 #include "Generators.h"
 #include "Representation.h"
 #include "support/Utils.h"
-#include "clang/ASTMatchers/ASTMatchersInternal.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Tooling/AllTUsExecution.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -41,9 +44,9 @@
 #include <mutex>
 #include <string>
 
-using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
+using clang::doc::OutputFormatTy;
 
 static llvm::cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static llvm::cl::OptionCategory ClangDocCategory("clang-doc options");
@@ -110,7 +113,9 @@ Turn on time profiler. Generates clang-doc-tracing.json)"),
                                       llvm::cl::init(false),
                                       llvm::cl::cat(ClangDocCategory));
 
-enum OutputFormatTy { md, yaml, html, mustache, json };
+static llvm::cl::opt<bool>
+    Pretty("pretty-json", llvm::cl::desc("Serialize JSON with whitespace."),
+           llvm::cl::cat(ClangDocCategory));
 
 static llvm::cl::opt<OutputFormatTy> FormatEnum(
     "format", llvm::cl::desc("Format for outputted docs."),
@@ -120,15 +125,15 @@ static llvm::cl::opt<OutputFormatTy> FormatEnum(
                                 "Documentation in MD format."),
                      clEnumValN(OutputFormatTy::html, "html",
                                 "Documentation in HTML format."),
-                     clEnumValN(OutputFormatTy::mustache, "mustache",
-                                "Documentation in mustache HTML format"),
                      clEnumValN(OutputFormatTy::json, "json",
-                                "Documentation in JSON format")),
+                                "Documentation in JSON format"),
+                     clEnumValN(OutputFormatTy::md_mustache, "md_mustache",
+                                "Documentation in MD format.")),
     llvm::cl::init(OutputFormatTy::yaml), llvm::cl::cat(ClangDocCategory));
 
 static llvm::ExitOnError ExitOnErr;
 
-static std::string getFormatString() {
+static llvm::StringRef getFormatString() {
   switch (FormatEnum) {
   case OutputFormatTy::yaml:
     return "yaml";
@@ -136,10 +141,10 @@ static std::string getFormatString() {
     return "md";
   case OutputFormatTy::html:
     return "html";
-  case OutputFormatTy::mustache:
-    return "mustache";
   case OutputFormatTy::json:
     return "json";
+  case OutputFormatTy::md_mustache:
+    return "md_mustache";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }
@@ -153,6 +158,7 @@ static std::string getExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
+// TODO: Rename this, since it only gets custom CSS/JS
 static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
@@ -173,58 +179,17 @@ static llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   return llvm::Error::success();
 }
 
-static llvm::Error getDefaultAssetFiles(const char *Argv0,
-                                        clang::doc::ClangDocContext &CDCtx) {
-  void *MainAddr = (void *)(intptr_t)getExecutablePath;
-  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
-  llvm::SmallString<128> NativeClangDocPath;
-  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
-
-  llvm::SmallString<128> AssetsPath;
-  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
-  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
-  llvm::SmallString<128> DefaultStylesheet =
-      appendPathNative(AssetsPath, "clang-doc-default-stylesheet.css");
-  llvm::SmallString<128> IndexJS = appendPathNative(AssetsPath, "index.js");
-
-  if (!llvm::sys::fs::is_regular_file(IndexJS))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "default index.js file missing at " +
-                                       IndexJS + "\n");
-
-  if (!llvm::sys::fs::is_regular_file(DefaultStylesheet))
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "default clang-doc-default-stylesheet.css file missing at " +
-            DefaultStylesheet + "\n");
-
-  CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                               std::string(DefaultStylesheet));
-  CDCtx.JsScripts.emplace_back(IndexJS.str());
-
-  return llvm::Error::success();
-}
-
-static llvm::Error getHtmlAssetFiles(const char *Argv0,
-                                     clang::doc::ClangDocContext &CDCtx) {
-  if (!UserAssetPath.empty() &&
-      !llvm::sys::fs::is_directory(std::string(UserAssetPath)))
-    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
-                 << " falling back to default\n";
-  if (llvm::sys::fs::is_directory(std::string(UserAssetPath)))
-    return getAssetFiles(CDCtx);
-  return getDefaultAssetFiles(Argv0, CDCtx);
-}
-
-static llvm::Error getMustacheHtmlFiles(const char *Argv0,
-                                        clang::doc::ClangDocContext &CDCtx) {
+static llvm::Error getHtmlFiles(const char *Argv0,
+                                clang::doc::ClangDocContext &CDCtx) {
   bool IsDir = llvm::sys::fs::is_directory(UserAssetPath);
   if (!UserAssetPath.empty() && !IsDir)
     llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
                  << " falling back to default\n";
   if (IsDir) {
-    getMustacheHtmlFiles(UserAssetPath, CDCtx);
-    return llvm::Error::success();
+    if (FormatEnum == OutputFormatTy::html) {
+      if (auto Err = getAssetFiles(CDCtx))
+        return Err;
+    }
   }
   void *MainAddr = (void *)(intptr_t)getExecutablePath;
   std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
@@ -235,35 +200,54 @@ static llvm::Error getMustacheHtmlFiles(const char *Argv0,
   AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
   llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc");
 
-  getMustacheHtmlFiles(AssetsPath, CDCtx);
+  getHtmlFiles(AssetsPath, CDCtx);
+
+  return llvm::Error::success();
+}
+
+static llvm::Error getMdFiles(const char *Argv0,
+                              clang::doc::ClangDocContext &CDCtx) {
+  bool IsDir = llvm::sys::fs::is_directory(UserAssetPath);
+  if (!UserAssetPath.empty() && !IsDir)
+    llvm::outs() << "Asset path supply is not a directory: " << UserAssetPath
+                 << " falling back to default\n";
+
+  void *MainAddr = (void *)(intptr_t)getExecutablePath;
+  std::string ClangDocPath = getExecutablePath(Argv0, MainAddr);
+  llvm::SmallString<128> NativeClangDocPath;
+  llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
+
+  llvm::SmallString<128> AssetsPath;
+  AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
+  llvm::sys::path::append(AssetsPath, "..", "share", "clang-doc", "md");
+
+  getMdFiles(AssetsPath, CDCtx);
 
   return llvm::Error::success();
 }
 
 /// Make the output of clang-doc deterministic by sorting the children of
 /// namespaces and records.
-static void
-sortUsrToInfo(llvm::StringMap<std::unique_ptr<doc::Info>> &USRToInfo) {
+static void sortUsrToInfo(llvm::StringMap<doc::Info *> &USRToInfo) {
   for (auto &I : USRToInfo) {
     auto &Info = I.second;
-    if (Info->IT == doc::InfoType::IT_namespace) {
-      auto *Namespace = static_cast<clang::doc::NamespaceInfo *>(Info.get());
+    if (auto *Namespace = dyn_cast<doc::NamespaceInfo>(Info))
       Namespace->Children.sort();
-    }
-    if (Info->IT == doc::InfoType::IT_record) {
-      auto *Record = static_cast<clang::doc::RecordInfo *>(Info.get());
+    else if (auto *Record = dyn_cast<doc::RecordInfo>(Info))
       Record->Children.sort();
-    }
   }
 }
 
-static llvm::Error handleMappingFailures(llvm::Error Err) {
+static llvm::Error handleMappingFailures(DiagnosticsEngine &Diags,
+                                         llvm::Error Err) {
   if (!Err)
     return llvm::Error::success();
   if (IgnoreMappingFailures) {
-    llvm::errs() << "Error mapping decls in files. Clang-doc will ignore these "
-                    "files and continue:\n"
-                 << toString(std::move(Err)) << "\n";
+    unsigned ID = Diags.getCustomDiagID(
+        DiagnosticsEngine::Warning,
+        "Error mapping decls in files. Clang-doc will ignore these files and "
+        "continue:\n%0");
+    Diags.Report(ID) << toString(std::move(Err));
     return llvm::Error::success();
   }
   return Err;
@@ -304,7 +288,7 @@ Example usage for a project using a compile commands database:
     llvm::TimeTraceScope("main");
 
     // Fail early if an invalid format was provided.
-    std::string Format = getFormatString();
+    llvm::StringRef Format = getFormatString();
     llvm::outs() << "Emiting docs in " << Format << " format.\n";
     auto G = ExitOnErr(doc::findGeneratorByName(Format));
 
@@ -315,28 +299,28 @@ Example usage for a project using a compile commands database:
                                     tooling::ArgumentInsertPosition::END),
           ArgAdjuster);
 
-    clang::doc::ClangDocContext CDCtx = {
-        Executor->getExecutionContext(),
-        ProjectName,
-        PublicOnly,
-        OutDirectory,
-        SourceRoot,
-        RepositoryUrl,
-        RepositoryCodeLinePrefix,
-        BaseDirectory,
-        {UserStylesheets.begin(), UserStylesheets.end()},
-        FTimeTrace};
+    auto DiagOpts = std::make_unique<DiagnosticOptions>();
+    TextDiagnosticPrinter *DiagClient =
+        new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
+    IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+    DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagClient);
 
-    if (Format == "html") {
-      ExitOnErr(getHtmlAssetFiles(argv[0], CDCtx));
-    } else if (Format == "mustache") {
-      ExitOnErr(getMustacheHtmlFiles(argv[0], CDCtx));
-    }
+    clang::doc::ClangDocContext CDCtx(
+        Executor->getExecutionContext(), ProjectName, PublicOnly, OutDirectory,
+        SourceRoot, RepositoryUrl, RepositoryCodeLinePrefix, BaseDirectory,
+        {UserStylesheets.begin(), UserStylesheets.end()}, Diags, FormatEnum,
+        FTimeTrace, Pretty);
+
+    if (Format == "html")
+      ExitOnErr(getHtmlFiles(argv[0], CDCtx));
+    else if (Format == "md_mustache")
+      ExitOnErr(getMdFiles(argv[0], CDCtx));
 
     llvm::timeTraceProfilerBegin("Executor Launch", "total runtime");
     // Mapping phase
     llvm::outs() << "Mapping decls...\n";
     ExitOnErr(handleMappingFailures(
+        Diags,
         Executor->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster)));
     llvm::timeTraceProfilerEnd();
 
@@ -355,64 +339,76 @@ Example usage for a project using a compile commands database:
     // Collects all Infos according to their unique USR value. This map is added
     // to from the thread pool below and is protected by the USRToInfoMutex.
     llvm::sys::Mutex USRToInfoMutex;
-    llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
+    llvm::StringMap<doc::Info *> USRToInfo;
 
     // First reducing phase (reduce all decls into one info per decl).
     llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
     std::atomic<bool> Error;
     Error = false;
     llvm::sys::Mutex IndexMutex;
-    // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
+    llvm::sys::Mutex DiagMutex;
+    unsigned DiagIDBitcodeReading = Diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "error reading bitcode: %0");
+    unsigned DiagIDBitcodeMerging = Diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "error merging bitcode: %0");
+    // Note: we use per-thread arenas, so Pool must outlive the last use of this
+    // memory in the generators.
     llvm::DefaultThreadPool Pool(
+        // ExecutorConcurrency is a flag exposed by AllTUsExecution.h
         llvm::hardware_concurrency(ExecutorConcurrency));
     {
       llvm::TimeTraceScope TS("Reduce");
-      for (auto &Group : USRToBitcode) {
-        Pool.async([&]() { // time trace decoding bitcode
-          if (FTimeTrace)
+      for (const auto &Group : USRToBitcode) {
+        StringRef Key = Group.getKey();
+        std::vector<StringRef> Bitcodes = Group.getValue();
+        Pool.async([Key, Bitcodes, &CDCtx, &Diags, &USRToInfo, &USRToInfoMutex,
+                    &IndexMutex, &DiagMutex, &Error, DiagIDBitcodeReading,
+                    DiagIDBitcodeMerging]() {
+          if (CDCtx.FTimeTrace)
             llvm::timeTraceProfilerInitialize(200, "clang-doc");
 
-          std::vector<std::unique_ptr<doc::Info>> Infos;
+          doc::Info *Reduced = nullptr;
           {
-            llvm::TimeTraceScope Red("decoding bitcode");
-            for (auto &Bitcode : Group.getValue()) {
+            llvm::TimeTraceScope Red("decoding and merging bitcode");
+            for (const auto &Bitcode : Bitcodes) {
+
+              llvm::scope_exit ArenaGuard(
+                  [] { clang::doc::getTransientArena().Reset(); });
               llvm::BitstreamCursor Stream(Bitcode);
-              doc::ClangDocBitcodeReader Reader(Stream);
+              doc::ClangDocBitcodeReader Reader(Stream, Diags);
               auto ReadInfos = Reader.readBitcode();
               if (!ReadInfos) {
-                llvm::errs() << toString(ReadInfos.takeError()) << "\n";
+                std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
+
+                Diags.Report(DiagIDBitcodeReading)
+                    << toString(ReadInfos.takeError());
                 Error = true;
                 return;
               }
-              std::move(ReadInfos->begin(), ReadInfos->end(),
-                        std::back_inserter(Infos));
+              for (auto &I : *ReadInfos) {
+                if (auto Err = doc::mergeSingleInfo(
+                        Reduced, std::move(I),
+                        clang::doc::getPersistentArena())) {
+                  std::lock_guard<llvm::sys::Mutex> Guard(DiagMutex);
+                  Diags.Report(DiagIDBitcodeMerging)
+                      << toString(std::move(Err));
+                  return;
+                }
+              }
             }
-          } // time trace decoding bitcode
-
-          std::unique_ptr<doc::Info> Reduced;
-
-          {
-            llvm::TimeTraceScope Merge("merging bitcode");
-            auto ExpReduced = doc::mergeInfos(Infos);
-
-            if (!ExpReduced) {
-              llvm::errs() << llvm::toString(ExpReduced.takeError());
-              return;
-            }
-            Reduced = std::move(*ExpReduced);
-          } // time trace merging bitcode
+          } // time trace decoding and merging bitcode
 
           // Add a reference to this Info in the Index
           {
             llvm::TimeTraceScope Merge("addInfoToIndex");
             std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
-            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get());
+            clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced);
           }
           // Save in the result map (needs a lock due to threaded access).
           {
             llvm::TimeTraceScope Merge("USRToInfo");
             std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
-            USRToInfo[Group.getKey()] = std::move(Reduced);
+            USRToInfo[Key] = std::move(Reduced);
           }
 
           if (CDCtx.FTimeTrace)
@@ -438,7 +434,8 @@ Example usage for a project using a compile commands database:
     // Run the generator.
     llvm::outs() << "Generating docs...\n";
 
-    ExitOnErr(G->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx));
+    ExitOnErr(
+        G->generateDocumentation(OutDirectory, std::move(USRToInfo), CDCtx));
     llvm::outs() << "Generating assets for docs...\n";
     ExitOnErr(G->createResources(CDCtx));
     llvm::timeTraceProfilerEnd();

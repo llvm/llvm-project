@@ -14,6 +14,15 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+AST_MATCHER_P(VarDecl, hasOwnInitializer, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
+  const Expr *Initializer = Node.getInit();
+  return Initializer != nullptr &&
+         InnerMatcher.matches(*Initializer, Finder, Builder);
+}
+} // namespace
+
 void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   // Add parameters to Parameters.
   Finder->addMatcher(parmVarDecl().bind("Parm"), this);
@@ -26,12 +35,13 @@ void NonConstParameterCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(declRefExpr().bind("Ref"), this);
 
   // Analyse parameter usage in function.
-  Finder->addMatcher(stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
-                                binaryOperator(), callExpr(), returnStmt(),
-                                cxxConstructExpr()))
-                         .bind("Mark"),
-                     this);
-  Finder->addMatcher(varDecl(hasInitializer(anything())).bind("Mark"), this);
+  Finder->addMatcher(
+      stmt(anyOf(unaryOperator(hasAnyOperatorName("++", "--")),
+                 binaryOperator(), callExpr(), returnStmt(), cxxConstructExpr(),
+                 cxxUnresolvedConstructExpr()))
+          .bind("Mark"),
+      this);
+  Finder->addMatcher(varDecl(hasOwnInitializer(anything())).bind("Mark"), this);
 }
 
 void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
@@ -59,9 +69,8 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
       // Typically, if a parameter is const then it is fine to make the data
       // const. But sometimes the data is written even though the parameter
       // is const. Mark all data passed by address to the function.
-      for (const auto *Arg : CE->arguments()) {
+      for (const auto *Arg : CE->arguments())
         markCanNotBeConst(Arg->IgnoreParenCasts(), true);
-      }
 
       // Data passed by nonconst reference should not be made const.
       if (const FunctionDecl *FD = CE->getDirectCallee()) {
@@ -78,9 +87,8 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
         }
       }
     } else if (const auto *CE = dyn_cast<CXXConstructExpr>(S)) {
-      for (const auto *Arg : CE->arguments()) {
+      for (const auto *Arg : CE->arguments())
         markCanNotBeConst(Arg->IgnoreParenCasts(), true);
-      }
       // Data passed by nonconst reference should not be made const.
       unsigned ArgNr = 0U;
       if (const auto *CD = CE->getConstructor()) {
@@ -95,6 +103,8 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
           markCanNotBeConst(Arg->IgnoreParenCasts(), false);
         }
       }
+    } else if (const auto *CE = dyn_cast<CXXUnresolvedConstructExpr>(S)) {
+      markCanNotBeConst(CE, true);
     } else if (const auto *R = dyn_cast<ReturnStmt>(S)) {
       markCanNotBeConst(R->getRetValue(), true);
     } else if (const auto *U = dyn_cast<UnaryOperator>(S)) {
@@ -102,12 +112,31 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
     }
   } else if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("Mark")) {
     const QualType T = VD->getType();
-    if ((T->isPointerType() && !T->getPointeeType().isConstQualified()) ||
-        T->isArrayType() || T->isRecordType())
+    if (T->isDependentType()) {
+      const Expr *Init = VD->getInit()->IgnoreParenCasts();
+      if (const auto *U = dyn_cast<UnaryOperator>(Init);
+          U && U->getOpcode() == UO_Deref) {
+        markCanNotBeConst(U->getSubExpr(), true);
+      } else if (const auto *PLE = dyn_cast<ParenListExpr>(Init)) {
+        for (const Expr *E : PLE->exprs()) {
+          E = E->IgnoreParenCasts();
+          if (const auto *U = dyn_cast<UnaryOperator>(E);
+              U && U->getOpcode() == UO_Deref)
+            markCanNotBeConst(U->getSubExpr(), true);
+          else
+            markCanNotBeConst(E, true);
+        }
+      } else {
+        markCanNotBeConst(Init, true);
+      }
+    } else if ((T->isPointerType() &&
+                !T->getPointeeType().isConstQualified()) ||
+               T->isArrayType() || T->isRecordType()) {
       markCanNotBeConst(VD->getInit(), true);
-    else if (T->isLValueReferenceType() &&
-             !T->getPointeeType().isConstQualified())
+    } else if (T->isLValueReferenceType() &&
+               !T->getPointeeType().isConstQualified()) {
       markCanNotBeConst(VD->getInit(), false);
+    }
   }
 }
 
@@ -212,17 +241,29 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
       markCanNotBeConst(U->getSubExpr(), CanNotBeConst);
     }
   } else if (const auto *A = dyn_cast<ArraySubscriptExpr>(E)) {
-    markCanNotBeConst(A->getBase(), true);
+    if (A->isInstantiationDependent()) {
+      markCanNotBeConst(A->getLHS(), true);
+      markCanNotBeConst(A->getRHS(), true);
+    } else {
+      markCanNotBeConst(A->getBase(), true);
+    }
   } else if (const auto *CLE = dyn_cast<CompoundLiteralExpr>(E)) {
     markCanNotBeConst(CLE->getInitializer(), true);
   } else if (const auto *Constr = dyn_cast<CXXConstructExpr>(E)) {
-    for (const auto *Arg : Constr->arguments()) {
+    for (const auto *Arg : Constr->arguments())
       if (const auto *M = dyn_cast<MaterializeTemporaryExpr>(Arg))
         markCanNotBeConst(cast<Expr>(M->getSubExpr()), CanNotBeConst);
-    }
+      else
+        markCanNotBeConst(Arg, CanNotBeConst);
+  } else if (const auto *CE = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
+    for (const auto *Arg : CE->arguments())
+      markCanNotBeConst(Arg, CanNotBeConst);
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     for (unsigned I = 0U; I < ILE->getNumInits(); ++I)
-      markCanNotBeConst(ILE->getInit(I), true);
+      markCanNotBeConst(ILE->getInit(I), CanNotBeConst);
+  } else if (const auto *PLE = dyn_cast<ParenListExpr>(E)) {
+    for (unsigned I = 0U; I < PLE->getNumExprs(); ++I)
+      markCanNotBeConst(PLE->getExpr(I), CanNotBeConst);
   } else if (CanNotBeConst) {
     // Referencing parameter.
     if (const auto *D = dyn_cast<DeclRefExpr>(E)) {

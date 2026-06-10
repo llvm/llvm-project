@@ -2,14 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs < %s | FileCheck %s --check-prefix=NOVLDEP
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+vl-dependent-latency -verify-machineinstrs < %s | FileCheck %s --check-prefix=VLDEP
 
-declare <vscale x 1 x i1> @llvm.experimental.vp.splice.nxv1i1(<vscale x 1 x i1>, <vscale x 1 x i1>, i32, <vscale x 1 x i1>, i32, i32)
-declare <vscale x 2 x i1> @llvm.experimental.vp.splice.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, i32, <vscale x 2 x i1>, i32, i32)
-declare <vscale x 4 x i1> @llvm.experimental.vp.splice.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>, i32, <vscale x 4 x i1>, i32, i32)
-declare <vscale x 8 x i1> @llvm.experimental.vp.splice.nxv8i1(<vscale x 8 x i1>, <vscale x 8 x i1>, i32, <vscale x 8 x i1>, i32, i32)
-declare <vscale x 16 x i1> @llvm.experimental.vp.splice.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, i32, <vscale x 16 x i1>, i32, i32)
-declare <vscale x 32 x i1> @llvm.experimental.vp.splice.nxv32i1(<vscale x 32 x i1>, <vscale x 32 x i1>, i32, <vscale x 32 x i1>, i32, i32)
-declare <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i1>, <vscale x 64 x i1>, i32, <vscale x 64 x i1>, i32, i32)
-
 define <vscale x 1 x i1> @test_vp_splice_nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) #0 {
 ; NOVLDEP-LABEL: test_vp_splice_nxv1i1:
 ; NOVLDEP:       # %bb.0:
@@ -924,6 +916,359 @@ define <vscale x 64 x i1> @test_vp_splice_nxv64i1_masked(<vscale x 64 x i1> %va,
 ; VLDEP-NEXT:    ret
   %v = call <vscale x 64 x i1> @llvm.experimental.vp.splice.nxv64i1(<vscale x 64 x i1> %va, <vscale x 64 x i1> %vb, i32 5, <vscale x 64 x i1> %mask, i32 %evla, i32 %evlb)
   ret <vscale x 64 x i1> %v
+}
+
+; nxv128i1 is split via the generic SplitVecRes_VP_SPLICE stack round-trip. The
+; i1 elements must be widened to a byte type; otherwise getVectorElementPointer
+; asserts and the negative-offset stride is 0.
+define <vscale x 128 x i1> @test_vp_splice_nxv128i1(<vscale x 128 x i1> %va, <vscale x 128 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) #0 {
+; NOVLDEP-LABEL: test_vp_splice_nxv128i1:
+; NOVLDEP:       # %bb.0:
+; NOVLDEP-NEXT:    csrr a2, vlenb
+; NOVLDEP-NEXT:    slli a4, a2, 4
+; NOVLDEP-NEXT:    addi a4, a4, -1
+; NOVLDEP-NEXT:    mv a5, a0
+; NOVLDEP-NEXT:    mv a3, a0
+; NOVLDEP-NEXT:    bltu a0, a4, .LBB21_2
+; NOVLDEP-NEXT:  # %bb.1:
+; NOVLDEP-NEXT:    mv a3, a4
+; NOVLDEP-NEXT:  .LBB21_2:
+; NOVLDEP-NEXT:    addi sp, sp, -80
+; NOVLDEP-NEXT:    .cfi_def_cfa_offset 80
+; NOVLDEP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; NOVLDEP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; NOVLDEP-NEXT:    .cfi_offset ra, -8
+; NOVLDEP-NEXT:    .cfi_offset s0, -16
+; NOVLDEP-NEXT:    addi s0, sp, 80
+; NOVLDEP-NEXT:    .cfi_def_cfa s0, 0
+; NOVLDEP-NEXT:    csrr a4, vlenb
+; NOVLDEP-NEXT:    slli a4, a4, 5
+; NOVLDEP-NEXT:    sub sp, sp, a4
+; NOVLDEP-NEXT:    andi sp, sp, -64
+; NOVLDEP-NEXT:    addi a4, sp, 64
+; NOVLDEP-NEXT:    vsetvli a6, zero, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vmv.v.i v16, 0
+; NOVLDEP-NEXT:    slli a2, a2, 3
+; NOVLDEP-NEXT:    add a3, a4, a3
+; NOVLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; NOVLDEP-NEXT:    bltu a5, a2, .LBB21_4
+; NOVLDEP-NEXT:  # %bb.3:
+; NOVLDEP-NEXT:    mv a5, a2
+; NOVLDEP-NEXT:  .LBB21_4:
+; NOVLDEP-NEXT:    vmv1r.v v0, v8
+; NOVLDEP-NEXT:    vsetvli zero, a5, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vse8.v v24, (a4)
+; NOVLDEP-NEXT:    sub a5, a0, a2
+; NOVLDEP-NEXT:    add a4, a4, a2
+; NOVLDEP-NEXT:    sltu a0, a0, a5
+; NOVLDEP-NEXT:    addi a0, a0, -1
+; NOVLDEP-NEXT:    and a0, a0, a5
+; NOVLDEP-NEXT:    sub a5, a1, a2
+; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; NOVLDEP-NEXT:    vse8.v v24, (a4)
+; NOVLDEP-NEXT:    add a4, a3, a2
+; NOVLDEP-NEXT:    sltu a0, a1, a5
+; NOVLDEP-NEXT:    addi a0, a0, -1
+; NOVLDEP-NEXT:    and a0, a0, a5
+; NOVLDEP-NEXT:    vmv1r.v v0, v10
+; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; NOVLDEP-NEXT:    vse8.v v24, (a4)
+; NOVLDEP-NEXT:    vmv1r.v v0, v9
+; NOVLDEP-NEXT:    vsetvli a4, zero, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vmerge.vim v8, v16, 1, v0
+; NOVLDEP-NEXT:    bltu a1, a2, .LBB21_6
+; NOVLDEP-NEXT:  # %bb.5:
+; NOVLDEP-NEXT:    mv a1, a2
+; NOVLDEP-NEXT:  .LBB21_6:
+; NOVLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vse8.v v8, (a3)
+; NOVLDEP-NEXT:    addi a3, sp, 69
+; NOVLDEP-NEXT:    add a2, a3, a2
+; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vle8.v v8, (a2)
+; NOVLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vle8.v v16, (a3)
+; NOVLDEP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vand.vi v24, v8, 1
+; NOVLDEP-NEXT:    vmsne.vi v8, v24, 0
+; NOVLDEP-NEXT:    vand.vi v16, v16, 1
+; NOVLDEP-NEXT:    vmsne.vi v0, v16, 0
+; NOVLDEP-NEXT:    addi sp, s0, -80
+; NOVLDEP-NEXT:    .cfi_def_cfa sp, 80
+; NOVLDEP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; NOVLDEP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; NOVLDEP-NEXT:    .cfi_restore ra
+; NOVLDEP-NEXT:    .cfi_restore s0
+; NOVLDEP-NEXT:    addi sp, sp, 80
+; NOVLDEP-NEXT:    .cfi_def_cfa_offset 0
+; NOVLDEP-NEXT:    ret
+;
+; VLDEP-LABEL: test_vp_splice_nxv128i1:
+; VLDEP:       # %bb.0:
+; VLDEP-NEXT:    csrr a2, vlenb
+; VLDEP-NEXT:    slli a4, a2, 4
+; VLDEP-NEXT:    addi a4, a4, -1
+; VLDEP-NEXT:    mv a5, a0
+; VLDEP-NEXT:    mv a3, a0
+; VLDEP-NEXT:    bltu a0, a4, .LBB21_2
+; VLDEP-NEXT:  # %bb.1:
+; VLDEP-NEXT:    mv a3, a4
+; VLDEP-NEXT:  .LBB21_2:
+; VLDEP-NEXT:    addi sp, sp, -80
+; VLDEP-NEXT:    .cfi_def_cfa_offset 80
+; VLDEP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; VLDEP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; VLDEP-NEXT:    .cfi_offset ra, -8
+; VLDEP-NEXT:    .cfi_offset s0, -16
+; VLDEP-NEXT:    addi s0, sp, 80
+; VLDEP-NEXT:    .cfi_def_cfa s0, 0
+; VLDEP-NEXT:    csrr a4, vlenb
+; VLDEP-NEXT:    slli a4, a4, 5
+; VLDEP-NEXT:    sub sp, sp, a4
+; VLDEP-NEXT:    andi sp, sp, -64
+; VLDEP-NEXT:    addi a4, sp, 64
+; VLDEP-NEXT:    vsetvli a6, zero, e8, m8, ta, ma
+; VLDEP-NEXT:    vmv.v.i v16, 0
+; VLDEP-NEXT:    slli a2, a2, 3
+; VLDEP-NEXT:    add a3, a4, a3
+; VLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; VLDEP-NEXT:    bltu a5, a2, .LBB21_4
+; VLDEP-NEXT:  # %bb.3:
+; VLDEP-NEXT:    mv a5, a2
+; VLDEP-NEXT:  .LBB21_4:
+; VLDEP-NEXT:    vmv1r.v v0, v8
+; VLDEP-NEXT:    vsetvli zero, a5, e8, m8, ta, ma
+; VLDEP-NEXT:    vse8.v v24, (a4)
+; VLDEP-NEXT:    sub a5, a0, a2
+; VLDEP-NEXT:    add a4, a4, a2
+; VLDEP-NEXT:    sltu a0, a0, a5
+; VLDEP-NEXT:    addi a0, a0, -1
+; VLDEP-NEXT:    and a0, a0, a5
+; VLDEP-NEXT:    sub a5, a1, a2
+; VLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; VLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; VLDEP-NEXT:    vse8.v v24, (a4)
+; VLDEP-NEXT:    add a4, a3, a2
+; VLDEP-NEXT:    sltu a0, a1, a5
+; VLDEP-NEXT:    addi a0, a0, -1
+; VLDEP-NEXT:    and a0, a0, a5
+; VLDEP-NEXT:    vmv1r.v v0, v10
+; VLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; VLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; VLDEP-NEXT:    vse8.v v24, (a4)
+; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    vsetvli a4, zero, e8, m8, ta, ma
+; VLDEP-NEXT:    vmerge.vim v8, v16, 1, v0
+; VLDEP-NEXT:    bltu a1, a2, .LBB21_6
+; VLDEP-NEXT:  # %bb.5:
+; VLDEP-NEXT:    mv a1, a2
+; VLDEP-NEXT:  .LBB21_6:
+; VLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; VLDEP-NEXT:    vse8.v v8, (a3)
+; VLDEP-NEXT:    addi a3, sp, 69
+; VLDEP-NEXT:    add a2, a3, a2
+; VLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; VLDEP-NEXT:    vle8.v v8, (a2)
+; VLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; VLDEP-NEXT:    vle8.v v16, (a3)
+; VLDEP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; VLDEP-NEXT:    vand.vi v24, v8, 1
+; VLDEP-NEXT:    vmsne.vi v8, v24, 0
+; VLDEP-NEXT:    vand.vi v16, v16, 1
+; VLDEP-NEXT:    vmsne.vi v0, v16, 0
+; VLDEP-NEXT:    addi sp, s0, -80
+; VLDEP-NEXT:    .cfi_def_cfa sp, 80
+; VLDEP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; VLDEP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; VLDEP-NEXT:    .cfi_restore ra
+; VLDEP-NEXT:    .cfi_restore s0
+; VLDEP-NEXT:    addi sp, sp, 80
+; VLDEP-NEXT:    .cfi_def_cfa_offset 0
+; VLDEP-NEXT:    ret
+  %v = call <vscale x 128 x i1> @llvm.experimental.vp.splice.nxv128i1(<vscale x 128 x i1> %va, <vscale x 128 x i1> %vb, i32 5, <vscale x 128 x i1> splat (i1 1), i32 %evla, i32 %evlb)
+  ret <vscale x 128 x i1> %v
+}
+
+define <vscale x 128 x i1> @test_vp_splice_nxv128i1_negative_offset(<vscale x 128 x i1> %va, <vscale x 128 x i1> %vb, i32 zeroext %evla, i32 zeroext %evlb) #0 {
+; NOVLDEP-LABEL: test_vp_splice_nxv128i1_negative_offset:
+; NOVLDEP:       # %bb.0:
+; NOVLDEP-NEXT:    csrr a3, vlenb
+; NOVLDEP-NEXT:    slli a4, a3, 4
+; NOVLDEP-NEXT:    addi a4, a4, -1
+; NOVLDEP-NEXT:    mv a6, a0
+; NOVLDEP-NEXT:    mv a2, a0
+; NOVLDEP-NEXT:    bltu a0, a4, .LBB22_2
+; NOVLDEP-NEXT:  # %bb.1:
+; NOVLDEP-NEXT:    mv a2, a4
+; NOVLDEP-NEXT:  .LBB22_2:
+; NOVLDEP-NEXT:    addi sp, sp, -80
+; NOVLDEP-NEXT:    .cfi_def_cfa_offset 80
+; NOVLDEP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; NOVLDEP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; NOVLDEP-NEXT:    .cfi_offset ra, -8
+; NOVLDEP-NEXT:    .cfi_offset s0, -16
+; NOVLDEP-NEXT:    addi s0, sp, 80
+; NOVLDEP-NEXT:    .cfi_def_cfa s0, 0
+; NOVLDEP-NEXT:    csrr a4, vlenb
+; NOVLDEP-NEXT:    slli a4, a4, 5
+; NOVLDEP-NEXT:    sub sp, sp, a4
+; NOVLDEP-NEXT:    andi sp, sp, -64
+; NOVLDEP-NEXT:    addi a5, sp, 64
+; NOVLDEP-NEXT:    vsetvli a4, zero, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vmv.v.i v16, 0
+; NOVLDEP-NEXT:    slli a3, a3, 3
+; NOVLDEP-NEXT:    add a4, a5, a2
+; NOVLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; NOVLDEP-NEXT:    bltu a6, a3, .LBB22_4
+; NOVLDEP-NEXT:  # %bb.3:
+; NOVLDEP-NEXT:    mv a6, a3
+; NOVLDEP-NEXT:  .LBB22_4:
+; NOVLDEP-NEXT:    vmv1r.v v0, v8
+; NOVLDEP-NEXT:    vsetvli zero, a6, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vse8.v v24, (a5)
+; NOVLDEP-NEXT:    sub a6, a0, a3
+; NOVLDEP-NEXT:    add a5, a5, a3
+; NOVLDEP-NEXT:    sltu a0, a0, a6
+; NOVLDEP-NEXT:    addi a0, a0, -1
+; NOVLDEP-NEXT:    and a0, a0, a6
+; NOVLDEP-NEXT:    sub a6, a1, a3
+; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; NOVLDEP-NEXT:    vse8.v v24, (a5)
+; NOVLDEP-NEXT:    add a5, a4, a3
+; NOVLDEP-NEXT:    sltu a0, a1, a6
+; NOVLDEP-NEXT:    addi a0, a0, -1
+; NOVLDEP-NEXT:    and a0, a0, a6
+; NOVLDEP-NEXT:    vmv1r.v v0, v10
+; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; NOVLDEP-NEXT:    vse8.v v24, (a5)
+; NOVLDEP-NEXT:    vmv1r.v v0, v9
+; NOVLDEP-NEXT:    vsetvli a5, zero, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vmerge.vim v8, v16, 1, v0
+; NOVLDEP-NEXT:    bltu a1, a3, .LBB22_6
+; NOVLDEP-NEXT:  # %bb.5:
+; NOVLDEP-NEXT:    mv a1, a3
+; NOVLDEP-NEXT:  .LBB22_6:
+; NOVLDEP-NEXT:    li a5, 5
+; NOVLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vse8.v v8, (a4)
+; NOVLDEP-NEXT:    bltu a2, a5, .LBB22_8
+; NOVLDEP-NEXT:  # %bb.7:
+; NOVLDEP-NEXT:    li a2, 5
+; NOVLDEP-NEXT:  .LBB22_8:
+; NOVLDEP-NEXT:    sub a4, a4, a2
+; NOVLDEP-NEXT:    add a3, a4, a3
+; NOVLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vle8.v v8, (a3)
+; NOVLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vle8.v v16, (a4)
+; NOVLDEP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; NOVLDEP-NEXT:    vand.vi v24, v8, 1
+; NOVLDEP-NEXT:    vmsne.vi v8, v24, 0
+; NOVLDEP-NEXT:    vand.vi v16, v16, 1
+; NOVLDEP-NEXT:    vmsne.vi v0, v16, 0
+; NOVLDEP-NEXT:    addi sp, s0, -80
+; NOVLDEP-NEXT:    .cfi_def_cfa sp, 80
+; NOVLDEP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; NOVLDEP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; NOVLDEP-NEXT:    .cfi_restore ra
+; NOVLDEP-NEXT:    .cfi_restore s0
+; NOVLDEP-NEXT:    addi sp, sp, 80
+; NOVLDEP-NEXT:    .cfi_def_cfa_offset 0
+; NOVLDEP-NEXT:    ret
+;
+; VLDEP-LABEL: test_vp_splice_nxv128i1_negative_offset:
+; VLDEP:       # %bb.0:
+; VLDEP-NEXT:    csrr a3, vlenb
+; VLDEP-NEXT:    slli a4, a3, 4
+; VLDEP-NEXT:    addi a4, a4, -1
+; VLDEP-NEXT:    mv a6, a0
+; VLDEP-NEXT:    mv a2, a0
+; VLDEP-NEXT:    bltu a0, a4, .LBB22_2
+; VLDEP-NEXT:  # %bb.1:
+; VLDEP-NEXT:    mv a2, a4
+; VLDEP-NEXT:  .LBB22_2:
+; VLDEP-NEXT:    addi sp, sp, -80
+; VLDEP-NEXT:    .cfi_def_cfa_offset 80
+; VLDEP-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; VLDEP-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; VLDEP-NEXT:    .cfi_offset ra, -8
+; VLDEP-NEXT:    .cfi_offset s0, -16
+; VLDEP-NEXT:    addi s0, sp, 80
+; VLDEP-NEXT:    .cfi_def_cfa s0, 0
+; VLDEP-NEXT:    csrr a4, vlenb
+; VLDEP-NEXT:    slli a4, a4, 5
+; VLDEP-NEXT:    sub sp, sp, a4
+; VLDEP-NEXT:    andi sp, sp, -64
+; VLDEP-NEXT:    addi a5, sp, 64
+; VLDEP-NEXT:    vsetvli a4, zero, e8, m8, ta, ma
+; VLDEP-NEXT:    vmv.v.i v16, 0
+; VLDEP-NEXT:    slli a3, a3, 3
+; VLDEP-NEXT:    add a4, a5, a2
+; VLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; VLDEP-NEXT:    bltu a6, a3, .LBB22_4
+; VLDEP-NEXT:  # %bb.3:
+; VLDEP-NEXT:    mv a6, a3
+; VLDEP-NEXT:  .LBB22_4:
+; VLDEP-NEXT:    vmv1r.v v0, v8
+; VLDEP-NEXT:    vsetvli zero, a6, e8, m8, ta, ma
+; VLDEP-NEXT:    vse8.v v24, (a5)
+; VLDEP-NEXT:    sub a6, a0, a3
+; VLDEP-NEXT:    add a5, a5, a3
+; VLDEP-NEXT:    sltu a0, a0, a6
+; VLDEP-NEXT:    addi a0, a0, -1
+; VLDEP-NEXT:    and a0, a0, a6
+; VLDEP-NEXT:    sub a6, a1, a3
+; VLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; VLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; VLDEP-NEXT:    vse8.v v24, (a5)
+; VLDEP-NEXT:    add a5, a4, a3
+; VLDEP-NEXT:    sltu a0, a1, a6
+; VLDEP-NEXT:    addi a0, a0, -1
+; VLDEP-NEXT:    and a0, a0, a6
+; VLDEP-NEXT:    vmv1r.v v0, v10
+; VLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; VLDEP-NEXT:    vmerge.vim v24, v16, 1, v0
+; VLDEP-NEXT:    vse8.v v24, (a5)
+; VLDEP-NEXT:    vmv1r.v v0, v9
+; VLDEP-NEXT:    vsetvli a5, zero, e8, m8, ta, ma
+; VLDEP-NEXT:    vmerge.vim v8, v16, 1, v0
+; VLDEP-NEXT:    bltu a1, a3, .LBB22_6
+; VLDEP-NEXT:  # %bb.5:
+; VLDEP-NEXT:    mv a1, a3
+; VLDEP-NEXT:  .LBB22_6:
+; VLDEP-NEXT:    li a5, 5
+; VLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; VLDEP-NEXT:    vse8.v v8, (a4)
+; VLDEP-NEXT:    bltu a2, a5, .LBB22_8
+; VLDEP-NEXT:  # %bb.7:
+; VLDEP-NEXT:    li a2, 5
+; VLDEP-NEXT:  .LBB22_8:
+; VLDEP-NEXT:    sub a4, a4, a2
+; VLDEP-NEXT:    add a3, a4, a3
+; VLDEP-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; VLDEP-NEXT:    vle8.v v8, (a3)
+; VLDEP-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
+; VLDEP-NEXT:    vle8.v v16, (a4)
+; VLDEP-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
+; VLDEP-NEXT:    vand.vi v24, v8, 1
+; VLDEP-NEXT:    vmsne.vi v8, v24, 0
+; VLDEP-NEXT:    vand.vi v16, v16, 1
+; VLDEP-NEXT:    vmsne.vi v0, v16, 0
+; VLDEP-NEXT:    addi sp, s0, -80
+; VLDEP-NEXT:    .cfi_def_cfa sp, 80
+; VLDEP-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; VLDEP-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; VLDEP-NEXT:    .cfi_restore ra
+; VLDEP-NEXT:    .cfi_restore s0
+; VLDEP-NEXT:    addi sp, sp, 80
+; VLDEP-NEXT:    .cfi_def_cfa_offset 0
+; VLDEP-NEXT:    ret
+  %v = call <vscale x 128 x i1> @llvm.experimental.vp.splice.nxv128i1(<vscale x 128 x i1> %va, <vscale x 128 x i1> %vb, i32 -5, <vscale x 128 x i1> splat (i1 1), i32 %evla, i32 %evlb)
+  ret <vscale x 128 x i1> %v
 }
 
 attributes #0 = { vscale_range(2,0) }

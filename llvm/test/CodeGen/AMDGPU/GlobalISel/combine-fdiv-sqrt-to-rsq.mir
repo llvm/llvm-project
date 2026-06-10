@@ -39,7 +39,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = G_FSQRT %x
-    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 0xH3C00
+    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = contract G_FDIV %one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)
@@ -66,7 +66,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = contract G_FSQRT %x
-    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 0xH3C00
+    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = G_FDIV %one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)
@@ -119,7 +119,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = G_FSQRT %x
-    ; GCN-NEXT: %neg_one:_(s16) = G_FCONSTANT half 0xHBC00
+    ; GCN-NEXT: %neg_one:_(s16) = G_FCONSTANT half -1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = contract G_FDIV %neg_one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)
@@ -146,7 +146,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = contract G_FSQRT %x
-    ; GCN-NEXT: %neg_one:_(s16) = G_FCONSTANT half 0xHBC00
+    ; GCN-NEXT: %neg_one:_(s16) = G_FCONSTANT half -1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = G_FDIV %neg_one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)
@@ -173,7 +173,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = contract G_FSQRT %x
-    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 0xH3C00
+    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = contract G_FDIV %one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)
@@ -202,7 +202,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = G_FSQRT %x
-    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 0xH3C00
+    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = contract G_FDIV %one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)
@@ -231,7 +231,7 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
     ; GCN-NEXT: %sqrt:_(s16) = contract G_FSQRT %x
-    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 0xH3C00
+    ; GCN-NEXT: %one:_(s16) = G_FCONSTANT half 1.000000e+00
     ; GCN-NEXT: %rsq:_(s16) = G_FDIV %one, %sqrt
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
     ; GCN-NEXT: $vgpr0 = COPY %ext(s32)
@@ -486,7 +486,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GCN-NEXT: %fract:_(s16) = G_FCONSTANT half 0xH3800
+    ; GCN-NEXT: %fract:_(s16) = G_FCONSTANT half 5.000000e-01
     ; GCN-NEXT: [[INT:%[0-9]+]]:_(s16) = contract G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %x(s16)
     ; GCN-NEXT: %rsq:_(s16) = contract G_FMUL [[INT]], %fract
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
@@ -513,7 +513,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GCN-NEXT: %neg_fract:_(s16) = G_FCONSTANT half 0xHB800
+    ; GCN-NEXT: %neg_fract:_(s16) = G_FCONSTANT half -5.000000e-01
     ; GCN-NEXT: [[INT:%[0-9]+]]:_(s16) = contract G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %x(s16)
     ; GCN-NEXT: %rsq:_(s16) = contract G_FMUL [[INT]], %neg_fract
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
@@ -541,7 +541,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GCN-NEXT: %ten:_(s16) = G_FCONSTANT half 0xH4900
+    ; GCN-NEXT: %ten:_(s16) = G_FCONSTANT half 1.000000e+01
     ; GCN-NEXT: [[INT:%[0-9]+]]:_(s16) = contract G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %x(s16)
     ; GCN-NEXT: %rsq:_(s16) = contract G_FMUL [[INT]], %ten
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)
@@ -568,7 +568,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GCN-NEXT: %x:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GCN-NEXT: %neg_ten:_(s16) = G_FCONSTANT half 0xHC900
+    ; GCN-NEXT: %neg_ten:_(s16) = G_FCONSTANT half -1.000000e+01
     ; GCN-NEXT: [[INT:%[0-9]+]]:_(s16) = contract G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), %x(s16)
     ; GCN-NEXT: %rsq:_(s16) = contract G_FMUL [[INT]], %neg_ten
     ; GCN-NEXT: %ext:_(s32) = G_ANYEXT %rsq(s16)

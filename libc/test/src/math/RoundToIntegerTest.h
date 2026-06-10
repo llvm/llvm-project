@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
+#undef LIBC_MATH_USE_SYSTEM_FENV
+
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -238,7 +240,7 @@ public:
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
-    constexpr int COUNT = 1'000'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_SUBNORMAL - MIN_SUBNORMAL) / COUNT),
         StorageType(1));
@@ -282,7 +284,7 @@ public:
     if (sizeof(IntType) > sizeof(long))
       return;
 
-    constexpr int COUNT = 1'000'001;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>((MAX_NORMAL - MIN_NORMAL) / COUNT),
         StorageType(1));

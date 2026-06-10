@@ -8,6 +8,7 @@
 
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/IntervalSet.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
@@ -27,6 +28,10 @@ static llvm::cl::opt<bool> clDisableStructuredFir(
 using namespace Fortran;
 
 namespace {
+static llvm::cl::opt<bool> lowerDoWhileToSCFWhile(
+    "lower-do-while-to-scf-while", llvm::cl::init(false),
+    llvm::cl::desc("lower structured DO WHILE loops to scf.while"),
+    llvm::cl::Hidden);
 /// Helpers to unveil parser node inside Fortran::parser::Statement<>,
 /// Fortran::parser::UnlabeledStatement, and Fortran::common::Indirection<>
 template <typename A>
@@ -73,10 +78,11 @@ void dumpScope(const semantics::Scope *scope, int depth = -1);
 /// limit the bridge to one such instantiation.
 class PFTBuilder {
 public:
-  PFTBuilder(const semantics::SemanticsContext &semanticsContext)
+  PFTBuilder(const semantics::SemanticsContext &semanticsContext,
+             const lower::LoweringOptions &loweringOptions)
       : pgm{std::make_unique<lower::pft::Program>(
             semanticsContext.GetCommonBlocks())},
-        semanticsContext{semanticsContext} {
+        semanticsContext{semanticsContext}, loweringOptions{loweringOptions} {
     lower::pft::PftNode pftRoot{*pgm.get()};
     pftParentStack.push_back(pftRoot);
   }
@@ -124,6 +130,10 @@ public:
                 },
             },
             stmt.unwrapped.u);
+      } else if constexpr (std::is_same_v<T, parser::UseStmt>) {
+        // Process USE statement for debug info generation
+        processUseStmt(stmt.unwrapped);
+        return false;
       }
     }
     return true;
@@ -136,8 +146,9 @@ public:
   ///  - 17.4p5 (The rounding modes)
   ///  - 17.6p1 (Halting)
   void checkForFPEnvironmentCalls(const parser::CallStmt &callStmt) {
+    const auto &call = std::get<parser::Call>(callStmt.t);
     const auto *callName = std::get_if<parser::Name>(
-        &std::get<parser::ProcedureDesignator>(callStmt.call.t).u);
+        &std::get<parser::ProcedureDesignator>(call.t).u);
     if (!callName)
       return;
     const Fortran::semantics::Symbol &procSym = callName->symbol->GetUltimate();
@@ -200,6 +211,112 @@ public:
     addEvaluation(
         lower::pft::Evaluation{endIfStmt, pftParentStack.back(), {}, {}});
     exitConstructOrDirective();
+  }
+
+  /// Process USE statements for debug info generation.
+  /// Captures USE statement information and stores it in the current
+  /// FunctionLikeUnit or ModuleLikeUnit for later use.
+  void processUseStmt(const parser::UseStmt &useStmt) {
+    if (!loweringOptions.getPreserveUseDebugInfo())
+      return;
+
+    if (!currentFunctionUnit && !currentModuleUnit)
+      return;
+
+    // For function-like units, only process USE statements in specification
+    // part.
+    if (currentFunctionUnit && specificationPartLevel == 0)
+      return;
+
+    std::string moduleName{useStmt.moduleName.source.ToString()};
+
+    auto addUseStmt = [&](Fortran::semantics::PreservedUseStmt &&stmt) {
+      if (currentFunctionUnit)
+        currentFunctionUnit->preservedUseStmts.push_back(std::move(stmt));
+      else if (currentModuleUnit)
+        currentModuleUnit->preservedUseStmts.push_back(std::move(stmt));
+    };
+
+    if (const auto *onlyList{
+            std::get_if<std::list<parser::Only>>(&useStmt.u)}) {
+      // USE mod, ONLY: list
+      Fortran::semantics::PreservedUseStmt stmt{moduleName};
+
+      for (const auto &only : *onlyList) {
+        Fortran::common::visit(
+            Fortran::common::visitors{
+                [&](const parser::Rename &rename) {
+                  // ONLY with rename: ONLY: local => use
+                  Fortran::common::visit(
+                      Fortran::common::visitors{
+                          [&](const parser::Rename::Names &names) {
+                            std::string localName{
+                                std::get<0>(names.t).source.ToString()};
+                            stmt.renames.push_back(localName);
+                            stmt.hasOnlyWithRenames = true;
+                          },
+                          [&](const parser::Rename::Operators &) {
+                            // Operator renames - not commonly needed for debug
+                            // info
+                          },
+                      },
+                      rename.u);
+                },
+                [&](const parser::Name &name) {
+                  // ONLY without rename: ONLY: name
+                  stmt.onlyNames.push_back(name.source.ToString());
+                },
+                [&](const Fortran::common::Indirection<parser::GenericSpec>
+                        &genericSpec) {
+                  // Generic spec can contain a Name (for regular symbols) or
+                  // operators
+                  Fortran::common::visit(Fortran::common::visitors{
+                                             [&](const parser::Name &name) {
+                                               stmt.onlyNames.push_back(
+                                                   name.source.ToString());
+                                             },
+                                             [&](const auto &) {
+                                               // Operators and special forms -
+                                               // not commonly needed for
+                                               // variable debug info
+                                             },
+                                         },
+                                         genericSpec.value().u);
+                },
+            },
+            only.u);
+      }
+
+      addUseStmt(std::move(stmt));
+    } else if (const auto *renameList{
+                   std::get_if<std::list<parser::Rename>>(&useStmt.u)}) {
+      // USE mod with optional renames (not ONLY)
+      if (renameList->empty()) {
+        // USE mod (import all, no renames)
+        Fortran::semantics::PreservedUseStmt stmt{moduleName};
+        addUseStmt(std::move(stmt));
+      } else {
+        // USE mod, renames (import all with some renames)
+        Fortran::semantics::PreservedUseStmt stmt{moduleName};
+
+        for (const auto &rename : *renameList) {
+          Fortran::common::visit(
+              Fortran::common::visitors{
+                  [&](const parser::Rename::Names &names) {
+                    std::string localName{
+                        std::get<0>(names.t).source.ToString()};
+                    stmt.renames.push_back(localName);
+                  },
+                  [&](const parser::Rename::Operators &) {
+                    // Operator renames - not commonly needed for debug info
+                  },
+              },
+              rename.u);
+        }
+
+        addUseStmt(std::move(stmt));
+      }
+    }
   }
 
   template <typename A>
@@ -306,11 +423,13 @@ private:
     containedUnitList = &unit.containedUnitList;
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
+    currentModuleUnit = &unit;
     LLVM_DEBUG(dumpScope(&unit.getScope()));
     return true;
   }
 
   void exitModule() {
+    currentModuleUnit = nullptr; // Clear when exiting module
     containsStmtStack.pop_back();
     if (!evaluationListStack.empty())
       popEvaluationList();
@@ -378,11 +497,13 @@ private:
     containedUnitList = &unit.containedUnitList;
     pushEvaluationList(&unit.evaluationList);
     pftParentStack.emplace_back(unit);
+    currentFunctionUnit = &unit;
     LLVM_DEBUG(dumpScope(&unit.getScope()));
     return true;
   }
 
   void exitFunction() {
+    currentFunctionUnit = nullptr; // Clear when exiting function
     rewriteIfGotos();
     endFunctionBody();
     analyzeBranches(nullptr, *evaluationListStack.back()); // add branch links
@@ -817,8 +938,9 @@ private:
           // Action statements (except IO statements)
           [&](const parser::CallStmt &s) {
             // Look for alternate return specifiers.
+            const auto &call = std::get<parser::Call>(s.t);
             const auto &args =
-                std::get<std::list<parser::ActualArgSpec>>(s.call.t);
+                std::get<std::list<parser::ActualArgSpec>>(call.t);
             for (const auto &arg : args) {
               const auto &actual = std::get<parser::ActualArg>(arg.t);
               if (const auto *altReturn =
@@ -951,12 +1073,15 @@ private:
             eval.controlSuccessor = &evaluationList.back();
             if (const auto *bounds =
                     std::get_if<parser::LoopControl::Bounds>(&loopControl->u)) {
-              if (bounds->name.thing.symbol->GetType()->IsNumeric(
+              if (bounds->Name().thing.symbol->GetType()->IsNumeric(
                       common::TypeCategory::Real))
                 eval.isUnstructured = true; // real-valued loop control
             } else if (std::get_if<parser::ScalarLogicalExpr>(
                            &loopControl->u)) {
-              eval.isUnstructured = true; // while loop
+              // Leave DO WHILE structured when -lower-do-while-to-scf-while is
+              // enabled; branch analysis will mark unstructured cases.
+              if (!lowerDoWhileToSCFWhile)
+                eval.isUnstructured = true; // while loop
             }
           },
           [&](const parser::EndDoStmt &) {
@@ -1124,6 +1249,7 @@ private:
   std::unique_ptr<lower::pft::Program> pgm;
   std::vector<lower::pft::PftNode> pftParentStack;
   const semantics::SemanticsContext &semanticsContext;
+  const lower::LoweringOptions &loweringOptions;
 
   llvm::SmallVector<bool> containsStmtStack{};
   lower::pft::ContainedUnitList *containedUnitList{};
@@ -1136,6 +1262,10 @@ private:
   std::map<std::string, lower::pft::Evaluation *> constructNameMap{};
   int specificationPartLevel{};
   lower::pft::Evaluation *lastLexicalEvaluation{};
+  /// Current function-like unit being processed (for USE statement tracking)
+  lower::pft::FunctionLikeUnit *currentFunctionUnit{nullptr};
+  /// Current module-like unit being processed (for USE statement tracking)
+  lower::pft::ModuleLikeUnit *currentModuleUnit{nullptr};
 };
 
 #ifndef NDEBUG
@@ -1491,6 +1621,20 @@ struct SymbolDependenceAnalysis {
   explicit SymbolDependenceAnalysis(const semantics::Symbol &symbol) {
     analyzeEquivalenceSets(symbol.owner());
     analyze(symbol);
+    finalize();
+  }
+  /// Analyze the dependencies of a set of module variables that are host
+  /// associated (or use associated in host module scopes).
+  explicit SymbolDependenceAnalysis(
+      const llvm::SetVector<const semantics::Symbol *> &moduleVariables) {
+    for (const semantics::Symbol *sym : moduleVariables)
+      analyzeLocalEquivalenceSets(sym->owner());
+    // Add all aggregate stores to the front of the variable list.
+    adjustSize(1);
+    for (auto st : stores)
+      layeredVarList[0].emplace_back(std::move(st));
+    for (const semantics::Symbol *sym : moduleVariables)
+      analyze(*sym);
     finalize();
   }
   Fortran::lower::pft::VariableList getVariableList() {
@@ -1894,8 +2038,9 @@ bool Fortran::lower::pft::Variable::isRuntimeTypeInfoData() const {
 
 std::unique_ptr<lower::pft::Program>
 Fortran::lower::createPFT(const parser::Program &root,
-                          const semantics::SemanticsContext &semanticsContext) {
-  PFTBuilder walker(semanticsContext);
+                          const semantics::SemanticsContext &semanticsContext,
+                          const LoweringOptions &loweringOptions) {
+  PFTBuilder walker(semanticsContext, loweringOptions);
   Walk(root, walker);
   return walker.result();
 }
@@ -2001,6 +2146,61 @@ lower::pft::getDependentVariableList(const semantics::Symbol &symbol) {
   return sda.getVariableList();
 }
 
+static bool
+isGenericHidingProcedurePointer(const Fortran::semantics::Symbol &sym) {
+  if (const auto *generic = sym.detailsIf<Fortran::semantics::GenericDetails>())
+    if (const Fortran::semantics::Symbol *specific = generic->specific())
+      return Fortran::semantics::IsProcedurePointer(*specific);
+  return false;
+}
+
+/// Collect the canonical list of host [sub]module variables referenced in \p
+/// funit. A symbol is considered a host module variable if it is an
+/// ObjectEntityDetails, a ProcedurePointer, or a NamelistDetails symbol whose
+/// ultimate owning scope is a [sub]module scope containing \p funit's scope.
+/// Namelist groups are expanded to the set of their objects.
+static void collectHostAssociatedModuleVariables(
+    const Fortran::lower::pft::FunctionLikeUnit &funit,
+    llvm::SetVector<const Fortran::semantics::Symbol *> &moduleVariables) {
+  auto addIfHostModuleVariable = [&](const Fortran::semantics::Symbol &sym) {
+    const Fortran::semantics::Symbol &ultimate = sym.GetUltimate();
+    const auto *namelistDetails =
+        ultimate.detailsIf<Fortran::semantics::NamelistDetails>();
+    if (!ultimate.has<Fortran::semantics::ObjectEntityDetails>() &&
+        !Fortran::semantics::IsProcedurePointer(ultimate) &&
+        !isGenericHidingProcedurePointer(ultimate) && !namelistDetails)
+      return;
+    const Fortran::semantics::Scope &symbolScope =
+        Fortran::semantics::FollowHostAssoc(sym).owner();
+    if (symbolScope.kind() != Fortran::semantics::Scope::Kind::Module)
+      return;
+    if (namelistDetails) {
+      // Namelist symbols are processed on the fly in IO lowering, which
+      // needs to be able to access each of their objects. Capture the
+      // objects rather than the namelist symbol itself.
+      for (const auto &namelistObject : namelistDetails->objects())
+        moduleVariables.insert(&namelistObject->GetUltimate());
+    } else {
+      moduleVariables.insert(&ultimate);
+    }
+  };
+  Fortran::lower::pft::visitAllSymbols(funit, addIfHostModuleVariable);
+}
+
+/// Create an ordered list of equivalences and variables from host
+/// [sub]modules of \p funit that are referenced in \p funit. The result is
+/// not cached.
+lower::pft::VariableList
+lower::pft::getHostModuleVariableList(const FunctionLikeUnit &funit) {
+  LLVM_DEBUG(llvm::dbgs() << "\ngetHostModuleVariableList of funit scope <"
+                          << &funit.getScope() << "> "
+                          << funit.getScope().GetName() << "\n");
+  llvm::SetVector<const semantics::Symbol *> moduleVariables;
+  collectHostAssociatedModuleVariables(funit, moduleVariables);
+  SymbolDependenceAnalysis sda(moduleVariables);
+  return sda.getVariableList();
+}
+
 namespace {
 /// Helper class to find all the symbols referenced in a FunctionLikeUnit.
 /// It defines a parse tree visitor doing a deep visit in all nodes with
@@ -2020,6 +2220,25 @@ struct SymbolVisitor {
     if (const semantics::Symbol *symbol = name.symbol)
       visitSymbol(*symbol);
     return false;
+  }
+
+  bool Pre(const Fortran::parser::AccClause::UseDevice &useDevice) {
+    // For use_device, each symbol's parser Name has been given a local copy
+    // of the symbol with the DEVICE attribute. The original symbol will be
+    // needed in lowering and may not appear in the parse tree of the function
+    // anymore. Visit it now: it is not directly accessible from the construct
+    // symbol, so the parent scope must be searched to find it.
+    for (const auto &accObject : useDevice.v.v) {
+      if (const semantics::Symbol *deviceSym =
+              Fortran::parser::GetFirstName(accObject).symbol) {
+        if (const semantics::Symbol *hostSym =
+                deviceSym->owner().parent().FindSymbol(deviceSym->name()))
+          visitSymbol(*hostSym);
+      }
+    }
+    // Continue visiting the ACC construct symbol and any symbols used in
+    // designator index expressions.
+    return true;
   }
 
   template <typename T>

@@ -13,8 +13,9 @@
 // template <class InputIterator>
 //     constexpr set(InputIterator first, InputIterator last, const value_compare& comp); // constexpr since C++26
 
-#include <set>
 #include <cassert>
+#include <iterator>
+#include <set>
 
 #include "test_macros.h"
 #include "test_iterators.h"

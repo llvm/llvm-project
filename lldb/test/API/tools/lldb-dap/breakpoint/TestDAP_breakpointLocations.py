@@ -12,6 +12,7 @@ import lldbdap_testcase
 import os
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDAP_breakpointLocations(lldbdap_testcase.DAPTestCaseBase):
     def setUp(self):
         lldbdap_testcase.DAPTestCaseBase.setUp(self)
@@ -79,10 +80,10 @@ class TestDAP_breakpointLocations(lldbdap_testcase.DAPTestCaseBase):
         # test more portable, only check that all expected breakpoints are
         # presented, but also accept additional breakpoints.
         expected_breakpoints = [
-            {"column": 39, "line": 40},
-            {"column": 51, "line": 40},
-            {"column": 3, "line": 42},
-            {"column": 18, "line": 42},
+            {"column": 39, "line": 41},
+            {"column": 51, "line": 41},
+            {"column": 3, "line": 43},
+            {"column": 18, "line": 43},
         ]
         for bp in expected_breakpoints:
             self.assertIn(bp, response["body"]["breakpoints"])

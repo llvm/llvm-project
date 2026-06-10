@@ -77,6 +77,9 @@ private:
                    raw_ostream &O);
   void printVINTRPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                       raw_ostream &O);
+  void printAVLdSt32Align2RegOp(const MCInst *MI, unsigned OpNo,
+                                const MCSubtargetInfo &STI, raw_ostream &O);
+
   void printImmediateInt16(uint32_t Imm, const MCSubtargetInfo &STI,
                            raw_ostream &O);
   void printImmediateBF16(uint32_t Imm, const MCSubtargetInfo &STI,
@@ -232,6 +235,8 @@ protected:
                    raw_ostream &O);
   void printSendMsg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
+  void printWaitEvent(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printSwizzle(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
   void printSWaitCnt(const MCInst *MI, unsigned OpNo,

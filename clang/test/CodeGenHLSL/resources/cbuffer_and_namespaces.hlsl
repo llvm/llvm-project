@@ -4,18 +4,18 @@
 
 // CHECK: %"n0::n1::__cblayout_A" = type <{ float }>
 // CHECK: %"n0::__cblayout_B" = type <{ float }>
-// CHECK: %"n0::n2::__cblayout_C" = type <{ float, target("dx.Layout", %"n0::Foo", 4, 0) }>
+// CHECK: %"n0::n2::__cblayout_C" = type <{ float, target("dx.Padding", 12), %"n0::Foo" }>
 // CHECK: %"n0::Foo" = type <{ float }>
 
-// CHECK: @A.cb = global target("dx.CBuffer", target("dx.Layout", %"n0::n1::__cblayout_A", 4, 0))
+// CHECK: @A.cb = global target("dx.CBuffer", %"n0::n1::__cblayout_A")
 // CHECK: @_ZN2n02n11aE = external hidden addrspace(2) global float, align 4
 
-// CHECK: @B.cb = global target("dx.CBuffer", target("dx.Layout", %"n0::__cblayout_B", 4, 0))
+// CHECK: @B.cb = global target("dx.CBuffer", %"n0::__cblayout_B")
 // CHECK: @_ZN2n01aE = external hidden addrspace(2) global float, align 4
 
-// CHECK: @C.cb = global target("dx.CBuffer", target("dx.Layout", %"n0::n2::__cblayout_C", 20, 0, 16))
+// CHECK: @C.cb = global target("dx.CBuffer", %"n0::n2::__cblayout_C")
 // CHECK: @_ZN2n02n21aE = external hidden addrspace(2) global float, align 4
-// CHECK: external hidden addrspace(2) global target("dx.Layout", %"n0::Foo", 4, 0), align 1
+// CHECK: external hidden addrspace(2) global %"n0::Foo", align 1
 
 namespace n0 {
   struct Foo {

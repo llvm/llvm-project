@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-zalasr < %s 2>&1 | FileCheck -check-prefixes=CHECK %s
+# RUN: not llvm-mc -triple riscv32 -mattr=+zalasr < %s 2>&1 | FileCheck -check-prefixes=CHECK %s
 
 # CHECK: error: instruction requires the following: RV64I Base Instruction Set{{$}}
 ld.aq a1, (t0)

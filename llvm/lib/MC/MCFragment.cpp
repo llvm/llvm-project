@@ -55,7 +55,8 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   case MCFragment::FT_DwarfFrame:    OS << "DwarfCallFrame"; break;
   case MCFragment::FT_SFrame:        OS << "SFrame"; break;
   case MCFragment::FT_LEB:           OS << "LEB"; break;
-  case MCFragment::FT_BoundaryAlign: OS<<"BoundaryAlign"; break;
+  case MCFragment::FT_BoundaryAlign: OS << "BoundaryAlign"; break;
+  case MCFragment::FT_PrefAlign:     OS << "PrefAlign"; break;
   case MCFragment::FT_SymbolId:      OS << "SymbolId"; break;
   case MCFragment::FT_CVInlineLines: OS << "CVInlineLineTable"; break;
   case MCFragment::FT_CVDefRange:    OS << "CVDefRangeTable"; break;
@@ -170,6 +171,11 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
        << " Size:" << BF->getSize();
     break;
   }
+  case MCFragment::FT_PrefAlign:
+    OS << " PrefAlign:" << getPrefAlignPreferred().value()
+       << " End:" << getPrefAlignEnd().getName()
+       << " ComputedAlign:" << getPrefAlignComputed().value();
+    break;
   case MCFragment::FT_SymbolId: {
     const auto *F = cast<MCSymbolIdFragment>(this);
     OS << " Sym:" << F->getSymbol();

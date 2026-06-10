@@ -903,42 +903,34 @@ void PMDataManager::removeNotPreservedAnalysis(Pass *P) {
     return;
 
   const AnalysisUsage::VectorType &PreservedSet = AnUsage->getPreservedSet();
-  for (DenseMap<AnalysisID, Pass*>::iterator I = AvailableAnalysis.begin(),
-         E = AvailableAnalysis.end(); I != E; ) {
-    DenseMap<AnalysisID, Pass*>::iterator Info = I++;
-    if (Info->second->getAsImmutablePass() == nullptr &&
-        !is_contained(PreservedSet, Info->first)) {
-      // Remove this analysis
-      if (PassDebugging >= Details) {
-        Pass *S = Info->second;
-        dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
-        dbgs() << S->getPassName() << "'\n";
-      }
-      AvailableAnalysis.erase(Info);
-    }
-  }
-
+  SmallVector<DenseMap<AnalysisID, Pass *> *, 8> Maps = {&AvailableAnalysis};
   // Check inherited analysis also. If P is not preserving analysis
   // provided by parent manager then remove it here.
-  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis) {
-    if (!IA)
+  for (DenseMap<AnalysisID, Pass *> *IA : InheritedAnalysis)
+    if (IA)
+      Maps.push_back(IA);
+  // Prune every map from a single remove_if call site. The instantiated
+  // DenseMap::remove_if is a local function; sharing it across more than one
+  // call site makes the inliner emit it out of line, which adds a call in this
+  // hot per-pass path. A single call site keeps it inlined here.
+  for (DenseMap<AnalysisID, Pass *> *M : Maps) {
+    // These maps are usually empty here, but a DenseMap keeps its grown bucket
+    // array after the entries are erased, so remove_if would still scan all
+    // those empty buckets. Skip it.
+    if (M->empty())
       continue;
-
-    for (DenseMap<AnalysisID, Pass *>::iterator I = IA->begin(),
-                                                E = IA->end();
-         I != E;) {
-      DenseMap<AnalysisID, Pass *>::iterator Info = I++;
-      if (Info->second->getAsImmutablePass() == nullptr &&
-          !is_contained(PreservedSet, Info->first)) {
-        // Remove this analysis
-        if (PassDebugging >= Details) {
-          Pass *S = Info->second;
-          dbgs() << " -- '" <<  P->getPassName() << "' is not preserving '";
-          dbgs() << S->getPassName() << "'\n";
-        }
-        IA->erase(Info);
+    M->remove_if([&](const auto &Entry) {
+      if (Entry.second->getAsImmutablePass() != nullptr ||
+          is_contained(PreservedSet, Entry.first))
+        return false;
+      // Remove this analysis
+      if (PassDebugging >= Details) {
+        Pass *S = Entry.second;
+        dbgs() << " -- '" << P->getPassName() << "' is not preserving '";
+        dbgs() << S->getPassName() << "'\n";
       }
-    }
+      return true;
+    });
   }
 }
 
@@ -1098,7 +1090,7 @@ void PMDataManager::initializeAnalysisImpl(Pass *P) {
 Pass *PMDataManager::findAnalysisPass(AnalysisID AID, bool SearchParent) {
 
   // Check if AvailableAnalysis map has one entry.
-  DenseMap<AnalysisID, Pass*>::const_iterator I =  AvailableAnalysis.find(AID);
+  auto I = AvailableAnalysis.find(AID);
 
   if (I != AvailableAnalysis.end())
     return I->second;

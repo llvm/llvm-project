@@ -27,12 +27,10 @@
 
 #include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 
-#include <mutex>
-
-LLDB_PLUGIN_DEFINE(ScriptedProcess)
-
 using namespace lldb;
 using namespace lldb_private;
+
+LLDB_PLUGIN_DEFINE(ScriptedProcess)
 
 llvm::StringRef ScriptedProcess::GetPluginDescriptionStatic() {
   return "Scripted Process plug-in.";
@@ -110,9 +108,8 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
   ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
 
   // Create process script object
-  auto obj_or_err = GetInterface().CreatePluginObject(
-      m_scripted_metadata.GetClassName(), exe_ctx,
-      m_scripted_metadata.GetArgsSP());
+  auto obj_or_err =
+      GetInterface().CreatePluginObject(m_scripted_metadata, exe_ctx);
 
   if (!obj_or_err) {
     llvm::consumeError(obj_or_err.takeError());
@@ -146,12 +143,8 @@ ScriptedProcess::~ScriptedProcess() {
 }
 
 void ScriptedProcess::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
-  });
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance);
 }
 
 void ScriptedProcess::Terminate() {
@@ -231,7 +224,7 @@ size_t ScriptedProcess::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
   lldb::DataExtractorSP data_extractor_sp =
       GetInterface().ReadMemoryAtAddress(addr, size, error);
 
-  if (!data_extractor_sp || !data_extractor_sp->GetByteSize() || error.Fail())
+  if (!data_extractor_sp || !data_extractor_sp->HasData() || error.Fail())
     return 0;
 
   offset_t bytes_copied = data_extractor_sp->CopyByteOrderedData(
@@ -252,7 +245,7 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
   lldb::DataExtractorSP data_extractor_sp = std::make_shared<DataExtractor>(
       buf, size, GetByteOrder(), GetAddressByteSize());
 
-  if (!data_extractor_sp || !data_extractor_sp->GetByteSize())
+  if (!data_extractor_sp || !data_extractor_sp->HasData())
     return 0;
 
   lldb::offset_t bytes_written =
@@ -271,7 +264,7 @@ size_t ScriptedProcess::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
 Status ScriptedProcess::EnableBreakpointSite(BreakpointSite *bp_site) {
   assert(bp_site != nullptr);
 
-  if (bp_site->IsEnabled()) {
+  if (IsBreakpointSitePhysicallyEnabled(*bp_site)) {
     return {};
   }
 
@@ -426,7 +419,8 @@ bool ScriptedProcess::GetProcessInfo(ProcessInstanceInfo &info) {
 }
 
 lldb_private::StructuredData::ObjectSP
-ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
+ScriptedProcess::GetLoadedDynamicLibrariesInfos(
+    BinaryInformationLevel info_level) {
   Status error;
   auto error_with_message = [&error](llvm::StringRef message) {
     return ScriptedInterface::ErrorWithMessage<bool>(LLVM_PRETTY_FUNCTION,

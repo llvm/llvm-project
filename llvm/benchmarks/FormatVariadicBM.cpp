@@ -10,6 +10,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <string>
+#include <vector>
 
 using namespace llvm;
 using namespace std;

@@ -39,7 +39,7 @@ namespace fputil {
 // Return value is +1 if the value should be rounded up; -1 if it should be
 // rounded down; 0 if it's exact and needs no rounding.
 template <size_t Bits>
-LIBC_INLINE constexpr int
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int
 rounding_direction(const LIBC_NAMESPACE::UInt<Bits> &value, size_t rshift,
                    Sign logical_sign) {
   if (rshift == 0 || (rshift < Bits && (value << (Bits - rshift)) == 0) ||
@@ -95,7 +95,7 @@ template <size_t Bits> struct DyadicFloat {
   LIBC_INLINE constexpr DyadicFloat() = default;
 
   template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-  LIBC_INLINE constexpr DyadicFloat(T x) {
+  LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR DyadicFloat(T x) {
     static_assert(FPBits<T>::FRACTION_LEN < Bits);
     FPBits<T> x_bits(x);
     sign = x_bits.sign();
@@ -152,7 +152,7 @@ template <size_t Bits> struct DyadicFloat {
   // Produce a correctly rounded DyadicFloat from a too-large mantissa,
   // by shifting it down and rounding if necessary.
   template <size_t MantissaBits>
-  LIBC_INLINE constexpr static DyadicFloat<Bits>
+  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT static DyadicFloat<Bits>
   round(Sign result_sign, int result_exponent,
         const LIBC_NAMESPACE::UInt<MantissaBits> &input_mantissa,
         size_t rshift) {
@@ -171,7 +171,7 @@ template <size_t Bits> struct DyadicFloat {
   }
 
   template <typename T, bool ShouldSignalExceptions>
-  LIBC_INLINE constexpr cpp::enable_if_t<
+  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT cpp::enable_if_t<
       cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
   generic_as() const {
     using FPBits = FPBits<T>;
@@ -219,6 +219,9 @@ template <size_t Bits> struct DyadicFloat {
       underflow = true;
     } else if (unbiased_exp == -FPBits::EXP_BIAS - FPBits::FRACTION_LEN) {
       round = true;
+      // underflow is detected pre-rounding FE_UNDERFLOW may be raised
+      // even if rounding produces a non-underflow result
+      underflow = true;
       MantissaType sticky_mask = (MantissaType(1) << (Bits - 1)) - 1;
       sticky = (mantissa & sticky_mask) != 0;
     } else {
@@ -281,7 +284,7 @@ template <size_t Bits> struct DyadicFloat {
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
-  LIBC_INLINE constexpr T fast_as() const {
+  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T fast_as() const {
     if (LIBC_UNLIKELY(mantissa.is_zero()))
       return FPBits<T>::zero(sign).get_val();
 
@@ -408,7 +411,7 @@ template <size_t Bits> struct DyadicFloat {
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
-  LIBC_INLINE constexpr T as() const {
+  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T as() const {
     if constexpr (cpp::is_same_v<T, bfloat16>
 #if defined(LIBC_TYPES_HAS_FLOAT16) && !defined(__LIBC_USE_FLOAT16_CONVERSION)
                   || cpp::is_same_v<T, float16>
@@ -450,7 +453,7 @@ template <size_t Bits> struct DyadicFloat {
     return new_mant;
   }
 
-  LIBC_INLINE constexpr MantissaType
+  LIBC_INLINE LIBC_CONSTEXPR_DEFAULT MantissaType
   as_mantissa_type_rounded(int *round_dir_out = nullptr) const {
     int round_dir = 0;
     MantissaType new_mant;

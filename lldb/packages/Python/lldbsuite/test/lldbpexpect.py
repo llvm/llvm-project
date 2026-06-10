@@ -10,10 +10,15 @@ from lldbsuite.test.decorators import *
 
 
 @skipIfRemote
+@skipIfWindows
 @add_test_categories(["pexpect"])
 class PExpectTest(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     PROMPT = "(lldb) "
+
+    # Override this value in a subclass to make the test fail faster and make
+    # debugging less tedious.
+    TIMEOUT = 60
 
     def expect_prompt(self):
         self.child.expect_exact(self.PROMPT)
@@ -22,7 +27,6 @@ class PExpectTest(TestBase):
         self,
         executable=None,
         extra_args=None,
-        timeout=60,
         dimensions=None,
         run_under=None,
         post_spawn=None,
@@ -54,6 +58,8 @@ class PExpectTest(TestBase):
         env = dict(os.environ)
         env["TERM"] = "vt100"
         env["HOME"] = self.getBuildDir()
+
+        timeout = self.TIMEOUT
 
         import pexpect
 
@@ -94,9 +100,24 @@ class PExpectTest(TestBase):
                 self.child.expect_exact(s)
         self.expect_prompt()
 
+    def tearDown(self):
+        # Ensure the child is always cleaned up, even if the test didn't call
+        # quit() explicitly or failed before reaching it.
+        if self.child is not None:
+            self.quit()
+        super().tearDown()
+
     def quit(self, gracefully=True):
-        self.child.sendeof()
-        self.child.close(force=not gracefully)
+        if self.child is None:
+            return
+
+        try:
+            self.child.sendeof()
+            self.child.close(force=not gracefully)
+        except OSError:
+            # This can happen if LLDB quit itself because it is running in
+            # batch mode.
+            pass
         self.child = None
 
     def cursor_forward_escape_seq(self, chars_to_move):

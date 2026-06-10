@@ -111,6 +111,61 @@ def SignlessLikeVariadic : TEST_Op<"signless_like_variadic"> {
 }
 
 //===----------------------------------------------------------------------===//
+// Test Token Type
+//===----------------------------------------------------------------------===//
+
+// Produce a builtin `!token` value.
+def TestTokenProduceOp : TEST_Op<"token.produce"> {
+  let results = (outs Token:$token);
+  let assemblyFormat = "attr-dict";
+}
+
+// Produce a builtin `!token` value via an opt-in result type without the
+// producer trait. ODS only auto-derives the trait when the declared type is
+// statically `Token`, so this op (whose result type accepts any type
+// including tokens) exercises the runtime trait check.
+def TestTokenProduceWithoutTraitOp
+    : TEST_Op<"token.produce_without_trait"> {
+  let results = (outs Type<CPred<"true">>:$token);
+  let assemblyFormat = "attr-dict `:` type($token)";
+}
+
+// Consume a builtin `!token` value (token-only operand). The consumer trait
+// is auto-derived by ODS from the statically-typed `Token` operand.
+def TestTokenConsumeOp : TEST_Op<"token.consume"> {
+  let arguments = (ins Token:$token);
+  let assemblyFormat = "$token attr-dict";
+}
+
+// Consume a builtin `!token` value via an opt-in operand type without the
+// consumer trait. ODS only auto-derives the trait when the declared type is
+// statically `Token`, so this op (whose operand type accepts any type
+// including tokens) exercises the runtime trait check.
+def TestTokenConsumeWithoutTraitOp
+    : TEST_Op<"token.consume_without_trait"> {
+  let arguments = (ins Type<CPred<"true">>:$token);
+  let assemblyFormat = "$token attr-dict `:` type($token)";
+}
+
+// Op that uses the default `AnyType` predicate. Tokens are excluded by
+// default and should be rejected by the verifier when passed here.
+def TestTokenAnyTypeOp : TEST_Op<"token.any_type", [TokenConsumerTrait]> {
+  let arguments = (ins AnyType:$value);
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+}
+
+// Op whose region entry blocks may produce builtin `!token` values.
+def TestTokenRegionOp : TEST_Op<"token.region", [TokenProducerTrait]> {
+  let regions = (region AnyRegion:$body);
+}
+
+// Op whose regions do not opt in to producing builtin `!token` values.
+def TestTokenRegionWithoutTraitOp
+    : TEST_Op<"token.region_without_trait"> {
+  let regions = (region AnyRegion:$body);
+}
+
+//===----------------------------------------------------------------------===//
 // Test Symbols
 //===----------------------------------------------------------------------===//
 
@@ -118,6 +173,13 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
   let summary =  "operation which defines a new symbol";
   let arguments = (ins StrAttr:$sym_name,
                        OptionalAttr<StrAttr>:$sym_visibility);
+}
+
+def SymbolWithResultOp : TEST_Op<"symbol_with_result", [Symbol]> {
+  let summary = "invalid symbol operation that produces an SSA result";
+  let arguments = (ins StrAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+  let results = (outs AnyType:$result);
 }
 
 def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
@@ -482,6 +544,20 @@ def OpWithBitEnumPropNamed : TEST_Op<"op_with_bit_enum_prop_named"> {
   let assemblyFormat = "$value1 ($value2^)? attr-dict";
 }
 
+def TestSimpleEnum8Prop : EnumProp<TestSimpleEnum8>;
+
+def OpWithSimpleEnum8Prop : TEST_Op<"op_with_simple_enum_8_prop"> {
+  let arguments = (ins TestSimpleEnum8Prop:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
+def TestSimpleEnum16Prop : EnumProp<TestSimpleEnum16>;
+
+def OpWithSimpleEnum16Prop : TEST_Op<"op_with_simple_enum_16_prop"> {
+  let arguments = (ins TestSimpleEnum16Prop:$value);
+  let assemblyFormat = "$value attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Bit Enum Attributes
 //===----------------------------------------------------------------------===//
@@ -539,7 +615,7 @@ def VariadicRegionInferredTypesOp : TEST_Op<"variadic_region_inferred",
   let extraClassDeclaration = [{
     static llvm::LogicalResult inferReturnTypes(mlir::MLIRContext *context,
           std::optional<::mlir::Location> location, mlir::ValueRange operands,
-          mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, mlir::RegionRange regions,
+          mlir::DictionaryAttr attributes, mlir::PropertyRef properties, mlir::RegionRange regions,
           llvm::SmallVectorImpl<mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({mlir::IntegerType::get(context, 16)});
       return mlir::success();
@@ -824,6 +900,13 @@ def OperandZeroAndResultHaveSameElementCount :
   let results = (outs AnyShaped:$res);
 }
 
+def OperandAndResultHaveSameElementCountAnyType :
+    TEST_Op<"operand_and_result_have_same_element_count_any_type",
+            [AllElementCountsMatch<["x", "res"]>]> {
+  let arguments = (ins AnyType:$x);
+  let results = (outs AnyType:$res);
+}
+
 def FourEqualsFive :
     TEST_Op<"four_equals_five", [AllMatch<["5", "4"], "4 equals 5">]>;
 
@@ -861,6 +944,15 @@ def ParentOp1 : TEST_Op<"parent1"> {
 }
 def ChildWithParentOneOf : TEST_Op<"child_with_parent_one_of",
                                 [ParentOneOf<["ParentOp", "ParentOp1"]>]>;
+
+// HasAncestor trait
+def ChildWithAncestor
+    : TEST_Op<"child_with_ancestor", [HasAncestor<"ParentOp">]>;
+
+// AncestorOneOf trait
+def ChildWithAncestorOneOf
+    : TEST_Op<"child_with_ancestor_one_of", [AncestorOneOf<["ParentOp",
+                                                            "ParentOp1"]>]>;
 
 def TerminatorOp : TEST_Op<"finish", [Terminator]>;
 def SingleBlockImplicitTerminatorOp : TEST_Op<"SingleBlockImplicitTerminator",
@@ -915,11 +1007,95 @@ def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
 }
 
-def OpWithResultShapePerDimInterfaceOp :
-    TEST_Op<"op_with_result_shape_per_dim_interface",
-        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+def ReifyShapedTypeUsingReifyResultShapesOp :
+    TEST_Op<"reify_shaped_type_using_reify_result_shapes",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that doesnt implement `reifyShapeOfResult` nor implements `reifyDimOfResult`
+    calls into the implementation of `reifyResultShapes` to get the required value.
+    The op semantics is that the first result has the same shape as the second operand
+    and the second result has the same shape as the first operand.
+  }];
   let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
   let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def ReifyShapedTypeUsingReifyShapeOfResultOp :
+    TEST_Op<"reify_shaped_type_using_reify_shape_of_result",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes", "reifyShapeOfResult"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that doesnt implement `reifyDimOfResult` but implements `reifyShapeOfResult`, which
+    is used to get the required value. `reifyResultShapes` is implemented as a failure
+    (which is also the default implementation) to ensure it is not called.
+    The op semantics is that the first result has the same shape as the second operand
+    and the second result has the same shape as the first operand.
+  }];
+  let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
+  let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def ReifyShapedTypeUsingReifyDimOfResultOp :
+    TEST_Op<"reify_shaped_type_using_reify_dim_of_result",
+        [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, 
+            ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
+  let description = [{
+    Test that when resolving a single dimension of a result for an operation
+    that implements `reifyDimOfResult`, which is used to get the required value.
+    `reifyResultShapes` and `reifyShapeOfResult` are implemented as failures
+    to ensure they are not called. The op semantics is that the first result has
+    the same shape as the second operand and the second result has the same shape
+    as the first operand.
+  }];
+  let arguments = (ins AnyRankedTensor:$operand1, AnyRankedTensor:$operand2);
+  let results = (outs AnyRankedTensor:$result1, AnyRankedTensor:$result2);
+}
+
+def UnreifiableResultShapesOp : TEST_Op<"unreifiable_result_shapes",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyResultShapes` is implemented.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
+}
+
+def UnreifiableResultShapeOp : TEST_Op<"unreifiable_result_shape",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes", "reifyShapeOfResult"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyShapeOfResult` is implemented,
+    but not `reifyDimOfResult` with `reifyResultShapes` implemented as a failure.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
+}
+
+def UnreifiableDimOfResultShapeOp : TEST_Op<"unreifiable_dim_of_result_shape",
+    [DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface,
+        ["reifyResultShapes", "reifyShapeOfResult", "reifyDimOfResult"]>]> {
+  let description = [{
+    Test handling of case where some dimension of the result cannot be
+    reified. This tests the path when `reifyDimOfResult` is implemented,
+    and `reifyDimOfResult` with `reifyResultShapes` are implemented as a failure.
+
+    Expected that dim 0 of `result` is reifable as dim 0 of `operand`, but
+    dim 1 of `result` is not reifiable.
+  }];
+  let arguments = (ins 2DTensorOf<[AnyType]>:$operand);
+  let results = (outs 2DTensorOf<[AnyType]>:$result);
 }
 
 def IsNotScalar : Constraint<CPred<"$0.getType().getRank() != 0">>;
@@ -1106,6 +1282,12 @@ def TestLocationSrcNoResOp : TEST_Op<"loc_src_no_res"> {
 def TestLocationDstNoResOp : TEST_Op<"loc_dst_no_res"> {
   let arguments = (ins I32:$input);
   let results = (outs);
+}
+
+def TestLocationAttrOp : TEST_Op<"op_with_loc_attr"> {
+  let arguments = (ins LocationAttr:$loc_attr);
+  let results = (outs );
+  let assemblyFormat = "$loc_attr attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2135,6 +2317,18 @@ def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
     [{ build($_builder, $_state, {}); }]>
   ];
 }
+// A return-like terminator used to test FuncOp verifier ordering.
+// When 'valid' unit-attr is absent the op is malformed; its verifier
+// emits an error, but getMutableSuccessorOperands() calls report_fatal_error
+// to expose the fact that FuncOp::verify() runs before the region is checked.
+def TestCrashingReturnOp : TEST_Op<"crashing_return", [
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+       ["getMutableSuccessorOperands"]>,
+    Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$args, UnitAttr:$valid);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+  let hasVerifier = 1;
+}
 def TestCastOp : TEST_Op<"cast">,
   Arguments<(ins Variadic<AnyType>)>, Results<(outs AnyType)>;
 def TestInvalidOp : TEST_Op<"invalid", [Terminator]>,
@@ -2183,6 +2377,19 @@ def TestSignatureConversionUndoOp : TEST_Op<"signature_conversion_undo"> {
 def TestSignatureConversionNoConverterOp
   : TEST_Op<"signature_conversion_no_converter"> {
   let regions = (region AnyRegion);
+}
+
+// A return-like operation with override on the successor operand getter
+// interface method.
+def TestReturnWithIgnoredValueOp : TEST_Op<"return_with_ignored_value", [
+    Pure,
+    ReturnLike,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface, [
+      "getMutableSuccessorOperands"
+    ]>,
+    Terminator
+]> {
+  let arguments = (ins Variadic<AnyType>:$values, AnyType:$unwanted_value);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2255,6 +2462,24 @@ def IsolatedGraphRegionOp : TEST_Op<"isolated_graph_region",  [
   let assemblyFormat = "attr-dict-with-keyword $region";
 }
 
+def ManyRegionsOp : TEST_Op<"many_regions", []> {
+  let summary = "operation created with move-only objects";
+  let description = [{
+    Test op with multiple regions with a `create` function that
+    takes parameters containing move-only objects.
+  }];
+
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let builders =
+      [OpBuilder<(ins "::std::unique_ptr<::mlir::Region>":$singleRegion), [{
+      $_state.addRegion(std::move(singleRegion));
+      build($_builder, $_state, {}, /*regionsCount=*/1);
+    }]>,
+       // Define in TestOps.cpp.
+       OpBuilder<(ins "::llvm::SmallVectorImpl<::std::unique_ptr<::mlir::"
+                      "Region>>&&":$regions)>];
+}
+
 def AffineScopeOp : TEST_Op<"affine_scope", [AffineScope]> {
   let summary =  "affine scope operation";
   let description = [{
@@ -2322,6 +2547,13 @@ def ArrayOfAttrOp : TEST_Op<"array_of_attr_op"> {
 def SideEffectOp : TEST_Op<"side_effect_op",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<TestEffectOpInterface>]> {
+  let results = (outs AnyType:$result);
+}
+
+def ConditionalSideEffectOp
+    : TEST_Op<"conditional_side_effect_op", [DeclareOpInterfaceMethods<
+                                                MemoryEffectsOpInterface>]> {
+  let arguments = (ins BoolAttr:$has_effects);
   let results = (outs AnyType:$result);
 }
 
@@ -2462,6 +2694,7 @@ def ReifyBoundOp : TEST_Op<"reify_bound", [Pure]> {
                        OptionalAttr<I64Attr>:$dim,
                        DefaultValuedAttr<StrAttr, "\"EQ\"">:$type,
                        UnitAttr:$constant,
+                       UnitAttr:$allow_integer_type,
                        UnitAttr:$scalable,
                        OptionalAttr<I64Attr>:$vscale_min,
                        OptionalAttr<I64Attr>:$vscale_max);
@@ -2520,7 +2753,8 @@ def RegionIfYieldOp : TEST_Op<"region_if_yield",
 def RegionIfOp : TEST_Op<"region_if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                  ["getRegionInvocationBounds",
-                                  "getEntrySuccessorOperands"]>,
+                                  "getEntrySuccessorOperands",
+                                  "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"RegionIfYieldOp">,
        RecursiveMemoryEffects]> {
   let description =[{
@@ -2550,7 +2784,8 @@ def RegionIfOp : TEST_Op<"region_if",
 
 def AnyCondOp : TEST_Op<"any_cond",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getRegionInvocationBounds"]>,
+                                 ["getRegionInvocationBounds",
+                                  "getSuccessorInputs"]>,
        RecursiveMemoryEffects]> {
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region AnyRegion:$region);
@@ -2558,7 +2793,8 @@ def AnyCondOp : TEST_Op<"any_cond",
 
 def LoopBlockOp : TEST_Op<"loop_block",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands"]>, RecursiveMemoryEffects]> {
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+     RecursiveMemoryEffects]> {
 
   let results = (outs F32:$floatResult);
   let arguments = (ins I32:$init);
@@ -2571,8 +2807,9 @@ def LoopBlockOp : TEST_Op<"loop_block",
 }
 
 def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
-    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Pure,
-     Terminator]> {
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>,
+     Pure, Terminator]> {
   let arguments = (ins I32:$nextIterArg, F32:$exitArg);
 
   let assemblyFormat = [{
@@ -2590,6 +2827,52 @@ def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
   let assemblyFormat = [{
     $arg attr-dict custom<SwitchCases>($cases, $caseRegions)
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// Test areTypesCompatible for RegionBranchOpInterface / LoopLikeOpInterface
+//===----------------------------------------------------------------------===//
+
+def TestTypesCompatYieldOp : TEST_Op<"types_compat_yield",
+    [Pure, ReturnLike, Terminator]> {
+  let arguments = (ins Variadic<AnyType>:$args);
+  let assemblyFormat = "($args^ `:` type($args))? attr-dict";
+}
+
+def TestRegionTypesCompatOp : TEST_Op<"region_types_compat",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+       ["getEntrySuccessorOperands", "getSuccessorInputs",
+        "areTypesCompatible"]>,
+     SingleBlockImplicitTerminator<"TestTypesCompatYieldOp">,
+     RecursiveMemoryEffects]> {
+  let arguments = (ins Variadic<AnyType>:$entries);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+}
+
+def TestLoopTypesCompatOp : TEST_Op<"loop_types_compat",
+    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
+       ["getInitsMutable", "getRegionIterArgs", "getYieldedValuesMutable",
+        "getLoopResults"]>,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface,
+       ["getEntrySuccessorOperands", "getSuccessorInputs",
+        "areTypesCompatible"]>,
+     SingleBlockImplicitTerminator<"TestTypesCompatYieldOp">,
+     RecursiveMemoryEffects]> {
+  let arguments = (ins Variadic<AnyType>:$init_args);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+}
+
+def TestRegionTypeChangerOp : TEST_Op<"region_type_changer",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+       ["getEntrySuccessorOperands", "getSuccessorInputs",
+        "areTypesCompatible"]>,
+     RecursiveMemoryEffects]> {
+  let arguments = (ins Variadic<AnyType>:$entries);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "`(` $entries `)` $body `:` functional-type($entries, $results) attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2643,7 +2926,7 @@ class TableGenBuildInferReturnTypeBaseOp<string mnemonic,
   let extraClassDeclaration = [{
     static ::llvm::LogicalResult inferReturnTypes(::mlir::MLIRContext *,
           ::std::optional<::mlir::Location> location, ::mlir::ValueRange operands,
-          ::mlir::DictionaryAttr attributes, mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+          ::mlir::DictionaryAttr attributes, mlir::PropertyRef properties, ::mlir::RegionRange regions,
           ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
       inferredReturnTypes.assign({operands[0].getType()});
       return ::mlir::success();
@@ -2924,6 +3207,30 @@ def TestNVVMRequirestSMArchCondMultiOp :
   let assemblyFormat = "attr-dict";
 }
 
+def TestNVVMRequiresSMFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSMf<[100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondHigherOp :
+    TEST_Op<"nvvm_requires_sm_103f", [NVVMRequiresSMf<[103]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamilyCondMultiOp :
+    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f", [NVVMRequiresSMf<[100, 120]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMArchOrFamilyCondOp :
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrSMf<[90], [100]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // Test Ops with Default-Valued String Attributes
 //===----------------------------------------------------------------------===//
@@ -3048,6 +3355,7 @@ def InferIntRangeType : AnyTypeOf<[AnyInteger, Index, VectorOfNonZeroRankOf<[Any
 def TestWithBoundsOp : TEST_Op<"with_bounds",
                           [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
                            NoMemoryEffect]> {
+  let hasVerifier = 1;
   let description = [{
     Creates a value with specified [min, max] range for integer range analysis.
 
@@ -3065,6 +3373,23 @@ def TestWithBoundsOp : TEST_Op<"with_bounds",
   let results = (outs InferIntRangeType:$fakeVal);
 
   let assemblyFormat = "attr-dict `:` type($fakeVal)";
+}
+
+def TestWithoutBoundsOp : TEST_Op<"without_bounds",
+                         [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
+                          NoMemoryEffect]> {
+  let description = [{
+    Creates a value with uninitialized range for integer range analysis tests.
+
+    Example:
+
+    ```mlir
+    %0 = test.without_bounds : index
+    ```
+  }];
+  let results = (outs InferIntRangeType:$result);
+
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 def TestWithBoundsRegionOp : TEST_Op<"with_bounds_region",
@@ -3626,7 +3951,7 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
 }
 
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {
   let arguments = (ins
     Arg<AnyMemRef, "", [MemWrite]>:$address,
@@ -3638,7 +3963,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
 }
 
 def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
-    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
      SingleBlock]> {
   let arguments = (ins
     Arg<AnyMemRef, "", [MemWrite]>:$address,
@@ -3671,6 +3996,73 @@ def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
   let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
 }
 
+// Transparent alias of a memref slot with the same element type. Exercises
+// alias-chain handling in mem2reg with identity projections.
+def TestTransparentAlias : TEST_Op<"transparent_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases"]>]> {
+  let arguments = (ins MemRefOf<[I32]>:$source);
+  let results = (outs MemRefOf<[I32]>:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
+// Type-changing transparent alias of a memref slot. The projection methods
+// bridge the element types using `builtin.unrealized_conversion_cast`.
+def TestTransparentCastAlias : TEST_Op<"transparent_cast_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases",
+                                "projectSlotValueToAliasValue",
+                                "projectAliasValueToSlotValue"]>]> {
+  let arguments = (ins MemRefOf<[I32, F32]>:$source);
+  let results = (outs MemRefOf<[I32, F32]>:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
+// Transparent alias of a memref slot exposing two simultaneously-usable
+// aliases of the same bit-width at different signednesses (signed and
+// unsigned 32-bit integers, both aliasing the signless i32 storage).
+// Exercises mem2reg's handling of an aliaser whose
+// `getPromotableSlotAliases` returns more than one entry for a single
+// aliased operand.
+def TestTransparentDualAlias : TEST_Op<"transparent_dual_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases",
+                                "projectSlotValueToAliasValue",
+                                "projectAliasValueToSlotValue"]>]> {
+  let arguments = (ins MemRefOf<[I32]>:$source);
+  let results = (outs MemRefOf<[SI32]>:$result_signed,
+                      MemRefOf<[UI32]>:$result_unsigned);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, results)";
+}
+
+// Partial alias of a memref slot: exposes a sub-value of the parent slot.
+// The slot-to-alias projection is a 1-input `unrealized_conversion_cast`
+// (sub-value extraction). The alias-to-slot projection is a 2-input cast
+// taking both the new alias value and the parent slot's reaching definition
+// (sub-value insertion). This exercises mem2reg's `reachingDef` plumbing
+// for partial sub-aliases.
+def TestPartialAlias : TEST_Op<"partial_alias",
+    [DeclareOpInterfaceMethods<PromotableOpInterface,
+                               ["canUsesBeRemoved",
+                                "removeBlockingUses"]>,
+     DeclareOpInterfaceMethods<PromotableAliaserInterface,
+                               ["getPromotableSlotAliases",
+                                "projectSlotValueToAliasValue",
+                                "projectAliasValueToSlotValue"]>]> {
+  let arguments = (ins AnyMemRef:$source);
+  let results = (outs AnyMemRef:$result);
+  let assemblyFormat = "$source attr-dict `:` functional-type($source, $result)";
+}
+
 //===----------------------------------------------------------------------===//
 // Test allocation Ops
 //===----------------------------------------------------------------------===//
@@ -3687,10 +4079,13 @@ def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
 // Test Ops bufferization
 //===----------------------------------------------------------------------===//
 
-def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
-    [DeclareOpInterfaceMethods<BufferizableOpInterface,
-        ["bufferize", "bufferizesToMemoryRead",
-         "bufferizesToMemoryWrite", "getAliasingValues"]>]> {
+def TestDummyTensorOp
+    : TEST_Op<"dummy_tensor_op",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands"]>]> {
   let arguments = (ins
     Arg<Bufferization_TensorLikeTypeInterface>:$input
   );
@@ -3710,7 +4105,23 @@ def TestDummyTensorOp : TEST_Op<"dummy_tensor_op",
     ::mlir::bufferization::AliasingValueList
     test::TestDummyTensorOp::getAliasingValues(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
-      return {};
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{getOutput(), relation, /*isDefinite=*/true}};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestDummyTensorOp::getAliasingOpOperands(::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      if (value != getOutput())
+        return {};
+
+      auto relation = getInput().getType() == getOutput().getType()
+                          ? ::mlir::bufferization::BufferRelation::Equivalent
+                          : ::mlir::bufferization::BufferRelation::Unknown;
+      return {{&getOperation()->getOpOperand(0), relation,
+               /*isDefinite=*/true}};
     }
   }];
 }
@@ -3724,11 +4135,13 @@ def TestDummyMemrefOp : TEST_Op<"dummy_memref_op", []> {
   );
 }
 
-def TestCreateTensorOp : TEST_Op<"create_tensor_op",
-    [DeclareOpInterfaceMethods<BufferizableOpInterface,
-        ["bufferize", "getBufferType", "bufferizesToMemoryRead",
-         "bufferizesToMemoryWrite", "getAliasingValues",
-         "bufferizesToAllocation"]>]> {
+def TestCreateTensorOp
+    : TEST_Op<"create_tensor_op",
+              [DeclareOpInterfaceMethods<
+                  BufferizableOpInterface,
+                  ["bufferize", "getBufferType", "bufferizesToMemoryRead",
+                   "bufferizesToMemoryWrite", "getAliasingValues",
+                   "getAliasingOpOperands", "bufferizesToAllocation"]>]> {
   let arguments = (ins);
   let results = (outs Arg<Bufferization_TensorLikeTypeInterface>:$output);
   let extraClassDefinition = [{
@@ -3747,6 +4160,14 @@ def TestCreateTensorOp : TEST_Op<"create_tensor_op",
     ::mlir::bufferization::AliasingValueList
     test::TestCreateTensorOp::getAliasingValues(::mlir::OpOperand&,
         const ::mlir::bufferization::AnalysisState&) {
+      return {};
+    }
+
+    ::mlir::bufferization::AliasingOpOperandList
+    test::TestCreateTensorOp::getAliasingOpOperands(
+        ::mlir::Value value,
+        const ::mlir::bufferization::AnalysisState&) {
+      (void)value;
       return {};
     }
   }];

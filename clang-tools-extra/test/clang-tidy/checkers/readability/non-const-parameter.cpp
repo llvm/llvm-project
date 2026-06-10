@@ -341,3 +341,111 @@ void constructLVRef(int *p) {
   // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be
   Temp1 t(*p);
 }
+
+template<bool>
+class A final {
+    char* sz_ = {};
+
+public:
+    explicit A(char* sz) noexcept : sz_(sz) {}
+    void f() { sz_ = {}; }
+};
+
+class B final {
+    char* sz_ = {};
+
+public:
+    explicit B(char* sz) noexcept : sz_(sz) {}
+    void f() { sz_ = {}; }
+};
+
+void gh176623() {
+    // CHECK-MESSAGES-NOT: warning:
+    auto const V1 = []<bool tc>(char* p) { auto X = A<tc>(p); };
+    // CHECK-MESSAGES-NOT: warning:
+    auto const V2 = []<bool tc>(char* p) { auto Y = B(p); };
+}
+
+void testGenericLambdaIssue177354() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto genericLambda = []<typename T>(int *p) {
+    T x(*p);
+  };
+}
+
+template <typename Index>
+void dependentArray1(double *ToFill, Index I, double FillValue) {
+  ToFill[I] = FillValue;
+}
+
+template <typename Index>
+void dependentArray2(double *ToFill, Index I, double FillValue) {
+  I[ToFill] = FillValue;
+}
+
+void useDependentArray() {
+  double ToFill[2] = {};
+  dependentArray1(ToFill, 0, 1.0);
+  dependentArray2(ToFill, 0, 1.0);
+}
+
+void testGenericLambdaIssue177354EqualsInit() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto genericLambda = []<typename T>(int *p) {
+    T x = *p;
+  };
+}
+
+void testGenericLambdaIssue177354Parens() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto genericLambda = []<typename T>(int *p) {
+    T x((*p));
+  };
+}
+
+template <typename T>
+struct DependentCtor {
+  DependentCtor(int *p);
+};
+
+template <typename T>
+struct DependentCtor2 {
+  DependentCtor2(int *p, int *q);
+};
+
+void dependentInitInGenericLambda() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto lambda = []<typename T>(int *p) {
+    DependentCtor<T> s(p);
+  };
+}
+
+void dependentInitInGenericLambdaParens() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto lambda = []<typename T>(int *p) {
+    DependentCtor<T> s((p));
+  };
+}
+
+void dependentInitInGenericLambdaMultiArg() {
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
+  auto lambda = []<typename T>(int *p) {
+    DependentCtor2<T> s(p, p);
+  };
+}
+
+template <class T>
+struct StaticDepInClassInit {
+  static const T X = 0;
+};
+
+template <class T>
+const T StaticDepInClassInit<T>::X;
+
+template <class T>
+struct StaticDepOutOfClassInit {
+  static const T X;
+};
+
+template <class T>
+const T StaticDepOutOfClassInit<T>::X = 0;

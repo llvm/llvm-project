@@ -338,3 +338,11 @@ class Foo {
   bool aux;
 };
 }
+
+namespace GH101330 {
+  template <class T> struct A {
+    template <int N> friend void f() noexcept(N == 0);
+  };
+  template <int N> void f() noexcept(N == 0) {}
+  template struct A<int>;
+} // namespace GH101330

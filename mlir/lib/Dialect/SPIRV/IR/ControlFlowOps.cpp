@@ -138,7 +138,7 @@ LogicalResult BranchConditionalOp::verify() {
       return emitOpError("must have exactly two branch weights");
     }
     if (llvm::all_of(*weights, [](Attribute attr) {
-          return llvm::cast<IntegerAttr>(attr).getValue().isZero();
+          return cast<IntegerAttr>(attr).getValue().isZero();
         }))
       return emitOpError("branch weights cannot both be zero");
   }
@@ -220,6 +220,89 @@ MutableOperandRange FunctionCallOp::getArgOperandsMutable() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.Switch
+//===----------------------------------------------------------------------===//
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     DenseIntElementsAttr literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  build(builder, result, selector, defaultOperands, targetOperands, literals,
+        defaultTarget, targets);
+}
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     ArrayRef<APInt> literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  DenseIntElementsAttr literalsAttr;
+  if (!literals.empty()) {
+    ShapedType literalType = VectorType::get(
+        static_cast<int64_t>(literals.size()), selector.getType());
+    literalsAttr = DenseIntElementsAttr::get(literalType, literals);
+  }
+  build(builder, result, selector, defaultTarget, defaultOperands, literalsAttr,
+        targets, targetOperands);
+}
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     ArrayRef<int32_t> literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  DenseIntElementsAttr literalsAttr;
+  if (!literals.empty()) {
+    ShapedType literalType = VectorType::get(
+        static_cast<int64_t>(literals.size()), selector.getType());
+    literalsAttr = DenseIntElementsAttr::get(literalType, literals);
+  }
+  build(builder, result, selector, defaultTarget, defaultOperands, literalsAttr,
+        targets, targetOperands);
+}
+
+LogicalResult SwitchOp::verify() {
+  std::optional<DenseIntElementsAttr> literals = getLiterals();
+  BlockRange targets = getTargets();
+
+  if (!literals && targets.empty())
+    return success();
+
+  Type selectorType = getSelector().getType();
+  Type literalType = literals->getType().getElementType();
+  if (literalType != selectorType)
+    return emitOpError() << "'selector' type (" << selectorType
+                         << ") should match literals type (" << literalType
+                         << ")";
+
+  if (literals && literals->size() != static_cast<int64_t>(targets.size()))
+    return emitOpError() << "number of literals (" << literals->size()
+                         << ") should match number of targets ("
+                         << targets.size() << ")";
+  return success();
+}
+
+SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDefaultOperandsMutable()
+                                      : getTargetOperandsMutable(index - 1));
+}
+
+Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  std::optional<DenseIntElementsAttr> literals = getLiterals();
+
+  if (!literals)
+    return getDefaultTarget();
+
+  SuccessorRange targets = getTargets();
+  if (auto value = dyn_cast_or_null<IntegerAttr>(operands.front())) {
+    for (auto [index, literal] : llvm::enumerate(literals->getValues<APInt>()))
+      if (literal == value.getValue())
+        return targets[index];
+    return getDefaultTarget();
+  }
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.mlir.loop
 //===----------------------------------------------------------------------===//
 
@@ -275,6 +358,14 @@ static bool hasOtherMerge(Region &region) {
   return !region.empty() && llvm::any_of(region.getOps(), [&](Operation &op) {
     return isa<spirv::MergeOp>(op) && op.getBlock() != &region.back();
   });
+}
+
+/// Returns true if types yielded by `spirv.mlir.merge` in the region match
+/// those returned by the `op`.
+static bool returnTypesMatch(Region &region, Operation *op) {
+  auto mergeOps = region.getOps<spirv::MergeOp>();
+  Operation *mergeOp = llvm::getSingleElement(mergeOps);
+  return llvm::equal(mergeOp->getOperandTypes(), op->getResultTypes());
 }
 
 LogicalResult LoopOp::verifyRegions() {
@@ -362,6 +453,10 @@ LogicalResult LoopOp::verifyRegions() {
     }
   }
 
+  if (!returnTypesMatch(region, op))
+    return emitOpError(
+        "result types do not match types yielded with `spirv.mlir.merge`");
+
   return success();
 }
 
@@ -421,8 +516,8 @@ LogicalResult ReturnValueOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult SelectOp::verify() {
-  if (auto conditionTy = llvm::dyn_cast<VectorType>(getCondition().getType())) {
-    auto resultVectorTy = llvm::dyn_cast<VectorType>(getResult().getType());
+  if (auto conditionTy = dyn_cast<VectorType>(getCondition().getType())) {
+    auto resultVectorTy = dyn_cast<VectorType>(getResult().getType());
     if (!resultVectorTy) {
       return emitOpError("result expected to be of vector type when "
                          "condition is of vector type");
@@ -525,6 +620,10 @@ LogicalResult SelectionOp::verifyRegions() {
 
   if (region.hasOneBlock())
     return emitOpError("must have a selection header block");
+
+  if (!returnTypesMatch(region, op))
+    return emitOpError(
+        "result types do not match types yielded with `spirv.mlir.merge`");
 
   return success();
 }

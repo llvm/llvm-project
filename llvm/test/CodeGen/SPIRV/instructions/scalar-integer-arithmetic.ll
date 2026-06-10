@@ -11,15 +11,18 @@
 ; CHECK-DAG: OpName [[SCALAR_MUL:%.+]] "scalar_mul"
 ; CHECK-DAG: OpName [[SCALAR_UDIV:%.+]] "scalar_udiv"
 ; CHECK-DAG: OpName [[SCALAR_SDIV:%.+]] "scalar_sdiv"
-;; TODO: add tests for urem + srem
-;; TODO: add test for OpSNegate
+; CHECK-DAG: OpName [[SCALAR_UREM:%.+]] "scalar_urem"
+; CHECK-DAG: OpName [[SCALAR_SREM:%.+]] "scalar_srem"
+; CHECK-DAG: OpName [[SCALAR_SNEGATE:%.+]] "scalar_snegate"
 
 ; CHECK-NOT: DAG-FENCE
 
 ; CHECK-DAG: [[BOOL:%.+]] = OpTypeBool
 ; CHECK-DAG: [[SCALAR:%.+]] = OpTypeInt 32
 ; CHECK-DAG: [[SCALAR_FN:%.+]] = OpTypeFunction [[SCALAR]] [[SCALAR]] [[SCALAR]]
+; CHECK-DAG: [[SCALAR_FN1:%.+]] = OpTypeFunction [[SCALAR]] [[SCALAR]]
 ; CHECK-DAG: [[BOOL_FN:%.+]] = OpTypeFunction [[BOOL]] [[BOOL]] [[BOOL]]
+; CHECK-DAG: [[ZERO:%.+]] = OpConstantNull [[SCALAR]]
 
 ; CHECK-NOT: DAG-FENCE
 
@@ -121,5 +124,49 @@ define i32 @scalar_sdiv(i32 %a, i32 %b) {
 ; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
 ; CHECK:      OpLabel
 ; CHECK:      [[C:%.+]] = OpSDiv [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test urem on scalar:
+define i32 @scalar_urem(i32 %a, i32 %b) {
+    %c = urem i32 %a, %b
+    ret i32 %c
+}
+
+; CHECK:      [[SCALAR_UREM]] = OpFunction [[SCALAR]] None [[SCALAR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpUMod [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test srem on scalar:
+define i32 @scalar_srem(i32 %a, i32 %b) {
+    %c = srem i32 %a, %b
+    ret i32 %c
+}
+
+; CHECK:      [[SCALAR_SREM]] = OpFunction [[SCALAR]] None [[SCALAR_FN]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK-NEXT: [[B:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpSRem [[SCALAR]] [[A]] [[B]]
+; CHECK:      OpReturnValue [[C]]
+; CHECK-NEXT: OpFunctionEnd
+
+
+;; Test snegate on scalar:
+define i32 @scalar_snegate(i32 %a) {
+    %c = sub i32 0, %a
+    ret i32 %c
+}
+
+; CHECK:      [[SCALAR_SNEGATE]] = OpFunction [[SCALAR]] None [[SCALAR_FN1]]
+; CHECK-NEXT: [[A:%.+]] = OpFunctionParameter [[SCALAR]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.+]] = OpISub [[SCALAR]] [[ZERO]] [[A]]
 ; CHECK:      OpReturnValue [[C]]
 ; CHECK-NEXT: OpFunctionEnd

@@ -64,6 +64,8 @@ class DWARFUnit;
 
 namespace bolt {
 
+class DataflowInfoManager;
+
 using InputOffsetToAddressMapTy = std::unordered_multimap<uint64_t, uint64_t>;
 
 /// Types of macro-fusion alignment corrections.
@@ -385,6 +387,10 @@ private:
   /// True if the function should not have an associated symbol table entry.
   bool IsAnonymous{false};
 
+  /// Indicates whether branch validation has already been performed,
+  /// to avoid redundant processing.
+  bool NeedBranchValidation{true};
+
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -396,7 +402,8 @@ private:
   FragmentsSetTy ParentFragments;
 
   /// Indicate if the function body was folded into another function.
-  /// Used by ICF optimization.
+  /// Used by ICF optimization. Always points to the root parent function
+  /// (i.e., a function that is not itself folded).
   BinaryFunction *FoldedIntoFunction{nullptr};
 
   /// All fragments for a parent function.
@@ -678,7 +685,8 @@ private:
   ///
   /// Prefer to use BinaryContext::getFunctionForSymbol(EntrySymbol, &ID)
   /// instead of calling this function directly.
-  uint64_t getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
+  std::optional<uint64_t>
+  getEntryIDForSymbol(const MCSymbol *EntrySymbol) const;
 
   /// If the function represents a secondary split function fragment, set its
   /// parent fragment to \p BF.
@@ -731,11 +739,12 @@ private:
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
   }
 
-  /// This constructor is used to create an injected function
+  /// This constructor is used to create an injected function, i.e. a function
+  /// that didn't originate in the input file.
   BinaryFunction(const std::string &Name, BinaryContext &BC, bool IsSimple)
       : Address(0), Size(0), BC(BC), IsSimple(IsSimple),
-        CodeSectionName(buildCodeSectionName(Name, BC)),
-        ColdCodeSectionName(buildColdCodeSectionName(Name, BC)),
+        CodeSectionName(BC.getInjectedCodeSectionName()),
+        ColdCodeSectionName(BC.getInjectedColdCodeSectionName()),
         FunctionNumber(++Count) {
     Symbols.push_back(BC.Ctx->getOrCreateSymbol(Name));
     IsInjected = true;
@@ -765,6 +774,9 @@ private:
   /// Clear state of the function that could not be disassembled or if its
   /// disassembled state was later invalidated.
   void clearDisasmState();
+
+  /// Reset the function state into Empty state, i.e. pre-disassembly form.
+  void resetState();
 
   /// Release memory allocated for CFG and instructions.
   /// We still keep basic blocks for address translation/mapping purposes.
@@ -2320,6 +2332,11 @@ public:
   /// zero-value bytes.
   bool isZeroPaddingAt(uint64_t Offset) const;
 
+  /// Validate if the target of any internal direct branch/call is a valid
+  /// executable instruction.
+  /// Return true if all the targets are valid, false otherwise.
+  bool validateInternalBranches();
+
   /// Check that entry points have an associated instruction at their
   /// offsets after disassembly.
   void postProcessEntryPoints();
@@ -2356,10 +2373,9 @@ public:
   bool postProcessIndirectBranches(MCPlusBuilder::AllocatorIdTy AllocId);
 
   /// Validate that all data references to function offsets are claimed by
-  /// recognized jump tables. Register externally referenced blocks as entry
-  /// points. Returns true if there are no unclaimed externally referenced
-  /// offsets.
-  bool validateExternallyReferencedOffsets();
+  /// recognized jump tables. Returns true if there are no unclaimed externally
+  /// referenced offsets.
+  bool validateInternalRefDataRelocations();
 
   /// Return all call site profile info for this function.
   IndirectCallSiteProfile &getAllCallSites() { return AllCallSites; }
@@ -2438,7 +2454,7 @@ public:
   /// while the second successor - false/fall-through branch.
   ///
   /// When we reverse the branch condition, the CFG is updated accordingly.
-  void fixBranches();
+  void fixBranches(DataflowInfoManager *DIM = nullptr);
 
   /// Mark function as finalized. No further optimizations are permitted.
   void setFinalized() { CurrentState = State::CFG_Finalized; }
@@ -2573,6 +2589,10 @@ public:
 
   /// Return true if the function is an AArch64 linker inserted veneer
   bool isAArch64Veneer() const;
+
+  /// Return true if the function signature matches veneer or it was established
+  /// to be a veneer.
+  bool isPossibleVeneer() const;
 
   virtual ~BinaryFunction();
 };

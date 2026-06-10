@@ -86,18 +86,18 @@ define { <16 x i32>, <16 x i32> } @test_int_x86_avx512_mask_vpdpbusds_512(<16 x 
   ret { <16 x i32>, <16 x i32> } %res2
 }
 
-declare <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <16 x i32>, <16 x i32>)
+declare <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32>, <32 x i16>, <32 x i16>)
 
-define <16 x i32>@test_int_x86_avx512_vpdpwssd_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
+define <16 x i32>@test_int_x86_avx512_vpdpwssd_512(<16 x i32> %x0, <32 x i16> %x1, <32 x i16> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpdpwssd_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpwssd %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x48,0x52,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  %1 = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %x0, <32 x i16> %x1, <32 x i16> %x2)
   ret <16 x i32> %1
 }
 
-define { <16 x i32>, <16 x i32> } @test_int_x86_avx512_mask_vpdpwssd_512(<16 x i32> %x0, <16 x i32> %x1, ptr %x2p, <16 x i32> %x4, i16 %x3) {
+define { <16 x i32>, <16 x i32> } @test_int_x86_avx512_mask_vpdpwssd_512(<16 x i32> %x0, <32 x i16> %x1, ptr %x2p, <32 x i16> %x4, i16 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpwssd_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm3 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xd8]
@@ -116,11 +116,11 @@ define { <16 x i32>, <16 x i32> } @test_int_x86_avx512_mask_vpdpwssd_512(<16 x i
 ; X64-NEXT:    vpdpwssd %zmm2, %zmm1, %zmm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xc9,0x52,0xda]
 ; X64-NEXT:    vmovdqa64 %zmm3, %zmm1 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <16 x i32>, ptr %x2p
-  %1 = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  %x2 = load <32 x i16>, ptr %x2p
+  %1 = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %x0, <32 x i16> %x1, <32 x i16> %x2)
   %2 = bitcast i16 %x3 to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
-  %4 = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x4)
+  %4 = call <16 x i32> @llvm.x86.avx512.vpdpwssd.512(<16 x i32> %x0, <32 x i16> %x1, <32 x i16> %x4)
   %5 = bitcast i16 %x3 to <16 x i1>
   %6 = select <16 x i1> %5, <16 x i32> %4, <16 x i32> zeroinitializer
   %res1 = insertvalue { <16 x i32>, <16 x i32> } poison, <16 x i32> %3, 0
@@ -128,18 +128,18 @@ define { <16 x i32>, <16 x i32> } @test_int_x86_avx512_mask_vpdpwssd_512(<16 x i
   ret { <16 x i32>, <16 x i32> } %res2
 }
 
-declare <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32>, <16 x i32>, <16 x i32>)
+declare <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32>, <32 x i16>, <32 x i16>)
 
-define <16 x i32>@test_int_x86_avx512_ask_vpdpwssds_512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2) {
+define <16 x i32>@test_int_x86_avx512_ask_vpdpwssds_512(<16 x i32> %x0, <32 x i16> %x1, <32 x i16> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_ask_vpdpwssds_512:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpwssds %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x75,0x48,0x53,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  %1 = call <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32> %x0, <32 x i16> %x1, <32 x i16> %x2)
   ret <16 x i32> %1
 }
 
-define { <16 x i32>, <16 x i32> } @test_int_x86_avx512_mask_vpdpwssds_512(<16 x i32> %x0, <16 x i32> %x1, ptr %x2p, <16 x i32> %x4, i16 %x3) {
+define { <16 x i32>, <16 x i32> } @test_int_x86_avx512_mask_vpdpwssds_512(<16 x i32> %x0, <32 x i16> %x1, ptr %x2p, <32 x i16> %x4, i16 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpwssds_512:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm3 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xd8]
@@ -158,11 +158,11 @@ define { <16 x i32>, <16 x i32> } @test_int_x86_avx512_mask_vpdpwssds_512(<16 x 
 ; X64-NEXT:    vpdpwssds %zmm2, %zmm1, %zmm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xc9,0x53,0xda]
 ; X64-NEXT:    vmovdqa64 %zmm3, %zmm1 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <16 x i32>, ptr %x2p
-  %1 = call <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x2)
+  %x2 = load <32 x i16>, ptr %x2p
+  %1 = call <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32> %x0, <32 x i16> %x1, <32 x i16> %x2)
   %2 = bitcast i16 %x3 to <16 x i1>
   %3 = select <16 x i1> %2, <16 x i32> %1, <16 x i32> %x0
-  %4 = call <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32> %x0, <16 x i32> %x1, <16 x i32> %x4)
+  %4 = call <16 x i32> @llvm.x86.avx512.vpdpwssds.512(<16 x i32> %x0, <32 x i16> %x1, <32 x i16> %x4)
   %5 = bitcast i16 %x3 to <16 x i1>
   %6 = select <16 x i1> %5, <16 x i32> %4, <16 x i32> zeroinitializer
   %res1 = insertvalue { <16 x i32>, <16 x i32> } poison, <16 x i32> %3, 0

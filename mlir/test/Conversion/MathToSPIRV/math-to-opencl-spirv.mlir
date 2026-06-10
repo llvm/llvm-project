@@ -20,14 +20,12 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.CL.log %[[ADDONE]]
   %5 = math.log1p %arg0 : f32
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant 1.44269502 : f32
-  // CHECK: %[[LOG0:.+]] = spirv.CL.log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.CL.log2 %{{.*}}: f32
   %6 = math.log2 %arg0 : f32
-  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant 0.434294492 : f32
-  // CHECK: %[[LOG1:.+]] = spirv.CL.log {{.+}}
-  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  // CHECK: spirv.CL.log10 %{{.*}}: f32
   %7 = math.log10 %arg0 : f32
+  // CHECK: spirv.CL.exp2 %{{.*}}: f32
+  %exp2_scalar = math.exp2 %arg0 : f32
   // CHECK: spirv.CL.rint %{{.*}}: f32
   %8 = math.roundeven %arg0 : f32
   // CHECK: spirv.CL.rsqrt %{{.*}}: f32
@@ -64,6 +62,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %24 = math.acosh %arg0 : f32
   // CHECK: spirv.CL.atanh %{{.*}}: f32
   %25 = math.atanh %arg0 : f32
+  // CHECK: spirv.CL.trunc %{{.*}}: f32
+  %26 = math.trunc %arg0 : f32
   return
 }
 
@@ -85,14 +85,12 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.CL.log %[[ADDONE]]
   %5 = math.log1p %arg0 : vector<3xf32>
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant dense<1.44269502> : vector<3xf32>
-  // CHECK: %[[LOG0:.+]] = spirv.CL.log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.CL.log2 %{{.*}}: vector<3xf32>
   %6 = math.log2 %arg0 : vector<3xf32>
-  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant dense<0.434294492> : vector<3xf32>
-  // CHECK: %[[LOG1:.+]] = spirv.CL.log {{.+}}
-  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  // CHECK: spirv.CL.log10 %{{.*}}: vector<3xf32>
   %7 = math.log10 %arg0 : vector<3xf32>
+  // CHECK: spirv.CL.exp2 %{{.*}}: vector<3xf32>
+  %exp2_vec = math.exp2 %arg0 : vector<3xf32>
   // CHECK: spirv.CL.rint %{{.*}}: vector<3xf32>
   %8 = math.roundeven %arg0 : vector<3xf32>
   // CHECK: spirv.CL.rsqrt %{{.*}}: vector<3xf32>
@@ -119,6 +117,8 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %19 = math.acosh %arg0 : vector<3xf32>
   // CHECK: spirv.CL.atanh %{{.*}}: vector<3xf32>
   %20 = math.atanh %arg0 : vector<3xf32>
+  // CHECK: spirv.CL.trunc %{{.*}}: vector<3xf32>
+  %21 = math.trunc %arg0 : vector<3xf32>
   return
 }
 
@@ -140,6 +140,20 @@ func.func @float32_binary_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) {
   return
 }
 
+// CHECK-LABEL: @fpowi_scalar
+func.func @fpowi_scalar(%base: f32, %power: i32) -> f32 {
+  // CHECK: spirv.CL.pown %{{.*}}, %{{.*}} : f32, i32 -> f32
+  %0 = math.fpowi %base, %power : f32, i32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @fpowi_vector
+func.func @fpowi_vector(%base: vector<4xf32>, %power: vector<4xi32>) -> vector<4xf32> {
+  // CHECK: spirv.CL.pown %{{.*}}, %{{.*}} : vector<4xf32>, vector<4xi32> -> vector<4xf32>
+  %0 = math.fpowi %base, %power : vector<4xf32>, vector<4xi32>
+  return %0 : vector<4xf32>
+}
+
 // CHECK-LABEL: @float32_ternary_scalar
 func.func @float32_ternary_scalar(%a: f32, %b: f32, %c: f32) {
   // CHECK: spirv.CL.fma %{{.*}}: f32
@@ -159,6 +173,15 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
 func.func @int_unary(%arg0: i32) {
   // CHECK: spirv.CL.s_abs %{{.*}}
   %0 = math.absi %arg0 : i32
+  // CHECK: spirv.CL.clz %{{.*}} : i32
+  %1 = math.ctlz %arg0 : i32
+  return
+}
+
+// CHECK-LABEL: @int_unary_vector
+func.func @int_unary_vector(%arg0: vector<2xi32>) {
+  // CHECK: spirv.CL.clz %{{.*}} : vector<2xi32>
+  %0 = math.ctlz %arg0 : vector<2xi32>
   return
 }
 

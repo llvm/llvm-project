@@ -4,7 +4,8 @@ modernize-type-traits
 =====================
 
 Converts standard library type traits of the form ``traits<...>::type`` and
-``traits<...>::value`` into ``traits_t<...>`` and ``traits_v<...>`` respectively.
+``traits<...>::value`` into ``traits_t<...>`` and
+``traits_v<...>`` respectively.
 
 For example:
 

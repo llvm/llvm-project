@@ -197,21 +197,21 @@ subroutine nested_default_clause_tests
 !CHECK: }
 !CHECK: omp.terminator
 !CHECK: }
-    !$omp parallel  firstprivate(x) private(y) shared(w) default(private)  
+    !$omp parallel  firstprivate(x) private(y) shared(w) default(private)
         !$omp parallel default(private)
            y = 20
-           x = 10 
-        !$omp end parallel 
+           x = 10
+        !$omp end parallel
 
-        !$omp parallel default(firstprivate) shared(y) private(w) 
+        !$omp parallel default(firstprivate) shared(y) private(w)
             y = 30
-            w = 40 
+            w = 40
             z = 50
             k = 40
         !$omp end parallel
     !$omp end parallel
-    
-    
+
+
 !CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Z:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -240,8 +240,8 @@ subroutine nested_default_clause_tests
         !$omp parallel default(private) shared(z)
             w = x + z
         !$omp end parallel
-    !$omp end parallel    
-    
+    !$omp end parallel
+
 !CHECK: omp.parallel private({{.*}} {{.*}}#0 -> %[[PRIVATE_X:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Y:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_W:.*]], {{.*}} {{.*}}#0 -> %[[PRIVATE_Z:.*]] : {{.*}}) {
 !CHECK: %[[PRIVATE_X_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_X]] {uniq_name = "_QFnested_default_clause_testsEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK: %[[PRIVATE_Y_DECL:.*]]:2 = hlfir.declare %[[PRIVATE_Y]] {uniq_name = "_QFnested_default_clause_testsEy"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -283,7 +283,7 @@ subroutine nested_default_clause_tests
 !CHECK: omp.terminator
 !CHECK: }
 !CHECK: return
-!CHECK: } 
+!CHECK: }
 	!$omp parallel default(firstprivate)
 		!$omp single
 			x = y

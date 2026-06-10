@@ -702,7 +702,7 @@ define <32 x i8> @test_remconstant_32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [32,16,16,128,64,16,256,32]
 ; AVX1-NEXT:    vpsrlw $8, %xmm3, %xmm3
 ; AVX1-NEXT:    vpackuswb %xmm4, %xmm3, %xmm4
-; AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm5 # [22,0,20,0,18,0,16,0,14,0,12,0,10,0,8,0]
+; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm5 # [22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7]
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
 ; AVX1-NEXT:    vpand %xmm3, %xmm5, %xmm5
 ; AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4 # [0,21,0,19,0,17,0,15,0,13,0,11,0,9,0,7]
@@ -739,7 +739,7 @@ define <32 x i8> @test_remconstant_32i8(<32 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4, %xmm4 # [64,256,128,32,32,32,64,64]
 ; AVX1-NEXT:    vpsrlw $8, %xmm4, %xmm4
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm4 # [7,0,9,0,11,0,13,0,15,0,17,0,19,0,21,0]
+; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm4 # [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22]
 ; AVX1-NEXT:    vpand %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [0,8,0,10,0,12,0,14,0,16,0,18,0,20,0,22]
 ; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
@@ -781,7 +781,7 @@ define <32 x i8> @test_remconstant_32i8(<32 x i8> %a) nounwind {
 ; AVX2NOBW-NEXT:    vpackuswb %ymm3, %ymm1, %ymm1
 ; AVX2NOBW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm2 # [0,8,0,10,0,12,0,14,0,16,0,18,0,20,0,22,0,21,0,19,0,17,0,15,0,13,0,11,0,9,0,7]
 ; AVX2NOBW-NEXT:    vpsllw $8, %ymm2, %ymm2
-; AVX2NOBW-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [7,0,9,0,11,0,13,0,15,0,17,0,19,0,21,0,22,0,20,0,18,0,16,0,14,0,12,0,10,0,8,0]
+; AVX2NOBW-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1 # [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7]
 ; AVX2NOBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX2NOBW-NEXT:    vpor %ymm2, %ymm1, %ymm1
 ; AVX2NOBW-NEXT:    vpsubb %ymm1, %ymm0, %ymm0

@@ -121,7 +121,7 @@ protected: // Can only create subclasses.
   std::optional<PGOOptions> PGOOption;
 
 public:
-  mutable TargetOptions Options;
+  TargetOptions Options;
 
   TargetMachine(const TargetMachine &) = delete;
   void operator=(const TargetMachine &) = delete;
@@ -231,17 +231,12 @@ public:
     return DL.getPointerSize(DL.getAllocaAddrSpace());
   }
 
-  /// Reset the target options based on the function's attributes.
-  // FIXME: Remove TargetOptions that affect per-function code generation
-  // from TargetMachine.
-  void resetTargetOptions(const Function &F) const;
-
   /// Return target specific asm information.
-  const MCAsmInfo *getMCAsmInfo() const { return AsmInfo.get(); }
+  const MCAsmInfo &getMCAsmInfo() const { return *AsmInfo; }
 
-  const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
+  const MCRegisterInfo &getMCRegisterInfo() const { return *MRI; }
   const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
-  const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
+  const MCSubtargetInfo &getMCSubtargetInfo() const { return *STI; }
 
   /// Return the ExceptionHandling to use, considering TargetOptions and the
   /// Triple's default.
@@ -485,10 +480,11 @@ public:
     return nullptr;
   }
 
-  virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
-                                     raw_pwrite_stream *, CodeGenFileType,
-                                     const CGPassBuilderOption &,
-                                     PassInstrumentationCallbacks *) {
+  virtual Error
+  buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                       raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                       CodeGenFileType FileType, const CGPassBuilderOption &Opt,
+                       MCContext &Ctx, PassInstrumentationCallbacks *PIC) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());
   }
@@ -538,6 +534,11 @@ public:
       const SmallPtrSetImpl<MachineInstr *> &MIs) const {
     return 0;
   }
+
+  /// Returns whether the backend can lower the llvm.cond.loop intrinsic. If
+  /// this function returns false, the intrinsic will be supported generically
+  /// but without loop detection support.
+  virtual bool canLowerCondLoop() const { return false; }
 };
 
 } // end namespace llvm

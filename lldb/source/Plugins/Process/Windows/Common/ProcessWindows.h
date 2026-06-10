@@ -9,6 +9,7 @@
 #ifndef liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 #define liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
 
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
@@ -38,14 +39,12 @@ public:
 
   ~ProcessWindows();
 
-  size_t GetSTDOUT(char *buf, size_t buf_size, Status &error) override;
-  size_t GetSTDERR(char *buf, size_t buf_size, Status &error) override;
-  size_t PutSTDIN(const char *buf, size_t buf_size, Status &error) override;
-
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   Status EnableBreakpointSite(BreakpointSite *bp_site) override;
   Status DisableBreakpointSite(BreakpointSite *bp_site) override;
+
+  bool ShouldUseDelayedBreakpoints() const override { return false; }
 
   Status DoDetach(bool keep_stopped) override;
   Status DoLaunch(Module *exe_module, ProcessLaunchInfo &launch_info) override;
@@ -92,22 +91,40 @@ public:
   void OnLoadDll(const ModuleSpec &module_spec,
                  lldb::addr_t module_addr) override;
   void OnUnloadDll(lldb::addr_t module_addr) override;
-  void OnDebugString(const std::string &string) override;
+  void OnDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                     uint16_t length_lower_word) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;
 
   std::optional<uint32_t> GetWatchpointSlotCount() override;
+
+  /// Returns the exception code of the active (current) debug exception,
+  /// or std::nullopt if there is no active exception.
+  std::optional<DWORD> GetActiveExceptionCode() const;
+
   Status EnableWatchpoint(lldb::WatchpointSP wp_sp,
                           bool notify = true) override;
   Status DisableWatchpoint(lldb::WatchpointSP wp_sp,
                            bool notify = true) override;
 
+  void SetPseudoConsoleHandle() override;
+
 protected:
+  /// Block until the stdio read thread has surfaced everything currently
+  /// buffered in the ConPTY/pipe to the process's STDOUT cache.
+  void DrainProcessStdout();
+
+  size_t PutSTDIN(const char *src, size_t src_len, Status &error) override;
+
   ProcessWindows(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
 
   Status DoGetMemoryRegionInfo(lldb::addr_t vm_addr,
                                MemoryRegionInfo &info) override;
 
 private:
+  llvm::Error ReadDebugString(lldb::addr_t debug_string_addr, bool is_unicode,
+                              uint16_t length_lower_word,
+                              llvm::SmallVectorImpl<char> &output);
+
   struct WatchpointInfo {
     uint32_t slot_id;
     lldb::addr_t address;
@@ -117,6 +134,7 @@ private:
   };
   std::map<lldb::break_id_t, WatchpointInfo> m_watchpoints;
   std::vector<lldb::break_id_t> m_watchpoint_ids;
+  std::shared_ptr<PTY> m_pty;
 };
 } // namespace lldb_private
 

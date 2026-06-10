@@ -1,5 +1,6 @@
 
 add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
+  IOHandlerProcessSTDIOWindows.cpp
   DebuggerThread.cpp
   LocalDebugDelegate.cpp
   NativeProcessWindows.cpp

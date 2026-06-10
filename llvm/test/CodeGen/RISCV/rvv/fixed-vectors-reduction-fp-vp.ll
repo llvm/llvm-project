@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfh,+v -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
-declare half @llvm.vp.reduce.fadd.v2f16(half, <2 x half>, <2 x i1>, i32)
-
 define half @vpreduce_fadd_v2f16(half %s, <2 x half> %v, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v2f16:
 ; CHECK:       # %bb.0:
@@ -31,8 +29,6 @@ define half @vpreduce_ord_fadd_v2f16(half %s, <2 x half> %v, <2 x i1> %m, i32 ze
   %r = call half @llvm.vp.reduce.fadd.v2f16(half %s, <2 x half> %v, <2 x i1> %m, i32 %evl)
   ret half %r
 }
-
-declare half @llvm.vp.reduce.fadd.v4f16(half, <4 x half>, <4 x i1>, i32)
 
 define half @vpreduce_fadd_v4f16(half %s, <4 x half> %v, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v4f16:
@@ -60,8 +56,6 @@ define half @vpreduce_ord_fadd_v4f16(half %s, <4 x half> %v, <4 x i1> %m, i32 ze
   ret half %r
 }
 
-declare float @llvm.vp.reduce.fadd.v2f32(float, <2 x float>, <2 x i1>, i32)
-
 define float @vpreduce_fadd_v2f32(float %s, <2 x float> %v, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v2f32:
 ; CHECK:       # %bb.0:
@@ -88,8 +82,6 @@ define float @vpreduce_ord_fadd_v2f32(float %s, <2 x float> %v, <2 x i1> %m, i32
   ret float %r
 }
 
-declare float @llvm.vp.reduce.fadd.v4f32(float, <4 x float>, <4 x i1>, i32)
-
 define float @vpreduce_fadd_v4f32(float %s, <4 x float> %v, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v4f32:
 ; CHECK:       # %bb.0:
@@ -115,8 +107,6 @@ define float @vpreduce_ord_fadd_v4f32(float %s, <4 x float> %v, <4 x i1> %m, i32
   %r = call float @llvm.vp.reduce.fadd.v4f32(float %s, <4 x float> %v, <4 x i1> %m, i32 %evl)
   ret float %r
 }
-
-declare float @llvm.vp.reduce.fadd.v64f32(float, <64 x float>, <64 x i1>, i32)
 
 define float @vpreduce_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v64f32:
@@ -174,8 +164,6 @@ define float @vpreduce_ord_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, 
   ret float %r
 }
 
-declare double @llvm.vp.reduce.fadd.v2f64(double, <2 x double>, <2 x i1>, i32)
-
 define double @vpreduce_fadd_v2f64(double %s, <2 x double> %v, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v2f64:
 ; CHECK:       # %bb.0:
@@ -202,8 +190,6 @@ define double @vpreduce_ord_fadd_v2f64(double %s, <2 x double> %v, <2 x i1> %m, 
   ret double %r
 }
 
-declare double @llvm.vp.reduce.fadd.v3f64(double, <3 x double>, <3 x i1>, i32)
-
 define double @vpreduce_fadd_v3f64(double %s, <3 x double> %v, <3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v3f64:
 ; CHECK:       # %bb.0:
@@ -229,8 +215,6 @@ define double @vpreduce_ord_fadd_v3f64(double %s, <3 x double> %v, <3 x i1> %m, 
   %r = call double @llvm.vp.reduce.fadd.v3f64(double %s, <3 x double> %v, <3 x i1> %m, i32 %evl)
   ret double %r
 }
-
-declare double @llvm.vp.reduce.fadd.v4f64(double, <4 x double>, <4 x i1>, i32)
 
 define double @vpreduce_fadd_v4f64(double %s, <4 x double> %v, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_v4f64:

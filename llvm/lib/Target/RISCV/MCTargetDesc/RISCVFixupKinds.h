@@ -11,7 +11,6 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCFixup.h"
-#include <utility>
 
 #undef RISCV
 
@@ -59,6 +58,9 @@ enum Fixups {
   fixup_riscv_qc_abs20_u,
   // 32-bit fixup for symbol references in the 48-bit qc.j/qc.jal instructions
   fixup_riscv_qc_e_call_plt,
+
+  fixup_qc_access_16,
+  fixup_qc_access_32,
 
   // Andes specific fixups
   // 10-bit fixup for symbol references in the xandesperf branch instruction

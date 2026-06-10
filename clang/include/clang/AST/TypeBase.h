@@ -1134,6 +1134,11 @@ public:
   /// Return true if this is a trivially copyable type
   bool isTriviallyCopyConstructibleType(const ASTContext &Context) const;
 
+  /// Returns true if the type uses postfix declarator syntax, i.e. the
+  /// declarator component appears after the name (arrays, functions).
+  /// Looks through pointer-like types to the pointee.
+  bool hasPostfixDeclaratorSyntax() const;
+
   /// Returns true if it is a class and it might be dynamic.
   bool mayBeDynamicClass() const;
 
@@ -1148,6 +1153,16 @@ public:
 
   /// Returns true if it is a WebAssembly Funcref Type.
   bool isWebAssemblyFuncrefType() const;
+
+  /// Returns true if it is a OverflowBehaviorType of Wrap kind.
+  bool isWrapType() const;
+
+  /// Returns true if it is a OverflowBehaviorType of Trap kind.
+  bool isTrapType() const;
+
+  /// Returns true if this type requires laundering by checking if it is a
+  /// dynamic class type, or contains a subobject which is a dynamic class type.
+  bool requiresBuiltinLaunder(const ASTContext &Context) const;
 
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
@@ -1788,6 +1803,33 @@ enum RefQualifierKind {
   RQ_RValue
 };
 
+// The kind of type deduction represented by a DeducedType (ie AutoType).
+enum class DeducedKind {
+  /// Not deduced yet. This is for example an 'auto' which was just parsed.
+  Undeduced,
+
+  /// The normal deduced case. For example, an 'auto' which has been deduced to
+  /// 'int' will be of this kind, with 'int' as the deduced-as type. This is the
+  /// only case where the node is sugar.
+  Deduced,
+
+  /// This is a special case where the initializer is dependent, so we can't
+  /// deduce a type yet. For example, 'auto x = V' where 'V' is a
+  /// value-dependent expression.
+  /// Formally we can't deduce an initializer which is dependent, because for
+  /// one reason it might be non-instantiable (ie it can contain a placeholder
+  /// dependent type such as DependentTy, which cannot be instantiated).
+  /// In general TreeTransform will turn these back to 'Undeduced' so we can try
+  /// to deduce them again.
+  DeducedAsDependent,
+
+  /// Same as above, but additionally this represents a case where the deduced
+  /// entity itself is a pack.
+  /// This currently only happens for a lambda init-capture pack, which always
+  /// uses AutoType.
+  DeducedAsPack,
+};
+
 /// Which keyword(s) were used to create an AutoType.
 enum class AutoTypeKeyword {
   /// auto
@@ -1929,7 +1971,7 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    static constexpr unsigned NumOfBuiltinTypeBits = 9;
+    static constexpr unsigned NumOfBuiltinTypeBits = 10;
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
@@ -2102,11 +2144,25 @@ protected:
     unsigned AttrKind : 32 - NumTypeBits;
   };
 
+  class DeducedTypeBitfields {
+    friend class DeducedType;
+
+    // One of the base classes uses the KeywordWrapper, so reserve those bits.
+    LLVM_PREFERRED_TYPE(KeywordWrapperBitfields)
+    unsigned : NumTypeWithKeywordBits;
+
+    /// The kind of deduction this type represents, ie 'undeduced' or otherwise.
+    LLVM_PREFERRED_TYPE(DeducedKind)
+    unsigned Kind : 2;
+  };
+
+  static constexpr int NumDeducedTypeBits = NumTypeBits + 2;
+
   class AutoTypeBitfields {
     friend class AutoType;
 
-    LLVM_PREFERRED_TYPE(TypeBitfields)
-    unsigned : NumTypeBits;
+    LLVM_PREFERRED_TYPE(DeducedTypeBitfields)
+    unsigned : NumDeducedTypeBits;
 
     /// Was this placeholder type spelled as 'auto', 'decltype(auto)',
     /// or '__auto_type'?  AutoTypeKeyword value.
@@ -2170,6 +2226,9 @@ protected:
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
+  static constexpr unsigned TemplateTypeParmTypeDepthBits = 15;
+  static constexpr unsigned TemplateTypeParmTypeIndexBits = 16;
+
   class TemplateTypeParmTypeBitfields {
     friend class TemplateTypeParmType;
 
@@ -2177,14 +2236,14 @@ protected:
     unsigned : NumTypeBits;
 
     /// The depth of the template parameter.
-    unsigned Depth : 15;
+    unsigned Depth : TemplateTypeParmTypeDepthBits;
 
     /// Whether this is a template parameter pack.
     LLVM_PREFERRED_TYPE(bool)
     unsigned ParameterPack : 1;
 
     /// The index of the template parameter.
-    unsigned Index : 16;
+    unsigned Index : TemplateTypeParmTypeIndexBits;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
@@ -2284,7 +2343,7 @@ protected:
     Last = PtrdiffT
   };
 
-  class PresefinedSugarTypeBitfields {
+  class PredefinedSugarTypeBitfields {
     friend class PredefinedSugarType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
@@ -2314,6 +2373,7 @@ protected:
     ArrayTypeBitfields ArrayTypeBits;
     ConstantArrayTypeBitfields ConstantArrayTypeBits;
     AttributedTypeBitfields AttributedTypeBits;
+    DeducedTypeBitfields DeducedTypeBits;
     AutoTypeBitfields AutoTypeBits;
     TypeOfBitfields TypeOfBits;
     TypedefBitfields TypedefBits;
@@ -2332,7 +2392,7 @@ protected:
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
     CountAttributedTypeBitfields CountAttributedTypeBits;
-    PresefinedSugarTypeBitfields PredefinedSugarTypeBits;
+    PredefinedSugarTypeBitfields PredefinedSugarTypeBits;
   };
 
 private:
@@ -2607,7 +2667,7 @@ public:
   bool isAnyPointerType() const;   // Any C pointer or ObjC object pointer
   bool isCountAttributedType() const;
   bool isCFIUncheckedCalleeFunctionType() const;
-  bool hasPointeeToToCFIUncheckedCalleeFunctionType() const;
+  bool hasPointeeToCFIUncheckedCalleeFunctionType() const;
   bool isBlockPointerType() const;
   bool isVoidPointerType() const;
   bool isReferenceType() const;
@@ -2637,12 +2697,14 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  bool isConstantMatrixBoolType() const; // Matrix type with bool element.
   // Extended vector type with bool element that is packed. HLSL doesn't pack
   // its bool vectors.
   bool isPackedVectorBoolType(const ASTContext &ctx) const;
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
+  bool isOverflowBehaviorType() const;          // Overflow behavior type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
   bool isObjCRetainableType() const;            // ObjC object or block pointer
@@ -3083,7 +3145,7 @@ public:
   /// Note that nullability is only captured as sugar within the type
   /// system, not as part of the canonical type, so nullability will
   /// be lost by canonicalization and desugaring.
-  std::optional<NullabilityKind> getNullability() const;
+  NullabilityKindOrNone getNullability() const;
 
   /// Determine whether the given type can have a nullability
   /// specifier applied to it, i.e., if it is any kind of pointer type.
@@ -4352,12 +4414,26 @@ public:
 
   /// Valid elements types are the following:
   /// * an integer type (as in C23 6.2.5p22), but excluding enumerated types
-  ///   and _Bool
+  ///   and _Bool (except that in HLSL, bool is allowed)
   /// * the standard floating types float or double
   /// * a half-precision floating point type, if one is supported on the target
-  static bool isValidElementType(QualType T) {
-    return T->isDependentType() ||
-           (T->isRealType() && !T->isBooleanType() && !T->isEnumeralType());
+  static bool isValidElementType(QualType T, const LangOptions &LangOpts) {
+    // Dependent is always okay
+    if (T->isDependentType())
+      return true;
+
+    // Enums are never okay
+    if (T->isEnumeralType())
+      return false;
+
+    // In HLSL, bool is allowed as a matrix element type.
+    // Note: isRealType includes bool so don't need to check
+    if (LangOpts.HLSL)
+      return T->isRealType();
+
+    // In non-HLSL modes, follow the existing rule:
+    // real type, but not _Bool.
+    return T->isRealType() && !T->isBooleanType();
   }
 
   bool isSugared() const { return false; }
@@ -4394,6 +4470,45 @@ public:
   /// Returns the number of elements required to embed the matrix into a vector.
   unsigned getNumElementsFlattened() const {
     return getNumRows() * getNumColumns();
+  }
+
+  /// Returns the row-major flattened index of a matrix element located at row
+  /// \p Row, and column \p Column
+  unsigned getRowMajorFlattenedIndex(unsigned Row, unsigned Column) const {
+    return Row * NumColumns + Column;
+  }
+
+  /// Returns the column-major flattened index of a matrix element located at
+  /// row \p Row, and column \p Column
+  unsigned getColumnMajorFlattenedIndex(unsigned Row, unsigned Column) const {
+    return Column * NumRows + Row;
+  }
+
+  /// Returns the flattened index of a matrix element located at
+  /// row \p Row, and column \p Column. If \p IsRowMajor is true, returns the
+  /// row-major order flattened index. Otherwise, returns the column-major order
+  /// flattened index.
+  unsigned getFlattenedIndex(unsigned Row, unsigned Column,
+                             bool IsRowMajor = false) const {
+    return IsRowMajor ? getRowMajorFlattenedIndex(Row, Column)
+                      : getColumnMajorFlattenedIndex(Row, Column);
+  }
+
+  /// Given a column-major flattened index \p ColumnMajorIdx, return the
+  /// equivalent row-major flattened index.
+  unsigned
+  mapColumnMajorToRowMajorFlattenedIndex(unsigned ColumnMajorIdx) const {
+    unsigned Column = ColumnMajorIdx / NumRows;
+    unsigned Row = ColumnMajorIdx % NumRows;
+    return Row * NumColumns + Column;
+  }
+
+  /// Given a row-major flattened index \p RowMajorIdx, return the equivalent
+  /// column-major flattened index.
+  unsigned mapRowMajorToColumnMajorFlattenedIndex(unsigned RowMajorIdx) const {
+    unsigned Row = RowMajorIdx / NumColumns;
+    unsigned Column = RowMajorIdx % NumColumns;
+    return Column * NumRows + Row;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
@@ -6613,7 +6728,7 @@ public:
 
   bool isCallingConv() const;
 
-  std::optional<NullabilityKind> getImmediateNullability() const;
+  NullabilityKindOrNone getImmediateNullability() const;
 
   /// Strip off the top-level nullability annotation on the given
   /// type, if it's there.
@@ -6624,20 +6739,15 @@ public:
   /// to the underlying modified type.
   ///
   /// \returns the top-level nullability, if present.
-  static std::optional<NullabilityKind> stripOuterNullability(QualType &T);
+  static NullabilityKindOrNone stripOuterNullability(QualType &T);
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getAttrKind(), ModifiedType, EquivalentType, Attribute);
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
+    Profile(ID, Ctx, getAttrKind(), ModifiedType, EquivalentType, Attribute);
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, Kind attrKind,
-                      QualType modified, QualType equivalent,
-                      const Attr *attr) {
-    ID.AddInteger(attrKind);
-    ID.AddPointer(modified.getAsOpaquePtr());
-    ID.AddPointer(equivalent.getAsOpaquePtr());
-    ID.AddPointer(attr);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx,
+                      Kind attrKind, QualType modified, QualType equivalent,
+                      const Attr *attr);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Attributed;
@@ -6678,11 +6788,50 @@ public:
   }
 };
 
+class OverflowBehaviorType : public Type, public llvm::FoldingSetNode {
+public:
+  enum OverflowBehaviorKind { Wrap, Trap };
+
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType UnderlyingType;
+  OverflowBehaviorKind BehaviorKind;
+
+  OverflowBehaviorType(QualType Canon, QualType Underlying,
+                       OverflowBehaviorKind Kind);
+
+public:
+  QualType getUnderlyingType() const { return UnderlyingType; }
+  OverflowBehaviorKind getBehaviorKind() const { return BehaviorKind; }
+
+  bool isWrapKind() const { return BehaviorKind == OverflowBehaviorKind::Wrap; }
+  bool isTrapKind() const { return BehaviorKind == OverflowBehaviorKind::Trap; }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return getUnderlyingType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, UnderlyingType, BehaviorKind);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Underlying,
+                      OverflowBehaviorKind Kind) {
+    ID.AddPointer(Underlying.getAsOpaquePtr());
+    ID.AddInteger((int)Kind);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == OverflowBehavior;
+  }
+};
+
 class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
 public:
   struct Attributes {
     // Data gathered from HLSL resource attributes
     llvm::dxil::ResourceClass ResourceClass;
+    llvm::dxil::ResourceDimension ResourceDimension;
 
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsROV : 1;
@@ -6693,18 +6842,26 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsCounter : 1;
 
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
-               bool RawBuffer = false, bool IsCounter = false)
-        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer),
-          IsCounter(IsCounter) {}
+    Attributes(llvm::dxil::ResourceClass ResourceClass,
+               llvm::dxil::ResourceDimension ResourceDimension,
+               bool IsROV = false, bool RawBuffer = false,
+               bool IsCounter = false)
+        : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
+          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter) {}
+
+    Attributes(llvm::dxil::ResourceClass ResourceClass)
+        : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
 
     Attributes()
-        : Attributes(llvm::dxil::ResourceClass::UAV, false, false, false) {}
+        : Attributes(llvm::dxil::ResourceClass::UAV,
+                     llvm::dxil::ResourceDimension::Unknown, false, false,
+                     false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
-      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer,
-                      LHS.IsCounter) == std::tie(RHS.ResourceClass, RHS.IsROV,
-                                                 RHS.RawBuffer, RHS.IsCounter);
+      return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
+                      LHS.RawBuffer, LHS.IsCounter) ==
+             std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
+                      RHS.RawBuffer, RHS.IsCounter);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6730,6 +6887,8 @@ public:
   QualType getContainedType() const { return ContainedType; }
   bool hasContainedType() const { return !ContainedType.isNull(); }
   const Attributes &getAttrs() const { return Attrs; }
+  bool isRaw() const { return Attrs.RawBuffer; }
+  bool isStructured() const { return !ContainedType->isChar8Type(); }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -6743,6 +6902,7 @@ public:
     ID.AddPointer(Wrapped.getAsOpaquePtr());
     ID.AddPointer(Contained.getAsOpaquePtr());
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
     ID.AddBoolean(Attrs.IsCounter);
@@ -6782,9 +6942,8 @@ public:
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
       : Kind(Kind), ResultType(ResultType), Value(std::move(Value)) {}
 
-  SpirvOperand(const SpirvOperand &Other) { *this = Other; }
-  ~SpirvOperand() {}
-
+  SpirvOperand(const SpirvOperand &Other) = default;
+  ~SpirvOperand() = default;
   SpirvOperand &operator=(const SpirvOperand &Other) = default;
 
   bool operator==(const SpirvOperand &Other) const {
@@ -6901,6 +7060,8 @@ class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
                  (PP ? TypeDependence::UnexpandedPack : TypeDependence::None)),
         TTPDecl(TTPDecl) {
     assert(!TTPDecl == Canon.isNull());
+    assert(D < (1 << TemplateTypeParmTypeDepthBits) && "Depth too large");
+    assert(I < (1 << TemplateTypeParmTypeIndexBits) && "Index too large");
     TemplateTypeParmTypeBits.Depth = D;
     TemplateTypeParmTypeBits.Index = I;
     TemplateTypeParmTypeBits.ParameterPack = PP;
@@ -7122,17 +7283,20 @@ class DeducedType : public Type {
   QualType DeducedAsType;
 
 protected:
-  DeducedType(TypeClass TC, QualType DeducedAsType,
-              TypeDependence ExtraDependence, QualType Canon)
-      : Type(TC, Canon,
-             ExtraDependence | (DeducedAsType.isNull()
-                                    ? TypeDependence::None
-                                    : DeducedAsType->getDependence() &
-                                          ~TypeDependence::VariablyModified)),
-        DeducedAsType(DeducedAsType) {}
+  DeducedType(TypeClass TC, DeducedKind DK, QualType DeducedAsTypeOrCanon);
+
+  static void Profile(llvm::FoldingSetNodeID &ID, DeducedKind DK,
+                      QualType Deduced) {
+    ID.AddInteger(llvm::to_underlying(DK));
+    Deduced.Profile(ID);
+  }
 
 public:
-  bool isSugared() const { return !DeducedAsType.isNull(); }
+  DeducedKind getDeducedKind() const {
+    return static_cast<DeducedKind>(DeducedTypeBits.Kind);
+  }
+
+  bool isSugared() const { return getDeducedKind() == DeducedKind::Deduced; }
   QualType desugar() const {
     return isSugared() ? DeducedAsType : QualType(this, 0);
   }
@@ -7140,9 +7304,7 @@ public:
   /// Get the type deduced for this placeholder type, or null if it
   /// has not been deduced.
   QualType getDeducedType() const { return DeducedAsType; }
-  bool isDeduced() const {
-    return !DeducedAsType.isNull() || isDependentType();
-  }
+  bool isDeduced() const { return getDeducedKind() != DeducedKind::Undeduced; }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto ||
@@ -7152,13 +7314,13 @@ public:
 
 /// Represents a C++11 auto or C++14 decltype(auto) type, possibly constrained
 /// by a type-constraint.
-class AutoType : public DeducedType {
+class AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
   TemplateDecl *TypeConstraintConcept;
 
-  AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-           TypeDependence ExtraDependence, QualType Canon, TemplateDecl *CD,
+  AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
+           AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
 public:
@@ -7189,9 +7351,8 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                      QualType Deduced, AutoTypeKeyword Keyword,
-                      bool IsDependent, TemplateDecl *CD,
-                      ArrayRef<TemplateArgument> Arguments);
+                      DeducedKind DK, QualType Deduced, AutoTypeKeyword Keyword,
+                      TemplateDecl *CD, ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;
@@ -7206,34 +7367,35 @@ class DeducedTemplateSpecializationType : public KeywordWrapper<DeducedType>,
   /// The name of the template whose arguments will be deduced.
   TemplateName Template;
 
-  DeducedTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
-                                    TemplateName Template,
-                                    QualType DeducedAsType,
-                                    bool IsDeducedAsDependent, QualType Canon)
-      : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DeducedAsType,
-                       toTypeDependence(Template.getDependence()) |
-                           (IsDeducedAsDependent
-                                ? TypeDependence::DependentInstantiation
-                                : TypeDependence::None),
-                       Canon),
-        Template(Template) {}
+  DeducedTemplateSpecializationType(DeducedKind DK,
+                                    QualType DeducedAsTypeOrCanon,
+                                    ElaboratedTypeKeyword Keyword,
+                                    TemplateName Template)
+      : KeywordWrapper(Keyword, DeducedTemplateSpecialization, DK,
+                       DeducedAsTypeOrCanon),
+        Template(Template) {
+    auto Dep = toTypeDependence(Template.getDependence());
+    // A deduced AutoType only syntactically depends on its template name.
+    if (DK == DeducedKind::Deduced)
+      Dep = toSyntacticDependence(Dep);
+    addDependence(Dep);
+  }
 
 public:
   /// Retrieve the name of the template that we are deducing.
   TemplateName getTemplateName() const { return Template; }
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
-    Profile(ID, getKeyword(), getTemplateName(), getDeducedType(),
-            isDependentType());
+    Profile(ID, getDeducedKind(), getDeducedType(), getKeyword(),
+            getTemplateName());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
-                      TemplateName Template, QualType Deduced,
-                      bool IsDependent) {
+  static void Profile(llvm::FoldingSetNodeID &ID, DeducedKind DK,
+                      QualType Deduced, ElaboratedTypeKeyword Keyword,
+                      TemplateName Template) {
+    DeducedType::Profile(ID, DK, Deduced);
     ID.AddInteger(llvm::to_underlying(Keyword));
     Template.Profile(ID);
-    Deduced.Profile(ID);
-    ID.AddBoolean(IsDependent || Template.isDependent());
   }
 
   static bool classof(const Type *T) {
@@ -8564,7 +8726,7 @@ inline bool Type::isCFIUncheckedCalleeFunctionType() const {
   return false;
 }
 
-inline bool Type::hasPointeeToToCFIUncheckedCalleeFunctionType() const {
+inline bool Type::hasPointeeToCFIUncheckedCalleeFunctionType() const {
   QualType Pointee;
   if (const auto *PT = getAs<PointerType>())
     Pointee = PT->getPointeeType();
@@ -8665,6 +8827,12 @@ inline bool Type::isExtVectorBoolType() const {
   return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
 }
 
+inline bool Type::isConstantMatrixBoolType() const {
+  if (auto *CMT = dyn_cast<ConstantMatrixType>(CanonicalType))
+    return CMT->getElementType()->isBooleanType();
+  return false;
+}
+
 inline bool Type::isSubscriptableVectorType() const {
   return isVectorType() || isSveVLSBuiltinType();
 }
@@ -8675,6 +8843,10 @@ inline bool Type::isMatrixType() const {
 
 inline bool Type::isConstantMatrixType() const {
   return isa<ConstantMatrixType>(CanonicalType);
+}
+
+inline bool Type::isOverflowBehaviorType() const {
+  return isa<OverflowBehaviorType>(CanonicalType);
 }
 
 inline bool Type::isDependentAddressSpaceType() const {
@@ -8921,6 +9093,10 @@ inline bool Type::isIntegerType() const {
     return IsEnumDeclComplete(ET->getDecl()) &&
            !IsEnumDeclScoped(ET->getDecl());
   }
+
+  if (const auto *OT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OT->getUnderlyingType()->isIntegerType();
+
   return isBitIntType();
 }
 
@@ -8983,7 +9159,7 @@ inline bool Type::isScalarType() const {
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
          isa<ObjCObjectPointerType>(CanonicalType) ||
-         isBitIntType();
+         isOverflowBehaviorType() || isBitIntType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -8994,6 +9170,9 @@ inline bool Type::isIntegralOrEnumerationType() const {
   // enumeration type in the sense required here.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
+
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isIntegralOrEnumerationType();
 
   return isBitIntType();
 }

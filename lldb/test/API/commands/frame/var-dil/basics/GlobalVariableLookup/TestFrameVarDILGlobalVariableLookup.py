@@ -19,7 +19,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(macos_version=["<", "15.0"], archs=["arm64", "arm64e"])
-    @expectedFailureAll(
+    @skipIf(
         dwarf_version=["<", "5"],
         oslist=[lldbplatformutil.getDarwinOSTriples()],
     )

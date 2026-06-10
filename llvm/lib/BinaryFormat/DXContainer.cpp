@@ -82,25 +82,42 @@ bool llvm::dxbc::isValidBorderColor(uint32_t V) {
   return false;
 }
 
-bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
-  using FlagT = dxbc::RootDescriptorFlags;
-  uint32_t LargestValue =
+template <typename FlagT>
+static bool isValidFlags(std::underlying_type_t<FlagT> V) {
+  decltype(V) LargestValue =
       llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
   return V < NextPowerOf2(LargestValue);
+}
+
+bool llvm::dxbc::isValidRootDesciptorFlags(uint32_t V) {
+  return isValidFlags<dxbc::RootDescriptorFlags>(V);
 }
 
 bool llvm::dxbc::isValidDescriptorRangeFlags(uint32_t V) {
-  using FlagT = dxbc::DescriptorRangeFlags;
-  uint32_t LargestValue =
-      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V < NextPowerOf2(LargestValue);
+  return isValidFlags<dxbc::DescriptorRangeFlags>(V);
 }
 
 bool llvm::dxbc::isValidStaticSamplerFlags(uint32_t V) {
-  using FlagT = dxbc::StaticSamplerFlags;
-  uint32_t LargestValue =
-      llvm::to_underlying(FlagT::LLVM_BITMASK_LARGEST_ENUMERATOR);
-  return V < NextPowerOf2(LargestValue);
+  return isValidFlags<dxbc::StaticSamplerFlags>(V);
+}
+
+bool llvm::dxbc::isValidCompilerVersionFlags(uint32_t V) {
+  return isValidFlags<dxbc::CompilerVersionFlags>(V);
+}
+
+template <typename EnumT>
+static bool isValidEnumValue(std::underlying_type_t<EnumT> V) {
+  decltype(V) LargestValue =
+      llvm::to_underlying(EnumT::LLVM_BITMASK_LARGEST_ENUMERATOR);
+  return V <= LargestValue;
+}
+
+bool llvm::dxbc::SourceInfo::Contents::isValidCompressionType(uint16_t V) {
+  return isValidEnumValue<CompressionType>(V);
+}
+
+bool SourceInfo::isValidSectionType(uint16_t V) {
+  return isValidEnumValue<SourceInfo::SectionType>(V);
 }
 
 dxbc::PartType dxbc::parsePartType(StringRef S) {
@@ -108,6 +125,12 @@ dxbc::PartType dxbc::parsePartType(StringRef S) {
   return StringSwitch<dxbc::PartType>(S)
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       .Default(dxbc::PartType::Unknown);
+}
+
+bool dxbc::isDebugProgramPart(PartType PT) { return PT == PartType::ILDB; }
+
+const char *dxbc::getProgramPartName(bool IsDebug) {
+  return IsDebug ? "ILDB" : "DXIL";
 }
 
 bool ShaderHash::isPopulated() {
@@ -291,4 +314,32 @@ static const EnumEntry<PSV::ResourceKind> ResourceKindNames[] = {
 
 ArrayRef<EnumEntry<PSV::ResourceKind>> PSV::getResourceKinds() {
   return ArrayRef(ResourceKindNames);
+}
+
+static const EnumEntry<SourceInfo::SectionType> SectionNames[] = {
+#define SOURCE_INFO_TYPE(Num, Val) {#Val, SourceInfo::SectionType::Val},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SourceInfo::SectionType>> SourceInfo::getSectionTypes() {
+  return ArrayRef(SectionNames);
+}
+
+StringRef SourceInfo::getSectionName(SourceInfo::SectionType Type) {
+  auto V = to_underlying(Type);
+  if (!isValidSectionType(V))
+    return StringRef();
+  return getSectionTypes()[V].Name;
+}
+
+static const EnumEntry<SourceInfo::Contents::CompressionType>
+    CompressionTypes[] = {
+#define COMPRESSION_TYPE(Num, Val)                                             \
+  {#Val, SourceInfo::Contents::CompressionType::Val},
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SourceInfo::Contents::CompressionType>>
+SourceInfo::Contents::getCompressionTypes() {
+  return ArrayRef(CompressionTypes);
 }

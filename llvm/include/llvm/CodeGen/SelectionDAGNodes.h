@@ -238,19 +238,7 @@ public:
   inline bool hasOneUse() const;
 };
 
-template<> struct DenseMapInfo<SDValue> {
-  static inline SDValue getEmptyKey() {
-    SDValue V;
-    V.ResNo = -1U;
-    return V;
-  }
-
-  static inline SDValue getTombstoneKey() {
-    SDValue V;
-    V.ResNo = -2U;
-    return V;
-  }
-
+template <> struct DenseMapInfo<SDValue> {
   static unsigned getHashValue(const SDValue &Val) {
     return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
             (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();
@@ -428,6 +416,9 @@ public:
     // that affect the provenance may have been optimized away.
     InBounds = 1 << 15,
 
+    // Call does not require convergence guarantees.
+    NoConvergent = 1 << 16,
+
     // NOTE: Please update LargestValue in LLVM_DECLARE_ENUM_AS_BITMASK below
     // the class definition when adding new flags.
 
@@ -468,6 +459,7 @@ public:
   void setNoFPExcept(bool b) { setFlag<NoFPExcept>(b); }
   void setUnpredictable(bool b) { setFlag<Unpredictable>(b); }
   void setInBounds(bool b) { setFlag<InBounds>(b); }
+  void setNoConvergent(bool b) { setFlag<NoConvergent>(b); }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return Flags & NoUnsignedWrap; }
@@ -486,6 +478,7 @@ public:
   bool hasNoFPExcept() const { return Flags & NoFPExcept; }
   bool hasUnpredictable() const { return Flags & Unpredictable; }
   bool hasInBounds() const { return Flags & InBounds; }
+  bool hasNoConvergent() const { return Flags & NoConvergent; }
 
   bool operator==(const SDNodeFlags &Other) const {
     return Flags == Other.Flags;
@@ -495,7 +488,7 @@ public:
 };
 
 LLVM_DECLARE_ENUM_AS_BITMASK(decltype(SDNodeFlags::None),
-                             SDNodeFlags::InBounds);
+                             SDNodeFlags::NoConvergent);
 
 inline SDNodeFlags operator|(SDNodeFlags LHS, SDNodeFlags RHS) {
   LHS |= RHS;
@@ -684,10 +677,14 @@ private:
   /// Return a pointer to the specified value type.
   LLVM_ABI static const EVT *getValueTypeList(MVT VT);
 
-  /// Index in worklist of DAGCombiner, or negative if the node is not in the
-  /// worklist. -1 = not in worklist; -2 = not in worklist, but has already been
-  /// combined at least once.
-  int CombinerWorklistIndex = -1;
+  union {
+    /// Index in worklist of DAGCombiner, or negative if the node is not in the
+    /// worklist. -1 = not in worklist; -2 = not in worklist, but has already
+    /// been combined at least once.
+    int CombinerWorklistIndex = -1;
+    /// Visited state in ScheduleDAGSDNodes::BuildSchedUnits.
+    bool SchedulerWorklistVisited;
+  };
 
   uint32_t CFIType = 0;
 
@@ -789,6 +786,14 @@ public:
 
   /// Set worklist index for DAGCombiner
   void setCombinerWorklistIndex(int Index) { CombinerWorklistIndex = Index; }
+
+  /// Get visited state for ScheduleDAGSDNodes::BuildSchedUnits.
+  bool getSchedulerWorklistVisited() const { return SchedulerWorklistVisited; }
+
+  /// Set visited state for ScheduleDAGSDNodes::BuildSchedUnits.
+  void setSchedulerWorklistVisited(bool Visited) {
+    SchedulerWorklistVisited = Visited;
+  }
 
   /// Return the node ordering.
   unsigned getIROrder() const { return IROrder; }
@@ -1215,7 +1220,6 @@ protected:
       : NodeType(Opc), ValueList(VTs.VTs), NumValues(VTs.NumVTs),
         IROrder(Order), debugLoc(std::move(dl)) {
     memset(&RawSDNodeBits, 0, sizeof(RawSDNodeBits));
-    assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
     assert(NumValues == VTs.NumVTs &&
            "NumValues wasn't wide enough for its operands!");
   }
@@ -1411,19 +1415,26 @@ private:
   EVT MemoryVT;
 
 protected:
-  /// Memory reference information.
-  MachineMemOperand *MMO;
+  /// Memory reference information. Must always have at least one MMO.
+  /// - MachineMemOperand*: exactly 1 MMO (common case)
+  /// - MachineMemOperand**: pointer to array, size at offset -1
+  PointerUnion<MachineMemOperand *, MachineMemOperand **> MemRefs;
 
 public:
-  LLVM_ABI MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
-                     SDVTList VTs, EVT memvt, MachineMemOperand *MMO);
+  /// Constructor that supports single or multiple MMOs. For single MMO, pass
+  /// the MMO pointer directly. For multiple MMOs, pre-allocate storage with
+  /// count at offset -1 and pass pointer to array.
+  LLVM_ABI
+  MemSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTs,
+            EVT memvt,
+            PointerUnion<MachineMemOperand *, MachineMemOperand **> memrefs);
 
-  bool readMem() const { return MMO->isLoad(); }
-  bool writeMem() const { return MMO->isStore(); }
+  bool readMem() const { return getMemOperand()->isLoad(); }
+  bool writeMem() const { return getMemOperand()->isStore(); }
 
   /// Returns alignment and volatility of the memory access
-  Align getBaseAlign() const { return MMO->getBaseAlign(); }
-  Align getAlign() const { return MMO->getAlign(); }
+  Align getBaseAlign() const { return getMemOperand()->getBaseAlign(); }
+  Align getAlign() const { return getMemOperand()->getAlign(); }
 
   /// Return the SubclassData value, without HasDebugValue. This contains an
   /// encoding of the volatile flag, as well as bits used by subclasses. This
@@ -1450,36 +1461,40 @@ public:
   bool isInvariant() const { return MemSDNodeBits.IsInvariant; }
 
   // Returns the offset from the location of the access.
-  int64_t getSrcValueOffset() const { return MMO->getOffset(); }
+  int64_t getSrcValueOffset() const { return getMemOperand()->getOffset(); }
 
   /// Returns the AA info that describes the dereference.
-  AAMDNodes getAAInfo() const { return MMO->getAAInfo(); }
+  AAMDNodes getAAInfo() const { return getMemOperand()->getAAInfo(); }
 
   /// Returns the Ranges that describes the dereference.
-  const MDNode *getRanges() const { return MMO->getRanges(); }
+  const MDNode *getRanges() const { return getMemOperand()->getRanges(); }
 
   /// Returns the synchronization scope ID for this memory operation.
-  SyncScope::ID getSyncScopeID() const { return MMO->getSyncScopeID(); }
+  SyncScope::ID getSyncScopeID() const {
+    return getMemOperand()->getSyncScopeID();
+  }
 
   /// Return the atomic ordering requirements for this memory operation. For
   /// cmpxchg atomic operations, return the atomic ordering requirements when
   /// store occurs.
   AtomicOrdering getSuccessOrdering() const {
-    return MMO->getSuccessOrdering();
+    return getMemOperand()->getSuccessOrdering();
   }
 
   /// Return a single atomic ordering that is at least as strong as both the
   /// success and failure orderings for an atomic operation.  (For operations
   /// other than cmpxchg, this is equivalent to getSuccessOrdering().)
-  AtomicOrdering getMergedOrdering() const { return MMO->getMergedOrdering(); }
+  AtomicOrdering getMergedOrdering() const {
+    return getMemOperand()->getMergedOrdering();
+  }
 
   /// Return true if the memory operation ordering is Unordered or higher.
-  bool isAtomic() const { return MMO->isAtomic(); }
+  bool isAtomic() const { return getMemOperand()->isAtomic(); }
 
   /// Returns true if the memory operation doesn't imply any ordering
   /// constraints on surrounding memory operations beyond the normal memory
   /// aliasing rules.
-  bool isUnordered() const { return MMO->isUnordered(); }
+  bool isUnordered() const { return getMemOperand()->isUnordered(); }
 
   /// Returns true if the memory operation is neither atomic or volatile.
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -1487,12 +1502,37 @@ public:
   /// Return the type of the in-memory value.
   EVT getMemoryVT() const { return MemoryVT; }
 
-  /// Return a MachineMemOperand object describing the memory
+  /// Return the unique MachineMemOperand object describing the memory
   /// reference performed by operation.
-  MachineMemOperand *getMemOperand() const { return MMO; }
+  /// Asserts if multiple MMOs are present - use memoperands() instead.
+  MachineMemOperand *getMemOperand() const {
+    assert(!isa<MachineMemOperand **>(MemRefs) &&
+           "Use memoperands() for nodes with multiple memory operands");
+    return cast<MachineMemOperand *>(MemRefs);
+  }
+
+  /// Return the number of memory operands.
+  size_t getNumMemOperands() const {
+    if (isa<MachineMemOperand *>(MemRefs))
+      return 1;
+    MachineMemOperand **Array = cast<MachineMemOperand **>(MemRefs);
+    return reinterpret_cast<size_t *>(Array)[-1];
+  }
+
+  /// Return true if this node has exactly one memory operand.
+  bool hasUniqueMemOperand() const { return isa<MachineMemOperand *>(MemRefs); }
+
+  /// Return the memory operands for this node.
+  ArrayRef<MachineMemOperand *> memoperands() const {
+    if (isa<MachineMemOperand *>(MemRefs))
+      return ArrayRef(MemRefs.getAddrOfPtr1(), 1);
+    MachineMemOperand **Array = cast<MachineMemOperand **>(MemRefs);
+    size_t Count = reinterpret_cast<size_t *>(Array)[-1];
+    return ArrayRef(Array, Count);
+  }
 
   const MachinePointerInfo &getPointerInfo() const {
-    return MMO->getPointerInfo();
+    return getMemOperand()->getPointerInfo();
   }
 
   /// Return the address space for the associated pointer
@@ -1501,19 +1541,35 @@ public:
   }
 
   /// Update this MemSDNode's MachineMemOperand information
-  /// to reflect the alignment of NewMMO, if it has a greater alignment.
+  /// to reflect the alignment of NewMMOs, if they have greater alignment.
   /// This must only be used when the new alignment applies to all users of
-  /// this MachineMemOperand.
-  void refineAlignment(const MachineMemOperand *NewMMO) {
-    MMO->refineAlignment(NewMMO);
+  /// these MachineMemOperands. The NewMMOs array must parallel memoperands().
+  void refineAlignment(ArrayRef<MachineMemOperand *> NewMMOs) {
+    ArrayRef<MachineMemOperand *> MMOs = memoperands();
+    assert(NewMMOs.size() == MMOs.size() && "MMO count mismatch");
+    for (auto [MMO, NewMMO] : zip(MMOs, NewMMOs))
+      MMO->refineAlignment(NewMMO);
   }
 
-  void refineRanges(const MachineMemOperand *NewMMO) {
-    // If this node has range metadata that is different than NewMMO, clear the
-    // range metadata.
+  void refineAlignment(MachineMemOperand *NewMMO) {
+    refineAlignment(ArrayRef(NewMMO));
+  }
+
+  /// Refine range metadata for all MMOs. The NewMMOs array must parallel
+  /// memoperands(). For each pair, if ranges differ, the stored range is
+  /// cleared.
+  void refineRanges(ArrayRef<MachineMemOperand *> NewMMOs) {
+    ArrayRef<MachineMemOperand *> MMOs = memoperands();
+    assert(NewMMOs.size() == MMOs.size() && "MMO count mismatch");
     // FIXME: Union the ranges instead?
-    if (getRanges() && getRanges() != NewMMO->getRanges())
-      MMO->clearRanges();
+    for (auto [MMO, NewMMO] : zip(MMOs, NewMMOs)) {
+      if (MMO->getRanges() && MMO->getRanges() != NewMMO->getRanges())
+        MMO->clearRanges();
+    }
+  }
+
+  void refineRanges(MachineMemOperand *NewMMO) {
+    refineRanges(ArrayRef(NewMMO));
   }
 
   const SDValue &getChain() const { return getOperand(0); }
@@ -1626,7 +1682,7 @@ public:
   /// when store does not occur.
   AtomicOrdering getFailureOrdering() const {
     assert(isCompareAndSwap() && "Must be cmpxchg operation");
-    return MMO->getFailureOrdering();
+    return getMemOperand()->getFailureOrdering();
   }
 
   // Methods to support isa and dyn_cast
@@ -1666,9 +1722,11 @@ public:
 /// opcode (see `SelectionDAGTargetInfo::isTargetMemoryOpcode`).
 class MemIntrinsicSDNode : public MemSDNode {
 public:
-  MemIntrinsicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl,
-                     SDVTList VTs, EVT MemoryVT, MachineMemOperand *MMO)
-      : MemSDNode(Opc, Order, dl, VTs, MemoryVT, MMO) {
+  MemIntrinsicSDNode(
+      unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTs,
+      EVT MemoryVT,
+      PointerUnion<MachineMemOperand *, MachineMemOperand **> MemRefs)
+      : MemSDNode(Opc, Order, dl, VTs, MemoryVT, MemRefs) {
     SDNodeBits.IsMemIntrinsic = true;
   }
 
@@ -1822,6 +1880,12 @@ public:
   /// Return true if the value is positive or negative zero.
   bool isZero() const { return Value->isZero(); }
 
+  /// Return true if the value is positive zero.
+  bool isPosZero() const { return Value->isPosZero(); }
+
+  /// Return true if the value is negative zero.
+  bool isNegZero() const { return Value->isNegZero(); }
+
   /// Return true if the value is a NaN.
   bool isNaN() const { return Value->isNaN(); }
 
@@ -1878,12 +1942,6 @@ LLVM_ABI bool isOneConstant(SDValue V);
 /// Returns true if \p V is a constant min signed integer value.
 LLVM_ABI bool isMinSignedConstant(SDValue V);
 
-/// Returns true if \p V is a neutral element of Opc with Flags.
-/// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
-/// checks that V is a right identity.
-LLVM_ABI bool isNeutralConstant(unsigned Opc, SDNodeFlags Flags, SDValue V,
-                                unsigned OperandNo);
-
 /// Return the non-bitcasted source operand of \p V if it exists.
 /// If \p V is not a bitcasted value, it is returned as-is.
 LLVM_ABI SDValue peekThroughBitcasts(SDValue V);
@@ -1905,6 +1963,22 @@ LLVM_ABI SDValue peekThroughInsertVectorElt(SDValue V,
 /// Return the non-truncated source operand of \p V if it exists.
 /// If \p V is not a truncation, it is returned as-is.
 LLVM_ABI SDValue peekThroughTruncates(SDValue V);
+
+/// Return the non-frozen source operand of \p V if it exists.
+/// If \p V is not a freeze, it is returned as-is.
+inline SDValue peekThroughFreeze(SDValue V) {
+  if (V.getOpcode() == ISD::FREEZE)
+    return V.getOperand(0);
+  return V;
+}
+
+/// Return the non-frozen source operand of \p V if it exists and \p V has
+/// a single use. If \p V is not a single-use freeze, it is returned as-is.
+inline SDValue peekThroughOneUseFreeze(SDValue V) {
+  if (V.getOpcode() == ISD::FREEZE && V.hasOneUse())
+    return V.getOperand(0);
+  return V;
+}
 
 /// Returns true if \p V is a bitwise not operation. Assumes that an all ones
 /// constant is canonicalized to be operand 1.
@@ -1968,6 +2042,10 @@ LLVM_ABI bool isOnesOrOnesSplat(SDValue N, bool AllowUndefs = false);
 /// Build vector implicit truncation is allowed.
 LLVM_ABI bool isZeroOrZeroSplat(SDValue N, bool AllowUndefs = false);
 
+/// Return true if the value is a constant (+/-)0.0 floating-point value or a
+/// splatted vector thereof (with no undefs).
+LLVM_ABI bool isZeroOrZeroSplatFP(SDValue N, bool AllowUndefs = false);
+
 /// Return true if \p V is either a integer or FP constant.
 inline bool isIntOrFPConstant(SDValue V) {
   return isa<ConstantSDNode>(V) || isa<ConstantFPSDNode>(V);
@@ -1998,6 +2076,22 @@ public:
            N->getOpcode() == ISD::TargetGlobalAddress ||
            N->getOpcode() == ISD::GlobalTLSAddress ||
            N->getOpcode() == ISD::TargetGlobalTLSAddress;
+  }
+};
+
+class DeactivationSymbolSDNode : public SDNode {
+  friend class SelectionDAG;
+
+  const GlobalValue *TheGlobal;
+
+  DeactivationSymbolSDNode(const GlobalValue *GV, SDVTList VTs)
+      : SDNode(ISD::DEACTIVATION_SYMBOL, 0, DebugLoc(), VTs), TheGlobal(GV) {}
+
+public:
+  const GlobalValue *getGlobal() const { return TheGlobal; }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::DEACTIVATION_SYMBOL;
   }
 };
 
@@ -2308,10 +2402,12 @@ public:
 
   LLVM_ABI bool isConstant() const;
 
-  /// If this BuildVector is constant and represents the numerical series
-  /// "<a, a+n, a+2n, a+3n, ...>" where a is integer and n is a non-zero integer,
-  /// the value "<a,n>" is returned.
-  LLVM_ABI std::optional<std::pair<APInt, APInt>> isConstantSequence() const;
+  /// If this BuildVector is constant and represents an arithmetic sequence
+  /// "<a, a+n, a+2n, a+3n, ...>" where a is integer and n is a non-zero
+  /// integer, the value "<a, n>" is returned. Arithmetic is performed modulo
+  /// 2^BitWidth, so this also matches sequences that wrap around. Poison
+  /// elements are ignored and can take any value.
+  LLVM_ABI std::optional<std::pair<APInt, APInt>> isArithmeticSequence() const;
 
   /// Recast bit data \p SrcBitElements to \p DstEltSizeInBits wide elements.
   /// Undef elements are treated as zero, and entirely undefined elements are

@@ -184,6 +184,4 @@ int main(int argc, char *argv[]) {
   auto Main = MainSym.getAddress().toPtr<int (*)(int, char *[])>();
 
   return runAsMain(Main, InputArgv, StringRef(InputFiles.front()));
-
-  return 0;
 }

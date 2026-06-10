@@ -279,6 +279,35 @@ static bool isCmpCSelPair(const MachineInstr *FirstMI,
   return false;
 }
 
+/// Floating-point compare and floating-point conditional select.
+static bool isFCmpFCSelPair(const MachineInstr *FirstMI,
+                            const MachineInstr &SecondMI) {
+  switch (SecondMI.getOpcode()) {
+  case AArch64::FCSELSrrr:
+  case AArch64::FCSELDrrr:
+  case AArch64::FCSELHrrr:
+    break;
+  default:
+    return false;
+  }
+
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr)
+    return true;
+
+  switch (FirstMI->getOpcode()) {
+  case AArch64::FCMPSrr:
+  case AArch64::FCMPDrr:
+  case AArch64::FCMPESrr:
+  case AArch64::FCMPEDrr:
+  case AArch64::FCMPHrr:
+  case AArch64::FCMPEHrr:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Compare and cset.
 static bool isCmpCSetPair(const MachineInstr *FirstMI,
                           const MachineInstr &SecondMI) {
@@ -500,6 +529,8 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   if (ST.hasFuseAddress() && isAddressLdStPair(FirstMI, SecondMI))
     return true;
   if (ST.hasFuseCmpCSel() && isCmpCSelPair(FirstMI, SecondMI))
+    return true;
+  if (ST.hasFuseFCmpFCSel() && isFCmpFCSelPair(FirstMI, SecondMI))
     return true;
   if (ST.hasFuseCmpCSet() && isCmpCSetPair(FirstMI, SecondMI))
     return true;

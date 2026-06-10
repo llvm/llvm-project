@@ -1,0 +1,37 @@
+## This test checks writing install-name-tool changes to a separate output file.
+
+# RUN: yaml2obj %s -o %t
+
+## Writing to a separate file with -o:
+# RUN: llvm-install-name-tool -id /usr/lib/short-id -o %t.short %t
+# RUN: llvm-objdump -p %t | FileCheck %s --check-prefix=INPUT --implicit-check-not='name /usr/lib/short-id'
+# RUN: llvm-objdump -p %t.short | FileCheck %s --check-prefix=SHORT --implicit-check-not='name /usr/lib/original-id'
+
+# INPUT: name /usr/lib/original-id
+# SHORT: name /usr/lib/short-id
+
+## Writing to a separate file with --output:
+# RUN: llvm-install-name-tool -id /usr/lib/long-id --output %t.long %t
+# RUN: llvm-objdump -p %t.long | FileCheck %s --check-prefix=LONG --implicit-check-not='name /usr/lib/original-id'
+
+# LONG: name /usr/lib/long-id
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000006
+  ncmds:           1
+  sizeofcmds:      72
+  flags:           0x00002000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:                        LC_ID_DYLIB
+    cmdsize:                    72
+    dylib:
+      name:                     24
+      timestamp:                2
+      current_version:          82115073
+      compatibility_version:    65536
+    Content:                    '/usr/lib/original-id'

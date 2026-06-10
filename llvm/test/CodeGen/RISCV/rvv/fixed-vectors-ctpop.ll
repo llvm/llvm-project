@@ -37,7 +37,6 @@ define void @ctpop_v16i8(ptr %x, ptr %y) {
   store <16 x i8> %c, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>)
 
 define void @ctpop_v8i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: ctpop_v8i16:
@@ -79,7 +78,6 @@ define void @ctpop_v8i16(ptr %x, ptr %y) {
   store <8 x i16> %c, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.ctpop.v8i16(<8 x i16>)
 
 define void @ctpop_v4i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: ctpop_v4i32:
@@ -122,7 +120,6 @@ define void @ctpop_v4i32(ptr %x, ptr %y) {
   store <4 x i32> %c, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)
 
 define void @ctpop_v2i64(ptr %x, ptr %y) {
 ; RV32-LABEL: ctpop_v2i64:
@@ -214,7 +211,6 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
   store <2 x i64> %c, ptr %x
   ret void
 }
-declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 
 define void @ctpop_v32i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: ctpop_v32i8:
@@ -251,7 +247,6 @@ define void @ctpop_v32i8(ptr %x, ptr %y) {
   store <32 x i8> %c, ptr %x
   ret void
 }
-declare <32 x i8> @llvm.ctpop.v32i8(<32 x i8>)
 
 define void @ctpop_v16i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: ctpop_v16i16:
@@ -293,7 +288,6 @@ define void @ctpop_v16i16(ptr %x, ptr %y) {
   store <16 x i16> %c, ptr %x
   ret void
 }
-declare <16 x i16> @llvm.ctpop.v16i16(<16 x i16>)
 
 define void @ctpop_v8i32(ptr %x, ptr %y) {
 ; CHECK-LABEL: ctpop_v8i32:
@@ -428,7 +422,6 @@ define <8 x i1> @ctpop_v8i32_ne_one(ptr %x, ptr %y) {
   %cmp = icmp ne <8 x i32> %c, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   ret <8 x i1> %cmp
 }
-declare <8 x i32> @llvm.ctpop.v8i32(<8 x i32>)
 
 define void @ctpop_v4i64(ptr %x, ptr %y) {
 ; RV32-LABEL: ctpop_v4i64:
@@ -612,4 +605,3 @@ define <4 x i1> @ctpop_v4i64_ne_one(ptr %x, ptr %y) {
   %cmp = icmp ne <4 x i64> %c, <i64 1, i64 1, i64 1, i64 1>
   ret <4 x i1> %cmp
 }
-declare <4 x i64> @llvm.ctpop.v4i64(<4 x i64>)

@@ -156,6 +156,12 @@ llvm.func @nvvm_special_regs() -> i32 {
   %76 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 0> : i32
   // CHECK: %77 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %77 = nvvm.read.ptx.sreg.tid.x range <i32, 4294967295, 4294967295> : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+  %78 = nvvm.read.ptx.sreg.total.smem.size : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+  %79 = nvvm.read.ptx.sreg.dynamic.smem.size : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.aggr_smem_size()
+  %80 = nvvm.read.ptx.sreg.aggr.smem.size : i32
   llvm.return %1 : i32
 }
 
@@ -164,25 +170,6 @@ llvm.func @nvvm_rcp(%0: f32) -> f32 {
   // CHECK: call float @llvm.nvvm.rcp.approx.ftz.f
   %1 = nvvm.rcp.approx.ftz.f %0 : f32
   llvm.return %1 : f32
-}
-
-// CHECK-LABEL: @llvm_nvvm_barrier0
-llvm.func @llvm_nvvm_barrier0() {
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
-  nvvm.barrier0
-  llvm.return
-}
-
-// CHECK-LABEL: @llvm_nvvm_barrier(
-// CHECK-SAME: i32 %[[barId:.*]], i32 %[[numThreads:.*]])
-llvm.func @llvm_nvvm_barrier(%barID : i32, %numberOfThreads : i32) {
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
-  nvvm.barrier
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 %[[barId]])
-  nvvm.barrier id = %barID
-  // CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %[[barId]], i32 %[[numThreads]])
-  nvvm.barrier id = %barID number_of_threads = %numberOfThreads
-  llvm.return
 }
 
 // CHECK-LABEL: @llvm_nvvm_cluster_arrive
@@ -503,13 +490,13 @@ llvm.func @nvvm_wmma_store_d_f64(%arg0: !llvm.ptr, %arg1 : i32, %arg2 : f64, %ar
 // CHECK-LABEL: @cp_async
 llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 4, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 4, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 8, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 8, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  ca : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
   // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}})
-  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache =  cg : !llvm.ptr<3>, !llvm.ptr<1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
 
   // CHECK: call void @llvm.nvvm.cp.async.commit.group()
   nvvm.cp.async.commit.group
@@ -521,13 +508,13 @@ llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
 // CHECK-LABEL: @async_cp_zfill
 llvm.func @async_cp_zfill(%dst: !llvm.ptr<3>, %src: !llvm.ptr<1>, %cpSize: i32) {
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.4.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
-  nvvm.cp.async.shared.global %dst, %src, 4, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 4, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.8.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
-  nvvm.cp.async.shared.global %dst, %src, 8, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 8, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   // CHECK: call void @llvm.nvvm.cp.async.ca.shared.global.16.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = ca, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   // CHECK: call void @llvm.nvvm.cp.async.cg.shared.global.16.s(ptr addrspace(3) %{{.*}}, ptr addrspace(1) %{{.*}}, i32 %{{.*}})
-  nvvm.cp.async.shared.global %dst, %src, 16, cache =  cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
+  nvvm.cp.async.shared.global %dst, %src, 16, cache = cg, %cpSize : !llvm.ptr<3>, !llvm.ptr<1>, i32
   llvm.return
 }
 
@@ -630,6 +617,14 @@ llvm.func @st_matrix(%arg0: !llvm.ptr<3>, %r1: i32, %r2: i32, %r3: i32, %r4: i32
   llvm.return
 }
 
+// CHECK-LABEL: @nvvm_movmatrix
+llvm.func @nvvm_movmatrix(%src : i32) -> i32 {
+  // CHECK: call i32 @llvm.nvvm.movmatrix.sync.aligned.m8n8.trans.b16(i32 %{{.*}})
+  %dst = nvvm.movmatrix %src {shape = #nvvm.ld_st_matrix_shape<m = 8, n = 8>,
+                              eltType = #nvvm.ld_st_matrix_elt_type<b16>} : i32
+  llvm.return %dst : i32
+}
+
 // This function has the "kernel" attribute attached and should appear in the
 // NVVM annotations after conversion.
 llvm.func @kernel_func() attributes {nvvm.kernel} {
@@ -718,42 +713,6 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, 
   llvm.return
 }
 
-
-// -----
-// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_release
-llvm.func @nvvm_fence_proxy_tensormap_generic_release() {
-  %c128 = llvm.mlir.constant(128) : i32
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cta()
-  nvvm.fence.proxy.release #nvvm.mem_scope<cta>
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.cluster()
-  nvvm.fence.proxy.release #nvvm.mem_scope<cluster>
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.gpu()
-  nvvm.fence.proxy.release #nvvm.mem_scope<gpu>
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.release.sys()
-  nvvm.fence.proxy.release #nvvm.mem_scope<sys>
-  llvm.return
-}
-
-// -----
-// CHECK-LABEL: @nvvm_fence_proxy_tensormap_generic_acquire
-llvm.func @nvvm_fence_proxy_tensormap_generic_acquire(%addr : !llvm.ptr) {
-  %c128 = llvm.mlir.constant(128) : i32
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cta(ptr {{%[0-9]+}}, i32 128)
-  nvvm.fence.proxy.acquire #nvvm.mem_scope<cta> %addr, %c128
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.cluster(ptr {{%[0-9]+}}, i32 128)
-  nvvm.fence.proxy.acquire #nvvm.mem_scope<cluster> %addr, %c128
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.gpu(ptr {{%[0-9]+}}, i32 128)
-  nvvm.fence.proxy.acquire #nvvm.mem_scope<gpu> %addr, %c128
-
-  // CHECK: call void @llvm.nvvm.fence.proxy.tensormap_generic.acquire.sys(ptr {{%[0-9]+}}, i32 128)
-  nvvm.fence.proxy.acquire #nvvm.mem_scope<sys> %addr, %c128
-  llvm.return
-}
 // -----
 
 // CHECK-LABEL: @nvvm_exit
@@ -958,20 +917,19 @@ llvm.func @nvvm_dot_accumulate_2way(%a: vector<2xi16>, %b: vector<4xi8>, %c: i32
 
 // -----
 
-// CHECK-LABEL: @nvvm_pmevent
-llvm.func @nvvm_pmevent() {
-  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 15000)
-  nvvm.pmevent mask = 15000
-  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 4)
-  nvvm.pmevent mask = 4
+// CHECK-LABEL: @nanosleep
+llvm.func @nanosleep(%duration: i32) {
+  // CHECK: call void @llvm.nvvm.nanosleep(i32 %{{.*}})
+  nvvm.nanosleep %duration
   llvm.return
 }
 
 // -----
 
-// CHECK-LABEL: @nanosleep
-llvm.func @nanosleep() {
-  // CHECK: call void @llvm.nvvm.nanosleep(i32 4000)
-  nvvm.nanosleep 4000
-  llvm.return
-}
+// CHECK: @managed_g = addrspace(1) global i32 0
+// CHECK: @managed_decl = external addrspace(1) global i32
+// CHECK: !nvvm.annotations = !{![[MANAGED0:[0-9]+]], ![[MANAGED1:[0-9]+]]}
+// CHECK: ![[MANAGED0]] = !{ptr addrspace(1) @managed_g, !"managed", i32 1}
+// CHECK: ![[MANAGED1]] = !{ptr addrspace(1) @managed_decl, !"managed", i32 1}
+llvm.mlir.global external @managed_g(0 : i32) {addr_space = 1 : i32, nvvm.managed} : i32
+llvm.mlir.global external @managed_decl() {addr_space = 1 : i32, nvvm.managed} : i32

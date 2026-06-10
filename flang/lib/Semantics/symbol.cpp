@@ -70,27 +70,50 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
+void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
+    const OmpClauseSet &clauses, parser::CharBlock name) const {
+  auto toLower = parser::ToLowerCaseLetters;
+
+  size_t idx{0}, size{clauses.count()};
+  clauses.IterateOverMembers([&](llvm::omp::Clause c) {
+    os << toLower(llvm::omp::getOpenMPClauseName(c, version_));
+    switch (c) {
+    case llvm::omp::Clause::OMPC_atomic_default_mem_order:
+      os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
+      break;
+    case llvm::omp::Clause::OMPC_device_type:
+      os << "(" << toLower(EnumToString(*ompDeviceType())) << ')';
+      break;
+    case llvm::omp::Clause::OMPC_enter:
+    case llvm::omp::Clause::OMPC_link:
+      if (!name.empty()) {
+        os << '(' << name.ToString() << ')';
+      }
+      break;
+    case llvm::omp::Clause::OMPC_indirect:
+      os << "(true)";
+      break;
+    default:
+      break;
+    }
+    if (++idx < size) {
+      os << ' ';
+    }
+  });
+}
+
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const WithOmpDeclarative &x) {
-  if (x.has_ompRequires() || x.has_ompAtomicDefaultMemOrder()) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+
+  if (const OmpClauseSet &reqs{x.ompRequires()}; reqs.count()) {
     os << " OmpRequirements:(";
-    if (const common::OmpMemoryOrderType *admo{x.ompAtomicDefaultMemOrder()}) {
-      os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(
-                llvm::omp::Clause::OMPC_atomic_default_mem_order))
-         << '(' << parser::ToLowerCaseLetters(EnumToString(*admo)) << ')';
-      if (x.has_ompRequires()) {
-        os << ',';
-      }
-    }
-    if (const WithOmpDeclarative::RequiresClauses *reqs{x.ompRequires()}) {
-      size_t num{0}, size{reqs->count()};
-      reqs->IterateOverMembers([&](llvm::omp::Clause f) {
-        os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
-        if (++num < size) {
-          os << ',';
-        }
-      });
-    }
+    x.printClauseSet(os, reqs);
+    os << ')';
+  }
+  if (const OmpClauseSet &dtgt{x.ompDeclTarget()}; dtgt.count()) {
+    os << " OmpDeclareTargetFlags:(";
+    x.printClauseSet(os, dtgt);
     os << ')';
   }
   return os;
@@ -338,7 +361,8 @@ std::string DetailsToString(const Details &details) {
           [](const TypeParamDetails &) { return "TypeParam"; },
           [](const MiscDetails &) { return "Misc"; },
           [](const AssocEntityDetails &) { return "AssocEntity"; },
-          [](const UserReductionDetails &) { return "UserReductionDetails"; }},
+          [](const UserReductionDetails &) { return "UserReductionDetails"; },
+          [](const MapperDetails &) { return "MapperDetails"; }},
       details);
 }
 
@@ -379,6 +403,7 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
             [&](const UserReductionDetails &) {
               return has<UserReductionDetails>();
             },
+            [&](const MapperDetails &) { return has<MapperDetails>(); },
             [](const auto &) { return false; },
         },
         details);
@@ -533,6 +558,7 @@ llvm::raw_ostream &operator<<(
   if (x.cudaDataAttr()) {
     os << " cudaDataAttr: " << common::EnumToString(*x.cudaDataAttr());
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -572,6 +598,7 @@ llvm::raw_ostream &operator<<(
   if (x.isCUDAKernel()) {
     os << " isCUDAKernel";
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -667,6 +694,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             for (const auto &object : x.objects()) {
               os << ' ' << object->name();
             }
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());
@@ -685,6 +713,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               DumpType(os, type);
             }
           },
+          // Avoid recursive streaming for MapperDetails; nothing more to dump
+          [&](const MapperDetails &) {},
           [&](const auto &x) { os << x; },
       },
       details);

@@ -1572,3 +1572,19 @@ TEST(DeclPrinter, TestTemplateFinalWithPolishForDecl) {
       "template <typename T> class FinalTemplate final {}",
       [](PrintingPolicy &Policy) { Policy.PolishForDeclaration = true; }));
 }
+
+TEST(DeclPrinter, TestClassSuppressDeclAttributes) {
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "class alignas(32) [[deprecated]] A final {};",
+      cxxRecordDecl(hasName("A")).bind("id"), "class A {}",
+      [](PrintingPolicy &Policy) { Policy.SuppressDeclAttributes = true; }));
+}
+
+TEST(DeclPrinter, TestTemplateSuppressDeclAttributes) {
+  ASSERT_TRUE(PrintedDeclCXX11Matches(
+      "template<typename T>\n"
+      "class alignas(32) [[deprecated]] A final {};",
+      classTemplateDecl(hasName("A")).bind("id"),
+      "template <typename T> class A {}",
+      [](PrintingPolicy &Policy) { Policy.SuppressDeclAttributes = true; }));
+}

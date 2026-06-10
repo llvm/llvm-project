@@ -20,7 +20,9 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <algorithm>
 #include <cstdio>
@@ -36,6 +38,12 @@ llvm::Constant *CodeGenModule::GetAddrOfThunk(StringRef Name, llvm::Type *FnTy,
                                               GlobalDecl GD) {
   return GetOrCreateLLVMFunction(Name, FnTy, GD, /*ForVTable=*/true,
                                  /*DontDefer=*/true, /*IsThunk=*/true);
+}
+
+llvm::GlobalVariable *CodeGenVTables::GetAddrOfVTable(const CXXRecordDecl *RD) {
+  llvm::GlobalVariable *VTable =
+      CGM.getCXXABI().getAddrOfVTable(RD, CharUnits());
+  return VTable;
 }
 
 static void setThunkProperties(CodeGenModule &CGM, const ThunkInfo &Thunk,
@@ -125,23 +133,41 @@ static void resolveTopLevelMetadata(llvm::Function *Fn,
   if (!DIS)
     return;
   auto *NewDIS = llvm::MDNode::replaceWithDistinct(DIS->clone());
+  // As DISubprogram remapping is avoided, clear retained nodes list of
+  // cloned DISubprogram from retained nodes local to original DISubprogram.
+  // FIXME: Thunk function signature is produced wrong in DWARF, as retained
+  // nodes are not remapped.
+  NewDIS->replaceRetainedNodes(llvm::MDTuple::get(Fn->getContext(), {}));
   VMap.MD()[DIS].reset(NewDIS);
 
   // Find all llvm.dbg.declare intrinsics and resolve the DILocalVariable nodes
   // they are referencing.
+  //
+  // DIDerivedTypes referring to incomplete Clang types, or
+  // LLVM enumeration types representing complete enums with no definition
+  // may be still unresolved. As they can't be cloned, keep references
+  // to the types from the base subprogram.
+  // FIXME: As a result, variables of cloned subprogram may refer to local types
+  // from base subprogram. In such case, type locality information is damaged.
+  // Find a way to enable cloning of all local types.
+  auto PrepareVariableMapping = [&VMap](llvm::DILocalVariable *DILocal) {
+    if (DILocal->isResolved())
+      return;
+
+    if (llvm::DIType *Ty = DILocal->getType(); Ty && !Ty->isResolved())
+      VMap.MD()[Ty].reset(Ty);
+
+    DILocal->resolve();
+  };
+
   for (auto &BB : *Fn) {
     for (auto &I : BB) {
       for (llvm::DbgVariableRecord &DVR :
-           llvm::filterDbgVars(I.getDbgRecordRange())) {
-        auto *DILocal = DVR.getVariable();
-        if (!DILocal->isResolved())
-          DILocal->resolve();
-      }
-      if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I)) {
-        auto *DILocal = DII->getVariable();
-        if (!DILocal->isResolved())
-          DILocal->resolve();
-      }
+           llvm::filterDbgVars(I.getDbgRecordRange()))
+        PrepareVariableMapping(DVR.getVariable());
+
+      if (auto *DII = dyn_cast<llvm::DbgVariableIntrinsic>(&I))
+        PrepareVariableMapping(DII->getVariable());
     }
   }
 }
@@ -704,17 +730,8 @@ void CodeGenVTables::addRelativeComponent(ConstantArrayBuilder &builder,
                                       /*position=*/vtableAddressPoint);
 }
 
-static bool UseRelativeLayout(const CodeGenModule &CGM) {
-  return CGM.getTarget().getCXXABI().isItaniumFamily() &&
-         CGM.getItaniumVTableContext().isRelativeLayout();
-}
-
-bool CodeGenVTables::useRelativeLayout() const {
-  return UseRelativeLayout(CGM);
-}
-
 llvm::Type *CodeGenModule::getVTableComponentType() const {
-  if (UseRelativeLayout(*this))
+  if (getLangOpts().RelativeCXXABIVTables)
     return Int32Ty;
   return GlobalsInt8PtrTy;
 }
@@ -727,14 +744,14 @@ static void AddPointerLayoutOffset(const CodeGenModule &CGM,
                                    ConstantArrayBuilder &builder,
                                    CharUnits offset) {
   builder.add(llvm::ConstantExpr::getIntToPtr(
-      llvm::ConstantInt::get(CGM.PtrDiffTy, offset.getQuantity()),
+      llvm::ConstantInt::getSigned(CGM.PtrDiffTy, offset.getQuantity()),
       CGM.GlobalsInt8PtrTy));
 }
 
 static void AddRelativeLayoutOffset(const CodeGenModule &CGM,
                                     ConstantArrayBuilder &builder,
                                     CharUnits offset) {
-  builder.add(llvm::ConstantInt::get(CGM.Int32Ty, offset.getQuantity()));
+  builder.add(llvm::ConstantInt::getSigned(CGM.Int32Ty, offset.getQuantity()));
 }
 
 void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
@@ -746,8 +763,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
                                         bool vtableHasLocalLinkage) {
   auto &component = layout.vtable_components()[componentIndex];
 
+  bool RelativeCXXABIVTables = CGM.getLangOpts().RelativeCXXABIVTables;
   auto addOffsetConstant =
-      useRelativeLayout() ? AddRelativeLayoutOffset : AddPointerLayoutOffset;
+      RelativeCXXABIVTables ? AddRelativeLayoutOffset : AddPointerLayoutOffset;
 
   switch (component.getKind()) {
   case VTableComponent::CK_VCallOffset:
@@ -760,7 +778,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
     return addOffsetConstant(CGM, builder, component.getOffsetToTop());
 
   case VTableComponent::CK_RTTI:
-    if (useRelativeLayout())
+    if (RelativeCXXABIVTables)
       return addRelativeComponent(builder, rtti, vtableAddressPoint,
                                   vtableHasLocalLinkage,
                                   /*isCompleteDtor=*/false);
@@ -770,7 +788,9 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   case VTableComponent::CK_FunctionPointer:
   case VTableComponent::CK_CompleteDtorPointer:
   case VTableComponent::CK_DeletingDtorPointer: {
-    GlobalDecl GD = component.getGlobalDecl();
+    GlobalDecl GD = component.getGlobalDecl(
+        CGM.getContext().getTargetInfo().emitVectorDeletingDtors(
+            CGM.getContext().getLangOpts()));
 
     const bool IsThunk =
         nextVTableThunkIndex < layout.vtable_thunks().size() &&
@@ -804,7 +824,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       // depending on link order, the comdat groups could resolve to the one
       // with the local symbol. As a temporary solution, fill these components
       // with zero. We shouldn't be calling these in the first place anyway.
-      if (useRelativeLayout())
+      if (RelativeCXXABIVTables)
         return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
 
       // For NVPTX devices in OpenMP emit special functon as null pointers,
@@ -856,7 +876,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
         GD = getItaniumVTableContext().findOriginalMethod(GD);
     }
 
-    if (useRelativeLayout()) {
+    if (RelativeCXXABIVTables) {
       return addRelativeComponent(
           builder, fnPtr, vtableAddressPoint, vtableHasLocalLinkage,
           component.getKind() == VTableComponent::CK_CompleteDtorPointer);
@@ -879,7 +899,7 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
   }
 
   case VTableComponent::CK_UnusedFunctionPointer:
-    if (useRelativeLayout())
+    if (RelativeCXXABIVTables)
       return builder.add(llvm::ConstantExpr::getNullValue(CGM.Int32Ty));
     else
       return builder.addNullPointer(CGM.GlobalsInt8PtrTy);
@@ -943,7 +963,7 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
                            Base.getBase(), Out);
   SmallString<256> Name(OutName);
 
-  bool UsingRelativeLayout = getItaniumVTableContext().isRelativeLayout();
+  bool UsingRelativeLayout = CGM.getLangOpts().RelativeCXXABIVTables;
   bool VTableAliasExists =
       UsingRelativeLayout && CGM.getModule().getNamedAlias(Name);
   if (VTableAliasExists) {
@@ -967,8 +987,10 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
   llvm::GlobalVariable *VTable =
       CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage, Align);
 
-  // V-tables are always unnamed_addr.
-  VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  // dynamic_cast assumes the vtable address is unique; see
+  // https://github.com/llvm/llvm-project/pull/200108
+  if (!CGM.shouldEmitRTTI())
+    VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(
       CGM.getContext().getCanonicalTagType(Base.getBase()));
@@ -1022,7 +1044,7 @@ void CodeGenVTables::RemoveHwasanMetadata(llvm::GlobalValue *GV) const {
 // the original vtable type.
 void CodeGenVTables::GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
                                                  llvm::StringRef AliasNameRef) {
-  assert(getItaniumVTableContext().isRelativeLayout() &&
+  assert(CGM.getLangOpts().RelativeCXXABIVTables &&
          "Can only use this if the relative vtable ABI is used");
   assert(!VTable->isDSOLocal() && "This should be called only if the vtable is "
                                   "not guaranteed to be dso_local");
@@ -1127,21 +1149,22 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 
       return llvm::GlobalVariable::ExternalLinkage;
 
-      case TSK_ImplicitInstantiation:
-        return !Context.getLangOpts().AppleKext ?
-                 llvm::GlobalVariable::LinkOnceODRLinkage :
-                 llvm::Function::InternalLinkage;
+    case TSK_FriendDeclaration:
+    case TSK_ImplicitInstantiation:
+      return !Context.getLangOpts().AppleKext
+                 ? llvm::GlobalVariable::LinkOnceODRLinkage
+                 : llvm::Function::InternalLinkage;
 
-      case TSK_ExplicitInstantiationDefinition:
-        return !Context.getLangOpts().AppleKext ?
-                 llvm::GlobalVariable::WeakODRLinkage :
-                 llvm::Function::InternalLinkage;
+    case TSK_ExplicitInstantiationDefinition:
+      return !Context.getLangOpts().AppleKext
+                 ? llvm::GlobalVariable::WeakODRLinkage
+                 : llvm::Function::InternalLinkage;
 
-      case TSK_ExplicitInstantiationDeclaration:
-        return IsExternalDefinition
-                   ? llvm::GlobalVariable::AvailableExternallyLinkage
-                   : llvm::GlobalVariable::ExternalLinkage;
-      }
+    case TSK_ExplicitInstantiationDeclaration:
+      return IsExternalDefinition
+                 ? llvm::GlobalVariable::AvailableExternallyLinkage
+                 : llvm::GlobalVariable::ExternalLinkage;
+    }
   }
 
   // -fapple-kext mode does not support weak linkage, so we must use
@@ -1166,6 +1189,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     case TSK_Undeclared:
     case TSK_ExplicitSpecialization:
     case TSK_ImplicitInstantiation:
+    case TSK_FriendDeclaration:
       return DiscardableODRLinkage;
 
     case TSK_ExplicitInstantiationDeclaration:
@@ -1192,6 +1216,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 /// emits them as-needed.
 void CodeGenModule::EmitVTable(CXXRecordDecl *theClass) {
   VTables.GenerateClassData(theClass);
+  EmittedVTables.insert(theClass);
 }
 
 void
@@ -1274,11 +1299,18 @@ void CodeGenModule::EmitDeferredVTables() {
   size_t savedSize = DeferredVTables.size();
 #endif
 
-  for (const CXXRecordDecl *RD : DeferredVTables)
+  for (const CXXRecordDecl *RD : DeferredVTables) {
+    // if a table has been emitted in an earlier PTU, but was also marked
+    // deferred, we should skip if the linkage is external
+    if (EmittedVTables.count(RD) &&
+        getVTableLinkage(RD) == llvm::GlobalValue::ExternalLinkage)
+      continue;
+
     if (shouldEmitVTableAtEndOfTranslationUnit(*this, RD))
       VTables.GenerateClassData(RD);
     else if (shouldOpportunisticallyEmitVTables())
       OpportunisticVTables.push_back(RD);
+  }
 
   assert(savedSize == DeferredVTables.size() &&
          "deferred extra vtables during vtable emission?");
@@ -1358,10 +1390,12 @@ llvm::GlobalObject::VCallVisibility CodeGenModule::GetVCallVisibilityLevel(
 void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
                                            llvm::GlobalVariable *VTable,
                                            const VTableLayout &VTLayout) {
-  // Emit type metadata on vtables with LTO or IR instrumentation.
+  // Emit type metadata on vtables with LTO or IR instrumentation or
+  // speculative devirtualization.
   // In IR instrumentation, the type metadata is used to find out vtable
   // definitions (for type profiling) among all global variables.
-  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr())
+  if (!getCodeGenOpts().LTOUnit && !getCodeGenOpts().hasProfileIRInstr() &&
+      !getCodeGenOpts().DevirtualizeSpeculatively)
     return;
 
   CharUnits ComponentWidth = GetTargetTypeStoreSize(getVTableComponentType());

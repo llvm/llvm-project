@@ -82,6 +82,10 @@ enum OperandType {
   OPERAND_TABLE,
   /// A list of catch clauses for try_table.
   OPERAND_CATCH_LIST,
+  /// Memory ordering immediate for atomic instructions.
+  OPERAND_MEMORDER,
+  /// A vector of value types for select t*.
+  OPERAND_VALTYPE_LIST,
 };
 } // end namespace WebAssembly
 
@@ -106,8 +110,9 @@ enum TOF {
   MO_MEMORY_BASE_REL,
 
   // On a symbol operand this indicates that the immediate is the symbol
-  // address relative the __tls_base wasm global.
-  // Only applicable to data symbols.
+  // address relative to the TLS base. This is retrieved through
+  // __wasm_get_tls_base() when using libcall thread context, and the __tls_base
+  // global otherwise. Only applicable to data symbols.
   MO_TLS_BASE_REL,
 
   // On a symbol operand this indicates that the immediate is the symbol
@@ -608,9 +613,9 @@ inline bool isLocalTee(unsigned Opc) {
 static const unsigned UnusedReg = -1u;
 
 // For a given stackified WAReg, return the id number to print with push/pop.
-unsigned inline getWARegStackId(unsigned Reg) {
-  assert(Reg & INT32_MIN);
-  return Reg & INT32_MAX;
+unsigned inline getWARegStackId(MCRegister Reg) {
+  assert(Reg.id() & INT32_MIN);
+  return Reg.id() & INT32_MAX;
 }
 
 } // end namespace WebAssembly

@@ -12,9 +12,6 @@
 #include <cstring>
 #include <optional>
 
-constexpr lldb::pid_t StringExtractorGDBRemote::AllProcesses;
-constexpr lldb::tid_t StringExtractorGDBRemote::AllThreads;
-
 StringExtractorGDBRemote::ResponseType
 StringExtractorGDBRemote::GetResponseType() const {
   if (m_packet.empty())
@@ -333,6 +330,12 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jLLDBTraceGetState;
     if (PACKET_STARTS_WITH("jLLDBTraceGetBinaryData:"))
       return eServerPacketType_jLLDBTraceGetBinaryData;
+    if (PACKET_STARTS_WITH("jMultiBreakpoint:"))
+      return eServerPacketType_jMultiBreakpoint;
+    if (PACKET_MATCHES("jAcceleratorPluginInitialize"))
+      return eServerPacketType_jAcceleratorPluginInitialize;
+    if (PACKET_STARTS_WITH("jAcceleratorPluginBreakpointHit:"))
+      return eServerPacketType_jAcceleratorPluginBreakpointHit;
     break;
 
   case 'v':

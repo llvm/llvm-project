@@ -10,6 +10,9 @@ import time
 
 
 class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
+    @skipIfWindows  # Wait for module events fails.
     @skipIfNetBSD  # Hangs on NetBSD as well
     def test_commands(self):
         """
@@ -57,6 +60,7 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
             terminateCommands=terminateCommands,
             postRunCommands=postRunCommands,
         )
+        self.dap_server.wait_for_initialized()
         # Get output from the console. This should contain both the
         # "initCommands" and the "preRunCommands".
         output = self.get_console()
@@ -73,6 +77,10 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
         output = self.collect_console(pattern=stopCommands[-1])
         self.verify_commands("stopCommands", output, stopCommands)
+
+        # Check that we got module events from target
+        modules = self.dap_server.wait_for_module_events()
+        self.assertGreater(len(modules), 0)
 
         # Continue after launch and hit the "pause()" call and stop the target.
         # Get output from the console. This should contain both the
@@ -102,10 +110,9 @@ class TestDAP_attachCommands(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.build_and_create_debug_adapter_for_attach()
         attachCommands = ['script print("oops, forgot to attach to a process...")']
-        resp = self.attach(
+        resp = self.attach_and_configurationDone(
             program=program,
             attachCommands=attachCommands,
-            expectFailure=True,
         )
         self.assertFalse(resp["success"])
         self.assertIn(

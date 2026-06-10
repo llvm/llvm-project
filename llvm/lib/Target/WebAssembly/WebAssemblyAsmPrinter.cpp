@@ -180,6 +180,13 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  if (GV->hasCommonLinkage()) {
+    OutContext.reportError(SMLoc(),
+                           "common symbols are not yet implemented for Wasm: " +
+                               getSymbol(GV)->getName());
+    return;
+  }
+
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
     AsmPrinter::emitGlobalVariable(GV);
     return;
@@ -190,16 +197,15 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (!Sym->getType()) {
     SmallVector<MVT, 1> VTs;
     Type *GlobalVT = GV->getValueType();
-    if (Subtarget) {
-      // Subtarget is only set when a function is defined, because
-      // each function can declare a different subtarget. For example,
-      // on ARM a compilation unit might have a function on ARM and
-      // another on Thumb. Therefore only if Subtarget is non-null we
-      // can actually calculate the legal VTs.
-      const WebAssemblyTargetLowering &TLI = *Subtarget->getTargetLowering();
-      computeLegalValueVTs(TLI, GV->getParent()->getContext(),
-                           GV->getDataLayout(), GlobalVT, VTs);
-    }
+    // Function-specific subtargets are not needed here: WebAssembly
+    // coalesces features before isel, so use the TargetMachine's
+    // module-wide subtarget to compute legal value types.
+    auto &WasmTM = static_cast<const WebAssemblyTargetMachine &>(TM);
+    const WebAssemblySubtarget *ST = WasmTM.getSubtargetImpl();
+    const WebAssemblyTargetLowering &TLI = *ST->getTargetLowering();
+    computeLegalValueVTs(TLI, GV->getParent()->getContext(),
+                         GV->getDataLayout(), GlobalVT, VTs);
+
     WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
   }
 
@@ -230,8 +236,7 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   if (Name == "__stack_pointer" || Name == "__tls_base" ||
       Name == "__memory_base" || Name == "__table_base" ||
       Name == "__tls_size" || Name == "__tls_align") {
-    bool Mutable =
-        Name == "__stack_pointer" || Name == "__tls_base";
+    bool Mutable = Name == "__stack_pointer" || Name == "__tls_base";
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
     WasmSym->setGlobalType(wasm::WasmGlobalType{
         uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64
@@ -259,6 +264,14 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
     wasm::ValType AddrType =
         Subtarget.hasAddr64() ? wasm::ValType::I64 : wasm::ValType::I32;
     Params.push_back(AddrType);
+  } else if (Name == "__wasm_get_stack_pointer" ||
+             Name == "__wasm_get_tls_base") {
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    Returns.push_back(wasm::ValType::I32);
+  } else if (Name == "__wasm_set_stack_pointer" ||
+             Name == "__wasm_set_tls_base") {
+    WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
+    Params.push_back(wasm::ValType::I32);
   } else { // Function symbols
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
     WebAssembly::getLibcallSignature(Subtarget, Name, Returns, Params);
@@ -404,7 +417,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!G.hasInitializer() && G.hasExternalLinkage() &&
         !WebAssembly::isWasmVarAddressSpace(G.getAddressSpace()) &&
         G.getValueType()->isSized()) {
-      uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
+      uint16_t Size = G.getGlobalSize(M.getDataLayout());
       OutStreamer->emitELFSize(getSymbol(&G),
                                MCConstantExpr::create(Size, OutContext));
     }
@@ -659,6 +672,12 @@ void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case WebAssembly::ARGUMENT_v2f64_S:
   case WebAssembly::ARGUMENT_v8f16:
   case WebAssembly::ARGUMENT_v8f16_S:
+  case WebAssembly::ARGUMENT_externref:
+  case WebAssembly::ARGUMENT_externref_S:
+  case WebAssembly::ARGUMENT_funcref:
+  case WebAssembly::ARGUMENT_funcref_S:
+  case WebAssembly::ARGUMENT_exnref:
+  case WebAssembly::ARGUMENT_exnref_S:
     // These represent values which are live into the function entry, so there's
     // no instruction to emit.
     break;

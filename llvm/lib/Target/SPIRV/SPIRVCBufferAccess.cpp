@@ -54,7 +54,12 @@ static Instruction *findHandleDef(GlobalVariable *HandleVar) {
 }
 
 static bool replaceCBufferAccesses(Module &M) {
-  std::optional<hlsl::CBufferMetadata> CBufMD = hlsl::CBufferMetadata::get(M);
+  std::optional<hlsl::CBufferMetadata> CBufMD =
+      hlsl::CBufferMetadata::get(M, [](Type *Ty) {
+        if (auto *TET = dyn_cast<TargetExtType>(Ty))
+          return TET->getName() == "spirv.Padding";
+        return false;
+      });
   if (!CBufMD)
     return false;
 
@@ -74,15 +79,20 @@ static bool replaceCBufferAccesses(Module &M) {
     // The handle definition should dominate all uses of the cbuffer members.
     // We'll insert our getpointer calls right after it.
     IRBuilder<> Builder(HandleDef->getNextNode());
+    auto *HandleTy = cast<TargetExtType>(Mapping.Handle->getValueType());
+    auto *LayoutTy = cast<StructType>(HandleTy->getTypeParameter(0));
+    const StructLayout *SL = M.getDataLayout().getStructLayout(LayoutTy);
 
-    for (uint32_t Index = 0; Index < Mapping.Members.size(); ++Index) {
-      GlobalVariable *MemberGV = Mapping.Members[Index].GV;
+    for (const hlsl::CBufferMember &Member : Mapping.Members) {
+      GlobalVariable *MemberGV = Member.GV;
       if (MemberGV->use_empty()) {
         continue;
       }
 
+      uint32_t IndexInStruct = SL->getElementContainingOffset(Member.Offset);
+
       // Create the getpointer intrinsic call.
-      Value *IndexVal = Builder.getInt32(Index);
+      Value *IndexVal = Builder.getInt32(IndexInStruct);
       Type *PtrType = MemberGV->getType();
       Value *GetPointerCall = Builder.CreateIntrinsic(
           PtrType, Intrinsic::spv_resource_getpointer, {HandleDef, IndexVal});

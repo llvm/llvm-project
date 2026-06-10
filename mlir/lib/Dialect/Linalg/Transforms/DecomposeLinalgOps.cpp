@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <optional>
 
 using namespace mlir;
@@ -115,19 +116,6 @@ static SmallVector<OpFoldResult> getGenericOpLoopRange(OpBuilder &b,
                                                           allShapesSizes);
 }
 
-/// Helper method to permute the list of `values` based on the `map`.
-SmallVector<OpFoldResult> permuteValues(ArrayRef<OpFoldResult> values,
-                                        AffineMap map) {
-  assert(map.isPermutation());
-  SmallVector<OpFoldResult> permutedValues(values.size());
-  for (const auto &position :
-       llvm::enumerate(llvm::map_range(map.getResults(), [](AffineExpr expr) {
-         return cast<AffineDimExpr>(expr).getPosition();
-       })))
-    permutedValues[position.value()] = values[position.index()];
-  return permutedValues;
-}
-
 /// Get zero value for an element type.
 static Value getZero(OpBuilder &b, Location loc, Type elementType) {
   assert(elementType.isIntOrIndexOrFloat() &&
@@ -225,10 +213,10 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
 
   /// Add indexing maps for the newly added operands. Use the same map
   /// as those used for the new results of the peeledGenericOp.
-  auto indexingMaps = llvm::to_vector(
-      llvm::map_range(genericOp.getDpsInputOperands(), [&](OpOperand *operand) {
+  auto indexingMaps = llvm::map_to_vector(
+      genericOp.getDpsInputOperands(), [&](OpOperand *operand) {
         return genericOp.getMatchingIndexingMap(operand);
-      }));
+      });
   for (auto resultNum :
        llvm::seq<unsigned>(origNumResults, peeledGenericOpNumResults)) {
     OpResult result = cast<OpResult>(peeledGenericOp.getResult(resultNum));
@@ -321,9 +309,9 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
             getZero(rewriter, genericOp.getLoc(), origYield.getType()));
       }
     }
-    yieldedVals.append(llvm::to_vector(
-        llvm::map_range(peeledScalarOperation->getResults(),
-                        [](OpResult opr) -> Value { return opr; })));
+    yieldedVals.append(
+        llvm::map_to_vector(peeledScalarOperation->getResults(),
+                            [](OpResult opr) -> Value { return opr; }));
     YieldOp::create(rewriter, genericOp.getLoc(), yieldedVals);
   }
 

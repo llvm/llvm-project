@@ -7,6 +7,7 @@ static_library("Utility") {
     "//llvm/lib/TargetParser",
   ]
   sources = [
+    "AcceleratorGDBRemotePackets.cpp",
     "AddressableBits.cpp",
     "ArchSpec.cpp",
     "Args.cpp",
@@ -21,7 +22,6 @@ static_library("Utility") {
     "DataEncoder.cpp",
     "DataExtractor.cpp",
     "Diagnostics.cpp",
-    "DiagnosticsRendering.cpp",
     "Environment.cpp",
     "ErrorMessages.cpp",
     "Event.cpp",
@@ -35,6 +35,7 @@ static_library("Utility") {
     "Listener.cpp",
     "Log.cpp",
     "NameMatches.cpp",
+    "Policy.cpp",
     "ProcessInfo.cpp",
     "RealpathPrefixes.cpp",
     "RegisterValue.cpp",
@@ -47,7 +48,6 @@ static_library("Utility") {
     "StreamString.cpp",
     "StringExtractor.cpp",
     "StringExtractorGDBRemote.cpp",
-    "StringLexer.cpp",
     "StringList.cpp",
     "StructuredData.cpp",
     "TildeExpressionResolver.cpp",
@@ -60,7 +60,7 @@ static_library("Utility") {
     "UserID.cpp",
     "UserIDResolver.cpp",
     "VASprintf.cpp",
-    "VMRange.cpp",
+    "VirtualDataExtractor.cpp",
     "XcodeSDK.cpp",
     "ZipFile.cpp",
   ]

@@ -16,7 +16,11 @@ find_package(Threads REQUIRED)
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(Protobuf CONFIG HINTS ${GRPC_INSTALL_PATH})
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
+# There's a `c-ares` library whose CMake file sets the `PACKAGE_VERSION` variable.
+# Preserve the original `PACKAGE_VERSION` value and restore it.
+set(PACKAGE_VERSION_PREV "${PACKAGE_VERSION}")
 find_package(gRPC CONFIG HINTS ${GRPC_INSTALL_PATH})
+set(PACKAGE_VERSION "${PACKAGE_VERSION_PREV}")
 message(STATUS "Using gRPC ${gRPC_VERSION}")
 
 if (Protobuf_FOUND AND gRPC_FOUND)

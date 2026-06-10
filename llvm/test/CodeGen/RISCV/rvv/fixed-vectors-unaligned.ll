@@ -72,8 +72,6 @@ define void @store_v4i32_align2(<4 x i32> %x, ptr %ptr) {
   ret void
 }
 
-declare <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i16>)
-
 define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %passthru) {
 ; RV32-SLOW-LABEL: mgather_v2i16_align1:
 ; RV32-SLOW:       # %bb.0:
@@ -160,8 +158,6 @@ define <2 x i16> @mgather_v2i16_align1(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i16> %
   ret <2 x i16> %v
 }
 
-declare <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr>, i32, <2 x i1>, <2 x i64>)
-
 define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %passthru) {
 ; RV32-SLOW-LABEL: mgather_v2i64_align4:
 ; RV32-SLOW:       # %bb.0:
@@ -243,8 +239,6 @@ define <2 x i64> @mgather_v2i64_align4(<2 x ptr> %ptrs, <2 x i1> %m, <2 x i64> %
   %v = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> %ptrs, i32 4, <2 x i1> %m, <2 x i64> %passthru)
   ret <2 x i64> %v
 }
-
-declare void @llvm.masked.scatter.v4i16.v4p0(<4 x i16>, <4 x ptr>, i32, <4 x i1>)
 
 define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m) {
 ; RV32-SLOW-LABEL: mscatter_v4i16_align1:
@@ -392,8 +386,6 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
   ret void
 }
 
-declare void @llvm.masked.scatter.v2i32.v2p0(<2 x i32>, <2 x ptr>, i32, <2 x i1>)
-
 define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m) {
 ; RV32-SLOW-LABEL: mscatter_v2i32_align2:
 ; RV32-SLOW:       # %bb.0:
@@ -475,8 +467,6 @@ define void @mscatter_v2i32_align2(<2 x i32> %val, <2 x ptr> %ptrs, <2 x i1> %m)
   call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> %val, <2 x ptr> %ptrs, i32 2, <2 x i1> %m)
   ret void
 }
-
-declare <2 x i32> @llvm.masked.load.v2i32(ptr, i32, <2 x i1>, <2 x i32>)
 
 define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwind {
 ; RV32-SLOW-LABEL: masked_load_v2i32_align1:
@@ -579,8 +569,6 @@ define void @masked_load_v2i32_align1(ptr %a, <2 x i32> %m, ptr %res_ptr) nounwi
   store <2 x i32> %load, ptr %res_ptr
   ret void
 }
-
-declare void @llvm.masked.store.v2i32.p0(<2 x i32>, ptr, i32, <2 x i1>)
 
 define void @masked_store_v2i32_align2(<2 x i32> %val, ptr %a, <2 x i32> %m) nounwind {
 ; SLOW-LABEL: masked_store_v2i32_align2:

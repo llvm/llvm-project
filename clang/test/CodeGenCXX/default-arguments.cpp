@@ -85,3 +85,15 @@ void f4() {
   // CHECK: call void @_Z2g4ii(i32 noundef 5, i32 noundef 7)
   g4();
 }
+
+namespace LambdaTemplateRedecl1 {
+  struct A {
+    template <class T> A(T) {}
+  };
+  template <class> void f(A = []{});
+  void t1() { f<int>(); }
+  template <class> void f(A);
+  void t2() { f<int>(); }
+  // CHECK-LABEL: define internal void @"_ZN21LambdaTemplateRedecl11AC1IZNS_1fIiEEvS0_E3$_0EET_"
+  // CHECK-LABEL: define internal void @"_ZN21LambdaTemplateRedecl11AC2IZNS_1fIiEEvS0_E3$_0EET_"
+} // namespace LambdaTemplateRedecl1

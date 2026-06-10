@@ -803,7 +803,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
 
   for (const DWARFLocationExpression &Location : *Locations) {
     uint8_t AddressSize = getAddressByteSize();
-    DataExtractor Data(Location.Expr, isLittleEndian(), AddressSize);
+    DataExtractor Data(Location.Expr, isLittleEndian());
     DWARFExpression Expr(Data, AddressSize);
     auto It = Expr.begin();
     if (It == Expr.end())
@@ -1187,9 +1187,15 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
   if (getVersion() >= 5) {
     if (DA.getData().data() == nullptr)
       return std::nullopt;
-    Offset += Header.getFormat() == dwarf::DwarfFormat::DWARF32 ? 8 : 16;
+    // FYI: The .debug_str_offsets.dwo section may use DWARF64 even when the
+    // rest of the file uses DWARF32, so respect whichever encoding the
+    // header/length uses.
+    uint64_t Length = 0;
+    DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
+    std::tie(Length, Format) = DA.getInitialLength(&Offset);
+    Offset += 4; // Skip the DWARF version uint16_t and the uint16_t padding.
     // Look for a valid contribution at the given offset.
-    auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), Offset);
+    auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Format, Offset);
     if (!DescOrError)
       return DescOrError.takeError();
     return *DescOrError;
@@ -1213,8 +1219,7 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
 }
 
 std::optional<uint64_t> DWARFUnit::getRnglistOffset(uint32_t Index) {
-  DataExtractor RangesData(RangeSection->Data, IsLittleEndian,
-                           getAddressByteSize());
+  DataExtractor RangesData(RangeSection->Data, IsLittleEndian);
   DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
                               IsLittleEndian, 0);
   if (std::optional<uint64_t> Off = llvm::DWARFListTableHeader::getOffsetEntry(

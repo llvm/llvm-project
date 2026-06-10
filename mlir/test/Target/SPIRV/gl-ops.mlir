@@ -31,6 +31,8 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %11 = spirv.GL.Pow %arg0, %arg1 : f32
     // CHECK: {{%.*}} = spirv.GL.Round {{%.*}} : f32
     %12 = spirv.GL.Round %arg0 : f32
+    // CHECK: {{%.*}} = spirv.GL.Trunc {{%.*}} : f32
+    %trunc = spirv.GL.Trunc %arg0 : f32
     // CHECK: {{%.*}} = spirv.GL.FrexpStruct {{%.*}} : f32 -> !spirv.struct<(f32, i32)>
     %13 = spirv.GL.FrexpStruct %arg0 : f32 -> !spirv.struct<(f32, i32)>
     // CHECK: {{%.*}} = spirv.GL.Ldexp {{%.*}} : f32, {{%.*}} : i32 -> f32
@@ -145,6 +147,14 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %0 = spirv.GL.UnpackHalf2x16 %arg0 : i32 -> vector<2xf32>
     // CHECK: {{%.*}} = spirv.GL.PackHalf2x16 {{%.*}} : vector<2xf32> -> i32
     %1 = spirv.GL.PackHalf2x16 %0 : vector<2xf32> -> i32
+    spirv.Return
+  }
+
+  spirv.func @pack_snorm_4x8(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.GL.UnpackSnorm4x8 {{%.*}} : i32 -> vector<4xf32>
+    %0 = spirv.GL.UnpackSnorm4x8 %arg0 : i32 -> vector<4xf32>
+    // CHECK: {{%.*}} = spirv.GL.PackSnorm4x8 {{%.*}} : vector<4xf32> -> i32
+    %1 = spirv.GL.PackSnorm4x8 %0 : vector<4xf32> -> i32
     spirv.Return
   }
 }

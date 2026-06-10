@@ -24,7 +24,7 @@
 using namespace llvm;
 
 SPIRVInstrInfo::SPIRVInstrInfo(const SPIRVSubtarget &STI)
-    : SPIRVGenInstrInfo(STI) {}
+    : SPIRVGenInstrInfo(STI, RI) {}
 
 bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
@@ -43,6 +43,7 @@ bool SPIRVInstrInfo::isConstantInstr(const MachineInstr &MI) const {
   case SPIRV::OpSpecConstantCompositeContinuedINTEL:
   case SPIRV::OpSpecConstantOp:
   case SPIRV::OpUndef:
+  case SPIRV::OpPoisonKHR:
   case SPIRV::OpConstantFunctionPointerINTEL:
     return true;
   default:

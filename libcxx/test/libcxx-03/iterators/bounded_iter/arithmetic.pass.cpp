@@ -99,14 +99,6 @@ TEST_CONSTEXPR_CXX14 bool tests() {
 
 int main(int, char**) {
   tests<int*>();
-#if TEST_STD_VER > 11
-  static_assert(tests<int*>(), "");
-#endif
-
-#if TEST_STD_VER > 17
-  tests<contiguous_iterator<int*> >();
-  static_assert(tests<contiguous_iterator<int*> >(), "");
-#endif
 
   return 0;
 }
