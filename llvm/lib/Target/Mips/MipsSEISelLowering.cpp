@@ -155,6 +155,14 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     addMSAFloatType(MVT::v4f32, &Mips::MSA128WRegClass);
     addMSAFloatType(MVT::v2f64, &Mips::MSA128DRegClass);
 
+    // We're using soft promotion for f16, but msa has some instructions for
+    // conversion to/from f16. Mark those conversions as custom so we can take
+    // advantage of these instructions.
+    for (MVT VT : {MVT::f32, MVT::f64}) {
+      setOperationAction(ISD::FP16_TO_FP, VT, Custom);
+      setOperationAction(ISD::FP_TO_FP16, VT, Custom);
+    }
+
     setTargetDAGCombine({ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR});
   }
 
@@ -477,6 +485,81 @@ SDValue MipsSETargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                      Op->getOperand(2));
 }
 
+// Lower FP16_TO_FP (the soft-promote-half representation of an f16 -> f32/f64
+// conversion).
+SDValue MipsSETargetLowering::lowerFP16_TO_FP(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT ResTy = Op.getValueType();
+  assert((ResTy == MVT::f32 || ResTy == MVT::f64) && "Unexpected FP16_TO_FP");
+
+  // The operand type is i32 because i16 isn't actually legal on MIPS.
+  SDValue In = Op.getOperand(0);
+  assert(In.getValueType() == MVT::i32 && "Unexpected FP16_TO_FP operand type");
+
+  // Splat into a v8i16 (the 32-bit In value is truncated to the lower 16 bits).
+  SDValue Splatted = DAG.getSplatBuildVector(MVT::v8i16, DL, In);
+
+  // Bitcast from v8i16 to v8f16.
+  SDValue HVec = DAG.getNode(ISD::BITCAST, DL, MVT::v8f16, Splatted);
+
+  // Convert from v8f16 to v4f32.
+  SDValue F32Vec = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::v4f32,
+      DAG.getConstant(Intrinsic::mips_fexupr_w, DL, MVT::i32), HVec);
+  SDValue Res;
+  if (ResTy == MVT::f32) {
+    // Every lane has the converted value, just read it from lane 0.
+    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, F32Vec,
+                      DAG.getVectorIdxConstant(0, DL));
+  } else {
+    // Convert from v4f32 to v2f64.
+    SDValue F64Vec = DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::v2f64,
+        DAG.getConstant(Intrinsic::mips_fexupr_d, DL, MVT::i32), F32Vec);
+    // Every lane has the converted value, just read it from lane 0.
+    Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f64, F64Vec,
+                      DAG.getVectorIdxConstant(0, DL));
+  }
+
+  return Res;
+}
+
+// Lower FP_TO_FP16 (the soft-promote-half representation of an f32/f64 -> f16
+// conversion)
+SDValue MipsSETargetLowering::lowerFP_TO_FP16(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT ResTy = Op.getValueType();
+  SDValue In = Op.getOperand(0);
+  assert((In.getValueType() == MVT::f32 || In.getValueType() == MVT::f64) &&
+         "Unexpected FP_TO_FP16");
+
+  SDValue F32Vec;
+  if (In.getValueType() == MVT::f64) {
+    // Splat f64 to v2f64, then convert to v4f32.
+    SDValue F64Vec = DAG.getSplatBuildVector(MVT::v2f64, DL, In);
+    F32Vec = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::v4f32,
+                         DAG.getConstant(Intrinsic::mips_fexdo_w, DL, MVT::i32),
+                         F64Vec, F64Vec);
+  } else {
+    // Splat f32 to v4f32.
+    F32Vec = DAG.getSplatBuildVector(MVT::v4f32, DL, In);
+  }
+
+  // Then convert from v4f32 to v8f16.
+  SDValue HVec = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::v8f16,
+      DAG.getConstant(Intrinsic::mips_fexdo_h, DL, MVT::i32), F32Vec, F32Vec);
+
+  // Finally cast to v8i16 (f16 is soft-promoted).
+  SDValue IVec = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, HVec);
+  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ResTy, IVec,
+                            DAG.getVectorIdxConstant(0, DL));
+
+  return Res;
+}
+
 SDValue MipsSETargetLowering::lowerINT_TO_FP(SDValue Op,
                                              SelectionDAG &DAG) const {
   // The f32/f64 case is already legal.
@@ -570,6 +653,12 @@ SDValue MipsSETargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return lowerFP_TO_INT(Op, DAG);
+  case ISD::FP16_TO_FP:
+  case ISD::STRICT_FP16_TO_FP:
+    return lowerFP16_TO_FP(Op, DAG);
+  case ISD::FP_TO_FP16:
+  case ISD::STRICT_FP_TO_FP16:
+    return lowerFP_TO_FP16(Op, DAG);
   case ISD::BITCAST:            return lowerBITCAST(Op, DAG);
   case ISD::FADD:
     return lowerR5900FPOp(Op, DAG, RTLIB::ADD_F32);
