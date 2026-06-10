@@ -840,14 +840,17 @@ and separate keys for non-thread specific things like this.
 
 `memory-region-infos` is an array of memory region information; a
 thread may want to provide region information about both the program
-counter and the stack pointer.  Note that the keys in `memory-region-infos`
-like `dirty_pages` and `types` are significant in their presence
-or absence.  If a stub can correctly identify which pages of memory
-have been modified (are dirty), it can include `"dirty_pages":[]`
-to indicate that no pages in this VM region are dirty.  This is
-different than the absence of the `dirty_pages` key, which means
-that this stub cannot provide information about pages of memory
-being modified or not.
+counter and the stack pointer.  The keys and values are the same
+as the `qMemoryRegionInfo`, except expressed in JSON key-value
+format.
+
+Note that the keys in a `memory-region-infos` entry like `dirty_pages`
+and `types` are significant in their presence or absence.  If a
+stub can correctly identify which pages of memory have been modified
+(are dirty), it can include `"dirty_pages":[]` to indicate that no
+pages in this VM region are dirty.  This is different than the
+absence of the `dirty_pages` key, which means that this stub cannot
+provide information about pages of memory being modified or not.
 
 **Priority To Implement:** Low
 
