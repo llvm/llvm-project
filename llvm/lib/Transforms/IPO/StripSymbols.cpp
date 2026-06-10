@@ -22,7 +22,6 @@
 #include "llvm/Transforms/IPO/StripSymbols.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -77,17 +76,15 @@ static void RemoveDeadConstant(Constant *C) {
 // Strip the symbol table of its names.
 //
 static void StripSymtab(ValueSymbolTable &ST, bool PreserveDbgInfo) {
-  // Collect the values to rename first: setName("") removes the value from the
-  // symbol table, which invalidates iterators into it.
-  SmallVector<Value *, 0> ToStrip;
-  for (const ValueName &VN : ST) {
-    Value *V = VN.getValue();
-    if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage())
+  for (ValueSymbolTable::iterator VI = ST.begin(), VE = ST.end(); VI != VE; ) {
+    Value *V = VI->getValue();
+    ++VI;
+    if (!isa<GlobalValue>(V) || cast<GlobalValue>(V)->hasLocalLinkage()) {
       if (!PreserveDbgInfo || !V->getName().starts_with("llvm.dbg"))
-        ToStrip.push_back(V);
+        // Set name to "", removing from symbol table!
+        V->setName("");
+    }
   }
-  for (Value *V : ToStrip)
-    V->setName("");
 }
 
 // Strip any named types of their names.
