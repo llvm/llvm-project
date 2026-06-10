@@ -1077,8 +1077,8 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
   const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
   if (!lat || !lat->getValue().isInitialized())
     return;
-  auto d = decide(lat->getValue(), offsetsTy.getShape(), maxChunkSize,
-                  subgroupSize);
+  auto d =
+      decide(lat->getValue(), offsetsTy.getShape(), maxChunkSize, subgroupSize);
   if (d.kind != CoalesceDecision::Kind::Chunked)
     return;
   auto hint = xegpu::CoalesceHintAttr::get(op.getContext(), d.factor);
