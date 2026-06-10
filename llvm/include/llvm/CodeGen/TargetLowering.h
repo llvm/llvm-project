@@ -4284,6 +4284,19 @@ public:
     return false;
   }
 
+  virtual bool isPreferredBitwiseImmCandidate(unsigned Opc, const APInt &Imm,
+                                              unsigned BitWidth) const {
+    return false;
+  }
+
+  // Target hook to prefer an equivalent IR bitwise immediate.
+  virtual std::optional<APInt>
+  getPreferredBitwiseImmForDemandedBits(unsigned Opc, const APInt &Imm,
+                                        const APInt &DemandedBits,
+                                        unsigned BitWidth) const {
+    return std::nullopt;
+  }
+
   /// Convert x+y to (VT)((SmallVT)x+(SmallVT)y) if the casts are free.
   /// This uses isTruncateFree/isZExtFree and ANY_EXTEND for the widening cast,
   /// but it could be generalized for targets with other types of implicit

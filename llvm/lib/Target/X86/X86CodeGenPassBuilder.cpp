@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/InterleavedAccess.h"
 #include "llvm/CodeGen/JMCInstrumenter.h"
 #include "llvm/CodeGen/KCFI.h"
+#include "llvm/CodeGen/TargetBitwiseImmRewrite.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -74,6 +75,9 @@ void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   addFunctionPass(X86LowerAMXTypePass(&TM), PMW);
 
   Base::addIRPasses(PMW);
+
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addFunctionPass(TargetBitwiseImmRewritePass(TM), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addFunctionPass(InterleavedAccessPass(TM), PMW);

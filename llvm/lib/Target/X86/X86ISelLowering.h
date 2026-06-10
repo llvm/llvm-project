@@ -327,6 +327,14 @@ namespace llvm {
                                       const APInt &DemandedElts,
                                       TargetLoweringOpt &TLO) const override;
 
+    bool isPreferredBitwiseImmCandidate(unsigned Opc, const APInt &Imm,
+                                        unsigned BitWidth) const override;
+
+    std::optional<APInt>
+    getPreferredBitwiseImmForDemandedBits(unsigned Opc, const APInt &Imm,
+                                          const APInt &DemandedBits,
+                                          unsigned BitWidth) const override;
+
     /// Determine which of the bits specified in Mask are known to be either
     /// zero or one and return them in the KnownZero/KnownOne bitsets.
     void computeKnownBitsForTargetNode(const SDValue Op,
