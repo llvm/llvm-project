@@ -1150,6 +1150,43 @@ def ReconcileUnrealizedCastsPass : Pass<"reconcile-unrealized-casts"> {
 }
 
 //===----------------------------------------------------------------------===//
+// SCFToAffine
+//===----------------------------------------------------------------------===//
+
+// TODO: extend to scf.if, scf.parallel, possibly more.
+def RaiseSCFToAffinePass : Pass<"raise-scf-to-affine"> {
+  let summary = "Raise SCF operations to affine operations (best effort)";
+  let description = [{
+    Raising to the affine dialect enables affine analyses and transforms such
+    as loop tiling, unrolling, vectorization, and dependence analysis.
+    Currently only `scf.for` is handled; loops that cannot be raised are left
+    unchanged.
+
+    A `scf.for` is raised when its lower and upper bounds are valid affine
+    dimensions (or an `affine.max` / `affine.min` respectively) and its step
+    is a valid affine symbol. Two cases are handled:
+
+      - Constant step: raised directly, preserving the step and any
+        `affine.min` / `affine.max` bounds as the loop's bounds.
+      - Dynamic (symbolic) step: the loop is normalized to unit step and the
+        original induction variable is reconstructed in the body. An
+        `affine.min` upper bound is supported here; an `affine.max` lower bound
+        is not, as it cannot be raised soundly without a constant step.
+
+    Bounds and step of non-`index` type are cast to `index` first if the source
+    type allows lossless conversion (otherwise we do not touch the loop). In any
+    case we preserve semantics.
+
+    This pass does not modify memory accesses; use `--affine-raise-from-memref`
+    to convert `memref.load` / `memref.store`.
+  }];
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "arith::ArithDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // SCFToControlFlow
 //===----------------------------------------------------------------------===//
 
