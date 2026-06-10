@@ -344,7 +344,8 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
 
   bool RemoveDotSlash = Version > 2;
 
-  bool SlashAgnostic = Version > 3 && llvm::sys::path::is_separator('\\');
+  bool SlashAgnostic = Version > 3 && llvm::sys::path::is_style_windows(
+                                          llvm::sys::path::Style::native);
 
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
