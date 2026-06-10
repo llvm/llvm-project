@@ -27,9 +27,9 @@
 //  /d1nodatetime - undefines __DATE__, __TIME__ and __TIMESTAMP__
 //  /Brepro - sets __DATE__, __TIME__ and __TIMESTAMP__ to "1"
 
-// RUN: %clang_cl -Xclang -verify /d1nodatetime /DDATETIME_UNDEFINED /c %s
+// RUN: %clang_cl -Xclang -verify /d1nodatetime /DDATETIME_UNDEFINED /c -- %s
 
-// RUN: %clang_cl -E /Brepro /DDATETIME_LITERALONE /c %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-LITERALONE
+// RUN: %clang_cl -E /Brepro /DDATETIME_LITERALONE /c -- %s | FileCheck %s --check-prefix CHECK-INIT-DATETIME-LITERALONE
 
 #if defined(DATETIME_LITERALONE) || defined(DATETIME_DEFAULT) || defined(DATETIME_CUSTOM)
 date: __DATE__
