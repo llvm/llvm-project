@@ -5924,9 +5924,9 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_nonnull)) {
     Check(I.getType()->isPointerTy(), "nonnull applies only to pointer types",
           &I);
-    Check(isa<LoadInst>(I),
-          "nonnull applies only to load instructions, use attributes"
-          " for calls or invokes",
+    Check((isa<LoadInst, PHINode>(I)),
+          "nonnull applies only to load instructions or phi nodes, use "
+          "attributes for calls or invokes",
           &I);
     Check(MD->getNumOperands() == 0, "nonnull metadata must be empty", &I);
   }

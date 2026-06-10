@@ -2,20 +2,24 @@
 
 declare ptr @dummy()
 
-; CHECK: nonnull applies only to pointer types
-define void @test_not_pointer(ptr %p) {
+define void @test_not_pointer(ptr %p, i32 %i) {
+entry:
+  ; CHECK: nonnull applies only to pointer types
   load i32, ptr %p, !nonnull !{}
-  ret void
-}
-
-; CHECK: nonnull applies only to load instructions, use attributes for calls or invokes
-define void @test_not_load() {
+  ; CHECK: nonnull applies only to load instructions or phi nodes, use attributes for calls or invokes
   call ptr @dummy(), !nonnull !{}
-  ret void
-}
-
-; CHECK: nonnull metadata must be empty
-define void @test_invalid_arg(ptr %p) {
+  ; CHECK: nonnull metadata must be empty
   load ptr, ptr %p, !nonnull !{i32 0}
+  ; This one is valid
+  load ptr, ptr %p, !nonnull !{}
+  ret void
+
+bb:
+  ; This one is valid
+  phi ptr [%p, %entry], !nonnull !{}
+  ; CHECK: nonnull metadata must be empty
+  phi ptr [%p, %entry], !nonnull !{i32 0}
+  ; CHECK: nonnull applies only to pointer types
+  phi i32 [%i, %entry], !nonnull !{}
   ret void
 }
