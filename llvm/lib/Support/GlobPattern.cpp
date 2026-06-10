@@ -138,8 +138,6 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
 }
 
 static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
-  const char *Metas =
-      SlashAgnostic ? PrefixMetacharactersWithSlash : PrefixMetacharacters;
   StringRef Best;
   while (!S.empty()) {
     const char *Metas =
@@ -185,8 +183,8 @@ static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
 }
 
 Expected<GlobPattern> GlobPattern::create(StringRef S,
-GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns,
-                    bool SlashAgnostic) {
+                                          std::optional<size_t> MaxSubPatterns,
+                                          bool SlashAgnostic) {
   GlobPattern Pat;
   Pat.SlashAgnostic = SlashAgnostic;
   Pat.Pattern = S;
@@ -244,13 +242,6 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
                                        errc::invalid_argument);
       StringRef Chars = S.substr(I, J - I);
       bool Invert = S[I] == '^' || S[I] == '!';
-      BitVector BV = std::move(*BVOrErr);
-      if (SlashAgnostic) {
-        if (BV['\\'] || BV['/']) {
-          BV.set('\\');
-          BV.set('/');
-        }
-      }
       if (Invert)
         Chars = Chars.drop_front();
       Expected<BitVector> BVOrErr = expand(Chars, S);

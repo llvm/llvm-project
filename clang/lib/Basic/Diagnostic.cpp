@@ -585,7 +585,8 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
   if (!DiagSection)
     return false;
 
-  StringRef F = PLoc.getFilename();
+  StringRef F = llvm::sys::path::remove_leading_dotslash(PLoc.getFilename());
+
   unsigned LastSup = DiagSection->getLastMatch("src", F, "");
   if (LastSup == 0)
     return false;
