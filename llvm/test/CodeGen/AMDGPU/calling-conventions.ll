@@ -244,10 +244,11 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; VI-NEXT:    s_add_u32 s4, s4, coldcc@gotpcrel32@lo+4
 ; VI-NEXT:    s_addc_u32 s5, s5, coldcc@gotpcrel32@hi+12
 ; VI-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; VI-NEXT:    s_mov_b32 s14, s10
 ; VI-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; VI-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; VI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; VI-NEXT:    s_mov_b64 s[0:1], s[88:89]
@@ -355,10 +356,11 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; VI-NEXT:    s_add_u32 s4, s4, fastcc@gotpcrel32@lo+4
 ; VI-NEXT:    s_addc_u32 s5, s5, fastcc@gotpcrel32@hi+12
 ; VI-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x0
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; VI-NEXT:    s_mov_b32 s14, s10
 ; VI-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; VI-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
-; VI-NEXT:    v_lshl_or_b32 v0, v1, 10, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; VI-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; VI-NEXT:    s_mov_b64 s[0:1], s[88:89]
@@ -3803,18 +3805,18 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v9, 3, v10
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v10, v12, v13
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v12, 3, v14
-; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v4, 4, v4
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v5, v11, v5
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v6, 3, v6
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v2, v7, v2
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v7, v9, v8
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v8, v12, v10
+; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v4, 4, v4
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 15, v0
-; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v1, 12, v1
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v5, v6, v5
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v2, 15, v2
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v6, 4, v7
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v7, 15, v8
+; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v1, 12, v1
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v3, 8, v3
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v4
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b16 v4, 12, v5
@@ -3828,9 +3830,11 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v1, v3, v2
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-FAKE16-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX11-FAKE16-NEXT:    s_endpgm
 ;
@@ -3969,13 +3973,13 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v9, v13, v9
 ; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v11, v14, v11
 ; GFX1250-FAKE16-NEXT:    v_bitop3_b16 v12, v28, v15, 1 bitop3:0xec
-; GFX1250-FAKE16-NEXT:    v_lshlrev_b16 v3, 4, v3
-; GFX1250-FAKE16-NEXT:    v_lshlrev_b16 v4, 8, v4
 ; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v2, v2, v6
 ; GFX1250-FAKE16-NEXT:    v_bitop3_b16 v6, v16, v8, 1 bitop3:0xec
 ; GFX1250-FAKE16-NEXT:    v_bitop3_b16 v5, v7, v5, 3 bitop3:0xec
 ; GFX1250-FAKE16-NEXT:    v_bitop3_b16 v7, v10, 15, v9 bitop3:0xc8
 ; GFX1250-FAKE16-NEXT:    v_bitop3_b16 v8, v12, v11, 3 bitop3:0xec
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b16 v3, 4, v3
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b16 v4, 8, v4
 ; GFX1250-FAKE16-NEXT:    v_lshlrev_b16 v1, 12, v1
 ; GFX1250-FAKE16-NEXT:    v_bitop3_b16 v2, v6, v2, 3 bitop3:0xec
 ; GFX1250-FAKE16-NEXT:    v_lshlrev_b16 v5, 4, v5
@@ -3990,8 +3994,9 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-FAKE16-NEXT:    v_bitop3_b16 v1, v2, v3, 0xff bitop3:0xec
 ; GFX1250-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX1250-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX1250-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX1250-FAKE16-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-FAKE16-NEXT:    s_endpgm
   store <32 x i1> %arg0, ptr addrspace(1) poison

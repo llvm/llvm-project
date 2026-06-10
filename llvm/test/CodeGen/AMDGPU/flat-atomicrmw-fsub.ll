@@ -6142,9 +6142,10 @@ define half @flat_agent_atomic_fsub_ret_f16(ptr %ptr, half %val) #0 {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
-; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v5, v2
-; GFX8-NEXT:    v_lshl_or_b32 v5, v5, v3, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
+; GFX8-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
+; GFX8-NEXT:    v_or_b32_e32 v5, v7, v5
 ; GFX8-NEXT:    flat_atomic_cmpswap v5, v[0:1], v[5:6] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -6520,9 +6521,10 @@ define half @flat_agent_atomic_fsub_ret_f16__offset12b_pos(ptr %ptr, half %val) 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
-; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v5, v2
-; GFX8-NEXT:    v_lshl_or_b32 v5, v5, v3, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
+; GFX8-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
+; GFX8-NEXT:    v_or_b32_e32 v5, v7, v5
 ; GFX8-NEXT:    flat_atomic_cmpswap v5, v[0:1], v[5:6] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -6901,9 +6903,10 @@ define half @flat_agent_atomic_fsub_ret_f16__offset12b_neg(ptr %ptr, half %val) 
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
-; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v5, v2
-; GFX8-NEXT:    v_lshl_or_b32 v5, v5, v3, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
+; GFX8-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
+; GFX8-NEXT:    v_or_b32_e32 v5, v7, v5
 ; GFX8-NEXT:    flat_atomic_cmpswap v5, v[0:1], v[5:6] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -7260,9 +7263,10 @@ define void @flat_agent_atomic_fsub_noret_f16(ptr %ptr, half %val) #0 {
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
 ; GFX8-NEXT:    v_sub_f16_e32 v3, v3, v2
-; GFX8-NEXT:    v_lshl_or_b32 v3, v3, v5, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, v5, v3
+; GFX8-NEXT:    v_or_b32_e32 v3, v7, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -7626,9 +7630,10 @@ define void @flat_agent_atomic_fsub_noret_f16__offset12b_pos(ptr %ptr, half %val
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
 ; GFX8-NEXT:    v_sub_f16_e32 v3, v3, v2
-; GFX8-NEXT:    v_lshl_or_b32 v3, v3, v5, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, v5, v3
+; GFX8-NEXT:    v_or_b32_e32 v3, v7, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -7995,9 +8000,10 @@ define void @flat_agent_atomic_fsub_noret_f16__offset12b_neg(ptr %ptr, half %val
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
 ; GFX8-NEXT:    v_sub_f16_e32 v3, v3, v2
-; GFX8-NEXT:    v_lshl_or_b32 v3, v3, v5, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, v5, v3
+; GFX8-NEXT:    v_or_b32_e32 v3, v7, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -8932,9 +8938,10 @@ define half @flat_system_atomic_fsub_ret_f16__offset12b_pos(ptr %ptr, half %val)
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v5, v3, v6
-; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
 ; GFX8-NEXT:    v_sub_f16_e32 v5, v5, v2
-; GFX8-NEXT:    v_lshl_or_b32 v5, v5, v3, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, v6, v4
+; GFX8-NEXT:    v_lshlrev_b32_e32 v5, v3, v5
+; GFX8-NEXT:    v_or_b32_e32 v5, v7, v5
 ; GFX8-NEXT:    flat_atomic_cmpswap v5, v[0:1], v[5:6] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1
@@ -9306,9 +9313,10 @@ define void @flat_system_atomic_fsub_noret_f16__offset12b_pos(ptr %ptr, half %va
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, v5, v4
-; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
 ; GFX8-NEXT:    v_sub_f16_e32 v3, v3, v2
-; GFX8-NEXT:    v_lshl_or_b32 v3, v3, v5, v7
+; GFX8-NEXT:    v_and_b32_e32 v7, v4, v6
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, v5, v3
+; GFX8-NEXT:    v_or_b32_e32 v3, v7, v3
 ; GFX8-NEXT:    flat_atomic_cmpswap v3, v[0:1], v[3:4] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1

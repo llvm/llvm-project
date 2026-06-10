@@ -682,8 +682,10 @@ define amdgpu_kernel void @v_cttz_zero_poison_i16_with_select(ptr addrspace(1) n
 ; VI-NEXT:    flat_load_ubyte v3, v[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshl_or_b32 v2, v2, 8, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    v_ffbl_b32_e32 v3, v2
 ; VI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v2
@@ -803,8 +805,10 @@ define amdgpu_kernel void @v_cttz_zero_poison_i32_with_select(ptr addrspace(1) n
 ; VI-NEXT:    flat_load_ubyte v5, v[6:7]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_waitcnt vmcnt(3)
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_lshl_or_b32 v2, v2, 8, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -963,15 +967,19 @@ define amdgpu_kernel void @v_cttz_zero_poison_i64_with_select(ptr addrspace(1) n
 ; VI-NEXT:    flat_load_ubyte v2, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_waitcnt vmcnt(7)
+; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v12
 ; VI-NEXT:    s_waitcnt vmcnt(6)
-; VI-NEXT:    v_lshl_or_b32 v3, v12, 8, v13
+; VI-NEXT:    v_or_b32_e32 v3, v3, v13
 ; VI-NEXT:    s_waitcnt vmcnt(5)
 ; VI-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
 ; VI-NEXT:    s_waitcnt vmcnt(4)
 ; VI-NEXT:    v_or_b32_sdwa v4, v4, v5 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v3, v4, v3
+; VI-NEXT:    s_waitcnt vmcnt(3)
+; VI-NEXT:    v_lshlrev_b32_e32 v4, 8, v6
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_lshl_or_b32 v4, v6, 8, v7
+; VI-NEXT:    v_or_b32_e32 v4, v4, v7
 ; VI-NEXT:    v_ffbl_b32_e32 v3, v3
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, 32, v3
 ; VI-NEXT:    s_waitcnt vmcnt(1)
@@ -1131,8 +1139,10 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(ptr addrspace(1) noalias %out,
 ; VI-NEXT:    flat_load_ubyte v5, v[6:7]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_waitcnt vmcnt(3)
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_lshl_or_b32 v2, v2, 8, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -1259,8 +1269,10 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_neg1(ptr addrspace(1) noalias %out,
 ; VI-NEXT:    flat_load_ubyte v5, v[6:7]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_waitcnt vmcnt(3)
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_lshl_or_b32 v2, v2, 8, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -1390,8 +1402,10 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; VI-NEXT:    flat_load_ubyte v5, v[6:7]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_waitcnt vmcnt(3)
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 8, v2
 ; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_lshl_or_b32 v2, v2, 8, v3
+; VI-NEXT:    v_or_b32_e32 v2, v2, v3
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -1588,8 +1602,10 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; VI-NEXT:    flat_load_ubyte v2, v[2:3]
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v4
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshl_or_b32 v2, v4, 8, v2
+; VI-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-NEXT:    v_ffbl_b32_e32 v2, v2
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm

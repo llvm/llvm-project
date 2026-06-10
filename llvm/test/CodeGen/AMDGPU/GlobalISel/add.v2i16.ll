@@ -673,7 +673,8 @@ define <2 x i16> @add_inline_imm_neg1_0(<2 x i16> %x) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX8-NEXT:    v_add_u16_e32 v0, -1, v0
-; GFX8-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: add_inline_imm_neg1_0:
@@ -707,7 +708,8 @@ define <2 x i16> @add_inline_imm_1_0(<2 x i16> %x) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX8-NEXT:    v_add_u16_e32 v0, 1, v0
-; GFX8-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX8-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX8-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: add_inline_imm_1_0:

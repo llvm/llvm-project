@@ -9,10 +9,11 @@ define <2 x half> @v_mac_f16_fpdp_rounding(<2 x half> %a, <2 x half> %c, <2 x ha
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v6, 16, v1
 ; CHECK-NEXT:    v_mac_f16_sdwa v6, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; CHECK-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
 ; CHECK-NEXT:    v_mac_f16_e32 v1, v0, v2
 ; CHECK-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 2, 2), 1
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CHECK-NEXT:    v_lshl_or_b32 v0, v6, 16, v1
+; CHECK-NEXT:    v_or_b32_e32 v0, v1, v6
 ; CHECK-NEXT:    flat_store_short v[4:5], v3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

@@ -147,7 +147,8 @@ define void @ds_bpermute_or_shl(ptr addrspace(1) %out, i32 %base_index, i32 %src
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_and_b32_e32 v2, 62, v2
-; CHECK-GISEL-NEXT:    v_lshl_or_b32 v2, v2, 2, 4
+; CHECK-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
+; CHECK-GISEL-NEXT:    v_or_b32_e32 v2, 4, v2
 ; CHECK-GISEL-NEXT:    ds_bpermute_b32 v2, v2, v3
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    flat_store_dword v[0:1], v2

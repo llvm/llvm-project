@@ -702,8 +702,9 @@ define amdgpu_kernel void @fma_v2f16(
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
 ; VI-NEXT:    v_fma_f16 v3, v5, v4, v3
+; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; VI-NEXT:    v_fma_f16 v0, v2, v1, v0
-; VI-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v3
 ; VI-NEXT:    buffer_store_dword v0, off, s[8:11], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -893,8 +894,9 @@ define amdgpu_kernel void @fma_v2f16_imm_a(
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; VI-NEXT:    v_fma_f16 v2, v3, s2, v2
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_fma_f16 v0, v1, s2, v0
-; VI-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -1077,8 +1079,9 @@ define amdgpu_kernel void @fma_v2f16_imm_b(
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; VI-NEXT:    v_fma_f16 v2, v3, s2, v2
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_fma_f16 v0, v1, s2, v0
-; VI-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -1261,8 +1264,9 @@ define amdgpu_kernel void @fma_v2f16_imm_c(
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; VI-NEXT:    v_fma_f16 v2, v3, v2, s2
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_fma_f16 v0, v1, v0, s2
-; VI-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
@@ -1571,8 +1575,10 @@ define amdgpu_kernel void @fma_v4f16(
 ; VI-NEXT:    v_fma_f16 v0, v4, v2, v0
 ; VI-NEXT:    v_fma_f16 v2, v8, v7, v6
 ; VI-NEXT:    v_fma_f16 v3, v9, v5, v3
-; VI-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
-; VI-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; VI-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; VI-NEXT:    v_or_b32_e32 v1, v1, v2
+; VI-NEXT:    v_or_b32_e32 v0, v0, v3
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;

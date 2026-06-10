@@ -3697,8 +3697,9 @@ define <2 x half> @select_fneg_posk_src_fma_v2f16(<2 x i32> %c, <2 x half> %x, <
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v3
 ; VI-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; VI-NEXT:    v_fma_f16 v1, v4, 4.0, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_fma_f16 v2, v2, 4.0, v3
-; VI-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0
@@ -3796,8 +3797,9 @@ define <2 x half> @select_fneg_posk_src_fmad_v2f16(<2 x i32> %c, <2 x half> %x, 
 ; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v3
 ; VI-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; VI-NEXT:    v_fma_f16 v1, v4, 4.0, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_fma_f16 v2, v2, 4.0, v3
-; VI-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_xor_b32_e32 v1, 0x80008000, v1
 ; VI-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v0

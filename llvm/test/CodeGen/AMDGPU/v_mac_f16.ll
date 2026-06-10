@@ -365,8 +365,9 @@ entry:
 ; VI-DAG: v_lshrrev_b32_e32 v[[C_F16_1:[0-9]+]], 16, v[[C_V2_F16]]
 ; VI-DAG: v_mac_f16_sdwa v[[C_F16_1]], v[[A_V2_F16]], v[[B_V2_F16]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
 ; VI-DAG: v_mac_f16_e32 v[[C_V2_F16]], v[[A_V2_F16]], v[[B_V2_F16]]
+; VI-DAG: v_lshlrev_b32_e32 v[[R_F16_HI:[0-9]+]], 16, v[[C_F16_1]]
 ; VI-NOT: and
-; VI-DAG: v_lshl_or_b32 v[[R_V2_F16:[0-9]+]], v[[C_F16_1]], 16, v[[C_V2_F16]]
+; VI:  v_or_b32_e32 v[[R_V2_F16:[0-9]+]], v[[C_V2_F16]], v[[R_F16_HI]]
 
 ; VI: {{buffer|flat}}_store_dword v[[R_V2_F16]]
 ; VI: s_endpgm

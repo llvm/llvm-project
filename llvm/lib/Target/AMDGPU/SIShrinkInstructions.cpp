@@ -58,7 +58,6 @@ class SIShrinkInstructions {
                                                    unsigned I) const;
   void dropInstructionKeepingImpDefs(MachineInstr &MI) const;
   MachineInstr *matchSwap(MachineInstr &MovT) const;
-  MachineInstr *matchLshlOr(MachineInstr &Shift) const;
 
 public:
   SIShrinkInstructions() = default;
@@ -851,147 +850,6 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   return nullptr;
 }
 
-// Fuse  v_lshlrev_b32 vDst, vAmt, vSrc  +  v_or_b32 vRes, vDst, vOther
-// into  v_lshl_or_b32 vRes, vSrc, vAmt, vOther  (GFX9+).
-// Requires the shift result to be dead after the or and the combined operand
-// list to satisfy the V_LSHL_OR_B32 constant-bus / literal-encoding rules.
-// Complements the SDAG ThreeOpFrag cshl_32+or pattern, which is blocked by
-// HasOneUseBinOp when the shift's DAG node has other consumers.
-MachineInstr *SIShrinkInstructions::matchLshlOr(MachineInstr &Shift) const {
-  if (TII->pseudoToMCOpcode(AMDGPU::V_LSHL_OR_B32_e64) == -1)
-    return nullptr;
-
-  assert(Shift.getOpcode() == AMDGPU::V_LSHLREV_B32_e32 ||
-         Shift.getOpcode() == AMDGPU::V_LSHLREV_B32_e64);
-
-  // V_LSHLREV / V_OR layout: 0 = vdst, 1 = src0, 2 = src1.
-  MachineOperand *ShDst = &Shift.getOperand(0);
-  MachineOperand *ShAmt = &Shift.getOperand(1);
-  MachineOperand *ShVal = &Shift.getOperand(2);
-  if (!ShDst->isReg())
-    return nullptr;
-
-  Register ShDstReg = ShDst->getReg();
-  unsigned ShDstSub = ShDst->getSubReg();
-
-  if (!TRI->isVGPR(*MRI, ShDstReg))
-    return nullptr;
-
-  // Search up to 16 instructions forward for the OR. Limit prevents
-  // unbounded scans while covering the vast majority of fusion opportunities.
-  // Matches the search window used in matchSwap.
-  const unsigned SearchLimit = 16;
-  unsigned Count = 0;
-
-  for (auto Iter = std::next(Shift.getIterator()),
-            E = Shift.getParent()->instr_end();
-       Iter != E && Count < SearchLimit; ++Iter) {
-    if (Iter->isDebugInstr())
-      continue;
-    ++Count;
-
-    bool IsOr = (Iter->getOpcode() == AMDGPU::V_OR_B32_e32 ||
-                 Iter->getOpcode() == AMDGPU::V_OR_B32_e64);
-
-    if (!IsOr) {
-      // Reject intervening hazards.
-      if (instReadsReg(&*Iter, ShDstReg, ShDstSub) ||
-          instModifiesReg(&*Iter, ShDstReg, ShDstSub))
-        return nullptr;
-      if (ShVal->isReg() && Iter->modifiesRegister(ShVal->getReg(), TRI))
-        return nullptr;
-      if (ShAmt->isReg() && Iter->modifiesRegister(ShAmt->getReg(), TRI))
-        return nullptr;
-      continue;
-    }
-    if (Iter->getNumExplicitOperands() < 3)
-      return nullptr;
-    MachineOperand *OrDst = &Iter->getOperand(0);
-    MachineOperand *OrSrc0 = &Iter->getOperand(1);
-    MachineOperand *OrSrc1 = &Iter->getOperand(2);
-    if (!OrDst->isReg())
-      return nullptr;
-
-    if (!TRI->isVGPR(*MRI, OrDst->getReg()))
-      return nullptr;
-
-    // Find which OR source uses the shift result (commutative).
-    MachineOperand *KillUse;
-    MachineOperand *Other;
-    if (OrSrc0->isReg() && OrSrc0->getReg() == ShDstReg &&
-        OrSrc0->getSubReg() == ShDstSub) {
-      KillUse = OrSrc0;
-      Other = OrSrc1;
-    } else if (OrSrc1->isReg() && OrSrc1->getReg() == ShDstReg &&
-               OrSrc1->getSubReg() == ShDstSub) {
-      KillUse = OrSrc1;
-      Other = OrSrc0;
-    } else {
-      return nullptr;
-    }
-
-    // The other operand can't be the shift result itself (e.g. "or x, x"):
-    // fusion deletes the shift, leaving it undefined.
-    if (Other->isReg() && TRI->regsOverlap(Other->getReg(), ShDstReg))
-      return nullptr;
-
-    // Fusion deletes the shift, so its result must be dead after the OR. Trust
-    // a kill flag; otherwise query liveness just past the OR (catches later
-    // reads, read-modify uses, and live-out).
-    if (!KillUse->isKill()) {
-      if (ShDstSub != 0)
-        return nullptr;
-      MachineBasicBlock::iterator AfterOr =
-          std::next(MachineBasicBlock::iterator(*Iter));
-      MachineBasicBlock::LivenessQueryResult LQR =
-          Iter->getParent()->computeRegisterLiveness(TRI, ShDstReg, AfterOr,
-                                                     /*Neighborhood=*/16);
-      if (LQR != MachineBasicBlock::LQR_Dead)
-        return nullptr;
-    }
-
-    LLVM_DEBUG(dbgs() << "Matched v_lshl_or:\n" << Shift << *Iter);
-
-    // Build the fused instruction and validate all operands are legal
-    // (constant-bus limits, VOP3 literal constraints, register classes). Bail
-    // if illegal.
-    MachineBasicBlock &MBB = *Iter->getParent();
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, Iter->getIterator(), Iter->getDebugLoc(),
-                TII->get(AMDGPU::V_LSHL_OR_B32_e64))
-            .addReg(OrDst->getReg(), RegState::Define, OrDst->getSubReg());
-    MIB.add(*ShVal);
-    MIB.add(*ShAmt);
-    MIB.add(*Other);
-    MachineInstr *NewMI = MIB.getInstr();
-
-    const int SrcIdx[] = {AMDGPU::getNamedOperandIdx(AMDGPU::V_LSHL_OR_B32_e64,
-                                                     AMDGPU::OpName::src0),
-                          AMDGPU::getNamedOperandIdx(AMDGPU::V_LSHL_OR_B32_e64,
-                                                     AMDGPU::OpName::src1),
-                          AMDGPU::getNamedOperandIdx(AMDGPU::V_LSHL_OR_B32_e64,
-                                                     AMDGPU::OpName::src2)};
-    for (int Idx : SrcIdx) {
-      if (Idx < 0 || !TII->isOperandLegal(*NewMI, Idx)) {
-        NewMI->eraseFromParent();
-        return nullptr;
-      }
-    }
-
-    auto ResumeIt = std::next(Shift.getIterator());
-    // Resume from the newly created instruction if Shift and OR were adjacent;
-    // otherwise continue from the instruction after the Shift.
-    MachineInstr *Next =
-        (ResumeIt != MBB.end() && &*ResumeIt == &*Iter) ? NewMI : &*ResumeIt;
-
-    Iter->eraseFromParent();
-    Shift.eraseFromParent();
-    return Next;
-  }
-
-  return nullptr;
-}
-
 // If an instruction has dead sdst replace it with NULL register on gfx1030+
 bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
   if (!ST->hasGFX10_3Insts())
@@ -1052,18 +910,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
                             MI.getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
                             MI.getOpcode() == AMDGPU::COPY)) {
         if (auto *NextMI = matchSwap(MI)) {
-          Next = NextMI->getIterator();
-          Changed = true;
-          continue;
-        }
-      }
-
-      // Fuse v_lshlrev_b32 + v_or_b32 into v_lshl_or_b32. Post-RA only:
-      // earlier passes / SDAG patterns get first crack pre-RA, and post-RA
-      // we have accurate kill flags and final register classes.
-      if (IsPostRA && (MI.getOpcode() == AMDGPU::V_LSHLREV_B32_e32 ||
-                       MI.getOpcode() == AMDGPU::V_LSHLREV_B32_e64)) {
-        if (auto *NextMI = matchLshlOr(MI)) {
           Next = NextMI->getIterator();
           Changed = true;
           continue;

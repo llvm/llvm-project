@@ -5201,7 +5201,8 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[4:5]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_lshl_or_b32 v4, v8, 8, v9
+; VI-NEXT:    v_lshlrev_b32_e32 v4, 8, v8
+; VI-NEXT:    v_or_b32_e32 v4, v4, v9
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 8, v10
 ; VI-NEXT:    v_or_b32_sdwa v5, v5, v6 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_e32 v4, v5, v4

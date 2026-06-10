@@ -795,13 +795,15 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; VI-NEXT:    v_cvt_f32_ubyte0_sdwa v1, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
 ; VI-NEXT:    v_add_u16_e32 v8, 9, v8
-; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    v_and_b32_e32 v10, 0xff, v10
-; VI-NEXT:    v_lshlrev_b32_sdwa v0, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
-; VI-NEXT:    v_or_b32_sdwa v0, v9, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    v_and_b32_e32 v6, 0xff, v6
-; VI-NEXT:    v_lshl_or_b32 v0, v10, 16, v0
-; VI-NEXT:    v_lshl_or_b32 v2, v6, 24, v0
+; VI-NEXT:    v_lshlrev_b32_sdwa v0, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v10
+; VI-NEXT:    v_or_b32_sdwa v0, v9, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 24, v6
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    v_or_b32_e32 v2, v0, v2
 ; VI-NEXT:    v_mov_b32_e32 v0, s2
 ; VI-NEXT:    v_mov_b32_e32 v1, s3
 ; VI-NEXT:    flat_store_dword v[0:1], v2

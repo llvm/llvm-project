@@ -1073,9 +1073,10 @@ define half @local_atomic_fmax_ret_f16(ptr addrspace(3) %ptr) nounwind {
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, v0, v4
 ; GFX8-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-NEXT:    v_and_b32_e32 v5, v4, v2
 ; GFX8-NEXT:    v_max_f16_e32 v3, 4.0, v3
-; GFX8-NEXT:    v_lshl_or_b32 v3, v3, v0, v5
+; GFX8-NEXT:    v_and_b32_e32 v5, v4, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, v0, v3
+; GFX8-NEXT:    v_or_b32_e32 v3, v5, v3
 ; GFX8-NEXT:    ds_cmpst_rtn_b32 v3, v1, v4, v3
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
@@ -1475,9 +1476,10 @@ define half @local_atomic_fmax_ret_f16__offset(ptr addrspace(3) %ptr) nounwind {
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, v0, v4
 ; GFX8-NEXT:    v_max_f16_e32 v3, v3, v3
-; GFX8-NEXT:    v_and_b32_e32 v5, v4, v2
 ; GFX8-NEXT:    v_max_f16_e32 v3, 4.0, v3
-; GFX8-NEXT:    v_lshl_or_b32 v3, v3, v0, v5
+; GFX8-NEXT:    v_and_b32_e32 v5, v4, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v3, v0, v3
+; GFX8-NEXT:    v_or_b32_e32 v3, v5, v3
 ; GFX8-NEXT:    ds_cmpst_rtn_b32 v3, v1, v4, v3
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, v3, v4
@@ -1858,9 +1860,10 @@ define void @local_atomic_fmax_noret_f16(ptr addrspace(3) %ptr) nounwind {
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v4, v0, v3
 ; GFX8-NEXT:    v_max_f16_e32 v4, v4, v4
-; GFX8-NEXT:    v_and_b32_e32 v5, v3, v2
 ; GFX8-NEXT:    v_max_f16_e32 v4, 4.0, v4
-; GFX8-NEXT:    v_lshl_or_b32 v4, v4, v0, v5
+; GFX8-NEXT:    v_and_b32_e32 v5, v3, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v4, v0, v4
+; GFX8-NEXT:    v_or_b32_e32 v4, v5, v4
 ; GFX8-NEXT:    ds_cmpst_rtn_b32 v4, v1, v3, v4
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v3
@@ -2247,9 +2250,10 @@ define void @local_atomic_fmax_noret_f16__offset(ptr addrspace(3) %ptr) nounwind
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v4, v1, v3
 ; GFX8-NEXT:    v_max_f16_e32 v4, v4, v4
-; GFX8-NEXT:    v_and_b32_e32 v5, v3, v2
 ; GFX8-NEXT:    v_max_f16_e32 v4, 4.0, v4
-; GFX8-NEXT:    v_lshl_or_b32 v4, v4, v1, v5
+; GFX8-NEXT:    v_and_b32_e32 v5, v3, v2
+; GFX8-NEXT:    v_lshlrev_b32_e32 v4, v1, v4
+; GFX8-NEXT:    v_or_b32_e32 v4, v5, v4
 ; GFX8-NEXT:    ds_cmpst_rtn_b32 v4, v0, v3, v4
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_eq_u32_e32 vcc, v4, v3

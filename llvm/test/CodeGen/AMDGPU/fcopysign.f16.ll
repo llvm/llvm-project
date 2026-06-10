@@ -913,8 +913,9 @@ define half @v_copysign_out_f16_mag_f64_sign_f16(double %mag, half %sign) {
 ; VI-NEXT:    s_movk_i32 s4, 0xfc10
 ; VI-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, s4, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v4, 12, v1
 ; VI-NEXT:    v_or_b32_e32 v3, v5, v3
-; VI-NEXT:    v_lshl_or_b32 v4, v1, 12, v0
+; VI-NEXT:    v_or_b32_e32 v4, v0, v4
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc
 ; VI-NEXT:    v_and_b32_e32 v4, 7, v3
@@ -3048,8 +3049,9 @@ define <2 x half> @v_copysign_out_v2f16_mag_v2f64_sign_v2f16(<2 x double> %mag, 
 ; VI-NEXT:    s_movk_i32 s5, 0xfc10
 ; VI-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s5, v3
+; VI-NEXT:    v_lshlrev_b32_e32 v6, 12, v3
 ; VI-NEXT:    v_or_b32_e32 v5, v7, v5
-; VI-NEXT:    v_lshl_or_b32 v6, v3, 12, v2
+; VI-NEXT:    v_or_b32_e32 v6, v2, v6
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v5, v6, v5, vcc
 ; VI-NEXT:    v_and_b32_e32 v6, 7, v5
@@ -3085,8 +3087,9 @@ define <2 x half> @v_copysign_out_v2f16_mag_v2f64_sign_v2f16(<2 x double> %mag, 
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, v5, v3
 ; VI-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, s5, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v5, 12, v1
 ; VI-NEXT:    v_or_b32_e32 v3, v8, v3
-; VI-NEXT:    v_lshl_or_b32 v5, v1, 12, v0
+; VI-NEXT:    v_or_b32_e32 v5, v0, v5
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; VI-NEXT:    v_and_b32_e32 v5, 7, v3
@@ -3453,8 +3456,9 @@ define <2 x half> @v_copysign_out_v2f16_mag_v2f16_sign_v2f64(<2 x half> %mag, <2
 ; VI-LABEL: v_copysign_out_v2f16_mag_v2f16_sign_v2f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v4
 ; VI-NEXT:    v_and_b32_e32 v2, 0x8000, v2
-; VI-NEXT:    v_lshl_or_b32 v1, v4, 16, v2
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    s_mov_b32 s4, 0x7fff7fff
 ; VI-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -4686,8 +4690,9 @@ define <3 x half> @v_copysign_out_v3f16_mag_v3f64_sign_v3f16(<3 x double> %mag, 
 ; VI-NEXT:    s_movk_i32 s5, 0xfc10
 ; VI-NEXT:    v_cndmask_b32_e64 v8, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, s5, v5
+; VI-NEXT:    v_lshlrev_b32_e32 v9, 12, v5
 ; VI-NEXT:    v_or_b32_e32 v8, v10, v8
-; VI-NEXT:    v_lshl_or_b32 v9, v5, 12, v4
+; VI-NEXT:    v_or_b32_e32 v9, v4, v9
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v5
 ; VI-NEXT:    v_cndmask_b32_e32 v8, v9, v8, vcc
 ; VI-NEXT:    v_and_b32_e32 v9, 7, v8
@@ -4723,8 +4728,9 @@ define <3 x half> @v_copysign_out_v3f16_mag_v3f64_sign_v3f16(<3 x double> %mag, 
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, v8, v5
 ; VI-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, s5, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v8, 12, v1
 ; VI-NEXT:    v_or_b32_e32 v5, v11, v5
-; VI-NEXT:    v_lshl_or_b32 v8, v1, 12, v0
+; VI-NEXT:    v_or_b32_e32 v8, v0, v8
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v5, v8, v5, vcc
 ; VI-NEXT:    v_and_b32_e32 v8, 7, v5
@@ -4757,8 +4763,9 @@ define <3 x half> @v_copysign_out_v3f16_mag_v3f64_sign_v3f16(<3 x double> %mag, 
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, v5, v2
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s5, v3
+; VI-NEXT:    v_lshlrev_b32_e32 v5, 12, v3
 ; VI-NEXT:    v_or_b32_e32 v2, v8, v2
-; VI-NEXT:    v_lshl_or_b32 v5, v3, 12, v1
+; VI-NEXT:    v_or_b32_e32 v5, v1, v5
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v5, v2, vcc
 ; VI-NEXT:    v_and_b32_e32 v5, 7, v2
@@ -4775,8 +4782,9 @@ define <3 x half> @v_copysign_out_v3f16_mag_v3f64_sign_v3f16(<3 x double> %mag, 
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v9, v10, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
-; VI-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    s_mov_b32 s4, 0x7fff7fff
 ; VI-NEXT:    v_bfi_b32 v0, s4, v0, v6
 ; VI-NEXT:    v_bfi_b32 v1, s4, v4, v7
@@ -5831,8 +5839,9 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f64_sign_v4f16(<4 x double> %mag, 
 ; VI-NEXT:    s_movk_i32 s5, 0xfc10
 ; VI-NEXT:    v_cndmask_b32_e64 v10, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v5, vcc, s5, v5
+; VI-NEXT:    v_lshlrev_b32_e32 v11, 12, v5
 ; VI-NEXT:    v_or_b32_e32 v10, v12, v10
-; VI-NEXT:    v_lshl_or_b32 v11, v5, 12, v4
+; VI-NEXT:    v_or_b32_e32 v11, v4, v11
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v5
 ; VI-NEXT:    v_cndmask_b32_e32 v10, v11, v10, vcc
 ; VI-NEXT:    v_and_b32_e32 v11, 7, v10
@@ -5868,8 +5877,9 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f64_sign_v4f16(<4 x double> %mag, 
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, v10, v6
 ; VI-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v7, vcc, s5, v7
+; VI-NEXT:    v_lshlrev_b32_e32 v10, 12, v7
 ; VI-NEXT:    v_or_b32_e32 v6, v13, v6
-; VI-NEXT:    v_lshl_or_b32 v10, v7, 12, v5
+; VI-NEXT:    v_or_b32_e32 v10, v5, v10
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v7
 ; VI-NEXT:    v_cndmask_b32_e32 v6, v10, v6, vcc
 ; VI-NEXT:    v_and_b32_e32 v10, 7, v6
@@ -5902,8 +5912,9 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f64_sign_v4f16(<4 x double> %mag, 
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, v7, v6
 ; VI-NEXT:    v_cndmask_b32_e64 v6, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, s5, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v7, 12, v1
 ; VI-NEXT:    v_or_b32_e32 v6, v10, v6
-; VI-NEXT:    v_lshl_or_b32 v7, v1, 12, v0
+; VI-NEXT:    v_or_b32_e32 v7, v0, v7
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v1
 ; VI-NEXT:    v_cndmask_b32_e32 v6, v7, v6, vcc
 ; VI-NEXT:    v_and_b32_e32 v7, 7, v6
@@ -5936,8 +5947,9 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f64_sign_v4f16(<4 x double> %mag, 
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, v6, v2
 ; VI-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
 ; VI-NEXT:    v_add_u32_e32 v3, vcc, s5, v3
+; VI-NEXT:    v_lshlrev_b32_e32 v6, 12, v3
 ; VI-NEXT:    v_or_b32_e32 v2, v7, v2
-; VI-NEXT:    v_lshl_or_b32 v6, v3, 12, v1
+; VI-NEXT:    v_or_b32_e32 v6, v1, v6
 ; VI-NEXT:    v_cmp_gt_i32_e32 vcc, 1, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v2, v6, v2, vcc
 ; VI-NEXT:    v_and_b32_e32 v6, 7, v2
@@ -5954,11 +5966,13 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f64_sign_v4f16(<4 x double> %mag, 
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v11, v12, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v3
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; VI-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v5
 ; VI-NEXT:    v_and_b32_e32 v2, 0x7fff, v4
-; VI-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
 ; VI-NEXT:    s_mov_b32 s4, 0x7fff7fff
-; VI-NEXT:    v_lshl_or_b32 v1, v5, 16, v2
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_bfi_b32 v0, s4, v0, v8
 ; VI-NEXT:    v_bfi_b32 v1, s4, v1, v9
 ; VI-NEXT:    s_setpc_b64 s[30:31]
@@ -6562,12 +6576,14 @@ define <4 x half> @v_copysign_out_v4f16_mag_v4f16_sign_v4f64(<4 x half> %mag, <4
 ; VI-LABEL: v_copysign_out_v4f16_mag_v4f16_sign_v4f64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v5
 ; VI-NEXT:    v_and_b32_e32 v3, 0x8000, v3
-; VI-NEXT:    v_lshl_or_b32 v2, v5, 16, v3
+; VI-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-NEXT:    s_mov_b32 s4, 0x7fff7fff
-; VI-NEXT:    v_and_b32_e32 v3, 0x8000, v7
 ; VI-NEXT:    v_bfi_b32 v0, s4, v0, v2
-; VI-NEXT:    v_lshl_or_b32 v2, v9, 16, v3
+; VI-NEXT:    v_lshlrev_b32_e32 v2, 16, v9
+; VI-NEXT:    v_and_b32_e32 v3, 0x8000, v7
+; VI-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-NEXT:    v_bfi_b32 v1, s4, v1, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -7242,8 +7258,9 @@ define <2 x half> @v_copysign_v2f16_0_v2bf64(<2 x double> %sign) {
 ; VI-LABEL: v_copysign_v2f16_0_v2bf64:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshlrev_b32_e32 v0, 16, v3
 ; VI-NEXT:    v_and_b32_e32 v1, 0x8000, v1
-; VI-NEXT:    v_lshl_or_b32 v0, v3, 16, v1
+; VI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; VI-NEXT:    s_mov_b32 s4, 0x7fff7fff
 ; VI-NEXT:    v_bfi_b32 v0, s4, 0, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]

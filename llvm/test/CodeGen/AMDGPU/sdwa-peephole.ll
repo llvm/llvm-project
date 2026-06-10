@@ -312,7 +312,8 @@ define amdgpu_kernel void @mul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v2, v4, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v2, 16, v3
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v3, v2
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -405,8 +406,10 @@ define amdgpu_kernel void @mul_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v1, v1, v3
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v0, v0, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v1, v1, 16, v6
-; NOSDWA-NEXT:    v_lshl_or_b32 v0, v0, 16, v7
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; NOSDWA-NEXT:    v_or_b32_e32 v1, v6, v1
+; NOSDWA-NEXT:    v_or_b32_e32 v0, v7, v0
 ; NOSDWA-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -512,10 +515,14 @@ define amdgpu_kernel void @mul_v8i16(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v2, v2, v6
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v1, v1, v5
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v0, v0, v4
-; NOSDWA-NEXT:    v_lshl_or_b32 v3, v3, 16, v10
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v2, 16, v11
-; NOSDWA-NEXT:    v_lshl_or_b32 v1, v1, 16, v12
-; NOSDWA-NEXT:    v_lshl_or_b32 v0, v0, 16, v13
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; NOSDWA-NEXT:    v_or_b32_e32 v3, v10, v3
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v11, v2
+; NOSDWA-NEXT:    v_or_b32_e32 v1, v12, v1
+; NOSDWA-NEXT:    v_or_b32_e32 v0, v13, v0
 ; NOSDWA-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -688,8 +695,9 @@ define amdgpu_kernel void @mul_v2half(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
 ; NOSDWA-NEXT:    v_mul_f16_e32 v4, v5, v4
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; NOSDWA-NEXT:    v_mul_f16_e32 v2, v3, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v4
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -772,8 +780,10 @@ define amdgpu_kernel void @mul_v4half(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; NOSDWA-NEXT:    v_mul_f16_e32 v0, v0, v2
 ; NOSDWA-NEXT:    v_mul_f16_e32 v2, v7, v6
 ; NOSDWA-NEXT:    v_mul_f16_e32 v3, v8, v3
-; NOSDWA-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
-; NOSDWA-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; NOSDWA-NEXT:    v_or_b32_e32 v1, v1, v2
+; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v3
 ; NOSDWA-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -869,10 +879,14 @@ define amdgpu_kernel void @mul_v8half(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; NOSDWA-NEXT:    v_mul_f16_e32 v7, v12, v7
 ; NOSDWA-NEXT:    v_mul_f16_e32 v6, v13, v6
 ; NOSDWA-NEXT:    v_mul_f16_e32 v4, v4, v5
-; NOSDWA-NEXT:    v_lshl_or_b32 v3, v10, 16, v3
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v7, 16, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v1, v6, 16, v1
-; NOSDWA-NEXT:    v_lshl_or_b32 v0, v4, 16, v0
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v5, 16, v10
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v7, 16, v7
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v6, 16, v6
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; NOSDWA-NEXT:    v_or_b32_e32 v3, v3, v5
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v7
+; NOSDWA-NEXT:    v_or_b32_e32 v1, v1, v6
+; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v4
 ; NOSDWA-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -1143,25 +1157,26 @@ define amdgpu_kernel void @mul_v4i8(ptr addrspace(1) %out, ptr addrspace(1) %ina
 ; NOSDWA-NEXT:    v_mov_b32_e32 v0, s0
 ; NOSDWA-NEXT:    v_mov_b32_e32 v1, s1
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(1)
-; NOSDWA-NEXT:    v_lshrrev_b16_e32 v6, 8, v4
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v5, 24, v4
+; NOSDWA-NEXT:    v_lshrrev_b16_e32 v6, 8, v4
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
-; NOSDWA-NEXT:    v_lshrrev_b16_e32 v9, 8, v2
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v8, 24, v2
+; NOSDWA-NEXT:    v_lshrrev_b16_e32 v9, 8, v2
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v2, v4, v2
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v4, v6, v9
-; NOSDWA-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v5, v5, v8
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v3, v3, v7
+; NOSDWA-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; NOSDWA-NEXT:    v_lshlrev_b16_e32 v4, 8, v4
 ; NOSDWA-NEXT:    v_lshlrev_b16_e32 v5, 8, v5
 ; NOSDWA-NEXT:    v_and_b32_e32 v3, 0xff, v3
 ; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v4
 ; NOSDWA-NEXT:    v_or_b32_e32 v3, v3, v5
 ; NOSDWA-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v3
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -1271,43 +1286,45 @@ define amdgpu_kernel void @mul_v8i8(ptr addrspace(1) %out, ptr addrspace(1) %ina
 ; NOSDWA-NEXT:    v_mov_b32_e32 v4, s0
 ; NOSDWA-NEXT:    v_mov_b32_e32 v5, s1
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(1)
-; NOSDWA-NEXT:    v_lshrrev_b16_e32 v8, 8, v0
-; NOSDWA-NEXT:    v_lshrrev_b16_e32 v11, 8, v1
-; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
-; NOSDWA-NEXT:    v_lshrrev_b16_e32 v14, 8, v2
-; NOSDWA-NEXT:    v_lshrrev_b16_e32 v17, 8, v3
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v7, 24, v0
+; NOSDWA-NEXT:    v_lshrrev_b16_e32 v8, 8, v0
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v10, 24, v1
+; NOSDWA-NEXT:    v_lshrrev_b16_e32 v11, 8, v1
+; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v12, 16, v2
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v13, 24, v2
+; NOSDWA-NEXT:    v_lshrrev_b16_e32 v14, 8, v2
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v16, 24, v3
+; NOSDWA-NEXT:    v_lshrrev_b16_e32 v17, 8, v3
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v1, v1, v3
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v0, v0, v2
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v2, v11, v17
-; NOSDWA-NEXT:    v_mul_lo_u16_e32 v8, v8, v14
-; NOSDWA-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v3, v10, v16
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v9, v9, v15
-; NOSDWA-NEXT:    v_and_b32_e32 v0, 0xff, v0
+; NOSDWA-NEXT:    v_mul_lo_u16_e32 v8, v8, v14
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v7, v7, v13
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v6, v6, v12
+; NOSDWA-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; NOSDWA-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; NOSDWA-NEXT:    v_lshlrev_b16_e32 v2, 8, v2
-; NOSDWA-NEXT:    v_lshlrev_b16_e32 v8, 8, v8
 ; NOSDWA-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
 ; NOSDWA-NEXT:    v_and_b32_e32 v9, 0xff, v9
+; NOSDWA-NEXT:    v_lshlrev_b16_e32 v8, 8, v8
 ; NOSDWA-NEXT:    v_lshlrev_b16_e32 v7, 8, v7
 ; NOSDWA-NEXT:    v_and_b32_e32 v6, 0xff, v6
 ; NOSDWA-NEXT:    v_or_b32_e32 v1, v1, v2
-; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v8
 ; NOSDWA-NEXT:    v_or_b32_e32 v2, v9, v3
+; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v8
 ; NOSDWA-NEXT:    v_or_b32_e32 v3, v6, v7
 ; NOSDWA-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; NOSDWA-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; NOSDWA-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
-; NOSDWA-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; NOSDWA-NEXT:    v_or_b32_e32 v1, v1, v2
+; NOSDWA-NEXT:    v_or_b32_e32 v0, v0, v3
 ; NOSDWA-NEXT:    flat_store_dwordx2 v[4:5], v[0:1]
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -1442,8 +1459,9 @@ define amdgpu_kernel void @sitofp_v2i16_to_v2f16(
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; NOSDWA-NEXT:    v_cvt_f16_i16_e32 v3, v3
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; NOSDWA-NEXT:    v_cvt_f16_i16_e32 v2, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v3
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -1517,8 +1535,9 @@ define amdgpu_kernel void @mac_v2half(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
 ; NOSDWA-NEXT:    v_mac_f16_e32 v4, v5, v4
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; NOSDWA-NEXT:    v_mac_f16_e32 v2, v3, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v4
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -1539,8 +1558,9 @@ define amdgpu_kernel void @mac_v2half(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX89-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    v_mac_f16_sdwa v4, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX89-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX89-NEXT:    v_mac_f16_e32 v2, v3, v2
-; GFX89-NEXT:    v_lshl_or_b32 v2, v4, 16, v2
+; GFX89-NEXT:    v_or_b32_e32 v2, v2, v4
 ; GFX89-NEXT:    flat_store_dword v[0:1], v2
 ; GFX89-NEXT:    s_endpgm
 ;
@@ -1598,7 +1618,8 @@ define amdgpu_kernel void @immediate_mul_v2i16(ptr addrspace(1) %out, ptr addrsp
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v3, 0x7b, v2
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v2, 0x141, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v2, 16, v3
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v3, v2
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -1680,7 +1701,8 @@ define amdgpu_kernel void @mulmul_v2i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v5, v5, v4
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v2, v3, v2
 ; NOSDWA-NEXT:    v_mul_lo_u16_e32 v3, v5, v4
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v3, 16, v2
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v2, v3
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -1769,9 +1791,10 @@ define amdgpu_kernel void @add_bb_v2i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; NOSDWA-NEXT:    v_add_u32_e32 v3, vcc, v1, v2
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; NOSDWA-NEXT:    v_and_b32_e32 v3, 0xffff, v3
 ; NOSDWA-NEXT:    v_add_u32_e32 v1, vcc, v1, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v1, 16, v3
+; NOSDWA-NEXT:    v_and_b32_e32 v3, 0xffff, v3
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v3, v1
 ; NOSDWA-NEXT:    v_mov_b32_e32 v1, s1
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
@@ -2199,8 +2222,9 @@ define amdgpu_kernel void @mac_v2half_same_srcop(ptr addrspace(1) %out, ptr addr
 ; NOSDWA-NEXT:    s_waitcnt vmcnt(0)
 ; NOSDWA-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
 ; NOSDWA-NEXT:    v_mac_f16_e32 v5, v4, v4
+; NOSDWA-NEXT:    v_lshlrev_b32_e32 v4, 16, v5
 ; NOSDWA-NEXT:    v_mac_f16_e32 v3, v2, v2
-; NOSDWA-NEXT:    v_lshl_or_b32 v2, v5, 16, v3
+; NOSDWA-NEXT:    v_or_b32_e32 v2, v3, v4
 ; NOSDWA-NEXT:    flat_store_dword v[0:1], v2
 ; NOSDWA-NEXT:    s_endpgm
 ;
@@ -2221,8 +2245,9 @@ define amdgpu_kernel void @mac_v2half_same_srcop(ptr addrspace(1) %out, ptr addr
 ; GFX89-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
 ; GFX89-NEXT:    s_waitcnt vmcnt(0)
 ; GFX89-NEXT:    v_mac_f16_sdwa v3, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX89-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX89-NEXT:    v_mac_f16_e32 v4, v2, v2
-; GFX89-NEXT:    v_lshl_or_b32 v2, v3, 16, v4
+; GFX89-NEXT:    v_or_b32_e32 v2, v4, v3
 ; GFX89-NEXT:    flat_store_dword v[0:1], v2
 ; GFX89-NEXT:    s_endpgm
 ;

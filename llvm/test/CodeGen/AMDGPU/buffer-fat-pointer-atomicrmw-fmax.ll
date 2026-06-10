@@ -2758,9 +2758,10 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__amdgpu_no_fine_gr
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v0, s6, v1
 ; GFX8-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX8-NEXT:    v_and_b32_e32 v2, s7, v1
 ; GFX8-NEXT:    v_max_f16_e32 v0, v0, v5
-; GFX8-NEXT:    v_lshl_or_b32 v0, v0, s6, v2
+; GFX8-NEXT:    v_and_b32_e32 v2, s7, v1
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, s6, v0
+; GFX8-NEXT:    v_or_b32_e32 v0, v2, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX8-NEXT:    buffer_atomic_cmpswap v[2:3], v4, s[16:19], 0 offen glc
@@ -3204,9 +3205,10 @@ define void @buffer_fat_ptr_agent_atomic_fmax_noret_f16__offset__amdgpu_no_fine_
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v0, s6, v1
 ; GFX8-NEXT:    v_max_f16_e32 v0, v0, v0
-; GFX8-NEXT:    v_and_b32_e32 v4, s7, v1
 ; GFX8-NEXT:    v_max_f16_e32 v0, v0, v3
-; GFX8-NEXT:    v_lshl_or_b32 v0, v0, s6, v4
+; GFX8-NEXT:    v_and_b32_e32 v4, s7, v1
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, s6, v0
+; GFX8-NEXT:    v_or_b32_e32 v0, v4, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX8-NEXT:    buffer_atomic_cmpswap v[4:5], v2, s[16:19], 0 offen glc
@@ -3941,8 +3943,9 @@ define half @buffer_fat_ptr_agent_atomic_fmax_ret_f16__offset__waterfall__amdgpu
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v4, v7, v6
 ; GFX8-NEXT:    v_max_f16_e32 v4, v4, v4
 ; GFX8-NEXT:    v_max_f16_e32 v4, v4, v10
+; GFX8-NEXT:    v_lshlrev_b32_e32 v4, v7, v4
 ; GFX8-NEXT:    v_and_b32_e32 v5, v6, v9
-; GFX8-NEXT:    v_lshl_or_b32 v5, v4, v7, v5
+; GFX8-NEXT:    v_or_b32_e32 v5, v5, v4
 ; GFX8-NEXT:    v_mov_b32_e32 v4, v5
 ; GFX8-NEXT:    s_mov_b64 s[12:13], exec
 ; GFX8-NEXT:    v_mov_b32_e32 v5, v6

@@ -2320,13 +2320,14 @@ define amdgpu_kernel void @v_test_v2i16_x_sub_7_0(ptr addrspace(1) %out, ptr add
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
 ; VI-GISEL-NEXT:    v_add_u16_e32 v3, -7, v3
-; VI-GISEL-NEXT:    v_lshl_or_b32 v2, v2, 16, v3
+; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; VI-GISEL-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm
 ;
@@ -3087,13 +3088,14 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg32_0(ptr addrspace(1) %out, ptr
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
 ; VI-GISEL-NEXT:    v_add_u16_e32 v3, 0xffe0, v3
-; VI-GISEL-NEXT:    v_lshl_or_b32 v2, v2, 16, v3
+; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; VI-GISEL-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm
 ;
@@ -3461,13 +3463,14 @@ define amdgpu_kernel void @v_test_v2i16_x_add_neg16_0(ptr addrspace(1) %out, ptr
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    flat_load_dword v3, v[0:1]
 ; VI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
+; VI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; VI-GISEL-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
 ; VI-GISEL-NEXT:    v_add_u16_e32 v3, -16, v3
-; VI-GISEL-NEXT:    v_lshl_or_b32 v2, v2, 16, v3
+; VI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; VI-GISEL-NEXT:    v_or_b32_e32 v2, v3, v2
 ; VI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; VI-GISEL-NEXT:    s_endpgm
 ;
