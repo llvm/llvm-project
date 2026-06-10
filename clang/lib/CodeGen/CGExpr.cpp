@@ -50,6 +50,7 @@
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/xxhash.h"
@@ -4047,6 +4048,22 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
   PresumedLoc PLoc = getContext().getSourceManager().getPresumedLoc(Loc);
   if (PLoc.isValid()) {
     StringRef FilenameString = PLoc.getFilename();
+
+    // If a sanitize compilation dir is set, make absolute paths relative to it.
+    llvm::SmallString<256> FileBuf(FilenameString);
+    if (!CGM.getCodeGenOpts().SanitizeCompilationDir.empty() &&
+        llvm::sys::path::is_absolute(FilenameString)) {
+      llvm::SmallString<256> CompDir(
+          CGM.getCodeGenOpts().SanitizeCompilationDir);
+      if (!llvm::sys::path::is_absolute(CompDir))
+        llvm::sys::fs::make_absolute(CompDir);
+      llvm::sys::path::remove_dots(CompDir, /*remove_dot_dot=*/true);
+      // Ensure trailing separator so "/foo" doesn't match "/foobar/x.c".
+      if (!CompDir.empty() && !llvm::sys::path::is_separator(CompDir.back()))
+        CompDir += llvm::sys::path::get_separator();
+      if (llvm::sys::path::replace_path_prefix(FileBuf, CompDir, ""))
+        FilenameString = FileBuf;
+    }
 
     int PathComponentsToStrip =
         CGM.getCodeGenOpts().EmitCheckPathComponentsToStrip;

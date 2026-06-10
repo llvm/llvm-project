@@ -1811,9 +1811,13 @@ def fcoverage_compilation_dir_EQ : Joined<["-"], "fcoverage-compilation-dir=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption]>,
     HelpText<"The compilation directory to embed in the coverage mapping.">,
     MarshallingInfoString<CodeGenOpts<"CoverageCompilationDir">>;
+def fsanitize_compilation_dir_EQ : Joined<["-"], "fsanitize-compilation-dir=">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    HelpText<"The compilation directory to use for sanitizer metadata.">,
+    MarshallingInfoString<CodeGenOpts<"SanitizeCompilationDir">>;
 def ffile_compilation_dir_EQ : Joined<["-"], "ffile-compilation-dir=">, Group<f_Group>,
     Visibility<[ClangOption, CLOption, DXCOption]>,
-    HelpText<"The compilation directory to embed in the debug info and coverage mapping.">;
+    HelpText<"The compilation directory to embed in the debug info, coverage mapping, and sanitizer metadata.">;
 defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   CodeGenOpts<"DebugInfoForProfiling">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],

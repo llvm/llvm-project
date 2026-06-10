@@ -5401,6 +5401,7 @@ void CompilerInvocationBase::visitPathsImpl(
   auto &CodeGenOpts = *this->CodeGenOpts;
   RETURN_IF(CodeGenOpts.DebugCompilationDir);
   RETURN_IF(CodeGenOpts.CoverageCompilationDir);
+  RETURN_IF(CodeGenOpts.SanitizeCompilationDir);
 
   // Sanitizer options.
   RETURN_IF_MANY(LangOpts->NoSanitizeFiles);

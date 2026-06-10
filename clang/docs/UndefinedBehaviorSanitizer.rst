@@ -522,6 +522,10 @@ information. If ``N`` is positive, file information emitted by
 UndefinedBehaviorSanitizer will drop the first ``N`` components from the file
 path. If ``N`` is negative, the last ``N`` components will be kept.
 
+Alternatively, ``-fsanitize-compilation-dir=<dir>`` (or
+``-ffile-compilation-dir=<dir>``) can be used to set the compilation directory,
+making absolute paths relative to it. This is useful for reproducible builds.
+
 Example
 -------
 
@@ -532,6 +536,8 @@ For a file called ``/code/library/file.cpp``, here is what would be emitted:
 * ``-fsanitize-undefined-strip-path-components=2``: ``library/file.cpp``
 * ``-fsanitize-undefined-strip-path-components=-1``: ``file.cpp``
 * ``-fsanitize-undefined-strip-path-components=-2``: ``library/file.cpp``
+* ``-fsanitize-compilation-dir=/code``: ``library/file.cpp``
+* ``-fsanitize-compilation-dir=/code/library``: ``file.cpp``
 
 More Information
 ================
