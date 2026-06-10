@@ -534,19 +534,12 @@ llvm::Error ClassDescriptorV2::ProcessRelativeMethodLists(
     if (!method_list)
       return method_list.takeError();
 
-    // 5. Cache the result so we don't need to reconstruct it later.
-    m_image_to_method_lists[entry.m_image_index].emplace_back(*method_list);
-
-    // 6. If the relevant image is loaded, add the methods to the Decl
+    // 5. If the relevant image is loaded, add the methods to the Decl
     if (!m_runtime.IsSharedCacheImageLoaded(entry.m_image_index))
       continue;
 
     ProcessMethodList(instance_method_func, *method_list);
   }
-
-  // We need to keep track of the last time we updated so we can re-update the
-  // type information in the future
-  m_last_version_updated = m_runtime.GetSharedCacheImageHeaderVersion();
 
   return llvm::Error::success();
 }
