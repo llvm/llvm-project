@@ -3143,10 +3143,12 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
   //   splice.right(vector.reverse(x), poison, evl) -> vp.reverse(x, true, evl)
   for (VPUser *U : collectUsersRecursively(EVL)) {
     VPValue *X;
-    if (!match(U, m_Reverse(m_Intrinsic<Intrinsic::vector_splice_left>(
-                      m_Poison(), m_VPValue(X), m_Specific(EVL)))) &&
-        !match(U, m_Intrinsic<Intrinsic::vector_splice_right>(
-                      m_Reverse(m_VPValue(X)), m_Poison(), m_Specific(EVL))))
+    if (!match(U,
+               m_CombineOr(
+                   m_Reverse(m_Intrinsic<Intrinsic::vector_splice_left>(
+                       m_Poison(), m_VPValue(X), m_Specific(EVL))),
+                   m_Intrinsic<Intrinsic::vector_splice_right>(
+                       m_Reverse(m_VPValue(X)), m_Poison(), m_Specific(EVL)))))
       continue;
 
     auto *Def = cast<VPSingleDefRecipe>(U);
