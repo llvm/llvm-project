@@ -860,7 +860,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                        Builder.getInt32(0));
   }
   case VPInstruction::ComputeReductionResult: {
-    RecurKind RK = getRecurrenceKind();
+    RecurKind RK = getRecurKind();
     bool IsOrdered = isReductionOrdered();
     bool IsInLoop = isReductionInLoop();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
@@ -2614,7 +2614,7 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
     break;
   case OperationType::ReductionOp: {
     O << " (";
-    printRecurrenceKind(O, getRecurrenceKind());
+    printRecurrenceKind(O, getRecurKind());
     if (isReductionInLoop())
       O << ", in-loop";
     if (isReductionOrdered())

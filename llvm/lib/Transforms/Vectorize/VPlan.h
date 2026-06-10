@@ -999,9 +999,7 @@ public:
   /// Returns true if the recipe has fast-math flags.
   bool hasFastMathFlags() const {
     return OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
-           (OpType == OperationType::ReductionOp &&
-            RecurrenceDescriptor::isFloatingPointRecurrenceKind(
-                getRecurrenceKind()));
+           OpType == OperationType::ReductionOp;
   }
 
   LLVM_ABI_FOR_TEST FastMathFlags getFastMathFlagsOrNone() const;
@@ -1057,7 +1055,7 @@ public:
     return DisjointFlags.IsDisjoint;
   }
 
-  RecurKind getRecurrenceKind() const {
+  RecurKind getRecurKind() const {
     assert(OpType == OperationType::ReductionOp &&
            "recipe doesn't have reduction flags");
     return static_cast<RecurKind>(ReductionFlags.Kind);
