@@ -1652,6 +1652,19 @@ namespace {
         SmallVectorImpl<QualType> &PTypes,
         SmallVectorImpl<ParmVarDecl *> &TransParams,
         Sema::ExtParameterInfoBuilder &PInfos);
+
+    ExprResult TransformCXXDynamicCastExpr(CXXDynamicCastExpr *E) {
+      ExprResult Ret = inherited::TransformCXXDynamicCastExpr(E);
+      if (Ret.isInvalid())
+        return Ret;
+      if (const auto *DestDecl =
+              Ret.get()->getType()->getPointeeCXXRecordDecl()) {
+        if (DestDecl->isEffectivelyFinal())
+          getSema().MarkVTableUsed(Ret.get()->getExprLoc(),
+                                   const_cast<CXXRecordDecl *>(DestDecl));
+      }
+      return Ret;
+    }
   };
 }
 
