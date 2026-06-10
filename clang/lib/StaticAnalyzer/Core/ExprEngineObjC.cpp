@@ -231,9 +231,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
   ExplodedNodeSet dstEval;
   NodeBuilder Bldr(dstGenericPrevisit, dstEval, *currBldrCtx);
 
-  for (ExplodedNodeSet::iterator DI = dstGenericPrevisit.begin(),
-       DE = dstGenericPrevisit.end(); DI != DE; ++DI) {
-    ExplodedNode *Pred = *DI;
+  for (ExplodedNode *Pred : dstGenericPrevisit) {
     ProgramStateRef State = Pred->getState();
     CallEventRef<ObjCMethodCall> UpdatedMsg = Msg.cloneWithState(State);
 
