@@ -97,7 +97,7 @@ struct QueryOptions {
 /// Represents a set of patterns and their line numbers
 class Matcher {
 public:
-  Matcher(QueryOptions QOpts);
+  explicit Matcher(QueryOptions QOpts);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
