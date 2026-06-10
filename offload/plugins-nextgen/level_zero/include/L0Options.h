@@ -129,9 +129,7 @@ struct L0OptionsTy {
   SpecConstantsTy CommonSpecConstants;
 
   /// Command execution mode.
-  /// Whether the runtime uses asynchronous mode or not depends on the type of
-  /// devices and whether immediate command list is fully enabled.
-  CommandModeTy CommandMode = CommandModeTy::Async;
+  CommandModeTy CommandMode = CommandModeTy::InOrder;
 
   /// Controls if we need to reduce available HW threads. We need this
   /// adjustment on XeHPG when Level Zero debug is enabled
