@@ -124,13 +124,16 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
 
       // When x < -0x1.ce4p+1, round(10^x - 1, HP, RN) = -1.
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      fputil::raise_except_if_required(FE_INEXACT);
       return FPBits::one(Sign::NEG).get_val();
 #else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_DOWNWARD:
+        fputil::raise_except_if_required(FE_INEXACT);
         return FPBits::one(Sign::NEG).get_val();
       default:
+        fputil::raise_except_if_required(FE_INEXACT);
         return fputil::cast<float16>(-0x1.ffcp-1);
       }
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY

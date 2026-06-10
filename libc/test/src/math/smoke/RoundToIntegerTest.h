@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_SMOKE_ROUNDTOINTEGERTEST_H
 
+#include "test/UnitTest/RoundingModeUtils.h"
 #undef LIBC_MATH_USE_SYSTEM_FENV
 
 #include "src/__support/CPP/algorithm.h"
@@ -21,9 +22,6 @@
 
 #include "hdr/math_macros.h"
 
-static constexpr int ROUNDING_MODES[4] = {FE_UPWARD, FE_DOWNWARD, FE_TOWARDZERO,
-                                          FE_TONEAREST};
-
 template <typename FloatType, typename IntType, bool TestModes = false>
 class RoundToIntegerTestTemplate
     : public LIBC_NAMESPACE::testing::FEnvSafeTest {
@@ -32,6 +30,8 @@ public:
 
 private:
   DECLARE_SPECIAL_CONSTANTS(FloatType)
+  using FPTest = LIBC_NAMESPACE::testing::FPTest<FloatType>;
+  using RoundingMode = LIBC_NAMESPACE::fputil::testing::RoundingMode;
 
   static constexpr StorageType MAX_SUBNORMAL =
       FPBits::max_subnormal().uintval();
@@ -71,9 +71,13 @@ public:
     }
   }
 
-  void do_infinity_and_na_n_test(RoundToIntegerFunc func) {
-    test_one_input(func, inf, INTEGER_MAX, true);
-    test_one_input(func, neg_inf, INTEGER_MIN, true);
+  void testInfinityAndNaN(RoundToIntegerFunc func) {
+    libc_errno = 0;
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+    ASSERT_EQ_ALL_ROUNDING_1(INTEGER_MAX, func(inf));
+    ASSERT_EQ_ALL_ROUNDING_1(INTEGER_MIN, func(neg_inf));
+    ASSERT_FP_EXCEPTION(FE_INVALID);
+    ASSERT_MATH_ERRNO(EDOM);
     // This is currently never enabled, the
     // LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR CMake option in
     // libc/CMakeLists.txt is not forwarded to C++.
@@ -83,37 +87,15 @@ public:
 #endif // LIBC_COPT_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
   }
 
-  void testInfinityAndNaN(RoundToIntegerFunc func) {
-    if (TestModes) {
-      for (int mode : ROUNDING_MODES) {
-        LIBC_NAMESPACE::fputil::set_round(mode);
-        do_infinity_and_na_n_test(func);
-      }
-    } else {
-      do_infinity_and_na_n_test(func);
-    }
-  }
-
-  void do_round_numbers_test(RoundToIntegerFunc func) {
-    test_one_input(func, zero, IntType(0), false);
-    test_one_input(func, neg_zero, IntType(0), false);
-    test_one_input(func, FloatType(1.0), IntType(1), false);
-    test_one_input(func, FloatType(-1.0), IntType(-1), false);
-    test_one_input(func, FloatType(10.0), IntType(10), false);
-    test_one_input(func, FloatType(-10.0), IntType(-10), false);
-    test_one_input(func, FloatType(1232.0), IntType(1232), false);
-    test_one_input(func, FloatType(-1232.0), IntType(-1232), false);
-  }
-
   void testRoundNumbers(RoundToIntegerFunc func) {
-    if (TestModes) {
-      for (int mode : ROUNDING_MODES) {
-        LIBC_NAMESPACE::fputil::set_round(mode);
-        do_round_numbers_test(func);
-      }
-    } else {
-      do_round_numbers_test(func);
-    }
+    ASSERT_EQ_ALL_ROUNDING_1(IntType(0), func(zero));
+    ASSERT_EQ_ALL_ROUNDING_1(IntType(0), func(neg_zero));
+    ASSERT_EQ_ALL_ROUNDING_1(IntType(1), func(FloatType(1.0)));
+    ASSERT_EQ_ALL_ROUNDING_1(IntType(-1), func(FloatType(-1.0)));
+    ASSERT_EQ_ALL_ROUNDING_1(IntType(10), func(FloatType(10.0)));
+    ASSERT_EQ_ALL_ROUNDING_1(IntType(-10), func(FloatType(-10.0)));
+    ASSERT_EQ_ALL_ROUNDING_1(IntType(1232), func(FloatType(1232.0)));
+    ASSERT_EQ_ALL_ROUNDING_1(IntType(-1232), func(FloatType(-1232.0)));
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
@@ -128,27 +110,19 @@ public:
         continue;
       // All subnormal numbers should round to zero.
       if (TestModes) {
-        if (x > zero) {
-          LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
-          test_one_input(func, x, IntType(1), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
-          test_one_input(func, x, IntType(0), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
-          test_one_input(func, x, IntType(0), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_TONEAREST);
-          test_one_input(func, x, IntType(0), false);
+        if (x > 0) {
+          ASSERT_EQ_ROUNDING_UPWARD(IntType(1), func(x));
+          ASSERT_EQ_ROUNDING_DOWNWARD(IntType(0), func(x));
+          ASSERT_EQ_ROUNDING_TOWARD_ZERO(IntType(0), func(x));
+          ASSERT_EQ_ROUNDING_NEAREST(IntType(0), func(x));
         } else {
-          LIBC_NAMESPACE::fputil::set_round(FE_UPWARD);
-          test_one_input(func, x, IntType(0), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_DOWNWARD);
-          test_one_input(func, x, IntType(-1), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_TOWARDZERO);
-          test_one_input(func, x, IntType(0), false);
-          LIBC_NAMESPACE::fputil::set_round(FE_TONEAREST);
-          test_one_input(func, x, IntType(0), false);
+          ASSERT_EQ_ROUNDING_UPWARD(IntType(0), func(x));
+          ASSERT_EQ_ROUNDING_DOWNWARD(IntType(-1), func(x));
+          ASSERT_EQ_ROUNDING_TOWARD_ZERO(IntType(0), func(x));
+          ASSERT_EQ_ROUNDING_NEAREST(IntType(0), func(x));
         }
       } else {
-        test_one_input(func, x, 0L, false);
+        test_one_input(func, x, IntType(0), false);
       }
     }
   }

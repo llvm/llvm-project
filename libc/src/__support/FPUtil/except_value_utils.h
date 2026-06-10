@@ -122,25 +122,35 @@ template <typename T, size_t N> struct ExceptValues {
 // Helper functions to set results for exceptional cases.
 template <typename T>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T round_result_slightly_down(T value_rn) {
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  fputil::raise_except_if_required(FE_INEXACT);
+  return value_rn;
+#else
   if (cpp::is_constant_evaluated()) {
+    fputil::raise_except_if_required(FE_INEXACT);
     return value_rn;
   } else {
     volatile T tmp = value_rn;
     tmp -= FPBits<T>::min_normal().get_val();
+    fputil::raise_except_if_required(FE_INEXACT);
     return tmp;
   }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }
 
 template <typename T>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT T round_result_slightly_up(T value_rn) {
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  fputil::raise_except_if_required(FE_INEXACT);
   return value_rn;
 #else
   if (cpp::is_constant_evaluated()) {
+    fputil::raise_except_if_required(FE_INEXACT);
     return value_rn;
   } else {
     volatile T tmp = value_rn;
     tmp += FPBits<T>::min_normal().get_val();
+    fputil::raise_except_if_required(FE_INEXACT);
     return tmp;
   }
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
@@ -152,6 +162,7 @@ template <>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16
 round_result_slightly_down(float16 value_rn) {
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  fputil::raise_except_if_required(FE_INEXACT);
   return value_rn;
 #else
   if (cpp::is_constant_evaluated()) {
@@ -159,6 +170,7 @@ round_result_slightly_down(float16 value_rn) {
   } else {
     volatile float tmp = value_rn;
     tmp -= FPBits<float16>::min_normal().get_val();
+    fputil::raise_except_if_required(FE_INEXACT);
     return cast<float16>(tmp);
   }
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
@@ -167,7 +179,8 @@ round_result_slightly_down(float16 value_rn) {
 template <>
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16
 round_result_slightly_up(float16 value_rn) {
-#ifdef LIBC_HAS_ASSUME_ROUND_NEAREST_ONLY
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  fputil::raise_except_if_required(FE_INEXACT);
   return value_rn;
 #else
   if (cpp::is_constant_evaluated()) {
@@ -175,9 +188,10 @@ round_result_slightly_up(float16 value_rn) {
   } else {
     volatile float tmp = value_rn;
     tmp += FPBits<float16>::min_normal().get_val();
+    fputil::raise_except_if_required(FE_INEXACT);
     return cast<float16>(tmp);
   }
-#endif // LIBC_HAS_ASSUME_ROUND_NEAREST_ONLY
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }
 #endif
 
