@@ -30,6 +30,7 @@ _TOOLS = {
     "llvm-objdump": "//llvm:llvm-objdump-lib",
     "llvm-rc": "//llvm:llvm-rc-lib",
     "llvm-readobj": "//llvm:llvm-readobj-lib",
+    "llvm-readtapi": "//llvm:llvm-readtapi-lib",
     "llvm-size": "//llvm:llvm-size-lib",
     "llvm-symbolizer": "//llvm:llvm-symbolizer-lib",
     "sancov": "//llvm:sancov-lib",

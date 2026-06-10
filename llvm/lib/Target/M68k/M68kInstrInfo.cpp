@@ -451,8 +451,6 @@ bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
   unsigned SSrc = RI.getMatchingMegaReg(Src, RCDst);
   assert(SSrc && "No viable MEGA register available");
 
-  DebugLoc DL = MIB->getDebugLoc();
-
   // If it happens to that super source register is the destination register
   // we do nothing
   if (Dst == SSrc) {

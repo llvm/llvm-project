@@ -2962,9 +2962,7 @@ public:
   /// aggregate type.
   AggValueSlot CreateAggTemp(QualType T, const Twine &Name = "tmp",
                              RawAddress *Alloca = nullptr) {
-    RawAddress Addr = CreateMemTemp(T, Name);
-    if (Alloca)
-      *Alloca = Addr;
+    RawAddress Addr = CreateMemTemp(T, Name, Alloca);
     return AggValueSlot::forAddr(
         Addr, T.getQualifiers(), AggValueSlot::IsNotDestructed,
         AggValueSlot::DoesNotNeedGCBarriers, AggValueSlot::IsNotAliased,

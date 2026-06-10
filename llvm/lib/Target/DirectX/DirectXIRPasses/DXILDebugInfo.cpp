@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILDebugInfo.h"
+#include "DXILAttributes.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
@@ -64,11 +66,19 @@ static void replaceDbgValue(Module &M, DXILDebugInfoMap &Res) {
 }
 
 DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
+  M.convertFromNewDbgValues();
+
   DXILDebugInfoMap Res;
   DebugInfoFinder DIF;
   DIF.processModule(M);
 
+  const AttributeMask &AttrMask = getNonDXILAttributeMask();
   for (auto &F : M) {
+    F.removeFnAttrs(AttrMask);
+    F.removeRetAttrs(AttrMask);
+    for (unsigned ArgNo = 0; ArgNo != F.arg_size(); ++ArgNo)
+      F.removeParamAttrs(ArgNo, AttrMask);
+
     for (auto &BB : F) {
       for (auto &I : make_early_inc_range(reverse(BB))) {
         if (auto *DL = dyn_cast<DbgLabelInst>(&I)) {
@@ -172,6 +182,23 @@ DXILDebugInfoMap DXILDebugInfoPass::run(Module &M) {
     const auto *SubprogramsMD = MDTuple::get(M.getContext(), Subprograms);
     Res.MDExtra.insert({NewCU, SubprogramsMD});
   }
+
+  for (const GlobalVariable &GV : M.globals()) {
+    SmallVector<DIGlobalVariableExpression *, 4> GVEs;
+    GV.getDebugInfo(GVEs);
+    for (DIGlobalVariableExpression *GVE : GVEs) {
+      if (GVE->getExpression()->getNumElements())
+        continue;
+      auto [It, Inserted] = Res.MDExtra.insert(
+          {GVE->getVariable(),
+           ValueAsMetadata::get(const_cast<GlobalVariable *>(&GV))});
+      if (!Inserted)
+        It->second = nullptr;
+    }
+  }
+
+  for (DIGlobalVariableExpression *GVE : DIF.global_variables())
+    Res.MDReplace.insert({GVE, GVE->getVariable()});
 
   for (DIType *T : DIF.types()) {
     if (auto *SR = dyn_cast<DISubrangeType>(T)) {
