@@ -97,13 +97,6 @@ void XtensaAsmPrinter::emitMachineConstantPoolValue(
       static_cast<XtensaTargetStreamer *>(OutStreamer->getTargetStreamer());
   auto Spec = getModifierSpecifier(XtensaCPV->getModifier());
 
-  if (XtensaCPV->getModifier() != XtensaCP::no_modifier) {
-    std::string SymName(MCSym->getName());
-    StringRef Modifier = XtensaCPV->getModifierText();
-    SymName += Modifier;
-    MCSym = OutContext.getOrCreateSymbol(SymName);
-  }
-
   const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, Spec, OutContext);
   TS->emitLiteral(LblSym, Expr, false);
 }

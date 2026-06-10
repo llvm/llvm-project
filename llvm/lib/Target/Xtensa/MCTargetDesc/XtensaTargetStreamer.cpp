@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaTargetStreamer.h"
+#include "MCTargetDesc/XtensaMCAsmInfo.h"
 #include "XtensaInstPrinter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
@@ -61,7 +62,9 @@ void XtensaTargetAsmStreamer::emitLiteral(MCSymbol *LblSym, const MCExpr *Value,
     LiteralStr << CE->getValue() << "\n";
   } else if (auto SRE = dyn_cast<MCSymbolRefExpr>(Value)) {
     const MCSymbol &Sym = SRE->getSymbol();
-    LiteralStr << Sym.getName() << "\n";
+    Xtensa::Specifier Spec = (Xtensa::Specifier)SRE->getSpecifier();
+    StringRef Modifier = (Spec == Xtensa::S_TPOFF) ? "@TPOFF" : "";
+    LiteralStr << Sym.getName() << Modifier << "\n";
   } else {
     llvm_unreachable("unexpected constant pool entry type");
   }
