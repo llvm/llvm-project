@@ -3927,43 +3927,20 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
   return MadeChanges;
 }
 
-/// For a given chain of patterns of the following form:
+/// Try to fold a chain of shuffles and ops feeding extractelement(..., 0)
+/// into llvm.vector.reduce.* over the source vector(s), by tracking which
+/// source lanes contribute to the extracted lane. For example:
 ///
-/// ```
-///   %1 = shufflevector <n x ty1> %0, <n x ty1> poison <n x ty2> mask
+///   %lo = shufflevector <4 x i32> %a, poison, <2 x i32> <i32 0, i32 1>
+///   %hi = shufflevector <4 x i32> %a, poison, <2 x i32> <i32 2, i32 3>
+///   %s  = add <2 x i32> %lo, %hi
+///   %sh = shufflevector <2 x i32> %s, poison, <2 x i32> <i32 1, i32 poison>
+///   %r  = add <2 x i32> %s, %sh
+///   %e  = extractelement <2 x i32> %r, i64 0
 ///
-///   %2 = tail call <n x ty1> llvm.<umin/umax/smin/smax>(<n x ty1> %0, <n x
-///   ty1> %1)
-///     OR
-///   %2 = add/mul/or/and/xor <n x ty1> %0, %1
+/// transforms to:
 ///
-///   %3 = shufflevector <n x ty1> %2, <n x ty1> poison <n x ty2> mask
-///   ...
-///   ...
-///   %(i - 1) = tail call <n x ty1> llvm.<umin/umax/smin/smax>(<n x ty1> %(i -
-///   3), <n x ty1> %(i - 2)
-///     OR
-///   %(i - 1) = add/mul/or/and/xor <n x ty1> %(i - 3), %(i - 2)
-///
-///   %(i) = extractelement <n x ty1> %(i - 1), 0
-/// ```
-///
-/// Where:
-///    `mask` follows a partition pattern:
-///
-/// Ex:
-///    [n = 8, p = poison]
-///
-///    4 5 6 7 | p p p p
-///    2 3 | p p p p p p
-///    1 | p p p p p p p
-///
-/// Ex:
-///    [n = 6]
-///
-///    3 4 5 | p p p
-///    1 2 | p p p p
-///    1 | p p p p p
+///   %e = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %a)
 bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   Value *VecOpEE;
   if (!match(&I, m_ExtractElt(m_Value(VecOpEE), m_Zero())))
@@ -3986,6 +3963,8 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     case Instruction::Or:
     case Instruction::And:
     case Instruction::Xor:
+    case Instruction::FAdd:
+    case Instruction::FMul:
       CommonBinOp = BO->getOpcode();
       break;
     default:
@@ -3996,6 +3975,10 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   } else {
     return false;
   }
+
+  // For floating-point reductions, track FMF intersection across all binops.
+  FastMathFlags CommonFMF;
+  bool IsFloatReduction = false;
 
   auto IsChainNode = [&](Value *V) {
     if (auto *BO = dyn_cast<BinaryOperator>(V))
@@ -4076,6 +4059,11 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     }
   }
 
+  // No chain nodes (e.g. extract(binop(x, y), 0)). Rebuilding would just
+  // recreate the original extract and refold forever when extraction is free.
+  if (ChainPostorder.empty())
+    return false;
+
   bool IsIdempotent =
       CommonCallOp || (CommonBinOp && Instruction::isIdempotent(*CommonBinOp));
 
@@ -4117,6 +4105,19 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       }
     } else {
       auto *U = cast<User>(V);
+      // For FP reductions, require reassoc on every binop and collect FMF.
+      if (auto *BinOp = dyn_cast<BinaryOperator>(V);
+          BinOp && (*CommonBinOp == Instruction::FAdd ||
+                    *CommonBinOp == Instruction::FMul)) {
+        if (!BinOp->hasAllowReassoc())
+          return false;
+        if (!IsFloatReduction) {
+          CommonFMF = BinOp->getFastMathFlags();
+          IsFloatReduction = true;
+        } else {
+          CommonFMF &= BinOp->getFastMathFlags();
+        }
+      }
       const auto &L = Attr.at(U->getOperand(0));
       const auto &R = Attr.at(U->getOperand(1));
       if (L.size() != R.size())
@@ -4156,10 +4157,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     auto It = Lane0.SrcElts.find(Src);
     if (It == Lane0.SrcElts.end())
       continue;
-    const APInt &Elts = It->second;
-    if (Elts.popcount() == 0)
-      continue;
-    Partials.push_back({Src, Elts, SrcSizes[Src]});
+    Partials.push_back({Src, It->second, SrcSizes[Src]});
   }
   if (Partials.empty())
     return false;
@@ -4205,7 +4203,11 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       NewCost +=
           TTI.getShuffleCost(Kind, RVT, SrcVT, Mask, CostKind, SubIdx, RVT);
     }
-    IntrinsicCostAttributes ICA(ReducedOp, RVT, {RVT});
+    IntrinsicCostAttributes ICA(ReducedOp, ElTy,
+                                IsFloatReduction
+                                    ? SmallVector<Type *, 2>{ElTy, RVT}
+                                    : SmallVector<Type *, 2>{RVT},
+                                IsFloatReduction ? CommonFMF : FastMathFlags());
     NewCost += TTI.getIntrinsicInstrCost(ICA, CostKind);
   }
   for (unsigned i = 1; i < Partials.size(); ++i) {
@@ -4244,14 +4246,27 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
           Mask.push_back(i);
       ReduceInput = Builder.CreateShuffleVector(P.Src, Mask);
     }
-    PartialResults.push_back(Builder.CreateIntrinsic(
-        ReducedOp, {ReduceInput->getType()}, {ReduceInput}));
+    if (IsFloatReduction) {
+      Value *Identity = ConstantExpr::getBinOpIdentity(
+          *CommonBinOp, ElTy, /*AllowRHSConstant=*/false,
+          CommonFMF.noSignedZeros());
+      auto *Rdx = Builder.CreateIntrinsic(ReducedOp, {ReduceInput->getType()},
+                                          {Identity, ReduceInput});
+      Rdx->setFastMathFlags(CommonFMF);
+      PartialResults.push_back(Rdx);
+    } else {
+      PartialResults.push_back(Builder.CreateIntrinsic(
+          ReducedOp, {ReduceInput->getType()}, {ReduceInput}));
+    }
   }
   Value *Result = PartialResults[0];
   for (unsigned i = 1; i < PartialResults.size(); ++i) {
-    if (CommonBinOp)
+    if (CommonBinOp) {
       Result = Builder.CreateBinOp(*CommonBinOp, Result, PartialResults[i]);
-    else
+      if (IsFloatReduction)
+        if (auto *RI = dyn_cast<Instruction>(Result))
+          RI->setFastMathFlags(CommonFMF);
+    } else
       Result = Builder.CreateIntrinsic(*CommonCallOp, {ElTy},
                                        {Result, PartialResults[i]});
   }
