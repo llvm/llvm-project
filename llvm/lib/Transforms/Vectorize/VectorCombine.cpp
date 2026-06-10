@@ -1348,12 +1348,9 @@ Value *VectorCombine::createBinaryOp(Instruction::BinaryOps Opcode, Value *LHS,
                               OldI->isExact());
   case Instruction::And:
     return Builder.CreateAnd(LHS, RHS, OldI->getName() + ".scalar.and");
-  case Instruction::Or: {
-    PossiblyDisjointInst *PDI = dyn_cast<PossiblyDisjointInst>(OldI);
-    bool IsDisjoint = PDI ? PDI->isDisjoint() : false;
+  case Instruction::Or:
     return Builder.CreateOr(LHS, RHS, OldI->getName() + ".scalar.or",
-                            IsDisjoint);
-  }
+                            cast<PossiblyDisjointInst>(OldI)->isDisjoint());
   case Instruction::Xor:
     return Builder.CreateXor(LHS, RHS, OldI->getName() + ".scalar.xor");
   case Instruction::FAdd:
