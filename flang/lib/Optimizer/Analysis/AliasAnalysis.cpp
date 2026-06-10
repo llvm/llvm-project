@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Analysis/AliasAnalysis.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -127,7 +128,8 @@ static fir::AliasAnalysis::Source getSourceForACCMappedValue(
             accumulatedAttrs,
             /*approximateSource=*/false,
             /*accessPath=*/{},
-            /*isCapturedInInternalProcedure=*/false};
+            /*isCapturedInInternalProcedure=*/false,
+            /*scopedOrigins=*/{}};
 
   // Not private-like: classify using the corresponding host variable's source.
   //
@@ -286,8 +288,72 @@ static fir::AliasAnalysis::Source mergeRegionBranchPredecessorSources(
 
   mlir::Type mergedTy = allTypesSame ? sources[0].valueType : fallbackType;
 
-  return {mergedOrigin, mergedKind, mergedTy,      mergedAttrs,
-          mergedApprox, mergedPath, mergedCaptured};
+  // Intersect scopedOrigins across predecessors by declValue. The
+  // declare's governing scope is a deterministic function of the
+  // declare op, so declValue alone identifies the snapshot (the same
+  // declValue can never carry two different scopes). For an entry that
+  // matches in every predecessor, take the bitwise union (|=) of its
+  // 'attributes' and 'approximateSource' bits and keep the first
+  // predecessor's path steps (the steps must be equal to match, so
+  // there is nothing to merge there). Drop the entry on a path-step or
+  // isData mismatch, because different control-flow shapes from the
+  // same declare to the merge point cannot be summarised safely.
+  llvm::SmallVector<fir::AliasAnalysis::Source::ScopedOrigin, 4>
+      mergedScopedOrigins;
+  if (!sources.empty()) {
+    // Seed with the first predecessor's snapshots, keyed by declValue
+    // for intersection lookups.
+    llvm::DenseMap<void *, unsigned> indexInMerged;
+    mergedScopedOrigins.assign(sources[0].scopedOrigins.begin(),
+                               sources[0].scopedOrigins.end());
+    for (unsigned i = 0; i < mergedScopedOrigins.size(); ++i) {
+      const auto &scopedOrigin = mergedScopedOrigins[i];
+      indexInMerged[scopedOrigin.declValue.getAsOpaquePointer()] = i;
+    }
+    llvm::SmallVector<bool, 4> seenThisPred;
+    for (unsigned predIdx = 1; predIdx < sources.size(); ++predIdx) {
+      seenThisPred.assign(mergedScopedOrigins.size(), false);
+      for (const auto &scopedOrigin : sources[predIdx].scopedOrigins) {
+        auto it =
+            indexInMerged.find(scopedOrigin.declValue.getAsOpaquePointer());
+        if (it == indexInMerged.end())
+          continue;
+        unsigned idx = it->second;
+        auto &mergedScopedOrigin = mergedScopedOrigins[idx];
+        if (mergedScopedOrigin.isData != scopedOrigin.isData ||
+            mergedScopedOrigin.accessPath.steps !=
+                scopedOrigin.accessPath.steps) {
+          // Mark as not-seen so the entry is dropped after this pred.
+          continue;
+        }
+        mergedScopedOrigin.attributes |= scopedOrigin.attributes;
+        mergedScopedOrigin.approximateSource |= scopedOrigin.approximateSource;
+        mergedScopedOrigin.accessPath.isApproximate |=
+            scopedOrigin.accessPath.isApproximate;
+        seenThisPred[idx] = true;
+      }
+      // Drop entries this predecessor did not match. Iterate in reverse
+      // to keep earlier indices valid while erasing.
+      for (int idx = static_cast<int>(mergedScopedOrigins.size()) - 1; idx >= 0;
+           --idx) {
+        if (!seenThisPred[idx]) {
+          const auto &scopedOrigin = mergedScopedOrigins[idx];
+          indexInMerged.erase(scopedOrigin.declValue.getAsOpaquePointer());
+          mergedScopedOrigins.erase(mergedScopedOrigins.begin() + idx);
+        }
+      }
+      // Recompute indices after erase shifts.
+      indexInMerged.clear();
+      for (unsigned i = 0; i < mergedScopedOrigins.size(); ++i) {
+        const auto &scopedOrigin = mergedScopedOrigins[i];
+        indexInMerged[scopedOrigin.declValue.getAsOpaquePointer()] = i;
+      }
+    }
+  }
+
+  return {
+      mergedOrigin, mergedKind, mergedTy,       mergedAttrs,
+      mergedApprox, mergedPath, mergedCaptured, std::move(mergedScopedOrigins)};
 }
 
 namespace fir {
@@ -536,15 +602,49 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // through other dialects
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
-  return alias(lhsSrc, rhsSrc, lhs, rhs);
+  AliasResult result = alias(lhsSrc, rhsSrc, lhs, rhs);
+
+  // Scope-aware refinement after inlining: if both walks crossed declares
+  // in the SAME Fortran procedure scope at DISTINCT declare values, the
+  // two queries may still be disambiguated by rebuilding intermediate
+  // Sources rooted at each shared-scope declare pair (Fortran 2018
+  // 15.5.2.13: distinct dummy arguments / locals of the same procedure
+  // frame do not alias unless TARGET/POINTER/Cray attributes permit it).
+  // The per-pair check delegates back to the 4-arg alias() with paths and
+  // attributes snapshotted at the declares, so TARGET-attributed declares
+  // and pointer-dereferenced paths remain correctly reported as MayAlias.
+  // Short-circuit on NoAlias since any pair that disambiguates is
+  // decisive.
+  if (result == AliasResult::NoAlias || result == AliasResult::MustAlias)
+    return result;
+  for (const auto &lhsScopedOrigin : lhsSrc.scopedOrigins) {
+    if (!lhsScopedOrigin.scope)
+      continue;
+    for (const auto &rhsScopedOrigin : rhsSrc.scopedOrigins) {
+      if (lhsScopedOrigin.scope != rhsScopedOrigin.scope ||
+          lhsScopedOrigin.declValue == rhsScopedOrigin.declValue)
+        continue;
+      Source lhsInner = buildSourceAtDeclare(lhsScopedOrigin);
+      Source rhsInner = buildSourceAtDeclare(rhsScopedOrigin);
+      // Use the OUTER lhs/rhs values, not the declare values: the
+      // rebuilt Sources describe accessing the outer query's leaf
+      // through the captured declare. Passing the declares here would
+      // make type-based checks (e.g. descriptor-vs-data via
+      // noAliasBasedOnType) compare the declare's box-descriptor type
+      // to the outer leaf type and yield bogus NoAlias for pointer
+      // dereferences.
+      AliasResult refined = alias(lhsInner, rhsInner, lhs, rhs);
+      if (refined == AliasResult::NoAlias) {
+        LLVM_DEBUG(llvm::dbgs() << "  no alias via scoped-origin refinement\n");
+        return AliasResult::NoAlias;
+      }
+    }
+  }
+  return result;
 }
 
 AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
                                  mlir::Value rhs) {
-  // TODO: alias() has to be aware of the function scopes.
-  // After MLIR inlining, the current implementation may
-  // not recognize non-aliasing entities.
-
   // If both values trace back to the same root through zero-offset view
   // operations (e.g. embox without slice, declare, convert), they access
   // the same underlying memory. This check avoids the case where
@@ -996,7 +1096,8 @@ static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
 }
 
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
-                                               bool getLastInstantiationPoint) {
+                                               bool getLastInstantiationPoint,
+                                               bool collectScopedOrigins) {
   // If v is a pass-through block argument (see walkBlockArgPassThroughs),
   // continue from the underlying operand so the tracking loop below has a
   // defining op to chew on. Without this, a recursive query like the one in
@@ -1025,6 +1126,13 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
   llvm::SmallVector<Source::PathStep, 4> pathSteps;
   Source::AccessPath accessPath;
   bool accessPathFinalized{false};
+
+  // Per-declare snapshots collected as the walk crosses [hl]fir.declare ops.
+  // Ordered from leaf-closest (front) to root-closest (back). Forwarded
+  // through region-branch merges and the box-load branch, then threaded into
+  // the final Source. Gated on collectScopedOrigins (suppressed when
+  // buildSourceAtDeclare reuses getSource purely for declare classification).
+  llvm::SmallVector<Source::ScopedOrigin, 4> scopedOrigins;
   while (defOp && !breakFromLoop) {
     // Operations may have multiple results, so we need to analyze
     // the result for which the source is queried.
@@ -1106,7 +1214,17 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             if (isPointerBox)
               attributes.set(Attribute::Pointer);
 
-            auto boxSrc = getSource(op.getMemref());
+            // Keep the inner walk's getLastInstantiationPoint=false so it
+            // continues past dummy-scope declares to the underlying
+            // BlockArgument. The outer classification below relies on
+            // boxSrc.origin.u being the BlockArg (so isDummyArgument()
+            // succeeds and the outer SourceKind becomes Argument).
+            // Passing true here would stop the inner walk at the declare
+            // and force SourceKind::Indirect, which spuriously coarsens
+            // getCallModRef (e.g. for box_addr of allocatable dummies).
+            auto boxSrc = getSource(op.getMemref(),
+                                    /*getLastInstantiationPoint=*/false,
+                                    collectScopedOrigins);
             attributes |= boxSrc.attributes;
             approximateSource |= boxSrc.approximateSource;
             isCapturedInInternalProcedure |=
@@ -1132,6 +1250,30 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             accessPath.isApproximate =
                 boxSrc.accessPath.isApproximate || approximateSource;
             accessPathFinalized = true;
+
+            // Rebase each forwarded ScopedOrigin from the inner walk's
+            // coordinate system (rooted at the inner declare, leaf=memref)
+            // to the outer (leaf=original query) by splicing the deref
+            // step and the outer pathSteps onto the snapshot's path.
+            if (collectScopedOrigins) {
+              for (auto scopedOrigin : boxSrc.scopedOrigins) {
+                scopedOrigin.accessPath.steps.push_back(derefStep);
+                for (int i = pathSteps.size() - 1; i >= 0; --i)
+                  scopedOrigin.accessPath.steps.push_back(pathSteps[i]);
+                scopedOrigin.accessPath.isApproximate |= approximateSource;
+                if (isPointerBox)
+                  scopedOrigin.attributes.set(Attribute::Pointer);
+                scopedOrigin.approximateSource |= approximateSource;
+                // The inner walk computed isData against the box memref
+                // (typically false, since the walk started at
+                // !fir.ref<!fir.box<...>>). After splicing the deref step, the
+                // snapshot's path now describes reaching the outer query's leaf
+                // via the box's pointer, so it follows data iff the outer walk
+                // does.
+                scopedOrigin.isData = followingData;
+                scopedOrigins.push_back(std::move(scopedOrigin));
+              }
+            }
 
             global = llvm::dyn_cast<mlir::SymbolRefAttr>(boxSrc.origin.u);
             if (global) {
@@ -1240,6 +1382,23 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           attributes |= getAttrsFromVariable(varIf);
           isCapturedInInternalProcedure |=
               varIf.isCapturedInInternalProcedure();
+
+          // Snapshot a ScopedOrigin at this declare. The snapshot
+          // captures the path/attributes from the leaf to this declare
+          // and is used by alias() for scope-aware refinement.
+          if (collectScopedOrigins) {
+            Source::ScopedOrigin scopedOrigin;
+            scopedOrigin.scope = getDeclarationScope(op);
+            scopedOrigin.declValue = opResult;
+            scopedOrigin.accessPath.steps.assign(pathSteps.rbegin(),
+                                                 pathSteps.rend());
+            scopedOrigin.accessPath.isApproximate = approximateSource;
+            scopedOrigin.attributes = attributes;
+            scopedOrigin.approximateSource = approximateSource;
+            scopedOrigin.isData = followingData;
+            scopedOrigins.push_back(std::move(scopedOrigin));
+          }
+
           if (varIf.isHostAssoc()) {
             // Do not track past such DeclareOp, because it does not
             // currently provide any useful information. The host associated
@@ -1397,7 +1556,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           accSourceReturn = getSourceForACCMappedValue(
               v, op.getOperation(),
               [&](mlir::Value x) {
-                return getSource(x, getLastInstantiationPoint);
+                return getSource(x, getLastInstantiationPoint,
+                                 collectScopedOrigins);
               },
               followingData, attributes);
           breakFromLoop = true;
@@ -1415,20 +1575,37 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                    attributes,
                                    /*approximateSource=*/true,
                                    /*accessPath=*/{},
-                                   isCapturedInInternalProcedure}};
+                                   isCapturedInInternalProcedure,
+                                   /*scopedOrigins=*/{}}};
             breakFromLoop = true;
             return;
           }
           llvm::SmallVector<AliasAnalysis::Source, 4> predSources;
           predSources.reserve(predecessors.size());
           for (mlir::Value pred : predecessors)
-            predSources.push_back(getSource(pred, getLastInstantiationPoint));
+            predSources.push_back(getSource(pred, getLastInstantiationPoint,
+                                            collectScopedOrigins));
           regionBranchReturn = mergeRegionBranchPredecessorSources(
               predSources, v, ty, followingData);
           regionBranchReturn->attributes |= attributes;
           regionBranchReturn->approximateSource |= approximateSource;
           regionBranchReturn->isCapturedInInternalProcedure |=
               isCapturedInInternalProcedure;
+          // Prepend the outer (leaf-closer) scopedOrigins -- declares
+          // already crossed between leaf and this region-branch op --
+          // to the merged predecessors' snapshots. The inner snapshots'
+          // paths are relative to the region-branch result (matching
+          // the existing approximation for the top-level accessPath
+          // composed across region-branch merges).
+          if (collectScopedOrigins && !scopedOrigins.empty()) {
+            llvm::SmallVector<Source::ScopedOrigin, 4> combined;
+            combined.reserve(scopedOrigins.size() +
+                             regionBranchReturn->scopedOrigins.size());
+            combined.append(scopedOrigins.begin(), scopedOrigins.end());
+            combined.append(regionBranchReturn->scopedOrigins.begin(),
+                            regionBranchReturn->scopedOrigins.end());
+            regionBranchReturn->scopedOrigins = std::move(combined);
+          }
           breakFromLoop = true;
         })
         .Default([&](auto op) {
@@ -1481,7 +1658,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             attributes,
             approximateSource,
             accessPath,
-            isCapturedInInternalProcedure};
+            isCapturedInInternalProcedure,
+            std::move(scopedOrigins)};
   }
   return {{v, instantiationPoint, followingData},
           type,
@@ -1489,7 +1667,8 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           attributes,
           approximateSource,
           accessPath,
-          isCapturedInInternalProcedure};
+          isCapturedInInternalProcedure,
+          std::move(scopedOrigins)};
 }
 
 const mlir::SymbolTable *
@@ -1502,6 +1681,81 @@ fir::AliasAnalysis::getNearestSymbolTable(mlir::Operation *from) {
   if (it != symTabMap.end())
     return &it->second;
   return &symTabMap.try_emplace(symTabOp, symTabOp).first->second;
+}
+
+mlir::Value
+fir::AliasAnalysis::getDeclarationScope(mlir::Operation *declareOp) {
+  assert(declareOp && "expected a non-null declare op");
+  // Prefer the declare's explicit dummy_scope operand when present.
+  if (auto hlfirDeclareOp = mlir::dyn_cast<hlfir::DeclareOp>(declareOp))
+    if (mlir::Value dummyScope = hlfirDeclareOp.getDummyScope())
+      return dummyScope;
+  if (auto firDeclareOp = mlir::dyn_cast<fir::DeclareOp>(declareOp))
+    if (mlir::Value dummyScope = firDeclareOp.getDummyScope())
+      return dummyScope;
+
+  // Otherwise look up the dominating fir.dummy_scope in the parent
+  // function. Mirrors PassState::getDeclarationScope in AddAliasTags.cpp.
+  auto func = declareOp->getParentOfType<mlir::func::FuncOp>();
+  if (!func)
+    return {};
+
+  mlir::Operation *funcOp = func.getOperation();
+  auto domIt = domInfoCache.find(funcOp);
+  if (domIt == domInfoCache.end()) {
+    auto inserted = domInfoCache.try_emplace(
+        funcOp, std::make_unique<mlir::DominanceInfo>(funcOp));
+    domIt = inserted.first;
+  }
+  mlir::DominanceInfo &domInfo = *domIt->second;
+
+  auto scopeIt = sortedScopeCache.find(funcOp);
+  if (scopeIt == sortedScopeCache.end()) {
+    llvm::SmallVector<mlir::Operation *, 16> scopeOps;
+    func.walk(
+        [&](fir::DummyScopeOp op) { scopeOps.push_back(op.getOperation()); });
+    llvm::stable_sort(scopeOps, [&](mlir::Operation *a, mlir::Operation *b) {
+      return domInfo.properlyDominates(a, b);
+    });
+    scopeIt = sortedScopeCache.insert({funcOp, std::move(scopeOps)}).first;
+  }
+
+  const auto &scopeOps = scopeIt->second;
+  for (auto it = scopeOps.rbegin(), ie = scopeOps.rend(); it != ie; ++it) {
+    if (domInfo.dominates(*it, declareOp))
+      return mlir::cast<fir::DummyScopeOp>(*it).getResult();
+  }
+  return {};
+}
+
+fir::AliasAnalysis::Source fir::AliasAnalysis::buildSourceAtDeclare(
+    const fir::AliasAnalysis::Source::ScopedOrigin &scopedOrigin) {
+  // Reuse getSource for classification (handles dummy_scope, alloca/
+  // allocmem, address_of, etc. exactly as the main walk does). Disable
+  // ScopedOrigin collection so we do not allocate snapshots that would
+  // be immediately discarded.
+  //
+  // Pass getLastInstantiationPoint=true so the walk STOPS at the captured
+  // declare and classifies the Source in that declare's own scope: a
+  // dummy-scope declare becomes SourceKind::Argument, while a local/global
+  // declare still continues to its alloca/address_of (Allocate/Global).
+  // This is essential after inlining: with getLastInstantiationPoint=false
+  // the walk would continue past the dummy declare through cross-scope
+  // chains (e.g. fir.embox/fir.box_addr/scf.if introduced by contiguity
+  // copy-in or OPTIONAL select in the caller frame), whose region-branch
+  // merge collapses the kind to SourceKind::Unknown and makes the 4-arg
+  // alias() report MayAlias -- defeating the whole point of the refinement.
+  Source source = getSource(scopedOrigin.declValue,
+                            /*getLastInstantiationPoint=*/true,
+                            /*collectScopedOrigins=*/false);
+  // Rebase path/attributes to the snapshot taken when the original
+  // walk crossed this declare, so the returned Source represents
+  // "declare-as-root, original-query-as-leaf".
+  source.accessPath = scopedOrigin.accessPath;
+  source.attributes = scopedOrigin.attributes;
+  source.approximateSource = scopedOrigin.approximateSource;
+  source.origin.isData = scopedOrigin.isData;
+  return source;
 }
 
 } // namespace fir

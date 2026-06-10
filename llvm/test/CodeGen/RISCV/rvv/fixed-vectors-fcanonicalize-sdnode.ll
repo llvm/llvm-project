@@ -51,10 +51,10 @@ define <4 x half> @canonicalize_v4f16(<4 x half> %a) {
 define <4 x bfloat> @canonicalize_v4bf16(<4 x bfloat> %a) {
 ; CHECK-LABEL: canonicalize_v4bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
 ; CHECK-NEXT:    lui a0, 260096
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vfwcvtbf16.f.f.v v9, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmul.vf v9, v9, fa5
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
