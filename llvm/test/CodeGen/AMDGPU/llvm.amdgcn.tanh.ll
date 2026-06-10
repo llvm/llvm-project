@@ -106,6 +106,106 @@ define amdgpu_kernel void @tanh_undef_f32(ptr addrspace(1) %out) #1 {
   ret void
 }
 
+define void @tanh_f32_v(ptr addrspace(1) %out, float %src) {
+; GFX1250-LABEL: tanh_f32_v:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_tanh_f32_e32 v2, v2
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-LABEL: tanh_f32_v:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_tanh_f32_e32 v2, v2
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+  %tanh = call float @llvm.amdgcn.tanh.f32(float %src)
+  store float %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_f32_neg(ptr addrspace(1) %out, float %src)  {
+; GFX1250-LABEL: tanh_f32_neg:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_tanh_f32_e64 v2, -v2
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-LABEL: tanh_f32_neg:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_tanh_f32_e64 v2, -v2
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+  %fneg = fneg float %src
+  %tanh = call float @llvm.amdgcn.tanh.f32(float %fneg)
+  store float %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_f32_abs(ptr addrspace(1) %out, float %src)  {
+; GFX1250-LABEL: tanh_f32_abs:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_tanh_f32_e64 v2, |v2|
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-LABEL: tanh_f32_abs:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_tanh_f32_e64 v2, |v2|
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+  %fabs = call float @llvm.fabs.f32(float %src)
+  %tanh = call float @llvm.amdgcn.tanh.f32(float %fabs)
+  store float %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_f32_neg_abs(ptr addrspace(1) %out, float %src)  {
+; GFX1250-LABEL: tanh_f32_neg_abs:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_tanh_f32_e64 v2, -|v2|
+; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-LABEL: tanh_f32_neg_abs:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_tanh_f32_e64 v2, -|v2|
+; GFX13-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+  %fabs = call float @llvm.fabs.f32(float %src)
+  %fneg = fneg float %fabs
+  %tanh = call float @llvm.amdgcn.tanh.f32(float %fneg)
+  store float %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 define amdgpu_kernel void @tanh_f16(ptr addrspace(1) %out, half %src) #1 {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_f16:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
@@ -249,6 +349,182 @@ define amdgpu_kernel void @tanh_undef_f16(ptr addrspace(1) %out) #1 {
   ret void
 }
 
+define void @tanh_f16_v(ptr addrspace(1) %out, half %src) {
+; GFX1250-SDAG-REAL16-LABEL: tanh_f16_v:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_f16_e32 v2.l, v2.l
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-SDAG-FAKE16-LABEL: tanh_f16_v:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v2, v2
+; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-REAL16-LABEL: tanh_f16_v:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e32 v2.l, v2.l
+; GFX13-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: tanh_f16_v:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v2, v2
+; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+  %tanh = call half @llvm.amdgcn.tanh.f16(half %src)
+  store half %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_f16_neg(ptr addrspace(1) %out, half %src)  {
+; GFX1250-SDAG-REAL16-LABEL: tanh_f16_neg:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v2.l, -v2.l
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-SDAG-FAKE16-LABEL: tanh_f16_neg:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v2, -v2
+; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-REAL16-LABEL: tanh_f16_neg:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v2.l, -v2.l
+; GFX13-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: tanh_f16_neg:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v2, -v2
+; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+  %fneg = fneg half %src
+  %tanh = call half @llvm.amdgcn.tanh.f16(half %fneg)
+  store half %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_f16_abs(ptr addrspace(1) %out, half %src)  {
+; GFX1250-SDAG-REAL16-LABEL: tanh_f16_abs:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v2.l, |v2.l|
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-SDAG-FAKE16-LABEL: tanh_f16_abs:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v2, |v2|
+; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-REAL16-LABEL: tanh_f16_abs:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v2.l, |v2.l|
+; GFX13-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: tanh_f16_abs:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v2, |v2|
+; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+  %fabs = call half @llvm.fabs.f16(half %src)
+  %tanh = call half @llvm.amdgcn.tanh.f16(half %fabs)
+  store half %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_f16_neg_abs(ptr addrspace(1) %out, half %src)  {
+; GFX1250-SDAG-REAL16-LABEL: tanh_f16_neg_abs:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v2.l, -|v2.l|
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-SDAG-FAKE16-LABEL: tanh_f16_neg_abs:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v2, -|v2|
+; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-REAL16-LABEL: tanh_f16_neg_abs:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_f16_e64 v2.l, -|v2.l|
+; GFX13-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: tanh_f16_neg_abs:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_f16_e64 v2, -|v2|
+; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+  %fabs = call half @llvm.fabs.f16(half %src)
+  %fneg = fneg half %fabs
+  %tanh = call half @llvm.amdgcn.tanh.f16(half %fneg)
+  store half %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 define amdgpu_kernel void @tanh_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_bf16:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
@@ -389,6 +665,182 @@ define amdgpu_kernel void @tanh_undef_bf16(ptr addrspace(1) %out) #1 {
 ; GFX13-NEXT:    s_endpgm
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat undef)
   store bfloat %tanh, ptr addrspace(1) %out, align 2
+  ret void
+}
+
+define void @tanh_bf16_v(ptr addrspace(1) %out, bfloat %src) {
+; GFX1250-SDAG-REAL16-LABEL: tanh_bf16_v:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v2.l, v2.l
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-SDAG-FAKE16-LABEL: tanh_bf16_v:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v2, v2
+; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-REAL16-LABEL: tanh_bf16_v:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v2.l, v2.l
+; GFX13-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_v:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v2, v2
+; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+  %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %src)
+  store bfloat %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_bf16_neg(ptr addrspace(1) %out, bfloat %src)  {
+; GFX1250-SDAG-REAL16-LABEL: tanh_bf16_neg:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v2.l, -v2.l
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-SDAG-FAKE16-LABEL: tanh_bf16_neg:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v2, -v2
+; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-REAL16-LABEL: tanh_bf16_neg:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v2.l, -v2.l
+; GFX13-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_neg:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v2, -v2
+; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+  %fneg = fneg bfloat %src
+  %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %fneg)
+  store bfloat %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_bf16_abs(ptr addrspace(1) %out, bfloat %src)  {
+; GFX1250-SDAG-REAL16-LABEL: tanh_bf16_abs:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v2.l, |v2.l|
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-SDAG-FAKE16-LABEL: tanh_bf16_abs:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v2, |v2|
+; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-REAL16-LABEL: tanh_bf16_abs:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v2.l, |v2.l|
+; GFX13-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_abs:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v2, |v2|
+; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+  %fabs = call bfloat @llvm.fabs.bf16(bfloat %src)
+  %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %fabs)
+  store bfloat %tanh, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define void @tanh_bf16_neg_abs(ptr addrspace(1) %out, bfloat %src)  {
+; GFX1250-SDAG-REAL16-LABEL: tanh_bf16_neg_abs:
+; GFX1250-SDAG-REAL16:       ; %bb.0:
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v2.l, -|v2.l|
+; GFX1250-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX1250-SDAG-FAKE16-LABEL: tanh_bf16_neg_abs:
+; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v2, -|v2|
+; GFX1250-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX1250-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-REAL16-LABEL: tanh_bf16_neg_abs:
+; GFX13-SDAG-REAL16:       ; %bb.0:
+; GFX13-SDAG-REAL16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v2.l, -|v2.l|
+; GFX13-SDAG-REAL16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-REAL16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_neg_abs:
+; GFX13-SDAG-FAKE16:       ; %bb.0:
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v2, -|v2|
+; GFX13-SDAG-FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
+; GFX13-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
+  %fabs = call bfloat @llvm.fabs.bf16(bfloat %src)
+  %fneg = fneg bfloat %fabs
+  %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat %fneg)
+  store bfloat %tanh, ptr addrspace(1) %out, align 4
   ret void
 }
 
