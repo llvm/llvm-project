@@ -23,10 +23,6 @@
 using namespace llvm;
 using namespace dxil;
 
-static StringRef asStringRef(Metadata *S) {
-  return dyn_cast<MDString>(S)->getString();
-}
-
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
   const Triple &TT = M.getTargetTriple();
@@ -51,12 +47,13 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
             ? dxbc::SourceInfo::Contents::CompressionType::Zlib
             : dxbc::SourceInfo::Contents::CompressionType::None);
     for (Metadata *FileInfoNode : ContentsNode->operands()) {
-      auto *FileInfo = dyn_cast<MDTuple>(FileInfoNode);
-      MMDAI.SourceInfo->addFile(asStringRef(FileInfo->getOperand(0)),
-                                asStringRef(FileInfo->getOperand(1)));
+      auto *FileInfo = cast<MDTuple>(FileInfoNode);
+      MMDAI.SourceInfo->addFile(
+          cast<MDString>(FileInfo->getOperand(0))->getString(),
+          cast<MDString>(FileInfo->getOperand(1))->getString());
     }
     for (Metadata *ArgNode : ArgsNode->getOperand(0)->operands())
-      MMDAI.SourceInfo->addArg(asStringRef(ArgNode), "");
+      MMDAI.SourceInfo->addArg(cast<MDString>(ArgNode)->getString(), "");
   }
 
   // For all HLSL Shader functions
