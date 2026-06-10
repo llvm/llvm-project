@@ -3,6 +3,11 @@
 # the PR, builds clang and the test-suite again, and then uploads the diff of
 # the codegen.
 
+# TODO: React to the comment to let the user know the workflow has kicked
+# off. We'll need to do this in a separate workflow like issue-write.yml with
+# elevated permissions, since this workflow can't have write permissions on
+# account for the arbitrary code execution.
+
 name: Diff test-suite codegen
 
 on:
