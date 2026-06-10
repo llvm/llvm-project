@@ -1139,7 +1139,7 @@ class FunctionTestBuilder:
                     ):
                         const_info = self._func_dict[prefix][func_name].const_info
                         if const_info is not None and const_info.body != body:
-                            self._func_dict[prefix][func_name] = None
+                            self._func_dict[prefix][func_name].const_info = None
                         elif const_info is None:
                             self._func_dict[prefix][
                                 func_name
