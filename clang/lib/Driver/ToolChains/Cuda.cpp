@@ -603,7 +603,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-v");
 
   StringRef GPUArch = Args.getLastArgValue(options::OPT_march_EQ);
-  if (GPUArch.empty() && !C.getDriver().isUsingLTO()) {
+  if (GPUArch.empty() && !getToolChain().isUsingLTO(Args)) {
     C.getDriver().Diag(diag::err_drv_offload_missing_gpu_arch)
         << getToolChain().getArchName() << getShortName();
     return;
@@ -633,9 +633,9 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
-  if (C.getDriver().isUsingLTO())
+  if (auto LTO = getToolChain().getLTOMode(Args); LTO != LTOK_None)
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
-                  C.getDriver().getLTOMode() == LTOK_Thin);
+                  LTO == LTOK_Thin);
 
   // Forward the PTX features if the nvlink-wrapper needs it.
   std::vector<StringRef> Features;
@@ -796,7 +796,8 @@ NVPTXToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 
 void NVPTXToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {}
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+}
 
 void NVPTXToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                                                ArgStringList &CC1Args) const {
@@ -883,8 +884,9 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
 
 void CudaToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                               DeviceOffloadingKind);
 
   StringRef GpuArch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
   assert((DeviceOffloadingKind == Action::OFK_OpenMP ||
@@ -939,7 +941,7 @@ void CudaToolChain::addClangTargetOptions(
     }
 
     // Link the bitcode library late if we're using device LTO.
-    if (getDriver().isUsingOffloadLTO())
+    if (isUsingLTO(DriverArgs, DeviceOffloadingKind))
       return;
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),

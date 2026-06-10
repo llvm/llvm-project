@@ -114,12 +114,15 @@ if(LLVM_INTEGRATED_CRT_ALLOC)
 
   if((LLVM_INTEGRATED_CRT_ALLOC MATCHES "rpmalloc$") OR LLVM_ENABLE_RPMALLOC)
     add_compile_definitions(ENABLE_OVERRIDE ENABLE_PRELOAD)
+    add_compile_definitions(LLVM_INTEGRATED_CRT_ALLOC="rpmalloc")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/rpmalloc/rpmalloc.c")
     list(APPEND delayload_flags "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "snmalloc$")
+    add_compile_definitions(LLVM_INTEGRATED_CRT_ALLOC="snmalloc")
     set(ALLOCATOR_FILES "${LLVM_INTEGRATED_CRT_ALLOC}/src/snmalloc/override/new.cc")
     set(system_libs ${system_libs} "mincore.lib" "${WL}-INCLUDE:malloc")
   elseif(LLVM_INTEGRATED_CRT_ALLOC MATCHES "mimalloc$")
+    add_compile_definitions(LLVM_INTEGRATED_CRT_ALLOC="mimalloc")
     set(MIMALLOC_LIB "${LLVM_INTEGRATED_CRT_ALLOC}/out/msvc-x64/Release/mimalloc-static.lib")
     if(NOT EXISTS "${MIMALLOC_LIB}")
 	  message(FATAL_ERROR "Cannot find the mimalloc static library. To build it, first apply the patch from https://github.com/microsoft/mimalloc/issues/268 then build the Release x64 target through ${LLVM_INTEGRATED_CRT_ALLOC}\\ide\\vs2019\\mimalloc.sln")
@@ -282,6 +285,7 @@ add_llvm_component_library(LLVMSupport
   VirtualOutputConfig.cpp
   VirtualOutputError.cpp
   VirtualOutputFile.cpp
+  Win64EH.cpp
   WithColor.cpp
   YAMLParser.cpp
   YAMLTraits.cpp

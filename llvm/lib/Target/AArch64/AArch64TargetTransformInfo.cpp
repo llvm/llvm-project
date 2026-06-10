@@ -4405,6 +4405,35 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   default:
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
                                          Op2Info);
+  case ISD::ADD:
+  case ISD::SUB:
+    return LT.first; // Also works for i128
+  case ISD::MUL:
+    if (LT.second == MVT::v2i64) {
+      // When SVE is available, then we can lower the v2i64 operation using
+      // the SVE mul instruction, which has a lower cost.
+      if (ST->hasSVE())
+        return LT.first;
+
+      // When SVE is not available, there is no MUL.2d instruction,
+      // which means mul <2 x i64> is expensive as elements are extracted
+      // from the vectors and the muls scalarized.
+      // As getScalarizationOverhead is a bit too pessimistic, we
+      // estimate the cost for a i64 vector directly here, which is:
+      // - four 2-cost i64 extracts,
+      // - two 2-cost i64 inserts, and
+      // - two 1-cost muls.
+      // So, for a v2i64 with LT.First = 1 the cost is 14, and for a v4i64 with
+      // LT.first = 2 the cost is 28.
+      return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
+             (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
+              getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
+                                 nullptr, nullptr) *
+                  2 +
+              getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
+                                 nullptr, nullptr));
+    }
+    return LT.first;
   case ISD::SREM:
   case ISD::SDIV:
     /*
@@ -4619,32 +4648,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     }
     return Cost;
   }
-  case ISD::MUL:
-    // When SVE is available, then we can lower the v2i64 operation using
-    // the SVE mul instruction, which has a lower cost.
-    if (LT.second == MVT::v2i64 && ST->hasSVE())
-      return LT.first;
-
-    // When SVE is not available, there is no MUL.2d instruction,
-    // which means mul <2 x i64> is expensive as elements are extracted
-    // from the vectors and the muls scalarized.
-    // As getScalarizationOverhead is a bit too pessimistic, we
-    // estimate the cost for a i64 vector directly here, which is:
-    // - four 2-cost i64 extracts,
-    // - two 2-cost i64 inserts, and
-    // - two 1-cost muls.
-    // So, for a v2i64 with LT.First = 1 the cost is 14, and for a v4i64 with
-    // LT.first = 2 the cost is 28.
-    if (LT.second != MVT::v2i64)
-      return LT.first;
-    return cast<VectorType>(Ty)->getElementCount().getKnownMinValue() *
-           (getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind) +
-            getVectorInstrCost(Instruction::ExtractElement, Ty, CostKind, -1,
-                               nullptr, nullptr) *
-                2 +
-            getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, -1,
-                               nullptr, nullptr));
-  case ISD::ADD:
   case ISD::XOR:
   case ISD::OR:
   case ISD::AND:
@@ -5554,6 +5557,9 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
+  case Intrinsic::aarch64_neon_st1x2:
+  case Intrinsic::aarch64_neon_st1x3:
+  case Intrinsic::aarch64_neon_st1x4:
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4: {
@@ -5576,6 +5582,9 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
     }
     return Res;
   }
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_ld1x4:
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_ld4:
@@ -5590,6 +5599,9 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
   switch (Inst->getIntrinsicID()) {
   default:
     break;
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_ld1x4:
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_ld4:
@@ -5597,6 +5609,9 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     Info.WriteMem = false;
     Info.PtrVal = Inst->getArgOperand(0);
     break;
+  case Intrinsic::aarch64_neon_st1x2:
+  case Intrinsic::aarch64_neon_st1x3:
+  case Intrinsic::aarch64_neon_st1x4:
   case Intrinsic::aarch64_neon_st2:
   case Intrinsic::aarch64_neon_st3:
   case Intrinsic::aarch64_neon_st4:
@@ -5606,20 +5621,33 @@ bool AArch64TTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     break;
   }
 
+  // Use the ID of neon load as the "matching id".
   switch (Inst->getIntrinsicID()) {
   default:
     return false;
+  case Intrinsic::aarch64_neon_ld1x2:
+  case Intrinsic::aarch64_neon_st1x2:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x2;
+    break;
+  case Intrinsic::aarch64_neon_ld1x3:
+  case Intrinsic::aarch64_neon_st1x3:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x3;
+    break;
+  case Intrinsic::aarch64_neon_ld1x4:
+  case Intrinsic::aarch64_neon_st1x4:
+    Info.MatchingId = Intrinsic::aarch64_neon_ld1x4;
+    break;
   case Intrinsic::aarch64_neon_ld2:
   case Intrinsic::aarch64_neon_st2:
-    Info.MatchingId = VECTOR_LDST_TWO_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld2;
     break;
   case Intrinsic::aarch64_neon_ld3:
   case Intrinsic::aarch64_neon_st3:
-    Info.MatchingId = VECTOR_LDST_THREE_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld3;
     break;
   case Intrinsic::aarch64_neon_ld4:
   case Intrinsic::aarch64_neon_st4:
-    Info.MatchingId = VECTOR_LDST_FOUR_ELEMENTS;
+    Info.MatchingId = Intrinsic::aarch64_neon_ld4;
     break;
   }
   return true;
@@ -6018,7 +6046,9 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     return Invalid;
 
   bool IsUSDot = OpBExtend != TTI::PR_None && OpAExtend != OpBExtend;
-  if (IsUSDot && !ST->hasMatMulInt8())
+  // USDot is natively supported with +i8mm. With plain +dotprod, SUMLA is
+  // lowered to two udots plus an eor and a sub.
+  if (IsUSDot && !ST->hasMatMulInt8() && !ST->hasDotProd())
     // FIXME: Remove this early bailout in favour of expand cost.
     return Invalid;
 
@@ -6075,6 +6105,12 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
     // i8 -> i32 usdot requires +i8mm
     if (IsUSDot && IsSupported(ST->hasMatMulInt8(), ST->hasMatMulInt8()))
       return Cost + INegCost;
+    // Without +i8mm, lower SUMLA via two udots plus an eor and a sub on plain
+    // +dotprod targets. Note that this is only implemented for NEON, as all
+    // modern CPUs with SVE also have +i8mm. Charge an extra factor for the
+    // expansion.
+    if (IsUSDot && IsSupported(false, ST->hasDotProd()))
+      return Cost * 3 + INegCost;
   }
 
   if (ST->isSVEorStreamingSVEAvailable() && !IsUSDot) {

@@ -831,12 +831,24 @@ always define a pointer to their "content" type because they describe a
 region of memory, and all :ref:`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
 
-Global variables can be marked with ``unnamed_addr`` which indicates
-that the address is not significant, only the content. Constants marked
-like this can be merged with other constants if they have the same
-initializer. Note that a constant with significant address *can* be
-merged with a ``unnamed_addr`` constant, the result being a constant
-whose address is significant.
+Global variables can be marked with ``unnamed_addr`` which indicates that
+the address is not significant, only the content. Constants marked like
+this can be merged with other constants if they have the same initializer,
+and can also be duplicated. Note that a constant with significant address
+*can* be merged with a ``unnamed_addr`` constant, the result being a
+constant whose address is significant.
+
+.. warning::
+
+    Constant duplication currently makes it unsound to compare pointers
+    if either may be ``unnamed_addr``, because each reference to the
+    global in the IR may return a different pointer, and optimization
+    passes may create additional references. Optimization passes can also
+    create pointer comparisons with the expectation that the comparison
+    will return true if the object is the same, which theoretically can
+    make any usage of ``unnamed_addr`` unsound, but in practice it is
+    unlikely that input IR that does not explicitly compare pointers
+    will be affected by this issue.
 
 If the ``local_unnamed_addr`` attribute is given, the address is known to
 not be significant within the module.
@@ -1543,8 +1555,20 @@ Currently, only the following parameter attributes are defined:
       is null is captured in some other way.
 
 ``nofree``
-    This indicates that the callee does not free the pointer argument. This is not
-    a valid attribute for return values.
+    This indicates that a pointer based on this argument cannot be freed during
+    the execution of the function.
+
+    More formally, a ``nofree`` argument provides the callee with a new pointer
+    with the same address and a derived provenance, where the derived
+    provenance has the same permissions as the original, except that the
+    underlying object cannot be freed until the function returns (or unwinds),
+    otherwise the behavior is undefined. This includes frees of the pointer on
+    other threads if the free *happens-before* the function return.
+
+    Notably, it is still possible to free the underlying object through a
+    pointer that is not based on the argument.
+
+    This is not a valid attribute for return values.
 
 .. _nest:
 
@@ -1563,6 +1587,8 @@ Currently, only the following parameter attributes are defined:
     :ref:`bitcast instruction <i_bitcast>`. This is not a valid attribute for
     return values and can only be applied to one parameter.
 
+.. _attr_nonnull:
+
 ``nonnull``
     This indicates that the parameter or return pointer is not null. This
     attribute may only be applied to pointer-typed parameters. This is not
@@ -1573,6 +1599,8 @@ Currently, only the following parameter attributes are defined:
     if the pointer has non-zero non-address bits or non-zero external state.
     The ``nonnull`` attribute should be combined with the ``noundef`` attribute
     to ensure a pointer is not null or otherwise the behavior is undefined.
+
+.. _attr_dereferenceable:
 
 ``dereferenceable(<n>)``
     This indicates that the parameter or return pointer is dereferenceable. This
@@ -1586,9 +1614,9 @@ Currently, only the following parameter attributes are defined:
     ``null_pointer_is_valid`` function attribute is present.
     ``n`` should be a positive number. The pointer should be well defined,
     otherwise it is undefined behavior. This means ``dereferenceable(<n>)``
-    implies ``noundef``. When used in an assume operand bundle, more restricted
-    semantics apply. See  :ref:`assume operand bundles <assume_opbundles>` for
-    more details.
+    implies ``noundef``.
+
+.. _attr_dereferenceable_or_null:
 
 ``dereferenceable_or_null(<n>)``
     This indicates that the parameter or return value isn't both
@@ -1642,6 +1670,8 @@ Currently, only the following parameter attributes are defined:
     constant. Undef or constant expressions are not valid. This is
     only valid on intrinsic declarations and cannot be applied to a
     call site or arbitrary function.
+
+.. _attr_noundef:
 
 ``noundef``
     This attribute applies to parameters and return values. If the value
@@ -2125,6 +2155,9 @@ For example:
     uses the ``nobuiltin`` attribute. This is only valid at call sites for
     direct calls to functions that are declared with the ``nobuiltin``
     attribute.
+
+.. _attr_cold:
+
 ``cold``
     This attribute indicates that this function is rarely called. When
     computing edge weights, basic blocks post-dominated by a cold
@@ -2326,22 +2359,21 @@ For example:
     internal linkage and only has one call site, so the original
     call is dead after inlining.
 ``nofree``
-    This function attribute indicates that the function does not, directly or
-    transitively, call a memory-deallocation function (``free``, for example)
-    on a memory allocation which existed before the call.
+    This function attribute indicates that the function does not free any memory
+    allocation which existed before the call, either through direct calls to
+    a memory-deallocation function like ``free``, or through synchronization.
+    Freeing through synchronization here means that a deallocation
+    *happens-before* the function exit but does not *happens-before* the
+    function entry.
 
-    As a result, uncaptured pointers that are known to be dereferenceable
-    prior to a call to a function with the ``nofree`` attribute are still
-    known to be dereferenceable after the call. The capturing condition is
-    necessary in environments where the function might communicate the
-    pointer to another thread which then deallocates the memory.  Alternatively,
-    ``nosync`` would ensure such communication cannot happen and even captured
-    pointers cannot be freed by the function.
+    As a result, pointers that are known to be dereferenceable prior to a call
+    to a function with the ``nofree`` attribute are still known to be
+    dereferenceable after the call.
 
     A ``nofree`` function is explicitly allowed to free memory which it
-    allocated or (if not ``nosync``) arrange for another thread to free
-    memory on its behalf.  As a result, perhaps surprisingly, a ``nofree``
-    function can return a pointer to a previously deallocated
+    allocated or arrange for another thread to free such memory on its behalf.
+    As a result, perhaps surprisingly, a ``nofree`` function can return a
+    pointer to a previously deallocated
     :ref:`allocated object<allocatedobjects>`.
 ``noimplicitfloat``
     Disallows implicit floating-point code. This inhibits optimizations that
@@ -3104,33 +3136,57 @@ Assume Operand Bundles
 ^^^^^^^^^^^^^^^^^^^^^^
 
 Operand bundles on an :ref:`llvm.assume <int_assume>` allow representing
-assumptions, such as that a :ref:`parameter attribute <paramattrs>` or a
-:ref:`function attribute <fnattrs>` holds for a certain value at a certain
-location. Operand bundles enable assumptions that are either hard or impossible
-to represent as a boolean argument of an :ref:`llvm.assume <int_assume>`.
+assumptions that hold at the location of the assume. Operand bundles enable
+assumptions that are either hard or impossible to represent as a boolean
+argument of an :ref:`llvm.assume <int_assume>`.
 
 Assumes with operand bundles must have ``i1 true`` as the condition operand.
 
-An assume operand bundle has the form:
+Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
+provided guarantees are violated at runtime the behavior is undefined.
 
-::
+While attributes expect constant arguments, assume operand bundles may be
+provided a dynamic value, for example:
 
-      "<tag>"([ <arguments>] ])
+.. code-block:: llvm
 
-In the case of function or parameter attributes, the operand bundle has the
-restricted form:
+      call void @llvm.assume(i1 true) ["align"(ptr %val, i32 %align)]
 
-::
+The following attributes are currently accepted:
 
-      "<tag>"([ <holds for value> [, <attribute argument>] ])
+``"align"(ptr %p, i64 %align)``, ``"align"(ptr %p, i64 %align, i64 %offset)``
+  Equivalent to :ref:`align(%align) <attr_align>` on ``%p``, or ``%p - %offset``
+  if the ``%offset`` argument exists, except that ``%align`` may be a
+  non-power-of-two alignment (including a zero alignment). If ``%align`` is not
+  a power of two the pointer value must be all-zero. Otherwise the behavior is
+  undefined.
 
-* The tag of the operand bundle is usually the name of the attribute that can be
-  assumed to hold. It can also be `ignore`; this tag doesn't contain any
-  information and should be ignored.
-* The first argument, if present, is the value for which the attribute holds.
-* The second argument, if present, is an argument of the attribute.
+``"cold"()``
+  Equivalent to :ref:`cold <attr_cold>`.
 
-If there are no arguments the attribute is a property of the call location.
+``"dereferenceable"(ptr %p, i64 %size)``
+  Equivalent to :ref:`dereferenceable(%size) <attr_dereferenceable>` on ``%p``,
+  except that ``%size`` may also be zero, in which case the bundle doesn't
+  imply ``nonnull``.
+
+``"dereferenceable_or_null"(ptr %p, i64 %size)``
+  Equivalent to :ref:`dereferenceable_or_null(%size)
+  <attr_dereferenceable_or_null>` on ``%p``, except that ``%size`` may also be
+  zero.
+
+``"ignore"(...)``
+  Doesn't imply anything and is ignored. This is used to drop an assume where
+  the ``llvm.assume`` call cannot be replaced or dropped.
+
+``"nonnull"(ptr %p)``
+  Equivalent to :ref:`nonnull <attr_nonnull>` on ``%p``.
+
+``"noundef"(any_type %v)``
+  Equivalent to :ref:`noundef <attr_noundef>` on ``%v``.
+
+``"separate_storage"(ptr %p1, ptr %p2)``
+  This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
+  arguments can alias any pointer based on the other.
 
 For example:
 
@@ -3147,39 +3203,6 @@ allows the optimizer to assume that at location of call to
 
 allows the optimizer to assume that the :ref:`llvm.assume <int_assume>`
 call location is cold and that ``%val`` may not be null.
-
-Just like for the argument of :ref:`llvm.assume <int_assume>`, if any of the
-provided guarantees are violated at runtime the behavior is undefined.
-
-While attributes expect constant arguments, assume operand bundles may be
-provided a dynamic value, for example:
-
-.. code-block:: llvm
-
-      call void @llvm.assume(i1 true) ["align"(ptr %val, i32 %align)]
-
-If the operand bundle value violates any requirements on the attribute value,
-the behavior is undefined, unless one of the following exceptions applies:
-
-* ``"align"`` operand bundles may specify a non-power-of-two alignment
-  (including a zero alignment). If this is the case, then the pointer value
-  must be an all-zero pointer, otherwise the behavior is undefined.
-
-* ``dereferenceable(<n>)`` operand bundles only guarantee the pointer is
-  dereferenceable at the point of the assumption. The pointer may not be
-  dereferenceable at later pointers, e.g., because it could have been freed.
-  Only ``n > 0`` implies that the pointer is dereferenceable.
-
-In addition to allowing operand bundles encoding function and parameter
-attributes, an assume operand bundle may also encode a ``separate_storage``
-operand bundle. This has the form:
-
-.. code-block:: llvm
-
-    separate_storage(<val1>, <val2>)``
-
-This indicates that no pointer :ref:`based <pointeraliasing>` on one of its
-arguments can alias any pointer based on the other.
 
 Even if the assumed property can be encoded as a boolean value, like
 ``nonnull``, using operand bundles to express the property can still have
@@ -4044,17 +4067,21 @@ For a simpler introduction to the ordering constraints, see the
 .. _syncscope:
 
 If an atomic operation is marked ``syncscope("singlethread")``, it only
-*synchronizes with* and only participates in the seq\_cst total orderings of
-other operations running in the same thread (for example, in signal handlers).
+*synchronizes with* other operations running in the same thread (for
+example, in signal handlers) and it is related in the seq\_cst order and
+the monotonic modification order with other operations in the same
+thread.
 
 If an atomic operation is marked ``syncscope("<target-scope>")``, where
-``<target-scope>`` is a target-specific synchronization scope, then it is target
-dependent if it *synchronizes with* and participates in the seq\_cst total
-orderings of other operations.
+``<target-scope>`` is a target-specific synchronization scope, then it
+is target-dependent if it *synchronizes with* other operations and
+if it is related with other operations in the seq\_cst order and the
+monotonic modification order.
 
-Otherwise, an atomic operation that is not marked ``syncscope("singlethread")``
-or ``syncscope("<target-scope>")`` *synchronizes with* and participates in the
-seq\_cst total orderings of other operations that are not marked
+Otherwise, an atomic operation that is not marked
+``syncscope("singlethread")`` or ``syncscope("<target-scope>")``
+*synchronizes with* and is related in the seq\_cst order and the
+monotonic modification order with other operations that are not marked
 ``syncscope("singlethread")`` or ``syncscope("<target-scope>")``.
 
 .. _floatenv:
@@ -4187,9 +4214,10 @@ Fast-Math Flags
 LLVM IR floating-point operations (:ref:`fneg <i_fneg>`, :ref:`fadd <i_fadd>`,
 :ref:`fsub <i_fsub>`, :ref:`fmul <i_fmul>`, :ref:`fdiv <i_fdiv>`,
 :ref:`frem <i_frem>`, :ref:`fcmp <i_fcmp>`, :ref:`fptrunc <i_fptrunc>`,
-:ref:`fpext <i_fpext>`), and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or
-:ref:`call <i_call>` instructions that return floating-point types may use the
-following flags to enable otherwise unsafe floating-point transformations.
+:ref:`fpext <i_fpext>`), :ref::`uitofp <i_uitofp>`, :ref::`sitofp <i_sitofp>`,
+and :ref:`phi <i_phi>`, :ref:`select <i_select>`, or :ref:`call <i_call>`
+instructions that return floating-point types may use the following flags to
+enable otherwise unsafe floating-point transformations.
 
 ``fast``
    This flag is a shorthand for specifying all fast-math flags at once, and
@@ -4298,16 +4326,11 @@ Use-list directives may appear at function scope or global scope. They are not
 instructions, and have no effect on the semantics of the IR. When they're at
 function scope, they must appear after the terminator of the final basic block.
 
-If basic blocks have their address taken via ``blockaddress()`` expressions,
-``uselistorder_bb`` can be used to reorder their use-lists from outside their
-function's scope.
-
 :Syntax:
 
 ::
 
     uselistorder <ty> <value>, { <order-indexes> }
-    uselistorder_bb @function, %block { <order-indexes> }
 
 :Examples:
 
@@ -4328,7 +4351,6 @@ function's scope.
     uselistorder ptr @global, { 1, 2, 0 }
     uselistorder i32 7, { 1, 0 }
     uselistorder i32 (i32) @bar, { 1, 0 }
-    uselistorder_bb @foo, %bb, { 5, 1, 3, 2, 0, 4 }
 
 .. _source_filename:
 
@@ -4515,6 +4537,12 @@ Otherwise, when known, the specific type should be used. Each bit can be:
 * ``poison``
 
 Any bit width from 1 bit to 2\ :sup:`23`\ (about 8 million) can be specified.
+
+The per-bit semantics described above (poison and conditional pointer
+provenance preservation) are mid-end only. At the IR-to-MIR boundary both
+SelectionDAG and GlobalISel lower ``bN`` as the equi-sized integer scalar
+(``iN``/``sN``); backend passes do not see the byte type and do not preserve
+its bit-level semantics.
 
 :Syntax:
 
@@ -6584,6 +6612,24 @@ more-accurate debug info for profiling results.
                         enums: !2, retainedTypes: !3, globals: !4, imports: !5,
                         macros: !6, dwoId: 0x0abcd)
 
+The optional ``dialect:`` field encodes the source-language *dialect* of the
+compile unit as an enum. It corresponds to the ``DW_AT_LLVM_language_dialect``
+attribute emitted on ``DW_TAG_compile_unit`` and is intended for language
+dialects that represent different execution models. When specified, the field
+must name one of the known dialects, either symbolically or with the matching
+numeric value; see :ref:`llvm_language_dialect` for the list of supported
+values.
+
+Omitting the ``dialect:`` field is the only way to express "no dialect" in
+textual IR.
+
+.. code-block:: text
+
+    !0 = !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang",
+                        isOptimized: false, runtimeVersion: 0,
+                        emissionKind: FullDebug,
+                        dialect: DW_LLVM_LANG_DIALECT_simt)
+
 Compile unit descriptors provide the root scope for objects declared in a
 specific compilation unit. File descriptors are defined using this scope.  These
 descriptors are collected by a named metadata node ``!llvm.dbg.cu``. They keep
@@ -7824,6 +7870,81 @@ The ``!captures`` attribute makes no statement about other uses of ``%x``, or
 uses of the stored-to memory location after it has been overwritten with a
 different value.
 
+'``mem.cache_hint``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``!mem.cache_hint`` metadata may be attached to any instruction that reads
+or writes memory, except non-intrinsic calls. Cache hints are not permitted on
+function calls because their memory behavior depends on attributes, which may
+change independently.
+
+The ``!mem.cache_hint`` metadata provides target-specific cache control hints
+for the memory operation. This metadata is purely a performance hint: dropping
+or ignoring it must not change the observable behavior of the program
+(particularly, cache hints do not affect memory model semantics).
+
+The ``!mem.cache_hint`` node must contain an even number of entries,
+alternating between ``i32`` operand numbers and metadata hint nodes.
+
+Each operand number identifies the pointer operand to which the following hint
+node applies. For non-call instructions, the operand number is the IR operand
+index. For intrinsic calls, the operand number is the call argument index.
+Operand numbers must be unique and appear in increasing order within a
+``!mem.cache_hint`` node and must refer to a pointer-typed operand.
+
+For example, for a ``load``, the pointer is operand 0. For a ``store``, the
+value is operand 0 and the pointer is operand 1. For intrinsic calls such as
+``llvm.memcpy``, operand numbers correspond to argument positions: e.g.,
+destination is argument 0 and source is argument 1.
+
+Each hint node is a metadata node containing target-prefixed key/value pairs.
+Keys must be strings, and values must be either strings or integer constants.
+Keys within a single hint node must be unique.
+
+The hint node keys are prefixed with a target identifier (e.g., ``nvvm.``) and
+their interpretation is target-dependent. Each hint must describe a property of
+the individual memory access through the corresponding pointer operand. The IR
+verifier enforces only the structural rules above; validation of target-specific
+keys and values is performed by the corresponding backend. Unsupported
+properties may be silently ignored during code generation.
+
+The following examples use ``nvvm.`` prefixed keys for NVIDIA GPU targets.
+Other targets may define their own prefixed keys.
+
+Example: load with cache hints:
+
+.. code-block:: llvm
+
+    %v = load i32, ptr addrspace(1) %p, align 4, !mem.cache_hint !0
+
+    !0 = !{ i32 0, !1 }
+    !1 = !{ !"nvvm.l1_eviction", !"first",
+            !"nvvm.l2_eviction", !"first",
+            !"nvvm.l2_prefetch_size", !"128B" }
+
+Example: store with cache hints:
+
+.. code-block:: llvm
+
+    store i32 %v, ptr addrspace(1) %p, align 4, !mem.cache_hint !0
+
+    !0 = !{ i32 1, !1 }
+    !1 = !{ !"nvvm.l1_eviction", !"last",
+            !"nvvm.l2_eviction", !"last" }
+
+Example: memcpy with per-operand hints:
+
+.. code-block:: llvm
+
+    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %d,
+                                      ptr addrspace(1) %s, i64 16, i1 false),
+                                      !mem.cache_hint !0
+
+    !0 = !{ i32 0, !1, i32 1, !2 }
+    !1 = !{ !"nvvm.l1_eviction", !"last" }
+    !2 = !{ !"nvvm.l1_eviction", !"first",
+            !"nvvm.l2_prefetch_size", !"128B" }
+
 .. _llvm.loop:
 
 '``llvm.loop``'
@@ -8022,7 +8143,7 @@ Together these two attributes provide a four-way classification:
 
 - ``body`` only: main vectorized loop body
 - ``epilogue`` only: scalar epilogue loop after vectorization
-- Both ``body`` and ``epilogue``: vectorized epilogue 
+- Both ``body`` and ``epilogue``: vectorized epilogue
   (a remainder loop that was itself vectorized during epilogue
   vectorization)
 - Neither: a plain loop not produced by the vectorizer
@@ -8514,6 +8635,10 @@ value (but see the ``llvm.launder.invariant.group`` intrinsic which affects
 when two pointers are considered the same). Pointers returned by bitcast or
 getelementptr with only zero indices are considered the same.
 
+Note that the metadata value in invariant.group carries no semantic value.
+Because it must have no entries, all invariant.group annotations in a module
+reference the same uniqued empty node.
+
 Examples:
 
 .. code-block:: llvm
@@ -8651,7 +8776,7 @@ is executed, followed by ``uint64_t`` value and execution count pairs.
 The value profiling kind is 0 for indirect call targets and 1 for memory
 operations. For indirect call targets, each profile value is a hash
 of the callee function name, and for memory operations each value is the
-byte length. It is illegal to have duplicate profile values (e.g., 
+byte length. It is illegal to have duplicate profile values (e.g.,
 duplicate function hashes for indirect calls or byte lengths for memory
 operations).
 
@@ -12988,6 +13113,8 @@ Example:
       %Y = fptosi float 1.0E-247 to i1      ; yields undefined:1
       %Z = fptosi float 1.04E+17 to i8      ; yields undefined:1
 
+.. _i_uitofp:
+
 '``uitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -12996,7 +13123,7 @@ Syntax:
 
 ::
 
-      <result> = uitofp <ty> <value> to <ty2>             ; yields ty2
+      <result> = uitofp [fast-math flags]* [nneg] <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -13040,6 +13167,8 @@ Example:
       %a = uitofp nneg i32 256 to float    ; yields float:256.0
       %b = uitofp nneg i32 -256 to float   ; yields float poison
 
+.. _i_sitofp:
+
 '``sitofp .. to``' Instruction
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -13048,7 +13177,7 @@ Syntax:
 
 ::
 
-      <result> = sitofp <ty> <value> to <ty2>             ; yields ty2
+      <result> = sitofp [fast-math flags]* <ty> <value> to <ty2> ; yields ty2
 
 Overview:
 """""""""
@@ -15248,9 +15377,10 @@ called).
 .. _int_read_register:
 .. _int_read_volatile_register:
 .. _int_write_register:
+.. _int_write_volatile_register:
 
-'``llvm.read_register``', '``llvm.read_volatile_register``', and '``llvm.write_register``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+'``llvm.read_register``', '``llvm.read_volatile_register``', '``llvm.write_register``', and '``llvm.write_volatile_register``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -15263,26 +15393,30 @@ Syntax:
       declare i64 @llvm.read_volatile_register.i64(metadata)
       declare void @llvm.write_register.i32(metadata, i32 @value)
       declare void @llvm.write_register.i64(metadata, i64 @value)
+      declare void @llvm.write_volatile_register.i32(metadata, i32 @value)
+      declare void @llvm.write_volatile_register.i64(metadata, i64 @value)
       !0 = !{!"sp\00"}
 
 Overview:
 """""""""
 
-The '``llvm.read_register``', '``llvm.read_volatile_register``', and
-'``llvm.write_register``' intrinsics provide access to the named register.
-The register must be valid on the architecture being compiled to. The type
-needs to be compatible with the register being read.
+The '``llvm.read_register``', '``llvm.read_volatile_register``',
+'``llvm.write_register``', and '``llvm.write_volatile_register``' intrinsics
+provide access to the named register. The register must be valid on the
+architecture being compiled to. The type needs to be compatible with the
+register being accessed.
 
 Semantics:
 """"""""""
 
 The '``llvm.read_register``' and '``llvm.read_volatile_register``' intrinsics
 return the current value of the register, where possible. The
-'``llvm.write_register``' intrinsic sets the current value of the register,
-where possible.
+'``llvm.write_register``' and '``llvm.write_volatile_register``' intrinsics
+set the current value of the register, where possible.
 
-A call to '``llvm.read_volatile_register``' is assumed to have side-effects
-and possibly return a different value each time (e.g., for a timer register).
+A call to '``llvm.read_volatile_register``' or
+'``llvm.write_volatile_register``' is assumed to have side-effects and will
+not be reordered or eliminated by the optimizer.
 
 This is useful to implement named register global variables that need
 to always be mapped to a specific register, as is common practice on
@@ -15290,12 +15424,22 @@ bare-metal programs including OS kernels.
 
 The compiler doesn't check for register availability or use of the used
 register in surrounding code, including inline assembly. Because of that,
-allocatable registers are not supported.
+allocatable registers are not supported by '``llvm.read_register``',
+'``llvm.read_volatile_register``', or '``llvm.write_register``'.
 
-Warning: So far it only works with the stack pointer on selected
-architectures (ARM, AArch64, PowerPC and x86_64). Significant amount of
-work is needed to support other registers and even more so, allocatable
-registers.
+'``llvm.write_volatile_register``' supports allocatable registers. Writing
+to an allocatable register means the value is copied into that physical
+register at the point of the call; the register may subsequently be
+reused by the register allocator for other purposes. The backend emits a
+``FAKE_USE`` of the physical register after the write to prevent the store
+from being dead-eliminated before register allocation.
+
+Warning: Register support is target-specific. The IR-level verifier does
+not validate register names; an unsupported name results in a fatal error
+during code generation. Supported registers vary by target and can be
+found in each target's ``getRegisterByName`` implementation.
+'``llvm.write_volatile_register``' support for allocatable registers is
+currently only implemented on AArch64.
 
 .. _int_stacksave:
 
@@ -21592,6 +21736,267 @@ Arguments:
 
 None.
 
+Vector Mask Intrinsics
+----------------------
+
+.. _int_get_active_lane_mask:
+
+'``llvm.get.active.lane.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %base, i32 %n)
+      declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 %base, i64 %n)
+      declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 %base, i64 %n)
+      declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %base, i64 %n)
+
+
+Overview:
+"""""""""
+
+Create a mask representing active and inactive vector lanes.
+
+
+Arguments:
+""""""""""
+
+Both arguments have the same scalar integer type. The result is a vector with
+the i1 element type.
+
+Semantics:
+""""""""""
+
+The '``llvm.get.active.lane.mask.*``' intrinsics are semantically equivalent
+to:
+
+::
+
+      %m[i] = icmp ult (%base + i), %n
+
+where ``%m`` is a vector (mask) of active/inactive lanes with its elements
+indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
+``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
+the unsigned less-than comparison operator.  Overflow cannot occur in
+``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
+numbers and not in machine numbers.  The above is equivalent to:
+
+::
+
+      %m = @llvm.get.active.lane.mask(%base, %n)
+
+This can, for example, be emitted by the loop vectorizer in which case
+``%base`` is the first element of the vector induction variable (VIV) and
+``%n`` is the loop tripcount. Thus, these intrinsics perform an element-wise
+less than comparison of VIV with the loop tripcount, producing a mask of
+true/false values representing active/inactive vector lanes, except if the VIV
+overflows in which case they return false in the lanes where the VIV overflows.
+The arguments are scalar types to accommodate scalable vector types, for which
+it is unknown what the type of the step vector needs to be that enumerate its
+lanes without overflow.
+
+This mask ``%m`` can e.g., be used in masked load/store instructions. These
+intrinsics provide a hint to the backend. I.e., for a vector loop, the
+back-edge taken count of the original scalar loop is explicit as the second
+argument.
+
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
+      %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr align 4 %3, <4 x i1> %active.lane.mask, <4 x i32> poison)
+
+
+.. _int_loop_dependence_war_mask:
+
+'``llvm.loop.dependence.war.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector load from address %addrA followed by a vector store to address
+%addrB, this instruction generates a mask where an active lane indicates that
+the write-after-read sequence can be performed safely for that lane, without the
+danger of a write-after-read hazard occurring.
+
+A write-after-read hazard occurs when a write-after-read sequence for a given
+lane in a vector ends up being executed as a read-after-write sequence due to
+the aliasing of pointers.
+
+Arguments:
+""""""""""
+
+The first two arguments are integers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
+is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
+or ``%addrB + VF * %elementSize`` wrap.
+
+The element of the result mask is active when loading from %addrA then storing to
+%addrB is safe and doesn't result in a write-after-read hazard, meaning that:
+
+* (addrB - addrA) <= 0 (guarantees that all lanes are loaded before any stores), or
+* elementSize * lane < (addrB - addrA) (guarantees that this lane is loaded
+  before the store to the same address)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %addrA = ptrtoaddr ptr %ptrA to i64
+      %addrB = ptrtoaddr ptr %ptrB to i64
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+      [...]
+      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
+
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. addrA >= addrB
+      ;
+      ;   load =      <0,1,2,3>     ; uint32_t load = array[i+2];
+      ;  store =  <0,1,2,3>         ; array[i] = store;
+      ;
+      ; This results in an all-true mask, as the load always occurs before the
+      ; store, so it does not depend on any values to be stored.
+      ;
+      ; 2. addrB - addrA = 2 * elementSize:
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =      <0,1,2,3>     ; array[i+2] = store;
+      ;
+      ; This results in a mask with the first two lanes active. This is because
+      ; we can only read two lanes before we would read values that have yet to
+      ; be written.
+      ;
+      ; 3. addrB - addrA = 4 * elementSize
+      ;
+      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
+      ;  store =          <0,1,2,3> ; array[i+4] = store;
+      ;
+      ; This results in an all-true mask, as the store is a full vector ahead
+      ; of the load, so all values will be written before any lane is read.
+
+.. _int_loop_dependence_raw_mask:
+
+'``llvm.loop.dependence.raw.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
+      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
+
+
+Overview:
+"""""""""
+
+Given a vector store to address %addrA followed by a vector load from address
+%addrB, this instruction generates a mask where an active lane indicates that the
+read-after-write sequence can be performed safely for that lane, without a
+read-after-write hazard or a store-to-load forwarding hazard being introduced.
+
+A read-after-write hazard occurs when a read-after-write sequence for a given
+lane in a vector ends up being executed as a write-after-read sequence due to
+the aliasing of pointers.
+
+A store-to-load forwarding hazard occurs when a vector store writes to an
+address that partially overlaps with the address of a subsequent vector load,
+meaning that the vector load can't be performed until the vector store is
+complete.
+
+Arguments:
+""""""""""
+
+The first two arguments are integers and the last argument is an immediate.
+The result is a vector with the i1 element type.
+
+Semantics:
+""""""""""
+
+``%elementSize`` is the size of the accessed elements in bytes.
+The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
+is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
+or ``%addrB + VF * %elementSize`` wrap.
+
+The element of the result mask is active when storing to %addrA then loading from
+%addrB is safe and doesn't result in aliasing, meaning that:
+
+* elementSize * lane < abs(addrB - addrA) (guarantees that the store of this lane
+  occurs before loading from this address), or
+* addrA == addrB (doesn't introduce any new hazards that weren't in the scalar
+  code)
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %addrA = ptrtoaddr ptr %ptrA to i64
+      %addrB = ptrtoaddr ptr %ptrB to i64
+      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
+      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
+      [...]
+      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
+
+      ; For the above example, consider the following cases:
+      ;
+      ; 1. addrA == addrB
+      ;
+      ;  store = <0,1,2,3>       ; array[i] = store;
+      ;   load = <0,1,2,3>       ; uint32_t load = array[i];
+      ;
+      ; This results in a all-true mask. There is no conflict.
+      ;
+      ; 2. addrB - addrA = 2 * elementSize
+      ;
+      ;  store =  <0,1,2,3>      ; array[i] = store;
+      ;   load =      <0,1,2,3>  ; uint32_t load = array[i+2];
+      ;
+      ; This results in a mask with the first two lanes active. In this case,
+      ; only two lanes can be written without overwriting values yet to be read.
+      ;
+      ; 3. addrB - addrA = -2 * elementSize
+      ;
+      ;  store =      <0,1,2,3>  ; array[i+2] = store;
+      ;   load =  <0,1,2,3>      ; uint32_t load = array[i];
+      ;
+      ; This also results in a mask with the first two lanes active. This is
+      ; because if any more lanes were active the load would be dependent on the
+      ; completion of the store.
+
 Experimental Vector Intrinsics
 ------------------------------
 
@@ -25197,265 +25602,6 @@ Examples:
       %masked.a = select <4 x i1> %mask, <4 x float> %a, <4 x float> <float infinity, float infinity, float infinity, float infinity>
       %reduction = call float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %masked.a)
       %also.r = call float @llvm.minimum.f32(float %reduction, float %start)
-
-
-.. _int_get_active_lane_mask:
-
-'``llvm.get.active.lane.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %base, i32 %n)
-      declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i64(i64 %base, i64 %n)
-      declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 %base, i64 %n)
-      declare <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 %base, i64 %n)
-
-
-Overview:
-"""""""""
-
-Create a mask representing active and inactive vector lanes.
-
-
-Arguments:
-""""""""""
-
-Both arguments have the same scalar integer type. The result is a vector with
-the i1 element type.
-
-Semantics:
-""""""""""
-
-The '``llvm.get.active.lane.mask.*``' intrinsics are semantically equivalent
-to:
-
-::
-
-      %m[i] = icmp ult (%base + i), %n
-
-where ``%m`` is a vector (mask) of active/inactive lanes with its elements
-indexed by ``i``,  and ``%base``, ``%n`` are the two arguments to
-``llvm.get.active.lane.mask.*``, ``%icmp`` is an integer compare and ``ult``
-the unsigned less-than comparison operator.  Overflow cannot occur in
-``(%base + i)`` and its comparison against ``%n`` as it is performed in integer
-numbers and not in machine numbers.  The above is equivalent to:
-
-::
-
-      %m = @llvm.get.active.lane.mask(%base, %n)
-
-This can, for example, be emitted by the loop vectorizer in which case
-``%base`` is the first element of the vector induction variable (VIV) and
-``%n`` is the loop tripcount. Thus, these intrinsics perform an element-wise
-less than comparison of VIV with the loop tripcount, producing a mask of
-true/false values representing active/inactive vector lanes, except if the VIV
-overflows in which case they return false in the lanes where the VIV overflows.
-The arguments are scalar types to accommodate scalable vector types, for which
-it is unknown what the type of the step vector needs to be that enumerate its
-lanes without overflow.
-
-This mask ``%m`` can e.g., be used in masked load/store instructions. These
-intrinsics provide a hint to the backend. I.e., for a vector loop, the
-back-edge taken count of the original scalar loop is explicit as the second
-argument.
-
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
-      %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr align 4 %3, <4 x i1> %active.lane.mask, <4 x i32> poison)
-
-
-.. _int_loop_dependence_war_mask:
-
-'``llvm.loop.dependence.war.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <8 x i1> @llvm.loop.dependence.war.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
-      declare <16 x i1> @llvm.loop.dependence.war.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <vscale x 16 x i1> @llvm.loop.dependence.war.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-
-
-Overview:
-"""""""""
-
-Given a vector load from address %addrA followed by a vector store to address
-%addrB, this instruction generates a mask where an active lane indicates that
-the write-after-read sequence can be performed safely for that lane, without the
-danger of a write-after-read hazard occurring.
-
-A write-after-read hazard occurs when a write-after-read sequence for a given
-lane in a vector ends up being executed as a read-after-write sequence due to
-the aliasing of pointers.
-
-Arguments:
-""""""""""
-
-The first two arguments are integers and the last argument is an immediate.
-The result is a vector with the i1 element type.
-
-Semantics:
-""""""""""
-
-``%elementSize`` is the size of the accessed elements in bytes.
-The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
-is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
-or ``%addrB + VF * %elementSize`` wrap.
-
-The element of the result mask is active when loading from %addrA then storing to
-%addrB is safe and doesn't result in a write-after-read hazard, meaning that:
-
-* (addrB - addrA) <= 0 (guarantees that all lanes are loaded before any stores), or
-* elementSize * lane < (addrB - addrA) (guarantees that this lane is loaded
-  before the store to the same address)
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %addrA = ptrtoaddr ptr %ptrA to i64
-      %addrB = ptrtoaddr ptr %ptrB to i64
-      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
-      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
-      [...]
-      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask)
-
-      ; For the above example, consider the following cases:
-      ;
-      ; 1. addrA >= addrB
-      ;
-      ;   load =      <0,1,2,3>     ; uint32_t load = array[i+2];
-      ;  store =  <0,1,2,3>         ; array[i] = store;
-      ;
-      ; This results in an all-true mask, as the load always occurs before the
-      ; store, so it does not depend on any values to be stored.
-      ;
-      ; 2. addrB - addrA = 2 * elementSize:
-      ;
-      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
-      ;  store =      <0,1,2,3>     ; array[i+2] = store;
-      ;
-      ; This results in a mask with the first two lanes active. This is because
-      ; we can only read two lanes before we would read values that have yet to
-      ; be written.
-      ;
-      ; 3. addrB - addrA = 4 * elementSize
-      ;
-      ;   load =  <0,1,2,3>         ; uint32_t load = array[i];
-      ;  store =          <0,1,2,3> ; array[i+4] = store;
-      ;
-      ; This results in an all-true mask, as the store is a full vector ahead
-      ; of the load, so all values will be written before any lane is read.
-
-.. _int_loop_dependence_raw_mask:
-
-'``llvm.loop.dependence.raw.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Syntax:
-"""""""
-This is an overloaded intrinsic.
-
-::
-
-      declare <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <8 x i1> @llvm.loop.dependence.raw.mask.v8i1.i32(i32 %addrA, i32 %addrB, i32 immarg %elementSize)
-      declare <16 x i1> @llvm.loop.dependence.raw.mask.v16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-      declare <vscale x 16 x i1> @llvm.loop.dependence.raw.mask.nxv16i1.i64(i64 %addrA, i64 %addrB, i64 immarg %elementSize)
-
-
-Overview:
-"""""""""
-
-Given a vector store to address %addrA followed by a vector load from address
-%addrB, this instruction generates a mask where an active lane indicates that the
-read-after-write sequence can be performed safely for that lane, without a
-read-after-write hazard or a store-to-load forwarding hazard being introduced.
-
-A read-after-write hazard occurs when a read-after-write sequence for a given
-lane in a vector ends up being executed as a write-after-read sequence due to
-the aliasing of pointers.
-
-A store-to-load forwarding hazard occurs when a vector store writes to an
-address that partially overlaps with the address of a subsequent vector load,
-meaning that the vector load can't be performed until the vector store is
-complete.
-
-Arguments:
-""""""""""
-
-The first two arguments are integers and the last argument is an immediate.
-The result is a vector with the i1 element type.
-
-Semantics:
-""""""""""
-
-``%elementSize`` is the size of the accessed elements in bytes.
-The intrinsic returns ``poison`` if the distance between ``%addrA`` and ``%addrB``
-is smaller than ``VF * %elementsize`` and either ``%addrA + VF * %elementSize``
-or ``%addrB + VF * %elementSize`` wrap.
-
-The element of the result mask is active when storing to %addrA then loading from
-%addrB is safe and doesn't result in aliasing, meaning that:
-
-* elementSize * lane < abs(addrB - addrA) (guarantees that the store of this lane
-  occurs before loading from this address), or
-* addrA == addrB (doesn't introduce any new hazards that weren't in the scalar
-  code)
-
-Examples:
-"""""""""
-
-.. code-block:: llvm
-
-      %addrA = ptrtoaddr ptr %ptrA to i64
-      %addrB = ptrtoaddr ptr %ptrB to i64
-      %loop.dependence.mask = call <4 x i1> @llvm.loop.dependence.raw.mask.v4i1.i64(i64 %addrA, i64 %addrB, i64 4)
-      call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %loop.dependence.mask)
-      [...]
-      %vecB = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 %ptrB, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
-
-      ; For the above example, consider the following cases:
-      ;
-      ; 1. addrA == addrB
-      ;
-      ;  store = <0,1,2,3>       ; array[i] = store;
-      ;   load = <0,1,2,3>       ; uint32_t load = array[i];
-      ;
-      ; This results in a all-true mask. There is no conflict.
-      ;
-      ; 2. addrB - addrA = 2 * elementSize
-      ;
-      ;  store =  <0,1,2,3>      ; array[i] = store;
-      ;   load =      <0,1,2,3>  ; uint32_t load = array[i+2];
-      ;
-      ; This results in a mask with the first two lanes active. In this case,
-      ; only two lanes can be written without overwriting values yet to be read.
-      ;
-      ; 3. addrB - addrA = -2 * elementSize
-      ;
-      ;  store =      <0,1,2,3>  ; array[i+2] = store;
-      ;   load =  <0,1,2,3>      ; uint32_t load = array[i];
-      ;
-      ; This also results in a mask with the first two lanes active. This is
-      ; because if any more lanes were active the load would be dependent on the
-      ; completion of the store.
 
 .. _int_experimental_vp_splice:
 

@@ -20,7 +20,7 @@ namespace llvm {
 class MCExpr;
 class MCInst;
 
-class MCWasmStreamer : public MCObjectStreamer {
+class LLVM_ABI MCWasmStreamer : public MCObjectStreamer {
 public:
   MCWasmStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                  std::unique_ptr<MCObjectWriter> OW,

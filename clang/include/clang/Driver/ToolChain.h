@@ -61,6 +61,8 @@ class SanitizerArgs;
 class Tool;
 class XRayArgs;
 
+enum LTOKind : int;
+
 /// Helper structure used to pass information extracted from clang executable
 /// name such as `i686-linux-android-g++`.
 struct ParsedClangName {
@@ -462,6 +464,17 @@ public:
   /// native LLVM support.
   virtual bool HasNativeLLVMSupport() const;
 
+  /// Returns the default LTO mode for this toolchain.
+  virtual LTOKind getDefaultLTOMode() const;
+
+  /// Resolve the requested LTO mode for this toolchain.
+  virtual LTOKind getLTOMode(const llvm::opt::ArgList &Args,
+                             Action::OffloadKind Kind = Action::OFK_None) const;
+
+  /// Returns true if LTO is active for this toolchain given the args.
+  bool isUsingLTO(const llvm::opt::ArgList &Args,
+                  Action::OffloadKind Kind = Action::OFK_None) const;
+
   /// LookupTypeForExtension - Return the default language type to use for the
   /// given extension.
   virtual types::ID LookupTypeForExtension(StringRef Ext) const;
@@ -741,9 +754,9 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const;
 
   /// Add options that need to be passed to cc1 for this target.
-  virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                     llvm::opt::ArgStringList &CC1Args,
-                                     Action::OffloadKind DeviceOffloadKind) const;
+  virtual void addClangTargetOptions(
+      const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+      llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const;
 
   /// Add options that need to be passed to cc1as for this target.
   virtual void
@@ -855,7 +868,7 @@ public:
 
   /// Get paths for device libraries.
   virtual llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getDeviceLibs(const llvm::opt::ArgList &Args,
+  getDeviceLibs(const llvm::opt::ArgList &Args, llvm::StringRef BoundArch,
                 const Action::OffloadKind DeviceOffloadingKind) const;
 
   /// Add the system specific libraries for the active offload kinds.

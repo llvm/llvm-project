@@ -126,7 +126,7 @@ MVT X86TargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
     return MVT::i32;
 
   if (isTypeLegal(MVT::f16)) {
-    if (VT.isVector() && VT.getVectorElementType() == MVT::bf16)
+    if (VT.isVectorOf(MVT::bf16))
       return getRegisterTypeForCallingConv(
           Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -165,8 +165,7 @@ unsigned X86TargetLowering::getNumRegistersForCallingConv(LLVMContext &Context,
       return 3;
   }
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     return getNumRegistersForCallingConv(
         Context, CC, VT.changeVectorElementType(Context, MVT::f16));
 
@@ -177,8 +176,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
     LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
     unsigned &NumIntermediates, MVT &RegisterVT) const {
   // Break wide or odd vXi1 vectors into scalars to match avx2 behavior.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
-      Subtarget.hasAVX512() &&
+  if (VT.isVectorOf(MVT::i1) && Subtarget.hasAVX512() &&
       (!isPowerOf2_32(VT.getVectorNumElements()) ||
        (VT.getVectorNumElements() == 64 && !Subtarget.hasBWI()) ||
        VT.getVectorNumElements() > 64)) {
@@ -198,8 +196,7 @@ unsigned X86TargetLowering::getVectorTypeBreakdownForCallingConv(
   }
 
   // Split vNbf16 vectors according to vNf16.
-  if (VT.isVector() && VT.getVectorElementType() == MVT::bf16 &&
-      isTypeLegal(MVT::f16))
+  if (VT.isVectorOf(MVT::bf16) && isTypeLegal(MVT::f16))
     VT = VT.changeVectorElementType(Context, MVT::f16);
 
   return TargetLowering::getVectorTypeBreakdownForCallingConv(Context, CC, VT, IntermediateVT,
@@ -785,7 +782,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     else if (VA.getLocInfo() == CCValAssign::ZExt)
       ValToCopy = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), ValToCopy);
     else if (VA.getLocInfo() == CCValAssign::AExt) {
-      if (ValVT.isVector() && ValVT.getVectorElementType() == MVT::i1)
+      if (ValVT.isVectorOf(MVT::i1))
         ValToCopy = lowerMasksToReg(ValToCopy, VA.getLocVT(), dl, DAG);
       else
         ValToCopy = DAG.getNode(ISD::ANY_EXTEND, dl, VA.getLocVT(), ValToCopy);
@@ -1242,11 +1239,11 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getIntPtrConstant(Flags.getByValSize(), dl);
-
-  return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile*/ false, /*AlwaysInline=*/true,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  Align Alignment = Flags.getNonZeroByValAlign();
+  return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile*/ false, /*AlwaysInline=*/true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 /// Return true if the calling convention is one that we can guarantee TCO for.
@@ -2115,23 +2112,21 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     CCInfo.AnalyzeArgumentsSecondPass(Outs, CC_X86);
   }
 
-  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
-  bool IsSibcall = false;
+  // We cannot guarantee TCO for mismatched calling conventions.
   if (isTailCall && ShouldGuaranteeTCO) {
-    // If we need to guarantee TCO for a non-musttail call, we just need to make
-    // sure the conventions match. If a tail call uses one of the supported TCO
-    // conventions and the caller and callee match, we can tail call any
-    // function prototype.
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
     isTailCall = (CallConv == CallerCC);
-    IsSibcall = IsMustTail;
-  } else if (isTailCall) {
-    // Check if this tail call is a "sibling" call, which is loosely defined to
-    // be a tail call that doesn't require heroics like moving the return
-    // address or swapping byval arguments. We treat some musttail calls as
-    // sibling calls to avoid unnecessary argument copies.
+  }
+
+  // Check if this tail call is a "sibling" call, which is loosely defined to
+  // be a tail call that doesn't require heroics like moving the return
+  // address or swapping byval arguments. We treat some musttail calls as
+  // sibling calls to avoid unnecessary argument copies.
+  bool IsMustTail = CLI.CB && CLI.CB->isMustTailCall();
+  bool IsSibcall = false;
+  if (isTailCall) {
     IsSibcall = isEligibleForSiblingCallOpt(CLI, CCInfo, ArgLocs);
-    isTailCall = IsSibcall || IsMustTail;
+    isTailCall = IsSibcall || IsMustTail || ShouldGuaranteeTCO;
   }
 
   if (isTailCall)

@@ -139,9 +139,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 
-  if (D.isUsingLTO())
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
@@ -367,7 +366,7 @@ ToolChain::CXXStdlibType Fuchsia::GetCXXStdlibType(const ArgList &Args) const {
 }
 
 void Fuchsia::addClangTargetOptions(const ArgList &DriverArgs,
-                                    ArgStringList &CC1Args,
+                                    ArgStringList &CC1Args, StringRef BoundArch,
                                     Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))

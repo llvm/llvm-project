@@ -1,0 +1,168 @@
+# When /test-suite is commented on a PR, checks out the PR, builds clang and
+# then the test-suite in several configurations. It then checks out the base of
+# the PR, builds clang and the test-suite again, and then uploads the diff of
+# the codegen.
+
+# TODO: React to the comment to let the user know the workflow has kicked
+# off. We'll need to do this in a separate workflow like issue-write.yml with
+# elevated permissions, since this workflow can't have write permissions on
+# account for the arbitrary code execution.
+
+name: Diff test-suite codegen
+
+on:
+  issue_comment:
+    types:
+      - created
+
+permissions:
+  contents: read
+
+jobs:
+  permission-check:
+    if: github.event.issue.pull_request && startswith(github.event.comment.body, '/test-suite')
+    runs-on: ubuntu-24.04
+    environment:
+      name: main-branch-only
+      deployment: false
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
+
+      - name: Check Permissions
+        uses: ./.github/workflows/require-team-membership
+        with:
+          team-slug: llvm-committers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+  test-suite:
+    name: Build test-suite and diff
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
+    needs:
+      - permission-check
+    steps:
+      - name: Get pull request
+        id: get-pr
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.issue.number
+            })
+            return pr
+      - name: Check pull request is mergeable
+        if: ${{ !fromJSON(steps.get-pr.outputs.result).mergeable }}
+        run: |
+          cat << EOF > comments
+          [{"body": "Unable to diff test-suite with PR, PR isn't mergeable"}]
+          EOF
+          exit 1
+      - name: Checkout pull request
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          ref: ${{ fromJSON(steps.get-pr.outputs.result).merge_commit_sha }}
+          repository: ${{ fromJSON(steps.get-pr.outputs.result).head.repo.full_name }}
+          fetch-depth: 2
+          path: llvm-project
+          persist-credentials: false
+      - name: Checkout llvm/llvm-test-suite
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          repository: llvm/llvm-test-suite
+          path: llvm-test-suite
+          persist-credentials: false
+      - name: Setup environment variables
+        run: |
+          echo "HEAD_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+          echo "BASE_SHA=$(git rev-parse HEAD^)" >> $GITHUB_ENV
+          SCRIPTS_DIR="$GITHUB_WORKSPACE/llvm-project/.github/workflows/test-suite"
+          echo "SCRIPTS_DIR=$SCRIPTS_DIR" >> $GITHUB_ENV
+          echo "$SCRIPTS_DIR" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/llvm-project/build/bin" >> $GITHUB_PATH
+        working-directory: llvm-project
+      - name: Install system dependencies
+        run: |
+          # Install newer version of CMake (llvm/ci-ubuntu-24.04 image has CMake 3.28)
+          # TODO(boomanaiden154): Remove once upgraded to Ubuntu 26.04
+          sudo apt-get update
+          sudo apt-get install -y wget
+          wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | sudo tee /usr/share/keyrings/kitware-archive-keyring.gpg >/dev/null
+          echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ noble main' | sudo tee /etc/apt/sources.list.d/kitware.list >/dev/null
+
+          sudo apt-get update
+          sudo apt-get install -y cmake tcl libc6-dev-arm64-cross libc6-dev-riscv64-cross libgcc-14-dev-arm64-cross libgcc-14-dev-riscv64-cross libstdc++-14-dev-arm64-cross libstdc++-14-dev-riscv64-cross
+      - name: Configure Clang
+        run: cmake -B build -C $SCRIPTS_DIR/llvm.cmake llvm -GNinja
+        working-directory: llvm-project
+      - name: Build Clang @ head
+        run: ninja -C build
+        working-directory: llvm-project
+      - name: Configure and build test-suite @ head
+        run: |
+          configure-and-build.sh rva23u64-O3-head $SCRIPTS_DIR/riscv64.cmake
+          configure-and-build.sh armv9-a-O3-head $SCRIPTS_DIR/aarch64.cmake
+          configure-and-build.sh x86_64-O3-head $SCRIPTS_DIR/x86_64.cmake
+        working-directory: llvm-test-suite
+      - name: Build Clang @ base
+        run: git checkout $BASE_SHA && ninja -C build
+        working-directory: llvm-project
+      - name: Configure and build test-suite @ base
+        run: |
+          configure-and-build.sh rva23u64-O3-base $SCRIPTS_DIR/riscv64.cmake
+          configure-and-build.sh armv9-a-O3-base $SCRIPTS_DIR/aarch64.cmake
+          configure-and-build.sh x86_64-O3-base $SCRIPTS_DIR/x86_64.cmake
+        working-directory: llvm-test-suite
+      - name: Compute diffs
+        run: |
+          mkdir diffs
+          ./utils/tdiff.py -a build.rva23u64-O3-base -b build.rva23u64-O3-head -s all > diffs/rva23u64-O3.diff || true
+          ./utils/tdiff.py -a build.armv9-a-O3-base -b build.armv9-a-O3-head -s all > diffs/armv9-a-O3.diff || true
+          ./utils/tdiff.py -a build.x86_64-O3-base -b build.x86_64-O3-head -s all > diffs/x86_64-O3.diff || true
+        working-directory: llvm-test-suite
+      - name: Upload diffs
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+        id: upload-diffs
+        with:
+          name: diffs
+          path: llvm-test-suite/diffs
+      - name: Upload results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f #v7.0.0
+        with:
+          name: results
+          path: llvm-test-suite/results*.json
+      - name: Create comment
+        env:
+          ARTIFACT_URL: ${{ steps.upload-diffs.outputs.artifact-url }}
+        run: |
+          cat << EOF > comments
+          [{"body" : "test-suite diff from $BASE_SHA...$HEAD_SHA: $ARTIFACT_URL"}]
+          EOF
+      - name: Create comment on failure
+        if: failure()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          cat << EOF > comments
+          [{"body" : "Failed to get test-suite diff from $BASE_SHA...$HEAD_SHA: $RUN_URL"}]
+          EOF
+      - name: Save PR number
+        if: always()
+        env:
+          PR_NUMBER: ${{ fromJSON(steps.get-pr.outputs.result).number }}
+        run: echo $PR_NUMBER > pr_number
+      - name: Upload comment and PR number
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: always()
+        with:
+          name: workflow-args
+          path: |
+            comments
+            pr_number

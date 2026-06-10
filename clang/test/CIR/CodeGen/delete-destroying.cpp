@@ -37,8 +37,8 @@ void test_destroying_delete(S *s) {
 // responsible for destroying the object itself.
 
 // CIR: cir.func {{.*}} @_Z22test_destroying_deleteP1S(%[[ARG:.*]]: !cir.ptr<!rec_S> {{.*}})
-// CIR:   %[[S_ADDR:.*]] = cir.alloca !cir.ptr<!rec_S>, {{.*}} ["s", init]
-// CIR:   %[[TAG_ADDR:.*]] = cir.alloca !rec_std3A3Adestroying_delete_t, {{.*}} ["destroying.delete.tag"]
+// CIR:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!cir.ptr<!rec_S>>
+// CIR:   %[[TAG_ADDR:.*]] = cir.alloca "destroying.delete.tag" {{.*}} : !cir.ptr<!rec_std3A3Adestroying_delete_t{{.*}}>
 // CIR:   cir.store %[[ARG]], %[[S_ADDR]]
 // CIR:   %[[S:.*]] = cir.load{{.*}} %[[S_ADDR]]
 // CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_S>
@@ -96,7 +96,7 @@ void test_virtual_destroying_delete(V *v) {
 }
 
 // CIR: cir.func {{.*}} @_Z30test_virtual_destroying_deleteP1V(%[[ARG:.*]]: !cir.ptr<!rec_V> {{.*}})
-// CIR:   %[[V_ADDR:.*]] = cir.alloca !cir.ptr<!rec_V>, {{.*}} ["v", init]
+// CIR:   %[[V_ADDR:.*]] = cir.alloca "v" {{.*}} init : !cir.ptr<!cir.ptr<!rec_V>>
 // CIR:   cir.store %[[ARG]], %[[V_ADDR]]
 // CIR:   %[[V:.*]] = cir.load{{.*}} %[[V_ADDR]]
 // CIR:   %[[NULL:.*]] = cir.const #cir.ptr<null> : !cir.ptr<!rec_V>

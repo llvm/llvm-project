@@ -15,8 +15,8 @@ void test_ternary_temporary(bool c, int x) {
   int result = c ? S().get() : x;
 }
 // CIR-LABEL: @_Z22test_ternary_temporarybi
-// CIR:   %[[TMP:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp0"]
-// CIR:   %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // The cleanup scope wraps the full expression so cleanups run on all exits.
 // CIR:   cir.cleanup.scope {
 // Load condition, then active flag false before the ternary (destructor guard).
@@ -117,10 +117,10 @@ void test_ternary_both_branches(bool c) {
   int result = c ? A().get() : B().get();
 }
 // CIR-LABEL: @_Z26test_ternary_both_branchesb
-// CIR:   %[[TMPA:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["ref.tmp0"]
-// CIR:   %[[ACTA:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   %[[TMPB:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
-// CIR:   %[[ACTB:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[TMPA:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_A>
+// CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.cleanup.scope {
 // Both active flags start false; each branch sets its own to true when it runs.
 // CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
@@ -234,10 +234,10 @@ int test_return_ternary(bool c) {
   return c ? A().get() : B().get();
 }
 // CIR-LABEL: @_Z19test_return_ternaryb
-// CIR:   %[[TMPA:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["ref.tmp0"]
-// CIR:   %[[ACTA:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   %[[TMPB:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
-// CIR:   %[[ACTB:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[TMPA:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_A>
+// CIR:   %[[ACTA:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[TMPB:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ACTB:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     %[[FALSE_A:.*]] = cir.const #false
@@ -365,8 +365,8 @@ int test_false_positive_conditional(bool c) {
   return S().get() ? 1 : 2;
 }
 // No cleanup.cond alloca — the destructor is unconditional.
-// CIR-NOT:   cir.alloca {{.*}} ["cleanup.cond"]
-// CIR:   %[[TMP:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["ref.tmp0"]
+// CIR-NOT:   cir.alloca "cleanup.cond"
+// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   cir.call @_ZN1SC1Ev(%[[TMP]])
 // The cleanup scope wraps the get() + select + store.
 // CIR:   cir.cleanup.scope {
@@ -435,11 +435,11 @@ void test_nested_ewc(bool c1, bool c2) {
 }
 
 // CIR-LABEL: @_Z15test_nested_ewcbb
-// CIR:   %[[RESULT:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["result", init]
-// CIR:   %[[REF_TMP:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["ref.tmp0"]
+// CIR:   %[[RESULT:.*]] = cir.alloca "result" {{.*}} init : !cir.ptr<!rec_T>
+// CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_T>
 // cir.scope for the statement expression.
 // CIR:   cir.scope {
-// CIR:     %[[S:.*]] = cir.alloca !rec_T, !cir.ptr<!rec_T>, ["s", init]
+// CIR:     %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_T>
 // Inner ternary: c1 ? T(1) : T(2) — no cleanup scope needed (no deferred dtors).
 // CIR:     %[[C1:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
 // CIR:     cir.if %[[C1]] {
@@ -576,11 +576,11 @@ void test_lvalue_ternary_cleanup(bool c, V &y) {
   y = c ? V(1) : V(2);
 }
 // CIR-LABEL: @_Z27test_lvalue_ternary_cleanupbR1V
-// CIR:   %[[REFTMP:.*]] = cir.alloca !rec_V, !cir.ptr<!rec_V>, ["ref.tmp0"]
-// CIR:   %[[UTRUE:.*]] = cir.alloca !rec_U, !cir.ptr<!rec_U>, ["ref.tmp1"]
-// CIR:   %[[ACTTRUE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   %[[UFALSE:.*]] = cir.alloca !rec_U, !cir.ptr<!rec_U>, ["ref.tmp2"]
-// CIR:   %[[ACTFALSE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[REFTMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_V>
+// CIR:   %[[UTRUE:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_U>
+// CIR:   %[[ACTTRUE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[UFALSE:.*]] = cir.alloca "ref.tmp2" {{.*}} : !cir.ptr<!rec_U>
+// CIR:   %[[ACTFALSE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // The outer cleanup scope wraps the full expression containing the ternary
 // and the operator= call.
 // CIR:   cir.cleanup.scope {
@@ -702,13 +702,13 @@ void test_lvalue_reload(bool c) {
   sink = &r;
 }
 // CIR-LABEL: @_Z18test_lvalue_reloadb
-// CIR:   %[[R_REF:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["r", init, const]
-// CIR:   %[[TMP0:.*]] = cir.alloca !rec_R, !cir.ptr<!rec_R>, ["ref.tmp0"]
-// CIR:   %[[ACT0:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
-// CIR:   %[[TMP1:.*]] = cir.alloca !rec_R, !cir.ptr<!rec_R>, ["ref.tmp1"]
-// CIR:   %[[ACT1:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[R_REF:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_R>
+// CIR:   %[[ACT0:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_R>
+// CIR:   %[[ACT1:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // The spill slot for the lvalue's base pointer.
-// CIR:   %[[SPILL:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["tmp.exprcleanup"]
+// CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.cleanup.scope {
 // CIR:     cir.store {{.*}}, %[[ACT0]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:     cir.store {{.*}}, %[[ACT1]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -807,8 +807,8 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
   return b ? CplxD().get() : x;
 }
 // CIR-LABEL: @_Z25test_complex_cond_cleanupbCf
-// CIR:   %[[TMP:.*]] = cir.alloca !rec_CplxD, !cir.ptr<!rec_CplxD>, ["ref.tmp0"]
-// CIR:   %[[ACTIVE:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.cond"]
+// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_CplxD>
+// CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // The full expression is wrapped in a single cleanup scope.
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[COND:.*]] = cir.load {{.*}} : !cir.ptr<!cir.bool>, !cir.bool
@@ -874,3 +874,161 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
 // OGCG:       [[DTOR]]:
 // OGCG:         call void @_ZN5CplxDD1Ev(ptr {{.*}} %[[TMP]])
 // OGCG:         br label %[[DONE]]
+
+struct LE {
+  LE(int);
+  ~LE();
+};
+
+void test_lifetime_ext_cond_ref(bool c) {
+  const LE &r = c ? LE(1) : LE(2);
+}
+// CIR-LABEL: @_Z26test_lifetime_ext_cond_refb
+// CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_LE>
+// CIR:   %[[R:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_LE>>
+// CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_LE>>
+// CIR:   cir.if %{{.*}} {
+// CIR:     cir.call @_ZN2LEC1Ei(%[[TMP]], %{{.*}})
+// CIR:   } else {
+// CIR:     cir.call @_ZN2LEC1Ei(%[[TMP]], %{{.*}})
+// CIR:   }
+// CIR:   cir.store {{.*}} %[[TMP]], %[[SPILL]]
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[RELOAD:.*]] = cir.load {{.*}} %[[SPILL]] : !cir.ptr<!cir.ptr<!rec_LE>>, !cir.ptr<!rec_LE>
+// CIR:     cir.store {{.*}} %[[RELOAD]], %[[R]]
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN2LED1Ev(%[[TMP]]) nothrow
+// CIR:     cir.yield
+// CIR:   }
+// CIR:   cir.return
+
+// LLVM-LABEL: define dso_local void @_Z26test_lifetime_ext_cond_refb(
+// LLVM:   %[[TMP:.*]] = alloca %struct.LE
+// LLVM:   %[[R:.*]] = alloca ptr
+// LLVM:   %[[SPILL:.*]] = alloca ptr
+// LLVM:   br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// LLVM: [[TRUE]]:
+// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 1)
+// LLVM: [[FALSE]]:
+// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 2)
+// LLVM:   store ptr %[[TMP]], ptr %[[SPILL]]
+// LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
+// LLVM:   store ptr %[[RELOAD]], ptr %[[R]]
+// LLVM:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP]])
+// LLVM:   ret void
+
+// OGCG-LABEL: define dso_local void @_Z26test_lifetime_ext_cond_refb(
+// OGCG:   %[[R:.*]] = alloca ptr
+// OGCG:   %[[TMP:.*]] = alloca %struct.LE
+// OGCG:   br i1 %{{.*}}, label %[[TRUE:.*]], label %[[FALSE:.*]]
+// OGCG: [[TRUE]]:
+// OGCG:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 1)
+// OGCG: [[FALSE]]:
+// OGCG:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP]], i32 {{.*}} 2)
+// OGCG:   store ptr %[[TMP]], ptr %[[R]]
+// OGCG:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP]])
+// OGCG:   ret void
+
+void test_combined_cleanups(bool c) {
+  const LE &r = LE((S().get(), c ? B().get() : 0));
+}
+// CIR-LABEL: @_Z22test_combined_cleanupsb
+// CIR:   %[[TMP_LE:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_LE>
+// CIR:   %[[R:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_LE>>
+// CIR:   %[[TMP_S:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_S>
+// CIR:   %[[TMP_B:.*]] = cir.alloca "ref.tmp2" {{.*}} : !cir.ptr<!rec_B>
+// CIR:   %[[ACT_B:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_LE>>
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.call @_ZN1SC1Ev(%[[TMP_S]])
+// CIR:     cir.cleanup.scope {
+// CIR:       cir.call @_ZN1S3getEv(%[[TMP_S]])
+// CIR:       cir.store {{.*}}, %[[ACT_B]]
+// CIR:       %{{.*}} = cir.ternary({{.*}}, true {
+// CIR:         cir.call @_ZN1BC1Ev(%[[TMP_B]])
+// CIR:         cir.store {{.*}}, %[[ACT_B]]
+// CIR:         cir.call @_ZN1B3getEv(%[[TMP_B]])
+// CIR:       }, false {
+// CIR:       })
+// CIR:       cir.call @_ZN2LEC1Ei(%[[TMP_LE]], %{{.*}})
+// CIR:       cir.store {{.*}} %[[TMP_LE]], %[[SPILL]]
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN1SD1Ev(%[[TMP_S]]) nothrow
+// CIR:       cir.yield
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     %[[FLAG:.*]] = cir.load {{.*}} %[[ACT_B]]
+// CIR:     cir.if %[[FLAG]] {
+// CIR:       cir.call @_ZN1BD1Ev(%[[TMP_B]]) nothrow
+// CIR:     }
+// CIR:     cir.yield
+// CIR:   }
+// CIR:   cir.cleanup.scope {
+// CIR:     %[[RELOAD:.*]] = cir.load {{.*}} %[[SPILL]]
+// CIR:     cir.store {{.*}} %[[RELOAD]], %[[R]]
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN2LED1Ev(%[[TMP_LE]]) nothrow
+// CIR:     cir.yield
+// CIR:   }
+// CIR:   cir.return
+
+// LLVM-LABEL: define dso_local void @_Z22test_combined_cleanupsb(
+// LLVM:   %[[TMP_LE:.*]] = alloca %struct.LE
+// LLVM:   %[[R:.*]] = alloca ptr
+// LLVM:   %[[TMP_S:.*]] = alloca %struct.S
+// LLVM:   %[[TMP_B:.*]] = alloca %struct.B
+// LLVM:   %[[ACT_B:.*]] = alloca i8
+// LLVM:   %[[SPILL:.*]] = alloca ptr
+// LLVM:   call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP_S]])
+// LLVM:   call {{.*}} i32 @_ZN1S3getEv(ptr {{.*}} %[[TMP_S]])
+// LLVM:   store i8 0, ptr %[[ACT_B]]
+// LLVM:   br i1 %{{.*}}, label %[[T:.*]], label %[[F:.*]]
+// LLVM: [[T]]:
+// LLVM:   call void @_ZN1BC1Ev(ptr {{.*}} %[[TMP_B]])
+// LLVM:   store i8 1, ptr %[[ACT_B]]
+// LLVM:   call {{.*}} i32 @_ZN1B3getEv(ptr {{.*}} %[[TMP_B]])
+// LLVM: [[F]]:
+// LLVM:   phi i32 [ 0, %[[F]] ], [ %{{.*}}, %[[T]] ]
+// LLVM:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP_LE]], i32 {{.*}})
+// LLVM:   store ptr %[[TMP_LE]], ptr %[[SPILL]]
+// LLVM:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP_S]])
+// LLVM:   %[[FLAG_BYTE:.*]] = load i8, ptr %[[ACT_B]]
+// LLVM:   %[[FLAG:.*]] = trunc i8 %[[FLAG_BYTE]] to i1
+// LLVM:   br i1 %[[FLAG]], label %[[B_DTOR:.*]], label %[[B_DONE:.*]]
+// LLVM: [[B_DTOR]]:
+// LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[TMP_B]])
+// LLVM: [[B_DONE]]:
+// LLVM:   %[[RELOAD:.*]] = load ptr, ptr %[[SPILL]]
+// LLVM:   store ptr %[[RELOAD]], ptr %[[R]]
+// LLVM:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
+// LLVM:   ret void
+
+// OGCG-LABEL: define dso_local void @_Z22test_combined_cleanupsb(
+// OGCG:   %[[R:.*]] = alloca ptr
+// OGCG:   %[[TMP_LE:.*]] = alloca %struct.LE
+// OGCG:   %[[TMP_S:.*]] = alloca %struct.S
+// OGCG:   %[[TMP_B:.*]] = alloca %struct.B
+// OGCG:   %[[ACT_B:.*]] = alloca i1
+// OGCG:   call void @_ZN1SC1Ev(ptr {{.*}} %[[TMP_S]])
+// OGCG:   call {{.*}} i32 @_ZN1S3getEv(ptr {{.*}} %[[TMP_S]])
+// OGCG:   store i1 false, ptr %[[ACT_B]]
+// OGCG:   br i1 %{{.*}}, label %[[T:.*]], label %[[F:.*]]
+// OGCG: [[T]]:
+// OGCG:   call void @_ZN1BC1Ev(ptr {{.*}} %[[TMP_B]])
+// OGCG:   store i1 true, ptr %[[ACT_B]]
+// OGCG:   call {{.*}} i32 @_ZN1B3getEv(ptr {{.*}} %[[TMP_B]])
+// OGCG: [[F]]:
+// OGCG:   phi i32
+// OGCG:   call void @_ZN2LEC1Ei(ptr {{.*}} %[[TMP_LE]], i32 {{.*}})
+// OGCG:   br i1 %{{.*}}, label %[[B_DTOR:.*]], label %[[B_DONE:.*]]
+// OGCG: [[B_DTOR]]:
+// OGCG:   call void @_ZN1BD1Ev(ptr {{.*}} %[[TMP_B]])
+// OGCG: [[B_DONE]]:
+// OGCG:   call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP_S]])
+// OGCG:   store ptr %[[TMP_LE]], ptr %[[R]]
+// OGCG:   call void @_ZN2LED1Ev(ptr {{.*}} %[[TMP_LE]])
+// OGCG:   ret void

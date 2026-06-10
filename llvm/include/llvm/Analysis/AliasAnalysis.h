@@ -217,14 +217,6 @@ struct AACacheLoc {
 };
 
 template <> struct DenseMapInfo<AACacheLoc> {
-  static inline AACacheLoc getEmptyKey() {
-    return {DenseMapInfo<AACacheLoc::PtrTy>::getEmptyKey(),
-            DenseMapInfo<LocationSize>::getEmptyKey()};
-  }
-  static inline AACacheLoc getTombstoneKey() {
-    return {DenseMapInfo<AACacheLoc::PtrTy>::getTombstoneKey(),
-            DenseMapInfo<LocationSize>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const AACacheLoc &Val) {
     return DenseMapInfo<AACacheLoc::PtrTy>::getHashValue(Val.Ptr) ^
            DenseMapInfo<LocationSize>::getHashValue(Val.Size);

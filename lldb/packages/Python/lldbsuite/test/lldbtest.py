@@ -32,6 +32,7 @@ from __future__ import annotations
 
 # System modules
 import abc
+import errno
 from functools import wraps
 import gc
 import io
@@ -791,7 +792,21 @@ class Base(unittest.TestCase):
                 "MAX_PATH limit): {}".format(bdir)
             )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
-            shutil.rmtree(bdir)
+            # Tolerate files vanishing mid-walk. Clang's implicit module
+            # build leaves behind `*.pcm.lock` lockfiles whose lifetime is
+            # tied to the holding process; a concurrent or just-exited
+            # clang can unlink one between rmtree's scandir and unlink,
+            # raising ENOENT. The dir is going away anyway, so treat
+            # already-gone entries as success.
+            def _ignore_enoent(func, path, exc_info):
+                if (
+                    isinstance(exc_info[1], OSError)
+                    and exc_info[1].errno == errno.ENOENT
+                ):
+                    return
+                raise exc_info[1]
+
+            shutil.rmtree(bdir, onerror=_ignore_enoent)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):
@@ -1964,6 +1979,8 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
             expanded[method_name] = method
             continue
         for value_name in variant.get_enabled_values():
+            if _is_excluded_variant_combination(method, variant.name, value_name):
+                continue
             new_name = method_name + "_" + value_name
 
             @decorators.add_test_categories([value_name])
@@ -1993,6 +2010,30 @@ def _expand_test_variants(attrname, methods, variant, xfail_fns, skip_fns):
 _test_variants = []
 
 
+# Variant value combinations that should never be generated. Each entry maps
+# `variant_name -> value`; a method copy is dropped when its already-set
+# variant attributes plus the new value being added match every key in the
+# entry. Add entries here for crosses that don't exercise anything new and
+# would only inflate the matrix on remote test runs.
+_excluded_variant_combinations = [
+    # Example (uncomment + adapt when registering a real cross to drop):
+    # {"swift_module_importer": "noclang", "swift_embedded": "swiftembed"},
+]
+
+
+def _is_excluded_variant_combination(method, variant_name, value_name):
+    """Return True if assigning *variant_name=value_name* to *method* would
+    produce a combination listed in `_excluded_variant_combinations`."""
+    for combo in _excluded_variant_combinations:
+        if combo.get(variant_name) != value_name:
+            continue
+        if all(
+            getattr(method, k, None) == v for k, v in combo.items() if k != variant_name
+        ):
+            return True
+    return False
+
+
 class LLDBTestCaseFactory(type):
     def __new__(cls, name, bases, attrs):
         original_testcase = super(LLDBTestCaseFactory, cls).__new__(
@@ -2019,6 +2060,11 @@ class LLDBTestCaseFactory(type):
             if attrname.startswith("test") and not getattr(
                 attrvalue, "__no_debug_info_test__", False
             ):
+                # Track only the entries created by THIS attrname so that
+                # variant expansion doesn't accidentally double-expand entries
+                # from a sibling test method whose name happens to be a strict
+                # prefix of attrname (e.g. test_foo vs test_foo_bar).
+                this_attr_entries = {}
                 # Create debug info variants unless NO_DEBUG_INFO_TESTCASE
                 if not original_testcase.NO_DEBUG_INFO_TESTCASE:
                     # If any debug info categories were explicitly tagged, assume that list to be
@@ -2067,23 +2113,31 @@ class LLDBTestCaseFactory(type):
                         if skip_reason:
                             test_method = unittest.skip(skip_reason)(test_method)
 
-                        newattrs[method_name] = test_method
+                        this_attr_entries[method_name] = test_method
                 else:
-                    # NO_DEBUG_INFO_TESTCASE — put method in newattrs for variant expansion
-                    newattrs[attrname] = attrvalue
+                    # NO_DEBUG_INFO_TESTCASE — put method in this_attr_entries
+                    # for variant expansion.
+                    this_attr_entries[attrname] = attrvalue
 
-                # Expand test variants (e.g. additional variant dimensions)
+                # Expand test variants only on the entries we just created
+                # for this attrname, not on the whole newattrs dict (which
+                # would double-expand sibling methods whose names share a
+                # prefix).
                 for variant in _test_variants:
                     if variant.should_expand(attrvalue):
                         xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
                         skip_fns = getattr(attrvalue, "__variant_skip__", {})
-                        newattrs = _expand_test_variants(
+                        this_attr_entries = _expand_test_variants(
                             attrname,
-                            newattrs,
+                            this_attr_entries,
                             variant,
                             xfail_fns=xfail_fns,
                             skip_fns=skip_fns,
                         )
+
+                # Merge this attrname's variant-expanded entries into
+                # newattrs.
+                newattrs.update(this_attr_entries)
 
             else:
                 newattrs[attrname] = attrvalue

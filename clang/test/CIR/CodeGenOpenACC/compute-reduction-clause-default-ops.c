@@ -23,7 +23,7 @@ void acc_compute() {
 #pragma acc parallel reduction(+:someVar)
 // CHECK: acc.reduction.recipe @reduction_add__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <add> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!rec_anon_struct>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.zero : !rec_anon_struct
 // CHECK-NEXT: cir.store{{.*}} %[[ZERO]], %[[BITCAST]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
@@ -47,13 +47,13 @@ void acc_compute() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHSARG]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -70,7 +70,7 @@ void acc_compute() {
 #pragma acc parallel reduction(*:someVar)
 // CHECK-NEXT: acc.reduction.recipe @reduction_mul__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <mul> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!rec_anon_struct>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, {{.*}}, #cir.fp<1{{.*}}> : !cir.double, #true, {{.*}}}> : !rec_anon_struct
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[BITCAST]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
@@ -94,13 +94,13 @@ void acc_compute() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHSARG]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHSARG]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -117,7 +117,7 @@ void acc_compute() {
 #pragma acc parallel reduction(max:someVar)
 // CHECK-NEXT: acc.reduction.recipe @reduction_max__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <max> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!rec_anon_struct>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_record<{#cir.int<-2147483648> : !s32i, #cir.int<0> : !u32i, #cir.fp<-3.4{{.*}}E+38> : !cir.float, {{.*}}, #cir.fp<-1.7{{.*}}E+308> : !cir.double, #false, {{.*}}}> : !rec_anon_struct
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[BITCAST]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
@@ -206,7 +206,7 @@ void acc_compute() {
 #pragma acc parallel reduction(min:someVar)
 // CHECK-NEXT: acc.reduction.recipe @reduction_min__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <min> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!rec_anon_struct>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_record<{#cir.int<2147483647> : !s32i, #cir.int<4294967295> : !u32i, #cir.fp<3.4{{.*}}E+38> : !cir.float, {{.*}}, #cir.fp<1.7{{.*}}E+308> : !cir.double, #true, {{.*}}}> : !rec_anon_struct
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[BITCAST]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
@@ -295,7 +295,7 @@ void acc_compute() {
 #pragma acc parallel reduction(&:someVarNoFloats)
 // CHECK-NEXT: acc.reduction.recipe @reduction_iand__ZTS24DefaultOperatorsNoFloats : !cir.ptr<!rec_DefaultOperatorsNoFloats> reduction_operator <iand> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperatorsNoFloats, !cir.ptr<!rec_DefaultOperatorsNoFloats>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperatorsNoFloats>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!rec_anon_struct1>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<4294967295> : !u32i, #true, {{.*}}}> : !rec_anon_struct1
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[BITCAST]] : !rec_anon_struct1, !cir.ptr<!rec_anon_struct1>
@@ -330,7 +330,7 @@ void acc_compute() {
 #pragma acc parallel reduction(|:someVarNoFloats)
 // CHECK-NEXT: acc.reduction.recipe @reduction_ior__ZTS24DefaultOperatorsNoFloats : !cir.ptr<!rec_DefaultOperatorsNoFloats> reduction_operator <ior> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperatorsNoFloats, !cir.ptr<!rec_DefaultOperatorsNoFloats>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperatorsNoFloats>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!rec_anon_struct1>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.zero : !rec_anon_struct1
 // CHECK-NEXT: cir.store{{.*}} %[[ZERO]], %[[BITCAST]] : !rec_anon_struct1, !cir.ptr<!rec_anon_struct1>
@@ -365,7 +365,7 @@ void acc_compute() {
 #pragma acc parallel reduction(^:someVarNoFloats)
 // CHECK-NEXT: acc.reduction.recipe @reduction_xor__ZTS24DefaultOperatorsNoFloats : !cir.ptr<!rec_DefaultOperatorsNoFloats> reduction_operator <xor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperatorsNoFloats>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperatorsNoFloats, !cir.ptr<!rec_DefaultOperatorsNoFloats>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperatorsNoFloats>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperatorsNoFloats> -> !cir.ptr<!rec_anon_struct1>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.zero : !rec_anon_struct1
 // CHECK-NEXT: cir.store{{.*}} %[[ZERO]], %[[BITCAST]] : !rec_anon_struct1, !cir.ptr<!rec_anon_struct1>
@@ -400,7 +400,7 @@ void acc_compute() {
 #pragma acc parallel reduction(&&:someVar)
 // CHECK-NEXT: acc.reduction.recipe @reduction_land__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <land> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!rec_anon_struct>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, {{.*}}, #cir.fp<1{{.*}}> : !cir.double, #true, {{.*}}}> : !rec_anon_struct
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[BITCAST]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
@@ -488,7 +488,7 @@ void acc_compute() {
 #pragma acc parallel reduction(||:someVar)
 // CHECK-NEXT: acc.reduction.recipe @reduction_lor__ZTS16DefaultOperators : !cir.ptr<!rec_DefaultOperators> reduction_operator <lor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_DefaultOperators>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_DefaultOperators, !cir.ptr<!rec_DefaultOperators>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!rec_DefaultOperators>
 // CHECK-NEXT: %[[BITCAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!rec_anon_struct>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.zero : !rec_anon_struct
 // CHECK-NEXT: cir.store{{.*}} %[[ZERO]], %[[BITCAST]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
@@ -577,7 +577,7 @@ void acc_compute() {
 #pragma acc parallel reduction(+:someVarArr)
 // CHECK-NEXT: acc.reduction.recipe @reduction_add__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <add> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!rec_DefaultOperators x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[ZERO]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: acc.yield
@@ -585,7 +585,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" align(8) : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -615,13 +615,13 @@ void acc_compute() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -646,7 +646,7 @@ void acc_compute() {
 #pragma acc parallel reduction(*:someVarArr)
 // CHECK-NEXT: acc.reduction.recipe @reduction_mul__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <mul> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators]> : !cir.array<!rec_DefaultOperators x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: acc.yield
@@ -654,7 +654,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" align(8) : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -684,13 +684,13 @@ void acc_compute() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -716,7 +716,7 @@ void acc_compute() {
 
 // CHECK-NEXT: acc.reduction.recipe @reduction_max__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <max> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.const_record<{#cir.int<-2147483648> : !s32i, #cir.int<0> : !u32i, #cir.fp<-3.4{{.*}}E+38> : !cir.float, #cir.fp<-1.7{{.*}}E+308> : !cir.double, #false}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<-2147483648> : !s32i, #cir.int<0> : !u32i, #cir.fp<-3.4{{.*}}E+38> : !cir.float, #cir.fp<-1.7{{.*}}E+308> : !cir.double, #false}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<-2147483648> : !s32i, #cir.int<0> : !u32i, #cir.fp<-3.4{{.*}}E+38> : !cir.float, #cir.fp<-1.7{{.*}}E+308> : !cir.double, #false}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<-2147483648> : !s32i, #cir.int<0> : !u32i, #cir.fp<-3.4{{.*}}E+38> : !cir.float, #cir.fp<-1.7{{.*}}E+308> : !cir.double, #false}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<-2147483648> : !s32i, #cir.int<0> : !u32i, #cir.fp<-3.4{{.*}}E+38> : !cir.float, #cir.fp<-1.7{{.*}}E+308> : !cir.double, #false}> : !rec_DefaultOperators]> : !cir.array<!rec_DefaultOperators x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: acc.yield
@@ -724,7 +724,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"]
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" {{.*}} : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -826,7 +826,7 @@ void acc_compute() {
 #pragma acc parallel reduction(min:someVarArr)
 // CHECK-NEXT: acc.reduction.recipe @reduction_min__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <min> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.const_record<{#cir.int<2147483647> : !s32i, #cir.int<4294967295> : !u32i, #cir.fp<3.4{{.*}}E+38> : !cir.float, #cir.fp<1.7{{.*}}E+308> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<2147483647> : !s32i, #cir.int<4294967295> : !u32i, #cir.fp<3.4{{.*}}E+38> : !cir.float, #cir.fp<1.7{{.*}}E+308> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<2147483647> : !s32i, #cir.int<4294967295> : !u32i, #cir.fp<3.4{{.*}}E+38> : !cir.float, #cir.fp<1.7{{.*}}E+308> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<2147483647> : !s32i, #cir.int<4294967295> : !u32i, #cir.fp<3.4{{.*}}E+38> : !cir.float, #cir.fp<1.7{{.*}}E+308> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<2147483647> : !s32i, #cir.int<4294967295> : !u32i, #cir.fp<3.4{{.*}}E+38> : !cir.float, #cir.fp<1.7{{.*}}E+308> : !cir.double, #true}> : !rec_DefaultOperators]> : !cir.array<!rec_DefaultOperators x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: acc.yield
@@ -834,7 +834,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"]
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" {{.*}} : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -937,7 +937,7 @@ void acc_compute() {
 #pragma acc parallel reduction(&:someVarArrNoFloats)
 // CHECK-NEXT: acc.reduction.recipe @reduction_iand__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <iand> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.const_record<{#cir.int<-1> : !s32i, #cir.int<4294967295> : !u32i, #true}> : !rec_DefaultOperatorsNoFloats, #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<4294967295> : !u32i, #true}> : !rec_DefaultOperatorsNoFloats, #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<4294967295> : !u32i, #true}> : !rec_DefaultOperatorsNoFloats, #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<4294967295> : !u32i, #true}> : !rec_DefaultOperatorsNoFloats, #cir.const_record<{#cir.int<-1> : !s32i, #cir.int<4294967295> : !u32i, #true}> : !rec_DefaultOperatorsNoFloats]> : !cir.array<!rec_DefaultOperatorsNoFloats x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: acc.yield
@@ -945,7 +945,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" align(8) : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -994,7 +994,7 @@ void acc_compute() {
 #pragma acc parallel reduction(|:someVarArrNoFloats)
 // CHECK-NEXT: acc.reduction.recipe @reduction_ior__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <ior> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!rec_DefaultOperatorsNoFloats x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[ZERO]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: acc.yield
@@ -1002,7 +1002,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" align(8) : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -1051,7 +1051,7 @@ void acc_compute() {
 #pragma acc parallel reduction(^:someVarArrNoFloats)
 // CHECK-NEXT: acc.reduction.recipe @reduction_xor__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <xor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!rec_DefaultOperatorsNoFloats x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[ZERO]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: acc.yield
@@ -1059,7 +1059,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" align(8) : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -1108,7 +1108,7 @@ void acc_compute() {
 #pragma acc parallel reduction(&&:someVarArr)
 // CHECK-NEXT: acc.reduction.recipe @reduction_land__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <land> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: %[[CONST:.*]] = cir.const #cir.const_array<[#cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators, #cir.const_record<{#cir.int<1> : !s32i, #cir.int<1> : !u32i, #cir.fp<1{{.*}}> : !cir.float, #cir.fp<1{{.*}}> : !cir.double, #true}> : !rec_DefaultOperators]> : !cir.array<!rec_DefaultOperators x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[CONST]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: acc.yield
@@ -1116,7 +1116,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" align(8) : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -1219,7 +1219,7 @@ void acc_compute() {
 #pragma acc parallel reduction(||:someVarArr)
 // CHECK: acc.reduction.recipe @reduction_lor__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <lor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}})
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init", init]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!rec_DefaultOperators x 5>
 // CHECK-NEXT: cir.store{{.*}} %[[ZERO]], %[[ALLOCA]] : !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: acc.yield
@@ -1227,7 +1227,7 @@ void acc_compute() {
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> {{.*}})
 // CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["itr"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "itr" align(8) : !cir.ptr<!s64i>
 // CHECK-NEXT: cir.store %[[ZERO]], %[[ITR]] : !s64i, !cir.ptr<!s64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -1331,13 +1331,13 @@ void acc_compute() {
 #pragma acc parallel reduction(+:someVarArr[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_add__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <add> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1378,7 +1378,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1406,13 +1406,13 @@ void acc_compute() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[ADD:.*]] = cir.add %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[ADD:.*]] = cir.fadd %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[ADD]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -1437,13 +1437,13 @@ void acc_compute() {
 #pragma acc parallel reduction(*:someVarArr[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_mul__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <mul> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1484,7 +1484,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1512,13 +1512,13 @@ void acc_compute() {
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][2] {name = "f"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.float>, !cir.float
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.float>, !cir.float
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.float
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][3] {name = "d"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[RHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_RHS]] : !cir.ptr<!cir.double>, !cir.double
 // CHECK-NEXT: %[[LHS_LOAD:.*]] = cir.load{{.*}} %[[GET_MEM_LHS]] : !cir.ptr<!cir.double>, !cir.double
-// CHECK-NEXT: %[[MUL:.*]] = cir.mul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
+// CHECK-NEXT: %[[MUL:.*]] = cir.fmul %[[LHS_LOAD]], %[[RHS_LOAD]] : !cir.double
 // CHECK-NEXT: cir.store {{.*}} %[[MUL]], %[[GET_MEM_LHS]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_MEM_LHS:.*]] = cir.get_member %[[LHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[GET_MEM_RHS:.*]] = cir.get_member %[[RHS_STRIDE]][4] {name = "b"} : !cir.ptr<!rec_DefaultOperators> -> !cir.ptr<!cir.bool>
@@ -1543,13 +1543,13 @@ void acc_compute() {
 #pragma acc parallel reduction(max:someVarArr[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_max__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <max> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1590,7 +1590,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"]
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" {{.*}} : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1695,13 +1695,13 @@ void acc_compute() {
 #pragma acc parallel reduction(min:someVarArr[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_min__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <min> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1742,7 +1742,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"]
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" {{.*}} : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1847,13 +1847,13 @@ void acc_compute() {
 #pragma acc parallel reduction(&:someVarArrNoFloats[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_iand__Bcnt1__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <iand> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1888,7 +1888,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1935,13 +1935,13 @@ void acc_compute() {
 #pragma acc parallel reduction(|:someVarArrNoFloats[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_ior__Bcnt1__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <ior> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1976,7 +1976,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2023,13 +2023,13 @@ void acc_compute() {
 #pragma acc parallel reduction(^:someVarArrNoFloats[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_xor__Bcnt1__ZTSA5_24DefaultOperatorsNoFloats : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>> reduction_operator <xor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperatorsNoFloats x 5>, !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperatorsNoFloats x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2064,7 +2064,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2111,13 +2111,13 @@ void acc_compute() {
 #pragma acc parallel reduction(&&:someVarArr[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_land__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <land> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2158,7 +2158,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2260,13 +2260,13 @@ void acc_compute() {
 #pragma acc parallel reduction(||:someVarArr[2])
 // CHECK-NEXT: acc.reduction.recipe @reduction_lor__Bcnt1__ZTSA5_16DefaultOperators : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>> reduction_operator <lor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>{{.*}}, %[[BOUND1:.*]]: !acc.data_bounds_ty{{.*}}))
-// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_DefaultOperators x 5>, !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>, ["openacc.reduction.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} : !cir.ptr<!cir.array<!rec_DefaultOperators x 5>>
 // CHECK-NEXT: cir.scope {
 // CHECK-NEXT: %[[LB:.*]] = acc.get_lowerbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2307,7 +2307,7 @@ void acc_compute() {
 // CHECK-NEXT: %[[LB_CAST:.*]] = builtin.unrealized_conversion_cast %[[LB]] : index to !u64i
 // CHECK-NEXT: %[[UB:.*]] = acc.get_upperbound %[[BOUND1]] : (!acc.data_bounds_ty) -> index
 // CHECK-NEXT: %[[UB_CAST:.*]] = builtin.unrealized_conversion_cast %[[UB]] : index to !u64i
-// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["iter"] {alignment = 8 : i64}
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca "iter" align(8) : !cir.ptr<!u64i>
 // CHECK-NEXT: cir.store %[[LB_CAST]], %[[ITR]] : !u64i, !cir.ptr<!u64i>
 // CHECK-NEXT: cir.for : cond {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i

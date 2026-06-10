@@ -11,6 +11,7 @@
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
@@ -249,7 +250,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
   // Deduce ROCm path by the real path of the invoked clang, resolving symbolic
   // link of clang itself.
   llvm::SmallString<256> RealClangPath;
-  llvm::sys::fs::real_path(D.getClangProgramPath(), RealClangPath);
+  llvm::sys::fs::real_path(D.getDriverProgramPath(), RealClangPath);
   auto ParentPath = llvm::sys::path::parent_path(RealClangPath);
   if (ParentPath != InstallDir)
     ROCmSearchDirs.emplace_back(DeduceROCmPath(ParentPath));
@@ -609,9 +610,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-shared");
   }
 
-  if (C.getDriver().isUsingLTO()) {
-    const bool ThinLTO = (C.getDriver().getLTOMode() == LTOK_Thin);
-    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs, ThinLTO);
+  if (auto LTO = getToolChain().getLTOMode(Args); LTO != LTOK_None) {
+    addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs,
+                  LTO == LTOK_Thin);
   } else if (Args.hasArg(options::OPT_mcpu_EQ)) {
     CmdArgs.push_back(Args.MakeArgString(
         "-plugin-opt=mcpu=" +
@@ -838,15 +839,14 @@ ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
 }
 
 void AMDGPUToolChain::addClangTargetOptions(
-    const llvm::opt::ArgList &DriverArgs,
-    llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat) &&
-      !getEffectiveTriple().isSPIRV()) {
+      !getEffectiveTriple().isSPIRV() && !getDriver().IsFlangMode()) {
     CC1Args.push_back("-fvisibility=hidden");
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
@@ -907,10 +907,7 @@ AMDGPUToolChain::ParsedTargetIDType
 AMDGPUToolChain::getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const {
   StringRef TargetID = DriverArgs.getLastArgValue(options::OPT_mcpu_EQ);
   if (TargetID.empty())
-    TargetID = DriverArgs.getLastArgValue(options::OPT_march_EQ);
-
-  if (TargetID.empty())
-    return {std::nullopt, std::nullopt, std::nullopt};
+    return {};
 
   llvm::StringMap<bool> FeatureMap;
   auto OptionalGpuArch = parseTargetID(getTriple(), TargetID, &FeatureMap);
@@ -956,8 +953,8 @@ AMDGPUToolChain::getSystemGPUArchs(const ArgList &Args) const {
 
 void ROCMToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args,
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  AMDGPUToolChain::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
                                          DeviceOffloadingKind);
 
   // For the OpenCL case where there is no offload target, accept -nostdlib to
@@ -981,11 +978,16 @@ void ROCMToolChain::addClangTargetOptions(
   if (TT.getEnvironment() == llvm::Triple::LLVM)
     return;
 
-  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(DriverArgs);
-  StringRef GpuArch =
-      TargetID.OptionalGPUArch ? *TargetID.OptionalGPUArch : StringRef();
+  // Get the device name and canonicalize it. For offload compilation,
+  // BoundArch contains the full target ID. For non-offload (OpenCL),
+  // fall back to -mcpu.
+  StringRef TargetID = BoundArch.empty()
+                           ? DriverArgs.getLastArgValue(options::OPT_mcpu_EQ)
+                           : BoundArch;
+  StringRef GpuArch = getProcessorFromTargetID(getTriple(), TargetID);
 
   StringRef LibDeviceFile = RocmInstallation->getLibDeviceFile(GpuArch);
+
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(getDriver(), DriverArgs));
   if (!RocmInstallation->checkCommonBitcodeLibs(GpuArch, LibDeviceFile, ABIVer))
@@ -998,8 +1000,7 @@ void ROCMToolChain::addClangTargetOptions(
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, GpuArch, DeviceOffloadingKind,
-      getSanitizerArgs(DriverArgs, TargetID.OptionalTargetID.value_or(""),
-                       DeviceOffloadingKind)
+      getSanitizerArgs(DriverArgs, TargetID, DeviceOffloadingKind)
           .needsAsanRt()));
 
   for (auto [BCFile, Internalize] : BCLibs) {
@@ -1119,7 +1120,7 @@ static bool isXnackAvailable(const llvm::Triple &TT, llvm::StringRef TargetID) {
 SanitizerMask AMDGPUToolChain::getSupportedSanitizers(
     StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   SanitizerMask SupportedMask =
-      SanitizerKind::Undefined | SanitizerKind::UndefinedGroup;
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
 
   // Address sanitizer is potentially supported, but depends on the exact target
   // arch xnack support.

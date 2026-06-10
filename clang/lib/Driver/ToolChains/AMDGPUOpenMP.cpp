@@ -32,8 +32,9 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
 
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                               DeviceOffloadingKind);
 
   assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
          "Only OpenMP offloading kinds are supported.");
@@ -42,14 +43,15 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
                           true))
     return;
 
-  for (auto BCFile : getDeviceLibs(DriverArgs, DeviceOffloadingKind)) {
+  for (auto BCFile :
+       getDeviceLibs(DriverArgs, BoundArch, DeviceOffloadingKind)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgString(BCFile.Path));
   }
 
   // Link the bitcode library late if we're using device LTO.
-  if (getDriver().isUsingOffloadLTO())
+  if (isUsingLTO(DriverArgs, DeviceOffloadingKind))
     return;
 }
 
@@ -121,19 +123,15 @@ AMDGPUOpenMPToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 AMDGPUOpenMPToolChain::getDeviceLibs(
-    const llvm::opt::ArgList &Args,
+    const llvm::opt::ArgList &Args, llvm::StringRef BoundArch,
     const Action::OffloadKind DeviceOffloadingKind) const {
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
     return {};
 
-  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(Args);
-  if (!TargetID.OptionalTargetID)
-    return {};
-
+  StringRef GpuArch = getProcessorFromTargetID(getTriple(), BoundArch);
   SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   for (auto BCLib :
-       getCommonDeviceLibNames(Args, *TargetID.OptionalTargetID,
-                               *TargetID.OptionalGPUArch, DeviceOffloadingKind))
+       getCommonDeviceLibNames(Args, BoundArch, GpuArch, DeviceOffloadingKind))
     BCLibs.emplace_back(BCLib);
 
   return BCLibs;
