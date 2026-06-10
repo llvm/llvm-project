@@ -6,14 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass coalesces neighbouring lanes of `xegpu.load` / `xegpu.store` ops
-// so that each lane handles `N` contiguous elements along the innermost
-// dimension. The decision is driven by a small XeGPU-local axis-info
-// dataflow analysis modeled on Triton's `AxisInfo` (`contiguity`,
-// `constancy`, `divisibility`) and is applied by attaching a
-// `lane_data` layout to the original op. The actual memory-message rewrite
-// is left to the downstream WG-to-SG / SG-to-Lane distribution passes,
-// which interpret `lane_data`.
+// This file implements the gather/scatter coalescing analysis. It decides
+// whether an `xegpu.load` / `xegpu.store` gather/scatter accesses `N`
+// contiguous elements per lane along the innermost dimension, and, if so,
+// stamps a `xegpu.coalesce_hint<factor = N>` attribute recording the chosen
+// factor. The decision is driven by a small XeGPU-local axis-info dataflow
+// analysis tracking per-axis `contiguity`, `constancy`, and `divisibility`.
+//
+// The analysis performs no rewrite. The hint it stamps is turned into a
+// `lane_data` layout by `coalesceGatherScatter` (used by the test pass) or
+// read directly by layout propagation; the actual memory-message rewrite is
+// left to the downstream WG-to-SG / SG-to-Lane distribution passes, which
+// interpret `lane_data`.
 //
 // The analysis tracks per-axis information for vectors of integer / index
 // type at any rank. The coalescing decision is computed against the
@@ -80,10 +84,15 @@ static constexpr int64_t kAxisInfoTop = 1LL << 30;
 ///   - `knownConstant`: scalar value if the entire vector is uniformly
 ///     known to be a single constant.
 ///   - `innerStride`: when set, every "row" along the innermost dimension
-///     is an arithmetic progression with this stride. Per-row base may
-///     differ across outer indices; per-row alignment is captured by
-///     `divisibility[innerDim]`. `innerStride = 1` implies stride-1
-///     contiguity; `innerStride = 0` implies inner-dim constancy.
+///     is an arithmetic progression with this (constant) step. This is the
+///     general form of which `contiguity`/`constancy` are the two special
+///     cases: `innerStride = 1` is the stride-1 contiguous case (and implies
+///     `contiguity[innerDim] > 1`), `innerStride = 0` is the all-equal case
+///     (implies `constancy[innerDim] > 1`), and any other value (e.g. 4) is a
+///     strided progression that neither `contiguity` nor `constancy` can
+///     represent — both read 1 there. Per-row base may differ across outer
+///     indices; per-row alignment is captured by `divisibility[innerDim]`.
+///     The coalescing decision only acts on the `innerStride = 1` case.
 ///
 /// Pessimistic / entry value: contiguity=1, constancy=1, divisibility=1,
 /// innerStride absent.
@@ -888,11 +897,10 @@ static int64_t largestPow2Divisor(int64_t numLanes, int64_t bound) {
 /// `XeGPUPropagateLayout`: `lane_layout[inner] = min(subgroupSize, inner)`,
 /// rounded down to a power-of-2 divisor of `inner`. The remaining lane
 /// budget then becomes `lane_data[inner] = inner / lane_layout`, capped by
-/// the per-lane chunk-size budget and the offsets contiguity.
+/// `maxChunkSize` and the offsets contiguity.
 static CoalesceDecision decide(const AxisInfo &info,
                                ArrayRef<int64_t> offsetsShape,
-                               int64_t origChunk, unsigned maxChunkSize,
-                               unsigned subgroupSize) {
+                               unsigned maxChunkSize, unsigned subgroupSize) {
   CoalesceDecision d;
   if (!info.isInitialized() || offsetsShape.empty())
     return d;
@@ -918,9 +926,7 @@ static CoalesceDecision decide(const AxisInfo &info,
   if (perLane < 2)
     return d; // already one element per lane, nothing to coalesce.
 
-  if (origChunk < 1)
-    origChunk = 1;
-  int64_t budget = static_cast<int64_t>(maxChunkSize) / origChunk;
+  int64_t budget = static_cast<int64_t>(maxChunkSize);
   if (budget < 2)
     return d;
 
@@ -969,10 +975,8 @@ static xegpu::LayoutAttr buildLaneDataLayout(MLIRContext *ctx, unsigned rank,
 }
 
 //===----------------------------------------------------------------------===//
-// Rewrites.
+// Analysis driver + hint apply.
 //===----------------------------------------------------------------------===//
-
-namespace {
 
 /// Look up the subgroup size from the enclosing gpu.module's xevm.target.
 /// Falls back to 16 when no target chip is found or the chip is unknown,
@@ -986,7 +990,7 @@ static unsigned lookupSubgroupSize(Operation *op) {
 }
 
 /// Common analysis preconditions: vector offsets/value, all-true mask,
-/// no existing non-trivial lane_data, no explicit chunk_size > 1.
+/// no existing non-trivial lane_data.
 template <typename OpTy>
 static bool isCandidateForCoalesce(OpTy op) {
   auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
@@ -999,8 +1003,6 @@ static bool isCandidateForCoalesce(OpTy op) {
   if (auto layout = op.getLayoutAttr())
     if (!layout.getEffectiveLaneDataAsInt().empty())
       return false;
-  if (op.getChunkSizeAttr() && op.getChunkSize().value_or(1) > 1)
-    return false;
   return true;
 }
 
@@ -1075,9 +1077,8 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
   const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
   if (!lat || !lat->getValue().isInitialized())
     return;
-  int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
-  auto d = decide(lat->getValue(), offsetsTy.getShape(), origChunk,
-                  maxChunkSize, subgroupSize);
+  auto d = decide(lat->getValue(), offsetsTy.getShape(), maxChunkSize,
+                  subgroupSize);
   if (d.kind != CoalesceDecision::Kind::Chunked)
     return;
   auto hint = xegpu::CoalesceHintAttr::get(op.getContext(), d.factor);
@@ -1086,9 +1087,9 @@ static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
 
 /// Apply a stamped hint on `op`: build a lane_layout/lane_data/inst_data
 /// layout from the hint's `factor` and the op's offsets inner extent +
-/// chip-derived subgroup size, install it, drop a trivial `chunk_size = 1`,
-/// and remove the hint. Returns success on apply (or no-op when no hint),
-/// failure when the hint is malformed.
+/// chip-derived subgroup size, install it, and remove the hint. Returns
+/// success on apply (or no-op when no hint), failure when the hint is
+/// malformed.
 template <typename OpTy>
 static LogicalResult applyHintOnOp(OpTy op) {
   auto hint = op->template getAttrOfType<xegpu::CoalesceHintAttr>(
@@ -1111,16 +1112,25 @@ static LogicalResult applyHintOnOp(OpTy op) {
 
   auto layout = buildLaneDataLayout(op.getContext(), valueTy.getRank(),
                                     laneLayout, factor);
-  int64_t origChunk = static_cast<int64_t>(op.getChunkSize().value_or(1));
-  bool dropChunk = op.getChunkSizeAttr() && origChunk == 1 && factor > 1;
   op.setLayoutAttr(layout);
-  if (dropChunk)
-    op.removeChunkSizeAttr();
   op->removeAttr(xegpu::getCoalesceHintAttrName());
   return success();
 }
 
-} // namespace
+/// Apply a stamped `xegpu.coalesce_hint` on a single op. A hint on an op
+/// that cannot be coalesced (anything other than a gather/scatter) is just
+/// dropped. Returns failure only when the hint is malformed for a real
+/// gather/scatter.
+static LogicalResult applyHintOnOp(Operation *op) {
+  if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
+    return applyHintOnOp(load);
+  if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
+    return applyHintOnOp(store);
+  // Hint attached to an unsupported op: silently drop it.
+  if (op->hasAttr(xegpu::getCoalesceHintAttrName()))
+    op->removeAttr(xegpu::getCoalesceHintAttrName());
+  return success();
+}
 
 } // namespace
 
@@ -1136,6 +1146,10 @@ void mlir::xegpu::runCoalesceGatherScatterAnalysis(
   if (failed(solver.initializeAndRun(root)))
     return;
 
+  // The solver computed AxisInfo for the whole region in the single
+  // `initializeAndRun` above; offsets shared by several gather/scatter ops are
+  // analyzed only once. This walk is just per-op point lookups into that
+  // result (no re-analysis), turning each cached fact into a hint.
   root->walk([&](Operation *op) {
     if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
       analyzeAndStampHint(load, solver, options.maxChunkSize);
@@ -1144,21 +1158,10 @@ void mlir::xegpu::runCoalesceGatherScatterAnalysis(
   });
 }
 
-LogicalResult mlir::xegpu::applyCoalesceGatherScatterHint(Operation *op) {
-  if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
-    return applyHintOnOp(load);
-  if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
-    return applyHintOnOp(store);
-  // Hint attached to an unsupported op: silently drop it.
-  if (op->hasAttr(xegpu::getCoalesceHintAttrName()))
-    op->removeAttr(xegpu::getCoalesceHintAttrName());
-  return success();
-}
-
-void mlir::xegpu::applyCoalesceGatherScatterHints(Operation *root) {
+void mlir::xegpu::coalesceGatherScatter(Operation *root) {
   root->walk([&](Operation *op) {
     if (op->hasAttr(xegpu::getCoalesceHintAttrName()))
-      (void)applyCoalesceGatherScatterHint(op);
+      (void)applyHintOnOp(op);
   });
 }
 

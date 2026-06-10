@@ -99,33 +99,26 @@ inline StringRef getCoalesceHintAttrName() { return "xegpu.coalesce_hint"; }
 
 /// Options controlling `runCoalesceGatherScatterAnalysis`.
 struct CoalesceGatherScatterAnalysisOptions {
-  /// Upper bound on the per-lane chunk size produced by coalescing. Mirrors
-  /// the `max-chunk-size` option of the original pass.
+  /// Upper bound on the number of contiguous elements grouped per lane by
+  /// coalescing. Mirrors the `max-chunk-size` option of the original pass.
   unsigned maxChunkSize = 8;
 };
 
 /// Run the AxisInfo-based coalescing analysis over `root` and stamp a
 /// `xegpu.coalesce_hint` attribute on every `xegpu.load` / `xegpu.store`
 /// the analysis classifies as coalescible. Ops with an existing non-empty
-/// `lane_data`, an explicit `chunk_size > 1`, or a non-uniform mask are
-/// skipped (no hint stamped).
-///
-/// This function performs no rewrite of its own; the hint is consumed by
-/// `applyCoalesceGatherScatterHint` (or a downstream pass that wants
-/// stronger control over when to honor the hint).
+/// `lane_data` or a non-uniform mask are skipped (no hint stamped). The hint
+/// is consumed downstream — either by `coalesceGatherScatter` or by a
+/// layout-propagation pass that reads the hint directly.
 void runCoalesceGatherScatterAnalysis(
     Operation *root, const CoalesceGatherScatterAnalysisOptions &options = {});
 
-/// Apply a stamped `xegpu.coalesce_hint` on `op`: install an equivalent
-/// `lane_layout` / `lane_data` / `inst_data` layout, drop a trivial
-/// `chunk_size = 1` attribute, and remove the hint. Idempotent — no-op if
-/// the op carries no hint. Returns `failure()` when the hint is malformed
-/// (e.g. attached to an op that isn't a gather/scatter).
-LogicalResult applyCoalesceGatherScatterHint(Operation *op);
-
-/// Walk `root` and apply coalesce hints on every op that carries one.
-/// Hints stamped on unsupported ops are silently dropped.
-void applyCoalesceGatherScatterHints(Operation *root);
+/// Walk `root` and turn every stamped `xegpu.coalesce_hint` into an
+/// equivalent `lane_layout` / `lane_data` / `inst_data` layout on its op,
+/// then remove the hint. A hint on an op that cannot be coalesced (e.g. one
+/// that isn't a gather/scatter) is simply dropped. Pairs with
+/// `runCoalesceGatherScatterAnalysis`.
+void coalesceGatherScatter(Operation *root);
 
 /// Walk `root` and remove any leftover `xegpu.coalesce_hint` attributes —
 /// useful as a cleanup after a propagator has decided whether to honor each

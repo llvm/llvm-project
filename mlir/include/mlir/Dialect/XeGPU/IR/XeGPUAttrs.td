@@ -962,24 +962,22 @@ def XeGPU_CoalesceHintAttr : XeGPUAttr<"CoalesceHint", "coalesce_hint"> {
   let description = [{
     `CoalesceHintAttr` is a discardable attribute attached by the
     coalesce-gather-scatter analysis to `xegpu.load` / `xegpu.store` ops
-    whose offsets describe a contiguous-per-lane access pattern. It records
-    the chosen `lane_data` factor along the fastest-changing dim (FCD) of
-    the value vector. The `lane_layout` along the FCD is *not* stored here;
-    it is re-derived at apply time from the op's offsets inner extent and
-    the chip's subgroup size, mirroring `xegpu-propagate-layout`'s default
-    rule.
+    whose offsets describe a coalescible access pattern. `factor` is the
+    number of contiguous elements grouped together along the innermost
+    (fastest-changing) dimension of the access.
 
-    The attribute is consumed and removed by `applyCoalesceGatherScatterHint`,
-    which installs an equivalent `xegpu.layout` on the op. A producer that
-    decides not to apply the hint (for example, a propagator that detects a
-    conflict with an anchor-driven layout) should remove the attribute
-    rather than leave it dangling.
+    The attribute is purely advisory: it records the analysis's decision
+    without committing to a layout. A consumer turns `factor` into a concrete
+    `xegpu.layout` (deriving the `lane_layout` / `lane_data` split from the
+    op's offsets inner extent and the chip's subgroup size) and removes the
+    hint. A consumer that decides not to act on the hint (for example, a
+    propagator that detects a conflict with an anchor-driven layout) should
+    likewise remove the attribute rather than leave it dangling.
 
     Example:
     ```mlir
     %v = xegpu.load %ptr[%offsets], %mask
-            <{chunk_size = 1 : i64,
-              xegpu.coalesce_hint = #xegpu.coalesce_hint<factor = 4>}>
+            {xegpu.coalesce_hint = #xegpu.coalesce_hint<factor = 4>}
             : i64, vector<64xindex>, vector<64xi1> -> vector<64xf32>
     ```
   }];

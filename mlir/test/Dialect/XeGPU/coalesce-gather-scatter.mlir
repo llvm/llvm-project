@@ -5,19 +5,16 @@
 // vector.step offsets -> stride 1, fully coalescible.
 // 32 lanes, subgroup_size = 16 (default) -> lane_layout = 16, perLane = 2,
 // max-chunk-size = 8 -> bound = min(32, 8, 2) = 2 -> lane_data = 2.
-// The trivial `chunk_size = 1` attribute is dropped on success since the
-// new lane_data FCD > 1 supersedes it.
 // CHECK-LABEL: func.func @load_step_offsets(
 // CHECK:   %[[STEP:.*]] = vector.step : vector<32xindex>
 // CHECK:   %[[LOAD:.*]] = xegpu.load
-// CHECK-NOT: chunk_size
 // CHECK-SAME: layout = #xegpu.layout<inst_data = [32], lane_layout = [16], lane_data = [2]>
 // CHECK-SAME: : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
 // CHECK:   return %[[LOAD]]
 func.func @load_step_offsets(%ptr: i64) -> vector<32xf32> {
   %offsets = vector.step : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask
       : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
   return %v : vector<32xf32>
 }
@@ -33,7 +30,7 @@ func.func @load_step_offsets(%ptr: i64) -> vector<32xf32> {
 func.func @load_step_offsets_chunk4(%ptr: i64) -> vector<32xf32> {
   %offsets = vector.step : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask
       : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
   return %v : vector<32xf32>
 }
@@ -50,7 +47,7 @@ func.func @load_dense_ap_offsets(%ptr: i64) -> vector<32xi32> {
     16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
   ]> : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask
       : i64, vector<32xindex>, vector<32xi1> -> vector<32xi32>
   return %v : vector<32xi32>
 }
@@ -67,7 +64,7 @@ func.func @load_stride4_unchanged(%ptr: i64) -> vector<32xf32> {
   %splat = vector.broadcast %c4 : index to vector<32xindex>
   %offsets = arith.muli %step, %splat : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask
       : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
   return %v : vector<32xf32>
 }
@@ -80,7 +77,7 @@ func.func @load_stride4_unchanged(%ptr: i64) -> vector<32xf32> {
 // CHECK-SAME: : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
 func.func @load_partial_mask_unchanged(%ptr: i64, %mask: vector<32xi1>) -> vector<32xf32> {
   %offsets = vector.step : vector<32xindex>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask
       : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
   return %v : vector<32xf32>
 }
@@ -94,7 +91,7 @@ func.func @load_partial_mask_unchanged(%ptr: i64, %mask: vector<32xi1>) -> vecto
 func.func @store_step_offsets(%ptr: i64, %v: vector<32xf32>) {
   %offsets = vector.step : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
-  xegpu.store %v, %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  xegpu.store %v, %ptr[%offsets], %mask
       : vector<32xf32>, i64, vector<32xindex>, vector<32xi1>
   return
 }
@@ -108,7 +105,7 @@ func.func @store_step_offsets(%ptr: i64, %v: vector<32xf32>) {
 func.func @store_broadcast_offsets_unchanged(%ptr: i64, %v: vector<32xf32>) {
   %offsets = arith.constant dense<0> : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
-  xegpu.store %v, %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  xegpu.store %v, %ptr[%offsets], %mask
       : vector<32xf32>, i64, vector<32xindex>, vector<32xi1>
   return
 }
@@ -122,7 +119,7 @@ func.func @store_broadcast_offsets_unchanged(%ptr: i64, %v: vector<32xf32>) {
 func.func @load_memref_step(%m: memref<1024xf32>) -> vector<32xf32> {
   %offsets = vector.step : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
-  %v = xegpu.load %m[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %m[%offsets], %mask
       : memref<1024xf32>, vector<32xindex>, vector<32xi1> -> vector<32xf32>
   return %v : vector<32xf32>
 }
@@ -139,7 +136,7 @@ func.func @load_2d_leading_unit(%ptr: i64) -> vector<1x32xf32> {
   %step = vector.step : vector<32xindex>
   %offsets = vector.shape_cast %step : vector<32xindex> to vector<1x32xindex>
   %mask = arith.constant dense<true> : vector<1x32xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask
       : i64, vector<1x32xindex>, vector<1x32xi1> -> vector<1x32xf32>
   return %v : vector<1x32xf32>
 }
@@ -159,7 +156,7 @@ func.func @load_2d_dense_ap(%ptr: i64) -> vector<2x16xf32> {
     [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
   ]> : vector<2x16xindex>
   %mask = arith.constant dense<true> : vector<2x16xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask
       : i64, vector<2x16xindex>, vector<2x16xi1> -> vector<2x16xf32>
   return %v : vector<2x16xf32>
 }
@@ -168,7 +165,7 @@ func.func @load_2d_dense_ap(%ptr: i64) -> vector<2x16xf32> {
 // True 2-D dense AP with inner > subgroup_size: each row stride-1 across 32
 // lanes. With subgroup_size = 16 (from #xevm.target chip = "pvc"),
 // lane_layout[inner] = 16, perLane = 32 / 16 = 2, contiguity[inner] = 32,
-// budget = max-chunk-size / 1 = 8. bound = min(32, 8, 2) = 2 -> lane_data = 2.
+// budget = max-chunk-size = 8. bound = min(32, 8, 2) = 2 -> lane_data = 2.
 // CHECK-LABEL: gpu.func @load_2d_dense_ap_wide(
 // CHECK: xegpu.load
 // CHECK-SAME: layout = #xegpu.layout<inst_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 2]>
@@ -182,7 +179,7 @@ gpu.module @kernel [#xevm.target<chip = "pvc">] {
        48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
     ]> : vector<2x32xindex>
     %mask = arith.constant dense<true> : vector<2x32xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<2x32xindex>, vector<2x32xi1> -> vector<2x32xf32>
     gpu.return %v : vector<2x32xf32>
   }
@@ -202,7 +199,7 @@ gpu.module @kernel_2x32 [#xevm.target<chip = "pvc">] {
     %step = vector.step : vector<64xindex>
     %offsets = vector.shape_cast %step : vector<64xindex> to vector<2x32xindex>
     %mask = arith.constant dense<true> : vector<2x32xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<2x32xindex>, vector<2x32xi1> -> vector<2x32xf32>
     gpu.return %v : vector<2x32xf32>
   }
@@ -221,7 +218,7 @@ func.func @load_2d_non_ap_unchanged(%ptr: i64) -> vector<2x16xf32> {
     [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
   ]> : vector<2x16xindex>
   %mask = arith.constant dense<true> : vector<2x16xi1>
-  %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  %v = xegpu.load %ptr[%offsets], %mask
       : i64, vector<2x16xindex>, vector<2x16xi1> -> vector<2x16xf32>
   return %v : vector<2x16xf32>
 }
@@ -255,7 +252,7 @@ gpu.module @kernel_reduction [#xevm.target<chip = "pvc">] {
             : vector<32xindex> to vector<2x32xindex>
     %off    = arith.addi %rowsT, %cols2 : vector<2x32xindex>
     %mask   = arith.constant dense<true> : vector<2x32xi1>
-    %v = xegpu.load %ptr[%off], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%off], %mask
         : i64, vector<2x32xindex>, vector<2x32xi1> -> vector<2x32xf32>
     gpu.return %v : vector<2x32xf32>
   }
@@ -279,7 +276,7 @@ gpu.module @kernel_divui [#xevm.target<chip = "pvc">] {
     %c2   = arith.constant dense<2> : vector<32xindex>
     %offsets = arith.divui %even, %c2 : vector<32xindex>
     %mask = arith.constant dense<true> : vector<32xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
     gpu.return %v : vector<32xf32>
   }
@@ -301,7 +298,7 @@ gpu.module @kernel_divsi [#xevm.target<chip = "pvc">] {
     %c2   = arith.constant dense<2> : vector<32xindex>
     %offsets = arith.divsi %even, %c2 : vector<32xindex>
     %mask = arith.constant dense<true> : vector<32xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
     gpu.return %v : vector<32xf32>
   }
@@ -311,7 +308,7 @@ gpu.module @kernel_divsi [#xevm.target<chip = "pvc">] {
 // `remui` by a constant that divides the inner stride: every element of a
 // row is the same residue class -> inner-dim constant. The decision picks
 // the broadcast case, which is currently disabled, so the load is left
-// alone (no layout, no chunk_size change).
+// alone (no layout change).
 // CHECK-LABEL: gpu.func @load_remui_inner_uniform(
 // CHECK: xegpu.load
 // CHECK-NOT: lane_data
@@ -325,7 +322,7 @@ gpu.module @kernel_remui [#xevm.target<chip = "pvc">] {
     // (even % 2) is uniformly 0 along the inner dim.
     %offsets = arith.remui %even, %c2 : vector<16xindex>
     %mask = arith.constant dense<true> : vector<16xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
     gpu.return %v : vector<16xf32>
   }
@@ -347,7 +344,7 @@ gpu.module @kernel_andi [#xevm.target<chip = "pvc">] {
     %m = arith.constant dense<1> : vector<16xindex>
     %offsets = arith.andi %even, %m : vector<16xindex>
     %mask = arith.constant dense<true> : vector<16xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
     gpu.return %v : vector<16xf32>
   }
@@ -367,7 +364,7 @@ gpu.module @kernel_shli [#xevm.target<chip = "pvc">] {
     %k = arith.constant dense<1> : vector<32xindex>
     %offsets = arith.shli %step, %k : vector<32xindex>
     %mask = arith.constant dense<true> : vector<32xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
     gpu.return %v : vector<32xf32>
   }
@@ -388,7 +385,7 @@ gpu.module @kernel_shli_shrui [#xevm.target<chip = "pvc">] {
     %doubled = arith.shli %step, %k : vector<32xindex>
     %offsets = arith.shrui %doubled, %k : vector<32xindex>
     %mask = arith.constant dense<true> : vector<32xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
     gpu.return %v : vector<32xf32>
   }
@@ -412,7 +409,7 @@ gpu.module @kernel_select [#xevm.target<chip = "pvc">] {
     %baseB = arith.addi %step, %b : vector<32xindex>
     %offsets = arith.select %cond, %baseA, %baseB : vector<32xindex>
     %mask = arith.constant dense<true> : vector<32xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<32xindex>, vector<32xi1> -> vector<32xf32>
     gpu.return %v : vector<32xf32>
   }
@@ -433,7 +430,7 @@ gpu.module @kernel_divui_neg [#xevm.target<chip = "pvc">] {
     %c3   = arith.constant dense<3> : vector<16xindex>
     %offsets = arith.divui %even, %c3 : vector<16xindex>
     %mask = arith.constant dense<true> : vector<16xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+    %v = xegpu.load %ptr[%offsets], %mask
         : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
     gpu.return %v : vector<16xf32>
   }
@@ -449,28 +446,7 @@ func.func @store_2d_step(%ptr: i64, %v: vector<1x32xf32>) {
   %step = vector.step : vector<32xindex>
   %offsets = vector.shape_cast %step : vector<32xindex> to vector<1x32xindex>
   %mask = arith.constant dense<true> : vector<1x32xi1>
-  xegpu.store %v, %ptr[%offsets], %mask <{chunk_size = 1 : i64}>
+  xegpu.store %v, %ptr[%offsets], %mask
       : vector<1x32xf32>, i64, vector<1x32xindex>, vector<1x32xi1>
   return
-}
-
-// -----
-// An op that already declares chunk_size = 2 is left alone: the verifier
-// requires a particular value/mask shape relationship for chunked ops, so
-// the pass conservatively skips when an explicit chunk_size > 1 is set
-// (a downstream pass has already committed to that per-lane chunked
-// access).
-// CHECK-LABEL: gpu.func @load_explicit_chunk_unchanged(
-// CHECK: xegpu.load
-// CHECK-NOT: lane_data
-// CHECK-SAME: <{chunk_size = 2 : i64}>
-// CHECK-SAME: : i64, vector<32xindex>, vector<32xi1> -> vector<32x2xf32>
-gpu.module @kernel_explicit_chunk [#xevm.target<chip = "pvc">] {
-  gpu.func @load_explicit_chunk_unchanged(%ptr: i64) -> vector<32x2xf32> {
-    %offsets = vector.step : vector<32xindex>
-    %mask = arith.constant dense<true> : vector<32xi1>
-    %v = xegpu.load %ptr[%offsets], %mask <{chunk_size = 2 : i64}>
-        : i64, vector<32xindex>, vector<32xi1> -> vector<32x2xf32>
-    gpu.return %v : vector<32x2xf32>
-  }
 }

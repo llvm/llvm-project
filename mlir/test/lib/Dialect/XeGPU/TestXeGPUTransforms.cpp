@@ -484,7 +484,7 @@ struct TestXeGPUCoalesceGatherScatter
     options.maxChunkSize = maxChunkSize;
     xegpu::runCoalesceGatherScatterAnalysis(getOperation(), options);
     if (!analyzeOnly)
-      xegpu::applyCoalesceGatherScatterHints(getOperation());
+      xegpu::coalesceGatherScatter(getOperation());
   }
 };
 
