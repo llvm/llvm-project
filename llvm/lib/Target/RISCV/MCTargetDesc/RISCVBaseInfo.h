@@ -701,6 +701,33 @@ MCRegister getBPReg();
 // Returns the register holding shadow call stack pointer.
 MCRegister getSCSPReg();
 
+// Returns whether the ABI is "pure capability", without non-capability
+// pointers.
+inline static bool isCHERIPureCapabilityABI(ABI TargetABI) {
+  switch (TargetABI) {
+  case ABI_ILP32:
+  case ABI_ILP32F:
+  case ABI_ILP32D:
+  case ABI_ILP32E:
+  case ABI_LP64:
+  case ABI_LP64F:
+  case ABI_LP64D:
+  case ABI_LP64E:
+    return false;
+  case ABI_IL32PC64:
+  case ABI_IL32PC64F:
+  case ABI_IL32PC64D:
+  case ABI_IL32PC64E:
+  case ABI_L64PC128:
+  case ABI_L64PC128F:
+  case ABI_L64PC128D:
+  case ABI_CHERIOT:
+    return true;
+  default:
+    llvm_unreachable("Improperly initialised target ABI");
+  }
+}
+
 } // namespace RISCVABI
 
 namespace RISCVFeatures {

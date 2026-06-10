@@ -97,11 +97,13 @@ public:
                                            VersionTuple SDKVersion) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
-  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        Align ByteAlignment) override;
+  void emitCommonSymbol(
+      MCSymbol *Symbol, uint64_t Size, Align ByteAlignment,
+      TailPaddingAmount TailPadding = TailPaddingAmount::None) override;
 
   void emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                             Align ByteAlignment) override;
+                             Align ByteAlignment,
+                             TailPaddingAmount TailPadding) override;
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, Align ByteAlignment = Align(1),
                     SMLoc Loc = SMLoc()) override;
@@ -373,7 +375,8 @@ void MCMachOStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 }
 
 void MCMachOStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                       Align ByteAlignment) {
+                                       Align ByteAlignment,
+                                       TailPaddingAmount TailPadding) {
   auto &Sym = static_cast<MCSymbolMachO &>(*Symbol);
   // FIXME: Darwin 'as' does appear to allow redef of a .comm by itself.
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
@@ -384,7 +387,8 @@ void MCMachOStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 }
 
 void MCMachOStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                            Align ByteAlignment) {
+                                            Align ByteAlignment,
+                                            TailPaddingAmount TailPadding) {
   // '.lcomm' is equivalent to '.zerofill'.
   return emitZerofill(getContext().getObjectFileInfo()->getDataBSSSection(),
                       Symbol, Size, ByteAlignment);

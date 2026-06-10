@@ -106,8 +106,9 @@ public:
   void emitLabel(MCSymbol *Symbol, SMLoc Loc) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
-  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        Align ByteAlignment) override {}
+  void emitCommonSymbol(
+      MCSymbol *Symbol, uint64_t Size, Align ByteAlignment,
+      TailPaddingAmount TailPadding = TailPaddingAmount::None) override {}
 
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, Align ByteAlignment = Align(1),

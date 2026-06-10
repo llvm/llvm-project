@@ -215,6 +215,9 @@ protected:
   /// True if full register names are printed.
   bool PPCUseFullRegisterNames = false;
 
+  /// True if a CHERI pure capability ABI is in use.
+  bool IsCheriPureCapabilityABI = false;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -600,6 +603,8 @@ public:
 
   bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
   void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
+
+  bool isCheriPureCapabilityABI() const { return IsCheriPureCapabilityABI; }
 
   const char *getZeroDirective() const { return ZeroDirective; }
   const char *getAsciiDirective() const { return AsciiDirective; }

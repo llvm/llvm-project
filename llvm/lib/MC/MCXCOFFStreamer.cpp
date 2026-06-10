@@ -130,8 +130,9 @@ void MCXCOFFStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
   getWriter().addCInfoSymEntry(Name, Metadata);
 }
 
-void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                                       Align ByteAlignment) {
+void MCXCOFFStreamer::emitCommonSymbol(
+    MCSymbol *Symbol, uint64_t Size, Align ByteAlignment,
+    TailPaddingAmount TailPadding = TailPaddingAmount::None) {
   auto &Sym = static_cast<MCSymbolXCOFF &>(*Symbol);
   getAssembler().registerSymbol(*Symbol);
   Sym.setExternal(Sym.getStorageClass() != XCOFF::C_HIDEXT);

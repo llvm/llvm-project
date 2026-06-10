@@ -16,6 +16,7 @@
 
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/CHERICapabilityFormat.h"
 #include "llvm/Support/Compiler.h"
 #include <cstdint>
 
@@ -304,6 +305,27 @@ public:
   virtual MCSymbol *getFunctionEntryPointSymbol(const GlobalValue *Func,
                                                 const TargetMachine &TM) const {
     return nullptr;
+  }
+
+  //===--------------------------------------------------------------------===//
+  // CHERI-related hooks
+  //
+
+  /// CHERI targets have compressed bounds, which place requirements on the
+  /// alignment of allocations based on their size. To guarantee non-overlapping
+  /// bounds for all global symbols we must over-align the symbol if the size is
+  /// not precisely representable. We also add padding at the end to ensure that
+  /// we cannot access another variable that happens to be located in the bytes
+  /// that are accessible after the end of the object due to the bounds having
+  /// been rounded up.
+  virtual TailPaddingAmount
+  getTailPaddingForPreciseBounds(uint64_t Size, const TargetMachine &TM) const {
+    return TailPaddingAmount::None;
+  }
+
+  virtual Align getAlignmentForPreciseBounds(uint64_t Size,
+                                             const TargetMachine &TM) const {
+    return {};
   }
 
 protected:

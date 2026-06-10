@@ -53,6 +53,13 @@ public:
                                           const MCValue &MV, int64_t Offset,
                                           MachineModuleInfo *MMI,
                                           MCStreamer &Streamer) const override;
+
+  TailPaddingAmount
+  getTailPaddingForPreciseBounds(uint64_t Size,
+                                 const TargetMachine &TM) const override;
+
+  Align getAlignmentForPreciseBounds(uint64_t Size,
+                                     const TargetMachine &TM) const override;
 };
 
 class RISCVMachOTargetObjectFile : public TargetLoweringObjectFileMachO {

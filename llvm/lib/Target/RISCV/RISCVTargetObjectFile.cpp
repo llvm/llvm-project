@@ -12,9 +12,11 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/CHERICapabilityFormat.h"
 
 using namespace llvm;
 
@@ -191,6 +193,44 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
                                                             Alignment, F);
+}
+
+TailPaddingAmount RISCVELFTargetObjectFile::getTailPaddingForPreciseBounds(
+    uint64_t Size, const TargetMachine &TM) const {
+  if (!TM.getMCAsmInfo().isCheriPureCapabilityABI())
+    return TailPaddingAmount::None;
+
+  const auto &STI = TM.getMCSubtargetInfo();
+  if (STI.hasFeature(RISCV::FeatureVendorXCheriot))
+    return CHERIoTCapabilityFormat::getRequiredTailPadding(Size);
+
+  if (STI.hasFeature(RISCV::FeatureStdExtY)) {
+    if (STI.hasFeature(RISCV::Feature64Bit))
+      return RV64YCapabilityFormat::getRequiredTailPadding(Size);
+    else
+      return RV32YCapabilityFormat::getRequiredTailPadding(Size);
+  }
+
+  return TargetLoweringObjectFile::getTailPaddingForPreciseBounds(Size, TM);
+}
+
+Align RISCVELFTargetObjectFile::getAlignmentForPreciseBounds(
+    uint64_t Size, const TargetMachine &TM) const {
+  if (!TM.getMCAsmInfo().isCheriPureCapabilityABI())
+    return Align();
+
+  const auto &STI = TM.getMCSubtargetInfo();
+  if (STI.hasFeature(RISCV::FeatureVendorXCheriot))
+    return CHERIoTCapabilityFormat::getRequiredAlignment(Size);
+
+  if (STI.hasFeature(RISCV::FeatureStdExtY)) {
+    if (STI.hasFeature(RISCV::Feature64Bit))
+      return RV64YCapabilityFormat::getRequiredAlignment(Size);
+    else
+      return RV32YCapabilityFormat::getRequiredAlignment(Size);
+  }
+
+  return TargetLoweringObjectFile::getAlignmentForPreciseBounds(Size, TM);
 }
 
 void RISCVMachOTargetObjectFile::getNameWithPrefix(
