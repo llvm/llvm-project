@@ -892,6 +892,17 @@ void TailRecursionEliminator::cleanupAndFinalize() {
   }
 
   if (RetPN) {
+    Instruction *AccRecInstr = AccumulatorRecursionInstr;
+    auto MaterializeAccumulator = [&](Value *OtherVal,
+                                      BasicBlock::iterator InsertPt) {
+      Instruction *New = AccRecInstr->clone();
+      New->setName("accumulator.ret.tr");
+      New->setOperand(AccRecInstr->getOperand(0) == AccPN, OtherVal);
+      New->insertBefore(InsertPt);
+      New->dropLocation();
+      return New;
+    };
+
     if (RetSelects.empty()) {
       // If we didn't insert any select instructions, then we know we didn't
       // store a return value and we can remove the PHI nodes we inserted.
@@ -904,7 +915,6 @@ void TailRecursionEliminator::cleanupAndFinalize() {
       if (AccPN) {
         // We need to insert a copy of our accumulator instruction before any
         // return in the function, and return its result instead.
-        Instruction *AccRecInstr = AccumulatorRecursionInstr;
         for (BasicBlock &BB : F) {
           ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator());
           if (!RI)
@@ -919,13 +929,8 @@ void TailRecursionEliminator::cleanupAndFinalize() {
             // return we need to apply the accumulation instruction one more
             // time to combine the last value with the result of the recursive
             // call.
-            Instruction *AccRecInstrNew = AccRecInstr->clone();
-            AccRecInstrNew->setName("accumulator.ret.tr");
-            AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
-                                       RI->getOperand(0));
-            AccRecInstrNew->insertBefore(RI->getIterator());
-            AccRecInstrNew->dropLocation();
-            RI->setOperand(0, AccRecInstrNew);
+            RI->setOperand(0, MaterializeAccumulator(RI->getOperand(0),
+                                                     RI->getIterator()));
           }
         }
       }
@@ -948,18 +953,12 @@ void TailRecursionEliminator::cleanupAndFinalize() {
       if (AccPN) {
         // We need to insert a copy of our accumulator instruction before any
         // of the selects we inserted, and select its result instead.
-        Instruction *AccRecInstr = AccumulatorRecursionInstr;
         for (SelectInst *SI : RetSelects) {
           if (isPseudoAssociative(AccRecInstr)) {
             SI->setFalseValue(AccPN);
           } else {
-            Instruction *AccRecInstrNew = AccRecInstr->clone();
-            AccRecInstrNew->setName("accumulator.ret.tr");
-            AccRecInstrNew->setOperand(AccRecInstr->getOperand(0) == AccPN,
-                                       SI->getFalseValue());
-            AccRecInstrNew->insertBefore(SI->getIterator());
-            AccRecInstrNew->dropLocation();
-            SI->setFalseValue(AccRecInstrNew);
+            SI->setFalseValue(
+                MaterializeAccumulator(SI->getFalseValue(), SI->getIterator()));
           }
         }
       }
