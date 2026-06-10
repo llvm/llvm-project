@@ -845,9 +845,12 @@ static bool leadingDimsAreUnit(ArrayRef<int64_t> shape, int numInnerDims) {
 /// result layout can later be distributed without re-deriving the lane
 /// layout. `instData`, `laneLayout`, and `laneData` may have different
 /// element types; they are normalized to int32 entries.
-static xegpu::LayoutAttr buildInstDataLayoutWithLane(
-    mlir::MLIRContext *context, ArrayRef<int64_t> instData,
-    ArrayRef<int64_t> laneLayout, ArrayRef<int64_t> laneData) {
+static xegpu::LayoutAttr
+buildInstDataLayoutWithLane(mlir::MLIRContext *context,
+                            ArrayRef<int64_t> instData,
+                            ArrayRef<int64_t> laneLayout,
+                            ArrayRef<int64_t> laneData,
+                            DenseI32ArrayAttr orderAttr = nullptr) {
   auto toI32Attr = [&](auto range) {
     SmallVector<int32_t> v(range.begin(), range.end());
     return DenseI32ArrayAttr::get(context, v);
@@ -857,12 +860,13 @@ static xegpu::LayoutAttr buildInstDataLayoutWithLane(
                                 /*inst_data=*/toI32Attr(instData),
                                 /*lane_layout=*/toI32Attr(laneLayout),
                                 /*lane_data=*/toI32Attr(laneData),
-                                /*order=*/nullptr);
+                                /*order=*/orderAttr);
 }
 
-static xegpu::LayoutAttr buildLaneLayout(mlir::MLIRContext *context,
-                                         ArrayRef<int64_t> laneLayout,
-                                         ArrayRef<int64_t> laneData) {
+static xegpu::LayoutAttr
+buildLaneLayout(mlir::MLIRContext *context, ArrayRef<int64_t> laneLayout,
+                ArrayRef<int64_t> laneData,
+                DenseI32ArrayAttr orderAttr = nullptr) {
   auto toI32Attr = [&](auto range) {
     SmallVector<int32_t> v(range.begin(), range.end());
     return DenseI32ArrayAttr::get(context, v);
@@ -872,7 +876,7 @@ static xegpu::LayoutAttr buildLaneLayout(mlir::MLIRContext *context,
                                 /*inst_data=*/nullptr,
                                 /*lane_layout=*/toI32Attr(laneLayout),
                                 /*lane_data=*/toI32Attr(laneData),
-                                /*order=*/nullptr);
+                                /*order=*/orderAttr);
 }
 
 /// Computes the lane_layout and lane_data for a multi-reduction's source
@@ -1707,8 +1711,12 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
   };
   honorConsumerLane();
 
+  // If the consumer carries an explicit `order`, propagate it through.
+  DenseI32ArrayAttr orderAttr =
+      consumerLayout ? consumerLayout.getOrder() : nullptr;
+
   if (layoutKind == xegpu::LayoutKind::Lane)
-    return buildLaneLayout(context, laneLayout, laneData);
+    return buildLaneLayout(context, laneLayout, laneData, orderAttr);
 
   // Subgroup-kind fast path: if the consumer already specifies a
   // workgroup-level layout, reuse it directly. Skip the inst_data
@@ -1752,7 +1760,8 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
   }
 
   if (layoutKind == xegpu::LayoutKind::InstData)
-    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
+    return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData,
+                                       orderAttr);
 
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
     if (rank != 2)
@@ -1859,16 +1868,27 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadNdAnchorLayout(
               xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
   if (!uArchInstruction)
     return nullptr;
-  // Transform / transpose / upConv are lane-level concerns; treat them as
-  // no-op at the propagation stage (consistent with the existing
-  // visitLoadNdOp, which warns on transpose).
+  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
+
+  // Lane kind only needs subgroupSize + packingSize. Skip the block-WHC
+  // lookup, which can fail for element types without a uArch entry (e.g.
+  // sub-byte floats like f4E2M1FN), and let the generic helper produce a
+  // default lane layout from packingSize alone.
+  if (layoutKind == xegpu::LayoutKind::Lane)
+    return setupGenericNdAnchorLayout(
+        layoutKind, context, resVecTy.getShape(), elemTy,
+        /*bWidths=*/{}, /*bHeights=*/{}, packingSize, consumerLayout, numSg,
+        uArch);
+
+  // InstData / Subgroup kinds need block params. Transform / transpose /
+  // upConv are lane-level concerns; treat them as no-op at the propagation
+  // stage (consistent with visitLoadNdOp, which warns on transpose).
   auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
       elemTy, /*hasTransform=*/false, /*hasTranspose=*/false,
       /*upConv=*/false);
   if (!blockWHC)
     return nullptr;
   auto [bWidths, bHeights, bCounts] = blockWHC.value();
-  unsigned packingSize = uArchInstruction->getPackedFormatBitSize();
 
   return setupGenericNdAnchorLayout(layoutKind, context, resVecTy.getShape(),
                                     elemTy, bWidths, bHeights, packingSize,
