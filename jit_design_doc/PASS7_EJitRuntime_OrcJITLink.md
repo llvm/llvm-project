@@ -377,10 +377,10 @@ void EJitJITLinkMemoryManager::allocate(
 ### 2.2.3 嵌入式优化: 固定 slab 分配
 
 ```
-嵌入式 Code Cache 内存布局 (512KB 示例):
+嵌入式 Code Cache 内存布局 (2MB 示例):
 
 ┌──────────────────────────────────────────────────────────────┐
-│                      Code Slab (RX) — 384KB                   │
+│                      Code Slab (RX) — 2MB                   │
 │  ┌──────────┬──────────┬──────────┬───────────────────────┐  │
 │  │ func_1   │ func_2   │ func_3   │ ... (free)            │  │
 │  │ (48KB)   │ (32KB)   │ (56KB)   │                       │  │
@@ -885,63 +885,50 @@ void* EJitCompileDriver::getOrCompile(uint32_t funcIdx,
 ## 2.6 EJitCache — Code Cache
 
 ```cpp
-// Code Cache 管理器 (线程安全)
+// Code Cache 管理器 — iterator-embedded LRU (单 hash 查找完成 LRU bump)
 class EJitCache {
 public:
+    using LruList = std::list<uint64_t>;
+
     struct Entry {
-        std::string cacheKey;
-        void* funcPtr;               // 编译后的函数指针
-        size_t codeSize;             // 代码大小 (字节)
-        uint64_t lastAccessTime;     // 最后访问时间戳
-        std::set<std::string> periodDeps; // 依赖的时间窗 (用于失效)
+        void* funcPtr;
+        size_t codeSize;
+        LruList::iterator lruIt;          // embedded → O(1) splice/erase
+        SmallVector<std::string, 4> periodDeps;
     };
 
-    EJitCache(size_t maxTotalSize,
-              size_t maxEntries,
-              size_t maxSingleFuncSize);
+    EJitCache(size_t maxEntries = 4096,
+              size_t maxTotalSize = 32 * 1024 * 1024,
+              size_t maxSingleFuncSize = 512 * 1024);
 
-    // 查询 (线程安全)
-    void* getOrNull(const std::string& cacheKey);
+    // 查询: unique_lock (splice 修改链表指针，不可 shared)
+    void* getOrNull(uint64_t cacheKey);
 
-    // 存入 (线程安全)
-    bool put(const std::string& cacheKey, void* funcPtr, size_t codeSize,
-             const std::vector<std::string>& periodDeps = {});
+    // 存入
+    bool put(uint64_t cacheKey, void* funcPtr, size_t codeSize,
+             ArrayRef<std::string> periodDeps = {});
 
-    // 时间窗失效 → 清理依赖缓存
-    void invalidateByPeriod(const std::string& periodName, int cellIdx);
+    // 时间窗失效 → 清理依赖缓存 (periodIndex_ 索引)
+    void invalidateByPeriod(const std::string& periodName, uint8_t cellIdx);
 
-    // 清空
     void clear();
-
-    // 统计
-    struct Stats {
-        size_t entryCount;
-        size_t totalCodeSize;
-        size_t maxSize;
-        size_t hits;
-        size_t misses;
-        size_t evictions;
-    };
     Stats getStats() const;
 
+    static uint64_t buildCacheKey(uint32_t funcIdx,
+        const std::pair<std::string, uint8_t>* dims, unsigned count);
+
 private:
-    // 淘汰 (LRU)
-    void evictLRU_unsafe();
+    void evictLRU();
 
-    std::unordered_map<std::string, Entry> cache_;
-    std::list<std::string> lruList_;
-    std::unordered_map<std::string, decltype(lruList_)::iterator> lruIter_;
+    mutable MutexType mutex_;               // BareMetalMutex or shared_mutex
+    std::unordered_map<uint64_t, Entry> cache_;
+    LruList lruList_;                       // uint64_t key, LRU order
+    std::unordered_map<std::string, std::set<uint64_t>> periodIndex_;
 
-    size_t maxTotalSize_;
     size_t maxEntries_;
+    size_t maxTotalSize_;
     size_t maxSingleFuncSize_;
-    size_t currentTotalSize_;
-
-    mutable std::shared_mutex mutex_;   // 读写锁
-
-    // period 失效索引: periodName:cellIdx → cacheKey 集合
-    // 用于 invalidateByPeriod 快速查找
-    std::unordered_map<std::string, std::set<std::string>> periodIndex_;
+    size_t currentTotalSize_ = 0;
 };
 ```
 
@@ -1224,7 +1211,7 @@ ejit_status_t ejit_init(const ejit_config_t* config) {
 
 | 数据结构 | 锁类型 | 读端 | 写端 |
 |---------|--------|------|------|
-| EJitCache | shared_mutex | getOrNull (共享) | put/evict (独占) |
+| EJitCache | shared_mutex (or BareMetalMutex) | getOrNull (独占 — splice write) | put/evict (独占) |
 | RuntimeState | mutex | 任意 | 仅主线程 (activate/deactivate) |
 | PeriodArrayRegistry | 无锁 (只读) | 任意 (init 后只读) | 仅 ejit_auto_register (初始化时) |
 | BitcodeCache | 无锁 (只读) | 任意 | 仅 ejit_auto_register (初始化时) |
@@ -1307,13 +1294,13 @@ void EJitRuntimeState::deactivate(const std::string& periodName, int cellIdx) {
 // 嵌入式默认配置
 struct EmbeddedDefaults {
     // JIT 代码内存 (JITLink slab)
-    static constexpr size_t kCodeSlabSize = 384 * 1024;   // 384KB
-    static constexpr size_t kDataSlabSize = 128 * 1024;   // 128KB
+    static constexpr size_t kCodeSlabSize = 2 * 1024 * 1024;  // 2MB
+    static constexpr size_t kDataSlabSize = 128 * 1024;       // 128KB
 
     // Code Cache
-    static constexpr size_t kMaxCacheSize = 384 * 1024;   // 384KB
-    static constexpr size_t kMaxCacheEntries = 64;
-    static constexpr size_t kMaxSingleFuncSize = 64 * 1024; // 64KB
+    static constexpr size_t kMaxCacheSize = 32 * 1024 * 1024; // 32MB
+    static constexpr size_t kMaxCacheEntries = 4096;
+    static constexpr size_t kMaxSingleFuncSize = 512 * 1024;  // 512KB
 
     // LLVM 内部
     static constexpr size_t kLLVMStackSize = 256 * 1024;  // 256KB (编译线程栈)

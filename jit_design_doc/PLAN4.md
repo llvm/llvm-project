@@ -321,39 +321,35 @@ JIT 编译时读取常量:
 
 ```cpp
 // Cache Key: uint64_t = funcIdx(32b) | dim[3](8b) | dim[2](8b) | dim[1](8b) | dim[0](8b)
-// funcIdx 由 FNV-1a hash 确定（AOT 编译期计算，运行时一致），dim 为 ejit_dim_t.index 的完整 uint8_t 值。
+// funcIdx 由 FNV-1a hash 确定（AOT 编译期计算，运行时一致）。
 // 无维度时低 32 位为 0。
 
-// 缓存条目
-struct CacheEntry {
-    void* funcPtr;                   // 编译后的函数指针
-    size_t codeSize;                 // 代码大小
-    uint64_t lastAccessTime;         // 最后访问时间 (LRU)
+// 缓存条目 — LRU list iterator 嵌入 Entry，getOrNull 一次 hash 完成 LRU bump
+struct Entry {
+    void* funcPtr;
+    size_t codeSize;
+    std::list<uint64_t>::iterator lruIt;  // embedded → O(1) splice/erase
+    SmallVector<std::string, 4> periodDeps;
 };
 
-// Code Cache 管理器
+// Code Cache 管理器 — 线程安全，iterator-embedded LRU
 class EJitCache {
-    // 缓存存储：uint64_t cacheKey -> Entry
     std::unordered_map<uint64_t, Entry> cache_;
+    std::list<uint64_t> lruList_;         // key, LRU 顺序
+    // 不再需要 lruIter_ 反向映射 — iterator 嵌在 Entry 里
 
-    // LRU 队列
-    std::list<uint64_t> lruList_;
-    std::unordered_map<uint64_t, std::list<uint64_t>::iterator> lruIter_;
-
-    // 时间窗 → cacheKey 集合索引 (用于 invalidateByPeriod)
     std::unordered_map<std::string, std::set<uint64_t>> periodIndex_;
 
-    // 缓存配置
-    size_t maxTotalSize_;
-    size_t maxSingleFunctionSize_;
-    size_t maxEntries_;
+    size_t maxEntries_        = 4096;      // 缓存条目上限
+    size_t maxTotalSize_      = 32 MB;     // 总代码大小上限
+    size_t maxSingleFuncSize_ = 512 KB;    // 单函数上限
 
 public:
-    void* getOrNull(uint64_t cacheKey);
+    void* getOrNull(uint64_t cacheKey);    // unique_lock (splice 是写操作)
     bool put(uint64_t cacheKey, void* fn, size_t codeSize,
              ArrayRef<std::string> periodDeps = {});
     void invalidateByPeriod(const std::string& periodName, uint8_t cellIdx);
-    void evictLRU();
+    void clear();
 
     static uint64_t buildCacheKey(uint32_t funcIdx,
         const std::pair<std::string, uint8_t>* dims, unsigned count);
