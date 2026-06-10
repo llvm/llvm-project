@@ -142,6 +142,8 @@ static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
       SlashAgnostic ? PrefixMetacharactersWithSlash : PrefixMetacharacters;
   StringRef Best;
   while (!S.empty()) {
+    const char *Metas =
+        SlashAgnostic ? PrefixMetacharactersWithSlash : PrefixMetacharacters;
     size_t PrefixSize = S.find_first_of(Metas);
     if (PrefixSize == std::string::npos)
       PrefixSize = S.size();
@@ -183,8 +185,8 @@ static StringRef maxPlainSubstring(StringRef S, bool SlashAgnostic) {
 }
 
 Expected<GlobPattern> GlobPattern::create(StringRef S,
-                                          std::optional<size_t> MaxSubPatterns,
-                                          bool SlashAgnostic) {
+GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns,
+                    bool SlashAgnostic) {
   GlobPattern Pat;
   Pat.SlashAgnostic = SlashAgnostic;
   Pat.Pattern = S;
@@ -242,11 +244,19 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
                                        errc::invalid_argument);
       StringRef Chars = S.substr(I, J - I);
       bool Invert = S[I] == '^' || S[I] == '!';
-      Expected<BitVector> BVOrErr =
-          Invert ? expand(Chars.substr(1), S) : expand(Chars, S);
+      BitVector BV = std::move(*BVOrErr);
+      if (SlashAgnostic) {
+        if (BV['\\'] || BV['/']) {
+          BV.set('\\');
+          BV.set('/');
+        }
+      }
+      if (Invert)
+        Chars = Chars.drop_front();
+      Expected<BitVector> BVOrErr = expand(Chars, S);
       if (!BVOrErr)
         return BVOrErr.takeError();
-      BitVector BV = std::move(*BVOrErr);
+      BitVector &BV = *BVOrErr;
       if (SlashAgnostic) {
         if (BV['\\'] || BV['/']) {
           BV.set('\\');
