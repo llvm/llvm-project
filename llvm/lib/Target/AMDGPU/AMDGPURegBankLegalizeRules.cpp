@@ -1333,6 +1333,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniP3}, {{SgprP3}, {SgprP3, Sgpr32}}})
       .Any({{DivP3}, {{VgprP3}, {VgprP3, Vgpr32}}});
 
+  addRulesForGOpcs({G_DYN_STACKALLOC})
+      .Any({{UniP5, UniS32}, {{SgprP5}, {Sgpr32}, DynStackAlloc}})
+      .Any({{UniP5, DivS32}, {{SgprP5}, {Vgpr32}, DynStackAlloc}});
+
   addRulesForGOpcs({G_ABS}, Standard)
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}})
       .Div(S16, {{Vgpr16}, {Vgpr16}, AbsToNegMax})
@@ -1617,6 +1621,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B64, {{VgprB64}, {VgprPtr64}})
       .Uni(B128, {{UniInVgprB128}, {SgprPtr64}})
       .Div(B128, {{VgprB128}, {VgprPtr64}});
+
+  addRulesForGOpcs({G_AMDGPU_WHOLE_WAVE_FUNC_SETUP})
+      .Any({{DivS1}, {{Vcc}, {}}});
+
+  addRulesForGOpcs({G_AMDGPU_WHOLE_WAVE_FUNC_RETURN}).Any({{}, {{}, {Vcc}}});
 
   using namespace Intrinsic;
 

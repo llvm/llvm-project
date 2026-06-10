@@ -746,7 +746,7 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void toolchains::MinGW::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
   if (Arg *A = DriverArgs.getLastArg(options::OPT_mguard_EQ)) {
     StringRef GuardArgs = A->getValue();
     if (GuardArgs == "none") {

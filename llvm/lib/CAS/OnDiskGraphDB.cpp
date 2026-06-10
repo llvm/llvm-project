@@ -1504,8 +1504,6 @@ Error OnDiskGraphDB::createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data) {
   int64_t FileSize = Data.size() + Leaf0;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I.Offset, Path);
 
-  auto BypassSandbox = sys::sandbox::scopedDisable();
-
   // Write the file. Don't reuse this mapped_file_region, which is read/write.
   // Let load() pull up one that's read-only.
   Expected<MappedTempFile> File = createTempFile(Path, FileSize, Logger.get());
@@ -1548,6 +1546,8 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
     if (Existing.SK != TrieRecord::StorageKind::Unknown)
       return Error::success();
   }
+
+  auto BypassSandbox = sys::sandbox::scopedDisable();
 
   // Big leaf nodes.
   if (Refs.empty() && Data.size() > TrieRecord::MaxEmbeddedSize)

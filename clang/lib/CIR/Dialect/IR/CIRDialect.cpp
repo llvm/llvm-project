@@ -292,10 +292,7 @@ void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp op,
 
 void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
                           mlir::OperationState &odsState, mlir::Type addr,
-                          mlir::Type allocaType, llvm::StringRef name,
-                          mlir::IntegerAttr alignment) {
-  odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
-                        mlir::TypeAttr::get(allocaType));
+                          llvm::StringRef name, mlir::IntegerAttr alignment) {
   odsState.addAttribute(getNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(name));
   if (alignment) {
