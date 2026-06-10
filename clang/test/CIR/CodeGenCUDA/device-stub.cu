@@ -255,7 +255,7 @@ __device__ _BitInt(36) c;
 // HIP-CIR-SAME: #cir.int<1> : !s32i,
 // HIP-CIR-SAME: #cir.global_view<@__hip_fatbin_str> : !cir.ptr<!void>,
 // HIP-CIR-SAME: #cir.ptr<null> : !cir.ptr<!void>
-// HIP-CIR-SAME: }> : !rec_anon_struct{{.*}} {section = ".hipFatBinSegment"}
+// HIP-CIR-SAME: }> : !rec_anon_struct {section = ".hipFatBinSegment"}
 
 // HIP-CIR: cir.global "private" internal @__hip_gpubin_handle = #cir.ptr<null> : !cir.ptr<!cir.ptr<!void>>
 // HIP-CIR: cir.func private @__hipRegisterFatBinary(!cir.ptr<!void>) -> !cir.ptr<!cir.ptr<!void>>

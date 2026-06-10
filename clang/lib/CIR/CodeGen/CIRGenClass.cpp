@@ -901,6 +901,33 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
   assert(!cir::MissingFeatures::incrementProfileCounter());
   assert(!cir::MissingFeatures::runCleanupsScope());
 
+  // For a memcpy-equivalent special member (a union, or a trivially-copyable
+  // record) the synthesized body either copies nothing -- a union body is just
+  // `return *this` -- or relies on a memcpy the AST does not spell out as
+  // field assignments.  Mirror classic CodeGen's AssignmentMemcpyizer: copy
+  // the whole object once, then fall through to emit the trailing
+  // `return *this`.  Emitting the copy but skipping the return would leave the
+  // result reference uninitialized.
+  if (assignOp->isMemcpyEquivalentSpecialMember(getContext())) {
+    CanQualType recordTy =
+        getContext().getCanonicalTagType(assignOp->getParent());
+    LValue dest = makeNaturalAlignAddrLValue(loadCXXThis(), recordTy);
+    // The source is the trailing reference parameter; load it to get the
+    // referent's address before copying (mirrors the copy-constructor path).
+    mlir::Value srcPtr = builder.createLoad(getLoc(assignOp->getLocation()),
+                                            getAddrOfLocalVar(args.back()));
+    LValue src = makeNaturalAlignAddrLValue(srcPtr, recordTy);
+    emitAggregateAssign(dest, src, recordTy);
+
+    for (Stmt *s : rootCS->body())
+      if (isa<ReturnStmt>(s))
+        if (emitStmt(s, /*useCurrentScope=*/true).failed())
+          cgm.errorNYI(s->getSourceRange(),
+                       std::string("emitImplicitAssignmentOperatorBody: ") +
+                           s->getStmtClassName());
+    return;
+  }
+
   // Classic codegen uses a special class to attempt to replace member
   // initializers with memcpy. We could possibly defer that to the
   // lowering or optimization phases to keep the memory accesses more

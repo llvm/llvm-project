@@ -34,7 +34,7 @@ template void templ<s>();
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR-NEXT: cir.call @_ZN6StructC1Ei(%[[TEMP]], %[[ONE]])
 // CIR-NEXT: %[[GLOB:.*]] = cir.get_global @s : !cir.ptr<!rec_Struct>
-// CIR-NEXT: cir.return
+// CIR-NEXT: cir.call @_ZN6StructaSEOS_(%[[GLOB]], %[[TEMP]])
 
 // LLVM: define{{.*}}@_Z5templITnRDaL_Z1sEEvv()
 // LLVM: %[[TEMP:.*]] = alloca %struct.Struct
