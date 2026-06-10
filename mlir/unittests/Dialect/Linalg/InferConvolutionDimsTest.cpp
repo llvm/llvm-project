@@ -132,6 +132,8 @@ createConv2DWithSwappedFilterLoops(OpBuilder &builder,
 
 /// Creates a Quantize 2D Convolution using input and filter layout
 /// but with extra scalar input/filter zero-point operands.
+/// The zero points are hard-coded constants since their values
+/// do not affect dimension inference.
 ///
 /// Loop order:
 ///   d0 = output height (oh), parallel
@@ -148,8 +150,7 @@ createConv2DWithSwappedFilterLoops(OpBuilder &builder,
 ///
 /// Semantic pairing: d0 <-> d2, d1 <-> d3
 static linalg::GenericOp createQConv2DOp(OpBuilder &builder, int64_t oh,
-                                         int64_t ow, int64_t kh,
-                                         int64_t kw) {
+                                         int64_t ow, int64_t kh, int64_t kw) {
   Location loc = builder.getUnknownLoc();
   MLIRContext *ctx = builder.getContext();
 
@@ -167,8 +168,11 @@ static linalg::GenericOp createQConv2DOp(OpBuilder &builder, int64_t oh,
                                         inputType.getElementType());
   Value filter = tensor::EmptyOp::create(builder, loc, filterType.getShape(),
                                          filterType.getElementType());
-  Value inputZeroPoint = arith::ConstantIntOp::create(builder, loc, 0, 32);
-  Value filterZeroPoint = arith::ConstantIntOp::create(builder, loc, 0, 32);
+
+  // Non-Zero Input and Filter Zero-Points
+  Value inputZeroPoint = arith::ConstantIntOp::create(builder, loc, 7, 32);
+  Value filterZeroPoint = arith::ConstantIntOp::create(builder, loc, 9, 32);
+
   Value output = tensor::EmptyOp::create(builder, loc, outputType.getShape(),
                                          outputType.getElementType());
 
@@ -270,9 +274,8 @@ TEST_F(InferConvolutionDimsTest, QConv2DWithZeroPoints) {
   ASSERT_EQ(qConvOp.getNumDpsInits(), 1u);
 
   auto indexingMaps = qConvOp.getIndexingMapsArray();
-  ASSERT_EQ(indexingMaps.size(),
-            static_cast<size_t>(qConvOp.getNumDpsInputs() +
-                                qConvOp.getNumDpsInits()));
+  ASSERT_EQ(indexingMaps.size(), static_cast<size_t>(qConvOp.getNumDpsInputs() +
+                                                     qConvOp.getNumDpsInits()));
 
   // The two extra quantized conv operands must be scalar inputs.
   EXPECT_EQ(indexingMaps[2].getNumResults(), 0u);
