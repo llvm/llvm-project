@@ -2081,22 +2081,6 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
   bool IsArray = Desc->isArray();
   QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
 
-  if (IsArray)
-    Ptr = Ptr.expand();
-
-  size_t BaseIdx = Ptr.getIndex();
-  size_t ArraySize = Ptr.getNumElems();
-  size_t RemainingElems = ArraySize - BaseIdx;
-  if (NElems > RemainingElems) {
-    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-        << (int64_t)(BaseIdx + NElems - 1) << /*isArray=*/0
-        << (uint64_t)ArraySize;
-    return false;
-  }
-
-  if (NElems <= 1)
-    return true;
-
   if (ElemTy->isIncompleteType()) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_ltor_incomplete_type)
@@ -2110,6 +2094,26 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
         << ElemTy;
     return false;
   }
+
+  if (IsArray)
+    Ptr = Ptr.expand();
+
+  size_t BaseIdx = Ptr.getIndex();
+  size_t ArraySize = Ptr.getNumElems();
+  size_t RemainingElems = ArraySize - BaseIdx;
+  if (NElems > RemainingElems) {
+    if (IsArray)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << (uint64_t)(BaseIdx + NElems - 1) << /*array*/ 0
+          << (uint64_t)ArraySize;
+    else
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << (uint64_t)(BaseIdx + NElems - 1) << /*non-array*/ 1;
+    return false;
+  }
+
+  if (NElems <= 1)
+    return true;
 
   PrimType ElemT = *S.getContext().classify(ElemTy);
 
