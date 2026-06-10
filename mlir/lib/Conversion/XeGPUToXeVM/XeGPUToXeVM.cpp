@@ -30,6 +30,7 @@
 #include "llvm/Support/FormatVariadic.h"
 
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 
 #include "llvm/ADT/TypeSwitch.h"
@@ -1159,6 +1160,187 @@ class DpasMxToXeVMPattern : public OpConversionPattern<xegpu::DpasMxOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// arith.extf / arith.truncf between f8E8M0FNU and f16/bf16.
+//
+// f8E8M0FNU is an 8-bit, all-exponent type (bias 127, no sign/mantissa, the
+// bit pattern 0xFF is NaN). There is no direct LLVM lowering for converting it
+// to/from f16 or bf16, and routing through f32 (as the generic arith expansion
+// does) is wasteful, so these patterns expand the conversion into integer bit
+// manipulation. The XeVM type converter maps f8E8M0FNU to i8, so the raw
+// exponent byte is produced/consumed directly.
+//===----------------------------------------------------------------------===//
+
+// Returns true if `type` (or its element type) is f8E8M0FNU.
+static bool isF8E8M0(Type type) {
+  return isa<Float8E8M0FNUType>(getElementTypeOrSelf(type));
+}
+
+// Returns true if `type` (or its element type) is f16 or bf16.
+static bool isF16OrBF16(Type type) {
+  Type elemTy = getElementTypeOrSelf(type);
+  return elemTy.isF16() || elemTy.isBF16();
+}
+
+// Clones the shape of `shapeFrom` (scalar or shaped) onto an integer element
+// type of the given bit width.
+static Type cloneToIntType(Type shapeFrom, unsigned width) {
+  Type intTy = IntegerType::get(shapeFrom.getContext(), width);
+  if (auto shapedTy = dyn_cast<ShapedType>(shapeFrom))
+    return shapedTy.clone(intTy);
+  return intTy;
+}
+
+// Builds an integer constant of `intTy` (scalar, or a splat for shaped types).
+static Value createIntConst(ConversionPatternRewriter &rewriter, Location loc,
+                            Type intTy, int64_t value) {
+  auto attr = rewriter.getIntegerAttr(getElementTypeOrSelf(intTy), value);
+  if (auto shapedTy = dyn_cast<ShapedType>(intTy))
+    return arith::ConstantOp::create(rewriter, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
+  return arith::ConstantOp::create(rewriter, loc, attr);
+}
+
+// Expands `arith.extf` from f8E8M0FNU to f16/bf16 using direct bit
+// manipulation.
+//   - bf16 shares E8M0's exponent encoding (8-bit exponent, bias 127), so the
+//     conversion just shifts the exponent into bf16's exponent field.
+//   - f16 has a 5-bit exponent (bias 15) and a much smaller range, so the
+//     exponent is rebiased and out-of-range values saturate.
+class ExtFE8M0ToFloatXeVMPattern : public OpConversionPattern<arith::ExtFOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::ExtFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstTy = op.getType();
+    if (!isF8E8M0(op.getIn().getType()) || !isF16OrBF16(dstTy))
+      return rewriter.notifyMatchFailure(op, "not extf f8E8M0FNU -> f16/bf16");
+
+    Location loc = op.getLoc();
+    Type i8Ty = cloneToIntType(dstTy, 8);
+    Type i16Ty = cloneToIntType(dstTy, 16);
+
+    // f8E8M0FNU operands are converted to i8 by the type converter; bitcast
+    // defensively in case the adaptor still carries the float type.
+    Value srcBits = adaptor.getIn();
+    if (srcBits.getType() != i8Ty)
+      srcBits = arith::BitcastOp::create(rewriter, loc, i8Ty, srcBits);
+    Value e = arith::ExtUIOp::create(rewriter, loc, i16Ty, srcBits);
+
+    Value resultBits;
+    if (getElementTypeOrSelf(dstTy).isBF16()) {
+      // bf16 exponent field is bits [14:7]: shift the exponent into place.
+      Value c7 = createIntConst(rewriter, loc, i16Ty, 7);
+      Value shifted = arith::ShLIOp::create(rewriter, loc, e, c7);
+      // A plain shift turns E8M0 NaN (0xFF) into +inf; force a bf16 NaN instead.
+      Value c255 = createIntConst(rewriter, loc, i16Ty, 0xFF);
+      Value cNaN = createIntConst(rewriter, loc, i16Ty, 0x7FC0);
+      Value isNaN = arith::CmpIOp::create(rewriter, loc,
+                                          arith::CmpIPredicate::eq, e, c255);
+      resultBits = arith::SelectOp::create(rewriter, loc, isNaN, cNaN, shifted);
+    } else {
+      // f16 exponent field is bits [14:10], bias 15. Rebias from E8M0's bias
+      // 127 (f16_exp = e - 112), then saturate values f16 cannot represent.
+      // Note: f16 subnormals (e in [103, 112]) are flushed to zero.
+      Value c112 = createIntConst(rewriter, loc, i16Ty, 112);
+      Value c10 = createIntConst(rewriter, loc, i16Ty, 10);
+      Value eh = arith::SubIOp::create(rewriter, loc, e, c112);
+      Value normal = arith::ShLIOp::create(rewriter, loc, eh, c10);
+      Value cZero = createIntConst(rewriter, loc, i16Ty, 0);
+      Value cInf = createIntConst(rewriter, loc, i16Ty, 0x7C00);
+      Value cNaN = createIntConst(rewriter, loc, i16Ty, 0x7E00);
+      Value c113 = createIntConst(rewriter, loc, i16Ty, 113);
+      Value c142 = createIntConst(rewriter, loc, i16Ty, 142);
+      Value c255 = createIntConst(rewriter, loc, i16Ty, 0xFF);
+      // e < 113 (< 2^-14): underflow, flush to zero.
+      Value isLo = arith::CmpIOp::create(rewriter, loc,
+                                         arith::CmpIPredicate::ult, e, c113);
+      resultBits = arith::SelectOp::create(rewriter, loc, isLo, cZero, normal);
+      // e > 142 (> 2^15): overflow, saturate to +inf.
+      Value isHi = arith::CmpIOp::create(rewriter, loc,
+                                         arith::CmpIPredicate::ugt, e, c142);
+      resultBits =
+          arith::SelectOp::create(rewriter, loc, isHi, cInf, resultBits);
+      // E8M0 NaN (0xFF) propagates to f16 NaN (overrides the +inf result).
+      Value isNaN = arith::CmpIOp::create(rewriter, loc,
+                                          arith::CmpIPredicate::eq, e, c255);
+      resultBits =
+          arith::SelectOp::create(rewriter, loc, isNaN, cNaN, resultBits);
+    }
+    Value result = arith::BitcastOp::create(rewriter, loc, dstTy, resultBits);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+// Expands `arith.truncf` from f16/bf16 to f8E8M0FNU using direct bit
+// manipulation, with round-to-nearest-even (the default truncf rounding mode).
+// The result type f8E8M0FNU is converted to i8, so the raw exponent byte is
+// produced directly.
+class TruncFFloatToE8M0XeVMPattern
+    : public OpConversionPattern<arith::TruncFOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::TruncFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcTy = op.getIn().getType();
+    if (!isF16OrBF16(srcTy) || !isF8E8M0(op.getType()))
+      return rewriter.notifyMatchFailure(op, "not truncf f16/bf16 -> f8E8M0FNU");
+    if (op.getRoundingmodeAttr())
+      return rewriter.notifyMatchFailure(op, "only default rounding supported");
+
+    Location loc = op.getLoc();
+    Type i16Ty = cloneToIntType(srcTy, 16);
+    Type i8Ty = cloneToIntType(srcTy, 8);
+
+    Value bits =
+        arith::BitcastOp::create(rewriter, loc, i16Ty, adaptor.getIn());
+    // Magnitude only: f8E8M0FNU is unsigned.
+    Value c7FFF = createIntConst(rewriter, loc, i16Ty, 0x7FFF);
+    Value mag = arith::AndIOp::create(rewriter, loc, bits, c7FFF);
+    Value c1 = createIntConst(rewriter, loc, i16Ty, 1);
+
+    Value expByte;
+    if (getElementTypeOrSelf(srcTy).isBF16()) {
+      // bf16 shares E8M0's exponent encoding. Round-to-nearest-even across the
+      // 7 mantissa bits (bias = 0x3F + exponent_lsb), then keep the exponent.
+      Value c7 = createIntConst(rewriter, loc, i16Ty, 7);
+      Value expLsb = arith::ShRUIOp::create(rewriter, loc, mag, c7);
+      expLsb = arith::AndIOp::create(rewriter, loc, expLsb, c1);
+      Value c3F = createIntConst(rewriter, loc, i16Ty, 0x3F);
+      Value bias = arith::AddIOp::create(rewriter, loc, c3F, expLsb);
+      Value rounded = arith::AddIOp::create(rewriter, loc, mag, bias);
+      Value shifted = arith::ShRUIOp::create(rewriter, loc, rounded, c7);
+      Value cFF = createIntConst(rewriter, loc, i16Ty, 0xFF);
+      expByte = arith::AndIOp::create(rewriter, loc, shifted, cFF);
+    } else {
+      // f16: round-to-nearest-even across the 10 mantissa bits (bias =
+      // 0x1FF + exponent_lsb), then rebias the 5-bit exponent (bias 15) to
+      // E8M0 (bias 127): e = f16_exp + 112.
+      Value c10 = createIntConst(rewriter, loc, i16Ty, 10);
+      Value top = arith::ShRUIOp::create(rewriter, loc, mag, c10);
+      Value c1F = createIntConst(rewriter, loc, i16Ty, 0x1F);
+      Value origExp = arith::AndIOp::create(rewriter, loc, top, c1F);
+      Value expLsb = arith::AndIOp::create(rewriter, loc, top, c1);
+      Value c1FF = createIntConst(rewriter, loc, i16Ty, 0x1FF);
+      Value bias = arith::AddIOp::create(rewriter, loc, c1FF, expLsb);
+      Value rounded = arith::AddIOp::create(rewriter, loc, mag, bias);
+      Value shifted = arith::ShRUIOp::create(rewriter, loc, rounded, c10);
+      Value roundedExp = arith::AndIOp::create(rewriter, loc, shifted, c1F);
+      Value c112 = createIntConst(rewriter, loc, i16Ty, 112);
+      Value e = arith::AddIOp::create(rewriter, loc, roundedExp, c112);
+      // f16 inf/NaN (exponent all ones) maps to E8M0 NaN (0xFF).
+      Value cFF = createIntConst(rewriter, loc, i16Ty, 0xFF);
+      Value isInfNaN = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::eq, origExp, c1F);
+      expByte = arith::SelectOp::create(rewriter, loc, isInfNaN, cFF, e);
+    }
+    Value result = arith::TruncIOp::create(rewriter, loc, i8Ty, expByte);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // Pass Definition
 //===----------------------------------------------------------------------===//
 
@@ -1441,6 +1623,16 @@ struct ConvertXeGPUToXeVMPass
                            memref::MemRefDialect, gpu::GPUDialect,
                            index::IndexDialect>();
     target.addIllegalDialect<xegpu::XeGPUDialect>();
+    // arith.extf/arith.truncf converting between f8E8M0FNU and f16/bf16 have no
+    // direct lowering; mark them illegal so the dedicated patterns below expand
+    // them into integer bit manipulation.
+    target.addDynamicallyLegalOp<arith::ExtFOp>([](arith::ExtFOp op) {
+      return !(isF8E8M0(op.getIn().getType()) && isF16OrBF16(op.getType()));
+    });
+    target.addDynamicallyLegalOp<arith::TruncFOp>([](arith::TruncFOp op) {
+      return !(isF16OrBF16(op.getIn().getType()) && isF8E8M0(op.getType()) &&
+               !op.getRoundingmodeAttr());
+    });
 
     RewritePatternSet patterns(context);
     populateXeGPUToXeVMConversionPatterns(typeConverter, patterns);
@@ -1473,4 +1665,6 @@ void mlir::populateXeGPUToXeVMConversionPatterns(
   patterns.add<FenceToXeVMPattern, DpasToXeVMPattern>(typeConverter,
                                                       patterns.getContext());
   patterns.add<DpasMxToXeVMPattern>(typeConverter, patterns.getContext());
+  patterns.add<ExtFE8M0ToFloatXeVMPattern, TruncFFloatToE8M0XeVMPattern>(
+      typeConverter, patterns.getContext());
 }
