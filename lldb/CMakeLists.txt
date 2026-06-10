@@ -34,6 +34,7 @@ if(LLDB_BUILT_STANDALONE)
   set(CMAKE_CXX_EXTENSIONS NO)
 
   include(LLDBStandalone)
+  include(HandleDoxygen)
 endif()
 
 include(LLDBConfig)
