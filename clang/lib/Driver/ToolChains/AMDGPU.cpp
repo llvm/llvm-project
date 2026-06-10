@@ -978,11 +978,16 @@ void ROCMToolChain::addClangTargetOptions(
   if (TT.getEnvironment() == llvm::Triple::LLVM)
     return;
 
-  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(DriverArgs);
-  StringRef GpuArch =
-      TargetID.OptionalGPUArch ? *TargetID.OptionalGPUArch : StringRef();
+  // Get the device name and canonicalize it. For offload compilation,
+  // BoundArch contains the full target ID. For non-offload (OpenCL),
+  // fall back to -mcpu.
+  StringRef TargetID = BoundArch.empty()
+                           ? DriverArgs.getLastArgValue(options::OPT_mcpu_EQ)
+                           : BoundArch;
+  StringRef GpuArch = getProcessorFromTargetID(getTriple(), TargetID);
 
   StringRef LibDeviceFile = RocmInstallation->getLibDeviceFile(GpuArch);
+
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(getDriver(), DriverArgs));
   if (!RocmInstallation->checkCommonBitcodeLibs(GpuArch, LibDeviceFile, ABIVer))
@@ -995,8 +1000,7 @@ void ROCMToolChain::addClangTargetOptions(
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation->getCommonBitcodeLibs(
       DriverArgs, LibDeviceFile, GpuArch, DeviceOffloadingKind,
-      getSanitizerArgs(DriverArgs, TargetID.OptionalTargetID.value_or(""),
-                       DeviceOffloadingKind)
+      getSanitizerArgs(DriverArgs, TargetID, DeviceOffloadingKind)
           .needsAsanRt()));
 
   for (auto [BCFile, Internalize] : BCLibs) {
