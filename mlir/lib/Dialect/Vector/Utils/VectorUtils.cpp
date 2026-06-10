@@ -457,9 +457,10 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
   int64_t vecToReadRank = vecToReadTy.getRank();
   auto vecToReadShape = vecToReadTy.getShape();
 
-  assert((permutationMap ||
-          sourceShape.size() == static_cast<size_t>(vecToReadRank)) &&
-         "expected same ranks.");
+  size_t expectedSourceRank =
+      permutationMap ? permutationMap.getNumDims() : vecToReadRank;
+  assert(sourceShape.size() == expectedSourceRank &&
+         "expected source rank to match permutation map dims or vector rank.");
   assert((!padValue.has_value() ||
           padValue.value().getType() == sourceShapedType.getElementType()) &&
          "expected same pad element type to match source element type");
@@ -468,6 +469,7 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
 
   if (useInBoundsInsteadOfMasking) {
     if (permutationMap) {
+      // FIXME: This computation is too weak - it ignores the read indices.
       inBoundsVal = computeInBoundsFromPermutationMap(
           permutationMap, vecToReadTy, cast<MemRefType>(source.getType()));
     } else {
@@ -534,6 +536,7 @@ Operation *vector::createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
   SmallVector<bool> inBoundsVal(vecToStoreRank, true);
   if (useInBoundsInsteadOfMasking) {
     if (permutationMap) {
+      // FIXME: This computation is too weak - it ignores the write indices.
       inBoundsVal = computeInBoundsFromPermutationMap(
           permutationMap, vecToStoreType, cast<MemRefType>(dest.getType()));
     } else {
