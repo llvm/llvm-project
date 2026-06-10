@@ -451,7 +451,8 @@ private:
     // 1. If there are pending writers, they are woken up first, so a reader
     //    cannot steal their wake-up signal.
     // 2. If there are only pending readers, they are all woken up together
-    //    (via notify_all), so a timed-out reader cannot starve other readers.
+    //    (via notify_all), so a timed-out reader cannot steal other readers'
+    //    wake-up signals.
     enum class WakeTarget { Readers, Writers, None };
     WakeTarget status;
 
