@@ -17,24 +17,27 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
+#include <cstdint>
 
 namespace llvm {
 
 /// Cost Table Entry
-template <typename CostType>
-struct CostTblEntryT {
-  int ISD;
-  MVT::SimpleValueType Type;
+template <typename CostType> struct CostTblEntryT {
+  // Cost tables use aggregate initialization, so values that do not fit in
+  // these fields are rejected as narrowing conversions at compile time.
+  uint16_t ISD;
+  uint8_t Type;
   CostType Cost;
 };
 using CostTblEntry = CostTblEntryT<unsigned>;
+static_assert(sizeof(CostTblEntry) == 8);
 
 /// Find in cost table.
 template <class CostType>
 inline const CostTblEntryT<CostType> *
 CostTableLookup(ArrayRef<CostTblEntryT<CostType>> Tbl, int ISD, MVT Ty) {
   auto I = find_if(Tbl, [=](const CostTblEntryT<CostType> &Entry) {
-    return ISD == Entry.ISD && Ty == Entry.Type;
+    return ISD == Entry.ISD && Ty.SimpleTy == Entry.Type;
   });
   if (I != Tbl.end())
     return I;
@@ -51,14 +54,14 @@ CostTableLookup(const CostTblEntryT<CostType> (&Table)[N], int ISD, MVT Ty) {
 }
 
 /// Type Conversion Cost Table
-template <typename CostType>
-struct TypeConversionCostTblEntryT {
-  int ISD;
-  MVT::SimpleValueType Dst;
-  MVT::SimpleValueType Src;
+template <typename CostType> struct TypeConversionCostTblEntryT {
+  uint16_t ISD;
+  uint8_t Dst;
+  uint8_t Src;
   CostType Cost;
 };
 using TypeConversionCostTblEntry = TypeConversionCostTblEntryT<unsigned>;
+static_assert(sizeof(TypeConversionCostTblEntry) == 8);
 
 /// Find in type conversion cost table.
 template <class CostType>
@@ -67,7 +70,8 @@ ConvertCostTableLookup(ArrayRef<TypeConversionCostTblEntryT<CostType>> Tbl,
                        int ISD, MVT Dst, MVT Src) {
   auto I =
       find_if(Tbl, [=](const TypeConversionCostTblEntryT<CostType> &Entry) {
-        return ISD == Entry.ISD && Src == Entry.Src && Dst == Entry.Dst;
+        return ISD == Entry.ISD && Src.SimpleTy == Entry.Src &&
+               Dst.SimpleTy == Entry.Dst;
       });
   if (I != Tbl.end())
     return I;
