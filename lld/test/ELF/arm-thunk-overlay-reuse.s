@@ -8,25 +8,25 @@
 /// is in memory. It is OK for an overlay to share a thunk in a non-overlay as
 /// that will be in memory.
 
-// CHECK-LABEL: 00001000 <_start>:
+// CHECK-LABEL: <_start>:
 // CHECK-NEXT: 1000: bl 0x1004
-// CHECK-LABEL: 00001004 <__Thumbv4ABSLongThunk_far>:
+// CHECK-LABEL: <__Thumbv4ABSLongThunk_far>:
 
-// CHECK-LABEL: 00002000 <over1>:
+// CHECK-LABEL: <over1>:
 // CHECK-NEXT: 2000: bl 0x1004
 // CHECK-NEXT:       bl 0x200c
 // CHECK-NEXT:       bl 0x200c
-// CHECK-LABEL: 0000200c <__Thumbv4ABSLongThunk_far2>:
+// CHECK-LABEL: <__Thumbv4ABSLongThunk_far2>:
 
-// CHECK-LABEL: 00002000 <over2>:
+// CHECK-LABEL: <over2>:
 // CHECK-NEXT: 2000: bl 0x1004
 // CHECK-NEXT:       bl 0x2010
 // CHECK-NEXT:       bl 0x2010
-// CHECK-LABEL: 00002010 <__Thumbv4ABSLongThunk_far2>:
+// CHECK-LABEL: <__Thumbv4ABSLongThunk_far2>:
 
-// CHECK-LABEL: 00003000 <nonover>:
+// CHECK-LABEL: <nonover>:
 // CHECK-NEXT: 3000: bl 0x3004
-// CHECK-LABEL: 00003004 <__Thumbv4ABSLongThunk_far2>:
+// CHECK-LABEL: <__Thumbv4ABSLongThunk_far2>:
 
 //--- a.s
  .thumb
