@@ -92,36 +92,34 @@ uint32x2_t test_pmv_s_u32x2(uint32_t x) { return __riscv_pmv_s_u32x2(x); }
 // RV64:        pmv.ws
 int32x2_t test_pmv_s_i32x2(int32_t x) { return __riscv_pmv_s_i32x2(x); }
 
-// TODO: On RV32, the 64-bit packed constant splat emits two `pli.b`/`pli.h`/
-// `plui.h` instead of one `pli.db`/`pli.dh`/`plui.dh`.
 // CHECK-LABEL: test_pmv_s_u8x8_imm:
-// RV32-COUNT-2: pli.b
-// RV64:         pli.b
+// RV32:        pli.db
+// RV64:        pli.b
 uint8x8_t test_pmv_s_u8x8_imm(void) { return __riscv_pmv_s_u8x8(5); }
 
 // CHECK-LABEL: test_pmv_s_i8x8_imm:
-// RV32-COUNT-2: pli.b
-// RV64:         pli.b
+// RV32:        pli.db
+// RV64:        pli.b
 int8x8_t test_pmv_s_i8x8_imm(void) { return __riscv_pmv_s_i8x8(-3); }
 
 // CHECK-LABEL: test_pmv_s_u16x4_imm:
-// RV32-COUNT-2: pli.h
-// RV64:         pli.h
+// RV32:        pli.dh
+// RV64:        pli.h
 uint16x4_t test_pmv_s_u16x4_imm(void) { return __riscv_pmv_s_u16x4(42); }
 
 // CHECK-LABEL: test_pmv_s_i16x4_imm:
-// RV32-COUNT-2: pli.h
-// RV64:         pli.h
+// RV32:        pli.dh
+// RV64:        pli.h
 int16x4_t test_pmv_s_i16x4_imm(void) { return __riscv_pmv_s_i16x4(-5); }
 
 // CHECK-LABEL: test_pmv_s_u16x4_imm_hi:
-// RV32-COUNT-2: plui.h
-// RV64:         plui.h
+// RV32:        plui.dh
+// RV64:        plui.h
 uint16x4_t test_pmv_s_u16x4_imm_hi(void) { return __riscv_pmv_s_u16x4(0x3600); }
 
 // CHECK-LABEL: test_pmv_s_i16x4_imm_hi:
-// RV32-COUNT-2: plui.h
-// RV64:         plui.h
+// RV32:        plui.dh
+// RV64:        plui.h
 int16x4_t test_pmv_s_i16x4_imm_hi(void) { return __riscv_pmv_s_i16x4(0x3600); }
 
 // Note: Constants that fit `addi`'s 12-bit immediate fold to 2x `li`.
