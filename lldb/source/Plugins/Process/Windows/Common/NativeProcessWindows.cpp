@@ -662,7 +662,7 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
 
 void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
                                         uint32_t exit_code) {
-  llvm::sys::ScopedLock lock(m_mutex);
+  llvm::sys::ScopedLock lock(m_threads_mutex);
   llvm::erase_if(m_threads, [thread_id](const auto &t) {
     return t->GetID() == thread_id;
   });
