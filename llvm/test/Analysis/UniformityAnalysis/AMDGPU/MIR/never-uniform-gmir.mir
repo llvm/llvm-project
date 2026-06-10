@@ -1,0 +1,13 @@
+# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
+
+# whole wave func setup (original exec mask) is a divergence source
+---
+name:            whole_wave_func_setup
+body:             |
+  bb.0:
+    ; CHECK-LABEL: MachineUniformityInfo for function:  @whole_wave_func_setup
+    ; CHECK: DIVERGENT: %0: %0:_(s1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
+    %0:_(s1) = G_AMDGPU_WHOLE_WAVE_FUNC_SETUP
+    G_AMDGPU_WHOLE_WAVE_FUNC_RETURN %0(s1)
+...
