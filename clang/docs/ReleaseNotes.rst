@@ -191,6 +191,7 @@ C++ Language Changes
 --------------------
 
 - ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+- ``auto`` parameters are now available in all C++ language modes as an extension.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -380,6 +381,17 @@ New Compiler Flags
   ``-mzilsd-strict-align`` which control whether Zilsd accesses are allowed to
   be aligned to 4-byte alignment rather than fully unaligned or fully (8-byte)
   aligned.
+
+- New ``-cl`` option ``/pathmap:`` added to match MSVC. This option acts as a
+  clang's ``-ffile-prefix-map=value`` and has known differences in behaviour
+  with the CL's option that do not affect the functionality: nomalizes the
+  macro prefix map pathes -- removes `./` and uses the target's platform-
+  specific path separator character when expanding the preprocessor macros -- 
+  ``-ffile-reproducible`` (but not the debug and coverage prefix maps);
+  does not require ``/experimental:deterministic`` as by MSVC. It needed for
+  removing a hostname from a mangling hash gen, but clang-cl does not use
+  a hostname when generates the hashes. Known issues -- does not remap the
+  source file pathes within PCH/PCM files.
 
 Deprecated Compiler Flags
 -------------------------
@@ -839,6 +851,30 @@ Windows Support
 - ``-fmacro-prefix-map=`` (``-ffile-prefix-map=``) now affects an anonymous namespace hash generation
   for the MSVC targets and allows deterministic symbol mangling for reproducible builds.
 
+- Added the ``-fwinx64-eh-unwind=`` flag to select the x64 Windows unwind info
+  version (``v1``, ``v2-best-effort``, ``v2-required``, or ``v3``). The legacy
+  ``-fwinx64-eh-unwindv2=`` flag is deprecated; it is still accepted and mapped
+  onto the new flag as follows:
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Legacy ``-fwinx64-eh-unwindv2=``
+       - New ``-fwinx64-eh-unwind=``
+     * - ``disabled``
+       - ``v1`` (default; no flag forwarded)
+     * - ``best-effort``
+       - ``v2-best-effort``
+     * - ``required``
+       - ``v2-required``
+
+  The MSVC-compatible ``/d2epilogunwind`` and ``/d2epilogunwindrequirev2``
+  options map to ``v2-best-effort`` and ``v2-required`` respectively.
+
+- When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
+  automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
+  explicit unwind version was specified.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
@@ -851,6 +887,9 @@ RISC-V Support
 - Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
 - Intrinsics were added for the 'Zvabd` (RISC-V Integer Vector Absolute Difference) extension.
 - Intrinsics were added for the 'Zvzip` (Reordering Structured Data in Vector Registers) extension.
+- A new ``-mtune`` syntax was added to support processor-specific tuning feature string
+  Currently this new syntax is gated by the ``-mexperimental-mtune-syntax`` flag.
+
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -903,3 +903,23 @@ void *t33(void *ptr)
 void t34(void) {
   __asm__ volatile("T34 CC NAMED MODIFIER: %cc[input]" :: [input] "i" (4));
 }
+
+// Register input (null element type) before a memory input: keep elementtype.
+//      CIR: cir.func{{.*}}@t35
+//      CIR: %[[I:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init]
+//      CIR: %[[G:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["g"]
+//      CIR: %[[I_LOAD:.*]] = cir.load align(4) %[[I]] : !cir.ptr<!s32i>, !s32i
+//      CIR: cir.asm(x86_att,
+// CIR-NEXT:   out = [],
+// CIR-NEXT:   in = [%[[I_LOAD]] : !s32i, %[[G]] : !cir.ptr<!s32i> (maybe_memory)],
+// CIR-NEXT:   in_out = [],
+// CIR-NEXT:   {"" "r,*m,~{dirflag},~{fpsr},~{flags}"}) side_effects
+// LLVM: define{{.*}}@t35
+// LLVM: %[[I:.*]] = alloca i32
+// LLVM: %[[G:.*]] = alloca i32
+// LLVM: %[[I_LOAD:.*]] = load i32, ptr %[[I]]
+// LLVM: call void asm sideeffect "", "r,*m,~{dirflag},~{fpsr},~{flags}"(i32 %[[I_LOAD]], ptr elementtype(i32) %[[G]])
+void t35(int i) {
+  int g;
+  __asm__ volatile("" :: "r"(i), "m"(g));
+}

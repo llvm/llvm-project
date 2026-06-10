@@ -10,6 +10,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_HIPSPV_H
 
 #include "SPIRV.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 
@@ -58,6 +59,7 @@ public:
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
   void addClangWarningOptions(llvm::opt::ArgStringList &CC1Args) const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
@@ -94,6 +96,11 @@ public:
   }
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
+
+  LTOKind getDefaultLTOMode() const override { return LTOK_Full; }
+  LTOKind
+  getLTOMode(const llvm::opt::ArgList &Args,
+             Action::OffloadKind Kind = Action::OFK_None) const override;
 
   const ToolChain *HostTC = nullptr;
 
