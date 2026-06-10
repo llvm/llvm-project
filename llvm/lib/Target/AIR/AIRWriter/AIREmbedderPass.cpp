@@ -15,6 +15,9 @@
 
 #include "AIREmbedderPass.h"
 #include "AIRLibWriter.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "BitcodeEmitter.h"
 #include "PointeeTypeMap.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -32,9 +35,35 @@
 
 using namespace llvm;
 
+static void emitTGBytesRemark(Module &M) {
+  Function *F = nullptr;
+  for (Function &Fn : M)
+    if (!Fn.isDeclaration()) {
+      F = &Fn;
+      break;
+    }
+  if (!F || F->empty())
+    return;
+  const DataLayout &DL = M.getDataLayout();
+  uint64_t Total = 0;
+  for (const GlobalVariable &GV : M.globals()) {
+    if (GV.getAddressSpace() != 3 || GV.isDeclaration())
+      continue;
+    uint64_t AlignB = GV.getAlign().value_or(Align(1)).value();
+    if (Total % AlignB)
+      Total += AlignB - (Total % AlignB);
+    Total += DL.getTypeAllocSize(GV.getValueType());
+  }
+  OptimizationRemark R("metal-tg", "TGBytes", DebugLoc(), &F->getEntryBlock());
+  R << "threadgroup memory total "
+    << DiagnosticInfoOptimizationBase::Argument("TGBytes", Total);
+  F->getContext().diagnose(R);
+}
+
 static void embedAIRLibImpl(Module &M) {
   metal::lowerConstantExprs(M);
   metal::PointeeTypeMap PTM = metal::buildPointeeTypeMap(M);
+  emitTGBytesRemark(M);
   std::vector<uint8_t> Bytes = metal::serializeAIRLib(M, PTM);
 
   ArrayRef<uint8_t> Ref(Bytes.data(), Bytes.size());
