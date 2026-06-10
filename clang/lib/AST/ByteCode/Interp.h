@@ -3245,16 +3245,16 @@ inline bool DoShift(InterpState &S, CodePtr OpPC, LT &LHS, RT &RHS,
     return true;
   }
 
-    // Right shift.
-    if (Compare(RHS, RT::from(MaxShiftAmount, RHS.bitWidth())) ==
-        ComparisonCategoryResult::Greater) {
-      R = LT::AsUnsigned::from(-1);
-    } else {
-      // Do the shift on potentially signed LT, then convert to unsigned type.
-      LT A;
-      LT::shiftRight(LHS, LT::from(RHS, Bits), Bits, &A);
-      R = LT::AsUnsigned::from(A);
-    }
+  // Right shift.
+  if (Compare(RHS, RT::from(MaxShiftAmount, RHS.bitWidth())) ==
+      ComparisonCategoryResult::Greater) {
+    R = LT::AsUnsigned::from(0);
+  } else {
+    // Do the shift on potentially signed LT, then convert to unsigned type.
+    LT A;
+    LT::shiftRight(LHS, LT::from(RHS, Bits), Bits, &A);
+    R = LT::AsUnsigned::from(A);
+  }
 
   S.Stk.push<LT>(LT::from(R));
   return true;
