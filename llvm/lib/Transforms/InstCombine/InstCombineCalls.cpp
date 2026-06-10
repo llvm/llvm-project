@@ -3700,6 +3700,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         break;
       }
 
+      case BundleAttr::Ignore:
+        return CallBase::removeOperandBundleAt(II, Idx);
+
       case BundleAttr::NonNull: {
         auto [Ptr] = llvm::getAssumeNonNullInfo(OBU);
 
@@ -3749,7 +3752,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
-      case BundleAttr::Ignore:
       case BundleAttr::NoUndef:
         break;
 
@@ -3803,7 +3805,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // then this one is redundant, and should be removed.
     KnownBits Known(1);
     computeKnownBits(IIOperand, Known, II);
-    if (Known.isAllOnes() && isAssumeWithEmptyBundle(cast<AssumeInst>(*II)))
+    if (Known.isAllOnes() && !II->hasOperandBundles())
       return eraseInstFromFunction(*II);
 
     // assume(false) is unreachable.
