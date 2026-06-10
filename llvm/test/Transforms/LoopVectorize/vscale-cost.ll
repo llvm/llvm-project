@@ -6,8 +6,8 @@
 
 define void @scalablevf(ptr %dst.start, i8 %a, i8 %b) {
 ; CHECK-LABEL: 'scalablevf'
-; CHECK:  Cost of 1 for VF vscale x 4: EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = vscale i64
-; CHECK:  Cost of 1 for VF vscale x 4: EMIT-SCALAR vp<[[VP2]]> = vscale i64
+; CHECK:  Cost of 0 for VF vscale x 4: EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = vscale i64
+; CHECK:  Cost of 0 for VF vscale x 4: EMIT-SCALAR vp<[[VP2]]> = vscale i64
 ;
 entry:
   br label %loop

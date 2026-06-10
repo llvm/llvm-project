@@ -38,10 +38,12 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; NO-VP-NEXT:  entry:
 ; NO-VP-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; NO-VP-NEXT:    [[TMP12:%.*]] = shl nuw i64 [[TMP11]], 1
-; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[TMP12]]
+; NO-VP-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP12]], i64 4)
+; NO-VP-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], [[UMAX]]
 ; NO-VP-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[ENTRY:%.*]]
 ; NO-VP:       vector.ph:
-; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP11]], 1
+; NO-VP-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; NO-VP-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; NO-VP-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; NO-VP-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NO-VP-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i32
@@ -91,12 +93,8 @@ for.body:
   store float %1, ptr %arrayidx7, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond.not = icmp eq i64 %indvars.iv.next, %n
-  br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
+  br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:
   ret void
 }
-
-!0 = distinct !{!0, !1, !2}
-!1 = !{!"llvm.loop.vectorize.width", i32 2}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
