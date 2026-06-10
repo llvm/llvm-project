@@ -84,7 +84,6 @@ LIBC_INLINE void FreeListHeap::init() {
   LIBC_ASSERT(!is_initialized && "duplicate initialization");
   auto result = BlockRef::init(region());
   BlockRef block = *result;
-  free_store.set_range({0, cpp::bit_ceil(block.inner_size())});
   free_store.insert(block);
   is_initialized = true;
 }
