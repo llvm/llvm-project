@@ -1,4 +1,4 @@
-name: Release Documentation
+name: Release Documentation and Man Pages
 
 permissions:
   contents: read
@@ -34,10 +34,47 @@ on:
         required: false
 
 jobs:
-  release-documentation:
-    name: Build and Upload Release Documentation
-    environment: release
+  # This job checks permissions and validates inputs to prevent potential
+  # malicious actions.  Since the release-documentation job has contents: write
+  # permissions we need to be extra careful about who can run the job and what
+  # inputs can be provided.
+  release-man-pages-validate-input:
+    name: Release Man Pages Validate Input
     runs-on: ubuntu-24.04
+    environment:
+      name: release
+      deployment: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
+
+      - name: Check Permissions
+        uses: ./.github/workflows/require-team-membership
+        with:
+          team-slug: llvm-release-managers
+          LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+      - name: Validate Input
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
+
+  release-documentation:
+    name: Build and Upload Release Documentation and Man Pages
+    environment:
+      name: release
+      deployment: false
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    needs:
+      - release-man-pages-validate-input
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
@@ -45,6 +82,11 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+
+      - name: Validate Input
+        uses: ./.github/workflows/validate-release-version
+        with:
+          release-version: ${{ inputs.release-version }}
 
       - name: Setup Python env
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
@@ -65,8 +107,27 @@ jobs:
       - name: Build Documentation
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
+          ./llvm/utils/release/build-docs.sh -release "$INPUTS_RELEASE_VERSION" -no-doxygen
+
+      - id: app-token
+        if: env.upload
+        uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1
+        with:
+          app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
+          private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          permission-members: read
+
+      - name: Upload man pages
+        if: env.upload
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          USER_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_VERSION: ${{ inputs.release-version }}
+        run: |
+          ./llvm/utils/release/github-upload-release.py --token "$GITHUB_TOKEN" --release "$RELEASE_VERSION" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" upload --files ./llvm_man_pages-*.tar.xz
 
       - name: Create Release Notes Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -89,14 +150,15 @@ jobs:
         env:
           PUSH_TOKEN: ${{ secrets.LLVMBOT_WWW_RELEASES_PUSH }}
           GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
+          INPUTS_RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          mkdir -p www-releases/${{ inputs.release-version }}
-          mv ./docs-build/html-export/* www-releases/${{ inputs.release-version }}
+          mkdir -p www-releases/$INPUTS_RELEASE_VERSION
+          mv ./docs-build/html-export/* www-releases/$INPUTS_RELEASE_VERSION
           cd www-releases
-          git checkout -b ${{ inputs.release-version }}
-          git add ${{ inputs.release-version }}
+          git checkout -b $INPUTS_RELEASE_VERSION
+          git add $INPUTS_RELEASE_VERSION
           git config user.email "llvmbot@llvm.org"
           git config user.name "llvmbot"
-          git commit -a -m "Add ${{ inputs.release-version }} documentation"
-          git push --force  "https://$PUSH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
-          gh pr create -f -B main -H llvmbot:${{ inputs.release-version }}
+          git commit -a -m "Add $INPUTS_RELEASE_VERSION documentation"
+          git push --force  "https://$PUSH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/$INPUTS_RELEASE_VERSION
+          gh pr create -f -B main -H llvmbot:$INPUTS_RELEASE_VERSION

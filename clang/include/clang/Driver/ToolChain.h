@@ -61,6 +61,8 @@ class SanitizerArgs;
 class Tool;
 class XRayArgs;
 
+enum LTOKind : int;
+
 /// Helper structure used to pass information extracted from clang executable
 /// name such as `i686-linux-android-g++`.
 struct ParsedClangName {
@@ -461,6 +463,17 @@ public:
   /// HasNativeLTOLinker - Check whether the linker and related tools have
   /// native LLVM support.
   virtual bool HasNativeLLVMSupport() const;
+
+  /// Returns the default LTO mode for this toolchain.
+  virtual LTOKind getDefaultLTOMode() const;
+
+  /// Resolve the requested LTO mode for this toolchain.
+  virtual LTOKind getLTOMode(const llvm::opt::ArgList &Args,
+                             Action::OffloadKind Kind = Action::OFK_None) const;
+
+  /// Returns true if LTO is active for this toolchain given the args.
+  bool isUsingLTO(const llvm::opt::ArgList &Args,
+                  Action::OffloadKind Kind = Action::OFK_None) const;
 
   /// LookupTypeForExtension - Return the default language type to use for the
   /// given extension.

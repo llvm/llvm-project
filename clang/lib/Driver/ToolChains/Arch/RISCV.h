@@ -10,8 +10,10 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_ARCH_RISCV_H
 
 #include "clang/Driver/Driver.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -28,6 +30,11 @@ std::string getRISCVArch(const llvm::opt::ArgList &Args,
                          const llvm::Triple &Triple);
 std::string getRISCVTargetCPU(const llvm::opt::ArgList &Args,
                               const llvm::Triple &Triple);
+/// Return the tune CPU and optionally, the tune features. A std::nullopt
+/// return value signals error state.
+std::optional<StringRef>
+getRISCVTuneCPU(const Driver &D, const llvm::opt::ArgList &Args,
+                SmallVectorImpl<std::string> *TuneFeatures = nullptr);
 } // end namespace riscv
 } // namespace tools
 } // end namespace driver

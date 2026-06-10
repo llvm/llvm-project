@@ -512,14 +512,6 @@ static bool isSentinel(const DWARFDebugNames::Abbrev &Abbr) {
   return Abbr.Code == 0;
 }
 
-DWARFDebugNames::Abbrev DWARFDebugNames::AbbrevMapInfo::getEmptyKey() {
-  return sentinelAbbrev();
-}
-
-DWARFDebugNames::Abbrev DWARFDebugNames::AbbrevMapInfo::getTombstoneKey() {
-  return DWARFDebugNames::Abbrev(~0, dwarf::Tag(0), 0, {});
-}
-
 Expected<DWARFDebugNames::AttributeEncoding>
 DWARFDebugNames::NameIndex::extractAttributeEncoding(uint64_t *Offset) {
   if (*Offset >= Offsets.EntriesBase) {

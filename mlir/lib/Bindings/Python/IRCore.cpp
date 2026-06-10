@@ -754,11 +754,11 @@ PyDiagnosticSeverity PyDiagnostic::getSeverity() {
       mlirDiagnosticGetSeverity(diagnostic));
 }
 
-PyLocation PyDiagnostic::getLocation() {
+nb::typed<nb::object, PyLocation> PyDiagnostic::getLocation() {
   checkValid();
   MlirLocation loc = mlirDiagnosticGetLocation(diagnostic);
   MlirContext context = mlirLocationGetContext(loc);
-  return PyLocation(PyMlirContext::forContext(context), loc);
+  return PyLocation(PyMlirContext::forContext(context), loc).maybeDownCast();
 }
 
 nb::str PyDiagnostic::getMessage() {
@@ -789,8 +789,8 @@ PyDiagnostic::DiagnosticInfo PyDiagnostic::getInfo() {
   std::vector<DiagnosticInfo> notes;
   for (nb::handle n : getNotes())
     notes.emplace_back(nb::cast<PyDiagnostic>(n).getInfo());
-  return {getSeverity(), getLocation(), nb::cast<std::string>(getMessage()),
-          std::move(notes)};
+  return {getSeverity(), nb::cast<PyLocation>(getLocation()),
+          nb::cast<std::string>(getMessage()), std::move(notes)};
 }
 
 //------------------------------------------------------------------------------

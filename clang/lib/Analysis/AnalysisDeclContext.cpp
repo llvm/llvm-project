@@ -310,11 +310,12 @@ AnalysisDeclContext *AnalysisDeclContextManager::getContext(const Decl *D) {
 
 BodyFarm &AnalysisDeclContextManager::getBodyFarm() { return FunctionBodyFarm; }
 
-const StackFrame *AnalysisDeclContext::getStackFrame(
-    const LocationContext *ParentLC, const void *Data, const Expr *E,
-    const CFGBlock *Blk, unsigned BlockCount, unsigned Index) {
-  return getLocationContextManager().getStackFrame(this, ParentLC, Data, E, Blk,
-                                                   BlockCount, Index);
+const StackFrame *
+AnalysisDeclContext::getStackFrame(const StackFrame *ParentSF, const void *Data,
+                                   const Expr *E, const CFGBlock *Blk,
+                                   unsigned BlockCount, unsigned Index) {
+  return getStackFrameManager().getStackFrame(this, ParentSF, Data, E, Blk,
+                                              BlockCount, Index);
 }
 
 bool AnalysisDeclContext::isInStdNamespace(const Decl *D) {
@@ -385,27 +386,15 @@ std::string AnalysisDeclContext::getFunctionName(const Decl *D) {
   return Str;
 }
 
-LocationContextManager &AnalysisDeclContext::getLocationContextManager() {
-  assert(
-      ADCMgr &&
-      "Cannot create LocationContexts without an AnalysisDeclContextManager!");
-  return ADCMgr->getLocationContextManager();
+StackFrameManager &AnalysisDeclContext::getStackFrameManager() {
+  assert(ADCMgr &&
+         "Cannot create StackFrames without an AnalysisDeclContextManager!");
+  return ADCMgr->getStackFrameManager();
 }
 
 //===----------------------------------------------------------------------===//
 // FoldingSet profiling.
 //===----------------------------------------------------------------------===//
-
-void LocationContext::ProfileCommon(llvm::FoldingSetNodeID &ID,
-                                    ContextKind ck,
-                                    AnalysisDeclContext *ctx,
-                                    const LocationContext *parent,
-                                    const void *data) {
-  ID.AddInteger(ck);
-  ID.AddPointer(ctx);
-  ID.AddPointer(parent);
-  ID.AddPointer(data);
-}
 
 void StackFrame::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getAnalysisDeclContext(), getParent(), Data, CallSite, Block,
@@ -413,50 +402,35 @@ void StackFrame::Profile(llvm::FoldingSetNodeID &ID) {
 }
 
 //===----------------------------------------------------------------------===//
-// LocationContext creation.
+// StackFrame creation.
 //===----------------------------------------------------------------------===//
 
-const StackFrame *LocationContextManager::getStackFrame(
-    AnalysisDeclContext *Ctx, const LocationContext *Parent, const void *Data,
-    const Expr *E, const CFGBlock *Blk, unsigned BlockCount, unsigned StmtIdx) {
+const StackFrame *StackFrameManager::getStackFrame(
+    AnalysisDeclContext *Ctx, const StackFrame *Parent, const void *Data,
+    const Expr *E, const CFGBlock *B, unsigned BlockCount, unsigned StmtIdx) {
   llvm::FoldingSetNodeID ID;
-  StackFrame::Profile(ID, Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx);
+  StackFrame::Profile(ID, Ctx, Parent, Data, E, B, BlockCount, StmtIdx);
   void *InsertPos;
-  auto *L =
-      cast_or_null<StackFrame>(Contexts.FindNodeOrInsertPos(ID, InsertPos));
-  if (!L) {
-    L = new StackFrame(Ctx, Parent, Data, E, Blk, BlockCount, StmtIdx, ++NewID);
-    Contexts.InsertNode(L, InsertPos);
+  StackFrame *SF = Frames.FindNodeOrInsertPos(ID, InsertPos);
+  if (!SF) {
+    SF = new StackFrame(Ctx, Parent, Data, E, B, BlockCount, StmtIdx, ++NewID);
+    Frames.InsertNode(SF, InsertPos);
   }
-  return L;
+  return SF;
 }
 
 //===----------------------------------------------------------------------===//
-// LocationContext methods.
+// StackFrame methods.
 //===----------------------------------------------------------------------===//
 
-const StackFrame *LocationContext::getStackFrame() const {
-  const LocationContext *LC = this;
-  while (LC) {
-    if (const auto *SF = dyn_cast<StackFrame>(LC))
-      return SF;
-    LC = LC->getParent();
-  }
-  return nullptr;
-}
-
-bool LocationContext::inTopFrame() const {
-  return getStackFrame()->inTopFrame();
-}
-
-bool LocationContext::isParentOf(const LocationContext *LC) const {
+bool StackFrame::isParentOf(const StackFrame *SF) const {
   do {
-    const LocationContext *Parent = LC->getParent();
+    const StackFrame *Parent = SF->getParent();
     if (Parent == this)
       return true;
     else
-      LC = Parent;
-  } while (LC);
+      SF = Parent;
+  } while (SF);
 
   return false;
 }
@@ -469,7 +443,7 @@ static void printLocation(raw_ostream &Out, const SourceManager &SM,
     Loc.print(Out, SM);
 }
 
-void LocationContext::dumpStack(raw_ostream &Out) const {
+void StackFrame::dumpStack(raw_ostream &Out) const {
   ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP(Ctx.getLangOpts());
   PP.TerseOutput = 1;
@@ -478,29 +452,24 @@ void LocationContext::dumpStack(raw_ostream &Out) const {
       getAnalysisDeclContext()->getASTContext().getSourceManager();
 
   unsigned Frame = 0;
-  for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
-    switch (LCtx->getKind()) {
-    case StackFrameKind:
-      Out << "\t#" << Frame << ' ';
-      ++Frame;
-      if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
-        Out << "Calling " << AnalysisDeclContext::getFunctionName(D);
-      else
-        Out << "Calling anonymous code";
-      if (const Expr *E = cast<StackFrame>(LCtx)->getCallSite()) {
-        Out << " at line ";
-        printLocation(Out, SM, E->getBeginLoc());
-      }
-      break;
+  for (const StackFrame *SF = this; SF; SF = SF->getParent()) {
+    Out << "\t#" << Frame << ' ';
+    ++Frame;
+    if (const auto *D = dyn_cast<NamedDecl>(SF->getDecl()))
+      Out << "Calling " << AnalysisDeclContext::getFunctionName(D);
+    else
+      Out << "Calling anonymous code";
+    if (const Expr *E = SF->getCallSite()) {
+      Out << " at line ";
+      printLocation(Out, SM, E->getBeginLoc());
     }
     Out << '\n';
   }
 }
 
-void LocationContext::printJson(raw_ostream &Out, const char *NL,
-                                unsigned int Space, bool IsDot,
-                                std::function<void(const LocationContext *)>
-                                    printMoreInfoPerContext) const {
+void StackFrame::printJson(
+    raw_ostream &Out, const char *NL, unsigned int Space, bool IsDot,
+    std::function<void(const StackFrame *)> printMoreInfoPerStackFrame) const {
   ASTContext &Ctx = getAnalysisDeclContext()->getASTContext();
   PrintingPolicy PP(Ctx.getLangOpts());
   PP.TerseOutput = 1;
@@ -509,39 +478,35 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
       getAnalysisDeclContext()->getASTContext().getSourceManager();
 
   unsigned Frame = 0;
-  for (const LocationContext *LCtx = this; LCtx; LCtx = LCtx->getParent()) {
+  for (const StackFrame *SF = this; SF; SF = SF->getParent()) {
     Indent(Out, Space, IsDot)
-        << "{ \"lctx_id\": " << LCtx->getID() << ", \"location_context\": \"";
-    switch (LCtx->getKind()) {
-    case StackFrameKind:
-      Out << '#' << Frame << " Call\", \"calling\": \"";
-      ++Frame;
-      if (const auto *D = dyn_cast<NamedDecl>(LCtx->getDecl()))
-        Out << D->getQualifiedNameAsString();
-      else
-        Out << "anonymous code";
+        << "{ \"lctx_id\": " << SF->getID() << ", \"location_context\": \"";
+    Out << '#' << Frame << " Call\", \"calling\": \"";
+    ++Frame;
+    if (const auto *D = dyn_cast<NamedDecl>(SF->getDecl()))
+      Out << D->getQualifiedNameAsString();
+    else
+      Out << "anonymous code";
 
-      Out << "\", \"location\": ";
-      if (const Expr *E = cast<StackFrame>(LCtx)->getCallSite()) {
-        printSourceLocationAsJson(Out, E->getBeginLoc(), SM);
-      } else {
-        Out << "null";
-      }
-
-      Out << ", \"items\": ";
-      break;
+    Out << "\", \"location\": ";
+    if (const Expr *E = SF->getCallSite()) {
+      printSourceLocationAsJson(Out, E->getBeginLoc(), SM);
+    } else {
+      Out << "null";
     }
 
-    printMoreInfoPerContext(LCtx);
+    Out << ", \"items\": ";
+
+    printMoreInfoPerStackFrame(SF);
 
     Out << '}';
-    if (LCtx->getParent())
+    if (SF->getParent())
       Out << ',';
     Out << NL;
   }
 }
 
-LLVM_DUMP_METHOD void LocationContext::dump() const { printJson(llvm::errs()); }
+LLVM_DUMP_METHOD void StackFrame::dump() const { printJson(llvm::errs()); }
 
 //===----------------------------------------------------------------------===//
 // Lazily generated map to query the external variables referenced by a Block.
@@ -649,18 +614,15 @@ AnalysisDeclContext::~AnalysisDeclContext() {
   delete (ManagedAnalysisMap*) ManagedAnalyses;
 }
 
-LocationContext::~LocationContext() = default;
+StackFrameManager::~StackFrameManager() { clear(); }
 
-LocationContextManager::~LocationContextManager() {
-  clear();
-}
-
-void LocationContextManager::clear() {
-  for (llvm::FoldingSet<LocationContext>::iterator I = Contexts.begin(),
-       E = Contexts.end(); I != E; ) {
-    LocationContext *LC = &*I;
+void StackFrameManager::clear() {
+  for (llvm::FoldingSet<StackFrame>::iterator I = Frames.begin(),
+                                              E = Frames.end();
+       I != E;) {
+    StackFrame *SF = &*I;
     ++I;
-    delete LC;
+    delete SF;
   }
-  Contexts.clear();
+  Frames.clear();
 }

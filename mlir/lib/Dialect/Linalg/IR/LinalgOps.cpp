@@ -503,6 +503,12 @@ public:
       return math::TanhOp::create(builder, arg.getLoc(), arg);
     case UnaryFn::erf:
       return math::ErfOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::sin:
+      return math::SinOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::cos:
+      return math::CosOp::create(builder, arg.getLoc(), arg);
+    case UnaryFn::tan:
+      return math::TanOp::create(builder, arg.getLoc(), arg);
     }
     if (emitError) {
       emitError() << "unsupported unary function";
