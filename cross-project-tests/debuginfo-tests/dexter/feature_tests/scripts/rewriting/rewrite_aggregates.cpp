@@ -22,21 +22,21 @@
 // CHECK: missing_values: 0
 
 struct Point {
-    int X;
-    int Y;
-    int Z;
+  int X;
+  int Y;
+  int Z;
 };
 
 struct Rect {
-    Point TopLeft;
-    Point BottomRight;
+  Point TopLeft;
+  Point BottomRight;
 };
 
 int main() {
-  Point P { 1, 2, 3 };
+  Point P{1, 2, 3};
   int *I = &P.X;
-  Rect R { { 1, 1, 1 }, { 2, 2, 2 } };
-  int L[] = { 0, 1, 2, 3, 4 };
+  Rect R{{1, 1, 1}, {2, 2, 2}};
+  int L[] = {0, 1, 2, 3, 4};
   int *InvalidPtr = nullptr;
   return 0; // !dex_label ret
 }

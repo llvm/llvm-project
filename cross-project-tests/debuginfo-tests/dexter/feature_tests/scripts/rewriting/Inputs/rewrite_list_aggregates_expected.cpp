@@ -16,12 +16,12 @@
 // CHECK: Rewrote script to add 1 expected values.
 
 struct Point {
-    int X;
-    int Y;
+  int X;
+  int Y;
 };
 
 int main() {
-  Point P { 1, 2 };
+  Point P{1, 2};
   P.X = 3; // !dex_label start
   P.Y = 0;
   P.X = 1;
