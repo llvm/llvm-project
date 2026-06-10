@@ -260,6 +260,26 @@ bool IsVariableListItem(
   return false;
 }
 
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    if (MaybeExpr expr{ea.Analyze(*desg)}) {
+      return ExtractSubstring(*expr).has_value();
+    }
+  }
+  return false;
+}
+
+bool IsArrayElement(
+    const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+    return !IsTypeParamInquiry(*sym) &&
+        parser::Unwrap<parser::ArrayElement>(object);
+  }
+  return false;
+}
+
 const Symbol *GetHostSymbol(const Symbol &sym) {
   if (auto *details{sym.detailsIf<HostAssocDetails>()}) {
     return &details->symbol();
@@ -290,6 +310,29 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   default:
     return false;
   }
+}
+
+// This function aims to return true when a symbol is going to result
+// in a temporary stack descriptor being allocated for it in the
+// lowering that may pose an issue for data mapping if left on
+// device accidentally.
+bool HasTemporaryStackDescriptor(const Symbol &symbol) {
+  const Symbol &ultimate(symbol.GetUltimate());
+  bool isDummy = IsDummy(ultimate);
+
+  if (IsAllocatableOrPointer(ultimate)) {
+    return !isDummy;
+  }
+
+  if (!isDummy) {
+    return false;
+  }
+
+  if (const auto *obj = ultimate.detailsIf<ObjectEntityDetails>()) {
+    return obj->IsAssumedShape() || obj->IsAssumedRank();
+  }
+
+  return false;
 }
 
 static MaybeExpr GetEvaluateExprFromTyped(const parser::TypedExpr &typedExpr) {
@@ -367,7 +410,9 @@ std::optional<int64_t> GetIntValueFromExpr(
     return value;
   }
   if (semaCtx) {
-    if (auto expr{evaluate::ExpressionAnalyzer{*semaCtx}.Analyze(parserExpr)}) {
+    evaluate::ExpressionAnalyzer ea(*semaCtx);
+    auto restorer{ea.GetContextualMessages().DiscardMessages()};
+    if (auto expr{ea.Analyze(parserExpr)}) {
       return evaluate::ToInt64(expr);
     }
   }
@@ -419,6 +464,7 @@ std::optional<bool> IsContiguous(
           },
           [&](const parser::Designator &x) {
             evaluate::ExpressionAnalyzer ea{semaCtx};
+            auto restorer{ea.GetContextualMessages().DiscardMessages()};
             if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
               return ContiguousHelper{semaCtx}.Visit(*maybeExpr);
             }

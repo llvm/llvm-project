@@ -824,7 +824,13 @@ struct VectorStoreOpConverter final
 
     spirv::StorageClass storageClass = attr.getValue();
     auto vectorType = storeOp.getVectorType();
-    auto vectorPtrType = spirv::PointerType::get(vectorType, storageClass);
+    // Use the converted vector type instead of original (single element vector
+    // would get converted to scalar).
+    auto spirvVectorType = typeConverter.convertType(vectorType);
+    if (!spirvVectorType)
+      return rewriter.notifyMatchFailure(storeOp, "unsupported vector type");
+
+    auto vectorPtrType = spirv::PointerType::get(spirvVectorType, storageClass);
 
     // For single element vectors, we don't need to bitcast the access chain to
     // the original vector type. Both is going to be the same, a pointer

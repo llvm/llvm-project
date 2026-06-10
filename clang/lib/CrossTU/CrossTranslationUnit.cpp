@@ -257,7 +257,7 @@ static bool hasBodyOrInit(const FunctionDecl *D, const FunctionDecl *&DefD) {
 static bool hasBodyOrInit(const VarDecl *D, const VarDecl *&DefD) {
   return D->getAnyInitializer(DefD);
 }
-template <typename T> static bool hasBodyOrInit(const T *D) {
+template <typename T> [[maybe_unused]] static bool hasBodyOrInit(const T *D) {
   const T *Unused;
   return hasBodyOrInit(D, Unused);
 }

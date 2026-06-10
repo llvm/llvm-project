@@ -42,18 +42,18 @@ define i128 @test_R_wide_scalar_inout(ptr %0, i128 noundef %1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    sd a0, 24(sp)
 ; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    sd a0, 24(sp)
 ; CHECK-NEXT:    sd a1, 0(sp)
 ; CHECK-NEXT:    sd a3, 8(sp)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # a0; a2
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    sd a0, 24(sp)
-; CHECK-NEXT:    sd a2, 0(sp)
-; CHECK-NEXT:    sd a3, 8(sp)
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    sd a2, 0(sp)
+; CHECK-NEXT:    sd a3, 8(sp)
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 entry:
@@ -112,18 +112,18 @@ define i128 @test_cR_wide_scalar_inout(ptr %0, i128 noundef %1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    sd a0, 24(sp)
 ; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    sd a0, 24(sp)
 ; CHECK-NEXT:    sd a1, 0(sp)
 ; CHECK-NEXT:    sd a3, 8(sp)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    # a0; a2
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    sd a0, 24(sp)
-; CHECK-NEXT:    sd a2, 0(sp)
-; CHECK-NEXT:    sd a3, 8(sp)
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    sd a2, 0(sp)
+; CHECK-NEXT:    sd a3, 8(sp)
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 entry:

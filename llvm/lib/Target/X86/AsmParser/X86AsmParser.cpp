@@ -1232,6 +1232,7 @@ private:
   /// SEH directives.
   bool parseSEHRegisterNumber(unsigned RegClassID, MCRegister &RegNo);
   bool parseDirectiveSEHPushReg(SMLoc);
+  bool parseDirectiveSEHPush2Regs(SMLoc);
   bool parseDirectiveSEHSetFrame(SMLoc);
   bool parseDirectiveSEHSaveReg(SMLoc);
   bool parseDirectiveSEHSaveXMM(SMLoc);
@@ -4839,6 +4840,8 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
   else if (IDVal == ".seh_pushreg" ||
            (Parser.isParsingMasm() && IDVal.equals_insensitive(".pushreg")))
     return parseDirectiveSEHPushReg(DirectiveID.getLoc());
+  else if (IDVal == ".seh_push2regs")
+    return parseDirectiveSEHPush2Regs(DirectiveID.getLoc());
   else if (IDVal == ".seh_setframe" ||
            (Parser.isParsingMasm() && IDVal.equals_insensitive(".setframe")))
     return parseDirectiveSEHSetFrame(DirectiveID.getLoc());
@@ -5072,6 +5075,27 @@ bool X86AsmParser::parseDirectiveSEHPushReg(SMLoc Loc) {
 
   getParser().Lex();
   getStreamer().emitWinCFIPushReg(Reg, Loc);
+  return false;
+}
+
+bool X86AsmParser::parseDirectiveSEHPush2Regs(SMLoc Loc) {
+  MCRegister Reg1;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg1))
+    return true;
+
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("expected comma between registers");
+  getParser().Lex();
+
+  MCRegister Reg2;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg2))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("expected end of directive");
+
+  getParser().Lex();
+  getStreamer().emitWinCFIPush2Regs(Reg1, Reg2, Loc);
   return false;
 }
 
