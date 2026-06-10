@@ -12,6 +12,7 @@
 
 #include "L0Device.h"
 #include "L0Defs.h"
+#include "L0Event.h"
 #include "L0Interop.h"
 #include "L0Plugin.h"
 #include "L0Program.h"
@@ -23,10 +24,6 @@
 #include "llvm/Object/ELF.h"
 
 namespace llvm::omp::target::plugin {
-
-L0DeviceTLSTy &L0DeviceTy::getTLS() {
-  return getPlugin().getDeviceTLS(getDeviceId());
-}
 
 // clang-format off
 /// Mapping from device arch to GPU runtime's device identifiers.
@@ -128,39 +125,26 @@ std::pair<uint32_t, uint32_t> L0DeviceTy::findComputeOrdinal() {
   return Ordinal;
 }
 
-/// Get copy command queue group ordinal. Returns Ordinal-NumQueues pair.
-std::pair<uint32_t, uint32_t> L0DeviceTy::findCopyOrdinal(bool LinkCopy) {
-  std::pair<uint32_t, uint32_t> Ordinal{MaxOrdinal, 0};
+/// Check if device supports cooperative kernels by checking if any command
+/// queue group has the cooperative kernels flag set.
+bool L0DeviceTy::checkCooperativeKernelSupport() {
   uint32_t Count = 0;
   const auto zeDevice = getZeDevice();
-  CALL_ZE_RET(Ordinal, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
+  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
               nullptr);
-  ze_command_queue_group_properties_t Init{
-      ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr, 0, 0, 0};
-  std::vector<ze_command_queue_group_properties_t> Properties(Count, Init);
-  CALL_ZE_RET(Ordinal, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
+
+  std::vector<ze_command_queue_group_properties_t> Properties(
+      Count,
+      {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_GROUP_PROPERTIES, nullptr, 0, 0, 0});
+  CALL_ZE_RET(false, zeDeviceGetCommandQueueGroupProperties, zeDevice, &Count,
               Properties.data());
 
-  for (uint32_t I = 0; I < Count; I++) {
-    const auto &Flags = Properties[I].flags;
-    if ((Flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COPY) &&
-        (Flags & ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COMPUTE) == 0) {
-      auto NumQueues = Properties[I].numQueues;
-      if (LinkCopy && NumQueues > 1) {
-        Ordinal = {I, NumQueues};
-        ODBG(OLDT_Init) << "Found link copy command queue for device "
-                        << zeDevice << ", ordinal = " << Ordinal.first
-                        << ", number of queues = " << Ordinal.second;
-        break;
-      } else if (!LinkCopy && NumQueues == 1) {
-        Ordinal = {I, NumQueues};
-        ODBG(OLDT_Init) << "Found copy command queue for device " << zeDevice
-                        << ", ordinal = " << Ordinal.first;
-        break;
-      }
-    }
-  }
-  return Ordinal;
+  for (auto &Property : Properties)
+    if (Property.flags &
+        ZE_COMMAND_QUEUE_GROUP_PROPERTY_FLAG_COOPERATIVE_KERNELS)
+      return true;
+
+  return false;
 }
 
 void L0DeviceTy::reportDeviceInfo() const {
@@ -219,11 +203,10 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin) {
   DeviceUuid = std::move(uid);
 
   ComputeOrdinal = findComputeOrdinal();
+  QueueCache.setCommandMode(getPlugin().getOptions().CommandMode);
 
-  CopyOrdinal = findCopyOrdinal();
+  SupportsCooperativeKernels = checkCooperativeKernelSupport();
 
-  IsAsyncEnabled =
-      isDiscreteDevice() && Options.CommandMode != CommandModeTy::Sync;
   if (auto Err = MemAllocator.initDevicePools(*this, Options))
     return Err;
   l0Context.getHostMemAllocator().updateMaxAllocSize(*this);
@@ -235,6 +218,8 @@ Error L0DeviceTy::deinitImpl() {
   for (auto &PGM : Programs)
     if (auto Err = PGM.deinit())
       return Err;
+  if (auto Err = QueueCache.deinit())
+    return Err;
   return MemAllocator.deinit();
 }
 
@@ -282,122 +267,65 @@ Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
   return Plugin::success();
 }
 
+Expected<L0QueueTy *>
+L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo->Queue);
+  if (!Queue) {
+    auto NewQueueOrErr = QueueCache.getQueue();
+    if (!NewQueueOrErr)
+      return NewQueueOrErr.takeError();
+    Queue = *NewQueueOrErr;
+    AsyncInfo->Queue = Queue;
+  }
+  return Queue;
+}
+
 Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
                                   bool ReleaseQueue) {
-  bool IsAsync = asyncEnabled();
-  if (!IsAsync)
+
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo.Queue);
+  if (!Queue)
     return Plugin::success();
 
-  auto &Plugin = getPlugin();
+  Error SyncErr = Queue->synchronize();
 
-  AsyncQueueTy *AsyncQueue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
-
-  Error SyncErrors = Error::success();
-  if (!AsyncQueue->WaitEvents.empty()) {
-    const auto &WaitEvents = AsyncQueue->WaitEvents;
-    if (Plugin.getOptions().CommandMode == CommandModeTy::AsyncOrdered) {
-      // Only need to wait for the last event.
-      CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, WaitEvents.back(),
-                          L0DefaultTimeout);
-      // Synchronize on kernel event to support printf().
-      auto KE = AsyncQueue->KernelEvent;
-      if (KE && KE != WaitEvents.back() && !SyncErrors) {
-        CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, KE,
-                            L0DefaultTimeout);
-      }
-      for (auto &Event : WaitEvents) {
-        if (auto Err = releaseEvent(Event))
-          SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
-      }
-    } else {
-      // Async case.
-      // Wait for all events. We should wait and reset events in reverse order
-      // to avoid premature event reset. If we have a kernel event in the
-      // queue, it is the last event to wait for since all wait events of the
-      // kernel are signaled before the kernel is invoked. We always invoke
-      // synchronization on kernel event to support printf().
-      bool WaitDone = false;
-      for (auto Itr = WaitEvents.rbegin(); Itr != WaitEvents.rend(); Itr++) {
-        if (!WaitDone) {
-          CALL_ZE_ACCUM_ERROR(SyncErrors, zeEventHostSynchronize, *Itr,
-                              L0DefaultTimeout);
-          if (*Itr == AsyncQueue->KernelEvent)
-            WaitDone = true;
-        }
-        if (auto Err = releaseEvent(*Itr))
-          SyncErrors = joinErrors(std::move(SyncErrors), std::move(Err));
-      }
-    }
-    // In either case, all the events are now reset and released
-    // back into the pool. We need to clear them from the queue.
-    AsyncQueue->WaitEvents.clear();
-  }
-
-  // Commit delayed USM2M copies.
-  for (auto &USM2M : AsyncQueue->USM2MList) {
-    std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
-                std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
-  }
-  // Commit delayed H2M copies.
-  for (auto &H2M : AsyncQueue->H2MList) {
-    std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
-                static_cast<char *>(std::get<1>(H2M)));
-  }
   if (ReleaseQueue) {
-    Plugin.releaseAsyncQueue(AsyncQueue);
+    releaseQueue(Queue);
     getStagingBuffer().reset();
     AsyncInfo.Queue = nullptr;
   }
 
-  return SyncErrors;
+  return SyncErr;
 }
 
 Expected<bool>
 L0DeviceTy::hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  auto &AsyncInfo = *static_cast<__tgt_async_info *>(AsyncInfoWrapper);
-  const bool IsAsync = AsyncInfo.Queue && asyncEnabled();
-  if (!IsAsync)
+  L0QueueTy *Queue = AsyncInfoWrapper.getQueueAs<L0QueueTy *>();
+  if (!Queue)
     return false;
-
-  auto *AsyncQueue = static_cast<AsyncQueueTy *>(AsyncInfo.Queue);
-
-  if (AsyncQueue->WaitEvents.empty())
-    return false;
-
-  return true;
+  return Queue->hasPendingWork();
 }
 
 Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                  bool *IsQueueWorkCompleted) {
-  if (IsQueueWorkCompleted)
-    *IsQueueWorkCompleted = true;
-  const bool IsAsync = AsyncInfo.Queue && asyncEnabled();
-  if (!IsAsync)
-    return Plugin::success();
-  if (IsQueueWorkCompleted)
-    *IsQueueWorkCompleted = false;
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo.Queue);
+  bool WorkCompleted = true;
 
-  auto &Plugin = getPlugin();
-  auto *AsyncQueue = static_cast<AsyncQueueTy *>(AsyncInfo.Queue);
-
-  if (!AsyncQueue->WaitEvents.empty())
-    return Plugin::success();
-
-  if (IsQueueWorkCompleted)
-    *IsQueueWorkCompleted = true;
-
-  // Commit delayed USM2M copies.
-  for (auto &USM2M : AsyncQueue->USM2MList) {
-    std::copy_n(static_cast<const char *>(std::get<0>(USM2M)),
-                std::get<2>(USM2M), static_cast<char *>(std::get<1>(USM2M)));
+  if (Queue) {
+    auto PendingWorkOrErr = Queue->hasPendingWork();
+    if (!PendingWorkOrErr)
+      return PendingWorkOrErr.takeError();
+    WorkCompleted = !*PendingWorkOrErr;
   }
-  // Commit delayed H2M copies.
-  for (auto &H2M : AsyncQueue->H2MList) {
-    std::copy_n(static_cast<char *>(std::get<0>(H2M)), std::get<2>(H2M),
-                static_cast<char *>(std::get<1>(H2M)));
-  }
+
+  if (IsQueueWorkCompleted)
+    *IsQueueWorkCompleted = WorkCompleted;
+
+  if (!WorkCompleted || !Queue)
+    return Plugin::success();
+
   if (ReleaseQueue) {
-    Plugin.releaseAsyncQueue(AsyncQueue);
+    releaseQueue(Queue);
     getStagingBuffer().reset();
     AsyncInfo.Queue = nullptr;
   }
@@ -421,45 +349,18 @@ Error L0DeviceTy::dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
   if (Size == 0)
     return Plugin::success();
 
-  auto &Plugin = getPlugin();
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  auto AsyncQueueOrErr = getOrCreateQueue(AsyncInfo);
+  if (!AsyncQueueOrErr)
+    return AsyncQueueOrErr.takeError();
+  auto *AsyncQueue = *AsyncQueueOrErr;
 
-  const auto DeviceId = getDeviceId();
-  bool IsAsync = AsyncInfo && asyncEnabled();
-  if (IsAsync && !AsyncInfo->Queue) {
-    AsyncInfo->Queue = reinterpret_cast<void *>(Plugin.getAsyncQueue());
-    if (!AsyncInfo->Queue)
-      IsAsync = false; // Couldn't get a queue, revert to sync.
-  }
-  const auto TgtPtrType = getMemAllocType(TgtPtr);
-  if (TgtPtrType == ZE_MEMORY_TYPE_SHARED ||
-      TgtPtrType == ZE_MEMORY_TYPE_HOST) {
-    std::copy_n(static_cast<const char *>(HstPtr), Size,
-                static_cast<char *>(TgtPtr));
-  } else {
-    const void *SrcPtr = HstPtr;
-    if (isDiscreteDevice() &&
-        static_cast<size_t>(Size) <= Plugin.getOptions().StagingBufferSize &&
-        getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-      auto PtrOrErr = getStagingBuffer().get(IsAsync);
-      if (!PtrOrErr)
-        return PtrOrErr.takeError();
-      SrcPtr = *PtrOrErr;
-      std::copy_n(static_cast<const char *>(HstPtr), Size,
-                  static_cast<char *>(const_cast<void *>(SrcPtr)));
-    }
-    if (IsAsync) {
-      if (auto Err = enqueueMemCopyAsync(TgtPtr, SrcPtr, Size, AsyncInfo))
-        return Err;
-    } else {
-      if (auto Err = enqueueMemCopy(TgtPtr, SrcPtr, Size, AsyncInfo))
-        return Err;
-    }
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "%s %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n",
-       IsAsync ? "Submitted copy" : "Copied", Size, DPxPTR(HstPtr),
-       DPxPTR(TgtPtr));
+  if (auto Err = AsyncQueue->dataSubmit(TgtPtr, HstPtr, Size))
+    return Err;
+  ODBG(OLDT_DataTransfer) << "Device " << getDeviceId() << ": Submitted "
+                          << Size
+                          << " bytes from host to device (hst:" << HstPtr
+                          << ") -> (tgt:" << TgtPtr << ").";
   return Plugin::success();
 }
 
@@ -469,97 +370,36 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
   if (Size == 0)
     return Plugin::success();
 
-  auto &Plugin = getPlugin();
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
+  assert(AsyncInfo && "AsyncInfo must be provided for data retrieval");
 
   const auto DeviceId = getDeviceId();
-  bool IsAsync = AsyncInfo && asyncEnabled();
-  if (IsAsync && !AsyncInfo->Queue) {
-    AsyncInfo->Queue = Plugin.getAsyncQueue();
-    if (!AsyncInfo->Queue)
-      IsAsync = false; // Couldn't get a queue, revert to sync.
-  }
-  auto AsyncQueue =
-      IsAsync ? static_cast<AsyncQueueTy *>(AsyncInfo->Queue) : nullptr;
-  auto TgtPtrType = getMemAllocType(TgtPtr);
-  if (TgtPtrType == ZE_MEMORY_TYPE_HOST ||
-      TgtPtrType == ZE_MEMORY_TYPE_SHARED) {
-    bool CopyNow = true;
-    if (IsAsync && AsyncQueue->KernelEvent) {
-      // Delay Host/Shared USM to host memory copy since it must wait for
-      // kernel completion.
-      AsyncQueue->USM2MList.emplace_back(TgtPtr, HstPtr, Size);
-      CopyNow = false;
-    }
-    if (CopyNow) {
-      // scope code to ease integration with downstream custom code.
-      std::copy_n(static_cast<const char *>(TgtPtr), Size,
-                  static_cast<char *>(HstPtr));
-    }
-  } else {
-    void *DstPtr = HstPtr;
-    if (isDiscreteDevice() &&
-        static_cast<size_t>(Size) <=
-            getPlugin().getOptions().StagingBufferSize &&
-        getMemAllocType(HstPtr) != ZE_MEMORY_TYPE_HOST) {
-      auto PtrOrErr = getStagingBuffer().get(IsAsync);
-      if (!PtrOrErr)
-        return PtrOrErr.takeError();
-      DstPtr = *PtrOrErr;
-    }
-    if (IsAsync) {
-      if (auto Err = enqueueMemCopyAsync(DstPtr, TgtPtr, Size, AsyncInfo,
-                                         /* CopyTo */ false))
-        return Err;
-    } else {
-      if (auto Err = enqueueMemCopy(DstPtr, TgtPtr, Size, AsyncInfo))
-        return Err;
-    }
-    if (DstPtr != HstPtr) {
-      if (IsAsync) {
-        // Store delayed H2M data copies.
-        auto &H2MList = AsyncQueue->H2MList;
-        H2MList.emplace_back(DstPtr, HstPtr, static_cast<size_t>(Size));
-      } else {
-        std::copy_n(static_cast<char *>(DstPtr), Size,
-                    static_cast<char *>(HstPtr));
-      }
-    }
-  }
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, DeviceId,
-       "%s %" PRId64 " bytes (tgt:" DPxMOD ") -> (hst:" DPxMOD ")\n",
-       IsAsync ? "Submitted copy" : "Copied", Size, DPxPTR(TgtPtr),
-       DPxPTR(HstPtr));
+  auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  auto *Queue = *QueueOrErr;
+
+  if (auto Err = Queue->dataRetrieve(HstPtr, TgtPtr, Size))
+    return Err;
+  ODBG(OLDT_DataTransfer) << "Device " << DeviceId << ": Retrieved " << Size
+                          << " bytes from device to host (tgt:" << TgtPtr
+                          << ") -> (hst:" << HstPtr << ").";
   return Plugin::success();
 }
 
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                    void *DstPtr, int64_t Size,
                                    AsyncInfoWrapperTy &AsyncInfoWrapper) {
-
-  L0DeviceTy &L0DstDev = L0DeviceTy::makeL0Device(DstDev);
-  // Use copy engine only for across-tile/device copies.
-  const bool UseCopyEngine = getZeDevice() != L0DstDev.getZeDevice();
-
-  if (asyncEnabled() && AsyncInfoWrapper.hasQueue()) {
-    if (auto Err = enqueueMemCopyAsync(DstPtr, SrcPtr, Size,
-                                       (__tgt_async_info *)AsyncInfoWrapper))
-      return Err;
-  } else {
-    if (auto Err = enqueueMemCopy(DstPtr, SrcPtr, Size,
-                                  /* AsyncInfo */ nullptr, UseCopyEngine))
-      return Err;
-  }
+  if (auto Err =
+          enqueueMemCopy(DstPtr, SrcPtr, Size,
+                         static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
+    return Err;
   return Plugin::success();
 }
 
 Error L0DeviceTy::initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  AsyncQueueTy *Queue = AsyncInfoWrapper.getQueueAs<AsyncQueueTy *>();
-  if (!Queue) {
-    Queue = getPlugin().getAsyncQueue();
-    AsyncInfoWrapper.setQueueAs<AsyncQueueTy *>(Queue);
-  }
-  return Plugin::success();
+  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
+  return QueueOrErr ? Plugin::success() : QueueOrErr.takeError();
 }
 
 const char *L0DeviceTy::getArchCStr() const {
@@ -709,6 +549,8 @@ Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   Info.add("Single FP Capabilities", SingleFPCapabilities, "",
            DeviceInfo::SINGLE_FP_CONFIG);
 
+  Info.add("Cooperative launch support", SupportsCooperativeKernels, "",
+           DeviceInfo::COOPERATIVE_LAUNCH_SUPPORT);
   return Info;
 }
 
@@ -785,20 +627,11 @@ Expected<OmpInteropTy> L0DeviceTy::createInterop(int32_t InteropContext,
 
     bool InOrder = InteropSpec.attrs.inorder;
     Ret->attrs.inorder = InOrder;
-    if (useImmForInterop()) {
-      auto CmdListOrErr = createImmCmdList(InOrder);
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      Ret->async_info->Queue = *CmdListOrErr;
-      L0->ImmCmdList = *CmdListOrErr;
-    } else {
-      auto QueueOrErr = createCommandQueue(InOrder);
-      if (!QueueOrErr)
-        return QueueOrErr.takeError();
-      Ret->async_info->Queue = *QueueOrErr;
-      L0->CommandQueue =
-          static_cast<ze_command_queue_handle_t>(Ret->async_info->Queue);
-    }
+    auto CmdListOrErr = createImmCmdList(InOrder);
+    if (!CmdListOrErr)
+      return CmdListOrErr.takeError();
+    Ret->async_info->Queue = *CmdListOrErr;
+    L0->ImmCmdList = *CmdListOrErr;
 
     CleanupOnError.release();
   }
@@ -816,13 +649,8 @@ Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
   }
   auto L0 = static_cast<L0Interop::Property *>(Interop->rtl_property);
   if (Interop->async_info && Interop->async_info->Queue) {
-    if (useImmForInterop()) {
-      auto ImmCmdList = L0->ImmCmdList;
-      CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
-    } else {
-      auto CmdQueue = L0->CommandQueue;
-      CALL_ZE_RET_ERROR(zeCommandQueueDestroy, CmdQueue);
-    }
+    auto ImmCmdList = L0->ImmCmdList;
+    CALL_ZE_RET_ERROR(zeCommandListDestroy, ImmCmdList);
   }
   delete L0;
   delete Interop;
@@ -830,144 +658,22 @@ Error L0DeviceTy::releaseInterop(OmpInteropTy Interop) {
   return Plugin::success();
 }
 
-Error L0DeviceTy::enqueueMemCopy(void *Dst, const void *Src, size_t Size,
-                                 __tgt_async_info *AsyncInfo,
-                                 bool UseCopyEngine) {
-  ze_command_list_handle_t CmdList = nullptr;
-  ze_command_queue_handle_t CmdQueue = nullptr;
-
-  if (useImmForCopy()) {
-    auto CmdListOrErr = UseCopyEngine ? getImmCopyCmdList() : getImmCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    CmdList = *CmdListOrErr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                      nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListHostSynchronize, CmdList, L0DefaultTimeout);
-  } else {
-    if (UseCopyEngine) {
-      auto CmdListOrErr = getCopyCmdList();
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      CmdList = *CmdListOrErr;
-      auto CmdQueueOrErr = getCopyCmdQueue();
-      if (!CmdQueueOrErr)
-        return CmdQueueOrErr.takeError();
-      CmdQueue = *CmdQueueOrErr;
-    } else {
-      auto CmdListOrErr = getCmdList();
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      CmdList = *CmdListOrErr;
-      auto CmdQueueOrErr = getCmdQueue();
-      if (!CmdQueueOrErr)
-        return CmdQueueOrErr.takeError();
-      CmdQueue = *CmdQueueOrErr;
-    }
-
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryCopy, CmdList, Dst, Src, Size,
-                      nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    llvm::scope_exit ResetOnExit(
-        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
-    CALL_ZE_RET_ERROR_MTX(zeCommandQueueExecuteCommandLists, getMutex(),
-                          CmdQueue, 1, &CmdList, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-    ResetOnExit.release();
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-  }
-  return Plugin::success();
-}
-
-/// Enqueue non-blocking memory copy. This function is invoked only when IMM is
-/// fully enabled and async mode is requested.
-Error L0DeviceTy::enqueueMemCopyAsync(void *Dst, const void *Src, size_t Size,
-                                      __tgt_async_info *AsyncInfo,
-                                      bool CopyTo) {
-  const bool Ordered =
-      (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
-  auto CmdListOrError = getImmCopyCmdList();
-  if (!CmdListOrError)
-    return CmdListOrError.takeError();
-  const auto CmdList = *CmdListOrError;
-  auto EventOrErr = getEvent();
-  if (!EventOrErr)
-    return EventOrErr.takeError();
-  ze_event_handle_t SignalEvent = *EventOrErr;
-  size_t NumWaitEvents = 0;
-  ze_event_handle_t *WaitEvents = nullptr;
-  AsyncQueueTy *AsyncQueue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo->Queue);
-  if (!AsyncQueue->WaitEvents.empty()) {
-    // Use a single wait event if events are ordered or a kernel event exists.
-    NumWaitEvents = 1;
-    if (Ordered)
-      WaitEvents = &AsyncQueue->WaitEvents.back();
-    else if (AsyncQueue->KernelEvent)
-      WaitEvents = &AsyncQueue->KernelEvent;
-    else
-      NumWaitEvents = 0;
-  }
-
-  Error AllErrors = Error::success();
-
-  CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendMemoryCopy, CmdList, Dst,
-                      Src, Size, SignalEvent, NumWaitEvents, WaitEvents);
-  if (!AllErrors)
-    AsyncQueue->WaitEvents.push_back(SignalEvent);
-  else {
-    if (auto Err = releaseEvent(SignalEvent))
-      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
-  }
-
-  return AllErrors;
-}
-
-/// Enqueue memory fill.
+/// Enqueue fill command.
 Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
-                                 size_t PatternSize, size_t Size) {
-  if (useImmForCopy()) {
-    auto CmdListOrErr = getImmCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    const auto CmdList = *CmdListOrErr;
-    auto EventOrErr = getEvent();
-    if (!EventOrErr)
-      return EventOrErr.takeError();
-    Error AllErrors = Error::success();
-    ze_event_handle_t Event = *EventOrErr;
-    CALL_ZE_ACCUM_ERROR(AllErrors, zeCommandListAppendMemoryFill, CmdList, Ptr,
-                        Pattern, PatternSize, Size, Event, 0, nullptr);
-    if (!AllErrors)
-      CALL_ZE_ACCUM_ERROR(AllErrors, zeEventHostSynchronize, Event,
-                          L0DefaultTimeout);
-    if (auto Err = releaseEvent(Event))
-      AllErrors = joinErrors(std::move(AllErrors), std::move(Err));
-    return AllErrors;
-  } else {
-    auto CmdListOrErr = getCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    auto CmdList = *CmdListOrErr;
-    auto CmdQueueOrErr = getCopyCmdQueue();
-    if (!CmdQueueOrErr)
-      return CmdQueueOrErr.takeError();
-    const auto CmdQueue = *CmdQueueOrErr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendMemoryFill, CmdList, Ptr, Pattern,
-                      PatternSize, Size, nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
-                      nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-  }
-  return Plugin::success();
+                                 size_t PatternSize, size_t Size,
+                                 __tgt_async_info *AsyncInfo) {
+  auto QueueOrErr = getOrCreateQueue(AsyncInfo);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  L0QueueTy *AsyncQueue = *QueueOrErr;
+  return AsyncQueue->memoryFill(Ptr, Pattern, PatternSize, Size);
 }
 
 Error L0DeviceTy::dataFillImpl(void *TgtPtr, const void *PatternPtr,
                                int64_t PatternSize, int64_t Size,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  // TODO: support async version.
-  return enqueueMemFill(TgtPtr, PatternPtr, PatternSize, Size);
+  return enqueueMemFill(TgtPtr, PatternPtr, PatternSize, Size,
+                        AsyncInfoWrapper);
 }
 
 Expected<void *> L0DeviceTy::dataAlloc(size_t Size, size_t Align, int32_t Kind,
@@ -1004,89 +710,6 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
   return Plugin::success();
 }
 
-// Command queues related functions.
-/// Create a command list with given ordinal and flags.
-Expected<ze_command_list_handle_t> L0DeviceTy::createCmdList(
-    ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
-    ze_command_list_flags_t Flags, const std::string_view DeviceIdStr) {
-  ze_command_list_desc_t cmdListDesc = {ZE_STRUCTURE_TYPE_COMMAND_LIST_DESC,
-                                        nullptr, // Extension.
-                                        Ordinal, Flags};
-  ze_command_list_handle_t cmdList;
-  CALL_ZE_RET_ERROR(zeCommandListCreate, Context, Device, &cmdListDesc,
-                    &cmdList);
-  ODBG(OLDT_Device) << "Created a command list " << cmdList
-                    << " (Ordinal: " << Ordinal << ") for device "
-                    << DeviceIdStr.data() << ".";
-  return cmdList;
-}
-
-/// Create a command list with default flags.
-Expected<ze_command_list_handle_t>
-L0DeviceTy::createCmdList(ze_context_handle_t Context,
-                          ze_device_handle_t Device, uint32_t Ordinal,
-                          const std::string_view DeviceIdStr) {
-  return (Ordinal == MaxOrdinal)
-             ? nullptr
-             : createCmdList(Context, Device, Ordinal, 0, DeviceIdStr);
-}
-
-Expected<ze_command_list_handle_t> L0DeviceTy::getCmdList() {
-  auto &TLS = getTLS();
-  auto CmdList = TLS.getCmdList();
-  if (!CmdList) {
-    auto CmdListOrErr = createCmdList(getZeContext(), getZeDevice(),
-                                      getComputeEngine(), getZeId());
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    CmdList = *CmdListOrErr;
-    TLS.setCmdList(CmdList);
-  }
-  return CmdList;
-}
-
-/// Create a command queue with given ordinal and flags.
-Expected<ze_command_queue_handle_t>
-L0DeviceTy::createCmdQueue(ze_context_handle_t Context,
-                           ze_device_handle_t Device, uint32_t Ordinal,
-                           uint32_t Index, ze_command_queue_flags_t Flags,
-                           const std::string_view DeviceIdStr) {
-  ze_command_queue_desc_t cmdQueueDesc = {ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
-                                          nullptr, // Extension.
-                                          Ordinal,
-                                          Index,
-                                          Flags,
-                                          ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
-                                          ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
-  ze_command_queue_handle_t cmdQueue;
-  CALL_ZE_RET_ERROR(zeCommandQueueCreate, Context, Device, &cmdQueueDesc,
-                    &cmdQueue);
-  ODBG(OLDT_Device) << "Created a command queue " << cmdQueue
-                    << " (Ordinal: " << Ordinal << ", Index: " << Index
-                    << ", Flags: " << Flags << ") for device "
-                    << DeviceIdStr.data() << ".";
-  return cmdQueue;
-}
-
-/// Create a command queue with default flags.
-Expected<ze_command_queue_handle_t> L0DeviceTy::createCmdQueue(
-    ze_context_handle_t Context, ze_device_handle_t Device, uint32_t Ordinal,
-    uint32_t Index, const std::string_view DeviceIdStr, bool InOrder) {
-  ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
-  return (Ordinal == MaxOrdinal) ? nullptr
-                                 : createCmdQueue(Context, Device, Ordinal,
-                                                  Index, Flags, DeviceIdStr);
-}
-
-/// Create a new command queue for the given OpenMP device ID.
-Expected<ze_command_queue_handle_t>
-L0DeviceTy::createCommandQueue(bool InOrder) {
-  auto cmdQueue =
-      createCmdQueue(getZeContext(), getZeDevice(), getComputeEngine(),
-                     getComputeIndex(), getZeId(), InOrder);
-  return cmdQueue;
-}
-
 /// Create an immediate command list.
 Expected<ze_command_list_handle_t>
 L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
@@ -1095,7 +718,7 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
                                nullptr,
                                Ordinal,
                                Index,
-                               Flags,
+                               Flags | ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT,
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
@@ -1107,130 +730,12 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   return CmdList;
 }
 
-/// Create an immediate command list for copying.
-Expected<ze_command_list_handle_t> L0DeviceTy::createImmCopyCmdList() {
-  uint32_t Ordinal = getMainCopyEngine();
-  if (Ordinal == MaxOrdinal)
-    Ordinal = getComputeEngine();
-  return createImmCmdList(Ordinal, /*Index*/ 0);
-}
-
-Expected<ze_command_queue_handle_t> L0DeviceTy::getCmdQueue() {
-  auto &TLS = getTLS();
-  auto CmdQueue = TLS.getCmdQueue();
-  if (!CmdQueue) {
-    auto CmdQueueOrErr = createCommandQueue();
-    if (!CmdQueueOrErr)
-      return CmdQueueOrErr.takeError();
-    CmdQueue = *CmdQueueOrErr;
-    TLS.setCmdQueue(CmdQueue);
-  }
-  return CmdQueue;
-}
-
-Expected<ze_command_list_handle_t> L0DeviceTy::getCopyCmdList() {
-  // Use main copy engine if available.
-  if (hasMainCopyEngine()) {
-    auto &TLS = getTLS();
-    auto CmdList = TLS.getCopyCmdList();
-    if (!CmdList) {
-      auto CmdListOrErr = createCmdList(getZeContext(), getZeDevice(),
-                                        getMainCopyEngine(), getZeId());
-      if (!CmdListOrErr)
-        return CmdListOrErr.takeError();
-      CmdList = *CmdListOrErr;
-      TLS.setCopyCmdList(CmdList);
-    }
-    return CmdList;
-  }
-  // Use compute engine otherwise.
-  return getCmdList();
-}
-
-Expected<ze_command_queue_handle_t> L0DeviceTy::getCopyCmdQueue() {
-  // Use main copy engine if available.
-  if (hasMainCopyEngine()) {
-    auto &TLS = getTLS();
-    auto CmdQueue = TLS.getCopyCmdQueue();
-    if (!CmdQueue) {
-      auto CmdQueueOrErr = createCmdQueue(getZeContext(), getZeDevice(),
-                                          getMainCopyEngine(), 0, getZeId());
-      if (!CmdQueueOrErr)
-        return CmdQueueOrErr.takeError();
-      CmdQueue = *CmdQueueOrErr;
-      TLS.setCopyCmdQueue(CmdQueue);
-    }
-    return CmdQueue;
-  }
-  // Use compute engine otherwise.
-  return getCmdQueue();
-}
-
-Expected<ze_command_list_handle_t> L0DeviceTy::getImmCmdList() {
-  auto &TLS = getTLS();
-  auto CmdList = TLS.getImmCmdList();
-  if (!CmdList) {
-    auto CmdListOrErr = createImmCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    CmdList = *CmdListOrErr;
-    TLS.setImmCmdList(CmdList);
-  }
-  return CmdList;
-}
-
-Expected<ze_command_list_handle_t> L0DeviceTy::getImmCopyCmdList() {
-  auto &TLS = getTLS();
-  auto CmdList = TLS.getImmCopyCmdList();
-  if (!CmdList) {
-    auto CmdListOrErr = createImmCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    CmdList = *CmdListOrErr;
-    TLS.setImmCopyCmdList(CmdList);
-  }
-  return CmdList;
-}
-
 Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
-  const bool Ordered =
-      (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
-
-  // Nothing to do if everything is ordered.
-  if (Ordered)
-    return Plugin::success();
-
-  ze_command_list_handle_t CmdList = nullptr;
-  ze_command_queue_handle_t CmdQueue = nullptr;
-
-  if (useImmForCopy()) {
-    auto CmdListOrErr = getImmCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    auto CmdList = *CmdListOrErr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
-  } else {
-    auto CmdListOrErr = getCopyCmdList();
-    if (!CmdListOrErr)
-      return CmdListOrErr.takeError();
-    auto CmdQueueOrerr = getCopyCmdQueue();
-    if (!CmdQueueOrerr)
-      return CmdQueueOrerr.takeError();
-
-    CmdList = *CmdListOrErr;
-    CmdQueue = *CmdQueueOrerr;
-    CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
-    CALL_ZE_RET_ERROR(zeCommandListClose, CmdList);
-    llvm::scope_exit ResetOnExit(
-        [&]() { CALL_ZE_SILENT(zeCommandListReset, CmdList); });
-    CALL_ZE_RET_ERROR(zeCommandQueueExecuteCommandLists, CmdQueue, 1, &CmdList,
-                      nullptr);
-    CALL_ZE_RET_ERROR(zeCommandQueueSynchronize, CmdQueue, L0DefaultTimeout);
-    ResetOnExit.release();
-    CALL_ZE_RET_ERROR(zeCommandListReset, CmdList);
-  }
-
-  return Plugin::success();
+  auto QueueOrErr = getOrCreateQueue(Async);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  L0QueueTy *Queue = *QueueOrErr;
+  return Queue->dataFence();
 }
 
 Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
@@ -1239,6 +744,65 @@ Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
                          "Invalid input to %s (Ptr = %p, Size = %zu)", __func__,
                          Ptr, Size);
   return getMemAllocator(Ptr).contains(Ptr, Size);
+}
+
+Error L0DeviceTy::createEventImpl(void **EventPtrStorage,
+                                  bool EnableProfiling) {
+  auto EventOrErr = getEventObject();
+  if (!EventOrErr)
+    return EventOrErr.takeError();
+  *EventPtrStorage = *EventOrErr;
+  return Plugin::success();
+}
+
+Error L0DeviceTy::destroyEventImpl(void *EventPtr, bool EnableProfiling) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  return releaseEventObject(Event);
+}
+
+Error L0DeviceTy::recordEventImpl(void *EventPtr,
+                                  AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                  bool EnableProfiling) {
+  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  L0QueueTy *Queue = *QueueOrErr;
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  Event->setQueue(*Queue);
+  return Queue->appendSignalEvent(Event);
+}
+
+Error L0DeviceTy::waitEventImpl(void *EventPtr,
+                                AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  L0QueueTy *Queue = *QueueOrErr;
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  return Queue->appendWaitOnEvent(Event);
+}
+
+Error L0DeviceTy::syncEventImpl(void *EventPtr) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  if (!Event->getQueue())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "event does not have any associated queue");
+  return Event->getQueue()->synchronizeEvent(Event);
+}
+
+Expected<bool> L0DeviceTy::isEventCompleteImpl(void *EventPtr,
+                                               AsyncInfoWrapperTy &) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  if (!Event->getQueue())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "event does not have any associated queue");
+  return Event->getQueue()->isEventComplete(Event);
+}
+
+Expected<float> L0DeviceTy::getEventElapsedTimeImpl(void *StartEventPtr,
+                                                    void *EndEventPtr) {
+  return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                       "%s not implemented yet\n", __func__);
 }
 
 Error L0DeviceTy::callGlobalConstructors(GenericPluginTy &Plugin,

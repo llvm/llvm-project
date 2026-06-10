@@ -1819,6 +1819,13 @@ defm debug_info_for_profiling : BoolFOption<"debug-info-for-profiling",
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Emit extra debug info to make sample profile more accurate">,
   NegFlag<SetFalse, [], [ClangOption, FlangOption]>>;
+defm debug_record_sysroot : BoolFOption<"debug-record-sysroot",
+  CodeGenOpts<"DebugRecordSysroot">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Record the sysroot path in debug info as DW_AT_LLVM_sysroot and in DW_AT_LLVM_include_path "
+          "(used by LLDB to locate the SDK for Clang module imports).">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Scrub the sysroot path from debug info.">>;
 def fprofile_generate_cold_function_coverage : Flag<["-"], "fprofile-generate-cold-function-coverage">,
     Group<f_Group>, Visibility<[ClangOption, CLOption]>,
     HelpText<"Generate instrumented code to collect coverage info for cold functions into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var)">;
@@ -1993,12 +2000,12 @@ defm bounds_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental bounds safety extension for C">>;
 
-defm lifetime_safety : BoolFOption<
-  "lifetime-safety",
-  LangOpts<"EnableLifetimeSafety">, DefaultTrue,
+defm debug_run_lifetime_safety : BoolFOption<
+  "debug-run-lifetime-safety",
+  LangOpts<"DebugRunLifetimeSafety">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [CC1Option], " lifetime safety for C++">>;
+  BothFlags<[], [CC1Option], " lifetime safety analysis for C++. Warnings are still controlled by -Wlifetime-safety. Primarily used to surface crashes or compile-time regressions without showing analysis findings.">>;
 
 def lifetime_safety_max_cfg_blocks
     : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
@@ -2131,7 +2138,7 @@ defm objc_constant_literals : BoolFOption<"objc-constant-literals",
   LangOpts<"ObjCConstantLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant ObjC literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant ObjC literals">>;
 def fconstant_array_class_EQ : Joined<["-"], "fconstant-array-class=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<LangOpts<"ObjCConstantArrayClass">>;
@@ -2177,6 +2184,10 @@ def fcrash_diagnostics_dir : Joined<["-"], "fcrash-diagnostics-dir=">,
   Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
   HelpText<"Put crash-report files in <dir>">, MetaVarName<"<dir>">;
+def fcrash_diagnostics_tar : Joined<["-"], "fcrash-diagnostics-tar=">,
+  Group<f_clang_Group>, Flags<[NoArgumentUnused]>,
+  Visibility<[ClangOption, CLOption, DXCOption]>,
+  HelpText<"Put crash-report tarball at <path>">, MetaVarName<"<path>">;
 def fcreate_profile : Flag<["-"], "fcreate-profile">, Group<f_Group>;
 defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,
@@ -2330,14 +2341,20 @@ defm assume_nothrow_exception_dtor: BoolFOption<"assume-nothrow-exception-dtor",
   LangOpts<"AssumeNothrowExceptionDtor">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume that exception objects' destructors are non-throwing">,
   NegFlag<SetFalse>>;
-def winx64_eh_unwindv2
-    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+def winx64_eh_unwind_EQ
+    : Joined<["-"], "fwinx64-eh-unwind=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Generate unwind v2 (epilog) information for x64 Windows">,
-      Values<"disabled,best-effort,required">,
-      NormalizedValues<["Disabled", "BestEffort", "Required"]>,
-      NormalizedValuesScope<"llvm::WinX64EHUnwindV2Mode">,
-      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwindV2">, "Disabled">;
+      HelpText<"Set x64 Windows unwind info version">,
+      Values<"v1,v2-best-effort,v2-required,v3">,
+      NormalizedValues<["V1", "V2BestEffort", "V2Required", "V3"]>,
+      NormalizedValuesScope<"llvm::WinX64EHUnwindMode">,
+      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwind">, "Default">;
+// Legacy flag — driver only, not passed to cc1. The driver translates it.
+def winx64_eh_unwindv2_EQ
+    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+    Visibility<[ClangOption]>,
+      HelpText<"(Legacy) Generate unwind v2 (epilog) information for x64 Windows">,
+      Values<"disabled,best-effort,required">;
 def win_cfg_mechanism
     : Joined<["-"], "fwin-cfg-mechanism=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
@@ -3809,17 +3826,17 @@ defm constant_nsnumber_literals : BoolFOption<"constant-nsnumber-literals",
   LangOpts<"ConstantNSNumberLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSNumber literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSNumber literals">>;
 defm constant_nsarray_literals : BoolFOption<"constant-nsarray-literals",
   LangOpts<"ConstantNSArrayLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSArray literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSArray literals">>;
 defm constant_nsdictionary_literals : BoolFOption<"constant-nsdictionary-literals",
   LangOpts<"ConstantNSDictionaryLiterals">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [], "Disable">,
-  BothFlags<[], [ClangOption], " compile-time constant NSDictionary literals">>;
+  BothFlags<[NoArgumentUnused], [ClangOption], " compile-time constant NSDictionary literals">>;
 def fno_common : Flag<["-"], "fno-common">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
     HelpText<"Compile common globals like normal definitions">;
@@ -4808,7 +4825,7 @@ def fwrapv : Flag<["-"], "fwrapv">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat signed integer overflow as two's complement">;
 def fno_wrapv : Flag<["-"], "fno-wrapv">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, FlangOption]>;
+  Visibility<[ClangOption, CC1Option, CLOption, FlangOption]>;
 def fwrapv_pointer : Flag<["-"], "fwrapv-pointer">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Treat pointer overflow as two's complement">;
@@ -4825,9 +4842,9 @@ defm zero_initialized_in_bss : BoolFOption<"zero-initialized-in-bss",
   PosFlag<SetFalse>>;
 defm function_sections : BoolFOption<"function-sections",
   CodeGenOpts<"FunctionSections">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each function in its own section">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm basic_block_address_map : BoolFOption<"basic-block-address-map",
   CodeGenOpts<"BBAddrMap">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option], "Emit the basic block address map section.">,
@@ -4840,9 +4857,9 @@ def fbasic_block_sections_EQ : Joined<["-"], "fbasic-block-sections=">, Group<f_
   MarshallingInfoString<CodeGenOpts<"BBSections">, [{"none"}]>;
 defm data_sections : BoolFOption<"data-sections",
   CodeGenOpts<"DataSections">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CC1Option, FlangOption, FC1Option],
           "Place each data in its own section">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [FlangOption, FC1Option]>>;
 defm experimental_call_graph_section
     : BoolFOption<"experimental-call-graph-section",
                   CodeGenOpts<"CallGraphSection">, DefaultFalse,
@@ -5595,6 +5612,10 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
       !eq(GlobalDocumentation.Program, "Flang") : "",
       true: " The value will be reflected in __riscv_v_fixed_vlen preprocessor define"),
     " (RISC-V only)")>;
+def mexperimental_mtune_syntax : Flag<["-"], "mexperimental-mtune-syntax">, Group<m_Group>,
+  HelpText<"Enable experimental syntax for the '-mtune' flag (RISC-V only)">;
+def mno_experimental_mtune_syntax : Flag<["-"], "mno-experimental-mtune-syntax">, Group<m_Group>,
+  HelpText<"Disable experimental syntax for the '-mtune' flag (RISC-V only)">;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/MIPSr6 only)">;
@@ -5616,6 +5637,10 @@ def mvector_strict_align : Flag<["-"], "mvector-strict-align">, Group<m_Group>,
   HelpText<"Force all vector memory accesses to be aligned (RISC-V only)">;
 def mno_vector_strict_align : Flag<["-"], "mno-vector-strict-align">, Group<m_Group>,
   HelpText<"Allow vector memory accesses to be unaligned (RISC-V only)">;
+def mzilsd_word_align : Flag<["-"], "mzilsd-word-align">, Group<m_Group>,
+  HelpText<"Allow Zilsd/Zclsd memory accesses to be 4-byte aligned (RISC-V only)">;
+def mzilsd_strict_align : Flag<["-"], "mzilsd-strict-align">, Group<m_Group>,
+  HelpText<"Force all Zilsd/Zclsd memory accesses to be 8-byte aligned (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;
@@ -6082,6 +6107,15 @@ def mstack_protector_guard_offset_EQ : Joined<["-"], "mstack-protector-guard-off
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given offset for addressing the stack-protector guard">,
   MarshallingInfoInt<CodeGenOpts<"StackProtectorGuardOffset">, "INT_MAX", "int">;
+def mstack_protector_guard_value_width_EQ : Joined<["-"], "mstack-protector-guard-value-width=">, Group<m_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Use the given width for the value of the the stack-protector guard (AArch64-only)">,
+  MarshallingInfoInt<CodeGenOpts<"StackProtectorGuardValueWidth">, "UINT_MAX", "unsigned">,
+  DocBrief<[{Set the width of the stack-protector guard variable. By default,
+the width is the same as the pointer width.  Currently only supported on AArch64
+targets.  Only the values "4" and "8" are currently supported.  This currently
+only modifies the size of accesses to the global variable, not the value
+stored on the stack.}]>;
 def mstack_protector_guard_symbol_EQ : Joined<["-"], "mstack-protector-guard-symbol=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given symbol for addressing the stack-protector guard">,
@@ -6090,6 +6124,14 @@ def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Use the given reg for addressing the stack-protector guard">,
   MarshallingInfoString<CodeGenOpts<"StackProtectorGuardReg">>;
+def mstackprotector_guard_record
+    : Flag<["-"], "mstack-protector-guard-record">,
+      HelpText<
+          "Generate a __stack_protector_loc section entry for each load of "
+          "the stack-protector guard address.">,
+      Visibility<[ClangOption, CC1Option]>,
+      Group<m_Group>,
+      MarshallingInfoFlag<CodeGenOpts<"StackProtectorGuardRecord">>;
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"CallFEntry">>;
@@ -7459,6 +7501,8 @@ def fsycl : Flag<["-"], "fsycl">,
   HelpText<"Enable SYCL C++ extensions">;
 def fno_sycl : Flag<["-"], "fno-sycl">,
   HelpText<"Disable SYCL C++ extensions">;
+def nolibsycl : Flag<["-"], "nolibsycl">,
+  HelpText<"Do not link the SYCL runtime library">;
 def fsycl_device_only : Flag<["-"], "fsycl-device-only">,
   Alias<offload_device_only>, HelpText<"Compile SYCL code for device only">;
 def fsycl_host_only : Flag<["-"], "fsycl-host-only">,

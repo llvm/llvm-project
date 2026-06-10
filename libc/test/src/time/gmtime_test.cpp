@@ -18,8 +18,6 @@
 using LlvmLibcGmTime = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcGmTime, OutOfRange) {
-  if (sizeof(time_t) < sizeof(int64_t))
-    return;
   time_t seconds =
       1 +
       INT_MAX *
@@ -275,8 +273,6 @@ TEST_F(LlvmLibcGmTime, EndOf32BitEpochYear) {
 }
 
 TEST_F(LlvmLibcGmTime, Max64BitYear) {
-  if (sizeof(time_t) == 4)
-    return;
   // Mon Jan 1 12:50:50 2170 (200 years from 1970),
   time_t seconds = 6311479850;
   struct tm *tm_data = LIBC_NAMESPACE::gmtime(&seconds);

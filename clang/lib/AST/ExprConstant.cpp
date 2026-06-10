@@ -733,11 +733,6 @@ namespace {
 namespace llvm {
 template<> struct DenseMapInfo<ObjectUnderConstruction> {
   using Base = DenseMapInfo<APValue::LValueBase>;
-  static ObjectUnderConstruction getEmptyKey() {
-    return {Base::getEmptyKey(), {}}; }
-  static ObjectUnderConstruction getTombstoneKey() {
-    return {Base::getTombstoneKey(), {}};
-  }
   static unsigned getHashValue(const ObjectUnderConstruction &Object) {
     return hash_value(Object);
   }
@@ -1037,7 +1032,7 @@ namespace {
     };
 
     StdAllocatorCaller getStdAllocatorCaller(StringRef FnName) const {
-      for (const CallStackFrame *Call = CurrentCall; Call != &BottomFrame;
+      for (const CallStackFrame *Call = CurrentCall; Call->Caller != nullptr;
            Call = Call->Caller) {
         const auto *MD = dyn_cast_or_null<CXXMethodDecl>(Call->Callee);
         if (!MD)
@@ -1085,7 +1080,6 @@ namespace {
 
   private:
     const interp::Frame *getCurrentFrame() override { return CurrentCall; }
-    const interp::Frame *getBottomFrame() const override { return &BottomFrame; }
 
     unsigned getCallStackDepth() override { return CallStackDepth; }
     bool stepsLeft() const override { return StepsLeft > 0; }
@@ -10038,6 +10032,19 @@ bool PointerExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
 }
 
 bool PointerExprEvaluator::VisitUnaryAddrOf(const UnaryOperator *E) {
+  // [C11 6.5.3.2p3]: if the operand of '&' is the result of a unary '*'
+  // operator, neither operator is evaluated and the result is as if both were
+  // omitted (except that the operators' constraints, already enforced by Sema,
+  // still apply, and the result is not an lvalue). So '&*p' is just the pointer
+  // value 'p' with no dereference, and forming it is therefore not undefined
+  // behavior even when 'p' is null, e.g. '&*(int *)0'. Evaluate the pointer
+  // operand directly so we don't spuriously diagnose a null dereference.
+  if (!Info.getLangOpts().CPlusPlus) {
+    const Expr *Sub = E->getSubExpr()->IgnoreParens();
+    if (const auto *Deref = dyn_cast<UnaryOperator>(Sub);
+        Deref && Deref->getOpcode() == UO_Deref)
+      return evaluatePointer(Deref->getSubExpr(), Result);
+  }
   return evaluateLValue(E->getSubExpr(), Result);
 }
 
@@ -10243,7 +10250,7 @@ static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
     return CharUnits::One();
 
   const bool AlignOfReturnsPreferred =
-      Ctx.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver7;
+      Ctx.getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver7);
 
   // __alignof is defined to return the preferred alignment.
   // Before 8, clang returned the preferred alignment for alignof and _Alignof
@@ -11073,6 +11080,7 @@ namespace {
     bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
     bool VisitCXXParenListOrInitListExpr(const Expr *ExprToVisit,
                                          ArrayRef<Expr *> Args);
+    bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
   };
 }
 
@@ -11349,6 +11357,11 @@ bool RecordExprEvaluator::VisitCXXParenListOrInitListExpr(
     ImplicitValueInitExpr VIE(HaveInit ? Info.Ctx.IntTy : Field->getType());
     const Expr *Init = HaveInit ? Args[ElementNo++] : &VIE;
 
+    // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+    // aren't supposed to be modified.
+    if (isa<NoInitExpr>(Init))
+      continue;
+
     if (Field->getType()->isIncompleteArrayType()) {
       if (auto *CAT = Info.Ctx.getAsConstantArrayType(Init->getType())) {
         if (!CAT->isZeroSize()) {
@@ -11544,6 +11557,13 @@ bool RecordExprEvaluator::VisitLambdaExpr(const LambdaExpr *E) {
     }
   }
   return Success;
+}
+
+bool RecordExprEvaluator::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  if (!Visit(E->getBase()))
+    return false;
+  return Visit(E->getUpdater());
 }
 
 static bool EvaluateRecord(const Expr *E, const LValue &This,
@@ -11774,6 +11794,31 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!handleElementwiseCast(Info, E, FPO, SrcVals, SrcTypes, DestTypes,
                                ResultEls))
       return false;
+    return Success(ResultEls, E);
+  }
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_IntegralCast:
+  case CK_FloatingCast:
+  case CK_FloatingToBoolean:
+  case CK_IntegralToBoolean: {
+    // These casts apply element-wise when the source is a vector type.
+    assert(SETy->isVectorType() && "expected vector source type");
+    APValue SrcVal;
+    if (!EvaluateVector(SE, SrcVal, Info))
+      return Error(E);
+
+    assert(SrcVal.getVectorLength() == NElts);
+    QualType SrcEltTy = SETy->castAs<VectorType>()->getElementType();
+    QualType DstEltTy = VTy->getElementType();
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+
+    SmallVector<APValue, 4> ResultEls(NElts);
+    for (unsigned I = 0; I < NElts; ++I) {
+      if (!handleScalarCast(Info, FPO, E, SrcEltTy, DstEltTy,
+                            SrcVal.getVectorElt(I), ResultEls[I]))
+        return Error(E);
+    }
     return Success(ResultEls, E);
   }
   default:
@@ -14071,6 +14116,8 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case Builtin::BI__builtin_elementwise_clmul:
+    return EvaluateBinOpExpr(llvm::APIntOps::clmul);
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APValue SourceHi, SourceLo, SourceShift;
@@ -14986,6 +15033,7 @@ namespace {
                                          ArrayRef<Expr *> Args,
                                          const Expr *ArrayFiller,
                                          QualType AllocType = QualType());
+    bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
   };
 } // end anonymous namespace
 
@@ -15116,12 +15164,6 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
 
   bool Success = true;
 
-  assert((!Result.isArray() || Result.getArrayInitializedElts() == 0) &&
-         "zero-initialized array shouldn't have any initialized elts");
-  APValue Filler;
-  if (Result.isArray() && Result.hasArrayFiller())
-    Filler = Result.getArrayFiller();
-
   unsigned NumEltsToInit = Args.size();
   unsigned NumElts = CAT->getZExtSize();
 
@@ -15131,26 +15173,50 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
       MaybeElementDependentArrayFiller(ArrayFiller)) {
     NumEltsToInit = NumElts;
   } else {
+    // Add additional elements represented by EmbedExpr.
     for (auto *Init : Args) {
       if (auto *EmbedS = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts()))
         NumEltsToInit += EmbedS->getDataElementCount() - 1;
     }
+    // If we have extra elements in the list, they will be discarded.
     if (NumEltsToInit > NumElts)
       NumEltsToInit = NumElts;
+    // If we're overwriting memory which already has an object, make sure we
+    // don't reduce the number of non-filler elements.  (It's possible to
+    // optimize this in some cases, but the logic gets really complicated.)
+    if (Result.hasValue() && NumEltsToInit < Result.getArrayInitializedElts())
+      NumEltsToInit = Result.getArrayInitializedElts();
   }
 
   LLVM_DEBUG(llvm::dbgs() << "The number of elements to initialize: "
                           << NumEltsToInit << ".\n");
 
-  Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
-
-  // If the array was previously zero-initialized, preserve the
-  // zero-initialized values.
-  if (Filler.hasValue()) {
-    for (unsigned I = 0, E = Result.getArrayInitializedElts(); I != E; ++I)
-      Result.getArrayInitializedElt(I) = Filler;
-    if (Result.hasArrayFiller())
-      Result.getArrayFiller() = Filler;
+  if (!Result.hasValue()) {
+    Result = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
+  } else if (Result.getArrayInitializedElts() != NumEltsToInit) {
+    // Number of inititalized elts changed. Recreate the APValue, and copy over
+    // the relevant elements.  (This is essentially just fixing the internal
+    // representation of the value, because it's tied to the number of
+    // non-filler elements.)
+    //
+    // This should be hit rarely, but there are some edge cases:
+    //
+    // - The array could be zero-initialized.
+    // - There could be a DesignatedInitListExpr.
+    // - operator new[] can be used to start the lifetime early.
+    APValue NewResult = APValue(APValue::UninitArray(), NumEltsToInit, NumElts);
+    // First copy existing elements.
+    unsigned NumOldElts = Result.getArrayInitializedElts();
+    for (unsigned I = 0; I < NumOldElts; ++I) {
+      NewResult.getArrayInitializedElt(I) =
+          std::move(Result.getArrayInitializedElt(I));
+    }
+    // Then copy the array filler over the remaining elements.
+    for (unsigned I = Result.getArrayInitializedElts(); I < NumEltsToInit; ++I)
+      NewResult.getArrayInitializedElt(I) = Result.getArrayFiller();
+    if (NewResult.hasArrayFiller() && Result.hasArrayFiller())
+      NewResult.getArrayFiller() = Result.getArrayFiller();
+    Result = std::move(NewResult);
   }
 
   LValue Subobject = This;
@@ -15158,6 +15224,11 @@ bool ArrayExprEvaluator::VisitCXXParenListOrInitListExpr(
   auto Eval = [&](const Expr *Init, unsigned ArrayIndex) {
     if (Init->isValueDependent())
       return EvaluateDependentExpr(Init, Info);
+
+    // If this is a child of a DesignatedInitUpdateExpr, skip elements which
+    // aren't supposed to be modified.
+    if (isa<NoInitExpr>(Init))
+      return true;
 
     if (!EvaluateInPlace(Result.getArrayInitializedElt(ArrayIndex), Info,
                          Subobject, Init) ||
@@ -15348,6 +15419,13 @@ bool ArrayExprEvaluator::VisitCXXParenListInitExpr(
 
   return VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),
                                          E->getArrayFiller());
+}
+
+bool ArrayExprEvaluator::VisitDesignatedInitUpdateExpr(
+    const DesignatedInitUpdateExpr *E) {
+  if (!Visit(E->getBase()))
+    return false;
+  return Visit(E->getUpdater());
 }
 
 //===----------------------------------------------------------------------===//
@@ -16212,8 +16290,14 @@ static bool determineEndOffset(EvalInfo &Info, SourceLocation ExprLoc,
 ///
 /// If @p WasError is non-null, this will report whether the failure to evaluate
 /// is to be treated as an Error in IntExprEvaluator.
+///
+/// If @p IsDynamic is true (i.e. we're evaluating
+/// __builtin_dynamic_object_size) and the operand designates a flexible array
+/// member annotated with 'counted_by', we refuse to fold so that IR generation
+/// can emit the count-based runtime size computation.
 static std::optional<uint64_t>
-tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info) {
+tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info,
+                             bool IsDynamic = false) {
   // Determine the denoted object.
   LValue LVal;
   {
@@ -16239,6 +16323,23 @@ tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type, EvalInfo &Info) {
   // bytes.
   if (LVal.getLValueOffset().isNegative())
     return 0;
+
+  // For __builtin_dynamic_object_size on a counted_by-annotated flexible
+  // array member, defer to IR generation (emitCountedBySize in CGBuiltin):
+  // its runtime computation uses the live 'count' field and is more accurate
+  // than the layout/initializer-derived size we'd produce here. Use the same
+  // findStructFieldAccess form-recognition CGBuiltin does, so we refuse to
+  // fold on exactly the shapes that path handles (and, importantly, *not*
+  // on '&af.fam' which designates the array-as-a-whole and stays on the
+  // layout-derived path to match GCC). Checked after the negative-offset
+  // early return above so that obviously out-of-bounds operands still fold
+  // to 0, preserving existing behavior.
+  if (IsDynamic) {
+    const auto *ME = dyn_cast_or_null<MemberExpr>(findStructFieldAccess(E));
+    const auto *FD = ME ? dyn_cast<FieldDecl>(ME->getMemberDecl()) : nullptr;
+    if (FD && FD->getType()->isCountAttributedType())
+      return std::nullopt;
+  }
 
   CharUnits EndOffset;
   if (!determineEndOffset(Info, E->getExprLoc(), Type, LVal, EndOffset))
@@ -16379,8 +16480,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         E->getArg(1)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     assert(Type <= 3 && "unexpected type");
 
+    bool IsDynamic = BuiltinOp == Builtin::BI__builtin_dynamic_object_size;
     if (std::optional<uint64_t> Size =
-            tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info))
+            tryEvaluateBuiltinObjectSize(E->getArg(0), Type, Info, IsDynamic))
       return Success(*Size, E);
 
     if (E->getArg(0)->HasSideEffects(Info.Ctx))
@@ -16483,7 +16585,11 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_bswapg:
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
-  case Builtin::BI__builtin_bswap64: {
+  case Builtin::BI__builtin_bswap64:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64: {
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
@@ -16874,6 +16980,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_rotateright64:
   case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BIstdc_rotate_left_uc:
+  case Builtin::BIstdc_rotate_left_us:
+  case Builtin::BIstdc_rotate_left_ui:
+  case Builtin::BIstdc_rotate_left_ul:
+  case Builtin::BIstdc_rotate_left_ull:
+  case Builtin::BIstdc_rotate_right_uc:
+  case Builtin::BIstdc_rotate_right_us:
+  case Builtin::BIstdc_rotate_right_ui:
+  case Builtin::BIstdc_rotate_right_ul:
+  case Builtin::BIstdc_rotate_right_ull:
   case Builtin::BI_rotl8: // Microsoft variants of rotate left
   case Builtin::BI_rotl16:
   case Builtin::BI_rotl:
@@ -16897,6 +17013,11 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BI__builtin_rotateright32:
     case Builtin::BI__builtin_rotateright64:
     case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BIstdc_rotate_right_uc:
+    case Builtin::BIstdc_rotate_right_us:
+    case Builtin::BIstdc_rotate_right_ui:
+    case Builtin::BIstdc_rotate_right_ul:
+    case Builtin::BIstdc_rotate_right_ull:
     case Builtin::BI_rotr8:
     case Builtin::BI_rotr16:
     case Builtin::BI_rotr:
@@ -17164,6 +17285,15 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     APInt Result = std::min(LHS, RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
+  }
+  case Builtin::BI__builtin_elementwise_clmul: {
+    APSInt LHS, RHS;
+    if (!EvaluateInteger(E->getArg(0), LHS, Info) ||
+        !EvaluateInteger(E->getArg(1), RHS, Info))
+      return false;
+
+    APInt Result = llvm::APIntOps::clmul(LHS, RHS);
+    return Success(APSInt(Result, LHS.isUnsigned()), E);
   }
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
@@ -17793,13 +17923,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
       return false;
-
-    unsigned BitWidth = Val.getBitWidth();
-    APInt Result = APInt::getZero(BitWidth);
-    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
-      if (Msk[I])
-        Result.setBitVal(I, Val[P++]);
-    return Success(Result, E);
+    return Success(llvm::APIntOps::expandBits(Val, Msk), E);
   }
 
   case clang::X86::BI__builtin_ia32_pext_si:
@@ -17808,13 +17932,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
       return false;
-
-    unsigned BitWidth = Val.getBitWidth();
-    APInt Result = APInt::getZero(BitWidth);
-    for (unsigned I = 0, P = 0; I != BitWidth; ++I)
-      if (Msk[I])
-        Result.setBitVal(P++, Val[I]);
-    return Success(Result, E);
+    return Success(llvm::APIntOps::compressBits(Val, Msk), E);
   }
   case X86::BI__builtin_ia32_ptestz128:
   case X86::BI__builtin_ia32_ptestz256:
@@ -21492,6 +21610,7 @@ bool VarDecl::evaluateDestruction(
   // Only treat the destruction as constant destruction if we formally have
   // constant initialization (or are usable in a constant expression).
   bool IsConstantDestruction = hasConstantInitialization();
+  ASTContext &Ctx = getASTContext();
 
   // Make a copy of the value for the destructor to mutate, if we know it.
   // Otherwise, treat the value as default-initialized; if the destructor works
@@ -21502,9 +21621,22 @@ bool VarDecl::evaluateDestruction(
   else if (!handleDefaultInitValue(getType(), DestroyedValue))
     return false;
 
-  if (!EvaluateDestruction(getASTContext(), this, std::move(DestroyedValue),
-                           getType(), getLocation(), EStatus,
-                           IsConstantDestruction) ||
+  if (Ctx.getLangOpts().EnableNewConstInterp) {
+    EvalInfo Info(Ctx, EStatus,
+                  IsConstantDestruction ? EvaluationMode::ConstantExpression
+                                        : EvaluationMode::ConstantFold);
+    Info.setEvaluatingDecl(this, DestroyedValue,
+                           EvalInfo::EvaluatingDeclKind::Dtor);
+    Info.InConstantContext = IsConstantDestruction;
+    if (!Ctx.getInterpContext().evaluateDestruction(Info, this,
+                                                    std::move(DestroyedValue)))
+      return false;
+    ensureEvaluatedStmt()->HasConstantDestruction = true;
+    return true;
+  }
+
+  if (!EvaluateDestruction(Ctx, this, std::move(DestroyedValue), getType(),
+                           getLocation(), EStatus, IsConstantDestruction) ||
       EStatus.HasSideEffects)
     return false;
 

@@ -469,13 +469,19 @@ ModRefInfo llvm::getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
   // an effect if the object is only captured *later*. As such, set I to null
   // and ReturnCaptures to true here.
   const Value *Obj = getUnderlyingObject(Loc.Ptr);
-  if (capturesNothing(AAQI.CA->getCapturesBefore(
-          Obj, /*I=*/nullptr, /*OrAt=*/true, /*ReturnCaptures=*/true)))
+  CaptureComponents CC = AAQI.CA->getCapturesBefore(
+      Obj, /*I=*/nullptr, /*OrAt=*/true, /*ReturnCaptures=*/true);
+  if (capturesNothing(CC))
     return ModRefInfo::NoModRef;
+
+  // If only read provenance was captured, other threads may only read the
+  // object.
+  ModRefInfo MR =
+      capturesReadProvenanceOnly(CC) ? ModRefInfo::Ref : ModRefInfo::ModRef;
 
   // If Loc is a constant memory location, the synchronization operation
   // definitely could not modify it.
-  return AA->getModRefInfoMask(Loc);
+  return MR & AA->getModRefInfoMask(Loc);
 }
 
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
@@ -928,7 +934,8 @@ bool llvm::isBaseOfObject(const Value *V) {
 
 bool llvm::isEscapeSource(const Value *V) {
   if (auto *CB = dyn_cast<CallBase>(V)) {
-    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(CB, true))
+    if (isIntrinsicReturningPointerAliasingArgumentWithoutCapturing(
+            CB, /*MustPreserveOffset=*/false))
       return false;
 
     // The return value of a function with a captures(ret: address, provenance)

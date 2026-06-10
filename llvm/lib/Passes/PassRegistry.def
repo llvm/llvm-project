@@ -450,7 +450,6 @@ FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
 FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
-FUNCTION_PASS("func-properties-stats", FunctionPropertiesStatisticsPass())
 FUNCTION_PASS("gc-lowering", GCLoweringPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn-hoist", GVNHoistPass())
@@ -461,7 +460,6 @@ FUNCTION_PASS("infer-address-spaces", InferAddressSpacesPass())
 FUNCTION_PASS("infer-alignment", InferAlignmentPass())
 FUNCTION_PASS("inject-tli-mappings", InjectTLIMappings())
 FUNCTION_PASS("inline-asm-prepare", InlineAsmPreparePass())
-FUNCTION_PASS("instcount", InstCountPass())
 FUNCTION_PASS("instnamer", InstructionNamerPass())
 FUNCTION_PASS("instsimplify", InstSimplifyPass())
 FUNCTION_PASS("interleaved-access", InterleavedAccessPass(*TM))
@@ -507,12 +505,11 @@ FUNCTION_PASS("partially-inline-libcalls", PartiallyInlineLibCallsPass())
 FUNCTION_PASS("pgo-memop-opt", PGOMemOPSizeOpt())
 FUNCTION_PASS("place-safepoints", PlaceSafepointsPass())
 FUNCTION_PASS("print", PrintFunctionPass(errs()))
-// TODO: rename to print<foo> after NPM switch
-FUNCTION_PASS("print-alias-sets", AliasSetsPrinterPass(errs()))
-FUNCTION_PASS("print-cfg-sccs", CFGSCCPrinterPass(errs()))
-FUNCTION_PASS("print-memderefs", MemDerefPrinterPass(errs()))
-FUNCTION_PASS("print-mustexecute", MustExecutePrinterPass(errs()))
-FUNCTION_PASS("print-predicateinfo", PredicateInfoPrinterPass(errs()))
+FUNCTION_PASS("print<alias-sets>", AliasSetsPrinterPass(errs()))
+FUNCTION_PASS("print<cfg-sccs>", CFGSCCPrinterPass(errs()))
+FUNCTION_PASS("print<mem-derefs>", MemDerefPrinterPass(errs()))
+FUNCTION_PASS("print<must-execute>", MustExecutePrinterPass(errs()))
+FUNCTION_PASS("print<predicate-info>", PredicateInfoPrinterPass(errs()))
 FUNCTION_PASS("print<assumptions>", AssumptionPrinterPass(errs()))
 FUNCTION_PASS("print<block-freq>", BlockFrequencyPrinterPass(errs()))
 FUNCTION_PASS("print<branch-prob>", BranchProbabilityPrinterPass(errs()))
@@ -597,6 +594,12 @@ FUNCTION_PASS_WITH_PARAMS(
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },
     parseEntryExitInstrumenterPassOptions, "post-inline")
 FUNCTION_PASS_WITH_PARAMS(
+    "func-properties-stats", "FunctionPropertiesStatisticsPass",
+    [](bool IsPreOptimizations) {
+      return FunctionPropertiesStatisticsPass(IsPreOptimizations);
+    },
+    parseFunctionPropertiesStatisticsOptions, "pre-opt")
+FUNCTION_PASS_WITH_PARAMS(
     "function-simplification", "",
     [this](OptimizationLevel OL) {
       return buildFunctionSimplificationPipeline(OL, ThinOrFullLTOPhase::None);
@@ -605,7 +608,7 @@ FUNCTION_PASS_WITH_PARAMS(
 FUNCTION_PASS_WITH_PARAMS(
     "gvn", "GVNPass", [](GVNOptions Opts) { return GVNPass(Opts); },
     parseGVNOptions,
-    "no-pre;pre;no-load-pre;load-pre;no-split-backedge-load-pre;"
+    "no-scalar-pre;scalar-pre;no-load-pre;load-pre;no-split-backedge-load-pre;"
     "split-backedge-load-pre;no-memdep;memdep;no-memoryssa;memoryssa")
 FUNCTION_PASS_WITH_PARAMS(
     "hardware-loops", "HardwareLoopsPass",
@@ -619,6 +622,10 @@ FUNCTION_PASS_WITH_PARAMS(
     [](InstCombineOptions Opts) { return InstCombinePass(Opts); },
     parseInstCombineOptions,
     "no-verify-fixpoint;verify-fixpoint;max-iterations=N")
+FUNCTION_PASS_WITH_PARAMS(
+    "instcount", "InstCountPass",
+    [](bool IsPreOptimizations) { return InstCountPass(IsPreOptimizations); },
+    parseInstCountOptions, "pre-opt")
 FUNCTION_PASS_WITH_PARAMS(
     "lint", "LintPass",
     [](bool AbortOnError) { return LintPass(AbortOnError); }, parseLintOptions,

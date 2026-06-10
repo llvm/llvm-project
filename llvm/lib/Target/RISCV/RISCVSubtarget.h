@@ -72,6 +72,8 @@ struct RISCVTuneInfo {
 
   // The direction of PostRA scheduling.
   MISched::Direction PostRASchedDirection;
+
+  bool IsJumpExpensive;
 };
 
 #define GET_RISCVTuneInfoTable_DECL
@@ -247,9 +249,13 @@ public:
   }
 
   Align getZilsdAlign() const {
-    return Align(enableUnalignedScalarMem() ? 1
-                 : allowZilsd4ByteAlign()   ? 4
-                                            : 8);
+    if (enableUnalignedScalarMem())
+      return Align(1);
+
+    if (allowZilsdWordAlign())
+      return Align(4);
+
+    return Align(8);
   }
 
   unsigned getELen() const {
@@ -337,6 +343,7 @@ public:
   }
 
   bool isPExtPackedType(MVT VT) const;
+  bool isPExtPackedDoubleType(MVT VT) const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
   // vector hardware implementation which may be less than VLEN.
@@ -442,6 +449,8 @@ public:
   MISched::Direction getPostRASchedDirection() const {
     return TuneInfo->PostRASchedDirection;
   }
+
+  bool isJumpExpensive() const { return TuneInfo->IsJumpExpensive; }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            const SchedRegion &Region) const override;

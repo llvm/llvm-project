@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -44,6 +44,24 @@ View return_alias_through_unannotated_passthrough(
   return not_lb(alias);
 }
 
+View global_view;
+
+View assign_param_to_global(
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  global_view = obj; // Wrong kind of escape.
+  return View(); // Unrelated view.
+}
+
+struct EnclosingState {
+  View member;
+
+  View assign_param_to_field(
+      const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+    member = obj; // Wrong kind of escape.
+    return View(); // Unrelated view.
+  }
+};
+
 View not_lb_view(View v);
 
 View lb_view(View v [[clang::lifetimebound]]);
@@ -85,4 +103,66 @@ View annotated_decl_but_not_def_not_returned(const MyObj &obj [[clang::lifetimeb
 
 View annotated_decl_but_not_def_not_returned(const MyObj &obj) {
   return not_lb(obj);
+}
+
+struct BadThisReturn {
+  MyObj data;
+
+  View get() const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
+    return not_lb(data);
+  }
+};
+
+struct GoodThisReturn {
+  MyObj data;
+
+  View get() const [[clang::lifetimebound]] {
+    return data;
+  }
+};
+
+struct RedeclaredThis {
+  MyObj data;
+  View get() const [[clang::lifetimebound]]; // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
+};
+
+View RedeclaredThis::get() const {
+  return not_lb(data);
+}
+
+struct ThisAndParam {
+  MyObj data;
+
+  View get(const MyObj &obj [[clang::lifetimebound]]) const [[clang::lifetimebound]] { // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
+    return lb(obj);
+  }
+};
+
+struct ThisAndMixedParams {
+  MyObj data;
+
+  View get(
+      const MyObj &a [[clang::lifetimebound]],
+      const MyObj &b,
+      const MyObj &c [[clang::lifetimebound]]) const // expected-warning {{could not verify that the return value can be lifetime bound to 'c'}}
+      [[clang::lifetimebound]] {                     // expected-warning {{could not verify that the return value can be lifetime bound to the implicit this parameter}}
+    return cond() ? lb(a) : not_lb(b);
+  }
+};
+
+struct AssignmentCorr {
+  AssignmentCorr& operator=(const AssignmentCorr& other) {
+    return *this;
+  }
+};
+
+struct AssignementIncorr {
+  AssignementIncorr& operator=(const AssignementIncorr& other) {
+    AssignementIncorr tmp;
+    return tmp;
+  }
+};
+
+void implicit_lifetimebound_in_nested_std_namespace() {
+  (void)std::basic_string_view<char>("hello");
 }

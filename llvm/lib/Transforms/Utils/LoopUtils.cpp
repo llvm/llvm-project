@@ -1110,6 +1110,8 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   case RecurKind::Xor:
     return Intrinsic::vector_reduce_xor;
   case RecurKind::FMulAdd:
+  case RecurKind::FAddChainWithSubs:
+  case RecurKind::FSub:
   case RecurKind::FAdd:
     return Intrinsic::vector_reduce_fadd;
   case RecurKind::FMul:
@@ -1199,6 +1201,10 @@ Intrinsic::ID llvm::getReductionForBinop(Instruction::BinaryOps Opc) {
     return Intrinsic::vector_reduce_or;
   case Instruction::Xor:
     return Intrinsic::vector_reduce_xor;
+  case Instruction::FAdd:
+    return Intrinsic::vector_reduce_fadd;
+  case Instruction::FMul:
+    return Intrinsic::vector_reduce_fmul;
   }
   return Intrinsic::not_intrinsic;
 }
@@ -1567,6 +1573,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::FMaximumNum:
     return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
+  case RecurKind::FAddChainWithSubs:
+  case RecurKind::FSub:
   case RecurKind::FAdd:
     return Builder.CreateFAddReduce(getIdentity(), Src);
   case RecurKind::FMul:

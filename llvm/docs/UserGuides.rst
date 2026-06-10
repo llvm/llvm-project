@@ -39,6 +39,7 @@ intermediate LLVM representation.
    Remarks
    SourceLevelDebugging
    HowToUpdateDebugInfo
+   Instrumentor
    InstrRefDebugInfo
    RemoveDIsDebugInfo
    KeyInstructionsDebugInfo
@@ -66,6 +67,7 @@ intermediate LLVM representation.
    AMDGPUDwarfExtensionsForHeterogeneousDebugging
    AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack/AMDGPUDwarfExtensionAllowLocationDescriptionOnTheDwarfExpressionStack
    AMDGPUExecutionSynchronization
+   AMDGPUMemoryModel
    SPIRVUsage
    DirectXUsage
    RISCVUsage
@@ -216,6 +218,10 @@ Optimizations
    This document specifies guidelines for contributions for InstCombine and
    related passes.
 
+:doc:`Instrumentor`
+   A comprehensive guide to the highly configurable Instrumentor pass for custom
+   program instrumentation, including the interactive configuration wizard.
+
 
 Code Generation
 ---------------
@@ -294,6 +300,10 @@ Additional Topics
 
 :doc:`AMDGPUAsyncOperations`
    Builtins for invoking asynchronous data transfer operations in AMD GPUs.
+
+:doc:`AMDGPUMemoryModel`
+   This document describes *AMDGPU Memory Model* which overrides the :ref:`LLVM
+   memory model<memmodel>` when a program is compiled for the AMDGPU target.
 
 :doc:`AMDGPUDwarfExtensionsForHeterogeneousDebugging`
    This document describes DWARF extensions to support heterogeneous debugging

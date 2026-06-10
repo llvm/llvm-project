@@ -652,7 +652,11 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
         // because it should be in sync with CaptureTracking. Not using it may
         // cause weird miscompilations where 2 aliasing pointers are assumed to
         // noalias.
-        if (auto *RP = getArgumentAliasingToReturnedPointer(Call, false)) {
+        // Pass MustPreserveOffset=true so we exclude llvm.ptrmask, which can
+        // change the byte offset by clearing low bits and would otherwise
+        // corrupt the symbolic offset we are accumulating in `Decomposed`.
+        if (auto *RP = getArgumentAliasingToReturnedPointer(
+                Call, /*MustPreserveOffset=*/true)) {
           V = RP;
           continue;
         }

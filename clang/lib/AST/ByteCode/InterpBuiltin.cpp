@@ -370,6 +370,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (ID == Builtin::BIstrlen || ID == Builtin::BIwcslen)
     diagnoseNonConstexprBuiltin(S, OpPC, ID);
 
+  if (StrPtr.isConstexprUnknown())
+    return false;
+
   if (!CheckArray(S, OpPC, StrPtr))
     return false;
 
@@ -1019,9 +1022,11 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignIntegral(S, CarryOutPtr, CarryOutT, CarryOut);
-  CarryOutPtr.initialize();
+  if (CarryOutPtr.canBeInitialized())
+    CarryOutPtr.initialize();
 
-  assert(Call->getType() == Call->getArg(0)->getType());
+  assert(S.getASTContext().hasSimilarType(Call->getType(),
+                                          Call->getArg(0)->getType()));
   pushInteger(S, Result, Call->getType());
   return true;
 }
@@ -2456,6 +2461,16 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
       if (Kind == 1)
         return std::nullopt;
     }
+    // For Type=1, defer to the runtime path on a true incomplete-array
+    // flexible array member (e.g. 'char fam[]') even when the base is a
+    // concrete local/global. Without this, the bytecode interpreter would
+    // happily fold &af.fam to 'NumElems * elemSize = 0' below; the default
+    // const-evaluator avoids the same trap, and CGBuiltin emits
+    // @llvm.objectsize for the correct layout-derived answer (matching
+    // GCC's __bos/__bdos on '&af.fam').
+    if (Kind == 1 && pointsToLastObject(Ptr) && Ptr.getFieldDesc()->isArray() &&
+        Ptr.getFieldDesc()->getType()->isIncompleteArrayType())
+      return std::nullopt;
   }
 
   // The "closest surrounding subobject" is NOT a base class,
@@ -4613,6 +4628,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
   case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BIstdc_rotate_left_uc:
+  case Builtin::BIstdc_rotate_left_us:
+  case Builtin::BIstdc_rotate_left_ui:
+  case Builtin::BIstdc_rotate_left_ul:
+  case Builtin::BIstdc_rotate_left_ull:
   case Builtin::BI_rotl8: // Microsoft variants of rotate left
   case Builtin::BI_rotl16:
   case Builtin::BI_rotl:
@@ -4623,6 +4643,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
   case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BIstdc_rotate_right_uc:
+  case Builtin::BIstdc_rotate_right_us:
+  case Builtin::BIstdc_rotate_right_ui:
+  case Builtin::BIstdc_rotate_right_ul:
+  case Builtin::BIstdc_rotate_right_ull:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
@@ -4636,6 +4661,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     case Builtin::BI__builtin_rotateright32:
     case Builtin::BI__builtin_rotateright64:
     case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BIstdc_rotate_right_uc:
+    case Builtin::BIstdc_rotate_right_us:
+    case Builtin::BIstdc_rotate_right_ui:
+    case Builtin::BIstdc_rotate_right_ul:
+    case Builtin::BIstdc_rotate_right_ull:
     case Builtin::BI_rotr8:
     case Builtin::BI_rotr16:
     case Builtin::BI_rotr:
@@ -4938,6 +4968,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_bswap16:
   case Builtin::BI__builtin_bswap32:
   case Builtin::BI__builtin_bswap64:
+  case Builtin::BIstdc_memreverse8u8:
+  case Builtin::BIstdc_memreverse8u16:
+  case Builtin::BIstdc_memreverse8u32:
+  case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
 
   case Builtin::BI__atomic_always_lock_free:
@@ -5081,33 +5115,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case clang::X86::BI__builtin_ia32_pdep_si:
   case clang::X86::BI__builtin_ia32_pdep_di:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
-          unsigned BitWidth = Val.getBitWidth();
-          APInt Result = APInt::getZero(BitWidth);
-
-          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-            if (Mask[I])
-              Result.setBitVal(I, Val[P++]);
-          }
-
-          return Result;
-        });
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::expandBits);
 
   case clang::X86::BI__builtin_ia32_pext_si:
   case clang::X86::BI__builtin_ia32_pext_di:
-    return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call, [](const APSInt &Val, const APSInt &Mask) {
-          unsigned BitWidth = Val.getBitWidth();
-          APInt Result = APInt::getZero(BitWidth);
-
-          for (unsigned I = 0, P = 0; I != BitWidth; ++I) {
-            if (Mask[I])
-              Result.setBitVal(P++, Val[I]);
-          }
-
-          return Result;
-        });
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::compressBits);
 
   case clang::X86::BI__builtin_ia32_addcarryx_u32:
   case clang::X86::BI__builtin_ia32_addcarryx_u64:
@@ -5517,6 +5531,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pclmulqdq256:
   case clang::X86::BI__builtin_ia32_pclmulqdq512:
     return interp__builtin_ia32_pclmulqdq(S, OpPC, Call);
+  case Builtin::BI__builtin_elementwise_clmul:
+    return interp__builtin_elementwise_int_binop(S, OpPC, Call,
+                                                 llvm::APIntOps::clmul);
 
   case Builtin::BI__builtin_elementwise_fma:
     return interp__builtin_elementwise_triop_fp(
@@ -6649,15 +6666,17 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
   assert(SrcDesc->ElemRecord == DestDesc->ElemRecord);
   const Record *R = DestDesc->ElemRecord;
   for (const Record::Field &F : R->fields()) {
+    Pointer FP = Src.atField(F.Offset);
+
+    if (!CheckMutable(S, OpPC, FP))
+      return false;
+
     if (R->isUnion()) {
       // For unions, only copy the active field. Zero all others.
-      const Pointer &SrcField = Src.atField(F.Offset);
-      if (SrcField.isActive()) {
+      if (FP.isActive()) {
         if (!copyField(F, /*Activate=*/true))
           return false;
       } else {
-        if (!CheckMutable(S, OpPC, Src.atField(F.Offset)))
-          return false;
         Pointer DestField = Dest.atField(F.Offset);
         zeroAll(DestField);
       }
@@ -6687,20 +6706,30 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
   assert(!DestDesc->isPrimitive() && !SrcDesc->isPrimitive());
 
   if (DestDesc->isPrimitiveArray()) {
+    if (!SrcDesc->isPrimitiveArray())
+      return false;
+    // For floating types, check the actual QualType so we don't accidentally
+    // mix up semantics.
+    if (SrcDesc->getPrimType() == PT_Float) {
+      if (!S.getASTContext().hasSimilarType(SrcDesc->getElemQualType(),
+                                            DestDesc->getElemQualType()))
+        return false;
+    }
+
     assert(SrcDesc->isPrimitiveArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
+    assert(SrcDesc->getPrimType() == DestDesc->getPrimType());
     PrimType ET = DestDesc->getPrimType();
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
-      Pointer DestElem = Dest.atIndex(I);
-      TYPE_SWITCH(ET, {
-        DestElem.deref<T>() = Src.elem<T>(I);
-        DestElem.initialize();
-      });
+      TYPE_SWITCH(ET, { Dest.elem<T>(I) = Src.elem<T>(I); });
+      Dest.initializeElement(I);
     }
     return true;
   }
 
   if (DestDesc->isCompositeArray()) {
+    if (!SrcDesc->isCompositeArray())
+      return false;
     assert(SrcDesc->isCompositeArray());
     assert(SrcDesc->getNumElems() == DestDesc->getNumElems());
     for (unsigned I = 0, N = DestDesc->getNumElems(); I != N; ++I) {
@@ -6712,8 +6741,11 @@ static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
     return true;
   }
 
-  if (DestDesc->isRecord())
+  if (DestDesc->isRecord()) {
+    if (!SrcDesc->isRecord())
+      return false;
     return copyRecord(S, OpPC, Src, Dest, Activate);
+  }
   return Invalid(S, OpPC);
 }
 

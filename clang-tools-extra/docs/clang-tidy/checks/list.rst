@@ -19,7 +19,6 @@ Clang-Tidy Checks
    darwin/*
    fuchsia/*
    google/*
-   hicpp/*
    linuxkernel/*
    llvm/*
    llvmlibc/*
@@ -122,6 +121,7 @@ Clang-Tidy Checks
    :doc:`bugprone-misplaced-operator-in-strlen-in-alloc <bugprone/misplaced-operator-in-strlen-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-widening-cast <bugprone/misplaced-widening-cast>`,
+   :doc:`bugprone-missing-end-comparison <bugprone/missing-end-comparison>`, "Yes"
    :doc:`bugprone-move-forwarding-reference <bugprone/move-forwarding-reference>`, "Yes"
    :doc:`bugprone-multi-level-implicit-pointer-conversion <bugprone/multi-level-implicit-pointer-conversion>`,
    :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
@@ -243,6 +243,7 @@ Clang-Tidy Checks
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
+   :doc:`llvm-formatv-string <llvm/formatv-string>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
@@ -417,6 +418,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-lambda-parameter-list <readability/redundant-lambda-parameter-list>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
+   :doc:`readability-redundant-nested-if <readability/redundant-nested-if>`, "Yes"
    :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-qualified-alias <readability/redundant-qualified-alias>`, "Yes"
@@ -604,13 +606,6 @@ Check aliases
    :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
-   :doc:`hicpp-uppercase-literal-suffix <hicpp/uppercase-literal-suffix>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
-   :doc:`hicpp-use-equals-default <hicpp/use-equals-default>`, :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
-   :doc:`hicpp-use-equals-delete <hicpp/use-equals-delete>`, :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
-   :doc:`hicpp-use-noexcept <hicpp/use-noexcept>`, :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
-   :doc:`hicpp-use-nullptr <hicpp/use-nullptr>`, :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
-   :doc:`hicpp-use-override <hicpp/use-override>`, :doc:`modernize-use-override <modernize/use-override>`, "Yes"
-   :doc:`hicpp-vararg <hicpp/vararg>`, :doc:`cppcoreguidelines-pro-type-vararg <cppcoreguidelines/pro-type-vararg>`,
    :doc:`llvm-else-after-return <llvm/else-after-return>`, :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
    :doc:`llvm-qualified-auto <llvm/qualified-auto>`, :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
    :doc:`performance-faster-string-find <performance/faster-string-find>`, :doc:`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>`, "Yes"
