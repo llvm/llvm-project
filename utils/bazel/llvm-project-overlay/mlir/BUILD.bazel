@@ -7377,8 +7377,10 @@ cc_library(
         ":ConvertToEmitCInterface",
         ":EmitCDialect",
         ":FuncDialect",
+        ":IR",
         ":Pass",
         ":TransformUtils",
+        "//llvm:Support",
     ],
 )
 
