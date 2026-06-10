@@ -408,10 +408,18 @@ void SampleProfileMatcher::runStaleProfileMatching(
       if (!FSForMatching)
         continue;
 
-      FunctionSamples &NewFS = FlattenedProfiles.create(IR.second);
+      FunctionId NewAnchor(FunctionSamples::getCanonicalFnName(IR.second.stringRef()));
+      FunctionSamples &NewFS = FlattenedProfiles.create(NewAnchor);
       NewFS.merge(*FSForMatching);
-      FuncToProfileNameMap[const_cast<Function *>(&F)] = IR.second;
+      FuncToProfileNameMap[const_cast<Function *>(&F)] = NewAnchor;
       IRToProfileLocationMap = getIRToProfileLocationMap(NewFS);
+
+      // Update profile in the sample profile reader
+      SampleProfileMap &Profiles = Reader.getProfiles();
+      SampleContext FContext(NewAnchor);
+      auto Res = Profiles.try_emplace(FContext.getHashCode(), FContext, NewFS);
+      FunctionSamples &FProfile = Res.first->second;
+      FProfile.setContext(FContext);
     }
   }
 
