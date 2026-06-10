@@ -17,11 +17,14 @@
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/windows/AutoHandle.h"
+#include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
+#include "lldb/Host/windows/PseudoConsole.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/State.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -50,9 +53,10 @@ NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
                                            llvm::Error &E)
     : NativeProcessProtocol(
           LLDB_INVALID_PROCESS_ID,
-          PseudoTerminal::invalid_fd, // TODO: Implement on Windows
+          PseudoTerminal::invalid_fd, // NativeProcessWindows owns the ConPTY.
           delegate),
-      ProcessDebugger(), m_arch(launch_info.GetArchitecture()) {
+      ProcessDebugger(), m_arch(launch_info.GetArchitecture()),
+      m_stdio_communication("lldb.NativeProcessWindows.stdio") {
   ErrorAsOutParameter EOut(&E);
   DebugDelegateSP delegate_sp(new NativeDebugDelegate(*this));
   E = LaunchProcess(launch_info, delegate_sp).ToError();
@@ -60,12 +64,16 @@ NativeProcessWindows::NativeProcessWindows(ProcessLaunchInfo &launch_info,
     return;
 
   SetID(GetDebuggedProcessId());
+
+  m_pty = launch_info.TakePTY();
+  StartStdioForwarding();
 }
 
 NativeProcessWindows::NativeProcessWindows(lldb::pid_t pid, int terminal_fd,
                                            NativeDelegate &delegate,
                                            llvm::Error &E)
-    : NativeProcessProtocol(pid, terminal_fd, delegate), ProcessDebugger() {
+    : NativeProcessProtocol(pid, terminal_fd, delegate), ProcessDebugger(),
+      m_stdio_communication("lldb.NativeProcessWindows.stdio") {
   ErrorAsOutParameter EOut(&E);
   DebugDelegateSP delegate_sp(new NativeDebugDelegate(*this));
   ProcessAttachInfo attach_info;
@@ -165,8 +173,13 @@ NativeProcessWindows::GetThreadByID(lldb::tid_t thread_id) {
 Status NativeProcessWindows::Halt() {
   bool caused_stop = false;
   StateType state = GetState();
-  if (state != eStateStopped)
-    return HaltProcess(caused_stop);
+  if (state != eStateStopped) {
+    m_pending_halt = true;
+    Status err = HaltProcess(caused_stop);
+    if (err.Fail() || !caused_stop)
+      m_pending_halt = false;
+    return err;
+  }
   return Status();
 }
 
@@ -342,7 +355,7 @@ Status NativeProcessWindows::CacheLoadedModules() {
   if (!m_loaded_modules.empty())
     return Status();
 
-  // Retrieve loaded modules by a Target/Module free implemenation.
+  // Retrieve loaded modules by a Target/Module-free implementation.
   AutoHandle snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetID()));
   if (snapshot.IsValid()) {
     MODULEENTRY32W me;
@@ -430,6 +443,10 @@ bool NativeProcessWindows::HasPendingLibraryEvents() {
 void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
+
+  // Closing the ConPTY signals EOF on the parent-side STDOUT pipe so the
+  // read thread can exit. Tear it down before the debuggee is destroyed.
+  StopStdioForwarding();
 
   ProcessDebugger::OnExitProcess(exit_code);
 
@@ -569,6 +586,32 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
   // Any remaining STATUS_BREAKPOINT is a breakpoint instruction in the
   // program's own code (e.g. `__debugbreak()` or `__builtin_debugtrap()`).
   // Stop the debugger and let the user decide what to do.
+  if (m_pending_halt) {
+    LLDB_LOG(log,
+             "DebugBreakProcess injection treated as Halt SIGSTOP for tid "
+             "{0:x}",
+             thread_id);
+    m_pending_halt = false;
+    ThreadStopInfo signal_info;
+    signal_info.reason = StopReason::eStopReasonSignal;
+    signal_info.signo = 19; // SIGSTOP on POSIX
+
+    // Halt all threads at the kernel level.
+    for (uint32_t i = 0; i < m_threads.size(); ++i) {
+      auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
+      if (Status err = t->DoStop(); err.Fail()) {
+        LLDB_LOG(log, "Failed to stop thread {1:x}: {0}", t->GetID(),
+                 err.GetError());
+        exit(1);
+      }
+    }
+    SetCurrentThreadID(thread_id);
+    if (NativeThreadWindows *injected = GetThreadByID(thread_id))
+      injected->SetStopReason(signal_info, "interrupt");
+    SetState(eStateStopped, true);
+    return ExceptionResult::BreakInDebugger;
+  }
+
   std::string desc = formatv("Exception {0:x8} encountered at address {1:x8}",
                              record.GetExceptionCode(), exception_addr)
                          .str();
@@ -650,18 +693,10 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
 
 void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
                                         uint32_t exit_code) {
-  llvm::sys::ScopedLock lock(m_mutex);
-  NativeThreadWindows *thread = GetThreadByID(thread_id);
-  if (!thread)
-    return;
-
-  for (auto t = m_threads.begin(); t != m_threads.end();) {
-    if ((*t)->GetID() == thread_id) {
-      t = m_threads.erase(t);
-    } else {
-      ++t;
-    }
-  }
+  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
+  llvm::erase_if(m_threads, [thread_id](const auto &t) {
+    return t->GetID() == thread_id;
+  });
 }
 
 void NativeProcessWindows::OnLoadDll(const ModuleSpec &module_spec,
@@ -697,5 +732,59 @@ NativeProcessWindows::Manager::Attach(
   if (E)
     return std::move(E);
   return std::move(process_up);
+}
+
+NativeProcessWindows::~NativeProcessWindows() { StopStdioForwarding(); }
+
+void NativeProcessWindows::StartStdioForwarding() {
+  if (!m_pty || !m_pty->IsConnected())
+    return;
+
+  m_stdio_communication.SetConnection(
+      std::make_unique<ConnectionConPTY>(m_pty));
+  if (!m_stdio_communication.IsConnected())
+    return;
+  m_stdio_communication.SetReadThreadBytesReceivedCallback(
+      &NativeProcessWindows::STDIOReadThreadBytesReceived, this);
+  m_stdio_communication.StartReadThread();
+}
+
+void NativeProcessWindows::StopStdioForwarding() {
+  if (!m_stdio_communication.HasConnection())
+    return;
+
+  if (m_pty)
+    m_pty->Close();
+
+  if (m_stdio_communication.ReadThreadIsRunning())
+    m_stdio_communication.JoinReadThread();
+
+  if (m_stdio_communication.HasConnection())
+    m_stdio_communication.Disconnect();
+}
+
+void NativeProcessWindows::STDIOReadThreadBytesReceived(void *baton,
+                                                        const void *src,
+                                                        size_t src_len) {
+  auto *self = static_cast<NativeProcessWindows *>(baton);
+  if (src_len == 0)
+    return;
+  self->m_delegate.NewProcessOutput(
+      self, llvm::StringRef(static_cast<const char *>(src), src_len));
+}
+
+size_t NativeProcessWindows::WriteStdin(const void *buf, size_t len,
+                                        Status &error) {
+  if (!m_stdio_communication.HasConnection()) {
+    error = Status::FromErrorString(
+        "no ConPTY connection on this NativeProcessWindows");
+    return 0;
+  }
+  ConnectionStatus status;
+  size_t written = m_stdio_communication.Write(buf, len, status, &error);
+  if (status != eConnectionStatusSuccess && error.Success())
+    error = Status::FromErrorStringWithFormatv(
+        "ConPTY stdin write returned status {0}", static_cast<int>(status));
+  return written;
 }
 } // namespace lldb_private

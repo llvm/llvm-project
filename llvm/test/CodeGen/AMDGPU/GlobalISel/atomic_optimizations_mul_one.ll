@@ -36,7 +36,6 @@ define amdgpu_cs void @atomic_add(<4 x i32> inreg %arg)  {
 ; GCN-LABEL: atomic_add:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -80,8 +79,7 @@ define amdgpu_cs void @atomic_add_and_format(<4 x i32> inreg %arg) {
 ;
 ; GCN-LABEL: atomic_add_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -134,7 +132,6 @@ define amdgpu_cs void @atomic_sub(<4 x i32> inreg %arg)  {
 ; GCN-LABEL: atomic_sub:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -178,8 +175,7 @@ define amdgpu_cs void @atomic_sub_and_format(<4 x i32> inreg %arg) {
 ;
 ; GCN-LABEL: atomic_sub_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -233,7 +229,6 @@ define amdgpu_cs void @atomic_xor(<4 x i32> inreg %arg)  {
 ; GCN-LABEL: atomic_xor:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -280,8 +275,7 @@ define amdgpu_cs void @atomic_xor_and_format(<4 x i32> inreg %arg) {
 ;
 ; GCN-LABEL: atomic_xor_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -336,7 +330,6 @@ define amdgpu_cs void @atomic_ptr_add(ptr addrspace(8) inreg %arg)  {
 ; GCN-LABEL: atomic_ptr_add:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -382,8 +375,7 @@ define amdgpu_cs void @atomic_ptr_add_and_format(ptr addrspace(8) inreg %arg) {
 ;
 ; GCN-LABEL: atomic_ptr_add_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -438,7 +430,6 @@ define amdgpu_cs void @atomic_ptr_sub(ptr addrspace(8) inreg %arg)  {
 ; GCN-LABEL: atomic_ptr_sub:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -484,8 +475,7 @@ define amdgpu_cs void @atomic_ptr_sub_and_format(ptr addrspace(8) inreg %arg) {
 ;
 ; GCN-LABEL: atomic_ptr_sub_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -541,7 +531,6 @@ define amdgpu_cs void @atomic_ptr_xor(ptr addrspace(8) inreg %arg)  {
 ; GCN-LABEL: atomic_ptr_xor:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s4, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s5, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
@@ -590,8 +579,7 @@ define amdgpu_cs void @atomic_ptr_xor_and_format(ptr addrspace(8) inreg %arg) {
 ;
 ; GCN-LABEL: atomic_ptr_xor_and_format:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    s_mov_b64 s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; GCN-NEXT:    s_mov_b64 s[6:7], exec
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s6, 0
 ; GCN-NEXT:    v_mbcnt_hi_u32_b32_e32 v0, s7, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0

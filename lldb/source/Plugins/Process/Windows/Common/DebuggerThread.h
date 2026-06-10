@@ -97,5 +97,5 @@ private:
   DebuggerThreadAttachRoutine(lldb::pid_t pid,
                               const ProcessAttachInfo &launch_info);
 };
-}
+} // namespace lldb_private
 #endif
