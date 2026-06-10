@@ -1720,7 +1720,7 @@ enum NumericFlags : uint64_t {
 Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
                            InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
-  uint64_t flag = NUMERIC_FLAG_NONE;
+  uint64_t Flag = NUMERIC_FLAG_NONE;
 
   switch (I.getOpcode()) {
   case Instruction::Add:
@@ -1728,9 +1728,9 @@ Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
   case Instruction::Mul:
   case Instruction::Shl:
     if (I.hasNoSignedWrap())
-      flag |= NUMERIC_FLAG_NO_SIGNED_WRAP;
+      Flag |= NUMERIC_FLAG_NO_SIGNED_WRAP;
     if (I.hasNoUnsignedWrap())
-      flag |= NUMERIC_FLAG_NO_UNSIGNED_WRAP;
+      Flag |= NUMERIC_FLAG_NO_UNSIGNED_WRAP;
     break;
   case Instruction::FAdd:
   case Instruction::FSub:
@@ -1738,25 +1738,25 @@ Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
   case Instruction::FDiv:
   case Instruction::FNeg:
     if (I.hasNoNaNs())
-      flag |= NUMERIC_FLAG_HAS_NO_NANS;
+      Flag |= NUMERIC_FLAG_HAS_NO_NANS;
     if (I.hasNoInfs())
-      flag |= NUMERIC_FLAG_HAS_NO_INFS;
+      Flag |= NUMERIC_FLAG_HAS_NO_INFS;
     if (I.hasNoSignedZeros())
-      flag |= NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS;
+      Flag |= NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS;
     break;
   case Instruction::AShr:
   case Instruction::LShr:
   case Instruction::SDiv:
   case Instruction::UDiv:
     if (I.isExact())
-      flag |= NUMERIC_FLAG_IS_EXACT;
+      Flag |= NUMERIC_FLAG_IS_EXACT;
     break;
   }
 
   if (auto *DI = dyn_cast<PossiblyDisjointInst>(&V); DI && DI->isDisjoint())
-    flag |= NUMERIC_FLAG_IS_DISJOINT;
+    Flag |= NUMERIC_FLAG_IS_DISJOINT;
 
-  return getCI(&Ty, flag);
+  return getCI(&Ty, Flag);
 }
 
 void NumericIO::init(InstrumentationConfig &IConf,
