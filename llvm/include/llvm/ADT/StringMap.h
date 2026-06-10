@@ -39,16 +39,19 @@ protected:
   StringMapEntryBase **TheTable = nullptr;
   unsigned NumBuckets = 0;
   unsigned NumItems = 0;
+  unsigned NumTombstones = 0;
   unsigned ItemSize;
 
 protected:
   explicit StringMapImpl(unsigned itemSize) : ItemSize(itemSize) {}
   StringMapImpl(StringMapImpl &&RHS)
       : TheTable(RHS.TheTable), NumBuckets(RHS.NumBuckets),
-        NumItems(RHS.NumItems), ItemSize(RHS.ItemSize) {
+        NumItems(RHS.NumItems), NumTombstones(RHS.NumTombstones),
+        ItemSize(RHS.ItemSize) {
     RHS.TheTable = nullptr;
     RHS.NumBuckets = 0;
     RHS.NumItems = 0;
+    RHS.NumTombstones = 0;
   }
 
   LLVM_ABI StringMapImpl(unsigned InitSize, unsigned ItemSize);
@@ -83,10 +86,6 @@ protected:
   /// table, returning it.  If the key is not in the table, this returns null.
   LLVM_ABI StringMapEntryBase *RemoveKey(StringRef Key);
 
-  /// Remove the entry at the given (live) bucket, whose value the caller has
-  /// already destroyed, and close the hole via Algorithm R backward shifting.
-  LLVM_ABI void removeBucket(unsigned Bucket);
-
   /// Allocate the table with the specified number of buckets and otherwise
   /// setup the map as empty.
   LLVM_ABI void init(unsigned Size);
@@ -96,6 +95,14 @@ protected:
   }
 
 public:
+  static constexpr uintptr_t TombstoneIntVal =
+      static_cast<uintptr_t>(-1)
+      << PointerLikeTypeTraits<StringMapEntryBase *>::NumLowBitsAvailable;
+
+  static StringMapEntryBase *getTombstoneVal() {
+    return reinterpret_cast<StringMapEntryBase *>(TombstoneIntVal);
+  }
+
   [[nodiscard]] unsigned getNumBuckets() const { return NumBuckets; }
   [[nodiscard]] unsigned getNumItems() const { return NumItems; }
 
@@ -115,6 +122,7 @@ public:
     std::swap(TheTable, Other.TheTable);
     std::swap(NumBuckets, Other.NumBuckets);
     std::swap(NumItems, Other.NumItems);
+    std::swap(NumTombstones, Other.NumTombstones);
   }
 };
 
@@ -164,19 +172,26 @@ public:
              *RHSHashTable = (unsigned *)(RHS.TheTable + NumBuckets + 1);
 
     NumItems = RHS.NumItems;
-    // Copy the bucket layout verbatim.  Because RHS was built with linear
-    // probing, preserving each entry's slot keeps the probe-sequence invariant
-    // intact without re-probing.
+    NumTombstones = RHS.NumTombstones;
     for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
       StringMapEntryBase *Bucket = RHS.TheTable[I];
-      if (!Bucket)
+      if (!Bucket || Bucket == getTombstoneVal()) {
+        TheTable[I] = Bucket;
         continue;
+      }
 
       TheTable[I] = MapEntryTy::create(
           static_cast<MapEntryTy *>(Bucket)->getKey(), getAllocator(),
           static_cast<MapEntryTy *>(Bucket)->getValue());
       HashTable[I] = RHSHashTable[I];
     }
+
+    // Note that here we've copied everything from the RHS into this object,
+    // tombstones included. We could, instead, have re-probed for each key to
+    // instantiate this new object without any tombstone buckets. The
+    // assumption here is that items are rarely deleted from most StringMaps,
+    // and so tombstones are rare, so the cost of re-probing for all inputs is
+    // not worthwhile.
   }
 
   StringMap &operator=(StringMap RHS) {
@@ -191,7 +206,7 @@ public:
     // work not required in the destructor.
     if (!empty()) {
       for (StringMapEntryBase *Bucket : buckets()) {
-        if (Bucket) {
+        if (Bucket && Bucket != getTombstoneVal()) {
           static_cast<MapEntryTy *>(Bucket)->Destroy(getAllocator());
         }
       }
@@ -311,13 +326,15 @@ public:
   bool insert(MapEntryTy *KeyValue) {
     unsigned BucketNo = LookupBucketFor(KeyValue->getKey());
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
-    if (Bucket)
+    if (Bucket && Bucket != getTombstoneVal())
       return false; // Already exists in map.
 
     incrementEpoch();
+    if (Bucket == getTombstoneVal())
+      --NumTombstones;
     Bucket = KeyValue;
     ++NumItems;
-    assert(NumItems <= NumBuckets);
+    assert(NumItems + NumTombstones <= NumBuckets);
 
     RehashTable();
     return true;
@@ -377,14 +394,16 @@ public:
                                                   ArgsTy &&...Args) {
     unsigned BucketNo = LookupBucketFor(Key, FullHashValue);
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
-    if (Bucket)
+    if (Bucket && Bucket != getTombstoneVal())
       return {iterator(this, TheTable + BucketNo), false}; // Already in map.
 
     incrementEpoch();
+    if (Bucket == getTombstoneVal())
+      --NumTombstones;
     Bucket =
         MapEntryTy::create(Key, getAllocator(), std::forward<ArgsTy>(Args)...);
     ++NumItems;
-    assert(NumItems <= NumBuckets);
+    assert(NumItems + NumTombstones <= NumBuckets);
 
     BucketNo = RehashTable(BucketNo);
     return {iterator(this, TheTable + BucketNo), true};
@@ -396,27 +415,26 @@ public:
     if (empty())
       return;
 
-    // Zap all values, resetting the keys back to non-present, which is safe
-    // because we're removing all elements.
+    // Zap all values, resetting the keys back to non-present (not tombstone),
+    // which is safe because we're removing all elements.
     for (StringMapEntryBase *&Bucket : buckets()) {
-      if (Bucket) {
+      if (Bucket && Bucket != getTombstoneVal()) {
         static_cast<MapEntryTy *>(Bucket)->Destroy(getAllocator());
       }
       Bucket = nullptr;
     }
 
     NumItems = 0;
+    NumTombstones = 0;
   }
 
   /// remove - Remove the specified key/value pair from the map, but do not
   /// erase it.  This aborts if the key is not in the map.
-  void remove(MapEntryTy *KeyValue) {
-    incrementEpoch();
-    RemoveKey(KeyValue);
-  }
+  void remove(MapEntryTy *KeyValue) { RemoveKey(KeyValue); }
 
   void erase(iterator I) {
     MapEntryTy &V = *I;
+    incrementEpoch();
     remove(&V);
     V.Destroy(getAllocator());
   }
@@ -437,22 +455,17 @@ public:
   /// into the map are invalidated.
   template <typename Predicate> bool remove_if(Predicate Pred) {
     bool Removed = false;
-    for (unsigned I = 0; I != NumBuckets;) {
-      StringMapEntryBase *Bucket = TheTable[I];
-      if (!Bucket) {
-        ++I;
+    for (StringMapEntryBase *&Bucket : buckets()) {
+      if (!Bucket || Bucket == getTombstoneVal())
         continue;
-      }
       auto *Entry = static_cast<MapEntryTy *>(Bucket);
-      if (!Pred(*Entry)) {
-        ++I;
-        continue;
+      if (Pred(*Entry)) {
+        Entry->Destroy(getAllocator());
+        Bucket = getTombstoneVal();
+        --NumItems;
+        ++NumTombstones;
+        Removed = true;
       }
-      Entry->Destroy(getAllocator());
-      // This may relocate a following entry into this slot to close the hole,
-      // so re-examine the same index rather than advancing past it.
-      removeBucket(I);
-      Removed = true;
     }
     if (Removed)
       incrementEpoch();
@@ -529,7 +542,7 @@ public:
 
 private:
   void AdvancePastEmptyBuckets() {
-    while (*Ptr == nullptr)
+    while (*Ptr == nullptr || *Ptr == StringMapImpl::getTombstoneVal())
       ++Ptr;
   }
 };

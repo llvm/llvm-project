@@ -94,11 +94,11 @@ static bool isReadable(const Pointer &P) {
 static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   assert(QT->isSignedIntegerOrEnumerationType() ||
          QT->isUnsignedIntegerOrEnumerationType());
-  OptPrimType T = S.getContext().classify(QT);
+  OptPrimType T = *S.getContext().classify(QT);
   assert(T);
-  unsigned BitWidth = S.getASTContext().getIntWidth(QT);
 
   if (T == PT_IntAPS) {
+    unsigned BitWidth = S.getASTContext().getIntWidth(QT);
     auto Result = S.allocAP<IntegralAP<true>>(BitWidth);
     Result.copy(Val);
     S.Stk.push<IntegralAP<true>>(Result);
@@ -106,6 +106,7 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
   }
 
   if (T == PT_IntAP) {
+    unsigned BitWidth = S.getASTContext().getIntWidth(QT);
     auto Result = S.allocAP<IntegralAP<false>>(BitWidth);
     Result.copy(Val);
     S.Stk.push<IntegralAP<false>>(Result);
@@ -114,11 +115,11 @@ static void pushInteger(InterpState &S, const APSInt &Val, QualType QT) {
 
   if (QT->isSignedIntegerOrEnumerationType()) {
     int64_t V = Val.getSExtValue();
-    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
+    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
   } else {
     assert(QT->isUnsignedIntegerOrEnumerationType());
     uint64_t V = Val.getZExtValue();
-    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V, BitWidth)); });
+    INT_TYPE_SWITCH(*T, { S.Stk.push<T>(T::from(V)); });
   }
 }
 

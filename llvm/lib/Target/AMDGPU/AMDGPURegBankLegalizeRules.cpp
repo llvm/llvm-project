@@ -1333,6 +1333,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniP3}, {{SgprP3}, {SgprP3, Sgpr32}}})
       .Any({{DivP3}, {{VgprP3}, {VgprP3, Vgpr32}}});
 
+  addRulesForGOpcs({G_DYN_STACKALLOC})
+      .Any({{UniP5, UniS32}, {{SgprP5}, {Sgpr32}, DynStackAlloc}})
+      .Any({{UniP5, DivS32}, {{SgprP5}, {Vgpr32}, DynStackAlloc}});
+
   addRulesForGOpcs({G_ABS}, Standard)
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32SExt}})
       .Div(S16, {{Vgpr16}, {Vgpr16}, AbsToNegMax})
@@ -1591,12 +1595,20 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS1, _, S64}, {{UniInVcc}, {None, Vgpr64, Vgpr64}}})
       .Any({{DivS1, _, S64}, {{Vcc}, {None, Vgpr64, Vgpr64}}});
 
-  addRulesForGOpcs({G_INTRINSIC_TRUNC, G_INTRINSIC_ROUNDEVEN, G_FFLOOR, G_FCEIL,
-                    G_FEXP2, G_FLOG2},
-                   Standard)
+  addRulesForGOpcs({G_INTRINSIC_ROUNDEVEN, G_FEXP2, G_FLOG2}, Standard)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16}})
       .Div(S16, {{Vgpr16}, {Vgpr16}})
       .Uni(S32, {{UniInVgprS32}, {Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64}});
+
+  addRulesForGOpcs({G_INTRINSIC_TRUNC, G_FFLOOR, G_FCEIL}, Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasSALUFloat)
+      .Div(S16, {{Vgpr16}, {Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32}})
+      .Uni(S32, {{Sgpr32}, {Sgpr32}}, hasSALUFloat)
       .Div(S32, {{Vgpr32}, {Vgpr32}})
       .Uni(S64, {{UniInVgprS64}, {Vgpr64}})
       .Div(S64, {{Vgpr64}, {Vgpr64}});
