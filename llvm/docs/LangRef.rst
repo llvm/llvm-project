@@ -14535,6 +14535,9 @@ does not define what this type is, so all transformations should be
 prepared to handle these functions regardless of the type used. The intrinsics
 are overloaded, and can be used for pointers to different address spaces.
 
+The underlying argument list is destroyed when a function returns, so
+a ``va_list`` must not outlive the function that created it.
+
 This example shows how the :ref:`va_arg <i_va_arg>` instruction and the
 variable argument handling intrinsic functions are used.
 
@@ -14673,6 +14676,10 @@ available in C. In a target-dependent way, it copies the source
 ``va_list`` element into the destination ``va_list`` element. This
 intrinsic is necessary because the ``llvm.va_start`` intrinsic may be
 arbitrarily complex and require, for example, memory allocation.
+
+On targets where ``va_list`` is trivially copyable, ``memcpy`` can be
+used instead to duplicate a ``va_list``. The ``va_list`` type is
+trivially copyable on all currently supported targets.
 
 Accurate Garbage Collection Intrinsics
 --------------------------------------
