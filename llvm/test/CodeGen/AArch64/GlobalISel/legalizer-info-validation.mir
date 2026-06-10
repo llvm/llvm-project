@@ -173,7 +173,7 @@
 # DEBUG-NEXT: .. the first uncovered imm index: {{[0-9]+}}, OK
 
 #
-# DEBUG-NEXT: G_INTRINSIC_FPTRUNC_ROUND (opcode {{[0-9]+}}): 2 type indices, 1 imm index
+# DEBUG-NEXT: G_INTRINSIC_FPTRUNC_ROUND (opcode {{[0-9]+}}): 2 type indices, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 #

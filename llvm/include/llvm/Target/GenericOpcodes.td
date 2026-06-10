@@ -1279,7 +1279,7 @@ def G_RESET_FPMODE : GenericInstruction {
 //------------------------------------------------------------------------------
 def G_INTRINSIC_FPTRUNC_ROUND : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$src1, untyped_imm_0:$round_mode);
+  let InOperandList = (ins type1:$src1, i32imm:$round_mode);
   let hasSideEffects = false;
 }
 
