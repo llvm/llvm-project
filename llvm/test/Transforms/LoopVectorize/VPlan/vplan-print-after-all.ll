@@ -5,8 +5,10 @@
 
 ; CHECK: VPlan for loop in 'foo' after printAfterInitialConstruction
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createHeaderPhiRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::removeDeadRecipes
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::finalizeSCEVPredicates
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::handleEarlyExits
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addMiddleCheck
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createLoopRegions
@@ -14,6 +16,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInLoopReductionRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeMemOpWideningDecisions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeScalarizationDecisions
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::makeCallWideningDecisions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::clearReductionWrapFlags
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimizeFindIVReductions
@@ -25,7 +28,7 @@
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createPartialReductions
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToAbstractRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::createInterleaveGroups
-; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceSymbolicStrides
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::convertToStridedAccesses
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::dropPoisonGeneratingRecipes
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::hoistPredicatedLoads
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::sinkPredicatedStores
@@ -46,8 +49,10 @@
 ; CHECK: VPlan for loop in 'foo' after mergeBlocksIntoPredecessors
 ; CHECK: VPlan for loop in 'foo' after licm
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::optimize
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::narrowInterleaveGroups
 ; CHECK: VPlan for loop in 'foo' after printOptimizedVPlan
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::addMinimumIterationCheck
+; CHECK: VPlan for loop in 'foo' after VPlanTransforms::replaceWideCanonicalIVWithWideIV
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::unrollByUF
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializePacksAndUnpacks
 ; CHECK: VPlan for loop in 'foo' after VPlanTransforms::materializeBroadcasts

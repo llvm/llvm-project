@@ -84,12 +84,28 @@ def InlineElementals : Pass<"inline-elementals"> {
   let summary = "Inline chained hlfir.elemental operations";
 }
 
-def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
-  let summary = "Inline hlfir.assign operations";
+def SeparateAllocatableAssign : Pass<"separate-allocatable-assign"> {
+  let summary = "Separate reallocation from allocatable array assignments";
+  let description = [{
+    Transform `hlfir.assign %rhs to %lhs realloc` into a conditional
+    reallocation of the LHS followed by a non-realloc `hlfir.assign`.
+    This separates host-side allocation from device-side computation
+    for OpenACC/OpenMP offloading and runs at all optimization levels.
+  }];
 }
 
-def InlineHLFIRCopyIn : Pass<"inline-hlfir-copy-in"> {
-  let summary = "Inline hlfir.copy_in operations";
+def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
+  let summary = "Inline hlfir.assign operations";
+  let options = [Option<
+      "onlyScalarRHS", "only-scalar-rhs", "bool", /*default=*/"false",
+      "Only inline assignments where RHS is a numeric or logical scalar "
+      "broadcast "
+      "to an array LHS. Used at O0 to avoid runtime calls in "
+      "device code without inlining all array assignments.">];
+}
+
+def InlineHLFIRCopy : Pass<"inline-hlfir-copy"> {
+  let summary = "Inline hlfir.copy_in and hlfir.copy_out operations";
 }
 
 def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {

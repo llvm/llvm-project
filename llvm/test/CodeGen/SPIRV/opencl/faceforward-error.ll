@@ -1,7 +1,7 @@
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 
-; CHECK: LLVM ERROR: %{{.*}} = G_INTRINSIC intrinsic(@llvm.spv.faceforward), %{{.*}}, %{{.*}}, %{{.*}} is only supported with the GLSL extended instruction set.
+; CHECK: error: {{.*}}: this instruction is only supported with the GLSL extended instruction set.
 
 define noundef <4 x float> @faceforward_float4(<4 x float> noundef %a, <4 x float> noundef %b, <4 x float> noundef %c) {
 entry:

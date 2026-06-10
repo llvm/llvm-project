@@ -3238,3 +3238,23 @@ APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
   assert(LHS.getBitWidth() == RHS.getBitWidth());
   return clmulr(LHS, RHS).lshr(1);
 }
+
+APInt llvm::APIntOps::compressBits(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
+  return Result;
+}
+
+APInt llvm::APIntOps::expandBits(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  return Result;
+}

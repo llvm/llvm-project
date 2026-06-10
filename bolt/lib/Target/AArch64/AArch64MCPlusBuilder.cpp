@@ -2870,6 +2870,26 @@ public:
     return true;
   }
 
+  /// Match Cortex-A53 erratum 843419 workaround veneer: one BB, two
+  /// instructions (load/store then branch back).
+  bool matchE843419Veneer(const BinaryFunction &BF) const override {
+    StringRef Name = BF.getOneName();
+    if (!Name.starts_with("e843419") && !Name.starts_with("__CortexA53843419_"))
+      return false;
+    if (BF.size() != 1)
+      return false;
+    const BinaryBasicBlock &BB = BF.front();
+    if (BB.size() != 2)
+      return false;
+    const MCInst &First = BB.getInstructionAtIndex(0);
+    const MCInst &Second = BB.getInstructionAtIndex(1);
+    if (!(mayLoad(First) || mayStore(First)))
+      return false;
+    if (!isTailCall(Second))
+      return false;
+    return true;
+  }
+
   bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const override {
     if (!isADRP(Adrp) || !isAddXri(Add))
       return false;

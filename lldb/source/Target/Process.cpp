@@ -52,8 +52,8 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/OperatingSystem.h"
 #include "lldb/Target/Platform.h"
-#include "lldb/Target/Policy.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/StructuredDataPlugin.h"
@@ -71,6 +71,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
@@ -410,7 +411,7 @@ ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
                               ListenerSP listener_sp,
                               const FileSpec *crash_file_path,
                               bool can_connect) {
-  static uint32_t g_process_unique_id = 0;
+  static std::atomic<uint32_t> g_process_unique_id{0};
 
   ProcessSP process_sp;
   ProcessCreateInstance create_callback = nullptr;
@@ -1569,8 +1570,8 @@ Process::GetBreakpointSiteList() const {
 
 void Process::DisableAllBreakpointSites() {
   m_breakpoint_site_list.ForEach([this](BreakpointSite *bp_site) -> void {
-    llvm::consumeError(
-        ExecuteBreakpointSiteAction(*bp_site, BreakpointAction::Disable));
+    llvm::consumeError(ExecuteBreakpointSiteAction(
+        *bp_site, BreakpointAction::Disable, /*forbid_delay=*/false));
   });
 }
 
@@ -1588,8 +1589,8 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1599,7 +1600,17 @@ Status Process::DisableBreakpointSiteByID(lldb::user_id_t break_id) {
 }
 
 llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                                 BreakpointAction action) {
+                                                 BreakpointAction action,
+                                                 bool forbid_delay) {
+  // Breakpoints immediately affect running processes, so do not delay them.
+  forbid_delay |= StateIsRunningState(GetPrivateState());
+
+  if (forbid_delay)
+    if (llvm::Error E = FlushDelayedBreakpoints())
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Breakpoints), std::move(E),
+          "eager breakpoint requested, but failed to flush breakpoints: {0}");
+
   auto site_sp = site.shared_from_this();
   std::unique_lock<std::recursive_mutex> guard(m_delayed_breakpoints_mutex);
 
@@ -1607,7 +1618,7 @@ llvm::Error Process::ExecuteBreakpointSiteAction(BreakpointSite &site,
   if (IsBreakpointSiteEnabled(*site_sp) == (action == BreakpointAction::Enable))
     return llvm::Error::success();
 
-  if (ShouldUseDelayedBreakpoints()) {
+  if (!forbid_delay && ShouldUseDelayedBreakpoints()) {
     m_delayed_breakpoints.Enqueue(site_sp, action);
     return llvm::Error::success();
   }
@@ -1630,8 +1641,8 @@ Status Process::EnableBreakpointSiteByID(lldb::user_id_t break_id) {
   BreakpointSiteSP bp_site_sp = m_breakpoint_site_list.FindByID(break_id);
   if (bp_site_sp) {
     if (!IsBreakpointSiteEnabled(*bp_site_sp))
-      error = Status::FromError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Enable));
+      error = Status::FromError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Enable, /*forbid_delay=*/false));
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid breakpoint site ID: %" PRIu64, break_id);
@@ -1767,19 +1778,10 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   bool bp_from_address =
       constituent->GetBreakpoint().GetResolver()->GetResolverTy() ==
       BreakpointResolver::ResolverTy::AddressResolver;
-  bool should_be_eager = use_hardware || bp_from_address;
+  bool forbid_delay = use_hardware || bp_from_address;
 
-  // If this breakpoint must be eager, flush the breakpoint queue in case there
-  // is an interaction between the sites in the queue and this new site.
-  if (should_be_eager)
-    if (llvm::Error E = FlushDelayedBreakpoints())
-      LLDB_LOG_ERROR(
-          GetLog(LLDBLog::Breakpoints), std::move(E),
-          "eager breakpoint requested, but failed to flush breakpoints: {0}");
-
-  auto error = should_be_eager ? EnableBreakpointSite(bp_site_sp.get())
-                               : Status::FromError(ExecuteBreakpointSiteAction(
-                                     *bp_site_sp, BreakpointAction::Enable));
+  auto error = Status::FromError(ExecuteBreakpointSiteAction(
+      *bp_site_sp, BreakpointAction::Enable, forbid_delay));
   if (error.Success()) {
     constituent->SetBreakpointSite(bp_site_sp);
     return m_breakpoint_site_list.Add(bp_site_sp);
@@ -1804,8 +1806,8 @@ void Process::RemoveConstituentFromBreakpointSite(
   if (num_constituents == 0) {
     // Don't try to disable the site if we don't have a live process anymore.
     if (IsAlive())
-      llvm::consumeError(
-          ExecuteBreakpointSiteAction(*bp_site_sp, BreakpointAction::Disable));
+      llvm::consumeError(ExecuteBreakpointSiteAction(
+          *bp_site_sp, BreakpointAction::Disable, /*forbid_delay=*/false));
     m_breakpoint_site_list.RemoveByAddress(bp_site_sp->GetLoadAddress());
   }
 }
@@ -2071,6 +2073,19 @@ size_t Process::ReadMemory(addr_t addr, void *buf, size_t size, Status &error) {
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 Process::ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                           llvm::MutableArrayRef<uint8_t> buffer) {
+  llvm::SmallVector<Range<lldb::addr_t, size_t>> fixed_ranges;
+  fixed_ranges.reserve(ranges.size());
+  for (const Range<lldb::addr_t, size_t> &range : ranges)
+    fixed_ranges.emplace_back(FixAnyAddress(range.GetRangeBase()),
+                              range.GetByteSize());
+  if (!GetDisableMemoryCache())
+    return m_memory_cache.ReadRanges(fixed_ranges, buffer);
+  return DoReadMemoryRanges(fixed_ranges, buffer);
+}
+
+llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+Process::DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                            llvm::MutableArrayRef<uint8_t> buffer) {
   auto total_ranges_len = llvm::sum_of(
       llvm::map_range(ranges, [](auto range) { return range.size; }));
   // If the buffer is not large enough, this is a programmer error.
@@ -4947,151 +4962,6 @@ void Process::STDIOReadThreadBytesReceived(void *baton, const void *src,
   process->AppendSTDOUT(static_cast<const char *>(src), src_len);
 }
 
-class IOHandlerProcessSTDIO : public IOHandler {
-public:
-  IOHandlerProcessSTDIO(Process *process, int write_fd)
-      : IOHandler(process->GetTarget().GetDebugger(),
-                  IOHandler::Type::ProcessIO),
-        m_process(process),
-        m_read_file(GetInputFD(), File::eOpenOptionReadOnly, false),
-        m_write_file(write_fd, File::eOpenOptionWriteOnly, false) {
-    m_pipe.CreateNew();
-  }
-
-  ~IOHandlerProcessSTDIO() override = default;
-
-  void SetIsRunning(bool running) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(!running);
-    m_is_running = running;
-  }
-
-  // Each IOHandler gets to run until it is done. It should read data from the
-  // "in" and place output into "out" and "err and return when done.
-  void Run() override {
-    if (!m_read_file.IsValid() || !m_write_file.IsValid() ||
-        !m_pipe.CanRead() || !m_pipe.CanWrite()) {
-      SetIsDone(true);
-      return;
-    }
-
-    SetIsDone(false);
-    const int read_fd = m_read_file.GetDescriptor();
-    Terminal terminal(read_fd);
-    TerminalState terminal_state(terminal, false);
-    // FIXME: error handling?
-    llvm::consumeError(terminal.SetCanonical(false));
-    llvm::consumeError(terminal.SetEcho(false));
-// FD_ZERO, FD_SET are not supported on windows
-#ifndef _WIN32
-    const int pipe_read_fd = m_pipe.GetReadFileDescriptor();
-    SetIsRunning(true);
-    while (true) {
-      {
-        std::lock_guard<std::mutex> guard(m_mutex);
-        if (GetIsDone())
-          break;
-      }
-
-      SelectHelper select_helper;
-      select_helper.FDSetRead(read_fd);
-      select_helper.FDSetRead(pipe_read_fd);
-      Status error = select_helper.Select();
-
-      if (error.Fail())
-        break;
-
-      char ch = 0;
-      size_t n;
-      if (select_helper.FDIsSetRead(read_fd)) {
-        n = 1;
-        if (m_read_file.Read(&ch, n).Success() && n == 1) {
-          if (m_write_file.Write(&ch, n).Fail() || n != 1)
-            break;
-        } else
-          break;
-      }
-
-      if (select_helper.FDIsSetRead(pipe_read_fd)) {
-        // Consume the interrupt byte
-        if (llvm::Expected<size_t> bytes_read = m_pipe.Read(&ch, 1)) {
-          if (ch == 'q')
-            break;
-          if (ch == 'i')
-            if (StateIsRunningState(m_process->GetState()))
-              m_process->SendAsyncInterrupt();
-        } else {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Process), bytes_read.takeError(),
-                         "Pipe read failed: {0}");
-        }
-      }
-    }
-    SetIsRunning(false);
-#endif
-  }
-
-  void Cancel() override {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    SetIsDone(true);
-    // Only write to our pipe to cancel if we are in
-    // IOHandlerProcessSTDIO::Run(). We can end up with a python command that
-    // is being run from the command interpreter:
-    //
-    // (lldb) step_process_thousands_of_times
-    //
-    // In this case the command interpreter will be in the middle of handling
-    // the command and if the process pushes and pops the IOHandler thousands
-    // of times, we can end up writing to m_pipe without ever consuming the
-    // bytes from the pipe in IOHandlerProcessSTDIO::Run() and end up
-    // deadlocking when the pipe gets fed up and blocks until data is consumed.
-    if (m_is_running) {
-      char ch = 'q'; // Send 'q' for quit
-      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
-                       "Pipe write failed: {0}");
-      }
-    }
-  }
-
-  bool Interrupt() override {
-    // Do only things that are safe to do in an interrupt context (like in a
-    // SIGINT handler), like write 1 byte to a file descriptor. This will
-    // interrupt the IOHandlerProcessSTDIO::Run() and we can look at the byte
-    // that was written to the pipe and then call
-    // m_process->SendAsyncInterrupt() from a much safer location in code.
-    if (m_active) {
-      char ch = 'i'; // Send 'i' for interrupt
-      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
-    } else {
-      // This IOHandler might be pushed on the stack, but not being run
-      // currently so do the right thing if we aren't actively watching for
-      // STDIN by sending the interrupt to the process. Otherwise the write to
-      // the pipe above would do nothing. This can happen when the command
-      // interpreter is running and gets a "expression ...". It will be on the
-      // IOHandler thread and sending the input is complete to the delegate
-      // which will cause the expression to run, which will push the process IO
-      // handler, but not run it.
-
-      if (StateIsRunningState(m_process->GetState())) {
-        m_process->SendAsyncInterrupt();
-        return true;
-      }
-    }
-    return false;
-  }
-
-  void GotEOF() override {}
-
-protected:
-  Process *m_process;
-  NativeFile m_read_file;  // Read from this file (usually actual STDIN for LLDB
-  NativeFile m_write_file; // Write to this file (usually the primary pty for
-                           // getting io to debuggee)
-  Pipe m_pipe;
-  std::mutex m_mutex;
-  bool m_is_running = false;
-};
-
 void Process::SetSTDIOFileDescriptor(int fd) {
   // First set up the Read Thread for reading/handling process I/O
   m_stdio_communication.SetConnection(
@@ -6161,7 +6031,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   return return_value;
 }
 
-void Process::GetStatus(Stream &strm) {
+void Process::GetStatus(Stream &strm, bool is_verbose) {
   const StateType state = GetState();
   if (StateIsStoppedState(state, false)) {
     if (state == eStateExited) {
@@ -6173,8 +6043,11 @@ void Process::GetStatus(Stream &strm) {
     } else {
       if (state == eStateConnected)
         strm.Printf("Connected to remote target.\n");
-      else
+      else {
         strm.Printf("Process %" PRIu64 " %s\n", GetID(), StateAsCString(state));
+        if (auto core_args = GetCoreFileArgs(); core_args && is_verbose)
+          core_args->Format(strm);
+      }
     }
   } else {
     strm.Printf("Process %" PRIu64 " is running.\n", GetID());

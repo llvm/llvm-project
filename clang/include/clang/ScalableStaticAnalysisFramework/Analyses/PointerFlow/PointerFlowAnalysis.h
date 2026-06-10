@@ -6,19 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines
-// - PointerFlowAnalysisResult
-//     - the plain PointerFlow info collected from the whole program.
-// - PointerFlowReachableAnalysisResult
-//     - the set of reachable pointers in the pointer flow graph from a provided
-//       starting set.
+// Defines PointerFlowAnalysisResult — the whole-program pointer-flow graph
+// aggregated from per-translation-unit EdgeSet summaries.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ANALYSES_POINTERFLOW_POINTERFLOWANALYSIS_H
 #define LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ANALYSES_POINTERFLOW_POINTERFLOWANALYSIS_H
 
-#include "clang/ScalableStaticAnalysisFramework/Analyses/EntityPointerLevel/EntityPointerLevel.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/PointerFlow/PointerFlow.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/WholeProgramAnalysis/AnalysisName.h"
@@ -30,33 +25,20 @@ namespace clang::ssaf {
 
 constexpr llvm::StringLiteral PointerFlowAnalysisResultName =
     "PointerFlowAnalysisResult";
-constexpr llvm::StringLiteral UnsafeBufferReachableAnalysisResultName =
-    "UnsafeBufferReachableAnalysisResult";
 
-/// A PointerFlowAnalysisResult is a set of pointer-flow edges, i.e.,
-/// a pointer-flow graph. A directed edge src -> dest corresponds to an
-/// assignment (of any of various kinds, e.g., assignment operator or
-/// argument-passing) of pointer dest to pointer src in the source code.
-/// The edge's direction is the opposite of how pointer values flow. This
-/// is because PointerFlowAnalysisResult is used for analyzing property
-/// propagation between pointers. For an assignment `src = dest`, the
-/// propagation works such that if `src` has a property, `dest` must also
-/// have that property; otherwise, the property would not be preserved
-/// across the assignment.
+/// The whole-program pointer-flow graph. Each directed edge 'src -> dest'
+/// records a static assignment site where 'src' (the LHS / assignee) is
+/// assigned the value of 'dest' (the RHS / assigned value).
+///
+/// This edge direction matches property-propagation direction: if a property
+/// (such as a bounds requirement) holds for 'src', it must also hold for
+/// 'dest', because 'dest' supplies the value that 'src' will hold.
 struct PointerFlowAnalysisResult final : AnalysisResult {
   static AnalysisName analysisName() {
     return AnalysisName(PointerFlowAnalysisResultName.str());
   }
 
   std::map<EntityId, EdgeSet> Edges;
-};
-
-struct UnsafeBufferReachableAnalysisResult final : AnalysisResult {
-  static AnalysisName analysisName() {
-    return AnalysisName(UnsafeBufferReachableAnalysisResultName.str());
-  }
-
-  std::map<EntityId, EntityPointerLevelSet> Reachables;
 };
 
 } // namespace clang::ssaf

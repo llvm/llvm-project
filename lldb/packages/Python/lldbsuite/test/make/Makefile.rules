@@ -64,8 +64,8 @@ else
 	# valid when transferred to a remote device.
 	LN_SF = ln -sf $(patsubst $(dir $(2))%,%,$(1)) $(2)
 	ECHO = echo $(1);
-	ECHO_TO_FILE = printf '%s\n' $(1) > "$(2)"
-	ECHO_APPEND_FILE = printf '%s\n' $(1) >> "$(2)"
+	ECHO_TO_FILE = echo $(subst ',,$(1))> "$(subst /,\,$(2))"
+	ECHO_APPEND_FILE = echo $(subst ',,$(1))>> "$(subst /,\,$(2))"
 endif
 
 # Suppress built-in suffix rules. We explicitly define rules for %.o.
@@ -209,6 +209,10 @@ ifeq "$(OS)" "Darwin"
 	DSFLAGS := $(DSFLAGS_EXTRAS)
 	DSYM = $(EXE).dSYM
 	ARFLAGS := -static -o
+	# The default UUID is a hash based on filename and __text section content.
+	# Use a random UUID so that LLDB and Spotlight never confuse two test
+	# binaries, where repeated test code can result in identical binaries.
+	LDFLAGS += -Wl,-random_uuid
 else
 	ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 		DSYM = $(EXE).debug
@@ -243,6 +247,13 @@ endif
 DEBUG_INFO_FLAG ?= -g
 
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0
+
+# Some tests require no debug information. When lldb-dotest specifies a DWARF version,
+# it adds `-gdwarf-{version}` to the CFLAGS environment variable which causes those tests
+# to fail. Strip any existing debug flags from CFLAGS and force -g0 to prevent this.
+ifeq "$(MAKE_NO_DEBUG_INFO)" "YES"
+    CFLAGS := $(filter-out -g%,$(CFLAGS)) -g0
+endif
 CFLAGS += $(SYSROOT_FLAGS)
 
 ifeq "$(OS)" "Darwin"

@@ -220,8 +220,8 @@ This pass decodes the debug info metadata in a module and prints it to standard 
 This pass is a simple post-dominator construction algorithm for finding
 post-dominators.
 
-``print-alias-sets``: Alias Set Printer
----------------------------------------
+``print<alias-sets>``: Alias Set Printer
+----------------------------------------
 
 Yet to be written.
 
@@ -237,8 +237,8 @@ in a human-readable form.
 This pass, only available in ``opt``, prints the SCCs of the call graph to
 standard error in a human-readable form.
 
-``print-cfg-sccs``: Print SCCs of each function CFG
----------------------------------------------------
+``print<cfg-sccs>``: Print SCCs of each function CFG
+----------------------------------------------------
 
 This pass, only available in ``opt``, prints the SCCs of each function CFG to
 standard error in a human-readable form.

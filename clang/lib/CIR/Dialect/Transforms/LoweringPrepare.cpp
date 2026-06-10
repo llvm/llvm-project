@@ -87,9 +87,9 @@ struct LoweringPreparePass
 
   void runOnOp(mlir::Operation *op);
   void lowerCastOp(cir::CastOp op);
+  void lowerComplexConjOp(cir::ComplexConjOp op);
   void lowerComplexDivOp(cir::ComplexDivOp op);
   void lowerComplexMulOp(cir::ComplexMulOp op);
-  void lowerUnaryOp(cir::UnaryOpInterface op);
   void lowerGetGlobalOp(cir::GetGlobalOp op);
   void lowerGlobalOp(cir::GlobalOp op);
   void lowerThreeWayCmpOp(cir::CmpThreeWayOp op);
@@ -123,10 +123,18 @@ struct LoweringPreparePass
   /// When looking at the 'global' op, create the wrapper function.
   void defineGlobalThreadLocalWrapper(cir::GlobalOp op, cir::FuncOp initAlias,
                                       bool isVarDefinition);
+  /// Create an initialization alias for a thread-local variable.
+  cir::FuncOp defineGlobalThreadLocalInitAlias(cir::GlobalOp op,
+                                               cir::FuncOp aliasee);
   /// Get the declaration for the 'wrapper' function for a global-TLS variable.
   cir::FuncOp getOrCreateThreadLocalWrapper(CIRBaseBuilderTy &builder,
                                             cir::GlobalOp op);
-
+  // Function that generates the guard global variable, get-global, and 'if'
+  // condition for global TLS init function generation. This inserts an 'if'
+  // with the store at the beginning of the 'then' region, so inserts into the
+  // body should happen after that.
+  cir::IfOp buildGlobalTlsGuardCheck(CIRBaseBuilderTy &builder,
+                                     mlir::Location loc, cir::GlobalOp guard);
   /// Handle the dtor region by registering destructor with __cxa_atexit
   cir::FuncOp getOrCreateDtorFunc(CIRBaseBuilderTy &builder, cir::GlobalOp op,
                                   mlir::Region &dtorRegion,
@@ -134,6 +142,9 @@ struct LoweringPreparePass
 
   /// Build a module init function that calls all the dynamic initializers.
   void buildCXXGlobalInitFunc();
+  // Build an init function for all of the ordered global thread local storage
+  // variables.
+  void buildCXXGlobalTlsFunc();
 
   /// Materialize global ctor/dtor list
   void buildGlobalCtorDtorList();
@@ -154,6 +165,8 @@ struct LoweringPreparePass
   /// ------------
 
   llvm::StringMap<FuncOp> cudaKernelMap;
+  llvm::SmallVector<std::pair<cir::GlobalOp, cir::CUDAVarRegistrationInfoAttr>>
+      cudaDeviceVars;
 
   /// Build the CUDA module constructor that registers the fat binary
   /// with the CUDA runtime.
@@ -161,6 +174,8 @@ struct LoweringPreparePass
   std::optional<FuncOp> buildCUDAModuleDtor();
   std::optional<FuncOp> buildHIPModuleDtor();
   std::optional<FuncOp> buildCUDARegisterGlobals();
+  void buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
+                             FuncOp regGlobalFunc);
   void buildCUDARegisterGlobalFunctions(cir::CIRBaseBuilderTy &builder,
                                         FuncOp regGlobalFunc);
 
@@ -172,6 +187,13 @@ struct LoweringPreparePass
 
   /// Get or create __cxa_guard_release function.
   cir::FuncOp getGuardReleaseFn(cir::PointerType guardPtrTy);
+
+  /// Get or create the __init_tls function.
+  cir::FuncOp getTlsInitFn();
+
+  // Create the __tls_guard variable.
+  cir::GlobalOp createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
+                                             mlir::Location loc);
 
   /// Create a guard global variable for a static local.
   cir::GlobalOp createGuardGlobalOp(CIRBaseBuilderTy &builder,
@@ -195,16 +217,35 @@ struct LoweringPreparePass
 
   /// Get or create the guard variable for a static local declaration.
   cir::GlobalOp getOrCreateStaticLocalDeclGuardAddress(
-      CIRBaseBuilderTy &builder, cir::GlobalOp globalOp,
-      cir::ASTVarDeclInterface varDecl, cir::IntType guardTy,
-      clang::CharUnits guardAlignment) {
+      CIRBaseBuilderTy &builder, cir::GlobalOp globalOp, StringRef guardName,
+      bool isLocalVarDecl, bool useInt8GuardVariable) {
+
+    cir::CIRDataLayout dataLayout(mlirModule);
+    cir::IntType guardTy;
+    clang::CharUnits guardAlignment;
+    // Guard variables are 64 bits in the generic ABI and size width on ARM
+    // (i.e. 32-bit on AArch32, 64-bit on AArch64).
+    if (useInt8GuardVariable) {
+      guardTy = cir::IntType::get(&getContext(), 8, /*isSigned=*/true);
+      guardAlignment = clang::CharUnits::One();
+    } else if (useARMGuardVarABI()) {
+      // Guard variables are size width on ARM (32-bit AArch32, 64-bit AArch64).
+      const unsigned sizeTypeSize =
+          astCtx->getTypeSize(astCtx->getSignedSizeType());
+      guardTy =
+          cir::IntType::get(&getContext(), sizeTypeSize, /*isSigned=*/true);
+      guardAlignment =
+          clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
+    } else {
+      guardTy = cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
+      guardAlignment =
+          clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
+    }
+    assert(guardTy && guardAlignment.getQuantity() != 0);
+
     llvm::StringRef globalSymName = globalOp.getSymName();
     cir::GlobalOp guard = getStaticLocalDeclGuardAddress(globalSymName);
     if (!guard) {
-      // Get the guard name from the static_local attribute.
-      llvm::StringRef guardName =
-          globalOp.getStaticLocalGuard()->getName().getValue();
-
       // Create the guard variable with a zero-initializer.
       guard = createGuardGlobalOp(builder, globalOp->getLoc(), guardName,
                                   guardTy, globalOp.getLinkage());
@@ -219,10 +260,12 @@ struct LoweringPreparePass
       // Wasm.
       bool hasComdat = globalOp.getComdat();
       const llvm::Triple &triple = astCtx->getTargetInfo().getTriple();
-      if (!varDecl.isLocalVarDecl() && hasComdat &&
+      // TODO(cir): for now, we're just setting comdat to true, but it should
+      // contain a comdat reference name here instead.
+      if (!isLocalVarDecl && hasComdat &&
           (triple.isOSBinFormatELF() || triple.isOSBinFormatWasm())) {
-        globalOp->emitError("NYI: guard COMDAT for non-local variables");
-        return {};
+        // This should be a comdat for the variable.
+        guard.setComdat(true);
       } else if (hasComdat && globalOp.isWeakForLinker()) {
         guard.setComdat(true);
       }
@@ -264,7 +307,9 @@ struct LoweringPreparePass
   /// Tracks existing dynamic initializers.
   llvm::StringMap<uint32_t> dynamicInitializerNames;
   llvm::SmallVector<cir::FuncOp> dynamicInitializers;
+  llvm::SmallVector<cir::FuncOp> globalThreadLocalInitializers;
   llvm::StringMap<cir::FuncOp> threadLocalWrappers;
+  llvm::StringMap<cir::FuncOp> threadLocalInitAliases;
 
   /// Tracks guard variables for static locals (keyed by global symbol name).
   llvm::StringMap<cir::GlobalOp> staticLocalDeclGuardMap;
@@ -346,6 +391,9 @@ struct LoweringPreparePass
     entryBB.getOperations().splice(entryBB.end(), dtorBlock.getOperations(),
                                    dtorBlock.begin(),
                                    std::prev(dtorBlock.end()));
+    // make sure we leave the insert location after the operations we just
+    // inserted.
+    builder.setInsertionPointToEnd(&entryBB);
   }
 
   /// Emit the guarded initialization for a static local variable.
@@ -635,18 +683,34 @@ buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   mlir::Value &c = rhsReal;
   mlir::Value &d = rhsImag;
 
-  mlir::Value ac = builder.createMul(loc, a, c);     // a*c
-  mlir::Value bd = builder.createMul(loc, b, d);     // b*d
-  mlir::Value cc = builder.createMul(loc, c, c);     // c*c
-  mlir::Value dd = builder.createMul(loc, d, d);     // d*d
-  mlir::Value acbd = builder.createAdd(loc, ac, bd); // ac+bd
-  mlir::Value ccdd = builder.createAdd(loc, cc, dd); // cc+dd
-  mlir::Value resultReal = builder.createDiv(loc, acbd, ccdd);
+  // The element type of the complex (lhs/rhs) determines whether floating
+  // point or integer ops are needed.
+  bool isFP = cir::isFPOrVectorOfFPType(a.getType());
+  auto mul = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFMul(l, x, y) : builder.createMul(l, x, y);
+  };
+  auto add = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFAdd(l, x, y) : builder.createAdd(l, x, y);
+  };
+  auto sub = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFSub(l, x, y) : builder.createSub(l, x, y);
+  };
+  auto div = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFDiv(l, x, y) : builder.createDiv(l, x, y);
+  };
 
-  mlir::Value bc = builder.createMul(loc, b, c);     // b*c
-  mlir::Value ad = builder.createMul(loc, a, d);     // a*d
-  mlir::Value bcad = builder.createSub(loc, bc, ad); // bc-ad
-  mlir::Value resultImag = builder.createDiv(loc, bcad, ccdd);
+  mlir::Value ac = mul(loc, a, c);     // a*c
+  mlir::Value bd = mul(loc, b, d);     // b*d
+  mlir::Value cc = mul(loc, c, c);     // c*c
+  mlir::Value dd = mul(loc, d, d);     // d*d
+  mlir::Value acbd = add(loc, ac, bd); // ac+bd
+  mlir::Value ccdd = add(loc, cc, dd); // cc+dd
+  mlir::Value resultReal = div(loc, acbd, ccdd);
+
+  mlir::Value bc = mul(loc, b, c);     // b*c
+  mlir::Value ad = mul(loc, a, d);     // a*d
+  mlir::Value bcad = sub(loc, bc, ad); // bc-ad
+  mlir::Value resultImag = div(loc, bcad, ccdd);
   return builder.createComplexCreate(loc, resultReal, resultImag);
 }
 
@@ -679,35 +743,39 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   mlir::Value &c = rhsReal;
   mlir::Value &d = rhsImag;
 
+  // Smith's algorithm is only used for floating-point complex division.
+  assert(cir::isFPOrVectorOfFPType(a.getType()) &&
+         "range-reduction complex divide expects floating-point operands");
+
   auto trueBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createDiv(loc, d, c);    // r := d / c
-    mlir::Value rd = builder.createMul(loc, r, d);   // r*d
-    mlir::Value tmp = builder.createAdd(loc, c, rd); // tmp := c + r*d
+    mlir::Value r = builder.createFDiv(loc, d, c);    // r := d / c
+    mlir::Value rd = builder.createFMul(loc, r, d);   // r*d
+    mlir::Value tmp = builder.createFAdd(loc, c, rd); // tmp := c + r*d
 
-    mlir::Value br = builder.createMul(loc, b, r);   // b*r
-    mlir::Value abr = builder.createAdd(loc, a, br); // a + b*r
-    mlir::Value e = builder.createDiv(loc, abr, tmp);
+    mlir::Value br = builder.createFMul(loc, b, r);   // b*r
+    mlir::Value abr = builder.createFAdd(loc, a, br); // a + b*r
+    mlir::Value e = builder.createFDiv(loc, abr, tmp);
 
-    mlir::Value ar = builder.createMul(loc, a, r);   // a*r
-    mlir::Value bar = builder.createSub(loc, b, ar); // b - a*r
-    mlir::Value f = builder.createDiv(loc, bar, tmp);
+    mlir::Value ar = builder.createFMul(loc, a, r);   // a*r
+    mlir::Value bar = builder.createFSub(loc, b, ar); // b - a*r
+    mlir::Value f = builder.createFDiv(loc, bar, tmp);
 
     mlir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
   };
 
   auto falseBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createDiv(loc, c, d);    // r := c / d
-    mlir::Value rc = builder.createMul(loc, r, c);   // r*c
-    mlir::Value tmp = builder.createAdd(loc, d, rc); // tmp := d + r*c
+    mlir::Value r = builder.createFDiv(loc, c, d);    // r := c / d
+    mlir::Value rc = builder.createFMul(loc, r, c);   // r*c
+    mlir::Value tmp = builder.createFAdd(loc, d, rc); // tmp := d + r*c
 
-    mlir::Value ar = builder.createMul(loc, a, r);   // a*r
-    mlir::Value arb = builder.createAdd(loc, ar, b); // a*r + b
-    mlir::Value e = builder.createDiv(loc, arb, tmp);
+    mlir::Value ar = builder.createFMul(loc, a, r);   // a*r
+    mlir::Value arb = builder.createFAdd(loc, ar, b); // a*r + b
+    mlir::Value e = builder.createFDiv(loc, arb, tmp);
 
-    mlir::Value br = builder.createMul(loc, b, r);   // b*r
-    mlir::Value bra = builder.createSub(loc, br, a); // b*r - a
-    mlir::Value f = builder.createDiv(loc, bra, tmp);
+    mlir::Value br = builder.createFMul(loc, b, r);   // b*r
+    mlir::Value bra = builder.createFSub(loc, br, a); // b*r - a
+    mlir::Value f = builder.createFDiv(loc, bra, tmp);
 
     mlir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
@@ -892,12 +960,23 @@ static mlir::Value lowerComplexMul(LoweringPreparePass &pass,
                                    mlir::Value lhsReal, mlir::Value lhsImag,
                                    mlir::Value rhsReal, mlir::Value rhsImag) {
   // (a+bi) * (c+di) = (ac-bd) + (ad+bc)i
-  mlir::Value resultRealLhs = builder.createMul(loc, lhsReal, rhsReal); // ac
-  mlir::Value resultRealRhs = builder.createMul(loc, lhsImag, rhsImag); // bd
-  mlir::Value resultImagLhs = builder.createMul(loc, lhsReal, rhsImag); // ad
-  mlir::Value resultImagRhs = builder.createMul(loc, lhsImag, rhsReal); // bc
-  mlir::Value resultReal = builder.createSub(loc, resultRealLhs, resultRealRhs);
-  mlir::Value resultImag = builder.createAdd(loc, resultImagLhs, resultImagRhs);
+  bool isFP = cir::isFPOrVectorOfFPType(lhsReal.getType());
+  auto mul = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFMul(l, x, y) : builder.createMul(l, x, y);
+  };
+  auto add = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFAdd(l, x, y) : builder.createAdd(l, x, y);
+  };
+  auto sub = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
+    return isFP ? builder.createFSub(l, x, y) : builder.createSub(l, x, y);
+  };
+
+  mlir::Value resultRealLhs = mul(loc, lhsReal, rhsReal); // ac
+  mlir::Value resultRealRhs = mul(loc, lhsImag, rhsImag); // bd
+  mlir::Value resultImagLhs = mul(loc, lhsReal, rhsImag); // ad
+  mlir::Value resultImagRhs = mul(loc, lhsImag, rhsReal); // bc
+  mlir::Value resultReal = sub(loc, resultRealLhs, resultRealRhs);
+  mlir::Value resultImag = add(loc, resultImagLhs, resultImagRhs);
   mlir::Value algebraicResult =
       builder.createComplexCreate(loc, resultReal, resultImag);
 
@@ -949,35 +1028,22 @@ void LoweringPreparePass::lowerComplexMulOp(cir::ComplexMulOp op) {
   op.erase();
 }
 
-void LoweringPreparePass::lowerUnaryOp(cir::UnaryOpInterface op) {
-  if (!mlir::isa<cir::ComplexType>(op.getResult().getType()))
-    return;
-
-  mlir::Location loc = op->getLoc();
+void LoweringPreparePass::lowerComplexConjOp(cir::ComplexConjOp op) {
+  mlir::Location loc = op.getLoc();
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointAfter(op);
 
-  mlir::Value operand = op.getInput();
+  mlir::Value operand = op.getOperand();
   mlir::Value operandReal = builder.createComplexReal(loc, operand);
   mlir::Value operandImag = builder.createComplexImag(loc, operand);
 
-  mlir::Value resultReal = operandReal;
-  mlir::Value resultImag = operandImag;
+  // The complex conjugate is formed by negating the imaginary component.
+  const bool isFP = cir::isFPOrVectorOfFPType(operandReal.getType());
+  mlir::Value resultImag = isFP ? builder.createFNeg(loc, operandImag)
+                                : builder.createMinus(loc, operandImag);
 
-  llvm::TypeSwitch<mlir::Operation *>(op)
-      .Case<cir::IncOp>(
-          [&](auto) { resultReal = builder.createInc(loc, operandReal); })
-      .Case<cir::DecOp>(
-          [&](auto) { resultReal = builder.createDec(loc, operandReal); })
-      .Case<cir::MinusOp>([&](auto) {
-        resultReal = builder.createMinus(loc, operandReal);
-        resultImag = builder.createMinus(loc, operandImag);
-      })
-      .Case<cir::NotOp>(
-          [&](auto) { resultImag = builder.createMinus(loc, operandImag); })
-      .Default([](auto) { llvm_unreachable("unhandled unary complex op"); });
-
-  mlir::Value result = builder.createComplexCreate(loc, resultReal, resultImag);
+  mlir::Value result =
+      builder.createComplexCreate(loc, operandReal, resultImag);
   op->replaceAllUsesWith(mlir::ValueRange{result});
   op->erase();
 }
@@ -988,7 +1054,6 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
                                                      cir::CallOp &dtorCall) {
   mlir::OpBuilder::InsertionGuard guard(builder);
   assert(!cir::MissingFeatures::astVarDeclInterface());
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
   cir::VoidType voidTy = builder.getVoidTy();
   auto voidPtrTy = cir::PointerType::get(voidTy);
@@ -1113,20 +1178,44 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   // the function entry, and discard extra blocks (which contain only
   // unreachable terminators from EH cleanup paths).
   mlir::Block *entryBB = f.addEntryBlock();
+  builder.setInsertionPointToStart(entryBB);
+
+  // If this is a global TLS variable (that is, declared at namespace scope), we
+  // have to emit the guard variable here.
+  bool needsTlsGuard = op.getDynTlsRefs() && op.getDynTlsRefs()->getGuardName();
+  cir::IfOp guardIf;
+  if (needsTlsGuard) {
+    guardIf = buildGlobalTlsGuardCheck(
+        builder, op.getLoc(),
+        getOrCreateStaticLocalDeclGuardAddress(
+            builder, op, op.getDynTlsRefs()->getGuardName().getValue(),
+            /*isLocalVarDecl=*/false,
+            /*useInt8GuardVariable=*/op.hasInternalLinkage()));
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().front());
+  }
+
   if (!op.getCtorRegion().empty()) {
     mlir::Block &block = op.getCtorRegion().front();
-    entryBB->getOperations().splice(entryBB->begin(), block.getOperations(),
-                                    block.begin(), std::prev(block.end()));
+    mlir::Block *insertBlock = builder.getBlock();
+    insertBlock->getOperations().splice(insertBlock->end(),
+                                        block.getOperations(), block.begin(),
+                                        std::prev(block.end()));
   }
 
   // Register the destructor call with __cxa_atexit
   mlir::Region &dtorRegion = op.getDtorRegion();
   if (!dtorRegion.empty()) {
     assert(!cir::MissingFeatures::astVarDeclInterface());
-    assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
     emitGlobalGuardedDtorRegion(builder, op, dtorRegion,
-                                op.getTlsModel().has_value(), *entryBB);
+                                op.getTlsModel().has_value(),
+                                *builder.getBlock());
+  }
+
+  // If we're actually in the 'if' above, create a yield.
+  if (needsTlsGuard) {
+    builder.setInsertionPointToEnd(&guardIf.getThenRegion().back());
+    cir::YieldOp::create(builder, op.getLoc());
   }
 
   // Replace cir.yield with cir.return
@@ -1168,6 +1257,17 @@ LoweringPreparePass::getGuardReleaseFn(cir::PointerType guardPtrTy) {
   cir::VoidType voidTy = cir::VoidType::get(&getContext());
   auto fnType = cir::FuncType::get({guardPtrTy}, voidTy);
   return buildRuntimeFunction(builder, "__cxa_guard_release", loc, fnType);
+}
+
+cir::FuncOp LoweringPreparePass::getTlsInitFn() {
+  // void __tls_init(void);
+  CIRBaseBuilderTy builder(getContext());
+  mlir::OpBuilder::InsertionGuard _{builder};
+  builder.setInsertionPointToStart(mlirModule.getBody());
+  mlir::Location loc = mlirModule.getLoc();
+  auto fnType = builder.getVoidFnTy();
+  return buildRuntimeFunction(builder, "__tls_init", loc, fnType,
+                              cir::GlobalLinkageKind::InternalLinkage);
 }
 
 cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
@@ -1225,33 +1325,11 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
   // If we have a global variable with internal linkage and thread-safe statics
   // are disabled, we can just let the guard variable be of type i8.
   bool useInt8GuardVariable = !threadsafe && globalOp.hasInternalLinkage();
-  cir::CIRDataLayout dataLayout(mlirModule);
-  cir::IntType guardTy;
-  clang::CharUnits guardAlignment;
-  // Guard variables are 64 bits in the generic ABI and size width on ARM
-  // (i.e. 32-bit on AArch32, 64-bit on AArch64).
-  if (useInt8GuardVariable) {
-    guardTy = cir::IntType::get(&getContext(), 8, /*isSigned=*/true);
-    guardAlignment = clang::CharUnits::One();
-  } else if (useARMGuardVarABI()) {
-    // Guard variables are size width on ARM (32-bit AArch32, 64-bit AArch64).
-    const unsigned sizeTypeSize =
-        astCtx->getTypeSize(astCtx->getSignedSizeType());
-    guardTy = cir::IntType::get(&getContext(), sizeTypeSize, /*isSigned=*/true);
-    guardAlignment =
-        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
-  } else {
-    guardTy = cir::IntType::get(&getContext(), 64, /*isSigned=*/true);
-    guardAlignment =
-        clang::CharUnits::fromQuantity(dataLayout.getABITypeAlign(guardTy));
-  }
-  assert(guardTy && guardAlignment.getQuantity() != 0);
-
-  auto guardPtrTy = cir::PointerType::get(guardTy);
 
   // Create the guard variable if we don't already have it.
   cir::GlobalOp guard = getOrCreateStaticLocalDeclGuardAddress(
-      builder, globalOp, varDecl, guardTy, guardAlignment);
+      builder, globalOp, globalOp.getStaticLocalGuard()->getName().getValue(),
+      varDecl.isLocalVarDecl(), useInt8GuardVariable);
   if (!guard) {
     // Error was already emitted, just restore the terminator and return.
     localInitBlock->push_back(ret);
@@ -1288,7 +1366,7 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
     auto bytePtrTy = cir::PointerType::get(builder.getSIntNTy(8));
     mlir::Value bytePtr = builder.createBitcast(guardPtr, bytePtrTy);
     mlir::Value guardLoad = builder.createAlignedLoad(
-        localInitOp.getLoc(), bytePtr, guardAlignment.getAsAlign().value());
+        localInitOp.getLoc(), bytePtr, *guard.getAlignment());
 
     // Itanium ABI:
     //   An implementation supporting thread-safety on multiprocessor
@@ -1341,7 +1419,8 @@ void LoweringPreparePass::handleStaticLocal(cir::GlobalOp globalOp,
         /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location) {
           emitCXXGuardedInitIf(builder, globalOp, localInitOp.getCtorRegion(),
                                localInitOp.getDtorRegion(), varDecl, guardPtr,
-                               guardPtrTy, threadsafe);
+                               builder.getPointerTo(guard.getSymType()),
+                               threadsafe);
         });
   } else {
     // Threadsafe statics without inline atomics - call __cxa_guard_acquire
@@ -1447,10 +1526,61 @@ void LoweringPreparePass::defineGlobalThreadLocalWrapper(cir::GlobalOp op,
   // If we are a situation where we have/need one, emit a call to the init
   // function.
   if (initAlias) {
-    op->emitError("not yet implemented, wrapper with an init alias");
+    mlir::Location aliasLoc = initAlias.getLoc();
+    if (!isVarDefinition) {
+      // If this isn't a definition, we have to check that the alias exists.
+      mlir::Value funcLoad = cir::GetGlobalOp::create(
+          builder, aliasLoc, cir::PointerType::get(initAlias.getFunctionType()),
+          initAlias.getSymName());
+      mlir::Value nullCheck =
+          builder.getNullValue(funcLoad.getType(), aliasLoc);
+      mlir::Value cmp = cir::CmpOp::create(
+          builder, aliasLoc, cir::CmpOpKind::ne, funcLoad, nullCheck);
+      cir::IfOp::create(builder, aliasLoc, cmp, /*withElseRegion=*/false,
+                        [&](mlir::OpBuilder &, mlir::Location loc) {
+                          builder.createCallOp(aliasLoc, initAlias, {});
+                          cir::YieldOp::create(builder, aliasLoc);
+                        });
+    } else {
+      // If this IS a definition, we know the alias exists, so we can just emit
+      // a call to it.
+      builder.createCallOp(aliasLoc, initAlias, {});
+    }
   }
-  auto get = builder.createGetGlobal(op, /*tls=*/true);
+  cir::GetGlobalOp get = builder.createGetGlobal(op, /*tls=*/true);
   cir::ReturnOp::create(builder, op.getLoc(), {get});
+}
+
+cir::FuncOp
+LoweringPreparePass::defineGlobalThreadLocalInitAlias(cir::GlobalOp op,
+                                                      cir::FuncOp aliasee) {
+  CIRBaseBuilderTy builder(getContext());
+  mlir::OpBuilder::InsertionGuard insertGuard(builder);
+  builder.setInsertionPointToStart(&mlirModule.getBodyRegion().front());
+  mlir::StringAttr aliasName = op.getDynTlsRefs()->getInitName();
+  auto existingAliasIter = threadLocalInitAliases.find(aliasName.getValue());
+
+  if (existingAliasIter != threadLocalInitAliases.end())
+    return existingAliasIter->second;
+
+  auto funcType = builder.getVoidFnTy();
+  cir::FuncOp alias =
+      cir::FuncOp::create(builder, op.getLoc(), aliasName, funcType);
+  alias.setLinkage(op.getLinkage());
+
+  if (aliasee) {
+    alias.setAliasee(aliasee.getSymName());
+  } else {
+    // If we don't have anything to alias (because this isn't a variable
+    // definition!), we set this as just a function definition with no alias,
+    // and extern-weak.
+    alias.setLinkage(cir::GlobalLinkageKind::ExternalWeakLinkage);
+    mlir::SymbolTable::setSymbolVisibility(
+        alias, mlir::SymbolTable::Visibility::Private);
+  }
+
+  threadLocalInitAliases.insert({aliasName.getValue(), alias});
+  return alias;
 }
 
 void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
@@ -1460,7 +1590,6 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
 
   mlir::Region &ctorRegion = op.getCtorRegion();
   mlir::Region &dtorRegion = op.getDtorRegion();
-  // TODO(cir): Implement the initialization of this.
   cir::FuncOp initAlias;
 
   if (!ctorRegion.empty() || !dtorRegion.empty()) {
@@ -1473,7 +1602,38 @@ void LoweringPreparePass::lowerGlobalOp(GlobalOp op) {
     dtorRegion.getBlocks().clear();
 
     assert(!cir::MissingFeatures::astVarDeclInterface());
-    dynamicInitializers.push_back(f);
+    if (op.getTlsModel() == TLS_Model::GeneralDynamic &&
+        !op.getStaticLocalGuard().has_value()) {
+      // There are two types of global TLS variables: 'ordered' and 'unordered'.
+      // 'ordered' are the common case. A call to any of them causes all of the
+      // initializers for all other 'ordered' ones to be called, via a
+      // `__tls_init` function. So the 'init alias' that gets called in the
+      // wrapper for these goes directly to `__tls_init`.
+
+      // 'Unordered' values are the case for variable templates. In this case,
+      // their init alias goes directly to their init function. The FE generates
+      // a guard variable for them (since they cannot use the global guard), so
+      // we differentiate them that way.
+
+      if (op.getDynTlsRefs()->getGuardName()) {
+        // Unordered: the alias is the function we just generated.
+        initAlias = defineGlobalThreadLocalInitAlias(op, f);
+      } else {
+        // Ordered: Get the __tls_init, and make the alias to that.
+        initAlias = defineGlobalThreadLocalInitAlias(op, getTlsInitFn());
+        // Ordered inits also need to get called from the __tls_init function,
+        // so we add the init function to the list, so that we can add them to
+        // it later.
+        globalThreadLocalInitializers.push_back(f);
+      }
+    } else {
+      dynamicInitializers.push_back(f);
+    }
+  } else if (op.getTlsModel() == TLS_Model::GeneralDynamic &&
+             op.getDynTlsRefs() && op.isDeclaration()) {
+    // If this is a declaration and has no init function, we probably DO have to
+    // create an alias that needs checking, so create it as extern-weak.
+    initAlias = defineGlobalThreadLocalInitAlias(op, {});
   }
 
   // We need a wrapper for TLS globals that MIGHT have a non-constant
@@ -1609,6 +1769,78 @@ void LoweringPreparePass::buildGlobalCtorDtorList() {
   }
 }
 
+cir::GlobalOp
+LoweringPreparePass::createGlobalThreadLocalGuard(CIRBaseBuilderTy &builder,
+                                                  mlir::Location loc) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  // The TLS Guard is always an Int8Ty.
+  cir::IntType guardTy = builder.getSIntNTy(8);
+  auto g = cir::GlobalOp::create(builder, loc, "__tls_guard", guardTy);
+  g.setLinkageAttr(cir::GlobalLinkageKindAttr::get(
+      builder.getContext(), cir::GlobalLinkageKind::InternalLinkage));
+  g.setAlignment(clang::CharUnits::One().getAsAlign().value());
+  // At the moment, we only have implementation for this mode, as it is the
+  // default.  At one point we might need to load this mode from the module.
+  g.setTlsModel(TLS_Model::GeneralDynamic);
+  g.setInitialValueAttr(cir::IntAttr::get(guardTy, 0));
+  return g;
+}
+
+cir::IfOp LoweringPreparePass::buildGlobalTlsGuardCheck(
+    CIRBaseBuilderTy &builder, mlir::Location loc, cir::GlobalOp guard) {
+  cir::GetGlobalOp getGuard = builder.createGetGlobal(guard, /*tls=*/true);
+  mlir::Value getGuardValue = getGuard;
+
+  // Classic codegen always just loads the first byte of the guard instead of
+  // the whole thing. __tls_guard is already only 8 bits, but for the case of
+  // unordered TLS, it gets created as 64 bits.
+  if (guard.getSymType() != builder.getSIntNTy(8))
+    getGuardValue = builder.createBitcast(
+        getGuard, cir::PointerType::get(builder.getSIntNTy(8)));
+
+  mlir::Value guardLoad =
+      builder.createAlignedLoad(loc, getGuardValue, *guard.getAlignment());
+  auto zero = builder.getConstantInt(loc, builder.getSIntNTy(8), 0);
+  cir::CmpOp compare =
+      builder.createCompare(loc, cir::CmpOpKind::eq, guardLoad, zero);
+  return cir::IfOp::create(
+      builder, loc, compare,
+      /*withElseRegion=*/false, [&](mlir::OpBuilder &, mlir::Location loc) {
+        // Classic codegen still does this store as a i8, but it doesn't seem
+        // reasonable to do an i8 store into a 64 bit value?
+        builder.createStore(
+            loc, builder.getConstantInt(loc, guard.getSymType(), 1), getGuard);
+      });
+}
+
+void LoweringPreparePass::buildCXXGlobalTlsFunc() {
+  if (globalThreadLocalInitializers.empty())
+    return;
+
+  // The global-ordered-init function for TLS variables just calls each of the
+  // init-functions in order after doing a guard.
+
+  cir::FuncOp tlsInit = getTlsInitFn();
+  mlir::Location loc = tlsInit.getLoc();
+  CIRBaseBuilderTy builder(getContext());
+  mlir::Block *entryBB = tlsInit.addEntryBlock();
+  builder.setInsertionPointToStart(entryBB);
+
+  cir::IfOp ifOperation = buildGlobalTlsGuardCheck(
+      builder, loc, createGlobalThreadLocalGuard(builder, loc));
+
+  // Emit the body of the guarded spot.
+  builder.setInsertionPointToEnd(&ifOperation.getThenRegion().front());
+  for (cir::FuncOp initFunc : globalThreadLocalInitializers)
+    builder.createCallOp(loc, initFunc, {});
+  cir::YieldOp::create(builder, loc);
+
+  builder.setInsertionPointAfter(ifOperation);
+  cir::ReturnOp::create(builder, loc);
+}
+
 void LoweringPreparePass::buildCXXGlobalInitFunc() {
   if (dynamicInitializers.empty())
     return;
@@ -1618,6 +1850,7 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   assert(!cir::MissingFeatures::opGlobalCtorPriority());
 
   SmallString<256> fnName;
+  cir::GlobalLinkageKind linkage;
   // Include the filename in the symbol name. Including "sub_" matches gcc
   // and makes sure these symbols appear lexicographically behind the symbols
   // with priority (TBD).  Module implementation units behave the same
@@ -1630,17 +1863,18 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
         astCtx->createMangleContext());
     cast<clang::ItaniumMangleContext>(*mangleCtx)
         .mangleModuleInitializer(astCtx->getCurrentNamedModule(), out);
+    linkage = cir::GlobalLinkageKind::ExternalLinkage;
   } else {
     fnName += "_GLOBAL__sub_I_";
     fnName += getTransformedFileName(mlirModule);
+    linkage = cir::GlobalLinkageKind::InternalLinkage;
   }
 
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
-  cir::FuncOp f =
-      buildRuntimeFunction(builder, fnName, mlirModule.getLoc(), fnType,
-                           cir::GlobalLinkageKind::ExternalLinkage);
+  cir::FuncOp f = buildRuntimeFunction(builder, fnName, mlirModule.getLoc(),
+                                       fnType, linkage);
   builder.setInsertionPointToStart(f.addEntryBlock());
   for (cir::FuncOp &f : dynamicInitializers)
     builder.createCallOp(f.getLoc(), f, {});
@@ -2023,16 +2257,19 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerArrayDtor(arrayDtor);
   } else if (auto cast = mlir::dyn_cast<cir::CastOp>(op)) {
     lowerCastOp(cast);
+  } else if (auto complexConj = mlir::dyn_cast<cir::ComplexConjOp>(op)) {
+    lowerComplexConjOp(complexConj);
   } else if (auto complexDiv = mlir::dyn_cast<cir::ComplexDivOp>(op)) {
     lowerComplexDivOp(complexDiv);
   } else if (auto complexMul = mlir::dyn_cast<cir::ComplexMulOp>(op)) {
     lowerComplexMulOp(complexMul);
   } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
+    if (auto regAttr = glob->getAttrOfType<CUDAVarRegistrationInfoAttr>(
+            CUDAVarRegistrationInfoAttr::getMnemonic()))
+      cudaDeviceVars.emplace_back(glob, regAttr);
   } else if (auto getGlob = mlir::dyn_cast<cir::GetGlobalOp>(op)) {
     lowerGetGlobalOp(getGlob);
-  } else if (auto unaryOp = mlir::dyn_cast<cir::UnaryOpInterface>(op)) {
-    lowerUnaryOp(unaryOp);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
   } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
@@ -2094,7 +2331,7 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // For CUDA without -fgpu-rdc, it's safe to stop generating ctor
   // if there's nothing to register.
-  if (cudaKernelMap.empty())
+  if (cudaKernelMap.empty() && cudaDeviceVars.empty())
     return;
 
   // There's no device-side binary, so no need to proceed for CUDA.
@@ -2161,9 +2398,9 @@ void LoweringPreparePass::buildCUDAModuleCtor() {
 
   // Create the fatbin wrapper struct:
   //    struct { int magic; int version; void *fatbin; void *unused; };
-  auto fatbinWrapperType = RecordType::get(
+  auto fatbinWrapperType = cir::StructType::get(
       &getContext(), {intTy, intTy, voidPtrTy, voidPtrTy},
-      /*packed=*/false, /*padded=*/false, RecordType::RecordKind::Struct);
+      /*packed=*/false, /*padded=*/false, /*is_class=*/false);
   std::string fatbinWrapperName =
       addUnderscoredPrefix(cudaPrefix, "_fatbin_wrapper");
   GlobalOp fatbinWrapper = GlobalOp::create(
@@ -2448,8 +2685,7 @@ std::optional<FuncOp> LoweringPreparePass::buildHIPModuleDtor() {
 }
 
 std::optional<FuncOp> LoweringPreparePass::buildCUDARegisterGlobals() {
-  // There is nothing to register.
-  if (cudaKernelMap.empty())
+  if (cudaKernelMap.empty() && cudaDeviceVars.empty())
     return {};
 
   cir::CIRBaseBuilderTy builder(getContext());
@@ -2473,8 +2709,7 @@ std::optional<FuncOp> LoweringPreparePass::buildCUDARegisterGlobals() {
   builder.setInsertionPointToStart(regGlobalFunc.addEntryBlock());
 
   buildCUDARegisterGlobalFunctions(builder, regGlobalFunc);
-  // TODO: Handle shadow registration
-  assert(!cir::MissingFeatures::globalRegistration());
+  buildCUDARegisterVars(builder, regGlobalFunc);
 
   ReturnOp::create(builder, loc);
   return regGlobalFunc;
@@ -2564,6 +2799,88 @@ void LoweringPreparePass::buildCUDARegisterGlobalFunctions(
   }
 }
 
+// Emit `__{cuda|hip}RegisterVar` calls inside `__{cuda|hip}_register_globals`
+// for every device-side shadow that carries a `cu.var_registration` attribute
+// (attached by `CIRGenNVCUDARuntime::handleVarRegistration`).
+void LoweringPreparePass::buildCUDARegisterVars(cir::CIRBaseBuilderTy &builder,
+                                                FuncOp regGlobalFunc) {
+  mlir::Location loc = mlirModule.getLoc();
+  llvm::StringRef cudaPrefix = getCUDAPrefix(astCtx);
+  cir::CIRDataLayout dataLayout(mlirModule);
+
+  PointerType voidPtrTy = builder.getVoidPtrTy();
+  PointerType voidPtrPtrTy = builder.getPointerTo(voidPtrTy);
+  IntType intTy = builder.getSIntNTy(32);
+  IntType sizeTy =
+      builder.getUIntNTy(astCtx->getTargetInfo().getMaxPointerWidth());
+  IntType charTy = cir::IntType::get(&getContext(), astCtx->getCharWidth(),
+                                     /*isSigned=*/false);
+
+  if (cudaDeviceVars.empty())
+    return;
+
+  cir::CIRBaseBuilderTy globalBuilder(getContext());
+  globalBuilder.setInsertionPointToStart(mlirModule.getBody());
+
+  // void __{cuda|hip}RegisterVar(void **fatbinHandle,
+  //                              char *hostVar, char *deviceAddress,
+  //                              const char *deviceName, int ext,
+  //                              size_t size, int constant, int normalized);
+  // OG ignores parameter types, treating pointers as void*.
+  cir::VoidType voidTy = builder.getVoidTy();
+  FuncOp cudaRegisterVar = buildRuntimeFunction(
+      globalBuilder, addUnderscoredPrefix(cudaPrefix, "RegisterVar"), loc,
+      FuncType::get({voidPtrPtrTy, voidPtrTy, voidPtrTy, voidPtrTy, intTy,
+                     sizeTy, intTy, intTy},
+                    voidTy));
+
+  auto makeConstantString = [&](llvm::StringRef str) -> GlobalOp {
+    auto strType = ArrayType::get(&getContext(), charTy, 1 + str.size());
+    auto tmpString = cir::GlobalOp::create(
+        globalBuilder, loc, (".str" + str).str(), strType,
+        /*isConstant=*/true, {},
+        /*linkage=*/cir::GlobalLinkageKind::PrivateLinkage);
+    tmpString.setInitialValueAttr(
+        ConstArrayAttr::get(strType, StringAttr::get(str + "\0", strType)));
+    tmpString.setPrivate();
+    return tmpString;
+  };
+
+  mlir::Value fatbinHandle = *regGlobalFunc.args_begin();
+
+  for (auto &[global, regAttr] : cudaDeviceVars) {
+    switch (regAttr.getKind()) {
+    case cir::CUDADeviceVarKind::Variable:
+      break;
+    case cir::CUDADeviceVarKind::Surface:
+      llvm_unreachable("Surface registration NYI");
+    case cir::CUDADeviceVarKind::Texture:
+      llvm_unreachable("Texture registration NYI");
+    }
+
+    if (regAttr.getIsManaged())
+      llvm_unreachable("Managed variable registration NYI");
+
+    GlobalOp deviceNameStr = makeConstantString(regAttr.getDeviceSideName());
+    mlir::Value deviceName = builder.createBitcast(
+        builder.createGetGlobal(deviceNameStr), voidPtrTy);
+    mlir::Value hostVar =
+        builder.createBitcast(builder.createGetGlobal(global), voidPtrTy);
+
+    auto isExtern = ConstantOp::create(
+        builder, loc, IntAttr::get(intTy, regAttr.getIsExtern() ? 1 : 0));
+    llvm::TypeSize size = dataLayout.getTypeAllocSize(global.getSymType());
+    auto varSize = ConstantOp::create(
+        builder, loc, IntAttr::get(sizeTy, size.getFixedValue()));
+    auto isConstant = ConstantOp::create(
+        builder, loc, IntAttr::get(intTy, regAttr.getIsConstant() ? 1 : 0));
+    auto normalized = ConstantOp::create(builder, loc, IntAttr::get(intTy, 0));
+    builder.createCallOp(loc, cudaRegisterVar,
+                         {fatbinHandle, hostVar, deviceName, deviceName,
+                          isExtern, varSize, isConstant, normalized});
+  }
+}
+
 void LoweringPreparePass::runOnOperation() {
   mlir::Operation *op = getOperation();
   if (isa<::mlir::ModuleOp>(op))
@@ -2573,10 +2890,10 @@ void LoweringPreparePass::runOnOperation() {
 
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
-                  cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::StoreOp, cir::CmpThreeWayOp, cir::IncOp, cir::DecOp,
-                  cir::MinusOp, cir::NotOp, cir::LocalInitOp>(op))
+                  cir::ComplexConjOp, cir::ComplexMulOp, cir::ComplexDivOp,
+                  cir::DynamicCastOp, cir::FuncOp, cir::CallOp,
+                  cir::GetGlobalOp, cir::GlobalOp, cir::StoreOp,
+                  cir::CmpThreeWayOp, cir::LocalInitOp>(op))
       opsToTransform.push_back(op);
   });
 
@@ -2584,6 +2901,7 @@ void LoweringPreparePass::runOnOperation() {
     runOnOp(o);
 
   buildCXXGlobalInitFunc();
+  buildCXXGlobalTlsFunc();
   if (astCtx->getLangOpts().CUDA && !astCtx->getLangOpts().CUDAIsDevice)
     buildCUDAModuleCtor();
 

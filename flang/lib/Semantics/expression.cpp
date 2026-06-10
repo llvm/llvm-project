@@ -2839,8 +2839,31 @@ static int CompareCudaMatchingDistance(
   return 0;
 }
 
-// Compute the matching distance as described in section 3.2.3 of the CUDA
-// Fortran references.
+// Compute the matching distance for one (dummy, actual) pair as described
+// in section 3.2.3 ("Table 2: Attributed Argument Matching Distance Values")
+// of the CUDA Fortran Programming Guide. The column applied for the actual
+// depends on its CUDA data attribute and (for unattributed actuals) on the
+// active -gpu=mem:{unified,managed} mode.
+//
+// Distance values returned (smaller is a better match; INF means
+// incompatible and disqualifies the candidate):
+//
+//                       Actual argument attribute
+//                 None                              ACC      gpu=    gpu=
+//   Dummy attr   (Host)  Device  Managed  Unified  use_dev  unified  managed
+//   ----------+--------+-------+--------+--------+--------+--------+--------+
+//   None(host)|    0   |  INF  |   3    |   3    |   3    |   3    |   3    |
+//   Device    |   INF  |   0   |   2    |   2    |   0    |   2    |   2    |
+//   Managed   |   INF  |  INF  |   0    |   1    |  INF   |   1    |   0    |
+//   Unified   |   INF  |  INF  |   1    |   0    |  INF   |   0    |   1    |
+//
+// Constant and Shared actuals use the Device column (all are device memory).
+//
+// In addition: a dummy declared TYPE(*) (assumed-size/rank opaque buffer)
+// is "CUDA address space agnostic" and accepts any attributed actual at a
+// non-zero distance (3) so an explicit Device overload still wins. The
+// "ACC use_dev" column applies to actuals appearing in a surrounding
+// ACC HOST_DATA USE_DEVICE clause.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     const characteristics::DummyArgument &dummy,
     const std::optional<ActualArgument> &actual) {
@@ -2893,13 +2916,20 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     return 3;
   }
 
+  auto actualIsDeviceMemory{[&]() {
+    return actualDataAttr &&
+        (*actualDataAttr == common::CUDADataAttr::Device ||
+            *actualDataAttr == common::CUDADataAttr::Constant ||
+            *actualDataAttr == common::CUDADataAttr::Shared);
+  }};
+
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
       if (isCudaUnified || isCudaManaged) {
         return 3;
       }
       return 0;
-    } else if (*actualDataAttr == common::CUDADataAttr::Device) {
+    } else if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
         *actualDataAttr == common::CUDADataAttr::Unified) {
@@ -2911,7 +2941,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
         return 2;
       }
       return cudaInfMatchingValue;
-    } else if (*actualDataAttr == common::CUDADataAttr::Device) {
+    } else if (actualIsDeviceMemory()) {
       return 0;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
         *actualDataAttr == common::CUDADataAttr::Unified) {
@@ -2921,7 +2951,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     if (!actualDataAttr) {
       return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
     }
-    if (*actualDataAttr == common::CUDADataAttr::Device) {
+    if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 0;
@@ -2932,7 +2962,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     if (!actualDataAttr) {
       return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
     }
-    if (*actualDataAttr == common::CUDADataAttr::Device) {
+    if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 1;
@@ -5517,7 +5547,9 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
         : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
         : type->IsPolymorphic()          ? type->AsFortran()
         : type->category() == TypeCategory::Derived
-        ? "TYPE("s + type->AsFortran() + ')'
+        ? (type->GetDerivedTypeSpec().IsVectorType()
+                  ? type->AsFortran()
+                  : "TYPE("s + type->AsFortran() + ')')
         : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
         : ToUpperCase(type->AsFortran());

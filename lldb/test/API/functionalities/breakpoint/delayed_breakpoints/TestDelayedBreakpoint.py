@@ -5,10 +5,11 @@ from lldbsuite.test import lldbutil
 import os
 
 
-@skipIfWindows
+@skipIfWindowsAndNoLLDBServer
 class TestDelayedBreakpoint(TestBase):
     def test(self):
         self.build()
+        self.runCmd("settings set target.process.use-delayed-breakpoints true")
         logfile = os.path.join(self.getBuildDir(), "log.txt")
         self.runCmd(f"log enable -f {logfile} gdb-remote packets")
 
@@ -45,6 +46,7 @@ class TestDelayedBreakpoint(TestBase):
 
     def test_eager_breakpoints(self):
         self.build()
+        self.runCmd("settings set target.process.use-delayed-breakpoints true")
         logfile = os.path.join(self.getBuildDir(), "log.txt")
         self.runCmd(f"log enable -f {logfile} gdb-remote packets")
 

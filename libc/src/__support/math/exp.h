@@ -35,7 +35,7 @@ namespace exp_internal {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
-using Float128 = typename fputil::DyadicFloat<128>;
+using DFloat128 = typename fputil::DyadicFloat<128>;
 
 using LIBC_NAMESPACE::operator""_u128;
 
@@ -108,8 +108,8 @@ LIBC_INLINE DoubleDouble poly_approx_dd(const DoubleDouble &dx) {
 // Return exp(dx) ~ 1 + dx + dx^2 / 2 + ... + dx^7 / 5040
 // For |dx| < 2^-13 + 2^-30:
 //   | output - exp(dx) | < 2^-126.
-LIBC_INLINE Float128 poly_approx_f128(const Float128 &dx) {
-  LIBC_CONSTEXPR Float128 COEFFS_128[]{
+LIBC_INLINE DFloat128 poly_approx_f128(const DFloat128 &dx) {
+  constexpr DFloat128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -128, 0x80000000'00000000'00000000'00000000_u128}, // 0.5
@@ -120,41 +120,41 @@ LIBC_INLINE Float128 poly_approx_f128(const Float128 &dx) {
       {Sign::POS, -140, 0xd00d00d0'0d00d00d'00d00d00'd00d00d0_u128}, // 1/5040
   };
 
-  Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
-                                COEFFS_128[3], COEFFS_128[4], COEFFS_128[5],
-                                COEFFS_128[6], COEFFS_128[7]);
+  DFloat128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1],
+                                 COEFFS_128[2], COEFFS_128[3], COEFFS_128[4],
+                                 COEFFS_128[5], COEFFS_128[6], COEFFS_128[7]);
   return p;
 }
 
 // Compute exp(x) using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-LIBC_INLINE Float128 exp_f128(double x, double kd, int idx1, int idx2) {
+LIBC_INLINE DFloat128 exp_f128(double x, double kd, int idx1, int idx2) {
   // Recalculate dx:
 
   double t1 = fputil::multiply_add(kd, MLOG_2_EXP2_M12_HI, x); // exact
   double t2 = kd * MLOG_2_EXP2_M12_MID_30;                     // exact
   double t3 = kd * MLOG_2_EXP2_M12_LO;                         // Error < 2^-133
 
-  Float128 dx = fputil::quick_add(
-      Float128(t1), fputil::quick_add(Float128(t2), Float128(t3)));
+  DFloat128 dx = fputil::quick_add(
+      DFloat128(t1), fputil::quick_add(DFloat128(t2), DFloat128(t3)));
 
   // TODO: Skip recalculating exp_mid1 and exp_mid2.
-  Float128 exp_mid1 =
-      fputil::quick_add(Float128(EXP2_MID1[idx1].hi),
-                        fputil::quick_add(Float128(EXP2_MID1[idx1].mid),
-                                          Float128(EXP2_MID1[idx1].lo)));
+  DFloat128 exp_mid1 =
+      fputil::quick_add(DFloat128(EXP2_MID1[idx1].hi),
+                        fputil::quick_add(DFloat128(EXP2_MID1[idx1].mid),
+                                          DFloat128(EXP2_MID1[idx1].lo)));
 
-  Float128 exp_mid2 =
-      fputil::quick_add(Float128(EXP2_MID2[idx2].hi),
-                        fputil::quick_add(Float128(EXP2_MID2[idx2].mid),
-                                          Float128(EXP2_MID2[idx2].lo)));
+  DFloat128 exp_mid2 =
+      fputil::quick_add(DFloat128(EXP2_MID2[idx2].hi),
+                        fputil::quick_add(DFloat128(EXP2_MID2[idx2].mid),
+                                          DFloat128(EXP2_MID2[idx2].lo)));
 
-  Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
+  DFloat128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
 
-  Float128 p = poly_approx_f128(dx);
+  DFloat128 p = poly_approx_f128(dx);
 
-  Float128 r = fputil::quick_mul(exp_mid, p);
+  DFloat128 r = fputil::quick_mul(exp_mid, p);
 
   r.exponent += static_cast<int>(kd) >> 12;
 
@@ -394,7 +394,7 @@ LIBC_INLINE double exp(double x) {
   } else {
     // to multiply by 2^hi, a fast way is to simply add hi to the exponent
     // field.
-    int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+    int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
     double r =
         cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(exp_mid.hi + lo));
     return r;
@@ -411,7 +411,7 @@ LIBC_INLINE double exp(double x) {
     if (LIBC_LIKELY(upper == lower)) {
       // to multiply by 2^hi, a fast way is to simply add hi to the exponent
       // field.
-      int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+      int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
       double r = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper));
       return r;
     }
@@ -429,7 +429,7 @@ LIBC_INLINE double exp(double x) {
     double lower_dd = r_dd.hi + (r_dd.lo - EXP_ERR_DD);
 
     if (LIBC_LIKELY(upper_dd == lower_dd)) {
-      int64_t exp_hi = static_cast<int64_t>(hi) << FPBits::FRACTION_LEN;
+      int64_t exp_hi = static_cast<int64_t>(hi) * (1LL << FPBits::FRACTION_LEN);
       double r =
           cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(upper_dd));
       return r;
@@ -437,7 +437,7 @@ LIBC_INLINE double exp(double x) {
   }
 
   // Use 128-bit precision
-  Float128 r_f128 = exp_f128(x, kd, idx1, idx2);
+  DFloat128 r_f128 = exp_f128(x, kd, idx1, idx2);
 
   return static_cast<double>(r_f128);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS

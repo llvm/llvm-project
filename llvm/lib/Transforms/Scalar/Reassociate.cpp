@@ -731,9 +731,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       // Preserve flags.
       if (ClearFlags) {
         if (isa<FPMathOperator>(I)) {
-          FastMathFlags Flags = I->getFastMathFlags();
-          ExpressionChangedStart->clearSubclassOptionalData();
-          ExpressionChangedStart->setFastMathFlags(Flags);
+          ExpressionChangedStart->copyFastMathFlags(I->getFastMathFlags());
         } else {
           Flags.applyFlags(*ExpressionChangedStart);
         }

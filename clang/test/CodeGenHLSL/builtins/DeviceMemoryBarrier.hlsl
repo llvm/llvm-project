@@ -11,7 +11,7 @@
 // CHECK-SPIRV: define hidden spir_func void @
 void test_DeviceMemoryBarrier() {
 // CHECK-DXIL: call void @llvm.[[TARGET]].device.memory.barrier()
-// CHECK-SPIRV: call spir_func void @llvm.[[TARGET]].device.memory.barrier()
+// CHECK-SPIRV: call void @llvm.[[TARGET]].device.memory.barrier()
   DeviceMemoryBarrier();
 }
 

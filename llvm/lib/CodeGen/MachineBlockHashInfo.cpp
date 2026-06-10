@@ -163,7 +163,7 @@ MachineBlockHashInfoPrinterPass::run(MachineFunction &MF,
   OS << "Machine Block Hash Info for function: " << MF.getName() << "\n";
   for (const auto &MBB : MF) {
     OS << "  BB#" << MBB.getNumber() << ": "
-       << format_hex(MBHI.getMBBHash(MBB), 16) << "\n";
+       << format_hex(MBHI.getMBBHash(MBB), 18) << "\n";
   }
   return PreservedAnalyses::all();
 }

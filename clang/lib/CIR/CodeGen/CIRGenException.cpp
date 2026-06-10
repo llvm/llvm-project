@@ -387,10 +387,15 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   CanQualType catchType =
       cgf.cgm.getASTContext().getCanonicalType(catchParam.getType());
   cir::InitCatchKind kind;
+  bool shouldInitFromExnDirectly;
 
   // If we're catching by reference, we can just cast the object
   // pointer to the appropriate pointer.
   if (isa<ReferenceType>(catchType)) {
+    QualType caughtType = cast<ReferenceType>(catchType)->getPointeeType();
+    if (const PointerType *ptr = dyn_cast<PointerType>(caughtType)) {
+      shouldInitFromExnDirectly = !ptr->getPointeeType()->isRecordType();
+    }
     kind = cir::InitCatchKind::Reference;
   } else {
     cir::TypeEvaluationKind tek = cgf.getEvaluationKind(catchType);
@@ -424,19 +429,24 @@ static void initCatchParam(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   Address paramAddr = var.getAllocatedAddress();
   mlir::Location mloc = cgf.getLoc(loc);
 
-  if (kind == cir::InitCatchKind::NonTrivialCopy) {
+  if (kind == cir::InitCatchKind::NonTrivialCopy ||
+      (kind == cir::InitCatchKind::Reference && shouldInitFromExnDirectly)) {
     // Sanitizer-checked construction (UBSan vptr/derived-class checks, etc.)
     // would require additional adornments that cir.construct_catch_param does
     // not yet carry.
     assert(!cir::MissingFeatures::sanitizers());
 
-    auto paramAddrType =
-        mlir::cast<cir::PointerType>(paramAddr.getPointer().getType());
-    cir::FuncOp thunk =
-        getOrCreateCopyThunk(cgf, catchParam, paramAddrType, mloc);
+    mlir::FlatSymbolRefAttr copyFun{};
+    if (kind == cir::InitCatchKind::NonTrivialCopy) {
+      auto paramAddrType =
+          mlir::cast<cir::PointerType>(paramAddr.getPointer().getType());
+      cir::FuncOp thunk =
+          getOrCreateCopyThunk(cgf, catchParam, paramAddrType, mloc);
+      copyFun = mlir::FlatSymbolRefAttr::get(thunk.getSymNameAttr());
+    }
+
     cir::ConstructCatchParamOp::create(builder, mloc, ehToken,
-                                       paramAddr.getPointer(), kind,
-                                       thunk.getSymName());
+                                       paramAddr.getPointer(), kind, copyFun);
   }
 
   mlir::Value exnPtr = callBeginCatch(cgf, ehToken, builder.getVoidPtrTy());
@@ -529,7 +539,9 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
         if (bodyCallback(*this).failed())
           tryRes = mlir::failure();
         tryBodyCleanups.forceCleanup();
-        cir::YieldOp::create(builder, loc);
+        if (!builder.getBlock()->mightHaveTerminator() ||
+            !builder.getBlock()->getTerminator())
+          cir::YieldOp::create(builder, loc);
       },
       /*handlersBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc,

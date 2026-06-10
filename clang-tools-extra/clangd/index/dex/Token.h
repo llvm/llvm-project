@@ -64,8 +64,7 @@ public:
     ProximityURI,
     /// Type of symbol (see `Symbol::Type`).
     Type,
-    /// Internal Token type for invalid/special tokens, e.g. empty tokens for
-    /// llvm::DenseMap.
+    /// Internal Token type for invalid/special tokens.
     Sentinel,
   };
 
@@ -115,14 +114,6 @@ namespace llvm {
 
 // Support Tokens as DenseMap keys.
 template <> struct DenseMapInfo<clang::clangd::dex::Token> {
-  static inline clang::clangd::dex::Token getEmptyKey() {
-    return {clang::clangd::dex::Token::Kind::Sentinel, "EmptyKey"};
-  }
-
-  static inline clang::clangd::dex::Token getTombstoneKey() {
-    return {clang::clangd::dex::Token::Kind::Sentinel, "TombstoneKey"};
-  }
-
   static unsigned getHashValue(const clang::clangd::dex::Token &Tag) {
     return hash_value(Tag);
   }

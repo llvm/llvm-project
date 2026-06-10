@@ -70,7 +70,7 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
 
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
-  bool IsThinLTO = D.getOffloadLTOMode() == LTOK_Thin;
+  bool IsThinLTO = TC.getLTOMode(Args, Action::OFK_HIP) == LTOK_Thin;
   addLTOOptions(TC, Args, LldArgs, Output, Inputs, IsThinLTO);
 
   // Extract all the -m options
@@ -180,7 +180,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
                     Output.getFilename()});
 
     const Driver &Driver = getToolChain().getDriver();
-    const char *Exec = Driver.getClangProgramPath();
+    const char *Exec = Driver.getDriverProgramPath();
     C.addCommand(std::make_unique<Command>(
         JA, *this, ResponseFileSupport::None(), Exec, CmdArgs, LinkedBCFile,
         Output, Driver.getPrependArg()));
@@ -188,7 +188,7 @@ void AMDGCN::Linker::constructLinkAndEmitSpirvCommand(
     // Emit SPIR-V binary using the translator
     llvm::opt::ArgStringList TrArgs{
         "--spirv-max-version=1.6",
-        "--spirv-ext=+all,-SPV_KHR_untyped_pointers",
+        "--spirv-ext=+all",
         "--spirv-allow-unknown-intrinsics",
         "--spirv-lower-const-expr",
         "--spirv-preserve-auxdata",
@@ -261,7 +261,7 @@ void HIPAMDToolChain::addClangTargetOptions(
   // TODO: remove the SPIR-V bypass once it can encode (hidden) visibility.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat) &&
-      !getEffectiveTriple().isSPIRV()) {
+      !getEffectiveTriple().isSPIRV() && !getDriver().IsFlangMode()) {
     CC1Args.append({"-fvisibility=hidden"});
     CC1Args.push_back("-fapply-global-visibility-to-externs");
   }
@@ -300,9 +300,18 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   const OptTable &Opts = getDriver().getOpts();
 
   for (Arg *A : Args) {
-    // Filter unsupported sanitizers passed from the HostTC.
-    if (!handleSanitizeOption(*this, *DAL, Args, BoundArch, A))
-      DAL->append(A);
+    // Sanitizer coverage is currently not supported for AMDGPU.
+    if (A->getOption().matches(options::OPT_fsan_cov_Group)) {
+      diagnoseUnsupportedOption(A, *DAL, Args);
+      continue;
+    }
+
+    if (A->getOption().matches(options::OPT_fsanitize_EQ) &&
+        !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                      true))
+      continue;
+
+    DAL->append(A);
   }
 
   if (!BoundArch.empty()) {
@@ -354,18 +363,6 @@ void HIPAMDToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-SanitizerMask HIPAMDToolChain::getSupportedSanitizers() const {
-  // The HIPAMDToolChain only supports sanitizers in the sense that it allows
-  // sanitizer arguments on the command line if they are supported by the host
-  // toolchain. The HIPAMDToolChain will later filter unsupported sanitizers
-  // from the command line arguments.
-  //
-  // This behavior is necessary because the host and device toolchains
-  // invocations often share the command line, so the device toolchain must
-  // tolerate flags meant only for the host toolchain.
-  return HostTC.getSupportedSanitizers();
-}
-
 VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
                                                  const ArgList &Args) const {
   return HostTC.computeMSVCVersion(D, Args);
@@ -379,9 +376,13 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
 
   if (!DriverArgs.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                           true) ||
-      TT.getEnvironment() == llvm::Triple::LLVM ||
-      getGPUArch(DriverArgs) == "amdgcnspirv")
+      TT.getEnvironment() == llvm::Triple::LLVM)
     return {};
+
+  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(DriverArgs);
+  if (!TargetID.OptionalTargetID || TargetID.OptionalTargetID == "amdgcnspirv")
+    return {};
+
   ArgStringList LibraryPaths;
 
   // Find in --hip-device-lib-path and HIP_LIBRARY_PATH.
@@ -414,12 +415,11 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_no_rocm_device_lib) << 0;
       return {};
     }
-    StringRef GpuArch = getGPUArch(DriverArgs);
-    assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
     // Add common device libraries like ocml etc.
-    for (auto N :
-         getCommonDeviceLibNames(DriverArgs, GpuArch, DeviceOffloadingKind))
+    for (auto N : getCommonDeviceLibNames(
+             DriverArgs, *TargetID.OptionalTargetID, *TargetID.OptionalGPUArch,
+             DeviceOffloadingKind))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.

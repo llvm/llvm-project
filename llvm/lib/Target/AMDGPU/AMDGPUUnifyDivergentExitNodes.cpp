@@ -123,7 +123,7 @@ static bool isUniformlyReached(const UniformityInfo &UA, BasicBlock &BB) {
 
   while (!Stack.empty()) {
     BasicBlock *Top = Stack.pop_back_val();
-    if (!UA.isUniformAtDef(Top->getTerminator()))
+    if (UA.isDivergentAtDef(Top->getTerminator()))
       return false;
 
     for (BasicBlock *Pred : predecessors(Top)) {
