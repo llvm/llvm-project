@@ -5880,6 +5880,8 @@ or 1 if they are unequal.
 * ``int __cs1(void *oldptr, void *curptr, void *newword)``
 
   Generates a 4-byte compare-and-swap using the CS instruction.
+  Accepts void pointers unlike ``__cs`` which requires unsigned int pointers.
+  Semantically identical except for argument typing.
 
 * ``int __csg(void *oldptr, void *curptr, void *newword)``
 
