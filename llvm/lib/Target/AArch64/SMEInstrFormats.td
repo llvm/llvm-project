@@ -3932,15 +3932,11 @@ class sme2_lut_single<string asm>
   let Inst{4-0}   = Zd;
 }
 
-multiclass sme2_lut_single_pat<Instruction inst, SDPatternOperator intrinsic> {
-  def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn)),
-            (inst $zt, nxv16i8:$zn)>;
-}
-
 multiclass sme2_lut_single<string asm, SDPatternOperator intrinsic> {
   def NAME : sme2_lut_single<asm>;
 
-  defm : sme2_lut_single_pat<!cast<Instruction>(NAME), intrinsic>;
+  def : Pat<(nxv16i8 (intrinsic (imm_to_zt untyped:$zt), nxv16i8:$zn)),
+            (!cast<Instruction>(NAME) $zt, nxv16i8:$zn)>;
 }
 
 //===----------------------------------------------------------------------===//

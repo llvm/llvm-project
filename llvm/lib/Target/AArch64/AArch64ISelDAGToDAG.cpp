@@ -2317,6 +2317,9 @@ void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
                                                 unsigned Opc,
                                                 unsigned NumInVecs) {
+  assert((NumInVecs == 2 || NumInVecs == 3) &&
+         "unexpected number of input vectors");
+
   SDValue ZtValue;
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;

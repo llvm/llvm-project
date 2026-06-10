@@ -728,6 +728,13 @@ class SVE_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
 
+class SVE_LUTI6_VG2_Index_Pat<ValueType vt, SDPatternOperator intrinsic,
+                              Instruction inst>
+    : Pat<(vt (intrinsic vt:$Op1, vt:$Op2, nxv16i8:$Op3,
+                         (i32 timm32_0_1:$Op4))),
+          (vt (inst (REG_SEQUENCE ZPR2, vt:$Op1, zsub0, vt:$Op2, zsub1),
+                    nxv16i8:$Op3, timm32_0_1:$Op4))>;
+
 //===----------------------------------------------------------------------===//
 // SVE pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -11414,13 +11421,6 @@ multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
                                                 nxv16i8:$Op3, timm32_0_3:$Op4))>;
 }
 
-class sve2_luti6_vector_index_pat<ValueType vt, SDPatternOperator intrinsic,
-                                  Instruction inst>
-    : Pat<(vt (intrinsic vt:$Op1, vt:$Op2, nxv16i8:$Op3,
-                         (i32 timm32_0_1:$Op4))),
-          (vt (inst (REG_SEQUENCE ZPR2, vt:$Op1, zsub0, vt:$Op2, zsub1),
-                    nxv16i8:$Op3, timm32_0_1:$Op4))>;
-
 // Look up table read with 6-bit indices
 multiclass sve2_luti6_vector_index<string mnemonic, SDPatternOperator intrinsic> {
   def _H : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexD32b, 0b1011, mnemonic> {
@@ -11428,12 +11428,12 @@ multiclass sve2_luti6_vector_index<string mnemonic, SDPatternOperator intrinsic>
     let Inst{23} = idx;
   }
 
-  def : sve2_luti6_vector_index_pat<nxv8i16, intrinsic,
-                                    !cast<Instruction>(NAME # _H)>;
-  def : sve2_luti6_vector_index_pat<nxv8f16, intrinsic,
-                                    !cast<Instruction>(NAME # _H)>;
-  def : sve2_luti6_vector_index_pat<nxv8bf16, intrinsic,
-                                    !cast<Instruction>(NAME # _H)>;
+  def : SVE_LUTI6_VG2_Index_Pat<nxv8i16, intrinsic,
+                                !cast<Instruction>(NAME # _H)>;
+  def : SVE_LUTI6_VG2_Index_Pat<nxv8f16, intrinsic,
+                                !cast<Instruction>(NAME # _H)>;
+  def : SVE_LUTI6_VG2_Index_Pat<nxv8bf16, intrinsic,
+                                !cast<Instruction>(NAME # _H)>;
 }
 
 // Look up table
