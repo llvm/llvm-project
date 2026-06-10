@@ -9,7 +9,5 @@ static_library("Frontend") {
     "//clang/lib/Sema",
     "//llvm/lib/Support",
   ]
-  sources = [
-    "TUSummaryExtractorFrontendAction.cpp",
-  ]
+  sources = [ "TUSummaryExtractorFrontendAction.cpp" ]
 }

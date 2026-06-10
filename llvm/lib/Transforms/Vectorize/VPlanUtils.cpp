@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanUtils.h"
+#include "LoopVectorizationPlanner.h"
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
@@ -15,6 +16,8 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
@@ -46,19 +49,17 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
-  Plan.getEntry()->appendRecipe(Expanded);
+  VPBasicBlock *EntryVPBB = Plan.getEntry();
+  auto Iter = EntryVPBB->getFirstNonPhi();
+  while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
+    ++Iter;
+  EntryVPBB->insert(Expanded, Iter);
   return Expanded;
 }
 
 bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
   if (isa<VPActiveLaneMaskPHIRecipe>(V))
     return true;
-
-  auto IsWideCanonicalIV = [](VPValue *A) {
-    return isa<VPWidenCanonicalIVRecipe>(A) ||
-           (isa<VPWidenIntOrFpInductionRecipe>(A) &&
-            cast<VPWidenIntOrFpInductionRecipe>(A)->isCanonical());
-  };
 
   VPValue *A, *B;
 
@@ -67,9 +68,14 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
                   m_DerivedIV(m_ZeroInt(), m_CanonicalIV(), m_One())),
       m_One(), m_Specific(&Plan.getVF()));
 
+  // A wide canonical IV is either an explicit VPWidenCanonicalIVRecipe or a
+  // canonical VPWidenIntOrFpInductionRecipe.
+  auto m_WideCanonicalIV =
+      m_CombineOr(m_Isa<VPWidenCanonicalIVRecipe>(), m_CanonicalWidenIV());
+
   if (match(V, m_ActiveLaneMask(m_VPValue(A), m_VPValue(B), m_One())))
     return B == Plan.getTripCount() &&
-           (match(A, m_CanonicalScalarIVSteps) || IsWideCanonicalIV(A));
+           (match(A, m_CanonicalScalarIVSteps) || match(A, m_WideCanonicalIV));
 
   // For scalar plans, the header mask uses the scalar steps.
   if (match(V, m_ICmp(m_CanonicalScalarIVSteps,
@@ -80,8 +86,12 @@ bool vputils::isHeaderMask(const VPValue *V, const VPlan &Plan) {
   }
 
   auto MaskMatch = m_ICmp(m_VPValue(A), m_VPValue(B));
-  return (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch)))) &&
-         IsWideCanonicalIV(A) && B == Plan.getBackedgeTakenCount();
+  if (match(V, m_CombineOr(MaskMatch, m_Reverse(MaskMatch))))
+    return match(A, m_WideCanonicalIV) && B == Plan.getBackedgeTakenCount();
+
+  return match(
+      V, m_c_BinaryAnd(m_VPValue(),
+                       m_VPInstruction<VPInstruction::IncomingAliasMask>()));
 }
 
 /// Returns true if \p R propagates poison from any operand to its result.
@@ -189,7 +199,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
         return SE.getCouldNotCompute();
       SCEVOps.push_back(S);
     }
-    return CreateFn(SCEVOps);
+    return PSE.getPredicatedSCEV(CreateFn(SCEVOps));
   };
 
   VPValue *LHSVal, *RHSVal;
@@ -211,10 +221,20 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
     });
-  if (match(V,
-            m_Binary<Instruction::UDiv>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+  // Handle shl by constant: x << c is equivalent to x * (1 << c).
+  uint64_t ShiftAmt;
+  if (match(V, m_Shl(m_VPValue(LHSVal), m_ConstantInt(ShiftAmt))))
+    return CreateSCEV(LHSVal, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getMulExpr(Ops[0],
+                           SE.getPowerOfTwo(Ops[0]->getType(), ShiftAmt));
+    });
+  if (match(V, m_UDiv(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getUDivExpr(Ops[0], Ops[1]);
+    });
+  if (match(V, m_URem(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<SCEVUse> Ops) {
+      return SE.getURemExpr(Ops[0], Ops[1]);
     });
   // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
   const APInt *Mask;
@@ -224,22 +244,19 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
     });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getTruncateExpr(Ops[0], DestTy);
     });
   }
   if (match(V, m_ZExt(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
     return CreateSCEV({LHSVal}, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getZeroExtendExpr(Ops[0], DestTy);
     });
   }
   if (match(V, m_SExt(m_VPValue(LHSVal)))) {
-    const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
-    Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
+    Type *DestTy = V->getScalarType();
 
     // Mirror SCEV's createSCEV handling for sext(sub nsw): push sign extension
     // onto the operands before computing the subtraction.
@@ -289,10 +306,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   ArrayRef<VPValue *> Ops;
   Type *SourceElementType;
   if (match(V, m_GetElementPtr(SourceElementType, Ops))) {
-    const SCEV *GEPExpr = CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
+    return CreateSCEV(Ops, [&](ArrayRef<SCEVUse> Ops) {
       return SE.getGEPExpr(Ops.front(), Ops.drop_front(), SourceElementType);
     });
-    return PSE.getPredicatedSCEV(GEPExpr);
   }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
@@ -417,7 +433,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
           VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
-    return Expr->isSingleScalar();
+    return Expr->isVectorToScalar();
 
   // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
@@ -454,6 +470,10 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       .Case([](const VPWidenRecipe *R) {
         return preservesUniformity(R->getOpcode()) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
+      })
+      .Case([](const VPPhi *) {
+        // Bail out on VPPhi, as we can end up in infinite cycles.
+        return false;
       })
       .Case([](const VPInstruction *VPI) {
         return (VPI->isSingleScalar() || VPI->isVectorToScalar() ||
@@ -550,9 +570,8 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   //   EMIT vp<%index.next> = add nuw vp<%2>, vp<%0>
   //   EMIT vp<%4> = any-of ir<%3>
   //   EMIT vp<%5> = icmp eq vp<%index.next>, vp<%1>
-  //   EMIT vp<%6> = or vp<%4>, vp<%5>
-  //   EMIT branch-on-cond vp<%6>
-  // Successor(s): middle.block, for.body
+  //   EMIT branch-on-two-conds vp<%4>, vp<%5>
+  // Successor(s): middle.block, middle.block, for.body
   //
   // middle.block:
   // Successor(s): ir-bb<exit>, scalar.ph
@@ -566,8 +585,8 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   // Find the uncountable loop exit condition.
   VPValue *UncountableCondition = nullptr;
   if (!match(LatchVPBB->getTerminator(),
-             m_BranchOnCond(m_c_BinaryOr(
-                 m_AnyOf(m_VPValue(UncountableCondition)), m_VPValue()))))
+             m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
+                                m_VPValue())))
     return std::nullopt;
 
   SmallVector<VPValue *, 4> Worklist;
@@ -620,10 +639,17 @@ vputils::getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
 }
 
 VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
+  if (VPValue *AliasMask = findIncomingAliasMask(Plan)) {
+    assert(match(AliasMask->getSingleUser(),
+                 m_c_BinaryAnd(m_VPValue(), m_Specific(AliasMask))) &&
+           "AliasMask must only be used with the original header mask");
+    return cast<VPSingleDefRecipe>(AliasMask->getSingleUser());
+  }
+
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
-  auto *WideCanonicalIV = vputils::findUserOf<VPWidenCanonicalIVRecipe>(
-      LoopRegion->getCanonicalIV());
+  auto *WideCanonicalIV =
+      findUserOf<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
   assert(count_if(LoopRegion->getCanonicalIV()->users(),
                   IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
@@ -634,9 +660,9 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   // version of the canonical induction.
   VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
-      WideCanonicalIVs.push_back(WidenOriginalIV);
+    VPWidenIntOrFpInductionRecipe *WidenIV;
+    if (match(&Phi, m_CanonicalWidenIV(WidenIV)))
+      WideCanonicalIVs.push_back(WidenIV);
   }
 
   // Walk users of wide canonical IVs and find the single compare of the form
@@ -654,6 +680,15 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
       HeaderMask = VPI;
     }
   }
+
+  for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
+    auto *Def = cast<VPSingleDefRecipe>(&R);
+    if (vputils::isHeaderMask(Def, Plan)) {
+      assert(!HeaderMask && "Multiple header masks found?");
+      HeaderMask = Def;
+    }
+  }
+
   return HeaderMask;
 }
 
@@ -676,6 +711,13 @@ VPBlockUtils::blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
          "LastBB unreachable from FirstBB in depth-first traversal");
   Blocks.erase(std::next(LastIt), Blocks.end());
   return Blocks;
+}
+
+VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
+  for (VPRecipeBase &R : *Plan.getVectorPreheader())
+    if (match(&R, m_VPInstruction<VPInstruction::IncomingAliasMask>()))
+      return cast<VPInstruction>(&R);
+  return nullptr;
 }
 
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
@@ -702,6 +744,18 @@ bool VPBlockUtils::isLatch(const VPBlockBase *VPB,
   // successor.
   return VPB->getNumSuccessors() >= 2 &&
          VPBlockUtils::isHeader(VPB->getSuccessors().back(), VPDT);
+}
+
+std::pair<VPBasicBlock *, VPBasicBlock *>
+VPBlockUtils::getPlainCFGHeaderAndLatch(const VPlan &Plan) {
+  auto *Header = cast<VPBasicBlock>(
+      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
+  auto *Latch = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+  return {Header, Latch};
+}
+
+VPBasicBlock *VPBlockUtils::getPlainCFGMiddleBlock(const VPlan &Plan) {
+  return cast<VPBasicBlock>(Plan.getScalarPreheader()->getPredecessors()[0]);
 }
 
 std::optional<MemoryLocation>
@@ -733,7 +787,14 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
-      return Step == &UF;
+      return Step == &UF ||
+             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
+                                 m_VPInstruction<VPInstruction::VScale>()));
+
+    // Alias masking: step is number of active lanes of a dependence mask.
+    if (match(Step, m_ZExtOrTruncOrSelf(
+                        m_VPInstruction<VPInstruction::NumActiveLanes>())))
+      return true;
 
     unsigned ConcreteUF = Plan.getConcreteUF();
     // Fixed VF: step is just the concrete UF.
@@ -749,9 +810,8 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     // mul(VScale, ConcreteUF) may have been simplified to
     // shl(VScale, log2(ConcreteUF)) when ConcreteUF is a power of 2.
     return isPowerOf2_32(ConcreteUF) &&
-           match(Step, m_Binary<Instruction::Shl>(
-                           m_VPInstruction<VPInstruction::VScale>(),
-                           m_SpecificInt(Log2_32(ConcreteUF))));
+           match(Step, m_Shl(m_VPInstruction<VPInstruction::VScale>(),
+                             m_SpecificInt(Log2_32(ConcreteUF))));
   };
 
   VPInstruction *Increment = nullptr;
@@ -777,16 +837,16 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 /// inserted for predicated reductions or tail folding.
 VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
   VPValue *BackedgeVal = PhiR->getBackedgeValue();
-  if (auto *Res = vputils::findUserOf<VPInstruction::ComputeReductionResult>(
-          BackedgeVal))
+  if (auto *Res =
+          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
     return Res;
 
   // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR = vputils::findUserOf(
-      BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  VPRecipeBase *SelR =
+      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
   if (!SelR)
     return nullptr;
-  return vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+  return findUserOf<VPInstruction::ComputeReductionResult>(
       cast<VPSingleDefRecipe>(SelR));
 }
 
@@ -839,4 +899,69 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
         WorkList.push_back(SDR);
   }
   return false;
+}
+
+/// Try to find a loop-invariant IR value for \p S in the plan's entry block
+/// that can be reused. Returns the corresponding live-in VPValue, or nullptr
+/// if no reusable IR value is found.
+VPValue *VPSCEVExpander::tryToReuseIRValue(const SCEV *S) {
+  if (isa<SCEVConstant, SCEVUnknown>(S))
+    return nullptr;
+  VPlan &Plan = Builder.getPlan();
+  BasicBlock *PH = cast<VPIRBasicBlock>(Plan.getEntry())->getIRBasicBlock();
+  for (Value *V : SE.getSCEVValues(S)) {
+    // Only reuse instructions in the plan's entry block, or, when a
+    // DominatorTree is available, any instruction that dominates it.
+    // Instructions in sibling branches may not dominate the entry block.
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return Plan.getOrAddLiveIn(V);
+    if (!SE.DT.dominates(I->getParent(), PH))
+      continue;
+    SmallVector<Instruction *> DropPoisonGeneratingInsts;
+    if (!SE.canReuseInstruction(S, I, DropPoisonGeneratingInsts))
+      continue;
+    for (Instruction *DropI : DropPoisonGeneratingInsts)
+      SCEVExpander::dropPoisonGeneratingAnnotationsAndReinfer(SE, DropI);
+    return Plan.getOrAddLiveIn(V);
+  }
+  return nullptr;
+}
+
+VPValue *VPSCEVExpander::tryToExpand(const SCEV *S) {
+  if (VPValue *V = tryToReuseIRValue(S))
+    return V;
+
+  switch (S->getSCEVType()) {
+  case scConstant:
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVConstant>(S)->getValue());
+  case scUnknown:
+    return Builder.getPlan().getOrAddLiveIn(cast<SCEVUnknown>(S)->getValue());
+  case scVScale:
+    return Builder.createNaryOp(VPInstruction::VScale, {}, S->getType());
+  case scAddExpr:
+  case scMulExpr: {
+    if (S->getType()->isPointerTy())
+      return nullptr;
+    auto *NAry = cast<SCEVNAryExpr>(S);
+    unsigned Opcode =
+        S->getSCEVType() == scAddExpr ? Instruction::Add : Instruction::Mul;
+    // Iterate in reverse so that constants are emitted last.
+    SmallVector<VPValue *, 2> Ops;
+    for (const SCEVUse &Op : reverse(NAry->operands())) {
+      VPValue *OpV = tryToExpand(Op);
+      if (!OpV)
+        return nullptr;
+      Ops.push_back(OpV);
+    }
+    VPIRFlags::WrapFlagsTy WrapFlags(NAry->hasNoUnsignedWrap(),
+                                     NAry->hasNoSignedWrap());
+    VPValue *Result = Ops.front();
+    for (VPValue *Op : drop_begin(Ops))
+      Result = Builder.createOverflowingOp(Opcode, {Result, Op}, WrapFlags, DL);
+    return Result;
+  }
+  default:
+    return nullptr;
+  }
 }

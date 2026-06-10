@@ -285,11 +285,10 @@ ConstString Mangled::GetDemangledName() const {
   return GetDemangledNameImpl(/*force=*/false);
 }
 
-std::optional<DemangledNameInfo> const &Mangled::GetDemangledInfo() const {
+const DemangledNameInfo *Mangled::GetDemangledInfo() const {
   if (!m_demangled_info)
     GetDemangledNameImpl(/*force=*/true);
-
-  return m_demangled_info;
+  return m_demangled_info.get();
 }
 
 // Generate the demangled name on demand using this accessor. Code in this
@@ -319,7 +318,8 @@ ConstString Mangled::GetDemangledNameImpl(bool force) const {
     std::pair<char *, DemangledNameInfo> demangled =
         GetItaniumDemangledStr(m_mangled.GetCString());
     demangled_name = demangled.first;
-    m_demangled_info.emplace(std::move(demangled.second));
+    m_demangled_info =
+        std::make_unique<DemangledNameInfo>(std::move(demangled.second));
     break;
   }
   case eManglingSchemeRustV0:
@@ -513,7 +513,7 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 /// saves us a lot of compute time. For these kinds of names we only need to
 /// save the mangled name and have the encoding set to "MangledOnly".
 ///
-/// If a mangled obejct has only a demangled name, then we save only that string
+/// If a mangled object has only a demangled name, then we save only that string
 /// and have the encoding set to "DemangledOnly".
 ///
 /// Some mangled objects have both mangled and demangled names, but the
@@ -530,7 +530,7 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
     if (m_demangled) {
       // We have both mangled and demangled names. If the demangled name is the
       // counterpart of the mangled name, then we only need to save the mangled
-      // named. If they are different, we need to save both.
+      // name. If they are different, we need to save both.
       ConstString s;
       if (!(m_mangled.GetMangledCounterpart(s) && s == m_demangled))
         encoding = MangledAndDemangled;
@@ -556,8 +556,8 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
 }
 
 ConstString Mangled::GetBaseName() const {
-  const auto &demangled_info = GetDemangledInfo();
-  if (!demangled_info.has_value())
+  const auto *demangled_info = GetDemangledInfo();
+  if (demangled_info == nullptr)
     return {};
 
   ConstString demangled_name = GetDemangledName();

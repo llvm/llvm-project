@@ -440,57 +440,41 @@ define <16 x i8> @test_128_i8_x_16_28_mask_ashr_4(<16 x i8> %a0) {
 define <16 x i8> @test_128_i8_x_16_224_mask_ashr_1(<16 x i8> %a0) {
 ; X86-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_1:
 ; X86-SSE2:       # %bb.0:
-; X86-SSE2-NEXT:    psrlw $1, %xmm0
-; X86-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; X86-SSE2-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE2-NEXT:    psubb %xmm1, %xmm0
+; X86-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [224,224,224,224,224,224,224,224,224,224,224,224,224,224,224,224]
+; X86-SSE2-NEXT:    pand %xmm0, %xmm1
+; X86-SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; X86-SSE2-NEXT:    pavgb %xmm1, %xmm2
+; X86-SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
-; X86-AVX1-LABEL: test_128_i8_x_16_224_mask_ashr_1:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; X86-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; X86-AVX1-NEXT:    retl
-;
-; X86-AVX2-LABEL: test_128_i8_x_16_224_mask_ashr_1:
-; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; X86-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; X86-AVX2-NEXT:    retl
+; X86-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_1:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
+; X86-AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; X86-AVX-NEXT:    vpavgb %xmm2, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE2-LABEL: test_128_i8_x_16_224_mask_ashr_1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    psrlw $1, %xmm0
-; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; X64-SSE2-NEXT:    pxor %xmm1, %xmm0
-; X64-SSE2-NEXT:    psubb %xmm1, %xmm0
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [224,224,224,224,224,224,224,224,224,224,224,224,224,224,224,224]
+; X64-SSE2-NEXT:    pand %xmm0, %xmm1
+; X64-SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
+; X64-SSE2-NEXT:    pavgb %xmm1, %xmm2
+; X64-SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    pxor %xmm2, %xmm0
 ; X64-SSE2-NEXT:    retq
 ;
-; X64-AVX1-LABEL: test_128_i8_x_16_224_mask_ashr_1:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    retq
-;
-; X64-AVX2-LABEL: test_128_i8_x_16_224_mask_ashr_1:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpbroadcastb {{.*#+}} xmm1 = [64,64,64,64,64,64,64,64,64,64,64,64,64,64,64,64]
-; X64-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    retq
+; X64-AVX-LABEL: test_128_i8_x_16_224_mask_ashr_1:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; X64-AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; X64-AVX-NEXT:    vpavgb %xmm2, %xmm1, %xmm1
+; X64-AVX-NEXT:    vpandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
+; X64-AVX-NEXT:    retq
   %t0 = and <16 x i8> %a0, <i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224, i8 224>
   %t1 = ashr <16 x i8> %t0, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   ret <16 x i8> %t1

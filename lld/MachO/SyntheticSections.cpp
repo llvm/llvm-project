@@ -1870,7 +1870,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         uint32_t value = *reinterpret_cast<const uint32_t *>(buf + off);
-        literal4Map.emplace(value, literal4Map.size());
+        literal4Map.try_emplace(value, literal4Map.size());
       }
       break;
     }
@@ -1879,7 +1879,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         uint64_t value = *reinterpret_cast<const uint64_t *>(buf + off);
-        literal8Map.emplace(value, literal8Map.size());
+        literal8Map.try_emplace(value, literal8Map.size());
       }
       break;
     }
@@ -1888,7 +1888,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         UInt128 value = *reinterpret_cast<const UInt128 *>(buf + off);
-        literal16Map.emplace(value, literal16Map.size());
+        literal16Map.try_emplace(value, literal16Map.size());
       }
       break;
     }

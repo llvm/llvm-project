@@ -193,7 +193,7 @@ public:
   }
   bool TraverseAttr(Attr *At) override { return true; }
   bool TraverseDecl(Decl *D) override {
-    if (DC && DC->containsDecl(D))
+    if (D && DC && DC->containsDecl(D))
       return DynamicRecursiveASTVisitor::TraverseDecl(D);
     return true;
   }

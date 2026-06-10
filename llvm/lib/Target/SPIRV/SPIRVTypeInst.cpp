@@ -38,4 +38,8 @@ bool SPIRVTypeInst::isTypeIntN(unsigned N) const {
 bool SPIRVTypeInst::isAnyTypeFloat() const {
   return MI->getOpcode() == SPIRV::OpTypeFloat;
 }
+
+bool SPIRVTypeInst::isTypePtr() const {
+  return MI->getOpcode() == SPIRV::OpTypePointer;
+}
 } // namespace llvm
