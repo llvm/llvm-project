@@ -76,6 +76,21 @@ static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
 
 namespace {
 
+struct MachineInstrLocAndIndex {
+  yaml::MachineInstrLoc Location;
+  unsigned Index;
+};
+static_assert(sizeof(MachineInstrLocAndIndex) == 12);
+
+static void
+sortMachineInstrLocations(SmallVectorImpl<MachineInstrLocAndIndex> &Locations) {
+  llvm::sort(Locations, [](const MachineInstrLocAndIndex &A,
+                           const MachineInstrLocAndIndex &B) {
+    return std::tie(A.Location.BlockNum, A.Location.Offset) <
+           std::tie(B.Location.BlockNum, B.Location.Offset);
+  });
+}
+
 /// This structure describes how to print out stack object references.
 struct FrameIndexOperand {
   std::string Name;
@@ -535,6 +550,7 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    ModuleSlotTracker &MST) {
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
+  SmallVector<MachineInstrLocAndIndex> CallLocations;
   for (auto [MI, CallSiteInfo] : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
     yaml::MachineInstrLoc CallLocation;
@@ -546,6 +562,7 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
     CallLocation.Offset =
         std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
+    CallLocations.push_back({CallLocation, unsigned(YMF.CallSitesInfo.size())});
 
     auto [ArgRegPairs, CalleeTypeIds, _] = CallSiteInfo;
     // Construct call arguments and theirs forwarding register info.
@@ -563,11 +580,12 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
   }
 
   // Sort call info by position of call instructions.
-  llvm::sort(YMF.CallSitesInfo.begin(), YMF.CallSitesInfo.end(),
-             [](yaml::CallSiteInfo A, yaml::CallSiteInfo B) {
-               return std::tie(A.CallLocation.BlockNum, A.CallLocation.Offset) <
-                      std::tie(B.CallLocation.BlockNum, B.CallLocation.Offset);
-             });
+  sortMachineInstrLocations(CallLocations);
+  std::vector<yaml::CallSiteInfo> SortedCallSites;
+  SortedCallSites.reserve(YMF.CallSitesInfo.size());
+  for (const MachineInstrLocAndIndex &CallLocation : CallLocations)
+    SortedCallSites.push_back(std::move(YMF.CallSitesInfo[CallLocation.Index]));
+  YMF.CallSitesInfo.swap(SortedCallSites);
 }
 
 static void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
@@ -586,6 +604,7 @@ static void convertMachineMetadataNodes(yaml::MachineFunction &YMF,
 static void convertCalledGlobals(yaml::MachineFunction &YMF,
                                  const MachineFunction &MF,
                                  MachineModuleSlotTracker &MST) {
+  SmallVector<MachineInstrLocAndIndex> CallLocations;
   for (const auto &[CallInst, CG] : MF.getCalledGlobals()) {
     yaml::MachineInstrLoc CallSite;
     CallSite.BlockNum = CallInst->getParent()->getNumber();
@@ -594,15 +613,18 @@ static void convertCalledGlobals(yaml::MachineFunction &YMF,
 
     yaml::CalledGlobal YamlCG{CallSite, CG.Callee->getName().str(),
                               CG.TargetFlags};
+    CallLocations.push_back({CallSite, unsigned(YMF.CalledGlobals.size())});
     YMF.CalledGlobals.push_back(std::move(YamlCG));
   }
 
   // Sort by position of call instructions.
-  llvm::sort(YMF.CalledGlobals.begin(), YMF.CalledGlobals.end(),
-             [](yaml::CalledGlobal A, yaml::CalledGlobal B) {
-               return std::tie(A.CallSite.BlockNum, A.CallSite.Offset) <
-                      std::tie(B.CallSite.BlockNum, B.CallSite.Offset);
-             });
+  sortMachineInstrLocations(CallLocations);
+  std::vector<yaml::CalledGlobal> SortedCalledGlobals;
+  SortedCalledGlobals.reserve(YMF.CalledGlobals.size());
+  for (const MachineInstrLocAndIndex &CallLocation : CallLocations)
+    SortedCalledGlobals.push_back(
+        std::move(YMF.CalledGlobals[CallLocation.Index]));
+  YMF.CalledGlobals.swap(SortedCalledGlobals);
 }
 
 static void convertPrefetchTargets(yaml::MachineFunction &YMF,
