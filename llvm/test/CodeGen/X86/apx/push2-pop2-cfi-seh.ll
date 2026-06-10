@@ -10,7 +10,7 @@
 ; EPGR normally required unwind v3 info, but that changes the SEH directives
 ; that get emitted, so disable epgr so that we can validate diamondrapids
 ; enables push2pop2
-; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids -mattr=-egpr | FileCheck %s --check-prefix=WIN-REF
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids -mattr=-egpr | FileCheck %s --check-prefix=WIN-PPX
 
 define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-REF-LABEL: csr6_alloc16:
