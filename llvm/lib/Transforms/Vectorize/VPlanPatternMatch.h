@@ -1032,11 +1032,6 @@ inline auto m_WidenIntrinsic(const T &...Ops) {
   return m_Isa<VPWidenIntrinsicRecipe>(m_Intrinsic<IntrID>(Ops...));
 }
 
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline auto m_vp_Reverse(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return m_Intrinsic<Intrinsic::experimental_vp_reverse>(Op0, Op1, Op2);
-}
-
 inline auto m_LiveIn() { return m_Isa<VPIRValue, VPSymbolicValue>(); }
 
 /// Match a GEP recipe (VPWidenGEPRecipe, VPInstruction, or VPReplicateRecipe)

@@ -6591,9 +6591,6 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
                      Config.getMaxSafeElements());
       RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
     }
-    // Remove reverses after optimizeEVLMasks to prevent interference with
-    // removing the header mask from reversed loads/stores.
-    RUN_VPLAN_PASS(VPlanTransforms::simplifyReverses, *Plan);
 
     if (auto P =
             RUN_VPLAN_PASS(VPlanTransforms::narrowInterleaveGroups, *Plan, TTI))

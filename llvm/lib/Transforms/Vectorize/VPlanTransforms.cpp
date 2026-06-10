@@ -1840,24 +1840,12 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
 }
 
 void VPlanTransforms::simplifyReverses(VPlan &Plan) {
-  auto m_ReverseReverse = [](auto X) {
-    VPValue *EVL;
-    return m_CombineOr(
-        m_Reverse(m_Reverse(X)),
-        m_vp_Reverse(m_vp_Reverse(X, m_VPValue(), m_VPValue(EVL)), m_VPValue(),
-                     m_Deferred(EVL)));
-  };
-
+  VPValue *X;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      VPValue *X;
-      if (match(&R, m_ReverseReverse(m_VPValue(X)))) {
+           vp_depth_first_deep(Plan.getEntry())))
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      if (match(&R, m_Reverse(m_Reverse(m_VPValue(X)))))
         R.getVPSingleValue()->replaceAllUsesWith(X);
-        R.eraseFromParent();
-      }
-    }
-  }
 }
 
 /// Reassociate (headermask && x) && y -> headermask && (x && y) to allow the
@@ -2824,6 +2812,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   RUN_VPLAN_PASS(reassociateHeaderMask, Plan);
   RUN_VPLAN_PASS(simplifyRecipes, Plan);
   RUN_VPLAN_PASS(removeBranchOnConst, Plan, /*OnlyLatches=*/false);
+  RUN_VPLAN_PASS(simplifyReverses, Plan);
   RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 
   RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
@@ -3159,11 +3148,22 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
     }
   }
 
-  // Fold the following splice patterns into vp.reverse for reverse accesses:
+  // Fold the following splice patterns:
+  //   splice.right(splice.left(poison, x, evl), poison, evl) -> x
   //   vector.reverse(splice.left(poison, x, evl))  -> vp.reverse(x, true, evl)
   //   splice.right(vector.reverse(x), poison, evl) -> vp.reverse(x, true, evl)
   for (VPUser *U : collectUsersRecursively(EVL)) {
+    auto *Def = cast<VPRecipeBase>(U);
     VPValue *X;
+    if (match(U, m_Intrinsic<Intrinsic::vector_splice_right>(
+                     m_Intrinsic<Intrinsic::vector_splice_left>(
+                         m_Poison(), m_VPValue(X), m_Specific(EVL)),
+                     m_Poison(), m_Specific(EVL)))) {
+      Def->getVPSingleValue()->replaceAllUsesWith(X);
+      OldRecipes.push_back(Def);
+      continue;
+    }
+
     if (!match(U,
                m_CombineOr(
                    m_Reverse(m_Intrinsic<Intrinsic::vector_splice_left>(
@@ -3172,12 +3172,11 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
                        m_Reverse(m_VPValue(X)), m_Poison(), m_Specific(EVL)))))
       continue;
 
-    auto *Def = cast<VPSingleDefRecipe>(U);
     auto *VPReverse = new VPWidenIntrinsicRecipe(
         Intrinsic::experimental_vp_reverse, {X, Plan.getTrue(), EVL},
         X->getScalarType(), {}, {}, Def->getDebugLoc());
     VPReverse->insertBefore(Def);
-    Def->replaceAllUsesWith(VPReverse);
+    Def->getVPSingleValue()->replaceAllUsesWith(VPReverse);
     OldRecipes.push_back(Def);
   }
 

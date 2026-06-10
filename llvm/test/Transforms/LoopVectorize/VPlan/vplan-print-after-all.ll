@@ -44,6 +44,7 @@
 ; CHECK: VPlan for loop in 'foo' after reassociateHeaderMask
 ; CHECK: VPlan for loop in 'foo' after simplifyRecipes
 ; CHECK: VPlan for loop in 'foo' after removeBranchOnConst
+; CHECK: VPlan for loop in 'foo' after simplifyReverses
 ; CHECK: VPlan for loop in 'foo' after removeDeadRecipes
 ; CHECK: VPlan for loop in 'foo' after createAndOptimizeReplicateRegions
 ; CHECK: VPlan for loop in 'foo' after mergeBlocksIntoPredecessors
