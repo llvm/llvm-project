@@ -18,8 +18,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include <functional>
 #include <memory>
-#include <utility>
-#include <vector>
 
 namespace llvm {
 class StringRef;

@@ -3913,9 +3913,12 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
                          ": <from> must not be empty");
     SubstitutePaths.emplace_back(From.str(), A->getValue(1));
   }
-  for (StringRef Dir : InputArgs.getAllArgValues(OBJDUMP_source_dir))
-    if (!Dir.empty())
-      SourceDirs.insert(SourceDirs.begin(), Dir.str());
+  for (StringRef Dir : InputArgs.getAllArgValues(OBJDUMP_source_dir)) {
+    if (Dir.empty())
+      reportCmdLineError("--source-dir argument must not be empty");
+    SourceDirs.insert(SourceDirs.begin(), Dir.str());
+  }
+
   if (const opt::Arg *A = InputArgs.getLastArg(OBJDUMP_debug_vars_EQ)) {
     DbgVariables = StringSwitch<DebugFormat>(A->getValue())
                        .Case("ascii", DFASCII)
