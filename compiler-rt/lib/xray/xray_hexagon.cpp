@@ -76,7 +76,11 @@ encodeConstantExtender(uint32_t Imm) XRAY_NEVER_INSTRUMENT {
   // constant:
   Imm = Imm >> 6;
 
-  const uint32_t high = (Imm & IMM_MASK_HIGH) << 16;
+  // The high 12 bits sit at bit positions [25:14] of the shifted constant;
+  // they must land in instruction bits [27:16], i.e. shifted left by 2 (not
+  // 16, which would overflow the word and drop the high bits -- breaking any
+  // constant above ~2^20, e.g. trampoline addresses in a PIE executable).
+  const uint32_t high = (Imm & IMM_MASK_HIGH) << 2;
   const uint32_t low = Imm & IMM_MASK_LOW;
 
   return PO_IMMEXT | high | PP_NOT_END | low;
