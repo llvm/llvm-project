@@ -238,8 +238,9 @@ tool-specific docs.
   file separators, and writing patterns to match both variants can be
   inconvenient.
 
-  Starting with version 4 (indicated by ``#!special-case-list-v4``), path separators
-  on Windows hosts are canonicalized by converting backslashes to forward slashes.
+  Starting with version 4 (indicated by ``#!special-case-list-v4``), path matching
+  on Windows hosts is slash-agnostic: both forward slashes (``/``) and backslashes
+  (``\``) match either path separator in both patterns and paths.
 
 ``mainfile`` is similar to applying ``-fno-sanitize=`` to a set of files but
 does not need plumbing into the build system. This works well for internal
