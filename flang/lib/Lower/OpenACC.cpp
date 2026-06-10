@@ -4535,6 +4535,69 @@ void Fortran::lower::genOpenACCRoutineConstruct(
       workerDeviceTypes, vectorDeviceTypes);
 }
 
+void Fortran::lower::materializeOpenACCRoutineBindTargets(
+    Fortran::lower::AbstractConverter &converter) {
+  mlir::ModuleOp topModule = converter.getModuleOp();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // The acc.routine ops are exactly the decorated routines (one per op), each
+  // created alongside its func.func, so processing them avoids a full
+  // symbol-table visit and inherently skips never-lowered routines (no op =>
+  // nothing to do). They normally live in the top-level module, but a routine
+  // in a nested module would be emitted there, so walk recursively. Collect
+  // first because declaring inserts func.func ops into the modules being
+  // walked.
+  llvm::SmallVector<mlir::acc::RoutineOp> routineOps;
+  topModule.walk(
+      [&](mlir::acc::RoutineOp routineOp) { routineOps.push_back(routineOp); });
+
+  for (mlir::acc::RoutineOp routineOp : routineOps) {
+    // Declare the bind target in the module that holds the acc.routine op, so
+    // the symbol resolves where the in-kernel call is. The converter's cached
+    // symbol table tracks only the top module, so pass it for that module and
+    // nullptr (forcing a direct module lookup) for any nested module.
+    mlir::ModuleOp module = routineOp->getParentOfType<mlir::ModuleOp>();
+    mlir::SymbolTable *symbolTable =
+        module.getOperation() == topModule.getOperation()
+            ? converter.getMLIRSymbolTable()
+            : nullptr;
+
+    // Clone the decorated routine's function type onto the bind target: bind
+    // renames the same callable, so this is the type the rewritten in-kernel
+    // call uses. Fall back to () -> () if the decorated func.func is absent.
+    mlir::func::FuncOp decorated = fir::FirOpBuilder::getNamedFunction(
+        module, symbolTable, routineOp.getFuncName());
+    mlir::FunctionType type =
+        decorated ? decorated.getFunctionType()
+                  : mlir::FunctionType::get(builder.getContext(), {}, {});
+
+    // Get-or-create a func.func named \p name in \p module. If one already
+    // exists (e.g. an in-TU bind target lowered as a real procedure), leave it
+    // untouched. Otherwise declare a body-less func.func with the cloned type
+    // so later passes (external-name-interop, nvhpc-acc-bind-routine) reference
+    // a live symbol.
+    auto declareBindTarget = [&](llvm::StringRef name) {
+      if (fir::FirOpBuilder::getNamedFunction(module, symbolTable, name))
+        return;
+      fir::FirOpBuilder::createFunction(builder.getUnknownLoc(), module, name,
+                                        type, symbolTable);
+    };
+
+    // bind(identifier): mangled SymbolRefAttr, matching the bind reference
+    // (and honoring BIND(C) via the same mangling).
+    if (mlir::ArrayAttr binds = routineOp.getBindIdNameAttr())
+      for (mlir::Attribute bind : binds)
+        if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(bind))
+          declareBindTarget(symRef.getLeafReference());
+
+    // bind("string"): the literal is its own external name, declared verbatim.
+    if (mlir::ArrayAttr binds = routineOp.getBindStrNameAttr())
+      for (mlir::Attribute bind : binds)
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(bind))
+          declareBindTarget(strAttr.getValue());
+  }
+}
+
 static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,

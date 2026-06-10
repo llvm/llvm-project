@@ -89,6 +89,14 @@ void genOpenACCRoutineConstruct(
 void declareExternalAccModuleDeclareActionRecipes(
     AbstractConverter &, fir::FirOpBuilder &,
     const Fortran::semantics::Symbol &);
+
+/// Declare a private func.func for every `acc routine` bind(name) target not
+/// otherwise declared in this program unit, cloning the function type of the
+/// decorated routine. Walks the module's acc.routine ops, so an existing
+/// declaration (e.g. an in-TU bind target) is left untouched. Run after primary
+/// translation, once all acc.routine ops have been emitted.
+void materializeOpenACCRoutineBindTargets(AbstractConverter &);
+
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
 void attachDeclarePreDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
