@@ -28,7 +28,6 @@ using namespace mlir;
 namespace {
 struct ConvertFuncToEmitC
     : public impl::ConvertFuncToEmitCBase<ConvertFuncToEmitC> {
-  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace
@@ -49,7 +48,7 @@ void ConvertFuncToEmitC::runOnOperation() {
     return type;
   });
 
-  populateFuncToEmitCPatterns(typeConverter, patterns, this->lowerToCpp);
+  populateFuncToEmitCPatterns(typeConverter, patterns);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
