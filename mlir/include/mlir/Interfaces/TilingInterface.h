@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
@@ -98,6 +99,24 @@ LogicalResult verifyInnerTileAlignments(Operation *op,
 /// per-dimension `InnerTileAlignment` hints consumed by the tiling driver.
 SmallVector<InnerTileAlignment>
 convertInnerTileAlignments(ArrayRef<int64_t> alignments);
+
+/// Returns the keyword spelling of an `InnerTileAlignment` (`Unknown`,
+/// `Multiple` or `Equal`) used by the `inner_tile_alignments` assembly syntax.
+StringRef stringifyInnerTileAlignment(InnerTileAlignment alignment);
+
+/// Returns the `InnerTileAlignment` for a keyword spelling, or `std::nullopt`
+/// if `keyword` is not one of `Unknown`, `Multiple` or `Equal`.
+std::optional<InnerTileAlignment>
+symbolizeInnerTileAlignment(StringRef keyword);
+
+/// Custom directive parser/printer for an `inner_tile_alignments` attribute,
+/// rendering the `DenseI64ArrayAttr` as a keyword list, e.g.
+/// `[Equal, Multiple, Unknown]` (see `InnerTileAlignment`). Shared by the
+/// transform ops that carry the hint.
+ParseResult parseInnerTileAlignmentArray(OpAsmParser &parser,
+                                         DenseI64ArrayAttr &alignments);
+void printInnerTileAlignmentArray(OpAsmPrinter &printer, Operation *op,
+                                  DenseI64ArrayAttr alignments);
 
 } // namespace mlir
 

@@ -16,6 +16,28 @@ transform.sequence failures(propagate) {
   %2, %3:2 = transform.structured.tile_using_for %0 tile_sizes [0, 5, 3] {test_attr3 = 1 : i64, test_attr4}: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
+// Check that the `inner_tile_alignments` hint round-trips as a keyword list
+// (Unknown / Multiple / Equal); see `InnerTileAlignment`.
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  // CHECK: transform.structured.tile_using_for %arg0 tile_sizes [8, 4] inner_tile_alignments = [Equal, Multiple]
+  %0, %1:2 = transform.structured.tile_using_for %arg0 tile_sizes [8, 4] inner_tile_alignments = [Equal, Multiple] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  // CHECK: transform.structured.fuse %arg0 tile_sizes [8] inner_tile_alignments = [Multiple, Unknown]
+  %0, %1 = transform.structured.fuse %arg0 tile_sizes [8] inner_tile_alignments = [Multiple, Unknown] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // CHECK: transform.structured.fuse_into_containing_op %{{.*}} into %{{.*}} inner_tile_alignments = [Equal, Equal]
+  %fused, %new = transform.structured.fuse_into_containing_op %0 into %1 inner_tile_alignments = [Equal, Equal] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
   %t = transform.structured.split %arg0 after 42 { dimension = 0 } : !transform.any_op
