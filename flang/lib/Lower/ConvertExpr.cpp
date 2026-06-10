@@ -951,6 +951,34 @@ public:
     if (inInitializer)
       return Fortran::lower::genInlinedStructureCtorLit(converter, loc, ctor);
     mlir::Type ty = translateSomeExprToFIRType(converter, toEvExpr(ctor));
+
+    // Enumeration types lower to i32 — extract the __ordinal value.
+    if (const auto *dtDetails =
+            ctor.derivedTypeSpec()
+                .typeSymbol()
+                .detailsIf<Fortran::semantics::DerivedTypeDetails>();
+        dtDetails && dtDetails->isEnumerationType()) {
+      if (const auto *scope = ctor.derivedTypeSpec().GetScope()) {
+        auto it = scope->find(Fortran::parser::CharBlock{"__ordinal", 9});
+        if (it != scope->end()) {
+          if (auto val = ctor.Find(it->second.get())) {
+            if (auto ordinal = Fortran::evaluate::ToInt64(*val)) {
+              return builder.createIntegerConstant(loc, ty, *ordinal);
+            }
+            // Non-constant ordinal (e.g. color(i) with variable i): lower the
+            // __ordinal component expression to a runtime scalar value.
+            // TODO: when a -fcheck=enum runtime check flag is added, emit a
+            // bounds check here that the ordinal is in 1..enumeratorCount.
+            mlir::Value ordinal = fir::getBase(genval(*val));
+            if (ordinal.getType() != ty)
+              ordinal = builder.createConvert(loc, ty, ordinal);
+            return ordinal;
+          }
+        }
+      }
+      fir::emitFatalError(loc, "failed to extract enumeration ordinal");
+    }
+
     auto recTy = mlir::cast<fir::RecordType>(ty);
     auto fieldTy = fir::FieldType::get(ty.getContext());
     mlir::Value res = builder.createTemporary(loc, recTy);
