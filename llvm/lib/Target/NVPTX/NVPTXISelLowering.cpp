@@ -1231,52 +1231,49 @@ std::string NVPTXTargetLowering::getPrototype(
   O << "_ (";
 
   auto AllOuts = ArrayRef(Outs);
-  interleave(
-      seq(Args.size()), O,
-      [&](const unsigned I) {
-        const auto ArgOuts =
-            AllOuts.take_while([I](auto O) { return O.OrigArgIndex == I; });
-        AllOuts = AllOuts.drop_front(ArgOuts.size());
+  auto MakeArg = [&](const unsigned I) {
+    const auto ArgOuts =
+        AllOuts.take_while([I](auto O) { return O.OrigArgIndex == I; });
+    AllOuts = AllOuts.drop_front(ArgOuts.size());
 
-        Type *Ty = Args[I].Ty;
+    Type *Ty = Args[I].Ty;
 
-        if (ArgOuts[0].Flags.isByVal()) {
-          // Indirect calls need strict ABI alignment so we disable
-          // optimizations by not providing a function to optimize.
-          Type *ETy = Args[I].IndirectType;
-          Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-          Align ParamByValAlign =
-              getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
+    if (ArgOuts[0].Flags.isByVal()) {
+      // Indirect calls need strict ABI alignment so we disable optimizations by
+      // not providing a function to optimize.
+      Type *ETy = Args[I].IndirectType;
+      Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
+      Align ParamByValAlign =
+          getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
 
-          O << ".param .align " << ParamByValAlign.value() << " .b8 _["
-            << ArgOuts[0].Flags.getByValSize() << "]";
-          return;
-        }
+      O << ".param .align " << ParamByValAlign.value() << " .b8 _["
+        << ArgOuts[0].Flags.getByValSize() << "]";
+      return;
+    }
 
-        if (shouldPassAsArray(Ty)) {
-          Align ParamAlign = getArgumentAlignment(
-              &CB, Ty, I + AttributeList::FirstArgIndex, DL);
-          O << ".param .align " << ParamAlign.value() << " .b8 _["
-            << DL.getTypeAllocSize(Ty) << "]";
-          return;
-        }
-        // i8 types in IR will be i16 types in SDAG
-        assert(
-            (getValueType(DL, Ty) == ArgOuts[0].VT ||
-             (getValueType(DL, Ty) == MVT::i8 && ArgOuts[0].VT == MVT::i16)) &&
-            "type mismatch between callee prototype and arguments");
-        // scalar type
-        unsigned sz = 0;
-        if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
-          sz = promoteScalarArgumentSize(ITy->getBitWidth());
-        } else if (isa<PointerType>(Ty)) {
-          sz = PtrVT.getSizeInBits();
-        } else {
-          sz = Ty->getPrimitiveSizeInBits();
-        }
-        O << ".param .b" << sz << " _";
-      },
-      ", ");
+    if (shouldPassAsArray(Ty)) {
+      Align ParamAlign =
+          getArgumentAlignment(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
+      O << ".param .align " << ParamAlign.value() << " .b8 _["
+        << DL.getTypeAllocSize(Ty) << "]";
+      return;
+    }
+    // i8 types in IR will be i16 types in SDAG
+    assert((getValueType(DL, Ty) == ArgOuts[0].VT ||
+            (getValueType(DL, Ty) == MVT::i8 && ArgOuts[0].VT == MVT::i16)) &&
+           "type mismatch between callee prototype and arguments");
+    // scalar type
+    unsigned sz = 0;
+    if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
+      sz = promoteScalarArgumentSize(ITy->getBitWidth());
+    } else if (isa<PointerType>(Ty)) {
+      sz = PtrVT.getSizeInBits();
+    } else {
+      sz = Ty->getPrimitiveSizeInBits();
+    }
+    O << ".param .b" << sz << " _";
+  };
+  interleave(seq(Args.size()), O, MakeArg, ", ");
 
   O << ")";
   if (shouldEmitPTXNoReturn(&CB, *nvTM))
