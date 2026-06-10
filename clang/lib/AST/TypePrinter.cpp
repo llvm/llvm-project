@@ -1992,14 +1992,19 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::HLSLResourceDimension:
     llvm_unreachable("HLSL resource type attributes handled separately");
 
-  case attr::OffloadPrivateAddressSpace:
-  case attr::OffloadGlobalAddressSpace:
+  case attr::OpenCLPrivateAddressSpace:
+  case attr::OpenCLGlobalAddressSpace:
   case attr::OpenCLGlobalDeviceAddressSpace:
   case attr::OpenCLGlobalHostAddressSpace:
-  case attr::OffloadLocalAddressSpace:
-  case attr::OffloadConstantAddressSpace:
-  case attr::OffloadGenericAddressSpace:
+  case attr::OpenCLLocalAddressSpace:
+  case attr::OpenCLConstantAddressSpace:
+  case attr::OpenCLGenericAddressSpace:
   case attr::HLSLGroupSharedAddressSpace:
+  case attr::SYCLPrivateAddressSpace:
+  case attr::SYCLGlobalAddressSpace:
+  case attr::SYCLLocalAddressSpace:
+  case attr::SYCLConstantAddressSpace:
+  case attr::SYCLGenericAddressSpace:
     // FIXME: Update printAttributedBefore to print these once we generate
     // AttributedType nodes for them.
     break;

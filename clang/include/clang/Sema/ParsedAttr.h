@@ -553,44 +553,47 @@ public:
   /// a Spelling enumeration, the value UINT_MAX is returned.
   unsigned getSemanticSpelling() const;
 
-  /// If this is a named address space attribute for OpenCL compilation, returns its
-  /// representation in LangAS, otherwise returns default address space.
+  /// If this is an OpenCL address space attribute, returns its representation
+  /// in LangAS, otherwise returns default address space.
   LangAS asOpenCLLangAS() const {
     switch (getParsedKind()) {
-    case ParsedAttr::AT_OffloadConstantAddressSpace:
+    case ParsedAttr::AT_OpenCLConstantAddressSpace:
       return LangAS::opencl_constant;
-    case ParsedAttr::AT_OffloadGlobalAddressSpace:
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
       return LangAS::opencl_global;
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
       return LangAS::opencl_global_device;
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
       return LangAS::opencl_global_host;
-    case ParsedAttr::AT_OffloadLocalAddressSpace:
+    case ParsedAttr::AT_OpenCLLocalAddressSpace:
       return LangAS::opencl_local;
-    case ParsedAttr::AT_OffloadPrivateAddressSpace:
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
       return LangAS::opencl_private;
-    case ParsedAttr::AT_OffloadGenericAddressSpace:
+    case ParsedAttr::AT_OpenCLGenericAddressSpace:
       return LangAS::opencl_generic;
     default:
       return LangAS::Default;
     }
   }
 
-  /// If this is a named address space attribute for SYCL compilation, returns its
-  /// representation in LangAS, otherwise returns default address space.
+  /// If this is a SYCL address space attribute, returns its SYCL
+  /// representation in LangAS.
   LangAS asSYCLLangAS() const {
-    switch (getKind()) {
-    case ParsedAttr::AT_OffloadGlobalAddressSpace:
+    switch (getParsedKind()) {
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
       return LangAS::sycl_global;
+    // TODO: OpenCLGlobalDeviceAddressSpace and OpenCLGlobalHostAddressSpace
+    // will be removed after deprecation.
+    // https://discourse.llvm.org/t/rfc-remove-opencl-global-device-and-opencl-global-host-address-space-attributes/90677
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
       return LangAS::sycl_global_device;
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
       return LangAS::sycl_global_host;
-    case ParsedAttr::AT_OffloadLocalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
       return LangAS::sycl_local;
-    case ParsedAttr::AT_OffloadPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
       return LangAS::sycl_private;
-    case ParsedAttr::AT_OffloadGenericAddressSpace:
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
       return LangAS::sycl_generic;
     default:
       return LangAS::Default;

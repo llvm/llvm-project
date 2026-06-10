@@ -3,9 +3,9 @@
 
 // REQUIRES: x86-registered-target
 
-void foo(__attribute__((sycl_global)) int *);
-void foo(__attribute__((sycl_local)) int *);
-void foo(__attribute__((sycl_private)) int *);
+void foo(int [[clang::sycl_global]] *);
+void foo(int [[clang::sycl_local]] *);
+void foo(int [[clang::sycl_private]] *);
 void foo(int *);
 
 // SPIR: declare spir_func void @_Z3fooPU3AS1i(ptr addrspace(1) noundef) #1
@@ -19,9 +19,9 @@ void foo(int *);
 // X86: declare void @_Z3fooPi(ptr noundef) #1
 
 [[clang::sycl_external]] void test() {
-  __attribute__((sycl_global)) int *glob;
-  __attribute__((sycl_local)) int *loc;
-  __attribute__((sycl_private)) int *priv;
+  int [[clang::sycl_global]] *glob;
+  int [[clang::sycl_local]] *loc;
+  int [[clang::sycl_private]] *priv;
   int *def;
   foo(glob);
   foo(loc);

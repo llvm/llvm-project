@@ -36,8 +36,9 @@ enum class LangAS : unsigned {
   opencl_constant,
   opencl_private,
   opencl_generic,
-  // TODO: Remove opencl_global_device and opencl_global_host after corresponding
-  // attributes are deprecated for the required time.
+  // TODO: Remove opencl_global_device and opencl_global_host after
+  // corresponding attributes are deprecated for the required time.
+  // https://discourse.llvm.org/t/rfc-remove-opencl-global-device-and-opencl-global-host-address-space-attributes/90677
   opencl_global_device,
   opencl_global_host,
 
@@ -48,8 +49,9 @@ enum class LangAS : unsigned {
 
   // SYCL specific address spaces.
   sycl_global,
-  // TODO: Remove sycl_global_device and sycl_global_host after corresponding attributes
-  // are deprecated for the required time.
+  // TODO: Remove sycl_global_device and sycl_global_host after corresponding
+  // attributes are deprecated for the required time.
+  // https://discourse.llvm.org/t/rfc-remove-opencl-global-device-and-opencl-global-host-address-space-attributes/90677
   sycl_global_device,
   sycl_global_host,
   sycl_local,

@@ -1791,16 +1791,16 @@ def OpenCLAccess : Attr {
   let Documentation = [OpenCLAccessDocs];
 }
 
-def OffloadPrivateAddressSpace : TypeAttr {
+def OpenCLPrivateAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"__private">, CustomKeyword<"private">,
-                   Clang<"opencl_private">, Clang<"sycl_private">];
-  let Documentation = [OffloadAddressSpacePrivateDocs];
+                   Clang<"opencl_private">];
+  let Documentation = [OpenCLAddressSpacePrivateDocs];
 }
 
-def OffloadGlobalAddressSpace : TypeAttr {
+def OpenCLGlobalAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"__global">, CustomKeyword<"global">,
-                   Clang<"opencl_global">, Clang<"sycl_global">];
-  let Documentation = [OffloadAddressSpaceGlobalDocs];
+                   Clang<"opencl_global">];
+  let Documentation = [OpenCLAddressSpaceGlobalDocs];
 }
 
 // TODO: Remove OpenCLGlobalDeviceAddressSpace after deprecation.
@@ -1815,22 +1815,52 @@ def OpenCLGlobalHostAddressSpace : TypeAttr {
   let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
 }
 
-def OffloadLocalAddressSpace : TypeAttr {
+def OpenCLLocalAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"__local">, CustomKeyword<"local">,
-                   Clang<"opencl_local">, Clang<"sycl_local">];
-  let Documentation = [OffloadAddressSpaceLocalDocs];
+                   Clang<"opencl_local">];
+  let Documentation = [OpenCLAddressSpaceLocalDocs];
 }
 
-def OffloadConstantAddressSpace : TypeAttr {
+def OpenCLConstantAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"__constant">, CustomKeyword<"constant">,
-                   Clang<"opencl_constant">, Clang<"sycl_constant">];
-  let Documentation = [OffloadAddressSpaceConstantDocs];
+                   Clang<"opencl_constant">];
+  let Documentation = [OpenCLAddressSpaceConstantDocs];
 }
 
-def OffloadGenericAddressSpace : TypeAttr {
+def OpenCLGenericAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"__generic">, CustomKeyword<"generic">,
-                   Clang<"opencl_generic">, Clang<"sycl_generic">];
-  let Documentation = [OffloadAddressSpaceGenericDocs];
+                   Clang<"opencl_generic">];
+  let Documentation = [OpenCLAddressSpaceGenericDocs];
+}
+
+def SYCLPrivateAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_private">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLGlobalAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_global">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLLocalAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_local">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLConstantAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_constant">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLGenericAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_generic">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
 }
 
 def OpenCLNoSVM : Attr {

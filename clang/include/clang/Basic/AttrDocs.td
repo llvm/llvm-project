@@ -786,6 +786,27 @@ expression.
   }];
 }
 
+def SYCLAddressSpaceDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "Address space attributes for SYCL";
+  let Content = [{
+The memory model for SYCL devices is derived from the OpenCL memory model. Accordingly
+SYCL defines five address spaces: global, local, private, generic and constant. The
+following attributes correspond to these address spaces:
+
+[[clang::sycl_global]], [[clang::sycl_local]], [[clang::sycl_private]],
+[[clang::sycl_generic]] and  [[clang::sycl_constant]] (deprecated)
+
+These attributes are intended for use in the implementation of SYCL run-time
+libraries. A direct declaration of pointers with address spaces is discouraged. Users
+should use the sycl::multi_ptr class to handle address space boundaries and
+interoperability.
+
+More details can be found in SYCL 2020 Specification, Section 3.8.2
+"SYCL device memory model" and Section 4.7.7, "Address space classes"
+  }];
+}
+
 def SYCLSpecialClassDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{
@@ -5003,19 +5024,12 @@ More details can be found in the OpenCL C language Spec v2.0, Section 6.6.
     }];
 }
 
-def DocOffloadAddressSpaces : DocumentationCategory<"OpenCL and SYCL Address Spaces"> {
+def DocOpenCLAddressSpaces : DocumentationCategory<"OpenCL Address Spaces"> {
   let Content = [{
 The address space qualifier may be used to specify the region of memory that is
-used to allocate the object.
-
-OpenCL supports the following address spaces:
-
-__generic(generic), __global(global), __local(local), __private(private) and
+used to allocate the object. OpenCL supports the following address spaces:
+__generic(generic), __global(global), __local(local), __private(private),
 __constant(constant).
-
-More details can be found in the OpenCL C language Spec v2.0, Section 6.5.
-
-Example:
 
   .. code-block:: c
 
@@ -5028,32 +5042,14 @@ Example:
       return l;
     }
 
-The memory model for SYCL devices is derived from the OpenCL memory model. Accordingly
-SYCL defines five address spaces: global, local, private, generic and constant. The
-following attributes correspond to these address spaces:
-
-[[clang::sycl_global]], [[clang::sycl_local]], [[clang::sycl_private]],
-[[clang::sycl_generic]] and  [[clang::sycl_constant]] (deprecated)
-
-These attributes are intended for use in the implementation of SYCL run-time
-libraries. A direct declaration of pointers with address spaces is discouraged. Users
-should use the sycl::multi_ptr class to handle address space boundaries and
-interoperability.
-
-More details can be found in SYCL 2020 Specification, Section 3.8.2
-"SYCL device memory model" and Section 4.7.7, "Address space classes"
+More details can be found in the OpenCL C language Spec v2.0, Section 6.5.
   }];
-
 }
 
-def OffloadAddressSpaceGenericDocs : Documentation {
-  let Category = DocOffloadAddressSpaces;
-  let Heading = "__generic, generic, [[clang::opencl_generic]], [[clang::sycl_generic]]";
+def OpenCLAddressSpaceGenericDocs : Documentation {
+  let Category = DocOpenCLAddressSpaces;
+  let Heading = "__generic, generic, [[clang::opencl_generic]]";
   let Content = [{
-The generic address space is a virtual address space which overlaps the global, local
-and private address spaces.
-
-OpenCL:
 The generic address space attribute is only available with OpenCL v2.0 and later.
 It can be used with pointer types. Variables in global and local scope and
 function parameters in non-kernel functions can have the generic address space
@@ -5063,35 +5059,33 @@ spaces.
   }];
 }
 
-def OffloadAddressSpaceConstantDocs : Documentation {
-  let Category = DocOffloadAddressSpaces;
-  let Heading = "__constant, constant, [[clang::opencl_constant]], [[clang::sycl_constant]]";
+def OpenCLAddressSpaceConstantDocs : Documentation {
+  let Category = DocOpenCLAddressSpaces;
+  let Heading = "__constant, constant, [[clang::opencl_constant]]";
   let Content = [{
 The constant address space attribute signals that an object is located in
 a constant (non-modifiable) memory region. It is available to all work items.
 Any type can be annotated with the constant address space attribute. Objects
 with the constant address space qualifier can be declared in any scope and must
-have an initializer. The constant address space is deprecated in SYCL 2020
-specification.
+have an initializer.
   }];
 }
 
-def OffloadAddressSpaceGlobalDocs : Documentation {
-  let Category = DocOffloadAddressSpaces;
-  let Heading = "__global, global, [[clang::opencl_global]], [[clang::sycl_global]]";
+def OpenCLAddressSpaceGlobalDocs : Documentation {
+  let Category = DocOpenCLAddressSpaces;
+  let Heading = "__global, global, [[clang::opencl_global]]";
   let Content = [{
 The global address space attribute specifies that an object is allocated in
 global memory, which is accessible by all work items. The content stored in this
-memory area persists between kernel executions.
-
-In OpenCL, pointer types to the global address space are allowed as function parameters or
-local variables. Starting with OpenCL v2.0, the global address space can be used with global
-(program scope) variables and static local variable as well.
+memory area persists between kernel executions. Pointer types to the global
+address space are allowed as function parameters or local variables. Starting
+with OpenCL v2.0, the global address space can be used with global (program
+scope) variables and static local variable as well.
   }];
 }
 
 def OpenCLAddressSpaceGlobalExtDocs : Documentation {
-  let Category = DocOffloadAddressSpaces;
+  let Category = DocOpenCLAddressSpaces;
   let Heading = "[[clang::opencl_global_device]], [[clang::opencl_global_host]]";
   let Content = [{
 The ``global_device`` and ``global_host`` address space attributes specify that
@@ -5115,9 +5109,9 @@ As ``global_device`` and ``global_host`` are a subset of
   }];
 }
 
-def OffloadAddressSpaceLocalDocs : Documentation {
-  let Category = DocOffloadAddressSpaces;
-  let Heading = "__local, local, [[clang::opencl_local]], [[clang::sycl_local]]";
+def OpenCLAddressSpaceLocalDocs : Documentation {
+  let Category = DocOpenCLAddressSpaces;
+  let Heading = "__local, local, [[clang::opencl_local]]";
   let Content = [{
 The local address space specifies that an object is allocated in the local (work
 group) memory area, which is accessible to all work items in the same work
@@ -5128,9 +5122,9 @@ space are allowed. Local address space variables cannot have an initializer.
   }];
 }
 
-def OffloadAddressSpacePrivateDocs : Documentation {
-  let Category = DocOffloadAddressSpaces;
-  let Heading = "__private, private, [[clang::opencl_private]], [[clang::sycl_private]]";
+def OpenCLAddressSpacePrivateDocs : Documentation {
+  let Category = DocOpenCLAddressSpaces;
+  let Heading = "__private, private, [[clang::opencl_private]]";
   let Content = [{
 The private address space specifies that an object is allocated in the private
 (work item) memory. Other work items cannot access the same memory area and its
