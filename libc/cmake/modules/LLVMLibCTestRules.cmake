@@ -259,9 +259,11 @@ function(create_libc_unittest fq_target_name)
   get_fq_deps_list(fq_deps_list ${LIBC_UNITTEST_DEPENDS})
   if(NOT LIBC_UNITTEST_C_TEST)
     list(APPEND fq_deps_list libc.src.__support.StringUtil.error_to_string
-                             libc.test.UnitTest.ErrnoSetterMatcher)
+                             libc.test.UnitTest.ErrnoSetterMatcher
+                             libc.src.__support.CPP.new)
   endif()
   list(REMOVE_DUPLICATES fq_deps_list)
+
 
   _get_common_test_compile_options(compile_options "${LIBC_UNITTEST_C_TEST}"
                                    "${LIBC_UNITTEST_FLAGS}")

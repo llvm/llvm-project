@@ -14,8 +14,8 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/time/linux/kernel_timespec.h"
 #include <sys/syscall.h>
-
 #if defined(SYS_clock_gettime64)
 #include <linux/time_types.h>
 #endif
@@ -36,9 +36,7 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
                                               reinterpret_cast<long>(ts));
   } else {
     __kernel_timespec ts64{};
-    __kernel_timespec *ts64_ptr = nullptr;
-    if (ts != nullptr)
-      ts64_ptr = &ts64;
+    __kernel_timespec *ts64_ptr = ts ? &ts64 : nullptr;
     if (ts64_ptr != nullptr && LIBC_LIKELY(clock_gettime64 != nullptr)) {
       ret = clock_gettime64(clockid, ts64_ptr);
     } else {
@@ -47,8 +45,7 @@ ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
                                               reinterpret_cast<long>(ts64_ptr));
     }
     if (ret == 0 && ts != nullptr) {
-      ts->tv_sec = static_cast<decltype(ts->tv_sec)>(ts64.tv_sec);
-      ts->tv_nsec = static_cast<decltype(ts->tv_nsec)>(ts64.tv_nsec);
+      *ts = to_timespec(ts64);
     }
   }
 #elif defined(SYS_clock_gettime)

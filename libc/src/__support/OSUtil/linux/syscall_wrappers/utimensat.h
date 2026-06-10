@@ -15,6 +15,7 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/struct_timespec.h"
+#include "src/__support/time/linux/kernel_timespec.h"
 #include <sys/syscall.h>
 #if defined(SYS_utimensat_time64)
 #include <linux/time_types.h>
@@ -35,11 +36,8 @@ LIBC_INLINE ErrorOr<int> utimensat(int dirfd, const char *path,
     ret = syscall_impl<int>(SYS_utimensat_time64, dirfd, path, times, flags);
   } else {
     if (times != nullptr) {
-      __kernel_timespec ts64[2];
-      ts64[0].tv_sec = times[0].tv_sec;
-      ts64[0].tv_nsec = times[0].tv_nsec;
-      ts64[1].tv_sec = times[1].tv_sec;
-      ts64[1].tv_nsec = times[1].tv_nsec;
+      __kernel_timespec ts64[2]{to_kernel_timespec(times[0]),
+                                to_kernel_timespec(times[1])};
       ret = syscall_impl<int>(SYS_utimensat_time64, dirfd, path, ts64, flags);
     } else {
       ret =

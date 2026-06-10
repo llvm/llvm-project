@@ -18,6 +18,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_word.h"
 #include "src/__support/time/abs_timeout.h"
+#include "src/__support/time/linux/kernel_timespec.h"
 #include <linux/errno.h>
 #include <linux/futex.h>
 #if defined(SYS_futex_time64)
@@ -67,8 +68,7 @@ public:
         if constexpr (sizeof(timespec) == sizeof(__kernel_timespec)) {
           timeout_arg = const_cast<timespec *>(&timeout->get_timespec());
         } else {
-          ts64.tv_sec = timeout->get_timespec().tv_sec;
-          ts64.tv_nsec = timeout->get_timespec().tv_nsec;
+          ts64 = to_kernel_timespec(timeout->get_timespec());
           timeout_arg = &ts64;
         }
       }

@@ -17,6 +17,7 @@
 #include "src/__support/macros/config.h"
 
 #include "hdr/types/size_t.h"
+#include "src/__support/time/linux/kernel_timespec.h"
 #include <sys/syscall.h>
 #if defined(SYS_pselect6_time64)
 #include <linux/time_types.h>
@@ -71,8 +72,7 @@ LLVM_LIBC_FUNCTION(int, select,
     __kernel_timespec ts64{};
     __kernel_timespec *ts_ptr = nullptr;
     if (timeout != nullptr) {
-      ts64.tv_sec = ts.tv_sec;
-      ts64.tv_nsec = ts.tv_nsec;
+      ts64 = to_kernel_timespec(ts);
       ts_ptr = &ts64;
     }
     ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pselect6_time64, nfds, read_set,

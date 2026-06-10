@@ -13,8 +13,8 @@
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/time/linux/kernel_timespec.h"
 #include <sys/syscall.h>
-
 #if defined(SYS_clock_settime64)
 #include <linux/time_types.h>
 #endif
@@ -36,8 +36,7 @@ ErrorOr<int> clock_settime(clockid_t clockid, const timespec *ts) {
     __kernel_timespec ts64{};
     __kernel_timespec *ts64_ptr = nullptr;
     if (ts != nullptr) {
-      ts64.tv_sec = ts->tv_sec;
-      ts64.tv_nsec = ts->tv_nsec;
+      ts64 = to_kernel_timespec(*ts);
       ts64_ptr = &ts64;
     }
     ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_settime64,

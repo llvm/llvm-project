@@ -299,3 +299,8 @@ bool Test::testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
 
 } // namespace testing
 } // namespace LIBC_NAMESPACE_DECL
+
+extern "C" void __cxa_pure_virtual() {
+  __builtin_trap();
+}
+

@@ -15,6 +15,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 
+#include "src/__support/time/linux/kernel_timespec.h"
 #include <sys/syscall.h>
 #if defined(SYS_clock_nanosleep_time64)
 #include <linux/time_types.h>
@@ -37,8 +38,7 @@ LLVM_LIBC_FUNCTION(int, nanosleep, (const timespec *req, timespec *rem)) {
     __kernel_timespec ts64_req{};
     __kernel_timespec *req_ptr = nullptr;
     if (req != nullptr) {
-      ts64_req.tv_sec = req->tv_sec;
-      ts64_req.tv_nsec = req->tv_nsec;
+      ts64_req = to_kernel_timespec(*req);
       req_ptr = &ts64_req;
     }
     __kernel_timespec ts64_rem{};
@@ -46,8 +46,7 @@ LLVM_LIBC_FUNCTION(int, nanosleep, (const timespec *req, timespec *rem)) {
     ret = LIBC_NAMESPACE::syscall_impl<int>(
         SYS_clock_nanosleep_time64, CLOCK_REALTIME, 0, req_ptr, rem_ptr);
     if (ret == -EINTR && rem != nullptr) {
-      rem->tv_sec = static_cast<decltype(rem->tv_sec)>(ts64_rem.tv_sec);
-      rem->tv_nsec = static_cast<decltype(rem->tv_nsec)>(ts64_rem.tv_nsec);
+      *rem = to_timespec(ts64_rem);
     }
   }
 #elif defined(SYS_nanosleep)
