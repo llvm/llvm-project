@@ -28,6 +28,14 @@ using namespace llvm;
 
 namespace {
 
+// A ds_load plus the program order positions (among WMMAs) of its
+// earliest and latest WMMA consumer.
+struct LoadInfo {
+  SUnit *SU;
+  unsigned MinPos = UINT_MAX;  // earliest consumer (UINT_MAX means none in this region)
+  unsigned MaxPos = 0;         // latest consumer
+};
+
 class WMMASchedule : public ScheduleDAGMutation {
 private:
   const GCNSubtarget &ST;
@@ -46,24 +54,20 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
     return;
   const TargetSchedModel *SM = DAG->getSchedModel();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  LLVM_DEBUG(dbgs() << "WMMASchedule running, " << DAG->SUnits.size()
-                    << "SUnits\n");
 
-  SmallVector<SUnit *> Loads;
-  MapVector<SUnit *, unsigned> Wmmas;
+  // Gather WMMAs (numbered in program order) and ds_loads.
+  MapVector<SUnit *, unsigned> Wmmas; // WMMA SUnit and its program position relative to one another
+  SmallVector<LoadInfo> Loads;
+  std::optional<unsigned> LoadLatency, WmmaLatency; 
 
-  std::optional<unsigned> LoadLatency = std::nullopt;
-  std::optional<unsigned> WmmaLatency = std::nullopt;
-
-  // Gather all WMMAs and DS_LOADs
-  for (auto &SU : DAG->SUnits) {
+  for (SUnit &SU : DAG->SUnits) {
     MachineInstr *MI = SU.getInstr();
     if (!MI)
       continue;
 
     // Gather WMMAs
     if (TII->isMFMAorWMMA(*MI)) {
-      if (WmmaLatency == std::nullopt)
+      if (!WmmaLatency)
         WmmaLatency = SM->computeInstrLatency(MI);
       Wmmas.insert({&SU, Wmmas.size()});
       continue;
@@ -71,53 +75,76 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
 
     // Gather DS_LOADs
     if (TII->isDS(*MI) && MI->mayLoad()) {
-      if (LoadLatency == std::nullopt)
+      if (!LoadLatency)
         LoadLatency = SM->computeInstrLatency(MI);
-      Loads.push_back(&SU);
+      Loads.push_back({&SU});
     }
   }
 
-  // Calculate how many WMMAs away from consuming WMMA a load must be
-  // before it will certainly ready for consumer
-  unsigned Dist;
-  if (LoadLatency && WmmaLatency) {
-    Dist = std::ceil(static_cast<double>(*LoadLatency) / *WmmaLatency);
-    if (Dist < 1)
-      Dist = 1;
-  } else {
-    return; // Either missing Wmmas or Loads. No point continuing.
-  }
-  LLVM_DEBUG(dbgs() << "Dist " << Dist << "\n");
+  // The following means the DAG Mutation cannot do anything useful.
+  if (!LoadLatency || !WmmaLatency || Wmmas.empty())
+    return;
 
-  // For every load, determine earliest WMMA reliant on it,
-  // and add an anchor.
-  for (SUnit *L : Loads) {
-    SUnit *Earliest = nullptr;
-    unsigned EarliestPos = UINT_MAX;
-    for (const SDep &D : L->Succs) {
+  // The number of WMMAs that elapse during one load's latency
+  unsigned Dist = std::ceil(static_cast<double>(*LoadLatency) / *WmmaLatency);
+  if (Dist < 1)
+    Dist = 1;
+
+  // For each load, find the earliest and latest consuming WMMA positions.
+  for (LoadInfo& LI : Loads) {
+    for (const SDep &D : LI.SU->Succs) {
       if (D.getKind() != SDep::Data)
         continue;
-      SUnit *S = D.getSUnit();
-      auto *It = Wmmas.find(S);
+      auto *It = Wmmas.find(D.getSUnit());
+      // Check to see if successor is a WMMA
       if (It == Wmmas.end())
         continue;
-      if (It->second < EarliestPos) {
-        EarliestPos = It->second;
-        Earliest = S;
-      }
-    };
-    LLVM_DEBUG(dbgs() << "load SU" << L->NodeNum << " -> earliest WMMA SU"
-                      << (Earliest ? (int)Earliest->NodeNum : -1) << " (pos "
-                      << EarliestPos << ")\n");
-    if (Earliest && EarliestPos >= Dist) {
-      LLVM_DEBUG(dbgs() << "Window Created!\n");
-      SUnit *Anchor = Wmmas.begin()[EarliestPos - Dist].first;
-      bool Ok = DAG->addEdge(L, SDep(Anchor, SDep::Artificial));
-      LLVM_DEBUG(dbgs() << "  leash SU" << L->NodeNum << " after WMMA SU"
-                        << Anchor->NodeNum
-                        << (Ok ? "\n" : " (REJECTED: cycle)\n"));
-    };
-  };
+      LI.MinPos = std::min(LI.MinPos, It->second);
+      LI.MaxPos = std::max(LI.MaxPos, It->second);
+    }
+  }
+
+  // MaxPos in order
+  std::vector<bool> Present(Wmmas.size(), false);
+  for (const LoadInfo &LI : Loads)
+    // Check if there's a consumer for this load in the region
+    if (LI.MinPos != UINT_MAX)
+      Present[LI.MaxPos] = true;
+  
+  // Latest position that's <= position Pos at which some load's register frees
+  // A load's register becomes free at its MaxPos, which is its last WMMA consumer.
+  std::vector<std::optional<unsigned>> DeadBy(Wmmas.size(), std::nullopt);
+  std::optional<unsigned> Latest;
+  for (unsigned Pos = 0; Pos < Wmmas.size(); ++Pos) {
+    if (Present[Pos])
+      Latest = Pos;
+    DeadBy[Pos] = Latest;
+  }
+
+  // Create the edges that constrain where the ds_loads can be placed
+  // minimum distance of a load is LI.MinPos - Dist
+  // maximum distance of a load is DeadBy[LI.MinPos - Dist]
+  for (const LoadInfo &LI : Loads) {
+    if (LI.MinPos == UINT_MAX || LI.MinPos < Dist)
+      continue;
+    
+    // Minimum distance edge
+    // Load scheduled before this point
+    unsigned MinDist = LI.MinPos - Dist; 
+    bool MinSuccess = DAG->addEdge(Wmmas.begin()[MinDist].first, SDep(LI.SU, SDep::Artificial));
+
+    // Maximum distance edge
+    // Load scheduled after this point
+    bool MaxSuccess = true;
+    std::optional<unsigned> MaxDist = DeadBy[MinDist];
+    if (MaxDist && *MaxDist < MinDist)
+      MaxSuccess = DAG->addEdge(LI.SU, SDep(Wmmas.begin()[*MaxDist].first, SDep::Artificial));
+
+    LLVM_DEBUG(dbgs() << "load SU" << LI.SU->NodeNum << " Win=[" << (MaxDist ? *MaxDist : -1) << ","
+                      << MinDist << "] MinPos=" << LI.MinPos << " MaxPos=" << LI.MaxPos
+                      << (MinSuccess && MaxSuccess ? "\n" : " (edge REJECTED: cycle)\n"));
+  }
+
 }
 
 } // end namespace
