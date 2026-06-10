@@ -11,8 +11,8 @@
 ;     if (x == 1) return 7;
 ;     return f(x-1) + f(x-1); // f(x-1) * 2
 ; }
-define i32 @f(i32 %x) {
-; CHECK-LABEL: define i32 @f(
+define i32 @test_shl_const_accumulator(i32 %x) {
+; CHECK-LABEL: define i32 @test_shl_const_accumulator(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[TAILRECURSE:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
@@ -21,7 +21,7 @@ define i32 @f(i32 %x) {
 ; CHECK-NEXT:    ret i32 7
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @f(i32 [[SUB]])
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @test_shl_const_accumulator(i32 [[SUB]])
 ; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[ACCUMULATOR_TR]], 1
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
@@ -35,7 +35,7 @@ common.ret:
 
 if.end:
   %sub = add nsw i32 %x, -1
-  %call = tail call i32 @f(i32 %sub)
+  %call = tail call i32 @test_shl_const_accumulator(i32 %sub)
   %add = shl nsw i32 %call, 1
   br label %common.ret
 }
@@ -45,8 +45,8 @@ if.end:
 ;     if (x == 1) return 14;
 ;     return f2(x-1) >> 1;
 ; }
-define i32 @f2(i32 %x) {
-; CHECK-LABEL: define i32 @f2(
+define i32 @test_ashr_const_accumulator(i32 %x) {
+; CHECK-LABEL: define i32 @test_ashr_const_accumulator(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[TAILRECURSE:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
@@ -55,7 +55,7 @@ define i32 @f2(i32 %x) {
 ; CHECK-NEXT:    ret i32 14
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @f2(i32 [[SUB]])
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @test_ashr_const_accumulator(i32 [[SUB]])
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[ACCUMULATOR_TR]], 1
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
@@ -69,7 +69,7 @@ common.ret:
 
 if.end:
   %sub = add nsw i32 %x, -1
-  %call = tail call i32 @f2(i32 %sub)
+  %call = tail call i32 @test_ashr_const_accumulator(i32 %sub)
   %shr = ashr i32 %call, 1
   br label %common.ret
 }
@@ -79,8 +79,8 @@ if.end:
 ;     if (x <= 1) return 14;
 ;     return f3(x - 1) >> 1;
 ; }
-define i32 @f3(i32 %x) {
-; CHECK-LABEL: define i32 @f3(
+define i32 @test_lshr_const_unsigned(i32 %x) {
+; CHECK-LABEL: define i32 @test_lshr_const_unsigned(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[TAILRECURSE:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], 2
@@ -89,7 +89,7 @@ define i32 @f3(i32 %x) {
 ; CHECK-NEXT:    ret i32 21
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X]], -1
-; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @f3(i32 [[SUB]])
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @test_lshr_const_unsigned(i32 [[SUB]])
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ACCUMULATOR_TR]], 1
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
@@ -103,7 +103,7 @@ common.ret:
 
 if.end:
   %sub = add i32 %x, -1
-  %call = tail call i32 @f3(i32 %sub)
+  %call = tail call i32 @test_lshr_const_unsigned(i32 %sub)
   %shr = lshr i32 %call, 1
   br label %common.ret
 }
@@ -113,8 +113,8 @@ if.end:
 ;   if (x == 1) return 7;
 ;   return f4(x-1, k) << k; // variable shift amount
 ; }
-define i32 @f4(i32 %x, i32 %k) {
-; CHECK-LABEL: define i32 @f4(
+define i32 @test_neg_variable_shift_amount(i32 %x, i32 %k) {
+; CHECK-LABEL: define i32 @test_neg_variable_shift_amount(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[K:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
@@ -123,7 +123,7 @@ define i32 @f4(i32 %x, i32 %k) {
 ; CHECK-NEXT:    ret i32 7
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @f4(i32 [[SUB]], i32 [[K]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @test_neg_variable_shift_amount(i32 [[SUB]], i32 [[K]])
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CALL]], [[K]]
 ; CHECK-NEXT:    ret i32 [[SHL]]
 ;
@@ -137,7 +137,7 @@ common.ret:
 
 if.end:
   %sub = add nsw i32 %x, -1
-  %call = tail call i32 @f4(i32 %sub, i32 %k)
+  %call = tail call i32 @test_neg_variable_shift_amount(i32 %sub, i32 %k)
   %shl = shl i32 %call, %k
   br label %common.ret
 }
@@ -147,8 +147,8 @@ if.end:
 ;   if (x == 1) return 7;
 ;   return (f5(x-1) + 1) << 1; // extra add breaks accumulator invariant
 ; }
-define i32 @f5(i32 %x) {
-; CHECK-LABEL: define i32 @f5(
+define i32 @test_neg_intervening_op(i32 %x) {
+; CHECK-LABEL: define i32 @test_neg_intervening_op(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
@@ -157,7 +157,7 @@ define i32 @f5(i32 %x) {
 ; CHECK-NEXT:    ret i32 7
 ; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @f5(i32 [[SUB]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @test_neg_intervening_op(i32 [[SUB]])
 ; CHECK-NEXT:    [[TMP:%.*]] = add i32 [[CALL]], 1
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[TMP]], 1
 ; CHECK-NEXT:    ret i32 [[SHL]]
@@ -172,7 +172,7 @@ common.ret:
 
 if.end:
   %sub = add nsw i32 %x, -1
-  %call = tail call i32 @f5(i32 %sub)
+  %call = tail call i32 @test_neg_intervening_op(i32 %sub)
   %tmp = add i32 %call, 1
   %shl = shl i32 %tmp, 1
   br label %common.ret

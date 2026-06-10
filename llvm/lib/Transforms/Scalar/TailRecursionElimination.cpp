@@ -408,7 +408,7 @@ static Constant *getReturnValue(Function &F) {
 
   for (BasicBlock &BB : F) {
     auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!RI || !RI->getReturnValue())
+    if (!RI)
       continue;
 
     Value *RV = RI->getReturnValue();
@@ -442,6 +442,9 @@ static Constant *getReturnValue(Function &F) {
 // This function checks whether the instruction I can be used
 // to perform accumulator recursion elimination for the
 // call instruction CI.
+// In the presence of pseudo-associative operations, it returns
+// the base case constant value in BaseCaseConst to both indicate success and
+// provide the value needed to initialize the accumulator.
 static Constant *canTransformAccumulatorRecursion(Instruction *I,
                                                   CallInst *CI) {
   auto IsPseudoAssociative = isPseudoAssociative(I);
@@ -678,18 +681,6 @@ void TailRecursionEliminator::insertAccumulator(Instruction *AccRecInstr) {
   for (pred_iterator PI = PB; PI != PE; ++PI) {
     BasicBlock *P = *PI;
     if (P == &F.getEntryBlock()) {
-      // Constant *InitialValue =
-      //     ConstantExpr::getIdentity(AccRecInstr, AccRecInstr->getType());
-      // if (!InitialValue) {
-      //   // We are in the presence of a pseudo-associative operation like
-      //   shift.
-      //   // We didn't pass `AllowRHSConstant = true` in getIdentity above
-      //   because
-      //   // the identity for shifts is zero, which is not valid for the LHS.
-      //   // We need the value of the base case(s) of the function to
-      //   // initialize the accumulator.
-      //   InitialValue = BaseCaseValue;
-      // }
       AccPN->addIncoming(AccumulatorInitialValue, P);
     } else {
       AccPN->addIncoming(AccPN, P);
