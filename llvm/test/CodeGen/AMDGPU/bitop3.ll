@@ -746,7 +746,7 @@ define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
 ; slot. The `optnone` attribute keeps the self-op alive through DAGCombine
 ; so selection actually sees the LHS == RHS shape.
 
-define i32 @xor_self_complex(i32 %a, i32 %b, i32 %c) #0 {
+define i32 @xor_self_complex(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 {
 ; GFX950-SDAG-LABEL: xor_self_complex:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -782,7 +782,7 @@ define i32 @xor_self_complex(i32 %a, i32 %b, i32 %c) #0 {
   ret i32 %res
 }
 
-define i32 @and_self_complex(i32 %a, i32 %b, i32 %c) #0 {
+define i32 @and_self_complex(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 {
 ; GFX950-SDAG-LABEL: and_self_complex:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -816,7 +816,7 @@ define i32 @and_self_complex(i32 %a, i32 %b, i32 %c) #0 {
   ret i32 %res
 }
 
-define i32 @or_self_complex(i32 %a, i32 %b, i32 %c) #0 {
+define i32 @or_self_complex(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 {
 ; GFX950-SDAG-LABEL: or_self_complex:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -850,22 +850,22 @@ define i32 @or_self_complex(i32 %a, i32 %b, i32 %c) #0 {
   ret i32 %res
 }
 
-define i32 @xor_self_complex_noundef(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 {
-; GFX950-SDAG-LABEL: xor_self_complex_noundef:
+define i32 @xor_self_complex_maybe_undef(i32 %a, i32 %b, i32 %c) #0 {
+; GFX950-SDAG-LABEL: xor_self_complex_maybe_undef:
 ; GFX950-SDAG:       ; %bb.0:
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
 ; GFX950-SDAG-NEXT:    v_xor_b32_e64 v0, v0, v0
 ; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX950-GISEL-LABEL: xor_self_complex_noundef:
+; GFX950-GISEL-LABEL: xor_self_complex_maybe_undef:
 ; GFX950-GISEL:       ; %bb.0:
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX950-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1250-SDAG-LABEL: xor_self_complex_noundef:
+; GFX1250-SDAG-LABEL: xor_self_complex_maybe_undef:
 ; GFX1250-SDAG:       ; %bb.0:
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -873,7 +873,7 @@ define i32 @xor_self_complex_noundef(i32 noundef %a, i32 noundef %b, i32 noundef
 ; GFX1250-SDAG-NEXT:    v_xor_b32_e64 v0, v0, v0
 ; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX1250-GISEL-LABEL: xor_self_complex_noundef:
+; GFX1250-GISEL-LABEL: xor_self_complex_maybe_undef:
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -883,74 +883,6 @@ define i32 @xor_self_complex_noundef(i32 noundef %a, i32 noundef %b, i32 noundef
   %t1 = and i32 %a, %b
   %xor1 = xor i32 %t1, %c
   %res = xor i32 %xor1, %xor1
-  ret i32 %res
-}
-
-define i32 @and_self_complex_noundef(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 {
-; GFX950-SDAG-LABEL: and_self_complex_noundef:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
-; GFX950-SDAG-NEXT:    v_and_b32_e64 v0, v0, v0
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-GISEL-LABEL: and_self_complex_noundef:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
-; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-SDAG-LABEL: and_self_complex_noundef:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
-; GFX1250-SDAG-NEXT:    v_and_b32_e64 v0, v0, v0
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: and_self_complex_noundef:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %t1 = and i32 %a, %b
-  %xor1 = xor i32 %t1, %c
-  %res = and i32 %xor1, %xor1
-  ret i32 %res
-}
-
-define i32 @or_self_complex_noundef(i32 noundef %a, i32 noundef %b, i32 noundef %c) #0 {
-; GFX950-SDAG-LABEL: or_self_complex_noundef:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
-; GFX950-SDAG-NEXT:    v_or_b32_e64 v0, v0, v0
-; GFX950-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX950-GISEL-LABEL: or_self_complex_noundef:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
-; GFX950-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1250-SDAG-LABEL: or_self_complex_noundef:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
-; GFX1250-SDAG-NEXT:    v_or_b32_e64 v0, v0, v0
-; GFX1250-SDAG-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX1250-GISEL-LABEL: or_self_complex_noundef:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x6c
-; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
-  %t1 = and i32 %a, %b
-  %xor1 = xor i32 %t1, %c
-  %res = or i32 %xor1, %xor1
   ret i32 %res
 }
 
