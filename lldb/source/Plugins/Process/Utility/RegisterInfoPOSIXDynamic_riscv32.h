@@ -40,9 +40,40 @@ public:
   const lldb_private::RegisterInfo *
   GetRegisterInfo(llvm::StringRef reg_name) const;
 
+  /// @brief Builds CS register information entries for 32-bit RISC-V debug
+  ///        targets on the basis of the enabled ISA extensions.
+  ///
+  /// Custom and vendor RISC-V extensions can define CSRs that overlap
+  /// in address space. This routine constructs a baseline CSR container and
+  /// applies extension patches in a deterministic order so that the final CSR
+  /// metadata depends only on the feature set and conflict resolution is
+  /// predictable.
+  ///
+  /// @param[in] features ISA extension feature names.
+  ///
+  /// @return Vector of CS register information entries for the 32-bit RISC-V
+  ///         debug target configuration.
+  std::vector<lldb_private::RegisterInfo>
+  GetCSRegisterInfos(const std::vector<std::string> &features);
+
 private:
   lldb_private::DynamicRegisterInfo m_dyn_reg_infos;
   const lldb_private::ArchSpec m_target_arch;
+
+  /// @brief Applies the CS register information patch set for a given feature.
+  ///
+  /// CSR metadata is constructed from a baseline container and then selectively
+  /// overridden by feature-specific definitions. This helper performs the
+  /// override by looking up the patch list for the feature and updating only
+  /// the affected CSR entries in-place.
+  ///
+  /// @param[in,out] cs_reg_infos CS register information vector to update
+  ///                             in-place.
+  /// @param[in]     feature      Feature name used to select a patch set
+  ///                             (e.g., "default").
+  void
+  ConfigureCSRegInfos(std::vector<lldb_private::RegisterInfo> &cs_reg_infos,
+                      llvm::StringRef feature);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIXDYNAMIC_RISCV32_H
