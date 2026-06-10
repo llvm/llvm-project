@@ -391,8 +391,9 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   // first line of the file. For more details, see
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
   bool UseGlobs = MinVersion(2);
+  bool RemoveDotSlash = MinVersion(4);
+  bool WarnDotSlash = MinVersion(4) && !MinVersion(5);
 
-  bool RemoveDotSlash = MinVersion(3);
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
     Error = toString(std::move(Err));
@@ -438,14 +439,12 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
       return false;
     }
 
+    bool IsPath = llvm::is_contained(PathPrefixes, Prefix);
+
     QueryOptions QOpts;
-    if (llvm::is_contained(PathPrefixes, Prefix)) {
-      if (Version == 4) {
-        QOpts.RemoveDotSlash = true;
-        QOpts.WarnDotSlashMatch = true;
-      } else if (Version > 4) {
-        QOpts.RemoveDotSlash = true;
-      }
+    if (IsPath) {
+      QOpts.RemoveDotSlash = RemoveDotSlash;
+      QOpts.WarnDotSlashMatch = WarnDotSlash;
     }
 
     auto [Pattern, Category] = Postfix.split("=");
