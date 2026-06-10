@@ -149,4 +149,36 @@ TEST(AArch64LaneBitmasks, SubRegs) {
             AArch64::W1);
 }
 
+TEST(AArch64ReservedRegs, ArtificialHIRegistersAreReserved) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine("");
+  ASSERT_TRUE(TM);
+
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  ASSERT_TRUE(II);
+
+  const AArch64RegisterInfo &TRI = II->getRegisterInfo();
+
+  // Create an empty machine function
+  LLVMContext Context;
+  Module M("", Context);
+  M.setDataLayout(TM->createDataLayout());
+  Function *F = Function::Create(
+      FunctionType::get(Type::getVoidTy(Context), /*isVarArg=*/false),
+      GlobalValue::ExternalLinkage, "f", &M);
+
+  MachineModuleInfo MMI(TM.get());
+  const TargetSubtargetInfo *STI = TM->getSubtargetImpl(*F);
+  MachineFunction MF(*F, *TM, *STI, MMI.getContext(), /*FunctionNum=*/0);
+  MF.initTargetMachineFunctionInfo(*STI);
+
+  BitVector Reserved = TRI.getReservedRegs(MF);
+
+  EXPECT_TRUE(Reserved.test(AArch64::W30_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::B31_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::H31_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::S31_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::D31_HI));
+  EXPECT_TRUE(Reserved.test(AArch64::Q31_HI));
+}
+
 } // namespace
