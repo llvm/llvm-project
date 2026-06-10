@@ -6997,6 +6997,12 @@ private:
   /// Parses the 'interop' parts of the 'append_args' and 'init' clauses.
   bool ParseOMPInteropInfo(OMPInteropInfo &InteropInfo, OpenMPClauseKind Kind);
 
+  /// Parses 'fr(<foreign-runtime-id>)'.
+  ExprResult ParseOMPInteropFrSelector();
+
+  /// Parses 'attr(<string-literal>[, ...])', appending to \p Attrs.
+  bool ParseOMPInteropAttrSelector(SmallVectorImpl<Expr *> &Attrs);
+
   /// Parses clause with an interop variable of kind \a Kind.
   ///
   /// \verbatim

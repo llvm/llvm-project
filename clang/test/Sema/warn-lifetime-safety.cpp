@@ -2751,6 +2751,24 @@ void new_int_braces() {
   (void)*p;           // expected-note {{later used here}}
 }
 
+void new_int_aligned() {
+  int *p = new (std::align_val_t(sizeof(int))) int{}; // expected-warning {{allocated object does not live long enough}}
+  delete p;                                           // expected-note {{freed here}}
+  (void)*p;                                           // expected-note {{later used here}}
+}
+
+void new_int_nothrow() {
+  int *p = new (std::nothrow) int{}; // expected-warning {{allocated object does not live long enough}}
+  delete p;                          // expected-note {{freed here}}
+  (void)*p;                          // expected-note {{later used here}}
+}
+
+void new_int_aligned_nothrow() {
+  int *p = new (std::align_val_t(sizeof(int)), std::nothrow) int{}; // expected-warning {{allocated object does not live long enough}}
+  delete p;                                                         // expected-note {{freed here}}
+  (void)*p;                                                         // expected-note {{later used here}}
+}
+
 void conditional_delete(bool cond) {
   int *p1 = new int;       // expected-warning {{allocated object does not live long enough}}
   int *p2 = new int;       // expected-warning {{allocated object does not live long enough}}
@@ -2910,6 +2928,18 @@ void class_specific_operator_delete_use_after_free() {
   (void)p->X;                                       // expected-note {{later used here}}
 }
 
+struct ClassSpecificNew {
+  int X;
+  static void *operator new(std::size_t);
+  static void operator delete(void *);
+};
+
+void class_specific_operator_new_use_after_free() {
+  ClassSpecificNew *p = new ClassSpecificNew; // expected-warning {{allocated object does not live long enough}}
+  delete p;                                   // expected-note {{freed here}}
+  (void)p->X;                                 // expected-note {{later used here}}
+}
+
 struct PointerFieldHolder {
   MyObj *Ptr;
 };
@@ -3007,6 +3037,32 @@ struct VariadicPlacementNew {
 void variadic_placement_new() {
   PlacementArg arg;
   (void)new (arg) VariadicPlacementNew;
+}
+
+struct Arena {};
+
+struct CustomPlacementNew {
+  int X;
+  void *operator new(std::size_t, Arena &, int);
+  void operator delete(void *);
+};
+
+struct SingleArgCustomPlacementNew {
+  int X;
+  void *operator new(std::size_t, Arena &);
+  void operator delete(void *);
+};
+
+void custom_placement_new_not_heap(Arena &A) {
+  CustomPlacementNew *p = new (A, 0) CustomPlacementNew;
+  delete p;
+  (void)p->X;
+}
+
+void single_arg_custom_placement_new_not_heap(Arena &A) {
+  SingleArgCustomPlacementNew *p = new (A) SingleArgCustomPlacementNew;
+  delete p;
+  (void)p->X;
 }
 
 int* foo(int* x [[clang::lifetimebound]], int* y [[clang::lifetimebound]]);

@@ -24,9 +24,9 @@ int rethrow_from_block(int a, int b) {
   return a / b;
 }
 
-// CIR:  %[[A_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
-// CIR:  %[[B_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["b", init]
-// CIR:  %[[RES_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR:  %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!s32i>
+// CIR:  %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!s32i>
+// CIR:  %[[RES_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR:  cir.store %{{.*}}, %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  cir.store %{{.*}}, %[[B_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:  cir.scope {
@@ -149,7 +149,7 @@ void throw_vector_type() {
   throw a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 16 -> !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[EXCEPTION_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
@@ -175,7 +175,7 @@ void throw_ext_vector_type() {
   throw a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, ["a"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 16 -> !cir.ptr<!cir.vector<4 x !s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[EXCEPTION_ADDR]] : !cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>
@@ -249,7 +249,7 @@ void throw_pointer_type() {
   throw ptr;
 }
 
-// CIR: %[[PTR_ADDR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["ptr", init]
+// CIR: %[[PTR_ADDR:.*]] = cir.alloca "ptr" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[VAR_ADDR:.*]] = cir.get_global @_ZZ18throw_pointer_typevE3var : !cir.ptr<!s32i>
 // CIR: cir.store{{.*}} %[[VAR_ADDR]], %[[PTR_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR: %[[EXCEPTION_ADDR:.*]] = cir.alloc.exception 8 -> !cir.ptr<!cir.ptr<!s32i>>

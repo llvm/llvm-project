@@ -33,7 +33,7 @@ static bool isAligned(const Value *Base, Align Alignment,
 }
 
 static bool isDereferenceableAndAlignedPointerViaAssumption(
-    const Value *Ptr, Align Alignment, const SimplifyQuery &SQ,
+    const Value *Ptr, Align Alignment, const SimplifyQuery &SQ, bool IgnoreFree,
     function_ref<bool(const RetainedKnowledge &RK)> CheckSize) {
   if (!SQ.CxtI)
     return false;
@@ -41,7 +41,7 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
   /// be proven by an assume if needed.
   RetainedKnowledge AlignRK;
   RetainedKnowledge DerefRK;
-  bool PtrCanBeFreed = Ptr->canBeFreed();
+  bool PtrCanBeFreed = Ptr->canBeFreed() && !IgnoreFree;
   bool IsAligned = Ptr->getPointerAlignment(SQ.DL) >= Alignment;
   return getKnowledgeForValue(
       Ptr, {Attribute::Dereferenceable, Attribute::Alignment}, *SQ.AC,
@@ -68,7 +68,8 @@ static bool isDereferenceableAndAlignedPointerViaAssumption(
 /// a simple load or store.
 static bool isDereferenceableAndAlignedPointer(
     const Value *V, Align Alignment, const APInt &Size, const SimplifyQuery &SQ,
-    SmallPtrSetImpl<const Value *> &Visited, unsigned MaxDepth) {
+    bool IgnoreFree, SmallPtrSetImpl<const Value *> &Visited,
+    unsigned MaxDepth) {
   assert(V->getType()->isPointerTy() && "Base must be pointer");
 
   // Recursion limit.
@@ -102,22 +103,25 @@ static bool isDereferenceableAndAlignedPointer(
     // addrspacecast, so we can't do arithmetic directly on the APInt values.
     return isDereferenceableAndAlignedPointer(
         Base, Alignment, Offset + Size.sextOrTrunc(Offset.getBitWidth()), SQ,
-        Visited, MaxDepth);
+        IgnoreFree, Visited, MaxDepth);
   }
 
   // bitcast instructions are no-ops as far as dereferenceability is concerned.
   if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V)) {
     if (BC->getSrcTy()->isPointerTy())
       return isDereferenceableAndAlignedPointer(BC->getOperand(0), Alignment,
-                                                Size, SQ, Visited, MaxDepth);
+                                                Size, SQ, IgnoreFree, Visited,
+                                                MaxDepth);
   }
 
   // Recurse into both hands of select.
   if (const SelectInst *Sel = dyn_cast<SelectInst>(V)) {
     return isDereferenceableAndAlignedPointer(Sel->getTrueValue(), Alignment,
-                                              Size, SQ, Visited, MaxDepth) &&
+                                              Size, SQ, IgnoreFree, Visited,
+                                              MaxDepth) &&
            isDereferenceableAndAlignedPointer(Sel->getFalseValue(), Alignment,
-                                              Size, SQ, Visited, MaxDepth);
+                                              Size, SQ, IgnoreFree, Visited,
+                                              MaxDepth);
   }
 
   auto IsKnownDeref = [&]() {
@@ -129,7 +133,7 @@ static bool isDereferenceableAndAlignedPointer(
       return false;
 
     auto *I = dyn_cast<Instruction>(V);
-    if (CheckForFreed) {
+    if (CheckForFreed && !IgnoreFree) {
       const Instruction *DefI;
       if (I) {
         // We don't want to consider frees by the instruction producing the
@@ -177,7 +181,7 @@ static bool isDereferenceableAndAlignedPointer(
     if (auto *RP = getArgumentAliasingToReturnedPointer(
             Call, /*MustPreserveOffset=*/true))
       return isDereferenceableAndAlignedPointer(RP, Alignment, Size, SQ,
-                                                Visited, MaxDepth);
+                                                IgnoreFree, Visited, MaxDepth);
 
     // If we have a call we can't recurse through, check to see if this is an
     // allocation function for which we can establish an minimum object size.
@@ -208,35 +212,40 @@ static bool isDereferenceableAndAlignedPointer(
 
   // For gc.relocate, look through relocations
   if (const GCRelocateInst *RelocateInst = dyn_cast<GCRelocateInst>(V))
-    return isDereferenceableAndAlignedPointer(
-        RelocateInst->getDerivedPtr(), Alignment, Size, SQ, Visited, MaxDepth);
+    return isDereferenceableAndAlignedPointer(RelocateInst->getDerivedPtr(),
+                                              Alignment, Size, SQ, IgnoreFree,
+                                              Visited, MaxDepth);
 
   if (const AddrSpaceCastOperator *ASC = dyn_cast<AddrSpaceCastOperator>(V))
-    return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
-                                              Size, SQ, Visited, MaxDepth);
+    return isDereferenceableAndAlignedPointer(
+        ASC->getOperand(0), Alignment, Size, SQ, IgnoreFree, Visited, MaxDepth);
 
-  return SQ.AC && isDereferenceableAndAlignedPointerViaAssumption(
-                      V, Alignment, SQ, [Size](const RetainedKnowledge &RK) {
-                        return RK.ArgValue >= Size.getZExtValue();
-                      });
+  return SQ.AC &&
+         isDereferenceableAndAlignedPointerViaAssumption(
+             V, Alignment, SQ, IgnoreFree, [Size](const RetainedKnowledge &RK) {
+               return RK.ArgValue >= Size.getZExtValue();
+             });
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
                                               const APInt &Size,
-                                              const SimplifyQuery &SQ) {
+                                              const SimplifyQuery &SQ,
+                                              bool IgnoreFree) {
   // Note: At the moment, Size can be zero.  This ends up being interpreted as
   // a query of whether [Base, V] is dereferenceable and V is aligned (since
   // that's what the implementation happened to do).  It's unclear if this is
   // the desired semantic, but at least SelectionDAG does exercise this case.
 
   SmallPtrSet<const Value *, 32> Visited;
-  return ::isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ, Visited,
+  return ::isDereferenceableAndAlignedPointer(V, Alignment, Size, SQ,
+                                              IgnoreFree, Visited,
                                               /*MaxDepth=*/16);
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
                                               Align Alignment,
-                                              const SimplifyQuery &SQ) {
+                                              const SimplifyQuery &SQ,
+                                              bool IgnoreFree) {
   // For unsized types or scalable vectors we don't know exactly how many bytes
   // are dereferenced, so bail out.
   if (!Ty->isSized() || Ty->isScalableTy())
@@ -249,12 +258,13 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
 
   APInt AccessSize(SQ.DL.getPointerTypeSizeInBits(V->getType()),
                    SQ.DL.getTypeStoreSize(Ty));
-  return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, SQ);
+  return isDereferenceableAndAlignedPointer(V, Alignment, AccessSize, SQ,
+                                            IgnoreFree);
 }
 
 bool llvm::isDereferenceablePointer(const Value *V, Type *Ty,
-                                    const SimplifyQuery &SQ) {
-  return isDereferenceableAndAlignedPointer(V, Ty, Align(1), SQ);
+                                    const SimplifyQuery &SQ, bool IgnoreFree) {
+  return isDereferenceableAndAlignedPointer(V, Ty, Align(1), SQ, IgnoreFree);
 }
 
 /// Test if A and B will obviously have the same value.
@@ -409,7 +419,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
   }
   SimplifyQuery SQ(DL, &DT, AC, CtxI);
   return isDereferenceableAndAlignedPointerViaAssumption(
-             Base, Alignment, SQ,
+             Base, Alignment, SQ, /*IgnoreFree=*/false,
              [&SE, AccessSizeSCEV, &LoopGuards](const RetainedKnowledge &RK) {
                return SE.isKnownPredicate(
                    CmpInst::ICMP_ULE,
