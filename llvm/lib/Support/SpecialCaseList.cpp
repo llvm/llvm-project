@@ -394,6 +394,12 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
 
     auto [Pattern, Category] = Postfix.split("=");
     bool IsPath = llvm::is_contained(PathPrefixes, Prefix);
+
+    if (Version >= 4 && IsPath && Pattern.contains("\\\\")) {
+      Error = (Twine("pattern cannot contain a backslash: ") + Pattern).str();
+      return false;
+    }
+
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
         Category, UseGlobs, RemoveDotSlash && IsPath,
         CanonicalizeSlashes && IsPath);

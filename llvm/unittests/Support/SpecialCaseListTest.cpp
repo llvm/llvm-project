@@ -416,23 +416,42 @@ TEST_F(SpecialCaseListTest, FileIdx) {
     sys::fs::remove(Path);
 }
 
+TEST_F(SpecialCaseListTest, PathPatternBackslashError) {
+  std::string Error;
+  // This should fail because 'src' pattern contains a double backslash.
+  std::unique_ptr<MemoryBuffer> MB =
+      MemoryBuffer::getMemBuffer("#!special-case-list-v4\n"
+                                 "src:*foo\\\\baz\n");
+  std::unique_ptr<SpecialCaseList> SCL =
+      SpecialCaseList::create(MB.get(), Error);
+  EXPECT_EQ(SCL, nullptr);
+  EXPECT_THAT(Error, HasSubstr("pattern cannot contain a backslash"));
+
+  // This should succeed because single backslash is allowed as escape.
+  std::unique_ptr<SpecialCaseList> SCL2 =
+      makeSpecialCaseList("src:*foo\\*baz\n", Error, 4);
+  EXPECT_TRUE(SCL2 != nullptr) << Error;
+
+  // This should succeed because 'fun' pattern is not a path pattern.
+  std::unique_ptr<SpecialCaseList> SCL3 =
+      makeSpecialCaseList("fun:hi\\\\bye=category\n", Error, 4);
+  ASSERT_TRUE(SCL3 != nullptr);
+  EXPECT_TRUE(SCL3->inSection("", "fun", "hi\\bye", "category"));
+  EXPECT_FALSE(SCL3->inSection("", "fun", "hi/bye", "category"));
+}
+
 #ifdef _WIN32
 TEST_F(SpecialCaseListTest, CanonicalizePathsOnWindows) {
   std::unique_ptr<SpecialCaseList> SCL =
-      makeSpecialCaseList("#!special-case-list-v4\n"
-                          "\n"
-                          "src:*foo/bar*\n"
-                          "src:*foo\\\\baz\n"
-                          "fun:hi\\\\bye=category\n");
+      makeSpecialCaseList("src:*foo/bar*\n"
+                          "fun:hi\\\\bye=category\n",
+                          4);
+  ASSERT_TRUE(SCL != nullptr);
   EXPECT_TRUE(SCL->inSection("", "src", "foo/bar"));
   EXPECT_TRUE(SCL->inSection("", "src", "foo\\bar"));
-  // The baz pattern doesn't match because paths are canonicalized first
-  EXPECT_FALSE(SCL->inSection("", "src", "foo/baz"));
-  EXPECT_FALSE(SCL->inSection("", "src", "foo\\baz"));
-  // The canonicalization only applies to files
   EXPECT_TRUE(SCL->inSection("", "fun", "hi\\bye", "category"));
+  EXPECT_FALSE(SCL->inSection("", "fun", "hi/bye", "category"));
 }
-
 #endif
 
 } // namespace
