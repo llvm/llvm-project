@@ -270,6 +270,14 @@ constexpr bool test_oob_n1() { // both-error{{constexpr function never produces 
 }
 static_assert(test_oob_n1(), ""); // both-error{{not an integral constant expression}} both-note{{in call to 'test_oob_n1()'}}
 
+// N exceeds the size of a scalar (non-array) object.
+constexpr bool test_scalar_oob() { // both-error{{constexpr function never produces a constant expression}}
+  unsigned char c = 0x42;
+  __builtin_stdc_memreverse8(4, &c); // both-note 2{{cannot refer to element 3 of non-array object in a constant expression}}
+  return true;
+}
+static_assert(test_scalar_oob(), ""); // both-error{{not an integral constant expression}} both-note{{in call to 'test_scalar_oob()'}}
+
 // Swapping uninitialized memory.
 constexpr bool test_uninit() {
   unsigned char buf[2]; // both-note {{declared here}}
