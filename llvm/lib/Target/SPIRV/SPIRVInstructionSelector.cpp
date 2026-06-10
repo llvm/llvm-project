@@ -1512,11 +1512,19 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
     auto It = getOpVariableMBBIt(*I.getMF());
-    BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
-        .addDef(PointerVReg)
-        .addUse(GR.getSPIRVTypeID(PointerType))
-        .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
-        .constrainAllUses(TII, TRI, RBI);
+    // An untyped pointer result type is only legal on OpUntypedVariableKHR
+    // (which carries an explicit Data Type operand), never on OpVariable.
+    const bool IsUntyped =
+        PointerType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+    auto VarMIB = BuildMI(*It->getParent(), It, It->getDebugLoc(),
+                          TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
+                                            : SPIRV::OpVariable))
+                      .addDef(PointerVReg)
+                      .addUse(GR.getSPIRVTypeID(PointerType))
+                      .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
+    if (IsUntyped)
+      VarMIB.addUse(GR.getSPIRVTypeID(PointeeTy)); // Data Type
+    VarMIB.constrainAllUses(TII, TRI, RBI);
 
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
         .addDef(ResVReg)
@@ -1553,11 +1561,19 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
     auto It = getOpVariableMBBIt(*I.getMF());
-    BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
-        .addDef(PointerVReg)
-        .addUse(GR.getSPIRVTypeID(PointerType))
-        .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
-        .constrainAllUses(TII, TRI, RBI);
+    // An untyped pointer result type is only legal on OpUntypedVariableKHR
+    // (which carries an explicit Data Type operand), never on OpVariable.
+    const bool IsUntyped =
+        PointerType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
+    auto VarMIB = BuildMI(*It->getParent(), It, It->getDebugLoc(),
+                          TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
+                                            : SPIRV::OpVariable))
+                      .addDef(PointerVReg)
+                      .addUse(GR.getSPIRVTypeID(PointerType))
+                      .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
+    if (IsUntyped)
+      VarMIB.addUse(GR.getSPIRVTypeID(ResType)); // Data Type
+    VarMIB.constrainAllUses(TII, TRI, RBI);
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
         .addDef(ResVReg)
         .addUse(ResTypeReg)
@@ -2206,12 +2222,22 @@ SPIRVInstructionSelector::getOrCreateMemSetGlobal(MachineInstr &I) const {
   Register Const = GR.getOrCreateConstIntArray(Val, Num, I, SpvArrTy, TII);
 
   Register VarReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  // With SPV_KHR_untyped_pointers enabled, getOrCreateSPIRVPointerType returns
+  // an untyped pointer type. An untyped pointer result type is only legal on
+  // OpUntypedVariableKHR (which carries an explicit Data Type operand), never on
+  // OpVariable. Pick the matching opcode/operands so the synthesized constant
+  // global is valid SPIR-V (otherwise consumers mis-size it -> GPU fault).
+  const bool IsUntyped = VarTy->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
   auto MIBVar =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
+                                : SPIRV::OpVariable))
           .addDef(VarReg)
           .addUse(GR.getSPIRVTypeID(VarTy))
-          .addImm(SPIRV::StorageClass::UniformConstant)
-          .addUse(Const);
+          .addImm(SPIRV::StorageClass::UniformConstant);
+  if (IsUntyped)
+    MIBVar.addUse(GR.getSPIRVTypeID(SpvArrTy)); // Data Type
+  MIBVar.addUse(Const);                         // Initializer
   MIBVar.constrainAllUses(TII, TRI, RBI);
 
   GR.add(GV, MIBVar);
@@ -6940,11 +6966,19 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
     GR.assignSPIRVTypeToVReg(PtrType, PtrTyReg, MIRBuilder.getMF());
     MachineBasicBlock::iterator VarPos = getOpVariableMBBIt(*I.getMF());
     MachineBasicBlock &EntryBB = I.getMF()->front();
+    // An untyped pointer result type is only legal on OpUntypedVariableKHR
+    // (which carries an explicit Data Type operand), never on OpVariable.
+    const bool IsUntyped =
+        PtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
     auto AllocaMIB =
-        BuildMI(EntryBB, VarPos, I.getDebugLoc(), TII.get(SPIRV::OpVariable))
+        BuildMI(EntryBB, VarPos, I.getDebugLoc(),
+                TII.get(IsUntyped ? SPIRV::OpUntypedVariableKHR
+                                  : SPIRV::OpVariable))
             .addDef(PtrTyReg)
             .addUse(GR.getSPIRVTypeID(PtrType))
             .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function));
+    if (IsUntyped)
+      AllocaMIB.addUse(GR.getSPIRVTypeID(ResType)); // Data Type
     Register Variable = AllocaMIB->getOperand(0).getReg();
 
     MachineBasicBlock &BB = *I.getParent();

@@ -1514,7 +1514,16 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       continue;
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (Op->hasUseList() &&
+    // Do not let a non-pointer (scalar/aggregate) element type clobber an
+    // already-deduced pointer element type for the same operand. A pointer
+    // that points to a pointer (e.g. a `T*&` reference parameter, deduced as
+    // pointer-to-pointer) must keep its pointer pointee; collapsing it to the
+    // pointee-of-the-pointee loses a level of indirection and corrupts every
+    // value that flows through it. The conflicting use is handled below by a
+    // localized spv_ptrcast instead.
+    bool WouldClobberPtrWithNonPtr =
+        Ty && isPointerTy(Ty) && KnownElemTy && !isPointerTy(KnownElemTy);
+    if (Op->hasUseList() && !WouldClobberPtrWithNonPtr &&
         (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
@@ -2148,6 +2157,19 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       return;
     }
   }
+
+  // Never replace an already-deduced pointer pointee with a non-pointer one:
+  // a pointer that points to a pointer (e.g. a `T*&` reference parameter,
+  // deduced as pointer-to-pointer) must keep its pointer pointee. Collapsing
+  // it to the pointee-of-the-pointee loses a level of indirection and corrupts
+  // every value that flows through it. Such a conflicting use comes from a
+  // mis-deduced expected type; leave the operand untouched (it stays a typed
+  // pointer-to-pointer / untyped pointer that the use can consume) rather than
+  // rewriting the value's element type or emitting a bogus ptrcast that would
+  // re-introduce the collapsed type at the use site.
+  if (PointerElemTy && isPointerTy(PointerElemTy) &&
+      !isPointerTy(ExpectedElementType))
+    return;
 
   if (isa<Instruction>(Pointer) || isa<Argument>(Pointer)) {
     if (FirstPtrCastOrAssignPtrType) {
