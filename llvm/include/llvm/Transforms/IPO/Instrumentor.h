@@ -1088,14 +1088,15 @@ struct CastIO final
 /// Instrumentation opportunity for numeric operations. This includes Add, FAdd,
 /// Sub, FSub, Mul, FMul, UDiv, FDiv, SDiv, URem, SRem, FRem, Shl, LShr, AShr,
 /// And, Or, Xor, and FNeg.
-struct NumericIO : public InstructionIO<
-                       Instruction::Add, Instruction::FAdd, Instruction::Sub,
-                       Instruction::FSub, Instruction::Mul, Instruction::FMul,
-                       Instruction::UDiv, Instruction::FDiv, Instruction::SDiv,
-                       Instruction::URem, Instruction::SRem, Instruction::FRem,
-                       Instruction::Shl, Instruction::LShr, Instruction::AShr,
-                       Instruction::And, Instruction::Or, Instruction::Xor,
-                       Instruction::FNeg> {
+struct NumericIO final
+    : public InstructionIO<
+          Instruction::Add, Instruction::FAdd, Instruction::Sub,
+          Instruction::FSub, Instruction::Mul, Instruction::FMul,
+          Instruction::UDiv, Instruction::FDiv, Instruction::SDiv,
+          Instruction::URem, Instruction::SRem, Instruction::FRem,
+          Instruction::Shl, Instruction::LShr, Instruction::AShr,
+          Instruction::And, Instruction::Or, Instruction::Xor,
+          Instruction::FNeg> {
   NumericIO(InstrumentationLocation::KindTy Kind) : InstructionIO(Kind) {}
 
   enum ConfigKind {
@@ -1106,6 +1107,7 @@ struct NumericIO : public InstructionIO<
     ReplaceResult,
     PassLeft,
     PassRight,
+    PassFlags,
     PassId,
     NumConfig,
   };
@@ -1121,6 +1123,8 @@ struct NumericIO : public InstructionIO<
   static Value *getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
                         InstrumentorIRBuilderTy &IIRB);
   static Value *getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB);
+  static Value *getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
                          InstrumentorIRBuilderTy &IIRB);
 
   static void populate(InstrumentationConfig &IConf,
