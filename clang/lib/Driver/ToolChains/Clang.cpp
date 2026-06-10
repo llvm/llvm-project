@@ -9713,7 +9713,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             options::OPT_fprofile_instr_generate_EQ);
         if (!Args.hasArg(options::OPT_foffload_lto_EQ,
                          options::OPT_fno_offload_lto) &&
-            !UsesProfileGenerate)
+            !UsesProfileGenerate && !TC->getTriple().isSPIRV())
           CmdArgs.push_back("--no-lto");
       }
     }

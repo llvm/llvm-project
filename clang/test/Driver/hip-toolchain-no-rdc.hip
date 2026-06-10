@@ -47,6 +47,14 @@
 // RUN:   %s -nogpuinc -nogpulib \
 // RUN: 2>&1 | FileCheck -check-prefixes=AMDGCNSPIRV-NEW %s
 
+// SPIR-V requires the LTO pipeline; --no-lto must not be passed.
+// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc \
+// RUN:   --offload-arch=amdgcnspirv -nogpuinc -nogpulib \
+// RUN:   %s 2>&1 | FileCheck -check-prefixes=SPIRV-NO-LTO %s
+// SPIRV-NO-LTO: {{".*clang-linker-wrapper}}
+// SPIRV-NO-LTO-NOT: "--no-lto"
+// SPIRV-NO-LTO-SAME: "--emit-fatbin-only"
+
 // Profile generation needs LTO, so the linker wrapper must not get --no-lto.
 // RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc -fprofile-generate \
 // RUN:   -x hip --cuda-gpu-arch=gfx900 -nogpuinc -nogpulib --offload-new-driver \
