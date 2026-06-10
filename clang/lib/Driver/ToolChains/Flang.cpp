@@ -522,8 +522,9 @@ static void processVSRuntimeLibrary(const ToolChain &TC, const ArgList &Args,
   }
 }
 
-void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
-                                ArgStringList &CmdArgs) const {
+void Flang::AddAMDGPUTargetArgs(const ArgList &Args, ArgStringList &CmdArgs,
+                                StringRef BoundArch,
+                                Action::OffloadKind DeviceOffloadKind) const {
   if (Arg *A = Args.getLastArg(options::OPT_mcode_object_version_EQ)) {
     StringRef Val = A->getValue();
     CmdArgs.push_back(Args.MakeArgString("-mcode-object-version=" + Val));
@@ -533,11 +534,12 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
   }
 
   const ToolChain &TC = getToolChain();
-  TC.addClangTargetOptions(Args, CmdArgs, "", Action::OffloadKind::OFK_OpenMP);
+  TC.addClangTargetOptions(Args, CmdArgs, BoundArch, DeviceOffloadKind);
 }
 
-void Flang::AddNVPTXTargetArgs(const ArgList &Args,
-                               ArgStringList &CmdArgs) const {
+void Flang::AddNVPTXTargetArgs(const ArgList &Args, ArgStringList &CmdArgs,
+                               StringRef BoundArch,
+                               Action::OffloadKind DeviceOffloadKind) const {
   // we cannot use addClangTargetOptions, as it appends unsupported args for
   // flang: -fcuda-is-device, -fno-threadsafe-statics,
   // -fcuda-allow-variadic-functions and -target-sdk-version Instead we manually
@@ -572,8 +574,9 @@ void Flang::AddNVPTXTargetArgs(const ArgList &Args,
   CmdArgs.push_back(Args.MakeArgString(LibDeviceFile));
 }
 
-void Flang::addTargetOptions(const ArgList &Args,
-                             ArgStringList &CmdArgs) const {
+void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                             StringRef BoundArch,
+                             Action::OffloadKind DeviceOffloadKind) const {
   const ToolChain &TC = getToolChain();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
   const Driver &D = TC.getDriver();
@@ -599,11 +602,11 @@ void Flang::addTargetOptions(const ArgList &Args,
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
-    AddAMDGPUTargetArgs(Args, CmdArgs);
+    AddAMDGPUTargetArgs(Args, CmdArgs, BoundArch, DeviceOffloadKind);
     break;
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
-    AddNVPTXTargetArgs(Args, CmdArgs);
+    AddNVPTXTargetArgs(Args, CmdArgs, BoundArch, DeviceOffloadKind);
     break;
   case llvm::Triple::riscv64:
     getTargetFeatures(D, Triple, Args, CmdArgs, /*ForAs*/ false);
@@ -1111,7 +1114,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   addFloatingPointOptions(D, Args, CmdArgs);
 
   // Add target args, features, etc.
-  addTargetOptions(Args, CmdArgs);
+  addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),
+                   JA.getOffloadingDeviceKind());
 
   if (!TC.useIntegratedAs())
     CmdArgs.push_back("-no-integrated-as");
