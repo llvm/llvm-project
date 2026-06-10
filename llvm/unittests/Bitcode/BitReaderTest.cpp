@@ -484,6 +484,19 @@ static constexpr StringRef CustomMDKind = "custom.test";
 static constexpr StringRef CustomMDString = "preserved-by-skip";
 static constexpr uint64_t CustomMDInt = 42;
 
+static bool isLegacyDbgIntrinsic(const Instruction &I) {
+  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II) return false;
+  switch (II->getIntrinsicID()) {
+    case Intrinsic::dbg_value:
+    case Intrinsic::dbg_declare:
+    case Intrinsic::dbg_assign:
+    case Intrinsic::dbg_label:
+      return true;
+  }
+  return false;
+}
+
 // Attaches CustomMD (an MDString + an integer) to every dbg.* call in F.
 static void attachCustomMetadataToDbgInsts(Function &F) {
   LLVMContext &Ctx = F.getContext();
@@ -492,7 +505,7 @@ static void attachCustomMetadataToDbgInsts(Function &F) {
             ConstantAsMetadata::get(
                 ConstantInt::get(Type::getInt32Ty(Ctx), CustomMDInt))});
   for (Instruction &I : instructions(F))
-    if (auto *II = dyn_cast<DbgInfoIntrinsic>(&I))
+    if (isLegacyDbgIntrinsic(I))
       I.setMetadata(CustomMDKind, Custom);
 }
 
@@ -500,11 +513,10 @@ static void attachCustomMetadataToDbgInsts(Function &F) {
 // exact MDString + integer it was created with.
 static void checkDbgInstCustomMetadata(Function &F) {
   for (Instruction &I : instructions(F)) {
-    auto *DI = dyn_cast<DbgInfoIntrinsic>(&I);
-    if (!DI)
+    if (!isLegacyDbgIntrinsic(I))
       continue;
 
-    MDNode *MD = DI->getMetadata(CustomMDKind);
+    MDNode *MD = I.getMetadata(CustomMDKind);
     ASSERT_NE(MD, nullptr);
     ASSERT_EQ(MD->getNumOperands(), 2u);
 
