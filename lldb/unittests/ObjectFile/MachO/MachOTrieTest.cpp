@@ -297,6 +297,132 @@ TEST(MachOTrieTest, TerminalNodeWithChildren) {
   EXPECT_EQ(names, (std::set<std::string>{"foo", "foobar"}));
 }
 
+TEST(MachOTrieTest, ManySiblings) {
+  TrieBuilder b;
+  TrieBuilder::Node *root = b.Root();
+  b.AddExport(root, "_a", 0x1000);
+  b.AddExport(root, "_b", 0x2000);
+  b.AddExport(root, "_c", 0x3000);
+  b.AddExport(root, "_d", 0x4000);
+  b.AddExport(root, "_e", 0x5000);
+
+  ParseResult result = Parse(b.Build());
+  ASSERT_TRUE(result.ok);
+  ASSERT_EQ(result.ext_symbols.size(), 5u);
+  std::set<std::string> names;
+  for (const auto &e : result.ext_symbols)
+    names.insert(e.entry.name.GetStringRef().str());
+  EXPECT_EQ(names, (std::set<std::string>{"a", "b", "c", "d", "e"}));
+}
+
+TEST(MachOTrieTest, EmptyEdgeLabel) {
+  // An empty edge label contributes nothing to the symbol name.
+  TrieBuilder b;
+  TrieBuilder::Node *mid = b.AddEdge(b.Root(), "_foo");
+  b.AddExport(mid, "", 0x1000);
+
+  ParseResult result = Parse(b.Build());
+  ASSERT_TRUE(result.ok);
+  ASSERT_EQ(result.ext_symbols.size(), 1u);
+  EXPECT_EQ(result.ext_symbols[0].entry.name.GetStringRef(), "foo");
+}
+
+TEST(MachOTrieTest, UnnamedRootChild) {
+  // A symbol reached by a single-character "_" edge has a one-byte prefix, so
+  // dropping the leading underscore leaves an empty name.
+  TrieBuilder b;
+  b.AddExport(b.Root(), "_", 0x1000);
+
+  ParseResult result = Parse(b.Build());
+  ASSERT_TRUE(result.ok);
+  ASSERT_EQ(result.ext_symbols.size(), 1u);
+  EXPECT_TRUE(result.ext_symbols[0].entry.name.GetStringRef().empty());
+}
+
+TEST(MachOTrieTest, LargeAddress) {
+  // A multi-byte ULEB128 address round-trips intact.
+  TrieBuilder b;
+  b.AddExport(b.Root(), "_foo", 0x123456789ABULL);
+
+  ParseResult result = Parse(b.Build());
+  ASSERT_TRUE(result.ok);
+  ASSERT_EQ(result.ext_symbols.size(), 1u);
+  EXPECT_EQ(result.ext_symbols[0].entry.address, 0x123456789ABULL);
+}
+
+TEST(MachOTrieTest, ThumbBitNotSetWhenNotArm) {
+  TrieBuilder b;
+  b.AddExport(b.Root(), "_foo", /*address=*/0x1001);
+
+  ParseResult result = Parse(b.Build(), /*is_arm=*/false);
+  ASSERT_TRUE(result.ok);
+  ASSERT_EQ(result.ext_symbols.size(), 1u);
+  // Without is_arm the low bit is left untouched and the Thumb flag is unset.
+  EXPECT_EQ(result.ext_symbols[0].entry.address, 0x1001u);
+  EXPECT_FALSE(result.ext_symbols[0].entry.flags & TRIE_SYMBOL_IS_THUMB);
+}
+
+TEST(MachOTrieTest, ArmStubAndResolverMasksThumb) {
+  TrieBuilder b;
+  b.AddExport(b.Root(), "_foo", /*address=*/0x2000,
+              EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER, /*resolver=*/0x3001);
+
+  ParseResult result = Parse(b.Build(), /*is_arm=*/true);
+  ASSERT_TRUE(result.ok);
+  // The resolver address has its Thumb bit stripped on ARM.
+  EXPECT_EQ(result.resolver_addresses, std::set<lldb::addr_t>{0x3000});
+}
+
+TEST(MachOTrieTest, ResolverAddressBiasedByTextSegment) {
+  TrieBuilder b;
+  b.AddExport(b.Root(), "_foo", /*address=*/0x2000,
+              EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER, /*resolver=*/0x3000);
+
+  ParseResult result = Parse(b.Build(), /*is_arm=*/false,
+                             /*text_seg_base_addr=*/0x4000);
+  ASSERT_TRUE(result.ok);
+  EXPECT_EQ(result.resolver_addresses, std::set<lldb::addr_t>{0x7000});
+}
+
+TEST(MachOTrieTest, ReexportWithEmptyImportName) {
+  TrieBuilder b;
+  b.AddReexport(b.Root(), "_bar", /*dylib_ordinal=*/2, /*import_name=*/"");
+
+  ParseResult result = Parse(b.Build());
+  ASSERT_TRUE(result.ok);
+  // A re-export with no import name is dropped from both tables.
+  EXPECT_TRUE(result.reexports.empty());
+  EXPECT_TRUE(result.ext_symbols.empty());
+}
+
+TEST(MachOTrieTest, MixedExportsAndReexports) {
+  TrieBuilder b;
+  TrieBuilder::Node *root = b.Root();
+  b.AddExport(root, "_foo", 0x1000);
+  b.AddReexport(root, "_bar", /*dylib_ordinal=*/3, "_baz");
+
+  ParseResult result = Parse(b.Build());
+  ASSERT_TRUE(result.ok);
+  ASSERT_EQ(result.ext_symbols.size(), 1u);
+  EXPECT_EQ(result.ext_symbols[0].entry.name.GetStringRef(), "foo");
+  ASSERT_EQ(result.reexports.size(), 1u);
+  EXPECT_EQ(result.reexports[0].entry.name.GetStringRef(), "bar");
+  EXPECT_EQ(result.reexports[0].entry.import_name.GetStringRef(), "baz");
+}
+
+TEST(MachOTrieTest, ChildOffsetZeroSkipped) {
+  // A child whose node offset is zero is not followed (zero is the root).
+  std::vector<uint8_t> t;
+  AppendULEB128(t, 0); // terminalSize
+  t.push_back(1);      // childrenCount
+  AppendCStr(t, "_foo");
+  AppendOffset(t, 0); // childNodeOffset 0 -> not recursed
+
+  ParseResult result = Parse(t);
+  EXPECT_TRUE(result.ok);
+  EXPECT_TRUE(result.ext_symbols.empty());
+}
+
 TEST(MachOTrieTest, MalformedSelfCycle) {
   // Root --"a"--> node1 (@9) --"b"--> node1 (points to itself).
   std::vector<uint8_t> t;
@@ -334,4 +460,83 @@ TEST(MachOTrieTest, MalformedBackEdgeCycle) {
 
   ParseResult result = Parse(t);
   EXPECT_FALSE(result.ok);
+}
+
+TEST(MachOTrieTest, MalformedSharedSubtree) {
+  // Root(@0) has two children that both point at the same node (@34). A real
+  // trie reaches every node by exactly one path, so the visited-set rejects the
+  // reuse just like a cycle.
+  std::vector<uint8_t> t;
+  AppendULEB128(t, 0); // root terminalSize
+  t.push_back(2);      // root childrenCount
+  AppendCStr(t, "a");
+  AppendOffset(t, 16); // -> n1
+  AppendCStr(t, "b");
+  AppendOffset(t, 25); // -> n2
+  ASSERT_EQ(t.size(), 16u);
+  AppendULEB128(t, 0); // n1 terminalSize
+  t.push_back(1);      // n1 childrenCount
+  AppendCStr(t, "c");
+  AppendOffset(t, 34); // -> shared
+  ASSERT_EQ(t.size(), 25u);
+  AppendULEB128(t, 0); // n2 terminalSize
+  t.push_back(1);      // n2 childrenCount
+  AppendCStr(t, "d");
+  AppendOffset(t, 34); // -> shared (same node as n1's child)
+  ASSERT_EQ(t.size(), 34u);
+  std::vector<uint8_t> info;   // shared: a terminal export leaf
+  AppendULEB128(info, 0);      // flags
+  AppendULEB128(info, 0x1000); // address
+  AppendULEB128(t, info.size());
+  t.insert(t.end(), info.begin(), info.end());
+  t.push_back(0); // shared childrenCount
+
+  ParseResult result = Parse(t);
+  EXPECT_FALSE(result.ok);
+}
+
+TEST(MachOTrieTest, MalformedUnterminatedEdgeString) {
+  std::vector<uint8_t> t;
+  AppendULEB128(t, 0); // terminalSize
+  t.push_back(1);      // childrenCount
+  t.push_back('a');    // edge bytes with no null terminator before EOF
+  t.push_back('b');
+  t.push_back('c');
+
+  ParseResult result = Parse(t);
+  EXPECT_FALSE(result.ok);
+}
+
+TEST(MachOTrieTest, MalformedExcessChildrenCount) {
+  std::vector<uint8_t> t;
+  AppendULEB128(t, 0); // terminalSize
+  t.push_back(5);      // claims five children
+  AppendCStr(t, "a");
+  AppendOffset(t, 0); // childNodeOffset 0 -> not recursed
+  // ...but no data for the remaining four claimed children.
+
+  ParseResult result = Parse(t);
+  EXPECT_FALSE(result.ok);
+}
+
+TEST(MachOTrieTest, MalformedTruncatedTerminalSize) {
+  // A lone ULEB128 continuation byte with no following byte.
+  std::vector<uint8_t> t = {0x80};
+
+  ParseResult result = Parse(t);
+  EXPECT_TRUE(result.ok); // bounds-safe: decodes to 0, no children
+  EXPECT_TRUE(result.ext_symbols.empty());
+}
+
+TEST(MachOTrieTest, ChildOffsetOutOfRange) {
+  // A child node offset past the end of the data is ignored, not followed.
+  std::vector<uint8_t> t;
+  AppendULEB128(t, 0); // terminalSize
+  t.push_back(1);      // childrenCount
+  AppendCStr(t, "_foo");
+  AppendOffset(t, 1000); // child node offset well past the end
+
+  ParseResult result = Parse(t);
+  EXPECT_TRUE(result.ok);
+  EXPECT_TRUE(result.ext_symbols.empty());
 }
