@@ -14,80 +14,99 @@ using namespace clang::doc::markdown;
 
 namespace {
 
-TEST(MarkdownParserTest, EmptyInput) {
+struct MarkdownParserTest : public ::testing::Test {
   llvm::BumpPtrAllocator Arena;
+};
+
+TEST_F(MarkdownParserTest, EmptyInput) {
   auto Nodes = parseMarkdown("", Arena);
   EXPECT_TRUE(Nodes.empty());
 }
 
-TEST(MarkdownParserTest, WhitespaceOnlyInput) {
-  llvm::BumpPtrAllocator Arena;
+TEST_F(MarkdownParserTest, WhitespaceOnlyInput) {
   auto Nodes = parseMarkdown("   \n  \n", Arena);
   EXPECT_TRUE(Nodes.empty());
 }
 
-TEST(MarkdownParserTest, PlainText) {
-  llvm::BumpPtrAllocator Arena;
+TEST_F(MarkdownParserTest, PlainText) {
   auto Nodes = parseMarkdown("hello world", Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  EXPECT_EQ(Nodes[0].Kind, NodeKind::NK_Text);
-  EXPECT_EQ(Nodes[0].Content, "hello world");
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_Text);
+  EXPECT_EQ(N.Content, "hello world");
 }
 
-TEST(MarkdownParserTest, FencedCodeBlock) {
-  llvm::BumpPtrAllocator Arena;
-  auto Nodes = parseMarkdown("```cpp\nint x = 0;\n```", Arena);
+TEST_F(MarkdownParserTest, FencedCodeBlock) {
+  auto Nodes = parseMarkdown(R"(```cpp
+int x = 0;
+````)",
+                             Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  EXPECT_EQ(Nodes[0].Kind, NodeKind::NK_FencedCode);
-  EXPECT_EQ(Nodes[0].Content, "cpp");
-  ASSERT_EQ(Nodes[0].Children.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  EXPECT_EQ(N.Content, "cpp");
+  ASSERT_EQ(N.Children.size(), 1u);
 }
 
-TEST(MarkdownParserTest, FencedCodeBlockNoLang) {
-  llvm::BumpPtrAllocator Arena;
-  auto Nodes = parseMarkdown("```\nsome code\n```", Arena);
+TEST_F(MarkdownParserTest, FencedCodeBlockNoLang) {
+  auto Nodes = parseMarkdown(R"(```
+some code
+```)",
+                             Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  EXPECT_EQ(Nodes[0].Kind, NodeKind::NK_FencedCode);
-  EXPECT_TRUE(Nodes[0].Content.empty());
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  EXPECT_TRUE(N.Content.empty());
 }
 
-TEST(MarkdownParserTest, UnterminatedFenceReturnsEmpty) {
-  llvm::BumpPtrAllocator Arena;
-  auto Nodes = parseMarkdown("```cpp\nint x = 0;", Arena);
+TEST_F(MarkdownParserTest, UnterminatedFenceReturnsEmpty) {
+  auto Nodes = parseMarkdown(R"(```cpp
+int x = 0;)",
+                             Arena);
   // Unterminated fence should not crash and should produce a code node
   // with whatever lines were found.
   EXPECT_FALSE(Nodes.empty());
 }
 
-TEST(MarkdownParserTest, PipeTable) {
-  llvm::BumpPtrAllocator Arena;
-  auto Nodes = parseMarkdown("| A | B |\n|---|---|\n| 1 | 2 |", Arena);
+TEST_F(MarkdownParserTest, PipeTable) {
+  auto Nodes = parseMarkdown(R"(| A | B |
+|---|---|
+| 1 | 2 |)",
+                             Arena);
   ASSERT_EQ(Nodes.size(), 1u);
   EXPECT_EQ(Nodes[0].Kind, NodeKind::NK_Table);
 }
 
-TEST(MarkdownParserTest, PipeCharacterWithoutSepRowIsPlainText) {
-  llvm::BumpPtrAllocator Arena;
-  auto Nodes = parseMarkdown("a | b\nc | d", Arena);
-  // No separator row so should not be parsed as a table
+TEST_F(MarkdownParserTest, PipeCharacterWithoutSepRowIsPlainText) {
+  auto Nodes = parseMarkdown(R"(a | b
+c | d)",
+                             Arena);
+  // No separator row so should not be parsed as a table.
   for (const auto &Node : Nodes)
     EXPECT_NE(Node.Kind, NodeKind::NK_Table);
 }
 
-TEST(MarkdownParserTest, UnorderedList) {
-  llvm::BumpPtrAllocator Arena;
-  auto Nodes = parseMarkdown("- foo\n- bar\n- baz", Arena);
+TEST_F(MarkdownParserTest, UnorderedList) {
+  auto Nodes = parseMarkdown(R"(- foo
+- bar
+- baz)",
+                             Arena);
   ASSERT_EQ(Nodes.size(), 1u);
-  EXPECT_EQ(Nodes[0].Kind, NodeKind::NK_UnorderedList);
-  ASSERT_EQ(Nodes[0].Children.size(), 3u);
-  EXPECT_EQ(Nodes[0].Children[0].Content, "foo");
-  EXPECT_EQ(Nodes[0].Children[1].Content, "bar");
-  EXPECT_EQ(Nodes[0].Children[2].Content, "baz");
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_UnorderedList);
+  ASSERT_EQ(N.Children.size(), 3u);
+  EXPECT_EQ(N.Children[0].Content, "foo");
+  EXPECT_EQ(N.Children[1].Content, "bar");
+  EXPECT_EQ(N.Children[2].Content, "baz");
 }
 
-TEST(MarkdownParserTest, MixedContent) {
-  llvm::BumpPtrAllocator Arena;
-  auto Nodes = parseMarkdown("some text\n```\ncode\n```\n- item", Arena);
+TEST_F(MarkdownParserTest, MixedContent) {
+  auto Nodes = parseMarkdown(R"(some text
+```
+code
+````
+- item)",
+                             Arena);
   EXPECT_EQ(Nodes.size(), 3u);
 }
 

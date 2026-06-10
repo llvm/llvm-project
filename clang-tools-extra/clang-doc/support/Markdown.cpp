@@ -12,7 +12,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DebugLog.h"
 
-#define DEBUG_TYPE "clang-doc-markdown"
+#define DEBUG_TYPE "clang-doc"
 
 using namespace llvm;
 
