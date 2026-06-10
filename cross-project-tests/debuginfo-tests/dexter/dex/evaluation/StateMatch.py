@@ -124,7 +124,6 @@ def get_active_where_matches(
             scope.where in active_where_expects
             and active_where_expects[scope.where].frame_idx == 0
         ):
-            print(scope.where)
             active_where_expects[scope.where].active_thens.append(then)
 
     script.visit_script(
