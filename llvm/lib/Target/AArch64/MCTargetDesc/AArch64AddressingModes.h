@@ -360,7 +360,7 @@ static inline bool isLegalArithImmed(const uint64_t C) {
 // instructions and \returns the required shift for this immediate.
 static inline unsigned getArithImmedShift(const uint64_t C) {
   assert(isLegalArithImmed(C) &&
-         "Try to get shift amount for illegal immediate");
+         "Tried to get the shift amount for an illegal immediate");
   return C >> 12 == 0 ? 0 : 12;
 }
 
