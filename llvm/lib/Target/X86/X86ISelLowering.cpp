@@ -29474,7 +29474,7 @@ SDValue X86TargetLowering::LowerRESET_FPENV(SDValue Op,
   MachinePointerInfo MPI =
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MPI, MachineMemOperand::MOStore, X87StateSize, Align(4));
+      MPI, MachineMemOperand::MOLoad, X87StateSize, Align(4));
 
   return createSetFPEnvNodes(Env, Chain, DL, MVT::i32, MMO, DAG, Subtarget);
 }
