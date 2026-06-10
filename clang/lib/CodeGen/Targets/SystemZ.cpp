@@ -32,7 +32,7 @@ public:
   bool isCompoundType(QualType Ty) const;
   bool isVectorArgumentType(QualType Ty) const;
   llvm::Type *getFPArgumentType(QualType Ty, uint64_t Size) const;
-  QualType GetSingleElementType(QualType Ty) const;
+  QualType getSingleElementType(QualType Ty) const;
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType ArgTy) const;
@@ -207,7 +207,7 @@ llvm::Type *SystemZABIInfo::getFPArgumentType(QualType Ty,
   return nullptr;
 }
 
-QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
+QualType SystemZABIInfo::getSingleElementType(QualType Ty) const {
   const auto *RD = Ty->getAsRecordDecl();
   if (RD && RD->isStructureOrClass()) {
     QualType Found;
@@ -224,7 +224,7 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
 
           if (!Found.isNull())
             return Ty;
-          Found = GetSingleElementType(Base);
+          Found = getSingleElementType(Base);
         }
 
     // Check the fields.
@@ -241,7 +241,7 @@ QualType SystemZABIInfo::GetSingleElementType(QualType Ty) const {
       // Nested structures still do though.
       if (!Found.isNull())
         return Ty;
-      Found = GetSingleElementType(FD->getType());
+      Found = getSingleElementType(FD->getType());
     }
 
     // Unlike isSingleElementStruct(), trailing padding is allowed.
@@ -439,7 +439,7 @@ ABIArgInfo SystemZABIInfo::classifyArgumentType(QualType Ty) const {
   // as opposed to float-like structure types, we do not allow any
   // padding for vector-like structures, so verify the sizes match.
   uint64_t Size = getContext().getTypeSize(Ty);
-  QualType SingleElementTy = GetSingleElementType(Ty);
+  QualType SingleElementTy = getSingleElementType(Ty);
   if (isVectorArgumentType(SingleElementTy) &&
       getContext().getTypeSize(SingleElementTy) == Size)
     return ABIArgInfo::getDirect(CGT.ConvertType(SingleElementTy));
@@ -506,7 +506,7 @@ bool SystemZTargetCodeGenInfo::isVectorTypeBased(const Type *Ty,
     // be passed via "hidden" pointer where any extra alignment is not
     // required (per GCC).
     const Type *SingleEltTy = getABIInfo<SystemZABIInfo>()
-                                  .GetSingleElementType(QualType(Ty, 0))
+                                  .getSingleElementType(QualType(Ty, 0))
                                   .getTypePtr();
     bool SingleVecEltStruct = SingleEltTy != Ty && SingleEltTy->isVectorType() &&
       Ctx.getTypeSize(SingleEltTy) == Ctx.getTypeSize(Ty);
@@ -648,7 +648,7 @@ QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
   if (const RecordType *RT = Ty->getAsUnionType()) {
     QualType Found;
     // Check the fields.
-    const RecordDecl *RD = RT->getDecl();
+    const RecordDecl *RD = RT->getAsRecordDecl();
     for (const auto *FD : RD->fields()) {
       if (Found.isNull())
         Found = getSingleElementType(FD->getType());
