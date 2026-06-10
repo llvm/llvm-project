@@ -161,7 +161,8 @@ bool RISCVQCRelaxMarking::runOnMachineFunction(MachineFunction &MF) {
 
       // Looking for QC.E.LI followed by a load or store
       if (MI->getOpcode() != RISCV::QC_E_LI ||
-          !(RISCVInstrInfo::isBaseLoad(*NextMI) || RISCVInstrInfo::isBaseStore(*NextMI)))
+          !(RISCVInstrInfo::isBaseLoad(*NextMI) ||
+            RISCVInstrInfo::isBaseStore(*NextMI)))
         continue;
 
       LLVM_DEBUG(dbgs() << "Found QC_E_LI " << *MI);
