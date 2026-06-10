@@ -2128,7 +2128,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_BZERO:
-  case TargetOpcode::G_MEMSET: {
+  case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
+  {
     ArrayRef<MachineMemOperand *> MMOs = MI->memoperands();
     std::string Name = Opc == TargetOpcode::G_MEMSET ? "memset" : "bzero";
     if (MMOs.size() != 1) {

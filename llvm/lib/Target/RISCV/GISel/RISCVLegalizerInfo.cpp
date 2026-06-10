@@ -529,6 +529,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
 
   getActionDefinitionsBuilder(G_MEMCPY_INLINE).lower();
 
+  getActionDefinitionsBuilder(G_MEMSET_INLINE).lower();
+
   getActionDefinitionsBuilder({G_DYN_STACKALLOC, G_STACKSAVE, G_STACKRESTORE})
       .lower();
 

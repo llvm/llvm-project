@@ -1805,7 +1805,8 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     DstAlign = MSI->getDestAlign().valueOrOne();
   }
 
-  if (Opcode != TargetOpcode::G_MEMCPY_INLINE) {
+  if (Opcode != TargetOpcode::G_MEMCPY_INLINE &&
+      Opcode != TargetOpcode::G_MEMSET_INLINE) {
     // We need to propagate the tail call flag from the IR inst as an argument.
     // Otherwise, we have to pessimize and assume later that we cannot tail call
     // any memory intrinsics.

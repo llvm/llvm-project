@@ -1042,6 +1042,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_MEMCPY:
   case TargetOpcode::G_MEMCPY_INLINE:
   case TargetOpcode::G_MEMSET:
+  case TargetOpcode::G_MEMSET_INLINE:
     return selectMemOperation(ResVReg, I);
 
   case TargetOpcode::G_ICMP:

@@ -868,6 +868,8 @@ public:
 
   /// Emit stores that perform the given memset.
   /// Assumes \p MI is a G_MEMSET_INLINE
+  /// TODO: implement dynamically sized inline memset,
+  ///       and rename: s/bool tryEmit/void emit/
   LLVM_ABI bool tryEmitMemsetInline(MachineInstr &MI) const;
 
   /// Match:

@@ -4947,6 +4947,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_MEMCPY:
   case G_MEMMOVE:
   case G_MEMCPY_INLINE:
+  case G_MEMSET_INLINE:
     return lowerMemCpyFamily(MI);
   case G_ZEXT:
   case G_SEXT:
