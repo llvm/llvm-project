@@ -68,11 +68,17 @@ mlir::getControlFlowPredecessors(Value value) {
     if (!regionOp)
       return std::nullopt;
     // Add the control flow predecessor operands to the work list.
-    RegionSuccessor region = RegionSuccessor::parent();
+    RegionSuccessor parentSuccessor = RegionSuccessor::parent();
+    // Find the position of `opResult` in the successor inputs of the parent.
+    // `getPredecessorValues` indexes into the successor inputs, not into the
+    // op results directly, since some results may not be successor inputs.
+    ValueRange successorInputs = regionOp.getSuccessorInputs(parentSuccessor);
+    auto it = llvm::find(successorInputs, opResult);
+    if (it == successorInputs.end())
+      return std::nullopt;
     SmallVector<Value> predecessorOperands;
-    // TODO (#175168): This assumes that there are no non-successor-inputs
-    // in front of the op result.
-    regionOp.getPredecessorValues(region, opResult.getResultNumber(),
+    regionOp.getPredecessorValues(parentSuccessor,
+                                  std::distance(successorInputs.begin(), it),
                                   predecessorOperands);
     return predecessorOperands;
   }
@@ -83,12 +89,20 @@ mlir::getControlFlowPredecessors(Value value) {
   if (block->isEntryBlock()) {
     if (auto regionBranchOp =
             dyn_cast<RegionBranchOpInterface>(block->getParentOp())) {
-      RegionSuccessor region(blockArg.getParentRegion());
+      RegionSuccessor regionSuccessor(blockArg.getParentRegion());
+      // Find the position of `blockArg` in the successor inputs of the region.
+      // `getPredecessorValues` indexes into the successor inputs, not into the
+      // block arguments directly, since some block arguments may not be
+      // successor inputs (e.g., block arguments produced by the terminator).
+      ValueRange successorInputs =
+          regionBranchOp.getSuccessorInputs(regionSuccessor);
+      auto it = llvm::find(successorInputs, blockArg);
+      if (it == successorInputs.end())
+        return std::nullopt;
       SmallVector<Value> predecessorOperands;
-      // TODO (#175168): This assumes that there are no non-successor-inputs
-      // in front of the block argument.
-      regionBranchOp.getPredecessorValues(region, blockArg.getArgNumber(),
-                                          predecessorOperands);
+      regionBranchOp.getPredecessorValues(
+          regionSuccessor, std::distance(successorInputs.begin(), it),
+          predecessorOperands);
       return predecessorOperands;
     }
     // If the interface is not implemented, there are no control flow

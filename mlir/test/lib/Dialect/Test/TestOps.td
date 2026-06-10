@@ -2817,6 +2817,33 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
   }];
 }
 
+// An op that has a result and a block argument that are NOT successor inputs,
+// used to test the fix for issue #175168 in getControlFlowPredecessors.
+// - result #0 (extraResult): NOT a successor input to parent
+// - result #1 (iterResult): IS a successor input to parent
+// - body block arg #0: NOT a successor input to the body region
+// - body block arg #1: IS a successor input to the body region
+// This mirrors the scf.for induction variable / iter_arg structure.
+def LoopWithExtraResultYieldOp : TEST_Op<"loop_with_extra_result_yield",
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+        ["getMutableSuccessorOperands"]>,
+     Pure, Terminator]> {
+  let arguments = (ins I32:$iterArg);
+  let assemblyFormat = "$iterArg `:` type($iterArg) attr-dict";
+}
+
+def LoopWithExtraResultOp : TEST_Op<"loop_with_extra_result",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+     RecursiveMemoryEffects]> {
+  let results = (outs I32:$extraResult, I32:$iterResult);
+  let arguments = (ins I32:$init);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    $init `:` type($init) `->` `(` type($extraResult) `,` type($iterResult) `)` $body attr-dict
+  }];
+}
+
 def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
     NoTerminator,
     DeclareOpInterfaceMethods<RegionBranchOpInterface>

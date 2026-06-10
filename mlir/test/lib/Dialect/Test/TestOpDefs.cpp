@@ -1334,6 +1334,37 @@ LoopBlockTerminatorOp::getMutableSuccessorOperands(RegionSuccessor successor) {
 }
 
 //===----------------------------------------------------------------------===//
+// LoopWithExtraResultOp / LoopWithExtraResultYieldOp
+//===----------------------------------------------------------------------===//
+
+void LoopWithExtraResultOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // Parent always enters the body; the body can loop back or exit to parent.
+  regions.emplace_back(&getBody());
+  if (!point.isParent())
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+LoopWithExtraResultOp::getSuccessorInputs(RegionSuccessor successor) {
+  // When branching to the parent, only iterResult (result #1) is a successor
+  // input; extraResult (#0) is not. Similaly when branching to the body, only
+  // body block arg #1 (iterArg) is a successor input; arg #0 is not.
+  if (successor.isParent())
+    return getResults().drop_front(1);
+  return getBody().getArguments().drop_front(1);
+}
+
+OperandRange LoopWithExtraResultOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return MutableOperandRange(getInitMutable());
+}
+
+MutableOperandRange
+LoopWithExtraResultYieldOp::getMutableSuccessorOperands(RegionSuccessor) {
+  return getIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // TestCrashingReturnOp
 //===----------------------------------------------------------------------===//
 
