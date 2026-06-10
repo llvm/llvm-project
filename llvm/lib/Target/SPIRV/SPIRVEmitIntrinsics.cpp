@@ -546,6 +546,17 @@ static bool IsKernelArgInt8(Function *F, StoreInst *SI) {
          isa<Argument>(SI->getValueOperand());
 }
 
+// A pointer-typed local holds a pointer, so its deduced pointee must stay a
+// pointer.
+static bool tracesToPointerAlloca(Value *V) {
+  using namespace PatternMatch;
+  V = V->stripPointerCasts();
+  if (auto *AI = dyn_cast<AllocaInst>(V))
+    return isUntypedPointerTy(AI->getAllocatedType());
+  return match(V, m_Intrinsic<Intrinsic::spv_alloca>()) ||
+         match(V, m_Intrinsic<Intrinsic::spv_alloca_array>());
+}
+
 // Maybe restore original function return type.
 static inline Type *restoreMutatedType(SPIRVGlobalRegistry *GR, Instruction *I,
                                        Type *Ty) {
@@ -1404,8 +1415,18 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
                                  StructuredGEPInst::getPointerOperandIndex()));
   } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
     KnownElemTy = I->getType();
-    if (isUntypedPointerTy(KnownElemTy))
-      return;
+    if (isUntypedPointerTy(KnownElemTy)) {
+      // A T** loaded back from its alloca comes out opaque, dropping a info.
+      // When the load is a pointer-to-pointer, type the alloca as that pointer.
+      Type *LoadedElemTy = GR->findDeducedElementType(I);
+      if (!LoadedElemTy || !isPointerTyOrWrapper(LoadedElemTy))
+        return;
+      Value *Root = Ref->getPointerOperand()->stripPointerCasts();
+      if (!isa<AllocaInst>(Root))
+        return;
+      KnownElemTy = getTypedPointerWrapper(
+          LoadedElemTy, getPointerAddressSpace(KnownElemTy));
+    }
     Type *PointeeTy = GR->findDeducedElementType(Ref->getPointerOperand());
     if (PointeeTy && !isUntypedPointerTy(PointeeTy))
       return;
@@ -1510,7 +1531,12 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
       continue;
     Value *OpTyVal = getNormalizedPoisonValue(KnownElemTy);
     Type *OpTy = Op->getType();
-    if (Op->hasUseList() &&
+    // Do not let a non-pointer element type clobber an already-deduced pointer
+    // pointee.
+    bool WouldClobberPtrWithNonPtr = Ty && isPointerTyOrWrapper(Ty) &&
+                                     !isPointerTyOrWrapper(KnownElemTy) &&
+                                     tracesToPointerAlloca(Op);
+    if (Op->hasUseList() && !WouldClobberPtrWithNonPtr &&
         (!Ty || AskTy || isUntypedPointerTy(Ty) || isTodoType(Op))) {
       Type *PrevElemTy = GR->findDeducedElementType(Op);
       GR->addDeducedElementType(Op, normalizeType(KnownElemTy));
@@ -2144,6 +2170,15 @@ void SPIRVEmitIntrinsics::replacePointerOperandWithPtrCast(
       return;
     }
   }
+
+  // Never replace an already-deduced pointer pointee with a non-pointer one.
+  // The conflicting use comes from a mis-deduced expected type. Leave the
+  // operand untouched rather than emitting a ptrcast that re-introduces
+  // the collapsed type at the use site.
+  if (PointerElemTy && isPointerTyOrWrapper(PointerElemTy) &&
+      !isPointerTyOrWrapper(ExpectedElementType) &&
+      tracesToPointerAlloca(Pointer))
+    return;
 
   if (isa<Instruction>(Pointer) || isa<Argument>(Pointer)) {
     if (FirstPtrCastOrAssignPtrType) {
