@@ -5,7 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+///
+/// \file
+/// Unit tests for regex AST expressions and pool.
+///
+//===----------------------------------------------------------------------===//
 #include "hdr/regex_macros.h"
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_expr_pool.h"
@@ -35,6 +39,24 @@ TEST(LlvmLibcRegexExprTest, Interning) {
   auto empty_str_1 = pool.empty_str();
   auto empty_str_2 = pool.empty_str();
   EXPECT_EQ(empty_str_1.value(), empty_str_2.value());
+}
+
+TEST(LlvmLibcRegexExprTest, RecursiveInterning) {
+  ExprPool pool;
+  auto lit_a = pool.make_lit('a').value();
+  auto lit_b = pool.make_lit('b').value();
+  auto lit_c = pool.make_lit('c').value();
+
+  // Create (a · b) | c
+  auto concat1 = pool.make_concat(lit_a, lit_b).value();
+  auto alt1 = pool.make_alt(concat1, lit_c).value();
+
+  // Create (a · b) | c again
+  auto concat2 = pool.make_concat(lit_a, lit_b).value();
+  auto alt2 = pool.make_alt(concat2, lit_c).value();
+
+  EXPECT_EQ(alt1, alt2);
+  EXPECT_EQ(concat1, concat2);
 }
 
 TEST(LlvmLibcRegexExprTest, AlgebraicIdentitiesConcat) {
