@@ -28,23 +28,23 @@ void HWEventSet::dump() const {
   dbgs() << "\n";
 }
 
-static std::optional<HWEvent>
-getExpertSchedulingEventType(const MachineInstr &Inst, const SIInstrInfo &TII) {
+static HWEventSet getExpertSchedulingEventType(const MachineInstr &Inst,
+                                               const SIInstrInfo &TII) {
   if (TII.isVALU(Inst)) {
     // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
     // out-of-order with respect to each other, so each of these classes
     // has its own event.
 
     if (TII.isXDL(Inst))
-      return HWEvent::VGPR_XDL_WRITE;
+      return {HWEvent::VGPR_XDL_WRITE};
 
     if (TII.isTRANS(Inst))
-      return HWEvent::VGPR_TRANS_WRITE;
+      return {HWEvent::VGPR_TRANS_WRITE};
 
     if (AMDGPU::isDPMACCInstruction(Inst.getOpcode()))
-      return HWEvent::VGPR_DPMACC_WRITE;
+      return {HWEvent::VGPR_DPMACC_WRITE};
 
-    return HWEvent::VGPR_CSMACC_WRITE;
+    return {HWEvent::VGPR_CSMACC_WRITE};
   }
 
   // FLAT and LDS instructions may read their VGPR sources out-of-order
@@ -52,16 +52,15 @@ getExpertSchedulingEventType(const MachineInstr &Inst, const SIInstrInfo &TII) {
   // each of these also has a separate event.
 
   if (TII.isFLAT(Inst))
-    return HWEvent::VGPR_FLAT_READ;
+    return {HWEvent::VGPR_FLAT_READ};
 
   if (TII.isDS(Inst))
-    return HWEvent::VGPR_LDS_READ;
+    return {HWEvent::VGPR_LDS_READ};
 
   if (TII.isVMEM(Inst) || TII.isVIMAGE(Inst) || TII.isVSAMPLE(Inst))
-    return HWEvent::VGPR_VMEM_READ;
+    return {HWEvent::VGPR_VMEM_READ};
 
   // Otherwise, no hazard.
-
   return {};
 }
 
@@ -116,10 +115,8 @@ HWEventSet getEventsFor(const MachineInstr &Inst, const GCNSubtarget &ST,
   const SIInstrInfo &TII = *ST.getInstrInfo();
 
   HWEventSet Events;
-  if (IsExpertMode) {
-    if (const auto ET = getExpertSchedulingEventType(Inst, TII))
-      Events.insert(*ET);
-  }
+  if (IsExpertMode)
+    Events |= getExpertSchedulingEventType(Inst, TII);
 
   if (TII.isDS(Inst) && TII.usesLGKM_CNT(Inst)) {
     if (TII.isAlwaysGDS(Inst.getOpcode()) ||
