@@ -1674,7 +1674,24 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                                    mlir::ValueRange{a, b, c}));
   }
   case Builtin::BI__builtin_elementwise_add_sat:
-  case Builtin::BI__builtin_elementwise_sub_sat:
+  case Builtin::BI__builtin_elementwise_sub_sat: {
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value op0 = emitScalarExpr(e->getArg(0));
+    mlir::Value op1 = emitScalarExpr(e->getArg(1));
+    QualType ty = e->getArg(0)->getType();
+    if (const auto *vecTy = ty->getAs<clang::VectorType>())
+      ty = vecTy->getElementType();
+    assert(ty->isIntegerType() &&
+           "elementwise saturating builtins require integer operands");
+    bool isSigned = ty->isSignedIntegerType();
+    llvm::StringRef name;
+    if (builtinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_add_sat)
+      name = isSigned ? "sadd.sat" : "uadd.sat";
+    else
+      name = isSigned ? "ssub.sat" : "usub.sat";
+    return RValue::get(builder.emitIntrinsicCallOp(loc, name, op0.getType(),
+                                                   mlir::ValueRange{op0, op1}));
+  }
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min:
   case Builtin::BI__builtin_elementwise_maxnum:
