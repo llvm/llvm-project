@@ -232,7 +232,8 @@ define void @common_value_undef(i32 noundef %a) {
 ; CHECK:       dead:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[U]], true
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[U]], [[DEAD:%.*]] ], [ false, [[HEADER]] ]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[P]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
 ; CHECK-NEXT:    ret void
 ;

@@ -2044,6 +2044,23 @@ Constant *LazyValueInfo::getConstantOnEdge(Value *V, BasicBlock *FromBB,
   return nullptr;
 }
 
+Constant *LazyValueInfo::getKnownNonUndefConstantOnEdge(Value *V,
+                                                        BasicBlock *FromBB,
+                                                        BasicBlock *ToBB,
+                                                        Instruction *CxtI) {
+  ValueLatticeElement Result =
+      getOrCreateImpl().getValueOnEdge(V, FromBB, ToBB, CxtI);
+
+  if (Result.isConstant(/*UndefAllowed=*/false))
+    return Result.getConstant();
+  if (Result.isConstantRange() && !Result.isConstantRangeIncludingUndef()) {
+    const ConstantRange &CR = Result.getConstantRange();
+    if (const APInt *SingleVal = CR.getSingleElement())
+      return ConstantInt::get(V->getType(), *SingleVal);
+  }
+  return nullptr;
+}
+
 ConstantRange LazyValueInfo::getConstantRangeOnEdge(Value *V,
                                                     BasicBlock *FromBB,
                                                     BasicBlock *ToBB,
