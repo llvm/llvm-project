@@ -32,8 +32,9 @@ AMDGPUOpenMPToolChain::AMDGPUOpenMPToolChain(const Driver &D,
 
 void AMDGPUOpenMPToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
-  HostTC.addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadingKind);
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadingKind) const {
+  HostTC.addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                               DeviceOffloadingKind);
 
   assert(DeviceOffloadingKind == Action::OFK_OpenMP &&
          "Only OpenMP offloading kinds are supported.");

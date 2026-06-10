@@ -754,9 +754,9 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const;
 
   /// Add options that need to be passed to cc1 for this target.
-  virtual void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                                     llvm::opt::ArgStringList &CC1Args,
-                                     Action::OffloadKind DeviceOffloadKind) const;
+  virtual void addClangTargetOptions(
+      const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+      llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const;
 
   /// Add options that need to be passed to cc1as for this target.
   virtual void

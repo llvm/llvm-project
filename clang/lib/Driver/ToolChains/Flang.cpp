@@ -533,7 +533,7 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
   }
 
   const ToolChain &TC = getToolChain();
-  TC.addClangTargetOptions(Args, CmdArgs, Action::OffloadKind::OFK_OpenMP);
+  TC.addClangTargetOptions(Args, CmdArgs, "", Action::OffloadKind::OFK_OpenMP);
 }
 
 void Flang::AddNVPTXTargetArgs(const ArgList &Args,

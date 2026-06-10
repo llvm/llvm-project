@@ -1491,7 +1491,7 @@ void ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 }
 
 void ToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadKind) const {}
 
 void ToolChain::addClangCC1ASTargetOptions(const ArgList &Args,
