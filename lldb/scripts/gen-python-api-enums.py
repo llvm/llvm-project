@@ -12,6 +12,7 @@ the `{build-include}` directive (see `lldb/docs/_ext/build_include.py`).
 
 import argparse
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 # Matches the start of an enum declaration up to and including the opening
@@ -42,11 +43,11 @@ CONSTANT_GROUP_ORDER = [
 ]
 
 
-def slugify(text):
+def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
-def clean_comment(text):
+def clean_comment(text: str) -> str:
     """Strip a doc-comment fragment down to its prose."""
     return DOXYGEN_CMD_RE.sub("", text).rstrip()
 
@@ -54,10 +55,10 @@ def clean_comment(text):
 @dataclass
 class Member:
     name: str
-    desc: list = field(default_factory=list)  # lines; "" marks a paragraph break
+    desc: list[str] = field(default_factory=list)  # lines; "" marks a paragraph break
 
 
-def parse_enum_body(body):
+def parse_enum_body(body: str) -> list[Member]:
     """Parse the body of an enum into a list of documented members.
 
     Comment association follows Doxygen conventions, with one accommodation for
@@ -73,7 +74,7 @@ def parse_enum_body(body):
     awaiting_name = True  # next identifier starts a new member
     depth = 0  # parenthesis nesting, to find top-level commas
 
-    def attach_lead(member):
+    def attach_lead(member: Member) -> None:
         # Drop a leading line that merely repeats the member name (the style
         # used by CommandFlags) along with its trailing blank.
         lead = pending_lead[:]
@@ -100,6 +101,7 @@ def parse_enum_body(body):
                 depth += 1
             elif ch == ")":
                 depth -= 1
+                assert depth >= 0
             elif ch == "," and depth == 0:
                 awaiting_name = True
             elif awaiting_name and (ch.isalpha() or ch == "_"):
@@ -123,7 +125,7 @@ def parse_enum_body(body):
         if comment is not None:
             has_code = bool(code.strip())
             if comment.startswith("///<"):
-                text = clean_comment(comment[4:].lstrip())
+                text = clean_comment(comment.removeprefix("///<").lstrip())
                 if has_code and current is not None:
                     current.desc.append(text)
                     in_trailing = True
@@ -132,7 +134,7 @@ def parse_enum_body(body):
                 else:
                     pending_lead.append(text)
             elif comment.startswith("///"):
-                text = clean_comment(comment[3:].lstrip())
+                text = clean_comment(comment.removeprefix("///").lstrip())
                 if has_code and current is not None:
                     current.desc.append(text)
                     in_trailing = True
@@ -151,7 +153,7 @@ def parse_enum_body(body):
     return members
 
 
-def parse_enums(text):
+def parse_enums(text: str) -> Iterator[tuple[str, list[str], list[Member]]]:
     """Yield (name, description_lines, members) for each enum in the header."""
     for match in ENUM_RE.finditer(text):
         name = match.group("name") or match.group("flags_name")
@@ -164,7 +166,7 @@ def parse_enums(text):
         yield name, leading_description(text[: match.start()]), members
 
 
-def leading_description(preceding_text):
+def leading_description(preceding_text: str) -> list[str]:
     """Collect the `///` doc comment immediately above a declaration."""
     lines = []
     for line in reversed(preceding_text.splitlines()):
@@ -177,7 +179,7 @@ def leading_description(preceding_text):
     for line in lines:
         stripped = line.strip()
         if stripped.startswith("///"):
-            desc.append(clean_comment(stripped[3:].lstrip()))
+            desc.append(clean_comment(stripped.removeprefix("///").lstrip()))
     while desc and desc[0] == "":
         desc.pop(0)
     while desc and desc[-1] == "":
@@ -185,7 +187,7 @@ def leading_description(preceding_text):
     return desc
 
 
-def classify_constant(name):
+def classify_constant(name: str) -> str:
     if name.startswith("LLDB_REGNUM_GENERIC_"):
         return "Generic register numbers"
     if name == "LLDB_INVALID_CPUTYPE" or name.startswith("LLDB_ARCH_"):
@@ -197,7 +199,7 @@ def classify_constant(name):
     return "Miscellaneous constants"
 
 
-def parse_constants(text):
+def parse_constants(text: str) -> dict[str, list[Member]]:
     """Parse value `#define LLDB_*` constants grouped for presentation."""
     # Join backslash line continuations so a define and its trailing comment
     # form a single logical line.
@@ -224,7 +226,7 @@ def parse_constants(text):
     return groups
 
 
-def format_directive(out, member):
+def format_directive(out: list[str], member: Member) -> None:
     out.append("```{eval-rst}")
     out.append(f".. py:data:: {member.name}")
     desc = member.desc[:]
@@ -240,14 +242,14 @@ def format_directive(out, member):
     out.append("")
 
 
-def format_paragraphs(out, lines):
+def format_paragraphs(out: list[str], lines: list[str]) -> None:
     for line in lines:
         out.append(line)
     if lines:
         out.append("")
 
 
-def generate(enums_text, defines_text):
+def generate(enums_text: str, defines_text: str) -> str:
     out = []
     out.append("# Python API enumerators and constants")
     out.append("")
@@ -284,7 +286,7 @@ def generate(enums_text, defines_text):
     return "\n".join(out).rstrip() + "\n"
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         prog="gen-python-api-enums",
         description="Generate the Python API enums/constants doc from headers",
