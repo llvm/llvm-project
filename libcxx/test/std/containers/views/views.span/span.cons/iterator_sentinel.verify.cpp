@@ -5,15 +5,19 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-// template <class It, class End>
-// constexpr explicit(Extent != dynamic_extent) span(It first, End last);
-// Requires: [first, last) shall be a valid range.
-//   If Extent is not equal to dynamic_extent, then last - first shall be equal to Extent.
+// template<class It, class End>
+//   constexpr explicit(extent != dynamic_extent) span(It first, End last);
 //
+// Preconditions:
+//   - [first, last) is a valid range.
+//
+// Hardened preconditions:
+//   If extent is not equal to dynamic_extent, then (last - first) == extent is true.
 
 #include <cstddef>
 #include <iterator>

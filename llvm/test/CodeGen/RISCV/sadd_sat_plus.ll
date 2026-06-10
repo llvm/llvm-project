@@ -36,8 +36,8 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; RV64IZbb-LABEL: func32:
 ; RV64IZbb:       # %bb.0:
-; RV64IZbb-NEXT:    sext.w a0, a0
 ; RV64IZbb-NEXT:    mulw a1, a1, a2
+; RV64IZbb-NEXT:    sext.w a0, a0
 ; RV64IZbb-NEXT:    lui a2, 524288
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    addiw a1, a2, -1
@@ -52,16 +52,16 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32I-LABEL: func64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a2, a1
-; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    add a3, a2, a5
+; RV32I-NEXT:    mv a2, a0
+; RV32I-NEXT:    mv a3, a1
 ; RV32I-NEXT:    add a0, a0, a4
-; RV32I-NEXT:    xor a5, a2, a5
-; RV32I-NEXT:    sltu a1, a0, a1
-; RV32I-NEXT:    add a1, a3, a1
-; RV32I-NEXT:    xor a2, a2, a1
-; RV32I-NEXT:    not a3, a5
-; RV32I-NEXT:    and a2, a3, a2
+; RV32I-NEXT:    add a1, a1, a5
+; RV32I-NEXT:    sltu a2, a0, a2
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    xor a5, a3, a5
+; RV32I-NEXT:    xor a3, a3, a1
+; RV32I-NEXT:    not a2, a5
+; RV32I-NEXT:    and a2, a2, a3
 ; RV32I-NEXT:    bgez a2, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    srai a0, a1, 31
@@ -78,8 +78,8 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV64-NEXT:    srli a2, a2, 63
 ; RV64-NEXT:    beq a2, a1, .LBB1_2
 ; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    li a1, -1
+; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    slli a1, a1, 63
 ; RV64-NEXT:    xor a0, a0, a1
 ; RV64-NEXT:  .LBB1_2:
@@ -87,15 +87,15 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ;
 ; RV32IZbb-LABEL: func64:
 ; RV32IZbb:       # %bb.0:
-; RV32IZbb-NEXT:    mv a2, a1
-; RV32IZbb-NEXT:    mv a1, a0
-; RV32IZbb-NEXT:    add a3, a2, a5
+; RV32IZbb-NEXT:    mv a2, a0
+; RV32IZbb-NEXT:    mv a3, a1
 ; RV32IZbb-NEXT:    add a0, a0, a4
-; RV32IZbb-NEXT:    sltu a1, a0, a1
-; RV32IZbb-NEXT:    add a1, a3, a1
-; RV32IZbb-NEXT:    xor a3, a2, a1
-; RV32IZbb-NEXT:    xor a2, a2, a5
-; RV32IZbb-NEXT:    andn a2, a3, a2
+; RV32IZbb-NEXT:    add a1, a1, a5
+; RV32IZbb-NEXT:    sltu a2, a0, a2
+; RV32IZbb-NEXT:    add a1, a1, a2
+; RV32IZbb-NEXT:    xor a2, a3, a1
+; RV32IZbb-NEXT:    xor a3, a3, a5
+; RV32IZbb-NEXT:    andn a2, a2, a3
 ; RV32IZbb-NEXT:    bgez a2, .LBB1_2
 ; RV32IZbb-NEXT:  # %bb.1:
 ; RV32IZbb-NEXT:    srai a0, a1, 31
@@ -111,12 +111,12 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; RV32I-LABEL: func16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 16
 ; RV32I-NEXT:    mul a1, a1, a2
-; RV32I-NEXT:    lui a2, 8
+; RV32I-NEXT:    slli a0, a0, 16
 ; RV32I-NEXT:    srai a0, a0, 16
 ; RV32I-NEXT:    slli a1, a1, 16
 ; RV32I-NEXT:    srai a1, a1, 16
+; RV32I-NEXT:    lui a2, 8
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    addi a1, a2, -1
 ; RV32I-NEXT:    bge a0, a1, .LBB2_3
@@ -135,12 +135,12 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ;
 ; RV64I-LABEL: func16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    mul a1, a1, a2
-; RV64I-NEXT:    lui a2, 8
+; RV64I-NEXT:    slli a0, a0, 48
 ; RV64I-NEXT:    srai a0, a0, 48
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srai a1, a1, 48
+; RV64I-NEXT:    lui a2, 8
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    addi a1, a2, -1
 ; RV64I-NEXT:    bge a0, a1, .LBB2_3
@@ -159,12 +159,12 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ;
 ; RV32IZbb-LABEL: func16:
 ; RV32IZbb:       # %bb.0:
-; RV32IZbb-NEXT:    sext.h a0, a0
 ; RV32IZbb-NEXT:    mul a1, a1, a2
-; RV32IZbb-NEXT:    lui a2, 8
+; RV32IZbb-NEXT:    sext.h a0, a0
 ; RV32IZbb-NEXT:    sext.h a1, a1
-; RV32IZbb-NEXT:    addi a2, a2, -1
+; RV32IZbb-NEXT:    lui a2, 8
 ; RV32IZbb-NEXT:    add a0, a0, a1
+; RV32IZbb-NEXT:    addi a2, a2, -1
 ; RV32IZbb-NEXT:    min a0, a0, a2
 ; RV32IZbb-NEXT:    lui a1, 1048568
 ; RV32IZbb-NEXT:    max a0, a0, a1
@@ -172,12 +172,12 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ;
 ; RV64IZbb-LABEL: func16:
 ; RV64IZbb:       # %bb.0:
-; RV64IZbb-NEXT:    sext.h a0, a0
 ; RV64IZbb-NEXT:    mul a1, a1, a2
-; RV64IZbb-NEXT:    lui a2, 8
+; RV64IZbb-NEXT:    sext.h a0, a0
 ; RV64IZbb-NEXT:    sext.h a1, a1
-; RV64IZbb-NEXT:    addi a2, a2, -1
+; RV64IZbb-NEXT:    lui a2, 8
 ; RV64IZbb-NEXT:    add a0, a0, a1
+; RV64IZbb-NEXT:    addi a2, a2, -1
 ; RV64IZbb-NEXT:    min a0, a0, a2
 ; RV64IZbb-NEXT:    lui a1, 1048568
 ; RV64IZbb-NEXT:    max a0, a0, a1
@@ -190,8 +190,8 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ; RV32I-LABEL: func8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 24
 ; RV32I-NEXT:    mul a1, a1, a2
+; RV32I-NEXT:    slli a0, a0, 24
 ; RV32I-NEXT:    srai a0, a0, 24
 ; RV32I-NEXT:    slli a1, a1, 24
 ; RV32I-NEXT:    srai a1, a1, 24
@@ -213,8 +213,8 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ;
 ; RV64I-LABEL: func8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 56
 ; RV64I-NEXT:    mul a1, a1, a2
+; RV64I-NEXT:    slli a0, a0, 56
 ; RV64I-NEXT:    srai a0, a0, 56
 ; RV64I-NEXT:    slli a1, a1, 56
 ; RV64I-NEXT:    srai a1, a1, 56
@@ -236,24 +236,24 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 ;
 ; RV32IZbb-LABEL: func8:
 ; RV32IZbb:       # %bb.0:
-; RV32IZbb-NEXT:    sext.b a0, a0
 ; RV32IZbb-NEXT:    mul a1, a1, a2
-; RV32IZbb-NEXT:    li a2, 127
+; RV32IZbb-NEXT:    sext.b a0, a0
 ; RV32IZbb-NEXT:    sext.b a1, a1
 ; RV32IZbb-NEXT:    add a0, a0, a1
-; RV32IZbb-NEXT:    min a0, a0, a2
+; RV32IZbb-NEXT:    li a1, 127
+; RV32IZbb-NEXT:    min a0, a0, a1
 ; RV32IZbb-NEXT:    li a1, -128
 ; RV32IZbb-NEXT:    max a0, a0, a1
 ; RV32IZbb-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func8:
 ; RV64IZbb:       # %bb.0:
-; RV64IZbb-NEXT:    sext.b a0, a0
 ; RV64IZbb-NEXT:    mul a1, a1, a2
-; RV64IZbb-NEXT:    li a2, 127
+; RV64IZbb-NEXT:    sext.b a0, a0
 ; RV64IZbb-NEXT:    sext.b a1, a1
 ; RV64IZbb-NEXT:    add a0, a0, a1
-; RV64IZbb-NEXT:    min a0, a0, a2
+; RV64IZbb-NEXT:    li a1, 127
+; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    li a1, -128
 ; RV64IZbb-NEXT:    max a0, a0, a1
 ; RV64IZbb-NEXT:    ret
@@ -265,8 +265,8 @@ define i8 @func8(i8 %x, i8 %y, i8 %z) nounwind {
 define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ; RV32I-LABEL: func4:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 28
 ; RV32I-NEXT:    mul a1, a1, a2
+; RV32I-NEXT:    slli a0, a0, 28
 ; RV32I-NEXT:    srai a0, a0, 28
 ; RV32I-NEXT:    slli a1, a1, 28
 ; RV32I-NEXT:    srai a1, a1, 28
@@ -288,8 +288,8 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ;
 ; RV64I-LABEL: func4:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 60
 ; RV64I-NEXT:    mul a1, a1, a2
+; RV64I-NEXT:    slli a0, a0, 60
 ; RV64I-NEXT:    srai a0, a0, 60
 ; RV64I-NEXT:    slli a1, a1, 60
 ; RV64I-NEXT:    srai a1, a1, 60
@@ -311,28 +311,28 @@ define i4 @func4(i4 %x, i4 %y, i4 %z) nounwind {
 ;
 ; RV32IZbb-LABEL: func4:
 ; RV32IZbb:       # %bb.0:
-; RV32IZbb-NEXT:    slli a0, a0, 28
 ; RV32IZbb-NEXT:    mul a1, a1, a2
-; RV32IZbb-NEXT:    li a2, 7
+; RV32IZbb-NEXT:    slli a0, a0, 28
 ; RV32IZbb-NEXT:    srai a0, a0, 28
 ; RV32IZbb-NEXT:    slli a1, a1, 28
 ; RV32IZbb-NEXT:    srai a1, a1, 28
 ; RV32IZbb-NEXT:    add a0, a0, a1
-; RV32IZbb-NEXT:    min a0, a0, a2
+; RV32IZbb-NEXT:    li a1, 7
+; RV32IZbb-NEXT:    min a0, a0, a1
 ; RV32IZbb-NEXT:    li a1, -8
 ; RV32IZbb-NEXT:    max a0, a0, a1
 ; RV32IZbb-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func4:
 ; RV64IZbb:       # %bb.0:
-; RV64IZbb-NEXT:    slli a0, a0, 60
 ; RV64IZbb-NEXT:    mul a1, a1, a2
-; RV64IZbb-NEXT:    li a2, 7
+; RV64IZbb-NEXT:    slli a0, a0, 60
 ; RV64IZbb-NEXT:    srai a0, a0, 60
 ; RV64IZbb-NEXT:    slli a1, a1, 60
 ; RV64IZbb-NEXT:    srai a1, a1, 60
 ; RV64IZbb-NEXT:    add a0, a0, a1
-; RV64IZbb-NEXT:    min a0, a0, a2
+; RV64IZbb-NEXT:    li a1, 7
+; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    li a1, -8
 ; RV64IZbb-NEXT:    max a0, a0, a1
 ; RV64IZbb-NEXT:    ret

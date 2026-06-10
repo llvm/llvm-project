@@ -570,4 +570,118 @@ TEST_F(UnsafeBufferUsageTest, NestedDefinitions2) {
   EXPECT_EQ(Sum, nullptr);
 }
 
+TEST_F(UnsafeBufferUsageTest, UnaryPlusSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo(int *p) {
+      (+p)[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"p", 1U}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, PredefinedExprSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      __func__[100];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, IntegerLiteralCastSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      ((int *)0)[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, CXXNewArraySubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      (new int[10])[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, CXXNullPtrSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    void foo() {
+      ((int*)nullptr)[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, CXXThisSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    struct S {
+      void foo() {
+        this[5];
+      }
+    };
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_EQ(Sum, nullptr);
+}
+
+TEST_F(UnsafeBufferUsageTest, ExprWithCleanupsSubscript) {
+  ASSERT_TRUE(setUpTest(R"cpp(
+    struct Guard { ~Guard(); };
+    int *getPtr(Guard);
+    void foo() {
+      getPtr(Guard{})[5];
+    }
+  )cpp"));
+  const auto *Sum = getEntitySummary("foo");
+
+  EXPECT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"getPtr", 1U, true}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, MaterializeTemporaryExpr) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    struct S { int *get(); };
+    void foo(int *p) {
+      S{}.get()[5];
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"get", 1U, true}}));
+}
+
+TEST_F(UnsafeBufferUsageTest, CXXScalarValueInitExpr) {
+  ASSERT_EQ(setUpTest(R"cpp(
+    using IntPtr = int*;
+
+    void foo(int *q) {
+      int p = IntPtr()[5]; // no EPL created for CXXScalarValueInitExpr
+      q[5];
+    }
+  )cpp"),
+            true);
+
+  auto *Sum = getEntitySummary("foo");
+
+  ASSERT_NE(Sum, nullptr);
+  EXPECT_EQ(*Sum, makeSet(__LINE__, {{"q", 1U}}));
+}
 } // namespace
