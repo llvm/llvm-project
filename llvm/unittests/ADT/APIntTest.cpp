@@ -4011,22 +4011,22 @@ TEST(APIntTest, clmulh) {
             21845);
 }
 
-TEST(APIntTest, isqrt) {
-  EXPECT_EQ(APInt::getMaxValue(64).isqrt(), 4294967295U);
-  EXPECT_EQ(APInt::getMaxValue(128).isqrt(),
+TEST(APIntTest, sqrtFloor) {
+  EXPECT_EQ(APInt::getMaxValue(64).sqrtFloor(), 4294967295U);
+  EXPECT_EQ(APInt::getMaxValue(128).sqrtFloor(),
             APInt(128, "18446744073709551615", 10));
-  EXPECT_EQ(APInt::getMaxValue(256).isqrt(),
+  EXPECT_EQ(APInt::getMaxValue(256).sqrtFloor(),
             APInt(256, "340282366920938463463374607431768211455", 10));
   // Exhaustive test for smallish inputs.
   for (unsigned N : seq(1000u)) {
-    unsigned S = APInt(32, N).isqrt().getZExtValue();
+    unsigned S = APInt(32, N).sqrtFloor().getZExtValue();
     EXPECT_LE(S * S, N);
     EXPECT_GT((S + 1) * (S + 1), N);
   }
   // Test some values around an arbitrary square larger than 2^52.
   for (uint64_t I : seq(1000ull)) {
     uint64_t N = 87654321ull * 87654321ull + I - 500ull;
-    uint64_t S = APInt(64, N).isqrt().getZExtValue();
+    uint64_t S = APInt(64, N).sqrtFloor().getZExtValue();
     EXPECT_LE(S * S, N);
     EXPECT_GT((S + 1) * (S + 1), N);
   }

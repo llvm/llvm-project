@@ -152,7 +152,7 @@ Makes programs 10x faster by doing Special New Thing.
   TableGen to improve compile-time.
 
 * ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
-  with ``APInt::isqrt`` (floor of square root).
+  with ``APInt::sqrtFloor`` (floor of square root).
 
 ### Changes to building LLVM
 

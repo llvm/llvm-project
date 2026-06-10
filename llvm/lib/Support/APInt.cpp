@@ -1239,7 +1239,7 @@ unsigned APInt::nearestLogBase2() const {
 // the libc sqrt function is called. The result is rounded and then converted
 // back to a uint64_t which is then used to construct the result. Finally,
 // the Babylonian method for computing square roots is used.
-APInt APInt::isqrt() const {
+APInt APInt::sqrtFloor() const {
 
   // Determine the magnitude of the value.
   unsigned magnitude = getActiveBits();
@@ -2974,7 +2974,7 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
 
   APInt D = SqrB - 4*A*C;
   assert(D.isNonNegative() && "Negative discriminant");
-  APInt SQ = D.isqrt();
+  APInt SQ = D.sqrtFloor();
 
   APInt Q = SQ * SQ;
   bool InexactSQ = Q != D;
