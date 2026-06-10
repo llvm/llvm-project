@@ -142,7 +142,27 @@ void OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
   scopeStack_.push_back(sym->scope());
 }
 
+void OmpStructureChecker::CheckTempDescriptorMappings() {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  for (const auto &[symbol, source] : tempDescriptorEnterMaps_) {
+    if (tempDescriptorExitMaps_.find(symbol) == tempDescriptorExitMaps_.end()) {
+      if (version >= 61) {
+        context_.Warn(common::UsageWarning::OpenMPUsage, source,
+            "The map of '%s' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data"_warn_en_US,
+            symbol->name());
+      } else {
+        context_.Warn(common::UsageWarning::OpenMPUsage, source,
+            "The map of '%s' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference"_warn_en_US,
+            symbol->name());
+      }
+    }
+  }
+  tempDescriptorEnterMaps_.clear();
+  tempDescriptorExitMaps_.clear();
+}
+
 void OmpStructureChecker::Enter(const parser::EndSubroutineStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -152,6 +172,7 @@ void OmpStructureChecker::Enter(const parser::FunctionStmt &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::EndFunctionStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -161,6 +182,7 @@ void OmpStructureChecker::Enter(const parser::MpSubprogramStmt &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::EndMpSubprogramStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -4700,6 +4722,38 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         auto maybeSource{GetObjectSource(object)};
         context_.Say(maybeSource.value_or(GetContext().clauseSource),
             "Whole assumed-size arrays are not allowed on MAP clause"_err_en_US);
+      }
+    }
+  }
+
+  // If we are an enter or exit map, iterate over the maps and add them to
+  // containers that track if the symbol has been referenced in both an
+  // enter/exit map in the current scope, if it falls into the category of
+  // having a temporary stack descriptor. If we have reference modifiers, we
+  // ignore the warning and trust that the user knows what they are doing
+  // already, as they are aware the type comes with a descriptor and pointer
+  // combination.
+  //
+  // We will utilise this information to emit a warning later if the neccesary
+  // conditions are met, where we have an enter map without a corresponding exit
+  // in the current scope.
+  bool hasRefModifier{
+      OmpGetUniqueModifier<parser::OmpRefModifier>(modifiers) != nullptr};
+  if (!hasRefModifier &&
+      (llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
+          llvm::is_contained(leafs, Directive::OMPD_target_exit_data))) {
+    for (const parser::OmpObject &object : objects.v) {
+      if (const Symbol *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+        if (HasTemporaryStackDescriptor(*sym)) {
+          auto maybeSource{GetObjectSource(object)};
+          parser::CharBlock source{
+              maybeSource.value_or(GetContext().clauseSource)};
+          if (llvm::is_contained(leafs, Directive::OMPD_target_enter_data)) {
+            tempDescriptorEnterMaps_.emplace(sym, source);
+          } else {
+            tempDescriptorExitMaps_.insert(sym);
+          }
+        }
       }
     }
   }
