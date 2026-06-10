@@ -17,10 +17,10 @@
 
 #include "PerThreadTable.h"
 
-#include "AsyncQueue.h"
 #include "L0CmdListManager.h"
 #include "L0Context.h"
 #include "L0Program.h"
+#include "L0Queue.h"
 #include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
@@ -72,26 +72,6 @@ struct L0DeviceIdTy {
   L0DeviceIdTy(ze_device_handle_t Device, int32_t RootId, int32_t SubId = -1,
                int32_t CCSId = -1)
       : zeId(Device), RootId(RootId), SubId(SubId), CCSId(CCSId) {}
-};
-
-class L0DeviceTLSTy {
-public:
-  L0DeviceTLSTy() = default;
-  ~L0DeviceTLSTy() {}
-  L0DeviceTLSTy(const L0DeviceTLSTy &) = delete;
-  L0DeviceTLSTy &operator=(const L0DeviceTLSTy &) = delete;
-  L0DeviceTLSTy &operator=(L0DeviceTLSTy &&) = delete;
-  L0DeviceTLSTy(L0DeviceTLSTy &&Other) {}
-
-  Error deinit() { return Plugin::success(); }
-};
-
-struct L0DeviceTLSTableTy
-    : public PerThreadContainer<std::vector<L0DeviceTLSTy>, 8> {
-  Error deinit() {
-    return PerThreadTable::deinit(
-        [](L0DeviceTLSTy &Entry) { return Entry.deinit(); });
-  }
 };
 
 class L0DeviceTy final : public GenericDeviceTy {
@@ -187,8 +167,6 @@ public:
   LevelZeroPluginTy &getPlugin() {
     return reinterpret_cast<LevelZeroPluginTy &>(Plugin);
   }
-
-  L0DeviceTLSTy &getTLS();
 
   Error setContext() override { return Plugin::success(); }
   Error initImpl(GenericPluginTy &Plugin) override;
@@ -401,14 +379,14 @@ public:
     auto QueueOrErr = getOrCreateQueue(AsyncInfo);
     if (!QueueOrErr)
       return QueueOrErr.takeError();
-    AsyncQueueTy *Queue = *QueueOrErr;
+    L0QueueTy *Queue = *QueueOrErr;
     return Queue->memoryCopy(Dst, Src, Size);
   }
 
   Error enqueueMemCopyAndSync(void *Dst, const void *Src, size_t Size) {
     __tgt_async_info AsyncInfo;
     if (auto Err = enqueueMemCopy(Dst, Src, Size, &AsyncInfo)) {
-      releaseQueue((AsyncQueueTy *)AsyncInfo.Queue);
+      releaseQueue(static_cast<L0QueueTy *>(AsyncInfo.Queue));
       return Err;
     }
     return synchronize(&AsyncInfo);
@@ -422,7 +400,7 @@ public:
     __tgt_async_info AsyncInfo;
     if (auto Err =
             enqueueMemFill(Ptr, Pattern, PatternSize, Size, &AsyncInfo)) {
-      releaseQueue((AsyncQueueTy *)AsyncInfo.Queue);
+      releaseQueue(static_cast<L0QueueTy *>(AsyncInfo.Queue));
       return Err;
     }
     return synchronize(&AsyncInfo);
@@ -441,14 +419,23 @@ public:
     return l0Context.getDriverAPIVersion();
   }
 
-  /// Return an event from the driver associated to this device.
+  /// Get a low-level L0 event from the driver associated to this device.
   Expected<ze_event_handle_t> getEvent() {
     return l0Context.getEventPool().getEvent();
   }
+  /// Get a high-level L0EventTy object from the driver associated to this
+  /// device.
+  Expected<L0EventTy *> getEventObject() {
+    return l0Context.getEventPool().getEventObject();
+  }
 
-  /// Release event to the pool associated to this device.
+  /// Release a L0 event to the pool associated to this device.
   Error releaseEvent(ze_event_handle_t Event) {
-    return l0Context.getEventPool().releaseEvent(Event, *this);
+    return l0Context.getEventPool().releaseEvent(Event);
+  }
+  /// Release an L0EventTy object to the pool associated to this device.
+  Error releaseEventObject(L0EventTy *EventObj) {
+    return l0Context.getEventPool().releaseEventObject(EventObj);
   }
 
   StagingBufferTy &getStagingBuffer() { return l0Context.getStagingBuffer(); }
@@ -457,8 +444,8 @@ public:
 
   /// Returns the Queue from an async info object, or creates a new one if
   /// the async info does not have a queue yet.
-  Expected<AsyncQueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
-  void releaseQueue(AsyncQueueTy *Queue) { QueueCache.releaseQueue(Queue); }
+  Expected<L0QueueTy *> getOrCreateQueue(__tgt_async_info *AsyncInfo);
+  void releaseQueue(L0QueueTy *Queue) { QueueCache.releaseQueue(Queue); }
 
   // Allocation related routines.
 
@@ -540,44 +527,17 @@ public:
                          "enqueueHostCallImpl not implemented yet");
   }
 
-  // Event routines are used to ensure ordering between dataTransfers. Instead
-  // of adding extra events in the queues, we make sure they're ordered by
-  // using the events from the data submission APIs so we don't need to support
-  // these routines.
-  // They still need to report succes to indicate the event are handled
-  // somewhere waitEvent and syncEvent should remain unimplemented.
   Expected<bool> isEventCompleteImpl(void *EventPtr,
-                                     AsyncInfoWrapperTy &) override {
-    return true;
-  }
-
-  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
-    return Plugin::success();
-  }
-  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
-    return Plugin::success();
-  }
+                                     AsyncInfoWrapperTy &) override;
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override;
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override;
   Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
-                        bool EnableProfiling) override {
-    return Plugin::success();
-  }
-
+                        bool EnableProfiling) override;
   Error waitEventImpl(void *EventPtr,
-                      AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
-
-  Error syncEventImpl(void *EventPtr) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
-
+                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error syncEventImpl(void *EventPtr) override;
   Expected<float> getEventElapsedTimeImpl(void *StartEventPtr,
-                                          void *EndEventPtr) override {
-    return Plugin::error(error::ErrorCode::UNKNOWN, "%s not implemented yet\n",
-                         __func__);
-  }
+                                          void *EndEventPtr) override;
 
   Expected<InfoTreeNode> obtainInfoImpl() override;
   uint64_t getClockFrequency() const override { return getClockRate(); }

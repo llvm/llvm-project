@@ -12,6 +12,7 @@
 
 #include "L0Device.h"
 #include "L0Defs.h"
+#include "L0Event.h"
 #include "L0Interop.h"
 #include "L0Plugin.h"
 #include "L0Program.h"
@@ -23,10 +24,6 @@
 #include "llvm/Object/ELF.h"
 
 namespace llvm::omp::target::plugin {
-
-L0DeviceTLSTy &L0DeviceTy::getTLS() {
-  return getPlugin().getDeviceTLS(getDeviceId());
-}
 
 // clang-format off
 /// Mapping from device arch to GPU runtime's device identifiers.
@@ -270,9 +267,9 @@ Error L0DeviceTy::unloadBinaryImpl(DeviceImageTy *Image) {
   return Plugin::success();
 }
 
-Expected<AsyncQueueTy *>
+Expected<L0QueueTy *>
 L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
-  AsyncQueueTy *Queue = static_cast<AsyncQueueTy *>(AsyncInfo->Queue);
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo->Queue);
   if (!Queue) {
     auto NewQueueOrErr = QueueCache.getQueue();
     if (!NewQueueOrErr)
@@ -286,7 +283,7 @@ L0DeviceTy::getOrCreateQueue(__tgt_async_info *AsyncInfo) {
 Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
                                   bool ReleaseQueue) {
 
-  AsyncQueueTy *Queue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo.Queue);
   if (!Queue)
     return Plugin::success();
 
@@ -303,7 +300,7 @@ Error L0DeviceTy::synchronizeImpl(__tgt_async_info &AsyncInfo,
 
 Expected<bool>
 L0DeviceTy::hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  AsyncQueueTy *Queue = AsyncInfoWrapper.getQueueAs<AsyncQueueTy *>();
+  L0QueueTy *Queue = AsyncInfoWrapper.getQueueAs<L0QueueTy *>();
   if (!Queue)
     return false;
   return Queue->hasPendingWork();
@@ -311,7 +308,7 @@ L0DeviceTy::hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) {
 
 Error L0DeviceTy::queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
                                  bool *IsQueueWorkCompleted) {
-  AsyncQueueTy *Queue = reinterpret_cast<AsyncQueueTy *>(AsyncInfo.Queue);
+  L0QueueTy *Queue = static_cast<L0QueueTy *>(AsyncInfo.Queue);
   bool WorkCompleted = true;
 
   if (Queue) {
@@ -393,8 +390,9 @@ Error L0DeviceTy::dataRetrieveImpl(void *HstPtr, const void *TgtPtr,
 Error L0DeviceTy::dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstDev,
                                    void *DstPtr, int64_t Size,
                                    AsyncInfoWrapperTy &AsyncInfoWrapper) {
-  if (auto Err = enqueueMemCopy(DstPtr, SrcPtr, Size,
-                                (__tgt_async_info *)AsyncInfoWrapper))
+  if (auto Err =
+          enqueueMemCopy(DstPtr, SrcPtr, Size,
+                         static_cast<__tgt_async_info *>(AsyncInfoWrapper)))
     return Err;
   return Plugin::success();
 }
@@ -667,7 +665,7 @@ Error L0DeviceTy::enqueueMemFill(void *Ptr, const void *Pattern,
   auto QueueOrErr = getOrCreateQueue(AsyncInfo);
   if (!QueueOrErr)
     return QueueOrErr.takeError();
-  AsyncQueueTy *AsyncQueue = *QueueOrErr;
+  L0QueueTy *AsyncQueue = *QueueOrErr;
   return AsyncQueue->memoryFill(Ptr, Pattern, PatternSize, Size);
 }
 
@@ -732,23 +730,12 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   return CmdList;
 }
 
-// TODO: logic from this function should be moved to AsyncQueue
 Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
-  const bool Ordered =
-      (getPlugin().getOptions().CommandMode == CommandModeTy::AsyncOrdered);
-
-  // Nothing to do if everything is ordered.
-  if (Ordered)
-    return Plugin::success();
-
   auto QueueOrErr = getOrCreateQueue(Async);
   if (!QueueOrErr)
     return QueueOrErr.takeError();
-  AsyncQueueTy *Queue = *QueueOrErr;
-  ze_command_list_handle_t CmdList = Queue->getCmdList();
-  CALL_ZE_RET_ERROR(zeCommandListAppendBarrier, CmdList, nullptr, 0, nullptr);
-
-  return Plugin::success();
+  L0QueueTy *Queue = *QueueOrErr;
+  return Queue->dataFence();
 }
 
 Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
@@ -757,6 +744,65 @@ Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
                          "Invalid input to %s (Ptr = %p, Size = %zu)", __func__,
                          Ptr, Size);
   return getMemAllocator(Ptr).contains(Ptr, Size);
+}
+
+Error L0DeviceTy::createEventImpl(void **EventPtrStorage,
+                                  bool EnableProfiling) {
+  auto EventOrErr = getEventObject();
+  if (!EventOrErr)
+    return EventOrErr.takeError();
+  *EventPtrStorage = *EventOrErr;
+  return Plugin::success();
+}
+
+Error L0DeviceTy::destroyEventImpl(void *EventPtr, bool EnableProfiling) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  return releaseEventObject(Event);
+}
+
+Error L0DeviceTy::recordEventImpl(void *EventPtr,
+                                  AsyncInfoWrapperTy &AsyncInfoWrapper,
+                                  bool EnableProfiling) {
+  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  L0QueueTy *Queue = *QueueOrErr;
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  Event->setQueue(*Queue);
+  return Queue->appendSignalEvent(Event);
+}
+
+Error L0DeviceTy::waitEventImpl(void *EventPtr,
+                                AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  auto QueueOrErr = getOrCreateQueue(AsyncInfoWrapper);
+  if (!QueueOrErr)
+    return QueueOrErr.takeError();
+  L0QueueTy *Queue = *QueueOrErr;
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  return Queue->appendWaitOnEvent(Event);
+}
+
+Error L0DeviceTy::syncEventImpl(void *EventPtr) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  if (!Event->getQueue())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "event does not have any associated queue");
+  return Event->getQueue()->synchronizeEvent(Event);
+}
+
+Expected<bool> L0DeviceTy::isEventCompleteImpl(void *EventPtr,
+                                               AsyncInfoWrapperTy &) {
+  L0EventTy *Event = static_cast<L0EventTy *>(EventPtr);
+  if (!Event->getQueue())
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "event does not have any associated queue");
+  return Event->getQueue()->isEventComplete(Event);
+}
+
+Expected<float> L0DeviceTy::getEventElapsedTimeImpl(void *StartEventPtr,
+                                                    void *EndEventPtr) {
+  return Plugin::error(error::ErrorCode::UNSUPPORTED,
+                       "%s not implemented yet\n", __func__);
 }
 
 Error L0DeviceTy::callGlobalConstructors(GenericPluginTy &Plugin,

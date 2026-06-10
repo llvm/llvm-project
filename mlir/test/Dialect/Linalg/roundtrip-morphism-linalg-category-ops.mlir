@@ -32,6 +32,12 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   linalg.elementwise kind=#linalg.elementwise_kind<erf>
     ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<sin>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<cos>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
+  linalg.elementwise kind=#linalg.elementwise_kind<tan>
+    ins(%A : memref<7x14x21xf32>) outs(%Out : memref<7x14x21xf32>)
   return
 }
 
@@ -75,6 +81,15 @@ func.func @unary_ops(%A: memref<7x14x21xf32>, %Out: memref<7x14x21xf32>) {
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<erf>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<sin>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<cos>
+// CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
+// CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
+// CHECK: linalg.elementwise kind=#linalg.elementwise_kind<tan>
 // CHECK-SAME: ins(%[[A]] : memref<7x14x21xf32>)
 // CHECK-SAME: outs(%[[OUT]] : memref<7x14x21xf32>)
 
@@ -323,6 +338,22 @@ func.func @contract_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
 // CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 
+func.func @contract_matmul_bool(%arg0: tensor<?x?xi1>, %arg1: tensor<?x?xi1>,
+    %arg2: tensor<?x?xi1>) -> tensor<?x?xi1> {
+  %0 = linalg.contract indexing_maps = [#map, #map1, #map2]
+    ins(%arg0, %arg1 : tensor<?x?xi1>, tensor<?x?xi1>)
+    outs(%arg2 : tensor<?x?xi1>) -> tensor<?x?xi1>
+  return %0 : tensor<?x?xi1>
+}
+
+// CHECK-LABEL: contract_matmul_bool
+// CHECK-SAME: %[[A:.+]]: tensor<?x?xi1>, %[[B:.+]]: tensor<?x?xi1>,
+// CHECK-SAME: %[[OUT:.+]]: tensor<?x?xi1>) -> tensor<?x?xi1>
+// CHECK-NOT: linalg.generic
+// CHECK: linalg.contract
+// CHECK-SAME: indexing_maps = {{\[}}#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]{{\]}}
+// CHECK-SAME: ins(%[[A]], %[[B]] : tensor<?x?xi1>, tensor<?x?xi1>)
+// CHECK-SAME: outs(%[[OUT]] : tensor<?x?xi1>) -> tensor<?x?xi1>
 
 func.func @contract_matmul_memref(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>,
     %arg2: memref<?x?xf32>) {
