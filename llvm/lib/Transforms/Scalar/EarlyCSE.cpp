@@ -94,12 +94,7 @@ struct SimpleValue {
   Instruction *Inst;
 
   SimpleValue(Instruction *I) : Inst(I) {
-    assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
-  }
-
-  bool isSentinel() const {
-    return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
-           Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
+    assert(canHandle(I) && "Inst can't be handled!");
   }
 
   static bool canHandle(Instruction *Inst) {
@@ -155,14 +150,6 @@ struct SimpleValue {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<SimpleValue> {
-  static inline SimpleValue getEmptyKey() {
-    return DenseMapInfo<Instruction *>::getEmptyKey();
-  }
-
-  static inline SimpleValue getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(SimpleValue Val);
   static bool isEqual(SimpleValue LHS, SimpleValue RHS);
 };
@@ -350,9 +337,6 @@ unsigned DenseMapInfo<SimpleValue>::getHashValue(SimpleValue Val) {
 static bool isEqualImpl(SimpleValue LHS, SimpleValue RHS) {
   Instruction *LHSI = LHS.Inst, *RHSI = RHS.Inst;
 
-  if (LHS.isSentinel() || RHS.isSentinel())
-    return LHSI == RHSI;
-
   if (LHSI->getOpcode() != RHSI->getOpcode())
     return false;
   if (LHSI->isIdenticalToWhenDefined(RHSI, /*IntersectAttrs=*/true)) {
@@ -462,8 +446,7 @@ bool DenseMapInfo<SimpleValue>::isEqual(SimpleValue LHS, SimpleValue RHS) {
   // These comparisons are nontrivial, so assert that equality implies
   // hash equality (DenseMap demands this as an invariant).
   bool Result = isEqualImpl(LHS, RHS);
-  assert(!Result || (LHS.isSentinel() && LHS.Inst == RHS.Inst) ||
-         getHashValueImpl(LHS) == getHashValueImpl(RHS));
+  assert(!Result || getHashValueImpl(LHS) == getHashValueImpl(RHS));
   return Result;
 }
 
@@ -479,12 +462,7 @@ struct CallValue {
   Instruction *Inst;
 
   CallValue(Instruction *I) : Inst(I) {
-    assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
-  }
-
-  bool isSentinel() const {
-    return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
-           Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
+    assert(canHandle(I) && "Inst can't be handled!");
   }
 
   static bool canHandle(Instruction *Inst) {
@@ -506,14 +484,6 @@ struct CallValue {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<CallValue> {
-  static inline CallValue getEmptyKey() {
-    return DenseMapInfo<Instruction *>::getEmptyKey();
-  }
-
-  static inline CallValue getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(CallValue Val);
   static bool isEqual(CallValue LHS, CallValue RHS);
 };
@@ -526,9 +496,6 @@ unsigned DenseMapInfo<CallValue>::getHashValue(CallValue Val) {
 }
 
 bool DenseMapInfo<CallValue>::isEqual(CallValue LHS, CallValue RHS) {
-  if (LHS.isSentinel() || RHS.isSentinel())
-    return LHS.Inst == RHS.Inst;
-
   CallInst *LHSI = cast<CallInst>(LHS.Inst);
   CallInst *RHSI = cast<CallInst>(RHS.Inst);
 
@@ -552,17 +519,12 @@ struct GEPValue {
   std::optional<int64_t> ConstantOffset;
 
   GEPValue(Instruction *I) : Inst(I) {
-    assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
+    assert(canHandle(I) && "Inst can't be handled!");
   }
 
   GEPValue(Instruction *I, std::optional<int64_t> ConstantOffset)
       : Inst(I), ConstantOffset(ConstantOffset) {
-    assert((isSentinel() || canHandle(I)) && "Inst can't be handled!");
-  }
-
-  bool isSentinel() const {
-    return Inst == DenseMapInfo<Instruction *>::getEmptyKey() ||
-           Inst == DenseMapInfo<Instruction *>::getTombstoneKey();
+    assert(canHandle(I) && "Inst can't be handled!");
   }
 
   static bool canHandle(Instruction *Inst) {
@@ -573,14 +535,6 @@ struct GEPValue {
 } // namespace
 
 template <> struct llvm::DenseMapInfo<GEPValue> {
-  static inline GEPValue getEmptyKey() {
-    return DenseMapInfo<Instruction *>::getEmptyKey();
-  }
-
-  static inline GEPValue getTombstoneKey() {
-    return DenseMapInfo<Instruction *>::getTombstoneKey();
-  }
-
   static unsigned getHashValue(const GEPValue &Val);
   static bool isEqual(const GEPValue &LHS, const GEPValue &RHS);
 };
@@ -595,8 +549,6 @@ unsigned DenseMapInfo<GEPValue>::getHashValue(const GEPValue &Val) {
 }
 
 bool DenseMapInfo<GEPValue>::isEqual(const GEPValue &LHS, const GEPValue &RHS) {
-  if (LHS.isSentinel() || RHS.isSentinel())
-    return LHS.Inst == RHS.Inst;
   auto *LGEP = cast<GetElementPtrInst>(LHS.Inst);
   auto *RGEP = cast<GetElementPtrInst>(RHS.Inst);
   if (LGEP->getPointerOperand() != RGEP->getPointerOperand())
@@ -821,6 +773,12 @@ private:
             Info.IsVolatile = false;
             break;
           }
+        } else if (auto *MI = dyn_cast<MemSetInst>(Inst)) {
+          Info.PtrVal = MI->getDest();
+          Info.MatchingId = 0;
+          Info.ReadMem = false;
+          Info.WriteMem = true;
+          Info.IsVolatile = MI->isVolatile();
         }
       }
     }
@@ -1226,6 +1184,29 @@ Value *EarlyCSE::getMatchingValue(LoadValue &InVal, ParseMemoryInst &MemInst,
                                   unsigned CurrentGeneration) {
   if (InVal.DefInst == nullptr)
     return nullptr;
+  if (auto *MSI = dyn_cast<MemSetInst>(InVal.DefInst)) {
+    if (!MemInst.isLoad() || MemInst.isVolatile() || !MemInst.isUnordered())
+      return nullptr;
+    if (MSI->isVolatile())
+      return nullptr;
+    auto *Val = dyn_cast<ConstantInt>(MSI->getValue());
+    if (!Val || !Val->isZero())
+      return nullptr;
+    auto Len = MSI->getLengthInBytes();
+    if (!Len)
+      return nullptr;
+    Type *InstType = MemInst.getValueType();
+    if (!InstType)
+      return nullptr;
+    TypeSize LoadSize = SQ.DL.getTypeStoreSize(InstType);
+    if (LoadSize.isScalable() || Len->ult(LoadSize.getFixedValue()))
+      return nullptr;
+    if (!isOperatingOnInvariantMemAt(MemInst.get(), InVal.Generation) &&
+        !isSameMemGeneration(InVal.Generation, CurrentGeneration, InVal.DefInst,
+                             MemInst.get()))
+      return nullptr;
+    return Constant::getNullValue(MemInst.getValueType());
+  }
   if (InVal.MatchingId != MemInst.getMatchingId())
     return nullptr;
   // We don't yet handle removing loads with ordering of any kind.

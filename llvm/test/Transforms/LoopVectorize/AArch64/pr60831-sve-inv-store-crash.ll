@@ -53,8 +53,7 @@ define void @test_invar_gep(ptr %dst) #0 {
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[TMP1]]
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IC2:       vector.ph:
-; IC2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; IC2-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP2]], 2
+; IC2-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP0]], 2
 ; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP11]], i64 0
 ; IC2-NEXT:    [[TMP21:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IC2-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP11]], 1
@@ -115,8 +114,7 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP4]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[START]], [[N_VEC]]
@@ -163,8 +161,7 @@ define void @test_invar_gep_var_start(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IC2:       vector.ph:
-; IC2-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; IC2-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 2
+; IC2-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP1]], 2
 ; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP4]], i64 0
 ; IC2-NEXT:    [[TMP9:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IC2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 1
@@ -231,11 +228,10 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP3]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP6]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i64 [[N_VEC]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[START]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[START]], i64 0
@@ -284,14 +280,13 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], [[TMP4]]
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; IC2:       vector.ph:
-; IC2-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; IC2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
+; IC2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP3]], 2
 ; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP6]], i64 0
 ; IC2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; IC2-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 1
 ; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP7]]
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
-; IC2-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC]], 2
+; IC2-NEXT:    [[TMP10:%.*]] = shl i64 [[N_VEC]], 1
 ; IC2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[START]], [[TMP10]]
 ; IC2-NEXT:    [[TMP13:%.*]] = shl <vscale x 4 x i64> [[BROADCAST_SPLAT1]], splat (i64 1)
 ; IC2-NEXT:    [[TMP11:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()

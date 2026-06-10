@@ -175,6 +175,11 @@ public:
   /// Remove register from copy maps.
   void invalidateRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
                           const TargetInstrInfo &TII, bool UseCopyInstr) {
+    // Early exit if there are no copies, as the function wouldn't do anything
+    // in that case.
+    if (Copies.empty())
+      return;
+
     // Since Reg might be a subreg of some registers, only invalidate Reg is not
     // enough. We have to find the COPY defines Reg or registers defined by Reg
     // and invalidate all of them. Similarly, we must invalidate all of the
@@ -255,13 +260,18 @@ public:
         }
       }
       // Now we can erase the copy.
-      Copies.erase(I);
+      Copies.erase(Unit);
     }
   }
 
   /// Clobber a single register, removing it from the tracker's copy maps.
   void clobberRegister(MCRegister Reg, const TargetRegisterInfo &TRI,
                        const TargetInstrInfo &TII, bool UseCopyInstr) {
+    // Early exit if there are no copies, as the function wouldn't do anything
+    // in that case.
+    if (Copies.empty())
+      return;
+
     for (MCRegUnit Unit : TRI.regunits(Reg)) {
       clobberRegUnit(Unit, TRI, TII, UseCopyInstr);
     }
@@ -1304,6 +1314,18 @@ void MachineCopyPropagation::backwardCopyPropagateBlock(
 // Reg is defined by a COPY, we untrack this Reg via
 // CopyTracker::clobberRegister(Reg, ...).
 void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
+
+  // Perform some cost modelling to ensure that only MBB's with more
+  // than 6 copies are checked. To create a chain that can be optimised,
+  // 6 copies are needed.
+  unsigned CopyCount = 0;
+  for (const MachineInstr &MI : MBB) {
+    if (isCopyInstr(MI, *TII, UseCopyInstr) && ++CopyCount > 6)
+      break;
+  }
+  if (CopyCount < 6)
+    return;
+
   // ChainLeader maps MI inside a spill-reload chain to its innermost reload COPY.
   // Thus we can track if a MI belongs to an existing spill-reload chain.
   DenseMap<MachineInstr *, MachineInstr *> ChainLeader;

@@ -13,6 +13,7 @@
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
+#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "llvm/Support/CommandLine.h"
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
@@ -290,6 +291,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
   }
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, hlfir::createInlineElementals);
+  addNestedPassToAllTopLevelOperations<PassConstructor>(
+      pm, hlfir::createSeparateAllocatableAssign);
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     pm.addPass(mlir::createCSEPass());
@@ -308,8 +311,19 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
 
     if (optLevel == llvm::OptimizationLevel::O3) {
       addNestedPassToAllTopLevelOperations<PassConstructor>(
-          pm, hlfir::createInlineHLFIRCopyIn);
+          pm, hlfir::createInlineHLFIRCopy);
     }
+  } else if (config.EnableOpenMPIsTargetDevice) {
+    // At O0, only inline scalar-to-array broadcasts when compiling for an
+    // OpenMP target device. This avoids emitting Fortran runtime calls
+    // (e.g. _FortranAAssign) that use malloc/free in device code generated
+    // by OpenMP target offloading. Restricting this to target-device
+    // compilation preserves the runtime call on the host at -O0 so that a
+    // line breakpoint on a scalar-to-array assignment hits once instead of
+    // once per element.
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
+      return hlfir::createInlineHLFIRAssign({/*onlyScalarRHS=*/true});
+    });
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
       {/*tryFusingAssignments=*/optLevel.isOptimizingForSpeed()}));
@@ -397,6 +411,11 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       pm, fir::createAbstractResultOpt);
   addPassToGPUModuleOperations<PassConstructor>(pm,
                                                 fir::createAbstractResultOpt);
+  pm.addPass(fir::createRematerializeFIRBoxOpsPass());
+  // Do not run CSE between rematerialization and FIR-to-LLVM lowering. CSE will
+  // undo the createRematerializeFIRBoxOps pass.
+  // LLVM-level CSE can clean up redundant operations after FIR box conversion
+  // has materialized region-local allocas.
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
@@ -440,6 +459,12 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   }
 
   fir::addFIRToLLVMPass(pm, config);
+
+  // Convert applicable OpenMP stack allocations to shared memory allocations
+  // for GPU targets. This pass must run after any alloca-generating passes to
+  // ensure all are adequately accounted for.
+  if (config.EnableOpenMP && !config.EnableOpenMPSimd)
+    pm.addPass(mlir::omp::createStackToSharedPass());
 }
 
 /// Create a pass pipeline for lowering from MLIR to LLVM IR

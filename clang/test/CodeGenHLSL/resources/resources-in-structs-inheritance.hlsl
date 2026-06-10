@@ -91,42 +91,43 @@ F f : register(t0) : register(u20) : register(s3);
 
 // CHECK: define internal void @main()()
 // CHECK-NEXT: entry:
+// CHECK-NEXT: %[[#C_ENTRY:]] = call token @llvm.experimental.convergence.entry()
 [numthreads(1, 1, 1)]
 void main() {
 // CHECK-NEXT: %i = alloca i32
 // CHECK-NEXT: %[[TMP:.*]] = alloca %"class.hlsl::StructuredBuffer.0"
 // CHECK-NEXT: %a = alloca float
 
-// CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @"_ZL8c.A::Buf", i32 noundef 0)
-// CHECK-NEXT: store float 0x3FF3AE1480000000, ptr %[[PTR1:]]
+// CHECK-NEXT: %[[PTR1:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @"_ZL8c.A::Buf", i32 noundef 0) {{.*}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// CHECK-NEXT: store float 1.230000e+00, ptr %[[PTR1:]]
   c.Buf[0] = 1.230f;
 
-// CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @c.Buf2, i32 noundef 0)
-// CHECK-NEXT: store float 0x4002B851E0000000, ptr %[[PTR2:]]
+// CHECK-NEXT: %[[PTR2:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @c.Buf2, i32 noundef 0) {{.*}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// CHECK-NEXT: store float 2.340000e+00, ptr %[[PTR2:]]
   c.Buf2[0] = 2.340f;
 
-// CHECK-NEXT: %[[PTR3:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @"_ZL8d.A::Buf", i32 noundef 0)
-// CHECK-NEXT: store float 0x400B9999A0000000, ptr %[[PTR3:]]
+// CHECK-NEXT: %[[PTR3:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @"_ZL8d.A::Buf", i32 noundef 0) {{.*}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// CHECK-NEXT: store float 3.450000e+00, ptr %[[PTR3:]]
   d.Buf[0] = 3.450f;
 
-// CHECK-NEXT: %[[PTR4:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @d.A.Buf, i32 noundef 0)
-// CHECK-NEXT: store float 0x40123D70A0000000, ptr %[[PTR4:]]
+// CHECK-NEXT: %[[PTR4:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @d.A.Buf, i32 noundef 0) {{.*}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// CHECK-NEXT: store float 4.560000e+00, ptr %[[PTR4:]]
   d.A.Buf[0] = 4.560f;
 
 // Resource array access - initilized on demand:
 // CHECK-NEXT: call void @hlsl::StructuredBuffer<int>::__createFromBinding({{.*}})(ptr {{.*}} %[[TMP]],
-// CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 2, i32 noundef 0, ptr noundef @[[fEBSrvBufStr]])
-// CHECK-NEXT: %[[PTR5:.*]] = call {{.*}} ptr @hlsl::StructuredBuffer<int>::operator[](unsigned int) const(ptr {{.*}} %[[TMP]], i32 noundef 1)
+// CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 2, i32 noundef 0, ptr noundef @[[fEBSrvBufStr]]) {{.*}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// CHECK-NEXT: %[[PTR5:.*]] = call {{.*}} ptr @hlsl::StructuredBuffer<int>::operator[](unsigned int) const(ptr {{.*}} %[[TMP]], i32 noundef 1) {{.*}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // CHECK-NEXT: %[[VAL1:.*]] = load i32, ptr %[[PTR5]]
 // CHECK-NEXT: store i32 %[[VAL1]], ptr %i
   int i = f.SrvBufs[0][1];
 
-// CHECK-NEXT: %[[PTR6:.*]] = call {{.*}} ptr @hlsl::StructuredBuffer<float>::operator[](unsigned int) const({{.*}} @f.SrvBuf, i32 noundef 0)
+// CHECK-NEXT: %[[PTR6:.*]] = call {{.*}} ptr @hlsl::StructuredBuffer<float>::operator[](unsigned int) const({{.*}} @f.SrvBuf, i32 noundef 0) {{.*}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
 // CHECK-NEXT: %[[VAL2:.*]] = load float, ptr %[[PTR6]]
 // CHECK-NEXT: store float %[[VAL2]], ptr %a
   float a = f.SrvBuf[0];
 
-// CHECK: [[PTR7:.*]]= call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int)(ptr {{.*}} @f.a.Buf, i32 noundef 0)
-// CHECK: store float %{{.*}}, ptr %call6
+// CHECK: %[[PTR7:.*]] = call {{.*}} ptr @hlsl::RWBuffer<float>::operator[](unsigned int) const(ptr {{.*}} @f.a.Buf, i32 noundef 0) {{.*}} [ "convergencectrl"(token %[[#C_ENTRY]]) ]
+// CHECK: store float %{{.*}}, ptr %[[PTR7]]
   f.a.Buf[0] = (float)i + a;
 }

@@ -10,8 +10,10 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -225,8 +227,8 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       getMDTupleOrNull(attr.getElements()),
       /*RuntimeLang=*/0, /*EnumKind*/ std::nullopt, /*VTableHolder=*/nullptr,
-      /*TemplateParams=*/nullptr, /*Identifier=*/nullptr,
-      /*Discriminator=*/nullptr,
+      /*TemplateParams=*/nullptr, getMDStringOrNull(attr.getIdentifier()),
+      translate(attr.getDiscriminator()),
       getExpressionAttrOrNull(attr.getDataLocation()),
       getExpressionAttrOrNull(attr.getAssociated()),
       getExpressionAttrOrNull(attr.getAllocated()),
@@ -234,14 +236,27 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
 }
 
 llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
+  llvm::Metadata *extraData = nullptr;
+  if (Attribute extraDataAttr = attr.getExtraData()) {
+    extraData =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(extraDataAttr)
+            .Case([&](DINodeAttr nodeAttr) { return translate(nodeAttr); })
+            .Case([&](IntegerAttr intAttr) {
+              return llvm::ConstantAsMetadata::get(
+                  llvm::ConstantInt::get(llvmCtx, intAttr.getValue()));
+            })
+            .Default([](Attribute) -> llvm::Metadata * {
+              llvm_unreachable("verifier guarantees DINodeAttr or IntegerAttr");
+            });
+  }
+
   return llvm::DIDerivedType::get(
       llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
       translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(), attr.getOffsetInBits(),
       attr.getDwarfAddressSpace(), /*PtrAuthData=*/std::nullopt,
-      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-      translate(attr.getExtraData()));
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()), extraData);
 }
 
 llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {

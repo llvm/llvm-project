@@ -6,15 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTMutationListener.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include <stack>
 
 #include "gtest/gtest.h"
@@ -41,10 +45,38 @@ std::string teardownProfiler() {
   return OS.str().str();
 }
 
+class TestASTConsumer : public ASTConsumer {
+public:
+  TestASTConsumer(ASTMutationListener *MutationListener)
+      : MutationListener(MutationListener) {}
+
+  ASTMutationListener *GetASTMutationListener() override {
+    return MutationListener;
+  }
+
+private:
+  ASTMutationListener *MutationListener;
+};
+
+class TestFrontendAction : public ASTFrontendAction {
+public:
+  TestFrontendAction(ASTMutationListener *MutationListener)
+      : MutationListener(MutationListener) {}
+
+private:
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override {
+    return std::make_unique<TestASTConsumer>(MutationListener);
+  }
+
+  ASTMutationListener *MutationListener;
+};
+
 // Returns true if code compiles successfully.
 // We only parse AST here. This is enough for constexpr evaluation.
 bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
-                       llvm::StringMap<std::string> Headers = {}) {
+                       llvm::StringMap<std::string> Headers = {},
+                       ASTMutationListener *MutationListener = nullptr) {
 
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FS->addFile(File, 0, MemoryBuffer::getMemBuffer(Code));
@@ -65,15 +97,58 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
   Compiler.createDiagnostics();
   Compiler.createFileManager();
 
-  class TestFrontendAction : public ASTFrontendAction {
-  private:
-    std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                   StringRef InFile) override {
-      return std::make_unique<ASTConsumer>();
-    }
-  } Action;
+  TestFrontendAction Action(MutationListener);
   return Compiler.ExecuteAction(Action);
 }
+
+bool compileFromArgs(ArrayRef<const char *> Args, FrontendAction &Action) {
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = llvm::vfs::getRealFileSystem();
+  auto Invocation = std::make_shared<CompilerInvocation>();
+  DiagnosticOptions InvocationDiagOpts;
+  auto InvocationDiags =
+      CompilerInstance::createDiagnostics(*FS, InvocationDiagOpts);
+  if (!CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags))
+    return false;
+
+  CompilerInstance Compiler(std::move(Invocation));
+  Compiler.setVirtualFileSystem(std::move(FS));
+  Compiler.createDiagnostics();
+  Compiler.createFileManager();
+
+  return Compiler.ExecuteAction(Action);
+}
+
+struct SpecializationCounts {
+  unsigned ClassTemplateSpecializations = 0;
+  unsigned FunctionTemplateSpecializations = 0;
+  unsigned VarTemplateSpecializations = 0;
+};
+
+class SpecializationCountingListener : public ASTMutationListener {
+public:
+  SpecializationCountingListener(SpecializationCounts &Counts)
+      : Counts(Counts) {}
+
+  void AddedCXXTemplateSpecialization(
+      const ClassTemplateDecl *TD,
+      const ClassTemplateSpecializationDecl *D) override {
+    ++Counts.ClassTemplateSpecializations;
+  }
+
+  void AddedCXXTemplateSpecialization(const FunctionTemplateDecl *TD,
+                                      const FunctionDecl *D) override {
+    ++Counts.FunctionTemplateSpecializations;
+  }
+
+  void AddedCXXTemplateSpecialization(
+      const VarTemplateDecl *TD,
+      const VarTemplateSpecializationDecl *D) override {
+    ++Counts.VarTemplateSpecializations;
+  }
+
+private:
+  SpecializationCounts &Counts;
+};
 
 std::string GetMetadata(json::Object *Event) {
   std::string M;
@@ -155,10 +230,10 @@ std::string buildTraceGraph(StringRef Json) {
 
       // Presumably due to timer rounding, PerformPendingInstantiations often
       // appear to be within the timer interval of the immediately previous
-      // event group. We always know these events occur at level 1, not level 2,
-      // in our tests, so pop an event in that case.
+      // event group. We always know these events occur at level 1 in our
+      // tests, so keep popping until the stack is back at the root.
       if (InsideCurrentEvent && Event.Name == "PerformPendingInstantiations" &&
-          EventStack.size() == 2) {
+          EventStack.size() >= 2) {
         InsideCurrentEvent = false;
       }
 
@@ -343,6 +418,173 @@ ExecuteCompiler
 | | | InstantiateFunction (fooMTA<int>, a.h:4)
 )",
             buildTraceGraph(Json));
+}
+
+static SpecializationCounts
+countAddedSpecializationsFromPCH(StringRef SourceFile, StringRef PCHFile,
+                                 bool EnableTimeTrace) {
+  SpecializationCounts Counts;
+  SpecializationCountingListener Listener(Counts);
+  TestFrontendAction Action(&Listener);
+  std::string SourcePath = SourceFile.str();
+  std::string PCHPath = PCHFile.str();
+
+  if (EnableTimeTrace)
+    setupProfiler();
+
+  const char *Args[] = {"-std=c++20", "-include-pch", PCHPath.c_str(),
+                        "-fsyntax-only", SourcePath.c_str()};
+  EXPECT_TRUE(compileFromArgs(Args, Action));
+
+  if (EnableTimeTrace)
+    (void)teardownProfiler();
+
+  return Counts;
+}
+
+TEST(TimeProfilerTest, TimeTraceDoesNotChangePCHSpecializationCount) {
+  StringRef Code = R"(
+#ifndef HEADER_INCLUDED
+#define HEADER_INCLUDED
+
+inline namespace {
+
+// The first declarations give f's body references to many function templates.
+#define DECLARE_G(N) template <typename T> T g##N(T v) { return v; }
+
+DECLARE_G(0)
+DECLARE_G(1)
+DECLARE_G(2)
+DECLARE_G(3)
+DECLARE_G(4)
+DECLARE_G(5)
+DECLARE_G(6)
+DECLARE_G(7)
+DECLARE_G(8)
+DECLARE_G(9)
+DECLARE_G(10)
+DECLARE_G(11)
+DECLARE_G(12)
+DECLARE_G(13)
+DECLARE_G(14)
+DECLARE_G(15)
+DECLARE_G(16)
+DECLARE_G(17)
+DECLARE_G(18)
+DECLARE_G(19)
+DECLARE_G(20)
+DECLARE_G(21)
+DECLARE_G(22)
+DECLARE_G(23)
+DECLARE_G(24)
+DECLARE_G(25)
+DECLARE_G(26)
+DECLARE_G(27)
+DECLARE_G(28)
+DECLARE_G(29)
+DECLARE_G(30)
+DECLARE_G(31)
+
+#undef DECLARE_G
+
+template <typename T> T f(T v) {
+  return g0(v) + g1(v) + g2(v) + g3(v) + g4(v) + g5(v) + g6(v) +
+         g7(v) + g8(v) + g9(v) + g10(v) + g11(v) + g12(v) + g13(v) +
+         g14(v) + g15(v) + g16(v) + g17(v) + g18(v) + g19(v) + g20(v) +
+         g21(v) + g22(v) + g23(v) + g24(v) + g25(v) + g26(v) + g27(v) +
+         g28(v) + g29(v) + g30(v) + g31(v);
+}
+
+// These later declarations are deserialized while -ftime-trace prints the
+// qualified name of a specialization lookup. Loading enough of them grows the
+// ASTReader specialization DenseMap and used to invalidate the active lookup.
+#define DECLARE_G(N) template <typename T> T g##N();
+
+DECLARE_G(0)
+DECLARE_G(1)
+DECLARE_G(2)
+DECLARE_G(3)
+DECLARE_G(4)
+DECLARE_G(5)
+DECLARE_G(6)
+DECLARE_G(7)
+DECLARE_G(8)
+DECLARE_G(9)
+DECLARE_G(10)
+DECLARE_G(11)
+DECLARE_G(12)
+DECLARE_G(13)
+DECLARE_G(14)
+DECLARE_G(15)
+DECLARE_G(16)
+DECLARE_G(17)
+DECLARE_G(18)
+DECLARE_G(19)
+DECLARE_G(20)
+DECLARE_G(21)
+DECLARE_G(22)
+DECLARE_G(23)
+DECLARE_G(24)
+DECLARE_G(25)
+DECLARE_G(26)
+DECLARE_G(27)
+DECLARE_G(28)
+DECLARE_G(29)
+DECLARE_G(30)
+DECLARE_G(31)
+
+#undef DECLARE_G
+
+} // namespace
+
+#else
+
+int x;
+void i() { f(x); }
+
+#endif
+)";
+
+  int SourceFD;
+  SmallString<256> SourceFileName;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile(
+      "ftime-trace-specialization-lookup", "cpp", SourceFD, SourceFileName));
+  llvm::FileRemover SourceFileRemover(SourceFileName);
+  {
+    raw_fd_ostream SourceOS(SourceFD, /*shouldClose=*/true);
+    SourceOS << Code;
+    SourceOS.flush();
+    ASSERT_FALSE(SourceOS.error());
+  }
+
+  int PCHFD;
+  SmallString<256> PCHFileName;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile(
+      "ftime-trace-specialization-lookup", "pch", PCHFD, PCHFileName));
+  llvm::FileRemover PCHFileRemover(PCHFileName);
+  {
+    raw_fd_ostream PCHOS(PCHFD, /*shouldClose=*/true);
+    PCHOS.flush();
+    ASSERT_FALSE(PCHOS.error());
+  }
+
+  GeneratePCHAction GeneratePCH;
+  const char *PCHArgs[] = {"-std=c++20", "-emit-pch", "-o", PCHFileName.c_str(),
+                           SourceFileName.c_str()};
+  ASSERT_TRUE(compileFromArgs(PCHArgs, GeneratePCH));
+
+  SpecializationCounts WithoutTimeTrace = countAddedSpecializationsFromPCH(
+      SourceFileName, PCHFileName, /*EnableTimeTrace=*/false);
+  SpecializationCounts WithTimeTrace = countAddedSpecializationsFromPCH(
+      SourceFileName, PCHFileName, /*EnableTimeTrace=*/true);
+
+  EXPECT_GT(WithoutTimeTrace.FunctionTemplateSpecializations, 0u);
+  EXPECT_EQ(WithoutTimeTrace.ClassTemplateSpecializations,
+            WithTimeTrace.ClassTemplateSpecializations);
+  EXPECT_EQ(WithoutTimeTrace.FunctionTemplateSpecializations,
+            WithTimeTrace.FunctionTemplateSpecializations);
+  EXPECT_EQ(WithoutTimeTrace.VarTemplateSpecializations,
+            WithTimeTrace.VarTemplateSpecializations);
 }
 
 TEST(TimeProfilerTest, ConstantEvaluationC99) {

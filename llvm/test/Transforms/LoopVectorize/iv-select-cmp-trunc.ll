@@ -619,8 +619,7 @@ define i32 @select_icmp_truncated_unsigned_iv_range(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 2147483646, [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = trunc i64 [[OFFSET_IDX]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i32 [[TMP3]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i32 [[TMP3]], 3
@@ -1322,8 +1321,7 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i64 [[IV]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = add i64 [[IV]], 3
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX4:%.*]] = add i64 4294967294, [[INDEX]]
-; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[OFFSET_IDX4]] to i32
+; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 0
 ; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = add i32 [[TMP7]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = add i32 [[TMP7]], 2
@@ -2269,13 +2267,10 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF4IC4-NEXT:    [[VEC_IND1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[LOOP]] ]
 ; CHECK-VF4IC4-NEXT:    [[TMP10:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP20:%.*]], %[[LOOP]] ]
 ; CHECK-VF4IC4-NEXT:    [[TMP17:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[LOOP]] ]
-; CHECK-VF4IC4-NEXT:    [[VEC_IND4:%.*]] = phi <4 x i1> [ <i1 false, i1 true, i1 false, i1 true>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT8:%.*]], %[[LOOP]] ]
+; CHECK-VF4IC4-NEXT:    [[VEC_IND4:%.*]] = phi <4 x i1> [ <i1 false, i1 true, i1 false, i1 true>, %[[VECTOR_PH]] ], [ [[VEC_IND4]], %[[LOOP]] ]
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[STEP_ADD_2]], splat (i64 4)
-; CHECK-VF4IC4-NEXT:    [[STEP_ADD5:%.*]] = add <4 x i1> [[VEC_IND4]], zeroinitializer
-; CHECK-VF4IC4-NEXT:    [[STEP_ADD_26:%.*]] = add <4 x i1> [[STEP_ADD5]], zeroinitializer
-; CHECK-VF4IC4-NEXT:    [[STEP_ADD_37:%.*]] = add <4 x i1> [[STEP_ADD_26]], zeroinitializer
 ; CHECK-VF4IC4-NEXT:    [[TMP3:%.*]] = icmp ne <4 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-VF4IC4-NEXT:    [[VEC_PHI:%.*]] = icmp ne <4 x i64> [[STEP_ADD]], zeroinitializer
 ; CHECK-VF4IC4-NEXT:    [[TMP18:%.*]] = icmp ne <4 x i64> [[STEP_ADD_2]], zeroinitializer
@@ -2293,12 +2288,11 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF4IC4-NEXT:    [[TMP20]] = select i1 [[TMP5]], <4 x i1> [[TMP18]], <4 x i1> [[TMP10]]
 ; CHECK-VF4IC4-NEXT:    [[TMP21]] = select i1 [[TMP5]], <4 x i1> [[TMP9]], <4 x i1> [[TMP17]]
 ; CHECK-VF4IC4-NEXT:    [[TMP22]] = select i1 [[TMP5]], <4 x i1> [[VEC_IND4]], <4 x i1> [[VEC_PHI4]]
-; CHECK-VF4IC4-NEXT:    [[TMP23]] = select i1 [[TMP5]], <4 x i1> [[STEP_ADD5]], <4 x i1> [[VEC_PHI1]]
-; CHECK-VF4IC4-NEXT:    [[TMP24]] = select i1 [[TMP5]], <4 x i1> [[STEP_ADD_26]], <4 x i1> [[VEC_PHI2]]
-; CHECK-VF4IC4-NEXT:    [[TMP25]] = select i1 [[TMP5]], <4 x i1> [[STEP_ADD_37]], <4 x i1> [[VEC_PHI3]]
+; CHECK-VF4IC4-NEXT:    [[TMP23]] = select i1 [[TMP5]], <4 x i1> [[VEC_IND4]], <4 x i1> [[VEC_PHI1]]
+; CHECK-VF4IC4-NEXT:    [[TMP24]] = select i1 [[TMP5]], <4 x i1> [[VEC_IND4]], <4 x i1> [[VEC_PHI2]]
+; CHECK-VF4IC4-NEXT:    [[TMP25]] = select i1 [[TMP5]], <4 x i1> [[VEC_IND4]], <4 x i1> [[VEC_PHI3]]
 ; CHECK-VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-VF4IC4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD_3]], splat (i64 4)
-; CHECK-VF4IC4-NEXT:    [[VEC_IND_NEXT8]] = add <4 x i1> [[STEP_ADD_37]], zeroinitializer
 ; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP18:![0-9]+]]
 ; CHECK-VF4IC4:       [[MIDDLE_BLOCK]]:
@@ -2310,12 +2304,12 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF4IC4-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK-VF4IC4:       [[SCALAR_PH]]:
 ; CHECK-VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP1]], %[[MIDDLE_BLOCK]] ], [ [[START]], %[[ENTRY]] ]
-; CHECK-VF4IC4-NEXT:    [[BC_RESUME_VAL9:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-VF4IC4-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-VF4IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[TMP30]], %[[MIDDLE_BLOCK]] ], [ false, %[[ENTRY]] ]
 ; CHECK-VF4IC4-NEXT:    br label %[[LOOP1:.*]]
 ; CHECK-VF4IC4:       [[LOOP1]]:
 ; CHECK-VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-VF4IC4-NEXT:    [[CTR:%.*]] = phi i64 [ [[BC_RESUME_VAL9]], %[[SCALAR_PH]] ], [ [[CTR_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-VF4IC4-NEXT:    [[CTR:%.*]] = phi i64 [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[CTR_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-VF4IC4-NEXT:    [[ACCUM:%.*]] = phi i1 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SEL:%.*]], %[[LOOP1]] ]
 ; CHECK-VF4IC4-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], 0
 ; CHECK-VF4IC4-NEXT:    [[TRUNC:%.*]] = trunc i64 [[CTR]] to i1

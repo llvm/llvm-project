@@ -33,10 +33,8 @@ define i32 @many_reductions(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, i64 
 ; UF2-NEXT:    [[VEC_PHI9:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP23:%.*]], %[[VECTOR_BODY]] ]
 ; UF2-NEXT:    [[VEC_PHI10:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP24:%.*]], %[[VECTOR_BODY]] ]
 ; UF2-NEXT:    [[VEC_PHI11:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
-; UF2-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <8 x i64> poison, i64 [[INDEX]], i64 0
-; UF2-NEXT:    [[BROADCAST_SPLAT13:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT12]], <8 x i64> poison, <8 x i32> zeroinitializer
-; UF2-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT13]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; UF2-NEXT:    [[VEC_IV16:%.*]] = add <8 x i64> [[BROADCAST_SPLAT13]], <i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
+; UF2-NEXT:    [[VEC_IV:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; UF2-NEXT:    [[VEC_IV16:%.*]] = add nuw <8 x i64> [[VEC_IV]], splat (i64 8)
 ; UF2-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; UF2-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV16]], [[BROADCAST_SPLAT]]
 ; UF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
@@ -76,6 +74,7 @@ define i32 @many_reductions(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, i64 
 ; UF2-NEXT:    [[TMP24]] = add <8 x i32> [[VEC_PHI10]], [[WIDE_MASKED_LOAD26]]
 ; UF2-NEXT:    [[TMP25]] = add <8 x i32> [[VEC_PHI11]], [[WIDE_MASKED_LOAD27]]
 ; UF2-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
+; UF2-NEXT:    [[VEC_IND_NEXT]] = add nuw <8 x i64> [[VEC_IV16]], splat (i64 8)
 ; UF2-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UF2-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; UF2:       [[MIDDLE_BLOCK]]:
@@ -152,10 +151,10 @@ define i32 @many_reductions(ptr %a, ptr %b, ptr %c, ptr %d, ptr %e, ptr %f, i64 
 ; UF4-NEXT:    [[VEC_PHI23:%.*]] = phi <8 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP51:%.*]], %[[VECTOR_BODY]] ]
 ; UF4-NEXT:    [[BROADCAST_SPLATINSERT24:%.*]] = insertelement <8 x i64> poison, i64 [[INDEX]], i64 0
 ; UF4-NEXT:    [[BROADCAST_SPLAT25:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT24]], <8 x i64> poison, <8 x i32> zeroinitializer
-; UF4-NEXT:    [[VEC_IV:%.*]] = add <8 x i64> [[BROADCAST_SPLAT25]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; UF4-NEXT:    [[VEC_IV28:%.*]] = add <8 x i64> [[BROADCAST_SPLAT25]], <i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
-; UF4-NEXT:    [[VEC_IV31:%.*]] = add <8 x i64> [[BROADCAST_SPLAT25]], <i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23>
-; UF4-NEXT:    [[VEC_IV34:%.*]] = add <8 x i64> [[BROADCAST_SPLAT25]], <i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>
+; UF4-NEXT:    [[VEC_IV:%.*]] = add nuw <8 x i64> [[BROADCAST_SPLAT25]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
+; UF4-NEXT:    [[VEC_IV28:%.*]] = add nuw <8 x i64> [[BROADCAST_SPLAT25]], <i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15>
+; UF4-NEXT:    [[VEC_IV31:%.*]] = add nuw <8 x i64> [[BROADCAST_SPLAT25]], <i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23>
+; UF4-NEXT:    [[VEC_IV34:%.*]] = add nuw <8 x i64> [[BROADCAST_SPLAT25]], <i64 24, i64 25, i64 26, i64 27, i64 28, i64 29, i64 30, i64 31>
 ; UF4-NEXT:    [[TMP0:%.*]] = icmp ule <8 x i64> [[VEC_IV]], [[BROADCAST_SPLAT]]
 ; UF4-NEXT:    [[TMP1:%.*]] = icmp ule <8 x i64> [[VEC_IV28]], [[BROADCAST_SPLAT]]
 ; UF4-NEXT:    [[TMP2:%.*]] = icmp ule <8 x i64> [[VEC_IV31]], [[BROADCAST_SPLAT]]

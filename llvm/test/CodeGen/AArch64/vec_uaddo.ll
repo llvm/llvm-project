@@ -141,7 +141,7 @@ define <16 x i32> @uaddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    add v4.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    cmhi v0.16b, v0.16b, v4.16b
 ; CHECK-NEXT:    str q4, [x0]
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    mov d1, v0.d[1]
 ; CHECK-NEXT:    zip1 v2.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    zip2 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    zip1 v3.8b, v1.8b, v0.8b

@@ -1033,6 +1033,11 @@ def CC_Intel_OCL_BI : CallingConv<[
 ]>;
 
 def CC_X86_64_Preserve_None : CallingConv<[
+  // Byval arguments must be passed on the stack as required by the x86-64 ABI. 
+  // This must come before the register assignment rules to prevent byval arguments 
+  // from being incorrectly assigned to registers, which would cause the required 
+  // caller-side copy to not be emitted.
+  CCIfByVal<CCPassByVal<8, 8>>,
   // We don't preserve general registers, so all of them can be used to pass
   // arguments except
   //   - RBP        frame pointer
@@ -1133,9 +1138,13 @@ def CSR_Win64_NoSSE : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12, R13, R14, R1
 
 def CSR_Win64 : CalleeSavedRegs<(add CSR_Win64_NoSSE,
                                      (sequence "XMM%u", 6, 15))>;
+def CSR_Win64_APX : CalleeSavedRegs<(add CSR_Win64_NoSSE, R30, R31,
+                                         (sequence "XMM%u", 6, 15))>;
 
 def CSR_Win64_SwiftError : CalleeSavedRegs<(sub CSR_Win64, R12)>;
+def CSR_Win64_APX_SwiftError : CalleeSavedRegs<(sub CSR_Win64_APX, R12)>;
 def CSR_Win64_SwiftTail : CalleeSavedRegs<(sub CSR_Win64, R13, R14)>;
+def CSR_Win64_APX_SwiftTail : CalleeSavedRegs<(sub CSR_Win64_APX, R13, R14)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
 // uses rdi to pass a single parameter and rax for the return value. All other
@@ -1155,6 +1164,8 @@ def CSR_64_RT_MostRegs : CalleeSavedRegs<(add CSR_64, RAX, RCX, RDX, RSI, RDI,
 
 def CSR_Win64_RT_MostRegs : CalleeSavedRegs<(add CSR_64_RT_MostRegs,
                                                  (sequence "XMM%u", 6, 15))>;
+def CSR_Win64_APX_RT_MostRegs : CalleeSavedRegs<(add CSR_64_RT_MostRegs, R30, R31,
+                                                     (sequence "XMM%u", 6, 15))>;
 
 // All registers - except r11 and return registers.
 def CSR_64_RT_AllRegs     : CalleeSavedRegs<(add CSR_64_RT_MostRegs,
@@ -1192,11 +1203,18 @@ def CSR_64_NoneRegs    : CalleeSavedRegs<(add RBP)>;
 def CSR_Win64_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,
                                                   R13, R14, R15,
                                                   (sequence "YMM%u", 6, 15))>;
+def CSR_Win64_APX_Intel_OCL_BI_AVX : CalleeSavedRegs<(add RBX, RBP, RDI, RSI, R12,
+                                                      R13, R14, R15, R30, R31,
+                                                      (sequence "YMM%u", 6, 15))>;
 
 def CSR_Win64_Intel_OCL_BI_AVX512 : CalleeSavedRegs<(add RBX, RBP, RDI, RSI,
                                                      R12, R13, R14, R15,
                                                      (sequence "ZMM%u", 6, 21),
                                                      K4, K5, K6, K7)>;
+def CSR_Win64_APX_Intel_OCL_BI_AVX512 : CalleeSavedRegs<(add RBX, RBP, RDI, RSI,
+                                                         R12, R13, R14, R15, R30, R31,
+                                                         (sequence "ZMM%u", 6, 21),
+                                                         K4, K5, K6, K7)>;
 //Standard C + XMM 8-15
 def CSR_64_Intel_OCL_BI       : CalleeSavedRegs<(add CSR_64,
                                                  (sequence "XMM%u", 8, 15))>;
@@ -1219,8 +1237,14 @@ def CSR_Win64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                               (sequence "R%u", 10, 15))>;
 def CSR_Win64_RegCall       : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,
                                               (sequence "XMM%u", 8, 15))>;
+def CSR_Win64_APX_RegCall   : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE, R30, R31,
+                                              (sequence "XMM%u", 8, 15))>;
 def CSR_Win64_CFGuard_Check_NoSSE : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE, RCX)>;
 def CSR_Win64_CFGuard_Check       : CalleeSavedRegs<(add CSR_Win64_RegCall, RCX)>;
+def CSR_Win64_APX_CFGuard_Check   : CalleeSavedRegs<(add CSR_Win64_RegCall_NoSSE,
+                                                     (sequence "R%u", 16, 31),
+                                                     (sequence "XMM%u", 8, 15),
+                                                     RCX)>;
 def CSR_SysV64_RegCall_NoSSE : CalleeSavedRegs<(add RBX, RBP,
                                                (sequence "R%u", 12, 15))>;
 def CSR_SysV64_RegCall       : CalleeSavedRegs<(add CSR_SysV64_RegCall_NoSSE,               

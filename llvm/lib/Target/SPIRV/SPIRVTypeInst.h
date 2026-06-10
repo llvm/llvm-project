@@ -55,18 +55,14 @@ public:
   bool isAnyTypeFloat() const;
   // Returns true if this is an OpTypeInt or OpTypeFloat instruction.
   bool isTypeIntOrFloat() const { return isTypeIntN() || isAnyTypeFloat(); }
+  // Returns true if this is an OpTypePointer instruction.
+  bool isTypePtr() const;
 
   friend struct DenseMapInfo<SPIRVTypeInst>;
 };
 
 template <> struct DenseMapInfo<SPIRVTypeInst> {
   using MIInfo = DenseMapInfo<MachineInstr *>;
-  static SPIRVTypeInst getEmptyKey() {
-    return {MIInfo::getEmptyKey(), SPIRVTypeInst::UncheckedConstructor()};
-  }
-  static SPIRVTypeInst getTombstoneKey() {
-    return {MIInfo::getTombstoneKey(), SPIRVTypeInst::UncheckedConstructor()};
-  }
   static unsigned getHashValue(SPIRVTypeInst Ty) {
     return MIInfo::getHashValue(Ty.MI);
   }

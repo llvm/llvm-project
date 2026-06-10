@@ -168,6 +168,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ATOMIC_LOAD, MVT::bf16, Promote);
   AddPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
 
+  setOperationAction(ISD::ATOMIC_LOAD, MVT::v2f32, Promote);
+  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v2f32, MVT::i64);
+
   setOperationAction(ISD::ATOMIC_STORE, MVT::f32, Promote);
   AddPromotedToType(ISD::ATOMIC_STORE, MVT::f32, MVT::i32);
 
@@ -179,6 +182,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::ATOMIC_STORE, MVT::bf16, Promote);
   AddPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
+
+  setOperationAction(ISD::ATOMIC_STORE, MVT::v2f32, Promote);
+  AddPromotedToType(ISD::ATOMIC_STORE, MVT::v2f32, MVT::i64);
 
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
@@ -508,11 +514,11 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                      Legal);
 
   setOperationAction(
-      {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF},
+      {ISD::CTTZ, ISD::CTTZ_ZERO_POISON, ISD::CTLZ, ISD::CTLZ_ZERO_POISON},
       MVT::i64, Custom);
 
   for (auto VT : {MVT::i8, MVT::i16})
-    setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, VT, Custom);
+    setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_POISON}, VT, Custom);
 
   static const MVT::SimpleValueType VectorIntTypes[] = {
       MVT::v2i32, MVT::v3i32, MVT::v4i32, MVT::v5i32, MVT::v6i32, MVT::v7i32,
@@ -1469,9 +1475,9 @@ SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_UINT_SAT:
     return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     return LowerCTLZ_CTTZ(Op, DAG);
   case ISD::CTLS:
     return LowerCTLS(Op, DAG);
@@ -1511,13 +1517,22 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(Lowered);
     return;
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
     if (auto Lowered = lowerCTLZResults(SDValue(N, 0u), DAG))
       Results.push_back(Lowered);
     return;
   default:
     return;
   }
+}
+
+SDValue AMDGPUTargetLowering::LowerBlockAddress(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  BlockAddressSDNode *BA = cast<BlockAddressSDNode>(Op);
+  SDLoc SL(Op);
+  EVT VT = Op.getValueType();
+  return DAG.getTargetBlockAddress(BA->getBlockAddress(), VT, BA->getOffset(),
+                                   BA->getTargetFlags());
 }
 
 SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
@@ -1995,23 +2010,35 @@ SDValue AMDGPUTargetLowering::SplitVectorStore(SDValue Op,
 
 // This is a shortcut for integer division because we have fast i32<->f32
 // conversions, and fast f32 reciprocal instructions. The fractional part of a
-// float is enough to accurately represent up to a 24-bit signed integer.
+// float is enough to accurately represent up to a 24-bit integer.
 SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
                                             bool Sign) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
+  assert(VT == MVT::i32 && "LowerDIVREM24 expects an i32");
+
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   MVT IntVT = MVT::i32;
   MVT FltVT = MVT::f32;
 
-  unsigned LHSSignBits = DAG.ComputeNumSignBits(LHS);
-  if (LHSSignBits < 9)
-    return SDValue();
-
-  unsigned RHSSignBits = DAG.ComputeNumSignBits(RHS);
-  if (RHSSignBits < 9)
-    return SDValue();
+  unsigned LHSSignBits;
+  unsigned RHSSignBits;
+  if (Sign) {
+    LHSSignBits = DAG.ComputeNumSignBits(LHS);
+    RHSSignBits = DAG.ComputeNumSignBits(RHS);
+    if (LHSSignBits < 9 || RHSSignBits < 9)
+      return SDValue();
+  } else {
+    KnownBits LHSKnown = DAG.computeKnownBits(LHS);
+    KnownBits RHSKnown = DAG.computeKnownBits(RHS);
+    APInt U24Max = APInt::getLowBitsSet(32, 24);
+    if (LHSKnown.getMaxValue().ugt(U24Max) ||
+        RHSKnown.getMaxValue().ugt(U24Max))
+      return SDValue();
+    LHSSignBits = LHSKnown.countMinLeadingZeros();
+    RHSSignBits = RHSKnown.countMinLeadingZeros();
+  }
 
   unsigned BitSize = VT.getSizeInBits();
   unsigned SignBits = std::min(LHSSignBits, RHSSignBits);
@@ -3323,11 +3350,11 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 }
 
 static bool isCtlzOpc(unsigned Opc) {
-  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_UNDEF;
+  return Opc == ISD::CTLZ || Opc == ISD::CTLZ_ZERO_POISON;
 }
 
 static bool isCttzOpc(unsigned Opc) {
-  return Opc == ISD::CTTZ || Opc == ISD::CTTZ_ZERO_UNDEF;
+  return Opc == ISD::CTTZ || Opc == ISD::CTTZ_ZERO_POISON;
 }
 
 SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
@@ -3347,7 +3374,7 @@ SDValue AMDGPUTargetLowering::lowerCTLZResults(SDValue Op,
   SDValue NumExtBits = DAG.getConstant(32u - NumBits, SL, MVT::i32);
   SDValue NewOp;
 
-  if (Opc == ISD::CTLZ_ZERO_UNDEF) {
+  if (Opc == ISD::CTLZ_ZERO_POISON) {
     NewOp = DAG.getNode(ISD::ANY_EXTEND, SL, MVT::i32, Arg);
     NewOp = DAG.getNode(ISD::SHL, SL, MVT::i32, NewOp, NumExtBits);
     NewOp = DAG.getNode(Opc, SL, MVT::i32, NewOp);
@@ -3368,21 +3395,21 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
   bool Ctlz = isCtlzOpc(Op.getOpcode());
   unsigned NewOpc = Ctlz ? AMDGPUISD::FFBH_U32 : AMDGPUISD::FFBL_B32;
 
-  bool ZeroUndef = Op.getOpcode() == ISD::CTLZ_ZERO_UNDEF ||
-                   Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF;
+  bool ZeroUndef = Op.getOpcode() == ISD::CTLZ_ZERO_POISON ||
+                   Op.getOpcode() == ISD::CTTZ_ZERO_POISON;
   bool Is64BitScalar = !Src->isDivergent() && Src.getValueType() == MVT::i64;
 
   if (Src.getValueType() == MVT::i32 || Is64BitScalar) {
     // (ctlz hi:lo) -> (umin (ffbh src), 32)
     // (cttz hi:lo) -> (umin (ffbl src), 32)
-    // (ctlz_zero_undef src) -> (ffbh src)
-    // (cttz_zero_undef src) -> (ffbl src)
+    // (ctlz_zero_poison src) -> (ffbh src)
+    // (cttz_zero_poison src) -> (ffbl src)
 
     //  64-bit scalar version produce 32-bit result
     // (ctlz hi:lo) -> (umin (S_FLBIT_I32_B64 src), 64)
     // (cttz hi:lo) -> (umin (S_FF1_I32_B64 src), 64)
-    // (ctlz_zero_undef src) -> (S_FLBIT_I32_B64 src)
-    // (cttz_zero_undef src) -> (S_FF1_I32_B64 src)
+    // (ctlz_zero_poison src) -> (S_FLBIT_I32_B64 src)
+    // (cttz_zero_poison src) -> (S_FF1_I32_B64 src)
     SDValue NewOpr = DAG.getNode(NewOpc, SL, MVT::i32, Src);
     if (!ZeroUndef) {
       const SDValue ConstVal = DAG.getConstant(
@@ -3400,8 +3427,8 @@ SDValue AMDGPUTargetLowering::LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) cons
 
   // (ctlz hi:lo) -> (umin3 (ffbh hi), (uaddsat (ffbh lo), 32), 64)
   // (cttz hi:lo) -> (umin3 (uaddsat (ffbl hi), 32), (ffbl lo), 64)
-  // (ctlz_zero_undef hi:lo) -> (umin (ffbh hi), (add (ffbh lo), 32))
-  // (cttz_zero_undef hi:lo) -> (umin (add (ffbl hi), 32), (ffbl lo))
+  // (ctlz_zero_poison hi:lo) -> (umin (ffbh hi), (add (ffbh lo), 32))
+  // (cttz_zero_poison hi:lo) -> (umin (add (ffbl hi), 32), (ffbl lo))
 
   unsigned AddOpc = ZeroUndef ? ISD::ADD : ISD::UADDSAT;
   const SDValue Const32 = DAG.getConstant(32, SL, MVT::i32);
@@ -4988,8 +5015,8 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
   ISD::CondCode CCOpcode = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
   SDValue CmpLHS = Cond.getOperand(0);
 
-  // select (setcc x, 0, eq), -1, (ctlz_zero_undef x) -> ffbh_u32 x
-  // select (setcc x, 0, eq), -1, (cttz_zero_undef x) -> ffbl_u32 x
+  // select (setcc x, 0, eq), -1, (ctlz_zero_poison x) -> ffbh_u32 x
+  // select (setcc x, 0, eq), -1, (cttz_zero_poison x) -> ffbl_u32 x
   if (CCOpcode == ISD::SETEQ &&
       (isCtlzOpc(RHS.getOpcode()) || isCttzOpc(RHS.getOpcode())) &&
       RHS.getOperand(0) == CmpLHS && isAllOnesConstant(LHS)) {
@@ -4998,8 +5025,8 @@ SDValue AMDGPUTargetLowering::performCtlz_CttzCombine(const SDLoc &SL, SDValue C
     return getFFBX_U32(DAG, CmpLHS, SL, Opc);
   }
 
-  // select (setcc x, 0, ne), (ctlz_zero_undef x), -1 -> ffbh_u32 x
-  // select (setcc x, 0, ne), (cttz_zero_undef x), -1 -> ffbl_u32 x
+  // select (setcc x, 0, ne), (ctlz_zero_poison x), -1 -> ffbh_u32 x
+  // select (setcc x, 0, ne), (cttz_zero_poison x), -1 -> ffbl_u32 x
   if (CCOpcode == ISD::SETNE &&
       (isCtlzOpc(LHS.getOpcode()) || isCttzOpc(LHS.getOpcode())) &&
       LHS.getOperand(0) == CmpLHS && isAllOnesConstant(RHS)) {
@@ -5551,7 +5578,7 @@ bool AMDGPUTargetLowering::isInt64ImmLegal(SDNode *N, SelectionDAG &DAG) const {
   auto &ST = DAG.getSubtarget<GCNSubtarget>();
   const auto *TII = ST.getInstrInfo();
 
-  if (!ST.hasMovB64() || (!SDConstant && !SDFPConstant))
+  if (!ST.hasVMovB64Inst() || (!SDConstant && !SDFPConstant))
     return false;
 
   if (ST.has64BitLiterals())
@@ -6070,7 +6097,8 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
     if (SelfMultiply)
       SelfMultiply &= DAG.isGuaranteedNotToBeUndefOrPoison(
-          Op.getOperand(0), DemandedElts, false, Depth + 1);
+          Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
+          Depth + 1);
 
     Known = KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
     break;
@@ -6259,7 +6287,7 @@ unsigned AMDGPUTargetLowering::computeNumSignBitsForTargetInstr(
 
 bool AMDGPUTargetLowering::canCreateUndefOrPoisonForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
-    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+    UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const {
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case AMDGPUISD::BFE_I32:
@@ -6267,7 +6295,7 @@ bool AMDGPUTargetLowering::canCreateUndefOrPoisonForTargetNode(
     return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
-      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
+      Op, DemandedElts, DAG, Kind, ConsiderFlags, Depth);
 }
 
 bool AMDGPUTargetLowering::isKnownNeverNaNForTargetNode(

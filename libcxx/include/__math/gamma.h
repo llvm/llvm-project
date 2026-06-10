@@ -68,11 +68,13 @@ inline _LIBCPP_HIDE_FROM_ABI double __lgamma_r(double __d) _NOEXCEPT { return __
 
 #else
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #  if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("_lgamma_r");
 #  else
 double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("lgamma_r");
 #  endif
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 inline _LIBCPP_HIDE_FROM_ABI double __lgamma_r(double __d) _NOEXCEPT {
   int __sign;

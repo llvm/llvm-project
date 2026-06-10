@@ -497,8 +497,8 @@ static SourceLocation ReadOriginalFileName(CompilerInstance &CI,
   if (!MainFileBuf)
     return SourceLocation();
 
-  std::unique_ptr<Lexer> RawLexer(
-      new Lexer(MainFileID, *MainFileBuf, SourceMgr, CI.getLangOpts()));
+  auto RawLexer = std::make_unique<Lexer>(MainFileID, *MainFileBuf, SourceMgr,
+                                          CI.getLangOpts());
 
   // If the first line has the syntax of
   //
@@ -675,7 +675,7 @@ static std::error_code collectModuleHeaderIncludes(
   }
 
   // Recurse into submodules.
-  for (auto *Submodule : Module->submodules())
+  for (clang::Module *Submodule : Module->submodules())
     if (std::error_code Err = collectModuleHeaderIncludes(
             LangOpts, FileMgr, Diag, ModMap, Submodule, Includes))
       return Err;

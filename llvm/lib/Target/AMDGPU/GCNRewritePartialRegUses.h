@@ -13,7 +13,7 @@
 
 namespace llvm {
 class GCNRewritePartialRegUsesPass
-    : public PassInfoMixin<GCNRewritePartialRegUsesPass> {
+    : public OptionalPassInfoMixin<GCNRewritePartialRegUsesPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

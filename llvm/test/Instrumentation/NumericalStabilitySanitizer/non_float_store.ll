@@ -9,7 +9,7 @@ define void @store_non_float(ptr %dst) sanitize_numerical_stability {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 42, ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__nsan_get_shadow_ptr_for_float_store(ptr [[DST]], i64 1)
-; CHECK-NEXT:    store double 0x36F5000000000000, ptr [[TMP0]], align 1
+; CHECK-NEXT:    store double f0x36F5000000000000, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -22,7 +22,7 @@ define void @store_non_float_vector(ptr %dst) sanitize_numerical_stability {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store <4 x i32> splat (i32 42), ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @__nsan_get_shadow_ptr_for_float_store(ptr [[DST]], i64 4)
-; CHECK-NEXT:    store <4 x double> splat (double 0x36F5000000000000), ptr [[TMP0]], align 1
+; CHECK-NEXT:    store <4 x double> splat (double f0x36F5000000000000), ptr [[TMP0]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:

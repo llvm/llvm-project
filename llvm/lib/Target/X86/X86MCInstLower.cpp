@@ -909,11 +909,8 @@ void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // bytes.  This assumes that patchable-function-prefix is the same for all
   // functions.
   const MachineFunction &MF = *MI.getMF();
-  int64_t PrefixNops = 0;
-  (void)MF.getFunction()
-      .getFnAttribute("patchable-function-prefix")
-      .getValueAsString()
-      .getAsInteger(10, PrefixNops);
+  int64_t PrefixNops = MF.getFunction().getFnAttributeAsParsedInteger(
+      "patchable-function-prefix");
 
   // KCFI allows indirect calls to any location that's preceded by a valid
   // type identifier. To avoid encoding the full constant into an instruction,
@@ -969,7 +966,7 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   StringRef Op = OrShadowOffset ? "or" : "add";
   std::string SymName = ("__asan_check_" + Name + "_" + Op + "_" +
                          Twine(1ULL << AccessInfo.AccessSizeIndex) + "_" +
-                         TM.getMCRegisterInfo()->getName(Reg.asMCReg()))
+                         TM.getMCRegisterInfo().getName(Reg.asMCReg()))
                             .str();
   if (OrShadowOffset)
     report_fatal_error(
@@ -1310,11 +1307,7 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
 
   const Function &F = MF->getFunction();
   if (F.hasFnAttribute("patchable-function-entry")) {
-    unsigned Num;
-    if (F.getFnAttribute("patchable-function-entry")
-            .getValueAsString()
-            .getAsInteger(10, Num))
-      return;
+    unsigned Num = F.getFnAttributeAsParsedInteger("patchable-function-entry");
     emitX86Nops(*OutStreamer, Num, Subtarget);
     return;
   }
@@ -1667,6 +1660,22 @@ static void printBroadcast(const MachineInstr *MI, MCStreamer &OutStreamer,
   }
 }
 
+static void addConstantComment(const MachineInstr *MI, MCStreamer &OutStreamer,
+                               unsigned OpNo, int BitWidth, int Repeats = 1) {
+  if (auto *C = X86::getConstantFromPool(*MI, OpNo)) {
+    std::string Comment;
+    raw_string_ostream CS(Comment);
+    CS << "[";
+    for (int I = 0; I != Repeats; ++I) {
+      if (I != 0)
+        CS << ",";
+      printConstant(C, BitWidth, CS);
+    }
+    CS << "]";
+    OutStreamer.AddComment(CS.str());
+  }
+}
+
 static bool printExtend(const MachineInstr *MI, MCStreamer &OutStreamer,
                         int SrcEltBits, int DstEltBits, bool IsSext) {
   unsigned SrcIdx = getSrcIdx(MI, 1);
@@ -1751,6 +1760,7 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     case X86::SEH_SaveReg:
     case X86::SEH_SaveXMM:
     case X86::SEH_PushFrame:
+    case X86::SEH_Push2Regs:
       llvm_unreachable("SEH_ directive incompatible with FPO");
       break;
     default:
@@ -1763,6 +1773,11 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   case X86::SEH_PushReg:
     OutStreamer->emitWinCFIPushReg(MI->getOperand(0).getImm());
+    break;
+
+  case X86::SEH_Push2Regs:
+    OutStreamer->emitWinCFIPush2Regs(MI->getOperand(0).getImm(),
+                                     MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_SaveReg:
@@ -1938,6 +1953,28 @@ static void addConstantComments(const MachineInstr *MI,
     break;
   }
 
+  case X86::GF2P8AFFINEQBrmi:
+  case X86::VGF2P8AFFINEQBrmi:
+  case X86::VGF2P8AFFINEQBYrmi:
+  case X86::VGF2P8AFFINEQBZrmi:
+  case X86::VGF2P8AFFINEQBZ128rmi:
+  case X86::VGF2P8AFFINEQBZ256rmi: {
+    // TODO: Add predicate handling with test coverage.
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+    addConstantComment(MI, OutStreamer, SrcIdx + 1, Width);
+    break;
+  }
+
+  case X86::VGF2P8AFFINEQBZ128rmbi:
+  case X86::VGF2P8AFFINEQBZ256rmbi:
+  case X86::VGF2P8AFFINEQBZrmbi: {
+    unsigned SrcIdx = getSrcIdx(MI, 1);
+    unsigned Width = X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+    addConstantComment(MI, OutStreamer, SrcIdx + 1, 64, Width / 64);
+    break;
+  }
+
 #define INSTR_CASE(Prefix, Instr, Suffix, Postfix)                             \
   case X86::Prefix##Instr##Suffix##rm##Postfix:
 
@@ -1982,16 +2019,9 @@ static void addConstantComments(const MachineInstr *MI,
     CASE_ARITH_RM(PMULHUW)
     CASE_ARITH_RM(PMULHRSW) {
       unsigned SrcIdx = getSrcIdx(MI, 1);
-      if (auto *C = X86::getConstantFromPool(*MI, SrcIdx + 1)) {
-        std::string Comment;
-        raw_string_ostream CS(Comment);
-        unsigned VectorWidth =
-            X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
-        CS << "[";
-        printConstant(C, VectorWidth, CS);
-        CS << "]";
-        OutStreamer.AddComment(CS.str());
-      }
+      unsigned VectorWidth =
+          X86::getVectorRegisterWidth(MI->getDesc().operands()[0]);
+      addConstantComment(MI, OutStreamer, SrcIdx + 1, VectorWidth);
       break;
     }
 
@@ -2530,6 +2560,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case X86::SEH_PushReg:
+  case X86::SEH_Push2Regs:
   case X86::SEH_SaveReg:
   case X86::SEH_SaveXMM:
   case X86::SEH_StackAlloc:
@@ -2547,6 +2578,11 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(!SplitChainedAtEndOfBlock &&
            "Duplicate SEH_SplitChainedAtEndOfBlock in a current block");
     SplitChainedAtEndOfBlock = true;
+    return;
+
+  case X86::SEH_SplitChained:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
+    OutStreamer->emitWinCFISplitChained();
     return;
 
   case X86::SEH_BeginEpilogue: {
@@ -2743,8 +2779,8 @@ void X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI) {
   // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
   // (Don't let the name fool you: Itanium refers to table-based exception
   // handling, not the Itanium architecture.)
-  if (MAI->getExceptionHandlingType() != ExceptionHandling::WinEH ||
-      MAI->getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
+  if (MAI.getExceptionHandlingType() != ExceptionHandling::WinEH ||
+      MAI.getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
     return;
   }
 

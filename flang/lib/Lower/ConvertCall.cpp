@@ -79,15 +79,15 @@ static fir::ExtendedValue toExtendedValue(mlir::Location loc, mlir::Value base,
   return base;
 }
 
-/// Lower a type(C_PTR/C_FUNPTR) argument with VALUE attribute into a
+/// Lower a type(C_PTR/C_FUNPTR/C_DEVPTR) argument with VALUE attribute into a
 /// reference. A C pointer can correspond to a Fortran dummy argument of type
 /// C_PTR with the VALUE attribute. (see 18.3.6 note 3).
 static mlir::Value genRecordCPtrValueArg(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Value rec,
-                                         mlir::Type ty) {
-  mlir::Value cAddr = fir::factory::genCPtrOrCFunptrAddr(builder, loc, rec, ty);
-  mlir::Value cVal = fir::LoadOp::create(builder, loc, cAddr);
-  return builder.createConvert(loc, cAddr.getType(), cVal);
+                                         mlir::Type) {
+  mlir::Value cVal = fir::factory::genCPtrOrCFunptrValue(builder, loc, rec);
+  return builder.createConvert(loc, fir::ReferenceType::get(cVal.getType()),
+                               cVal);
 }
 
 // Find the argument that corresponds to the host associations.
@@ -145,12 +145,11 @@ static bool mustCastFuncOpToCopeWithImplicitInterfaceMismatch(
   // mismatch on the arguments. The argument are always prepared according
   // to the implicit interface. Cast the actual function if any of the
   // argument mismatch cannot be dealt with a simple fir.convert.
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    for (auto [actualType, dummyType] :
-         llvm::zip(callSiteType.getInputs(), funcOpType.getInputs()))
-      if (actualType != dummyType &&
-          !fir::ConvertOp::canBeConverted(actualType, dummyType))
-        return true;
+  for (auto [actualType, dummyType] :
+       llvm::zip(callSiteType.getInputs(), funcOpType.getInputs()))
+    if (actualType != dummyType &&
+        !fir::ConvertOp::canBeConverted(actualType, dummyType))
+      return true;
   return false;
 }
 
@@ -408,7 +407,6 @@ Fortran::lower::genCallOpAndResult(
     }
   }
   const bool isExprCall =
-      converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       callSiteType.getNumResults() == 1 &&
       llvm::isa<fir::SequenceType>(callSiteType.getResult(0));
 
@@ -622,8 +620,6 @@ Fortran::lower::genCallOpAndResult(
         // With the lowering to HLFIR, box arguments have already been built
         // according to the attributes, rank, bounds, and type they should have.
         // Do not attempt any reboxing here that could break this.
-        bool legacyLowering =
-            !converter.getLoweringOptions().getLowerToHighLevelFIR();
         // When dealing with a dummy character argument (fir.boxchar), the
         // effective argument might be a non-character raw pointer. This may
         // happen when calling an implicit interface that was previously called
@@ -635,7 +631,7 @@ Fortran::lower::genCallOpAndResult(
         cast = builder.createVolatileCast(loc, isVolatile, fst);
         cast = builder.convertWithSemantics(loc, snd, cast,
                                             allowCharacterConversions,
-                                            /*allowRebox=*/legacyLowering);
+                                            /*allowRebox=*/false);
       }
     }
     operands.push_back(cast);
@@ -845,9 +841,7 @@ Fortran::lower::genCallOpAndResult(
   // In HLFIR, this is skipped when the result does not need to be finalized
   // because the result is moved to an expression that will deal with the
   // finalization.
-  if (allocatedResult &&
-      (mustFinalizeResult ||
-       !converter.getLoweringOptions().getLowerToHighLevelFIR())) {
+  if (allocatedResult && mustFinalizeResult) {
     // The result must be optionally destroyed (if it is of a derived type
     // that may need finalization or deallocation of the components).
     // For an allocatable result we have to free the memory allocated
@@ -1758,7 +1752,7 @@ void prepareUserCallArguments(
 
       mlir::Type eleTy = value.getFortranElementType();
       if (fir::isa_builtin_cptr_type(eleTy)) {
-        // Pass-by-value argument of type(C_PTR/C_FUNPTR).
+        // Pass-by-value argument of type(C_PTR/C_FUNPTR/C_DEVPTR).
         // Load the __address component and pass it by value.
         if (value.isValue()) {
           auto associate = hlfir::genAssociateExpr(loc, builder, value, eleTy,
@@ -3262,19 +3256,13 @@ bool Fortran::lower::isIntrinsicModuleProcRef(
   return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC);
 }
 
-static bool isInWhereMaskedExpression(fir::FirOpBuilder &builder) {
-  // The MASK of the outer WHERE is not masked itself.
-  mlir::Operation *op = builder.getRegion().getParentOp();
-  return op && op->getParentOfType<hlfir::WhereOp>();
-}
-
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const evaluate::ProcedureRef &procRef, std::optional<mlir::Type> resultType,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
   auto &builder = converter.getFirOpBuilder();
   if (resultType && !procRef.IsElemental() &&
-      isInWhereMaskedExpression(builder) &&
+      hlfir::isInsideHlfirWhereMaskedExpression(builder.getRegion()) &&
       !builder.getRegion().getParentOfType<hlfir::ExactlyOnceOp>()) {
     // Non elemental calls inside a where-assignment-stmt must be executed
     // exactly once without mask control. Lower them in a special region so that

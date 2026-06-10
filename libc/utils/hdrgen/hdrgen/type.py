@@ -10,6 +10,7 @@ from hdrgen.symbol import Symbol
 
 
 class Type(Symbol):
-    # A type so far carries no specific information beyond its name.
-    def __init__(self, name):
+    # A type carries its name and an optional guard.
+    def __init__(self, name, guard=None):
         super().__init__(name)
+        self.guard = guard

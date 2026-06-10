@@ -2,17 +2,39 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=OGCG
 
-// Empty union (should be padded to size 1)
+// Padding-only union: CIR has no storage member and stores size in padding
+// field, so getUnionStorageType() is null and getABIAlignment returns 1.
 union Empty {};
-// CIR: !rec_Empty = !cir.record<union "Empty" padded {!u8i}>
-// LLVM: %union.Empty = type { i8 }
-// OGCG: %union.Empty = type { i8 }
+// CIR: !rec_Empty = !cir.union<"Empty" {}, padding = {!u8i}>
+// LLVM-DAG: %union.Empty = type { i8 }
+// OGCG-DAG: %union.Empty = type { i8 }
 
 // Aligned empty union (should have aligned integer member in CIR)
 union alignas(16) EmptyAligned {};
-// CIR: !rec_EmptyAligned = !cir.record<union "EmptyAligned" padded {!cir.array<!u8i x 16>}>
-// LLVM: %union.EmptyAligned = type { [16 x i8] }
-// OGCG: %union.EmptyAligned = type { [16 x i8] }
+// CIR: !rec_EmptyAligned = !cir.union<"EmptyAligned" {}, padding = {!cir.array<!u8i x 16>}>
+// LLVM-DAG: %union.EmptyAligned = type { [16 x i8] }
+// OGCG-DAG: %union.EmptyAligned = type { [16 x i8] }
+
+// Struct holding a padding-only union member: layout queries !rec_Empty
+// alignment (null largest), not OuterWithEmpty's int x.
+union OuterWithEmpty {
+  Empty e;
+  int x;
+};
+struct WrapEmpty {
+  OuterWithEmpty o;
+  int s;
+};
+WrapEmpty w;
+// CIR:      !rec_OuterWithEmpty = !cir.union<"OuterWithEmpty" {!rec_Empty, !s32i}>
+// CIR:      !rec_WrapEmpty = !cir.struct<"WrapEmpty" {!rec_OuterWithEmpty, !s32i}>
+// CIR:      cir.global external @w = #cir.zero : !rec_WrapEmpty {alignment = 4 : i64}
+// LLVM-DAG: %struct.WrapEmpty = type { %union.OuterWithEmpty, i32 }
+// LLVM-DAG: %union.OuterWithEmpty = type { i32 }
+// LLVM:     @w = global %struct.WrapEmpty zeroinitializer, align 4
+// OGCG-DAG: %struct.WrapEmpty = type { %union.OuterWithEmpty, i32 }
+// OGCG-DAG: %union.OuterWithEmpty = type { i32 }
+// OGCG:     @w = global %struct.WrapEmpty zeroinitializer, align 4
 
 void useEmpty() {
   Empty e;

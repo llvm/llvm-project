@@ -894,13 +894,16 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
           type descriptor or element size to populate the new descriptor.
         - accessMap: unused/experimental.
         - allocator_idx: specify special allocator to use.
+        - optional: indicates that a null pointer `memref` must produce a absent
+          fir.box as opposed to a fir.box containing a nullptr.
   }];
 
   let arguments = (ins AnyReferenceLike:$memref, Optional<AnyShapeType>:$shape,
       Optional<fir_SliceType>:$slice, Variadic<AnyIntegerType>:$typeparams,
       Optional<BoxOrClassType>:$sourceBox,
       OptionalAttr<AffineMapAttr>:$accessMap,
-      OptionalAttr<I32Attr>:$allocator_idx);
+      OptionalAttr<I32Attr>:$allocator_idx,
+      UnitAttr:$optional);
 
   let results = (outs BoxOrClassType);
 
@@ -913,12 +916,13 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
       CArg<"mlir::IntegerAttr", "{}">:$allocator_idx),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
                     typeparams, sourceBox, mlir::AffineMapAttr{},
-                    allocator_idx); }]>
+                    allocator_idx, /*optional=*/mlir::UnitAttr{}); }]>
   ];
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
-      (`source_box` $sourceBox^)? (`map` $accessMap^)? attr-dict `:`
+      (`source_box` $sourceBox^)? (`map` $accessMap^)?
+      (`optional` $optional^)? attr-dict `:`
       functional-type(operands, results)
   }];
 
@@ -976,18 +980,24 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
       %3 = fir.shape %c3, %c4 : (index, index) -> !fir.shape<2>
       %4 = fir.rebox %2(%3) : (!fir.box<!fir.array<?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
     ```
+
+    When the `optional` unit attribute is set, `$box` may be an absent
+    (null-descriptor) OPTIONAL. In such case, the produced fir.box will be
+    absent when the input one is absent. Without this flag, it is illegal
+    to execute a fir.rebox where the input fir.box is absent.
   }];
 
   let arguments = (ins
     BoxOrClassType:$box,
     Optional<AnyShapeOrShiftType>:$shape,
-    Optional<fir_SliceType>:$slice
+    Optional<fir_SliceType>:$slice,
+    UnitAttr:$optional
   );
 
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
-    $box (`(` $shape^ `)`)? (`[` $slice^ `]`)?
+    $box (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`optional` $optional^)?
         attr-dict `:` functional-type(operands, results)
   }];
 
@@ -1022,18 +1032,24 @@ def fir_ReboxAssumedRankOp : fir_Op<"rebox_assumed_rank",
     Example:
     ```
       fir.rebox_assumed_rank %1 lbs zeroes : (!fir.box<!fir.array<*:f32>>) -> !fir.box<!fir.array<*:f32>>
-    ```    
+    ```
+
+    When the `optional` unit attribute is set, `$box` may be an absent
+    (null-descriptor) OPTIONAL. In such case, the produced fir.box will be
+    absent when the input one is absent. Without this flag, it is illegal
+    to execute a fir.rebox where the input fir.box is absent.
   }];
 
   let arguments = (ins
     AnyRefOrBoxType:$box,
-    fir_LowerBoundModifierAttribute:$lbs_modifier
+    fir_LowerBoundModifierAttribute:$lbs_modifier,
+    UnitAttr:$optional
   );
 
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
-    $box `lbs` $lbs_modifier
+    $box `lbs` $lbs_modifier (`optional` $optional^)?
         attr-dict `:` functional-type(operands, results)
   }];
 
@@ -2071,6 +2087,41 @@ def fir_ShapeOp : fir_Op<"shape", [Pure]> {
   let builders = [OpBuilder<(ins "mlir::ValueRange":$extents)>];
 }
 
+def fir_ShapeExtentsOp : fir_Op<"shape_extents", [Pure]> {
+  let summary = "unpack a shape value into per-dimension extent SSA values";
+
+  let description = [{
+    Takes a single abstract `!fir.shape<n>` or `!fir.shapeshift<n>` value and yields `n` integer SSA
+    results, one per dimension extent in Fortran row-to-column order. This is
+    intended for lowering when extent values are needed but the defining
+    `fir.shape` is not visible (for example when a shape is forwarded through
+    control flow as a block argument).
+
+    When the operand is the result of `fir.shape`, a canonicalization may fold
+    this operation to the original extent operands.
+
+    ```
+      %e0, %e1 = fir.shape_extents %sh : (!fir.shape<2>) -> (index, index)
+    ```
+  }];
+
+  let arguments = (ins AnyShapeType:$shape);
+
+  let results = (outs Variadic<AnyIntegerType>:$extents);
+
+  let assemblyFormat = [{
+    $shape attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+
+  let hasCanonicalizer = 1;
+
+  let skipDefaultBuilders = 1;
+
+  let builders = [OpBuilder<(ins "mlir::Value":$shape)>];
+}
+
 def fir_ShapeShiftOp : fir_Op<"shape_shift", [Pure]> {
 
   let summary = [{
@@ -2321,7 +2372,9 @@ def fir_LenParamIndexOp : fir_OneResultOp<"len_param_index", [NoMemoryEffect]> {
 
 def fir_ResultOp
     : fir_Op<"result", [Pure, ReturnLike, Terminator,
-                        ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>]> {
+                        ParentOneOf<["IfOp", "DoLoopOp", "IterWhileOp"]>,
+                        DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+                            ["getMutableSuccessorOperands"]>]> {
   let summary = "special terminator for use in fir region operations";
 
   let description = [{
@@ -2351,7 +2404,9 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
 
 def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<LoopLikeOpInterface,
-        ["getYieldedValuesMutable"]>]> {
+        ["getYieldedValuesMutable"]>,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
   let summary = "generalized loop operation";
   let description = [{
     Generalized high-level looping construct. This operation is similar to
@@ -2987,7 +3042,10 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [Pure]> {
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
 }
 
-def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
+def fir_VolatileCastOp
+    : fir_SimpleOneResultOp<
+          "volatile_cast", [Pure, ViewLikeOpInterface,
+                            fir_FortranObjectViewOpInterface]> {
   let summary = "cast between volatile and non-volatile types";
   let description = [{
     Cast between volatile and non-volatile types. The types must be otherwise
@@ -3001,6 +3059,14 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
   }];
   let hasVerifier = 1;
   let hasFolder = 1;
+  let extraClassDeclaration = [{
+    // ViewLikeOpInterface methods:
+    mlir::Value getViewSource() { return getValue(); }
+
+    // FortranObjectViewOpInterface methods:
+    mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
+    std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+  }];
 }
 
 def fir_ConvertOp
@@ -3298,12 +3364,14 @@ def fir_UseStmtOp
   }];
 
   let arguments = (ins StrAttr:$module_name,
-      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames);
+      OptionalAttr<ArrayAttr>:$only_symbols, OptionalAttr<ArrayAttr>:$renames,
+      DefaultValuedAttr<BoolAttr, "false">:$hasOnlyWithRenames);
 
   let assemblyFormat = [{
     $module_name
     (`only_symbols` `[` $only_symbols^ `]`)?
     (`renames` `[` $renames^ `]`)?
+    (`hasOnlyWithRenames` $hasOnlyWithRenames^)?
     attr-dict
   }];
 
@@ -3315,7 +3383,10 @@ def fir_UseStmtOp
     bool hasRenames() { return getRenames().has_value(); }
 
     /// Returns true if this imports the entire module (no ONLY clause)
-    bool importsAll() { return !hasOnlyClause(); }
+    bool importsAll() { return !(hasOnlyClause() || getHasOnlyWithRenames()); }
+
+    /// Returns true if this USE statement has both ONLY clause and renames
+    bool hasOnlyWithRenames() { return getHasOnlyWithRenames(); }
   }];
 }
 

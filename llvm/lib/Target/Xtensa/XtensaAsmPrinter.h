@@ -33,7 +33,8 @@ public:
 
   explicit XtensaAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), STI(TM.getMCSubtargetInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), STI(&TM.getMCSubtargetInfo()) {
+  }
 
   StringRef getPassName() const override { return "Xtensa Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;

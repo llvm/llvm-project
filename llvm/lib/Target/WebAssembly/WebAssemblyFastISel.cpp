@@ -324,8 +324,7 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
   }
   case Instruction::Alloca: {
     const auto *AI = cast<AllocaInst>(Obj);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-        FuncInfo.StaticAllocaMap.find(AI);
+    auto SI = FuncInfo.StaticAllocaMap.find(AI);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       if (Addr.isSet()) {
         return false;
@@ -674,8 +673,7 @@ unsigned WebAssemblyFastISel::copyValue(unsigned Reg) {
 }
 
 Register WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
-  DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
     Register ResultReg =

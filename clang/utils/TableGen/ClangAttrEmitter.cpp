@@ -287,6 +287,10 @@ namespace {
       std::string S = std::string("get") + std::string(getUpperName()) + "()";
       return getArgEqualityFn().str() + "(" + S + ", Other." + S + ", Context)";
     }
+
+    virtual std::string emitAttrArgProfileCall() const {
+      return "profileAttrArg(ID, Ctx, get" + getUpperName().str() + "())";
+    }
   };
 
   class SimpleArgument : public Argument {
@@ -415,9 +419,9 @@ namespace {
     int64_t Default;
 
   public:
-    DefaultSimpleArgument(const Record &Arg, StringRef Attr,
-                          std::string T, int64_t Default)
-      : SimpleArgument(Arg, Attr, T), Default(Default) {}
+    DefaultSimpleArgument(const Record &Arg, StringRef Attr, std::string T,
+                          int64_t Default)
+        : SimpleArgument(Arg, Attr, std::move(T)), Default(Default) {}
 
     void writeAccessors(raw_ostream &OS) const override {
       SimpleArgument::writeAccessors(OS);
@@ -866,6 +870,11 @@ namespace {
       return getArgEqualityFn().str() + "(" + GenIter(false, "begin") + ", " +
              GenIter(false, "end") + ", " + GenIter(true, "begin") + ", " +
              GenIter(true, "end") + ", Context)";
+    }
+
+    std::string emitAttrArgProfileCall() const override {
+      std::string LN = getLowerName().str();
+      return "profileAttrArg(ID, Ctx, " + LN + "_begin(), " + LN + "_end())";
     }
   };
 
@@ -2006,6 +2015,23 @@ static void emitClangAttrLateParsedExperimentalList(const RecordKeeper &Records,
   emitClangAttrLateParsedListImpl(Records, OS,
                                   LateAttrParseKind::ExperimentalExt);
   OS << "#endif // CLANG_ATTR_LATE_PARSED_EXPERIMENTAL_EXT_LIST\n\n";
+}
+
+// Emits a list of attributes whose argument list is parsed inside a function
+// prototype scope so it can refer to the enclosing function's parameters.
+static void
+emitClangAttrParseArgsInFunctionScopeList(const RecordKeeper &Records,
+                                          raw_ostream &OS) {
+  OS << "#if defined(CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST)\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    if (!Attr->getValueAsBit("ParseArgsInFunctionScope"))
+      continue;
+    // FIXME: Handle non-GNU attributes
+    for (const auto &I : GetFlattenedSpellings(*Attr))
+      if (I.variety() == "GNU")
+        OS << ".Case(\"" << I.name() << "\", 1)\n";
+  }
+  OS << "#endif // CLANG_ATTR_PARSE_ARGS_IN_FUNCTION_SCOPE_LIST\n\n";
 }
 
 static bool hasGNUorCXX11Spelling(const Record &Attribute) {
@@ -3249,6 +3275,22 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
       OS << "}\n\n";
     }
 
+    std::string ProfileSig = "Profile(llvm::FoldingSetNodeID &ID, "
+                             "const ASTContext &Ctx) const";
+    if (Header) {
+      OS << "  void " << ProfileSig << ";\n";
+    } else {
+      OS << "void " << R.getName() << "Attr::" << ProfileSig << " {\n";
+      std::string CustomFn = R.getValueAsString("profileFn").str();
+      if (CustomFn.empty()) {
+        for (const auto &ai : Args)
+          OS << "  " << ai->emitAttrArgProfileCall() << ";\n";
+      } else {
+        OS << "  " << CustomFn << "(*this, ID, Ctx);\n";
+      }
+      OS << "}\n\n";
+    }
+
     if (Header) {
       if (DelayedArgs) {
         DelayedArgs->writeAccessors(OS);
@@ -3321,6 +3363,23 @@ static void emitEquivalenceFunction(const RecordKeeper &Records,
   OS << "}\n\n";
 }
 
+static void emitProfileFunction(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "void Attr::Profile(llvm::FoldingSetNodeID &ID, "
+        "const ASTContext &Ctx) const {\n";
+  OS << "  switch (getKind()) {\n";
+  for (const auto *Attr : Records.getAllDerivedDefinitions("Attr")) {
+    const Record &R = *Attr;
+    if (!R.getValueAsBit("ASTNode"))
+      continue;
+    OS << "  case attr::" << R.getName() << ":\n";
+    OS << "    return cast<" << R.getName()
+       << "Attr>(this)->Profile(ID, Ctx);\n";
+  }
+  OS << "  }\n";
+  OS << "  llvm_unreachable(\"Unexpected attribute kind!\");\n";
+  OS << "}\n\n";
+}
+
 // Emits the class method definitions for attributes.
 void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   emitSourceFileHeader("Attribute classes' member function definitions", OS,
@@ -3357,6 +3416,7 @@ void clang::EmitClangAttrImpl(const RecordKeeper &Records, raw_ostream &OS) {
   EmitFunc("printPretty(OS, Policy)");
 
   emitEquivalenceFunction(Records, OS);
+  emitProfileFunction(Records, OS);
 }
 
 static void emitAttrList(raw_ostream &OS, StringRef Class,
@@ -5268,6 +5328,7 @@ void EmitClangAttrParserStringSwitches(const RecordKeeper &Records,
   emitClangAttrTypeArgList(Records, OS);
   emitClangAttrLateParsedList(Records, OS);
   emitClangAttrLateParsedExperimentalList(Records, OS);
+  emitClangAttrParseArgsInFunctionScopeList(Records, OS);
   emitClangAttrStrictIdentifierArgList(Records, OS);
 }
 
@@ -5314,7 +5375,7 @@ public:
     return Spellings[(size_t)K];
   }
 
-  void add(const Record &Attr, FlattenedSpelling Spelling) {
+  void add(const Record &Attr, const FlattenedSpelling &Spelling) {
     SpellingKind Kind =
         StringSwitch<SpellingKind>(Spelling.variety())
             .Case("GNU", SpellingKind::GNU)

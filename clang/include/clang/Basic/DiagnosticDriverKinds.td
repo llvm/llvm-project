@@ -33,6 +33,8 @@ def err_drv_invalid_riscv_arch_name : Error<
   "invalid arch name '%0', %1">;
 def err_drv_invalid_riscv_cpu_name_for_target : Error<
   "cpu '%0' does not support rv%select{32|64}1">;
+def err_drv_invalid_riscv_mtune_string : Error<
+  "invalid %select{-mtune|tune feature}0 string '%1': %2">;
 def warn_drv_invalid_arch_name_with_suggestion : Warning<
   "ignoring invalid /arch: argument '%0'; for %select{64|32}1-bit expected one of %2">,
   InGroup<UnusedCommandLineArgument>;
@@ -92,6 +94,11 @@ def err_drv_no_hipspv_device_lib : Error<
 def err_drv_hipspv_no_hip_path : Error<
   "'--hip-path' must be specified when offloading to SPIR-V unless '-nogpuinc' "
   "is given">;
+
+// SYCL Windows-specific diagnostics
+def err_drv_sycl_requires_dynamic_crt : Error<
+  "SYCL requires dynamic C++ runtime (/MD or /MDd); "
+  "static C++ runtime (/MT or /MTd) is not supported">;
 
 def err_drv_no_spv_tools : Error<"cannot find SPIR-V Tools binary '%0', which "
                                  "is required for SPIR-V compilation. "
@@ -167,10 +174,13 @@ def warn_drv_unsupported_option_for_runtime : Warning<
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
-def warn_openmp_incomplete : Warning<
+def warn_openmp_impl_incomplete : Warning<
   "OpenMP support for version %0 in flang is still incomplete">,
   InGroup<ExperimentalOption>;
-
+def warn_openmp_spec_incomplete : Warning<
+  "the specification for OpenMP version %0 is still under development; "
+  "the syntax and semantics of new features may be subject to change">,
+  InGroup<ExperimentalOption>;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<
@@ -231,6 +241,8 @@ def err_drv_argument_not_allowed_with : Error<
 def warn_drv_argument_not_allowed_with : Warning<
   "invalid argument '%0' not allowed with '%1'">,
   InGroup<OptionIgnored>;
+def err_drv_sycl_requires_cxx17 : Error<
+  "SYCL requires C++17 or later; '%0' is not supported">;
 def err_drv_cannot_open_randomize_layout_seed_file : Error<
   "cannot read randomize layout seed file '%0'">;
 def err_drv_invalid_version_number : Error<
@@ -613,6 +625,8 @@ def err_drv_reduced_module_output_overrided : Warning<
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
+def err_drv_modules_driver_requires_reduced_bmi : Error<
+  "'-fmodules-driver' is currently incompatible with '-fno-modules-reduced-bmi'">;
 def remark_performing_driver_managed_module_build : Remark<
   "performing driver managed module build">, InGroup<ModulesDriver>;
 def remark_modules_manifest_not_found : Remark<

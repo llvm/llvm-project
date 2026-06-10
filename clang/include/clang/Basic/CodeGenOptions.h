@@ -22,10 +22,10 @@
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/Hash.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include "llvm/Transforms/Utils/KCFIHash.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -66,7 +66,7 @@ public:
   using AsanDtorKind = llvm::AsanDtorKind;
   using VectorLibrary = llvm::driver::VectorLibrary;
   using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
-  using WinX64EHUnwindV2Mode = llvm::WinX64EHUnwindV2Mode;
+  using WinX64EHUnwindMode = llvm::WinX64EHUnwindMode;
   using ControlFlowGuardMechanism = llvm::ControlFlowGuardMechanism;
 
   using DebugCompressionType = llvm::DebugCompressionType;
@@ -682,6 +682,8 @@ public:
   bool isConvertingBoolWithCmp0() const {
     switch (getLoadBoolFromMem()) {
     case BoolFromMem::Strict:
+      return !isOptimizedBuild();
+
     case BoolFromMem::Truncate:
       return false;
 

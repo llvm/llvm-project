@@ -186,4 +186,12 @@ void NativeProcessELF::NotifyDidExec() {
   m_shared_library_info_addr.reset();
 }
 
+void NativeProcessELF::DoStopIDBumped(uint32_t newBumpId) {
+  Log *log = GetLog(POSIXLog::Process);
+  LLDB_LOG(log, "newBumpId={0}", newBumpId);
+  LLDB_LOG(log, "clearing {0} entries from memory region cache",
+           m_mem_region_cache.size());
+  m_mem_region_cache.clear();
+}
+
 } // namespace lldb_private

@@ -194,8 +194,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64: {
-    ArchName = "riscv64";
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32: {
+    ArchName = TheTriple.getArchName();
     if (!Features)
       return createFatalBOLTError("RISCV target needs SubtargetFeatures");
     // We rely on relaxation for some transformations (e.g., promoting all calls
@@ -255,7 +256,7 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         Twine("BOLT-ERROR: no instruction info for target ", TripleName));
 
   std::unique_ptr<MCContext> Ctx(
-      new MCContext(TheTriple, *AsmInfo, MRI.get(), STI.get()));
+      new MCContext(TheTriple, *AsmInfo, *MRI, *STI));
   std::unique_ptr<MCObjectFileInfo> MOFI(
       TheTarget->createMCObjectFileInfo(*Ctx, IsPIC));
   Ctx->setObjectFileInfo(MOFI.get());

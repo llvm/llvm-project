@@ -69,7 +69,7 @@ LLVM_ABI void initializeBranchFolderLegacyPass(PassRegistry &);
 LLVM_ABI void initializeBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeBranchRelaxationLegacyPass(PassRegistry &);
 LLVM_ABI void initializeBreakCriticalEdgesPass(PassRegistry &);
-LLVM_ABI void initializeBreakFalseDepsPass(PassRegistry &);
+LLVM_ABI void initializeBreakFalseDepsLegacyPass(PassRegistry &);
 LLVM_ABI void initializeCanonicalizeFreezeInLoopsPass(PassRegistry &);
 LLVM_ABI void initializeCFGSimplifyPassPass(PassRegistry &);
 LLVM_ABI void initializeCFGuardPass(PassRegistry &);
@@ -198,7 +198,7 @@ LLVM_ABI void initializeMachineBlockPlacementLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineBlockPlacementStatsLegacyPass(PassRegistry &);
 LLVM_ABI void
 initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);
-LLVM_ABI void initializeMachineCFGPrinterPass(PassRegistry &);
+LLVM_ABI void initializeMachineCFGPrinterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCSELegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachineCombinerPass(PassRegistry &);
 LLVM_ABI void initializeMachineCopyPropagationLegacyPass(PassRegistry &);
