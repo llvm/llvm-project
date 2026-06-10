@@ -155,58 +155,6 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     addMSAFloatType(MVT::v4f32, &Mips::MSA128WRegClass);
     addMSAFloatType(MVT::v2f64, &Mips::MSA128DRegClass);
 
-    // f16 is a storage-only type, always promote it to f32.
-    addRegisterClass(MVT::f16, &Mips::MSA128HRegClass);
-    setOperationAction(ISD::SETCC, MVT::f16, Promote);
-    setOperationAction(ISD::BR_CC, MVT::f16, Promote);
-    setOperationAction(ISD::SELECT_CC, MVT::f16, Promote);
-    setOperationAction(ISD::SELECT, MVT::f16, Promote);
-    setOperationAction(ISD::FADD, MVT::f16, Promote);
-    setOperationAction(ISD::FSUB, MVT::f16, Promote);
-    setOperationAction(ISD::FMUL, MVT::f16, Promote);
-    setOperationAction(ISD::FDIV, MVT::f16, Promote);
-    setOperationAction(ISD::FREM, MVT::f16, Promote);
-    setOperationAction(ISD::FMA, MVT::f16, Promote);
-    setOperationAction(ISD::FNEG, MVT::f16, Promote);
-    setOperationAction(ISD::FABS, MVT::f16, Promote);
-    setOperationAction(ISD::FCEIL, MVT::f16, Promote);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Promote);
-    setOperationAction(ISD::FCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FP_EXTEND, MVT::f16, Promote);
-    setOperationAction(ISD::FFLOOR, MVT::f16, Promote);
-    setOperationAction(ISD::FNEARBYINT, MVT::f16, Promote);
-    setOperationAction(ISD::FPOW, MVT::f16, Promote);
-    setOperationAction(ISD::FPOWI, MVT::f16, Promote);
-    setOperationAction(ISD::FRINT, MVT::f16, Promote);
-    setOperationAction(ISD::FSIN, MVT::f16, Promote);
-    setOperationAction(ISD::FSINCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FSQRT, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP, MVT::f16, Promote);
-    setOperationAction(ISD::FEXP2, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG2, MVT::f16, Promote);
-    setOperationAction(ISD::FLOG10, MVT::f16, Promote);
-    setOperationAction(ISD::FROUND, MVT::f16, Promote);
-    setOperationAction(ISD::FTRUNC, MVT::f16, Promote);
-    setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
-    setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
-    setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
-    setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
-
-    // Integer <-> Float conversions are keyed on the integer type. Make these
-    // custom so that we can handle the f16 case. Other float types use their
-    // default expansion.
-    setOperationAction(ISD::SINT_TO_FP, MVT::i32, Custom);
-    if (Subtarget.isGP64bit())
-      setOperationAction(ISD::SINT_TO_FP, MVT::i64, Custom);
-
-    setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
-    setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
-    setOperationAction(ISD::FP_TO_SINT, MVT::i128, Custom);
-    setOperationAction(ISD::FP_TO_UINT, MVT::i128, Custom);
-
     setTargetDAGCombine({ISD::AND, ISD::OR, ISD::SRA, ISD::VSELECT, ISD::XOR});
   }
 
