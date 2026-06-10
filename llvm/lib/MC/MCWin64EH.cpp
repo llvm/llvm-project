@@ -714,6 +714,7 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
 
   // --- Emit epilog descriptors ---
   const MCSymbol *PrevEpilogStart = nullptr;
+  uint8_t BaseEpiFlags = 0;
   for (const auto &EI : EpilogInfos) {
     const auto &Epilog = *EI.Epilog;
 
@@ -728,6 +729,12 @@ static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
     uint8_t EpiFlags = 0;
     if (EI.NeedsLarge)
       EpiFlags |= Win64EH::EPILOG_INFO_LARGE;
+    // An inherited descriptor must replicate the base descriptor's flags bits
+    // 0 and 1; verify we are about to emit a byte consistent with the base.
+    assert((!EI.Inherited || (EpiFlags & 0x03) == (BaseEpiFlags & 0x03)) &&
+           "inherited epilog must replicate base descriptor's flags bits 0-1");
+    if (!EI.Inherited)
+      BaseEpiFlags = EpiFlags;
     uint8_t EpiNumOps = EI.Inherited ? 0 : EI.NumberOfOps;
     Streamer.emitInt8((EpiNumOps << 3) | EpiFlags);
 
