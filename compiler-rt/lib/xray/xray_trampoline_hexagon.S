@@ -57,7 +57,7 @@
 .macro CALL_PATCHED_FUNC entry_type
 	// Load the address of the global handler function pointer,
 	// then dereference it to get the actual handler.
-	r8 = ##ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
+	r8 = add(pc,##ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)@PCREL)
 	r8 = memw(r8+#0)
 	// Skip if handler is not registered (null).
 	{
@@ -131,7 +131,7 @@ ASM_SYMBOL(__xray_CustomEvent):
 
 	// Arguments (r0=ptr, r1=size) are already set by the inline sled.
 	// Load the handler address.
-	r8 = ##ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)
+	r8 = add(pc,##ASM_SYMBOL(_ZN6__xray22XRayPatchedCustomEventE)@PCREL)
 	r8 = memw(r8+#0)
 	{
 		p0 = cmp.eq(r8, #0)
@@ -153,7 +153,7 @@ ASM_SYMBOL(__xray_TypedEvent):
 
 	// Arguments (r0=type, r1=ptr, r2=size) are already set by the inline sled.
 	// Load the handler address.
-	r8 = ##ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)
+	r8 = add(pc,##ASM_SYMBOL(_ZN6__xray21XRayPatchedTypedEventE)@PCREL)
 	r8 = memw(r8+#0)
 	{
 		p0 = cmp.eq(r8, #0)
