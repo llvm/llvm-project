@@ -228,11 +228,11 @@ GlobPattern::SubGlobPattern::create(StringRef S) {
                                        errc::invalid_argument);
       StringRef Chars = S.substr(I, J - I);
       bool Invert = S[I] == '^' || S[I] == '!';
-      Expected<BitVector> BVOrErr =
-          Invert ? expand(Chars.substr(1), S) : expand(Chars, S);
-      if (!BVOrErr)
-        return BVOrErr.takeError();
-      BitVector BV = std::move(*BVOrErr);
+      if (Invert)
+        Chars = Chars.drop_front();
+      BitVector BV;
+      if (auto Err = expand(Chars, S).moveInto(BV))
+        return Err;
       if (Invert)
         BV.flip();
       Pat.Brackets.push_back(Bracket{J + 1, std::move(BV)});
