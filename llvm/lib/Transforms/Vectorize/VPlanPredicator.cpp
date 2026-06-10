@@ -286,8 +286,6 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
       VPValue *V = Edges.lookup(E);
       if (!V)
         return nullptr;
-      if (match(V, m_Poison()))
-        continue;
       if (!Common)
         Common = V;
       else if (Common != V)
@@ -390,12 +388,6 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
       InValEdgesMap[Val].push_back(Edge);
     auto InValEdges = InValEdgesMap.takeVector();
 
-    if (InValEdges.size() == 1) {
-      PhiR->replaceAllUsesWith(InValEdges[0].first);
-      PhiR->eraseFromParent();
-      continue;
-    }
-
     // Sort the incoming value order to match PhiR as much as possible.
     llvm::stable_sort(InValEdges, [&PhiR](auto &L, auto &R) {
       auto InVs = PhiR->incoming_values();
@@ -405,8 +397,6 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, Edges] : InValEdges) {
-      if (match(InVPV, m_Poison()))
-        continue;
       OperandsWithMask.push_back(InVPV);
       OperandsWithMask.push_back(createMaskDisjunction(Edges, VPBB));
     }
