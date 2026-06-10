@@ -267,8 +267,9 @@ static bool containsGCPtrType(Type *Ty) {
 }
 
 // Debugging aid -- prints a [Begin, End) range of values.
-template<typename IteratorTy>
-static void PrintValueSet(raw_ostream &OS, IteratorTy Begin, IteratorTy End) {
+template <typename IteratorTy>
+[[maybe_unused]] static void PrintValueSet(raw_ostream &OS, IteratorTy Begin,
+                                           IteratorTy End) {
   OS << "[ ";
   while (Begin != End) {
     OS << **Begin << " ";
