@@ -131,20 +131,6 @@ class TargetRegisterClass;
     /// Emit the FEXP2_D_1 pseudo instructions.
     MachineBasicBlock *emitFEXP2_D_1(MachineInstr &MI,
                                      MachineBasicBlock *BB) const;
-    /// Emit the FILL_FW pseudo instruction
-    MachineBasicBlock *emitLD_F16_PSEUDO(MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
-    /// Emit the FILL_FD pseudo instruction
-    MachineBasicBlock *emitST_F16_PSEUDO(MachineInstr &MI,
-                                   MachineBasicBlock *BB) const;
-    /// Emit the FEXP2_W_1 pseudo instructions.
-    MachineBasicBlock *emitFPEXTEND_PSEUDO(MachineInstr &MI,
-                                           MachineBasicBlock *BB,
-                                           bool IsFGR64) const;
-    /// Emit the FEXP2_D_1 pseudo instructions.
-    MachineBasicBlock *emitFPROUND_PSEUDO(MachineInstr &MI,
-                                          MachineBasicBlock *BBi,
-                                          bool IsFGR64) const;
   };
 
 } // end namespace llvm
