@@ -145,7 +145,12 @@ if(NOT WIN32)
       check_library_exists(c pthread_mutex_lock "" HAVE_PTHREAD_MUTEX_LOCK)
     endif()
   endif()
+  check_library_exists(dl dlopen "" HAVE_LIBDL)
+  check_library_exists(rt shm_open "" HAVE_LIBRT)
 endif()
+
+# Check for libpfm.
+include(FindLibpfm)
 
 if(HAVE_LIBPTHREAD)
   # We want to find pthreads library and at the moment we do want to
@@ -155,21 +160,7 @@ if(HAVE_LIBPTHREAD)
   set(THREADS_HAVE_PTHREAD_ARG Off)
   find_package(Threads REQUIRED)
   set(LLVM_PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
-  if(LLVM_PTHREAD_LIB)
-    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
-  endif()
 endif()
-
-# Keep the dlopen and rt library checks after FindThreads so that
-# CMAKE_REQUIRED_LIBRARIES includes pthread. glibc versions before 2.34 may
-# need pthread to satisfy librt dependencies.
-if(NOT WIN32)
-  check_library_exists(dl dlopen "" HAVE_LIBDL)
-  check_library_exists(rt shm_open "" HAVE_LIBRT)
-endif()
-
-# Check for libpfm.
-include(FindLibpfm)
 
 if(LLVM_ENABLE_ZLIB)
   if(LLVM_ENABLE_ZLIB STREQUAL FORCE_ON)
@@ -451,10 +442,16 @@ else()
 endif()
 
 if (NOT WIN32)
+  if (LLVM_PTHREAD_LIB)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
+  endif()
   check_symbol_exists(pthread_getname_np pthread.h HAVE_PTHREAD_GETNAME_NP)
   check_symbol_exists(pthread_setname_np pthread.h HAVE_PTHREAD_SETNAME_NP)
   check_symbol_exists(pthread_get_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_GET_NAME_NP)
   check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" HAVE_PTHREAD_SET_NAME_NP)
+  if (LLVM_PTHREAD_LIB)
+    list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
+  endif()
 
   if( HAVE_LIBDL )
     list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
