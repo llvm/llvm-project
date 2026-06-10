@@ -759,3 +759,31 @@ entry:
   store i32 %1, ptr addrspace(1) %out
   ret void
 }
+
+define <8 x i1> @siinstrinfo_vector_f32_ole() {
+entry:
+  %LGV = load <8 x float>, ptr addrspace(1) null, align 32
+  %C = fcmp ole <8 x float> %LGV, zeroinitializer
+  ret <8 x i1> %C
+}
+
+define <4 x i1> @siinstrinfo_vector_f32_ogt() {
+entry:
+  %LGV = load <4 x float>, ptr addrspace(1) null, align 16
+  %C = fcmp ogt <4 x float> %LGV, zeroinitializer
+  ret <4 x i1> %C
+}
+
+define <32 x i1> @siinstrinfo_vector_f32_ueq() {
+entry:
+  %LGV = load <32 x float>, ptr addrspace(1) null, align 128
+  %C = fcmp ueq <32 x float> %LGV, zeroinitializer
+  ret <32 x i1> %C
+}
+
+define <4 x i1> @siinstrinfo_vector_f32_ugt() {
+entry:
+  %LGV1 = load <4 x float>, ptr addrspace(1) null, align 16
+  %C = fcmp ugt <4 x float> %LGV1, zeroinitializer
+  ret <4 x i1> %C
+}
