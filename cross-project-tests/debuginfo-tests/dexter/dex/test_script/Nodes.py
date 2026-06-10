@@ -192,6 +192,14 @@ class Value(Expect):
 
 
 class ValueAll(Expect):
+    """Expect node used to write values for all variables within a particular debugger scope, as defined by the DAP
+    specification; see: https://microsoft.github.io/debug-adapter-protocol/specification#Requests_Scopes.
+
+    This node is not directly evaluated; it must have no expected values, and when Dexter rewrites the original script,
+    this node will be replaced with !value nodes for each variable that was seen in its scope inserted under !and nodes
+    that cover that variable's live range(s).
+    """
+
     def __init__(self, scope_name: str):
         self.scope_name = scope_name
 
