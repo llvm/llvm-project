@@ -970,7 +970,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
         if (U.usesFirstLaneOnly(DefR))
           return true;
-        auto *VPI = dyn_cast<VPInstructionWithType>(&U);
+        auto *VPI = dyn_cast<VPInstruction>(&U);
         return VPI && Instruction::isCast(VPI->getOpcode());
       });
 

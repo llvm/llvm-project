@@ -208,7 +208,7 @@ define void @fpiv_wideivstep_flags(float %init, ptr %p, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:    vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<%init> + vp<[[VP2]]> * ir<1.000000e+00>
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = wide-iv-step vp<[[VP0]]>, ir<1.000000e+00>
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = wide-iv-step fast vp<[[VP0]]>, ir<1.000000e+00>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
