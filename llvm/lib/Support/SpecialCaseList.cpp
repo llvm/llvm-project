@@ -92,6 +92,7 @@ private:
 };
 
 struct QueryOptions {
+  bool UseGlobs = true;
   bool RemoveDotSlash = false;
   bool WarnDotSlashMatch = false;
 };
@@ -99,7 +100,7 @@ struct QueryOptions {
 /// Represents a set of patterns and their line numbers
 class Matcher {
 public:
-  Matcher(bool UseGlobs, QueryOptions QOpts = {});
+  Matcher(QueryOptions QOpts);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
@@ -247,8 +248,8 @@ StringRef GlobMatcher::findRule(unsigned LineNo) const {
   return {};
 }
 
-Matcher::Matcher(bool UseGlobs, QueryOptions QOpts) : Options(QOpts) {
-  if (UseGlobs)
+Matcher::Matcher(QueryOptions QOpts) : Options(QOpts) {
+  if (Options.UseGlobs)
     M.emplace<GlobMatcher>();
   else
     M.emplace<RegexMatcher>();
@@ -299,7 +300,7 @@ public:
 
   using SectionEntries = StringMap<StringMap<Matcher>>;
 
-  explicit SectionImpl(bool UseGlobs) : SectionMatcher(UseGlobs) {}
+  explicit SectionImpl(QueryOptions QOpts) : SectionMatcher(QOpts) {}
 
   Matcher SectionMatcher;
   SectionEntries Entries;
@@ -442,14 +443,14 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     bool IsPath = llvm::is_contained(PathPrefixes, Prefix);
 
     QueryOptions QOpts;
+    QOpts.UseGlobs = UseGlobs;
     if (IsPath) {
       QOpts.RemoveDotSlash = RemoveDotSlash;
       QOpts.WarnDotSlashMatch = WarnDotSlash;
     }
 
     auto [Pattern, Category] = Postfix.split("=");
-    auto [It, _] =
-        CurrentImpl->Entries[Prefix].try_emplace(Category, UseGlobs, QOpts);
+    auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(Category, QOpts);
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
@@ -487,7 +488,8 @@ SpecialCaseList::inSectionBlame(StringRef Section, StringRef Prefix,
 SpecialCaseList::Section::Section(StringRef Str, unsigned FileIdx,
                                   bool UseGlobs)
     : Name(Str), FileIdx(FileIdx),
-      Impl(std::make_unique<SectionImpl>(UseGlobs)) {}
+      Impl(std::make_unique<SectionImpl>(
+          QueryOptions{UseGlobs, /*RemoveDotSlash=*/false})) {}
 
 SpecialCaseList::Section::Section(Section &&) = default;
 

@@ -105,7 +105,7 @@ public:
 
   static JobSlot createImplicit() { return JobSlot(kImplicitValue); }
 
-  uint8_t getExplicitValue() const;
+  LLVM_ABI uint8_t getExplicitValue() const;
   bool isExplicit() const { return isValid() && !isImplicit(); }
 
 private:
@@ -130,7 +130,7 @@ private:
 
 /// The public interface for a jobserver client.
 /// This client is a lazy-initialized singleton that is created on first use.
-class JobserverClient {
+class LLVM_ABI JobserverClient {
 public:
   virtual ~JobserverClient();
 
@@ -149,10 +149,10 @@ public:
   /// Returns the singleton instance of the JobserverClient.
   /// The instance is created on the first call to this function.
   /// Returns a nullptr if no jobserver is configured or an error occurs.
-  LLVM_ABI_FOR_TEST static JobserverClient *getInstance();
+  static JobserverClient *getInstance();
 
   /// Resets the singleton instance. For testing purposes only.
-  LLVM_ABI_FOR_TEST static void resetForTesting();
+  static void resetForTesting();
 };
 
 } // end namespace llvm
