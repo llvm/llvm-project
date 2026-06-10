@@ -1341,15 +1341,24 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
 //   return {laneLayout, laneData};
 // }
 
+// Forward declaration: defined later in this file.
+static std::pair<SmallVector<int>, SmallVector<int>>
+computeScatterStoreLaneLayoutAndData(ArrayRef<int64_t> srcShape,
+                                     int subgroupSize, int64_t maxChunkSize);
+
 /// Sets up the anchor layout for load gather and load matrix operation.
 /// load matrix lowers to load gather and 1d block load. All of them share the
 /// same layout setup logic.
+///
 /// For Subgroup layout, uses the consumer layout directly.
-/// For InstData layout, the innermost inst_data is taken directly from the
-/// consumer's inst_data, capped by `maxChunkSize * subgroupSize`.
-/// For Lane layout, lane_layout/lane_data are derived via
-/// `computeScatterLoadLaneLayoutAndData` using the consumer's
-/// lane_data[innermost] as the per-lane vector hint.
+///
+/// For InstData layout, takes consumer's inst_data as-is. lane_layout and
+/// lane_data are taken from the consumer when present; otherwise the helper
+/// derives the standard scatter-style default (subgroupSize lanes on the
+/// innermost dim, per-lane vector capped by maxChunkSize).
+///
+/// For Lane layout, lane_layout/lane_data are taken from the consumer when
+/// present; otherwise derived from the same default.
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, int maxChunkSize,
@@ -1360,28 +1369,41 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
 
   SmallVector<int64_t> consumerInstData =
       consumerLayout.getEffectiveInstDataAsInt();
-  SmallVector<int64_t> consumerLaneData =
-      consumerLayout.getEffectiveLaneDataAsInt();
   SmallVector<int64_t> consumerLaneLayout =
       consumerLayout.getEffectiveLaneLayoutAsInt();
-  SmallVector<int64_t> laneLayout(resShape.size(), 1);
-  SmallVector<int64_t> laneData(resShape.size(), 1);
+  SmallVector<int64_t> consumerLaneData =
+      consumerLayout.getEffectiveLaneDataAsInt();
+
+  // Pick lane_layout / lane_data: prefer consumer's, fall back to the
+  // scatter-store default (subgroupSize lanes on innermost dim, per-lane
+  // vector capped by maxChunkSize).
+  SmallVector<int64_t> laneLayout;
+  SmallVector<int64_t> laneData;
+  if (!consumerLaneLayout.empty() && !consumerLaneData.empty()) {
+    laneLayout.assign(consumerLaneLayout.begin(), consumerLaneLayout.end());
+    laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
+  } else {
+    auto [defLaneLayout, defLaneData] = computeScatterStoreLaneLayoutAndData(
+        resShape, subgroupSize, maxChunkSize);
+    laneLayout.assign(defLaneLayout.begin(), defLaneLayout.end());
+    laneData.assign(defLaneData.begin(), defLaneData.end());
+  }
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
-    SmallVector<int64_t> instData(resShape.size(), 1);
-    laneData.back() = std::min(static_cast<int64_t>(consumerLaneData.back()),
-                               int64_t(maxChunkSize));
-    laneLayout.back() = consumerLaneLayout.back();
-    instData.back() = laneData.back() * laneLayout.back();
+    // Take consumer's inst_data as-is. If the consumer doesn't have one,
+    // fall back to lane_layout * lane_data per dim.
+    SmallVector<int64_t> instData;
+    if (!consumerInstData.empty()) {
+      instData.assign(consumerInstData.begin(), consumerInstData.end());
+    } else {
+      instData.resize(resShape.size());
+      for (size_t i = 0; i < resShape.size(); ++i)
+        instData[i] = laneLayout[i] * laneData[i];
+    }
     return buildInstDataLayoutWithLane(context, instData, laneLayout, laneData);
   }
-  if (layoutKind == xegpu::LayoutKind::Lane) {
-
-    laneData.back() = std::min(static_cast<int64_t>(consumerLaneData.back()),
-                               int64_t(maxChunkSize));
-    laneLayout.back() = consumerLaneLayout.back();
+  if (layoutKind == xegpu::LayoutKind::Lane)
     return buildLaneLayout(context, laneLayout, laneData);
-  }
   return nullptr;
 }
 
