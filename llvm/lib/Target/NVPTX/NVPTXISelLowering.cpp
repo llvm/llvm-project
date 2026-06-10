@@ -1244,7 +1244,7 @@ std::string NVPTXTargetLowering::getPrototype(
       Type *ETy = Args[I].IndirectType;
       Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
       Align ParamByValAlign =
-          getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
+          getDeviceByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
 
       O << ".param .align " << ParamByValAlign.value() << " .b8 _["
         << ArgOuts[0].Flags.getByValSize() << "]";
@@ -1253,7 +1253,7 @@ std::string NVPTXTargetLowering::getPrototype(
 
     if (shouldPassAsArray(Ty)) {
       Align ParamAlign =
-          getArgumentAlignment(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
+          getPTXParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
       O << ".param .align " << ParamAlign.value() << " .b8 _["
         << DL.getTypeAllocSize(Ty) << "]";
       return;
