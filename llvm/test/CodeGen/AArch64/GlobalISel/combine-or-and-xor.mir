@@ -129,7 +129,6 @@ body:             |
 ---
 name:            and_xor_or_to_and_vector
 tracksRegLiveness: true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     liveins: $q0, $q1
