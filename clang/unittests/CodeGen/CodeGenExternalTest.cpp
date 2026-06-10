@@ -271,7 +271,7 @@ static void test_codegen_fns(MyASTConsumer *my) {
         GEPOperator *gepOperator = dyn_cast<GEPOperator>(c);
         ASSERT_NE(gepOperator, nullptr);
         gepOperator->accumulateConstantOffset(dataLayout, offset);
-        // Itanium ABI has a couple of pointersi (offset to top, type info)
+        // Itanium ABI has a couple of pointers (offset to top, type info)
         // before the array of function pointers.
         ASSERT_EQ(offset, (pointerSizeInBits / 8) * 2);
       }
