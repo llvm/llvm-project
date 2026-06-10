@@ -97,24 +97,36 @@
 #define DEMANGLE_NAMESPACE_BEGIN namespace llvm { namespace itanium_demangle {
 #define DEMANGLE_NAMESPACE_END } }
 
-/// DEMANGLE_ABI is the export/visibility macro used to mark symbols delcared in
+/// DEMANGLE_ABI is the export/visibility macro used to mark symbols declared in
 /// llvm/Demangle as exported when built as a shared library.
+#if !defined(DEMANGLE_ABI)
+
 #if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
+
 #define DEMANGLE_ABI
-#else
+
+#else // !(defined(LLVM_BUILD_STATIC) || [...])
+
 #if defined(_WIN32) && !defined(__MINGW32__)
+
 #if defined(LLVM_EXPORTS)
 #define DEMANGLE_ABI __declspec(dllexport)
-#else
+#else // !defined(LLVM_EXPORTS)
 #define DEMANGLE_ABI __declspec(dllimport)
-#endif
-#else
+#endif // defined(LLVM_EXPORTS)
+
+#else // !(defined(_WIN32) && !defined(__MINGW32__))
+
 #if __has_attribute(visibility)
 #define DEMANGLE_ABI __attribute__((__visibility__("default")))
-#else
+#else // !__has_attribute(visibility)
 #define DEMANGLE_ABI
-#endif
-#endif
-#endif
+#endif // __has_attribute(visibility)
+
+#endif // defined(_WIN32) && !defined(__MINGW32__)
+
+#endif // defined(LLVM_BUILD_STATIC) || [...]
+
+#endif // !defined(DEMANGLE_ABI)
 
 #endif
