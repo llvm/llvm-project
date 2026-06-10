@@ -343,7 +343,7 @@ VPValue *VPPredicator::createMaskDisjunction(ArrayRef<EdgeTy> Edges,
   for (auto [_, VPBB] : drop_begin(Edges))
     PostDom =
         cast<VPBasicBlock>(VPPDT.findNearestCommonDominator(PostDom, VPBB));
-  assert(VPPDT.dominates(VPBB, PostDom) && "Edges don't postdominate VPBB");
+  assert(VPPDT.dominates(VPBB, PostDom) && "VPBB doesn't postdominate edges");
   if (PostDom != VPBB)
     return getBlockInMask(PostDom);
 
