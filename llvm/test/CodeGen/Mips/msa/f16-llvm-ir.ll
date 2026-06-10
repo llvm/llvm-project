@@ -3965,4 +3965,70 @@ entry:
   ret i128 %r
 }
 
+define void @pass_f16_argument(ptr align 2 %p) {
+; MIPS32-LABEL: pass_f16_argument:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lui $2, %hi(_gp_disp)
+; MIPS32-NEXT:    addiu $2, $2, %lo(_gp_disp)
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    addu $gp, $2, $25
+; MIPS32-NEXT:    lhu $4, 0($4)
+; MIPS32-NEXT:    lw $25, %call16(accept_f16_argument)($gp)
+; MIPS32-NEXT:    jalr $25
+; MIPS32-NEXT:    addiu $5, $zero, 1
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    addiu $sp, $sp, 24
+;
+; MIPS64-N32-LABEL: pass_f16_argument:
+; MIPS64-N32:       # %bb.0: # %entry
+; MIPS64-N32-NEXT:    addiu $sp, $sp, -16
+; MIPS64-N32-NEXT:    .cfi_def_cfa_offset 16
+; MIPS64-N32-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
+; MIPS64-N32-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
+; MIPS64-N32-NEXT:    .cfi_offset 31, -8
+; MIPS64-N32-NEXT:    .cfi_offset 28, -16
+; MIPS64-N32-NEXT:    lui $1, %hi(%neg(%gp_rel(pass_f16_argument)))
+; MIPS64-N32-NEXT:    addu $1, $1, $25
+; MIPS64-N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(pass_f16_argument)))
+; MIPS64-N32-NEXT:    sll $1, $4, 0
+; MIPS64-N32-NEXT:    lh $4, 0($1)
+; MIPS64-N32-NEXT:    lw $25, %call16(accept_f16_argument)($gp)
+; MIPS64-N32-NEXT:    jalr $25
+; MIPS64-N32-NEXT:    daddiu $5, $zero, 1
+; MIPS64-N32-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
+; MIPS64-N32-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64-N32-NEXT:    jr $ra
+; MIPS64-N32-NEXT:    addiu $sp, $sp, 16
+;
+; MIPS64-N64-LABEL: pass_f16_argument:
+; MIPS64-N64:       # %bb.0: # %entry
+; MIPS64-N64-NEXT:    daddiu $sp, $sp, -16
+; MIPS64-N64-NEXT:    .cfi_def_cfa_offset 16
+; MIPS64-N64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
+; MIPS64-N64-NEXT:    sd $gp, 0($sp) # 8-byte Folded Spill
+; MIPS64-N64-NEXT:    .cfi_offset 31, -8
+; MIPS64-N64-NEXT:    .cfi_offset 28, -16
+; MIPS64-N64-NEXT:    lui $1, %hi(%neg(%gp_rel(pass_f16_argument)))
+; MIPS64-N64-NEXT:    daddu $1, $1, $25
+; MIPS64-N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(pass_f16_argument)))
+; MIPS64-N64-NEXT:    lh $4, 0($4)
+; MIPS64-N64-NEXT:    ld $25, %call16(accept_f16_argument)($gp)
+; MIPS64-N64-NEXT:    jalr $25
+; MIPS64-N64-NEXT:    daddiu $5, $zero, 1
+; MIPS64-N64-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
+; MIPS64-N64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; MIPS64-N64-NEXT:    jr $ra
+; MIPS64-N64-NEXT:    daddiu $sp, $sp, 16
+entry:
+  %h = load half, ptr %p, align 2
+  call void @accept_f16_argument( half %h, i32 1)
+  ret void
+}
+
+declare void @accept_f16_argument(half, i32 )
+
 attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
