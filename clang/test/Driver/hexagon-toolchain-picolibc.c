@@ -5,13 +5,13 @@
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-none-elf --cstdlib=picolibc \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK-C-INCLUDES -DRESOURCE_DIR=%clang-resource-dir %s
-// CHECK-C-INCLUDES: "-cc1" {{.*}} "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\}}include"
+// CHECK-C-INCLUDES: "-cc1" {{.*}} "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 // CHECK-C-INCLUDES: "-internal-externc-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-none-elf{{/|\\\\}}include"
 
 // RUN: %clangxx -### --target=hexagon-none-elf --cstdlib=picolibc \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK-CXX-INCLUDES -DRESOURCE_DIR=%clang-resource-dir %s
 // CHECK-CXX-INCLUDES: "-cc1" {{.*}} "-internal-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-none-elf{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
-// CHECK-CXX-INCLUDES: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\}}include"
+// CHECK-CXX-INCLUDES: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 // CHECK-CXX-INCLUDES: "-internal-externc-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-none-elf{{/|\\\\}}include"
 // -----------------------------------------------------------------------------
 // Passing start files for Picolibc
@@ -129,13 +129,13 @@
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-h2-elf --cstdlib=picolibc \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK-H2-C-INCLUDES -DRESOURCE_DIR=%clang-resource-dir %s
-// CHECK-H2-C-INCLUDES: "-cc1" {{.*}} "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\}}include"
+// CHECK-H2-C-INCLUDES: "-cc1" {{.*}} "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 // CHECK-H2-C-INCLUDES: "-internal-externc-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}include"
 
 // RUN: %clangxx -### --target=hexagon-h2-elf --cstdlib=picolibc \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK-H2-CXX-INCLUDES -DRESOURCE_DIR=%clang-resource-dir %s
 // CHECK-H2-CXX-INCLUDES: "-cc1" {{.*}} "-internal-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}include{{/|\\\\}}c++{{/|\\\\}}v1"
-// CHECK-H2-CXX-INCLUDES: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\}}include"
+// CHECK-H2-CXX-INCLUDES: "-internal-isystem" "[[RESOURCE_DIR]]{{/|\\\\}}include"
 // CHECK-H2-CXX-INCLUDES: "-internal-externc-isystem" "{{.*}}{{/|\\\\}}Inputs{{/|\\\\}}hexagon_tree{{/|\\\\}}Tools{{/|\\\\}}bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}picolibc{{/|\\\\}}hexagon-unknown-h2-elf{{/|\\\\}}include"
 
 // -----------------------------------------------------------------------------
