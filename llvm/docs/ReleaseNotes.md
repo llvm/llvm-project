@@ -408,11 +408,6 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Add a random delay into ThreadSanitizer to help find rare thread interleavings.
 
-* [Sanitizer Special Case Lists](https://clang.llvm.org/docs/SanitizerSpecialCaseList.html)
-  version 4 (indicated by ``#!special-case-list-v4``) now specifies that filename
-  patterns should be matched against canonicalized paths, without leading dots or
-  slashes and (on Windows only) without any backslashes.
-
 ### Other Changes
 
 ## External Open Source Projects Using LLVM {{env.config.release}}
