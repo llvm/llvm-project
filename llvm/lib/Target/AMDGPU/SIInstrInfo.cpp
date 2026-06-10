@@ -8693,6 +8693,8 @@ void SIInstrInfo::moveToVALUImpl(
   }
   fixImplicitOperands(*NewInstr);
 
+  removeFcanonicalize(*NewInstr);
+
   legalizeOperandsVALUt16(*NewInstr, MRI);
 
   // Legalize the operands
@@ -10320,6 +10322,121 @@ void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
     if (Op.isReg() && Op.getReg() == AMDGPU::VCC)
       Op.setReg(AMDGPU::VCC_LO);
   }
+}
+
+// fcanonicalize is selected as a self-max (SelectCanonicalizeAsMax), i.e.
+// V_MAX_F{16,32} src, src, so only these max opcodes can define a canonicalize.
+static bool isFPSelfMaxCanonicalizeOpc(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_MAX_F16_e32:
+  case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F16_t16_e32:
+  case AMDGPU::V_MAX_F16_t16_e64:
+  case AMDGPU::V_MAX_F16_fake16_e32:
+  case AMDGPU::V_MAX_F16_fake16_e64:
+  case AMDGPU::V_MAX_F32_e32:
+  case AMDGPU::V_MAX_F32_e64:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// VALU FP min/max (f16/f32). On FeatureIEEEMinimumMaximumInsts targets these
+// print as v_{min,max}_num_f*, which canonicalize their inputs internally.
+static bool isFPMinMaxNumOpc(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::V_MIN_F16_e32:
+  case AMDGPU::V_MIN_F16_e64:
+  case AMDGPU::V_MIN_F16_t16_e32:
+  case AMDGPU::V_MIN_F16_t16_e64:
+  case AMDGPU::V_MIN_F16_fake16_e32:
+  case AMDGPU::V_MIN_F16_fake16_e64:
+  case AMDGPU::V_MIN_F32_e32:
+  case AMDGPU::V_MIN_F32_e64:
+    return true;
+  default:
+    return isFPSelfMaxCanonicalizeOpc(Opc);
+  }
+}
+
+static bool isFPCanonicalizeSrcModifier(unsigned Mod) {
+  return !(Mod & ~(SISrcMods::NEG | SISrcMods::ABS));
+}
+
+/// On FeatureIEEEMinimumMaximumInsts targets a VALU FP min/max is printed as
+/// v_{min,max}_num_f*, which already canonicalizes its inputs, so feeding it an
+/// explicitly canonicalized operand is redundant.
+///
+/// A uniform llvm.minnum/maxnum on a target without scalar _num_ min/max is
+/// lowered to fcanonicalize(x)/fcanonicalize(y) feeding S_{MIN,MAX}_F*, where
+/// each fcanonicalize is selected as a self-max V_MAX_F*_e64 src_mods:src,
+/// src_mods:src. When SIFixSGPRCopies later moves that scalar op back to a
+/// VALU min/max, e.g.:
+///
+///   %10 = V_MAX_F32_e64 0, %9, 0, %9, 0, 0    ; fcanonicalize %9
+///   %11 = V_MAX_F32_e64 1, %8, 1, %8, 0, 0    ; fcanonicalize -%8
+///   %13 = COPY %11
+///   %14 = COPY %10
+///   %12 = S_MAX_F32 %13, %14   -->   V_MAX_F32_e64 %10, %11
+///
+/// the self-max inputs become redundant once the user is a v_max_num, so fold
+/// them back to %9/-%8 and drop the now-dead canonicalizes.
+void SIInstrInfo::removeFcanonicalize(MachineInstr &MI) const {
+  if (!ST.hasIEEEMinimumMaximumInsts() || !isFPMinMaxNumOpc(MI.getOpcode()))
+    return;
+
+  MachineBasicBlock *MBB = MI.getParent();
+  if (!MBB)
+    return;
+  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+
+  SmallVector<MachineInstr *, 2> DefsToErase;
+  auto foldSelfMaxInput = [&](AMDGPU::OpName SrcName, AMDGPU::OpName ModsName) {
+    MachineOperand *Src = getNamedOperand(MI, SrcName);
+    MachineOperand *SrcMods = getNamedOperand(MI, ModsName);
+    if (!Src || !Src->isReg() || !SrcMods || !SrcMods->isImm() ||
+        SrcMods->getImm() != 0)
+      return;
+    Register SrcReg = Src->getReg();
+    if (!SrcReg.isVirtual() || !MRI.hasOneNonDBGUser(SrcReg))
+      return;
+
+    // Match a self-max canonicalize: V_MAX_F* src_mods:src, src_mods:src.
+    MachineInstr *Def = MRI.getVRegDef(SrcReg);
+    if (!Def || !isFPSelfMaxCanonicalizeOpc(Def->getOpcode()))
+      return;
+    MachineOperand *S0 = getNamedOperand(*Def, AMDGPU::OpName::src0);
+    MachineOperand *S1 = getNamedOperand(*Def, AMDGPU::OpName::src1);
+    if (!S0 || !S1 || !S0->isReg() || !S1->isReg() ||
+        S0->getReg() != S1->getReg() || S0->getSubReg() != S1->getSubReg())
+      return;
+
+    MachineOperand *S0Mods =
+        getNamedOperand(*Def, AMDGPU::OpName::src0_modifiers);
+    MachineOperand *S1Mods =
+        getNamedOperand(*Def, AMDGPU::OpName::src1_modifiers);
+    if (!S0Mods || !S1Mods || !S0Mods->isImm() || !S1Mods->isImm() ||
+        S0Mods->getImm() != S1Mods->getImm() ||
+        !isFPCanonicalizeSrcModifier(S0Mods->getImm()))
+      return;
+
+    Src->setReg(S0->getReg());
+    Src->setSubReg(S0->getSubReg());
+    Src->setIsUndef(S0->isUndef());
+    Src->setIsKill(false);
+    MRI.clearKillFlags(S0->getReg());
+    SrcMods->setImm(S0Mods->getImm());
+    if (!llvm::is_contained(DefsToErase, Def))
+      DefsToErase.push_back(Def);
+  };
+
+  foldSelfMaxInput(AMDGPU::OpName::src0, AMDGPU::OpName::src0_modifiers);
+  foldSelfMaxInput(AMDGPU::OpName::src1, AMDGPU::OpName::src1_modifiers);
+
+  for (MachineInstr *Def : DefsToErase)
+    if (MRI.use_nodbg_empty(Def->getOperand(0).getReg()))
+      Def->eraseFromParent();
 }
 
 bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {

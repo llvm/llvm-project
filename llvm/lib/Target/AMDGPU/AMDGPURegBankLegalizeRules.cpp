@@ -16,6 +16,7 @@
 #include "AMDGPURegBankLegalizeRules.h"
 #include "AMDGPUInstrInfo.h"
 #include "GCNSubtarget.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -1546,9 +1547,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  addRulesForGOpcs({G_FMINNUM_IEEE, G_FMAXNUM_IEEE, G_FMINNUM, G_FMAXNUM,
-                    G_FMINIMUMNUM, G_FMAXIMUMNUM},
-                   Standard)
+  // FMINNUM_IEEE/FMAXNUM_IEEE select to the IEEE scalar min/max (e.g.
+  // s_min_f32/s_max_f32), which is available whenever the target has the SALU
+  // float instructions, so a uniform value may map to SGPR.
+  addRulesForGOpcs({G_FMINNUM_IEEE, G_FMAXNUM_IEEE}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Uni(S64, {{UniInVgprS64}, {Vgpr64, Vgpr64}})
@@ -1559,6 +1561,33 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat);
+
+  auto ScalarNumIsSafe = [=](const MachineInstr &MI) {
+    const SIMachineFunctionInfo *MFI =
+        MI.getMF()->getInfo<SIMachineFunctionInfo>();
+    return hasSALUFloat && (!MFI->getMode().IEEE || hasSALUMinimumMaximumInsts);
+  };
+  auto ScalarNumIsNotSafe = [=](const MachineInstr &MI) {
+    return !ScalarNumIsSafe(MI);
+  };
+
+  // The _num_ min/max can use the mode-dependent scalar min/max outside IEEE
+  // mode. In IEEE mode, they only have a scalar form (e.g. s_max_num_f32) when
+  // the target has the SALU min/max-num instructions. Otherwise a uniform value
+  // must use the self-canonicalizing vector v_*_num form.
+  addRulesForGOpcs({G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM},
+                   NoFastRules)
+      .Any({{DivS16}, {{Vgpr16}, {Vgpr16, Vgpr16}}})
+      .Any({{DivS32}, {{Vgpr32}, {Vgpr32, Vgpr32}}})
+      .Any({{UniS64}, {{UniInVgprS64}, {Vgpr64, Vgpr64}}})
+      .Any({{DivS64}, {{Vgpr64}, {Vgpr64, Vgpr64}}})
+      .Any({{UniV2S16}, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}}})
+      .Any({{DivV2S16}, {{VgprV2S16}, {VgprV2S16, VgprV2S16}}})
+      .Any({{{UniS16}, ScalarNumIsSafe}, {{Sgpr16}, {Sgpr16, Sgpr16}}})
+      .Any({{{UniS16}, ScalarNumIsNotSafe}, {{UniInVgprS16}, {Vgpr16, Vgpr16}}})
+      .Any({{{UniS32}, ScalarNumIsSafe}, {{Sgpr32}, {Sgpr32, Sgpr32}}})
+      .Any(
+          {{{UniS32}, ScalarNumIsNotSafe}, {{UniInVgprS32}, {Vgpr32, Vgpr32}}});
 
   addRulesForGOpcs({G_FPTRUNC})
       .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})

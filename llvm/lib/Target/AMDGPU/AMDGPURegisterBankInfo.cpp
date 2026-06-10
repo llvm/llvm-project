@@ -4085,10 +4085,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FFLOOR:
   case AMDGPU::G_FCEIL:
   case AMDGPU::G_INTRINSIC_ROUNDEVEN:
-  case AMDGPU::G_FMINNUM:
-  case AMDGPU::G_FMAXNUM:
-  case AMDGPU::G_FMINIMUMNUM:
-  case AMDGPU::G_FMAXIMUMNUM:
   case AMDGPU::G_INTRINSIC_TRUNC:
   case AMDGPU::G_STRICT_FADD:
   case AMDGPU::G_STRICT_FSUB:
@@ -4098,6 +4094,25 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = Ty.getSizeInBits();
     if (Subtarget.hasSALUFloatInsts() && Ty.isScalar() &&
         (Size == 32 || Size == 16) && isSALUMapping(MI))
+      return getDefaultMappingSOP(MI);
+    return getDefaultMappingVOP(MI);
+  }
+  case AMDGPU::G_FMINNUM:
+  case AMDGPU::G_FMAXNUM:
+  case AMDGPU::G_FMINIMUMNUM:
+  case AMDGPU::G_FMAXIMUMNUM: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    unsigned Size = Ty.getSizeInBits();
+    // Outside IEEE mode the mode-dependent scalar min/max (e.g. s_max_f32) has
+    // the correct numeric behavior, so a uniform op can map to SGPR. In IEEE
+    // mode those scalar ops would require explicit input canonicalization, so
+    // only map to SGPR when a scalar _num_ min/max (e.g. s_max_num_f32) exists;
+    // otherwise force VGPR to use the self-canonicalizing v_*_num_f* form.
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    bool ScalarNumIsSafe =
+        !MFI->getMode().IEEE || Subtarget.hasSALUMinimumMaximumInsts();
+    if (Subtarget.hasSALUFloatInsts() && Ty.isScalar() &&
+        (Size == 32 || Size == 16) && isSALUMapping(MI) && ScalarNumIsSafe)
       return getDefaultMappingSOP(MI);
     return getDefaultMappingVOP(MI);
   }

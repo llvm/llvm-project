@@ -1760,6 +1760,8 @@ public:
 
   void fixImplicitOperands(MachineInstr &MI) const;
 
+  void removeFcanonicalize(MachineInstr &MI) const;
+
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       ArrayRef<unsigned> Ops, int FrameIndex,
                                       MachineInstr *&CopyMI,

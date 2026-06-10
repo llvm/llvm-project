@@ -177,12 +177,13 @@ defm FmaMixBF16Insts : AMDGPUSubtargetFeature<"fma-mix-bf16-insts",
 >;
 
 defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-insts",
-  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32 and"
-  "v_pk_minimum/maximum_f16 instructions"
+  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32,"
+  "v_pk_minmax/maxmin_num_f16, v_min/max_num_f16/f32/f64,"
+  "and v_pk_min/max_num_f16 instructions"
 >;
 
 defm SALUMinimumMaximumInsts : AMDGPUSubtargetFeature<"salu-minimum-maximum-insts",
-  "Has s_minimum/maximum_f16/f32 instructions"
+  "Has s_minimum/maximum_f16/f32 and s_max/min_num_f16/f32 instructions"
 >;
 
 defm Minimum3Maximum3F32 : AMDGPUSubtargetFeature<"minimum3-maximum3-f32",
@@ -2075,7 +2076,6 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureFP8ConversionInsts,
    FeatureWMMA128bInsts,
    FeatureSWMMACGfx1200Insts,
-   FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -2287,7 +2287,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureGloballyAddressableScratch,
    FeatureCvtPkF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
-   FeatureIEEEMinimumMaximumInsts,
    FeatureSWakeupBarrier,
    FeatureClusters,
    FeatureCubeInsts,
