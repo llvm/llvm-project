@@ -58,6 +58,7 @@ if (SPHINX_FOUND)
       nl_types
       net/if
       netinet/in
+      netinet/tcp
       poll
       pthread
       pwd

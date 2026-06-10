@@ -3262,6 +3262,10 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         (Auto && Auto->getKeyword() != AutoTypeKeyword::GNUAutoType);
     bool IsDeducedReturnType = false;
 
+    SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
+    if (D.getName().getKind() == UnqualifiedIdKind::IK_ConversionFunctionId)
+      AutoRange = D.getName().getSourceRange();
+
     switch (D.getContext()) {
     case DeclaratorContext::LambdaExpr:
       // Declared return type of a lambda-declarator is implicit and is always
@@ -3279,11 +3283,16 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       InventedTemplateParameterInfo *Info = nullptr;
       if (D.getContext() == DeclaratorContext::Prototype) {
         // With concepts we allow 'auto' in function parameters.
-        if (!SemaRef.getLangOpts().CPlusPlus20 || !Auto ||
+        if (!SemaRef.getLangOpts().CPlusPlus || !Auto ||
             Auto->getKeyword() != AutoTypeKeyword::Auto) {
           Error = 0;
           break;
-        } else if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
+        }
+
+        if (!SemaRef.getLangOpts().CPlusPlus20)
+          SemaRef.DiagCompat(AutoRange.getBegin(), diag_compat::auto_param);
+
+        if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
           Error = 21;
           break;
         }
@@ -3418,10 +3427,6 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     if (D.isFunctionDeclarator() &&
         (!SemaRef.getLangOpts().CPlusPlus11 || !IsCXXAutoType))
       Error = 13;
-
-    SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
-    if (D.getName().getKind() == UnqualifiedIdKind::IK_ConversionFunctionId)
-      AutoRange = D.getName().getSourceRange();
 
     if (Error != -1) {
       unsigned Kind;
@@ -9129,6 +9134,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       }
       attr.setUsedAsTypeAttr();
       break;
+    case ParsedAttr::AT_HLSLRowMajor:
+    case ParsedAttr::AT_HLSLColumnMajor:
+      if (Attr *A =
+              state.getSema().HLSL().buildMatrixLayoutTypeAttr(type, attr))
+        type = state.getAttributedType(A, type, type);
+      attr.setUsedAsTypeAttr();
+      break;
     OBJC_POINTER_TYPE_ATTRS_CASELIST:
       if (!handleObjCPointerTypeAttr(state, attr, type))
         distributeObjCPointerTypeAttr(state, attr, type);
@@ -10016,7 +10028,7 @@ QualType Sema::getDecltypeForExpr(Expr *E) {
   // parameter object. This rule makes no difference before C++20 so we apply
   // it unconditionally.
   if (const auto *SNTTPE = dyn_cast<SubstNonTypeTemplateParmExpr>(IDExpr))
-    return SNTTPE->getParameterType(Context);
+    IDExpr = SNTTPE->getReplacement();
 
   //     - if e is an unparenthesized id-expression or an unparenthesized class
   //       member access (5.2.5), decltype(e) is the type of the entity named

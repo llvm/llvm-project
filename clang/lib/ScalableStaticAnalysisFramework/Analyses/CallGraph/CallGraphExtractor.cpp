@@ -72,9 +72,13 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
     // never null.
     assert(CalleeDecl);
 
-    // FIXME: `clang::CallGraph` does not consider ObjCMessageExprs as calls.
-    // Consequently, they don't appear as a Callee.
-    assert(!isa<ObjCMethodDecl>(CalleeDecl));
+    // `clang::CallGraph` resolves ObjCMessageExprs (including property
+    // dot-syntax) to their ObjCMethodDecls and adds them as callees — see
+    // `CGBuilder::VisitObjCMessageExpr` in clang/lib/Analysis/CallGraph.cpp.
+    // ObjC dispatch is dynamic, so recording these as direct callees would be
+    // misleading; skip them until we model ObjC properly.
+    if (isa<ObjCMethodDecl>(CalleeDecl))
+      continue;
 
     // FIXME: `clang::CallGraph` does not create entries for primary templates.
     assert(!CalleeDecl->isTemplated());
@@ -98,7 +102,7 @@ static TUSummaryExtractorRegistry::Add<CallGraphExtractor>
     RegisterExtractor(CallGraphSummary::Name,
                       "Extracts static call-graph information");
 
-// This anchor is used to force the linker to link in the generated object file
-// and thus register the CallGraphExtractor.
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int CallGraphExtractorAnchorSource = 0;
+} // namespace clang::ssaf

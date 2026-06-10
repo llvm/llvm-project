@@ -285,10 +285,10 @@ uint32_t ConstStringTable::Add(ConstString s) {
 static const llvm::StringRef kStringTableIdentifier("STAB");
 
 bool ConstStringTable::Encode(DataEncoder &encoder) {
-  // Write an 4 character code into the stream. This will help us when decoding
-  // to make sure we find this identifier when decoding the string table to make
-  // sure we have the rigth data. It also helps to identify the string table
-  // when dumping the hex bytes in a cache file.
+  // Write a 4 character code into the stream. This will help us when decoding
+  // to make sure we find this identifier when decoding the string table.
+  // It also helps to identify the string table when dumping the hex bytes
+  // in a cache file.
   encoder.AppendData(kStringTableIdentifier);
   size_t length_offset = encoder.GetByteSize();
   encoder.AppendU32(0); // Total length of all strings which will be fixed up.

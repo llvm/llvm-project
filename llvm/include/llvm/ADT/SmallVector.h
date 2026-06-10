@@ -1349,14 +1349,6 @@ extern template class llvm::SmallVectorBase<uint64_t>;
 
 // Provide DenseMapInfo for SmallVector of a type which has info.
 template <typename T, unsigned N> struct DenseMapInfo<llvm::SmallVector<T, N>> {
-  static SmallVector<T, N> getEmptyKey() {
-    return {DenseMapInfo<T>::getEmptyKey()};
-  }
-
-  static SmallVector<T, N> getTombstoneKey() {
-    return {DenseMapInfo<T>::getTombstoneKey()};
-  }
-
   static unsigned getHashValue(const SmallVector<T, N> &V) {
     return static_cast<unsigned>(hash_combine_range(V));
   }

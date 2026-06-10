@@ -1,5 +1,15 @@
 add_custom_target(libc-shared-tests)
 
+# Shared math tests include the entire math library headers into a single file
+# so it might take some time to compile the tests.  We do have dedicated
+# precommit CIs to build and test shared tests.  So we provide a cmake option
+# LIBC_TEST_SKIP_SHARED_TESTS to reduce redundant testings and reduce test time
+# for other precommit CIs.
+if(LIBC_TEST_SKIP_SHARED_TESTS)
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    message(STATUS "LIBC_TEST_SKIP_SHARED_MATH_TESTS is set.  Skipping libc-shared-tests.")
+  endif()
+else()
 add_fp_unittest(
   shared_math_test
   SUITE
@@ -9,6 +19,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.math.acos
+    libc.src.__support.math.acosbf16
     libc.src.__support.math.acosf
     libc.src.__support.math.acosf16
     libc.src.__support.math.acoshf
@@ -804,6 +815,7 @@ add_fp_unittest(
     libc.src.__support.math.totalordermagf16
     libc.src.__support.math.totalordermagl
 )
+endif() # LIBC_TEST_SKIP_SHARED_MATH_TESTS
 
 add_fp_unittest(
   shared_str_to_num_test
@@ -832,3 +844,15 @@ add_libc_test(
     libc.src.__support.arg_list
 )
 endif()
+
+add_fp_unittest(
+  shared_math_check_exp_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_math_check_exp_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
