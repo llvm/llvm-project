@@ -1313,55 +1313,64 @@ Value *VectorCombine::createUnaryOp(Instruction::UnaryOps Opcode,
 
 Value *VectorCombine::createBinaryOp(Instruction::BinaryOps Opcode, Value *LHS,
                                      Value *RHS, BinaryOperator *OldI) {
-  Twine Prefix = OldI->getName() + ".scalar.";
   switch (Opcode) {
   case Instruction::Add:
-    return Builder.CreateAdd(LHS, RHS, Prefix + "add",
+    return Builder.CreateAdd(LHS, RHS, OldI->getName() + ".scalar.add",
                              OldI->hasNoUnsignedWrap(),
                              OldI->hasNoSignedWrap());
   case Instruction::Sub:
-    return Builder.CreateSub(LHS, RHS, Prefix + "sub",
+    return Builder.CreateSub(LHS, RHS, OldI->getName() + ".scalar.sub",
                              OldI->hasNoUnsignedWrap(),
                              OldI->hasNoSignedWrap());
   case Instruction::Mul:
-    return Builder.CreateMul(LHS, RHS, Prefix + "mul",
+    return Builder.CreateMul(LHS, RHS, OldI->getName() + ".scalar.mul",
                              OldI->hasNoUnsignedWrap(),
                              OldI->hasNoSignedWrap());
   case Instruction::UDiv:
-    return Builder.CreateUDiv(LHS, RHS, Prefix + "udiv", OldI->isExact());
+    return Builder.CreateUDiv(LHS, RHS, OldI->getName() + ".scalar.udiv",
+                              OldI->isExact());
   case Instruction::SDiv:
-    return Builder.CreateSDiv(LHS, RHS, Prefix + "sdiv", OldI->isExact());
+    return Builder.CreateSDiv(LHS, RHS, OldI->getName() + ".scalar.sdiv",
+                              OldI->isExact());
   case Instruction::URem:
-    return Builder.CreateURem(LHS, RHS, Prefix + "urem");
+    return Builder.CreateURem(LHS, RHS, OldI->getName() + ".scalar.urem");
   case Instruction::SRem:
-    return Builder.CreateSRem(LHS, RHS, Prefix + "srem");
+    return Builder.CreateSRem(LHS, RHS, OldI->getName() + ".scalar.srem");
   case Instruction::Shl:
-    return Builder.CreateShl(LHS, RHS, Prefix + "shl",
+    return Builder.CreateShl(LHS, RHS, OldI->getName() + ".scalar.shl",
                              OldI->hasNoUnsignedWrap(),
                              OldI->hasNoSignedWrap());
   case Instruction::LShr:
-    return Builder.CreateLShr(LHS, RHS, Prefix + "lshr", OldI->isExact());
+    return Builder.CreateLShr(LHS, RHS, OldI->getName() + ".scalar.lshr",
+                              OldI->isExact());
   case Instruction::AShr:
-    return Builder.CreateAShr(LHS, RHS, Prefix + "ashr", OldI->isExact());
+    return Builder.CreateAShr(LHS, RHS, OldI->getName() + ".scalar.ashr",
+                              OldI->isExact());
   case Instruction::And:
-    return Builder.CreateAnd(LHS, RHS, Prefix + "and");
+    return Builder.CreateAnd(LHS, RHS, OldI->getName() + ".scalar.and");
   case Instruction::Or: {
     PossiblyDisjointInst *PDI = dyn_cast<PossiblyDisjointInst>(OldI);
     bool IsDisjoint = PDI ? PDI->isDisjoint() : false;
-    return Builder.CreateOr(LHS, RHS, Prefix + "or", IsDisjoint);
+    return Builder.CreateOr(LHS, RHS, OldI->getName() + ".scalar.or",
+                            IsDisjoint);
   }
   case Instruction::Xor:
-    return Builder.CreateXor(LHS, RHS, Prefix + "xor");
+    return Builder.CreateXor(LHS, RHS, OldI->getName() + ".scalar.xor");
   case Instruction::FAdd:
-    return Builder.CreateFAddFMF(LHS, RHS, OldI, Prefix + "fadd");
+    return Builder.CreateFAddFMF(LHS, RHS, OldI,
+                                 OldI->getName() + ".scalar.fadd");
   case Instruction::FSub:
-    return Builder.CreateFSubFMF(LHS, RHS, OldI, Prefix + "fsub");
+    return Builder.CreateFSubFMF(LHS, RHS, OldI,
+                                 OldI->getName() + ".scalar.fsub");
   case Instruction::FMul:
-    return Builder.CreateFMulFMF(LHS, RHS, OldI, Prefix + "fmul");
+    return Builder.CreateFMulFMF(LHS, RHS, OldI,
+                                 OldI->getName() + ".scalar.fmul");
   case Instruction::FDiv:
-    return Builder.CreateFDivFMF(LHS, RHS, OldI, Prefix + "fdiv");
+    return Builder.CreateFDivFMF(LHS, RHS, OldI,
+                                 OldI->getName() + ".scalar.fdiv");
   case Instruction::FRem:
-    return Builder.CreateFRemFMF(LHS, RHS, OldI, Prefix + "frem");
+    return Builder.CreateFRemFMF(LHS, RHS, OldI,
+                                 OldI->getName() + ".scalar.frem");
   case Instruction::BinaryOpsEnd:
     llvm_unreachable("Invalid binary opcode");
   }
