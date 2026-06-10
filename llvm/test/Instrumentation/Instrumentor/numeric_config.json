@@ -10,6 +10,7 @@
       "opcode": true,
       "left": true,
       "right": true,
+      "flags": true,
       "id": true
     }
   },
@@ -22,6 +23,7 @@
       "left": true,
       "right": true,
       "result": true,
+      "flags": true,
       "id": true
     }
   }
