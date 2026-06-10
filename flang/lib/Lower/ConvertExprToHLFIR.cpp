@@ -2214,6 +2214,16 @@ private:
                     builder.createIntegerConstant(loc, ty, *ordinal);
                 return hlfir::EntityWithAttributes{result};
               }
+              // Non-constant ordinal (e.g. color(i) with variable i): lower
+              // the __ordinal component expression to a runtime scalar value.
+              // TODO: when a -fcheck=enum runtime check flag is added, emit a
+              // bounds check here that the ordinal is in 1..enumeratorCount.
+              hlfir::Entity ordinalEntity = gen(*val);
+              mlir::Value ordinal =
+                  hlfir::loadTrivialScalar(loc, builder, ordinalEntity);
+              if (ordinal.getType() != ty)
+                ordinal = builder.createConvert(loc, ty, ordinal);
+              return hlfir::EntityWithAttributes{ordinal};
             }
           }
         }

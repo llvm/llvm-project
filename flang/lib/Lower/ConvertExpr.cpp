@@ -965,6 +965,14 @@ public:
             if (auto ordinal = Fortran::evaluate::ToInt64(*val)) {
               return builder.createIntegerConstant(loc, ty, *ordinal);
             }
+            // Non-constant ordinal (e.g. color(i) with variable i): lower the
+            // __ordinal component expression to a runtime scalar value.
+            // TODO: when a -fcheck=enum runtime check flag is added, emit a
+            // bounds check here that the ordinal is in 1..enumeratorCount.
+            mlir::Value ordinal = fir::getBase(genval(*val));
+            if (ordinal.getType() != ty)
+              ordinal = builder.createConvert(loc, ty, ordinal);
+            return ordinal;
           }
         }
       }
