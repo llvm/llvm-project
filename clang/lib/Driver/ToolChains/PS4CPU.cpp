@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PS4CPU.h"
+#include "Arch/X86.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
@@ -177,6 +178,9 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (StringRef Threads = getLTOParallelism(Args, D); !Threads.empty())
     AddLTOFlag(Twine("-threads=") + Threads);
+
+  std::string CPU = tools::x86::getX86TargetCPU(D, Args, TC.getTriple());
+  AddLTOFlag(Twine("mcpu=" + CPU));
 
   if (*LTOArgs)
     CmdArgs.push_back(
