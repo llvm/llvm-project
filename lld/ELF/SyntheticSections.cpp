@@ -1172,9 +1172,9 @@ static uint64_t addRelaSz(Ctx &ctx, const RelocationBaseSection &relaDyn) {
 static uint64_t addPltRelSz(Ctx &ctx) { return ctx.in.relaPlt->getSize(); }
 
 // Add remaining entries to complete .dynamic contents.
-template <class ELFT>
-std::vector<std::pair<int32_t, uint64_t>>
-DynamicSection<ELFT>::computeContents() {
+static std::vector<std::pair<int32_t, uint64_t>> computeDynamicSectionContents(
+    Ctx &ctx, uint64_t dynamicVA, uint64_t dynamicEntsize, uint64_t relaEntsize,
+    uint64_t relEntsize, uint64_t relrEntsize, uint64_t symEntsize) {
   std::vector<std::pair<int32_t, uint64_t>> entries;
 
   auto addInt = [&](int32_t tag, uint64_t val) {
@@ -1254,8 +1254,7 @@ DynamicSection<ELFT>::computeContents() {
                          addRelaSz(ctx, *ctx.in.relaDyn));
 
     bool isRela = ctx.arg.isRela;
-    addInt(isRela ? DT_RELAENT : DT_RELENT,
-           isRela ? sizeof(Elf_Rela) : sizeof(Elf_Rel));
+    addInt(isRela ? DT_RELAENT : DT_RELENT, isRela ? relaEntsize : relEntsize);
 
     // MIPS dynamic loader does not support RELCOUNT tag.
     // The problem is in the tight relation between dynamic
@@ -1273,13 +1272,13 @@ DynamicSection<ELFT>::computeContents() {
     addInt(ctx.arg.useAndroidRelrTags ? DT_ANDROID_RELRSZ : DT_RELRSZ,
            ctx.in.relrDyn->getParent()->size);
     addInt(ctx.arg.useAndroidRelrTags ? DT_ANDROID_RELRENT : DT_RELRENT,
-           sizeof(Elf_Relr));
+           relrEntsize);
   }
   if (ctx.in.relrAuthDyn && ctx.in.relrAuthDyn->getParent() &&
       !ctx.in.relrAuthDyn->relocs.empty()) {
     addInSec(DT_AARCH64_AUTH_RELR, *ctx.in.relrAuthDyn);
     addInt(DT_AARCH64_AUTH_RELRSZ, ctx.in.relrAuthDyn->getParent()->size);
-    addInt(DT_AARCH64_AUTH_RELRENT, sizeof(Elf_Relr));
+    addInt(DT_AARCH64_AUTH_RELRENT, relrEntsize);
   }
   if (ctx.in.relaPlt->isNeeded()) {
     addInSec(DT_JMPREL, *ctx.in.relaPlt);
@@ -1338,7 +1337,7 @@ DynamicSection<ELFT>::computeContents() {
   }
 
   addInSec(DT_SYMTAB, *ctx.in.dynSymTab);
-  addInt(DT_SYMENT, sizeof(Elf_Sym));
+  addInt(DT_SYMENT, symEntsize);
   addInSec(DT_STRTAB, *ctx.in.dynStrTab);
   addInt(DT_STRSZ, ctx.in.dynStrTab->getSize());
   if (!ctx.arg.zText)
@@ -1401,7 +1400,8 @@ DynamicSection<ELFT>::computeContents() {
       // Store the offset to the .rld_map section
       // relative to the address of the tag.
       addInt(DT_MIPS_RLD_MAP_REL,
-             ctx.in.mipsRldMap->getVA() - (getVA() + entries.size() * entsize));
+             ctx.in.mipsRldMap->getVA() -
+                 (dynamicVA + entries.size() * dynamicEntsize));
     }
   }
 
@@ -1423,6 +1423,14 @@ DynamicSection<ELFT>::computeContents() {
 
   addInt(DT_NULL, 0);
   return entries;
+}
+
+template <class ELFT>
+std::vector<std::pair<int32_t, uint64_t>>
+DynamicSection<ELFT>::computeContents() {
+  return computeDynamicSectionContents(ctx, getVA(), entsize, sizeof(Elf_Rela),
+                                       sizeof(Elf_Rel), sizeof(Elf_Relr),
+                                       sizeof(Elf_Sym));
 }
 
 template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
