@@ -931,7 +931,7 @@ class AnyStridedMemRefOfRank<int rank> :
 
 class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
     ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>, HasStridesPred],
-         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
+         !interleave(!foreach(rank, ranks, rank # "D"), "/") # " strided " #
          MemRefOf<allowedTypes>.summary>;
 
 // This represents a generic tuple without any constraints on element type.
