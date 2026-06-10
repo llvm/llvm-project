@@ -1027,22 +1027,80 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
   return ShAmt < 4 && ShAmt > 0;
 }
 
+static std::optional<APInt> getANDImmediateMask(const MachineInstr &MI) {
+  unsigned BitWidth;
+  switch (MI.getOpcode()) {
+  default:
+    return std::nullopt;
+  case X86::AND8ri:
+  case X86::AND8ri_ND:
+    BitWidth = 8;
+    break;
+  case X86::AND16ri:
+  case X86::AND16ri_ND:
+    BitWidth = 16;
+    break;
+  case X86::AND32ri:
+  case X86::AND32ri_ND:
+    BitWidth = 32;
+    break;
+  case X86::AND64ri32:
+  case X86::AND64ri32_ND:
+    BitWidth = 64;
+    break;
+  }
+
+  for (const MachineOperand &MO : MI.explicit_operands()) {
+    if (!MO.isImm())
+      continue;
+    int64_t Imm = MO.getImm();
+    if (BitWidth == 64)
+      Imm = SignExtend64<32>(Imm);
+    return APInt(BitWidth, Imm, /*isSigned=*/true);
+  }
+
+  return std::nullopt;
+}
+
+static bool clearsSignBit(const std::optional<APInt> &Mask, unsigned BitWidth) {
+  if (!Mask)
+    return false;
+  assert(Mask->getBitWidth() >= BitWidth && "Unexpected mask width");
+  return !Mask->trunc(BitWidth).isSignBitSet();
+}
+
+static unsigned getTESTrrBitWidth(unsigned Opcode) {
+  switch (Opcode) {
+  default:
+    return 0;
+  case X86::TEST8rr:
+    return 8;
+  case X86::TEST16rr:
+    return 16;
+  case X86::TEST64rr:
+    return 64;
+  }
+}
+
 static bool
 findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
                        const MachineRegisterInfo *MRI, MachineInstr **AndInstr,
                        const TargetRegisterInfo *TRI, const X86Subtarget &ST,
                        bool &NoSignFlag, bool &ClearsOverflowFlag) {
-  if (!(CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG &&
-        CmpInstr.getOpcode() == X86::TEST64rr) &&
-      !(CmpValDefInstr.getOpcode() == X86::COPY &&
-        CmpInstr.getOpcode() == X86::TEST16rr))
+  unsigned TestBitWidth = getTESTrrBitWidth(CmpInstr.getOpcode());
+  bool IsSubregToRegTest64 =
+      CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG && TestBitWidth == 64;
+  bool IsCopyNarrowTest =
+      CmpValDefInstr.getOpcode() == X86::COPY &&
+      (TestBitWidth == 8 || TestBitWidth == 16);
+  if (!IsSubregToRegTest64 && !IsCopyNarrowTest)
     return false;
 
-  // CmpInstr is a TEST16rr/TEST64rr instruction, and
+  // CmpInstr is a TEST8rr/TEST16rr/TEST64rr instruction, and
   // `X86InstrInfo::analyzeCompare` guarantees that it's analyzable only if two
   // registers are identical.
   assert((CmpInstr.getOperand(0).getReg() == CmpInstr.getOperand(1).getReg()) &&
-         "CmpInstr is an analyzable TEST16rr/TEST64rr, and "
+         "CmpInstr is an analyzable TEST8rr/TEST16rr/TEST64rr, and "
          "`X86InstrInfo::analyzeCompare` requires two reg operands are the"
          "same.");
 
@@ -1052,25 +1110,25 @@ findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
   // redundant.
   assert(
       (MRI->getVRegDef(CmpInstr.getOperand(0).getReg()) == &CmpValDefInstr) &&
-      "Caller guarantees that TEST64rr is a user of SUBREG_TO_REG or TEST16rr "
-      "is a user of COPY sub16bit.");
+      "Caller guarantees that TEST64rr is a user of SUBREG_TO_REG or TEST8rr/"
+      "TEST16rr is a user of COPY.");
   MachineInstr *VregDefInstr = nullptr;
-  if (CmpInstr.getOpcode() == X86::TEST16rr) {
+  if (IsCopyNarrowTest) {
     if (!CmpValDefInstr.getOperand(1).getReg().isVirtual())
       return false;
     VregDefInstr = MRI->getVRegDef(CmpValDefInstr.getOperand(1).getReg());
     if (!VregDefInstr)
       return false;
-    // We can only remove test when AND32ri or AND64ri32 whose imm can fit 16bit
-    // size, others 32/64 bit ops would test higher bits which test16rr don't
-    // want to.
+    // We can only remove test when AND32ri or AND64ri32 whose imm can fit the
+    // test width. Otherwise, the wide AND may test higher bits that the narrow
+    // TEST does not.
     if (!((VregDefInstr->getOpcode() == X86::AND32ri ||
            VregDefInstr->getOpcode() == X86::AND64ri32) &&
-          isUInt<16>(VregDefInstr->getOperand(2).getImm())))
+          isUIntN(TestBitWidth, VregDefInstr->getOperand(2).getImm())))
       return false;
   }
 
-  if (CmpInstr.getOpcode() == X86::TEST64rr) {
+  if (IsSubregToRegTest64) {
     // As seen in X86 td files, CmpValDefInstr.getOperand(3) is typically
     // sub_32bit or sub_xmm.
     if (CmpValDefInstr.getOperand(2).getImm() != X86::sub_32bit)
@@ -1116,24 +1174,18 @@ findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
 
     *AndInstr = VregDefInstr;
 
-    // AND instruction will essentially update SF and clear OF, so
-    // NoSignFlag should be false in the sense that SF is modified by `AND`.
-    //
-    // However, the implementation artifically sets `NoSignFlag` to true
-    // to poison the SF bit; that is to say, if SF is looked at later, the
-    // optimization (to erase TEST64rr) will be disabled.
-    //
-    // The reason to poison SF bit is that SF bit value could be different
-    // in the `AND` and `TEST` operation; signed bit is not known for `AND`,
-    // and is known to be 0 as a result of `TEST64rr`.
-    //
-    // FIXME: As opposed to poisoning the SF bit directly, consider peeking into
-    // the AND instruction and using the static information to guide peephole
-    // optimization if possible. For example, it's possible to fold a
-    // conditional move into a copy if the relevant EFLAG bits could be deduced
-    // from an immediate operand of and operation.
-    //
-    NoSignFlag = true;
+    // AND updates SF and clears OF, but a wider AND may produce a different SF
+    // than the later narrower TEST. If the immediate mask clears both relevant
+    // sign bits, both instructions produce SF=0 and signed users can reuse the
+    // AND flags.
+    std::optional<APInt> Mask = getANDImmediateMask(*VregDefInstr);
+    bool EquivalentSignFlag = false;
+    if (Mask) {
+      EquivalentSignFlag = clearsSignBit(Mask, Mask->getBitWidth());
+      if (TestBitWidth < Mask->getBitWidth())
+        EquivalentSignFlag &= clearsSignBit(Mask, TestBitWidth);
+    }
+    NoSignFlag = !EquivalentSignFlag;
     // ClearsOverflowFlag is true for AND operation (no surprise).
     ClearsOverflowFlag = true;
     return true;
