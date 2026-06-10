@@ -1107,13 +1107,7 @@ struct NumericIO final
     ReplaceResult,
     PassLeft,
     PassRight,
-    PassHasNoUnsignedWrap,
-    PassHasNoSignedWrap,
-    PassIsExact,
-    PassIsDisjoint,
-    PassHasNoNaNs,
-    PassHasNoInfs,
-    PassHasNoSignedZeros,
+    PassFlags,
     PassId,
     NumConfig,
   };
@@ -1130,23 +1124,8 @@ struct NumericIO final
                         InstrumentorIRBuilderTy &IIRB);
   static Value *getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
                          InstrumentorIRBuilderTy &IIRB);
-  static Value *hasNoUnsignedWrap(Value &V, Type &Ty,
-                                  InstrumentationConfig &IConf,
-                                  InstrumentorIRBuilderTy &IIRB);
-  static Value *hasNoSignedWrap(Value &V, Type &Ty,
-                                InstrumentationConfig &IConf,
-                                InstrumentorIRBuilderTy &IIRB);
-  static Value *isExact(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                        InstrumentorIRBuilderTy &IIRB);
-  static Value *isDisjoint(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                           InstrumentorIRBuilderTy &IIRB);
-  static Value *hasNoNaNs(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                          InstrumentorIRBuilderTy &IIRB);
-  static Value *hasNoInfs(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                          InstrumentorIRBuilderTy &IIRB);
-  static Value *hasNoSignedZeros(Value &V, Type &Ty,
-                                 InstrumentationConfig &IConf,
-                                 InstrumentorIRBuilderTy &IIRB);
+  static Value *getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                         InstrumentorIRBuilderTy &IIRB);
 
   static void populate(InstrumentationConfig &IConf,
                        InstrumentorIRBuilderTy &IIRB) {

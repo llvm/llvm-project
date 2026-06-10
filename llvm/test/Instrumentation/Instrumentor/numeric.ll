@@ -9,45 +9,45 @@ define float @test_float(float %p1, float %p2) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[P2]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 15, i64 [[TMP1]], i64 [[TMP3]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 1) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 15, i64 [[TMP1]], i64 [[TMP3]], i64 0, i32 1) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[A1:%.*]] = fadd float [[P1]], [[P2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float [[A1]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 15, i64 [[TMP1]], i64 [[TMP3]], i64 [[TMP5]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -1) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 15, i64 [[TMP1]], i64 [[TMP3]], i64 [[TMP5]], i64 0, i32 -1) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float [[P1]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float [[A1]] to i32
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 19, i64 [[TMP7]], i64 [[TMP9]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 1, i8 0, i32 2) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 19, i64 [[TMP7]], i64 [[TMP9]], i64 8, i32 2) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = fmul ninf float [[P1]], [[A1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast float [[A2]] to i32
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP10]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 19, i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 1, i8 0, i32 -2) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 19, i64 [[TMP7]], i64 [[TMP9]], i64 [[TMP11]], i64 8, i32 -2) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast float [[A2]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i64
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast float [[P2]] to i32
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 22, i64 [[TMP13]], i64 [[TMP15]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 3) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 22, i64 [[TMP13]], i64 [[TMP15]], i64 0, i32 3) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = fdiv float [[A2]], [[P2]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast float [[A3]] to i32
 ; CHECK-NEXT:    [[TMP17:%.*]] = zext i32 [[TMP16]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 22, i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -3) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 22, i64 [[TMP13]], i64 [[TMP15]], i64 [[TMP17]], i64 0, i32 -3) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = bitcast float [[A3]] to i32
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext i32 [[TMP18]] to i64
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast float [[A1]] to i32
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i32 [[TMP20]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 17, i64 [[TMP19]], i64 [[TMP21]], i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 0, i8 0, i32 4) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 17, i64 [[TMP19]], i64 [[TMP21]], i64 4, i32 4) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = fsub nnan float [[A3]], [[A1]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = bitcast float [[A4]] to i32
 ; CHECK-NEXT:    [[TMP23:%.*]] = zext i32 [[TMP22]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 17, i64 [[TMP19]], i64 [[TMP21]], i64 [[TMP23]], i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 0, i8 0, i32 -4) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 17, i64 [[TMP19]], i64 [[TMP21]], i64 [[TMP23]], i64 4, i32 -4) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = bitcast float [[A4]] to i32
 ; CHECK-NEXT:    [[TMP25:%.*]] = zext i32 [[TMP24]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 13, i64 [[TMP25]], i64 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 5) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 2, i32 4, i32 13, i64 [[TMP25]], i64 poison, i64 0, i32 5) #[[ATTR0]]
 ; CHECK-NEXT:    [[A5:%.*]] = fneg float [[A4]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = bitcast float [[A5]] to i32
 ; CHECK-NEXT:    [[TMP27:%.*]] = zext i32 [[TMP26]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 13, i64 [[TMP25]], i64 poison, i64 [[TMP27]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -5) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 2, i32 4, i32 13, i64 [[TMP25]], i64 poison, i64 [[TMP27]], i64 0, i32 -5) #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[A5]]
 ;
 entry:
@@ -65,33 +65,33 @@ define double @test_double(double %p1, double %p2) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double [[P1]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double [[P2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 15, i64 [[TMP0]], i64 [[TMP1]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 6) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 15, i64 [[TMP0]], i64 [[TMP1]], i64 0, i32 6) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = fadd double [[P1]], [[P2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 15, i64 [[TMP0]], i64 [[TMP1]], i64 [[TMP2]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -6) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 15, i64 [[TMP0]], i64 [[TMP1]], i64 [[TMP2]], i64 0, i32 -6) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast double [[P1]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 19, i64 [[TMP3]], i64 [[TMP4]], i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 1, i8 1, i32 7) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 19, i64 [[TMP3]], i64 [[TMP4]], i64 28, i32 7) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = fmul fast double [[P1]], [[A1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double [[A2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 19, i64 [[TMP3]], i64 [[TMP4]], i64 [[TMP5]], i8 poison, i8 poison, i8 poison, i8 poison, i8 1, i8 1, i8 1, i32 -7) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 19, i64 [[TMP3]], i64 [[TMP4]], i64 [[TMP5]], i64 28, i32 -7) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double [[A2]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double [[P2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 25, i64 [[TMP6]], i64 [[TMP7]], i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 8) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 25, i64 [[TMP6]], i64 [[TMP7]], i64 0, i32 8) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = frem double [[A2]], [[P2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast double [[A3]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 25, i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP8]], i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -8) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 25, i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP8]], i64 0, i32 -8) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double [[A3]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast double [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 17, i64 [[TMP9]], i64 [[TMP10]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 1, i32 9) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 17, i64 [[TMP9]], i64 [[TMP10]], i64 16, i32 9) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = fsub nsz double [[A3]], [[A1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double [[A4]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 17, i64 [[TMP9]], i64 [[TMP10]], i64 [[TMP11]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 1, i32 -9) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 17, i64 [[TMP9]], i64 [[TMP10]], i64 [[TMP11]], i64 16, i32 -9) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double [[A4]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 13, i64 [[TMP12]], i64 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 10) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 3, i32 8, i32 13, i64 [[TMP12]], i64 poison, i64 0, i32 10) #[[ATTR0]]
 ; CHECK-NEXT:    [[A5:%.*]] = fneg double [[A4]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast double [[A5]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 13, i64 [[TMP12]], i64 poison, i64 [[TMP13]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -10) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 3, i32 8, i32 13, i64 [[TMP12]], i64 poison, i64 [[TMP13]], i64 0, i32 -10) #[[ATTR0]]
 ; CHECK-NEXT:    ret double [[A5]]
 ;
 entry:
@@ -113,34 +113,34 @@ define fp128 @test_fp128(fp128 %p1, fp128 %p2) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = alloca fp128, align 16
 ; CHECK-NEXT:    store fp128 [[P1]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    store fp128 [[P2]], ptr [[TMP2]], align 16
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 15, ptr [[TMP3]], ptr [[TMP2]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 11) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 15, ptr [[TMP3]], ptr [[TMP2]], i64 0, i32 11) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = fadd fp128 [[P1]], [[P2]]
 ; CHECK-NEXT:    store fp128 [[A1]], ptr [[TMP1]], align 16
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 15, ptr [[TMP3]], ptr [[TMP2]], ptr [[TMP1]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -11) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 15, ptr [[TMP3]], ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 -11) #[[ATTR0]]
 ; CHECK-NEXT:    store fp128 [[P1]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    store fp128 [[A1]], ptr [[TMP1]], align 16
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 19, ptr [[TMP3]], ptr [[TMP1]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 12) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 19, ptr [[TMP3]], ptr [[TMP1]], i64 0, i32 12) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = fmul fp128 [[P1]], [[A1]]
 ; CHECK-NEXT:    store fp128 [[A2]], ptr [[TMP2]], align 16
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 19, ptr [[TMP3]], ptr [[TMP1]], ptr [[TMP2]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -12) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 19, ptr [[TMP3]], ptr [[TMP1]], ptr [[TMP2]], i64 0, i32 -12) #[[ATTR0]]
 ; CHECK-NEXT:    store fp128 [[A2]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    store fp128 [[P2]], ptr [[TMP2]], align 16
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 22, ptr [[TMP3]], ptr [[TMP2]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 13) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 22, ptr [[TMP3]], ptr [[TMP2]], i64 0, i32 13) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = fdiv fp128 [[A2]], [[P2]]
 ; CHECK-NEXT:    store fp128 [[A3]], ptr [[TMP1]], align 16
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 22, ptr [[TMP3]], ptr [[TMP2]], ptr [[TMP1]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -13) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 22, ptr [[TMP3]], ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 -13) #[[ATTR0]]
 ; CHECK-NEXT:    store fp128 [[A3]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    store fp128 [[A1]], ptr [[TMP1]], align 16
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 17, ptr [[TMP3]], ptr [[TMP1]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 14) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 17, ptr [[TMP3]], ptr [[TMP1]], i64 0, i32 14) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = fsub fp128 [[A3]], [[A1]]
 ; CHECK-NEXT:    store fp128 [[A4]], ptr [[TMP2]], align 16
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 17, ptr [[TMP3]], ptr [[TMP1]], ptr [[TMP2]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -14) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 17, ptr [[TMP3]], ptr [[TMP1]], ptr [[TMP2]], i64 0, i32 -14) #[[ATTR0]]
 ; CHECK-NEXT:    store fp128 [[A4]], ptr [[TMP3]], align 16
 ; CHECK-NEXT:    store i64 poison, ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 13, ptr [[TMP3]], ptr [[TMP0]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 15) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 5, i32 16, i32 13, ptr [[TMP3]], ptr [[TMP0]], i64 0, i32 15) #[[ATTR0]]
 ; CHECK-NEXT:    [[A5:%.*]] = fneg fp128 [[A4]]
 ; CHECK-NEXT:    store fp128 [[A5]], ptr [[TMP2]], align 16
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 13, ptr [[TMP3]], ptr [[TMP0]], ptr [[TMP2]], i8 poison, i8 poison, i8 poison, i8 poison, i8 0, i8 0, i8 0, i32 -15) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 5, i32 16, i32 13, ptr [[TMP3]], ptr [[TMP0]], ptr [[TMP2]], i64 0, i32 -15) #[[ATTR0]]
 ; CHECK-NEXT:    ret fp128 [[A5]]
 ;
 entry:
@@ -158,28 +158,28 @@ define i32 @test_i32(i32 %p1, i32 %p2) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[P1]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[P2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 14, i64 [[TMP0]], i64 [[TMP1]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 16) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 14, i64 [[TMP0]], i64 [[TMP1]], i64 0, i32 16) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = add i32 [[P1]], [[P2]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 14, i64 [[TMP0]], i64 [[TMP1]], i64 [[TMP2]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -16) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 14, i64 [[TMP0]], i64 [[TMP1]], i64 [[TMP2]], i64 0, i32 -16) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[P1]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 18, i64 [[TMP3]], i64 [[TMP4]], i8 1, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 17) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 18, i64 [[TMP3]], i64 [[TMP4]], i64 2, i32 17) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = mul nuw i32 [[P1]], [[A1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[A2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 18, i64 [[TMP3]], i64 [[TMP4]], i64 [[TMP5]], i8 1, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -17) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 18, i64 [[TMP3]], i64 [[TMP4]], i64 [[TMP5]], i64 2, i32 -17) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[A2]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[P2]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 21, i64 [[TMP6]], i64 [[TMP7]], i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i32 18) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 21, i64 [[TMP6]], i64 [[TMP7]], i64 64, i32 18) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = sdiv exact i32 [[A2]], [[P2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[A3]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 21, i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP8]], i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i32 -18) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 21, i64 [[TMP6]], i64 [[TMP7]], i64 [[TMP8]], i64 64, i32 -18) #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[A3]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[A1]] to i64
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 16, i64 [[TMP9]], i64 [[TMP10]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 19) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 4, i32 16, i64 [[TMP9]], i64 [[TMP10]], i64 0, i32 19) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = sub i32 [[A3]], [[A1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[A4]] to i64
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 16, i64 [[TMP9]], i64 [[TMP10]], i64 [[TMP11]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -19) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 4, i32 16, i64 [[TMP9]], i64 [[TMP10]], i64 [[TMP11]], i64 0, i32 -19) #[[ATTR0]]
 ; CHECK-NEXT:    ret i32 [[A4]]
 ;
 entry:
@@ -194,24 +194,24 @@ define i64 @test_i64(i64 %p1, i64 %p2) {
 ; CHECK-LABEL: define i64 @test_i64(
 ; CHECK-SAME: i64 [[P1:%.*]], i64 [[P2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 14, i64 [[P1]], i64 [[P2]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 20) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 14, i64 [[P1]], i64 [[P2]], i64 0, i32 20) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = add i64 [[P1]], [[P2]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 14, i64 [[P1]], i64 [[P2]], i64 [[A1]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -20) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 18, i64 [[P1]], i64 [[A1]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 21) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 14, i64 [[P1]], i64 [[P2]], i64 [[A1]], i64 0, i32 -20) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 18, i64 [[P1]], i64 [[A1]], i64 0, i32 21) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = mul i64 [[P1]], [[A1]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 18, i64 [[P1]], i64 [[A1]], i64 [[A2]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -21) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 20, i64 [[A2]], i64 [[P2]], i8 poison, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i32 22) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 18, i64 [[P1]], i64 [[A1]], i64 [[A2]], i64 0, i32 -21) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 20, i64 [[A2]], i64 [[P2]], i64 0, i32 22) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = udiv i64 [[A2]], [[P2]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 20, i64 [[A2]], i64 [[P2]], i64 [[A3]], i8 poison, i8 poison, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i32 -22) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 16, i64 [[A3]], i64 [[A1]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 23) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 20, i64 [[A2]], i64 [[P2]], i64 [[A3]], i64 0, i32 -22) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 16, i64 [[A3]], i64 [[A1]], i64 0, i32 23) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = sub i64 [[A3]], [[A1]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 16, i64 [[A3]], i64 [[A1]], i64 [[A4]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -23) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 29, i64 [[A4]], i64 [[A2]], i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 24) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 16, i64 [[A3]], i64 [[A1]], i64 [[A4]], i64 0, i32 -23) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 29, i64 [[A4]], i64 [[A2]], i64 0, i32 24) #[[ATTR0]]
 ; CHECK-NEXT:    [[A5:%.*]] = and i64 [[A4]], [[A2]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 29, i64 [[A4]], i64 [[A2]], i64 [[A5]], i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -24) #[[ATTR0]]
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 31, i64 [[A5]], i64 [[A3]], i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 25) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 29, i64 [[A4]], i64 [[A2]], i64 [[A5]], i64 0, i32 -24) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric(i32 12, i32 8, i32 31, i64 [[A5]], i64 [[A3]], i64 0, i32 25) #[[ATTR0]]
 ; CHECK-NEXT:    [[A6:%.*]] = xor i64 [[A5]], [[A3]]
-; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 31, i64 [[A5]], i64 [[A3]], i64 [[A6]], i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -25) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric(i32 12, i32 8, i32 31, i64 [[A5]], i64 [[A3]], i64 [[A6]], i64 0, i32 -25) #[[ATTR0]]
 ; CHECK-NEXT:    ret i64 [[A6]]
 ;
 entry:
@@ -233,40 +233,40 @@ define i128 @test_i128(i128 %p1, i128 %p2) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, align 8
 ; CHECK-NEXT:    store i128 [[P1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[P2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 26) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 26) #[[ATTR0]]
 ; CHECK-NEXT:    [[A1:%.*]] = add i128 [[P1]], [[P2]]
 ; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -26) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 14, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 0, i32 -26) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[P1]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 27) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], i64 0, i32 27) #[[ATTR0]]
 ; CHECK-NEXT:    [[A2:%.*]] = mul i128 [[P1]], [[A1]]
 ; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -27) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 18, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 0, i32 -27) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[P2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 28) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], i64 0, i32 28) #[[ATTR0]]
 ; CHECK-NEXT:    [[A3:%.*]] = srem i128 [[A2]], [[P2]]
 ; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -28) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 24, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 0, i32 -28) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[A1]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], i8 0, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 29) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], i64 1, i32 29) #[[ATTR0]]
 ; CHECK-NEXT:    [[A4:%.*]] = sub nsw i128 [[A3]], [[A1]]
 ; CHECK-NEXT:    store i128 [[A4]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i8 0, i8 1, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -29) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 16, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 1, i32 -29) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[A4]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[A2]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i32 30) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], i64 32, i32 30) #[[ATTR0]]
 ; CHECK-NEXT:    [[A5:%.*]] = or disjoint i128 [[A4]], [[A2]]
 ; CHECK-NEXT:    store i128 [[A5]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i8 poison, i8 poison, i8 poison, i8 1, i8 poison, i8 poison, i8 poison, i32 -30) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 30, ptr [[TMP2]], ptr [[TMP1]], ptr [[TMP0]], i64 32, i32 -30) #[[ATTR0]]
 ; CHECK-NEXT:    store i128 [[A5]], ptr [[TMP2]], align 4
 ; CHECK-NEXT:    store i128 [[A3]], ptr [[TMP0]], align 4
-; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 31) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_pre_numeric_ind(i32 12, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], i64 0, i32 31) #[[ATTR0]]
 ; CHECK-NEXT:    [[A6:%.*]] = shl i128 [[A5]], [[A3]]
 ; CHECK-NEXT:    store i128 [[A6]], ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i8 0, i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i32 -31) #[[ATTR0]]
+; CHECK-NEXT:    call void @__instrumentor_post_numeric_ind(i32 12, i32 16, i32 26, ptr [[TMP2]], ptr [[TMP0]], ptr [[TMP1]], i64 0, i32 -31) #[[ATTR0]]
 ; CHECK-NEXT:    ret i128 [[A6]]
 ;
 entry:

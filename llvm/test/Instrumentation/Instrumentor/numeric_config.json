@@ -10,13 +10,7 @@
       "opcode": true,
       "left": true,
       "right": true,
-      "has_no_unsigned_wrap": true,
-      "has_no_signed_wrap": true,
-      "is_exact": true,
-      "is_disjoint": true,
-      "has_no_nans": true,
-      "has_no_infs": true,
-      "has_no_signed_zeros": true,
+      "flags": true,
       "id": true
     }
   },
@@ -29,13 +23,7 @@
       "left": true,
       "right": true,
       "result": true,
-      "has_no_unsigned_wrap": true,
-      "has_no_signed_wrap": true,
-      "is_exact": true,
-      "is_disjoint": true,
-      "has_no_nans": true,
-      "has_no_infs": true,
-      "has_no_signed_zeros": true,
+      "flags": true,
       "id": true
     }
   }

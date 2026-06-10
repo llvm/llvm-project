@@ -1705,102 +1705,58 @@ Value *NumericIO::getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
     return PoisonValue::get(&Ty);
 }
 
-Value *NumericIO::hasNoUnsignedWrap(Value &V, Type &Ty,
-                                    InstrumentationConfig &IConf,
-                                    InstrumentorIRBuilderTy &IIRB) {
+// NumericIO flag bitmask values
+enum NumericFlags : uint64_t {
+  NUMERIC_FLAG_NONE = 0,
+  NUMERIC_FLAG_NO_SIGNED_WRAP = 1 << 0,
+  NUMERIC_FLAG_NO_UNSIGNED_WRAP = 1 << 1,
+  NUMERIC_FLAG_HAS_NO_NANS = 1 << 2,
+  NUMERIC_FLAG_HAS_NO_INFS = 1 << 3,
+  NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS = 1 << 4,
+  NUMERIC_FLAG_IS_DISJOINT = 1 << 5,
+  NUMERIC_FLAG_IS_EXACT = 1 << 6,
+};
+
+Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
+  uint64_t flag = NUMERIC_FLAG_NONE;
+
   switch (I.getOpcode()) {
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
   case Instruction::Shl:
-    return getCI(&Ty, I.hasNoUnsignedWrap());
-  default:
-    return PoisonValue::get(&Ty);
-  }
-}
-
-Value *NumericIO::hasNoSignedWrap(Value &V, Type &Ty,
-                                  InstrumentationConfig &IConf,
-                                  InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  switch (I.getOpcode()) {
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
-  case Instruction::Shl:
-    return getCI(&Ty, I.hasNoSignedWrap());
-  default:
-    return PoisonValue::get(&Ty);
-  }
-}
-
-Value *NumericIO::isExact(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                          InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  switch (I.getOpcode()) {
+    if (I.hasNoSignedWrap())
+      flag |= NUMERIC_FLAG_NO_SIGNED_WRAP;
+    if (I.hasNoUnsignedWrap())
+      flag |= NUMERIC_FLAG_NO_UNSIGNED_WRAP;
+    break;
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FNeg:
+    if (I.hasNoNaNs())
+      flag |= NUMERIC_FLAG_HAS_NO_NANS;
+    if (I.hasNoInfs())
+      flag |= NUMERIC_FLAG_HAS_NO_INFS;
+    if (I.hasNoSignedZeros())
+      flag |= NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS;
+    break;
   case Instruction::AShr:
   case Instruction::LShr:
   case Instruction::SDiv:
   case Instruction::UDiv:
-    return getCI(&Ty, I.isExact());
-  default:
-    return PoisonValue::get(&Ty);
+    if (I.isExact())
+      flag |= NUMERIC_FLAG_IS_EXACT;
+    break;
   }
-}
 
-Value *NumericIO::isDisjoint(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                             InstrumentorIRBuilderTy &IIRB) {
-  if (auto *DI = dyn_cast<PossiblyDisjointInst>(&V))
-    return getCI(&Ty, DI->isDisjoint());
-  else
-    return PoisonValue::get(&Ty);
-}
+  if (auto *DI = dyn_cast<PossiblyDisjointInst>(&V); DI && DI->isDisjoint())
+    flag |= NUMERIC_FLAG_IS_DISJOINT;
 
-Value *NumericIO::hasNoNaNs(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                            InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  switch (I.getOpcode()) {
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FNeg:
-    return getCI(&Ty, I.hasNoNaNs());
-  default:
-    return PoisonValue::get(&Ty);
-  }
-}
-
-Value *NumericIO::hasNoInfs(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                            InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  switch (I.getOpcode()) {
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FNeg:
-    return getCI(&Ty, I.hasNoInfs());
-  default:
-    return PoisonValue::get(&Ty);
-  }
-}
-
-Value *NumericIO::hasNoSignedZeros(Value &V, Type &Ty,
-                                   InstrumentationConfig &IConf,
-                                   InstrumentorIRBuilderTy &IIRB) {
-  auto &I = cast<Instruction>(V);
-  switch (I.getOpcode()) {
-  case Instruction::FAdd:
-  case Instruction::FSub:
-  case Instruction::FMul:
-  case Instruction::FDiv:
-  case Instruction::FNeg:
-    return getCI(&Ty, I.hasNoSignedZeros());
-  default:
-    return PoisonValue::get(&Ty);
-  }
+  return getCI(&Ty, flag);
 }
 
 void NumericIO::init(InstrumentationConfig &IConf,
@@ -1835,48 +1791,11 @@ void NumericIO::init(InstrumentationConfig &IConf,
         IRTArg(IIRB.Int64Ty, "result", "Result of the operation.",
                IRTArg::REPLACABLE | ValArgOpts, getValue,
                Config.has(ReplaceResult) ? replaceValue : nullptr));
-  if (Config.has(PassHasNoUnsignedWrap))
-    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "has_no_unsigned_wrap",
-                             "Flag indicating the presence of the nuw "
-                             "keyword. This value is poison for "
-                             "instructions that do not support this keyword.",
-                             IRTArg::NONE, hasNoUnsignedWrap));
-  if (Config.has(PassHasNoSignedWrap))
-    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "has_no_signed_wrap",
-                             "Flag indicating the presence of the nsw "
-                             "keyword. This value is poison for "
-                             "instructions that do not support this keyword.",
-                             IRTArg::NONE, hasNoSignedWrap));
-  if (Config.has(PassIsExact))
-    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_exact",
-                             "Flag indicating the presence of the exact "
-                             "keyword. This value is poison for "
-                             "instructions that do not support this keyword.",
-                             IRTArg::NONE, isExact));
-  if (Config.has(PassIsDisjoint))
-    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "is_disjoint",
-                             "Flag indicating the presence of the disjoint "
-                             "keyword. This value is poison for "
-                             "instructions that do not support this keyword.",
-                             IRTArg::NONE, isDisjoint));
-  if (Config.has(PassHasNoNaNs))
-    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "has_no_nans",
-                             "Flag indicating the presence of the nnan "
-                             "fast math flag. This value is poison for "
-                             "instructions that do not support this keyword.",
-                             IRTArg::NONE, hasNoNaNs));
-  if (Config.has(PassHasNoInfs))
-    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "has_no_infs",
-                             "Flag indicating the presence of the ninf "
-                             "fast math flag. This value is poison for "
-                             "instructions that do not support this keyword.",
-                             IRTArg::NONE, hasNoInfs));
-  if (Config.has(PassHasNoSignedZeros))
-    IRTArgs.push_back(IRTArg(IIRB.Int8Ty, "has_no_signed_zeros",
-                             "Flag indicating the presence of the nsz "
-                             "fast math flag. This value is poison for "
-                             "instructions that do not support this keyword.",
-                             IRTArg::NONE, hasNoSignedZeros));
+  if (Config.has(PassFlags))
+    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "flags",
+                             "A bitmask value signaling which flags are "
+                             "present in this LLVM instruction.",
+                             IRTArg::NONE, getFlags));
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
   IConf.addChoice(*this, IIRB.Ctx);
 }
