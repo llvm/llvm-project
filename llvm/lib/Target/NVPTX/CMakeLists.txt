@@ -12,6 +12,7 @@ tablegen(LLVM NVPTXGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(NVPTXCommonTableGen)
 
 set(NVPTXCodeGen_sources
+  NVPTXAddressFolder.cpp
   NVPTXAliasAnalysis.cpp
   NVPTXAllocaHoisting.cpp
   NVPTXAsmPrinter.cpp
@@ -19,7 +20,6 @@ set(NVPTXCodeGen_sources
   NVPTXAtomicLower.cpp
   NVPTXCtorDtorLowering.cpp
   NVPTXDwarfDebug.cpp
-  NVPTXForwardKernelParams.cpp
   NVPTXForwardParams.cpp
   NVPTXFrameLowering.cpp
   NVPTXGenericToNVVM.cpp
