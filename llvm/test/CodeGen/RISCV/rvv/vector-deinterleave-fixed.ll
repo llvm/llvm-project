@@ -208,6 +208,32 @@ define {<2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave3_v2i32_v6i32(<6 x 
 	   ret {<2 x i32>, <2 x i32>, <2 x i32>} %res
 }
 
+define {<3 x i32>, <3 x i32>, <3 x i32>} @vector_deinterleave3_v3i32_v9i32(<9 x i32> %v) nounwind {
+; CHECK-LABEL: vector_deinterleave3_v3i32_v9i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
+; CHECK-NEXT:    vslidedown.vi v12, v8, 8
+; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vi v10, v8, 4
+; CHECK-NEXT:    vmv1r.v v9, v10
+; CHECK-NEXT:    vmv2r.v v10, v12
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs4r.v v8, (a0)
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg3e32.v v8, (a0)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 2
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    ret
+  %d = call {<3 x i32>, <3 x i32>, <3 x i32>} @llvm.vector.deinterleave3(<9 x i32> %v)
+  ret {<3 x i32>, <3 x i32>, <3 x i32>} %d
+}
+
 define {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @vector_deinterleave4_v2i32_v8i32(<8 x i32> %v) nounwind {
 ; CHECK-LABEL: vector_deinterleave4_v2i32_v8i32:
 ; CHECK:       # %bb.0:
