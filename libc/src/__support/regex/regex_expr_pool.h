@@ -61,7 +61,8 @@ class ExprPool {
   /// the load factor below 70% when the pool reaches its limit of 10,000 nodes
   /// (peak load factor is ~61%). Using a power of two allows the compiler to
   /// optimize the modulo indexing into an efficient bitwise AND, while the low
-  /// load factor minimizes collisions and guarantees O(1) average interning time.
+  /// load factor minimizes collisions and guarantees O(1) average interning
+  /// time.
   static constexpr size_t HASH_TABLE_SIZE = 0x4000;
   /// Hash table storing pointers to unique Expr nodes.
   Expr **hashtable = nullptr;
