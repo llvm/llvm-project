@@ -93,9 +93,11 @@ struct RematerializerWrapper {
 class RematerializerTest : public CodeGenTestBase {
 public:
   static void SetUpTestCase() {
+#if LLVM_HAS_AMDGPU_TARGET
     LLVMInitializeAMDGPUTargetInfo();
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetMC();
+#endif
   }
 
   void SetUp() override { setUpImpl("amdgcn--", "gfx950", ""); }
