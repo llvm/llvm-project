@@ -1,8 +1,8 @@
 # Xqcibm - Qualcomm uC Bit Manipulation Extension
 # RUN: not llvm-mc -triple riscv32 -mattr=+xqcibm < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
+# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s --implicit-check-not="error:"
 # RUN: not llvm-mc -triple riscv32 -mattr=-xqcibm < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
+# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s --implicit-check-not="error:"
 
 # CHECK-PLUS: :[[@LINE+2]]:18: error: register must be a GPR excluding zero (x0)
 # CHECK-MINUS: :[[@LINE+1]]:18: error: invalid operand for instruction
@@ -152,7 +152,8 @@ qc.insbri x10, x0, -1024
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.insbri x10, x20
 
-# CHECK-PLUS: :[[@LINE+1]]:21: error: immediate must be an integer in the range [-1024, 1023]
+# CHECK-PLUS: :[[@LINE+2]]:21: error: immediate must be an integer in the range [-1024, 1023]
+# CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction
 qc.insbri x10, x20, -1027
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -166,13 +167,16 @@ qc.insbi x0, -10, 12, 15
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.insbi x6, -10, 12
 
-# CHECK-PLUS: :[[@LINE+1]]:14: error: immediate must be an integer in the range [-16, 15]
+# CHECK-PLUS: :[[@LINE+2]]:14: error: immediate must be an integer in the range [-16, 15]
+# CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.insbi x6, -17, 12, 15
 
-# CHECK-PLUS: :[[@LINE+1]]:19: error: immediate must be an integer in the range [1, 32]
+# CHECK-PLUS: :[[@LINE+2]]:19: error: immediate must be an integer in the range [1, 32]
+# CHECK-MINUS: :[[@LINE+1]]:19: error: invalid operand for instruction
 qc.insbi x6, -10, 45, 15
 
-# CHECK-PLUS: :[[@LINE+1]]:23: error: immediate must be an integer in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+2]]:23: error: immediate must be an integer in the range [0, 31]
+# CHECK-MINUS: :[[@LINE+1]]:23: error: invalid operand for instruction
 qc.insbi x6, -10, 12, 65
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -189,10 +193,12 @@ qc.insb x10, x7, 6
 # CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
 qc.insb x0, x7, 6, 31
 
-# CHECK-PLUS: :[[@LINE+1]]:18: error: immediate must be an integer in the range [1, 32]
+# CHECK-PLUS: :[[@LINE+2]]:18: error: immediate must be an integer in the range [1, 32]
+# CHECK-MINUS: :[[@LINE+1]]:18: error: invalid operand for instruction
 qc.insb x10, x7, 46, 31
 
-# CHECK-PLUS: :[[@LINE+1]]:21: error: immediate must be an integer in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+2]]:21: error: immediate must be an integer in the range [0, 31]
+# CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction
 qc.insb x10, x7, 6, 61
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -209,10 +215,12 @@ qc.insbh x20, x12, 8
 # CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
 qc.insbh x0, x12, 8, 12
 
-# CHECK-PLUS: :[[@LINE+1]]:20: error: immediate must be an integer in the range [1, 32]
+# CHECK-PLUS: :[[@LINE+2]]:20: error: immediate must be an integer in the range [1, 32]
+# CHECK-MINUS: :[[@LINE+1]]:20: error: invalid operand for instruction
 qc.insbh x20, x12, 48, 12
 
-# CHECK-PLUS: :[[@LINE+1]]:23: error: immediate must be an integer in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+2]]:23: error: immediate must be an integer in the range [0, 31]
+# CHECK-MINUS: :[[@LINE+1]]:23: error: invalid operand for instruction
 qc.insbh x20, x12, 8, 72
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -234,10 +242,12 @@ qc.extu x0, x12, 20, 20
 # CHECK-MINUS: :[[@LINE+1]]:14: error: invalid operand for instruction
 qc.extu x15, x0, 20, 20
 
-# CHECK-PLUS: :[[@LINE+1]]:19: error: immediate must be an integer in the range [1, 32]
+# CHECK-PLUS: :[[@LINE+2]]:19: error: immediate must be an integer in the range [1, 32]
+# CHECK-MINUS: :[[@LINE+1]]:19: error: invalid operand for instruction
 qc.extu x15, x12, 0, 20
 
-# CHECK-PLUS: :[[@LINE+1]]:23: error: immediate must be an integer in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+2]]:23: error: immediate must be an integer in the range [0, 31]
+# CHECK-MINUS: :[[@LINE+1]]:23: error: invalid operand for instruction
 qc.extu x15, x12, 20, 60
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -259,10 +269,12 @@ qc.ext x0, x6, 31, 1
 # CHECK-MINUS: :[[@LINE+1]]:13: error: invalid operand for instruction
 qc.ext x27, x0, 31, 1
 
-# CHECK-PLUS: :[[@LINE+1]]:17: error: immediate must be an integer in the range [1, 32]
+# CHECK-PLUS: :[[@LINE+2]]:17: error: immediate must be an integer in the range [1, 32]
+# CHECK-MINUS: :[[@LINE+1]]:17: error: invalid operand for instruction
 qc.ext x27, x6, 0, 1
 
-# CHECK-PLUS: :[[@LINE+1]]:21: error: immediate must be an integer in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+2]]:21: error: immediate must be an integer in the range [0, 31]
+# CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction
 qc.ext x27, x6, 31, 41
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -280,10 +292,12 @@ qc.extdu x1, x8, 8
 # CHECK-MINUS: :[[@LINE+1]]:10: error: invalid operand for instruction
 qc.extdu x0, x8, 8, 8
 
-# CHECK-PLUS: :[[@LINE+1]]:18: error: immediate must be an integer in the range [1, 32]
+# CHECK-PLUS: :[[@LINE+2]]:18: error: immediate must be an integer in the range [1, 32]
+# CHECK-MINUS: :[[@LINE+1]]:18: error: invalid operand for instruction
 qc.extdu x1, x8, 48, 8
 
-# CHECK-PLUS: :[[@LINE+1]]:21: error: immediate must be an integer in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+2]]:21: error: immediate must be an integer in the range [0, 31]
+# CHECK-MINUS: :[[@LINE+1]]:21: error: invalid operand for instruction
 qc.extdu x1, x8, 8, 78
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -301,10 +315,12 @@ qc.extd x13, x21, 10
 # CHECK-MINUS: :[[@LINE+1]]:9: error: invalid operand for instruction
 qc.extd x0, x21, 10, 15
 
-# CHECK-PLUS: :[[@LINE+1]]:19: error: immediate must be an integer in the range [1, 32]
+# CHECK-PLUS: :[[@LINE+2]]:19: error: immediate must be an integer in the range [1, 32]
+# CHECK-MINUS: :[[@LINE+1]]:19: error: invalid operand for instruction
 qc.extd x13, x21, 60, 15
 
-# CHECK-PLUS: :[[@LINE+1]]:23: error: immediate must be an integer in the range [0, 31]
+# CHECK-PLUS: :[[@LINE+2]]:23: error: immediate must be an integer in the range [0, 31]
+# CHECK-MINUS: :[[@LINE+1]]:23: error: invalid operand for instruction
 qc.extd x13, x21, 10, 85
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -525,26 +541,30 @@ qc.extdprh x6, x24, x0
 qc.extdprh x6, x24, x25
 
 
-# CHECK: :[[@LINE+1]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: invalid operand for instruction
+# CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.c.bexti x1, 8
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.c.bexti x15
 
-# CHECK-PLUS: :[[@LINE+1]]:17: error: immediate must be an integer in the range [1, 31]
+# CHECK-PLUS: :[[@LINE+2]]:17: error: immediate must be an integer in the range [1, 31]
+# CHECK-MINUS: :[[@LINE+1]]:17: error: invalid operand for instruction
 qc.c.bexti x15, 43
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
 qc.c.bexti x9, 8
 
 
-# CHECK: :[[@LINE+1]]:12: error: invalid operand for instruction
+# CHECK-PLUS: :[[@LINE+2]]:12: error: invalid operand for instruction
+# CHECK-MINUS: :[[@LINE+1]]:12: error: invalid operand for instruction
 qc.c.bseti x2, 10
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.c.bseti x12
 
-# CHECK-PLUS: :[[@LINE+1]]:17: error: immediate must be an integer in the range [1, 31]
+# CHECK-PLUS: :[[@LINE+2]]:17: error: immediate must be an integer in the range [1, 31]
+# CHECK-MINUS: :[[@LINE+1]]:17: error: invalid operand for instruction
 qc.c.bseti x12, -10
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
@@ -558,7 +578,8 @@ qc.c.extu x0, 10
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.c.extu x5
 
-# CHECK-PLUS: :[[@LINE+1]]:16: error: immediate must be an integer in the range [6, 32]
+# CHECK-PLUS: :[[@LINE+2]]:16: error: immediate must be an integer in the range [6, 32]
+# CHECK-MINUS: :[[@LINE+1]]:16: error: invalid operand for instruction
 qc.c.extu x17, 3
 
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
