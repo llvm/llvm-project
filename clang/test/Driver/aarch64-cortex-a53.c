@@ -3,8 +3,8 @@
 // RUN: %clang --target=aarch64_be -mlittle-endian -mcpu=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=CA53 %s
 // RUN: %clang --target=aarch64 -mtune=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=CA53-TUNE %s
 // RUN: %clang --target=aarch64_be -mlittle-endian -mtune=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=CA53-TUNE %s
-// CA53: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "cortex-a53"
-// CA53-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{(--)?}}"{{.*}} "-target-cpu" "generic"
+// CA53: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "cortex-a53"
+// CA53-TUNE: "-cc1"{{.*}} "-triple" "aarch64{{(-unknown-unknown)?}}"{{.*}} "-target-cpu" "generic"
 
 // RUN: %clang --target=arm64 -mcpu=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-CA53 %s
 // RUN: %clang --target=arm64 -mlittle-endian -mcpu=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-CA53 %s

@@ -3073,13 +3073,16 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
           LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
+        // The dereferenceability query here is only required to satisfy the
+        // writable contract, actual dereferenceability is proven by the
+        // presence of an access. As such, we can ignore frees.
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
             capturesNothing(
                 PointerMayBeCaptured(Obj, CaptureComponents::Provenance)
                     .WithoutRet) &&
             (!ExplicitlyDereferenceableOnly ||
-             isDereferenceablePointer(StorePtr, StoreTy,
-                                      LI->getDataLayout()))) {
+             isDereferenceablePointer(StorePtr, StoreTy, LI->getDataLayout(),
+                                      /*IgnoreFree=*/true))) {
           // Found a previous load, return it.
           return LI;
         }
@@ -6970,8 +6973,23 @@ SwitchReplacement::SwitchReplacement(
     return;
   }
 
+  if (auto *IT = dyn_cast<IntegerType>(ValueType)) {
+    ConstantRange Range(IT->getBitWidth(), false);
+    for (Constant *Value : TableContents)
+      if (!isa<UndefValue>(Value))
+        Range = Range.unionWith(cast<ConstantInt>(Value)->getValue());
+    // TODO: handle sign extension as well?
+    unsigned NeededBitWidth =
+        std::max(8u, unsigned(PowerOf2Ceil(Range.getActiveBits())));
+    if (NeededBitWidth < IT->getBitWidth()) {
+      IntegerType *DstTy = IntegerType::get(IT->getContext(), NeededBitWidth);
+      for (Constant *&Value : TableContents)
+        Value = ConstantFoldCastInstruction(Instruction::Trunc, Value, DstTy);
+    }
+  }
+
   // Store the table in an array.
-  auto *TableTy = ArrayType::get(ValueType, TableSize);
+  auto *TableTy = ArrayType::get(TableContents[0]->getType(), TableSize);
   Initializer = ConstantArray::get(TableTy, TableContents);
 
   Kind = LookupTableKind;
@@ -7045,7 +7063,11 @@ Value *SwitchReplacement::replaceSwitch(Value *Index, IRBuilder<> &Builder,
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
     Value *GEP =
         Builder.CreateInBoundsGEP(ArrayTy, Table, GEPIndices, "switch.gep");
-    return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
+    Value *Load =
+        Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
+    if (Load->getType() == ValueType)
+      return Load;
+    return Builder.CreateZExt(Load, ValueType, "switch.ext");
   }
   }
   llvm_unreachable("Unknown helper kind!");
@@ -8056,9 +8078,6 @@ struct EqualBBWrapper {
 };
 
 template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
-  static const EqualBBWrapper *getEmptyKey() {
-    return static_cast<EqualBBWrapper *>(DenseMapInfo<void *>::getEmptyKey());
-  }
   static unsigned getHashValue(const EqualBBWrapper *EBW) {
     BasicBlock *BB = EBW->BB;
     UncondBrInst *BI = cast<UncondBrInst>(BB->getTerminator());
@@ -8078,10 +8097,6 @@ template <> struct llvm::DenseMapInfo<const EqualBBWrapper *> {
     return hash_combine(Succ, hash_combine_range(PhiValsForBB));
   }
   static bool isEqual(const EqualBBWrapper *LHS, const EqualBBWrapper *RHS) {
-    auto *EKey = DenseMapInfo<EqualBBWrapper *>::getEmptyKey();
-    if (LHS == EKey || RHS == EKey)
-      return LHS == RHS;
-
     BasicBlock *A = LHS->BB;
     BasicBlock *B = RHS->BB;
 

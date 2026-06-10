@@ -18,11 +18,11 @@
 ;
 ; Test missing input files
 ; RUN: not clang-sycl-linker -o %t.out 2>&1 | FileCheck %s --check-prefix=NO-INPUT
-; NO-INPUT: No input files provided
+; NO-INPUT: no input files provided
 ;
 ; Test non-existent input file
 ; RUN: not clang-sycl-linker %t-missing.bc -o %t.out 2>&1 | FileCheck %s --check-prefix=MISSING
-; MISSING: Input file '{{.*}}-missing.bc' does not exist
+; MISSING: input file '{{.*}}-missing.bc' does not exist
 ;
 ; Test the dry run of a simple case to link two input files.
 ; Test that IMG_SPIRV image kind is set for non-AOT compilation.
@@ -66,7 +66,7 @@
 ; RUN: touch %t/dummy.o
 ; RUN: not clang-sycl-linker %t/dummy.o -o a.spv 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=FILETYPEERROR
-; FILETYPEERROR: Unsupported file type
+; FILETYPEERROR: unsupported file type
 ;
 ; Test to see if device library related errors are emitted.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc --library-path=%t/libs --bc-library lib1.bc --bc-library lib2.bc --bc-library lib3.bc -o a.spv 2>&1 \
@@ -111,7 +111,7 @@
 ; Check that the output file must be specified.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NOOUTPUT
-; NOOUTPUT: Output file must be specified
+; NOOUTPUT: output file must be specified
 ;
 ; Check parser error reporting for unknown options.
 ; RUN: not clang-sycl-linker --dry-run --not-a-real-flag -triple=spirv64 %t/input1.bc -o a.out 2>&1 \

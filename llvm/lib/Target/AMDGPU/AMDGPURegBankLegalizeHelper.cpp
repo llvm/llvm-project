@@ -19,6 +19,7 @@
 #include "AMDGPURegisterBankInfo.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -1304,6 +1305,61 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     }
     return true;
   }
+  case DynStackAlloc: {
+    const auto &TFI = *ST.getFrameLowering();
+    // Guard in case the stack growth direction ever changes with scratch
+    // instructions.
+    assert(TFI.getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp &&
+           "Stack grows upwards for AMDGPU");
+
+    Register Dst = MI.getOperand(0).getReg();
+    Register AllocSize = MI.getOperand(1).getReg();
+    Align Alignment = assumeAligned(MI.getOperand(2).getImm());
+
+    // Erase before building new instrs to avoid hitting multiple Dst assert
+    // with CSE.
+    B.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
+    MI.eraseFromParent();
+
+    if (MRI.getRegBank(AllocSize) != SgprRB) {
+      auto WaveReduction =
+          B.buildIntrinsic(Intrinsic::amdgcn_wave_reduce_umax, {SgprRB_S32})
+              .addUse(AllocSize)
+              .addImm(0);
+      AllocSize = WaveReduction.getReg(0);
+    }
+
+    LLT PtrTy = MRI.getType(Dst);
+    assert(PtrTy.getSizeInBits() == 32 &&
+           "Expected 32-bit pointer for stack allocation");
+    const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+    Register SPReg = Info->getStackPtrOffsetReg();
+
+    // When using flat-scratch, the stack offset is unscaled.
+    const bool HasFlatScratch = ST.hasFlatScratchEnabled();
+    const unsigned WavefrontSizeLog2 = ST.getWavefrontSizeLog2();
+
+    Register AdjustedSize = AllocSize;
+    if (!HasFlatScratch) {
+      auto WaveSize = B.buildConstant(SgprRB_S32, WavefrontSizeLog2);
+      AdjustedSize = B.buildShl(SgprRB_S32, AllocSize, WaveSize).getReg(0);
+    }
+    if (Alignment > TFI.getStackAlign()) {
+      const uint64_t EffectiveAlignment =
+          Alignment.value() << (HasFlatScratch ? 0 : WavefrontSizeLog2);
+      auto OldSP = B.buildCopy({SgprRB, PtrTy}, SPReg);
+      auto Tmp1 =
+          B.buildPtrAdd({SgprRB, PtrTy}, OldSP,
+                        B.buildConstant(SgprRB_S32, EffectiveAlignment - 1));
+      uint64_t Mask = maskTrailingZeros<uint64_t>(Log2_64(EffectiveAlignment));
+      B.buildPtrMask(Dst, Tmp1, B.buildConstant(SgprRB_S32, Mask));
+    } else {
+      B.buildCopy(Dst, SPReg);
+    }
+    auto PtrAdd = B.buildPtrAdd({SgprRB, PtrTy}, Dst, AdjustedSize);
+    B.buildCopy(SPReg, PtrAdd);
+    return true;
+  }
   case WidenLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     if (DstTy == S96)
@@ -1516,9 +1572,16 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprV2S32:
     return LLT::fixed_vector(2, 32);
   case VgprV3S32:
+  case UniInVgprV3S32:
     return LLT::fixed_vector(3, 32);
   case VgprV4S16:
     return LLT::fixed_vector(4, 16);
+  case VgprV8S16:
+  case UniInVgprV8S16:
+    return LLT::fixed_vector(8, 16);
+  case VgprV16S16:
+  case UniInVgprV16S16:
+    return LLT::fixed_vector(16, 16);
   case SgprV4S32:
   case SgprV4S32_WF:
   case SgprV4S32_ReadFirstLane:
@@ -1526,15 +1589,23 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprV4S32:
     return LLT::fixed_vector(4, 32);
   case VgprV8S32:
+  case UniInVgprV8S32:
+  case SgprV8S32_ReadFirstLane:
     return LLT::fixed_vector(8, 32);
   case VgprV2S64:
   case UniInVgprV2S64:
     return LLT::fixed_vector(2, 64);
   case VgprV6S32:
+  case UniInVgprV6S32:
     return LLT::fixed_vector(6, 32);
+  case VgprV16S32:
+  case UniInVgprV16S32:
+    return LLT::fixed_vector(16, 32);
   case VgprV32S16:
+  case UniInVgprV32S16:
     return LLT::fixed_vector(32, 16);
   case VgprV32S32:
+  case UniInVgprV32S32:
     return LLT::fixed_vector(32, 32);
   default:
     return LLT();
@@ -1650,6 +1721,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprV4S32:
   case SgprV4S32_WF:
   case SgprV4S32_ReadFirstLane:
+  case SgprV8S32_ReadFirstLane:
   case SgprB32:
   case SgprB64:
   case SgprB96:
@@ -1663,8 +1735,16 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprS64:
   case UniInVgprV2S16:
   case UniInVgprV2S32:
+  case UniInVgprV3S32:
   case UniInVgprV4S32:
   case UniInVgprV2S64:
+  case UniInVgprV6S32:
+  case UniInVgprV8S16:
+  case UniInVgprV8S32:
+  case UniInVgprV16S16:
+  case UniInVgprV16S32:
+  case UniInVgprV32S16:
+  case UniInVgprV32S32:
   case UniInVgprB32:
   case UniInVgprB64:
   case UniInVgprB96:
@@ -1698,10 +1778,14 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprV2S64:
   case VgprV3S32:
   case VgprV4S16:
+  case VgprV8S16:
+  case VgprV16S16:
   case VgprV4S32:
   case VgprV6S32:
   case VgprV8S32:
+  case VgprV16S32:
   case VgprV32S16:
+  case VgprV32S32:
   case VgprB32:
   case VgprB64:
   case VgprB96:
@@ -1765,10 +1849,14 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprV2S64:
     case VgprV3S32:
     case VgprV4S16:
+    case VgprV8S16:
+    case VgprV16S16:
     case VgprV4S32:
     case VgprV6S32:
     case VgprV8S32:
-    case VgprV32S16: {
+    case VgprV16S32:
+    case VgprV32S16:
+    case VgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
@@ -1841,8 +1929,16 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprS64:
     case UniInVgprV2S16:
     case UniInVgprV2S32:
+    case UniInVgprV3S32:
     case UniInVgprV4S32:
-    case UniInVgprV2S64: {
+    case UniInVgprV2S64:
+    case UniInVgprV6S32:
+    case UniInVgprV8S16:
+    case UniInVgprV8S32:
+    case UniInVgprV16S16:
+    case UniInVgprV16S32:
+    case UniInVgprV32S16:
+    case UniInVgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == SgprRB);
       Register NewVgprDst = MRI.createVirtualRegister({VgprRB, Ty});
@@ -1973,9 +2069,12 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprV2S64:
     case VgprV3S32:
     case VgprV4S16:
+    case VgprV8S16:
+    case VgprV16S16:
     case VgprV4S32:
     case VgprV6S32:
     case VgprV8S32:
+    case VgprV16S32:
     case VgprV32S16:
     case VgprV32S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
@@ -2065,7 +2164,8 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       Op.setReg(NewSGPR);
       break;
     }
-    case SgprV4S32_ReadFirstLane: {
+    case SgprV4S32_ReadFirstLane:
+    case SgprV8S32_ReadFirstLane: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB == SgprRB)
         break;

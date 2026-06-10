@@ -97,7 +97,7 @@ STATISTIC(NumHoistedInsts, "Number of hoisted preheader instructions.");
 STATISTIC(NumSunkInsts, "Number of sunk preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
 
-static cl::opt<unsigned> FusionPeelMaxCount(
+static cl::opt<uint32_t> FusionPeelMaxCount(
     "loop-fusion-peel-max-count", cl::init(0), cl::Hidden,
     cl::desc("Max number of iterations to be peeled from a loop, such that "
              "fusion can take place"));
@@ -470,8 +470,8 @@ private:
 public:
   LoopFuser(LoopInfo &LI, DominatorTree &DT, DependenceInfo &DI,
             ScalarEvolution &SE, PostDominatorTree &PDT,
-            OptimizationRemarkEmitter &ORE, const DataLayout &DL,
-            AssumptionCache &AC, const TargetTransformInfo &TTI)
+            OptimizationRemarkEmitter &ORE, AssumptionCache &AC,
+            const TargetTransformInfo &TTI)
       : LDT(LI), DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy), LI(LI),
         DT(DT), DI(DI), SE(SE), PDT(PDT), ORE(ORE), AC(AC), TTI(TTI) {}
 
@@ -590,29 +590,26 @@ private:
     return true;
   }
 
-  /// Determine if two fusion candidates have the same trip count (i.e., they
-  /// execute the same number of iterations).
+  /// Computes the integer difference in trip counts:
+  /// TripCount(FC0) - TripCount(FC1).
   ///
-  /// This function will return a pair of values. The first is a boolean,
-  /// stating whether or not the two candidates are known at compile time to
-  /// have the same TripCount. The second is the difference in the two
-  /// TripCounts. This information can be used later to determine whether or not
-  /// peeling can be performed on either one of the candidates.
-  std::pair<bool, std::optional<unsigned>>
-  haveIdenticalTripCounts(const FusionCandidate &FC0,
-                          const FusionCandidate &FC1) const {
+  /// \returns The integer difference, or std::nullopt if it
+  ///          cannot be determined.
+  std::optional<int64_t>
+  calculateTripCountDiff(const FusionCandidate &FC0,
+                         const FusionCandidate &FC1) const {
     const SCEV *TripCount0 = SE.getBackedgeTakenCount(FC0.L);
     if (isa<SCEVCouldNotCompute>(TripCount0)) {
       UncomputableTripCount++;
       LLVM_DEBUG(dbgs() << "Trip count of first loop could not be computed!");
-      return {false, std::nullopt};
+      return std::nullopt;
     }
 
     const SCEV *TripCount1 = SE.getBackedgeTakenCount(FC1.L);
     if (isa<SCEVCouldNotCompute>(TripCount1)) {
       UncomputableTripCount++;
       LLVM_DEBUG(dbgs() << "Trip count of second loop could not be computed!");
-      return {false, std::nullopt};
+      return std::nullopt;
     }
 
     LLVM_DEBUG(dbgs() << "\tTrip counts: " << *TripCount0 << " & "
@@ -621,15 +618,19 @@ private:
                       << "\n");
 
     if (TripCount0 == TripCount1)
-      return {true, 0};
+      return 0;
 
     LLVM_DEBUG(dbgs() << "The loops do not have the same tripcount, "
                          "determining the difference between trip counts\n");
 
     // Currently only considering loops with a single exit point
-    // and a non-constant trip count.
-    const unsigned TC0 = SE.getSmallConstantTripCount(FC0.L);
-    const unsigned TC1 = SE.getSmallConstantTripCount(FC1.L);
+    // and a non-constant trip count. Note that the return value
+    // of getSmallConstantTripCount is a 32 bit number, based on
+    // the existing implementation.
+    const int64_t TC0 =
+        static_cast<int64_t>(SE.getSmallConstantTripCount(FC0.L));
+    const int64_t TC1 =
+        static_cast<int64_t>(SE.getSmallConstantTripCount(FC1.L));
 
     // If any of the tripcounts are zero that means that loop(s) do not have
     // a single exit or a constant tripcount.
@@ -637,24 +638,10 @@ private:
       LLVM_DEBUG(dbgs() << "Loop(s) do not have a single exit point or do not "
                            "have a constant number of iterations. Peeling "
                            "is not benefical\n");
-      return {false, std::nullopt};
+      return std::nullopt;
     }
 
-    std::optional<unsigned> Difference;
-    int Diff = TC0 - TC1;
-
-    if (Diff > 0)
-      Difference = Diff;
-    else {
-      LLVM_DEBUG(
-          dbgs() << "Difference is less than 0. FC1 (second loop) has more "
-                    "iterations than the first one. Currently not supported\n");
-    }
-
-    LLVM_DEBUG(dbgs() << "Difference in loop trip count is: " << Difference
-                      << "\n");
-
-    return {false, Difference};
+    return TC0 - TC1;
   }
 
   void peelFusionCandidate(FusionCandidate &FC0, const FusionCandidate &FC1,
@@ -674,9 +661,9 @@ private:
     LLVM_DEBUG(dbgs() << "Done Peeling\n");
 
 #ifndef NDEBUG
-    auto IdenticalTripCount = haveIdenticalTripCounts(FC0, FC1);
+    auto TCDiff = calculateTripCountDiff(FC0, FC1);
 
-    assert(IdenticalTripCount.first && *IdenticalTripCount.second == 0 &&
+    assert(TCDiff && *TCDiff == 0 &&
            "Loops should have identical trip counts after peeling");
 #endif
 
@@ -759,34 +746,19 @@ private:
         FC0.verify();
         FC1.verify();
 
-        // Check if the candidates have identical tripcounts (first value of
-        // pair), and if not check the difference in the tripcounts between
-        // the loops (second value of pair). The difference is not equal to
-        // std::nullopt iff the loops iterate a constant number of times, and
-        // have a single exit.
-        std::pair<bool, std::optional<unsigned>> IdenticalTripCountRes =
-            haveIdenticalTripCounts(FC0, FC1);
-        bool SameTripCount = IdenticalTripCountRes.first;
-        std::optional<unsigned> TCDifference = IdenticalTripCountRes.second;
-
+        std::optional<int64_t> TCDifference = calculateTripCountDiff(FC0, FC1);
         // Here we are checking that FC0 (the first loop) can be peeled, and
-        // both loops have different tripcounts.
-        if (FC0.AbleToPeel && !SameTripCount && TCDifference) {
-          if (*TCDifference > FusionPeelMaxCount) {
-            LLVM_DEBUG(dbgs()
-                       << "Difference in loop trip counts: " << *TCDifference
-                       << " is greater than maximum peel count specificed: "
-                       << FusionPeelMaxCount << "\n");
-          } else {
-            // Dependent on peeling being performed on the first loop, and
-            // assuming all other conditions for fusion return true.
-            SameTripCount = true;
-          }
-        }
+        // the first loop has a larger trip count. In this case it is possible
+        // that the first loop is peeled to expose the fusion opportunity.
+        // Peeling the second loop is not currently supported.
+        bool WillPeel =
+            FC0.AbleToPeel && TCDifference && *TCDifference > 0 &&
+            *TCDifference <= static_cast<int64_t>(FusionPeelMaxCount);
 
-        if (!SameTripCount) {
+        if (!WillPeel && (!TCDifference || *TCDifference != 0)) {
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "
-                               "counts. Not fusing.\n");
+                               "counts and peeling is not supported for this "
+                               "case. Not fusing.\n");
           reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
                                                      NonEqualTripCount);
           continue;
@@ -1895,7 +1867,6 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   const TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
-  const DataLayout &DL = F.getDataLayout();
 
   // Ensure loops are in simplifed form which is a pre-requisite for loop fusion
   // pass. Added only for new PM since the legacy PM has already added
@@ -1908,7 +1879,7 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   if (Changed)
     PDT.recalculate(F);
 
-  LoopFuser LF(LI, DT, DI, SE, PDT, ORE, DL, AC, TTI);
+  LoopFuser LF(LI, DT, DI, SE, PDT, ORE, AC, TTI);
   Changed |= LF.fuseLoops(F);
   if (!Changed)
     return PreservedAnalyses::all();
