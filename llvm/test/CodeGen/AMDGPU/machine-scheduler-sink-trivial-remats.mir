@@ -13007,8 +13007,6 @@ body:             |
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_25:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF26]], implicit $exec, implicit $mode
   ; GFX908-GCNTRACKERS-NEXT:   [[V_CVT_I32_F32_e32_26:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F32_e32 [[DEF27]], implicit $exec, implicit $mode
   ; GFX908-GCNTRACKERS-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64 = S_MOV_B32 0
-  ; GFX908-GCNTRACKERS-NEXT:   [[DEF23:%[0-9]+]].sub1:vreg_512 = IMPLICIT_DEF
-  ; GFX908-GCNTRACKERS-NEXT:   [[DEF23:%[0-9]+]].sub3:vreg_512 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   dead [[DEF28:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX908-GCNTRACKERS-NEXT:   dead undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
   ; GFX908-GCNTRACKERS-NEXT:   [[DEF23:%[0-9]+]].sub2:vreg_512 = IMPLICIT_DEF

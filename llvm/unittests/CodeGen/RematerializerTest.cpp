@@ -101,8 +101,13 @@ public:
   void SetUp() override { setUpImpl("amdgcn--", "gfx950", ""); }
 
   using RematerializerTestFn = std::function<void(RematerializerWrapper &RW)>;
+  using ProcessMIRFn =
+      std::function<void(MachineFunction &MF, LiveIntervals &LIS)>;
 
-  void rematerializerTest(StringRef MIRBody, RematerializerTestFn Test) {
+  static void doNothing(MachineFunction &MF, LiveIntervals &LIS) {};
+
+  void rematerializerTest(StringRef MIRBody, RematerializerTestFn Test,
+                          ProcessMIRFn PreRemat = doNothing) {
     SmallString<512> S;
     StringRef MIRString = (Twine(R"MIR(
 ---
@@ -116,6 +121,8 @@ body:             |
     ASSERT_TRUE(parseMIR(MIRString));
     MachineFunction &MF = getMF("func");
     LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+
+    PreRemat(MF, LIS);
 
     SmallVector<Rematerializer::RegionBoundaries> Regions;
     MachineInstr *FirstMI = nullptr;
@@ -138,9 +145,26 @@ body:             |
     RematerializerWrapper RW(MF, Regions, LIS);
     Test(RW);
 
-    RW->updateLiveIntervals();
     EXPECT_TRUE(MF.verify());
   }
+
+  /// Replicates the scheduler's effect on \p LIS on an intra-block move of \p
+  /// MI right before \p MoveBefore, which must be in the same block as \p MI.
+  void moveMIAndAdjustLiveness(MachineBasicBlock::iterator MoveBefore,
+                               MachineInstr &MI, LiveIntervals &LIS) {
+    MachineBasicBlock &MBB = *MI.getParent();
+    const MachineFunction &MF = *MBB.getParent();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+
+    MBB.splice(MoveBefore, &MBB, MI.getIterator());
+    LIS.handleMove(MI);
+
+    RegisterOperands RegOpers;
+    RegOpers.collect(MI, TRI, MRI, true, /*IgnoreDead=*/false);
+    SlotIndex Slot = LIS.getInstructionIndex(MI).getRegSlot();
+    RegOpers.adjustLaneLiveness(LIS, MRI, Slot, &MI);
+  };
 };
 } // namespace
 
@@ -202,7 +226,6 @@ TEST_F(RematerializerTest, TreeRematRollback) {
 
     // Rematerialize Add23 with all transitive dependencies.
     RW->rematerializeToRegion(Add23, MBB1, DRI);
-    RW->updateLiveIntervals();
 
     EXPECT_NO_USERS(Cst0);
     EXPECT_NO_USERS(Cst1);
@@ -222,7 +245,6 @@ TEST_F(RematerializerTest, TreeRematRollback) {
     // Rematerialize Add23 only with its direct dependencies, reuse the rest.
     DRI.clear().reuse(Cst0).reuse(Cst1);
     RW->rematerializeToRegion(Add23, MBB1, DRI);
-    RW->updateLiveIntervals();
 
     EXPECT_NUM_USERS(Cst0, 1);
     EXPECT_NUM_USERS(Cst1, 1);
@@ -386,10 +408,6 @@ TEST_F(RematerializerTest, MultiStep) {
     EXPECT_REMAT(RematCst0, Cst0, MBB1, 1);
     EXPECT_REMAT(RematAdd01, Add01, MBB1, 1);
 
-    // We are going to re-rematerialize a register so the LIS need to be
-    // up-to-date.
-    RW->updateLiveIntervals();
-
     // Rematerialize Add22 from the second to the third block, which will also
     // indirectly rematerialize RematAdd01; make sure the latter's
     // rematerialization's origin is the original register, not RematAdd01.
@@ -504,12 +522,11 @@ TEST_F(RematerializerTest, SubRegRematSupport) {
 }
 
 /// The rematerializer had a bug where re-creating the interval of a
-/// non-rematerializable super-register defined over multiple MIs, some of which
-/// defining entirely dead subregisters, could cause a crash when changing the
-/// order of sub-definitions (for example during scheduling) because the
-/// re-created interval could end up with multiple connected components, which
-/// is illegal. The solution is to split separate components of the interval in
-/// such cases.
+/// super-register defined over multiple MIs, some of which defining entirely
+/// dead subregisters, could cause a crash when changing the order of
+/// sub-definitions (for example during scheduling) because the re-created
+/// interval could end up with multiple connected components, which is illegal.
+/// The solution is to elimimate dead definitions in such cases.
 TEST_F(RematerializerTest, SplitSubRegDeadDef) {
   StringRef MIRBody = R"MIR(
   bb.0:
@@ -521,48 +538,116 @@ TEST_F(RematerializerTest, SplitSubRegDeadDef) {
     S_NOP 0, implicit %1
     S_ENDPGM 0
 )MIR";
-  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
-    // Replicates the scheduler's effect on LIS on an intra-block move of MI.
-    auto MoveMIAndAdjustLiveness = [&](MachineInstr &MI) {
-      RW.LIS.handleMove(MI);
-      const MachineRegisterInfo &MRI = RW.MF.getRegInfo();
-      const TargetRegisterInfo &TRI = *RW.MF.getSubtarget().getRegisterInfo();
-      RegisterOperands RegOpers;
-      RegOpers.collect(MI, TRI, MRI, true, /*IgnoreDead=*/false);
-      SlotIndex Sub1Slot = RW.LIS.getInstructionIndex(MI).getRegSlot();
-      RegOpers.adjustLaneLiveness(RW.LIS, MRI, Sub1Slot, &MI);
-    };
-
-    MachineBasicBlock &MBB0 = *RW.MF.getBlockNumbered(0);
+  ProcessMIRFn PreRemat = [this](MachineFunction &MF, LiveIntervals &LIS) {
+    MachineBasicBlock &MBB0 = *MF.getBlockNumbered(0);
     MachineInstr &Sub0Def = *MBB0.begin();
-    MachineInstr &Sub1Def = *MBB0.begin()->getNextNode();
+    MachineInstr &Sub1Def = *std::next(Sub0Def.getIterator());
 
-    // Flip %0's subdefinition order. After the move, the definitions look like:
+    // Flip %0's subdefinition order. After the move, the definitions look
+    // like:
     // undef %0.sub1:vreg_64 = IMPLICIT_DEF
     // undef %0.sub0:vreg_64 = IMPLICIT_DEF
-    MBB0.splice(Sub0Def.getIterator(), &MBB0, Sub1Def.getIterator());
-    MoveMIAndAdjustLiveness(Sub1Def);
+    moveMIAndAdjustLiveness(Sub0Def.getIterator(), Sub1Def, LIS);
+  };
 
-    // Rematerialize %1 to bb.1. This triggers a live-interval update of %0 when
-    // calling Remater.updateLiveIntervals(), during which its interval is
-    // split.
-    Rematerializer::DependencyReuseInfo DRI;
-    const unsigned MBB1 = 1;
-    const RegisterIdx Add = 0;
-    RW->rematerializeToRegion(Add, MBB1, DRI);
-    RW->updateLiveIntervals();
+  rematerializerTest(
+      MIRBody,
+      [](RematerializerWrapper &RW) {
+        // Only %1 should be rematerializable.
+        ASSERT_EQ(RW->getNumRegs(), 1U);
 
-    // If we didn't split %0 before, its definitions would now look like:
-    // dead undef %0.sub1:vreg_64 = IMPLICIT_DEF
-    // undef %0.sub0:vreg_64 = IMPLICIT_DEF
-    //
-    // Trying to flip back %0's definition order then triggers an
-    // error in LIS.handleMove because its live interval is made up of multiple
-    // connected components.
-    ASSERT_NE(Sub0Def.getOperand(0).getReg(), Sub1Def.getOperand(0).getReg());
-    MBB0.splice(MBB0.end(), &MBB0, Sub1Def.getIterator());
-    MoveMIAndAdjustLiveness(Sub1Def);
-  });
+        // Rematerialize %1 to bb.1. This triggers a live-interval update of %0,
+        // during which the sub1 def is identified as dead and sub-sequently
+        // removed.
+        Rematerializer::DependencyReuseInfo DRI;
+        const unsigned MBB0 = 0, MBB1 = 1;
+        const RegisterIdx Add = 0;
+        RW->rematerializeToRegion(Add, MBB1, DRI);
+
+        // The add is moved to another region.
+        RW.moveMIs(MBB0, MBB1, 1);
+        // The sub1 def is dead and deleted.
+        RW.removeMIs(MBB0, 1);
+        ASSERT_REGION_SIZES();
+      },
+      PreRemat);
+}
+
+/// Checks that dead-def elimination successfully deletes all unrematerializable
+/// MIs and rematerializable registers that become dead after shrinking the
+/// interval of an unrematerializable register reveals a dead definition.
+TEST_F(RematerializerTest, DeadDefCascadeDeletion) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %cst0Die:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+    %cst1Die:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode
+    %addDie:vgpr_32 = V_ADD_U32_e32 %cst0Die, %cst1Die, implicit $exec
+
+    undef %multidefDontDie.sub0:vreg_64 = IMPLICIT_DEF
+    %multidefDontDie.sub1:vreg_64 = IMPLICIT_DEF
+    
+  bb.1:
+    %cst2:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode
+    undef %multidef.sub0:vreg_64 = IMPLICIT_DEF
+    %multidef.sub1:vreg_64 = V_ADD_U32_e32 %addDie, %multidefDontDie.sub1, implicit $exec
+    %add:vgpr_32 = V_ADD_U32_e32 %multidef.sub0, %multidefDontDie.sub0, implicit $exec
+    
+  bb.2:
+    S_NOP 0, implicit %cst2, implicit %add
+    S_ENDPGM 0
+)MIR";
+  ProcessMIRFn PreRemat = [this](MachineFunction &MF, LiveIntervals &LIS) {
+    MachineBasicBlock &MBB0 = *MF.getBlockNumbered(1);
+    MachineInstr &Sub0Def = *std::next(MBB0.begin());
+    MachineInstr &Sub1Def = *std::next(Sub0Def.getIterator());
+
+    // Flip %multidef's subdefinition order. After the move, the definitions
+    // look like:
+    // undef %multidef.sub1:vreg_64 = ...
+    // undef %multidef.sub0:vreg_64 = ...
+    moveMIAndAdjustLiveness(Sub0Def.getIterator(), Sub1Def, LIS);
+  };
+
+  rematerializerTest(
+      MIRBody,
+      [](RematerializerWrapper &RW) {
+        Rollbacker Rollback;
+        RW->addListener(&Rollback);
+
+        Rematerializer::DependencyReuseInfo DRI;
+        const unsigned MBB0 = 0, MBB1 = 1, MBB2 = 2;
+        const RegisterIdx Cst1Die = 1, AddDie = 2, Cst2 = 3, Add = 4;
+        ASSERT_EQ(RW->getNumRegs(), 5U);
+
+        // Rematerialize %addDie along with %cst0Die right after %cst2.
+        RW->rematerializeToRegion(AddDie, MBB1, DRI.reuse(Cst1Die));
+        RW.moveMIs(MBB0, MBB1, 2);
+
+        // %cst2 and %add are moved to their using region.
+        RW->rematerializeToRegion(Cst2, MBB2, DRI.clear());
+        RW->rematerializeToRegion(Add, MBB2, DRI.clear());
+        RW.moveMIs(MBB1, MBB2, 2);
+
+        // The rematerialization of %add makes %multidef.sub1 become a dead def.
+        // It is deleted along with %addDie, %cst1Die, and %cst0Die, which in
+        // turn no longer have any uses. These are rematerializable registers
+        // that become "permanently dead" in the rematerializer's nomenclature.
+        RW.removeMIs(MBB1, 3);
+        RW.removeMIs(MBB0, 1);
+        ASSERT_REGION_SIZES();
+
+        // We are mostly interested in %cst2 being re-created correctly. When
+        // it was rematerialized it was followed by rematerializations that have
+        // now been permanently deleted (which cannot therefore be rolled back),
+        // and by an unrematerializable MI that has also been permanently
+        // deleted. It should be re-created at the beginning of its block, as it
+        // was initially.
+        Rollback.rollback(*RW);
+        EXPECT_EQ(RW->getReg(Cst2).DefMI, &*RW.MF.getBlockNumbered(1)->begin());
+        RW.moveMIs(MBB2, MBB1, 2);
+        ASSERT_REGION_SIZES();
+      },
+      PreRemat);
 }
 
 /// Checks that rollback works as expected when the rollback listener is added
