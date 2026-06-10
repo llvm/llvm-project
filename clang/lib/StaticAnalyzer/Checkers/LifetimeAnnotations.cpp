@@ -43,6 +43,8 @@ public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void analyzerLifetimeBound(const CallEvent &Call, const CallExpr *,
                              CheckerContext &C) const;
+  ProgramStateRef bindValues(ProgramStateRef State, SymbolRef RetValSym, SVal RetVal, const MemRegion *Source) const;
+
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
 
@@ -57,6 +59,17 @@ public:
 };
 
 } // namespace
+
+ProgramStateRef LifetimeAnnotations::bindValues(ProgramStateRef State, SymbolRef RetValSym, SVal RetVal, const MemRegion *Source) const {
+
+  if (Source) {
+    if (RetValSym)
+      State = State->add<LifetimeBoundSet>(LifetimeMap{RetValSym, Source});
+    else if (const MemRegion *RetValRegion = RetVal.getAsRegion())
+      State = State->set<LifetimeBoundMapVal>(RetValRegion, Source);
+  }
+  return State;
+}
 
 void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
                                         CheckerContext &C) const {
@@ -77,25 +90,15 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
     if (PVD->hasAttr<LifetimeBoundAttr>()) {
       unsigned Idx = PVD->getFunctionScopeIndex();
       SVal Arg = Call.getArgSVal(Idx);
-
-      if (const MemRegion *ArgValRegion = Arg.getAsRegion()) {
-        if (RetValSym)
-          State = State->add<LifetimeBoundSet>(
-              LifetimeMap{RetValSym, ArgValRegion});
-        else if (const MemRegion *RetValRegion = RetVal.getAsRegion())
-          State = State->set<LifetimeBoundMapVal>(RetValRegion, ArgValRegion);
+      if (const MemRegion *ArgValRegion = Arg.getAsRegion())
+        State = bindValues(State, RetValSym, RetVal, ArgValRegion);
       }
     }
-  }
 
   if (const auto *IC = dyn_cast<CXXInstanceCall>(&Call)) {
     if (clang::lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
       if (const MemRegion *AttrRegion = IC->getCXXThisVal().getAsRegion()) {
-        if (RetValSym)
-          State =
-              State->add<LifetimeBoundSet>(LifetimeMap{RetValSym, AttrRegion});
-        else if (const MemRegion *RetValRegion = RetVal.getAsRegion())
-          State = State->set<LifetimeBoundMapVal>(RetValRegion, AttrRegion);
+        State = bindValues(State, RetValSym, RetVal, AttrRegion);
       }
     }
   }
