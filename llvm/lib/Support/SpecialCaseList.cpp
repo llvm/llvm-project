@@ -328,14 +328,17 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
   if (Header.consume_front("#!special-case-list-v"))
     consumeUnsignedInteger(Header, 10, Version);
 
+  auto MinVersion = [&](unsigned V) { return Version >= V; };
+
   // In https://reviews.llvm.org/D154014 we added glob support and planned
   // to remove regex support in patterns. We temporarily support the
   // original behavior using regexes if "#!special-case-list-v1" is the
   // first line of the file. For more details, see
   // https://discourse.llvm.org/t/use-glob-instead-of-regex-for-specialcaselists/71666
-  bool UseGlobs = Version > 1;
 
-  bool RemoveDotSlash = Version > 2;
+  bool UseGlobs = MinVersion(2);
+
+  bool RemoveDotSlash = MinVersion(3);
 
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
