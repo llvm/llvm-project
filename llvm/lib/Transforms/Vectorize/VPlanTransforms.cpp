@@ -367,11 +367,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
               dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
         // TODO: Handle converting to uniform recipes as separate transform,
         // then cloning should be sufficient here.
-        Clone = VPBuilder::createSingleScalarOp(
-            SinkCandidateRepR->getOpcode(), SinkCandidate->operands(),
-            /*Mask=*/nullptr, *SinkCandidateRepR, *SinkCandidateRepR,
-            SinkCandidate->getDebugLoc(),
-            SinkCandidate->getUnderlyingInstr());
+        Instruction *I = SinkCandidate->getUnderlyingInstr();
+        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
+                                      nullptr /*Mask*/, *SinkCandidateRepR,
+                                      *SinkCandidateRepR);
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -904,10 +903,9 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
-      auto *Clone = VPBuilder::createSingleScalarOp(
-          Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
-          /*Mask=*/nullptr, *Def, {}, DebugLoc::getUnknown(),
-          Def->getUnderlyingInstr());
+      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
+                                          Def->operands(), /*IsUniform*/ true,
+                                          /*Mask*/ nullptr, /*Flags*/ *Def);
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
     }
@@ -1267,21 +1265,24 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
 /// Operands are foldable live-ins.
 static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
                                    ArrayRef<VPValue *> Operands,
-                                   const DataLayout &DL, LLVMContext &Ctx) {
+                                   const DataLayout &DL) {
   auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
   if (!OpcodeOrIID)
     return nullptr;
 
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
-    if (!match(Op, m_LiveIn()))
+    VPValue *Candidate = Op;
+    match(Op, m_Broadcast(m_VPValue(Candidate)));
+    if (!match(Candidate, m_LiveIn()))
       return nullptr;
-    Value *V = Op->getUnderlyingValue();
+    Value *V = Candidate->getUnderlyingValue();
     if (!V)
       return nullptr;
     Ops.push_back(V);
   }
 
+  VPlan &Plan = *R.getParent()->getPlan();
   auto FoldToIRValue = [&]() -> Value * {
     InstSimplifyFolder Folder(DL);
     if (OpcodeOrIID->first) {
@@ -1318,7 +1319,8 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
     }
     case VPInstruction::PtrAdd:
     case VPInstruction::WidePtrAdd:
-      return Folder.FoldGEP(IntegerType::getInt8Ty(Ctx), Ops[0], Ops[1],
+      return Folder.FoldGEP(IntegerType::getInt8Ty(Plan.getContext()), Ops[0],
+                            Ops[1],
                             cast<VPRecipeWithIRFlags>(R).getGEPNoWrapFlags());
     // An extract of a live-in is an extract of a broadcast, so return the
     // broadcasted element.
@@ -1330,7 +1332,7 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
   };
 
   if (Value *V = FoldToIRValue())
-    return R.getParent()->getPlan()->getOrAddLiveIn(V);
+    return Plan.getOrAddLiveIn(V);
   return nullptr;
 }
 
@@ -1469,8 +1471,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
   const DataLayout &DL = Plan->getDataLayout();
-  if (VPValue *V =
-          tryToFoldLiveIns(*Def, Def->operands(), DL, Plan->getContext()))
+  if (VPValue *V = tryToFoldLiveIns(*Def, Def->operands(), DL))
     return Def->replaceAllUsesWith(V);
 
   // Fold PredPHI LiveIn -> LiveIn.
@@ -1967,10 +1968,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      auto *Clone = VPBuilder::createSingleScalarOp(
-          getOpcodeOrIntrinsicID(RepOrWidenR)->second, RepOrWidenR->operands(),
-          /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
-          RepOrWidenR->getUnderlyingInstr());
+      auto *Clone = new VPReplicateRecipe(
+          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
+          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
@@ -2365,8 +2365,7 @@ bool VPlanTransforms::simplifyKnownEVL(VPlan &Plan, ElementCount VF,
       if (Trunc != AVL) {
         auto *TruncR = cast<VPSingleDefRecipe>(Trunc);
         const DataLayout &DL = Plan.getDataLayout();
-        if (VPValue *Folded = tryToFoldLiveIns(*TruncR, TruncR->operands(), DL,
-                                               Plan.getContext()))
+        if (VPValue *Folded = tryToFoldLiveIns(*TruncR, TruncR->operands(), DL))
           Trunc = Folded;
       }
       R.getVPSingleValue()->replaceAllUsesWith(Trunc);
@@ -2998,19 +2997,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
                                     EVL, Mask);
 
-  VPValue *ReversedVal;
-  if (match(&CurRecipe, m_Reverse(m_VPValue(ReversedVal))) &&
-      match(ReversedVal,
+  if (match(&CurRecipe,
             m_MaskedLoad(m_VPValue(EndPtr),
                          m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    auto *LoadR = new VPWidenLoadEVLRecipe(
-        *cast<VPWidenLoadRecipe>(ReversedVal), Addr, EVL, Mask);
+    auto *LoadR = new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
+                                           Addr, EVL, Mask);
     LoadR->insertBefore(&CurRecipe);
-    return new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_reverse,
-                                      {LoadR, Plan->getTrue(), &EVL},
+    VPValue *Poison =
+        Plan->getOrAddLiveIn(PoisonValue::get(LoadR->getScalarType()));
+    return new VPWidenIntrinsicRecipe(Intrinsic::vector_splice_left,
+                                      {Poison, LoadR, &EVL},
                                       LoadR->getScalarType(), {}, {}, DL);
   }
 
@@ -3034,14 +3033,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                      StoredVal, EVL, Mask);
 
   if (match(&CurRecipe,
-            m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
+            m_MaskedStore(m_VPValue(EndPtr), m_VPValue(StoredVal),
                           m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    StoredVal = GetVPReverse(ReversedVal);
+    VPValue *Poison =
+        Plan->getOrAddLiveIn(PoisonValue::get(StoredVal->getScalarType()));
+    auto *SpliceR = new VPWidenIntrinsicRecipe(
+        Intrinsic::vector_splice_right, {StoredVal, Poison, &EVL},
+        StoredVal->getScalarType(), {}, {}, DL);
+    SpliceR->insertBefore(&CurRecipe);
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
-                                     StoredVal, EVL, Mask);
+                                     SpliceR, EVL, Mask);
   }
 
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
@@ -3132,6 +3136,28 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       LogicalAnd->replaceAllUsesWith(Merge);
       OldRecipes.push_back(LogicalAnd);
     }
+  }
+
+  // Fold the following splice patterns into vp.reverse for reverse accesses:
+  //   vector.reverse(splice.left(poison, x, evl))  -> vp.reverse(x, true, evl)
+  //   splice.right(vector.reverse(x), poison, evl) -> vp.reverse(x, true, evl)
+  for (VPUser *U : collectUsersRecursively(EVL)) {
+    VPValue *X;
+    if (!match(U,
+               m_CombineOr(
+                   m_Reverse(m_Intrinsic<Intrinsic::vector_splice_left>(
+                       m_Poison(), m_VPValue(X), m_Specific(EVL))),
+                   m_Intrinsic<Intrinsic::vector_splice_right>(
+                       m_Reverse(m_VPValue(X)), m_Poison(), m_Specific(EVL)))))
+      continue;
+
+    auto *Def = cast<VPSingleDefRecipe>(U);
+    auto *VPReverse = new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse, {X, Plan.getTrue(), EVL},
+        X->getScalarType(), {}, {}, Def->getDebugLoc());
+    VPReverse->insertBefore(Def);
+    Def->replaceAllUsesWith(VPReverse);
+    OldRecipes.push_back(Def);
   }
 
   for (VPRecipeBase *R : reverse(OldRecipes)) {
@@ -5453,7 +5479,11 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                                                   ScalarEvolution &SE) {
   auto *Entry = Plan.getEntry();
   VPBuilder Builder(Entry, Entry->begin());
-  VPSCEVExpander Expander(Builder, SE);
+  DebugLoc DL = cast<VPIRBasicBlock>(Entry)
+                    ->getIRBasicBlock()
+                    ->getTerminator()
+                    ->getDebugLoc();
+  VPSCEVExpander Expander(Builder, SE, DL);
 
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander. During
   // the transition, unsupported VPExpandSCEVRecipes are skipped and left for
@@ -6964,9 +6994,9 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe = VPBuilder::createSingleScalarOp(
-          VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr, *VPI,
-          *VPI, VPI->getDebugLoc(), I);
+      auto *Recipe = new VPReplicateRecipe(
+          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
+          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();

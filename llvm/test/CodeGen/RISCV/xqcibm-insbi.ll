@@ -147,13 +147,13 @@ define i32 @insb_comm1(i32 %in1, i32 %in2) {
 define i64 @insb_i64(i64 %in1, i64 %in2) {
 ; RV32I-LABEL: insb_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srli a1, a2, 31
-; RV32I-NEXT:    slli a3, a3, 1
-; RV32I-NEXT:    slli a2, a2, 1
-; RV32I-NEXT:    or a1, a3, a1
-; RV32I-NEXT:    andi a3, a0, -2
-; RV32I-NEXT:    xor a2, a3, a2
-; RV32I-NEXT:    xor a0, a2, a0
+; RV32I-NEXT:    slli a1, a2, 1
+; RV32I-NEXT:    andi a4, a0, -2
+; RV32I-NEXT:    xor a4, a4, a1
+; RV32I-NEXT:    srli a2, a2, 31
+; RV32I-NEXT:    slli a1, a3, 1
+; RV32I-NEXT:    or a1, a1, a2
+; RV32I-NEXT:    xor a0, a4, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV32XQCIBM-LABEL: insb_i64:
