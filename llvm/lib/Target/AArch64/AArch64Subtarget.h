@@ -103,7 +103,9 @@ protected:
 
   /// GlobalISel related APIs.
   std::unique_ptr<CallLowering> CallLoweringInfo;
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   std::unique_ptr<InlineAsmLowering> InlineAsmLoweringInfo;
+#endif
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;

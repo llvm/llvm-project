@@ -398,8 +398,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
 
 #ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
-#endif
   InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
+#endif
 #ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   Legalizer.reset(new AArch64LegalizerInfo(*this));
 
@@ -450,9 +450,11 @@ const CallLowering *AArch64Subtarget::getCallLowering() const {
 }
 #endif
 
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 const InlineAsmLowering *AArch64Subtarget::getInlineAsmLowering() const {
   return InlineAsmLoweringInfo.get();
 }
+#endif
 
 #ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 InstructionSelector *AArch64Subtarget::getInstructionSelector() const {
@@ -468,6 +470,9 @@ const RegisterBankInfo *AArch64Subtarget::getRegBankInfo() const {
 }
 #else  // EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL — stub: GlobalISel is excluded
 const CallLowering *AArch64Subtarget::getCallLowering() const {
+  return nullptr;
+}
+const InlineAsmLowering *AArch64Subtarget::getInlineAsmLowering() const {
   return nullptr;
 }
 InstructionSelector *AArch64Subtarget::getInstructionSelector() const {

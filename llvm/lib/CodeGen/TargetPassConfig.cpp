@@ -161,9 +161,11 @@ static cl::opt<cl::boolOrDefault>
 EnableFastISelOption("fast-isel", cl::Hidden,
   cl::desc("Enable the \"fast\" instruction selector"));
 
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 static cl::opt<cl::boolOrDefault> EnableGlobalISelOption(
     "global-isel", cl::Hidden,
     cl::desc("Enable the \"global\" instruction selector"));
+#endif
 
 // FIXME: remove this after switching to NPM or GlobalISel, whichever gets there
 //        first...
@@ -171,6 +173,7 @@ static cl::opt<bool>
     PrintAfterISel("print-after-isel", cl::init(false), cl::Hidden,
                    cl::desc("Print machine instrs after ISel"));
 
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 static cl::opt<GlobalISelAbortMode> EnableGlobalISelAbort(
     "global-isel-abort", cl::Hidden,
     cl::desc("Enable abort calls when \"global\" instruction selection "
@@ -180,6 +183,7 @@ static cl::opt<GlobalISelAbortMode> EnableGlobalISelAbort(
         clEnumValN(GlobalISelAbortMode::Enable, "1", "Enable the abort"),
         clEnumValN(GlobalISelAbortMode::DisableWithDiag, "2",
                    "Disable the abort but emit a diagnostic on failure")));
+#endif
 
 // Disable MIRProfileLoader before RegAlloc. This is for for debugging and
 // tuning purpose.
@@ -487,8 +491,10 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
     Opt.Option = Option;
 
   SET_OPTION(EnableFastISelOption)
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   SET_OPTION(EnableGlobalISelAbort)
   SET_OPTION(EnableGlobalISelOption)
+#endif
   SET_OPTION(EnableIPRA)
   SET_OPTION(OptimizeRegAlloc)
   SET_OPTION(VerifyMachineCode)
@@ -609,8 +615,10 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
   if (TM.Options.EnableIPRA)
     setRequiresCodeGenSCCOrder();
 
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (EnableGlobalISelAbort.getNumOccurrences())
     TM.Options.GlobalISelAbort = EnableGlobalISelAbort;
+#endif
 
   setStartStopPasses();
 }
@@ -978,15 +986,21 @@ bool TargetPassConfig::addCoreISelPasses() {
   TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
 
   // Determine an instruction selector.
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   enum class SelectorType { SelectionDAG, FastISel, GlobalISel };
+#else
+  enum class SelectorType { SelectionDAG, FastISel };
+#endif
   SelectorType Selector;
 
   if (EnableFastISelOption == cl::BOU_TRUE)
     Selector = SelectorType::FastISel;
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   else if (EnableGlobalISelOption == cl::BOU_TRUE ||
            (TM->Options.EnableGlobalISel &&
             EnableGlobalISelOption != cl::BOU_FALSE))
     Selector = SelectorType::GlobalISel;
+#endif
   else if (TM->getOptLevel() == CodeGenOptLevel::None &&
            TM->getO0WantsFastISel())
     Selector = SelectorType::FastISel;
@@ -997,9 +1011,11 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (Selector == SelectorType::FastISel) {
     TM->setFastISel(true);
     TM->setGlobalISel(false);
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   } else if (Selector == SelectorType::GlobalISel) {
     TM->setFastISel(false);
     TM->setGlobalISel(true);
+#endif
   }
 
   // FIXME: Injecting into the DAGISel pipeline seems to cause issues with
@@ -1012,6 +1028,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   //        and -run-pass seem to be unaffected. The majority of GlobalISel
   //        testing uses -run-pass so this probably isn't too bad.
   SaveAndRestore SavedDebugifyIsSafe(DebugifyIsSafe);
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
     DebugifyIsSafe = false;
 
@@ -1044,12 +1061,20 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (Selector == SelectorType::GlobalISel)
     addPass(createResetMachineFunctionPass(
         reportDiagnosticWhenGlobalISelFallback(), isGlobalISelAbortEnabled()));
+#else
+  DebugifyIsSafe = false;
+#endif
 
   // Run the SDAG InstSelector, providing a fallback path when we do not want to
   // abort on not-yet-supported input.
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (Selector != SelectorType::GlobalISel || !isGlobalISelAbortEnabled())
     if (addInstSelector())
       return true;
+#else
+  if (addInstSelector())
+    return true;
+#endif
 
   // Expand pseudo-instructions emitted by ISel. Don't run the verifier before
   // FinalizeISel.
