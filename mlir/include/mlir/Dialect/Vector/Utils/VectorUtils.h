@@ -224,11 +224,11 @@ bool isLinearizableVector(VectorType type);
 /// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
 /// instead of explicit masks.
 ///
-/// When \p permutationMap is provided the in_bounds attribute is inferred from
+/// When `permutationMap` is provided the in_bounds attribute is inferred from
 /// it: dimension i is in-bounds when the map result is an AffineDimExpr
 /// pointing to a static memref dimension divisible by the vector size, or an
-/// AffineConstantExpr (broadcast). Custom \p indices must also be supplied in
-/// that case; if \p indices is empty, all offsets default to 0.
+/// AffineConstantExpr (broadcast). Custom`indices` must also be supplied in
+/// that case; if `indices` is empty, all offsets default to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              const VectorType &vecToReadTy,
                              std::optional<Value> padValue = std::nullopt,
