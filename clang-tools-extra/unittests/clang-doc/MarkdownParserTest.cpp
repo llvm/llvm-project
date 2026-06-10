@@ -39,7 +39,7 @@ TEST_F(MarkdownParserTest, PlainText) {
 TEST_F(MarkdownParserTest, FencedCodeBlock) {
   auto Nodes = parseMarkdown(R"(```cpp
 int x = 0;
-````)",
+````````)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
   const auto &N = Nodes[0];
@@ -51,7 +51,7 @@ int x = 0;
 TEST_F(MarkdownParserTest, FencedCodeBlockNoLang) {
   auto Nodes = parseMarkdown(R"(```
 some code
-```)",
+```````)",
                              Arena);
   ASSERT_EQ(Nodes.size(), 1u);
   const auto &N = Nodes[0];
@@ -102,12 +102,116 @@ TEST_F(MarkdownParserTest, UnorderedList) {
 
 TEST_F(MarkdownParserTest, MixedContent) {
   auto Nodes = parseMarkdown(R"(some text
-```
+```````
 code
-````
+````````
 - item)",
                              Arena);
   EXPECT_EQ(Nodes.size(), 3u);
+}
+
+// CommonMark §4.5 example 120: tilde fences work the same as backtick fences.
+TEST_F(MarkdownParserTest, TildeFence) {
+  auto Nodes = parseMarkdown(R"(~~~
+int x = 0;
+~~~)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  EXPECT_TRUE(N.Content.empty());
+  ASSERT_EQ(N.Children.size(), 1u);
+}
+
+// CommonMark §4.5 example 120: tilde fence with a language tag.
+TEST_F(MarkdownParserTest, TildeFenceWithLang) {
+  auto Nodes = parseMarkdown(R"(~~~cpp
+int x = 0;
+~~~)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  EXPECT_EQ(N.Content, "cpp");
+  ASSERT_EQ(N.Children.size(), 1u);
+}
+
+// CommonMark §4.5 example 122: a tilde line does not close a backtick fence.
+TEST_F(MarkdownParserTest, ClosingFenceMustMatchOpeningChar) {
+  auto Nodes = parseMarkdown(R"(```
+aaa
+~~~
+````````)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  // ~~~ is content, not a closing fence.
+  ASSERT_EQ(N.Children.size(), 2u);
+}
+
+// CommonMark §4.5 example 130: a code block can be empty.
+TEST_F(MarkdownParserTest, EmptyFencedCodeBlock) {
+  auto Nodes = parseMarkdown(R"(```
+```````)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  EXPECT_TRUE(N.Children.empty());
+}
+
+// CommonMark §4.5 example 129: a code block may contain only blank lines.
+TEST_F(MarkdownParserTest, FencedCodeBlockBlankLineContent) {
+  auto Nodes = parseMarkdown("```\n\n  \n```", Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  ASSERT_EQ(N.Children.size(), 2u);
+}
+
+// CommonMark §4.5 example 142: lang tag is captured from the info string.
+TEST_F(MarkdownParserTest, InfoStringLangTag) {
+  auto Nodes = parseMarkdown(R"(```ruby
+def foo(x)
+  return 3
+end
+``````)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  EXPECT_EQ(N.Content, "ruby");
+  ASSERT_EQ(N.Children.size(), 3u);
+}
+
+// CommonMark §4.5 example 146: tilde fence info string may contain backticks.
+TEST_F(MarkdownParserTest, TildeFenceInfoStringWithBackticks) {
+  auto Nodes = parseMarkdown(R"(~~~ aa ``` ~~~
+foo
+~~~)",
+                             Arena);
+  ASSERT_EQ(Nodes.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  EXPECT_EQ(N.Content, "aa ``` ~~~");
+  ASSERT_EQ(N.Children.size(), 1u);
+}
+
+// CommonMark §4.5 example 124: closing fence must be at least as long as the
+// opening fence.
+// TODO: our parser currently closes on the first line with 3 matching fence
+// chars regardless of opening fence length. Fix as part of the CommonMark
+// TODO in parseMarkdown().
+TEST_F(MarkdownParserTest, ClosingFenceLengthTODO) {
+  auto Nodes = parseMarkdown("````\naaa\n```", Arena);
+  // The ``` line should not close the ```` fence per CommonMark, but our
+  // parser currently treats it as a closing fence. This test documents the
+  // current (non-conformant) behavior.
+  ASSERT_EQ(Nodes.size(), 1u);
+  const auto &N = Nodes[0];
+  EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
+  ASSERT_EQ(N.Children.size(), 1u);
 }
 
 } // namespace
