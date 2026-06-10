@@ -18,6 +18,7 @@
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/DataTypes.h"
@@ -262,6 +263,12 @@ class AArch64CompressJumpTablesPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+};
+
+// SelectionDAGISelPass is already a NewPM interface.
+class AArch64DAGToDAGISelPass : public SelectionDAGISelPass {
+public:
+  AArch64DAGToDAGISelPass(AArch64TargetMachine &TM);
 };
 
 class AArch64DeadRegisterDefinitionsPass

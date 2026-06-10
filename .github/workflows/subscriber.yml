@@ -1,6 +1,9 @@
-name: Issue Subscriber
+name: Issue/PR Subscriber
 
 on:
+  pull_request_target:
+    types:
+      - labeled
   issues:
     types:
       - labeled
@@ -8,20 +11,26 @@ on:
 permissions:
   contents: read
 
+env:
+  # github.event.number is for pull_request events and
+  # github.event.issue.number is for issues events.
+  ISSUE_NUMBER: ${{ github.event.number || github.event.issue.number }}
+  LABEL_NAME: ${{ github.event.label.name }}
+
 jobs:
-  auto-subscribe:
+  subscriber:
     environment:
       name: main-branch-only
       deployment: false
-    runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout Automation Script
+      - name: Checkout Scripts
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
-          sparse-checkout: llvm/utils/git/
-          ref: main
+          sparse-checkout: |
+            llvm/utils/git/
 
       - name: Setup Automation Script
         working-directory: ./llvm/utils/git/
@@ -34,19 +43,32 @@ jobs:
           client-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
+          repositories: llvm-project
           permission-members: read
           permission-contents: read
-          permission-issues: write
+          permission-issues: ${{ case(github.event_name == 'issues', 'write', 'read') }}
+          permission-pull-requests: ${{ case(github.event_name == 'pull_request_target', 'write', 'read') }}
 
-      - name: Update watchers
+      - name: Update subscribers
         working-directory: ./llvm/utils/git/
-        # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
         env:
-          LABEL_NAME: ${{ github.event.label.name }}
+          EVENT_TRIGGER: ${{ github.event_name }}
           ISSUE_SUBSCRIBER_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
+          case "$EVENT_TRIGGER" in
+            pull_request_target)
+              command="pr-subscriber"
+              ;;
+            issues)
+              command="issue-subscriber"
+              ;;
+            *)
+              echo "Unknown event trigger: $EVENT_TRIGGER"
+              exit 1
+              ;;
+          esac
           python3 ./github-automation.py \
             --token "$ISSUE_SUBSCRIBER_TOKEN" \
-            issue-subscriber \
-            --issue-number '${{ github.event.issue.number }}' \
+            "$command" \
+            --issue-number "$ISSUE_NUMBER" \
             --label-name "$LABEL_NAME"

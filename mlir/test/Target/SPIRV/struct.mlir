@@ -18,6 +18,9 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Addresses, Float
   // CHECK: !spirv.ptr<!spirv.struct<(!spirv.array<128 x !spirv.struct<(!spirv.array<128 x f32, stride=4> [0])>, stride=512> [0]), Block>, StorageBuffer>
   spirv.GlobalVariable @var3 : !spirv.ptr<!spirv.struct<(!spirv.array<128 x !spirv.struct<(!spirv.array<128 x f32, stride=4> [0])>, stride=512> [0]), Block>, StorageBuffer>
 
+  // CHECK: !spirv.ptr<!spirv.struct<(!spirv.array<128 x f32, stride=4> [0]), BufferBlock>, Uniform>
+  spirv.GlobalVariable @var_buffer_block : !spirv.ptr<!spirv.struct<(!spirv.array<128 x f32, stride=4> [0]), BufferBlock>, Uniform>
+
   // CHECK: !spirv.ptr<!spirv.struct<(f32 [0, NonWritable], i32 [4]), Block>, StorageBuffer>
   spirv.GlobalVariable @var4 : !spirv.ptr<!spirv.struct<(f32 [0, NonWritable], i32 [4]), Block>, StorageBuffer>
 

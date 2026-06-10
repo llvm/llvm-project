@@ -16,16 +16,14 @@
 
 namespace {
 
+inline void *hostOSGetGlobalLookupHandle() { return RTLD_DEFAULT; }
+
 orc_rt::Expected<void *> hostOSLoadLibrary(const std::string &Path) {
+  assert(!Path.empty() && "hostOSLoadLibray doesn't support empty paths");
   void *H = dlopen(Path.c_str(), RTLD_LAZY | RTLD_LOCAL);
   if (H == nullptr) {
     std::ostringstream ErrMsg;
-    ErrMsg << "error loading ";
-    if (!Path.empty())
-      ErrMsg << "\"" << Path << "\"";
-    else
-      ErrMsg << "process symbols";
-    ErrMsg << ": " << dlerror();
+    ErrMsg << "error loading \"" << Path << "\": " << dlerror();
     return orc_rt::make_error<orc_rt::StringError>(ErrMsg.str());
   }
 

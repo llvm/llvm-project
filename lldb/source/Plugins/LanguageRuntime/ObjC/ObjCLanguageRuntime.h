@@ -63,7 +63,7 @@ public:
 
     virtual ClassDescriptorSP GetSuperclass() = 0;
 
-    virtual ClassDescriptorSP GetMetaclass() const = 0;
+    virtual std::unique_ptr<ClassDescriptor> GetMetaclass() const = 0;
 
     // virtual if any implementation has some other version-specific rules but
     // for the known v1/v2 this is all that needs to be done
