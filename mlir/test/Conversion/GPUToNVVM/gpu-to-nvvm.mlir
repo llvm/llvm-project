@@ -185,7 +185,7 @@ gpu.module @test_module_4 {
 gpu.module @test_module_5 {
   // CHECK-LABEL: func @gpu_sync()
   func.func @gpu_sync() {
-    // CHECK: nvvm.barrier
+    // CHECK: nvvm.barrier {aligned = true}
     gpu.barrier
     func.return
   }

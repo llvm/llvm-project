@@ -433,7 +433,12 @@ struct GPUBarrierOpToNVVMLowering final
     gpu::BarrierScope scope = op.getScope();
     switch (scope) {
     case gpu::BarrierScope::Workgroup:
-      rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op);
+      // A workgroup barrier synchronizes the whole CTA: every thread is
+      // required to reach this same barrier instruction, so it is safe to emit
+      // the .aligned form of the barrier intrinsic.
+      rewriter.replaceOpWithNewOp<NVVM::BarrierOp>(op, /*barrierId=*/Value{},
+                                                   /*numberOfThreads=*/Value{},
+                                                   /*aligned=*/true);
       return success();
     case gpu::BarrierScope::Subgroup: {
       // Emit __syncwarp(0xFFFFFFFF) for full-warp sync.
