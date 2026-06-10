@@ -1584,6 +1584,27 @@ LoadInst *GVNPass::findLoadToHoistIntoPred(BasicBlock *Pred, BasicBlock *LoadBB,
   return nullptr;
 }
 
+static void copyLoadPREMetadata(LoadInst *NewLoad, LoadInst *Load,
+                                const LoopInfo *LI) {
+  AAMDNodes Tags = Load->getAAMetadata();
+  if (Tags)
+    NewLoad->setAAMetadata(Tags);
+
+  if (auto *MD = Load->getMetadata(LLVMContext::MD_invariant_load))
+    NewLoad->setMetadata(LLVMContext::MD_invariant_load, MD);
+  if (auto *InvGroupMD = Load->getMetadata(LLVMContext::MD_invariant_group))
+    NewLoad->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
+  if (auto *RangeMD = Load->getMetadata(LLVMContext::MD_range))
+    NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
+  if (auto *NoFPClassMD = Load->getMetadata(LLVMContext::MD_nofpclass))
+    NewLoad->setMetadata(LLVMContext::MD_nofpclass, NoFPClassMD);
+
+  if (auto *AccessMD = Load->getMetadata(LLVMContext::MD_access_group))
+    if (LI->getLoopFor(Load->getParent()) ==
+        LI->getLoopFor(NewLoad->getParent()))
+      NewLoad->setMetadata(LLVMContext::MD_access_group, AccessMD);
+}
+
 void GVNPass::eliminatePartiallyRedundantLoad(
     LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
     MapVector<BasicBlock *, Value *> &AvailableLoads,
@@ -1606,23 +1627,7 @@ void GVNPass::eliminatePartiallyRedundantLoad(
         MSSAU->insertUse(cast<MemoryUse>(NewAccess), /*RenameUses=*/true);
     }
 
-    // Transfer the old load's AA tags to the new load.
-    AAMDNodes Tags = Load->getAAMetadata();
-    if (Tags)
-      NewLoad->setAAMetadata(Tags);
-
-    if (auto *MD = Load->getMetadata(LLVMContext::MD_invariant_load))
-      NewLoad->setMetadata(LLVMContext::MD_invariant_load, MD);
-    if (auto *InvGroupMD = Load->getMetadata(LLVMContext::MD_invariant_group))
-      NewLoad->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
-    if (auto *RangeMD = Load->getMetadata(LLVMContext::MD_range))
-      NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
-    if (auto *NoFPClassMD = Load->getMetadata(LLVMContext::MD_nofpclass))
-      NewLoad->setMetadata(LLVMContext::MD_nofpclass, NoFPClassMD);
-
-    if (auto *AccessMD = Load->getMetadata(LLVMContext::MD_access_group))
-      if (LI->getLoopFor(Load->getParent()) == LI->getLoopFor(UnavailableBlock))
-        NewLoad->setMetadata(LLVMContext::MD_access_group, AccessMD);
+    copyLoadPREMetadata(NewLoad, Load, LI);
 
     // We do not propagate the old load's debug location, because the new
     // load now lives in a different BB, and we want to avoid a jumpy line
@@ -1923,6 +1928,246 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   eliminatePartiallyRedundantLoad(Load, ValuesPerBlock, PredLoads,
                                   &CriticalEdgePredAndLoad);
   ++NumPRELoad;
+  return true;
+}
+
+static bool isSupportedLoadSelectPRECast(CastInst *Cast) {
+  if (auto *PNNI = dyn_cast<PossiblyNonNegInst>(Cast);
+      PNNI && PNNI->hasNonNeg())
+    return false;
+  if (auto *Trunc = dyn_cast<TruncInst>(Cast);
+      Trunc && (Trunc->hasNoUnsignedWrap() || Trunc->hasNoSignedWrap()))
+    return false;
+
+  switch (Cast->getOpcode()) {
+  case Instruction::Trunc:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::PtrToAddr:
+  case Instruction::BitCast:
+  case Instruction::AddrSpaceCast:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isSupportedLoadSelectPREAddrExpr(Value *V) {
+  if (!isa<Instruction>(V))
+    return true;
+  if (auto *Cast = dyn_cast<CastInst>(V))
+    return isSupportedLoadSelectPRECast(Cast);
+  return isa<GetElementPtrInst>(V) || isa<PHINode>(V);
+}
+
+static PHINode *findSingleHeaderPhi(Value *V, BasicBlock *Header,
+                                    SmallPtrSetImpl<Value *> &Visited) {
+  if (!Visited.insert(V).second)
+    return nullptr;
+
+  auto *PN = dyn_cast<PHINode>(V);
+  if (PN)
+    return PN->getParent() == Header ? PN : nullptr;
+
+  if (!isSupportedLoadSelectPREAddrExpr(V))
+    return nullptr;
+
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return nullptr;
+
+  PHINode *Found = nullptr;
+  for (Value *Op : I->operands()) {
+    PHINode *OpPhi = findSingleHeaderPhi(Op, Header, Visited);
+    if (!OpPhi)
+      continue;
+    if (Found && Found != OpPhi)
+      return nullptr;
+    Found = OpPhi;
+  }
+  return Found;
+}
+
+static bool isSameValueWithPhiSubstitution(Value *Pattern, Value *Candidate,
+                                           PHINode *Phi, Value *Subst,
+                                           unsigned Depth = 0) {
+  if (Pattern == Phi)
+    return Candidate == Subst;
+  if (Depth == 8)
+    return false;
+  if (!isa<Instruction>(Pattern) || !isa<Instruction>(Candidate))
+    return Pattern == Candidate;
+
+  auto *PatternI = dyn_cast<Instruction>(Pattern);
+  auto *CandidateI = dyn_cast<Instruction>(Candidate);
+  if (!isSupportedLoadSelectPREAddrExpr(PatternI) ||
+      !isSupportedLoadSelectPREAddrExpr(CandidateI))
+    return false;
+  if (isa<PHINode>(PatternI) || isa<PHINode>(CandidateI))
+    return false;
+  if (PatternI->getOpcode() != CandidateI->getOpcode() ||
+      PatternI->getType() != CandidateI->getType() ||
+      PatternI->getNumOperands() != CandidateI->getNumOperands())
+    return false;
+
+  if (auto *PatternGEP = dyn_cast<GetElementPtrInst>(PatternI)) {
+    auto *CandidateGEP = dyn_cast<GetElementPtrInst>(CandidateI);
+    if (!CandidateGEP ||
+        PatternGEP->getSourceElementType() !=
+            CandidateGEP->getSourceElementType() ||
+        PatternGEP->getNoWrapFlags() != CandidateGEP->getNoWrapFlags())
+      return false;
+  }
+
+  for (auto [PatternOp, CandidateOp] :
+       zip(PatternI->operands(), CandidateI->operands()))
+    if (!isSameValueWithPhiSubstitution(PatternOp, CandidateOp, Phi, Subst,
+                                        Depth + 1))
+      return false;
+  return true;
+}
+
+static LoadInst *findLoadWithPhiSubstitutedAddr(LoadInst *Load, PHINode *Phi,
+                                                Value *Subst) {
+  BasicBlock *BB = Load->getParent();
+  for (Instruction &I : *BB) {
+    if (&I == Load)
+      break;
+
+    auto *OtherLoad = dyn_cast<LoadInst>(&I);
+    if (!OtherLoad || !OtherLoad->isSimple() ||
+        OtherLoad->getType() != Load->getType())
+      continue;
+
+    if (isSameValueWithPhiSubstitution(Load->getPointerOperand(),
+                                       OtherLoad->getPointerOperand(), Phi,
+                                       Subst))
+      return OtherLoad;
+  }
+  return nullptr;
+}
+
+static bool loopMayWriteToMemory(const Loop *L) {
+  for (BasicBlock *BB : L->blocks())
+    for (Instruction &I : *BB)
+      if (I.mayWriteToMemory())
+        return true;
+  return false;
+}
+
+bool GVNPass::performLoopLoadSelectPRE(LoadInst *Load) {
+  if (!Load->isSimple())
+    return false;
+
+  Function *F = Load->getFunction();
+  if (F->hasFnAttribute(Attribute::SanitizeAddress) ||
+      F->hasFnAttribute(Attribute::SanitizeHWAddress))
+    return false;
+
+  const Loop *L = LI->getLoopFor(Load->getParent());
+  if (!L || L->getHeader() != Load->getParent())
+    return false;
+
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *Preheader = L->getLoopPreheader();
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!Preheader || !Latch || loopMayWriteToMemory(L))
+    return false;
+  if (Preheader->getTerminator()->isEHPad() ||
+      Latch->getTerminator()->isEHPad())
+    return false;
+
+  if (ICF->isDominatedByICFIFromSameBlock(Load))
+    return false;
+
+  SmallPtrSet<Value *, 8> Visited;
+  PHINode *AddrPhi =
+      findSingleHeaderPhi(Load->getPointerOperand(), Header, Visited);
+  if (!AddrPhi || AddrPhi->getNumIncomingValues() != 2)
+    return false;
+
+  int PreheaderIdx = AddrPhi->getBasicBlockIndex(Preheader);
+  int LatchIdx = AddrPhi->getBasicBlockIndex(Latch);
+  if (PreheaderIdx < 0 || LatchIdx < 0)
+    return false;
+  Value *LatchValue = AddrPhi->getIncomingValue(LatchIdx);
+
+  auto *Sel = dyn_cast<SelectInst>(LatchValue);
+  if (!Sel || Sel->getParent() != Latch)
+    return false;
+
+  Value *Subst = nullptr;
+  bool PhiOnTrueVal = false;
+  if (Sel->getTrueValue() == AddrPhi) {
+    PhiOnTrueVal = true;
+    Subst = Sel->getFalseValue();
+  } else if (Sel->getFalseValue() == AddrPhi) {
+    Subst = Sel->getTrueValue();
+  } else {
+    return false;
+  }
+
+  LoadInst *SubstLoad = findLoadWithPhiSubstitutedAddr(Load, AddrPhi, Subst);
+  if (!SubstLoad)
+    return false;
+
+  SmallVector<Instruction *, 8> NewInsts;
+  const DataLayout &DL = Load->getDataLayout();
+  PHITransAddr Address(Load->getPointerOperand(), DL, AC);
+  Value *PreheaderPtr =
+      Address.translateWithInsertion(Header, Preheader, *DT, NewInsts);
+  if (!PreheaderPtr) {
+    while (!NewInsts.empty())
+      NewInsts.pop_back_val()->eraseFromParent();
+    return false;
+  }
+
+  for (Instruction *I : NewInsts) {
+    I->updateLocationAfterHoist();
+    VN.lookupOrAdd(I);
+  }
+
+  auto *PreheaderLoad = new LoadInst(
+      Load->getType(), PreheaderPtr, Load->getName() + ".pre",
+      /*isVolatile*/ false, Load->getAlign(), Load->getOrdering(),
+      Load->getSyncScopeID(), Preheader->getTerminator()->getIterator());
+  copyLoadPREMetadata(PreheaderLoad, Load, LI);
+  if (MSSAU) {
+    auto *NewAccess = MSSAU->createMemoryAccessInBB(
+        PreheaderLoad, nullptr, PreheaderLoad->getParent(),
+        MemorySSA::BeforeTerminator);
+    MSSAU->insertUse(cast<MemoryUse>(NewAccess), /*RenameUses=*/true);
+  }
+
+  PHINode *CarriedValue = PHINode::Create(
+      Load->getType(), 2, Load->getName() + ".phi", Header->getFirstNonPHIIt());
+  CarriedValue->addIncoming(PreheaderLoad, Preheader);
+
+  Value *TrueValue = PhiOnTrueVal ? static_cast<Value *>(CarriedValue)
+                                  : static_cast<Value *>(SubstLoad);
+  Value *FalseValue = PhiOnTrueVal ? static_cast<Value *>(SubstLoad)
+                                   : static_cast<Value *>(CarriedValue);
+  auto *NextValue = SelectInst::Create(Sel->getCondition(), TrueValue,
+                                       FalseValue, Load->getName() + ".next",
+                                       Latch->getTerminator()->getIterator());
+  NextValue->setDebugLoc(Load->getDebugLoc());
+  CarriedValue->addIncoming(NextValue, Latch);
+
+  ICF->removeUsersOf(Load);
+  Load->replaceAllUsesWith(CarriedValue);
+  if (MD) {
+    MD->invalidateCachedPointerInfo(PreheaderPtr);
+    if (CarriedValue->getType()->isPtrOrPtrVectorTy())
+      MD->invalidateCachedPointerInfo(CarriedValue);
+  }
+  ORE->emit([&]() {
+    return OptimizationRemark(DEBUG_TYPE, "LoadPRE", Load)
+           << "loop load eliminated by select PRE";
+  });
+  salvageAndRemoveInstruction(Load);
+  ++NumPRELoopLoad;
   return true;
 }
 
@@ -2762,8 +3007,12 @@ bool GVNPass::processLoad(LoadInst *L) {
     MemDepResult Dep = MD->getDependency(L);
 
     // If it is defined in another block, try harder.
-    if (Dep.isNonLocal())
-      return processNonLocalLoad(L);
+    if (Dep.isNonLocal()) {
+      if (processNonLocalLoad(L))
+        return true;
+      return isLoadPREEnabled() && isLoadInLoopPREEnabled() &&
+             performLoopLoadSelectPRE(L);
+    }
 
     // Only handle the local case below.
     if (Dep.isDef())
@@ -2776,8 +3025,12 @@ bool GVNPass::processLoad(LoadInst *L) {
     if (!findReachingValuesForLoad(L, MemVals, *MSSAU->getMemorySSA(), *AA))
       return false; // Too many dependencies.
     assert(MemVals.size() && "Expected at least an unknown value");
-    if (MemVals.size() > 1 || MemVals[0].Block != L->getParent())
-      return processNonLocalLoad(L, MemVals);
+    if (MemVals.size() > 1 || MemVals[0].Block != L->getParent()) {
+      if (processNonLocalLoad(L, MemVals))
+        return true;
+      return isLoadPREEnabled() && isLoadInLoopPREEnabled() &&
+             performLoopLoadSelectPRE(L);
+    }
 
     MemVal = MemVals[0];
   }

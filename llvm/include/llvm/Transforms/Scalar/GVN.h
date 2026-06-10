@@ -460,6 +460,10 @@ private:
   bool PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
                       UnavailBlkVect &UnavailableBlocks);
 
+  /// Try to eliminate a loop-header load whose address is derived from a
+  /// loop-carried select recurrence.
+  bool performLoopLoadSelectPRE(LoadInst *Load);
+
   /// Try to replace a load which executes on each loop iteraiton with Phi
   /// translation of load in preheader and load(s) in conditionally executed
   /// paths.

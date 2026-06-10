@@ -886,20 +886,22 @@ define i32 @test_phi_select_index_loop(ptr %A, i32 %N)  {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[N:%.*]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[DOTPHI:%.*]] = phi i32 [ [[DOTPRE]], [[FOR_BODY_PREHEADER]] ], [ [[DOTNEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[IDX]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[RES]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IDXPROM1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP0]], [[DOTPHI]]
 ; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP1]], i32 [[IDX]], i32 [[RES]]
 ; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[IDX_NEXT]], [[N]]
+; CHECK-NEXT:    [[DOTNEXT]] = select i1 [[CMP1]], i32 [[TMP0]], i32 [[DOTPHI]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       for.cond.cleanup.loopexit:
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
