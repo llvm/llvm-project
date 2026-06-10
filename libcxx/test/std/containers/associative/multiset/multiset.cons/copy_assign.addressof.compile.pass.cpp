@@ -23,4 +23,5 @@ void test() {
   std::multiset<operator_hijacker> so;
   std::multiset<operator_hijacker> s;
   s = so;
+  (void)s;
 }

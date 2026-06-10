@@ -26,4 +26,5 @@
 void test() {
   std::unordered_multiset<operator_hijacker> so;
   std::unordered_multiset<operator_hijacker> s(std::move(so));
+  (void)s;
 }

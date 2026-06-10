@@ -31,6 +31,7 @@ int main(int, char**) {
 
   // Make sure that the allocator isn't rebound to and incomplete type
   std::multimap<int, int, std::less<int>, complete_type_allocator<std::pair<const int, int> > > m;
+  (void)m;
 
   return 0;
 }

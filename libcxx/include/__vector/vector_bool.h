@@ -77,7 +77,7 @@ struct __has_storage_type<vector<bool, _Allocator> > {
 };
 
 template <class _Allocator>
-class vector<bool, _Allocator> {
+class [[__gnu__::__warn_unused__]] vector<bool, _Allocator> {
 public:
   using __self _LIBCPP_NODEBUG         = vector;
   using value_type                     = bool;

@@ -225,6 +225,7 @@ void test_map_exception_safety_throwing_copy() {
 
   try {
     Container<K, V> c(std::from_range, in);
+    (void)c;
     assert(false); // The constructor call above should throw.
 
   } catch (int) {
@@ -246,6 +247,7 @@ void test_map_exception_safety_throwing_allocator() {
     globalMemCounter.reset();
     Container<K, V, test_hash<K>, test_equal_to<K>, ThrowingAllocator<ValueType>> c(
         std::from_range, in, /*n=*/0, alloc);
+    (void)c;
     assert(false); // The constructor call should throw.
 
   } catch (int) {
@@ -417,6 +419,7 @@ void test_set_exception_safety_throwing_copy() {
 
   try {
     Container<T, test_hash<T>> c(std::from_range, in);
+    (void)c;
     assert(false); // The constructor call above should throw.
 
   } catch (int) {
@@ -436,6 +439,7 @@ void test_set_exception_safety_throwing_allocator() {
 
     globalMemCounter.reset();
     Container<T, test_hash<T>, test_equal_to<T>, ThrowingAllocator<T>> c(std::from_range, in, /*n=*/0, alloc);
+    (void)c;
     assert(false); // The constructor call should throw.
 
   } catch (int) {

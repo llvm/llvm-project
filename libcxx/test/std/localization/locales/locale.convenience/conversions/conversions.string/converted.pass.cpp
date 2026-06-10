@@ -41,11 +41,11 @@ void TestHelper<CharT, 2>::test() {
     typedef std::wstring_convert<Codecvt> Myconv;
     Myconv myconv;
     assert(myconv.converted() == 0);
-    std::string bs = myconv.to_bytes(L"\u1005");
+    myconv.to_bytes(L"\u1005");
     assert(myconv.converted() == 1);
-    bs = myconv.to_bytes(L"\u1005e");
+    myconv.to_bytes(L"\u1005e");
     assert(myconv.converted() == 2);
-    std::wstring ws = myconv.from_bytes("\xE1\x80\x85");
+    myconv.from_bytes("\xE1\x80\x85");
     assert(myconv.converted() == 3);
   }
 }
@@ -58,11 +58,11 @@ void TestHelper<CharT, 4>::test() {
     typedef std::wstring_convert<Codecvt> Myconv;
     Myconv myconv;
     assert(myconv.converted() == 0);
-    std::string bs = myconv.to_bytes(L"\U00040003");
+    myconv.to_bytes(L"\U00040003");
     assert(myconv.converted() == 1);
-    bs = myconv.to_bytes(L"\U00040003e");
+    myconv.to_bytes(L"\U00040003e");
     assert(myconv.converted() == 2);
-    std::wstring ws = myconv.from_bytes("\xF1\x80\x80\x83");
+    myconv.from_bytes("\xF1\x80\x80\x83");
     assert(myconv.converted() == 4);
   }
 }

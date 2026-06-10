@@ -573,7 +573,7 @@ template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<
 class multiset;
 
 template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
-class set {
+class [[__gnu__::__warn_unused__]] set {
 public:
   // types:
   typedef _Key key_type;
@@ -1064,7 +1064,7 @@ struct __container_traits<set<_Key, _Compare, _Allocator> > {
 };
 
 template <class _Key, class _Compare, class _Allocator>
-class multiset {
+class [[__gnu__::__warn_unused__]] multiset {
 public:
   // types:
   typedef _Key key_type;

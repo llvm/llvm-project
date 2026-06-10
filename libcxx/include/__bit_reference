@@ -274,7 +274,7 @@ struct __bit_array {
 };
 
 template <class _Cp, bool _IsConst, typename _Cp::__storage_type>
-class __bit_iterator {
+class [[__gnu__::__warn_unused__]] __bit_iterator {
 public:
   using difference_type = typename __size_difference_type_traits<_Cp>::difference_type;
   using value_type      = bool;

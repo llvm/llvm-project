@@ -37,4 +37,5 @@ void test() {
 
   C mo;
   C m(std::move(mo), A());
+  (void)m;
 }

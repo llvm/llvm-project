@@ -214,12 +214,14 @@ int main(int, char**) {
     test_exception_safety_throwing_copy_container<C, ThrowOn, Size>([](C&& in) {
       std::forward_list<T> c;
       c = in;
+      (void)c;
     });
 
     // forward_list& operator=(initializer_list<value_type> il);
     test_exception_safety_throwing_copy<ThrowOn, Size>([&il](T*, T*) {
       std::forward_list<T> c;
       c = il;
+      (void)c;
     });
 
     // template <class InputIterator>

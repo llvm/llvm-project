@@ -802,7 +802,7 @@ struct __specialized_algorithm<
 #endif
 
 template <class _Tp, class _NodePtr, class _DiffType>
-class __tree_const_iterator {
+class [[__gnu__::__warn_unused__]] __tree_const_iterator {
   using _NodeTypes _LIBCPP_NODEBUG = __tree_node_types<_NodePtr>;
   // NOLINTNEXTLINE(libcpp-nodebug-on-aliases) lldb relies on this alias for pretty printing
   using __node_pointer                      = _NodePtr;

@@ -43,6 +43,7 @@ constexpr void test(S orig, typename S::size_type pos, typename S::size_type n, 
   if (!std::is_constant_evaluated()) {
     try {
       S str = std::move(orig).substr(pos, n);
+      (void)str;
       assert(false);
     } catch (const std::out_of_range&) {
     }
