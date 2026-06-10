@@ -376,10 +376,6 @@ public:
   /// Divergence is seeded by calls to \p markDivergent.
   void compute();
 
-  /// \brief Whether \p Val will always return a uniform value regardless of its
-  /// operands
-  bool isAlwaysUniform(const InstructionT &Instr) const;
-
   /// \brief Whether \p V is a value that is always uniform.
   bool isAlwaysUniform(ConstValueRefT V) const;
 
@@ -819,8 +815,9 @@ auto llvm::GenericSyncDependenceAnalysis<ContextT>::getJoinBlocks(
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::markDivergent(
     const InstructionT &I) {
-  if (isAlwaysUniform(I))
-    return;
+  // Always-uniform values are filtered out below by the per-value/per-register
+  // markDivergent(), so there is no need for a separate instruction-level
+  // uniformity check here.
   // For custom uniformity candidates, check if the instruction can be
   // proven uniform based on which operands are uniform/divergent.
   // The candidate will be re-evaluated as operands become divergent.
@@ -1183,12 +1180,6 @@ void GenericUniformityAnalysisImpl<ContextT>::recordTemporalDivergence(
     ConstValueRefT Val, const InstructionT *User, const CycleT *Cycle) {
   TemporalDivergenceList.emplace_back(Val, const_cast<InstructionT *>(User),
                                       Cycle);
-}
-
-template <typename ContextT>
-bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
-    const InstructionT &Instr) const {
-  return isAlwaysUniform(&Instr);
 }
 
 template <typename ContextT>

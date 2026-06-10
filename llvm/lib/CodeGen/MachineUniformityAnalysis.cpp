@@ -48,25 +48,6 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::markDefsDivergent(
 }
 
 template <>
-bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::isAlwaysUniform(
-    const MachineInstr &Instr) const {
-  // An instruction is always uniform only if it has at least one virtual
-  // register def and every virtual def has been overridden uniform. Because
-  // overrides are tracked per def, a multi-def instruction with a mix of
-  // uniform and divergent outputs is not considered always uniform.
-  bool HasVirtualDef = false;
-  for (const MachineOperand &Op : Instr.all_defs()) {
-    Register Reg = Op.getReg();
-    if (!Reg.isVirtual())
-      continue;
-    HasVirtualDef = true;
-    if (!isAlwaysUniform(Reg))
-      return false;
-  }
-  return HasVirtualDef;
-}
-
-template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
   // Pre-populate UniformValues with all register defs. Physical register defs
   // are included because they are never analyzed for divergence (initialize
@@ -83,9 +64,6 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
   }
 
   const TargetInstrInfo &InstrInfo = *F.getSubtarget().getInstrInfo();
-  const MachineRegisterInfo &MRI = F.getRegInfo();
-  const RegisterBankInfo &RBI = *F.getSubtarget().getRegBankInfo();
-  const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();
 
   for (const MachineBasicBlock &MBB : F) {
     for (const MachineInstr &MI : MBB) {
@@ -112,10 +90,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
           addUniformOverride(Reg);
           break;
         case ValueUniformity::NeverUniform:
-          // Inherently uniform registers (e.g. SGPRs) stay uniform even when
-          // the def is reported as a divergence source.
-          if (!TRI.isUniformReg(MRI, RBI, Reg))
-            HasDivergentDef |= markDivergent(Reg);
+          HasDivergentDef |= markDivergent(Reg);
           break;
         case ValueUniformity::Custom:
           break;
@@ -144,7 +119,6 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
 template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     const MachineInstr &Instr) {
-  assert(!isAlwaysUniform(Instr));
   if (Instr.isTerminator())
     return;
   for (const MachineOperand &Op : Instr.all_defs()) {
@@ -157,7 +131,6 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
 template <>
 bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
     const MachineInstr &I, const MachineCycle &DefCycle) const {
-  assert(!isAlwaysUniform(I));
   for (auto &Op : I.operands()) {
     if (!Op.isReg() || !Op.readsReg())
       continue;

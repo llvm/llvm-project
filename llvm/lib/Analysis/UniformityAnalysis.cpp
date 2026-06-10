@@ -43,7 +43,7 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
 template <>
 void llvm::GenericUniformityAnalysisImpl<SSAContext>::pushUsers(
     const Instruction &Instr) {
-  assert(!isAlwaysUniform(Instr));
+  assert(!isAlwaysUniform(cast<Value>(&Instr)));
   if (Instr.isTerminator())
     return;
   pushUsers(cast<Value>(&Instr));
@@ -110,7 +110,7 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
 template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
     const Instruction &I, const Cycle &DefCycle) const {
-  assert(!isAlwaysUniform(I));
+  assert(!isAlwaysUniform(cast<Value>(&I)));
   for (const Use &U : I.operands()) {
     if (auto *I = dyn_cast<Instruction>(&U)) {
       if (DefCycle.contains(I->getParent()))

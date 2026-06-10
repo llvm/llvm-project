@@ -11015,8 +11015,17 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI,
   assert(DefIdx < (unsigned)std::distance(MI.all_defs().begin(),
                                           MI.all_defs().end()) &&
          "DefIdx is out of range for this instruction's defs");
-  assert(std::next(MI.all_defs().begin(), DefIdx)->getReg().isVirtual() &&
+  Register DefReg = std::next(MI.all_defs().begin(), DefIdx)->getReg();
+  assert(DefReg.isVirtual() &&
          "DefIdx must name a virtual register def, not a physical register");
+
+  // A def whose register bank/class forces uniformity (e.g. an SGPR, but not a
+  // lane-mask class) cannot hold a divergent value regardless of the
+  // instruction's semantics. Resolve that here so the generic
+  // MachineUniformityAnalysis seeding stays target-agnostic and does not need
+  // to consult the register bank itself.
+  if (RI.isUniformReg(MI.getMF()->getRegInfo(), *ST.getRegBankInfo(), DefReg))
+    return ValueUniformity::Default;
 
   if (isNeverUniform(MI))
     return ValueUniformity::NeverUniform;
