@@ -14631,10 +14631,13 @@ Semantics:
 
 The '``llvm.va_end``' intrinsic works just like the ``va_end`` macro
 available in C. In a target-dependent way, it destroys the ``va_list``
-element to which the argument points. Calls to
+element to which the argument points. Calls to ``llvm.va_end`` can be
+omitted when they are a no-op for the given target. ``llvm.va_end``
+is a no-op for all currently supported targets.
+
+When used, calls to ``llvm.va_end`` must be matched exactly with calls to
 :ref:`llvm.va_start <int_va_start>` and
-:ref:`llvm.va_copy <int_va_copy>` must be matched exactly with calls to
-``llvm.va_end``.
+:ref:`llvm.va_copy <int_va_copy>`.
 
 .. _int_va_copy:
 
