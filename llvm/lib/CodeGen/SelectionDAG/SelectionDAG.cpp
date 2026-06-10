@@ -2570,8 +2570,8 @@ SDValue SelectionDAG::getFreeze(SDValue V) {
 }
 
 SDValue SelectionDAG::getFreeze(SDValue V, const APInt &DemandedElts,
-                                bool PoisonOnly) {
-  if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, PoisonOnly))
+                                UndefPoisonKind Kind) {
+  if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, Kind))
     return V;
   return getFreeze(V);
 }
@@ -3008,6 +3008,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     return false;
   }
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::TRUNCATE:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
@@ -3669,7 +3670,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     // TODO: SelfMultiply can be poison, but not undef.
     if (SelfMultiply)
       SelfMultiply &= isGuaranteedNotToBeUndefOrPoison(
-          Op.getOperand(0), DemandedElts, false, Depth + 1);
+          Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
+          Depth + 1);
     Known = KnownBits::mul(Known, Known2, SelfMultiply);
 
     // If the multiplication is known not to overflow, the product of a number
@@ -3913,7 +3915,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF: {
+  case ISD::CTTZ_ZERO_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If we have a known 1, its position is our upper bound.
     unsigned PossibleTZ = Known2.countMaxTrailingZeros();
@@ -3922,7 +3924,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF: {
+  case ISD::CTLZ_ZERO_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     // If we have a known 1, its position is our upper bound.
     unsigned PossibleLZ = Known2.countMaxLeadingZeros();
@@ -4158,7 +4160,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known2 = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     bool SelfAdd = Op.getOperand(0) == Op.getOperand(1) &&
                    isGuaranteedNotToBeUndefOrPoison(
-                       Op.getOperand(0), DemandedElts, false, Depth + 1);
+                       Op.getOperand(0), DemandedElts,
+                       UndefPoisonKind::UndefOrPoison, Depth + 1);
     Known = KnownBits::add(Known, Known2, Flags.hasNoSignedWrap(),
                            Flags.hasNoUnsignedWrap(), SelfAdd);
     break;
@@ -4342,7 +4345,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     Known = Known2.byteSwap();
     break;
   }
-  case ISD::ABS: {
+  case ISD::ABS:
+  case ISD::ABS_MIN_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     Known = Known2.abs();
     Known.Zero.setHighBits(
@@ -4935,7 +4939,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return VTBits-Tmp;
   case ISD::FREEZE:
     if (isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
-                                         /*PoisonOnly=*/false))
+                                         UndefPoisonKind::UndefOrPoison))
       return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     break;
   case ISD::MERGE_VALUES:
@@ -5609,19 +5613,20 @@ unsigned SelectionDAG::ComputeMaxSignificantBits(SDValue Op,
   return Op.getScalarValueSizeInBits() - SignBits + 1;
 }
 
-bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op, bool PoisonOnly,
+bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
+                                                    UndefPoisonKind Kind,
                                                     unsigned Depth) const {
   // Early out for FREEZE.
   if (Op.getOpcode() == ISD::FREEZE)
     return true;
 
   APInt DemandedElts = getDemandAllEltsMask(Op);
-  return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts, PoisonOnly, Depth);
+  return isGuaranteedNotToBeUndefOrPoison(Op, DemandedElts, Kind, Depth);
 }
 
 bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
                                                     const APInt &DemandedElts,
-                                                    bool PoisonOnly,
+                                                    UndefPoisonKind Kind,
                                                     unsigned Depth) const {
   unsigned Opcode = Op.getOpcode();
 
@@ -5644,10 +5649,50 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     return true;
 
   case ISD::POISON:
-    return false;
+    return !includesPoison(Kind);
 
   case ISD::UNDEF:
-    return PoisonOnly;
+    return !includesUndef(Kind);
+
+  case ISD::BITCAST: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    EVT DstVT = Op.getValueType();
+
+    if (!SrcVT.isVector() || !DstVT.isVector())
+      return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
+
+    unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+    unsigned DstEltBits = DstVT.getScalarSizeInBits();
+    ElementCount NumSrcElts = SrcVT.getVectorElementCount();
+    [[maybe_unused]] ElementCount NumDstElts = DstVT.getVectorElementCount();
+
+    if (SrcEltBits == DstEltBits)
+      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedElts, Kind,
+                                              Depth + 1);
+
+    if (SrcEltBits < DstEltBits) {
+      if (DstEltBits % SrcEltBits != 0)
+        return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
+
+      assert(NumSrcElts == NumDstElts * (DstEltBits / SrcEltBits) &&
+             "Unexpected vector bitcast");
+      APInt DemandedSrcElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumSrcElts.getKnownMinValue());
+      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
+                                              Depth + 1);
+    }
+
+    if (SrcEltBits % DstEltBits != 0)
+      return isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
+
+    assert(NumDstElts == NumSrcElts * (SrcEltBits / DstEltBits) &&
+           "Unexpected vector bitcast");
+    APInt DemandedSrcElts =
+        APIntOps::ScaleBitMask(DemandedElts, NumSrcElts.getKnownMinValue());
+    return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
+                                            Depth + 1);
+  }
 
   case ISD::BUILD_VECTOR:
     // NOTE: BUILD_VECTOR has implicit truncation of wider scalar elements -
@@ -5655,11 +5700,28 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     for (unsigned i = 0, e = Op.getNumOperands(); i < e; ++i) {
       if (!DemandedElts[i])
         continue;
-      if (!isGuaranteedNotToBeUndefOrPoison(Op.getOperand(i), PoisonOnly,
-                                            Depth + 1))
+      if (!isGuaranteedNotToBeUndefOrPoison(Op.getOperand(i), Kind, Depth + 1))
         return false;
     }
     return true;
+
+  case ISD::CONCAT_VECTORS: {
+    EVT VT = Op.getValueType();
+    if (!VT.isFixedLengthVector())
+      break;
+
+    EVT SubVT = Op.getOperand(0).getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+    for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I) {
+      APInt DemandedSubElts =
+          DemandedElts.extractBits(NumSubElts, I * NumSubElts);
+      if (!!DemandedSubElts &&
+          !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(I), DemandedSubElts,
+                                            Kind, Depth + 1))
+        return false;
+    }
+    return true;
+  }
 
   case ISD::EXTRACT_SUBVECTOR: {
     SDValue Src = Op.getOperand(0);
@@ -5668,7 +5730,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     uint64_t Idx = Op.getConstantOperandVal(1);
     unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
     APInt DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
-    return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, PoisonOnly,
+    return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
                                             Depth + 1);
   }
 
@@ -5684,10 +5746,10 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
 
     if (!!DemandedSubElts && !isGuaranteedNotToBeUndefOrPoison(
-                                 Sub, DemandedSubElts, PoisonOnly, Depth + 1))
+                                 Sub, DemandedSubElts, Kind, Depth + 1))
       return false;
     if (!!DemandedSrcElts && !isGuaranteedNotToBeUndefOrPoison(
-                                 Src, DemandedSrcElts, PoisonOnly, Depth + 1))
+                                 Src, DemandedSrcElts, Kind, Depth + 1))
       return false;
     return true;
   }
@@ -5700,7 +5762,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
         IndexC->getAPIntValue().ult(SrcVT.getVectorNumElements())) {
       APInt DemandedSrcElts = APInt::getOneBitSet(SrcVT.getVectorNumElements(),
                                                   IndexC->getZExtValue());
-      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, PoisonOnly,
+      return isGuaranteedNotToBeUndefOrPoison(Src, DemandedSrcElts, Kind,
                                               Depth + 1);
     }
     break;
@@ -5715,14 +5777,14 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     if (IndexC && VT.isFixedLengthVector() &&
         IndexC->getAPIntValue().ult(VT.getVectorNumElements())) {
       if (DemandedElts[IndexC->getZExtValue()] &&
-          !isGuaranteedNotToBeUndefOrPoison(InVal, PoisonOnly, Depth + 1))
+          !isGuaranteedNotToBeUndefOrPoison(InVal, Kind, Depth + 1))
         return false;
       APInt InVecDemandedElts = DemandedElts;
       InVecDemandedElts.clearBit(IndexC->getZExtValue());
       if (!!InVecDemandedElts &&
           !isGuaranteedNotToBeUndefOrPoison(
               peekThroughInsertVectorElt(InVec, InVecDemandedElts),
-              InVecDemandedElts, PoisonOnly, Depth + 1))
+              InVecDemandedElts, Kind, Depth + 1))
         return false;
       return true;
     }
@@ -5731,17 +5793,27 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
 
   case ISD::SCALAR_TO_VECTOR:
     // Check upper (known undef) elements.
-    if (DemandedElts.ugt(1) && !PoisonOnly)
+    if (DemandedElts.ugt(1) && includesUndef(Kind))
       return false;
     // Check element zero.
-    if (DemandedElts[0] && !isGuaranteedNotToBeUndefOrPoison(
-                               Op.getOperand(0), PoisonOnly, Depth + 1))
+    if (DemandedElts[0] &&
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind, Depth + 1))
       return false;
     return true;
 
   case ISD::SPLAT_VECTOR:
-    return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), PoisonOnly,
-                                            Depth + 1);
+    return isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind, Depth + 1);
+
+  case ISD::SELECT: {
+    return !canCreateUndefOrPoison(Op, DemandedElts, Kind,
+                                   /*ConsiderFlags*/ true, Depth) &&
+           isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), Kind,
+                                            Depth + 1) &&
+           isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedElts,
+                                            Kind, Depth + 1) &&
+           isGuaranteedNotToBeUndefOrPoison(Op.getOperand(2), DemandedElts,
+                                            Kind, Depth + 1);
+  }
 
   case ISD::VECTOR_SHUFFLE: {
     APInt DemandedLHS, DemandedRHS;
@@ -5751,12 +5823,12 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
                                 /*AllowUndefElts=*/false))
       return false;
     if (!DemandedLHS.isZero() &&
-        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS,
-                                          PoisonOnly, Depth + 1))
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedLHS, Kind,
+                                          Depth + 1))
       return false;
     if (!DemandedRHS.isZero() &&
-        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS,
-                                          PoisonOnly, Depth + 1))
+        !isGuaranteedNotToBeUndefOrPoison(Op.getOperand(1), DemandedRHS, Kind,
+                                          Depth + 1))
       return false;
     return true;
   }
@@ -5766,10 +5838,10 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   case ISD::SRA:
     // Shift amount operand is checked by canCreateUndefOrPoison. So it is
     // enough to check operand 0 if Op can't create undef/poison.
-    return !canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly,
+    return !canCreateUndefOrPoison(Op, DemandedElts, Kind,
                                    /*ConsiderFlags*/ true, Depth) &&
            isGuaranteedNotToBeUndefOrPoison(Op.getOperand(0), DemandedElts,
-                                            PoisonOnly, Depth + 1);
+                                            Kind, Depth + 1);
 
   case ISD::BSWAP:
   case ISD::CTPOP:
@@ -5799,11 +5871,11 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     // then Op is never undef/poison. A difference from the more common check
     // below, outside the switch, is that we handle elementwise operations for
     // which the DemandedElts mask is valid for all operands here.
-    return !canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly,
+    return !canCreateUndefOrPoison(Op, DemandedElts, Kind,
                                    /*ConsiderFlags*/ true, Depth) &&
            all_of(Op->ops(), [&](SDValue V) {
-             return isGuaranteedNotToBeUndefOrPoison(V, DemandedElts,
-                                                     PoisonOnly, Depth + 1);
+             return isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, Kind,
+                                                     Depth + 1);
            });
   }
 
@@ -5816,7 +5888,7 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
       return TLI->isGuaranteedNotToBeUndefOrPoisonForTargetNode(
-          Op, DemandedElts, *this, PoisonOnly, Depth);
+          Op, DemandedElts, *this, Kind, Depth);
     break;
   }
 
@@ -5825,25 +5897,24 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   // NOTE: TargetNodes can handle this in themselves in
   // isGuaranteedNotToBeUndefOrPoisonForTargetNode or let
   // TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode handle it.
-  return !canCreateUndefOrPoison(Op, PoisonOnly, /*ConsiderFlags*/ true,
-                                 Depth) &&
+  return !canCreateUndefOrPoison(Op, Kind, /*ConsiderFlags*/ true, Depth) &&
          all_of(Op->ops(), [&](SDValue V) {
-           return isGuaranteedNotToBeUndefOrPoison(V, PoisonOnly, Depth + 1);
+           return isGuaranteedNotToBeUndefOrPoison(V, Kind, Depth + 1);
          });
 }
 
-bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, bool PoisonOnly,
+bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, UndefPoisonKind Kind,
                                           bool ConsiderFlags,
                                           unsigned Depth) const {
   APInt DemandedElts = getDemandAllEltsMask(Op);
-  return canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly, ConsiderFlags,
-                                Depth);
+  return canCreateUndefOrPoison(Op, DemandedElts, Kind, ConsiderFlags, Depth);
 }
 
 bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
-                                          bool PoisonOnly, bool ConsiderFlags,
+                                          UndefPoisonKind Kind,
+                                          bool ConsiderFlags,
                                           unsigned Depth) const {
-  if (ConsiderFlags && Op->hasPoisonGeneratingFlags())
+  if (ConsiderFlags && includesPoison(Kind) && Op->hasPoisonGeneratingFlags())
     return true;
 
   unsigned Opcode = Op.getOpcode();
@@ -5853,7 +5924,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::AssertAlign:
   case ISD::AssertNoFPClass:
     // Assertion nodes can create poison if the assertion fails.
-    return true;
+    return includesPoison(Kind);
 
   case ISD::FREEZE:
   case ISD::CONCAT_VECTORS:
@@ -5900,12 +5971,22 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_PAIR:
   case ISD::SPLAT_VECTOR:
   case ISD::FABS:
+  case ISD::FCEIL:
+  case ISD::FFLOOR:
+  case ISD::FTRUNC:
+  case ISD::FRINT:
+  case ISD::FNEARBYINT:
+  case ISD::FROUND:
+  case ISD::FROUNDEVEN:
     return false;
 
   case ISD::ABS:
     // ISD::ABS defines abs(INT_MIN) -> INT_MIN and never generates poison.
     // Different to Intrinsic::abs.
     return false;
+  case ISD::ABS_MIN_POISON:
+    // ABS_MIN_POISON may produce poison if the input is INT_MIN.
+    return ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1) <= 1;
 
   case ISD::ADDC:
   case ISD::SUBC:
@@ -5957,6 +6038,14 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FMAD:
   case ISD::FMULADD:
   case ISD::FP_EXTEND:
+  case ISD::FMINNUM:
+  case ISD::FMAXNUM:
+  case ISD::FMINNUM_IEEE:
+  case ISD::FMAXNUM_IEEE:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUMNUM:
+  case ISD::FMAXIMUMNUM:
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::TRUNCATE_SSAT_S:
@@ -5970,25 +6059,30 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::SRA:
     // If the max shift amount isn't in range, then the shift can
     // create poison.
-    return !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
+    return includesPoison(Kind) &&
+           !getValidMaximumShiftAmount(Op, DemandedElts, Depth + 1);
 
-  case ISD::CTTZ_ZERO_UNDEF:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
+  case ISD::CTLZ_ZERO_POISON:
     // If the amount is zero then the result will be poison.
     // TODO: Add isKnownNeverZero DemandedElts handling.
-    return !isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    return includesPoison(Kind) &&
+           !isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::SCALAR_TO_VECTOR:
     // Check if we demand any upper (undef) elements.
-    return !PoisonOnly && DemandedElts.ugt(1);
+    return includesUndef(Kind) && DemandedElts.ugt(1);
 
   case ISD::INSERT_VECTOR_ELT:
   case ISD::EXTRACT_VECTOR_ELT: {
     // Ensure that the element index is in bounds.
-    EVT VecVT = Op.getOperand(0).getValueType();
-    SDValue Idx = Op.getOperand(Opcode == ISD::INSERT_VECTOR_ELT ? 2 : 1);
-    KnownBits KnownIdx = computeKnownBits(Idx, Depth + 1);
-    return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+    if (includesPoison(Kind)) {
+      EVT VecVT = Op.getOperand(0).getValueType();
+      SDValue Idx = Op.getOperand(Opcode == ISD::INSERT_VECTOR_ELT ? 2 : 1);
+      KnownBits KnownIdx = computeKnownBits(Idx, Depth + 1);
+      return KnownIdx.getMaxValue().uge(VecVT.getVectorMinNumElements());
+    }
+    return false;
   }
 
   case ISD::VECTOR_SHUFFLE: {
@@ -6008,7 +6102,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
         Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
       return TLI->canCreateUndefOrPoisonForTargetNode(
-          Op, DemandedElts, *this, PoisonOnly, ConsiderFlags, Depth);
+          Op, DemandedElts, *this, Kind, ConsiderFlags, Depth);
     break;
   }
 
@@ -6157,6 +6251,50 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
     FPClassTest AssertedClasses =
         static_cast<FPClassTest>(Op->getConstantOperandVal(1));
     Known.KnownFPClasses &= ~AssertedClasses;
+    break;
+  }
+  case ISD::EXTRACT_SUBVECTOR: {
+    SDValue Src = Op.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (SrcVT.isFixedLengthVector()) {
+      unsigned Idx = Op.getConstantOperandVal(1);
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+
+      APInt DemandedSrcElts = DemandedElts.zextOrTrunc(NumSrcElts).shl(Idx);
+      Known = computeKnownFPClass(Src, DemandedSrcElts, InterestedClasses,
+                                  Depth + 1);
+    } else {
+      Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
+    }
+    break;
+  }
+  case ISD::INSERT_SUBVECTOR: {
+    SDValue BaseVector = Op.getOperand(0);
+    SDValue SubVector = Op.getOperand(1);
+    EVT BaseVT = BaseVector.getValueType();
+    if (BaseVT.isFixedLengthVector()) {
+      unsigned Idx = Op.getConstantOperandVal(2);
+      unsigned NumBaseElts = BaseVT.getVectorNumElements();
+      unsigned NumSubElts = SubVector.getValueType().getVectorNumElements();
+
+      APInt DemandedMask =
+          APInt::getBitsSet(NumBaseElts, Idx, Idx + NumSubElts);
+      APInt DemandedSrcElts = DemandedElts & ~DemandedMask;
+      APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
+
+      if (!DemandedSrcElts.isZero())
+        Known = computeKnownFPClass(BaseVector, DemandedSrcElts,
+                                    InterestedClasses, Depth + 1);
+      if (!DemandedSubElts.isZero()) {
+        KnownFPClass SubKnown = computeKnownFPClass(
+            SubVector, DemandedSubElts, InterestedClasses, Depth + 1);
+        Known = DemandedSrcElts.isZero() ? SubKnown : (Known | SubKnown);
+      }
+    } else {
+      Known = computeKnownFPClass(SubVector, InterestedClasses, Depth + 1);
+      if (!Known.isUnknown())
+        Known |= computeKnownFPClass(BaseVector, InterestedClasses, Depth + 1);
+    }
     break;
   }
   case ISD::SELECT:
@@ -6563,6 +6701,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   case ISD::BSWAP:
   case ISD::CTPOP:
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
 
   case ISD::SRA:
@@ -6586,7 +6725,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     // div exact can only produce a zero if the dividend is zero.
     // TODO: For udiv this is also true if Op1 u<= Op0
     if (Op->getFlags().hasExact())
-      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+      return isKnownNeverZero(Op.getOperand(0), DemandedElts, Depth + 1);
     break;
 
   case ISD::ADD:
@@ -6628,7 +6767,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   }
   }
 
-  return computeKnownBits(Op, Depth).isNonZero();
+  return computeKnownBits(Op, DemandedElts, Depth).isNonZero();
 }
 
 bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
@@ -6959,12 +7098,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::BF16_TO_FP:
   case ISD::BITCAST:
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::BITREVERSE:
   case ISD::BSWAP:
   case ISD::CTLZ:
-  case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTLZ_ZERO_POISON:
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
+  case ISD::CTTZ_ZERO_POISON:
   case ISD::CTPOP:
   case ISD::CTLS:
   case ISD::STEP_VECTOR: {
@@ -6985,7 +7125,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::FREEZE:
     assert(VT == N1.getValueType() && "Unexpected VT!");
-    if (isGuaranteedNotToBeUndefOrPoison(N1, /*PoisonOnly=*/false))
+    if (isGuaranteedNotToBeUndefOrPoison(N1, UndefPoisonKind::UndefOrPoison))
       return N1;
     break;
   case ISD::TokenFactor:
@@ -7185,6 +7325,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::ABS:
     assert(VT.isInteger() && VT == N1.getValueType() && "Invalid ABS!");
+    if (N1.isUndef())
+      return getConstant(0, DL, VT);
+    break;
+  case ISD::ABS_MIN_POISON:
+    assert(VT.isInteger() && VT == N1.getValueType() &&
+           "Invalid ABS_MIN_POISON!");
     if (N1.isUndef())
       return getConstant(0, DL, VT);
     break;
@@ -7489,6 +7635,11 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       case ISD::ABS:
         return getConstant(Val.abs(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
+      case ISD::ABS_MIN_POISON:
+        if (Val.isMinSignedValue())
+          return getPOISON(VT);
+        return getConstant(Val.abs(), DL, VT, C->isTargetOpcode(),
+                           C->isOpaque());
       case ISD::BITREVERSE:
         return getConstant(Val.reverseBits(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
@@ -7499,11 +7650,11 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
         return getConstant(Val.popcount(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTLZ:
-      case ISD::CTLZ_ZERO_UNDEF:
+      case ISD::CTLZ_ZERO_POISON:
         return getConstant(Val.countl_zero(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTTZ:
-      case ISD::CTTZ_ZERO_UNDEF:
+      case ISD::CTTZ_ZERO_POISON:
         return getConstant(Val.countr_zero(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
       case ISD::CTLS:
@@ -9173,11 +9324,13 @@ static void chainLoadsAndStoresForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
   }
 }
 
-static SDValue getMemcpyLoadsAndStores(
-    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    uint64_t Size, Align Alignment, bool isVol, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
-    const AAMDNodes &AAInfo, BatchAAResults *BatchAA) {
+static SDValue
+getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                        SDValue Dst, SDValue Src, uint64_t Size, Align DstAlign,
+                        Align SrcAlign, bool isVol, bool AlwaysInline,
+                        MachinePointerInfo DstPtrInfo,
+                        MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo,
+                        BatchAAResults *BatchAA) {
   // Turn a memcpy of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
   if (Src.isUndef())
@@ -9198,20 +9351,17 @@ static SDValue getMemcpyLoadsAndStores(
   FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Dst);
   if (FI && !MFI.isFixedObjectIndex(FI->getIndex()))
     DstAlignCanChange = true;
-  MaybeAlign SrcAlign = DAG.InferPtrAlign(Src);
-  if (!SrcAlign || Alignment > *SrcAlign)
-    SrcAlign = Alignment;
-  assert(SrcAlign && "SrcAlign must be set");
+  SrcAlign = std::max(SrcAlign, DAG.InferPtrAlign(Src).valueOrOne());
   ConstantDataArraySlice Slice;
   // If marked as volatile, perform a copy even when marked as constant.
   bool CopyFromConstant = !isVol && isMemSrcFromConstant(Src, Slice);
   bool isZeroConstant = CopyFromConstant && Slice.Array == nullptr;
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemcpy(OptSize);
   const MemOp Op = isZeroConstant
-                       ? MemOp::Set(Size, DstAlignCanChange, Alignment,
+                       ? MemOp::Set(Size, DstAlignCanChange, DstAlign,
                                     /*IsZeroMemset*/ true, isVol)
-                       : MemOp::Copy(Size, DstAlignCanChange, Alignment,
-                                     *SrcAlign, isVol, CopyFromConstant);
+                       : MemOp::Copy(Size, DstAlignCanChange, DstAlign,
+                                     SrcAlign, isVol, CopyFromConstant);
   if (!TLI.findOptimalMemOpLowering(
           C, MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
           SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes(), nullptr))
@@ -9219,7 +9369,7 @@ static SDValue getMemcpyLoadsAndStores(
 
   if (DstAlignCanChange) {
     Type *Ty = MemOps[0].getTypeForEVT(C);
-    Align NewAlign = DL.getABITypeAlign(Ty);
+    Align NewDstAlign = DL.getABITypeAlign(Ty);
 
     // Don't promote to an alignment that would require dynamic stack
     // realignment which may conflict with optimizations such as tail call
@@ -9227,13 +9377,13 @@ static SDValue getMemcpyLoadsAndStores(
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
       if (MaybeAlign StackAlign = DL.getStackAlignment())
-        NewAlign = std::min(NewAlign, *StackAlign);
+        NewDstAlign = std::min(NewDstAlign, *StackAlign);
 
-    if (NewAlign > Alignment) {
+    if (NewDstAlign > DstAlign) {
       // Give the stack frame object a larger alignment if needed.
-      if (MFI.getObjectAlign(FI->getIndex()) < NewAlign)
-        MFI.setObjectAlignment(FI->getIndex(), NewAlign);
-      Alignment = NewAlign;
+      if (MFI.getObjectAlign(FI->getIndex()) < NewDstAlign)
+        MFI.setObjectAlignment(FI->getIndex(), NewDstAlign);
+      DstAlign = NewDstAlign;
     }
   }
 
@@ -9288,7 +9438,7 @@ static SDValue getMemcpyLoadsAndStores(
         Store = DAG.getStore(
             Chain, dl, Value,
             DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-            DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
+            DstPtrInfo.getWithOffset(DstOff), DstAlign, MMOFlags, NewAAInfo);
         OutChains.push_back(Store);
       }
     }
@@ -9314,13 +9464,13 @@ static SDValue getMemcpyLoadsAndStores(
           ISD::EXTLOAD, dl, NVT, Chain,
           DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
           SrcPtrInfo.getWithOffset(SrcOff), VT,
-          commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
+          commonAlignment(SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
       OutLoadChains.push_back(Value.getValue(1));
 
       Store = DAG.getTruncStore(
           Chain, dl, Value,
           DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-          DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
+          DstPtrInfo.getWithOffset(DstOff), VT, DstAlign, MMOFlags, NewAAInfo);
       OutStoreChains.push_back(Store);
     }
     SrcOff += VTSize;
@@ -9374,13 +9524,11 @@ static SDValue getMemcpyLoadsAndStores(
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 }
 
-static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
-                                        SDValue Chain, SDValue Dst, SDValue Src,
-                                        uint64_t Size, Align Alignment,
-                                        bool isVol, bool AlwaysInline,
-                                        MachinePointerInfo DstPtrInfo,
-                                        MachinePointerInfo SrcPtrInfo,
-                                        const AAMDNodes &AAInfo) {
+static SDValue getMemmoveLoadsAndStores(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
+    uint64_t Size, Align DstAlign, Align SrcAlign, bool isVol,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo) {
   // Turn a memmove of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
   if (Src.isUndef())
@@ -9399,21 +9547,18 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Dst);
   if (FI && !MFI.isFixedObjectIndex(FI->getIndex()))
     DstAlignCanChange = true;
-  MaybeAlign SrcAlign = DAG.InferPtrAlign(Src);
-  if (!SrcAlign || Alignment > *SrcAlign)
-    SrcAlign = Alignment;
-  assert(SrcAlign && "SrcAlign must be set");
+  SrcAlign = std::max(SrcAlign, DAG.InferPtrAlign(Src).valueOrOne());
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemmove(OptSize);
   if (!TLI.findOptimalMemOpLowering(
           C, MemOps, Limit,
-          MemOp::Copy(Size, DstAlignCanChange, Alignment, *SrcAlign, isVol),
+          MemOp::Copy(Size, DstAlignCanChange, DstAlign, SrcAlign, isVol),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
           MF.getFunction().getAttributes(), nullptr))
     return SDValue();
 
   if (DstAlignCanChange) {
     Type *Ty = MemOps[0].getTypeForEVT(C);
-    Align NewAlign = DL.getABITypeAlign(Ty);
+    Align NewDstAlign = DL.getABITypeAlign(Ty);
 
     // Don't promote to an alignment that would require dynamic stack
     // realignment which may conflict with optimizations such as tail call
@@ -9421,13 +9566,13 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
     if (!TRI->hasStackRealignment(MF))
       if (MaybeAlign StackAlign = DL.getStackAlignment())
-        NewAlign = std::min(NewAlign, *StackAlign);
+        NewDstAlign = std::min(NewDstAlign, *StackAlign);
 
-    if (NewAlign > Alignment) {
+    if (NewDstAlign > DstAlign) {
       // Give the stack frame object a larger alignment if needed.
-      if (MFI.getObjectAlign(FI->getIndex()) < NewAlign)
-        MFI.setObjectAlignment(FI->getIndex(), NewAlign);
-      Alignment = NewAlign;
+      if (MFI.getObjectAlign(FI->getIndex()) < NewDstAlign)
+        MFI.setObjectAlignment(FI->getIndex(), NewDstAlign);
+      DstAlign = NewDstAlign;
     }
   }
 
@@ -9458,7 +9603,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     // Calculate the actual alignment at the current offset. The alignment at
     // SrcOff may be lower than the base alignment, especially when using
     // overlapping loads.
-    Align SrcAlignAtOffset = commonAlignment(*SrcAlign, SrcOff);
+    Align SrcAlignAtOffset = commonAlignment(SrcAlign, SrcOff);
     if (IsOverlapping) {
       // Verify that the target allows misaligned memory accesses at the
       // adjusted offset when using overlapping loads.
@@ -9506,7 +9651,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
     // Calculate the actual alignment at the current offset. The alignment at
     // DstOff may be lower than the base alignment, especially when using
     // overlapping stores.
-    Align DstAlignAtOffset = commonAlignment(Alignment, DstOff);
+    Align DstAlignAtOffset = commonAlignment(DstAlign, DstOff);
     if (IsOverlapping) {
       // Verify that the target allows misaligned memory accesses at the
       // adjusted offset when using overlapping stores.
@@ -9805,10 +9950,10 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrlen(SDValue Chain,
 
 SDValue SelectionDAG::getMemcpy(
     SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src, SDValue Size,
-    Align Alignment, bool isVol, bool AlwaysInline, const CallInst *CI,
-    std::optional<bool> OverrideTailCall, MachinePointerInfo DstPtrInfo,
-    MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo,
-    BatchAAResults *BatchAA) {
+    Align DstAlign, Align SrcAlign, bool isVol, bool AlwaysInline,
+    const CallInst *CI, std::optional<bool> OverrideTailCall,
+    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
+    const AAMDNodes &AAInfo, BatchAAResults *BatchAA) {
   // Check to see if we should lower the memcpy to loads and stores first.
   // For cases within the target-specified limits, this is the best choice.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
@@ -9818,8 +9963,8 @@ SDValue SelectionDAG::getMemcpy(
       return Chain;
 
     SDValue Result = getMemcpyLoadsAndStores(
-        *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), Alignment,
-        isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
+        *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), DstAlign,
+        SrcAlign, isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
     if (Result.getNode())
       return Result;
   }
@@ -9828,8 +9973,8 @@ SDValue SelectionDAG::getMemcpy(
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
     SDValue Result = TSI->EmitTargetCodeForMemcpy(
-        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline,
-        DstPtrInfo, SrcPtrInfo);
+        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol,
+        AlwaysInline, DstPtrInfo, SrcPtrInfo);
     if (Result.getNode())
       return Result;
   }
@@ -9839,8 +9984,8 @@ SDValue SelectionDAG::getMemcpy(
   if (AlwaysInline) {
     assert(ConstantSize && "AlwaysInline requires a constant size!");
     return getMemcpyLoadsAndStores(
-        *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), Alignment,
-        isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
+        *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), DstAlign,
+        SrcAlign, isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
   }
 
   checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());
@@ -9919,8 +10064,8 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
 }
 
 SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
-                                 SDValue Src, SDValue Size, Align Alignment,
-                                 bool isVol, const CallInst *CI,
+                                 SDValue Src, SDValue Size, Align DstAlign,
+                                 Align SrcAlign, bool isVol, const CallInst *CI,
                                  std::optional<bool> OverrideTailCall,
                                  MachinePointerInfo DstPtrInfo,
                                  MachinePointerInfo SrcPtrInfo,
@@ -9935,8 +10080,8 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
       return Chain;
 
     SDValue Result = getMemmoveLoadsAndStores(
-        *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), Alignment,
-        isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo);
+        *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), DstAlign,
+        SrcAlign, isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo);
     if (Result.getNode())
       return Result;
   }
@@ -9944,9 +10089,9 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memmove with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
-    SDValue Result =
-        TSI->EmitTargetCodeForMemmove(*this, dl, Chain, Dst, Src, Size,
-                                      Alignment, isVol, DstPtrInfo, SrcPtrInfo);
+    SDValue Result = TSI->EmitTargetCodeForMemmove(
+        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, DstPtrInfo,
+        SrcPtrInfo);
     if (Result.getNode())
       return Result;
   }
@@ -13500,38 +13645,48 @@ bool llvm::isMinSignedConstant(SDValue V) {
   return Const != nullptr && Const->isMinSignedValue();
 }
 
-bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
-                             unsigned OperandNo) {
+bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
+                                     SDValue V, unsigned OperandNo,
+                                     unsigned Depth) const {
+  APInt DemandedElts = getDemandAllEltsMask(V);
+  return isIdentityElement(Opcode, Flags, V, DemandedElts, OperandNo, Depth);
+}
+
+bool SelectionDAG::isIdentityElement(unsigned Opcode, SDNodeFlags Flags,
+                                     SDValue V, const APInt &DemandedElts,
+                                     unsigned OperandNo, unsigned Depth) const {
   // NOTE: The cases should match with IR's ConstantExpr::getBinOpIdentity().
   // TODO: Target-specific opcodes could be added.
-  if (auto *ConstV = isConstOrConstSplat(V, /*AllowUndefs*/ false,
-                                         /*AllowTruncation*/ true)) {
-    APInt Const = ConstV->getAPIntValue().trunc(V.getScalarValueSizeInBits());
-    switch (Opcode) {
-    case ISD::ADD:
-    case ISD::OR:
-    case ISD::XOR:
-    case ISD::UMAX:
-      return Const.isZero();
-    case ISD::MUL:
-      return Const.isOne();
-    case ISD::AND:
-    case ISD::UMIN:
-      return Const.isAllOnes();
-    case ISD::SMAX:
-      return Const.isMinSignedValue();
-    case ISD::SMIN:
-      return Const.isMaxSignedValue();
-    case ISD::SUB:
-    case ISD::SHL:
-    case ISD::SRA:
-    case ISD::SRL:
-      return OperandNo == 1 && Const.isZero();
-    case ISD::UDIV:
-    case ISD::SDIV:
-      return OperandNo == 1 && Const.isOne();
+  if (V.getValueType().isInteger()) {
+    KnownBits Known = computeKnownBits(V, DemandedElts, Depth);
+    if (Known.isConstant()) {
+      const APInt &Const = Known.getConstant();
+      switch (Opcode) {
+      case ISD::ADD:
+      case ISD::OR:
+      case ISD::XOR:
+      case ISD::UMAX:
+        return Const.isZero();
+      case ISD::MUL:
+        return Const.isOne();
+      case ISD::AND:
+      case ISD::UMIN:
+        return Const.isAllOnes();
+      case ISD::SMAX:
+        return Const.isMinSignedValue();
+      case ISD::SMIN:
+        return Const.isMaxSignedValue();
+      case ISD::SUB:
+      case ISD::SHL:
+      case ISD::SRA:
+      case ISD::SRL:
+        return OperandNo == 1 && Const.isZero();
+      case ISD::UDIV:
+      case ISD::SDIV:
+        return OperandNo == 1 && Const.isOne();
+      }
     }
-  } else if (auto *ConstFP = isConstOrConstSplatFP(V)) {
+  } else if (auto *ConstFP = isConstOrConstSplatFP(V, DemandedElts)) {
     switch (Opcode) {
     case ISD::FADD:
       return ConstFP->isZero() &&
@@ -13548,11 +13703,9 @@ bool llvm::isNeutralConstant(unsigned Opcode, SDNodeFlags Flags, SDValue V,
       // Neutral element for fminnum is NaN, Inf or FLT_MAX, depending on FMF.
       EVT VT = V.getValueType();
       const fltSemantics &Semantics = VT.getFltSemantics();
-      APFloat NeutralAF = !Flags.hasNoNaNs()
-                              ? APFloat::getQNaN(Semantics)
-                              : !Flags.hasNoInfs()
-                                    ? APFloat::getInf(Semantics)
-                                    : APFloat::getLargest(Semantics);
+      APFloat NeutralAF = !Flags.hasNoNaNs()   ? APFloat::getQNaN(Semantics)
+                          : !Flags.hasNoInfs() ? APFloat::getInf(Semantics)
+                                               : APFloat::getLargest(Semantics);
       if (Opcode == ISD::FMAXNUM)
         NeutralAF.changeSign();
 
@@ -13705,8 +13858,9 @@ bool llvm::isOneOrOneSplatFP(SDValue N, bool AllowUndefs) {
 bool llvm::isAllOnesOrAllOnesSplat(SDValue N, bool AllowUndefs) {
   N = peekThroughBitcasts(N);
   unsigned BitWidth = N.getScalarValueSizeInBits();
-  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
-  return C && C->isAllOnes() && C->getValueSizeInBits(0) == BitWidth;
+  ConstantSDNode *C =
+      isConstOrConstSplat(N, AllowUndefs, /*AllowTruncation=*/true);
+  return C && C->getAPIntValue().countTrailingOnes() >= BitWidth;
 }
 
 bool llvm::isOnesOrOnesSplat(SDValue N, bool AllowUndefs) {
@@ -14310,8 +14464,7 @@ SelectionDAG::SplitVector(const SDValue &N, const SDLoc &DL, const EVT &LoVT,
   // (rather than having to use ElementCount), because EXTRACT_SUBVECTOR scales
   // IDX with the runtime scaling factor of the result vector type. For
   // fixed-width result vectors, that runtime scaling factor is 1.
-  Hi = getNode(ISD::EXTRACT_SUBVECTOR, DL, HiVT, N,
-               getVectorIdxConstant(LoVT.getVectorMinNumElements(), DL));
+  Hi = getExtractSubvector(DL, HiVT, N, LoVT.getVectorMinNumElements());
   return std::make_pair(Lo, Hi);
 }
 
@@ -14862,8 +15015,8 @@ SDValue SelectionDAG::getTokenFactor(const SDLoc &DL,
   return getNode(ISD::TokenFactor, DL, MVT::Other, Vals);
 }
 
-SDValue SelectionDAG::getNeutralElement(unsigned Opcode, const SDLoc &DL,
-                                        EVT VT, SDNodeFlags Flags) {
+SDValue SelectionDAG::getIdentityElement(unsigned Opcode, const SDLoc &DL,
+                                         EVT VT, SDNodeFlags Flags) {
   switch (Opcode) {
   default:
     return SDValue();

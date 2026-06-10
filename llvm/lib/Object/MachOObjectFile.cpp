@@ -2847,7 +2847,7 @@ Triple MachOObjectFile::getArchTriple(uint32_t CPUType, uint32_t CPUSubType,
       return Triple("thumbv8m-apple-darwin");
     case MachO::CPU_SUBTYPE_ARM_V8M_MAIN:
       if (McpuDefault)
-        *McpuDefault = "cortex-m23";
+        *McpuDefault = "cortex-m33";
       if (ArchFlag)
         *ArchFlag = "armv8m.main";
       return Triple("thumbv8m-apple-darwin");
@@ -5360,7 +5360,7 @@ bool MachOObjectFile::is64Bit() const {
 
 void MachOObjectFile::ReadULEB128s(uint64_t Index,
                                    SmallVectorImpl<uint64_t> &Out) const {
-  DataExtractor extractor(ObjectFile::getData(), true, 0);
+  DataExtractor extractor(ObjectFile::getData(), true);
 
   uint64_t offset = Index;
   uint64_t data = 0;

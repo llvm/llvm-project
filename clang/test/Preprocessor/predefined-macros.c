@@ -238,6 +238,13 @@
 // CHECK-SPIRV64-NOT: #define __SPIRV32__ 1
 // CHECK-SPIRV64-NOT: #define __spirv__ 1
 
+// RUN: %clang_cc1 %s -E -dM -o - -x c -triple spirv64-unknown-vulkan \
+// RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64-VULKAN
+// CHECK-SPIRV64-VULKAN-DAG: #define __SPIRV__ 1
+// CHECK-SPIRV64-VULKAN-DAG: #define __SPIRV64__ 1
+// CHECK-SPIRV64-VULKAN-DAG: #define __VULKAN__ 1
+// CHECK-SPIRV64-VULKAN-NOT: #define __SPIRV32__ 1
+
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-amd-amdhsa \
 // RUN:   | FileCheck -match-full-lines %s --check-prefix=CHECK-SPIRV64-AMDGCN
 // RUN: %clang_cc1 %s -E -dM -o - -x cl -triple spirv64-amd-amdhsa -fatomic-ignore-denormal-mode \

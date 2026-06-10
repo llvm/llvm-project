@@ -71,30 +71,86 @@ CIRGenFunction::emitRISCVBuiltinExpr(unsigned builtinID, const CallExpr *e) {
 
   // Zbkx
   case RISCV::BI__builtin_riscv_xperm4_32:
-  case RISCV::BI__builtin_riscv_xperm4_64:
+  case RISCV::BI__builtin_riscv_xperm4_64: {
+    intrinsicName = "riscv.xperm4";
+    break;
+  }
   case RISCV::BI__builtin_riscv_xperm8_32:
-  case RISCV::BI__builtin_riscv_xperm8_64:
+  case RISCV::BI__builtin_riscv_xperm8_64: {
+    intrinsicName = "riscv.xperm8";
+    break;
+  }
   // Zbkb
   case RISCV::BI__builtin_riscv_brev8_32:
-  case RISCV::BI__builtin_riscv_brev8_64:
-  case RISCV::BI__builtin_riscv_zip_32:
-  case RISCV::BI__builtin_riscv_unzip_32:
+  case RISCV::BI__builtin_riscv_brev8_64: {
+    intrinsicName = "riscv.brev8";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_zip_32: {
+    intrinsicName = "riscv.zip";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_unzip_32: {
+    intrinsicName = "riscv.unzip";
+    break;
+  }
   // Zknh
-  case RISCV::BI__builtin_riscv_sha256sig0:
-  case RISCV::BI__builtin_riscv_sha256sig1:
-  case RISCV::BI__builtin_riscv_sha256sum0:
-  case RISCV::BI__builtin_riscv_sha256sum1:
+  case RISCV::BI__builtin_riscv_sha256sig0: {
+    intrinsicName = "riscv.sha256sig0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sig1: {
+    intrinsicName = "riscv.sha256sig1";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum0: {
+    intrinsicName = "riscv.sha256sum0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sha256sum1: {
+    intrinsicName = "riscv.sha256sum1";
+    break;
+  }
   // Zksed
-  case RISCV::BI__builtin_riscv_sm4ks:
-  case RISCV::BI__builtin_riscv_sm4ed:
+  case RISCV::BI__builtin_riscv_sm4ks: {
+    intrinsicName = "riscv.sm4ks";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sm4ed: {
+    intrinsicName = "riscv.sm4ed";
+    break;
+  }
   // Zksh
-  case RISCV::BI__builtin_riscv_sm3p0:
-  case RISCV::BI__builtin_riscv_sm3p1:
+  case RISCV::BI__builtin_riscv_sm3p0: {
+    intrinsicName = "riscv.sm3p0";
+    break;
+  }
+  case RISCV::BI__builtin_riscv_sm3p1: {
+    intrinsicName = "riscv.sm3p1";
+    break;
+  }
   // Zbb
   case RISCV::BI__builtin_riscv_clz_32:
-  case RISCV::BI__builtin_riscv_clz_64:
+  case RISCV::BI__builtin_riscv_clz_64: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto op = cir::BitClzOp::create(builder, loc, ops[0],
+                                    /*poison_zero=*/false);
+    mlir::Value result = op.getResult();
+    if (result.getType() != returnType)
+      result = builder.createIntCast(result, returnType);
+    return result;
+  }
   case RISCV::BI__builtin_riscv_ctz_32:
-  case RISCV::BI__builtin_riscv_ctz_64:
+  case RISCV::BI__builtin_riscv_ctz_64: {
+    mlir::Location loc = getLoc(e->getSourceRange());
+    auto op = cir::BitCtzOp::create(builder, loc, ops[0],
+                                    /*poison_zero=*/false);
+    mlir::Value result = op.getResult();
+    if (result.getType() != returnType)
+      result = builder.createIntCast(result, returnType);
+    return result;
+  }
+
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load:
   case RISCV::BI__builtin_riscv_ntl_store: {

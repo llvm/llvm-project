@@ -77,58 +77,66 @@ uint f32tof16_too_many_arg(uint p0) {
   // expected-error@-1 {{no matching function for call to 'f32tof16'}}
 }
 
+// Overload resolution selects uint f32tof16(float); bool is implicitly converted to float.
 uint f32tof16_bool(bool p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
+// Overload resolution selects an overload; bool3 is implicitly converted.
 uint f32tof16_bool3(bool3 p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'bool3' (aka 'vector<bool, 3>'))}}
+  // expected-warning@-1 {{implicit conversion turns vector to scalar: 'vector<unsigned int, 3>' (vector of 3 'unsigned int' values) to 'unsigned int'}}
 }
 
 
+// Overload resolution selects uint f32tof16(float); short is implicitly converted to float.
 uint f32tof16_int16_t(short p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'short')}}
 }
 
+// Overload resolution selects uint f32tof16(float); unsigned short is implicitly converted to float.
 uint f32tof16_int16_t(unsigned short p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'unsigned short')}}
 }
 
+// Overload resolution selects uint f32tof16(float); int is implicitly converted to float.
 uint f32tof16_int(int p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int')}}
+  // expected-warning@-1 {{implicit conversion from 'int' to 'float' may lose precision}}
 }
 
+// Overload resolution selects uint f32tof16(float); long is implicitly converted to float.
 uint f32tof16_int64_t(long p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'long')}}
+  // expected-warning@-1 {{implicit conversion from 'long' to 'float' may lose precision}}
 }
 
+// Overload resolution selects an overload; int3 is implicitly converted.
 uint2 f32tof16_int2_to_float2_promotion(int3 p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'int3' (aka 'vector<int, 3>'))}}
+  // expected-warning@-1 {{implicit conversion truncates vector: 'vector<unsigned int, 3>' (vector of 3 'unsigned int' values) to 'vector<unsigned int, 2>' (vector of 2 'unsigned int' values)}}
+  // expected-warning@-2 {{implicit conversion from 'int3' (aka 'vector<int, 3>') to 'vector<float, 3>' (vector of 3 'float' values) may lose precision}}
 }
 
+// Overload resolution selects uint f32tof16(float); half is implicitly converted to float.
 uint f32tof16_half(half p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'half')}}
 }
 
+// Overload resolution selects an overload; half2 is implicitly converted.
 uint f32tof16_half2(half2 p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'half2' (aka 'vector<half, 2>'))}}
+  // expected-warning@-1 {{implicit conversion turns vector to scalar: 'vector<unsigned int, 2>' (vector of 2 'unsigned int' values) to 'unsigned int'}}
 }
 
+// Overload resolution selects uint f32tof16(float); uint is implicitly converted to float.
 uint f32tof16_float(uint p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'uint' (aka 'unsigned int'))}}
+  // expected-warning@-1 {{implicit conversion from 'uint' (aka 'unsigned int') to 'float' may lose precision}}
 }
 
+// Overload resolution selects uint f32tof16(float); double is implicitly converted to float.
 uint f32tof16_double(double p0) {
   return f32tof16(p0);
-  // expected-error@-1 {{1st argument must be a scalar or vector of floating-point types (was 'double')}}
+  // expected-warning@-1 {{implicit conversion loses floating-point precision: 'double' to 'float'}}
 }

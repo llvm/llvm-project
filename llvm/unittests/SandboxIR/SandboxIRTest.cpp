@@ -2010,7 +2010,7 @@ bb1:
   ret void, !tbaa !2
 }
 
-!1 = !{}
+!1 = !DILocation(line: 12, column: 1, scope: !{})
 !2 = !{}
 )IR");
   llvm::Function *LLVMF = &*M->getFunction("foo");
@@ -6240,6 +6240,7 @@ define void @foo() {
 
 /// Makes sure that all Instruction sub-classes have a classof().
 TEST_F(SandboxIRTest, CheckClassof) {
+#define DEF_ENABLE_AUTO_UNDEF
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   EXPECT_NE(&sandboxir::CLASS::classof, &sandboxir::Instruction::classof);
 #include "llvm/SandboxIR/Values.def"

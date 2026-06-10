@@ -368,7 +368,7 @@ static bool doSimplify_v3(Function &F, DominatorTree &DT) {
 }
 
 namespace {
-struct SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
+struct SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
     switch (Version) {
     case V1:

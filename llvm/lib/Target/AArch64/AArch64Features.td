@@ -793,6 +793,10 @@ def FeatureFuseFCmpFCSel : SubtargetFeature<
     "fuse-fcsel", "HasFuseFCmpFCSel", "true",
     "CPU can fuse FCMP and FCSEL operations">;
 
+def FeatureAlignCmpCSelPairs : SubtargetFeature<
+    "align-cmp-csel-pairs", "HasAlignCmpCSelPairs", "true",
+    "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs">;
+
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
     "CPU fuses AES/PMULL and EOR operations">;
@@ -1074,6 +1078,11 @@ def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
   "HardenSlsNoComdat", "true",
   "Generate thunk code for SLS mitigation in the normal text section">;
 
+
+def FeatureNoLFILoads : SubtargetFeature<"no-lfi-loads", "NoLFILoads", "true",
+  "Disable LFI sandboxing for load instructions">;
+def FeatureNoLFIStores : SubtargetFeature<"no-lfi-stores", "NoLFIStores", "true",
+  "Disable LFI sandboxing for store instructions">;
 
 // Only intended to be used by disassemblers.
 def FeatureAll

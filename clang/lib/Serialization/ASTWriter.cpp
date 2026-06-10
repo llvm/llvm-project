@@ -246,30 +246,17 @@ GetAffectingModuleMaps(const Preprocessor &PP, Module *RootModule) {
   }
 
   // Handle textually-included headers that belong to other modules.
+  HS.forEachExistingLocalFileInfo(
+      [&](FileEntryRef File, const HeaderFileInfo &HFI) {
+        if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
+          return; // Modular header, handled in the above module-based loop.
+        if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
+          return; // Non-modular header not included locally is not affecting.
 
-  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
-  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
-
-  if (FilesByUID.size() > HS.header_file_size())
-    FilesByUID.resize(HS.header_file_size());
-
-  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    OptionalFileEntryRef File = FilesByUID[UID];
-    if (!File)
-      continue;
-
-    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI)
-      continue; // We have no information on this being a header file.
-    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
-      continue; // Modular header, handled in the above module-based loop.
-    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
-      continue; // Non-modular header not included locally is not affecting.
-
-    for (const auto &KH : HS.findResolvedModulesForHeader(*File))
-      if (const Module *M = KH.getModule())
-        CollectModuleMapsForHierarchy(M, AR_TextualHeader);
-  }
+        for (const auto &KH : HS.findResolvedModulesForHeader(File))
+          if (const Module *M = KH.getModule())
+            CollectModuleMapsForHierarchy(M, AR_TextualHeader);
+      });
 
   // FIXME: This algorithm is not correct for module map hierarchies where
   // module map file defining a (sub)module of a top-level module X includes
@@ -919,6 +906,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // AST Top-Level Block.
   BLOCK(AST_BLOCK);
+  RECORD(SUBMODULE_METADATA);
   RECORD(TYPE_OFFSET);
   RECORD(DECL_OFFSET);
   RECORD(IDENTIFIER_OFFSET);
@@ -997,7 +985,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // Submodule Block.
   BLOCK(SUBMODULE_BLOCK);
-  RECORD(SUBMODULE_METADATA);
+  RECORD(SUBMODULE_END);
   RECORD(SUBMODULE_DEFINITION);
   RECORD(SUBMODULE_UMBRELLA_HEADER);
   RECORD(SUBMODULE_HEADER);
@@ -1016,6 +1004,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SUBMODULE_PRIVATE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_INITIALIZERS);
   RECORD(SUBMODULE_EXPORT_AS);
+  RECORD(SUBMODULE_CHILD);
 
   // Comments Block.
   BLOCK(COMMENTS_BLOCK);
@@ -1568,7 +1557,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Implicit suff len
+    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name raw kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Strings
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
@@ -1602,9 +1591,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
         Record.push_back(M.Signature ? 0 : M.Size);
         Record.push_back(M.Signature ? 0 : getTimestampForOutput(M.ModTime));
 
+        Record.push_back(M.FileName.getRawKind());
+
         llvm::append_range(Blob, M.Signature);
 
-        Record.push_back(M.FileName.getImplicitModuleSuffixLength());
         AddPathBlob(M.FileName, Record, Blob);
       }
 
@@ -2249,46 +2239,36 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
     }
   }
 
-  SmallVector<OptionalFileEntryRef, 16> FilesByUID;
-  HS.getFileMgr().GetUniqueIDMapping(FilesByUID);
+  HS.forEachExistingLocalFileInfo(
+      [&](FileEntryRef File, const HeaderFileInfo &HFI) {
+        if (!HFI.isCompilingModuleHeader && HFI.isModuleHeader)
+          return; // Header file info is tracked by the owning module file.
+        if (!HFI.isCompilingModuleHeader && !HFI.IsLocallyIncluded)
+          return; // Header file info is tracked by the including module file.
 
-  if (FilesByUID.size() > HS.header_file_size())
-    FilesByUID.resize(HS.header_file_size());
+        // Massage the file path into an appropriate form.
+        StringRef Filename = File.getName();
+        SmallString<128> FilenameTmp(Filename);
+        if (PreparePathForOutput(FilenameTmp)) {
+          // If we performed any translation on the file name at all, we need to
+          // save this string, since the generator will refer to it later.
+          Filename = StringRef(strdup(FilenameTmp.c_str()));
+          SavedStrings.push_back(Filename.data());
+        }
 
-  for (unsigned UID = 0, LastUID = FilesByUID.size(); UID != LastUID; ++UID) {
-    OptionalFileEntryRef File = FilesByUID[UID];
-    if (!File)
-      continue;
+        bool Included = HFI.IsLocallyIncluded || PP->alreadyIncluded(File);
 
-    const HeaderFileInfo *HFI = HS.getExistingLocalFileInfo(*File);
-    if (!HFI)
-      continue; // We have no information on this being a header file.
-    if (!HFI->isCompilingModuleHeader && HFI->isModuleHeader)
-      continue; // Header file info is tracked by the owning module file.
-    if (!HFI->isCompilingModuleHeader && !HFI->IsLocallyIncluded)
-      continue; // Header file info is tracked by the including module file.
-
-    // Massage the file path into an appropriate form.
-    StringRef Filename = File->getName();
-    SmallString<128> FilenameTmp(Filename);
-    if (PreparePathForOutput(FilenameTmp)) {
-      // If we performed any translation on the file name at all, we need to
-      // save this string, since the generator will refer to it later.
-      Filename = StringRef(strdup(FilenameTmp.c_str()));
-      SavedStrings.push_back(Filename.data());
-    }
-
-    bool Included = HFI->IsLocallyIncluded || PP->alreadyIncluded(*File);
-
-    HeaderFileInfoTrait::key_type Key = {
-        Filename, File->getSize(),
-        getTimestampForOutput(File->getModificationTime())};
-    HeaderFileInfoTrait::data_type Data = {
-      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(*File), {}
-    };
-    Generator.insert(Key, Data, GeneratorTrait);
-    ++NumHeaderSearchEntries;
-  }
+        HeaderFileInfoTrait::key_type Key = {
+            Filename, File.getSize(),
+            getTimestampForOutput(File.getModificationTime())};
+        HeaderFileInfoTrait::data_type Data = {
+            HFI,
+            Included,
+            HS.getModuleMap().findResolvedModulesForHeader(File),
+            {}};
+        Generator.insert(Key, Data, GeneratorTrait);
+        ++NumHeaderSearchEntries;
+      });
 
   // Create the on-disk hash table in a buffer.
   SmallString<4096> TableData;
@@ -2983,16 +2963,6 @@ unsigned ASTWriter::getSubmoduleID(Module *Mod) {
   return ID;
 }
 
-/// Compute the number of modules within the given tree (including the
-/// given module).
-static unsigned getNumberOfModules(Module *Mod) {
-  unsigned ChildModules = 0;
-  for (Module *Submodule : Mod->submodules())
-    ChildModules += getNumberOfModules(Submodule);
-
-  return ChildModules + 1;
-}
-
 void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   // Enter the submodule description block.
   Stream.EnterSubblock(SUBMODULE_BLOCK_ID, /*bits for abbreviations*/5);
@@ -3088,11 +3058,16 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));    // Macro name
   unsigned ExportAsAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
 
-  // Write the submodule metadata block.
-  RecordData::value_type Record[] = {
-      getNumberOfModules(WritingModule),
-      FirstSubmoduleID - NUM_PREDEF_SUBMODULE_IDS};
-  Stream.EmitRecord(SUBMODULE_METADATA, Record);
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_CHILD));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Child submodule ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));   // Child name
+  unsigned ChildAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+  SmallVector<uint64_t> SubmoduleOffsets;
+  uint64_t SubmoduleOffsetBase = Stream.GetCurrentBitNo();
+
+  unsigned TopLevelID = getSubmoduleID(WritingModule);
 
   // Write all of the submodules.
   std::queue<Module *> Q;
@@ -3101,6 +3076,19 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
     Module *Mod = Q.front();
     Q.pop();
     unsigned ID = getSubmoduleID(Mod);
+    if (ID < FirstSubmoduleID) {
+      assert(0 && "Loaded submodule entered WritingModule ?");
+      continue;
+    }
+
+    // Record the local offset of this submodule.
+    unsigned Index = ID - FirstSubmoduleID;
+    if (Index >= SubmoduleOffsets.size())
+      SubmoduleOffsets.resize(Index + 1);
+
+    uint64_t Offset = Stream.GetCurrentBitNo() - SubmoduleOffsetBase;
+    assert((Offset >> 32) == 0 && "Submodule offset too large");
+    SubmoduleOffsets[Index] = Offset;
 
     uint64_t ParentID = 0;
     if (Mod->Parent) {
@@ -3259,6 +3247,20 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
       Stream.EmitRecordWithBlob(ExportAsAbbrev, Record, Mod->ExportAsModule);
     }
 
+    // Emit one SUBMODULE_CHILD record per direct child so the reader can
+    // populate PendingSubmodules and demand-load children by name.
+    for (Module *Child : Mod->submodules()) {
+      RecordData::value_type Record[] = {SUBMODULE_CHILD,
+                                         getSubmoduleID(Child)};
+      Stream.EmitRecordWithBlob(ChildAbbrev, Record, Child->Name);
+    }
+
+    // Emit the sentinel signifying the end of this submodule.
+    {
+      RecordData Record;
+      Stream.EmitRecord(SUBMODULE_END, Record);
+    }
+
     // Queue up the submodules of this module.
     for (Module *M : Mod->submodules())
       Q.push(M);
@@ -3266,10 +3268,23 @@ void ASTWriter::WriteSubmodules(Module *WritingModule, ASTContext *Context) {
 
   Stream.ExitBlock();
 
-  assert((NextSubmoduleID - FirstSubmoduleID ==
-          getNumberOfModules(WritingModule)) &&
+  assert((NextSubmoduleID - FirstSubmoduleID == SubmoduleOffsets.size()) &&
          "Wrong # of submodules; found a reference to a non-local, "
          "non-imported submodule?");
+
+  Abbrev = std::make_shared<BitCodeAbbrev>();
+  Abbrev->Add(BitCodeAbbrevOp(SUBMODULE_METADATA));
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Submodule count
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Base submodule ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Top-level submod ID
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));   // Submodule offsets
+  unsigned SubmoduleMetadataAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
+
+  RecordData::value_type Record[] = {
+      SUBMODULE_METADATA, SubmoduleOffsets.size(),
+      FirstSubmoduleID - NUM_PREDEF_SUBMODULE_IDS, TopLevelID};
+  Stream.EmitRecordWithBlob(SubmoduleMetadataAbbrev, Record,
+                            bytes(SubmoduleOffsets));
 }
 
 void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
@@ -8244,11 +8259,22 @@ void OMPClauseWriter::VisitOMPSIMDClause(OMPSIMDClause *) {}
 void OMPClauseWriter::VisitOMPNogroupClause(OMPNogroupClause *) {}
 
 void OMPClauseWriter::VisitOMPInitClause(OMPInitClause *C) {
+  // Sizes for CreateEmpty on the read side: varlist_size = 1 + NumPrefs, then
+  // NumAttrs (total attrs across all pref-specs).
   Record.push_back(C->varlist_size());
+  Record.push_back(C->attrs().size());
+  // Varlist (interop var + Fr block).
   for (Expr *VE : C->varlist())
     Record.AddStmt(VE);
   Record.writeBool(C->getIsTarget());
   Record.writeBool(C->getIsTargetSync());
+  Record.writeBool(C->hasPreferAttrs());
+  // Per-pref-spec: attr count + that many attr exprs, in order.
+  for (OMPInitClause::PrefView P : C->prefs()) {
+    Record.push_back(P.Attrs.size());
+    for (Expr *A : P.Attrs)
+      Record.AddStmt(A);
+  }
   Record.AddSourceLocation(C->getLParenLoc());
   Record.AddSourceLocation(C->getVarLoc());
 }

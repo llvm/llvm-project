@@ -446,7 +446,7 @@ class MetadataLoader::MetadataLoaderImpl {
 
   // Keep mapping of seens pair of old-style CU <-> SP, and update pointers to
   // point from SP to CU after a block is completly parsed.
-  std::vector<std::pair<DICompileUnit *, Metadata *>> CUSubprograms;
+  std::vector<std::pair<DICompileUnit *, unsigned>> CUSubprograms;
 
   /// Functions that need to be matched with subprograms when upgrading old
   /// metadata.
@@ -485,7 +485,8 @@ class MetadataLoader::MetadataLoaderImpl {
   /// Upgrade old-style CU <-> SP pointers to point from SP to CU.
   void upgradeCUSubprograms() {
     for (auto CU_SP : CUSubprograms)
-      if (auto *SPs = dyn_cast_or_null<MDTuple>(CU_SP.second))
+      if (auto *SPs =
+              dyn_cast_or_null<MDTuple>(MetadataList.lookup(CU_SP.second - 1)))
         for (auto &Op : SPs->operands())
           if (auto *SP = dyn_cast_or_null<DISubprogram>(Op))
             SP->replaceUnit(CU_SP.first);
@@ -1333,11 +1334,6 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
       return getMD(ID - 1);
     return nullptr;
   };
-  auto getMDOrNullWithoutPlaceholders = [&](unsigned ID) -> Metadata * {
-    if (ID)
-      return MetadataList.getMetadataFwdRef(ID - 1);
-    return nullptr;
-  };
   auto getMDString = [&](unsigned ID) -> MDString * {
     // This requires that the ID is not really a forward reference.  In
     // particular, the MDString must already have been resolved.
@@ -1941,7 +1937,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_COMPILE_UNIT: {
-    if (Record.size() < 14 || Record.size() > 23)
+    if (Record.size() < 14 || Record.size() > 24)
       return error("Invalid record");
 
     // Ignore Record[0], which indicates whether this compile unit is
@@ -1951,13 +1947,23 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     const auto LangVersionMask = (uint64_t(1) << 63);
     const bool HasVersionedLanguage = Record[1] & LangVersionMask;
     const uint32_t LanguageVersion = Record.size() > 22 ? Record[22] : 0;
+    // The dialect field is written by writeDICompileUnit as a small enum
+    // value (see dwarf::LanguageDialectAttribute). Reject out-of-range
+    // values rather than silently truncating to uint16_t; this keeps the
+    // writer/reader invariant symmetric and surfaces malformed inputs.
+    // Value 0 means "no dialect specified".
+    if (Record.size() > 23 &&
+        Record[23] > static_cast<uint64_t>(dwarf::DW_LLVM_LANG_DIALECT_max))
+      return error("Invalid DICompileUnit dialect value");
+    const uint16_t Dialect =
+        Record.size() > 23 ? static_cast<uint16_t>(Record[23]) : uint16_t(0);
 
     auto *CU = DICompileUnit::getDistinct(
         Context,
         HasVersionedLanguage
             ? DISourceLanguageName(Record[1] & ~LangVersionMask,
-                                   LanguageVersion)
-            : DISourceLanguageName(Record[1]),
+                                   LanguageVersion, Dialect)
+            : DISourceLanguageName(Record[1], Dialect),
         getMDOrNull(Record[2]), getMDString(Record[3]), Record[4],
         getMDString(Record[5]), Record[6], getMDString(Record[7]), Record[8],
         getMDOrNull(Record[9]), getMDOrNull(Record[10]),
@@ -1968,6 +1974,10 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
         Record.size() <= 17 ? false : Record[17],
         Record.size() <= 18 ? 0 : Record[18],
         Record.size() <= 19 ? false : Record[19],
+        // Keep these guarded for backwards-compatibility with older bitcode
+        // records. Keep this index layout in sync with writeDICompileUnit:
+        // index 20 is sysroot, 21 is SDK, 22 is source-language version, and
+        // 23 is dialect (read above as raw enum value, where 0 means unset).
         Record.size() <= 20 ? nullptr : getMDString(Record[20]),
         Record.size() <= 21 ? nullptr : getMDString(Record[21]));
 
@@ -1975,8 +1985,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     NextMetadataNo++;
 
     // Move the Upgrade the list of subprograms.
-    if (Metadata *SPs = getMDOrNullWithoutPlaceholders(Record[11]))
-      CUSubprograms.push_back({CU, SPs});
+    if (Record[11])
+      CUSubprograms.push_back({CU, Record[11]});
     break;
   }
   case bitc::METADATA_SUBPROGRAM: {
@@ -2598,7 +2608,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseMetadataAttachment(
       Instruction *Inst = InstructionList[Record[0]];
       for (unsigned i = 1; i != RecordLength; i = i + 2) {
         unsigned Kind = Record[i];
-        DenseMap<unsigned, unsigned>::iterator I = MDKindMap.find(Kind);
+        auto I = MDKindMap.find(Kind);
         if (I == MDKindMap.end())
           return error("Invalid ID");
         if (I->second == LLVMContext::MD_tbaa && StripTBAA)

@@ -28,6 +28,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -328,9 +329,9 @@ static std::string formatBytes(size_t B) {
   if (B < (1u << 10u))
     SS << B << " B";
   else if (B < (1u << 20u))
-    SS << llvm::format("{0:F2}", B / 1024.) << " KB";
+    SS << llvm::formatv("{0:F2}", B / 1024.) << " KB";
   else
-    SS << llvm::format("{0:F2}", B / 1024. / 1024.) << " MB";
+    SS << llvm::formatv("{0:F2}", B / 1024. / 1024.) << " MB";
 
   return Result;
 }
@@ -447,9 +448,10 @@ LLVM_DUMP_METHOD void Descriptor::dump(llvm::raw_ostream &OS) const {
 
   // Print a few interesting bits about the descriptor.
   if (isPrimitiveArray())
-    OS << " primitive-array";
+    OS << " primitive-array " << getNumElems() << ' '
+       << primTypeToString(getPrimType());
   else if (isCompositeArray())
-    OS << " composite-array";
+    OS << " composite-array " << getNumElems();
   else if (isUnion())
     OS << " union(" << ElemRecord->getName() << ")";
   else if (isRecord())
@@ -568,7 +570,9 @@ LLVM_DUMP_METHOD void InterpFrame::dump(llvm::raw_ostream &OS,
   OS.indent(Spaces) << "Depth: " << Depth << "\n";
   OS.indent(Spaces) << "ArgSize: " << ArgSize << "\n";
   OS.indent(Spaces) << "Args: " << (void *)Args << "\n";
+#ifndef NDEBUG
   OS.indent(Spaces) << "FrameOffset: " << FrameOffset << "\n";
+#endif
   OS.indent(Spaces) << "FrameSize: " << (Func ? Func->getFrameSize() : 0)
                     << "\n";
 

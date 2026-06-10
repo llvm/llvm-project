@@ -8,7 +8,7 @@ int *sink();
 extern "C" __complex float complex_src();
 extern "C" __complex float *complex_sink();
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f1
 void f1() {
   *sink()
   // CHECK: store {{.*}}, !dbg [[DBG_F1:!.*]]
@@ -24,7 +24,7 @@ struct foo {
   foo();
 };
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}foo
 foo::foo()
     :
 #line 200
@@ -36,7 +36,7 @@ foo::foo()
       (complex_src()) {
 }
 
-// CHECK-LABEL: define {{.*}}f2{{.*}}
+// CHECK-LABEL: define {{.*}}void {{.*}}f2{{.*}}
 void f2() {
   // CHECK: store float {{.*}} !dbg [[DBG_F2:!.*]]
   *complex_sink()
@@ -45,7 +45,7 @@ void f2() {
       complex_src();
 }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f3
 void f3() {
   // CHECK: store float {{.*}} !dbg [[DBG_F3:!.*]]
   *complex_sink()
@@ -54,14 +54,14 @@ void f3() {
       complex_src();
 }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f4
 void f4() {
 #line 500
   auto x // CHECK: store {{.*}} !dbg [[DBG_F4:!.*]]
       = src();
 }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f5
 void f5() {
 #line 600
   auto x // CHECK: store float {{.*}} !dbg [[DBG_F5:!.*]]
@@ -71,17 +71,17 @@ void f5() {
 struct agg { int i; };
 agg agg_src();
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f6
 void f6() {
   agg x;
-  // CHECK: call void @llvm.memcpy{{.*}} !dbg [[DBG_F6:!.*]]
+  // CHECK: call void @llvm.memcpy{{.*}}ref.tmp{{.*}} !dbg [[DBG_F6:!.*]]
   x
 #line 700
       = //
       agg_src();
 }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f7
 void f7() {
   int *src1();
   int src2();
@@ -90,7 +90,7 @@ void f7() {
       src1())[src2()];
 }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f8
 void f8() {
   int src1[1];
   int src2();
@@ -99,7 +99,7 @@ void f8() {
       src1)[src2()];
 }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f9
 void f9(int i) {
   int src1[1][i];
   int src2();
@@ -110,7 +110,7 @@ void f9(int i) {
 
 inline void *operator new(decltype(sizeof(1)), void *p) noexcept { return p; }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}void {{.*}}f10
 void f10() {
   void *void_src();
   (
@@ -128,7 +128,7 @@ struct bar {
   ~bar() noexcept(false);
 };
 // global ctor cleanup
-// CHECK-LABEL: define
+// CHECK-LABEL: define {{.*}}global_var_init
 // CHECK: invoke{{ }}
 // CHECK: invoke{{ }}
 // CHECK:   to label {{.*}}, !dbg [[DBG_GLBL_CTOR_B:!.*]]
@@ -154,7 +154,7 @@ __complex double f11() {
   return f;
 }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define{{.*}}f12
 void f12() {
   int f12_1();
   void f12_2(int = f12_1());
@@ -163,7 +163,7 @@ void f12() {
   f12_2();
 }
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define{{.*}}f13
 void f13() {
 // CHECK: call {{.*}} !dbg [[DBG_F13:!.*]]
 #define F13_IMPL 1, src()
@@ -176,7 +176,7 @@ struct f14_impl {
   f14_impl(int);
 };
 
-// CHECK-LABEL: define
+// CHECK-LABEL: define{{.*}}f14_use
 struct f14_use {
 // CHECK: call {{.*}}f14_impl{{.*}}, !dbg [[DBG_F14_CTOR_CALL:![0-9]*]]
 #line 1600

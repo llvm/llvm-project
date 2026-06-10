@@ -24,6 +24,8 @@ define void @diamond_phi(ptr %a) {
 ; CHECK-NEXT:    bb4:
 ; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add2>/vp<[[VP4]]> ir<%add1>/ir<%c0>
 ; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
@@ -96,6 +98,8 @@ define void @mask_reuse(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%c0>
 ; CHECK-NEXT:      BLEND ir<%phi4> = ir<%add3>/ir<%c0> ir<%iv>/vp<[[VP7]]>
 ; CHECK-NEXT:      EMIT store ir<%phi4>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
@@ -202,6 +206,8 @@ define void @optimized_mask(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP16:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP15]]>
 ; CHECK-NEXT:      BLEND ir<%phi7> = ir<%add6>/vp<[[VP16]]> ir<%add5>/vp<[[VP14]]>
 ; CHECK-NEXT:      EMIT store ir<%phi7>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
@@ -316,6 +322,8 @@ define void @switch(ptr %a) {
 ; CHECK-NEXT:      EMIT vp<[[VP17:%[0-9]+]]> = logical-and vp<[[VP4]]>, vp<[[VP16]]>
 ; CHECK-NEXT:      BLEND ir<%phi5> = ir<%add4>/vp<[[VP9]]> ir<%add3>/vp<[[VP15]]> ir<%add2>/vp<[[VP17]]> ir<%add1>/vp<[[VP14]]>
 ; CHECK-NEXT:      EMIT store ir<%phi5>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
@@ -414,6 +422,8 @@ define void @diamond_phi2(ptr %a, i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    Successor(s): bb5
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb5:
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
@@ -513,6 +523,8 @@ define void @blend_masks(ptr noalias %p, i1 %c0, i1 %c1, i1 %c2, i1 %c3, i1 %c4)
 ; CHECK-NEXT:    Successor(s): bb8
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    bb8:
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
@@ -594,6 +606,8 @@ define void @blend_masks_triangle_phi(ptr noalias %p, i1 %c0, i1 %c1) {
 ; CHECK-NEXT:      BLEND ir<%phi> = ir<1>/vp<[[VP7]]> ir<0>/vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%p>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%phi>, ir<%gep>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
 ; CHECK-NEXT:    No successors
@@ -620,6 +634,118 @@ bb3:
   %iv.next = add i32 %iv, 1
   %ec = icmp eq i32 %iv.next, 128
   br i1 %ec, label %exit, label %bb0
+
+exit:
+  ret void
+}
+
+define void @blend_chain_non_trivial(ptr noalias %a, ptr noalias %b) {
+; CHECK-LABEL: VPlan for loop in 'blend_chain_non_trivial'
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK-NEXT:      EMIT-SCALAR ir<%lb> = load ir<%b>
+; CHECK-NEXT:      EMIT ir<%v1> = add ir<%iv>, ir<%lb>
+; CHECK-NEXT:      EMIT ir<%v2> = mul ir<%iv>, ir<3>
+; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%a>, ir<%iv>
+; CHECK-NEXT:      EMIT ir<%c0> = icmp sle ir<%iv>, ir<0>
+; CHECK-NEXT:    Successor(s): if.a
+; CHECK-EMPTY:
+; CHECK-NEXT:    if.a:
+; CHECK-NEXT:      EMIT ir<%ca> = icmp sle ir<%iv>, ir<8>, ir<%c0>
+; CHECK-NEXT:    Successor(s): if.a.inner
+; CHECK-EMPTY:
+; CHECK-NEXT:    if.a.inner:
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = logical-and ir<%c0>, ir<%ca>
+; CHECK-NEXT:    Successor(s): merge.a.inner
+; CHECK-EMPTY:
+; CHECK-NEXT:    merge.a.inner:
+; CHECK-NEXT:    Successor(s): merge.a
+; CHECK-EMPTY:
+; CHECK-NEXT:    merge.a:
+; CHECK-NEXT:      EMIT vp<[[VP5:%[0-9]+]]> = not ir<%c0>
+; CHECK-NEXT:      BLEND ir<%blend.a> = ir<%v1>/ir<%c0> ir<%v1>/vp<[[VP5]]>
+; CHECK-NEXT:      EMIT ir<%d0> = icmp sgt ir<%iv>, ir<0>
+; CHECK-NEXT:    Successor(s): if.b
+; CHECK-EMPTY:
+; CHECK-NEXT:    if.b:
+; CHECK-NEXT:      EMIT ir<%cb> = icmp sle ir<%iv>, ir<16>, ir<%d0>
+; CHECK-NEXT:    Successor(s): if.b.inner
+; CHECK-EMPTY:
+; CHECK-NEXT:    if.b.inner:
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = logical-and ir<%d0>, ir<%cb>
+; CHECK-NEXT:    Successor(s): merge.b.inner
+; CHECK-EMPTY:
+; CHECK-NEXT:    merge.b.inner:
+; CHECK-NEXT:    Successor(s): merge.b
+; CHECK-EMPTY:
+; CHECK-NEXT:    merge.b:
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = not ir<%d0>
+; CHECK-NEXT:      BLEND ir<%blend.b> = ir<%v2>/ir<%d0> ir<%v2>/vp<[[VP7]]>
+; CHECK-NEXT:      EMIT ir<%sum> = add ir<%blend.a>, ir<%blend.b>
+; CHECK-NEXT:      EMIT store ir<%sum>, ir<%gep>
+; CHECK-NEXT:    Successor(s): loop.latch
+; CHECK-EMPTY:
+; CHECK-NEXT:    loop.latch:
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1:%[0-9]+]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2:%[0-9]+]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %lb = load i64, ptr %b
+  %v1 = add i64 %iv, %lb
+  %v2 = mul i64 %iv, 3
+  %gep = getelementptr i64, ptr %a, i64 %iv
+  %c0 = icmp sle i64 %iv, 0
+  br i1 %c0, label %if.a, label %merge.a
+
+if.a:
+  %ca = icmp sle i64 %iv, 8
+  br i1 %ca, label %if.a.inner, label %merge.a.inner
+
+if.a.inner:
+  br label %merge.a.inner
+
+merge.a.inner:
+  %blend.a.inner = phi i64 [ %v1, %if.a ], [ %v1, %if.a.inner ]
+  br label %merge.a
+
+merge.a:
+  %blend.a = phi i64 [ %v1, %loop.header ], [ %blend.a.inner, %merge.a.inner ]
+  %d0 = icmp sgt i64 %iv, 0
+  br i1 %d0, label %if.b, label %merge.b
+
+if.b:
+  %cb = icmp sle i64 %iv, 16
+  br i1 %cb, label %if.b.inner, label %merge.b.inner
+
+if.b.inner:
+  br label %merge.b.inner
+
+merge.b.inner:
+  %blend.b.inner = phi i64 [ %v2, %if.b ], [ %v2, %if.b.inner ]
+  br label %merge.b
+
+merge.b:
+  %blend.b = phi i64 [ %v2, %merge.a ], [ %blend.b.inner, %merge.b.inner ]
+  %sum = add i64 %blend.a, %blend.b
+  store i64 %sum, ptr %gep
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %loop.header
 
 exit:
   ret void

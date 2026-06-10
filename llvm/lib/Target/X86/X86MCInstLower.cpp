@@ -966,7 +966,7 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   StringRef Op = OrShadowOffset ? "or" : "add";
   std::string SymName = ("__asan_check_" + Name + "_" + Op + "_" +
                          Twine(1ULL << AccessInfo.AccessSizeIndex) + "_" +
-                         TM.getMCRegisterInfo()->getName(Reg.asMCReg()))
+                         TM.getMCRegisterInfo().getName(Reg.asMCReg()))
                             .str();
   if (OrShadowOffset)
     report_fatal_error(
@@ -1760,6 +1760,7 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     case X86::SEH_SaveReg:
     case X86::SEH_SaveXMM:
     case X86::SEH_PushFrame:
+    case X86::SEH_Push2Regs:
       llvm_unreachable("SEH_ directive incompatible with FPO");
       break;
     default:
@@ -1772,6 +1773,11 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   case X86::SEH_PushReg:
     OutStreamer->emitWinCFIPushReg(MI->getOperand(0).getImm());
+    break;
+
+  case X86::SEH_Push2Regs:
+    OutStreamer->emitWinCFIPush2Regs(MI->getOperand(0).getImm(),
+                                     MI->getOperand(1).getImm());
     break;
 
   case X86::SEH_SaveReg:
@@ -2554,6 +2560,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case X86::SEH_PushReg:
+  case X86::SEH_Push2Regs:
   case X86::SEH_SaveReg:
   case X86::SEH_SaveXMM:
   case X86::SEH_StackAlloc:
@@ -2571,6 +2578,11 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     assert(!SplitChainedAtEndOfBlock &&
            "Duplicate SEH_SplitChainedAtEndOfBlock in a current block");
     SplitChainedAtEndOfBlock = true;
+    return;
+
+  case X86::SEH_SplitChained:
+    assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
+    OutStreamer->emitWinCFISplitChained();
     return;
 
   case X86::SEH_BeginEpilogue: {

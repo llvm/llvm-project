@@ -283,9 +283,6 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
     if (!CB->isConvergent() && !CB->mayReadOrWriteMemory())
       return true;
 
-    if (AANoSync::isNoSyncIntrinsic(&I))
-      return true;
-
     bool IsKnownNoSync;
     return AA::hasAssumedIRAttr<Attribute::NoSync>(
         A, &QueryingAA, IRPosition::callsite_function(*CB),
@@ -295,7 +292,7 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
   if (!I.mayReadOrWriteMemory())
     return true;
 
-  return !I.isVolatile() && !AANoSync::isNonRelaxedAtomic(&I);
+  return !AANoSync::isNonRelaxedAtomic(&I);
 }
 
 bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
@@ -1334,10 +1331,6 @@ ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
   };
   return updateAttrMap<Attribute>(IRP, Attrs, AddAttrCB);
 }
-
-const IRPosition IRPosition::EmptyKey(DenseMapInfo<void *>::getEmptyKey());
-const IRPosition
-    IRPosition::TombstoneKey(DenseMapInfo<void *>::getTombstoneKey());
 
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);

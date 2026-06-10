@@ -23,9 +23,8 @@ public:
   ScriptedProcessPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(const llvm::StringRef class_name,
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
                      ExecutionContext &exe_ctx,
-                     StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;
 
   llvm::SmallVector<AbstractMethodRequirement>

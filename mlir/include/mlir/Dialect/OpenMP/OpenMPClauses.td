@@ -903,20 +903,24 @@ class OpenMP_MapClauseSkip<
     MapClauseOwningOpInterface
   ];
 
-  let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$map_vars
-  );
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$map_vars,
+      Variadic<OpenMP_IteratedType>:$map_iterated);
 
   // This assembly format should only be used by operations where `map` does not
   // define entry block arguments. Otherwise, it must be printed and parsed
   // together with the corresponding region.
   let optAssemblyFormat = [{
-    `map_entries` `(` $map_vars `:` type($map_vars) `)`
+    `map_entries` `(` $map_vars `:` type($map_vars) `)` |
+    `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`
   }];
 
   let description = [{
     The optional `map_vars` maps data from the current task's data environment
     to the device data environment.
+
+    The optional `map_iterated` holds iterator-produced handles (from
+    `omp.iterator`) whose bodies create `omp.map.info` ops, specifying
+    map entries expanded at runtime via an iterator modifier.
   }];
 }
 
@@ -1844,5 +1848,40 @@ class OpenMP_UniformClauseSkip<
 }
 
 def OpenMP_UniformClause : OpenMP_UniformClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V6.1 `dyn_groupprivate` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_DynGroupprivateClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    OptionalAttr<AccessGroupModifierAttr>:$dyn_groupprivate_access_group,
+    OptionalAttr<FallbackModifierAttr>:$dyn_groupprivate_fallback,
+    Optional<AnyInteger>:$dyn_groupprivate_size
+  );
+
+  let description = [{
+    The `dyn_groupprivate_access_group` attribute specifies the access group
+    modifier for the dynamically allocated group-private memory. The
+    `dyn_groupprivate_fallback` attribute specifies the fallback behavior when
+    allocation fails. The `dyn_groupprivate_size` operand specifies the size in
+    bytes to allocate.
+  }];
+
+  let optAssemblyFormat = [{
+    `dyn_groupprivate` `(`
+      custom<DynGroupprivateClause>($dyn_groupprivate_access_group,
+      $dyn_groupprivate_fallback,
+      $dyn_groupprivate_size, type($dyn_groupprivate_size))
+    `)`
+  }];
+}
+
+def OpenMP_DynGroupprivateClause : OpenMP_DynGroupprivateClauseSkip<>;
 
 #endif // OPENMP_CLAUSES

@@ -564,8 +564,8 @@ bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
 
   // Step 2: worklist over ops in this region only.
   //
-  // Worklist invariant: an op is pushed *only* once we have verified it is
-  // trivially dead. No speculative enqueues — every op on the worklist will
+  // Worklist invariant: an op is pushed only once we have verified it is
+  // trivially dead. No speculative enqueues: every op on the worklist will
   // be erased when popped. Two things enforce this:
   //   - the initial seed below calls isOpTriviallyDead before enqueueing,
   //   - the propagation inside the loop drops the erasing op's use of
@@ -573,13 +573,11 @@ bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
   //     sees the post-erase use count and only enqueues when actually dead.
   // Deadness is monotonic within this pass (we never add users, only remove
   // them), so an op that was dead at enqueue time is still dead at pop time.
-  // The `visited` set is just for dedup; no re-check is needed on pop.
   SmallVector<Operation *> worklist;
-  DenseSet<Operation *> visited;
 
   LDBG(2) << "Stage 2: Seeding trivially dead operation worklist";
   for (Operation &op : region.getOps()) {
-    if (isOpTriviallyDead(&op) && visited.insert(&op).second) {
+    if (isOpTriviallyDead(&op)) {
       LDBG(2) << "Seeded worklist with operation: "
               << OpWithFlags(&op, OpPrintingFlags().skipRegions());
       worklist.push_back(&op);
@@ -614,11 +612,6 @@ bool mlir::eliminateTriviallyDeadOps(RewriterBase &rewriter, Region &region,
         if (defOp->getParentRegion() != &region) {
           LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
                   << ": defining operation is outside the current region";
-          continue;
-        }
-        if (visited.count(defOp)) {
-          LDBG(4) << "Skipping operand #" << opOperand.getOperandNumber()
-                  << ": defining operation was already visited";
           continue;
         }
         LDBG(4) << "Dropping operand #" << opOperand.getOperandNumber()

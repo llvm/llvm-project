@@ -312,6 +312,10 @@ std::string ClangTidyContext::getCheckName(unsigned DiagnosticID) const {
   return "";
 }
 
+bool ClangTidyContext::isCompilerDiagnostic(unsigned DiagnosticID) const {
+  return !CheckNamesByDiagnosticID.contains(DiagnosticID);
+}
+
 ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
     ClangTidyContext &Ctx, DiagnosticsEngine *ExternalDiagEngine,
     bool RemoveIncompatibleErrors, bool GetFixesFromNotes,
@@ -470,7 +474,7 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
   }
 
   if (Info.hasSourceManager())
-    checkFilters(Info.getLocation(), Info.getSourceManager());
+    checkFilters(Info.getLocation(), Info.getID(), Info.getSourceManager());
 
   for (const auto &Error : SuppressionErrors)
     Context.diag(Error);
@@ -567,6 +571,7 @@ void ClangTidyDiagnosticConsumer::forwardDiagnostic(const Diagnostic &Info) {
 }
 
 void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
+                                               unsigned DiagnosticID,
                                                const SourceManager &Sources) {
   // Invalid location may mean a diagnostic in a command line, don't skip these.
   if (!Location.isValid()) {
@@ -575,9 +580,17 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
     return;
   }
 
-  if (!Context.getOptions().SystemHeaders.value_or(false) &&
-      (Sources.isInSystemHeader(Location) || Sources.isInSystemMacro(Location)))
-    return;
+  if (!Context.getOptions().SystemHeaders.value_or(false)) {
+    if (Context.isCompilerDiagnostic(DiagnosticID)) {
+      if (Context.DiagEngine->getDiagnosticIDs()->shouldSuppressAsSystemWarning(
+              DiagnosticID, Location, *Context.DiagEngine))
+        return;
+    } else {
+      if (Sources.isInSystemHeader(Location) ||
+          Sources.isInSystemMacro(Location))
+        return;
+    }
+  }
 
   // FIXME: We start with a conservative approach here, but the actual type of
   // location needed depends on the check (in particular, where this check wants

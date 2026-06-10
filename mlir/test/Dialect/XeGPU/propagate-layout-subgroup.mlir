@@ -133,9 +133,9 @@ gpu.module @test {
     %tdesc_src = xegpu.create_nd_tdesc %src : memref<32x64xf32> -> !xegpu.tensor_desc<32x64xf32>
     %load = xegpu.load_nd %tdesc_src[0, 0] : !xegpu.tensor_desc<32x64xf32> -> vector<32x64xf32>
     %reduce = vector.multi_reduction <add>, %load, %cst [1] : vector<32x64xf32> to vector<32xf32>
-    %tdesc_dst = xegpu.create_nd_tdesc %dst : memref<32xf32> -> !xegpu.tensor_desc<32xf32, #xegpu.layout<sg_layout = [32], sg_data = [1]>>
+    %tdesc_dst = xegpu.create_nd_tdesc %dst : memref<32xf32> -> !xegpu.tensor_desc<32xf32>
     xegpu.store_nd %reduce, %tdesc_dst[0] <{layout = #xegpu.layout<sg_layout = [32], sg_data = [1]>}>
-      : vector<32xf32>, !xegpu.tensor_desc<32xf32, #xegpu.layout<sg_layout = [32], sg_data = [1]>>
+      : vector<32xf32>, !xegpu.tensor_desc<32xf32>
     gpu.return
   }
 }
@@ -260,7 +260,7 @@ gpu.module @test {
     // CHECK-SAME: : vector<128x128xf16>, vector<128x128xf16>, vector<128x128xf32> -> vector<128x128xf32>
 
     // CHECK-NEXT: scf.yield %{{.*}} : vector<128x128xf32>
-    // CHECK-NEXT: } {layout_result_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}
+    // CHECK-NEXT: } {layout_operand_3 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>, layout_result_0 = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}
     // CHECK: xegpu.store_nd %{{.*}} <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [64, 64]>}>
 
     %2 = scf.for %arg3 = %c0 to %c8192 step %c128 iter_args(%arg4 = %cst) -> (vector<128x128xf32>) {
@@ -399,7 +399,7 @@ gpu.module @test {
   // CHECK-SAME: !xegpu.tensor_desc<16x256xf8E8M0FNU, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32]>> -> vector<16x256xf8E8M0FNU>
   // CHECK: %[[T8:.*]] = xegpu.dpas_mx %[[T1]], %[[T3]], %[[CST]] scale_a = %[[T5]] scale_b = %[[T7]]
   // CHECK-SAME: {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 512]>, layout_a_scale = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>, layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [512, 32]>, layout_b_scale = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32]>, layout_cd = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32]>} :
-  // CHECK-SAME: vector<128x512xf8E5M2>, vector<512x256xf8E5M2>, vector<128x256xbf16>, vector<128x16xf8E8M0FNU>, vector<16x256xf8E8M0FNU> -> vector<128x256xbf16>
+  // CHECK-SAME: (vector<128x512xf8E5M2>, vector<512x256xf8E5M2>, vector<128x256xbf16>, vector<128x16xf8E8M0FNU>, vector<16x256xf8E8M0FNU>) -> vector<128x256xbf16>
   // CHECK: %[[T9:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<128x256xbf16> -> !xegpu.tensor_desc<128x256xbf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32]>>
   // CHECK: xegpu.store_nd %[[T8]], %[[T9]][0, 0] <{layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32]>}> : vector<128x256xbf16>, !xegpu.tensor_desc<128x256xbf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32]>>
   gpu.func @dpas_mx(%arg0: memref<128x512xf8E5M2>, %arg1: memref<512x256xf8E5M2>, %arg2: memref<128x256xbf16>,
@@ -414,7 +414,7 @@ gpu.module @test {
     %load_a_scale =  xegpu.load_nd %tdesc_a_scale[0, 0] : !xegpu.tensor_desc<128x16xf8E8M0FNU> -> vector<128x16xf8E8M0FNU>
     %tdesc_b_scale = xegpu.create_nd_tdesc %arg4 : memref<16x256xf8E8M0FNU> -> !xegpu.tensor_desc<16x256xf8E8M0FNU>
     %load_b_scale =  xegpu.load_nd %tdesc_b_scale[0, 0] : !xegpu.tensor_desc<16x256xf8E8M0FNU> -> vector<16x256xf8E8M0FNU>
-    %dpas_mx = xegpu.dpas_mx %load_a, %load_b, %cst scale_a = %load_a_scale scale_b = %load_b_scale : vector<128x512xf8E5M2>, vector<512x256xf8E5M2>, vector<128x256xbf16>, vector<128x16xf8E8M0FNU>, vector<16x256xf8E8M0FNU> -> vector<128x256xbf16>
+    %dpas_mx = xegpu.dpas_mx %load_a, %load_b, %cst scale_a = %load_a_scale scale_b = %load_b_scale : (vector<128x512xf8E5M2>, vector<512x256xf8E5M2>, vector<128x256xbf16>, vector<128x16xf8E8M0FNU>, vector<16x256xf8E8M0FNU>) -> vector<128x256xbf16>
     %tdesc_cd = xegpu.create_nd_tdesc %arg2 : memref<128x256xbf16> -> !xegpu.tensor_desc<128x256xbf16>
     xegpu.store_nd %dpas_mx, %tdesc_cd[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 32]>}> : vector<128x256xbf16>, !xegpu.tensor_desc<128x256xbf16>
     gpu.return
@@ -440,7 +440,7 @@ gpu.module @test {
   // CHECK-SAME: !xegpu.tensor_desc<16x128xf8E8M0FNU, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>> -> vector<16x128xf8E8M0FNU>
   // CHECK: %[[T8:.*]] = xegpu.dpas_mx %[[T1]], %[[T3]], %[[CST]] scale_a = %[[T5]] scale_b = %[[T7]]
   // CHECK-SAME: {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 512]>, layout_a_scale = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>, layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [512, 16]>, layout_b_scale = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>, layout_cd = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>} :
-  // CHECK-SAME: vector<128x512xf4E2M1FN>, vector<512x128xf4E2M1FN>, vector<128x128xf32>, vector<128x16xf8E8M0FNU>, vector<16x128xf8E8M0FNU> -> vector<128x128xf32>
+  // CHECK-SAME: (vector<128x512xf4E2M1FN>, vector<512x128xf4E2M1FN>, vector<128x128xf32>, vector<128x16xf8E8M0FNU>, vector<16x128xf8E8M0FNU>) -> vector<128x128xf32>
   // CHECK: %[[T9:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>>
   // CHECK: xegpu.store_nd %[[T8]], %[[T9]][0, 0] <{layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>}> : vector<128x128xf32>, !xegpu.tensor_desc<128x128xf32, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>>
   gpu.func @dpas_mx_fp4(%arg0: memref<128x512xf4E2M1FN>, %arg1: memref<512x128xf4E2M1FN>, %arg2: memref<128x128xf32>,
@@ -455,9 +455,123 @@ gpu.module @test {
     %load_a_scale =  xegpu.load_nd %tdesc_a_scale[0, 0] : !xegpu.tensor_desc<128x16xf8E8M0FNU> -> vector<128x16xf8E8M0FNU>
     %tdesc_b_scale = xegpu.create_nd_tdesc %arg4 : memref<16x128xf8E8M0FNU> -> !xegpu.tensor_desc<16x128xf8E8M0FNU>
     %load_b_scale =  xegpu.load_nd %tdesc_b_scale[0, 0] : !xegpu.tensor_desc<16x128xf8E8M0FNU> -> vector<16x128xf8E8M0FNU>
-    %dpas_mx = xegpu.dpas_mx %load_a, %load_b, %cst scale_a = %load_a_scale scale_b = %load_b_scale : vector<128x512xf4E2M1FN>, vector<512x128xf4E2M1FN>, vector<128x128xf32>, vector<128x16xf8E8M0FNU>, vector<16x128xf8E8M0FNU> -> vector<128x128xf32>
+    %dpas_mx = xegpu.dpas_mx %load_a, %load_b, %cst scale_a = %load_a_scale scale_b = %load_b_scale : (vector<128x512xf4E2M1FN>, vector<512x128xf4E2M1FN>, vector<128x128xf32>, vector<128x16xf8E8M0FNU>, vector<16x128xf8E8M0FNU>) -> vector<128x128xf32>
     %tdesc_cd = xegpu.create_nd_tdesc %arg2 : memref<128x128xf32> -> !xegpu.tensor_desc<128x128xf32>
     xegpu.store_nd %dpas_mx, %tdesc_cd[0, 0] <{layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>}> : vector<128x128xf32>, !xegpu.tensor_desc<128x128xf32>
+    gpu.return
+  }
+}
+
+// -----
+gpu.module @test {
+  // CHECK-LABEL: sum_reduction_broadcast_transpose
+  // CHECK-SAME: %[[ARG0:.*]]: memref<64x256xf16>
+  // CHECK-SAME: %[[ARG1:.*]]: memref<64x32xf16>
+  // CHECK:      %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [0, 1]>, dims = [1]>}
+  // CHECK-SAME:    dense<0.000000e+00> : vector<64xf16>
+  // CHECK:      %[[TDESC0:.*]] = xegpu.create_nd_tdesc %[[ARG0]] : memref<64x256xf16> -> !xegpu.tensor_desc<64x32xf16,
+  // CHECK-SAME:    #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [0, 1]>>
+  // CHECK:       %[[FOR:.*]] = scf.for %[[ARG2:.*]] = %{{.*}} iter_args(%[[ARG3:.*]] = %[[CST]]) -> (vector<64xf16>) {
+  // CHECK:       %[[LOAD:.*]] = xegpu.load_nd %[[TDESC0]][0, %[[ARG2]]]
+  // CHECK-SAME:    <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [0, 1]>}> :
+  // CHECK-SAME:    !xegpu.tensor_desc<64x32xf16, #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [0, 1]>> -> vector<64x32xf16>
+  // CHECK:       %[[REDUCE:.*]] = vector.multi_reduction <add>, %[[LOAD]], %[[ARG3]]
+  // CHECK-SAME:    {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [0, 1]>, dims = [1]>} [1]
+  // CHECK-SAME:    : vector<64x32xf16> to vector<64xf16>
+  // CHECK:       scf.yield %[[REDUCE]] : vector<64xf16>
+  // CHECK:       } {layout_operand_3 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [0, 1]>, dims = [1]>, layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16], order = [0, 1]>, dims = [1]>}
+  // CHECK:       %[[BCAST:.*]] = vector.broadcast %[[FOR]] {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16], order = [0, 1]>}
+  // CHECK-SAME:    : vector<64xf16> to vector<32x64xf16>
+  // CHECK:       %[[TRANS:.*]] = vector.transpose %[[BCAST]], [1, 0] {layout_result_0 = #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16]>}
+  // CHECK-SAME:    : vector<32x64xf16> to vector<64x32xf16>
+  // CHECK:       %[[TDESC1:.*]] = xegpu.create_nd_tdesc %[[ARG1]] : memref<64x32xf16> ->
+  // CHECK-SAME:    !xegpu.tensor_desc<64x32xf16, #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16]>>
+  // CHECK:       xegpu.store_nd %[[TRANS]], %[[TDESC1]][0, 0] <{layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16]>}>
+  // CHECK-SAME:    : vector<64x32xf16>, !xegpu.tensor_desc<64x32xf16, #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16]>>
+  gpu.func @sum_reduction_broadcast_transpose(%input: memref<64x256xf16>, %output: memref<64x32xf16>) kernel attributes {known_block_size = array<i32: 1, 32, 16>} {
+    %c0 = arith.constant 0 : index
+    %c32 = arith.constant 32 : index
+    %c256 = arith.constant 256 : index
+    %init = arith.constant dense<0.000000e+00> : vector<64xf16>
+    %tdesc_input = xegpu.create_nd_tdesc %input : memref<64x256xf16> -> !xegpu.tensor_desc<64x32xf16>
+    %result = scf.for %i = %c0 to %c256 step %c32 iter_args(%acc = %init) -> (vector<64xf16>) {
+      %loaded = xegpu.load_nd %tdesc_input[0, %i] : !xegpu.tensor_desc<64x32xf16> -> vector<64x32xf16>
+      %reduced = vector.multi_reduction <add>, %loaded, %acc [1] : vector<64x32xf16> to vector<64xf16>
+      scf.yield %reduced : vector<64xf16>
+    }
+    %broadcasted = vector.broadcast %result : vector<64xf16> to vector<32x64xf16>
+    %transposed = vector.transpose %broadcasted, [1, 0] : vector<32x64xf16> to vector<64x32xf16>
+    %tdesc_output = xegpu.create_nd_tdesc %output : memref<64x32xf16> -> !xegpu.tensor_desc<64x32xf16>
+    xegpu.store_nd %transposed, %tdesc_output[0, 0] { layout = #xegpu.layout<sg_layout = [4, 2], sg_data = [16, 16]>} : vector<64x32xf16>, !xegpu.tensor_desc<64x32xf16>
+    gpu.return
+  }
+}
+
+// -----
+// shape_cast collapse: all src dims fold into a single innermost dst dim.
+// srcShape=[8, 16, 32], resShape=[4096], consumer sg_layout=[8],
+// sg_data=[512]
+// sg_layout outer-to-inner: dim0 take=min(8, 8)=8 (rem=1) -> [8, 1, 1].
+// sg_data innermost-first, capped per dim by srcShape[d]/sgLayout[d]:
+//   dim2 cap=32/1=32, take=32 (rem=16); dim1 cap=16/1=16, take=16 (rem=1)
+//   -> [1, 16, 32].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_innermost(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [8, 1, 1], sg_data = [1, 16, 32]>} dense<0.000000e+00> : vector<8x16x32xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [8], sg_data = [512]>} : vector<8x16x32xf16> to vector<4096xf16>
+  gpu.func @shape_cast_collapse_innermost(%dst: memref<4096xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<8x16x32xf16>
+    %0 = vector.shape_cast %cst : vector<8x16x32xf16> to vector<4096xf16>
+    %mask = arith.constant dense<true> : vector<4096xi1>
+    %offsets = vector.step : vector<4096xindex>
+    xegpu.store %0, %dst[%offsets], %mask <{layout = #xegpu.layout<sg_layout = [8], sg_data = [512]>}> : vector<4096xf16>, memref<4096xf16>, vector<4096xindex>, vector<4096xi1>
+    gpu.return
+  }
+}
+
+// -----
+// shape_cast collapse where sg_layout exceeds the size of the outermost src
+// dim, so it spills inward across multiple src dims.
+// srcShape=[2, 8, 32], resShape=[512], consumer sg_layout=[16], sg_data=[32]
+// sg_layout outer-to-inner: dim0 take=min(16, 2)=2 (rem=8);
+//   dim1 take=min(8, 8)=8 (rem=1) -> [2, 8, 1].
+// sg_data innermost-first, capped per dim by srcShape[d]/sgLayout[d]:
+//   dim2 cap=32/1=32, take=32 (rem=1) -> [1, 1, 32].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_sg_layout_spill_inward(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 8, 1], sg_data = [1, 1, 32]>} dense<0.000000e+00> : vector<2x8x32xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [16], sg_data = [32]>} : vector<2x8x32xf16> to vector<512xf16>
+  gpu.func @shape_cast_collapse_sg_layout_spill_inward(%dst: memref<512xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<2x8x32xf16>
+    %0 = vector.shape_cast %cst : vector<2x8x32xf16> to vector<512xf16>
+    %mask = arith.constant dense<true> : vector<512xi1>
+    %offsets = vector.step : vector<512xindex>
+    xegpu.store %0, %dst[%offsets], %mask <{layout = #xegpu.layout<sg_layout = [16], sg_data = [32]>}> : vector<512xf16>, memref<512xf16>, vector<512xindex>, vector<512xi1>
+    gpu.return
+  }
+}
+
+// -----
+// shape_cast collapse with multiple non-trivial groups: every dst dim
+// collapses >=2 src dims, exercising the general matchDimCollapse path.
+// srcShape=[2, 4, 8, 16], resShape=[8, 128], consumer sg_layout=[2, 4],
+// sg_data=[4, 32]
+//  - dst[0]=8 collapses src[0, 1]: sg_layout outer-to-inner over [0, 1]:
+//      dim0 take=min(2, 2)=2 (rem=1) -> [2, 1, _, _]; sg_data innermost-first:
+//      dim1 cap=4/1=4, take=4 (rem=1) -> [1, 4, _, _].
+//  - dst[1]=128 collapses src[2, 3]: sg_layout outer-to-inner: dim2 take=
+//      min(4, 8)=4 (rem=1) -> [_, _, 4, 1]; sg_data innermost-first: dim3
+//      cap=16/1=16, take=16 (rem=2); dim2 cap=8/4=2, take=2 (rem=1)
+//      -> [_, _, 2, 16].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_collapse_multi_groups(
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 1, 4, 1], sg_data = [1, 4, 2, 16]>} dense<0.000000e+00> : vector<2x4x8x16xf16>
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[CST]] {layout_result_0 = #xegpu.layout<sg_layout = [2, 4], sg_data = [4, 32]>} : vector<2x4x8x16xf16> to vector<8x128xf16>
+  gpu.func @shape_cast_collapse_multi_groups(%dst: memref<8x128xf16>) kernel {
+    %cst = arith.constant dense<0.000000e+00> : vector<2x4x8x16xf16>
+    %0 = vector.shape_cast %cst : vector<2x4x8x16xf16> to vector<8x128xf16>
+    %tdesc = xegpu.create_nd_tdesc %dst : memref<8x128xf16> -> !xegpu.tensor_desc<8x128xf16>
+    xegpu.store_nd %0, %tdesc[0, 0] <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [4, 32]>}> : vector<8x128xf16>, !xegpu.tensor_desc<8x128xf16>
     gpu.return
   }
 }

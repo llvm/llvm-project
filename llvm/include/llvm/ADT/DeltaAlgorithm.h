@@ -14,7 +14,7 @@
 
 namespace llvm {
 
-/// DeltaAlgorithm - Implements the delta debugging algorithm (A. Zeller '99)
+/// Implements the delta debugging algorithm (A. Zeller '99)
 /// for minimizing arbitrary sets using a predicate function.
 ///
 /// The result of the algorithm is a subset of the input change set which is
@@ -45,22 +45,22 @@ private:
   /// since we always reduce following a success.
   std::set<changeset_ty> FailedTestsCache;
 
-  /// GetTestResult - Get the test result for the \p Changes from the
-  /// cache, executing the test if necessary.
+  /// Get the test result for the \p Changes from the cache, executing the test
+  /// if necessary.
   ///
   /// \param Changes - The change set to test.
   /// \return - The test result.
   bool GetTestResult(const changeset_ty &Changes);
 
-  /// Split - Partition a set of changes \p S into one or two subsets.
+  /// Partition a set of changes \p S into one or two subsets.
   void Split(const changeset_ty &S, changesetlist_ty &Res);
 
-  /// Delta - Minimize a set of \p Changes which has been partitioned into
+  /// Minimize a set of \p Changes which has been partitioned into
   /// smaller sets, by attempting to remove individual subsets.
   changeset_ty Delta(const changeset_ty &Changes,
                      const changesetlist_ty &Sets);
 
-  /// Search - Search for a subset (or subsets) in \p Sets which can be
+  /// Search for a subset (or subsets) in \p Sets which can be
   /// removed from \p Changes while still satisfying the predicate.
   ///
   /// \param Res - On success, a subset of Changes which satisfies the
@@ -70,11 +70,11 @@ private:
               changeset_ty &Res);
 
 protected:
-  /// UpdatedSearchState - Callback used when the search state changes.
+  /// Callback used when the search state changes.
   virtual void UpdatedSearchState(const changeset_ty &Changes,
                                   const changesetlist_ty &Sets) {}
 
-  /// ExecuteOneTest - Execute a single test predicate on the change set \p S.
+  /// Execute a single test predicate on the change set \p S.
   virtual bool ExecuteOneTest(const changeset_ty &S) = 0;
 
   DeltaAlgorithm& operator=(const DeltaAlgorithm&) = default;
@@ -82,7 +82,7 @@ protected:
 public:
   virtual ~DeltaAlgorithm();
 
-  /// Run - Minimize the set \p Changes by executing \see ExecuteOneTest() on
+  /// Minimize the set \p Changes by executing \see ExecuteOneTest() on
   /// subsets of changes and returning the smallest set which still satisfies
   /// the test predicate.
   changeset_ty Run(const changeset_ty &Changes);

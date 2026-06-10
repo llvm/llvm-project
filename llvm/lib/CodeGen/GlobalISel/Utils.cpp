@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include <numeric>
@@ -947,10 +948,10 @@ llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
   auto Fold = [Opcode, EltBits](const APInt &V) -> APInt {
     switch (Opcode) {
     case TargetOpcode::G_CTLZ:
-    case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+    case TargetOpcode::G_CTLZ_ZERO_POISON:
       return APInt(EltBits, V.countl_zero());
     case TargetOpcode::G_CTTZ:
-    case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+    case TargetOpcode::G_CTTZ_ZERO_POISON:
       return APInt(EltBits, V.countr_zero());
     case TargetOpcode::G_CTPOP:
       return APInt(EltBits, V.popcount());
@@ -1068,7 +1069,7 @@ llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 }
 
 bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
-                                  GISelValueTracking *VT) {
+                                  GISelValueTracking *VT, bool OrNegative) {
   std::optional<DefinitionAndSourceRegister> DefSrcReg =
       getDefSrcRegIgnoringCopies(Reg, MRI);
   if (!DefSrcReg)
@@ -1077,11 +1078,15 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
   const MachineInstr &MI = *DefSrcReg->MI;
   const LLT Ty = MRI.getType(Reg);
 
+  auto IsPow2 = [OrNegative](const APInt &V) {
+    return V.isPowerOf2() || (OrNegative && V.isNegatedPowerOf2());
+  };
+
   switch (MI.getOpcode()) {
   case TargetOpcode::G_CONSTANT: {
     unsigned BitWidth = Ty.getScalarSizeInBits();
     const ConstantInt *CI = MI.getOperand(1).getCImm();
-    return CI->getValue().zextOrTrunc(BitWidth).isPowerOf2();
+    return IsPow2(CI->getValue().zextOrTrunc(BitWidth));
   }
   case TargetOpcode::G_SHL: {
     // A left-shift of a constant one will have exactly one bit set because
@@ -1107,7 +1112,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     // TODO: Probably should have a recursion depth guard since you could have
     // bitcasted vector elements.
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
-      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT))
+      if (!isKnownToBeAPowerOfTwo(MO.getReg(), MRI, VT, OrNegative))
         return false;
 
     return true;
@@ -1118,7 +1123,7 @@ bool llvm::isKnownToBeAPowerOfTwo(Register Reg, const MachineRegisterInfo &MRI,
     const unsigned BitWidth = Ty.getScalarSizeInBits();
     for (const MachineOperand &MO : llvm::drop_begin(MI.operands())) {
       auto Const = getIConstantVRegVal(MO.getReg(), MRI);
-      if (!Const || !Const->zextOrTrunc(BitWidth).isPowerOf2())
+      if (!Const || !IsPow2(Const->zextOrTrunc(BitWidth)))
         return false;
     }
 
@@ -1728,8 +1733,10 @@ bool llvm::isPreISelGenericFloatingPointOpcode(unsigned Opc) {
   case TargetOpcode::G_FNEARBYINT:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPEXTLOAD:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPTRUNCSTORE:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FRINT:
   case TargetOpcode::G_FSIN:
@@ -1783,22 +1790,6 @@ static bool shiftAmountKnownInRange(Register ShiftAmount,
   }
 
   return true;
-}
-
-namespace {
-enum class UndefPoisonKind {
-  PoisonOnly = (1 << 0),
-  UndefOnly = (1 << 1),
-  UndefOrPoison = PoisonOnly | UndefOnly,
-};
-}
-
-static bool includesPoison(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::PoisonOnly)) != 0;
-}
-
-static bool includesUndef(UndefPoisonKind Kind) {
-  return (unsigned(Kind) & unsigned(UndefPoisonKind::UndefOnly)) != 0;
 }
 
 static bool canCreateUndefOrPoison(Register Reg, const MachineRegisterInfo &MRI,

@@ -39,7 +39,7 @@ define fp128 @test_ret_f128() {
   ; WASM32-NOMULTIVAL-NEXT:   liveins: $arguments
   ; WASM32-NOMULTIVAL-NEXT: {{  $}}
   ; WASM32-NOMULTIVAL-NEXT:   [[ARGUMENT_i32_:%[0-9]+]]:i32(p0) = ARGUMENT_i32 0, implicit $arguments
-  ; WASM32-NOMULTIVAL-NEXT:   [[C:%[0-9]+]]:_(f128) = G_FCONSTANT fp128 0xL00000000000000000000000000000000
+  ; WASM32-NOMULTIVAL-NEXT:   [[C:%[0-9]+]]:_(f128) = G_FCONSTANT fp128 0.000000e+00
   ; WASM32-NOMULTIVAL-NEXT:   G_STORE [[C]](f128), [[ARGUMENT_i32_]](p0) :: (store (f128))
   ; WASM32-NOMULTIVAL-NEXT:   RETURN implicit-def $arguments
   ;
@@ -48,7 +48,7 @@ define fp128 @test_ret_f128() {
   ; WASM64-NOMULTIVAL-NEXT:   liveins: $arguments
   ; WASM64-NOMULTIVAL-NEXT: {{  $}}
   ; WASM64-NOMULTIVAL-NEXT:   [[ARGUMENT_i64_:%[0-9]+]]:i64(p0) = ARGUMENT_i64 0, implicit $arguments
-  ; WASM64-NOMULTIVAL-NEXT:   [[C:%[0-9]+]]:_(f128) = G_FCONSTANT fp128 0xL00000000000000000000000000000000
+  ; WASM64-NOMULTIVAL-NEXT:   [[C:%[0-9]+]]:_(f128) = G_FCONSTANT fp128 0.000000e+00
   ; WASM64-NOMULTIVAL-NEXT:   G_STORE [[C]](f128), [[ARGUMENT_i64_]](p0) :: (store (f128))
   ; WASM64-NOMULTIVAL-NEXT:   RETURN implicit-def $arguments
   ;
@@ -56,7 +56,7 @@ define fp128 @test_ret_f128() {
   ; MULTIVAL: bb.1 (%ir-block.0):
   ; MULTIVAL-NEXT:   liveins: $arguments
   ; MULTIVAL-NEXT: {{  $}}
-  ; MULTIVAL-NEXT:   [[C:%[0-9]+]]:_(f128) = G_FCONSTANT fp128 0xL00000000000000000000000000000000
+  ; MULTIVAL-NEXT:   [[C:%[0-9]+]]:_(f128) = G_FCONSTANT fp128 0.000000e+00
   ; MULTIVAL-NEXT:   [[UV:%[0-9]+]]:i64(i64), [[UV1:%[0-9]+]]:i64(i64) = G_UNMERGE_VALUES [[C]](f128)
   ; MULTIVAL-NEXT:   RETURN [[UV]](i64), [[UV1]](i64), implicit-def $arguments
   ret fp128 zeroinitializer

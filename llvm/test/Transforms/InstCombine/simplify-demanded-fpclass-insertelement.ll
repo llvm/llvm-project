@@ -49,7 +49,7 @@ define nofpclass(nan zero sub norm) <4 x half> @ret_only_inf__insert_unknown_unk
 define nofpclass(nan ninf zero sub norm) <4 x half> @ret_only_pinf__insert_unknown_unknown(<4 x half> %vec, half %elt, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) <4 x half> @ret_only_pinf__insert_unknown_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], half [[ELT:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret <4 x half> splat (half 0xH7C00)
+; CHECK-NEXT:    ret <4 x half> splat (half +inf)
 ;
   %insert = insertelement <4 x half> %vec, half %elt, i32 %idx
   ret <4 x half> %insert
@@ -58,7 +58,7 @@ define nofpclass(nan ninf zero sub norm) <4 x half> @ret_only_pinf__insert_unkno
 define nofpclass(nan pinf zero sub norm) <4 x half> @ret_only_ninf__insert_unknown_unknown(<4 x half> %vec, half %elt, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(nan pinf zero sub norm) <4 x half> @ret_only_ninf__insert_unknown_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], half [[ELT:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret <4 x half> splat (half 0xHFC00)
+; CHECK-NEXT:    ret <4 x half> splat (half -inf)
 ;
   %insert = insertelement <4 x half> %vec, half %elt, i32 %idx
   ret <4 x half> %insert
@@ -86,7 +86,7 @@ define nofpclass(nan inf nzero sub norm) <4 x half> @ret_only_pzero__insert_unkn
 define nofpclass(nan inf pzero sub norm) <4 x half> @ret_only_nzero__insert_unknown_unknown(<4 x half> %vec, half %elt, i32 %idx) {
 ; CHECK-LABEL: define nofpclass(nan inf pzero sub norm) <4 x half> @ret_only_nzero__insert_unknown_unknown(
 ; CHECK-SAME: <4 x half> [[VEC:%.*]], half [[ELT:%.*]], i32 [[IDX:%.*]]) {
-; CHECK-NEXT:    ret <4 x half> splat (half 0xH8000)
+; CHECK-NEXT:    ret <4 x half> splat (half -0.000000e+00)
 ;
   %insert = insertelement <4 x half> %vec, half %elt, i32 %idx
   ret <4 x half> %insert

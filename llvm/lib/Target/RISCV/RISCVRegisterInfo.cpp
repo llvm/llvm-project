@@ -177,12 +177,16 @@ BitVector RISCVRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   for (size_t Reg = 0; Reg < getNumRegs(); Reg++) {
     // Mark any GPRs requested to be reserved as such
-    if (Subtarget.isRegisterReservedByUser(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (Subtarget.isRegisterReservedByUser(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
 
     // Mark all the registers defined as constant in TableGen as reserved.
-    if (isConstantPhysReg(Reg))
-      markSuperRegs(Reserved, Reg);
+    if (isConstantPhysReg(Reg)) {
+      for (MCPhysReg Sub : subregs_inclusive(Reg))
+        markSuperRegs(Reserved, Sub);
+    }
   }
 
   // Use markSuperRegs to ensure any register aliases are also reserved
@@ -270,8 +274,12 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
       const int64_t NumOfVReg = Offset.getScalable() / 8;
       const int64_t FixedOffset = NumOfVReg * VLENB;
       if (!isInt<32>(FixedOffset)) {
-        reportFatalUsageError(
-            "Frame size outside of the signed 32-bit range not supported");
+        // This check might also need to be updated to 64bit.
+        // However mulImm() still assumes 32bit. For now only support fixed
+        // 64bit frame offsets, since scalable offsets would require the number
+        // of spilled registers to exceed 2^31, which is unlikely.
+        reportFatalUsageError("Scalable frame size outside of the signed "
+                              "32-bit range not supported");
       }
       Offset = StackOffset::getFixed(FixedOffset + Offset.getFixed());
     }
@@ -561,6 +569,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  bool Is64Bit = MF.getSubtarget<RISCVSubtarget>().is64Bit();
   DebugLoc DL = MI.getDebugLoc();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
@@ -571,9 +580,9 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (!IsRVVSpill)
     Offset += StackOffset::getFixed(MI.getOperand(FIOperandNum + 1).getImm());
 
-  if (!isInt<32>(Offset.getFixed())) {
-    reportFatalUsageError(
-        "Frame offsets outside of the signed 32-bit range not supported");
+  if (!Is64Bit && !isInt<32>(Offset.getFixed())) {
+    reportFatalUsageError("Frame offsets outside of the signed 32-bit range "
+                          "not supported on RV32");
   }
 
   if (!IsRVVSpill) {
@@ -725,7 +734,13 @@ bool RISCVRegisterInfo::needsFrameBaseReg(MachineInstr *MI,
     }
 
     int64_t MaxFPOffset = Offset - CalleeSavedSize;
-    return !isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset);
+    if (isFrameOffsetLegal(MI, RISCV::X8, MaxFPOffset))
+      return false;
+
+    // If the FP-relative offset doesn't fit, fall through to check the
+    // SP-relative offset. getFrameIndexReference may select SP over FP when
+    // the SP offset fits in the compressed instruction immediate range, so a
+    // base register might not be needed.
   }
 
   // Assume 128 bytes spill slots size to estimate the maximum possible

@@ -26,12 +26,9 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-/// Compute the indices of the slice `index` for a transfer op.
-static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
-                                               ArrayRef<Value> indices,
-                                               AffineMap permutationMap,
-                                               Location loc,
-                                               OpBuilder &builder) {
+SmallVector<Value> mlir::vector::sliceTransferIndices(
+    ArrayRef<int64_t> elementOffsets, ArrayRef<Value> indices,
+    AffineMap permutationMap, Location loc, OpBuilder &builder) {
   MLIRContext *ctx = builder.getContext();
   auto isBroadcast = [](AffineExpr expr) {
     if (auto constExpr = dyn_cast<AffineConstantExpr>(expr))
@@ -41,11 +38,12 @@ static SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
   // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
   SmallVector<Value> slicedIndices(indices);
   for (const auto &dim : llvm::enumerate(permutationMap.getResults())) {
-    if (isBroadcast(dim.value()))
+    int64_t elementOffset = elementOffsets[dim.index()];
+    if (isBroadcast(dim.value()) || elementOffset == 0)
       continue;
     unsigned pos = cast<AffineDimExpr>(dim.value()).getPosition();
     auto expr = getAffineDimExpr(0, builder.getContext()) +
-                getAffineConstantExpr(elementOffsets[dim.index()], ctx);
+                getAffineConstantExpr(elementOffset, ctx);
     auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
     slicedIndices[pos] =
         affine::AffineApplyOp::create(builder, loc, map, indices[pos]);
@@ -263,10 +261,6 @@ private:
 };
 
 struct OffsetMapInfo {
-  static SmallVector<int64_t> getEmptyKey() { return {int64_t(-1)}; }
-
-  static SmallVector<int64_t> getTombstoneKey() { return {int64_t(-2)}; }
-
   static unsigned getHashValue(const SmallVector<int64_t> &v) {
     return static_cast<unsigned>(llvm::hash_combine_range(v));
   }

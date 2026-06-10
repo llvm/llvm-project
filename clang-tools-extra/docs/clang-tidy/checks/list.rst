@@ -19,7 +19,6 @@ Clang-Tidy Checks
    darwin/*
    fuchsia/*
    google/*
-   hicpp/*
    linuxkernel/*
    llvm/*
    llvmlibc/*
@@ -122,6 +121,7 @@ Clang-Tidy Checks
    :doc:`bugprone-misplaced-operator-in-strlen-in-alloc <bugprone/misplaced-operator-in-strlen-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone/misplaced-pointer-arithmetic-in-alloc>`, "Yes"
    :doc:`bugprone-misplaced-widening-cast <bugprone/misplaced-widening-cast>`,
+   :doc:`bugprone-missing-end-comparison <bugprone/missing-end-comparison>`, "Yes"
    :doc:`bugprone-move-forwarding-reference <bugprone/move-forwarding-reference>`, "Yes"
    :doc:`bugprone-multi-level-implicit-pointer-conversion <bugprone/multi-level-implicit-pointer-conversion>`,
    :doc:`bugprone-multiple-new-in-one-expression <bugprone/multiple-new-in-one-expression>`,
@@ -174,6 +174,7 @@ Clang-Tidy Checks
    :doc:`bugprone-unchecked-string-to-number-conversion <bugprone/unchecked-string-to-number-conversion>`,
    :doc:`bugprone-undefined-memory-manipulation <bugprone/undefined-memory-manipulation>`,
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
+   :doc:`bugprone-unhandled-code-paths <bugprone/unhandled-code-paths>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
    :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
@@ -230,7 +231,6 @@ Clang-Tidy Checks
    :doc:`google-build-explicit-make-pair <google/build-explicit-make-pair>`,
    :doc:`google-build-using-namespace <google/build-using-namespace>`,
    :doc:`google-default-arguments <google/default-arguments>`,
-   :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
    :doc:`google-global-names-in-headers <google/global-names-in-headers>`,
    :doc:`google-objc-avoid-nsobject-new <google/objc-avoid-nsobject-new>`,
    :doc:`google-objc-avoid-throwing-exception <google/objc-avoid-throwing-exception>`,
@@ -242,8 +242,8 @@ Clang-Tidy Checks
    :doc:`google-runtime-int <google/runtime-int>`,
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
-   :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`linuxkernel-must-check-errs <linuxkernel/must-check-errs>`,
+   :doc:`llvm-formatv-string <llvm/formatv-string>`,
    :doc:`llvm-header-guard <llvm/header-guard>`,
    :doc:`llvm-include-order <llvm/include-order>`, "Yes"
    :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
@@ -265,6 +265,7 @@ Clang-Tidy Checks
    :doc:`misc-const-correctness <misc/const-correctness>`, "Yes"
    :doc:`misc-coroutine-hostile-raii <misc/coroutine-hostile-raii>`,
    :doc:`misc-definitions-in-headers <misc/definitions-in-headers>`, "Yes"
+   :doc:`misc-explicit-constructor <misc/explicit-constructor>`, "Yes"
    :doc:`misc-header-include-cycle <misc/header-include-cycle>`,
    :doc:`misc-include-cleaner <misc/include-cleaner>`, "Yes"
    :doc:`misc-misleading-bidirectional <misc/misleading-bidirectional>`,
@@ -279,6 +280,7 @@ Clang-Tidy Checks
    :doc:`misc-predictable-rand <misc/predictable-rand>`,
    :doc:`misc-redundant-expression <misc/redundant-expression>`, "Yes"
    :doc:`misc-static-assert <misc/static-assert>`, "Yes"
+   :doc:`misc-static-initialization-cycle <misc/static-initialization-cycle>`,
    :doc:`misc-throw-by-value-catch-by-reference <misc/throw-by-value-catch-by-reference>`,
    :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,
    :doc:`misc-uniqueptr-reset-release <misc/uniqueptr-reset-release>`, "Yes"
@@ -416,6 +418,7 @@ Clang-Tidy Checks
    :doc:`readability-redundant-inline-specifier <readability/redundant-inline-specifier>`, "Yes"
    :doc:`readability-redundant-lambda-parameter-list <readability/redundant-lambda-parameter-list>`, "Yes"
    :doc:`readability-redundant-member-init <readability/redundant-member-init>`, "Yes"
+   :doc:`readability-redundant-nested-if <readability/redundant-nested-if>`, "Yes"
    :doc:`readability-redundant-parentheses <readability/redundant-parentheses>`, "Yes"
    :doc:`readability-redundant-preprocessor <readability/redundant-preprocessor>`,
    :doc:`readability-redundant-qualified-alias <readability/redundant-qualified-alias>`, "Yes"
@@ -586,6 +589,7 @@ Check aliases
    :doc:`cppcoreguidelines-avoid-c-arrays <cppcoreguidelines/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
    :doc:`cppcoreguidelines-avoid-magic-numbers <cppcoreguidelines/avoid-magic-numbers>`, :doc:`readability-magic-numbers <readability/magic-numbers>`,
    :doc:`cppcoreguidelines-c-copy-assignment-signature <cppcoreguidelines/c-copy-assignment-signature>`, :doc:`misc-unconventional-assign-operator <misc/unconventional-assign-operator>`,
+   :doc:`cppcoreguidelines-explicit-constructor <cppcoreguidelines/explicit-constructor>`, :doc:`misc-explicit-constructor <misc/explicit-constructor>`, "Yes"
    :doc:`cppcoreguidelines-explicit-virtual-functions <cppcoreguidelines/explicit-virtual-functions>`, :doc:`modernize-use-override <modernize/use-override>`, "Yes"
    :doc:`cppcoreguidelines-macro-to-enum <cppcoreguidelines/macro-to-enum>`, :doc:`modernize-macro-to-enum <modernize/macro-to-enum>`, "Yes"
    :doc:`cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions>`, :doc:`bugprone-narrowing-conversions <bugprone/narrowing-conversions>`,
@@ -597,40 +601,11 @@ Check aliases
    :doc:`fuchsia-header-anon-namespaces <fuchsia/header-anon-namespaces>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
    :doc:`fuchsia-multiple-inheritance <fuchsia/multiple-inheritance>`, :doc:`misc-multiple-inheritance <misc/multiple-inheritance>`,
    :doc:`google-build-namespaces <google/build-namespaces>`, :doc:`misc-anonymous-namespace-in-header <misc/anonymous-namespace-in-header>`,
+   :doc:`google-explicit-constructor <google/explicit-constructor>`, :doc:`misc-explicit-constructor <misc/explicit-constructor>`, "Yes"
    :doc:`google-readability-braces-around-statements <google/readability-braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
    :doc:`google-readability-casting <google/readability-casting>`, :doc:`modernize-avoid-c-style-cast <modernize/avoid-c-style-cast>`, "Yes"
    :doc:`google-readability-function-size <google/readability-function-size>`, :doc:`readability-function-size <readability/function-size>`,
    :doc:`google-readability-namespace-comments <google/readability-namespace-comments>`, :doc:`llvm-namespace-comment <llvm/namespace-comment>`,
-   :doc:`hicpp-avoid-c-arrays <hicpp/avoid-c-arrays>`, :doc:`modernize-avoid-c-arrays <modernize/avoid-c-arrays>`,
-   :doc:`hicpp-avoid-goto <hicpp/avoid-goto>`, :doc:`cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`,
-   :doc:`hicpp-braces-around-statements <hicpp/braces-around-statements>`, :doc:`readability-braces-around-statements <readability/braces-around-statements>`, "Yes"
-   :doc:`hicpp-deprecated-headers <hicpp/deprecated-headers>`, :doc:`modernize-deprecated-headers <modernize/deprecated-headers>`, "Yes"
-   :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`, :doc:`bugprone-std-exception-baseclass <bugprone/std-exception-baseclass>`,
-   :doc:`hicpp-explicit-conversions <hicpp/explicit-conversions>`, :doc:`google-explicit-constructor <google/explicit-constructor>`, "Yes"
-   :doc:`hicpp-function-size <hicpp/function-size>`, :doc:`readability-function-size <readability/function-size>`,
-   :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`, :doc:`bugprone-unused-return-value <bugprone/unused-return-value>`,
-   :doc:`hicpp-invalid-access-moved <hicpp/invalid-access-moved>`, :doc:`bugprone-use-after-move <bugprone/use-after-move>`,
-   :doc:`hicpp-member-init <hicpp/member-init>`, :doc:`cppcoreguidelines-pro-type-member-init <cppcoreguidelines/pro-type-member-init>`, "Yes"
-   :doc:`hicpp-move-const-arg <hicpp/move-const-arg>`, :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
-   :doc:`hicpp-named-parameter <hicpp/named-parameter>`, :doc:`readability-named-parameter <readability/named-parameter>`, "Yes"
-   :doc:`hicpp-new-delete-operators <hicpp/new-delete-operators>`, :doc:`misc-new-delete-overloads <misc/new-delete-overloads>`,
-   :doc:`hicpp-no-array-decay <hicpp/no-array-decay>`, :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay>`,
-   :doc:`hicpp-no-assembler <hicpp/no-assembler>`, :doc:`portability-no-assembler <portability/no-assembler>`,
-   :doc:`hicpp-no-malloc <hicpp/no-malloc>`, :doc:`cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc>`,
-   :doc:`hicpp-noexcept-move <hicpp/noexcept-move>`, :doc:`performance-noexcept-move-constructor <performance/noexcept-move-constructor>`, "Yes"
-   :doc:`hicpp-signed-bitwise <hicpp/signed-bitwise>`, :doc:`bugprone-signed-bitwise <bugprone/signed-bitwise>`,
-   :doc:`hicpp-special-member-functions <hicpp/special-member-functions>`, :doc:`cppcoreguidelines-special-member-functions <cppcoreguidelines/special-member-functions>`,
-   :doc:`hicpp-static-assert <hicpp/static-assert>`, :doc:`misc-static-assert <misc/static-assert>`, "Yes"
-   :doc:`hicpp-undelegated-constructor <hicpp/undelegated-constructor>`, :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
-   :doc:`hicpp-uppercase-literal-suffix <hicpp/uppercase-literal-suffix>`, :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
-   :doc:`hicpp-use-auto <hicpp/use-auto>`, :doc:`modernize-use-auto <modernize/use-auto>`, "Yes"
-   :doc:`hicpp-use-emplace <hicpp/use-emplace>`, :doc:`modernize-use-emplace <modernize/use-emplace>`, "Yes"
-   :doc:`hicpp-use-equals-default <hicpp/use-equals-default>`, :doc:`modernize-use-equals-default <modernize/use-equals-default>`, "Yes"
-   :doc:`hicpp-use-equals-delete <hicpp/use-equals-delete>`, :doc:`modernize-use-equals-delete <modernize/use-equals-delete>`, "Yes"
-   :doc:`hicpp-use-noexcept <hicpp/use-noexcept>`, :doc:`modernize-use-noexcept <modernize/use-noexcept>`, "Yes"
-   :doc:`hicpp-use-nullptr <hicpp/use-nullptr>`, :doc:`modernize-use-nullptr <modernize/use-nullptr>`, "Yes"
-   :doc:`hicpp-use-override <hicpp/use-override>`, :doc:`modernize-use-override <modernize/use-override>`, "Yes"
-   :doc:`hicpp-vararg <hicpp/vararg>`, :doc:`cppcoreguidelines-pro-type-vararg <cppcoreguidelines/pro-type-vararg>`,
    :doc:`llvm-else-after-return <llvm/else-after-return>`, :doc:`readability-else-after-return <readability/else-after-return>`, "Yes"
    :doc:`llvm-qualified-auto <llvm/qualified-auto>`, :doc:`readability-qualified-auto <readability/qualified-auto>`, "Yes"
    :doc:`performance-faster-string-find <performance/faster-string-find>`, :doc:`performance-prefer-single-char-overloads <performance/prefer-single-char-overloads>`, "Yes"

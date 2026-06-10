@@ -14,7 +14,6 @@
 #include "clang/Analysis/CallGraph.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/CallGraph/CallGraphSummary.h"
-#include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "llvm/ADT/STLExtras.h"
@@ -53,8 +52,8 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
   // FIXME: `clang::CallGraph` does not create entries for primary templates.
   assert(!Definition->isTemplated());
 
-  auto CallerName = getEntityName(Definition);
-  if (!CallerName)
+  auto CallerId = addEntity(Definition);
+  if (!CallerId)
     return;
 
   auto FnSummary = std::make_unique<CallGraphSummary>();
@@ -73,35 +72,37 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
     // never null.
     assert(CalleeDecl);
 
-    // FIXME: `clang::CallGraph` does not consider ObjCMessageExprs as calls.
-    // Consequently, they don't appear as a Callee.
-    assert(!isa<ObjCMethodDecl>(CalleeDecl));
+    // `clang::CallGraph` resolves ObjCMessageExprs (including property
+    // dot-syntax) to their ObjCMethodDecls and adds them as callees — see
+    // `CGBuilder::VisitObjCMessageExpr` in clang/lib/Analysis/CallGraph.cpp.
+    // ObjC dispatch is dynamic, so recording these as direct callees would be
+    // misleading; skip them until we model ObjC properly.
+    if (isa<ObjCMethodDecl>(CalleeDecl))
+      continue;
 
     // FIXME: `clang::CallGraph` does not create entries for primary templates.
     assert(!CalleeDecl->isTemplated());
 
-    auto CalleeName = getEntityName(CalleeDecl);
-    if (!CalleeName)
+    auto CalleeId = addEntity(cast<NamedDecl>(CalleeDecl));
+    if (!CalleeId)
       continue;
 
-    EntityId CalleeId = SummaryBuilder.addEntity(*CalleeName);
     if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CalleeDecl);
         MD && MD->isVirtual()) {
-      FnSummary->VirtualCallees.insert(CalleeId);
+      FnSummary->VirtualCallees.insert(*CalleeId);
       continue;
     }
-    FnSummary->DirectCallees.insert(CalleeId);
+    FnSummary->DirectCallees.insert(*CalleeId);
   }
 
-  EntityId CallerId = SummaryBuilder.addEntity(*CallerName);
-  SummaryBuilder.addSummary(CallerId, std::move(FnSummary));
+  SummaryBuilder.addSummary(*CallerId, std::move(FnSummary));
 }
 
 static TUSummaryExtractorRegistry::Add<CallGraphExtractor>
     RegisterExtractor(CallGraphSummary::Name,
                       "Extracts static call-graph information");
 
-// This anchor is used to force the linker to link in the generated object file
-// and thus register the CallGraphExtractor.
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 volatile int CallGraphExtractorAnchorSource = 0;
+} // namespace clang::ssaf

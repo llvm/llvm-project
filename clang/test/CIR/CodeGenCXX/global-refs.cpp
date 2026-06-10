@@ -26,7 +26,7 @@ int &globalIntRef = globalInt;
 // LLVM: @globalIntRef = constant ptr @globalInt, align 8
 
 const int &constGlobalIntRef = 5;
-// CIR: cir.global "private" constant external @_ZGR17constGlobalIntRef_ = #cir.int<5> : !s32i {alignment = 4 : i64}
+// CIR: cir.global "private" constant internal @_ZGR17constGlobalIntRef_ = #cir.int<5> : !s32i {alignment = 4 : i64}
 // CIR: cir.global constant external @constGlobalIntRef = #cir.global_view<@_ZGR17constGlobalIntRef_> : !cir.ptr<!s32i> {alignment = 8 : i64}
 // LLVM: @_ZGR17constGlobalIntRef_ = {{.*}}constant i32 5, align 4
 // LLVM: @constGlobalIntRef = constant ptr @_ZGR17constGlobalIntRef_, align 8
@@ -40,7 +40,7 @@ DefCtor &defCtorRef = defCtor;
 // LLVM: @defCtorRef = constant ptr @defCtor, align 8
 
 const DefCtor &constDefCtorRef{};
-// CIR: cir.global "private" constant external @_ZGR15constDefCtorRef_ = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
+// CIR: cir.global "private" constant internal @_ZGR15constDefCtorRef_ = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
 // CIR: cir.global constant external @constDefCtorRef = #cir.global_view<@_ZGR15constDefCtorRef_> : !cir.ptr<!rec_DefCtor> {alignment = 8 : i64}
 // LLVM: @_ZGR15constDefCtorRef_ = {{.*}}constant %struct.DefCtor undef, align 1
 // LLVM: @constDefCtorRef = constant ptr @_ZGR15constDefCtorRef_, align 8
@@ -133,7 +133,7 @@ void use() {
   // CIR-LABEL: cir.func{{.*}}use
 
   WithCtor &local = ExternRef;
-  // CIR-NEXT: %[[LOCAL:.*]] = cir.alloca !cir.ptr<!rec_WithCtor>, !cir.ptr<!cir.ptr<!rec_WithCtor>>, ["local", init, const]
+  // CIR-NEXT: %[[LOCAL:.*]] = cir.alloca "local" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_WithCtor>>
   // CIR-NEXT: %[[EXT_REF:.*]] = cir.get_global @ExternRef : !cir.ptr<!cir.ptr<!rec_WithCtor>>
   // CIR-NEXT: %[[EXT_REF_LOAD:.*]] = cir.load %[[EXT_REF]] : !cir.ptr<!cir.ptr<!rec_WithCtor>>, !cir.ptr<!rec_WithCtor>
   // CIR-NEXT: cir.store{{.*}}%[[EXT_REF_LOAD]], %[[LOCAL]]

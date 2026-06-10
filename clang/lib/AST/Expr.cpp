@@ -25,6 +25,7 @@
 #include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
@@ -141,6 +142,11 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   if (E->getType()->isBooleanType()) return true;
   // If this is a non-scalar-integer type, we don't care enough to try.
   if (!E->getType()->isIntegralOrEnumerationType()) return false;
+
+  if (!Semantic)
+    if (const auto *BIT = E->getType()->getAs<BitIntType>();
+        BIT && BIT->isUnsigned() && BIT->getNumBits() == 1)
+      return true;
 
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
     switch (UO->getOpcode()) {
@@ -2404,12 +2410,14 @@ EmbedExpr::EmbedExpr(const ASTContext &Ctx, SourceLocation Loc,
 }
 
 InitListExpr::InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
-                           ArrayRef<Expr *> initExprs, SourceLocation rbraceloc)
+                           ArrayRef<Expr *> initExprs, SourceLocation rbraceloc,
+                           bool isExplicit)
     : Expr(InitListExprClass, QualType(), VK_PRValue, OK_Ordinary),
       InitExprs(C, initExprs.size()), LBraceLoc(lbraceloc),
       RBraceLoc(rbraceloc), AltForm(nullptr, true) {
   sawArrayRangeDesignator(false);
   InitExprs.insert(C, InitExprs.end(), initExprs.begin(), initExprs.end());
+  InitListExprBits.IsExplicit = isExplicit;
 
   setDependence(computeDependence(this));
 }
@@ -3615,7 +3623,7 @@ CallExpr::evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const {
     Into = ExprResult.Val.getInt();
     if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
       return false;
-    Into = Into.zext(BitsInSizeT);
+    Into = Into.extOrTrunc(BitsInSizeT);
     return true;
   };
 
@@ -4933,7 +4941,8 @@ DesignatedInitUpdateExpr::DesignatedInitUpdateExpr(const ASTContext &C,
            OK_Ordinary) {
   BaseAndUpdaterExprs[0] = baseExpr;
 
-  InitListExpr *ILE = new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc);
+  InitListExpr *ILE =
+      new (C) InitListExpr(C, lBraceLoc, {}, rBraceLoc, /*isExplicit=*/false);
   ILE->setType(baseExpr->getType());
   BaseAndUpdaterExprs[1] = ILE;
 
@@ -5693,4 +5702,67 @@ APValue &CompoundLiteralExpr::getOrCreateStaticValue(ASTContext &Ctx) const {
 APValue &CompoundLiteralExpr::getStaticValue() const {
   assert(StaticValue);
   return *StaticValue;
+}
+
+namespace {
+/// Visitor that walks an Expr to the head of a struct-field access chain;
+/// see clang::findStructFieldAccess.
+class StructFieldAccessVisitor
+    : public ConstStmtVisitor<StructFieldAccessVisitor, const Expr *> {
+  bool AddrOfSeen = false;
+
+public:
+  const Expr *ArrayIndex = nullptr;
+  QualType ArrayElementTy;
+
+  const Expr *VisitMemberExpr(const MemberExpr *E) {
+    if (AddrOfSeen && E->getType()->isArrayType())
+      // '&fam' designates the array object as a whole, not the
+      // pointer-to-element value that 'fam' decays to.
+      return nullptr;
+    return E;
+  }
+
+  const Expr *VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+    if (ArrayIndex)
+      // We don't support multiple subscripts.
+      return nullptr;
+
+    AddrOfSeen = false; // '&ptr->array[idx]' is okay.
+    ArrayIndex = E->getIdx();
+    ArrayElementTy = E->getBase()->getType();
+    return Visit(E->getBase());
+  }
+  const Expr *VisitCastExpr(const CastExpr *E) {
+    if (E->getCastKind() == CK_LValueToRValue)
+      return E;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitParenExpr(const ParenExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryAddrOf(const UnaryOperator *E) {
+    AddrOfSeen = true;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitUnaryDeref(const UnaryOperator *E) {
+    AddrOfSeen = false;
+    return Visit(E->getSubExpr());
+  }
+  const Expr *VisitBinaryOperator(const BinaryOperator *Op) {
+    return Op->isCommaOp() ? Visit(Op->getRHS()) : nullptr;
+  }
+};
+} // namespace
+
+const Expr *clang::findStructFieldAccess(const Expr *E,
+                                         const Expr **OutArrayIndex,
+                                         QualType *OutArrayElementTy) {
+  StructFieldAccessVisitor V;
+  const Expr *Result = V.Visit(E);
+  if (OutArrayIndex)
+    *OutArrayIndex = V.ArrayIndex;
+  if (OutArrayElementTy)
+    *OutArrayElementTy = V.ArrayElementTy;
+  return Result;
 }

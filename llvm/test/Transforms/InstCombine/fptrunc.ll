@@ -40,7 +40,7 @@ define <2 x float> @fdiv_constant_op0(<2 x double> %x) {
 
 define <2 x half> @fmul_constant_op1(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_constant_op1(
-; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float 0x47EFFFFFE0000000, float 5.000000e-01>
+; CHECK-NEXT:    [[BO:%.*]] = fmul reassoc <2 x float> [[X:%.*]], <float f0x7F7FFFFF, float 5.000000e-01>
 ; CHECK-NEXT:    [[R:%.*]] = fptrunc <2 x float> [[BO]] to <2 x half>
 ; CHECK-NEXT:    ret <2 x half> [[R]]
 ;
@@ -116,8 +116,8 @@ define half @fptrunc_select_true_val_extra_use(half %x, float %y, i1 %cond) {
 
 define half @fptrunc_max(half %arg) {
 ; CHECK-LABEL: @fptrunc_max(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt half [[ARG:%.*]], 0xH0000
-; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[CMP]], half 0xH0000, half [[ARG]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt half [[ARG:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NARROW_SEL:%.*]] = select i1 [[CMP]], half 0.000000e+00, half [[ARG]]
 ; CHECK-NEXT:    ret half [[NARROW_SEL]]
 ;
   %ext = fpext half %arg to double

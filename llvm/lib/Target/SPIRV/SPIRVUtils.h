@@ -31,7 +31,6 @@
 namespace llvm {
 class MCInst;
 class MachineFunction;
-class MachineInstr;
 class MachineInstrBuilder;
 class MachineIRBuilder;
 class MachineRegisterInfo;
@@ -40,7 +39,6 @@ class StringRef;
 class SPIRVInstrInfo;
 class SPIRVSubtarget;
 class SPIRVGlobalRegistry;
-class SPIRVTypeInst;
 
 // This class implements a partial ordering visitor, which visits a cyclic graph
 // in natural topological-like ordering. Topological ordering is not defined for
@@ -238,6 +236,7 @@ constexpr bool isGenericCastablePtr(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::Workgroup:
   case SPIRV::StorageClass::CrossWorkgroup:
   case SPIRV::StorageClass::Function:
+  case SPIRV::StorageClass::CodeSectionINTEL:
     return true;
   default:
     return false;
@@ -335,6 +334,15 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx);
 // Returns true if the function was changed.
 bool sortBlocks(Function &F);
 
+// Create a stack slot in the entry block of F for a value of the given type.
+AllocaInst *createVariable(Function &F, Type *Type);
+
+// Create a value in BB set to the value associated with the branch the block
+// terminator will take.
+Value *
+createExitVariable(BasicBlock *BB,
+                   const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue);
+
 // Check for peeled array structs and recursively reconstitute them. In HLSL
 // CBuffers, arrays may have padding between the elements, but not after the
 // last element. To represent this in LLVM IR an array [N x T] will be
@@ -373,6 +381,12 @@ inline bool isPointerTy(const Type *T) {
   return isUntypedPointerTy(T) || isTypedPointerTy(T);
 }
 
+// True if this is a vector whose element type is an (untyped) PointerType.
+inline bool isUntypedPointerVectorTy(const Type *T) {
+  return isa_and_nonnull<VectorType>(T) &&
+         isUntypedPointerTy(T->getScalarType());
+}
+
 // Get the address space of this pointer or pointer vector type for instances of
 // PointerType or TypedPointerType.
 inline unsigned getPointerAddressSpace(const Type *T) {
@@ -396,13 +410,6 @@ inline Type *getPointeeTypeByAttr(Argument *Arg) {
   if (Arg->hasByRefAttr())
     return Arg->getParamByRefType();
   return nullptr;
-}
-
-inline Type *reconstructFunctionType(Function *F) {
-  SmallVector<Type *> ArgTys;
-  for (unsigned i = 0; i < F->arg_size(); ++i)
-    ArgTys.push_back(F->getArg(i)->getType());
-  return FunctionType::get(F->getReturnType(), ArgTys, F->isVarArg());
 }
 
 #define TYPED_PTR_TARGET_EXT_NAME "spirv.$TypedPointerType"
@@ -534,6 +541,8 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg);
 
 #define SPIRV_BACKEND_SERVICE_FUN_NAME "__spirv_backend_service_fun"
+#define SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR "spv.was-available-externally"
+
 bool getVacantFunctionName(Module &M, std::string &Name);
 
 void setRegClassType(Register Reg, const Type *Ty, SPIRVGlobalRegistry *GR,
