@@ -9,20 +9,20 @@
 define bfloat @fminimum_bf16(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: fminimum_bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fmv.s fa3, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
+; CHECK-NEXT:    fmv.s fa4, fa3
 ; CHECK-NEXT:    bnez a0, .LBB0_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa3, fa5
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    feq.s a0, fa4, fa4
+; CHECK-NEXT:    feq.s a0, fa3, fa3
 ; CHECK-NEXT:    bnez a0, .LBB0_4
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa5, fa3
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    fmin.s fa5, fa5, fa3
+; CHECK-NEXT:    fmin.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %1 = call bfloat @llvm.minimum.bf16(bfloat %a, bfloat %b)
@@ -32,20 +32,20 @@ define bfloat @fminimum_bf16(bfloat %a, bfloat %b) nounwind {
 define bfloat @fmaximum_bf16(bfloat %a, bfloat %b) nounwind {
 ; CHECK-LABEL: fmaximum_bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fcvt.s.bf16 fa4, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa0
 ; CHECK-NEXT:    feq.s a0, fa5, fa5
-; CHECK-NEXT:    fmv.s fa3, fa4
+; CHECK-NEXT:    fcvt.s.bf16 fa3, fa1
+; CHECK-NEXT:    fmv.s fa4, fa3
 ; CHECK-NEXT:    bnez a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    fmv.s fa3, fa5
+; CHECK-NEXT:    fmv.s fa4, fa5
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    feq.s a0, fa4, fa4
+; CHECK-NEXT:    feq.s a0, fa3, fa3
 ; CHECK-NEXT:    bnez a0, .LBB1_4
 ; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    fmv.s fa5, fa4
+; CHECK-NEXT:    fmv.s fa5, fa3
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    fmax.s fa5, fa5, fa3
+; CHECK-NEXT:    fmax.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %1 = call bfloat @llvm.maximum.bf16(bfloat %a, bfloat %b)
@@ -103,13 +103,13 @@ define bfloat @fmaximum_nnan_op_bf16(bfloat %a, bfloat %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fcvt.s.bf16 fa5, fa1
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa0
-; CHECK-NEXT:    fadd.s fa3, fa4, fa5
-; CHECK-NEXT:    fsub.s fa5, fa4, fa5
+; CHECK-NEXT:    fsub.s fa3, fa4, fa5
+; CHECK-NEXT:    fadd.s fa5, fa4, fa5
 ; CHECK-NEXT:    fcvt.bf16.s fa4, fa3
 ; CHECK-NEXT:    fcvt.bf16.s fa5, fa5
-; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
 ; CHECK-NEXT:    fcvt.s.bf16 fa4, fa4
-; CHECK-NEXT:    fmax.s fa5, fa4, fa5
+; CHECK-NEXT:    fcvt.s.bf16 fa5, fa5
+; CHECK-NEXT:    fmax.s fa5, fa5, fa4
 ; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %c = fadd nnan bfloat %a, %b

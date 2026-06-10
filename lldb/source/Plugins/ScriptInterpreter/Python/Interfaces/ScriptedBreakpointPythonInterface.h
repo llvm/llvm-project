@@ -22,8 +22,8 @@ public:
   ScriptedBreakpointPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
   llvm::Expected<StructuredData::GenericSP>
-  CreatePluginObject(llvm::StringRef class_name, lldb::BreakpointSP break_sp,
-                     const StructuredDataImpl &args_sp) override;
+  CreatePluginObject(const ScriptedMetadata &scripted_metadata,
+                     lldb::BreakpointSP break_sp) override;
 
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {

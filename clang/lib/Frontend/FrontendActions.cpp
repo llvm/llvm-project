@@ -128,7 +128,7 @@ GeneratePCHAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
   std::string OutputFile;
   std::unique_ptr<raw_pwrite_stream> OS =
-      CreateOutputFile(CI, InFile, /*ref*/ OutputFile);
+      CreateOutputFile(CI, InFile, /*ref*/ OutputFile, SetOnlyIfDifferent);
   if (!OS)
     return nullptr;
 
@@ -162,10 +162,13 @@ bool GeneratePCHAction::ComputeASTConsumerArguments(CompilerInstance &CI,
 
 std::unique_ptr<llvm::raw_pwrite_stream>
 GeneratePCHAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile,
-                                    std::string &OutputFile) {
+                                    std::string &OutputFile,
+                                    bool SetOnlyIfDifferent) {
   // Because this is exposed via libclang we must disable RemoveFileOnSignal.
   std::unique_ptr<raw_pwrite_stream> OS = CI.createDefaultOutputFile(
-      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false);
+      /*Binary=*/true, InFile, /*Extension=*/"", /*RemoveFileOnSignal=*/false,
+      /*CreateMissingDirectories=*/false, /*ForceUseTemporary=*/false,
+      SetOnlyIfDifferent);
   if (!OS)
     return nullptr;
 
@@ -258,7 +261,8 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
   return CI.createDefaultOutputFile(/*Binary=*/true, InFile, /*Extension=*/"",
                                     /*RemoveFileOnSignal=*/false,
                                     /*CreateMissingDirectories=*/true,
-                                    /*ForceUseTemporary=*/true);
+                                    /*ForceUseTemporary=*/true,
+                                    /*SetOnlyIfDifferent=*/SetOnlyIfDifferent);
 }
 
 bool GenerateModuleInterfaceAction::PrepareToExecuteAction(

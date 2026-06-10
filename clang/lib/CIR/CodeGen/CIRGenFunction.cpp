@@ -19,6 +19,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
@@ -218,10 +219,9 @@ bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
-    mlir::Value addr = emitAlloca("__retval", convertType(type), loc, alignment,
-                                  /*insertIntoFnEntryBlock=*/false);
-    fnRetAlloca = addr;
-    returnValue = Address(addr, alignment);
+    Address allocaAddr = Address::invalid();
+    returnValue = createMemTemp(type, alignment, loc, "__retval", &allocaAddr);
+    fnRetAlloca = allocaAddr.getPointer();
   }
 }
 
@@ -231,7 +231,8 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   assert(isa<NamedDecl>(var) && "Needs a named decl");
   assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
-  auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
+  Address addr(addrVal, alignment);
+  cir::AllocaOp allocaOp = addr.getUnderlyingAllocaOp();
   assert(allocaOp && "expected cir::AllocaOp");
 
   if (isParam)
@@ -239,7 +240,7 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
 
-  symbolTable.insert(var, allocaOp);
+  symbolTable.insert(var, addrVal);
 }
 
 void CIRGenFunction::LexicalScope::cleanup() {
@@ -273,22 +274,6 @@ void CIRGenFunction::LexicalScope::cleanup() {
     return;
   if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
     return;
-
-  // If the builder's current block lives in a region nested below this
-  // lexical scope's region, popCleanup has left the insertion point past
-  // a cir.cleanup.scope inside that nested region (for example, inside a
-  // cir.for body when the body cleanup was registered there). Emitting a
-  // cir.yield at the current position would terminate the nested region
-  // instead of this scope's region. Reposition to the back block of this
-  // scope's region so the terminator below lands in the correct place.
-  if (mlir::Region *scopeRegion = entryBlock->getParent();
-      scopeRegion && !scopeRegion->empty() &&
-      curBlock->getParent() != scopeRegion) {
-    builder.setInsertionPointToEnd(&scopeRegion->back());
-    curBlock = builder.getBlock();
-    if (curBlock->mightHaveTerminator() && curBlock->getTerminator())
-      return;
-  }
 
   // Get rid of any empty block at the end of the scope. An empty non-entry
   // block is created when a terminator (return/break/continue) is followed
@@ -777,6 +762,10 @@ cir::FuncOp CIRGenFunction::generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
 
     // Emit the standard function prologue.
     startFunction(gd, retTy, fn, funcType, args, loc, bodyRange.getBegin());
+    if (funcDecl->UsesFPIntrin() || funcDecl->hasAttr<StrictFPAttr>()) {
+      cgm.errorNYI(loc, "STDC FENV_ACCESS");
+      return fn;
+    }
 
     // Save parameters for coroutine function.
     if (body && isa_and_nonnull<CoroutineBodyStmt>(body))
@@ -1168,40 +1157,29 @@ LValue CIRGenFunction::emitPseudoObjectLValue(const PseudoObjectExpr *e) {
 /// of the expression.
 /// FIXME: document this function better.
 LValue CIRGenFunction::emitLValue(const Expr *e) {
-  // FIXME: ApplyDebugLocation DL(*this, e);
+  assert(!cir::MissingFeatures::generateDebugInfo());
   switch (e->getStmtClass()) {
   default:
     getCIRGenModule().errorNYI(e->getSourceRange(),
-                               std::string("l-value not implemented for '") +
-                                   e->getStmtClassName() + "'");
+                               "emitLValue: unsupported l-value class");
     return LValue();
-  case Expr::ConditionalOperatorClass:
-    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
-  case Expr::BinaryConditionalOperatorClass:
-    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
-  case Expr::ArraySubscriptExprClass:
-    return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
-  case Expr::ExtVectorElementExprClass:
-    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
-  case Expr::UnaryOperatorClass:
-    return emitUnaryOpLValue(cast<UnaryOperator>(e));
-  case Expr::StringLiteralClass:
-    return emitStringLiteralLValue(cast<StringLiteral>(e));
-  case Expr::MemberExprClass:
-    return emitMemberExpr(cast<MemberExpr>(e));
-  case Expr::CompoundLiteralExprClass:
-    return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
-  case Expr::PredefinedExprClass:
-    return emitPredefinedLValue(cast<PredefinedExpr>(e));
+
+  case Expr::ObjCPropertyRefExprClass:
+    llvm_unreachable("cannot emit a property reference directly");
+
+  case Expr::ObjCSelectorExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCSelectorExpr");
+    return LValue();
+  case Expr::ObjCIsaExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ObjCIsaExpr");
+    return LValue();
   case Expr::BinaryOperatorClass:
     return emitBinaryOperatorLValue(cast<BinaryOperator>(e));
   case Expr::CompoundAssignOperatorClass: {
     QualType ty = e->getType();
-    if (ty->getAs<AtomicType>()) {
-      cgm.errorNYI(e->getSourceRange(),
-                   "CompoundAssignOperator with AtomicType");
-      return LValue();
-    }
+    if (const AtomicType *at = ty->getAs<AtomicType>())
+      ty = at->getValueType();
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
 
@@ -1212,6 +1190,50 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXOperatorCallExprClass:
   case Expr::UserDefinedLiteralClass:
     return emitCallExprLValue(cast<CallExpr>(e));
+  case Expr::CXXRewrittenBinaryOperatorClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXRewrittenBinaryOperator");
+    return LValue();
+  case Expr::VAArgExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: VAArgExpr");
+    return LValue();
+  case Expr::DeclRefExprClass:
+    return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::ConstantExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: ConstantExpr");
+    return LValue();
+  case Expr::ParenExprClass:
+    return emitLValue(cast<ParenExpr>(e)->getSubExpr());
+  case Expr::GenericSelectionExprClass:
+    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
+  case Expr::PredefinedExprClass:
+    return emitPredefinedLValue(cast<PredefinedExpr>(e));
+  case Expr::StringLiteralClass:
+    return emitStringLiteralLValue(cast<StringLiteral>(e));
+  case Expr::ObjCEncodeExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCEncodeExpr");
+    return LValue();
+  case Expr::PseudoObjectExprClass:
+    return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
+  case Expr::InitListExprClass:
+    return emitInitListLValue(cast<InitListExpr>(e));
+  case Expr::CXXTemporaryObjectExprClass:
+  case Expr::CXXConstructExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXConstructExpr");
+    return LValue();
+  case Expr::CXXBindTemporaryExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXBindTemporaryExpr");
+    return LValue();
+  case Expr::CXXUuidofExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: CXXUuidofExpr");
+    return LValue();
+  case Expr::LambdaExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: LambdaExpr");
+    return LValue();
   case Expr::ExprWithCleanupsClass: {
     const auto *cleanups = cast<ExprWithCleanups>(e);
     FullExprCleanupScope scope(*this, cleanups->getSubExpr());
@@ -1234,41 +1256,92 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     CXXDefaultArgExprScope scope(*this, dae);
     return emitLValue(dae->getExpr());
   }
-  case Expr::CXXTypeidExprClass:
-    return emitCXXTypeidLValue(cast<CXXTypeidExpr>(e));
-  case Expr::ParenExprClass:
-    return emitLValue(cast<ParenExpr>(e)->getSubExpr());
-  case Expr::GenericSelectionExprClass:
-    return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
-  case Expr::DeclRefExprClass:
-    return emitDeclRefLValue(cast<DeclRefExpr>(e));
-  case Expr::ImplicitCastExprClass:
-  case Expr::CStyleCastExprClass:
-  case Expr::CXXStaticCastExprClass:
-  case Expr::CXXDynamicCastExprClass:
-  case Expr::CXXReinterpretCastExprClass:
-  case Expr::CXXConstCastExprClass:
-  case Expr::CXXFunctionalCastExprClass:
-    // TODO(cir): The above list is missing
-    // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
-    return emitCastLValue(cast<CastExpr>(e));
-  case Expr::MaterializeTemporaryExprClass:
-    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
-  case Expr::OpaqueValueExprClass:
-    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
-  case Expr::ChooseExprClass:
-    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
-  case Expr::SubstNonTypeTemplateParmExprClass:
-    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
-  case Expr::InitListExprClass:
-    return emitInitListLValue(cast<InitListExpr>(e));
-  case Expr::PseudoObjectExprClass:
-    return emitPseudoObjectLValue(cast<PseudoObjectExpr>(e));
   case Expr::CXXDefaultInitExprClass: {
     auto *die = cast<CXXDefaultInitExpr>(e);
     CXXDefaultInitExprScope scope(*this, die);
     return emitLValue(die->getExpr());
   }
+  case Expr::CXXTypeidExprClass:
+    return emitCXXTypeidLValue(cast<CXXTypeidExpr>(e));
+  case Expr::ObjCMessageExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCMessageExpr");
+    return LValue();
+  case Expr::ObjCIvarRefExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ObjCIvarRefExpr");
+    return LValue();
+  case Expr::StmtExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: StmtExpr");
+    return LValue();
+  case Expr::UnaryOperatorClass:
+    return emitUnaryOpLValue(cast<UnaryOperator>(e));
+  case Expr::ArraySubscriptExprClass:
+    return emitArraySubscriptExpr(cast<ArraySubscriptExpr>(e));
+  case Expr::MatrixSingleSubscriptExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixSingleSubscriptExpr");
+    return LValue();
+  case Expr::MatrixSubscriptExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixSubscriptExpr");
+    return LValue();
+  case Expr::ArraySectionExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: ArraySectionExpr");
+    return LValue();
+  case Expr::ExtVectorElementExprClass:
+    return emitExtVectorElementExpr(cast<ExtVectorElementExpr>(e));
+  case Expr::MatrixElementExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: MatrixElementExpr");
+    return LValue();
+  case Expr::CXXThisExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CXXThisExpr");
+    return LValue();
+  case Expr::MemberExprClass:
+    return emitMemberExpr(cast<MemberExpr>(e));
+  case Expr::CompoundLiteralExprClass:
+    return emitCompoundLiteralLValue(cast<CompoundLiteralExpr>(e));
+  case Expr::ConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<ConditionalOperator>(e));
+  case Expr::BinaryConditionalOperatorClass:
+    return emitConditionalOperatorLValue(cast<BinaryConditionalOperator>(e));
+  case Expr::ChooseExprClass:
+    return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
+  case Expr::OpaqueValueExprClass:
+    return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
+  case Expr::SubstNonTypeTemplateParmExprClass:
+    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
+  case Expr::ImplicitCastExprClass:
+  case Expr::CStyleCastExprClass:
+  case Expr::CXXFunctionalCastExprClass:
+  case Expr::CXXStaticCastExprClass:
+  case Expr::CXXDynamicCastExprClass:
+  case Expr::CXXReinterpretCastExprClass:
+  case Expr::CXXConstCastExprClass:
+    return emitCastLValue(cast<CastExpr>(e));
+  case Expr::CXXAddrspaceCastExprClass:
+  case Expr::ObjCBridgedCastExprClass:
+    // TODO(cir): These can just be moved into the cast handling above, but
+    //            they need test cases.
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: addrspace or ObjC bridged cast");
+    return LValue();
+  case Expr::MaterializeTemporaryExprClass:
+    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
+  case Expr::CoawaitExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoawaitExpr");
+    return LValue();
+  case Expr::CoyieldExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(), "emitLValue: CoyieldExpr");
+    return LValue();
+  case Expr::PackIndexingExprClass:
+    getCIRGenModule().errorNYI(e->getSourceRange(),
+                               "emitLValue: PackIndexingExpr");
+    return LValue();
+  case Expr::HLSLOutArgExprClass:
+    llvm_unreachable("cannot emit a HLSL out argument directly");
   }
 }
 
@@ -1491,8 +1564,15 @@ mlir::Value CIRGenFunction::emitAlignmentAssumption(
     mlir::Value ptrValue, QualType ty, SourceLocation loc,
     SourceLocation assumptionLoc, int64_t alignment, mlir::Value offsetValue) {
   assert(!cir::MissingFeatures::sanitizers());
-  return cir::AssumeAlignedOp::create(builder, getLoc(assumptionLoc), ptrValue,
-                                      alignment, offsetValue);
+  mlir::Location assumeLoc = getLoc(assumptionLoc);
+  mlir::Value alignValue = builder.getUInt64(alignment, assumeLoc);
+  mlir::Value cond = builder.getBool(true, assumeLoc);
+  llvm::SmallVector<mlir::Value> bundleArgs{ptrValue, alignValue};
+  if (offsetValue)
+    bundleArgs.push_back(offsetValue);
+  cir::AssumeOp::create(builder, assumeLoc, cond, cir::AssumeBundleKind::Align,
+                        bundleArgs);
+  return ptrValue;
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
@@ -1644,7 +1724,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
           // Always zexting here would be wrong if it weren't
           // undefined behavior to have a negative bound.
           // FIXME: What about when size's type is larger than size_t?
-          entry = builder.createIntCast(size, sizeTy);
+          entry = builder.createBoolIntToIntCast(size, sizeTy);
         }
       }
       type = vat->getElementType();

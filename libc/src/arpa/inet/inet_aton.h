@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_ARPA_INET_INET_ATON_H
 #define LLVM_LIBC_SRC_ARPA_INET_INET_ATON_H
 
-#include "include/llvm-libc-types/struct_in_addr.h"
+#include "hdr/types/struct_in_addr.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

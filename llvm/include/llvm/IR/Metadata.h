@@ -867,18 +867,7 @@ struct AAMDNodes {
 };
 
 // Specialize DenseMapInfo for AAMDNodes.
-template<>
-struct DenseMapInfo<AAMDNodes> {
-  static inline AAMDNodes getEmptyKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getEmptyKey(), nullptr, nullptr,
-                     nullptr, nullptr);
-  }
-
-  static inline AAMDNodes getTombstoneKey() {
-    return AAMDNodes(DenseMapInfo<MDNode *>::getTombstoneKey(), nullptr,
-                     nullptr, nullptr, nullptr);
-  }
-
+template <> struct DenseMapInfo<AAMDNodes> {
   static unsigned getHashValue(const AAMDNodes &Val) {
     return DenseMapInfo<MDNode *>::getHashValue(Val.TBAA) ^
            DenseMapInfo<MDNode *>::getHashValue(Val.TBAAStruct) ^
