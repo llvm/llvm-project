@@ -2018,12 +2018,10 @@ bool SPIRVInstructionSelector::selectAtomicLoad(Register ResVReg,
         .addUse(GR.getSPIRVTypeID(PtrType))
         .addUse(Ptr)
         .constrainAllUses(TII, TRI, RBI);
-    ResType = PtrType;
-    Ptr = PtrCastedToMatchValReg;
 
     MIRBuilder.buildInstr(SPIRV::OpAtomicLoad)
         .addDef(PtrToUVal)
-        .addUse(GR.getSPIRVTypeID(PtrType))
+        .addUse(GR.getSPIRVTypeID(PtrAsIntSpirvType))
         .addUse(PtrCastedToMatchValReg)
         .addUse(ScopeReg)
         .addUse(MemSemReg)

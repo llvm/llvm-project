@@ -20,11 +20,10 @@ define ptr addrspace(4)  @load_ptr(ptr addrspace(4) %ptr) {
 ; CHECK-LABEL: OpFunction %[[#]]
 ; CHECK:       %[[#Ptr:]] = OpFunctionParameter %[[#PtrInt8Ptr]]
 ; SPIRV32:       %[[#ConvertPtr:]] = OpBitcast %[[#Int32Ptr]] %[[#Ptr]]
-; SPIRV32:       %[[#Val:]] = OpAtomicLoad %[[#Int32Ptr]] %[[#ConvertPtr]] %[[#]] %[[#]]
-; SPIRV32:       %[[#ConvertVal:]] = OpConvertUToPtr %[[#Int32Ptr]] %[[#Val]]
+; SPIRV32:       %[[#Val:]] = OpAtomicLoad %[[#Int32]] %[[#ConvertPtr]] %[[#]] %[[#]]
 ; SPIRV64:       %[[#ConvertPtr:]] = OpBitcast %[[#Int64Ptr]] %[[#Ptr]]
-; SPIRV64:       %[[#Val:]] = OpAtomicLoad %[[#Int64Ptr]] %[[#ConvertPtr]] %[[#]] %[[#]]
-; SPIRV64:       %[[#ConvertVal:]] = OpConvertUToPtr %[[#Int64Ptr]] %[[#Val]]
+; SPIRV64:       %[[#Val:]] = OpAtomicLoad %[[#Int64]] %[[#ConvertPtr]] %[[#]] %[[#]]
+; CHECK:         %[[#ConvertVal:]] = OpConvertUToPtr %[[#Int8Ptr]] %[[#Val]]
 ; CHECK:       OpReturnValue %[[#ConvertVal]]
   %val = load atomic ptr addrspace(4), ptr addrspace(4) %ptr monotonic, align 8
   ret ptr addrspace(4) %val
