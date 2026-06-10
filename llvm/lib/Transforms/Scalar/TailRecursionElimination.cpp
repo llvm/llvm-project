@@ -408,7 +408,7 @@ static Constant *getReturnValue(Function &F) {
 
   for (BasicBlock &BB : F) {
     auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
-    if (!RI)
+    if (!RI || !RI->getReturnValue())
       continue;
 
     Value *RV = RI->getReturnValue();
