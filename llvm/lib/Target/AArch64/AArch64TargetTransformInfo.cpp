@@ -635,6 +635,56 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return HistCost;
     break;
   }
+  case Intrinsic::clmul: {
+    auto LT = getTypeLegalizationCost(RetTy);
+
+    // PMUL v8i8/v16i8 is always available on AArch64
+    if (ST->hasNEON()) {
+      if (LT.second == MVT::v8i8 || LT.second == MVT::v16i8)
+        return LT.first;
+
+      // Scalar i8 lowers through scalar/vector moves around PMUL.
+      if (TLI->getValueType(DL, RetTy, true) == MVT::i8)
+        return 4;
+    }
+
+    if (ST->hasSVE2() || ST->hasSME()) {
+      switch (LT.second.SimpleTy) {
+      case MVT::nxv16i8:
+        return LT.first;
+      case MVT::nxv8i16:
+        return LT.first * 6;
+      case MVT::nxv4i32:
+        return LT.first * 3;
+      case MVT::nxv2i64:
+        if (ST->hasSVEAES() && (ST->isSVEAvailable() || ST->hasSSVE_AES()))
+          return LT.first * 3;
+        return LT.first * 8;
+      default:
+        break;
+      }
+    }
+
+    if (ST->hasAES()) {
+      switch (LT.second.SimpleTy) {
+      case MVT::i16:
+      case MVT::i32:
+      case MVT::i64:
+        return LT.first * 2;
+      case MVT::i128:
+        return LT.first * 4;
+      case MVT::v1i64:
+        return LT.first;
+      case MVT::v2i64:
+        return LT.first * 3;
+      case MVT::v2i32:
+        return LT.first * 6;
+      default:
+        break;
+      }
+    }
+    break;
+  }
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
