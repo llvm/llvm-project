@@ -534,19 +534,12 @@ llvm::Error ClassDescriptorV2::ProcessRelativeMethodLists(
     if (!method_list)
       return method_list.takeError();
 
-    // 5. Cache the result so we don't need to reconstruct it later.
-    m_image_to_method_lists[entry.m_image_index].emplace_back(*method_list);
-
-    // 6. If the relevant image is loaded, add the methods to the Decl
+    // 5. If the relevant image is loaded, add the methods to the Decl
     if (!m_runtime.IsSharedCacheImageLoaded(entry.m_image_index))
       continue;
 
     ProcessMethodList(instance_method_func, *method_list);
   }
-
-  // We need to keep track of the last time we updated so we can re-update the
-  // type information in the future
-  m_last_version_updated = m_runtime.GetSharedCacheImageHeaderVersion();
 
   return llvm::Error::success();
 }
@@ -595,7 +588,7 @@ bool ClassDescriptorV2::Describe(
   }
 
   if (class_method_func) {
-    AppleObjCRuntime::ClassDescriptorSP metaclass(GetMetaclass());
+    std::unique_ptr<ClassDescriptor> metaclass = GetMetaclass();
 
     // We don't care about the metaclass's superclass, or its class methods.
     // Its instance methods are our class methods.
@@ -677,21 +670,22 @@ ObjCLanguageRuntime::ClassDescriptorSP ClassDescriptorV2::GetSuperclass() {
       objc_class->m_superclass);
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP ClassDescriptorV2::GetMetaclass() const {
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
+ClassDescriptorV2::GetMetaclass() const {
   lldb_private::Process *process = m_runtime.GetProcess();
 
   if (!process)
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   auto objc_class = objc_class_t::Read(process, m_objc_class_ptr);
   if (!objc_class) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Types), objc_class.takeError(), "{0}");
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
   }
 
   lldb::addr_t candidate_isa = m_runtime.GetPointerISA(objc_class->m_isa);
 
-  return ObjCLanguageRuntime::ClassDescriptorSP(
+  return std::unique_ptr<ClassDescriptor>(
       new ClassDescriptorV2(m_runtime, candidate_isa, nullptr));
 }
 

@@ -653,7 +653,7 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
   uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
   auto allocaOp = cir::AllocaOp::create(
-      rewriter, loc, ptrToS32Type, s32Type, "__cleanup_dest_slot",
+      rewriter, loc, ptrToS32Type, "__cleanup_dest_slot",
       /*alignment=*/rewriter.getI64IntegerAttr(alignment));
   allocaOp.setCleanupDestSlot(true);
   return allocaOp;
@@ -960,9 +960,9 @@ public:
           uint64_t alignment =
               dataLayout.getAlignment(operand.getType(), true).value();
           cir::PointerType ptrType = cir::PointerType::get(operand.getType());
-          alloca = cir::AllocaOp::create(rewriter, loc, ptrType,
-                                         operand.getType(), "__ret_operand_tmp",
-                                         rewriter.getI64IntegerAttr(alignment));
+          alloca =
+              cir::AllocaOp::create(rewriter, loc, ptrType, "__ret_operand_tmp",
+                                    rewriter.getI64IntegerAttr(alignment));
         }
 
         // Store the operand value at the original return location.

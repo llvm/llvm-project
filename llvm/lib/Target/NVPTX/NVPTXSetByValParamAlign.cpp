@@ -64,7 +64,7 @@ static Align setByValParamAlign(Argument *Arg) {
   Type *ByValType = Arg->getParamByValType();
   const DataLayout &DL = F->getDataLayout();
 
-  const Align OptimizedAlign = getFunctionParamOptimizedAlign(F, ByValType, DL);
+  const Align OptimizedAlign = getPTXPromotedParamTypeAlign(F, ByValType, DL);
   const Align CurrentAlign = Arg->getParamAlign().valueOrOne();
 
   if (CurrentAlign >= OptimizedAlign)

@@ -142,7 +142,27 @@ void OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
   scopeStack_.push_back(sym->scope());
 }
 
+void OmpStructureChecker::CheckTempDescriptorMappings() {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  for (const auto &[symbol, source] : tempDescriptorEnterMaps_) {
+    if (tempDescriptorExitMaps_.find(symbol) == tempDescriptorExitMaps_.end()) {
+      if (version >= 61) {
+        context_.Warn(common::UsageWarning::OpenMPUsage, source,
+            "The map of '%s' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data"_warn_en_US,
+            symbol->name());
+      } else {
+        context_.Warn(common::UsageWarning::OpenMPUsage, source,
+            "The map of '%s' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference"_warn_en_US,
+            symbol->name());
+      }
+    }
+  }
+  tempDescriptorEnterMaps_.clear();
+  tempDescriptorExitMaps_.clear();
+}
+
 void OmpStructureChecker::Enter(const parser::EndSubroutineStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -152,6 +172,7 @@ void OmpStructureChecker::Enter(const parser::FunctionStmt &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::EndFunctionStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -161,6 +182,7 @@ void OmpStructureChecker::Enter(const parser::MpSubprogramStmt &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::EndMpSubprogramStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -1571,9 +1593,7 @@ void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     const parser::Designator &designator) {
   auto *name{parser::Unwrap<parser::Name>(designator)};
-  // If the symbol is null, return early, CheckSymbolNames
-  // should have already reported the missing symbol as a
-  // diagnostic error
+  // If the symbol is null, return early.
   if (!name || !name->symbol) {
     return;
   }
@@ -1745,7 +1765,6 @@ void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.v};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{GetArgumentObject(arg)}) {
-      CheckSymbolName(dirSpec.source, *object);
       CheckTypeParamInquiry(dirSpec.source, *object);
       CheckVarIsNotPartOfAnotherVar(dirSpec.source, *object);
       CheckThreadprivateOrDeclareTargetVar(*object);
@@ -2353,38 +2372,6 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareReductionDirective &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::CheckSymbolName(
-    const parser::CharBlock &source, const parser::OmpObject &object) {
-  common::visit(
-      common::visitors{
-          [&](const parser::Designator &designator) {
-            if (const auto *name{parser::Unwrap<parser::Name>(object)}) {
-              if (!name->symbol) {
-                context_.Say(source,
-                    "The given %s directive clause has an invalid argument"_err_en_US,
-                    ContextDirectiveAsFortran());
-              }
-            }
-          },
-          [&](const parser::Name &name) {
-            if (!name.symbol) {
-              context_.Say(source,
-                  "The given %s directive clause has an invalid argument"_err_en_US,
-                  ContextDirectiveAsFortran());
-            }
-          },
-          [&](const parser::OmpObject::Invalid &invalid) {},
-      },
-      object.u);
-}
-
-void OmpStructureChecker::CheckSymbolNames(
-    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
-  for (const auto &ompObject : objList.v) {
-    CheckSymbolName(source, ompObject);
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContext(dirName.source, dirName.v);
@@ -2454,7 +2441,6 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{GetArgumentObject(arg)}) {
       deviceConstructFound_ = true;
-      CheckSymbolName(dirName.source, *object);
       CheckTypeParamInquiry(dirName.source, *object);
       CheckVarIsNotPartOfAnotherVar(dirName.source, *object);
       CheckThreadprivateOrDeclareTargetVar(*object);
@@ -2500,7 +2486,6 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
                   std::is_same_v<TypeC, parser::OmpClause::Link> ||
                   std::is_same_v<TypeC, parser::OmpClause::To>) {
                 auto &objList{*GetOmpObjectList(c)};
-                CheckSymbolNames(dirName.source, objList);
                 CheckVarIsNotPartOfAnotherVar(dirName.source, objList);
                 CheckThreadprivateOrDeclareTargetVar(objList);
               }
@@ -4700,6 +4685,38 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         auto maybeSource{GetObjectSource(object)};
         context_.Say(maybeSource.value_or(GetContext().clauseSource),
             "Whole assumed-size arrays are not allowed on MAP clause"_err_en_US);
+      }
+    }
+  }
+
+  // If we are an enter or exit map, iterate over the maps and add them to
+  // containers that track if the symbol has been referenced in both an
+  // enter/exit map in the current scope, if it falls into the category of
+  // having a temporary stack descriptor. If we have reference modifiers, we
+  // ignore the warning and trust that the user knows what they are doing
+  // already, as they are aware the type comes with a descriptor and pointer
+  // combination.
+  //
+  // We will utilise this information to emit a warning later if the neccesary
+  // conditions are met, where we have an enter map without a corresponding exit
+  // in the current scope.
+  bool hasRefModifier{
+      OmpGetUniqueModifier<parser::OmpRefModifier>(modifiers) != nullptr};
+  if (!hasRefModifier &&
+      (llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
+          llvm::is_contained(leafs, Directive::OMPD_target_exit_data))) {
+    for (const parser::OmpObject &object : objects.v) {
+      if (const Symbol *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+        if (HasTemporaryStackDescriptor(*sym)) {
+          auto maybeSource{GetObjectSource(object)};
+          parser::CharBlock source{
+              maybeSource.value_or(GetContext().clauseSource)};
+          if (llvm::is_contained(leafs, Directive::OMPD_target_enter_data)) {
+            tempDescriptorEnterMaps_.emplace(sym, source);
+          } else {
+            tempDescriptorExitMaps_.insert(sym);
+          }
+        }
       }
     }
   }

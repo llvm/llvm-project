@@ -72,9 +72,13 @@ void CallGraphExtractor::handleCallGraphNode(const ASTContext &Ctx,
     // never null.
     assert(CalleeDecl);
 
-    // FIXME: `clang::CallGraph` does not consider ObjCMessageExprs as calls.
-    // Consequently, they don't appear as a Callee.
-    assert(!isa<ObjCMethodDecl>(CalleeDecl));
+    // `clang::CallGraph` resolves ObjCMessageExprs (including property
+    // dot-syntax) to their ObjCMethodDecls and adds them as callees — see
+    // `CGBuilder::VisitObjCMessageExpr` in clang/lib/Analysis/CallGraph.cpp.
+    // ObjC dispatch is dynamic, so recording these as direct callees would be
+    // misleading; skip them until we model ObjC properly.
+    if (isa<ObjCMethodDecl>(CalleeDecl))
+      continue;
 
     // FIXME: `clang::CallGraph` does not create entries for primary templates.
     assert(!CalleeDecl->isTemplated());

@@ -1967,6 +1967,7 @@ Familiar template syntax for generic lambdas  __cpp_generic_lambdas            C
 Designated initializers                       __cpp_designated_initializers    C++20         C++03
 Conditional ``explicit``                      __cpp_conditional_explicit       C++20         C++03
 ``using enum``                                __cpp_using_enum                 C++20         C++03
+``auto`` parameters                                                            C++20         C++03
 ``if consteval``                              __cpp_if_consteval               C++23         C++20
 ``static operator()``                         __cpp_static_call_operator       C++23         C++03
 Attributes on Lambda-Expressions                                               C++23         C++11

@@ -471,7 +471,7 @@ struct RemSIOpGLPattern final : public OpConversionPattern<arith::RemSIOp> {
   LogicalResult
   matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Value result = emulateSignedRemainder<spirv::CLSAbsOp>(
+    Value result = emulateSignedRemainder<spirv::GLSAbsOp>(
         op.getLoc(), adaptor.getOperands()[0], adaptor.getOperands()[1],
         adaptor.getOperands()[0], rewriter);
     rewriter.replaceOp(op, result);
@@ -487,7 +487,7 @@ struct RemSIOpCLPattern final : public OpConversionPattern<arith::RemSIOp> {
   LogicalResult
   matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Value result = emulateSignedRemainder<spirv::GLSAbsOp>(
+    Value result = emulateSignedRemainder<spirv::CLSAbsOp>(
         op.getLoc(), adaptor.getOperands()[0], adaptor.getOperands()[1],
         adaptor.getOperands()[0], rewriter);
     rewriter.replaceOp(op, result);

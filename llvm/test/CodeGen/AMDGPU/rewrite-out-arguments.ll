@@ -677,9 +677,9 @@ attributes #2 = { alwaysinline nounwind }
 ; CHECK-LABEL: define {{[^@]+}}@multiple_same_return_mayalias
 ; CHECK-SAME: (ptr addrspace(5) [[TMP0:%.*]], ptr addrspace(5) [[TMP1:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call [[MULTIPLE_SAME_RETURN_MAYALIAS:%.*]] @[[MULTIPLE_SAME_RETURN_MAYALIAS_BODY:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](ptr addrspace(5) poison, ptr addrspace(5) poison)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue [[MULTIPLE_SAME_RETURN_MAYALIAS]] [[TMP3]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue [[MULTIPLE_SAME_RETURN_MAYALIAS]] [[TMP3]], 1
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr addrspace(5) [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[MULTIPLE_SAME_RETURN_MAYALIAS]] [[TMP3]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[MULTIPLE_SAME_RETURN_MAYALIAS]] [[TMP3]], 0
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(5) [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -861,9 +861,9 @@ attributes #2 = { alwaysinline nounwind }
 ; CHECK-LABEL: define {{[^@]+}}@num_regs_reach_limit_leftover
 ; CHECK-SAME: (ptr addrspace(5) [[TMP0:%.*]], ptr addrspace(5) [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call [[NUM_REGS_REACH_LIMIT_LEFTOVER:%.*]] @[[NUM_REGS_REACH_LIMIT_LEFTOVER_BODY:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]](ptr addrspace(5) poison, ptr addrspace(5) poison, i32 [[TMP2]])
-; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[NUM_REGS_REACH_LIMIT_LEFTOVER]] [[TMP4]], 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[NUM_REGS_REACH_LIMIT_LEFTOVER]] [[TMP4]], 2
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr addrspace(5) [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue [[NUM_REGS_REACH_LIMIT_LEFTOVER]] [[TMP4]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue [[NUM_REGS_REACH_LIMIT_LEFTOVER]] [[TMP4]], 1
 ; CHECK-NEXT:    store i32 [[TMP6]], ptr addrspace(5) [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue [[NUM_REGS_REACH_LIMIT_LEFTOVER]] [[TMP4]], 0
 ; CHECK-NEXT:    ret [15 x i32] [[TMP7]]

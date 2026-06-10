@@ -13,6 +13,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
+class DominatorTree;
 class MemoryLocation;
 class ScalarEvolution;
 class SCEV;
@@ -197,7 +198,7 @@ class VPSCEVExpander {
   VPValue *tryToReuseIRValue(const SCEV *S);
 
 public:
-  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL = {})
+  VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
       : Builder(Builder), SE(SE), DL(DL) {}
 
   /// Try to expand \p S into recipes and live-ins using the builder. Returns

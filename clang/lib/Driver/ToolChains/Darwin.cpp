@@ -1349,9 +1349,10 @@ void DarwinClang::addClangWarningOptions(ArgStringList &CC1Args) const {
 
 void DarwinClang::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
 
-  Darwin::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  Darwin::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                DeviceOffloadKind);
 }
 
 /// Take a path that speculatively points into Xcode and return the
@@ -3439,9 +3440,11 @@ bool Darwin::isSizedDeallocationUnavailable() const {
 
 void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args,
+                                  llvm::StringRef BoundArch,
                                   Action::OffloadKind DeviceOffloadKind) const {
 
-  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  ToolChain::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                   DeviceOffloadKind);
 
   // On arm64e, we enable all the features required for the Darwin userspace
   // ABI
@@ -3488,9 +3491,10 @@ void MachO::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
 
 void Darwin::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    llvm::StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
 
-  MachO::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  MachO::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                               DeviceOffloadKind);
 
   // When compiling device code (e.g. SPIR-V for HIP), skip host-specific
   // flags like -faligned-alloc-unavailable and -fno-sized-deallocation

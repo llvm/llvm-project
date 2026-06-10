@@ -486,6 +486,13 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/fixunsdfsi.S
       arm/fixunssfdi.S
       arm/fixunssfsi.S
+      arm/floatdidf.S
+      arm/floatdisf.S
+      arm/floatsidf.S
+      arm/floatsisf.S
+      arm/floatundidf.S
+      arm/floatunsidf.S
+      arm/floatunsisf.S
       arm/truncdfsf2.S
       )
     set_source_files_properties(${assembly_files}
@@ -536,6 +543,7 @@ set(thumb1_base_SOURCES
 set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
 set_special_properties(arm/cmpdf2.S SUPERSEDES comparedf2.c PROVIDES comparedf2)
 set_special_properties(arm/cmpsf2.S SUPERSEDES arm/comparesf2.S PROVIDES comparesf2)
+set_special_properties(arm/floatdisf.S SUPERSEDES floatundisf.c PROVIDES floatundisf)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES

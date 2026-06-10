@@ -2,12 +2,12 @@
 
 void acc_combined(int parmVar) {
   // CHECK: cir.func{{.*}} @acc_combined(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["parmVar", init]
+  // CHECK-NEXT: %[[PARM:.*]] = cir.alloca "parmVar" {{.*}} init : !cir.ptr<!s32i>
 
   int localVar1;
-  // CHECK-NEXT: %[[LV1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["localVar1"]
+  // CHECK-NEXT: %[[LV1:.*]] = cir.alloca "localVar1" {{.*}} : !cir.ptr<!s32i>
   float localVar2;
-  // CHECK-NEXT: %[[LV2:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["localVar2"]
+  // CHECK-NEXT: %[[LV2:.*]] = cir.alloca "localVar2" {{.*}} : !cir.ptr<!cir.float>
   // CHECK-NEXT: cir.store %[[ARG]], %[[PARM]]
 #pragma acc parallel loop copyin(parmVar) copyout(localVar1) create(localVar2)
   for(int i = 0; i < 5; ++i);

@@ -155,20 +155,20 @@ protected:
   ///
   /// \returns The start address of the first FunctionInfo or std::nullopt if
   /// there are no function infos.
-  std::optional<uint64_t> getFirstFunctionAddress() const;
+  LLVM_ABI std::optional<uint64_t> getFirstFunctionAddress() const;
 
   /// Get the last function address.
   ///
   /// \returns The start address of the last FunctionInfo or std::nullopt if
   /// there are no function infos.
-  std::optional<uint64_t> getLastFunctionAddress() const;
+  LLVM_ABI std::optional<uint64_t> getLastFunctionAddress() const;
 
   /// Get the base address to use for this GSYM file.
   ///
   /// \returns The base address to put into the header and to use when creating
   ///          the address offset table or std::nullpt if there are no valid
   ///          function infos or if the base address wasn't specified.
-  std::optional<uint64_t> getBaseAddress() const;
+  LLVM_ABI std::optional<uint64_t> getBaseAddress() const;
 
   /// Get the size of an address offset in the address offset table.
   ///
@@ -178,7 +178,7 @@ protected:
   /// on the current contents of the GSYM file.
   ///
   /// \returns The size in byets of the address offsets.
-  uint8_t getAddressOffsetSize() const;
+  LLVM_ABI uint8_t getAddressOffsetSize() const;
 
   /// Get the maximum address offset for the current address offset size.
   ///
@@ -188,7 +188,7 @@ protected:
   ///
   /// \returns The maximum address offset value that will be encoded into a GSYM
   /// file.
-  uint64_t getMaxAddressOffset() const;
+  LLVM_ABI uint64_t getMaxAddressOffset() const;
 
   /// Calculate the byte size of the GSYM header and tables sizes.
   ///
@@ -209,7 +209,8 @@ protected:
   /// \returns The number of bytes it will take to encode the function info in
   /// this GsymCreator. This helps calculate the size of the current GSYM
   /// segment file.
-  uint64_t copyFunctionInfo(const GsymCreator &SrcGC, size_t FuncInfoIdx);
+  LLVM_ABI uint64_t copyFunctionInfo(const GsymCreator &SrcGC,
+                                     size_t FuncInfoIdx);
 
   /// Copy a string from \a SrcGC into this object.
   ///
@@ -221,7 +222,7 @@ protected:
   /// \param SrcGC The source gsym creator to copy from.
   /// \param StrOff The string table offset from \a SrcGC to copy.
   /// \returns The new string table offset of the string within this object.
-  gsym_strp_t copyString(const GsymCreator &SrcGC, gsym_strp_t StrOff);
+  LLVM_ABI gsym_strp_t copyString(const GsymCreator &SrcGC, gsym_strp_t StrOff);
 
   /// Copy a file from \a SrcGC into this object.
   ///
@@ -237,7 +238,7 @@ protected:
   /// file index of zero will always return zero as the zero is a reserved file
   /// index that means no file.
   /// \returns The new file index of the file within this object.
-  uint32_t copyFile(const GsymCreator &SrcGC, uint32_t FileIdx);
+  LLVM_ABI uint32_t copyFile(const GsymCreator &SrcGC, uint32_t FileIdx);
 
   /// Inserts a FileEntry into the file table.
   ///
@@ -245,7 +246,7 @@ protected:
   ///
   /// \param FE A file entry object that contains valid string table offsets
   /// from this object already.
-  uint32_t insertFileEntry(FileEntry FE);
+  LLVM_ABI uint32_t insertFileEntry(FileEntry FE);
 
   /// Fixup any string and file references by updating any file indexes and
   /// strings offsets in the InlineInfo parameter.
@@ -257,7 +258,7 @@ protected:
   /// \param II The inline info that contains file indexes and string offsets
   /// that come from \a SrcGC. The entries will be updated by coping any files
   /// and strings over into this object.
-  void fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II);
+  LLVM_ABI void fixupInlineInfo(const GsymCreator &SrcGC, InlineInfo &II);
 
   /// Save this GSYM file into segments that are roughly \a SegmentSize in size.
   ///
@@ -273,8 +274,8 @@ protected:
   /// \param Path The path prefix to use when saving the GSYM files.
   /// \param ByteOrder The endianness to use when saving the file.
   /// \param SegmentSize The size in bytes to segment the GSYM file into.
-  llvm::Error saveSegments(StringRef Path, llvm::endianness ByteOrder,
-                           uint64_t SegmentSize) const;
+  LLVM_ABI llvm::Error saveSegments(StringRef Path, llvm::endianness ByteOrder,
+                                    uint64_t SegmentSize) const;
 
   /// Let this creator know that this is a segment of another GsymCreator.
   ///
@@ -292,21 +293,22 @@ protected:
   ///
   /// \param[out] BaseAddr Set to the base address on success.
   /// \returns An error if validation fails, or Error::success().
-  llvm::Error validateForEncoding(std::optional<uint64_t> &BaseAddr) const;
+  LLVM_ABI llvm::Error
+  validateForEncoding(std::optional<uint64_t> &BaseAddr) const;
 
   /// Write the address offsets table to the output stream.
   ///
   /// \param O The file writer to write to.
   /// \param AddrOffSize The byte width of each address offset.
   /// \param BaseAddr The base address to subtract from each function address.
-  void encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
-                         uint64_t BaseAddr) const;
+  LLVM_ABI void encodeAddrOffsets(FileWriter &O, uint8_t AddrOffSize,
+                                  uint64_t BaseAddr) const;
 
   /// Write the file table to the output stream.
   ///
   /// \param O The file writer to write to.
   /// \returns An error if the file table is too large, or Error::success().
-  llvm::Error encodeFileTable(FileWriter &O) const;
+  LLVM_ABI llvm::Error encodeFileTable(FileWriter &O) const;
 
   /// Create a new empty creator of the same version.
   ///

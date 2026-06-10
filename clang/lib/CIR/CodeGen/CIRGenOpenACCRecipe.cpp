@@ -51,8 +51,7 @@ void OpenACCRecipeBuilderBase::makeAllocaCopy(mlir::Location loc,
           cgf.getContext().UnsignedLongLongTy));
 
   auto loopBuilder = [&]() {
-    auto itr =
-        cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr", itrAlign);
+    auto itr = cir::AllocaOp::create(builder, loc, itrPtrTy, "itr", itrAlign);
     cir::ConstantOp constZero = builder.getConstInt(loc, itrTy, 0);
     builder.CIRBaseBuilderTy::createStore(loc, constZero, itr);
     builder.createFor(
@@ -141,7 +140,7 @@ mlir::Value OpenACCRecipeBuilderBase::makeBoundsAlloca(
   cir::PointerType topLevelTyPtr = builder.getPointerTo(topLevelTy);
   // Do an alloca for the 'top' level type without bounds.
   mlir::Value initialAlloca = builder.createAlloca(
-      loc, topLevelTyPtr, topLevelTy, allocaName,
+      loc, topLevelTyPtr, allocaName,
       cgf.getContext().getTypeAlignInChars(boundTypes.back()));
 
   bool lastBoundWasArray = isArrayTy(boundTypes.back());
@@ -261,8 +260,7 @@ std::pair<mlir::Value, mlir::Value> OpenACCRecipeBuilderBase::createBoundsLoop(
         builder, loc, itrTy, upperBoundVal.getResult());
 
     // Create a memory location for the iterator.
-    auto itr =
-        cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "iter", itrAlign);
+    auto itr = cir::AllocaOp::create(builder, loc, itrPtrTy, "iter", itrAlign);
     // Store to the iterator: either lower bound, or if inverse loop, upper
     // bound.
     if (inverse) {
@@ -620,9 +618,8 @@ void OpenACCRecipeBuilderBase::createReductionRecipeCombiner(
 
     mlir::Value zero =
         builder.getConstInt(loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), 0);
-    mlir::Value itr =
-        cir::AllocaOp::create(builder, loc, itrPtrTy, itrTy, "itr",
-                              cgf.cgm.getSize(cgf.getPointerAlign()));
+    mlir::Value itr = cir::AllocaOp::create(
+        builder, loc, itrPtrTy, "itr", cgf.cgm.getSize(cgf.getPointerAlign()));
     builder.CIRBaseBuilderTy::createStore(loc, zero, itr);
 
     builder.setInsertionPointAfter(builder.createFor(

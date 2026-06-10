@@ -138,7 +138,7 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
                                  llvm::StringRef PatternName, bool IsRecursive,
                                  llvm::StringRef ExtraDecl,
                                  const Record *CustomCtorRec,
-                                 llvm::StringRef LLVMOp) {
+                                 llvm::StringRef LLVMOp, bool IsZeroResult) {
   std::optional<CustomLoweringCtor> CustomCtor =
       parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
@@ -188,10 +188,15 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
         << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
            "const override {\n";
-    Code
-        << "    mlir::Type resTy = typeConverter->convertType(op.getType());\n";
-    Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
-         << ">(op, resTy, adaptor.getOperands());\n";
+    if (IsZeroResult) {
+      Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
+           << ">(op, mlir::TypeRange{}, adaptor.getOperands());\n";
+    } else {
+      Code << "    mlir::Type resTy = "
+              "typeConverter->convertType(op.getType());\n";
+      Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
+           << ">(op, resTy, adaptor.getOperands());\n";
+    }
     Code << "    return mlir::success();\n";
     Code << "  }\n";
   } else {
@@ -236,8 +241,10 @@ void Generate(const Record *OpRecord) {
                           "' has both llvmOp and a custom lowering "
                           "constructor, which is not supported");
 
+    const DagInit *ResultsDag = OpRecord->getValueAsDag("results");
+    bool IsZeroResult = ResultsDag->getNumArgs() == 0;
     GenerateLLVMLoweringPattern(OpName, PatternName, IsRecursive, ExtraDecl,
-                                CustomCtor, LLVMOp);
+                                CustomCtor, LLVMOp, IsZeroResult);
     // Only automatically register patterns that use the default constructor.
     // Patterns with a custom constructor must be manually registered by the
     // lowering pass.

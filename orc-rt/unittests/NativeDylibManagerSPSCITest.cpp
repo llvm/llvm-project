@@ -121,6 +121,23 @@ TEST_F(NativeDylibManagerSPSCITest, LoadNonExistent) {
   consumeError(Handle.takeError());
 }
 
+TEST_F(NativeDylibManagerSPSCITest, LoadEmptyPathReturnsGlobalHandle) {
+  // The global handle's value is implementation-defined, so verify by looking
+  // up through it.
+  std::future<Expected<Expected<void *>>> LoadResult;
+  spsLoad(waitFor(LoadResult), "");
+  void *Handle = cantFail(cantFail(LoadResult.get()));
+
+  std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
+      LookupResult;
+  spsLookup(waitFor(LookupResult), Handle, {{"malloc", Req}});
+  auto Addrs = cantFail(cantFail(LookupResult.get()));
+  ASSERT_EQ(Addrs.size(), 1U);
+  ASSERT_TRUE(Addrs[0].has_value())
+      << "malloc should be findable via the process's global lookup handle";
+  EXPECT_NE(*Addrs[0], nullptr);
+}
+
 TEST_F(NativeDylibManagerSPSCITest, LookupSingleSymbol) {
   std::future<Expected<Expected<void *>>> LoadResult;
   spsLoad(waitFor(LoadResult), NDM_TEST_LIB_PATH);

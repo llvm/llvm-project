@@ -9,9 +9,9 @@
 // where auto variables have the opencl_private address space.
 
 // CIR: cir.func {{.*}} @k(%arg0: !cir.ptr<!s32i>
-// CIR:   %[[GP:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["gp", init]
-// CIR:   %[[GR_ALLOCA:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["gr", init, const]
-// CIR:   %[[R_ALLOCA:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["r", init, const]
+// CIR:   %[[GP:.*]] = cir.alloca "gp" {{.*}} init : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[GR_ALLOCA:.*]] = cir.alloca "gr" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[R_ALLOCA:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[R:.*]] = cir.cast address_space %[[R_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[GR:.*]] = cir.cast address_space %[[GR_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i>> -> !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.store %arg0, %[[GP]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

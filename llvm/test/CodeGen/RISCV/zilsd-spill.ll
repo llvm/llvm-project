@@ -38,8 +38,8 @@ define i64 @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwi
   ; RV32I-NEXT:   renamable $x10 = LW $x2, 0 :: (dereferenceable load (s32) from %ir.1, align 8)
   ; RV32I-NEXT:   renamable $x11 = LW $x2, 4 :: (dereferenceable load (s32) from %ir.1 + 4, basealign 8)
   ; RV32I-NEXT:   renamable $x5 = ADD renamable $x10, renamable $x10
-  ; RV32I-NEXT:   renamable $x11 = ADD killed renamable $x11, renamable $x11
   ; RV32I-NEXT:   renamable $x30 = SLTU renamable $x5, killed renamable $x10
+  ; RV32I-NEXT:   renamable $x11 = ADD killed renamable $x11, renamable $x11
   ; RV32I-NEXT:   renamable $x30 = ADD killed renamable $x11, killed renamable $x30
   ; RV32I-NEXT:   INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $x6, clobber, implicit-def dead early-clobber $x7, clobber, implicit-def dead early-clobber $x8, clobber, implicit-def dead early-clobber $x9, clobber, implicit-def dead early-clobber $x10, clobber, implicit-def dead early-clobber $x11, clobber, implicit-def dead early-clobber $x12, clobber, implicit-def dead early-clobber $x13, clobber, implicit-def dead early-clobber $x14, clobber, implicit-def dead early-clobber $x15, clobber, implicit-def dead early-clobber $x16, clobber, implicit-def dead early-clobber $x17, clobber, implicit-def dead early-clobber $x18, clobber, implicit-def dead early-clobber $x19, clobber, implicit-def dead early-clobber $x20, clobber, implicit-def dead early-clobber $x21, clobber, implicit-def dead early-clobber $x22, clobber, implicit-def dead early-clobber $x23, clobber, implicit-def dead early-clobber $x24, clobber, implicit-def dead early-clobber $x25, clobber, implicit-def dead early-clobber $x26, clobber, implicit-def dead early-clobber $x27, clobber, implicit-def dead early-clobber $x28, clobber, implicit-def dead early-clobber $x29, clobber, implicit-def dead early-clobber $x31
   ; RV32I-NEXT:   $x10 = COPY killed renamable $x5

@@ -9,7 +9,7 @@
 module {
   // CHECK-LABEL: llvm.func @target_map_from
   cir.func @target_map_from(%arg0 : !s32i) {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init] {alignment = 4 : i64}
+    %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
     cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
 
     // CHECK: %[[ALLOCA:.*]] = llvm.alloca {{.*}} x i32

@@ -49,10 +49,10 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; VSCALEFORTUNING2-LABEL: define i32 @chained_recurrences(
 ; VSCALEFORTUNING2-SAME: i32 [[X:%.*]], i64 [[Y:%.*]], ptr [[SRC_1:%.*]], i32 [[Z:%.*]], ptr [[SRC_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; VSCALEFORTUNING2-NEXT:  [[ENTRY:.*]]:
-; VSCALEFORTUNING2-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
 ; VSCALEFORTUNING2-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; VSCALEFORTUNING2-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; VSCALEFORTUNING2-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 16)
+; VSCALEFORTUNING2-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
 ; VSCALEFORTUNING2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[UMAX]]
 ; VSCALEFORTUNING2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VSCALEFORTUNING2:       [[VECTOR_PH]]:

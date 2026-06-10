@@ -3073,13 +3073,16 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
           LI->isSimple() && LI->getAlign() >= StoreToHoist->getAlign()) {
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
+        // The dereferenceability query here is only required to satisfy the
+        // writable contract, actual dereferenceability is proven by the
+        // presence of an access. As such, we can ignore frees.
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
             capturesNothing(
                 PointerMayBeCaptured(Obj, CaptureComponents::Provenance)
                     .WithoutRet) &&
             (!ExplicitlyDereferenceableOnly ||
-             isDereferenceablePointer(StorePtr, StoreTy,
-                                      LI->getDataLayout()))) {
+             isDereferenceablePointer(StorePtr, StoreTy, LI->getDataLayout(),
+                                      /*IgnoreFree=*/true))) {
           // Found a previous load, return it.
           return LI;
         }

@@ -2801,6 +2801,9 @@ ArrayRef<StringRef> cl::getCompilerBuildConfig() {
 #if __has_feature(undefined_behavior_sanitizer)
       "+ubsan",
 #endif
+#ifdef LLVM_INTEGRATED_CRT_ALLOC
+      "+alloc:" LLVM_INTEGRATED_CRT_ALLOC,
+#endif
   };
   return ArrayRef(Config).drop_front(1);
 }

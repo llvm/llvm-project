@@ -3973,6 +3973,65 @@ fir::DoLoopOp::getYieldedValuesMutable() {
                          : term->getOpOperands();
 }
 
+void fir::DoLoopOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point,
+    llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
+  // Entry (parent → body): loop executes ≥1 iterations, or is skipped (0-trip).
+  // Loop-back (body → body): another iteration follows.
+  regions.push_back(mlir::RegionSuccessor(&getRegion()));
+  // Exit (body → parent): last iteration completes.
+  regions.push_back(mlir::RegionSuccessor::parent());
+}
+
+// Note: when finalValue is set, result[0] tracks the IV's final value.
+mlir::OperandRange
+fir::DoLoopOp::getEntrySuccessorOperands(mlir::RegionSuccessor successor) {
+  // Initial iter-arg values, forwarded into the body or (zero-trip) directly
+  // to the parent's iter results.
+  return getInitArgs();
+}
+
+mlir::ValueRange
+fir::DoLoopOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
+  // Returns the receiving slots for values flowing into `successor`.
+  //
+  // For a loop with finalValue and one iter arg:
+  //   %r:2 = fir.do_loop ... iter_args(%acc = %init) -> (index, i32)
+  //
+  //   body successor  → receiving slots = [%acc]      (regionIterArgs)
+  //   parent successor → receiving slots = [%r#1]     (results, drop %r#0)
+  //
+  // %r#0 (finalValue IV) is excluded: it has no symmetric iter-arg slot in
+  // the body, so it cannot participate in the 4-edge count check.
+  if (successor.isParent())
+    return getResults().drop_front(getFinalValue() ? 1 : 0);
+  return getRegionIterArgs();
+}
+
+mlir::MutableOperandRange
+fir::ResultOp::getMutableSuccessorOperands(mlir::RegionSuccessor successor) {
+  // called on fir.result to determine
+  // which of the operands is sending to the specific successor
+  //
+  // Without finalValue (N iter args, N results):
+  //   fir.result %a0, %a1 : T0, T1   → send all N ops to body/%acc or results
+  //
+  // With finalValue (N iter args, N+1 results):
+  //   fir.result %iv_next, %a0 : index, T0
+  //              ops[0]: IV final value — only meaningful on the last exit,
+  //                      has no iter-arg slot in the body; excluded here.
+  //              ops[1..]: iter-carried values — sent on both loop-back and
+  //              exit.
+  //
+  // For fir.if / fir.iter_while the parent cast fails; all ops are returned.
+  if (auto doLoop =
+          mlir::dyn_cast<fir::DoLoopOp>(getOperation()->getParentOp()))
+    if (doLoop.getFinalValue() && getNumOperands() > 0)
+      return mlir::MutableOperandRange(getOperation(), /*start=*/1,
+                                       getNumOperands() - 1);
+  return mlir::MutableOperandRange(getOperation());
+}
+
 //===----------------------------------------------------------------------===//
 // DTEntryOp
 //===----------------------------------------------------------------------===//
@@ -4955,6 +5014,77 @@ void fir::ShapeOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                          mlir::ValueRange extents) {
   auto type = fir::ShapeType::get(builder.getContext(), extents.size());
   build(builder, result, type, extents);
+}
+
+//===----------------------------------------------------------------------===//
+// ShapeExtentsOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct FoldShapeExtentsOfShape
+    : public mlir::OpRewritePattern<fir::ShapeExtentsOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::ShapeExtentsOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Value shape = op.getShape();
+    mlir::ValueRange extents;
+    if (auto shapeOp = shape.getDefiningOp<fir::ShapeOp>())
+      extents = shapeOp.getExtents();
+    else if (auto ssOp = shape.getDefiningOp<fir::ShapeShiftOp>())
+      extents = ssOp.getExtents();
+    else
+      return mlir::failure();
+    llvm::SmallVector<mlir::Value> results;
+    for (auto [extent, resultType] : llvm::zip(extents, op.getResultTypes())) {
+      if (extent.getType() == resultType) {
+        results.push_back(extent);
+      } else if (fir::ConvertOp::canBeConverted(extent.getType(), resultType)) {
+        results.push_back(
+            fir::ConvertOp::create(rewriter, op.getLoc(), resultType, extent));
+      } else {
+        return mlir::failure();
+      }
+    }
+    rewriter.replaceOp(op, results);
+    return mlir::success();
+  }
+};
+} // namespace
+
+llvm::LogicalResult fir::ShapeExtentsOp::verify() {
+  mlir::Type ty = getShape().getType();
+  unsigned rank;
+  if (auto shapeTy = mlir::dyn_cast<fir::ShapeType>(ty))
+    rank = shapeTy.getRank();
+  else if (auto ssTy = mlir::dyn_cast<fir::ShapeShiftType>(ty))
+    rank = ssTy.getRank();
+  else
+    return emitOpError("operand must be !fir.shape or !fir.shapeshift");
+  if (getNumResults() != rank)
+    return emitOpError("number of results must match shape rank");
+  return mlir::success();
+}
+
+void fir::ShapeExtentsOp::build(mlir::OpBuilder &builder,
+                                mlir::OperationState &result,
+                                mlir::Value shape) {
+  mlir::Type ty = shape.getType();
+  unsigned rank;
+  if (auto shapeTy = mlir::dyn_cast<fir::ShapeType>(ty))
+    rank = shapeTy.getRank();
+  else
+    rank = mlir::cast<fir::ShapeShiftType>(ty).getRank();
+  mlir::Type indexTy = builder.getIndexType();
+  llvm::SmallVector<mlir::Type> resultTypes(rank, indexTy);
+  result.addTypes(resultTypes);
+  result.addOperands(shape);
+}
+
+void fir::ShapeExtentsOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<FoldShapeExtentsOfShape>(context);
 }
 
 //===----------------------------------------------------------------------===//

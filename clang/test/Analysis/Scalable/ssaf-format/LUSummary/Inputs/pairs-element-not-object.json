@@ -1,0 +1,25 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "test.exe"
+    }
+  ],
+  "id_table": [],
+  "linkage_table": [],
+  "data": [
+    {
+      "summary_name": "PairsEntitySummary",
+      "summary_data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "pairs": [
+              "not_an_object"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

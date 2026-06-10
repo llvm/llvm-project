@@ -47,8 +47,8 @@ define void @eliminate_restore(i32 %n) nounwind {
 ;
 ; RV64I-SW-LABEL: eliminate_restore:
 ; RV64I-SW:       # %bb.0:
-; RV64I-SW-NEXT:    sext.w a0, a0
 ; RV64I-SW-NEXT:    li a1, 32
+; RV64I-SW-NEXT:    sext.w a0, a0
 ; RV64I-SW-NEXT:    bgeu a1, a0, .LBB0_2
 ; RV64I-SW-NEXT:  # %bb.1: # %if.end
 ; RV64I-SW-NEXT:    ret
@@ -131,9 +131,9 @@ define void @conditional_alloca(i32 %n) nounwind {
 ;
 ; RV64I-SW-LABEL: conditional_alloca:
 ; RV64I-SW:       # %bb.0:
-; RV64I-SW-NEXT:    sext.w a1, a0
-; RV64I-SW-NEXT:    li a2, 32
-; RV64I-SW-NEXT:    bltu a2, a1, .LBB1_2
+; RV64I-SW-NEXT:    li a1, 32
+; RV64I-SW-NEXT:    sext.w a2, a0
+; RV64I-SW-NEXT:    bltu a1, a2, .LBB1_2
 ; RV64I-SW-NEXT:  # %bb.1: # %if.then
 ; RV64I-SW-NEXT:    addi sp, sp, -16
 ; RV64I-SW-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -297,10 +297,10 @@ define void @li_straightline_b(i32 zeroext %a, i32 zeroext %b) {
 ; RV32I-SW-NO-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-SW-NO-NEXT:    .cfi_offset ra, -4
 ; RV32I-SW-NO-NEXT:    .cfi_offset s0, -8
-; RV32I-SW-NO-NEXT:    mv s0, a1
-; RV32I-SW-NO-NEXT:    li a1, 57
-; RV32I-SW-NO-NEXT:    beq a0, a1, .LBB3_3
+; RV32I-SW-NO-NEXT:    li a2, 57
+; RV32I-SW-NO-NEXT:    beq a0, a2, .LBB3_3
 ; RV32I-SW-NO-NEXT:  # %bb.1: # %do_call
+; RV32I-SW-NO-NEXT:    mv s0, a1
 ; RV32I-SW-NO-NEXT:    call foo
 ; RV32I-SW-NO-NEXT:    li a0, 57
 ; RV32I-SW-NO-NEXT:    beq s0, a0, .LBB3_3
@@ -317,6 +317,9 @@ define void @li_straightline_b(i32 zeroext %a, i32 zeroext %b) {
 ;
 ; RV32I-SW-LABEL: li_straightline_b:
 ; RV32I-SW:       # %bb.0:
+; RV32I-SW-NEXT:    li a2, 57
+; RV32I-SW-NEXT:    beq a0, a2, .LBB3_4
+; RV32I-SW-NEXT:  # %bb.1: # %do_call
 ; RV32I-SW-NEXT:    addi sp, sp, -16
 ; RV32I-SW-NEXT:    .cfi_def_cfa_offset 16
 ; RV32I-SW-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -324,43 +327,47 @@ define void @li_straightline_b(i32 zeroext %a, i32 zeroext %b) {
 ; RV32I-SW-NEXT:    .cfi_offset ra, -4
 ; RV32I-SW-NEXT:    .cfi_offset s0, -8
 ; RV32I-SW-NEXT:    mv s0, a1
-; RV32I-SW-NEXT:    li a1, 57
-; RV32I-SW-NEXT:    beq a0, a1, .LBB3_3
-; RV32I-SW-NEXT:  # %bb.1: # %do_call
 ; RV32I-SW-NEXT:    call foo
 ; RV32I-SW-NEXT:    li a0, 57
 ; RV32I-SW-NEXT:    beq s0, a0, .LBB3_3
 ; RV32I-SW-NEXT:  # %bb.2: # %do_call2
 ; RV32I-SW-NEXT:    call foo
-; RV32I-SW-NEXT:  .LBB3_3: # %exit
+; RV32I-SW-NEXT:  .LBB3_3:
 ; RV32I-SW-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-SW-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32I-SW-NEXT:    .cfi_restore ra
 ; RV32I-SW-NEXT:    .cfi_restore s0
 ; RV32I-SW-NEXT:    addi sp, sp, 16
 ; RV32I-SW-NEXT:    .cfi_def_cfa_offset 0
+; RV32I-SW-NEXT:  .LBB3_4: # %exit
 ; RV32I-SW-NEXT:    ret
 ;
 ; RV32I-SW-SR-LABEL: li_straightline_b:
 ; RV32I-SW-SR:       # %bb.0:
+; RV32I-SW-SR-NEXT:    li a2, 57
+; RV32I-SW-SR-NEXT:    beq a0, a2, .LBB3_4
+; RV32I-SW-SR-NEXT:  # %bb.1: # %do_call
 ; RV32I-SW-SR-NEXT:    call t0, __riscv_save_1
 ; RV32I-SW-SR-NEXT:    .cfi_def_cfa_offset 16
 ; RV32I-SW-SR-NEXT:    .cfi_offset ra, -4
 ; RV32I-SW-SR-NEXT:    .cfi_offset s0, -8
 ; RV32I-SW-SR-NEXT:    mv s0, a1
-; RV32I-SW-SR-NEXT:    li a1, 57
-; RV32I-SW-SR-NEXT:    beq a0, a1, .LBB3_3
-; RV32I-SW-SR-NEXT:  # %bb.1: # %do_call
 ; RV32I-SW-SR-NEXT:    call foo
 ; RV32I-SW-SR-NEXT:    li a0, 57
 ; RV32I-SW-SR-NEXT:    beq s0, a0, .LBB3_3
 ; RV32I-SW-SR-NEXT:  # %bb.2: # %do_call2
 ; RV32I-SW-SR-NEXT:    call foo
-; RV32I-SW-SR-NEXT:  .LBB3_3: # %exit
+; RV32I-SW-SR-NEXT:  .LBB3_3:
 ; RV32I-SW-SR-NEXT:    tail __riscv_restore_1
+; RV32I-SW-SR-NEXT:    j .LBB3_4
+; RV32I-SW-SR-NEXT:  .LBB3_4: # %exit
+; RV32I-SW-SR-NEXT:    ret
 ;
 ; RV64I-SW-LABEL: li_straightline_b:
 ; RV64I-SW:       # %bb.0:
+; RV64I-SW-NEXT:    li a2, 57
+; RV64I-SW-NEXT:    beq a0, a2, .LBB3_4
+; RV64I-SW-NEXT:  # %bb.1: # %do_call
 ; RV64I-SW-NEXT:    addi sp, sp, -16
 ; RV64I-SW-NEXT:    .cfi_def_cfa_offset 16
 ; RV64I-SW-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
@@ -368,21 +375,19 @@ define void @li_straightline_b(i32 zeroext %a, i32 zeroext %b) {
 ; RV64I-SW-NEXT:    .cfi_offset ra, -8
 ; RV64I-SW-NEXT:    .cfi_offset s0, -16
 ; RV64I-SW-NEXT:    mv s0, a1
-; RV64I-SW-NEXT:    li a1, 57
-; RV64I-SW-NEXT:    beq a0, a1, .LBB3_3
-; RV64I-SW-NEXT:  # %bb.1: # %do_call
 ; RV64I-SW-NEXT:    call foo
 ; RV64I-SW-NEXT:    li a0, 57
 ; RV64I-SW-NEXT:    beq s0, a0, .LBB3_3
 ; RV64I-SW-NEXT:  # %bb.2: # %do_call2
 ; RV64I-SW-NEXT:    call foo
-; RV64I-SW-NEXT:  .LBB3_3: # %exit
+; RV64I-SW-NEXT:  .LBB3_3:
 ; RV64I-SW-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-SW-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-SW-NEXT:    .cfi_restore ra
 ; RV64I-SW-NEXT:    .cfi_restore s0
 ; RV64I-SW-NEXT:    addi sp, sp, 16
 ; RV64I-SW-NEXT:    .cfi_def_cfa_offset 0
+; RV64I-SW-NEXT:  .LBB3_4: # %exit
 ; RV64I-SW-NEXT:    ret
   %cmp0 = icmp eq i32 %a, 57
   br i1 %cmp0, label %exit, label %do_call

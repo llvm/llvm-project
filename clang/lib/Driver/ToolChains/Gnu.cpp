@@ -3498,6 +3498,7 @@ void Generic_ELF::anchor() {}
 
 void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args,
+                                        StringRef BoundArch,
                                         Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))

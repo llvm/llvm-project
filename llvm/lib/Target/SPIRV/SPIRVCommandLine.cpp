@@ -170,7 +170,6 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_INTEL_kernel_attributes},
     {"SPV_ALTERA_blocking_pipes",
      SPIRV::Extension::Extension::SPV_ALTERA_blocking_pipes},
-    {"SPV_INTEL_int4", SPIRV::Extension::Extension::SPV_INTEL_int4},
     {"SPV_ALTERA_arbitrary_precision_fixed_point",
      SPIRV::Extension::Extension::SPV_ALTERA_arbitrary_precision_fixed_point},
     {"SPV_EXT_image_raw10_raw12",

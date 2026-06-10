@@ -560,6 +560,8 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
       cxxMemberCallExpr(callee(cxxMethodDecl(hasName("try_emplace"))));
   auto Arg = declRefExpr().bind("arg");
   auto IsMemberCallee = callee(functionDecl(unless(isStaticStorageClass())));
+  auto DerivedToBaseCast =
+      implicitCastExpr(hasCastKind(CK_DerivedToBase)).bind("optional-cast");
   auto CallMoveMatcher = callExpr(
       callee(functionDecl(getNameMatcher(InvalidationFunctions))
                  .bind("move-decl")),
@@ -568,8 +570,10 @@ void UseAfterMoveCheck::registerMatchers(MatchFinder *Finder) {
                      hasArgument(0, Arg))),
       unless(inDecltypeOrTemplateArg()), unless(hasParent(TryEmplaceMatcher)),
       expr().bind("call-move"),
-      optionally(hasParent(implicitCastExpr(hasCastKind(CK_DerivedToBase))
-                               .bind("optional-cast"))),
+      optionally(
+          anyOf(hasParent(DerivedToBaseCast),
+                hasArgument(
+                    0, traverse(TK_AsIs, expr(hasParent(DerivedToBaseCast)))))),
       anyOf(hasAncestor(compoundStmt(
                 hasParent(lambdaExpr().bind("containing-lambda")))),
             hasAncestor(functionDecl(

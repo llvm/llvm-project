@@ -99,6 +99,15 @@ static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,
   }
 }
 
+template <typename EmitWaitcntFn>
+static void EmitExpandedWaitcnt(unsigned Outstanding, unsigned Target,
+                                EmitWaitcntFn &&EmitWaitcnt) {
+  // Emit waitcnts from (Outstanding - 1) down to Target.
+  for (unsigned I = Outstanding - 1; I > Target && I != ~0u; --I)
+    EmitWaitcnt(I);
+  EmitWaitcnt(Target);
+}
+
 /// Integer IDs used to track vector memory locations we may have to wait on.
 /// Encoded as u16 chunks:
 ///
@@ -1997,17 +2006,6 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
   bool Modified = false;
   const DebugLoc &DL = Block.findDebugLoc(It);
 
-  // Helper to emit expanded waitcnt sequence for profiling.
-  // Emits waitcnts from (Outstanding-1) down to Target.
-  // The EmitWaitcnt callback emits a single waitcnt.
-  auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
-                                 auto EmitWaitcnt) {
-    do {
-      EmitWaitcnt(--Outstanding);
-    } while (Outstanding > Target);
-    Modified = true;
-  };
-
   // Waits for VMcnt, LKGMcnt and/or EXPcnt are encoded together into a
   // single instruction while VScnt has its own instruction.
   if (Wait.hasWaitExceptStoreCnt()) {
@@ -2045,6 +2043,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
             BuildMI(Block, It, DL, TII.get(AMDGPU::S_WAITCNT))
                 .addImm(AMDGPU::encodeWaitcnt(IV, W));
           });
+          Modified = true;
         }
       }
     } else {
@@ -2075,6 +2074,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
                 .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
                 .addImm(Count);
           });
+      Modified = true;
     } else {
       [[maybe_unused]] auto SWaitInst =
           BuildMI(Block, It, DL, TII.get(AMDGPU::S_WAITCNT_VSCNT))
@@ -2405,15 +2405,6 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   bool Modified = false;
   const DebugLoc &DL = Block.findDebugLoc(It);
 
-  // Helper to emit expanded waitcnt sequence for profiling.
-  auto EmitExpandedWaitcnt = [&](unsigned Outstanding, unsigned Target,
-                                 auto EmitWaitcnt) {
-    for (unsigned I = Outstanding - 1; I > Target && I != ~0u; --I)
-      EmitWaitcnt(I);
-    EmitWaitcnt(Target);
-    Modified = true;
-  };
-
   // For GFX12+, we use separate wait instructions, which makes expansion
   // simpler
   if (ExpandWaitcntProfiling) {
@@ -2436,6 +2427,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
         BuildMI(Block, It, DL, TII.get(instrsForExtendedCounterTypes[CT]))
             .addImm(Val);
       });
+      Modified = true;
     }
     return Modified;
   }

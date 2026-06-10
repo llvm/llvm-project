@@ -15,6 +15,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Win64EH.h"
 
 namespace llvm {
@@ -106,6 +107,28 @@ static void EmitAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
   Streamer.emitValue(Diff, 1);
 }
 
+/// Emit a 16-bit (2-byte LE) label difference. If the difference is
+/// evaluatable at this point, validate that it fits in [0, UINT16_MAX]
+/// and emit it as a constant; otherwise emit a 16-bit fixup.
+static void EmitAbsDifference16(MCStreamer &Streamer, const MCSymbol *LHS,
+                                const MCSymbol *RHS) {
+  MCContext &Context = Streamer.getContext();
+  const MCExpr *Diff =
+      MCBinaryExpr::createSub(MCSymbolRefExpr::create(LHS, Context),
+                              MCSymbolRefExpr::create(RHS, Context), Context);
+  int64_t Value;
+  if (Diff->evaluateAsAbsolute(
+          Value, static_cast<MCObjectStreamer &>(Streamer).getAssembler())) {
+    if (Value < 0 || Value > UINT16_MAX)
+      Context.reportError(
+          SMLoc(),
+          "Label difference out of 16-bit unsigned range for V3 unwind info");
+  }
+  // Always emit a 2-byte value so subsequent emission stays in sync; if a
+  // diagnostic was reported, the object file will be discarded by the caller.
+  Streamer.emitValue(Diff, 2);
+}
+
 static void EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
                            WinEH::Instruction &inst) {
   uint8_t b2;
@@ -114,6 +137,15 @@ static void EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
   switch (static_cast<Win64EH::UnwindOpcodes>(inst.Operation)) {
   default:
     llvm_unreachable("Unsupported unwind code");
+  case Win64EH::UOP_Push2:
+    // Reachable from hand-written .s if a UOP_Push2 ends up in a V1/V2
+    // frame (e.g. via a per-function `.seh_unwindversion` downgrade after
+    // `.seh_push2regs`). Emit a recoverable diagnostic and skip the op so
+    // the assembler doesn't keep writing malformed bytes.
+    streamer.getContext().reportError(
+        SMLoc(), "UOP_Push2 (PUSH2 with two registers) requires V3 unwind "
+                 "info. Use `.seh_unwindversion 3`.");
+    return;
   case Win64EH::UOP_PushNonVol:
     EmitAbsDifference(streamer, inst.Label, begin);
     b2 |= (inst.Register & 0x0F) << 4;
@@ -226,10 +258,572 @@ GetOptionalAbsDifference(const MCAssembler &Assembler, const MCSymbol *LHS,
   return value;
 }
 
+//===----------------------------------------------------------------------===//
+// V3 UNWIND_INFO Emission
+// See https://learn.microsoft.com/en-us/cpp/build/x64-unwind-information-v3
+//===----------------------------------------------------------------------===//
+
+/// Encode a single WinEH::Instruction as V3 WOD bytes.
+/// Appends encoded bytes to Out.
+void Win64EH::EncodeWOD(const WinEH::Instruction &Inst,
+                        SmallVectorImpl<uint8_t> &Out) {
+  switch (static_cast<Win64EH::UnwindOpcodes>(Inst.Operation)) {
+  case Win64EH::UOP_PushNonVol: {
+    // WOD_PUSH: 1 byte, bits [2:0] = 4, bits [7:3] = register (5-bit)
+    uint8_t Reg = Inst.Register & 0x1F;
+    Out.push_back((Reg << 3) | Win64EH::WOD_PUSH);
+    break;
+  }
+  case Win64EH::UOP_AllocSmall: {
+    // WOD_ALLOC_SMALL: 1 byte, bits [3:0] = 8, bits [7:4] = (size/8 - 1)
+    // V1/V2 stores (size-8)/8 in OpInfo; actual size = Offset.
+    // Inst.Offset is the raw allocation size.
+    if (Inst.Offset < 8 || Inst.Offset > 128 || Inst.Offset % 8 != 0)
+      reportFatalInternalError(
+          "UOP_AllocSmall outside expected range or alignment");
+    uint8_t Encoded = ((Inst.Offset / 8 - 1) & 0x0F);
+    Out.push_back((Encoded << 4) | Win64EH::WOD_ALLOC_SMALL);
+    break;
+  }
+  case Win64EH::UOP_AllocLarge: {
+    if (Inst.Offset > 512 * 1024 - 8) {
+      // WOD_ALLOC_HUGE: 5 bytes, byte[0] = 1, bytes[1:4] = LE32(size)
+      Out.push_back(Win64EH::WOD_ALLOC_HUGE);
+      uint32_t Size = Inst.Offset;
+      Out.push_back(Size & 0xFF);
+      Out.push_back((Size >> 8) & 0xFF);
+      Out.push_back((Size >> 16) & 0xFF);
+      Out.push_back((Size >> 24) & 0xFF);
+    } else {
+      // WOD_ALLOC_LARGE: 3 bytes, byte[0] = 2, bytes[1:2] = LE16(size/8)
+      Out.push_back(Win64EH::WOD_ALLOC_LARGE);
+      uint16_t Scaled = Inst.Offset / 8;
+      Out.push_back(Scaled & 0xFF);
+      Out.push_back((Scaled >> 8) & 0xFF);
+    }
+    break;
+  }
+  case Win64EH::UOP_SetFPReg: {
+    // WOD_SET_FPREG: 2 bytes, byte[0] = 0, byte[1] = reg(4) | (offset/16)(4)
+    // The frame register field is only 4 bits, so EGPR (R16-R31) cannot be
+    // used as the frame pointer in V3 unwind info.
+    if (Inst.Register > 0x0F)
+      reportFatalInternalError(
+          "SET_FPREG frame register does not fit in 4 bits");
+    Out.push_back(Win64EH::WOD_SET_FPREG);
+    uint8_t Reg = Inst.Register & 0x0F;
+    uint8_t Off = (Inst.Offset / 16) & 0x0F;
+    Out.push_back(Reg | (Off << 4));
+    break;
+  }
+  case Win64EH::UOP_SaveNonVol: {
+    // WOD_SAVE_NONVOL: 3 bytes, bits [2:0] = 6, bits [7:3] = reg,
+    // bytes[1:2] = LE16(displacement/8)
+    uint8_t Reg = Inst.Register & 0x1F;
+    Out.push_back((Reg << 3) | Win64EH::WOD_SAVE_NONVOL);
+    uint16_t Disp = Inst.Offset / 8;
+    Out.push_back(Disp & 0xFF);
+    Out.push_back((Disp >> 8) & 0xFF);
+    break;
+  }
+  case Win64EH::UOP_SaveNonVolBig: {
+    // WOD_SAVE_NONVOL_FAR: 5 bytes, bits [2:0] = 5, bits [7:3] = reg,
+    // bytes[1:4] = LE32(displacement)
+    uint8_t Reg = Inst.Register & 0x1F;
+    Out.push_back((Reg << 3) | Win64EH::WOD_SAVE_NONVOL_FAR);
+    uint32_t Disp = Inst.Offset;
+    Out.push_back(Disp & 0xFF);
+    Out.push_back((Disp >> 8) & 0xFF);
+    Out.push_back((Disp >> 16) & 0xFF);
+    Out.push_back((Disp >> 24) & 0xFF);
+    break;
+  }
+  case Win64EH::UOP_SaveXMM128: {
+    // WOD_SAVE_XMM128: 3 bytes, bits [3:0] = 10, bits [7:4] = reg,
+    // bytes[1:2] = LE16(displacement/16)
+    // The XMM register field is only 4 bits, so XMM16-XMM31 (AVX-512 EVEX)
+    // cannot be encoded. Such registers are caller-saved on Win64 and should
+    // never reach here from codegen.
+    if (Inst.Register > 0x0F)
+      reportFatalInternalError(
+          "SAVE_XMM128 register does not fit in 4 bits (XMM16-31 unsupported)");
+    uint8_t Reg = Inst.Register & 0x0F;
+    Out.push_back((Reg << 4) | Win64EH::WOD_SAVE_XMM128);
+    uint16_t Disp = Inst.Offset / 16;
+    Out.push_back(Disp & 0xFF);
+    Out.push_back((Disp >> 8) & 0xFF);
+    break;
+  }
+  case Win64EH::UOP_SaveXMM128Big: {
+    // WOD_SAVE_XMM128_FAR: 5 bytes, bits [3:0] = 9, bits [7:4] = reg,
+    // bytes[1:4] = LE32(displacement)
+    if (Inst.Register > 0x0F)
+      reportFatalInternalError("SAVE_XMM128_FAR register does not fit in 4 "
+                               "bits (XMM16-31 unsupported)");
+    uint8_t Reg = Inst.Register & 0x0F;
+    Out.push_back((Reg << 4) | Win64EH::WOD_SAVE_XMM128_FAR);
+    uint32_t Disp = Inst.Offset;
+    Out.push_back(Disp & 0xFF);
+    Out.push_back((Disp >> 8) & 0xFF);
+    Out.push_back((Disp >> 16) & 0xFF);
+    Out.push_back((Disp >> 24) & 0xFF);
+    break;
+  }
+  case Win64EH::UOP_PushMachFrame: {
+    // WOD_PUSH_CANONICAL_FRAME: 2 bytes, byte[0] = 3, byte[1] = type
+    Out.push_back(Win64EH::WOD_PUSH_CANONICAL_FRAME);
+    Out.push_back(Inst.Offset == 1 ? 1 : 0);
+    break;
+  }
+  case Win64EH::UOP_Push2: {
+    uint8_t Reg1 = Inst.Register & 0x1F;
+    uint8_t Reg2 = Inst.Register2 & 0x1F;
+    // Optimization: if registers are consecutive, use WOD_PUSH_CONSECUTIVE_2
+    // (opcode 7, 1 byte) instead of WOD_PUSH2 (opcode 32, 2 bytes).
+    if (Reg2 == Reg1 + 1) {
+      // WOD_PUSH_CONSECUTIVE_2: bits [2:0] = 111b, bits [7:3] = Register
+      Out.push_back((Reg1 << 3) | Win64EH::WOD_PUSH_CONSECUTIVE_2);
+    } else {
+      // WOD_PUSH2: 2 bytes
+      // Byte 0: [5:0] = 100000b (opcode 32), [7:6] = Register1[1:0]
+      // Byte 1: [2:0] = Register1[4:2], [7:3] = Register2
+      Out.push_back(((Reg1 & 0x03) << 6) | Win64EH::WOD_PUSH2);
+      Out.push_back(((Reg2 & 0x1F) << 3) | ((Reg1 >> 2) & 0x07));
+    }
+    break;
+  }
+  default:
+    llvm_unreachable("Unsupported unwind operation for V3 encoding");
+  }
+}
+
+/// Try to find Needle as a contiguous subsequence within Haystack.
+/// Returns the byte offset if found, or std::nullopt.
+static std::optional<uint16_t> FindInPool(ArrayRef<uint8_t> Haystack,
+                                          ArrayRef<uint8_t> Needle) {
+  assert(!Needle.empty() && "FindInPool called with empty Needle");
+  auto It = std::search(Haystack.begin(), Haystack.end(), Needle.begin(),
+                        Needle.end());
+  if (It == Haystack.end())
+    return std::nullopt;
+  return static_cast<uint16_t>(std::distance(Haystack.begin(), It));
+}
+
+/// Compare the relative IP offset arrays of two epilogs.
+static bool EpilogIpOffsetsMatch(const WinEH::FrameInfo::Epilog &A,
+                                 const WinEH::FrameInfo::Epilog &B,
+                                 const MCAssembler &Asm) {
+  if (A.Instructions.size() != B.Instructions.size())
+    return false;
+  for (unsigned I = 0; I < A.Instructions.size(); ++I) {
+    auto OffA = GetOptionalAbsDifference(Asm, A.Instructions[I].Label, A.Start);
+    auto OffB = GetOptionalAbsDifference(Asm, B.Instructions[I].Label, B.Start);
+    if (!OffA || !OffB || *OffA != *OffB)
+      return false;
+  }
+  return true;
+}
+
+/// Emit V3 UNWIND_INFO for a single frame.
+static void EmitUnwindInfoV3(MCStreamer &Streamer, WinEH::FrameInfo *Info) {
+  // Should have been checked by our caller.
+  assert(!Info->Symbol && "UNWIND_INFO already has a symbol");
+
+  MCContext &Context = Streamer.getContext();
+  MCObjectStreamer *OS = static_cast<MCObjectStreamer *>(&Streamer);
+  const MCAssembler &Asm = OS->getAssembler();
+
+  MCSymbol *Label = Context.createTempSymbol();
+  Streamer.emitValueToAlignment(Align(4));
+  Streamer.emitLabel(Label);
+  Info->Symbol = Label;
+
+  // ===================================================================
+  // Phase 1: Data preparation — compute all metadata before emitting.
+  // ===================================================================
+
+  // --- Build prolog WOD pool (body-to-entry order) ---
+  SmallVector<uint8_t, 64> WODPool;
+  for (auto It = Info->Instructions.rbegin(); It != Info->Instructions.rend();
+       ++It)
+    Win64EH::EncodeWOD(*It, WODPool);
+
+  // --- Build prolog IP offset label pairs (body-to-entry order) ---
+  SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 16> PrologIpLabels;
+  unsigned PrologOpCount = Info->Instructions.size();
+  if (PrologOpCount > 31) {
+    reportFatalUsageError(
+        "Too many prolog unwind codes for V3 encoding. Maximum "
+        "is 31. This function has " +
+        Twine(PrologOpCount));
+  }
+  for (auto It = Info->Instructions.rbegin(); It != Info->Instructions.rend();
+       ++It)
+    PrologIpLabels.push_back({It->Label, Info->Begin});
+
+  // --- Determine if UNW_FLAG_LARGE is needed for the prolog ---
+  // Conservative: if we KNOW a value exceeds 255 or can't measure, use LARGE.
+  // Reject evaluatable values that are negative or exceed the 16-bit unsigned
+  // range supported by LARGE, since those would be silently truncated.
+  bool NeedsLargeProlog = false;
+  if (Info->PrologEnd) {
+    auto MaybePrologSize =
+        GetOptionalAbsDifference(Asm, Info->PrologEnd, Info->Begin);
+    if (MaybePrologSize) {
+      if (*MaybePrologSize < 0)
+        reportFatalUsageError("Negative SizeOfProlog in V3 unwind info");
+      if (*MaybePrologSize > UINT16_MAX)
+        reportFatalUsageError(
+            "SizeOfProlog exceeds 16-bit range for V3 unwind info");
+      NeedsLargeProlog = (*MaybePrologSize > 255);
+    } else {
+      NeedsLargeProlog = true; // Can't measure -> be conservative
+    }
+  }
+  for (auto &[InstLabel, BeginLabel] : PrologIpLabels) {
+    if (NeedsLargeProlog)
+      break;
+    auto MaybeOffset = GetOptionalAbsDifference(Asm, InstLabel, BeginLabel);
+    if (MaybeOffset) {
+      if (*MaybeOffset < 0)
+        reportFatalUsageError("Negative prolog IP offset in V3 unwind info");
+      if (*MaybeOffset > UINT16_MAX)
+        reportFatalUsageError(
+            "Prolog IP offset exceeds 16-bit range for V3 unwind info");
+      NeedsLargeProlog = (*MaybeOffset > 255);
+    } else {
+      NeedsLargeProlog = true; // Can't measure -> be conservative
+    }
+  }
+
+  // --- Per-epilog data preparation ---
+  struct EpilogEmitInfo {
+    const WinEH::FrameInfo::Epilog *Epilog;
+    SmallVector<uint8_t, 32> WODBytes;
+    uint16_t FirstOp;
+    uint8_t NumberOfOps;
+    bool Inherited;
+    bool NeedsLarge; // EPILOG_INFO_LARGE needed for this epilog
+  };
+
+  SmallVector<EpilogEmitInfo, 8> EpilogInfos;
+  for (const auto &[EpilogSym, Epilog] : Info->EpilogMap) {
+    if (Epilog.Instructions.empty())
+      continue;
+
+    EpilogEmitInfo EI;
+    EI.Epilog = &Epilog;
+    EI.NumberOfOps = Epilog.Instructions.size();
+    if (EI.NumberOfOps > 31)
+      reportFatalUsageError(
+          "Too many epilog unwind codes for V3 encoding. Maximum "
+          "is 31. This epilog has " +
+          Twine(EI.NumberOfOps));
+    EI.Inherited = false;
+    EI.NeedsLarge = false;
+
+    // Determine if EPILOG_INFO_LARGE is needed.
+    // Check IpOffsetOfLastInstruction (EpilogEnd - EpilogStart).
+    // Reject negative or out-of-range evaluatable values.
+    auto MaybeLastInstOfs =
+        GetOptionalAbsDifference(Asm, Epilog.End, Epilog.Start);
+    if (MaybeLastInstOfs) {
+      if (*MaybeLastInstOfs < 0)
+        reportFatalUsageError(
+            "Negative IpOffsetOfLastInstruction in V3 unwind info");
+      if (*MaybeLastInstOfs > UINT16_MAX)
+        reportFatalUsageError(
+            "IpOffsetOfLastInstruction exceeds 16-bit range for "
+            "V3 unwind info");
+      EI.NeedsLarge = (*MaybeLastInstOfs > 255);
+    } else {
+      EI.NeedsLarge = true; // Can't measure -> be conservative
+    }
+
+    // Check each epilog IP offset.
+    for (const auto &EpiInst : Epilog.Instructions) {
+      if (EI.NeedsLarge)
+        break;
+      auto MaybeOffset =
+          GetOptionalAbsDifference(Asm, EpiInst.Label, Epilog.Start);
+      if (MaybeOffset) {
+        if (*MaybeOffset < 0)
+          reportFatalUsageError("Negative epilog IP offset in V3 unwind info");
+        if (*MaybeOffset > UINT16_MAX)
+          reportFatalUsageError(
+              "Epilog IP offset exceeds 16-bit range for V3 unwind info");
+        EI.NeedsLarge = (*MaybeOffset > 255);
+      } else {
+        EI.NeedsLarge = true; // Can't measure -> be conservative
+      }
+    }
+
+    // Encode this epilog's WODs (forward order: body-to-terminator).
+    for (const auto &Inst : Epilog.Instructions)
+      Win64EH::EncodeWOD(Inst, EI.WODBytes);
+
+    // Pool sharing: try to re-use existing bytes in the pool rather than
+    // appending.
+    if (auto Offset = FindInPool(WODPool, EI.WODBytes)) {
+      EI.FirstOp = *Offset;
+    } else {
+      EI.FirstOp = WODPool.size();
+      WODPool.append(EI.WODBytes.begin(), EI.WODBytes.end());
+    }
+
+    EpilogInfos.push_back(std::move(EI));
+  }
+  if (EpilogInfos.size() > 7)
+    reportFatalUsageError("Too many epilogs for V3 encoding. Maximum is 7."
+                          " This function has " +
+                          Twine(EpilogInfos.size()));
+
+  // --- Inheritance decisions ---
+  // An epilog can use the inherited (3-byte) descriptor when FirstOp,
+  // NumberOfOps, NeedsLarge, and relative IP offsets all match the previous
+  // epilog.
+  for (unsigned I = 1; I < EpilogInfos.size(); ++I) {
+    auto &Prev = EpilogInfos[I - 1];
+    auto &Curr = EpilogInfos[I];
+    if (Curr.FirstOp == Prev.FirstOp && Curr.NumberOfOps == Prev.NumberOfOps &&
+        Curr.NeedsLarge == Prev.NeedsLarge &&
+        EpilogIpOffsetsMatch(*Curr.Epilog, *Prev.Epilog, OS->getAssembler()))
+      Curr.Inherited = true;
+  }
+
+  // --- Compute payload sizes ---
+  unsigned PrologIpEntrySize = NeedsLargeProlog ? 2 : 1;
+  unsigned EpilogDescBytes = 0;
+  for (const auto &EI : EpilogInfos) {
+    if (EI.Inherited) {
+      EpilogDescBytes += 3;
+    } else if (EI.NeedsLarge) {
+      // EPILOG_INFO_V3 (3) + EPILOG_INFO_LARGE_EX_V3 (4) + IP offsets (N*2)
+      EpilogDescBytes += 7 + EI.NumberOfOps * 2;
+    } else {
+      // EPILOG_INFO_V3 (3) + EPILOG_INFO_EX_V3 (3) + IP offsets (N*1)
+      EpilogDescBytes += 6 + EI.NumberOfOps;
+    }
+  }
+
+  unsigned PrologIpBytes = PrologOpCount * PrologIpEntrySize;
+  unsigned WODPoolBytes = WODPool.size();
+  // When UNW_FLAG_LARGE is set, the SizeOfPrologHighByte sits at the start
+  // of the payload (immediately after the 4-byte fixed header) and is
+  // counted in PayloadWords. See decodeUnwindInfoV3 / the V3 spec:
+  //   handler_offset = ALIGN_UP(sizeof(UNWIND_INFO_V3) + PayloadWords * 2, 4)
+  unsigned LargeHeaderBytes = NeedsLargeProlog ? 1 : 0;
+  unsigned TotalPayloadBytes =
+      LargeHeaderBytes + PrologIpBytes + EpilogDescBytes + WODPoolBytes;
+  if (TotalPayloadBytes > 255 * 2) {
+    reportFatalUsageError("Too much unwind info for V3 encoding. Maximum is "
+                          "510 bytes. This function has " +
+                          Twine(TotalPayloadBytes));
+  }
+  uint8_t PayloadWords = (TotalPayloadBytes + 1) / 2;
+
+  // ===================================================================
+  // Phase 2: Emission — emit header, payload, and trailer.
+  // ===================================================================
+
+  // --- Emit header (4 bytes, or 5 when UNW_FLAG_LARGE) ---
+  uint8_t Flags = 0;
+  if (Info->ChainedParent)
+    Flags |= Win64EH::UNW_ChainInfo;
+  else {
+    if (Info->HandlesUnwind)
+      Flags |= Win64EH::UNW_TerminateHandler;
+    if (Info->HandlesExceptions)
+      Flags |= Win64EH::UNW_ExceptionHandler;
+  }
+  if (NeedsLargeProlog)
+    Flags |= Win64EH::UNW_FlagLarge;
+
+  // Byte 0: (Flags << 3) | Version(3)
+  Streamer.emitInt8((Flags << 3) | 3);
+
+  // Byte 1: SizeOfProlog (low byte, or full 8-bit value when not LARGE)
+  if (Info->PrologEnd) {
+    if (NeedsLargeProlog) {
+      // Emit low byte as a fixup; we'll emit the high byte after Byte 3.
+      // Use a 2-byte value at a temp symbol and extract bytes, OR just emit
+      // the known value if evaluable.
+      auto MaybePrologSize =
+          GetOptionalAbsDifference(Asm, Info->PrologEnd, Info->Begin);
+      if (MaybePrologSize) {
+        Streamer.emitInt8(*MaybePrologSize & 0xFF);
+      } else {
+        // Emit as 1-byte fixup for the low byte.
+        EmitAbsDifference(Streamer, Info->PrologEnd, Info->Begin);
+      }
+    } else {
+      EmitAbsDifference(Streamer, Info->PrologEnd, Info->Begin);
+    }
+  } else {
+    Streamer.emitInt8(0);
+  }
+
+  // Byte 2: PayloadWords
+  Streamer.emitInt8(PayloadWords);
+
+  // Byte 3: (NumberOfEpilogs << 5) | NumberOfPrologOps
+  uint8_t NumberOfEpilogs = EpilogInfos.size();
+  Streamer.emitInt8((NumberOfEpilogs << 5) | (PrologOpCount & 0x1F));
+
+  // Byte 4 (LARGE only): SizeOfPrologHighByte
+  if (NeedsLargeProlog) {
+    if (Info->PrologEnd) {
+      auto MaybePrologSize =
+          GetOptionalAbsDifference(Asm, Info->PrologEnd, Info->Begin);
+      if (MaybePrologSize) {
+        Streamer.emitInt8((*MaybePrologSize >> 8) & 0xFF);
+      } else {
+        // Can't evaluate at this point — emit a fixup that shifts the
+        // difference right by 8 to extract the high byte.
+        const MCExpr *Diff = MCBinaryExpr::createSub(
+            MCSymbolRefExpr::create(Info->PrologEnd, Context),
+            MCSymbolRefExpr::create(Info->Begin, Context), Context);
+        const MCExpr *HighByte = MCBinaryExpr::createLShr(
+            Diff, MCConstantExpr::create(8, Context), Context);
+        Streamer.emitValue(HighByte, 1);
+      }
+    } else {
+      Streamer.emitInt8(0);
+    }
+  }
+
+  // --- Emit prolog IP offsets (8-bit or 16-bit) ---
+  for (auto &[InstLabel, BeginLabel] : PrologIpLabels) {
+    if (NeedsLargeProlog)
+      EmitAbsDifference16(Streamer, InstLabel, BeginLabel);
+    else
+      EmitAbsDifference(Streamer, InstLabel, BeginLabel);
+  }
+
+  // --- Emit epilog descriptors ---
+  const MCSymbol *PrevEpilogStart = nullptr;
+  for (const auto &EI : EpilogInfos) {
+    const auto &Epilog = *EI.Epilog;
+
+    // FlagsAndNumOps: bits [2:0] = flags, bits [7:3] = NumberOfOps.
+    // For inherited descriptors, NumberOfOps = 0.
+    uint8_t EpiFlags = 0;
+    if (EI.NeedsLarge && !EI.Inherited)
+      EpiFlags |= Win64EH::EPILOG_INFO_LARGE;
+    uint8_t EpiNumOps = EI.Inherited ? 0 : EI.NumberOfOps;
+    Streamer.emitInt8((EpiNumOps << 3) | EpiFlags);
+
+    // EpilogOffset: signed 16-bit.
+    // For the first epilog: byte offset from fragment start to epilog start.
+    // For subsequent epilogs: delta from the previous epilog's start position.
+    // Emit as a fixup since we may not know the exact distance yet.
+    {
+      const MCSymbol *Base = PrevEpilogStart ? PrevEpilogStart : Info->Begin;
+      const MCExpr *EpilogOffsetExpr = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(Epilog.Start, Context),
+          MCSymbolRefExpr::create(Base, Context), Context);
+      // Validate the epilog offset fits in a signed 16-bit field if we can
+      // evaluate it now.
+      int64_t OffsetValue;
+      if (EpilogOffsetExpr->evaluateAsAbsolute(OffsetValue,
+                                               OS->getAssembler())) {
+        if (OffsetValue < INT16_MIN || OffsetValue > INT16_MAX)
+          reportFatalUsageError(
+              "Epilog offset out of signed 16-bit range for V3 encoding");
+      }
+      OS->ensureHeadroom(2);
+      OS->addFixup(EpilogOffsetExpr, FK_Data_2);
+      OS->appendContents(2, 0);
+    }
+    PrevEpilogStart = Epilog.Start;
+
+    // Full descriptor fields (only for non-inherited epilogs).
+    if (!EI.Inherited) {
+      // FirstOp: byte offset into WOD pool (2 bytes LE).
+      Streamer.emitInt8(EI.FirstOp & 0xFF);
+      Streamer.emitInt8((EI.FirstOp >> 8) & 0xFF);
+
+      // IpOffsetOfLastInstruction: 8-bit or 16-bit depending on
+      // EPILOG_INFO_LARGE.
+      {
+        const MCExpr *LastInstOffsetExpr = MCBinaryExpr::createSub(
+            MCSymbolRefExpr::create(Epilog.End, Context),
+            MCSymbolRefExpr::create(Epilog.Start, Context), Context);
+        unsigned FixupSize = EI.NeedsLarge ? 2 : 1;
+        OS->ensureHeadroom(FixupSize);
+        OS->addFixup(LastInstOffsetExpr, EI.NeedsLarge ? FK_Data_2 : FK_Data_1);
+        OS->appendContents(FixupSize, 0);
+      }
+
+      // Epilog IP offsets (forward order: body-to-terminator).
+      for (const auto &EpiInst : Epilog.Instructions) {
+        if (EI.NeedsLarge)
+          EmitAbsDifference16(Streamer, EpiInst.Label, Epilog.Start);
+        else
+          EmitAbsDifference(Streamer, EpiInst.Label, Epilog.Start);
+      }
+    }
+  }
+
+  // --- Emit WOD pool ---
+  for (uint8_t B : WODPool)
+    Streamer.emitInt8(B);
+
+  // --- Pad to PayloadWords * 2 bytes ---
+  // PayloadWords = (TotalPayloadBytes + 1) / 2, so at most 1 byte of padding.
+  if (TotalPayloadBytes % 2 != 0)
+    Streamer.emitInt8(0);
+
+  // --- Pad to 4-byte boundary before handler/chain info ---
+  // Per the V3 spec, the handler RVA / chained RUNTIME_FUNCTION begins at
+  //   handler_offset = ALIGN_UP(sizeof(UNWIND_INFO_V3) + PayloadWords * 2, 4)
+  // The unwind info structure itself is 4-byte aligned, so when PayloadWords
+  // is odd, the natural end of the payload sits at +2 mod 4 and requires 2
+  // additional zero bytes of padding before the handler/chain.
+  if (PayloadWords % 2 != 0)
+    Streamer.emitInt16(0);
+
+  // --- Emit handler/chained info (same position as V1/V2) ---
+  if (Flags & Win64EH::UNW_ChainInfo)
+    EmitRuntimeFunction(Streamer, Info->ChainedParent);
+  else if (Flags &
+           (Win64EH::UNW_TerminateHandler | Win64EH::UNW_ExceptionHandler))
+    Streamer.emitValue(
+        MCSymbolRefExpr::create(Info->ExceptionHandler,
+                                MCSymbolRefExpr::VK_COFF_IMGREL32, Context),
+        4);
+  else if (PayloadWords == 0) {
+    // Minimum size: pad to 8 bytes total.
+    Streamer.emitInt32(0);
+  }
+}
+
 static void EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
   // If this UNWIND_INFO already has a symbol, it's already been emitted.
   if (info->Symbol)
     return;
+
+  // V3 has a completely different binary layout; dispatch to separate emitter.
+  if (info->Version == 3) {
+    EmitUnwindInfoV3(streamer, info);
+    return;
+  }
+
+  // UOP_Push2 is V3-only and cannot be encoded in V1/V2. Detect this early
+  // (before counting codes) so the error is reported cleanly. This is
+  // reachable from hand-written .s if `.seh_push2regs` is followed by a
+  // per-function `.seh_unwindversion 1` or `2` downgrade.
+  for (const auto &Inst : info->Instructions) {
+    if (Inst.Operation == Win64EH::UOP_Push2) {
+      streamer.getContext().reportError(
+          SMLoc(), "UOP_Push2 (PUSH2 with two registers) requires V3 unwind "
+                   "info. Use `.seh_unwindversion 3`.");
+      // Mark the frame as emitted (with no UNWIND_INFO) and bail so we don't
+      // emit malformed bytes or hit a downstream assertion.
+      info->Symbol = streamer.getContext().createTempSymbol();
+      return;
+    }
+  }
 
   MCContext &context = streamer.getContext();
   MCObjectStreamer *OS = (MCObjectStreamer *)(&streamer);

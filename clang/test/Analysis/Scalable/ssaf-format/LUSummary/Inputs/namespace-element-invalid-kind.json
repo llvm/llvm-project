@@ -1,0 +1,32 @@
+{
+  "lu_namespace": [
+    {
+      "kind": "LinkUnit",
+      "name": "test.exe"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": "",
+        "namespace": [
+          {
+            "kind": "invalid_kind",
+            "name": "test.cpp"
+          }
+        ]
+      }
+    }
+  ],
+  "linkage_table": [
+    {
+      "id": 0,
+      "linkage": {
+        "type": "External"
+      }
+    }
+  ],
+  "data": []
+}

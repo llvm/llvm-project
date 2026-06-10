@@ -1691,6 +1691,14 @@ def err_omp_expected_interop_type : Error<
 def warn_omp_more_one_interop_type
   : Warning<"interop type '%0' cannot be specified more than once">,
     InGroup<OpenMPClauses>;
+def err_omp_interop_multiple_fr : Error<
+  "only one 'fr' selector allowed per preference-specification">;
+def err_omp_prefer_type_brace_60 : Error<
+  "brace-grouped 'prefer_type' argument requires OpenMP version 6.0 or later">;
+def err_omp_expected_fr_or_attr_selector : Error<
+  "expected 'fr' or 'attr' selector in 'prefer_type'">;
+def err_omp_expected_pref_spec : Error<
+  "expected preference-specification in 'prefer_type'">;
 def err_expected_sequence_or_directive : Error<
   "expected an OpenMP 'directive' or 'sequence' attribute argument">;
 def ext_omp_attributes : ExtWarn<

@@ -112,6 +112,8 @@ void XtensaTargetELFStreamer::startLiteralSection(MCSection *BaseSection) {
       SectionName, ELF::SHT_PROGBITS, ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
 
   ConstSection->setAlignment(Align(4));
+  MCStreamer &OutStreamer = getStreamer();
+  OutStreamer.switchSection(ConstSection);
 }
 
 MCELFStreamer &XtensaTargetELFStreamer::getStreamer() {

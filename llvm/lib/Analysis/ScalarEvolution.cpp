@@ -8680,18 +8680,6 @@ bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
   return getBackedgeTakenInfo(L).isConstantMaxOrZero(this);
 }
 
-/// Push PHI nodes in the header of the given loop onto the given Worklist.
-static void PushLoopPHIs(const Loop *L,
-                         SmallVectorImpl<Instruction *> &Worklist,
-                         SmallPtrSetImpl<Instruction *> &Visited) {
-  BasicBlock *Header = L->getHeader();
-
-  // Push all Loop-header PHIs onto the Worklist stack.
-  for (PHINode &PN : Header->phis())
-    if (Visited.insert(&PN).second)
-      Worklist.push_back(&PN);
-}
-
 ScalarEvolution::BackedgeTakenInfo &
 ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   auto &BTI = getBackedgeTakenInfo(L);
@@ -8801,8 +8789,6 @@ void ScalarEvolution::visitAndClearUsers(
 
 void ScalarEvolution::forgetLoop(const Loop *L) {
   SmallVector<const Loop *, 16> LoopWorklist(1, L);
-  SmallVector<Instruction *, 32> Worklist;
-  SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<SCEVUse, 16> ToForget;
 
   // Iterate over all the loops and sub-loops to drop SCEV information.
@@ -8822,8 +8808,12 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
       llvm::append_range(ToForget, LoopUsersItr->second);
 
     // Drop information about expressions based on loop-header PHIs.
-    PushLoopPHIs(CurrL, Worklist, Visited);
-    visitAndClearUsers(Worklist, Visited, ToForget);
+    for (PHINode &PN : CurrL->getHeader()->phis()) {
+      ConstantEvolutionLoopExitValue.erase(&PN);
+      auto VIt = ValueExprMap.find_as(static_cast<Value *>(&PN));
+      if (VIt != ValueExprMap.end())
+        ToForget.push_back(VIt->second);
+    }
 
     LoopPropertiesCache.erase(CurrL);
     // Forget all contained loops too, to avoid dangling entries in the

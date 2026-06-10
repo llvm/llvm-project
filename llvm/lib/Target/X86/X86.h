@@ -399,6 +399,9 @@ public:
 
 FunctionPass *createX86LowerAMXIntrinsicsLegacyPass();
 
+/// Capacity check and sub-fragment splitting for Win x64 Unwind V3.
+FunctionPass *createX86WinEHUnwindV3Pass();
+
 InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
@@ -507,6 +510,7 @@ void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerLegacyPass(PassRegistry &);
 void initializeX86PostLegalizerCombinerLegacyPass(PassRegistry &);
+void initializeX86WinEHUnwindV3Pass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

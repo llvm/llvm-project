@@ -552,11 +552,13 @@ static void handlePAuthABI(const Driver &D, const ArgList &DriverArgs,
 
 void Linux::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args,
+                                  StringRef BoundArch,
                                   Action::OffloadKind DeviceOffloadKind) const {
   llvm::Triple Triple(ComputeEffectiveClangTriple(DriverArgs));
   if (Triple.isAArch64() && Triple.getEnvironment() == llvm::Triple::PAuthTest)
     handlePAuthABI(getDriver(), DriverArgs, CC1Args);
-  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, DeviceOffloadKind);
+  Generic_ELF::addClangTargetOptions(DriverArgs, CC1Args, BoundArch,
+                                     DeviceOffloadKind);
 }
 
 std::string Linux::getDynamicLinker(const ArgList &Args) const {

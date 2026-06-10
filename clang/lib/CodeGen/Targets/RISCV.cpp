@@ -580,7 +580,8 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty, unsigned ABIVLen) const {
     // vector with same LMUL.
     const TargetInfo &TI = getContext().getTargetInfo();
     if ((EltType->isHalfTy() && !TI.hasFeature("zvfhmin")) ||
-        (EltType->isBFloatTy() && !TI.hasFeature("zvfbfmin")) ||
+        (EltType->isBFloatTy() && !(TI.hasFeature("zvfbfmin") ||
+                                    TI.hasFeature("experimental-zvfbfa"))) ||
         (EltType->isFloatTy() && !TI.hasFeature("zve32f")) ||
         (EltType->isDoubleTy() && !TI.hasFeature("zve64d")) ||
         (EltType->isIntegerTy(64) && !TI.hasFeature("zve64x")) ||

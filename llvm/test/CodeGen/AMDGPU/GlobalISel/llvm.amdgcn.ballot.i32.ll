@@ -21,7 +21,7 @@ define amdgpu_cs i32 @constant_false() {
 define amdgpu_cs i32 @constant_true() {
 ; CHECK-LABEL: constant_true:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_and_b32 s0, exec_lo, exec_lo
+; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    ; return to shader part epilog
   %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 1)
   ret i32 %ballot
@@ -383,7 +383,6 @@ define amdgpu_cs i32 @branch_uniform_ballot_sgt_N_compare(i32 inreg %v) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_cmp_lt_u32 s0, 12
 ; CHECK-NEXT:    s_cselect_b32 s0, exec_lo, 0
-; CHECK-NEXT:    s_and_b32 s0, s0, exec_lo
 ; CHECK-NEXT:    s_cmp_le_i32 s0, 22
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB18_2
 ; CHECK-NEXT:  ; %bb.1: ; %true

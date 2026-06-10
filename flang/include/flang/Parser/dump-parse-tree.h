@@ -360,6 +360,7 @@ public:
   NODE(parser, ExitStmt)
   NODE(parser, ExplicitCoshapeSpec)
   NODE(parser, ExplicitShapeSpec)
+  NODE(parser, ExplicitShapeBoundsSpec)
   NODE(parser, Expr)
   NODE(Expr, Parentheses)
   NODE(Expr, UnaryPlus)

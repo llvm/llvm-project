@@ -33,7 +33,7 @@ using namespace lldb_private;
 TargetThreadWindows::TargetThreadWindows(ProcessWindows &process,
                                          const HostThread &thread)
     : Thread(process, thread.GetNativeThread().GetThreadId()),
-      m_thread_reg_ctx_sp(), m_host_thread(thread) {}
+      m_host_thread(thread) {}
 
 TargetThreadWindows::~TargetThreadWindows() { DestroyThread(); }
 

@@ -2,10 +2,10 @@
 
 void acc_data(int cond) {
   // CHECK: cir.func{{.*}} @acc_data(%[[ARG:.*]]: !s32i{{.*}}) {{.*}}{
-  // CHECK-NEXT: %[[COND:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["cond", init]
+  // CHECK-NEXT: %[[COND:.*]] = cir.alloca "cond" {{.*}} init : !cir.ptr<!s32i>
 
   int *ptr;
-  // CHECK-NEXT: %[[PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["ptr"]
+  // CHECK-NEXT: %[[PTR:.*]] = cir.alloca "ptr" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: cir.store %[[ARG]], %[[COND]] : !s32i, !cir.ptr<!s32i>
 
 #pragma acc data default(none)

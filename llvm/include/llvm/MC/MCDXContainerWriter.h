@@ -18,7 +18,7 @@ namespace llvm {
 
 class raw_pwrite_stream;
 
-class MCDXContainerTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCDXContainerTargetWriter : public MCObjectTargetWriter {
 protected:
   MCDXContainerTargetWriter() {}
 
@@ -33,7 +33,7 @@ public:
   }
 };
 
-class DXContainerObjectWriter final : public MCObjectWriter {
+class LLVM_ABI DXContainerObjectWriter final : public MCObjectWriter {
   support::endian::Writer W;
   std::unique_ptr<MCDXContainerTargetWriter> TargetObjectWriter;
 

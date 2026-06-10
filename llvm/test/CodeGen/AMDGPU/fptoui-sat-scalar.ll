@@ -575,13 +575,13 @@ define i64 @test_s_unsigned_i64_f32(float inreg %f) nounwind {
 ; GFX12-GI-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GI-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GI-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GI-NEXT:    v_trunc_f32_e32 v0, s0
+; GFX12-GI-NEXT:    s_trunc_f32 s1, s0
 ; GFX12-GI-NEXT:    s_cmp_nge_f32 s0, 0
-; GFX12-GI-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_mul_f32 s2, s1, 0x2f800000
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-GI-NEXT:    v_floor_f32_e32 v0, s2
-; GFX12-GI-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12-GI-NEXT:    s_floor_f32 s2, s2
+; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GI-NEXT:    s_fmac_f32 s1, s2, 0xcf800000
 ; GFX12-GI-NEXT:    s_cvt_u32_f32 s3, s2
 ; GFX12-GI-NEXT:    s_wait_alu depctr_sa_sdst(0)

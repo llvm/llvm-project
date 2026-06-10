@@ -63,6 +63,7 @@ public:
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
+                        llvm::StringRef BoundArch,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
   std::string getDynamicLinker(const llvm::opt::ArgList &Args) const override;

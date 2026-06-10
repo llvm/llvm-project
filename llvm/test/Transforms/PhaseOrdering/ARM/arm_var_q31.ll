@@ -74,7 +74,7 @@ define void @arm_var_q31(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[SHR]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY_PREHEADER67]]
-; CHECK:       while.body.preheader63:
+; CHECK:       while.body.preheader65:
 ; CHECK-NEXT:    [[SUMOFSQUARES_043_PH:%.*]] = phi i64 [ 0, [[WHILE_BODY_PREHEADER]] ], [ [[TMP25]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[PSRC_ADDR_042_PH:%.*]] = phi ptr [ [[PSRC]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP1]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[BLKCNT_041_PH:%.*]] = phi i32 [ [[SHR]], [[WHILE_BODY_PREHEADER]] ], [ [[TMP2]], [[MIDDLE_BLOCK]] ]
@@ -129,7 +129,7 @@ define void @arm_var_q31(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[REM:%.*]] = and i32 [[BLOCKSIZE]], 3
 ; CHECK-NEXT:    [[CMP31_NOT46:%.*]] = icmp eq i32 [[REM]], 0
 ; CHECK-NEXT:    br i1 [[CMP31_NOT46]], label [[WHILE_END43:%.*]], label [[VECTOR_BODY61:%.*]]
-; CHECK:       vector.body61:
+; CHECK:       vector.body63:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 [[REM]])
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[PSRC_ADDR_0_LCSSA]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i32> poison), !tbaa [[TBAA4]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = ashr <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 8)

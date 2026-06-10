@@ -1982,14 +1982,19 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
   for (Instruction &I : *BB) {
     // Scan all uses of this instruction to see if it is used outside of its
     // block, and if so, record them in UsesToRename.
+
+    SmallVector<Instruction *> LifetimeMarkers;
     for (Use &U : I.uses()) {
       Instruction *User = cast<Instruction>(U.getUser());
-      if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
-        if (UserPN->getIncomingBlock(U) == BB)
+      if (User->isLifetimeStartOrEnd()) {
+        LifetimeMarkers.push_back(User);
+      } else {
+        if (PHINode *UserPN = dyn_cast<PHINode>(User)) {
+          if (UserPN->getIncomingBlock(U) == BB)
+            continue;
+        } else if (User->getParent() == BB)
           continue;
-      } else if (User->getParent() == BB)
-        continue;
-
+      }
       UsesToRename.push_back(&U);
     }
 
@@ -2018,6 +2023,15 @@ void JumpThreadingPass::updateSSA(BasicBlock *BB, BasicBlock *NewBB,
       DbgVariableRecords.clear();
     }
 
+    // Lifetime markers cannot be rewritten through PHIs. If threading leaves
+    // one of them pointing at a PHI, drop the whole set.
+    bool HasPhiArg = any_of(LifetimeMarkers, [](Instruction *User) {
+      return isa<PHINode>(cast<CallBase>(User)->getOperand(0));
+    });
+    if (HasPhiArg) {
+      for (Instruction *User : LifetimeMarkers)
+        User->eraseFromParent();
+    }
     LLVM_DEBUG(dbgs() << "\n");
   }
 }

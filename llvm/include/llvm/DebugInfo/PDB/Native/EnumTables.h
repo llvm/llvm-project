@@ -14,7 +14,7 @@
 namespace llvm {
 template <typename T> struct EnumEntry;
 namespace pdb {
-ArrayRef<EnumEntry<uint16_t>> getOMFSegMapDescFlagNames();
+LLVM_ABI ArrayRef<EnumEntry<uint16_t>> getOMFSegMapDescFlagNames();
 }
 }
 
