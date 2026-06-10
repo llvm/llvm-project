@@ -147,7 +147,7 @@ purpose of calls, since the copy constructor is made trivial.
 
 ``_LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE``
 ------------------------------------------
-This flag sets the default block size of ``deque`` to 512 bytes and the minimum number of elements per block to 2.
+This flag sets the default block size of ``deque`` to 512 bytes and the minimum number of elements per block to 4.
 
 Types that public aliases reference
 ===================================
