@@ -13,6 +13,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorExtras.h"
 #include <optional>
 
@@ -41,6 +42,8 @@ private:
 
   ValueObject *m_start = nullptr;
   ValueObject *m_finish = nullptr;
+  enum class VectorLayout : bool { Pointer, Size };
+  VectorLayout m_layout;
   CompilerType m_element_type;
   uint32_t m_element_size = 0;
 };
@@ -83,14 +86,9 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
   // delete m_finish;
 }
 
-llvm::Expected<uint32_t> lldb_private::formatters::
-    LibcxxStdVectorSyntheticFrontEnd::CalculateNumChildren() {
-  if (!m_start || !m_finish)
-    return llvm::createStringError(
-        "failed to determine start/end of vector data");
-
-  uint64_t start_val = m_start->GetValueAsUnsigned(0);
-  uint64_t finish_val = m_finish->GetValueAsUnsigned(0);
+static llvm::Expected<uint32_t> CalculateNumChildrenUsingPointerArithmetic(ValueObject* begin, ValueObject* end, uint64_t value_type_size) {
+  uint64_t start_val = begin->GetValueAsUnsigned(0);
+  uint64_t finish_val = end->GetValueAsUnsigned(0);
 
   // A default-initialized empty vector.
   if (start_val == 0 && finish_val == 0)
@@ -107,10 +105,30 @@ llvm::Expected<uint32_t> lldb_private::formatters::
         "start of vector data begins after end pointer");
 
   size_t num_children = (finish_val - start_val);
-  if (num_children % m_element_size)
+  if (num_children % value_type_size)
     return llvm::createStringError("size not multiple of element size");
 
-  return num_children / m_element_size;
+  return num_children / value_type_size;
+}
+
+static llvm::Expected<uint32_t> GetNumChildren(ValueObject* size) {
+  if (!size->GetCompilerType().IsInteger())
+    return llvm::createStringError("size data member must be a built-in integer type");
+  return size->GetValueAsUnsigned(0);
+}
+
+llvm::Expected<uint32_t> lldb_private::formatters::
+    LibcxxStdVectorSyntheticFrontEnd::CalculateNumChildren() {
+  if (!m_start || !m_finish)
+    return llvm::createStringError(
+        "failed to determine start/end of vector data");
+
+  switch (m_layout) {
+    case VectorLayout::Pointer:
+      return CalculateNumChildrenUsingPointerArithmetic(m_start, m_finish, m_element_size);
+    case VectorLayout::Size:
+      return GetNumChildren(m_finish);
+  }
 }
 
 lldb::ValueObjectSP
@@ -158,20 +176,16 @@ lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
 
   if (ValueObjectSP end_sp = target->GetChildMemberWithName("__end_")) {
     m_finish = end_sp.get();
+    m_layout = VectorLayout::Pointer;
     return lldb::ChildCacheState::eRefetch;
   }
 
   ValueObjectSP size_sp = target->GetChildMemberWithName("__size_");
-  if (!size_sp || !size_sp->GetCompilerType().IsInteger())
+  if (!size_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  uint64_t begin_addr = m_start->GetValueAsUnsigned(0);
-  uint64_t size = size_sp->GetValueAsUnsigned(0);
-  uint64_t end_addr = begin_addr + size * m_element_size;
-  m_finish = CreateChildValueObjectFromAddress(
-                 "__end_", end_addr, m_backend.GetExecutionContextRef(),
-                 m_start->GetCompilerType(), false)
-                 .get();
+  m_finish = size_sp.get();
+  m_layout = VectorLayout::Size;
   return lldb::ChildCacheState::eRefetch;
 }
 

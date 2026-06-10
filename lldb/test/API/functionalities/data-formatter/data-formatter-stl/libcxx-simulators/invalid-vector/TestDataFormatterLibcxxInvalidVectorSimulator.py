@@ -88,7 +88,7 @@ class LibcxxInvalidVectorDataFormatterSimulatorTestCase(TestBase):
         )
         self.expect(
             "frame variable v18",
-            substrs=["size=error: failed to determine start/end of vector data"],
+            substrs=["size=error: size data member must be a built-in integer type"],
         )
         self.expect(
             "frame variable v19",
