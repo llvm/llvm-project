@@ -1683,6 +1683,30 @@ static xegpu::DistributeLayoutAttr setupGenericNdAnchorLayout(
   laneLayout.back() = uArch->getSubgroupSize();
   laneData.back() = packingFactor;
 
+  // Honor the consumer's lane info when valid. The consumer (e.g. dpas) may
+  // require VNNI-style packing on a non-innermost dim that the load's own
+  // packing default doesn't capture.
+  auto honorConsumerLane = [&]() {
+    if (!consumerLayout)
+      return;
+    SmallVector<int64_t> consumerLaneLayout =
+        consumerLayout.getEffectiveLaneLayoutAsInt();
+    SmallVector<int64_t> consumerLaneData =
+        consumerLayout.getEffectiveLaneDataAsInt();
+    if (consumerLaneLayout.size() != static_cast<size_t>(rank) ||
+        consumerLaneData.size() != static_cast<size_t>(rank))
+      return;
+    // Validate: lane_layout * lane_data must divide each dim of dataShape.
+    for (int dim = 0; dim < rank; ++dim) {
+      int64_t product = consumerLaneLayout[dim] * consumerLaneData[dim];
+      if (product == 0 || dataShape[dim] % product != 0)
+        return;
+    }
+    laneLayout.assign(consumerLaneLayout.begin(), consumerLaneLayout.end());
+    laneData.assign(consumerLaneData.begin(), consumerLaneData.end());
+  };
+  honorConsumerLane();
+
   if (layoutKind == xegpu::LayoutKind::Lane)
     return buildLaneLayout(context, laneLayout, laneData);
 
