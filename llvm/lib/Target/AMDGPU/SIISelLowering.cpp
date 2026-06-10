@@ -10822,7 +10822,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_wave_reduce_or:
   case Intrinsic::amdgcn_wave_reduce_xor: {
     EVT SrcVT = Op.getOperand(1).getValueType();
-    if (SrcVT.getFixedSizeInBits() == 0x10) {
+    if (SrcVT.getFixedSizeInBits() == 16) {
       bool IsFPOp = SrcVT.isFloatingPoint();
       bool NeedsSignExt = IntrinsicID == Intrinsic::amdgcn_wave_reduce_min ||
                           IntrinsicID == Intrinsic::amdgcn_wave_reduce_max ||
