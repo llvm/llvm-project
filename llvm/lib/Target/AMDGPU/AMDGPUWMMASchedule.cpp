@@ -42,42 +42,48 @@ public:
 };
 
 void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
-  if (!ST.hasGFX1250Insts()) return;
+  if (!ST.hasGFX1250Insts())
+    return;
   const TargetSchedModel *SM = DAG->getSchedModel();
   const SIInstrInfo *TII = ST.getInstrInfo();
-  LLVM_DEBUG(dbgs() << "WMMASchedule running, " << DAG->SUnits.size() << "SUnits\n");
+  LLVM_DEBUG(dbgs() << "WMMASchedule running, " << DAG->SUnits.size()
+                    << "SUnits\n");
 
-  SmallVector<SUnit*> Loads;
-  MapVector<SUnit*, unsigned> Wmmas;
+  SmallVector<SUnit *> Loads;
+  MapVector<SUnit *, unsigned> Wmmas;
 
   std::optional<unsigned> LoadLatency = std::nullopt;
   std::optional<unsigned> WmmaLatency = std::nullopt;
-  
+
   // Gather all WMMAs and DS_LOADs
-  for(auto &SU : DAG->SUnits) {
-    MachineInstr* MI = SU.getInstr();
-    if(!MI) continue;
+  for (auto &SU : DAG->SUnits) {
+    MachineInstr *MI = SU.getInstr();
+    if (!MI)
+      continue;
 
     // Gather WMMAs
-    if(TII->isMFMAorWMMA(*MI)) {
-      if(WmmaLatency == std::nullopt) WmmaLatency = SM->computeInstrLatency(MI);
+    if (TII->isMFMAorWMMA(*MI)) {
+      if (WmmaLatency == std::nullopt)
+        WmmaLatency = SM->computeInstrLatency(MI);
       Wmmas.insert({&SU, Wmmas.size()});
       continue;
     }
 
     // Gather DS_LOADs
-    if(TII->isDS(*MI) && MI->mayLoad()) {
-      if(LoadLatency == std::nullopt) LoadLatency = SM->computeInstrLatency(MI);
+    if (TII->isDS(*MI) && MI->mayLoad()) {
+      if (LoadLatency == std::nullopt)
+        LoadLatency = SM->computeInstrLatency(MI);
       Loads.push_back(&SU);
     }
   }
 
-  // Calculate how many WMMAs away from consuming WMMA a load must be 
+  // Calculate how many WMMAs away from consuming WMMA a load must be
   // before it will certainly ready for consumer
   unsigned Dist;
-  if(LoadLatency && WmmaLatency) {
-    Dist = std::ceil(static_cast<double>(*LoadLatency) / *WmmaLatency); 
-    if (Dist < 1) Dist = 1;
+  if (LoadLatency && WmmaLatency) {
+    Dist = std::ceil(static_cast<double>(*LoadLatency) / *WmmaLatency);
+    if (Dist < 1)
+      Dist = 1;
   } else {
     return; // Either missing Wmmas or Loads. No point continuing.
   }
@@ -85,28 +91,31 @@ void WMMASchedule::apply(ScheduleDAGInstrs *DAG) {
 
   // For every load, determine earliest WMMA reliant on it,
   // and add an anchor.
-  for(SUnit* L : Loads){
-    SUnit* Earliest = nullptr;
+  for (SUnit *L : Loads) {
+    SUnit *Earliest = nullptr;
     unsigned EarliestPos = UINT_MAX;
-    for(const SDep& D : L->Succs){
-      if(D.getKind() != SDep::Data) continue; 
-      SUnit* S = D.getSUnit();
+    for (const SDep &D : L->Succs) {
+      if (D.getKind() != SDep::Data)
+        continue;
+      SUnit *S = D.getSUnit();
       auto *It = Wmmas.find(S);
-      if(It == Wmmas.end()) continue;
-      if(It->second < EarliestPos) { 
-        EarliestPos = It->second; 
+      if (It == Wmmas.end())
+        continue;
+      if (It->second < EarliestPos) {
+        EarliestPos = It->second;
         Earliest = S;
       }
     };
     LLVM_DEBUG(dbgs() << "load SU" << L->NodeNum << " -> earliest WMMA SU"
-                      << (Earliest ? (int)Earliest->NodeNum : -1)
-                      << " (pos " << EarliestPos << ")\n");
-    if(Earliest && EarliestPos >= Dist) {
+                      << (Earliest ? (int)Earliest->NodeNum : -1) << " (pos "
+                      << EarliestPos << ")\n");
+    if (Earliest && EarliestPos >= Dist) {
       LLVM_DEBUG(dbgs() << "Window Created!\n");
-      SUnit* Anchor = Wmmas.begin()[EarliestPos - Dist].first;
+      SUnit *Anchor = Wmmas.begin()[EarliestPos - Dist].first;
       bool Ok = DAG->addEdge(L, SDep(Anchor, SDep::Artificial));
-      LLVM_DEBUG(dbgs() << "  leash SU" << L->NodeNum << " after WMMA SU" << Anchor->NodeNum
-                    << (Ok ? "\n" : " (REJECTED: cycle)\n"));
+      LLVM_DEBUG(dbgs() << "  leash SU" << L->NodeNum << " after WMMA SU"
+                        << Anchor->NodeNum
+                        << (Ok ? "\n" : " (REJECTED: cycle)\n"));
     };
   };
 }
