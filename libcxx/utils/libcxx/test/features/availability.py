@@ -13,23 +13,30 @@ from lit.BooleanExpression import BooleanExpression
 # Those are used for backdeployment features below, do not use directly in tests.
 features = [
     Feature(
-        name="_target-has-llvm-22",
+        name="_target-has-llvm-23",
         when=lambda cfg: BooleanExpression.evaluate(
             "TBD",
+            cfg.available_features,
+        ),
+    ),
+    Feature(
+        name="_target-has-llvm-22",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "_target-has-llvm-23",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-21",
         when=lambda cfg: BooleanExpression.evaluate(
-            "TBD",
+            r"_target-has-llvm-22 || target={{.+}}-apple-macosx{{26.[4-9](.\d+)?}}",
             cfg.available_features,
         ),
     ),
     Feature(
         name="_target-has-llvm-20",
         when=lambda cfg: BooleanExpression.evaluate(
-            r"_target-has-llvm-21 || target={{.+}}-apple-macosx{{26.[0-9](.\d+)?}}",
+            r"_target-has-llvm-21 || target={{.+}}-apple-macosx{{26.[0-3](.\d+)?}}",
             cfg.available_features,
         ),
     ),

@@ -458,3 +458,48 @@ define <2 x i32> @test18(<2 x i32> %x, <2 x i32> %y) {
   %tmp5 = xor <2 x i32> %tmp4, %tmp3
   ret <2 x i32> %tmp5
 }
+
+define float @test19_scalar(float %x, float %y) {
+; CHECK-LABEL: @test19_scalar(
+; CHECK-NEXT:    [[NEG:%.*]] = fneg reassoc nsz float [[Y:%.*]]
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd reassoc nsz float [[NEG]], [[X:%.*]]
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul reassoc nsz float [[REASS_ADD]], 0.000000e+00
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz float [[REASS_MUL]], 0.000000e+00
+; CHECK-NEXT:    ret float [[TMP4]]
+;
+  %tmp1 = fmul reassoc nsz float %x, zeroinitializer
+  %tmp2 = fadd reassoc nsz float zeroinitializer, %tmp1
+  %tmp3 = fmul reassoc nsz float %y, zeroinitializer
+  %tmp4 = fsub reassoc nsz float %tmp2, %tmp3
+  ret float %tmp4
+}
+
+define <4 x float> @test19_vector(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @test19_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz <4 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz <4 x float> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3_NEG:%.*]] = fmul reassoc nsz <4 x float> [[Y:%.*]], splat (float -0.000000e+00)
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz <4 x float> [[TMP2]], [[TMP3_NEG]]
+; CHECK-NEXT:    ret <4 x float> [[TMP4]]
+;
+  %tmp1 = fmul reassoc nsz <4 x float> %x, zeroinitializer
+  %tmp2 = fadd reassoc nsz <4 x float> zeroinitializer, %tmp1
+  %tmp3 = fmul reassoc nsz <4 x float> %y, zeroinitializer
+  %tmp4 = fsub reassoc nsz <4 x float> %tmp2, %tmp3
+  ret <4 x float> %tmp4
+}
+
+define <vscale x 4 x float> @test19_scalable_vector(<vscale x 4 x float> %x, <vscale x 4 x float> %y) {
+; CHECK-LABEL: @test19_scalable_vector(
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz <vscale x 4 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc nsz <vscale x 4 x float> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP3_NEG:%.*]] = fmul reassoc nsz <vscale x 4 x float> [[Y:%.*]], splat (float -0.000000e+00)
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc nsz <vscale x 4 x float> [[TMP2]], [[TMP3_NEG]]
+; CHECK-NEXT:    ret <vscale x 4 x float> [[TMP4]]
+;
+  %tmp1 = fmul reassoc nsz <vscale x 4 x float> %x, zeroinitializer
+  %tmp2 = fadd reassoc nsz <vscale x 4 x float> zeroinitializer, %tmp1
+  %tmp3 = fmul reassoc nsz <vscale x 4 x float> %y, zeroinitializer
+  %tmp4 = fsub reassoc nsz <vscale x 4 x float> %tmp2, %tmp3
+  ret <vscale x 4 x float> %tmp4
+}

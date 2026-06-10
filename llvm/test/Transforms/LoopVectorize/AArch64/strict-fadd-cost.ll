@@ -49,8 +49,8 @@ for.end:
   ret double %add
 }
 
-; CHECK-VF4: Cost of 14 for VF 4: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<{{.+}}>)
-; CHECK-VF8: Cost of 28 for VF 8: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<{{.+}}>)
+; CHECK-VF4: Cost of 14 for VF 4: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fmuladd (vp<{{.+}}>)
+; CHECK-VF8: Cost of 28 for VF 8: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fmuladd (vp<{{.+}}>)
 
 define float @fmuladd_strict32(ptr %a, ptr %b, i64 %n) {
 entry:
@@ -73,8 +73,8 @@ for.end:
 }
 
 
-; CHECK-VF4: Cost of 12 for VF 4: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<{{.+}}>)
-; CHECK-VF8: Cost of 24 for VF 8: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fadd (vp<{{.+}}>)
+; CHECK-VF4: Cost of 12 for VF 4: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fmuladd (vp<{{.+}}>)
+; CHECK-VF8: Cost of 24 for VF 8: REDUCE ir<%muladd> = ir<%sum.07> + reduce.fmuladd (vp<{{.+}}>)
 
 define double @fmuladd_strict64(ptr %a, ptr %b, i64 %n) {
 entry:

@@ -365,6 +365,7 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
                    : cir::GlobalLinkageKind::InternalLinkage;
       return cir::GlobalLinkageKind::ExternalLinkage;
 
+    case TSK_FriendDeclaration:
     case TSK_ImplicitInstantiation:
       return cir::GlobalLinkageKind::LinkOnceODRLinkage;
 
@@ -397,6 +398,7 @@ cir::GlobalLinkageKind CIRGenModule::getVTableLinkage(const CXXRecordDecl *rd) {
   case TSK_Undeclared:
   case TSK_ExplicitSpecialization:
   case TSK_ImplicitInstantiation:
+  case TSK_FriendDeclaration:
     return discardableODRLinkage;
 
   case TSK_ExplicitInstantiationDeclaration:
@@ -752,9 +754,18 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
   else
     assert(!cir::MissingFeatures::opCallMustTail());
 
-  // Emit return.
-  if (!resultType->isVoidType() && slot.isNull())
-    cgm.getCXXABI().emitReturnFromThunk(*this, rv, resultType);
+  // Emit return.  For aggregate returns the call has already written the
+  // result through the slot bound to returnValue above; emit the
+  // corresponding load+return here rather than leaving the function to
+  // fall off the end and have LexicalScope::emitImplicitReturn drop a
+  // `cir.trap` / `cir.unreachable` in its place (which would silently
+  // discard the result we just stored).
+  if (!resultType->isVoidType()) {
+    if (slot.isNull())
+      cgm.getCXXABI().emitReturnFromThunk(*this, rv, resultType);
+    else
+      emitReturnOfRValue(loc, rv, resultType);
+  }
 
   // Disable final ARC autorelease.
   assert(!cir::MissingFeatures::objCLifetime());

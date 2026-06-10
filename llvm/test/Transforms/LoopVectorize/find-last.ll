@@ -283,7 +283,7 @@ define ptr @loop_inv_select_condition_issue_185682(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], <4 x i1> [[TMP0]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v4p0(<4 x ptr> zeroinitializer, <4 x i1> [[TMP3]], ptr null)
+; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @llvm.experimental.vector.extract.last.active.v4p0(<4 x ptr> splat (ptr null), <4 x i1> [[TMP3]], ptr null)
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret ptr [[TMP6]]

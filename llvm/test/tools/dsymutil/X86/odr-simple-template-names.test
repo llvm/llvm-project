@@ -1,0 +1,369 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo '---' > %t2.map
+# RUN: echo "triple:          'x86_64-apple-darwin'" >> %t2.map
+# RUN: echo 'objects:'  >> %t2.map
+# RUN: echo " -  filename: '%t.o'" >> %t2.map
+# RUN: echo '    symbols:' >> %t2.map
+# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
+# RUN: echo '...' >> %t2.map
+# RUN: dsymutil --linker classic -f -y %t2.map -o - | llvm-dwarfdump --debug-info - | FileCheck %s
+# RUN: dsymutil --linker parallel -f -y %t2.map -o - | llvm-dwarfdump --debug-info - | FileCheck --check-prefix=PARALLEL %s
+
+## Test that dsymutil correctly handles -gsimple-template-names, where
+## DW_AT_name does not include template parameters and template arguments are
+## represented as DW_TAG_template_type_parameter children instead.
+##
+## CU1 defines MyTemplate<int> and MyTemplate<float> (both named "MyTemplate").
+## CU2 defines MyTemplate<float> (also named "MyTemplate").
+##
+## dsymutil must not incorrectly unify MyTemplate<int> with MyTemplate<float>.
+## CU2's MyTemplate<float> should unify with CU1's MyTemplate<float>.
+
+## Classic linker: CU1 keeps both specializations. CU2's type reference is
+## redirected to CU1's MyTemplate<float>.
+##
+## Type references use 0x00000000[[VAR]] to match DWARF32 ref_addr (8 hex digit
+## DIE offset zero-extended to 16 hex digits for the 8-byte ref_addr).
+# CHECK: .debug_info contents:
+# CHECK: DW_TAG_compile_unit
+# CHECK-NOT: DW_TAG
+# CHECK:   DW_AT_name{{.*}}"CU1"
+# CHECK:   0x[[TMPL_INT:[0-9a-f]*]]: DW_TAG_class_type
+# CHECK-NEXT: DW_AT_name{{.*}}"MyTemplate"
+# CHECK:     DW_TAG_template_type_parameter
+# CHECK:       DW_AT_type{{.*}}"int"
+# CHECK:   0x[[TMPL_FLOAT:[0-9a-f]*]]: DW_TAG_class_type
+# CHECK-NEXT: DW_AT_name{{.*}}"MyTemplate"
+# CHECK:     DW_TAG_template_type_parameter
+# CHECK:       DW_AT_type{{.*}}"float"
+# CHECK:   DW_TAG_variable
+# CHECK:     DW_AT_name{{.*}}"var1"
+# CHECK:     DW_AT_type{{.*}}0x00000000[[TMPL_INT]] "MyTemplate
+# CHECK:   DW_TAG_variable
+# CHECK:     DW_AT_name{{.*}}"var2"
+# CHECK:     DW_AT_type{{.*}}0x00000000[[TMPL_FLOAT]] "MyTemplate
+# CHECK: DW_TAG_compile_unit
+# CHECK-NOT: DW_TAG
+# CHECK:   DW_AT_name{{.*}}"CU2"
+# CHECK:   DW_TAG_variable
+# CHECK:     DW_AT_name{{.*}}"var3"
+# CHECK:     DW_AT_type{{.*}}0x00000000[[TMPL_FLOAT]] "MyTemplate
+
+## Parallel linker: types go to artificial type CU with separate entries.
+# PARALLEL: .debug_info contents:
+# PARALLEL: DW_TAG_compile_unit
+# PARALLEL:   DW_AT_name{{.*}}"__artificial_type_unit"
+# PARALLEL: 0x[[TMPL_FLOAT:[0-9a-f]*]]: DW_TAG_class_type
+# PARALLEL:   DW_AT_name{{.*}}"MyTemplate"
+# PARALLEL:   DW_TAG_template_type_parameter
+# PARALLEL:     DW_AT_type{{.*}}"float"
+# PARALLEL: 0x[[TMPL_INT:[0-9a-f]*]]: DW_TAG_class_type
+# PARALLEL:   DW_AT_name{{.*}}"MyTemplate"
+# PARALLEL:   DW_TAG_template_type_parameter
+# PARALLEL:     DW_AT_type{{.*}}"int"
+# PARALLEL: DW_TAG_compile_unit
+# PARALLEL:   DW_AT_name{{.*}}"CU1"
+# PARALLEL: DW_TAG_variable
+# PARALLEL:   DW_AT_name{{.*}}"var1"
+# PARALLEL:   DW_AT_type{{.*}}0x00000000[[TMPL_INT]]
+# PARALLEL: DW_TAG_variable
+# PARALLEL:   DW_AT_name{{.*}}"var2"
+# PARALLEL:   DW_AT_type{{.*}}0x00000000[[TMPL_FLOAT]]
+# PARALLEL: DW_TAG_compile_unit
+# PARALLEL:   DW_AT_name{{.*}}"CU2"
+# PARALLEL: DW_TAG_variable
+# PARALLEL:   DW_AT_name{{.*}}"var3"
+# PARALLEL:   DW_AT_type{{.*}}0x00000000[[TMPL_FLOAT]]
+
+## ---- Mach-O + DWARF definition ----
+##
+## CU1 debug_info layout (starting at 0x00):
+##   0x00: CU header (11 bytes)
+##   0x0b: DW_TAG_compile_unit
+##   0x1a: DW_TAG_class_type "MyTemplate" (template param T -> int at 0x44)
+##   0x2f: DW_TAG_class_type "MyTemplate" (template param T -> float at 0x49)
+##   0x44: DW_TAG_base_type "int"
+##   0x49: DW_TAG_base_type "float"
+##   0x50: DW_TAG_subprogram "foo" (low_pc at section offset 0x55)
+##   0x61: DW_TAG_variable "var1" (type -> 0x1a)
+##   0x6f: DW_TAG_variable "var2" (type -> 0x2f)
+##   0x7e: end CU1
+##
+## CU2 debug_info layout (starting at 0x7f):
+##   0x7f: CU header (11 bytes)
+##   0x8a: DW_TAG_compile_unit
+##   0x99: DW_TAG_class_type "MyTemplate" (template param T -> float at 0xb3)
+##   0xae: DW_TAG_base_type "int"
+##   0xb3: DW_TAG_base_type "float"
+##   0xba: DW_TAG_subprogram "foo" (low_pc at section offset 0xbf)
+##   0xcb: DW_TAG_variable "var3" (type -> 0x99)
+##   0xda: end CU2
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      2
+  sizeofcmds: 376
+  flags:      0x00002000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  232
+    segname:  ''
+    vmaddr:   0x00
+    vmsize:   0x300
+    fileoff:  0x300
+    filesize: 0x300
+    maxprot:  7
+    initprot: 7
+    nsects:   2
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x000000000000000F
+        size:      0x76
+        offset:    0x00000380
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x000000000000100
+        size:      0xDB
+        offset:    0x000003F6
+        align:     0
+        reloff:    0x00000600
+        nreloc:    2
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        relocations:
+          - address:         0x55
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0xBF
+            symbolnum:       0
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0x700
+    nsyms:           1
+    stroff:          0x710
+    strsize:         10
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '__Z3foov'
+    - ''
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data4
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_class_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_template_type_parameter
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data4
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_const_value
+            Form:      DW_FORM_data4
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU1
+        ## 0x1a: MyTemplate<int> (simple template name)
+        - AbbrCode: 2
+          Values:
+            - CStr: MyTemplate
+            - Value:  0x04
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000044
+            - CStr: T
+        - AbbrCode: 0
+        ## 0x2f: MyTemplate<float> (simple template name)
+        - AbbrCode: 2
+          Values:
+            - CStr: MyTemplate
+            - Value:  0x04
+        - AbbrCode: 3
+          Values:
+            - Value:  0x00000049
+            - CStr: T
+        - AbbrCode: 0
+        ## 0x44: base types
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+        - AbbrCode: 4
+          Values:
+            - CStr: float
+        ## 0x50: subprogram (low_pc at offset 0x55 in section)
+        - AbbrCode: 5
+          Values:
+            - CStr: foo
+            - Value:  0x0000000000000000
+            - Value:  0x00000010
+        - AbbrCode: 6
+          Values:
+            - CStr: var1
+            - Value:  0x00000000
+            - Value:  0x0000001a
+        - AbbrCode: 6
+          Values:
+            - CStr: var2
+            - Value:  0x00000000
+            - Value:  0x0000002f
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version: 4
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: CU2
+        ## 0x99: MyTemplate<float> (simple template name)
+        - AbbrCode: 2
+          Values:
+            - CStr: MyTemplate
+            - Value:  0x04
+        - AbbrCode: 3
+          Values:
+            - Value:  0x000000b3
+            - CStr: T
+        - AbbrCode: 0
+        ## base types
+        - AbbrCode: 4
+          Values:
+            - CStr: int
+        - AbbrCode: 4
+          Values:
+            - CStr: float
+        ## 0xba: subprogram (low_pc at offset 0xbf in section)
+        - AbbrCode: 5
+          Values:
+            - CStr: foo
+            - Value:  0x0000000000000000
+            - Value:  0x00000010
+        - AbbrCode: 6
+          Values:
+            - CStr: var3
+            - Value:  0x00000000
+            - Value:  0x00000099
+        - AbbrCode: 0
+        - AbbrCode: 0
+...

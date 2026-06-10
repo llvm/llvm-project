@@ -360,9 +360,6 @@ public:
 
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
 
-  /// Emits inital debug location directive.
-  void emitInitialRawDwarfLocDirective(const MachineFunction &MF);
-
   /// Return the current section we are emitting to.
   const MCSection *getCurrentSection() const;
 
@@ -1013,12 +1010,12 @@ protected:
   }
 };
 
-void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
-                           AsmPrinter &AsmPrinter);
-
-void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
-                                    MachineFunction &MF,
+LLVM_ABI void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
                                     AsmPrinter &AsmPrinter);
+
+LLVM_ABI void
+setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
+                               MachineFunction &MF, AsmPrinter &AsmPrinter);
 
 } // end namespace llvm
 

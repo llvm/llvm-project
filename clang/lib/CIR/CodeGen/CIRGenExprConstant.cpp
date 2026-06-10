@@ -1414,9 +1414,9 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     if (isa<MSGuidDecl>(d))
       cgm.errorNYI(d->getSourceRange(), "ConstantLValueEmitter: MSGuidDecl");
 
-    if (isa<UnnamedGlobalConstantDecl>(d))
-      cgm.errorNYI(d->getSourceRange(),
-                   "ConstantLValueEmitter: Unnamed global constant");
+    if (const auto *gcd = dyn_cast<UnnamedGlobalConstantDecl>(d))
+      return cgm.getBuilder().getGlobalViewAttr(
+          cgm.getAddrOfUnnamedGlobalConstantDecl(gcd));
 
     if (const auto *tpo = dyn_cast<TemplateParamObjectDecl>(d))
       return cgm.getBuilder().getGlobalViewAttr(
@@ -1439,10 +1439,48 @@ ConstantLValue ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *e) {
   return {};
 }
 
+static cir::GlobalViewAttr
+tryEmitGlobalCompoundLiteral(ConstantEmitter &emitter,
+                             const CompoundLiteralExpr *e) {
+  CIRGenModule &cgm = emitter.cgm;
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  CharUnits align = cgm.getASTContext().getTypeAlignInChars(e->getType());
+
+  if (cir::GlobalOp addr = cgm.getAddrOfConstantCompoundLiteralIfEmitted(e))
+    return builder.getGlobalViewAttr(addr);
+
+  assert(!cir::MissingFeatures::addressSpace());
+  mlir::Attribute c =
+      emitter.tryEmitForInitializer(e->getInitializer(), e->getType());
+  if (!c) {
+    assert(!e->isFileScope() &&
+           "file-scope compound literal did not have constant initializer!");
+    return {};
+  }
+
+  auto typedInit = mlir::cast<mlir::TypedAttr>(c);
+  bool isConstant = e->getType().isConstantStorage(cgm.getASTContext(),
+                                                   /*ExcludeCtor=*/true,
+                                                   /*ExcludeDtor=*/false);
+
+  std::string name = cgm.getUniqueGlobalName(".compoundliteral");
+  mlir::Location loc = cgm.getLoc(e->getSourceRange());
+  cir::GlobalOp gv =
+      cgm.createGlobalOp(loc, name, typedInit.getType(), isConstant);
+  gv.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
+  gv.setAlignment(align.getAsAlign().value());
+  CIRGenModule::setInitializer(gv, c);
+
+  emitter.finalize(gv);
+  cgm.setAddrOfConstantCompoundLiteral(e, gv);
+  return builder.getGlobalViewAttr(gv);
+}
+
 ConstantLValue
 ConstantLValueEmitter::VisitCompoundLiteralExpr(const CompoundLiteralExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: compound literal");
-  return {};
+  ConstantEmitter compoundLiteralEmitter(cgm, emitter.cgf);
+  compoundLiteralEmitter.setInConstantContext(emitter.isInConstantContext());
+  return tryEmitGlobalCompoundLiteral(compoundLiteralEmitter, e);
 }
 
 ConstantLValue
@@ -1516,6 +1554,12 @@ ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &d) {
   initializeNonAbstract();
   return markIfFailed(tryEmitPrivateForVarInit(d));
+}
+
+mlir::Attribute ConstantEmitter::tryEmitForInitializer(const Expr *e,
+                                                       QualType destType) {
+  initializeNonAbstract();
+  return markIfFailed(tryEmitPrivateForMemory(e, destType));
 }
 
 mlir::Attribute ConstantEmitter::emitForInitializer(const APValue &value,
@@ -1762,6 +1806,16 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
 
     assert(innerSize < outerSize && "emitted over-large constant for atomic");
     cgm.errorNYI("emitForMemory: tail padding in atomic initializer");
+  }
+
+  // In HLSL bool vectors are stored in memory as a vector of i32
+  if (destType->isExtVectorBoolType() &&
+      !destType->isPackedVectorBoolType(cgm.getASTContext())) {
+    cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
+  }
+
+  if (destType->isBitIntType()) {
+    cgm.errorNYI("emitForMemory: _BitInt type");
   }
 
   return c;

@@ -274,7 +274,13 @@ Expected<std::string> getCachedOrDownloadArtifact(
         parseCachePruningPolicy(std::getenv("DEBUGINFOD_CACHE_POLICY"));
     if (!PruningPolicyOrErr)
       return PruningPolicyOrErr.takeError();
-    pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
+
+    Expected<bool> PrunedOrErr =
+        pruneCache(CacheDirectoryPath, *PruningPolicyOrErr);
+    // Log the error but continue execution: failure to prune the cache is not
+    // fatal.
+    if (!PrunedOrErr)
+      logAllUnhandledErrors(PrunedOrErr.takeError(), WithColor::warning());
 
     // Return the path to the artifact on disk.
     return std::string(AbsCachedArtifactPath);

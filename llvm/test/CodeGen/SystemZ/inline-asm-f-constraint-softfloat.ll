@@ -1,6 +1,6 @@
 ; RUN: not llc -mtriple=s390x-linux-gnu -mcpu=z15 -mattr=soft-float < %s 2>&1 | FileCheck %s
 
-; CHECK: error: couldn't allocate output register for constraint 'f'
+; CHECK: error: could not allocate output register for constraint 'f'
 
 define signext i32 @int_and_f(i32 signext %cc_dep1) {
 entry:

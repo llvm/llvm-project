@@ -34,6 +34,10 @@ class IntBitUtilTemplate : Template<
      "unsigned long int", "unsigned long long int"],
     ["_uc", "_us", "_ui", "_ul", "_ull"]>;
 
+class MemReverse8Template : Template<
+    ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
+    ["u8",      "u16",      "u32",      "u64"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -886,90 +890,6 @@ def StdcBitCeil: Builtin {
   let Prototype = "void(...)";
 }
 
-def StdcLeadingZerosLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_leading_zeros"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcLeadingOnesLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_leading_ones"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcTrailingZerosLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_trailing_zeros"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcTrailingOnesLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_trailing_ones"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcFirstLeadingZeroLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_first_leading_zero"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcFirstLeadingOneLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_first_leading_one"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcFirstTrailingZeroLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_first_trailing_zero"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcFirstTrailingOneLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_first_trailing_one"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcCountZerosLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_count_zeros"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcCountOnesLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_count_ones"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcHasSingleBitLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_has_single_bit"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "bool(...)";
-}
-
-def StdcBitWidthLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_bit_width"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcBitFloorLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_bit_floor"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def StdcBitCeilLib: LibBuiltin<"stdbit.h", "C23_LANG"> {
-  let Spellings = ["stdc_bit_ceil"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
 // Typed variants of the C23 stdbit.h builtins (e.g. stdc_leading_zeros_uc).
 // IntBitUtilTemplate generates the _uc/_us/_ui/_ul/_ull spellings with
 // concrete prototypes so the compiler can match the <stdbit.h> declarations.
@@ -1058,6 +978,30 @@ def StdcBitCeilTyped : LibBuiltin<"stdbit.h", "C23_LANG">, IntBitUtilTemplate {
   let Prototype = "T(T)";
 }
 
+def StdcRotateLeftTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_rotate_left"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T, unsigned int)";
+}
+
+def StdcRotateRightTyped : LibBuiltin<"stdbit.h", "C2Y_LANG">, IntBitUtilTemplate {
+  let Spellings = ["stdc_rotate_right"];
+  let Attributes = [NoThrow, Const, Constexpr];
+  let Prototype = "T(T, unsigned int)";
+}
+
+def StdcMemReverse8: LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Spellings = ["stdc_memreverse8"];
+  let Attributes = [NoThrow, NonNull<NonOptimizing, [1]>];
+  let Prototype = "void(size_t, unsigned char*)";
+  let AddBuiltinPrefixedAlias = 1;
+}
+
+def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Template {
+  let Spellings = ["stdc_memreverse8"];
+  let Attributes = [NoThrow, Pure, Const, Constexpr];
+  let Prototype = "T(T)";
+}
 
 
 // Random GCC builtins
@@ -1261,6 +1205,12 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Spellings = ["__builtin_is_within_lifetime"];
   let Attributes = [NoThrow, CustomTypeChecking, Consteval];
   let Prototype = "bool(void*)";
+}
+
+def ClearPadding : Builtin {
+  let Spellings = ["__builtin_clear_padding"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(void*)";
 }
 
 def GetVtablePointer : LangBuiltin<"CXX_LANG"> {
@@ -1875,6 +1825,12 @@ def ElementwiseCtlz : Builtin {
 
 def ElementwiseCttz : Builtin {
   let Spellings = ["__builtin_elementwise_ctzg"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
+  let Prototype = "void(...)";
+}
+
+def ElementwiseClmul : Builtin {
+  let Spellings = ["__builtin_elementwise_clmul"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
@@ -5500,6 +5456,12 @@ def HLSLWaveActiveBitXor : LangBuiltin<"HLSL_LANG"> {
 def HLSLWaveActiveBitAnd : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_bit_and"];
   let Attributes = [NoThrow, Const];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_add"];
+  let Attributes = [NoThrow];
   let Prototype = "void (...)";
 }
 

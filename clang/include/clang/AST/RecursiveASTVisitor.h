@@ -1765,8 +1765,9 @@ DEF_TRAVERSE_DECL(ExplicitInstantiationDecl, {
     TRY_TO(TraverseNestedNameSpecifierLoc(D->getQualifierLoc()));
   if (TypeSourceInfo *TSI = D->getTypeAsWritten())
     TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
-  for (unsigned I = 0, E = D->getNumTemplateArgs(); I != E; ++I)
-    TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
+  if (auto NumArgs = D->getNumTemplateArgs())
+    for (unsigned I = 0; I != *NumArgs; ++I)
+      TRY_TO(TraverseTemplateArgumentLoc(D->getTemplateArg(I)));
 })
 
 DEF_TRAVERSE_DECL(TranslationUnitDecl, {
@@ -1976,10 +1977,8 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateParameterListHelper(
 template <typename Derived>
 template <typename T>
 bool RecursiveASTVisitor<Derived>::TraverseDeclTemplateParameterLists(T *D) {
-  for (unsigned i = 0; i < D->getNumTemplateParameterLists(); i++) {
-    TemplateParameterList *TPL = D->getTemplateParameterList(i);
+  for (TemplateParameterList *TPL : D->getTemplateParameterLists())
     TraverseTemplateParameterListHelper(TPL);
-  }
   return true;
 }
 
@@ -2003,6 +2002,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
       case TSK_ExplicitSpecialization:
+      case TSK_FriendDeclaration:
         break;
       }
     }
@@ -2023,6 +2023,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
+      case TSK_FriendDeclaration:
       case TSK_ExplicitInstantiationDeclaration:
       case TSK_ExplicitInstantiationDefinition:
       case TSK_ExplicitSpecialization:
@@ -2057,6 +2058,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateInstantiations(
         TRY_TO(TraverseDecl(RD));
         break;
 
+      case TSK_FriendDeclaration:
       case TSK_ExplicitSpecialization:
         break;
       }
@@ -2223,12 +2225,11 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLocsHelper(
        handles traversal of template args and qualifier.                       \
        For explicit specializations ("template<> set<int> {...};"),            \
        we traverse template args here since there is no EID. */                \
-    if (const auto *ArgsWritten = D->getTemplateArgsAsWritten()) {             \
-      assert(D->getTemplateSpecializationKind() != TSK_ImplicitInstantiation); \
-      if (D->getTemplateSpecializationKind() == TSK_ExplicitSpecialization) {  \
-        TRY_TO(TraverseTemplateArgumentLocsHelper(                             \
-            ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));    \
-      }                                                                        \
+    if (const auto *Info = D->getExplicitSpecializationInfo()) {               \
+      const auto *ArgsWritten = Info->TemplateArgsAsWritten;                   \
+      TRY_TO(TraverseTemplateParameterListHelper(Info->TemplateParams));       \
+      TRY_TO(TraverseTemplateArgumentLocsHelper(                               \
+          ArgsWritten->getTemplateArgs(), ArgsWritten->NumTemplateArgs));      \
     }                                                                          \
                                                                                \
     if (getDerived().shouldVisitTemplateInstantiations() ||                    \
@@ -3799,6 +3800,10 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNogroupClause(OMPNogroupClause *) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPInitClause(OMPInitClause *C) {
   TRY_TO(VisitOMPClauseList(C));
+  // VisitOMPClauseList covers the interop var and the per-pref-spec fr exprs
+  // (the varlist); the prefer_type attr() exprs live outside it.
+  for (Expr *A : C->attrs())
+    TRY_TO(TraverseStmt(A));
   return true;
 }
 

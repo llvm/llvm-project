@@ -389,10 +389,12 @@ define void @v_trunc_i1024_to_i512(ptr addrspace(1) %src, ptr addrspace(1) %dst)
 }
 
 !llvm.dbg.cu = !{!0}
+!5 = !{null}
+!6 = !DISubroutineType(types: !5)
 !llvm.module.flags = !{!2}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
 !1 = !DIFile(filename: ".", directory: ".")
 !2 = !{i32 2, !"Debug Info Version", i32 3}
-!3 = distinct !DISubprogram(name: "trunc", scope: !1, file: !1, line: 1, unit: !0)
+!3 = distinct !DISubprogram(name: "trunc", scope: !1, file: !1, line: 1, type: !6, unit: !0)
 !4 = !DILocation(line: 1, scope: !3)

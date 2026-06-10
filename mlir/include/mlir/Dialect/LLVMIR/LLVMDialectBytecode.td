@@ -189,6 +189,8 @@ def DICompositeTypeAttr : DialectAttribute<(attr
   OptionalAttribute<"DIExpressionAttr">:$rank,
   OptionalAttribute<"DIExpressionAttr">:$allocated,
   OptionalAttribute<"DIExpressionAttr">:$associated,
+  OptionalAttribute<"StringAttr">:$identifier,
+  OptionalAttribute<"DIDerivedTypeAttr">:$discriminator,
   OptionalArrayRef<"DINodeAttr">:$elements
 )>;
 
@@ -209,7 +211,7 @@ def DIDerivedTypeAttr : DialectAttribute<(attr
   OptionalInt<"unsigned">:$dwarfAddressSpace,
   EnumClassFlag<"DIFlags", "getFlags()">:$_rawflags,
   LocalVar<"DIFlags", "(DIFlags)_rawflags">:$flags,
-  OptionalAttribute<"DINodeAttr">:$extraData
+  OptionalAttribute<"Attribute">:$extraData
 )>;
 
 //===----------------------------------------------------------------------===//

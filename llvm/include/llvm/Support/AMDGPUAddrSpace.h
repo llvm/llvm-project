@@ -47,6 +47,8 @@ enum : unsigned {
   BUFFER_STRIDED_POINTER = 9, ///< Address space for 192-bit fat buffer
                               ///< pointers with an additional index.
 
+  RESERVED_ADDRESS_SPACE_16 = 16, ///< Reserved for downstream use.
+
   /// Internal address spaces. Can be freely renumbered.
   STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.
   /// end Internal address spaces.
@@ -85,6 +87,10 @@ enum : unsigned {
 } // end namespace AMDGPUAS
 
 namespace AMDGPU {
+// Identifies which FLAT address-space segment an instruction operates on.
+// Passed to helpers like isLegalFLATOffset / splitFlatOffset.
+enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
+
 inline bool isFlatGlobalAddrSpace(unsigned AS) {
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
          AS == AMDGPUAS::CONSTANT_ADDRESS || AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;

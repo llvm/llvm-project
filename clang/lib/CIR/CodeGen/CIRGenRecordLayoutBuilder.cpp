@@ -196,9 +196,15 @@ struct CIRRecordLowering final {
   void fillOutputFields();
 
   void appendPaddingBytes(CharUnits size) {
-    if (!size.isZero()) {
-      fieldTypes.push_back(getByteArrayType(size));
-      padded = true;
+    if (size.isZero())
+      return;
+    mlir::Type padTy = getByteArrayType(size);
+    padded = true;
+    if (recordDecl->isUnion()) {
+      assert(!unionPadding && "at most one union tail-padding type");
+      unionPadding = padTy;
+    } else {
+      fieldTypes.push_back(padTy);
     }
   }
 
@@ -212,6 +218,7 @@ struct CIRRecordLowering final {
   std::vector<MemberInfo> members;
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
+  mlir::Type unionPadding;
   llvm::DenseMap<const FieldDecl *, CIRGenBitFieldInfo> bitFields;
   llvm::DenseMap<const FieldDecl *, unsigned> fieldIdxMap;
   llvm::DenseMap<const CXXRecordDecl *, unsigned> nonVirtualBases;
@@ -685,13 +692,21 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   assert(ty->isIncomplete() && "recomputing record layout?");
   lowering.lower(/*nonVirtualBaseType=*/false);
 
-  // If we're in C++, compute the base subobject type.
+  // If we're in C++, compute the base subobject type. For C++ records the base
+  // subobject type is always set (matching classic CodeGen). For unions and
+  // final classes the base subobject and complete object types are identical
+  // (no tail padding can be reused), so baseTy points at the same record as
+  // ty. We must still populate baseTy in those cases because callers such as
+  // getStorageType(const CXXRecordDecl *) used to lay out potentially-
+  // overlapping ([[no_unique_address]]) fields read it unconditionally; a
+  // null baseTy would otherwise propagate as a null mlir::Type into the
+  // members vector and trip the !empty() assertion in fillOutputFields.
   cir::RecordType baseTy;
-  if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
-      !rd->hasAttr<FinalAttr>()) {
+  if (llvm::isa<CXXRecordDecl>(rd)) {
     baseTy = *ty;
-    if (lowering.astRecordLayout.getNonVirtualSize() !=
-        lowering.astRecordLayout.getSize()) {
+    if (!rd->isUnion() && !rd->hasAttr<FinalAttr>() &&
+        lowering.astRecordLayout.getNonVirtualSize() !=
+            lowering.astRecordLayout.getSize()) {
       CIRRecordLowering baseLowering(*this, rd, /*Packed=*/lowering.packed);
       baseLowering.lower(/*NonVirtualBaseType=*/true);
       std::string baseIdentifier = getRecordTypeName(rd, ".base");
@@ -711,7 +726,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout rd while laying D out as a base type.
   assert(!cir::MissingFeatures::astRecordDeclAttr());
-  ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded);
+  ty->complete(lowering.fieldTypes, lowering.packed, lowering.padded,
+               lowering.unionPadding);
 
   // Queue ABI metadata for the module-level cir.record_layouts attribute.
   if (ty->getName()) {

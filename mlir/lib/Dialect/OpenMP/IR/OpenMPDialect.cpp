@@ -927,6 +927,118 @@ static void printHeapAllocClause(OpAsmPrinter &p, Operation *op,
 }
 
 //===----------------------------------------------------------------------===//
+// Parser, printer and verify for dyn_groupprivate Clause
+//===----------------------------------------------------------------------===//
+
+static LogicalResult
+verifyDynGroupprivateClause(Operation *op, AccessGroupModifierAttr accessGroup,
+                            FallbackModifierAttr fallback,
+                            Value dynGroupprivateSize) {
+  if (!dynGroupprivateSize && (accessGroup || fallback))
+    return op->emitOpError("dyn_groupprivate modifiers require a size operand");
+
+  return success();
+}
+
+static ParseResult parseDynGroupprivateClause(
+    OpAsmParser &parser, AccessGroupModifierAttr &accessGroupAttr,
+    FallbackModifierAttr &fallbackAttr,
+    std::optional<OpAsmParser::UnresolvedOperand> &dynGroupprivateSize,
+    Type &sizeType) {
+
+  bool parsedAccessGroup = false;
+  bool parsedFallback = false;
+  bool parsedSize = false;
+
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    // Parse AccessGroupModifier.
+    if (succeeded(parser.parseOptionalKeyword("cgroup"))) {
+      if (parsedAccessGroup)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate access group modifier");
+      accessGroupAttr = AccessGroupModifierAttr::get(
+          parser.getContext(), AccessGroupModifier::cgroup);
+      parsedAccessGroup = true;
+      return success();
+    }
+    // Parse FallbackModifier.
+    if (succeeded(parser.parseOptionalKeyword("fallback"))) {
+      if (parsedFallback)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate fallback modifier");
+      if (parser.parseLParen())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected '(' after 'fallback'");
+      llvm::StringRef fbKind;
+      if (parser.parseKeyword(&fbKind))
+        return parser.emitError(
+            parser.getCurrentLocation(),
+            "expected fallback modifier (abort/null/default_mem)");
+      std::optional<FallbackModifier> fbEnum;
+      if (fbKind == "abort")
+        fbEnum = FallbackModifier::abort;
+      else if (fbKind == "null")
+        fbEnum = FallbackModifier::null;
+      else if (fbKind == "default_mem")
+        fbEnum = FallbackModifier::default_mem;
+      else
+        return parser.emitError(parser.getCurrentLocation(),
+                                "invalid fallback modifier '" + fbKind + "'");
+      fallbackAttr = FallbackModifierAttr::get(parser.getContext(), *fbEnum);
+      if (parser.parseRParen())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected ')' after fallback modifier");
+      parsedFallback = true;
+      return success();
+    }
+    // Parse size operand.
+    OpAsmParser::UnresolvedOperand operand;
+    if (succeeded(parser.parseOperand(operand))) {
+      if (parsedSize)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate size operand");
+      dynGroupprivateSize = operand;
+      parsedSize = true;
+      if (failed(parser.parseColon()) || failed(parser.parseType(sizeType)))
+        return parser.emitError(parser.getCurrentLocation(),
+                                "expected ':' and type after size operand");
+      return success();
+    }
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected dyn_groupprivate_size operand");
+  });
+}
+
+static void printDynGroupprivateClause(OpAsmPrinter &printer, Operation *op,
+                                       AccessGroupModifierAttr modifierFirst,
+                                       FallbackModifierAttr modifierSecond,
+                                       Value dynGroupprivateSize,
+                                       Type sizeType) {
+
+  bool needsComma = false;
+
+  if (modifierFirst) {
+    printer << modifierFirst.getValue();
+    needsComma = true;
+  }
+
+  if (modifierSecond) {
+    if (needsComma)
+      printer << ", ";
+    printer << "fallback(";
+    printer << modifierSecond.getValue();
+    printer << ")";
+    needsComma = true;
+  }
+
+  if (dynGroupprivateSize) {
+    if (needsComma)
+      printer << ", ";
+    printer << dynGroupprivateSize << " : " << sizeType;
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // Parsers for operations including clauses that define entry block arguments.
 //===----------------------------------------------------------------------===//
 
@@ -2028,9 +2140,6 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "ref_ptee")
       mapTypeBits |= ClauseMapFlags::ref_ptee;
 
-    if (mapTypeMod == "ref_ptr_ptee")
-      mapTypeBits |= ClauseMapFlags::ref_ptr_ptee;
-
     if (mapTypeMod == "is_device_ptr")
       mapTypeBits |= ClauseMapFlags::is_device_ptr;
 
@@ -2101,8 +2210,6 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("ref_ptr");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptee))
     mapTypeStrs.push_back("ref_ptee");
-  if (mapTypeToBool(mapFlags, ClauseMapFlags::ref_ptr_ptee))
-    mapTypeStrs.push_back("ref_ptr_ptee");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::is_device_ptr))
     mapTypeStrs.push_back("is_device_ptr");
   if (mapFlags == ClauseMapFlags::none)
@@ -2201,7 +2308,80 @@ static ParseResult parseCaptureType(OpAsmParser &parser,
   return success();
 }
 
-static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
+static LogicalResult verifyMapInfoForMapClause(
+    Operation *op, mlir::omp::MapInfoOp mapInfoOp,
+    llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> &updateToVars,
+    llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>>
+        &updateFromVars) {
+  mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
+
+  bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
+  bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
+  bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
+
+  bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
+  bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
+  bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
+  bool attach = mapTypeToBool(mapTypeBits, ClauseMapFlags::attach);
+
+  if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
+    return emitError(op->getLoc(),
+                     "to, from, tofrom and alloc map types are permitted");
+
+  if (isa<TargetEnterDataOp>(op) && (from || del))
+    return emitError(op->getLoc(), "to and alloc map types are permitted");
+
+  if (isa<TargetExitDataOp>(op) && to)
+    return emitError(op->getLoc(),
+                     "from, release and delete map types are permitted");
+
+  if (isa<TargetUpdateOp>(op)) {
+    if (del) {
+      return emitError(op->getLoc(),
+                       "at least one of to or from map types must be "
+                       "specified, other map types are not permitted");
+    }
+
+    if (!to && !from && !attach) {
+      return emitError(op->getLoc(),
+                       "at least one of to or from or attach map types must be "
+                       "specified, other map types are not permitted");
+    }
+
+    auto updateVar = mapInfoOp.getVarPtr();
+
+    if ((to && from) || (to && updateFromVars.contains(updateVar)) ||
+        (from && updateToVars.contains(updateVar))) {
+      return emitError(
+          op->getLoc(),
+          "either to or from map types can be specified, not both");
+    }
+
+    if (always || close || implicit) {
+      return emitError(
+          op->getLoc(),
+          "present, mapper and iterator map type modifiers are permitted");
+    }
+
+    // It's possible we have an attach map, in which case if there is no to
+    // or from tied to it, we skip insertion.
+    if (to || from) {
+      to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
+    }
+  }
+
+  if ((mapInfoOp.getVarPtrPtr() && !mapInfoOp.getVarPtrPtrType()) ||
+      (!mapInfoOp.getVarPtrPtr() && mapInfoOp.getVarPtrPtrType())) {
+    return emitError(op->getLoc(),
+                     "if varPtrPtr or varPtrPtrType is specified, then both "
+                     "must be present");
+  }
+
+  return success();
+}
+
+static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars,
+                                     OperandRange mapIterated) {
   llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateToVars;
   llvm::DenseSet<mlir::TypedValue<mlir::omp::PointerLikeType>> updateFromVars;
 
@@ -2210,65 +2390,41 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
       return emitError(op->getLoc(), "missing map operation");
 
     if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
-      mlir::omp::ClauseMapFlags mapTypeBits = mapInfoOp.getMapType();
-
-      bool to = mapTypeToBool(mapTypeBits, ClauseMapFlags::to);
-      bool from = mapTypeToBool(mapTypeBits, ClauseMapFlags::from);
-      bool del = mapTypeToBool(mapTypeBits, ClauseMapFlags::del);
-
-      bool always = mapTypeToBool(mapTypeBits, ClauseMapFlags::always);
-      bool close = mapTypeToBool(mapTypeBits, ClauseMapFlags::close);
-      bool implicit = mapTypeToBool(mapTypeBits, ClauseMapFlags::implicit);
-
-      if ((isa<TargetDataOp>(op) || isa<TargetOp>(op)) && del)
-        return emitError(op->getLoc(),
-                         "to, from, tofrom and alloc map types are permitted");
-
-      if (isa<TargetEnterDataOp>(op) && (from || del))
-        return emitError(op->getLoc(), "to and alloc map types are permitted");
-
-      if (isa<TargetExitDataOp>(op) && to)
-        return emitError(op->getLoc(),
-                         "from, release and delete map types are permitted");
-
-      if (isa<TargetUpdateOp>(op)) {
-        if (del) {
-          return emitError(op->getLoc(),
-                           "at least one of to or from map types must be "
-                           "specified, other map types are not permitted");
-        }
-
-        if (!to && !from) {
-          return emitError(op->getLoc(),
-                           "at least one of to or from map types must be "
-                           "specified, other map types are not permitted");
-        }
-
-        auto updateVar = mapInfoOp.getVarPtr();
-
-        if ((to && from) || (to && updateFromVars.contains(updateVar)) ||
-            (from && updateToVars.contains(updateVar))) {
-          return emitError(
-              op->getLoc(),
-              "either to or from map types can be specified, not both");
-        }
-
-        if (always || close || implicit) {
-          return emitError(
-              op->getLoc(),
-              "present, mapper and iterator map type modifiers are permitted");
-        }
-
-        to ? updateToVars.insert(updateVar) : updateFromVars.insert(updateVar);
-      }
+      if (failed(verifyMapInfoForMapClause(op, mapInfoOp, updateToVars,
+                                           updateFromVars)))
+        return failure();
     } else if (!isa<DeclareMapperInfoOp>(op)) {
       return emitError(op->getLoc(),
                        "map argument is not a map entry operation");
     }
   }
 
+  // Verify iterated map entries.
+  for (auto iterVal : mapIterated) {
+    auto iterOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
+    if (!iterOp)
+      return op->emitOpError() << "'map_iterated' arguments must be defined by "
+                                  "'omp.iterator' ops";
+
+    // Check that the iterator body yields a value defined by omp.map.info.
+    auto yieldOp =
+        cast<mlir::omp::YieldOp>(iterOp.getRegion().front().getTerminator());
+    auto yieldedMapInfo =
+        yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
+    if (!yieldedMapInfo)
+      return op->emitOpError() << "'map_iterated' iterator body must yield "
+                                  "a value defined by 'omp.map.info'";
+
+    if (failed(verifyMapInfoForMapClause(op, yieldedMapInfo, updateToVars,
+                                         updateFromVars)))
+      return failure();
+  }
+
   return success();
 }
+
+template <typename OpType>
+static LogicalResult verifyPrivateVarList(OpType &op);
 
 static LogicalResult verifyPrivateVarsMapping(TargetOp targetOp) {
   std::optional<DenseI64ArrayAttr> privateMapIndices =
@@ -2323,13 +2479,13 @@ LogicalResult MapInfoOp::verify() {
 void TargetDataOp::build(OpBuilder &builder, OperationState &state,
                          const TargetDataOperands &clauses) {
   TargetDataOp::build(builder, state, clauses.device, clauses.ifExpr,
-                      clauses.mapVars, clauses.useDeviceAddrVars,
-                      clauses.useDevicePtrVars);
+                      clauses.mapVars, clauses.mapIterated,
+                      clauses.useDeviceAddrVars, clauses.useDevicePtrVars);
 }
 
 LogicalResult TargetDataOp::verify() {
-  if (getMapVars().empty() && getUseDevicePtrVars().empty() &&
-      getUseDeviceAddrVars().empty()) {
+  if (getMapVars().empty() && getMapIterated().empty() &&
+      getUseDevicePtrVars().empty() && getUseDeviceAddrVars().empty()) {
     return ::emitError(this->getLoc(),
                        "At least one of map, use_device_ptr_vars, or "
                        "use_device_addr_vars operand must be present");
@@ -2343,7 +2499,7 @@ LogicalResult TargetDataOp::verify() {
                                       getUseDeviceAddrVars())))
     return failure();
 
-  return verifyMapClause(*this, getMapVars());
+  return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2358,15 +2514,16 @@ void TargetEnterDataOp::build(
       builder, state, makeArrayAttr(ctx, clauses.dependKinds),
       clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
       clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
-      clauses.nowait);
+      clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetEnterDataOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2380,15 +2537,16 @@ void TargetExitDataOp::build(OpBuilder &builder, OperationState &state,
       builder, state, makeArrayAttr(ctx, clauses.dependKinds),
       clauses.dependVars, makeArrayAttr(ctx, clauses.dependIteratedKinds),
       clauses.dependIterated, clauses.device, clauses.ifExpr, clauses.mapVars,
-      clauses.nowait);
+      clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetExitDataOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2402,15 +2560,16 @@ void TargetUpdateOp::build(OpBuilder &builder, OperationState &state,
                         clauses.dependVars,
                         makeArrayAttr(ctx, clauses.dependIteratedKinds),
                         clauses.dependIterated, clauses.device, clauses.ifExpr,
-                        clauses.mapVars, clauses.nowait);
+                        clauses.mapVars, clauses.mapIterated, clauses.nowait);
 }
 
 LogicalResult TargetUpdateOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars) ? verifyDependVars
-                                  : verifyMapClause(*this, getMapVars());
+  return failed(verifyDependVars)
+             ? verifyDependVars
+             : verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2426,11 +2585,12 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
       builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.bare,
       makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
       makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
-      clauses.device, clauses.hasDeviceAddrVars, clauses.hostEvalVars,
-      clauses.ifExpr,
+      clauses.device, clauses.dynGroupprivateAccessGroup,
+      clauses.dynGroupprivateFallback, clauses.dynGroupprivateSize,
+      clauses.hasDeviceAddrVars, clauses.hostEvalVars, clauses.ifExpr,
       /*in_reduction_vars=*/{}, /*in_reduction_byref=*/nullptr,
       /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
-      clauses.nowait, clauses.privateVars,
+      clauses.mapIterated, clauses.nowait, clauses.privateVars,
       makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
       clauses.threadLimitVars,
       /*private_maps=*/nullptr);
@@ -2446,7 +2606,15 @@ LogicalResult TargetOp::verify() {
                                       getHasDeviceAddrVars())))
     return failure();
 
-  if (failed(verifyMapClause(*this, getMapVars())))
+  if (failed(verifyMapClause(*this, getMapVars(), getMapIterated())))
+    return failure();
+
+  if (failed(verifyDynGroupprivateClause(
+          *this, getDynGroupprivateAccessGroupAttr(),
+          getDynGroupprivateFallbackAttr(), getDynGroupprivateSize())))
+    return failure();
+
+  if (failed(verifyPrivateVarList(*this)))
     return failure();
 
   return verifyPrivateVarsMapping(*this);
@@ -2834,8 +3002,9 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   TeamsOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
-      clauses.ifExpr, clauses.numTeamsLower, clauses.numTeamsUpperVars,
-      /*private_vars=*/{}, /*private_syms=*/nullptr,
+      clauses.dynGroupprivateAccessGroup, clauses.dynGroupprivateFallback,
+      clauses.dynGroupprivateSize, clauses.ifExpr, clauses.numTeamsLower,
+      clauses.numTeamsUpperVars, /*private_vars=*/{}, /*private_syms=*/nullptr,
       /*private_needs_barrier=*/nullptr, clauses.reductionMod,
       clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
@@ -2881,6 +3050,14 @@ LogicalResult TeamsOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyDynGroupprivateClause(
+          op, getDynGroupprivateAccessGroupAttr(),
+          getDynGroupprivateFallbackAttr(), getDynGroupprivateSize())))
+    return failure();
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
@@ -3058,6 +3235,9 @@ void LoopOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult LoopOp::verify() {
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
 }
@@ -3113,6 +3293,10 @@ LogicalResult WsloopOp::verify() {
   if (getLinearVars().size() &&
       getLinearVarTypes().value().size() != getLinearVars().size())
     return emitError() << "Ill-formed type attributes for linear variables";
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
 }
@@ -3207,6 +3391,9 @@ LogicalResult SimdOp::verify() {
     }
   }
 
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   if (getLinearVars().size() &&
       getLinearVarTypes().value().size() != getLinearVars().size())
     return emitError() << "Ill-formed type attributes for linear variables";
@@ -3243,6 +3430,9 @@ LogicalResult DistributeOp::verify() {
     return emitError(
         "expected equal sizes for allocate and allocator variables");
 
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   return success();
 }
 
@@ -3276,8 +3466,14 @@ LogicalResult DistributeOp::verifyRegions() {
 // DeclareMapperOp / DeclareMapperInfoOp
 //===----------------------------------------------------------------------===//
 
+void DeclareMapperInfoOp::build(OpBuilder &builder, OperationState &state,
+                                const DeclareMapperInfoOperands &clauses) {
+  DeclareMapperInfoOp::build(builder, state, clauses.mapVars,
+                             clauses.mapIterated);
+}
+
 LogicalResult DeclareMapperInfoOp::verify() {
-  return verifyMapClause(*this, getMapVars());
+  return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
 LogicalResult DeclareMapperOp::verifyRegions() {
@@ -3397,11 +3593,14 @@ LogicalResult TaskOp::verify() {
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
-  return failed(verifyDependVars)
-             ? verifyDependVars
-             : verifyReductionVarList(*this, getInReductionSyms(),
-                                      getInReductionVars(),
-                                      getInReductionByref());
+  if (failed(verifyDependVars))
+    return verifyDependVars;
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
+  return verifyReductionVarList(*this, getInReductionSyms(),
+                                getInReductionVars(), getInReductionByref());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3455,6 +3654,10 @@ LogicalResult TaskloopContextOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
         "expected equal sizes for allocate and allocator variables");
+
+  if (failed(verifyPrivateVarList(*this)))
+    return failure();
+
   if (failed(verifyReductionVarList(*this, getReductionSyms(),
                                     getReductionVars(), getReductionByref())) ||
       failed(verifyReductionVarList(*this, getInReductionSyms(),
@@ -4344,11 +4547,19 @@ LogicalResult AtomicReadOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
-    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
-        *mo == ClauseMemoryOrderKind::Release) {
-      return emitError(
-          "memory-order must not be acq_rel or release for atomic reads");
+    if (*mo == ClauseMemoryOrderKind::Release) {
+      return emitError("memory-order must not be release for atomic reads");
+    }
+    if (*mo == ClauseMemoryOrderKind::Acq_rel) {
+      // acq_rel is prohibited on read only in OpenMP 5.0; allowed in 5.1+.
+      if (version < 51)
+        return emitError("memory-order must not be acq_rel for atomic reads");
     }
   }
   return verifySynchronizationHint(*this, getHint());
@@ -4362,11 +4573,19 @@ LogicalResult AtomicWriteOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
-    if (*mo == ClauseMemoryOrderKind::Acq_rel ||
-        *mo == ClauseMemoryOrderKind::Acquire) {
-      return emitError(
-          "memory-order must not be acq_rel or acquire for atomic writes");
+    if (*mo == ClauseMemoryOrderKind::Acquire) {
+      return emitError("memory-order must not be acquire for atomic writes");
+    }
+    if (*mo == ClauseMemoryOrderKind::Acq_rel) {
+      // acq_rel is prohibited on write only in OpenMP 5.0; allowed in 5.1+.
+      if (version < 51)
+        return emitError("memory-order must not be acq_rel for atomic writes");
     }
   }
   return verifySynchronizationHint(*this, getHint());
@@ -4394,11 +4613,18 @@ LogicalResult AtomicUpdateOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
 
+  int64_t version = 50;
+  if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
+    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+      version = llvm::cast<VersionAttr>(verAttr).getVersion();
+
   if (auto mo = getMemoryOrder()) {
     if (*mo == ClauseMemoryOrderKind::Acq_rel ||
         *mo == ClauseMemoryOrderKind::Acquire) {
-      return emitError(
-          "memory-order must not be acq_rel or acquire for atomic updates");
+      // This restriction applies only to OpenMP 5.0; removed in 5.1.
+      if (version < 51)
+        return emitError(
+            "memory-order must not be acq_rel or acquire for atomic updates");
     }
   }
 
@@ -4445,6 +4671,32 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
       getSecondOp()->getAttr("memory_order"))
     return emitOpError(
         "operations inside capture region must not have memory_order clause");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicCompareOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareOp::verify() {
+  if (verifyCommon().failed())
+    return mlir::failure();
+  return verifySynchronizationHint(*this, getHint());
+}
+
+LogicalResult AtomicCompareOp::verifyRegions() {
+  if (verifyRegionsCommon().failed())
+    return mlir::failure();
+
+  if (verifyOperator().failed())
+    return mlir::failure();
+
+  Block &block = getRegion().front();
+
+  Operation *terminator = block.getTerminator();
+  if (!terminator || !isa<YieldOp>(terminator))
+    return emitOpError("region must be terminated with omp.yield");
+
   return success();
 }
 
@@ -5029,6 +5281,24 @@ LogicalResult IteratorOp::verify() {
     return emitOpError() << "omp.iterated element type (" << elemTy
                          << ") does not match omp.yield operand type ("
                          << yieldedTy << ")";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GroupprivateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+GroupprivateOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  auto *symbol = symbolTable.lookupNearestSymbolFrom(*this, getSymNameAttr());
+  if (!symbol)
+    return emitOpError() << "expected symbol reference '" << getSymName()
+                         << "' to point to a global variable";
+
+  if (isa<FunctionOpInterface>(symbol))
+    return emitOpError() << "expected symbol reference '" << getSymName()
+                         << "' to point to a global variable, not a function";
 
   return success();
 }

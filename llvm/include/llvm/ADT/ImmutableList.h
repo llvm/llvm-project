@@ -17,7 +17,9 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <iterator>
 #include <new>
 
 namespace llvm {
@@ -53,14 +55,13 @@ public:
   }
 };
 
-/// ImmutableList - This class represents an immutable (functional) list.
-///  It is implemented as a smart pointer (wraps ImmutableListImpl), so it
-///  it is intended to always be copied by value as if it were a pointer.
-///  This interface matches ImmutableSet and ImmutableMap.  ImmutableList
-///  objects should almost never be created directly, and instead should
-///  be created by ImmutableListFactory objects that manage the lifetime
-///  of a group of lists.  When the factory object is reclaimed, all lists
-///  created by that factory are released as well.
+/// This class represents an immutable (functional) list. It is implemented as a
+/// smart pointer (wraps ImmutableListImpl), so it is intended to always be
+/// copied by value as if it were a pointer. This interface matches ImmutableSet
+/// and ImmutableMap. ImmutableList objects should almost never be created
+/// directly, and instead should be created by ImmutableListFactory objects that
+/// manage the lifetime of a group of lists. When the factory object is
+/// reclaimed, all lists created by that factory are released as well.
 template <typename T>
 class ImmutableList {
 public:
@@ -87,10 +88,21 @@ public:
     const ImmutableListImpl<T>* L = nullptr;
 
   public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::remove_reference_t<T>;
+    using difference_type = std::ptrdiff_t;
+    using pointer = const value_type *;
+    using reference = const value_type &;
+
     iterator() = default;
     iterator(ImmutableList l) : L(l.getInternalPointer()) {}
 
     iterator& operator++() { L = L->getTail(); return *this; }
+    iterator operator++(int) {
+      iterator Tmp = *this;
+      ++*this;
+      return Tmp;
+    }
     bool operator==(const iterator& I) const { return L == I.L; }
     bool operator!=(const iterator& I) const { return L != I.L; }
     const value_type& operator*() const { return L->getHead(); }
@@ -101,15 +113,15 @@ public:
     ImmutableList getList() const { return L; }
   };
 
-  /// begin - Returns an iterator referring to the head of the list, or
-  ///  an iterator denoting the end of the list if the list is empty.
+  /// Returns an iterator referring to the head of the list, or an iterator
+  /// denoting the end of the list if the list is empty.
   iterator begin() const { return iterator(X); }
 
-  /// end - Returns an iterator denoting the end of the list.  This iterator
-  ///  does not refer to a valid list element.
+  /// Returns an iterator denoting the end of the list. This iterator does not
+  /// refer to a valid list element.
   iterator end() const { return iterator(); }
 
-  /// isEmpty - Returns true if the list is empty.
+  /// Returns true if the list is empty.
   bool isEmpty() const { return !X; }
 
   bool contains(const T& V) const {
@@ -120,23 +132,22 @@ public:
     return false;
   }
 
-  /// isEqual - Returns true if two lists are equal.  Because all lists created
-  ///  from the same ImmutableListFactory are uniqued, this has O(1) complexity
-  ///  because it the contents of the list do not need to be compared.  Note
-  ///  that you should only compare two lists created from the same
-  ///  ImmutableListFactory.
+  /// Returns true if two lists are equal.  Because all lists created from the
+  /// same ImmutableListFactory are uniqued, this has O(1) complexity because it
+  /// the contents of the list do not need to be compared. Note that you should
+  /// only compare two lists created from the same ImmutableListFactory.
   bool isEqual(const ImmutableList& L) const { return X == L.X; }
 
   bool operator==(const ImmutableList& L) const { return isEqual(L); }
 
-  /// getHead - Returns the head of the list.
+  /// Returns the head of the list.
   const T& getHead() const {
     assert(!isEmpty() && "Cannot get the head of an empty list.");
     return X->getHead();
   }
 
-  /// getTail - Returns the tail of the list, which is another (possibly empty)
-  ///  ImmutableList.
+  /// Returns the tail of the list, which is another (possibly empty)
+  /// ImmutableList.
   ImmutableList getTail() const {
     return X ? X->getTail() : nullptr;
   }
@@ -222,18 +233,8 @@ public:
 //===----------------------------------------------------------------------===//
 
 template <typename T> struct DenseMapInfo<ImmutableList<T>, void> {
-  static inline ImmutableList<T> getEmptyKey() {
-    return reinterpret_cast<ImmutableListImpl<T>*>(-1);
-  }
-
-  static inline ImmutableList<T> getTombstoneKey() {
-    return reinterpret_cast<ImmutableListImpl<T>*>(-2);
-  }
-
   static unsigned getHashValue(ImmutableList<T> X) {
-    uintptr_t PtrVal = reinterpret_cast<uintptr_t>(X.getInternalPointer());
-    return (unsigned((uintptr_t)PtrVal) >> 4) ^
-           (unsigned((uintptr_t)PtrVal) >> 9);
+    return DenseMapInfo<const void *>::getHashValue(X.getInternalPointer());
   }
 
   static bool isEqual(ImmutableList<T> X1, ImmutableList<T> X2) {

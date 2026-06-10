@@ -29,6 +29,9 @@ struct S {
 static_assert(((delete[] (new int[true])), true));
 static_assert(((delete[] (new S[true])), true));
 
+static_assert((new int[]{})[0] == 0); // both-error {{not an integral constant expression}} \
+                                      // both-note {{read of dereferenced one-past-the-end pointer}}
+
 constexpr int a() {
   new int(12); // both-note {{allocation performed here was not deallocated}}
   return 1;
@@ -643,6 +646,9 @@ namespace std {
                                     // both-note {{used to delete a null pointer}} \
                                     // both-note {{delete of pointer '&no_deallocate_nonalloc' that does not point to a heap-allocated object}}
     }
+    constexpr void deallocate(void *p, size_t N) {
+       __builtin_operator_delete(p, sizeof(T) * N);
+     }
   };
   template<typename T, typename ...Args>
   constexpr void construct_at(void *p, Args &&...args) { // #construct
@@ -767,6 +773,13 @@ namespace OperatorNewDelete {
                                                                                         // both-note {{in call}}
 
   static_assert((std::allocator<float>().deallocate(std::allocator<float>().allocate(10)), 1) == 1);
+
+  constexpr bool sizedDeallocate() {
+    int *p = std::allocator<int>().allocate(1);
+    std::allocator<int>().deallocate(p, 1);
+    return true;
+  }
+  static_assert(sizedDeallocate());
 }
 
 namespace Limits {
@@ -1088,12 +1101,18 @@ namespace BaseCompare {
 }
 
 
-namespace NegativeArraySize { 
+namespace NegativeArraySize {
   constexpr void f() { // both-error {{constexpr function never produces a constant expression}}
     int x = -1;
-    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}} 
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}}
   }
-} // namespace NegativeArraySize
+
+  struct S {};
+  constexpr void f1() { // both-error {{constexpr function never produces a constant expression}}
+    int x = -1;
+    int *p = new int[x]; //both-note {{cannot allocate array; evaluated array bound -1 is negative}}
+  }
+}
 
 namespace NewNegSizeNothrow {
   constexpr int get_neg_size() {
@@ -1185,6 +1204,41 @@ namespace vdtor {
   static_assert(vdtor_3(1) == 1); // both-error {{}} both-note {{in call}}
   static_assert(vdtor_3(2) == 3); // both-error {{}} both-note {{in call}}
   static_assert(vdtor_3(3) == 3);
+}
+
+namespace ArrayDestSize {
+  template<typename T>
+  constexpr T dynarray(int elems, int i) {
+    T *p;
+    if constexpr (sizeof(T) == 1)
+      p = new T[elems]{"fox"}; // both-note {{evaluated array bound 3 is too small to hold 4 explicitly initialized elements}}
+    else
+      p = new T[elems]{1, 2, 3}; // both-note {{evaluated array bound 2 is too small to hold 3 explicitly initialized elements}}
+    T n = p[i]; // both-note 4{{past-the-end}}
+    delete [] p;
+    return n;
+  }
+  static_assert(dynarray<int>(4, 4) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<int>(3, 3) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<int>(2, 1) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<char>(5, 5) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<char>(4, 4) == 0); // both-error {{constant expression}} both-note {{in call}}
+  static_assert(dynarray<char>(3, 2) == 'x'); // both-error {{constant expression}} both-note {{in call}}
+}
+
+namespace OpertorArrayDelete {
+  struct S {};
+  using State = S[2];
+  constexpr unsigned run(const State *s) {
+    void *p;
+    p = operator new[](128); // both-note {{cannot allocate untyped memory}}
+    operator delete[](p);
+    return 42;
+  }
+
+  constexpr State s[] = {};
+  static_assert(run(s) == 42, ""); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
 }
 
 #else

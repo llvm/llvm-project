@@ -16,6 +16,14 @@
 extern "C" {
 #endif
 
+#define __riscv_intrinsic_zkn 1
+#define __riscv_intrinsic_zknd 1
+#define __riscv_intrinsic_zkne 1
+#define __riscv_intrinsic_zknh 1
+#define __riscv_intrinsic_zks 1
+#define __riscv_intrinsic_zksed 1
+#define __riscv_intrinsic_zksh 1
+
 #if defined(__riscv_zknd)
 #if __riscv_xlen == 32
 #define __riscv_aes32dsi(x, y, bs) __builtin_riscv_aes32dsi(x, y, bs)

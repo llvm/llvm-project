@@ -535,10 +535,6 @@ def TargetWindowsArm64EC : TargetSpec {
   let CustomCode = [{ Target.getTriple().isWindowsArm64EC() }];
 }
 
-def TargetSupportsInitPriority : TargetSpec {
-  let CustomCode = [{ !Target.getTriple().isOSzOS() }];
-}
-
 class TargetSpecificSpelling<TargetSpec target, list<Spelling> spellings> {
   TargetSpec Target = target;
   list<Spelling> Spellings = spellings;
@@ -747,6 +743,9 @@ class Attr {
   bit PragmaAttributeSupport;
   // Set to true if this attribute accepts parameter pack expansion expressions.
   bit AcceptsExprPack = 0;
+  // Set to true if this attribute's argument list is parsed inside a function
+  // prototype scope, so it can reference the function's parameters.
+  bit ParseArgsInFunctionScope = 0;
   // To support multiple enum parameters to an attribute without breaking
   // our existing general parsing we need to have a separate flag that
   // opts an attribute into strict parsing of attribute parameters
@@ -769,10 +768,13 @@ class Attr {
   // Note: Any additional data members will leak and should be constructed
   // externally on the ASTContext.
   code AdditionalMembers = [{}];
+
+  string comparisonFn = "";
+  string profileFn = "";
+
   // Any documentation that should be associated with the attribute. Since an
   // attribute may be documented under multiple categories, more than one
   // Documentation entry may be listed.
-  string comparisonFn = "";
   list<Documentation> Documentation;
 }
 
@@ -898,6 +900,7 @@ def Aligned : InheritableAttr {
                                           CustomKeyword<"_Alignas">]>,
                    Accessor<"isDeclspec",[Declspec<"align">]>];
   let comparisonFn = "areAlignedAttrsEqual";
+  let profileFn = "profileAlignedAttr";
   let Documentation = [Undocumented];
 }
 
@@ -1163,6 +1166,7 @@ static llvm::StringRef canonicalizePlatformName(llvm::StringRef Platform) {
              .Case("macosx", "macos")
              .Case("tvOS", "tvos")
              .Case("watchOS", "watchos")
+             .Case("DriverKit", "driverkit")
              .Case("iOSApplicationExtension", "ios_app_extension")
              .Case("macOSApplicationExtension", "macos_app_extension")
              .Case("tvOSApplicationExtension", "tvos_app_extension")
@@ -1239,6 +1243,7 @@ static llvm::Triple::OSType getOSType(llvm::StringRef Platform) {
              .Case("tvos", OSType::TvOS)
              .Case("watchos", OSType::WatchOS)
              .Case("bridgeos", OSType::BridgeOS)
+             .Case("driverkit", OSType::DriverKit)
              .Case("ios_app_extension", OSType::IOS)
              .Case("maccatalyst_app_extension", OSType::IOS)
              .Case("macos_app_extension", OSType::MacOSX)
@@ -1910,6 +1915,7 @@ def EnableIf : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Args = [ExprArgument<"Cond">, StringArgument<"Message">];
   let TemplateDependent = 1;
+  let ParseArgsInFunctionScope = 1;
   let Documentation = [EnableIfDocs];
 }
 
@@ -3319,7 +3325,7 @@ def WorkGroupSizeHint :  InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def InitPriority : InheritableAttr, TargetSpecificAttr<TargetSupportsInitPriority> {
+def InitPriority : InheritableAttr {
   let Spellings = [GCC<"init_priority", /*AllowInC*/0>];
   let Args = [UnsignedArgument<"Priority">];
   let Subjects = SubjectList<[Var], ErrorDiag>;
@@ -3415,7 +3421,7 @@ def Sentinel : InheritableAttr {
   let Args = [DefaultIntArgument<"Sentinel", 0>,
               DefaultIntArgument<"NullPos", 0>];
 //  let Subjects = SubjectList<[Function, ObjCMethod, Block, Var]>;
-  let Documentation = [Undocumented];
+  let Documentation = [SentinelDocs];
 }
 
 def StdCall : DeclOrTypeAttr {
@@ -3898,7 +3904,7 @@ def VecReturn : InheritableAttr {
 def WarnUnused : InheritableAttr {
   let Spellings = [GCC<"warn_unused">];
   let Subjects = SubjectList<[Record]>;
-  let Documentation = [Undocumented];
+  let Documentation = [WarnUnusedDocs];
   let SimpleHandler = 1;
 }
 
@@ -4096,11 +4102,12 @@ def AssertCapability : InheritableAttr {
                    Clang<"assert_shared_capability", 0>,
                    GNU<"assert_exclusive_lock">,
                    GNU<"assert_shared_lock">];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, Var, Field]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
+  let ParseArgsInFunctionScope = 1;
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
@@ -4114,11 +4121,12 @@ def AcquireCapability : InheritableAttr {
                    Clang<"acquire_shared_capability", 0>,
                    GNU<"exclusive_lock_function">,
                    GNU<"shared_lock_function">];
-  let Subjects = SubjectList<[Function, ParmVar]>;
+  let Subjects = SubjectList<[Function, Var, Field]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
+  let ParseArgsInFunctionScope = 1;
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
@@ -4132,11 +4140,12 @@ def TryAcquireCapability : InheritableAttr {
                    Clang<"try_acquire_shared_capability", 0>,
                    GNU<"exclusive_trylock_function">,
                    GNU<"shared_trylock_function">];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, Var, Field]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
+  let ParseArgsInFunctionScope = 1;
   let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
@@ -4150,11 +4159,12 @@ def ReleaseCapability : InheritableAttr {
                    Clang<"release_shared_capability", 0>,
                    Clang<"release_generic_capability", 0>,
                    Clang<"unlock_function", 0>];
-  let Subjects = SubjectList<[Function, ParmVar]>;
+  let Subjects = SubjectList<[Function, Var, Field]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
+  let ParseArgsInFunctionScope = 1;
   let Args = [VariadicExprArgument<"Args">];
   let AcceptsExprPack = 1;
   let Accessors = [Accessor<"isShared",
@@ -4176,7 +4186,8 @@ def RequiresCapability : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function, ParmVar]>;
+  let ParseArgsInFunctionScope = 1;
+  let Subjects = SubjectList<[Function, Var, Field]>;
   let Accessors = [Accessor<"isShared", [Clang<"requires_shared_capability", 0>,
                                          Clang<"shared_locks_required", 0>]>];
   let Documentation = [Undocumented];
@@ -4253,7 +4264,8 @@ def LocksExcluded : InheritableAttr {
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function, ParmVar]>;
+  let ParseArgsInFunctionScope = 1;
+  let Subjects = SubjectList<[Function, Var, Field]>;
   let Documentation = [Undocumented];
 }
 
@@ -5286,9 +5298,16 @@ def HLSLVkLocation : HLSLAnnotationAttr {
   let Documentation = [HLSLVkLocationDocs];
 }
 
-def HLSLMatrixLayout : InheritableAttr {
-  let Spellings = [CustomKeyword<"row_major">, CustomKeyword<"column_major">];
-  let Subjects = SubjectList<[Var, TypedefName, Field, Function]>;
+// `row_major` / `column_major` are HLSL keywords that select the in-memory
+// layout of a matrix-typed declaration. 
+def HLSLRowMajor : TypeAttr {
+  let Spellings = [CustomKeyword<"row_major">];
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLMatrixLayoutDocs];
+}
+
+def HLSLColumnMajor : TypeAttr {
+  let Spellings = [CustomKeyword<"column_major">];
   let LangOpts = [HLSL];
   let Documentation = [HLSLMatrixLayoutDocs];
 }
