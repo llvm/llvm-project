@@ -141,7 +141,7 @@ StringRef RegexMatcher::findRule(unsigned LineNo) const {
   for (const auto &R : RegExes)
     if (R.LineNo == LineNo)
       return R.Name;
-  assert(!"`findRule` should be called only with correct `LineNo`");
+  assert(false && "`findRule` should be called only with correct `LineNo`");
   return {};
 }
 
@@ -235,7 +235,7 @@ StringRef GlobMatcher::findRule(unsigned LineNo) const {
   for (const auto &G : Globs)
     if (G.LineNo == LineNo)
       return G.Name;
-  assert(!"`findRule` should be called only with correct `LineNo`");
+  assert(false && "`findRule` should be called only with correct `LineNo`");
   return {};
 }
 
