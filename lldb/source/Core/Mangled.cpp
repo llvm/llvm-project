@@ -393,7 +393,8 @@ ConstString Mangled::GetDemangledNameImpl(bool force, // BEGIN SWIFT
   {
     auto demangled =
         GetSwiftDemangledStr(m_mangled, sc, m_demangled, preference);
-    m_demangled_info.emplace(std::move(demangled.second));
+    m_demangled_info =
+        std::make_unique<DemangledNameInfo>(std::move(demangled.second));
     return demangled.first;
   }
 #endif // LLDB_ENABLE_SWIFT
