@@ -4321,7 +4321,12 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
           PseudoOp = AArch64::READ_REGISTER_GPR64;
         else if (AArch64::FPR64RegClass.contains(PReg))
           PseudoOp = AArch64::READ_REGISTER_FPR64;
-        if (!ReadIs128Bit && PseudoOp && N->getValueType(0) == MVT::i64) {
+        // The pseudo performs an opaque read and is only meaningful for an
+        // allocatable register. A reserved register has a well-defined value
+        //  and is read through the normal CopyFromReg.
+        const MachineFunction &MF = CurDAG->getMachineFunction();
+        if (!ReadIs128Bit && PseudoOp && N->getValueType(0) == MVT::i64 &&
+            !Subtarget->getRegisterInfo()->isReservedReg(MF, PReg)) {
           CurDAG->SelectNodeTo(N, PseudoOp, MVT::i64, MVT::Other,
                                {CurDAG->getTargetConstant(PReg, DL, MVT::i32),
                                 N->getOperand(0)});
@@ -4420,8 +4425,12 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
           RegString->getString());
       bool IsGPR = AArch64::GPR64RegClass.contains(PReg);
       bool IsFPR = AArch64::FPR64RegClass.contains(PReg);
+      // Only allocatable registers are handled here; a reserved register has a
+      // well-defined value and is written through the normal CopyToReg path.
+      const MachineFunction &MF = CurDAG->getMachineFunction();
       if (!WriteIs128Bit && (IsGPR || IsFPR) &&
-          N->getOperand(2).getValueType() == MVT::i64) {
+          N->getOperand(2).getValueType() == MVT::i64 &&
+          !Subtarget->getRegisterInfo()->isReservedReg(MF, PReg)) {
         SDValue Copy =
             CurDAG->getCopyToReg(N->getOperand(0), DL, PReg, N->getOperand(2));
         SDValue RegOp = CurDAG->getRegister(PReg, MVT::i64);
