@@ -1,4 +1,4 @@
-; RUN: llvm-ml64 -filetype=s --mattr=+push2pop2 /unwindv3 %s /Fo - | FileCheck %s
+; RUN: llvm-ml64 -filetype=s /unwindv3 %s /Fo - | FileCheck %s
 
 .code
 

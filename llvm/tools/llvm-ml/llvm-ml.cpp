@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -45,7 +44,6 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/TargetParser/SubtargetFeature.h"
 #include <ctime>
 #include <optional>
 
@@ -334,17 +332,8 @@ int llvm_ml_main(int Argc, char **Argv, const llvm::ToolContext &) {
 
   MAI->setPreserveAsmComments(InputArgs.hasArg(OPT_preserve_comments));
 
-  std::string FeaturesStr;
-  if (InputArgs.hasArg(OPT_mattr)) {
-    SubtargetFeatures Features;
-    for (auto *A : InputArgs.filtered(OPT_mattr))
-      for (StringRef F : llvm::split(A->getValue(), ','))
-        Features.AddFeature(F);
-    FeaturesStr = Features.getString();
-  }
-
-  std::unique_ptr<MCSubtargetInfo> STI(TheTarget->createMCSubtargetInfo(
-      TheTriple, /*CPU=*/"", /*Features=*/FeaturesStr));
+  std::unique_ptr<MCSubtargetInfo> STI(
+      TheTarget->createMCSubtargetInfo(TheTriple, /*CPU=*/"", /*Features=*/""));
   if (!STI) {
     WithColor::error(errs(), ProgName) << "unable to create subtarget info\n";
     exit(1);

@@ -41,8 +41,6 @@ def fatal_warnings : LLVMFlag<"fatal-warnings">,
                      HelpText<"Treat warnings as errors">;
 def filetype : LLVMJoined<"filetype=">, Values<"obj,s,null">,
                HelpText<"Emit a file with the given type">;
-def mattr : LLVMCommaJoined<"mattr=">,
-            HelpText<"Target specific attributes (--mattr=help for details)">;
 def output_att_asm : LLVMFlag<"output-att-asm">,
                      HelpText<"Use ATT syntax for output assembly">;
 def show_encoding : LLVMFlag<"show-encoding">,

@@ -321,8 +321,6 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
-* llvm-ml now supports the `--mattr` flag for enabling target-specific CPU
-  features (e.g. `--mattr=+push2pop2`).
 * llvm-ml now supports the `/unwindv3` flag to enable V3 unwind information
   format for x64 exception handling.
 * llvm-ml now supports the `@UnwindVersion` built-in symbol, which returns the
