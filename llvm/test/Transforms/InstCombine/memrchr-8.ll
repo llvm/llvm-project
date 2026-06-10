@@ -4,8 +4,8 @@
 ; Verify that the result of memrchr calls used in equality expressions
 ; with the first argument aren't folded like the corresponding calls
 ; to memchr might be.
-; Folding of equality expressions with the first argument plus the bound
-; -1, i.e., memrchr(S, C, N) == N && S[N - 1] == C is not implemented.
+; Equality expressions with the first argument plus the bound - 1 can be folded
+; when the bound is known nonzero.
 
 declare ptr @memrchr(ptr, i32, i64)
 
@@ -81,5 +81,111 @@ define i1 @fold_memrchr_s_c_n_eq_s(ptr %s, i32 %c, i64 %n) {
 ;
   %p = call ptr @memrchr(ptr %s, i32 %c, i64 %n)
   %cmp = icmp eq ptr %p, %s
+  ret i1 %cmp
+}
+
+define i1 @fold_memrchr_s_c_17_eq_end(ptr %s, i32 %c) {
+; CHECK-LABEL: @fold_memrchr_s_c_17_eq_end(
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[MEMRCHR_CHAR:%.*]] = load i8, ptr [[END]], align 1
+; CHECK-NEXT:    [[MEMRCHR_CHARCMP:%.*]] = icmp eq i8 [[MEMRCHR_CHAR]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[MEMRCHR_CHARCMP]]
+;
+  %end = getelementptr inbounds i8, ptr %s, i64 16
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 17)
+  %cmp = icmp eq ptr %p, %end
+  ret i1 %cmp
+}
+
+define i1 @fold_memrchr_s_c_17_ne_end(ptr %s, i32 %c) {
+; CHECK-LABEL: @fold_memrchr_s_c_17_ne_end(
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[MEMRCHR_CHAR:%.*]] = load i8, ptr [[END]], align 1
+; CHECK-NEXT:    [[MEMRCHR_CHARCMP:%.*]] = icmp ne i8 [[MEMRCHR_CHAR]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[MEMRCHR_CHARCMP]]
+;
+  %end = getelementptr inbounds i8, ptr %s, i64 16
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 17)
+  %cmp = icmp ne ptr %p, %end
+  ret i1 %cmp
+}
+
+define i1 @fold_memrchr_s_c_17_eq_end_swapped(ptr %s, i32 %c) {
+; CHECK-LABEL: @fold_memrchr_s_c_17_eq_end_swapped(
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[S:%.*]], i64 16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[MEMRCHR_CHAR:%.*]] = load i8, ptr [[END]], align 1
+; CHECK-NEXT:    [[MEMRCHR_CHARCMP:%.*]] = icmp eq i8 [[MEMRCHR_CHAR]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[MEMRCHR_CHARCMP]]
+;
+  %end = getelementptr inbounds i8, ptr %s, i64 16
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 17)
+  %cmp = icmp eq ptr %end, %p
+  ret i1 %cmp
+}
+
+define i1 @fold_memrchr_s_c_nz_eq_end_add(ptr %s, i32 %c, i64 %n) {
+; CHECK-LABEL: @fold_memrchr_s_c_nz_eq_end_add(
+; CHECK-NEXT:    [[IDX:%.*]] = and i64 [[N:%.*]], -2
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[MEMRCHR_CHAR:%.*]] = load i8, ptr [[END]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[MEMRCHR_CHAR]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i64 %n, 1
+  %idx = add i64 %nz, -1
+  %end = getelementptr inbounds i8, ptr %s, i64 %idx
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 %nz)
+  %cmp = icmp eq ptr %p, %end
+  ret i1 %cmp
+}
+
+define i1 @fold_memrchr_s_c_nz_ne_end_sub(ptr %s, i32 %c, i64 %n) {
+; CHECK-LABEL: @fold_memrchr_s_c_nz_ne_end_sub(
+; CHECK-NEXT:    [[IDX:%.*]] = and i64 [[N:%.*]], -2
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
+; CHECK-NEXT:    [[MEMRCHR_CHAR:%.*]] = load i8, ptr [[END]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[MEMRCHR_CHAR]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i64 %n, 1
+  %idx = sub i64 %nz, 1
+  %end = getelementptr inbounds i8, ptr %s, i64 %idx
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 %nz)
+  %cmp = icmp ne ptr %p, %end
+  ret i1 %cmp
+}
+
+define i1 @call_memrchr_s_c_n_eq_end(ptr %s, i32 %c, i64 %n) {
+; CHECK-LABEL: @call_memrchr_s_c_n_eq_end(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    [[END:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -1
+; CHECK-NEXT:    [[P:%.*]] = call ptr @memrchr(ptr [[S]], i32 [[C:%.*]], i64 [[N]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[END]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %idx = add i64 %n, -1
+  %end = getelementptr i8, ptr %s, i64 %idx
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 %n)
+  %cmp = icmp eq ptr %p, %end
+  ret i1 %cmp
+}
+
+define i1 @call_memrchr_s_c_nz_eq_wrong_end(ptr %s, i32 %c, i64 %n) {
+; CHECK-LABEL: @call_memrchr_s_c_nz_eq_wrong_end(
+; CHECK-NEXT:    [[NZ:%.*]] = or i64 [[N:%.*]], 1
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i8, ptr [[S:%.*]], i64 [[NZ]]
+; CHECK-NEXT:    [[P:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(1) [[S]], i32 [[C:%.*]], i64 [[NZ]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[END]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %nz = or i64 %n, 1
+  %end = getelementptr inbounds i8, ptr %s, i64 %nz
+  %p = call ptr @memrchr(ptr %s, i32 %c, i64 %nz)
+  %cmp = icmp eq ptr %p, %end
   ret i1 %cmp
 }

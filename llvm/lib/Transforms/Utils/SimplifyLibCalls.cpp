@@ -484,6 +484,86 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
   return B.CreateSelect(Cmp, Src, NullPtr);
 }
 
+// Recognize the offset of the last byte searched by memrchr(S, C, N), i.e.
+// N - 1, including InstCombine's canonical form for (X | 1) - 1.
+static bool isMemRChrEndIndex(Value *Index, Value *Size) {
+  if (auto *LenC = dyn_cast<ConstantInt>(Size)) {
+    if (LenC->isZero() || LenC->getValue().getActiveBits() > 64)
+      return false;
+    auto *IndexC = dyn_cast<ConstantInt>(Index);
+    return IndexC && IndexC->getValue().getActiveBits() <= 64 &&
+           IndexC->getZExtValue() == LenC->getZExtValue() - 1;
+  }
+
+  auto *IndexInst = dyn_cast<Instruction>(Index);
+  if (!IndexInst)
+    return false;
+
+  if (match(IndexInst, m_Sub(m_Specific(Size), m_One())))
+    return true;
+
+  if (match(IndexInst, m_c_Add(m_Specific(Size), m_AllOnes())))
+    return true;
+
+  // InstCombine canonicalizes (X | 1) - 1 to X & -2.
+  Value *X;
+  const APInt *OrC, *AndC;
+  if (match(Size, m_c_Or(m_Value(X), m_APInt(OrC))) && OrC->isOne() &&
+      match(IndexInst, m_c_And(m_Specific(X), m_APInt(AndC)))) {
+    APInt MinusTwo = APInt::getAllOnes(AndC->getBitWidth());
+    MinusTwo.clearBit(0);
+    return *AndC == MinusTwo;
+  }
+
+  return false;
+}
+
+static bool isMemRChrEndPtr(Value *Ptr, Value *Src, Value *Size) {
+  if (auto *LenC = dyn_cast<ConstantInt>(Size))
+    if (LenC->isOne())
+      return Ptr == Src;
+
+  auto *GEP = dyn_cast<GEPOperator>(Ptr);
+  if (!GEP || GEP->getPointerOperand() != Src ||
+      !GEP->getSourceElementType()->isIntegerTy(8) || GEP->getNumIndices() != 1)
+    return false;
+
+  return isMemRChrEndIndex(GEP->idx_begin()->get(), Size);
+}
+
+static Value *getMemRChrEndPtrComparedWith(CallInst *CI, Value *Size) {
+  Value *Src = CI->getArgOperand(0);
+  Value *EndPtr = nullptr;
+  for (User *U : CI->users()) {
+    auto *ICmp = dyn_cast<ICmpInst>(U);
+    if (!ICmp || !ICmp->isEquality())
+      return nullptr;
+
+    Value *Other = nullptr;
+    if (ICmp->getOperand(0) == CI)
+      Other = ICmp->getOperand(1);
+    else if (ICmp->getOperand(1) == CI)
+      Other = ICmp->getOperand(0);
+    else
+      return nullptr;
+    if (!isMemRChrEndPtr(Other, Src, Size))
+      return nullptr;
+    if (EndPtr && EndPtr != Other)
+      return nullptr;
+    EndPtr = Other;
+  }
+  return EndPtr;
+}
+
+static Value *memRChrToEndCharCompare(CallInst *CI, Value *EndPtr,
+                                      IRBuilderBase &B) {
+  Value *CharVal = B.CreateTrunc(CI->getArgOperand(1), B.getInt8Ty());
+  Value *LastChar = B.CreateLoad(B.getInt8Ty(), EndPtr, "memrchr.char");
+  Value *Cmp = B.CreateICmpEQ(LastChar, CharVal, "memrchr.charcmp");
+  Value *NullPtr = Constant::getNullValue(CI->getType());
+  return B.CreateSelect(Cmp, EndPtr, NullPtr, "memrchr.sel");
+}
+
 Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
   Value *SrcStr = CI->getArgOperand(0);
   Value *CharVal = CI->getArgOperand(1);
@@ -1241,6 +1321,10 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
       return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
     }
   }
+
+  if (isKnownNonZero(Size, DL))
+    if (Value *EndPtr = getMemRChrEndPtrComparedWith(CI, Size))
+      return memRChrToEndCharCompare(CI, EndPtr, B);
 
   StringRef Str;
   if (!getConstantStringInfo(SrcStr, Str, /*TrimAtNul=*/false))
