@@ -84,9 +84,9 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (EntryFuncs.empty())
     return PreservedAnalyses::all();
 
-  // Declare ejit_compile_or_get(i32 funcIdx, ptr dims, i32 count, ptr out_pfn)
+  // Declare ejit_compile_or_get(i64 cacheKey, ptr out_pfn)
   M.getOrInsertFunction(FN_COMPILE_OR_GET,
-      FunctionType::get(PtrTy, {Type::getInt32Ty(Ctx), PtrTy, Type::getInt32Ty(Ctx), PtrTy}, false));
+      FunctionType::get(PtrTy, {Type::getInt64Ty(Ctx), PtrTy}, false));
 
   auto isAlreadyWrapped = [](Function &F) -> bool {
     if (!F.getEntryBlock().getName().starts_with("jit_entry"))
@@ -114,8 +114,9 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
       continue;
 
     // Prevent the CGSCC inliner from inlining the wrapped function into
-    // callers. Each call site would duplicate the JIT dispatch logic (alloca,
-    // ejit_compile_or_get call, indirect call) and the inliner may produce
+    // callers. Each call site would duplicate the JIT dispatch logic
+    // (cacheKey computation, ejit_compile_or_get call, indirect call) and
+    // the inliner may produce
     // inconsistent AOT fallback code depending on call-site context.
     if (EJitNoInlineEntry)
       F->addFnAttr(Attribute::NoInline);
@@ -146,51 +147,24 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     // Build wrapper prologue in jit_entry
     IRBuilder<> Builder(JitEntry);
 
-    // Build dims array (if any dimensions)
-    Value *DimsPtr = ConstantPointerNull::get(PtrTy);
-    Value *CountVal = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+    // Compute cacheKey = funcIdx(32b) | dim[0](8b) | dim[1](8b) | ...
+    // All in registers — zero alloca, zero store overhead.
+    uint64_t funcIdx = hashFuncName(F->getName());
+    Value *Key = ConstantInt::get(Type::getInt64Ty(Ctx), funcIdx);
+    Key = Builder.CreateShl(Key, 32);
 
-    if (DimCount > 0) {
-      // ejit_dim_t = { ptr, i8 }  (matches EJitRuntime.h: uint8_t index)
-      auto *DimTy = StructType::get(Ctx, {PtrTy, Type::getInt8Ty(Ctx)});
-      auto *DimsAlloca = Builder.CreateAlloca(DimTy,
-          ConstantInt::get(Type::getInt32Ty(Ctx), DimCount));
-
-      for (unsigned I = 0; I < DimCount; ++I) {
-        Value *Idx = ConstantInt::get(Type::getInt32Ty(Ctx), I);
-        Value *DimPtr = Builder.CreateInBoundsGEP(DimTy, DimsAlloca, {Idx});
-
-        // name field
-        Value *NamePtr = Builder.CreateInBoundsGEP(
-            DimTy, DimPtr, {ConstantInt::get(Type::getInt32Ty(Ctx), 0),
-                             ConstantInt::get(Type::getInt32Ty(Ctx), 0)});
-        Value *NameStr = Builder.CreateGlobalString(PeriodInds[I].PeriodName);
-        Builder.CreateStore(NameStr, NamePtr);
-
-        // index field
-        Value *IdxFieldPtr = Builder.CreateInBoundsGEP(
-            DimTy, DimPtr, {ConstantInt::get(Type::getInt32Ty(Ctx), 0),
-                             ConstantInt::get(Type::getInt32Ty(Ctx), 1)});
-        Value *ArgVal = F->getArg(PeriodInds[I].ArgIndex);
-        Value *IdxVal = Builder.CreateZExtOrTrunc(ArgVal, Type::getInt8Ty(Ctx));
-        Builder.CreateStore(IdxVal, IdxFieldPtr);
-      }
-
-      DimsPtr = Builder.CreateBitCast(DimsAlloca, PtrTy);
-      CountVal = ConstantInt::get(Type::getInt32Ty(Ctx), DimCount);
+    for (unsigned I = 0; I < DimCount; ++I) {
+      Value *ArgVal = F->getArg(PeriodInds[I].ArgIndex);
+      Value *ZExt = Builder.CreateZExt(ArgVal, Type::getInt64Ty(Ctx));
+      if (I > 0)
+        ZExt = Builder.CreateShl(ZExt, I * 8);
+      Key = Builder.CreateOr(Key, ZExt);
     }
 
-    // Compute deterministic funcIdx (FNV-1a hash of function name).
-    // The runtime uses the same hash to index bitcode data, eliminating
-    // the need for string→idx map lookups in the cache-hit path.
-    Value *FuncIdxVal = ConstantInt::get(Type::getInt32Ty(Ctx),
-                                        hashFuncName(F->getName()));
-
-    // Call ejit_compile_or_get(funcIdx, dims, count, null)
+    // Call ejit_compile_or_get(cacheKey, null)
     FunctionCallee CompileFn = M.getFunction(FN_COMPILE_OR_GET);
     Value *JitResult = Builder.CreateCall(
-        CompileFn, {FuncIdxVal, DimsPtr, CountVal,
-                    ConstantPointerNull::get(PtrTy)});
+        CompileFn, {Key, ConstantPointerNull::get(PtrTy)});
 
     // Null check branch
     Value *IsNull = Builder.CreateIsNull(JitResult);

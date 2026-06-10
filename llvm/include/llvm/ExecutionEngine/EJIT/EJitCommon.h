@@ -35,7 +35,6 @@ constexpr const char *TAG_EJIT_PERIOD_ARR_IND = "ejit_period_arr_ind";
 constexpr const char *TAG_EJIT_PERIOD_ARR = "ejit_period_arr";
 constexpr const char *TAG_EJIT_PERIOD = "ejit_period";
 constexpr const char *TAG_EJIT_MAY_CONST_FIELD = "ejit_may_const_field";
-constexpr const char *TAG_EJIT_FUNC_IDX = "ejit_func_idx";
 
 //===----------------------------------------------------------------------===//
 // Global variable and section names

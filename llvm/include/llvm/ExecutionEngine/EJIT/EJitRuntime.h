@@ -71,11 +71,6 @@ typedef enum {
 } ejit_opt_level_t;
 
 typedef struct {
-  const char *periodName;
-  uint8_t index;
-} ejit_dim_t;
-
-typedef struct {
   ejit_compile_mode_t compileMode;
   ejit_opt_level_t optLevel;
   size_t maxCodeMemory;
@@ -123,12 +118,10 @@ ejit_status_t ejit_deactivate_all(const char *periodName);
 bool ejit_is_active(const char *periodName, uint8_t cellIdx);
 
 // Compilation
-/// funcIdx is the deterministic FNV-1a hash of the function name, emitted
-/// directly by the AOT wrapper as an immediate. Eliminates runtime
-/// string→idx map lookups on every call.
-void *ejit_compile_or_get(uint32_t funcIdx,
-                           const ejit_dim_t *dims, uint32_t count,
-                           void **out_pfn);
+/// Pre-computed cacheKey = funcIdx(32b) | dim[3](8b) | ... | dim[0](8b).
+/// The AOT wrapper computes this in registers (zero alloca/store overhead).
+/// Hot path: single hash lookup; cold path: bitcode parse + JIT compile.
+void *ejit_compile_or_get(uint64_t cacheKey, void **out_pfn);
 
 // Cache
 void ejit_clear_cache(void);

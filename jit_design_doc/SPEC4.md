@@ -166,7 +166,7 @@ ejit_entry void jit_entry(ejit_period_arr_ind(cell) uint8_t cellIndex)
 ```
 
 - **funcIdx**：FNV-1a 32-bit hash of 函数名，AOT 编译期计算，运行时一致
-- **d[0..3]**：每个维度 index 占 8-bit（完整 uint8_t，与 `ejit_dim_t.index` 一致），按 `ejit_period_arr_ind` 参数顺序排列
+- **d[0..3]**：每个维度 index 占 8-bit（完整 uint8_t，与 wrapper 中 d[i] 参数一致），按 `ejit_period_arr_ind` 参数顺序排列
 - 无维度时低 32 位为 0
 - 相比旧方案（字符串拼接 `"fnName|cell=3,trp=1"`），uint64_t 直接比较/哈希，无内存分配
 
@@ -217,12 +217,7 @@ typedef enum {
     EJIT_OPT_L3 = 3       /* 激进：+ 循环展开 */
 } ejit_opt_level_t;
 
-/* 维度信息 */
-typedef struct {
-    const char* name;    /* 维度名称，如 "cell", "trp" */
-    uint8_t index;       /* 参数值 (ejit_period_arr_ind 参数的实际值) */
-} ejit_dim_t;
-```
+/* 维度编码在 cacheKey 中 —— 不再需要 ejit_dim_t 结构 */```
 
 ### 3.2 初始化与配置
 
@@ -285,14 +280,14 @@ void ejit_register_symbol(const char *name, void *addr);
 ### 3.5 编译接口
 
 ```c
-void* ejit_compile_or_get(uint32_t funcIdx, ejit_dim_t* dims,
+void* ejit_compile_or_get(uint64_t cacheKey,
                           int count, void** out_pfn);
 ```
 
 | 参数 | 说明 |
 |------|------|
 | `funcIdx` | FNV-1a 32-bit hash of 函数名（AOT 编译期计算） |
-| `dims` | 维度信息数组，包含维度名称和索引值 |
+| `cacheKey` | 预计算的 uint64_t key = funcIdx(32b) \| dims(4x8b) |
 | `count` | 维度数量（无维度时为 0，dims 为 NULL） |
 | `out_pfn` | 保留扩展参数，当前传 NULL |
 

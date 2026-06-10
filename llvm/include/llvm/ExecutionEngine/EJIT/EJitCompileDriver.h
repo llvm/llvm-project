@@ -35,27 +35,17 @@ public:
 
   EJitCompileDriver(const Config &config,
                     EJitCache &cache,
-                    PeriodArrayRegistry &periodReg,
                     EJitRuntimeState &runtimeState,
                     EJitModuleLoader &loader,
                     EJitLogger *logger = nullptr);
 
   ~EJitCompileDriver();
 
-  /// Get or compile a function for the given specialization.
-  /// Returns nullptr if compilation cannot proceed (e.g., time window
-  /// not active, no bitcode found, or compile failure).
-  void *getOrCompile(const std::string &funcName,
-                     const std::pair<std::string, uint8_t> *dims,
-                     unsigned count);
-
-  /// v2: funcIdx-based entry point (zero string ops on cache hit).
-  /// funcIdx is the deterministic FNV-1a hash of the function name,
-  /// emitted directly by the AOT wrapper. On cache miss, funcName is
-  /// recovered from the module loader for bitcode loading and JIT lookup.
-  void *getOrCompile(uint32_t funcIdx,
-                     const std::pair<std::string, uint8_t> *dims,
-                     unsigned count);
+  /// Hot path: cache lookup on pre-computed uint64_t cacheKey.
+  /// Cold path: decode cacheKey → load bitcode → JIT compile.
+  /// Returns nullptr on miss that cannot be compiled (time window not
+  /// active, no bitcode, or compile failure).
+  void *getOrCompile(uint64_t cacheKey);
 
   EJitCache &getCache() { return cache_; }
   EJitRuntimeState &getRuntimeState() { return runtimeState_; }
@@ -69,14 +59,11 @@ public:
 #endif
 
   void setSyncEngine(std::unique_ptr<EJitOrcEngine> engine);
-
-  /// Register a user-defined symbol for JIT resolution (bare-metal).
   void registerSymbol(const std::string &name, void *addr);
 
 private:
   const Config &config_;
   EJitCache &cache_;
-  PeriodArrayRegistry &periodReg_;
   EJitRuntimeState &runtimeState_;
   EJitModuleLoader &loader_;
 #ifndef EJIT_FREESTANDING

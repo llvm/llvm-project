@@ -160,17 +160,11 @@ bool ejit_is_active(const char *periodName, uint8_t cellIdx) {
   return gEJIT->isActive(periodName, cellIdx);
 }
 
-void *ejit_compile_or_get(uint32_t funcIdx,
-                           const ejit_dim_t *dims, uint32_t count,
-                           void **out_pfn) {
+void *ejit_compile_or_get(uint64_t cacheKey, void **out_pfn) {
   if (!gEJIT)
     return nullptr;
 
-  SmallVector<std::pair<std::string, uint8_t>, 4> cppDims;
-  for (uint32_t i = 0; i < count && i < 4; ++i)
-    cppDims.push_back({dims[i].periodName, dims[i].index});
-
-  void *result = gEJIT->getOrCompile(funcIdx, cppDims.data(), count);
+  void *result = gEJIT->getOrCompile(cacheKey);
   if (out_pfn)
     *out_pfn = result;
   return result;

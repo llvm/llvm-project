@@ -2,18 +2,21 @@
 
 #include "llvm/ExecutionEngine/EJIT/EJitModuleLoader.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
 
 void EJitModuleLoader::registerBitcode(const std::string &funcName,
                                        const uint8_t *data, size_t size) {
-  entries_[funcName] = {funcName, data, size};
-  totalSize_ += size;
-
-  // Populate funcIdx index for O(1) lookup in the hot path.
-  // Uses deterministic FNV-1a hash — AOT passes compute the same hash.
+  // Hash collision detection: fatal error if two different names map to
+  // the same funcIdx. 32-bit FNV-1a makes this vanishingly unlikely.
   uint32_t idx = hashFuncName(funcName);
   auto &entry = entriesByFuncIdx_[idx];
   if (entry.data && entry.funcName != funcName) {
@@ -23,17 +26,6 @@ void EJitModuleLoader::registerBitcode(const std::string &funcName,
     report_fatal_error("EJIT: hash collision on funcIdx, rename functions");
   }
   entry = {funcName, data, size};
-}
-
-Expected<StringRef>
-EJitModuleLoader::getBitcode(const std::string &funcName) const {
-  auto it = entries_.find(funcName);
-  if (it == entries_.end())
-    return make_error<StringError>(
-        "No bitcode registered for function: " + funcName,
-        inconvertibleErrorCode());
-  return StringRef(reinterpret_cast<const char *>(it->second.data),
-                   it->second.size);
 }
 
 Expected<StringRef>
@@ -47,39 +39,61 @@ EJitModuleLoader::getBitcodeByFuncIdx(uint32_t funcIdx) const {
                    it->second.size);
 }
 
-uint32_t EJitModuleLoader::getFuncIndex(const std::string &funcName) {
-  auto it = funcToIndex_.find(funcName);
-  if (it != funcToIndex_.end())
-    return it->second;
-  // For the new wrapper path (v2), the funcIdx equals the deterministic hash.
-  // getFuncIndex remains for backward compat; new code uses hashFuncName.
-  uint32_t idx = hashFuncName(funcName);
-  funcToIndex_[funcName] = idx;
-  return idx;
-}
-
-const std::string &EJitModuleLoader::getFuncName(uint32_t index) const {
-  auto it = entriesByFuncIdx_.find(index);
+const std::string &
+EJitModuleLoader::getFuncNameByFuncIdx(uint32_t funcIdx) const {
+  auto it = entriesByFuncIdx_.find(funcIdx);
   if (it != entriesByFuncIdx_.end())
     return it->second.funcName;
   static const std::string empty;
   return empty;
 }
 
-const std::string &EJitModuleLoader::getFuncNameByFuncIdx(uint32_t funcIdx) const {
-  return getFuncName(funcIdx);
-}
+const EJitModuleLoader::FuncMeta &
+EJitModuleLoader::getOrCacheFuncMeta(uint32_t funcIdx) {
+  auto it = funcMetaCache_.find(funcIdx);
+  if (it != funcMetaCache_.end())
+    return it->second;
 
-bool EJitModuleLoader::detectHashCollisions() const {
-  // Collisions are detected and fatal at registerBitcode time.
-  // This method exists as a documented checkpoint for ejit_init.
-  return false;
-}
+  FuncMeta &meta = funcMetaCache_[funcIdx];
+  auto bitcode = getBitcodeByFuncIdx(funcIdx);
+  if (!bitcode) {
+    consumeError(bitcode.takeError());
+    return meta;
+  }
 
-size_t EJitModuleLoader::getEntryCount() const {
-  return entries_.size();
-}
+  auto Ctx = std::make_unique<LLVMContext>();
+  auto Buf = MemoryBuffer::getMemBuffer(*bitcode,
+      "meta_" + std::to_string(funcIdx) + ".bc");
+  auto MOrErr = parseBitcodeFile(Buf->getMemBufferRef(), *Ctx);
+  if (!MOrErr) {
+    consumeError(MOrErr.takeError());
+    return meta;
+  }
 
-size_t EJitModuleLoader::getTotalBitcodeSize() const {
-  return totalSize_;
+  for (Function &F : (*MOrErr)->functions()) {
+    if (F.isDeclaration())
+      continue;
+    // Precondition: detectHashCollisions() passed at init, so
+    // hashFuncName uniquely identifies this function.
+    if (hashFuncName(F.getName()) != funcIdx)
+      continue;
+
+    MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
+    if (!MD)
+      break;
+
+    for (const MDOperand &Op : MD->operands()) {
+      auto *Sub = dyn_cast<MDNode>(Op.get());
+      if (!Sub || Sub->getNumOperands() < 3)
+        continue;
+      auto *Tag = dyn_cast<MDString>(Sub->getOperand(0));
+      if (!Tag || Tag->getString() != TAG_EJIT_PERIOD_ARR_IND)
+        continue;
+      auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
+      if (PN && meta.dimCount < 4)
+        meta.periodNames[meta.dimCount++] = PN->getString().str();
+    }
+    break;
+  }
+  return meta;
 }

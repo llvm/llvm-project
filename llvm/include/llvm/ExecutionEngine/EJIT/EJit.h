@@ -37,14 +37,9 @@ public:
   bool isActive(const std::string &periodName, uint8_t cellIdx) const;
 
   // Compilation
-  void *getOrCompile(const std::string &funcName,
-                     const std::pair<std::string, uint8_t> *dims,
-                     unsigned count);
-
-  /// v2: funcIdx-based entry point. Zero string ops on cache hit.
-  void *getOrCompile(uint32_t funcIdx,
-                     const std::pair<std::string, uint8_t> *dims,
-                     unsigned count);
+  /// Pre-computed cacheKey = funcIdx(32b) | dims(4x8b). The AOT wrapper
+  /// computes this in registers; no dims array construction.
+  void *getOrCompile(uint64_t cacheKey);
 
   // Cache management
   void clearCache();

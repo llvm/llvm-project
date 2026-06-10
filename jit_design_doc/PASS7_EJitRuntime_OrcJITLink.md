@@ -808,7 +808,7 @@ public:
     // 统一入口: 获取或编译特化函数
     // 返回 NULL 表示需要 fallback
     void* getOrCompile(uint32_t funcIdx,
-                       ejit_dim_t* dims,
+                       uint64_t cacheKey,
                        int count);
 
 private:
@@ -826,17 +826,17 @@ private:
 
     // 构建 Cache Key (v1.8: uint64_t)
     // funcIdx(32b) | dim[0](8b) | dim[1](8b) | dim[2](8b) | dim[3](8b)
-    uint64_t buildCacheKey(uint32_t funcIdx, ejit_dim_t* dims, int count);
+    uint64_t buildCacheKey(uint32_t funcIdx, uint64_t cacheKey);
 
     // 构建 SpecializationContext
     SpecializationContext buildContext(const std::string& funcName,
-                                       ejit_dim_t* dims, int count);
+                                       uint64_t cacheKey);
 };
 ```
 
 ```cpp
 void* EJitCompileDriver::getOrCompile(uint32_t funcIdx,
-                                       ejit_dim_t* dims,
+                                       uint64_t cacheKey,
                                        int count) {
     // Step 1: 构建 Cache key (funcIdx from wrapper, 无字符串开销)
     uint32_t funcIdx = hashFuncName(funcName)  // deterministic, zero map lookup;

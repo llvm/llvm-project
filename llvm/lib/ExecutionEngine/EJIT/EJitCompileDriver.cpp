@@ -14,11 +14,10 @@ using namespace llvm::ejit;
 
 EJitCompileDriver::EJitCompileDriver(const Config &config,
                                      EJitCache &cache,
-                                     PeriodArrayRegistry &periodReg,
                                      EJitRuntimeState &runtimeState,
                                      EJitModuleLoader &loader,
                                      EJitLogger *logger)
-    : config_(config), cache_(cache), periodReg_(periodReg),
+    : config_(config), cache_(cache),
   runtimeState_(runtimeState), loader_(loader)
 #ifndef EJIT_FREESTANDING
   , logger_(logger)
@@ -36,59 +35,69 @@ void EJitCompileDriver::registerSymbol(const std::string &name, void *addr) {
     syncEngine_->addUserSymbol(name, addr);
 }
 
-// Common compile path (cache miss). Both string-based and funcIdx-based
-// overloads delegate here after computing the cacheKey.
-static void *compileMiss(EJitCompileDriver &D,
-                         const std::string &funcName,
-                         uint64_t cacheKey,
-                         const std::pair<std::string, uint8_t> *dims,
-                         unsigned count) {
-  EJitCache &cache_ = D.getCache();
-  EJitRuntimeState &runtimeState_ = D.getRuntimeState();
-  EJitModuleLoader &loader_ = D.getLoader();
+void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
 
-  // Verify time-window state
-  for (unsigned i = 0; i < count; ++i) {
-    if (!runtimeState_.isActive(dims[i].first, dims[i].second)) {
+  // ── Hot path: single hash find ──────────────────────────────────────────
+  if (void *cached = cache_.getOrNull(cacheKey))
+    return cached;
+
+  // ── Cold path: decode cacheKey, verify, compile ────────────────────────
+  uint32_t funcIdx = static_cast<uint32_t>(cacheKey >> 32);
+  uint8_t dims[4] = {
+    static_cast<uint8_t>(cacheKey & 0xFF),
+    static_cast<uint8_t>((cacheKey >> 8) & 0xFF),
+    static_cast<uint8_t>((cacheKey >> 16) & 0xFF),
+    static_cast<uint8_t>((cacheKey >> 24) & 0xFF),
+  };
+
+  // Resolve funcName from loader
+  const std::string &funcName = loader_.getFuncNameByFuncIdx(funcIdx);
+  if (funcName.empty())
+    return nullptr;
+
+  // Get bitcode
+  auto bitcodeOrErr = loader_.getBitcodeByFuncIdx(funcIdx);
+  if (!bitcodeOrErr) {
 #ifndef EJIT_FREESTANDING
-      if (D.getLogger())
-        D.getLogger()->log(ErrorCode::TimeWindowNotActive,
-                     "Time window not active for " + dims[i].first,
+    if (logger_)
+      logger_->log(ErrorCode::BitcodeNotFound,
+                   "No bitcode for function", funcName,
+                   std::to_string(cacheKey));
+#endif
+    return nullptr;
+  }
+  StringRef bitcode = *bitcodeOrErr;
+
+  // Resolve period names from cached metadata (parsed once per funcIdx).
+  const auto &meta = loader_.getOrCacheFuncMeta(funcIdx);
+  const auto &periodNames = meta.periodNames;
+  unsigned dimCount = meta.dimCount;
+
+  // Verify time-window state for each dimension.
+  for (unsigned i = 0; i < dimCount; ++i) {
+    if (!runtimeState_.isActive(periodNames[i], dims[i])) {
+#ifndef EJIT_FREESTANDING
+      if (logger_)
+        logger_->log(ErrorCode::TimeWindowNotActive,
+                     "Time window not active for " + periodNames[i],
                      funcName, std::to_string(cacheKey));
 #endif
       return nullptr;
     }
   }
 
-  // Get bitcode via funcIdx (O(1)) when possible, fall back to string lookup
-  uint32_t funcIdx = loader_.getFuncIndex(funcName);
-  auto bitcodeOrErr = loader_.getBitcodeByFuncIdx(funcIdx);
-  if (!bitcodeOrErr)
-    bitcodeOrErr = loader_.getBitcode(funcName);
-  if (!bitcodeOrErr) {
-#ifndef EJIT_FREESTANDING
-    if (D.getLogger())
-      D.getLogger()->log(ErrorCode::BitcodeNotFound,
-                   "No bitcode for function", funcName, std::to_string(cacheKey));
-#endif
-    return nullptr;
-  }
-
-  StringRef bitcode = *bitcodeOrErr;
-
   // Build specialization context
   SpecializationContext ctx;
   ctx.fnName = funcName;
   ctx.cacheKey = cacheKey;
-  ctx.optLevel = D.getConfig().optLevel;
-  for (unsigned i = 0; i < count; ++i)
-    ctx.dimensions.push_back({dims[i].first, dims[i].second});
+  ctx.optLevel = config_.optLevel;
+  for (unsigned i = 0; i < dimCount; ++i)
+    ctx.dimensions.push_back({periodNames[i], dims[i]});
 
-  EJitOrcEngine *syncEngine_ = D.getSyncEngine();
   if (!syncEngine_) {
 #ifndef EJIT_FREESTANDING
-    if (D.getLogger())
-      D.getLogger()->log(ErrorCode::NotActive,
+    if (logger_)
+      logger_->log(ErrorCode::NotActive,
                    "Sync engine not initialized", funcName,
                    std::to_string(cacheKey));
 #endif
@@ -104,9 +113,10 @@ static void *compileMiss(EJitCompileDriver &D,
   if (auto Err = syncEngine_->loadBitcodeModule(bitcode, cacheKey, funcName)) {
     syncEngine_->setActiveContext(nullptr);
 #ifndef EJIT_FREESTANDING
-    if (D.getLogger())
-      D.getLogger()->log(ErrorCode::CompilationFailed,
-                   "Failed to load bitcode module", funcName, std::to_string(cacheKey));
+    if (logger_)
+      logger_->log(ErrorCode::CompilationFailed,
+                   "Failed to load bitcode module", funcName,
+                   std::to_string(cacheKey));
 #else
     consumeError(std::move(Err));
 #endif
@@ -118,9 +128,10 @@ static void *compileMiss(EJitCompileDriver &D,
 
   if (!addrOrErr) {
 #ifndef EJIT_FREESTANDING
-    if (D.getLogger())
-      D.getLogger()->log(ErrorCode::CompilationFailed,
-                   "Failed to look up compiled function", funcName, std::to_string(cacheKey));
+    if (logger_)
+      logger_->log(ErrorCode::CompilationFailed,
+                   "Failed to look up compiled function", funcName,
+                   std::to_string(cacheKey));
 #else
     consumeError(addrOrErr.takeError());
 #endif
@@ -130,43 +141,10 @@ static void *compileMiss(EJitCompileDriver &D,
   void *funcPtr = *addrOrErr;
 
   SmallVector<std::string, 4> periodDeps;
-  for (unsigned i = 0; i < count; ++i)
-    periodDeps.push_back(dims[i].first + "=" + std::to_string(dims[i].second));
+  for (unsigned i = 0; i < dimCount; ++i)
+    periodDeps.push_back(periodNames[i] + "=" + std::to_string(dims[i]));
 
   cache_.put(cacheKey, funcPtr, bitcode.size(), periodDeps);
 
   return funcPtr;
-}
-
-void *EJitCompileDriver::getOrCompile(
-    const std::string &funcName,
-    const std::pair<std::string, uint8_t> *dims,
-    unsigned count) {
-
-  uint32_t funcIdx = loader_.getFuncIndex(funcName);
-  uint64_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
-
-  if (void *cached = cache_.getOrNull(cacheKey))
-    return cached;
-
-  return compileMiss(*this, funcName, cacheKey, dims, count);
-}
-
-void *EJitCompileDriver::getOrCompile(
-    uint32_t funcIdx,
-    const std::pair<std::string, uint8_t> *dims,
-    unsigned count) {
-
-  uint64_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
-
-  // Cache hit: zero string operations in this path
-  if (void *cached = cache_.getOrNull(cacheKey))
-    return cached;
-
-  // Cache miss: resolve funcName from the module loader
-  const std::string &funcName = loader_.getFuncNameByFuncIdx(funcIdx);
-  if (funcName.empty())
-    return nullptr;
-
-  return compileMiss(*this, funcName, cacheKey, dims, count);
 }

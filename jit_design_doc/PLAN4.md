@@ -394,9 +394,9 @@ void process_task_multi(uint8_t cellIdx, int iterations) { ... }
 // AOT 编译后生成的 Wrapper (单函数混合方案)
 void process_task_multi(uint8_t cellIdx, int iterations) {
     // === Wrapper 逻辑 (JIT 入口) ===
-    // 使用 ejit_dim_t 结构传递 {name, index} 对
-    ejit_dim_t dims[1] = {{"cell", cellIdx}};
-    PFN_process_task_multi pfn = (PFN_process_task_multi)ejit_compile_or_get(funcIdx, dims, 1, NULL);
+    // 维度编码在 cacheKey 中
+    uint64_t key = (funcIdx << 32) | cellIdx;
+    PFN_process_task_multi pfn = (PFN_process_task_multi)ejit_compile_or_get(key, NULL);
 
     if (pfn) {
         return pfn(cellIdx, iterations);  // JIT 成功，调用 specialized 版本
@@ -415,12 +415,11 @@ void process_task_multi(uint8_t cellIdx, uint8_t trpIdx, int iterations) { ... }
 // AOT 编译后生成的 Wrapper (单函数混合方案)
 void process_task_multi(uint8_t cellIdx, uint8_t trpIdx, int iterations) {
     // === Wrapper 逻辑 (JIT 入口) ===
-    // 使用 ejit_dim_t 结构传递 {name, index} 对
-    ejit_dim_t dims[2] = {
+    // 维度编码在 cacheKey 中
         {"cell", cellIdx},   // cell 维度: g_cellCfg[cellIdx]
         {"trp", trpIdx}      // trp 维度: g_trpCfg[trpIdx]
     };
-    PFN_process_task_multi pfn = (PFN_process_task_multi)ejit_compile_or_get(funcIdx, dims, 2, NULL);
+    PFN_process_task_multi pfn = (PFN_process_task_multi)ejit_compile_or_get(key, NULL);
 
     if (pfn) {
         return pfn(cellIdx, trpIdx, iterations);  // JIT 成功，调用 specialized 版本
@@ -440,7 +439,7 @@ void process_static_data(void) { ... }
 void process_static_data(void) {
     // === Wrapper 逻辑 (JIT 入口) ===
     // 无维度参数，dims 为 NULL，count 为 0
-    PFN_process_static_data pfn = (PFN_process_static_data)ejit_compile_or_get(funcIdx, NULL, 0, NULL);
+    PFN_process_static_data pfn = (PFN_process_static_data)ejit_compile_or_get(funcIdx << 32, NULL);
 
     if (pfn) {
         return pfn();  // JIT 成功，调用 specialized 版本
@@ -456,7 +455,7 @@ void process_static_data(void) {
 | ---------- | ----------------------------------------- |
 | Wrapper 生成 | AOT 编译时由 `EJitWrapperGenPass` 生成，单函数混合方案  |
 | Wrapper 数量 | 每个 `ejit_entry` 函数只有一个函数                  |
-| 参数传递       | 使用 `ejit_dim_t` 结构传递 `{name, index}` 对    |
+| 参数传递       | Wrapper 在寄存器中计算 cacheKey（funcIdx<<32|dims），零栈分配    |
 | 用户调用       | 直接调用原函数名，实际执行 wrapper + 原函数逻辑             |
 | Fallback   | 单函数混合方案：JIT 失败时继续执行原函数逻辑，无需单独 fallback 函数 |
 | out_pfn    | 保留作为 future 扩展，用于跨平台适配或状态查询               |
@@ -886,13 +885,12 @@ bool ejit_is_active(const char* periodName, int cellIdx);
 typedef struct {
     const char* name;    /* 维度名称，如 "cell", "trp" */
     uint8_t index;       /* 参数值 */
-} ejit_dim_t;
 
 // 内部使用: Wrapper 入口和编译函数
 // 返回特化函数指针，NULL 表示编译失败继续执行原函数逻辑
-// ejit_dim_t 传递 {name, index} 结构化数据用于 JIT 特化
+// cacheKey = (funcIdx << 32) | dims
 // out_pfn 保留作为 future 扩展，用于跨平台适配或状态查询
-void* ejit_compile_or_get(uint32_t funcIdx, ejit_dim_t* dims,
+void* ejit_compile_or_get(uint64_t cacheKey,
                           int count, void** out_pfn);
 
 // 缓存管理

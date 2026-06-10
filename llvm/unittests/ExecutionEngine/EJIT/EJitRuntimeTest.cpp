@@ -136,7 +136,7 @@ TEST(EJitModuleLoader, RegisterAndGetBitcode) {
   const uint8_t data[] = {0xAA, 0xBB, 0xCC, 0xDD};
   loader.registerBitcode("my_func", data, sizeof(data));
 
-  auto result = loader.getBitcode("my_func");
+  auto result = loader.getBitcodeByFuncIdx(hashFuncName("my_func"));
   ASSERT_TRUE(static_cast<bool>(result));
   EXPECT_EQ(result->size(), 4u);
   EXPECT_EQ((uint8_t)(*result)[0], 0xAA);
@@ -144,7 +144,7 @@ TEST(EJitModuleLoader, RegisterAndGetBitcode) {
 
 TEST(EJitModuleLoader, GetBitcodeNotFound) {
   EJitModuleLoader loader;
-  auto result = loader.getBitcode("nonexistent");
+  auto result = loader.getBitcodeByFuncIdx(0xDEAD);
   EXPECT_FALSE(static_cast<bool>(result));
   // Consume the error to avoid unchecked-Expected assertion at destruction
   if (!result)
@@ -158,22 +158,13 @@ TEST(EJitModuleLoader, MultipleFunctions) {
   loader.registerBitcode("f1", d1, sizeof(d1));
   loader.registerBitcode("f2", d2, sizeof(d2));
 
-  EXPECT_EQ(loader.getEntryCount(), 2u);
-
-  auto r1 = loader.getBitcode("f1");
+  auto r1 = loader.getBitcodeByFuncIdx(hashFuncName("f1"));
   ASSERT_TRUE(static_cast<bool>(r1));
   EXPECT_EQ(r1->size(), 1u);
 
-  auto r2 = loader.getBitcode("f2");
+  auto r2 = loader.getBitcodeByFuncIdx(hashFuncName("f2"));
   ASSERT_TRUE(static_cast<bool>(r2));
   EXPECT_EQ(r2->size(), 2u);
-}
-
-TEST(EJitModuleLoader, GetTotalBitcodeSize) {
-  EJitModuleLoader loader;
-  loader.registerBitcode("a", nullptr, 100);
-  loader.registerBitcode("b", nullptr, 200);
-  EXPECT_EQ(loader.getTotalBitcodeSize(), 300u);
 }
 
 //===----------------------------------------------------------------------===//
@@ -262,20 +253,20 @@ TEST(EJitCache, PeriodicInvalidation) {
 }
 
 TEST(EJitCache, BuildCacheKey) {
-  // uint32_t key = funcIdx(16b) | dim[0](4b) | dim[1](4b) | dim[2](4b) | dim[3](4b)
-  // No dimensions → key = funcIdx << 16
-  uint32_t key0 = EJitCache::buildCacheKey(7, nullptr, 0);
-  EXPECT_EQ(key0, 0x00070000u);
+  // uint64_t key = funcIdx(32b) | dim[0](8b) | dim[1](8b) | dim[2](8b) | dim[3](8b)
+  // No dimensions → key = funcIdx << 32
+  uint64_t key0 = EJitCache::buildCacheKey(7, nullptr, 0);
+  EXPECT_EQ(key0, 0x0000000700000000ULL);
 
-  // Single dimension: funcIdx=1, cell=3 → 0x00010003
+  // Single dimension: funcIdx=1, cell=3 → (1 << 32) | 3
   std::pair<std::string, uint8_t> dims1[] = {{"cell", 3}};
-  uint32_t key1 = EJitCache::buildCacheKey(1, dims1, 1);
-  EXPECT_EQ(key1, 0x00010003u);
+  uint64_t key1 = EJitCache::buildCacheKey(1, dims1, 1);
+  EXPECT_EQ(key1, 0x0000000100000003ULL);
 
-  // Multiple dimensions: funcIdx=2, cell=5, trp=1 → 0x00020051
+  // Multiple dimensions: funcIdx=2, d0=1, d1=5 → (2 << 32) | 1 | (5 << 8)
   std::pair<std::string, uint8_t> dims2[] = {{"trp", 1}, {"cell", 5}};
-  uint32_t key2 = EJitCache::buildCacheKey(2, dims2, 2);
-  EXPECT_EQ(key2, 0x00020051u);
+  uint64_t key2 = EJitCache::buildCacheKey(2, dims2, 2);
+  EXPECT_EQ(key2, 0x0000000200000501ULL);
 }
 
 TEST(EJitCache, Clear) {

@@ -80,8 +80,7 @@ EJit::EJit(const Config &config) : config_(config) {
   EJitLogger *logger = nullptr;
 #endif
   compileDriver_ = std::make_unique<EJitCompileDriver>(
-      config, *cache_, runtimeState_->getRegistry(),
-      *runtimeState_, *moduleLoader_, logger);
+      config, *cache_, *runtimeState_, *moduleLoader_, logger);
 
   // Consume registration data from the staging store (constructor path).
   StoredData data = EJitRegistrationStore::instance().consume();
@@ -191,16 +190,8 @@ bool EJit::isActive(const std::string &periodName, uint8_t cellIdx) const {
   return runtimeState_->isActive(periodName, cellIdx);
 }
 
-void *EJit::getOrCompile(const std::string &funcName,
-                         const std::pair<std::string, uint8_t> *dims,
-                         unsigned count) {
-  return compileDriver_->getOrCompile(funcName, dims, count);
-}
-
-void *EJit::getOrCompile(uint32_t funcIdx,
-                         const std::pair<std::string, uint8_t> *dims,
-                         unsigned count) {
-  return compileDriver_->getOrCompile(funcIdx, dims, count);
+void *EJit::getOrCompile(uint64_t cacheKey) {
+  return compileDriver_->getOrCompile(cacheKey);
 }
 
 void EJit::clearCache() {
