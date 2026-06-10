@@ -523,7 +523,7 @@ defm ImageGatherBiasLodAMD : CapabilityOperand<5009, 0, 0, [], [Shader]>;
 defm FragmentMaskAMD : CapabilityOperand<5010, 0, 0, [], [Shader]>;
 defm StencilExportEXT : CapabilityOperand<5013, 0, 0, [], [Shader]>;
 defm ImageReadWriteLodAMD : CapabilityOperand<5015, 0, 0, [], [Shader]>;
-defm Int64ImageEXT : CapabilityOperand<5016, 0, 0, [SPV_EXT_shader_image_int64], [Int64]>;
+defm Int64ImageEXT : CapabilityOperand<5016, 0, 0, [SPV_EXT_shader_image_int64], [Shader]>;
 defm ShaderClockKHR : CapabilityOperand<5055, 0, 0, [SPV_KHR_shader_clock], []>;
 defm BFloat16TypeKHR : CapabilityOperand<5116, 0, 0, [SPV_KHR_bfloat16], []>;
 defm SampleMaskOverrideCoverageNV : CapabilityOperand<5249, 0, 0, [], [SampleRateShading]>;
@@ -1054,6 +1054,8 @@ defm Rg16ui : ImageFormatOperand<36, [StorageImageExtendedFormats]>;
 defm Rg8ui : ImageFormatOperand<37, [StorageImageExtendedFormats]>;
 defm R16ui : ImageFormatOperand<38, [StorageImageExtendedFormats]>;
 defm R8ui : ImageFormatOperand<39, [StorageImageExtendedFormats]>;
+defm R64ui : ImageFormatOperand<40, [Int64ImageEXT]>;
+defm R64i : ImageFormatOperand<41, [Int64ImageEXT]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define ImageChannelOrder enum values and at the same time

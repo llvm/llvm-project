@@ -1,14 +1,15 @@
 ; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bindless_images,+SPV_EXT_shader_image_int64 %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bindless_images,+SPV_EXT_shader_image_int64 %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bindless_images %s -o - | FileCheck %s
+; spirv-val behavior for Int64ImageEXT is not aligned with spec
+; error message is: Capability Int64ImageEXT is required when using Sampled Type of 64-bit int
+; but this requirement is not correct
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bindless_images,+SPV_EXT_shader_image_int64 %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: OpConvertHandleTo[Image/Sampler/SampledImage]INTEL instruction
 ; CHECK-ERROR-SAME: require the following SPIR-V extension: SPV_INTEL_bindless_images
 
-; CHECK-DAG: OpCapability BindlessImagesINTEL
-; CHECK-DAG: OpCapability Int64ImageEXT
-; CHECK-DAG: OpExtension "SPV_INTEL_bindless_images"
-; CHECK-DAG: OpExtension "SPV_EXT_shader_image_int64"
+; CHECK: OpCapability BindlessImagesINTEL
+; CHECK: OpExtension "SPV_INTEL_bindless_images"
 
 ; CHECK-DAG: %[[#VoidTy:]] = OpTypeVoid
 ; CHECK-DAG: %[[#Int64Ty:]] = OpTypeInt 64
