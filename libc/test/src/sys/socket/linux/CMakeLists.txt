@@ -116,10 +116,16 @@ add_libc_unittest(
     libc.hdr.sys_socket_macros
     libc.hdr.types.socklen_t
     libc.hdr.types.struct_linger
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.struct_timeval
     libc.src.errno.errno
     libc.src.sys.socket.getsockopt
     libc.src.sys.socket.setsockopt
     libc.src.sys.socket.socket
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.recv
+    libc.src.time.clock_gettime
     libc.src.unistd.close
     libc.src.unistd.pipe
     libc.src.__support.CPP.scope
@@ -198,6 +204,26 @@ add_libc_unittest(
     libc.src.sys.socket.socketpair
     libc.src.sys.socket.sendto
     libc.src.sys.socket.recvfrom
+    libc.src.unistd.close
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  sendmmsg_test
+  SUITE
+    libc_sys_socket_unittests
+  SRCS
+    sendmmsg_test.cpp
+  DEPENDS
+    libc.hdr.sys_socket_macros
+    libc.hdr.types.struct_mmsghdr
+    libc.src.errno.errno
+    libc.src.string.strlen
+    libc.src.sys.socket.socketpair
+    libc.src.sys.socket.sendmmsg
+    libc.src.sys.socket.recvmsg
     libc.src.unistd.close
     libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest

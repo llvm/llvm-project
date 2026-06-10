@@ -903,20 +903,24 @@ class OpenMP_MapClauseSkip<
     MapClauseOwningOpInterface
   ];
 
-  let arguments = (ins
-    Variadic<OpenMP_PointerLikeType>:$map_vars
-  );
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$map_vars,
+      Variadic<OpenMP_IteratedType>:$map_iterated);
 
   // This assembly format should only be used by operations where `map` does not
   // define entry block arguments. Otherwise, it must be printed and parsed
   // together with the corresponding region.
   let optAssemblyFormat = [{
-    `map_entries` `(` $map_vars `:` type($map_vars) `)`
+    `map_entries` `(` $map_vars `:` type($map_vars) `)` |
+    `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`
   }];
 
   let description = [{
     The optional `map_vars` maps data from the current task's data environment
     to the device data environment.
+
+    The optional `map_iterated` holds iterator-produced handles (from
+    `omp.iterator`) whose bodies create `omp.map.info` ops, specifying
+    map entries expanded at runtime via an iterator modifier.
   }];
 }
 

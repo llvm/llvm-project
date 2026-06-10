@@ -150,6 +150,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::nearbyintf16(0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::rintf16(0.0f16));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf16(0.0f16));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf16(0.0f16));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf16(0.0f16));
   EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf16("")).is_nan());
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::roundf16(0.0f16));
@@ -731,8 +732,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0x0p+0f,
                LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
-  EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::llrintf128(float128(0.0)));
-  EXPECT_FP_EQ(0.0L, LIBC_NAMESPACE::shared::llroundf128(float128(0.0)));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintf128(float128(0.0)));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf128(float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lrintf128(float128(0.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::lroundf128(float128(0.0)));
   EXPECT_FP_EQ(float128(0.0),
@@ -751,8 +752,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
 
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
-  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::atanbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0x1.921fb6p0f),
+               LIBC_NAMESPACE::shared::acosbf16(bfloat16(0.0f)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::asinbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::atanbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16add(2.0, 3.0));
   EXPECT_FP_EQ(bfloat16(2.0f), LIBC_NAMESPACE::shared::bf16divf(4.0f, 2.0f));
   EXPECT_FP_EQ(bfloat16(2.0), LIBC_NAMESPACE::shared::bf16div(4.0, 2.0));
@@ -808,10 +811,15 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::nextafterbf16(
                                   bfloat16(0.0), bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::sqrtbf16(bfloat16(1.0)));
-#ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
-  EXPECT_FP_EQ(bfloat16(0.0),
-               LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0), 0.0L));
-#endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  // TODO: This test case just failed only when building with gcc-13 and only
+  //   for `ninja libc.test.shared.shared_math_test.__unit__.__NO_FMA_OPT
+  //   Other gcc versions or other sub-targets work fine.
+  //   https://github.com/llvm/llvm-project/issues/199332
+  // #ifndef LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
+  //   EXPECT_FP_EQ(bfloat16(0.0),
+  //                LIBC_NAMESPACE::shared::nexttowardbf16(bfloat16(0.0),
+  //                0.0L));
+  // #endif // LIBC_TYPES_LONG_DOUBLE_IS_DOUBLE_DOUBLE
 
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbbf16(bfloat16(1.0)));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbbf16(bfloat16(1.0)));

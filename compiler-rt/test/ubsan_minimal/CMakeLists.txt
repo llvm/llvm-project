@@ -15,7 +15,7 @@ foreach(arch ${UBSAN_TEST_ARCH})
   get_test_cc_for_arch(${arch} UBSAN_TEST_TARGET_CC UBSAN_TEST_TARGET_CFLAGS)
 
   if(COMPILER_RT_GPU_BUILD)
-    if("${arch}" MATCHES "amdgcn")
+    if(COMPILER_RT_TARGET_AMDGPU)
       list(APPEND UBSAN_TEST_TARGET_CFLAGS
            -Wno-multi-gpu -flto -mcpu=native -nogpulib -startfiles -stdlib)
     elseif("${arch}" MATCHES "nvptx")

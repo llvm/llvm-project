@@ -4,9 +4,9 @@
 define i1 @test(i64 %x, i1 %cond1, i1 %cond2) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    not a1, a1
 ; CHECK-NEXT:    addi a3, a0, 1
 ; CHECK-NEXT:    slt a0, a3, a0
-; CHECK-NEXT:    not a1, a1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    or a0, a2, a0
 ; CHECK-NEXT:    ret

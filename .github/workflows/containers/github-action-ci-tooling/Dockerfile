@@ -79,7 +79,7 @@ COPY --from=llvm-downloader /llvm-extract/LLVM-${LLVM_VERSION}-Linux-X64/bin/cla
 
 # Install dependencies for 'pr-code-format.yml' job
 COPY llvm/utils/git/requirements_formatting.txt requirements_formatting.txt
-RUN pip install -r requirements_formatting.txt --break-system-packages && \
+RUN pip install --require-hashes -r requirements_formatting.txt --break-system-packages && \
     rm requirements_formatting.txt
 USER gha
 WORKDIR /home/gha
@@ -95,7 +95,7 @@ COPY clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py ${LLVM_SYSROOT}/bin/cl
 
 # Install dependencies for 'pr-code-lint.yml' job
 COPY llvm/utils/git/requirements_linting.txt requirements_linting.txt
-RUN pip install -r requirements_linting.txt --break-system-packages && \
+RUN pip install --require-hashes -r requirements_linting.txt --break-system-packages && \
     rm requirements_linting.txt
 USER gha
 WORKDIR /home/gha
@@ -113,3 +113,16 @@ RUN apt-get update && \
     universal-ctags && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+FROM base as ci-container-github-automation
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3-git \
+    python3-github && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+USER gha
+
+ADD github-automation.py /usr/local/bin/

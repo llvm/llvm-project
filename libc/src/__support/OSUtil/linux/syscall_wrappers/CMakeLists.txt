@@ -190,6 +190,19 @@ add_header_library(
 )
 
 add_header_library(
+  sendmmsg
+  HDRS
+    sendmmsg.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.struct_mmsghdr
+    libc.include.sys_syscall
+)
+
+add_header_library(
   sendmsg
   HDRS
     sendmsg.h
@@ -327,6 +340,19 @@ add_header_library(
   HDRS
     personality.h
   DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  ptrace
+  HDRS
+    ptrace.h
+  DEPENDS
+    libc.hdr.types.pid_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or

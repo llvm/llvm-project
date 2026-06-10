@@ -286,7 +286,7 @@ unsigned int test_get_workgroup_size_z()
 }
 
 // NONUNIFORM-V5-LABEL: define dso_local void @test_get_workgroup_size(
-// NONUNIFORM-V5-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// NONUNIFORM-V5-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) nofree noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // NONUNIFORM-V5-NEXT:  [[ENTRY:.*]]:
 // NONUNIFORM-V5-NEXT:    switch i32 [[D]], label %[[SW_EPILOG:.*]] [
 // NONUNIFORM-V5-NEXT:      i32 0, label %[[SW_BB:.*]]
@@ -330,7 +330,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-V5-NEXT:    ret void
 //
 // UNIFORM-V5-LABEL: define dso_local void @test_get_workgroup_size(
-// UNIFORM-V5-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// UNIFORM-V5-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) nofree noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // UNIFORM-V5-NEXT:  [[ENTRY:.*]]:
 // UNIFORM-V5-NEXT:    switch i32 [[D]], label %[[SW_EPILOG:.*]] [
 // UNIFORM-V5-NEXT:      i32 0, label %[[SW_BB:.*]]
@@ -360,7 +360,7 @@ unsigned int test_get_workgroup_size_z()
 // UNIFORM-V5-NEXT:    ret void
 //
 // NONUNIFORM-V4-LABEL: define dso_local void @test_get_workgroup_size(
-// NONUNIFORM-V4-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// NONUNIFORM-V4-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) nofree noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // NONUNIFORM-V4-NEXT:  [[ENTRY:.*]]:
 // NONUNIFORM-V4-NEXT:    switch i32 [[D]], label %[[SW_EPILOG:.*]] [
 // NONUNIFORM-V4-NEXT:      i32 0, label %[[SW_BB:.*]]
@@ -410,7 +410,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-V4-NEXT:    ret void
 //
 // UNIFORM-V4-LABEL: define dso_local void @test_get_workgroup_size(
-// UNIFORM-V4-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// UNIFORM-V4-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) nofree noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // UNIFORM-V4-NEXT:  [[ENTRY:.*]]:
 // UNIFORM-V4-NEXT:    switch i32 [[D]], label %[[SW_EPILOG:.*]] [
 // UNIFORM-V4-NEXT:      i32 0, label %[[SW_BB:.*]]
@@ -440,7 +440,7 @@ unsigned int test_get_workgroup_size_z()
 // UNIFORM-V4-NEXT:    ret void
 //
 // NONUNIFORM-UNKNOWN-LABEL: define dso_local void @test_get_workgroup_size(
-// NONUNIFORM-UNKNOWN-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
+// NONUNIFORM-UNKNOWN-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) nofree noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR4:[0-9]+]] {
 // NONUNIFORM-UNKNOWN-NEXT:  [[ENTRY:.*]]:
 // NONUNIFORM-UNKNOWN-NEXT:    switch i32 [[D]], label %[[SW_EPILOG:.*]] [
 // NONUNIFORM-UNKNOWN-NEXT:      i32 0, label %[[SW_BB:.*]]
@@ -522,7 +522,7 @@ unsigned int test_get_workgroup_size_z()
 // NONUNIFORM-UNKNOWN-NEXT:    ret void
 //
 // UNIFORM-UNKNOWN-LABEL: define dso_local void @test_get_workgroup_size(
-// UNIFORM-UNKNOWN-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
+// UNIFORM-UNKNOWN-SAME: i32 noundef [[D:%.*]], ptr addrspace(1) nofree noundef writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // UNIFORM-UNKNOWN-NEXT:  [[ENTRY:.*]]:
 // UNIFORM-UNKNOWN-NEXT:    switch i32 [[D]], label %[[SW_EPILOG:.*]] [
 // UNIFORM-UNKNOWN-NEXT:      i32 0, label %[[SW_BB:.*]]

@@ -44,6 +44,8 @@ namespace dxbc {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
+constexpr static uint64_t DXCONTAINER_STRUCT_ALIGNMENT = 4;
+
 inline Triple::EnvironmentType getShaderStage(uint32_t Kind) {
   assert(Kind <= Triple::RootSignature - Triple::Pixel &&
          "Shader kind out of expected range.");
@@ -261,6 +263,7 @@ LLVM_ABI PartType parsePartType(StringRef S);
 bool isDebugProgramPart(PartType PT);
 
 const char *getProgramPartName(bool IsDebug);
+bool isProgramPart(StringRef PartName);
 
 struct VertexPSVInfo {
   uint8_t OutputPositionPresent;
@@ -821,6 +824,219 @@ struct DebugNameHeader {
 };
 
 static_assert(sizeof(DebugNameHeader) == 4, "DebugNameHeader size incorrect.");
+
+#define VERSION_INFO_FLAG(Num, Val, Str) Val = Num,
+enum class CompilerVersionFlags : uint32_t {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(Internal)
+};
+
+bool isValidCompilerVersionFlags(uint32_t V);
+
+struct CompilerVersionHeader {
+  uint16_t Major;
+  uint16_t Minor;
+  CompilerVersionFlags Flags;
+  /// The number outputted by `git rev-list --count HEAD` in the compiler repo.
+  uint32_t CommitCount;
+  /// Byte size of CommitSha and CustomVersionString, padding not included.
+  uint32_t ContentSizeInBytes;
+
+  void swapBytes() {
+    sys::swapByteOrder(Major);
+    sys::swapByteOrder(Minor);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(CommitCount);
+    sys::swapByteOrder(ContentSizeInBytes);
+  }
+};
+
+static_assert(sizeof(CompilerVersionHeader) == 16,
+              "CompilerVersionHeader size incorrect.");
+
+namespace SourceInfo {
+
+struct Header {
+  /// Part size including this header. Aligned to a 4-byte boundary.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be zero.
+  uint16_t Flags;
+  /// Source info part must contain 3 sections. Each section is 4-byte aligned.
+  uint16_t SectionCount;
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(SectionCount);
+  }
+};
+
+static_assert(sizeof(Header) == 8, "SourceInfo::Header size incorrect.");
+
+#define SOURCE_INFO_TYPE(Num, Val) Val = Num,
+enum class SectionType : uint16_t {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(Args)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<SectionType>> getSectionTypes();
+LLVM_ABI bool isValidSectionType(uint16_t V);
+LLVM_ABI StringRef getSectionName(SectionType Type);
+
+struct SectionHeader {
+  /// Section size including this header. Aligned to a 4-byte boundary.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be zero.
+  uint16_t Flags;
+  SectionType Type;
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(Type);
+  }
+};
+
+static_assert(sizeof(SectionHeader) == 8,
+              "SourceInfo::SectionHeader size incorrect.");
+
+namespace Names {
+
+LLVM_PACKED(struct HeaderOnDisk {
+  /// Reserved, must be zero.
+  uint32_t Flags;
+  /// The number of data entries.
+  uint32_t Count;
+  /// The total size of the data entries following this header. Each entry is
+  /// 4-byte padded.
+  uint16_t EntriesSizeInBytes;
+});
+
+static_assert(sizeof(HeaderOnDisk) == 10,
+              "SourceInfo::Names::HeaderOnDisk size incorrect.");
+
+struct Entry {
+  /// Size of entry, including this header. Aligned to a 4-byte boundary.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be set to zero.
+  uint32_t Flags;
+  /// Size of the file name following this header, including the null
+  /// terminator, excluding entry padding.
+  uint32_t NameSizeInBytes;
+  /// Size of the file content, including the null terminator.
+  uint32_t ContentSizeInBytes;
+  /// Followed by a string of size NameSizeInBytes with HLSL source file name.
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(NameSizeInBytes);
+    sys::swapByteOrder(ContentSizeInBytes);
+  }
+};
+
+static_assert(sizeof(Entry) == 16, "SourceInfo::Names::Entry size incorrect.");
+
+} // namespace Names
+
+namespace Contents {
+
+#define COMPRESSION_TYPE(Num, Val) Val = Num,
+enum class CompressionType : uint16_t {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  LLVM_MARK_AS_BITMASK_ENUM(Zlib)
+};
+
+LLVM_ABI ArrayRef<EnumEntry<CompressionType>> getCompressionTypes();
+bool isValidCompressionType(uint16_t V);
+
+struct Header {
+  /// Size of the section including this header. Aligned to a 4-byte boundary.
+  /// In some implementations, it is unused and set to zero.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be zero.
+  uint16_t Flags;
+  /// Type of compression used to compress the whole section content.
+  CompressionType Type;
+  /// The size of the data entries following this header.
+  /// Aligned to a 4-byte boundary if Type is None.
+  /// Doesn’t have to be aligned otherwise.
+  uint32_t EntriesSizeInBytes;
+  /// Total size of the data entries when uncompressed. Aligned to a 4-byte
+  /// boundary.
+  uint32_t UncompressedEntriesSizeInBytes;
+  /// The number of data entries.
+  uint32_t Count;
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(Type);
+    sys::swapByteOrder(EntriesSizeInBytes);
+    sys::swapByteOrder(UncompressedEntriesSizeInBytes);
+    sys::swapByteOrder(Count);
+  }
+};
+
+static_assert(sizeof(Header) == 20,
+              "SourceInfo::Contents::Header size incorrect.");
+
+struct Entry {
+  /// Size of entry, including this header. Aligned to a 4-byte boundary.
+  uint32_t AlignedSizeInBytes;
+  /// Reserved, must be zero.
+  uint32_t Flags;
+  /// Size of the file contents following this header, including the null
+  /// terminator, excluding entry padding.
+  uint32_t ContentSizeInBytes;
+  /// Followed by a string of length ContentSizeInBytes-1 with HLSL source file
+  /// content.
+  /// Entry is aligned to 4-bytes (in uncompressed form).
+  /// Entries of this section must be stored in the same order as the entries of
+  /// the Names section.
+
+  void swapBytes() {
+    sys::swapByteOrder(AlignedSizeInBytes);
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(ContentSizeInBytes);
+  }
+};
+
+static_assert(sizeof(Entry) == 12,
+              "SourceInfo::Contents::Entry size incorrect.");
+
+} // namespace Contents
+
+namespace Args {
+
+struct Header {
+  /// Reserved, must be zero.
+  uint32_t Flags;
+  /// Length of all argument pairs, including their null terminators, not
+  /// including this header.
+  uint32_t SizeInBytes;
+  /// Number of arguments.
+  uint32_t Count;
+  /// Followed by Count argument pairs, representing command line arguments of
+  /// the HLSL compiler invocation. Each pair consists of argument name and
+  /// argument value null-terminated strings. Padding is not applied to the
+  /// pairs.
+
+  void swapBytes() {
+    sys::swapByteOrder(Flags);
+    sys::swapByteOrder(SizeInBytes);
+    sys::swapByteOrder(Count);
+  }
+};
+
+static_assert(sizeof(Header) == 12, "SourceInfo::Args::Header size incorrect.");
+
+} // namespace Args
+
+} // namespace SourceInfo
 
 } // namespace dxbc
 } // namespace llvm

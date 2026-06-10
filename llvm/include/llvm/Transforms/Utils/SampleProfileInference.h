@@ -112,8 +112,8 @@ struct ProfiParams {
   const int64_t CostUnlikely = ((int64_t)1) << 30;
 };
 
-void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
-void applyFlowInference(FlowFunction &Func);
+LLVM_ABI void applyFlowInference(const ProfiParams &Params, FlowFunction &Func);
+LLVM_ABI void applyFlowInference(FlowFunction &Func);
 
 /// Sample profile inference pass.
 template <typename FT> class SampleProfileInference {
