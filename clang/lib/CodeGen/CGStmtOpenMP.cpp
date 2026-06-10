@@ -1310,19 +1310,19 @@ void CodeGenFunction::EmitOMPPrivateClause(
     CodeGenFunction::OMPPrivateScope &PrivateScope) {
   if (!HaveInsertPoint())
     return;
-  llvm::DenseSet<const VarDecl *> EmittedAsPrivate;
+  llvm::DenseSet<const ValueDecl *> EmittedAsPrivate;
   for (const auto *C : D.getClausesOfKind<OMPPrivateClause>()) {
     auto IRef = C->varlist_begin();
     for (const Expr *IInit : C->private_copies()) {
       const auto *OrigDecl = cast<DeclRefExpr>(*IRef)->getDecl();
       const auto *VD = cast<VarDecl>(cast<DeclRefExpr>(IInit)->getDecl());
-      EmitDecl(*VD);
-      // Emit private VarDecl with copy init.
-      bool IsRegistered =
-          PrivateScope.addPrivate(OrigDecl, GetAddrOfLocalVar(VD));
-      assert(IsRegistered && "private var already registered as private");
-      // Silence the warning about unused variable.
-      (void)IsRegistered;
+      if (EmittedAsPrivate.insert(OrigDecl).second) {
+        EmitDecl(*VD);
+        bool IsRegistered =
+            PrivateScope.addPrivate(OrigDecl, GetAddrOfLocalVar(VD));
+        assert(IsRegistered && "private var already registered as private");
+        (void)IsRegistered;
+      }
       ++IRef;
     }
   }
@@ -1608,15 +1608,35 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
   for (const Expr *IRef : Shareds) {
     const auto *PrivateVD = cast<VarDecl>(cast<DeclRefExpr>(*IPriv)->getDecl());
     const BindingDecl *BD = nullptr;
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(IRef->IgnoreParenImpCasts())) {
-      if (const auto *OCED = dyn_cast<OMPCapturedExprDecl>(DRE->getDecl())) {
-        if (const Expr *Init = OCED->getInit()) {
-          if (const auto *InnerDRE =
-                  dyn_cast<DeclRefExpr>(Init->IgnoreParenImpCasts())) {
-            BD = dyn_cast<BindingDecl>(InnerDRE->getDecl());
-          }
-        }
-      }
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(IRef->IgnoreParenImpCasts()))
+      BD = dyn_cast<BindingDecl>(DRE->getDecl());
+    if (BD) {
+      // Emit the private VarDecl with reduction initialization.
+      EmitDecl(*PrivateVD);
+      Address PrivateAddr = GetAddrOfLocalVar(PrivateVD);
+
+      // Register the BindingDecl with the private address.
+      bool IsRegistered = PrivateScope.addPrivate(BD, PrivateAddr);
+      assert(IsRegistered && "private binding already registered as private");
+      (void)IsRegistered;
+
+      // Get the original BindingDecl address for LHSVD registration.
+      DeclRefExpr BindingDRE(getContext(), const_cast<BindingDecl *>(BD),
+                             /*RefersToEnclosingVariableOrCapture=*/true,
+                             BD->getType(), VK_LValue, IRef->getExprLoc());
+      LValue OriginalLVal = EmitLValue(&BindingDRE);
+      Address OriginalAddr = OriginalLVal.getAddress();
+
+      // Register LHSVD/RHSVD for reduction operation.
+      const auto *LHSVD = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());
+      const auto *RHSVD = cast<VarDecl>(cast<DeclRefExpr>(*IRHS)->getDecl());
+      PrivateScope.addPrivate(LHSVD, OriginalAddr);
+      PrivateScope.addPrivate(RHSVD, PrivateAddr);
+      ++Count;
+      ++ILHS;
+      ++IRHS;
+      ++IPriv;
+      continue;
     }
     // Emit private VarDecl with reduction init.
     RedCG.emitSharedOrigLValue(*this, Count);
@@ -1637,12 +1657,6 @@ void CodeGenFunction::EmitOMPReductionClauseInit(
     // Silence the warning about unused variable.
     (void)IsRegistered;
 
-    // If this is a BindingDecl, also register it directly.
-    if (BD) {
-      IsRegistered = PrivateScope.addPrivate(BD, BaseAddr);
-      assert(IsRegistered && "private binding already registered as private");
-      (void)IsRegistered;
-    }
     const auto *LHSVD = cast<VarDecl>(cast<DeclRefExpr>(*ILHS)->getDecl());
     const auto *RHSVD = cast<VarDecl>(cast<DeclRefExpr>(*IRHS)->getDecl());
     QualType Type = PrivateVD->getType();
@@ -1890,7 +1904,11 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
       if (!DRE)
         continue;
-      PrivateDecls.insert(cast<VarDecl>(DRE->getDecl()));
+      // Skip BindingDecls - lastprivate conditional only applies to VarDecls.
+      const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+      if (!VD)
+        continue;
+      PrivateDecls.insert(VD);
       CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
     }
   }
