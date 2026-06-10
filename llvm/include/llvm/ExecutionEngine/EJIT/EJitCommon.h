@@ -35,6 +35,7 @@ constexpr const char *TAG_EJIT_PERIOD_ARR_IND = "ejit_period_arr_ind";
 constexpr const char *TAG_EJIT_PERIOD_ARR = "ejit_period_arr";
 constexpr const char *TAG_EJIT_PERIOD = "ejit_period";
 constexpr const char *TAG_EJIT_MAY_CONST_FIELD = "ejit_may_const_field";
+constexpr const char *TAG_EJIT_FUNC_IDX = "ejit_func_idx";
 
 //===----------------------------------------------------------------------===//
 // Global variable and section names
@@ -51,6 +52,7 @@ constexpr const char *FN_REGISTER_BITCODE = "ejit_register_bitcode";
 constexpr const char *FN_REGISTER_PERIOD_ARRAY = "ejit_register_period_array";
 constexpr const char *FN_REGISTER_STATIC_VAR = "ejit_register_static_var";
 constexpr const char *FN_COMPILE_OR_GET = "ejit_compile_or_get";
+constexpr const char *FN_COMPILE_OR_GET_V2 = "ejit_compile_or_get_v2";
 constexpr const char *FN_DEACTIVATE_ARRAY = "ejit_deactivate_array";
 constexpr const char *FN_ACTIVATE_ARRAY = "ejit_activate_array";
 
@@ -64,6 +66,21 @@ constexpr unsigned EJIT_CTOR_PRIORITY = 65535;
 //===----------------------------------------------------------------------===//
 constexpr unsigned MAX_PERIOD_ARR_IND_PARAMS = 4;
 constexpr unsigned MAX_PERIOD_ARR_SIZE = 100;
+
+//===----------------------------------------------------------------------===//
+// Deterministic funcIdx generation
+//===----------------------------------------------------------------------===//
+
+/// FNV-1a 32-bit hash used to compute a compile-time funcIdx from the
+/// function name. The same hash is recomputed at runtime for registration
+/// lookup, eliminating the need for string→idx map lookups on the cache-hit
+/// path. Collisions are detected at ejit_init time.
+inline uint32_t hashFuncName(StringRef name) {
+  uint32_t h = 2166136261u;
+  for (char c : name)
+    h = (h ^ static_cast<uint8_t>(c)) * 16777619u;
+  return h;
+}
 
 //===----------------------------------------------------------------------===//
 // Metadata utility functions (shared across AOT passes)

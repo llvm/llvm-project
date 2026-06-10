@@ -320,62 +320,63 @@ JIT 编译时读取常量:
 根据 SPEC4.md 的 Cache key 格式设计：
 
 ```cpp
-// 特化函数指针类型
-using CompiledFunction = void*;
+// Cache Key: uint64_t = funcIdx(32b) | dim[3](8b) | dim[2](8b) | dim[1](8b) | dim[0](8b)
+// funcIdx 由 EJitModuleLoader 自增分配，dim 为 ejit_dim_t.index 的完整 uint8_t 值。
+// 无维度时低 32 位为 0。
 
 // 缓存条目
 struct CacheEntry {
-    std::string cacheKey;            // Cache key (格式见下方)
-    CompiledFunction fn;             // 编译后的函数指针
+    void* funcPtr;                   // 编译后的函数指针
     size_t codeSize;                 // 代码大小
     uint64_t lastAccessTime;         // 最后访问时间 (LRU)
-    uint64_t compileTimeMs;          // 编译耗时
 };
 
 // Code Cache 管理器
 class EJitCache {
-    // 缓存存储：cacheKey -> CacheEntry
-    // Cache key 格式 (根据 SPEC4.md §2.3.2):
-    //   - 单维度："fnName|periodName=cellIdx"
-    //   - 多维度："fnName|periodName1=cellIdx1,periodName2=cellIdx2,..."
-    // 示例："process_task_multi|cell=1,trp=5"
-    std::unordered_map<std::string, CacheEntry> cache_;
+    // 缓存存储：uint64_t cacheKey -> Entry
+    std::unordered_map<uint64_t, Entry> cache_;
 
     // LRU 队列
-    std::list<std::string> lruQueue_;
-    std::unordered_map<std::string, std::list<std::string>::iterator> lruIterators_;
+    std::list<uint64_t> lruList_;
+    std::unordered_map<uint64_t, std::list<uint64_t>::iterator> lruIter_;
+
+    // 时间窗 → cacheKey 集合索引 (用于 invalidateByPeriod)
+    std::unordered_map<std::string, std::set<uint64_t>> periodIndex_;
 
     // 缓存配置
-    size_t maxTotalSize_;           // 总大小限制
-    size_t maxSingleFunctionSize_;  // 单函数大小限制
-    size_t maxEntries_;             // 最大条目数
+    size_t maxTotalSize_;
+    size_t maxSingleFunctionSize_;
+    size_t maxEntries_;
 
 public:
-    CompiledFunction getOrNull(const std::string& cacheKey);
-    void put(const std::string& cacheKey, CompiledFunction fn, size_t codeSize);
-    void invalidate(const std::string& cacheKey);
-    void invalidateByPeriod(const std::string& periodName, int cellIdx); // 时间窗失效时清理相关缓存
+    void* getOrNull(uint64_t cacheKey);
+    bool put(uint64_t cacheKey, void* fn, size_t codeSize,
+             ArrayRef<std::string> periodDeps = {});
+    void invalidateByPeriod(const std::string& periodName, uint8_t cellIdx);
     void evictLRU();
+
+    static uint64_t buildCacheKey(uint32_t funcIdx,
+        const std::pair<std::string, uint8_t>* dims, unsigned count);
 };
 
-// 构建 Cache key (根据 SPEC4.md §2.3.2)
-std::string buildCacheKey(const std::string& fnName,
-                          const std::vector<std::pair<std::string, int>>& periodIndices) {
-    // periodIndices: [(periodName1, cellIdx1), (periodName2, cellIdx2), ...]
-    std::string key = fnName;
-    for (const auto& [periodName, cellIdx] : periodIndices) {
-        key += "|" + periodName + "=" + std::to_string(cellIdx);
-    }
+// 构建 Cache key
+uint64_t buildCacheKey(uint32_t funcIdx,
+                       const std::pair<std::string, uint8_t>* dims,
+                       unsigned count) {
+    uint64_t key = static_cast<uint64_t>(funcIdx) << 32;
+    for (unsigned i = 0; i < count && i < 4; ++i)
+        key |= static_cast<uint64_t>(dims[i].second) << (i * 8);
     return key;
 }
 ```
 
 **Cache key 格式说明** (SPEC4.md §2.3.2):
 
-| 维度数 | Cache key 格式 | 示例                                              |
-| --- | ------------ | ----------------------------------------------- |
-| 单维度 | `"fnName     | periodName=cellIdx"`                            |
-| 多维度 | `"fnName     | periodName1=cellIdx1,periodName2=cellIdx2,..."` |
+| 维度数 | Cache key (uint64_t) | 示例 |
+| --- | --- | --- |
+| 0 (static only) | `funcIdx << 32` | funcIdx=1 → `0x00000001_00000000` |
+| 1 维 | `funcIdx(32b) + dim[0](8b)` | funcIdx=1, cellIdx=3 → `0x00000001_00000003` |
+| 2 维 | `funcIdx(32b) + dim[0](8b) + dim[1](8b)` | cell=1, trp=5 → `0x00000001_00000501` |
 
 ### 3.2.1 运行时 Wrapper 调用模型
 

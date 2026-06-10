@@ -23,17 +23,17 @@ EJitModuleLoader::getBitcode(const std::string &funcName) const {
                    it->second.size);
 }
 
-uint16_t EJitModuleLoader::getFuncIndex(const std::string &funcName) {
+uint32_t EJitModuleLoader::getFuncIndex(const std::string &funcName) {
   auto it = funcToIndex_.find(funcName);
   if (it != funcToIndex_.end())
     return it->second;
-  uint16_t idx = static_cast<uint16_t>(indexToFunc_.size());
+  uint32_t idx = static_cast<uint32_t>(indexToFunc_.size());
   funcToIndex_[funcName] = idx;
   indexToFunc_.push_back(funcName);
   return idx;
 }
 
-const std::string &EJitModuleLoader::getFuncName(uint16_t index) const {
+const std::string &EJitModuleLoader::getFuncName(uint32_t index) const {
   static const std::string empty;
   if (index >= indexToFunc_.size())
     return empty;

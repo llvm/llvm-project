@@ -41,9 +41,9 @@ void *EJitCompileDriver::getOrCompile(
     const std::pair<std::string, uint8_t> *dims,
     unsigned count) {
 
-  // Build cache key: uint32_t = funcIdx(16b) | dim[0..3](4x4b)
-  uint16_t funcIdx = loader_.getFuncIndex(funcName);
-  uint32_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
+  // Build cache key: uint64_t = funcIdx(32b) | dim[0..3](4x8b)
+  uint32_t funcIdx = loader_.getFuncIndex(funcName);
+  uint64_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
 
   // Check cache
   if (void *cached = cache_.getOrNull(cacheKey))

@@ -27,7 +27,7 @@ namespace llvm {
 namespace ejit {
 
 /// Thread-safe LRU code cache with size and entry limits.
-/// Cache key: uint32_t = funcIdx(16b) | dim3(4b) | dim2(4b) | dim1(4b) | dim0(4b)
+/// Cache key: uint64_t = funcIdx(32b) | dim3(8b) | dim2(8b) | dim1(8b) | dim0(8b)
 class EJitCache {
 public:
 #ifdef EJIT_FREESTANDING
@@ -55,10 +55,10 @@ public:
             size_t maxSingleFuncSize = 512 * 1024);
 
   /// Look up a cache entry. Returns nullptr on miss.
-  void *getOrNull(uint32_t cacheKey);
+  void *getOrNull(uint64_t cacheKey);
 
   /// Insert a compiled function into the cache.
-  bool put(uint32_t cacheKey, void *funcPtr,
+  bool put(uint64_t cacheKey, void *funcPtr,
            size_t codeSize,
            ArrayRef<std::string> periodDeps = {});
 
@@ -70,18 +70,18 @@ public:
 
   Stats getStats() const;
 
-  /// Build cache key: upper 16 bits = funcIdx, lower 16 bits = 4x4-bit dims.
-  static uint32_t buildCacheKey(uint16_t funcIdx,
+  /// Build cache key: upper 32 bits = funcIdx, lower 32 bits = 4x8-bit dims.
+  static uint64_t buildCacheKey(uint32_t funcIdx,
       const std::pair<std::string, uint8_t> *dims, unsigned count);
 
 private:
   void evictLRU();
 
   mutable MutexType mutex_;
-  std::unordered_map<uint32_t, Entry> cache_;
-  std::list<uint32_t> lruList_;
-  std::unordered_map<uint32_t, std::list<uint32_t>::iterator> lruIter_;
-  std::unordered_map<std::string, std::set<uint32_t>> periodIndex_;
+  std::unordered_map<uint64_t, Entry> cache_;
+  std::list<uint64_t> lruList_;
+  std::unordered_map<uint64_t, std::list<uint64_t>::iterator> lruIter_;
+  std::unordered_map<std::string, std::set<uint64_t>> periodIndex_;
 
   size_t maxEntries_;
   size_t maxTotalSize_;

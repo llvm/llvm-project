@@ -462,7 +462,7 @@ public:
         engine.ActiveCtx = &ctx;
         engine.OptLevel = ctx.optLevel;
 
-        // Step 2: 加载 bitcode module 到 LLJIT (使用 uint32_t cacheKey)
+        // Step 2: 加载 bitcode module 到 LLJIT (使用 uint64_t cacheKey)
         if (auto Err = engine.loadBitcodeModule(bitcodeData, ctx.cacheKey, ctx.fnName)) {
             engine.ActiveCtx = nullptr;
             return result;
@@ -534,7 +534,7 @@ private:
     std::atomic<bool> running_{false};
     std::atomic<bool> stopping_{false};
 
-    // 正在编译的请求集合 (按 cacheKey, uint32_t)
+    // 正在编译的请求集合 (按 uint64_t cacheKey)
     // 防止同一 cacheKey 重复提交编译请求
     std::set<uint32_t> requestsInFlight_;
     std::mutex inFlightMutex_;
@@ -544,7 +544,7 @@ private:
 struct CompileRequest {
     std::string funcName;
     std::string bitcodeData;
-    SpecializationContext ctx;         // 含 uint32_t cacheKey
+    SpecializationContext ctx;         // 含 uint64_t cacheKey
     uint64_t timestamp;
 };
 ```
@@ -553,7 +553,7 @@ struct CompileRequest {
 void EJitAsyncCompiler::submitRequest(CompileRequest req) {
     {
         std::lock_guard<std::mutex> lock(inFlightMutex_);
-        // 去重: 相同 cacheKey (uint32_t) 已有编译在进行中，跳过
+        // 去重: 相同 cacheKey (uint64_t) 已有编译在进行中，跳过
         if (requestsInFlight_.count(req.ctx.cacheKey)) {
             return;
         }
@@ -824,9 +824,9 @@ private:
     // AOT 嵌入的 bitcode 在 ejit_init 时加载到此缓存
     std::unordered_map<std::string, std::string> bitcodeCache_;
 
-    // 构建 Cache Key (v1.7: uint32_t)
-    // funcIdx(16b) | dim[0](4b) | dim[1](4b) | dim[2](4b) | dim[3](4b)
-    uint32_t buildCacheKey(uint16_t funcIdx, ejit_dim_t* dims, int count);
+    // 构建 Cache Key (v1.8: uint64_t)
+    // funcIdx(32b) | dim[0](8b) | dim[1](8b) | dim[2](8b) | dim[3](8b)
+    uint64_t buildCacheKey(uint32_t funcIdx, ejit_dim_t* dims, int count);
 
     // 构建 SpecializationContext
     SpecializationContext buildContext(const std::string& funcName,
@@ -838,9 +838,9 @@ private:
 void* EJitCompileDriver::getOrCompile(const std::string& funcName,
                                        ejit_dim_t* dims,
                                        int count) {
-    // Step 1: 构建 Cache key (uint32_t, 无字符串开销)
-    uint16_t funcIdx = loader_.getFuncIndex(funcName);
-    uint32_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
+    // Step 1: 构建 Cache key (uint64_t, 无字符串开销)
+    uint32_t funcIdx = loader_.getFuncIndex(funcName);
+    uint64_t cacheKey = EJitCache::buildCacheKey(funcIdx, dims, count);
 
     // Step 2: 查 Cache
     if (void* cached = cache_.getOrNull(cacheKey)) {

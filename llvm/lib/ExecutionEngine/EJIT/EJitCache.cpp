@@ -30,7 +30,7 @@ EJitCache::EJitCache(size_t maxEntries, size_t maxTotalSize,
     : maxEntries_(maxEntries), maxTotalSize_(maxTotalSize),
       maxSingleFuncSize_(maxSingleFuncSize) {}
 
-void *EJitCache::getOrNull(uint32_t cacheKey) {
+void *EJitCache::getOrNull(uint64_t cacheKey) {
   std::shared_lock<decltype(mutex_)> lock(mutex_);
   auto it = cache_.find(cacheKey);
   if (it == cache_.end()) {
@@ -50,7 +50,7 @@ void *EJitCache::getOrNull(uint32_t cacheKey) {
   return it->second.funcPtr;
 }
 
-bool EJitCache::put(uint32_t cacheKey, void *funcPtr,
+bool EJitCache::put(uint64_t cacheKey, void *funcPtr,
                     size_t codeSize,
                     ArrayRef<std::string> periodDeps) {
   std::unique_lock<decltype(mutex_)> lock(mutex_);
@@ -109,7 +109,7 @@ void EJitCache::invalidateByPeriod(const std::string &periodName,
   if (it == periodIndex_.end())
     return;
 
-  for (uint32_t key : it->second) {
+  for (uint64_t key : it->second) {
     auto cacheIt = cache_.find(key);
     if (cacheIt != cache_.end()) {
       currentTotalSize_ -= cacheIt->second.codeSize;
@@ -145,12 +145,12 @@ EJitCache::Stats EJitCache::getStats() const {
   return s;
 }
 
-uint32_t EJitCache::buildCacheKey(
-    uint16_t funcIdx,
+uint64_t EJitCache::buildCacheKey(
+    uint32_t funcIdx,
     const std::pair<std::string, uint8_t> *dims, unsigned count) {
-  uint32_t key = static_cast<uint32_t>(funcIdx) << 16;
+  uint64_t key = static_cast<uint64_t>(funcIdx) << 32;
   for (unsigned i = 0; i < count && i < 4; ++i)
-    key |= (static_cast<uint32_t>(dims[i].second) & 0xF) << (i * 4);
+    key |= static_cast<uint64_t>(dims[i].second) << (i * 8);
   return key;
 }
 
@@ -158,7 +158,7 @@ void EJitCache::evictLRU() {
   if (lruList_.empty())
     return;
 
-  uint32_t key = lruList_.back();
+  uint64_t key = lruList_.back();
   auto it = cache_.find(key);
   if (it != cache_.end()) {
     currentTotalSize_ -= it->second.codeSize;

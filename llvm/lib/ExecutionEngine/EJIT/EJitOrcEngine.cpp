@@ -28,7 +28,7 @@ struct EJitOrcEngine::Impl {
   /// Per-specialization JITDylib pointers so each specialization is
   /// independently compiled and symbols from different specializations
   /// never conflict.
-  std::map<uint32_t, orc::JITDylib *> specDylibs;
+  std::map<uint64_t, orc::JITDylib *> specDylibs;
   /// User-registered symbols (functions + globals) for bare-metal.
   /// Populated via ejit_register_symbol() / addUserSymbol().
   std::map<std::string, void *> userSymbols;
@@ -156,7 +156,7 @@ EJitOrcEngine::Create(const Config &config,
 }
 
 Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
-                                       uint32_t cacheKey,
+                                       uint64_t cacheKey,
                                        const std::string &origFnName) {
   auto Ctx = std::make_unique<LLVMContext>();
   auto Buf = MemoryBuffer::getMemBuffer(
@@ -259,7 +259,7 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   return Error::success();
 }
 
-Expected<void *> EJitOrcEngine::lookup(uint32_t cacheKey,
+Expected<void *> EJitOrcEngine::lookup(uint64_t cacheKey,
                                        const std::string &name) {
   auto it = P->specDylibs.find(cacheKey);
   if (it == P->specDylibs.end())

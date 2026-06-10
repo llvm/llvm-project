@@ -23,7 +23,7 @@ class EJitRuntimeState;
 
 struct SpecializationContext {
   std::string fnName;
-  uint32_t cacheKey = 0;
+  uint64_t cacheKey = 0;
   struct DimInfo {
     std::string periodName;
     uint8_t cellIdx;
@@ -49,12 +49,12 @@ public:
   /// by cacheKey. Each specialization gets its own JITDylib so symbols
   /// from the same TU bitcode can be defined multiple times without conflict.
   Error loadBitcodeModule(StringRef bitcodeData,
-                          uint32_t cacheKey,
+                          uint64_t cacheKey,
                           const std::string &origFnName);
 
   /// Look up a compiled function symbol in the specialization JITDylib
   /// identified by cacheKey.
-  Expected<void *> lookup(uint32_t cacheKey, const std::string &name);
+  Expected<void *> lookup(uint64_t cacheKey, const std::string &name);
 
   /// Set the active specialization context (used during compilation).
   void setActiveContext(const SpecializationContext *ctx);

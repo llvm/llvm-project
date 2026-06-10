@@ -68,7 +68,7 @@ private:
   std::atomic<bool> running_{false};
   std::atomic<bool> stopping_{false};
 
-  std::set<uint32_t> requestsInFlight_;
+  std::set<uint64_t> requestsInFlight_;
   std::mutex inFlightMutex_;
 
   std::unique_ptr<EJitOrcEngine> workerEngine_;
