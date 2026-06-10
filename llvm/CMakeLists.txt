@@ -554,9 +554,15 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
 # List of targets with JIT support:
 set(LLVM_TARGETS_WITH_JIT X86 PowerPC AArch64 ARM Mips SystemZ)
 
-option(EJIT_BARE_METAL "Trim backend for bare-metal: exclude non-ELF formats, non-AArch64 targets, DWARF/CFI" OFF)
-if(EJIT_BARE_METAL)
-  add_definitions(-DEJIT_BARE_METAL)
+option(EJIT_TRIM_LLVM_BACKEND "Trim LLVM backend pieces used by EJIT: disable heavyweight debug info, GlobalISel, and optional AArch64 SME/SVE passes" OFF)
+if(EJIT_TRIM_LLVM_BACKEND)
+  add_definitions(-DEJIT_TRIM_LLVM_BACKEND)
+endif()
+
+option(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL "Trim backend for bare-metal: exclude non-ELF formats, non-AArch64 targets, DWARF/CFI" OFF)
+if(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+  add_definitions(-DEJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+  add_definitions(-DEJIT_TRIM_LLVM_BACKEND)
 endif()
 
 option(EJIT_FREESTANDING "Build EJIT runtime for freestanding: no OS threads, no file I/O, no-op logging" OFF)

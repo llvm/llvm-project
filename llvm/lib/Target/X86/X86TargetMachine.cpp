@@ -24,7 +24,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/ExecutionDomainFix.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -71,7 +71,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   RegisterTargetMachine<X86TargetMachine> Y(getTheX86_64Target());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeX86LowerAMXIntrinsicsLegacyPassPass(PR);
   initializeX86LowerAMXTypeLegacyPassPass(PR);
   initializeX86PreTileConfigPass(PR);
@@ -79,14 +79,14 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeWinEHStatePassPass(PR);
 #endif
   initializeFixupBWInstPassPass(PR);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeCompressEVEXPassPass(PR);
 #endif
   initializeFixupLEAPassPass(PR);
   initializeFPSPass(PR);
   initializeX86FixupSetCCPassPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeX86CmovConverterPassPass(PR);
   initializeX86TileConfigPass(PR);
   initializeX86FastPreTileConfigPass(PR);
@@ -96,7 +96,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
 #endif
   initializeX86ExpandPseudoPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeX86DomainReassignmentPass(PR);
   initializeX86AvoidSFBPassPass(PR);
   initializeX86AvoidTrailingCallPassPass(PR);
@@ -104,7 +104,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86SpeculativeExecutionSideEffectSuppressionPass(PR);
 #endif
   initializeX86FlagsCopyLoweringPassPass(PR);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeX86LoadValueInjectionLoadHardeningPassPass(PR);
   initializeX86LoadValueInjectionRetHardeningPassPass(PR);
   initializeX86OptimizeLEAPassPass(PR);
@@ -115,12 +115,12 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotPassPass(PR);
   initializeX86AsmPrinterPass(PR);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeX86FixupInstTuningPassPass(PR);
   initializeX86FixupVectorConstantsPassPass(PR);
 #endif
   initializeX86DynAllocaExpanderPass(PR);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeX86SuppressAPXForRelocationPassPass(PR);
   initializeX86WinEHUnwindV2Pass(PR);
 #endif
@@ -486,7 +486,7 @@ void X86PassConfig::addIRPasses() {
 
   // We add both pass anyway and when these two passes run, we skip the pass
   // based on the option level and option attribute.
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createX86LowerAMXIntrinsicsPass());
   addPass(createX86LowerAMXTypePass());
 #endif
@@ -532,7 +532,7 @@ bool X86PassConfig::addInstSelector() {
 }
 
 bool X86PassConfig::addIRTranslator() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return false;
 #else
   addPass(new IRTranslator(getOptLevel()));
@@ -541,7 +541,7 @@ bool X86PassConfig::addIRTranslator() {
 }
 
 bool X86PassConfig::addLegalizeMachineIR() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return false;
 #else
   addPass(new Legalizer());
@@ -550,7 +550,7 @@ bool X86PassConfig::addLegalizeMachineIR() {
 }
 
 bool X86PassConfig::addRegBankSelect() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return false;
 #else
   addPass(new RegBankSelect());
@@ -559,7 +559,7 @@ bool X86PassConfig::addRegBankSelect() {
 }
 
 bool X86PassConfig::addGlobalInstructionSelect() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return false;
 #else
   addPass(new InstructionSelect(getOptLevel()));
@@ -589,23 +589,23 @@ void X86PassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(&LiveRangeShrinkID);
     addPass(createX86FixupSetCC());
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     addPass(createX86OptimizeLEAs());
 #endif
     addPass(createX86CallFrameOptimization());
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     addPass(createX86AvoidStoreForwardingBlocks());
 #endif
   }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createX86SuppressAPXForRelocationPass());
   addPass(createX86SpeculativeLoadHardeningPass());
 #endif
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86DynAllocaExpander());
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86PreTileConfigPass());
   else
@@ -614,18 +614,18 @@ void X86PassConfig::addPreRegAlloc() {
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createX86DomainReassignmentPass());
 #endif
   TargetPassConfig::addMachineSSAOptimization();
 }
 
 void X86PassConfig::addPostRegAlloc() {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createX86LowerTileCopyPass());
 #endif
   addPass(createX86FloatingPointStackifierPass());
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createX86LoadValueInjectionLoadHardeningPass());
 #endif
@@ -633,7 +633,7 @@ void X86PassConfig::addPostRegAlloc() {
 
 void X86PassConfig::addPreSched2() {
   addPass(createX86ExpandPseudoPass());
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createKCFIPass());
 #endif
 }
@@ -644,7 +644,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createBreakFalseDeps());
   }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createX86IndirectBranchTrackingPass());
 #endif
 
@@ -652,16 +652,16 @@ void X86PassConfig::addPreEmitPass() {
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInsts());
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     addPass(createX86PadShortFunctions());
 #endif
     addPass(createX86FixupLEAs());
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     addPass(createX86FixupInstTuning());
     addPass(createX86FixupVectorConstants());
 #endif
   }
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createX86CompressEVEXPass());
   addPass(createX86DiscriminateMemOpsPass());
   addPass(createX86InsertPrefetchPass());
@@ -673,7 +673,7 @@ void X86PassConfig::addPreEmitPass2() {
   const Triple &TT = TM->getTargetTriple();
   const MCAsmInfo *MAI = TM->getMCAsmInfo();
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createX86SpeculativeExecutionSideEffectSuppression());
   addPass(createX86IndirectThunksPass());
   addPass(createX86ReturnThunksPass());
@@ -687,7 +687,7 @@ void X86PassConfig::addPreEmitPass2() {
        MAI->getExceptionHandlingType() == ExceptionHandling::DwarfCFI))
     addPass(createCFIInstrInserter());
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (TT.isOSWindows()) {
     addPass(createCFGuardLongjmpPass());
     addPass(createEHContGuardTargetsPass());
@@ -721,7 +721,7 @@ bool X86PassConfig::addPostFastRegAllocRewrite() {
 }
 
 std::unique_ptr<CSEConfigBase> X86PassConfig::getCSEConfig() const {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return getStandardCSEConfigForOpt(TM->getOptLevel());
 #else
   return nullptr;

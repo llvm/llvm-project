@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "RuntimeDyldCOFF.h"
 #endif
 #include "RuntimeDyldELF.h"
 #include "RuntimeDyldImpl.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "RuntimeDyldMachO.h"
 #include "llvm/Object/COFF.h"
 #endif
@@ -476,7 +476,7 @@ static bool isRequiredForExecution(const SectionRef Section) {
   const ObjectFile *Obj = Section.getObject();
   if (isa<object::ELFObjectFileBase>(Obj))
     return ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC;
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj)) {
     const coff_section *CoffSection = COFFObj->getCOFFSection(Section);
     // Avoid loading zero-sized COFF sections.
@@ -503,7 +503,7 @@ static bool isReadOnlyData(const SectionRef Section) {
   if (isa<object::ELFObjectFileBase>(Obj))
     return !(ELFSectionRef(Section).getFlags() &
              (ELF::SHF_WRITE | ELF::SHF_EXECINSTR));
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj))
     return ((COFFObj->getCOFFSection(Section)->Characteristics &
              (COFF::IMAGE_SCN_CNT_INITIALIZED_DATA
@@ -523,7 +523,7 @@ static bool isZeroInit(const SectionRef Section) {
   const ObjectFile *Obj = Section.getObject();
   if (isa<object::ELFObjectFileBase>(Obj))
     return ELFSectionRef(Section).getType() == ELF::SHT_NOBITS;
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj))
     return COFFObj->getCOFFSection(Section)->Characteristics &
             COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA;
@@ -1334,7 +1334,7 @@ RuntimeDyld::RuntimeDyld(RuntimeDyld::MemoryManager &MemMgr,
 
 RuntimeDyld::~RuntimeDyld() = default;
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 static std::unique_ptr<RuntimeDyldCOFF>
 createRuntimeDyldCOFF(
                      Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
@@ -1359,7 +1359,7 @@ createRuntimeDyldELF(Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
   return Dyld;
 }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 static std::unique_ptr<RuntimeDyldMachO>
 createRuntimeDyldMachO(
                      Triple::ArchType Arch, RuntimeDyld::MemoryManager &MM,
@@ -1382,7 +1382,7 @@ RuntimeDyld::loadObject(const ObjectFile &Obj) {
           createRuntimeDyldELF(static_cast<Triple::ArchType>(Obj.getArch()),
                                MemMgr, Resolver, ProcessAllSections,
                                std::move(NotifyStubEmitted));
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
     else if (Obj.isMachO())
       Dyld = createRuntimeDyldMachO(
                static_cast<Triple::ArchType>(Obj.getArch()), MemMgr, Resolver,

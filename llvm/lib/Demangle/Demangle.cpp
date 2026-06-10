@@ -28,7 +28,7 @@ std::string llvm::demangle(std::string_view MangledName) {
                            /*CanHaveLeadingDot=*/false))
     return Result;
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (char *Demangled = microsoftDemangle(MangledName, nullptr, nullptr)) {
     Result = Demangled;
     std::free(Demangled);
@@ -46,7 +46,7 @@ static bool isItaniumEncoding(std::string_view S) {
   return Pos > 0 && Pos <= 4 && S[Pos] == 'Z';
 }
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 static bool isRustEncoding(std::string_view S) { return starts_with(S, "_R"); }
 
 static bool isDLangEncoding(std::string_view S) { return starts_with(S, "_D"); }
@@ -65,7 +65,7 @@ bool llvm::nonMicrosoftDemangle(std::string_view MangledName,
 
   if (isItaniumEncoding(MangledName))
     Demangled = itaniumDemangle(MangledName, ParseParams);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   else if (isRustEncoding(MangledName))
     Demangled = rustDemangle(MangledName);
   else if (isDLangEncoding(MangledName))

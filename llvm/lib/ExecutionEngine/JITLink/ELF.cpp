@@ -86,7 +86,7 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer,
   switch (*TargetMachineArch) {
   case ELF::EM_AARCH64:
     return createLinkGraphFromELFObject_aarch64(ObjectBuffer, std::move(SSP));
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case ELF::EM_ARM:
     return createLinkGraphFromELFObject_aarch32(ObjectBuffer, std::move(SSP));
   case ELF::EM_PPC64: {
@@ -117,7 +117,7 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::aarch64:
     link_ELF_aarch64(std::move(G), std::move(Ctx));
     return;
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   case Triple::arm:
   case Triple::armeb:
   case Triple::thumb:

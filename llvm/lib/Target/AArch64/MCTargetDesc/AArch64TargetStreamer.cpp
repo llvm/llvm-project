@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
+#endif
+
 #include "AArch64TargetStreamer.h"
 #include "AArch64MCAsmInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -144,7 +148,7 @@ llvm::createAArch64ObjectTargetStreamer(MCStreamer &S,
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new AArch64TargetELFStreamer(S);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (TT.isOSBinFormatCOFF())
     return new AArch64TargetWinCOFFStreamer(S);
 #endif

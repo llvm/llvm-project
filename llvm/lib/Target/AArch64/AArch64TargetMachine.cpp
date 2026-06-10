@@ -9,6 +9,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
+#endif
+
 #include "AArch64TargetMachine.h"
 #include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
@@ -22,7 +26,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
@@ -159,7 +163,7 @@ static cl::opt<bool>
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 static cl::opt<int> EnableGlobalISelAtO(
     "aarch64-enable-global-isel-at-O", cl::Hidden,
     cl::desc("Enable GlobalISel at or below an opt level (-1 to disable)"),
@@ -208,7 +212,7 @@ static cl::opt<bool> ForceStreamingCompatible(
 
 extern cl::opt<bool> EnableHomogeneousPrologEpilog;
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 static cl::opt<bool> EnableGISelLoadStoreOptPreLegal(
     "aarch64-enable-gisel-ldst-prelegal",
     cl::desc("Enable GlobalISel's pre-legalizer load/store optimization pass"),
@@ -239,7 +243,7 @@ LLVMInitializeAArch64Target() {
   RegisterTargetMachine<AArch64leTargetMachine> W(getTheARM64_32Target());
   RegisterTargetMachine<AArch64leTargetMachine> V(getTheAArch64_32Target());
   auto &PR = *PassRegistry::getPassRegistry();
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeGlobalISel(PR);
 #endif
   initializeAArch64A53Fix835769Pass(PR);
@@ -249,13 +253,17 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PointerAuthPass(PR);
   initializeKCFIPass(PR);
   initializeAArch64SLSHardeningPass(PR);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeSMEABIPass(PR);
   initializeSMEPeepholeOptPass(PR);
   initializeSVEIntrinsicOptsPass(PR);
+#endif
   initializeAArch64SpeculationHardeningPass(PR);
   initializeAArch64StackTaggingPass(PR);
   initializeAArch64StackTaggingPreRAPass(PR);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeAArch64AdvSIMDScalarPass(PR);
+#endif
   initializeAArch64AsmPrinterPass(PR);
   initializeAArch64BranchTargetsPass(PR);
   initializeAArch64CollectLOHPass(PR);
@@ -266,13 +274,15 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ExpandPseudoPass(PR);
   initializeAArch64LoadStoreOptPass(PR);
   initializeAArch64MIPeepholeOptPass(PR);
+#ifndef EJIT_TRIM_LLVM_BACKEND
   initializeAArch64SIMDInstrOptPass(PR);
-#ifndef EJIT_BARE_METAL
+#endif
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeAArch64O0PreLegalizerCombinerPass(PR);
   initializeAArch64PreLegalizerCombinerPass(PR);
 #endif
   initializeAArch64PostCoalescerPass(PR);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeAArch64PostLegalizerCombinerPass(PR);
   initializeAArch64PostLegalizerLoweringPass(PR);
   initializeAArch64PostSelectOptimizePass(PR);
@@ -284,7 +294,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   initializeAArch64Arm64ECCallLoweringPass(PR);
 #endif
 }
@@ -410,7 +420,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     // for the tiny code model, the maximum TLS size is 1MiB (< 16MiB)
     this->Options.TLSSize = 24;
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
   // MachO/CodeModel::Large, which GlobalISel does not support.
   if (static_cast<int>(getOptLevel()) <= EnableGlobalISelAtO &&
@@ -422,7 +432,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   }
 #endif
 
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   // AArch64 supports the MachineOutliner.
   setMachineOutliner(true);
 #endif
@@ -619,7 +629,7 @@ TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return getStandardCSEConfigForOpt(TM->getOptLevel());
 #else
   return nullptr;
@@ -632,9 +642,11 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   // Expand any SVE vector library calls that we can't code generate directly.
+#ifndef EJIT_TRIM_LLVM_BACKEND
   if (EnableSVEIntrinsicOpts &&
       TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createSVEIntrinsicOptsPass());
+#endif
 
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
@@ -693,10 +705,12 @@ void AArch64PassConfig::addIRPasses() {
   // Expand any functions marked with SME attributes which require special
   // changes for the calling convention or that require the lazy-saving
   // mechanism specified in the SME ABI.
+#ifndef EJIT_TRIM_LLVM_BACKEND
   addPass(createSMEABIPass());
+#endif
 
   // Add Control Flow Guard checks.
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   if (TM->getTargetTriple().isOSWindows()) {
     if (TM->getTargetTriple().isWindowsArm64EC())
       addPass(createAArch64Arm64ECCallLoweringPass());
@@ -762,7 +776,7 @@ bool AArch64PassConfig::addInstSelector() {
 }
 
 bool AArch64PassConfig::addIRTranslator() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return false;
 #else
   addPass(new IRTranslator(getOptLevel()));
@@ -771,7 +785,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return;
 #else
   if (getOptLevel() == CodeGenOptLevel::None) {
@@ -787,7 +801,7 @@ void AArch64PassConfig::addPreLegalizeMachineIR() {
 }
 
 bool AArch64PassConfig::addLegalizeMachineIR() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return false;
 #else
   addPass(new Legalizer());
@@ -796,7 +810,7 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return;
 #else
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
@@ -810,7 +824,7 @@ void AArch64PassConfig::addPreRegBankSelect() {
 }
 
 bool AArch64PassConfig::addRegBankSelect() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return false;
 #else
   addPass(new RegBankSelect());
@@ -819,7 +833,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 }
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
-#ifdef EJIT_BARE_METAL
+#ifdef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   return false;
 #else
   addPass(new InstructionSelect(getOptLevel()));
@@ -830,8 +844,10 @@ bool AArch64PassConfig::addGlobalInstructionSelect() {
 }
 
 void AArch64PassConfig::addMachineSSAOptimization() {
+#ifndef EJIT_TRIM_LLVM_BACKEND
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableSMEPeepholeOpt)
     addPass(createSMEPeepholeOptPass());
+#endif
 
   // Run default MachineSSAOptimization first.
   TargetPassConfig::addMachineSSAOptimization();
@@ -853,7 +869,9 @@ bool AArch64PassConfig::addILPOpts() {
     addPass(&EarlyIfConverterLegacyID);
   if (EnableStPairSuppress)
     addPass(createAArch64StorePairSuppressPass());
+#ifndef EJIT_TRIM_LLVM_BACKEND
   addPass(createAArch64SIMDInstrOptPass());
+#endif
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createAArch64StackTaggingPreRAPass());
   return true;
@@ -867,7 +885,9 @@ void AArch64PassConfig::addPreRegAlloc() {
 
   // Use AdvSIMD scalar instructions whenever profitable.
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAdvSIMDScalar) {
+#ifndef EJIT_TRIM_LLVM_BACKEND
     addPass(createAArch64AdvSIMDScalar());
+#endif
     // The AdvSIMD pass may produce copies that can be rewritten to
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerLegacyID);
@@ -940,7 +960,7 @@ void AArch64PassConfig::addPreEmitPass() {
 }
 
 void AArch64PassConfig::addPostBBSections() {
-#ifndef EJIT_BARE_METAL
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   addPass(createAArch64SLSHardeningPass());
   addPass(createAArch64PointerAuthPass());
 #endif
