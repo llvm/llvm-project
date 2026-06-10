@@ -44,6 +44,13 @@ public:
 
   CompilerType CreateType(uint32_t kind, uint64_t bitsize, ConstString name);
 
+  CompilerType CreateArrayType(
+      llvm::SmallVectorImpl<std::optional<uint64_t>> &elements_per_dimension,
+      llvm::SmallVectorImpl<std::optional<uint64_t>> &byte_strides,
+      llvm::SmallVectorImpl<int64_t> &lower_bounds, CompilerType element_type,
+      bool is_allocatable, bool is_star, uint64_t total_array_size,
+      uint64_t total_elements);
+
   static LanguageSet GetSupportedLanguagesForTypes();
 
   static LanguageSet GetSupportedLanguagesForExpressions();
@@ -94,9 +101,7 @@ public:
   // Type Classification
   bool IsArrayType(lldb::opaque_compiler_type_t type,
                    CompilerType *element_type, uint64_t *size,
-                   bool *is_incomplete) override {
-    return false;
-  };
+                   bool *is_incomplete) override;
 
   bool IsAggregateType(lldb::opaque_compiler_type_t type) override {
     return false;
@@ -485,13 +490,13 @@ public:
 
 private:
   typedef std::pair<int, uint64_t> TypeKey;
-  typedef llvm::DenseMap<TypeKey, std::unique_ptr<FortranType>> TypeMap;
+  typedef llvm::DenseMap<TypeKey, std::unique_ptr<FortranType>> BasicTypeMap;
   typedef llvm::DenseMap<ConstString, std::unique_ptr<FortranType>> FunctionMap;
 
   // TODO: Types are assosciated by their kind and bitsize, this helps to
   // return from their basic type and is enough for basic types but
   // will change once more types are supported
-  TypeMap m_type_map;
+  BasicTypeMap m_basic_type_map;
   // Right now we can index functions just by their name, but a more
   // effecient solution might replace this
   FunctionMap m_function_map;
