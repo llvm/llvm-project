@@ -3606,7 +3606,7 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
          "Expected OpenMP captured region");
   assert(CGM.getLangOpts().OpenMP && "Expected OpenMP to be enabled");
 
- if (auto It = LocalDeclMap.find(BD->getCanonicalDecl());
+  if (auto It = LocalDeclMap.find(BD->getCanonicalDecl());
       It != LocalDeclMap.end())
     return MakeAddrLValue(It->second, BD->getType());
 
