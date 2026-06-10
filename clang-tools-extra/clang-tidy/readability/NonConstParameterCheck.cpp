@@ -23,8 +23,8 @@ AST_MATCHER_P(VarDecl, hasOwnInitializer, ast_matchers::internal::Matcher<Expr>,
 }
 } // namespace
 
-static bool wouldConflictWithOverload(const FunctionDecl &Function,
-                                      unsigned ParamIndex) {
+static bool wouldConflictWithExistingDecl(const FunctionDecl &Function,
+                                          unsigned ParamIndex) {
   ASTContext &Context = Function.getASTContext();
   const auto *Proto = Function.getType()->getAs<FunctionProtoType>();
   if (!Proto)
@@ -213,7 +213,7 @@ void NonConstParameterCheck::diagnoseNonConstParameters() {
     if (!Function)
       continue;
     const unsigned Index = Par->getFunctionScopeIndex();
-    if (wouldConflictWithOverload(*Function, Index))
+    if (wouldConflictWithExistingDecl(*Function, Index))
       continue;
 
     for (FunctionDecl *FnDecl : Function->redecls()) {
