@@ -41,7 +41,7 @@
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t/input1.bc %t/input2.bc --library-path=%t/libs --whole-archive -l device -o /dev/null 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=DEVLIBS
 ; DEVLIBS:      link: inputs: {{.*}}.bc, {{.*}}.bc, {{.*}}libdevice.a(lib1.bc), {{.*}}libdevice.a(lib2.bc) output: [[LLVMLINKOUT:.*]].bc
-; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: /dev/null_0.spv
+; DEVLIBS-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
 ; DEVLIBS-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; DEVLIBS-NOT:  {{.+}}
 ;

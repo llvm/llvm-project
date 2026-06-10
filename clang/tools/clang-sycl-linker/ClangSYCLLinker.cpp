@@ -265,8 +265,8 @@ findFromSearchPaths(StringRef Name, ArrayRef<StringRef> SearchPaths) {
 
 /// Search for static libraries in the linker's library path given input like
 /// `-lfoo`, `-l:libfoo.a`, or `-l/absolute/path/to/lib.a`.
-static std::optional<std::string> searchLibrary(StringRef Input,
-                                                ArrayRef<StringRef> SearchPaths) {
+static std::optional<std::string>
+searchLibrary(StringRef Input, ArrayRef<StringRef> SearchPaths) {
   // An absolute path is taken as-is; -L paths are only consulted for relative
   // names.
   if (sys::path::is_absolute(Input)) {
@@ -350,9 +350,9 @@ static Error addBitcodeInput(SmallVector<PendingInput> &Inputs,
 /// Returns the buffers to link, in extraction order, along with the resolved
 /// target triple. All returned buffers have compatible target triples;
 /// incompatible archive members are filtered during resolution.
-static Expected<ResolvedInputs>
-resolveArchiveMembers(ArrayRef<InputDesc> Order, ArrayRef<StringRef> SearchPaths,
-                      ArrayRef<StringRef> ForcedUndefs, StringRef TargetTripleArgValue) {
+static Expected<ResolvedInputs> resolveArchiveMembers(
+    ArrayRef<InputDesc> Order, ArrayRef<StringRef> SearchPaths,
+    ArrayRef<StringRef> ForcedUndefs, StringRef TargetTripleArgValue) {
   // Collect every candidate member, parsing each one's IR symbol table once.
   SmallVector<PendingInput> Inputs;
 
@@ -469,11 +469,11 @@ resolveArchiveMembers(ArrayRef<InputDesc> Order, ArrayRef<StringRef> SearchPaths
     }
   }
 
-  return ResolvedInputs{std::move(Resolved), std::move(TargetTriple), TripleSource};
+  return ResolvedInputs{std::move(Resolved), std::move(TargetTriple),
+                        TripleSource};
 }
 
-static Expected<ResolvedInputs>
-getInput(const ArgList &Args) {
+static Expected<ResolvedInputs> getInput(const ArgList &Args) {
   // Build input descriptors for the archive resolver.
   SmallVector<InputDesc> InputDescs;
   bool WholeArchive = false;
@@ -511,9 +511,8 @@ getInput(const ArgList &Args) {
   // Get target triple from command line if specified.
   StringRef TargetTripleStr = Args.getLastArgValue(OPT_triple_EQ);
 
-  Expected<ResolvedInputs> ResolvedOrErr =
-      resolveArchiveMembers(InputDescs, LibraryPaths, ForcedUndefs,
-                            TargetTripleStr);
+  Expected<ResolvedInputs> ResolvedOrErr = resolveArchiveMembers(
+      InputDescs, LibraryPaths, ForcedUndefs, TargetTripleStr);
   if (!ResolvedOrErr)
     return ResolvedOrErr.takeError();
 
@@ -541,8 +540,7 @@ struct LinkResult {
 /// regular (non-archive) inputs are hard errors caught during resolution.
 static Expected<LinkResult>
 linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
-           const llvm::Triple &TargetTriple,
-           StringRef TripleSource,
+           const llvm::Triple &TargetTriple, StringRef TripleSource,
            const ArgList &Args, LLVMContext &C) {
   llvm::TimeTraceScope TimeScope("Link code");
 
@@ -555,12 +553,12 @@ linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     return BitcodeOutput.takeError();
 
   if (Verbose) {
-    std::string InputList = llvm::join(
-        llvm::map_range(Inputs,
-                        [](const auto &Buffer) {
-                          return Buffer->getBufferIdentifier();
-                        }),
-        ", ");
+    std::string InputList =
+        llvm::join(llvm::map_range(Inputs,
+                                   [](const auto &Buffer) {
+                                     return Buffer->getBufferIdentifier();
+                                   }),
+                   ", ");
     errs() << formatv("link: inputs: {0} output: {1}\n", InputList,
                       *BitcodeOutput);
   }
@@ -577,10 +575,10 @@ linkInputs(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     if (!T.empty() && T != TargetTriple) {
       // All incompatible archive members should have been filtered during
       // resolution, so this is a conflict between regular inputs.
-      return createStringError(
-          "conflicting target triples: '" + TargetTriple.str() + "' (from " +
-          TripleSource + ") vs '" + T.str() + "' (from " +
-          Buffer->getBufferIdentifier() + ")");
+      return createStringError("conflicting target triples: '" +
+                               TargetTriple.str() + "' (from " + TripleSource +
+                               ") vs '" + T.str() + "' (from " +
+                               Buffer->getBufferIdentifier() + ")");
     }
 
     if (L.linkInModule(std::move(*ModOrErr)))
@@ -931,14 +929,14 @@ static bool canSkipModuleSplit(IRSplitMode Mode, const Module &M,
 ///    output file.
 static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
                          const llvm::Triple &TargetTriple,
-                         StringRef TripleSource,
-                         const ArgList &Args) {
+                         StringRef TripleSource, const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("SYCL linking");
 
   LLVMContext C;
 
   // Link all input bitcode files and library files.
-  Expected<LinkResult> LinkedOrErr = linkInputs(Inputs, TargetTriple, TripleSource, Args, C);
+  Expected<LinkResult> LinkedOrErr =
+      linkInputs(Inputs, TargetTriple, TripleSource, Args, C);
   if (!LinkedOrErr)
     return LinkedOrErr.takeError();
   LinkResult &Result = *LinkedOrErr;
