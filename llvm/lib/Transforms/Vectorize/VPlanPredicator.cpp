@@ -274,12 +274,9 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
     AddEdge(InVPBB, Phi->getParent(), InVal);
 
-  // Only handle phis that postdominate every incoming block. Also don't touch
-  // phis in a reduction chain since they need to be in a specific structure for
-  // handle*Reductions.
-  for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
-    if (!VPPDT.dominates(Phi->getParent(), InVPBB) ||
-        isa<VPReductionPHIRecipe>(InVal))
+  // Only handle phis that postdominate every incoming block.
+  for (const VPBlockBase *InVPBB : Phi->incoming_blocks())
+    if (!VPPDT.dominates(Phi->getParent(), InVPBB))
       return Edges;
 
   // Given a list of edges, check if they all have the same value and return it.
