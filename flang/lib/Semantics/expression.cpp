@@ -2507,6 +2507,13 @@ MaybeExpr ExpressionAnalyzer::AnalyzeEnumerationConstructor(
         argType ? argType->AsFortran() : std::string{"typeless"});
     return std::nullopt;
   }
+  // F2023 R771: the argument shall be a scalar-int-expr.
+  if (folded.Rank() > 0) {
+    Say(argExpr.source,
+        "Enumeration constructor argument for '%s' must be scalar"_err_en_US,
+        typeName);
+    return std::nullopt;
+  }
   // If the value is known at compile time, validate the range
   if (auto value{ToInt64(folded)}) {
     if (*value < 1 || *value > enumeratorCount) {
@@ -2516,12 +2523,16 @@ MaybeExpr ExpressionAnalyzer::AnalyzeEnumerationConstructor(
       return std::nullopt;
     }
   }
-  // Produce an Expr<SomeDerived> with the ordinal in the __ordinal component
+  // Produce an Expr<SomeDerived> with the ordinal in the __ordinal component,
+  // converted to the component's declared integer kind.
   StructureConstructor result{spec};
   if (const auto *scope{spec.GetScope()}) {
     auto ordinalIter{scope->find(semantics::SourceName{"__ordinal", 9})};
     if (ordinalIter != scope->end()) {
-      result.Add(*ordinalIter->second, std::move(folded));
+      const Symbol &ordinalSymbol{*ordinalIter->second};
+      if (auto converted{ConvertToType(ordinalSymbol, std::move(folded))}) {
+        result.Add(ordinalSymbol, std::move(*converted));
+      }
     }
   }
   return AsMaybeExpr(Expr<SomeDerived>{std::move(result)});

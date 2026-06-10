@@ -62,6 +62,9 @@ subroutine test_constructor_errors()
   ! ERROR: Enumeration constructor argument must be INTEGER, but is REAL(4)
   c = color(1.0)
 
+  ! ERROR: Enumeration constructor argument for 'color' must be scalar
+  c = color([1, 2])
+
   ! ERROR: Enumeration constructor value (0) for 'color' must be positive and less than or equal to the number of enumerators (3)
   c = color(0)
 
