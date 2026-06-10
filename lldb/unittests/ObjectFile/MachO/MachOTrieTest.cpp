@@ -191,11 +191,10 @@ ParseResult Parse(llvm::ArrayRef<uint8_t> bytes, bool is_arm = false,
                   lldb::addr_t text_seg_base_addr = LLDB_INVALID_ADDRESS) {
   DataExtractor data(bytes.data(), bytes.size(), lldb::eByteOrderLittle,
                      /*addr_size=*/8);
-  std::string prefix;
   ParseResult result;
-  result.ok = ParseTrieEntries(data, /*offset=*/0, is_arm, text_seg_base_addr,
-                               prefix, result.resolver_addresses,
-                               result.reexports, result.ext_symbols);
+  result.ok = ParseTrieEntries(data, is_arm, text_seg_base_addr,
+                               result.resolver_addresses, result.reexports,
+                               result.ext_symbols);
   return result;
 }
 
@@ -296,4 +295,43 @@ TEST(MachOTrieTest, TerminalNodeWithChildren) {
   for (const auto &e : result.ext_symbols)
     names.insert(e.entry.name.GetStringRef().str());
   EXPECT_EQ(names, (std::set<std::string>{"foo", "foobar"}));
+}
+
+TEST(MachOTrieTest, MalformedSelfCycle) {
+  // Root --"a"--> node1 (@9) --"b"--> node1 (points to itself).
+  std::vector<uint8_t> t;
+  AppendULEB128(t, 0); // root terminalSize
+  t.push_back(1);      // root childrenCount
+  AppendCStr(t, "a");
+  AppendOffset(t, 9); // root SelfSize == 1 + 1 + 2 + 5 == 9
+  ASSERT_EQ(t.size(), 9u);
+  AppendULEB128(t, 0); // node1 terminalSize
+  t.push_back(1);      // node1 childrenCount
+  AppendCStr(t, "b");
+  AppendOffset(t, 9); // points back at node1 -> cycle
+
+  ParseResult result = Parse(t);
+  EXPECT_FALSE(result.ok);
+}
+
+TEST(MachOTrieTest, MalformedBackEdgeCycle) {
+  // Root(@0) --"a"--> n1(@9) --"b"--> n2(@18) --"c"--> n1 (ancestor).
+  std::vector<uint8_t> t;
+  AppendULEB128(t, 0);
+  t.push_back(1);
+  AppendCStr(t, "a");
+  AppendOffset(t, 9);
+  ASSERT_EQ(t.size(), 9u);
+  AppendULEB128(t, 0);
+  t.push_back(1);
+  AppendCStr(t, "b");
+  AppendOffset(t, 18);
+  ASSERT_EQ(t.size(), 18u);
+  AppendULEB128(t, 0);
+  t.push_back(1);
+  AppendCStr(t, "c");
+  AppendOffset(t, 9); // back edge to n1
+
+  ParseResult result = Parse(t);
+  EXPECT_FALSE(result.ok);
 }
