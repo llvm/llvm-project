@@ -985,6 +985,12 @@ int ModuleSlotTracker::getLocalSlot(const Value *V) {
   return Machine->getLocalSlot(V);
 }
 
+int ModuleSlotTracker::getMetadataSlot(const MDNode *N) {
+  if (!getMachine())
+    return -1;
+  return Machine->getMetadataSlot(N);
+}
+
 void ModuleSlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Module *)> Fn) {
   ProcessModuleHookFn = std::move(Fn);

@@ -130,7 +130,7 @@ for.exit:
 ;; Check that metadata is preserved in the WIDEN-HISTOGRAM recipe when the
 ;; histogram store carries alias.scope/noalias metadata.
 ; CHECK: VPlan 'Initial VPlan for VF={vscale x 2,vscale x 4},UF>=1' {
-; CHECK:     WIDEN-HISTOGRAM buckets: {{.*}}, inc: ir<1> (!alias.scope {{![0-9]+}}, !noalias {{![0-9]+}})
+; CHECK:     WIDEN-HISTOGRAM buckets: {{.*}}, inc: ir<1> (!alias.scope !7, !noalias !4)
 
 define void @simple_histogram_metadata(ptr noalias %buckets, ptr readonly %indices, i64 %N) {
 entry:
