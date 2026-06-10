@@ -12,7 +12,7 @@
 ; Test the split mode ("none"): kernels from different TUs are not split into separate images.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=none %t.bc -o %t-none.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SPLIT-NONE
-; SPLIT-NONE:      link: inputs: {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
+; SPLIT-NONE:      link: inputs: {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
 ; SPLIT-NONE-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}_0.spv
 ; SPLIT-NONE-NEXT: sycl-bundle: image kind: spv, triple: spirv64, arch: {{$}}
 ; SPLIT-NONE-NOT:  {{.+}}
@@ -20,7 +20,7 @@
 ; Test the split mode ("kernel"): each SPIR_KERNEL function produces its own device image.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=kernel %t.bc -o %t-split-kernel.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SPLIT-KERNEL
-; SPLIT-KERNEL:      link: inputs: {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
+; SPLIT-KERNEL:      link: inputs: {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
 ; SPLIT-KERNEL-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, mode: kernel
 ; SPLIT-KERNEL-NEXT: [[SPLIT0:.*]].bc [kernel_c ]
 ; SPLIT-KERNEL-NEXT: [[SPLIT1:.*]].bc [kernel_b ]
@@ -43,7 +43,7 @@
 ; Test per-TU split ('source' explicitly provided)
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=source %t.bc -o %t-src.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=SPLIT-SRC
-; SPLIT-SRC:      link: inputs: {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
+; SPLIT-SRC:      link: inputs: {{.*}}.bc  libfiles:  output: [[LLVMLINKOUT:.*]].bc
 ; SPLIT-SRC-NEXT: sycl-module-split: input: [[LLVMLINKOUT]].bc, mode: source
 ; SPLIT-SRC-NEXT: [[S0:.*]].bc [kernel_b kernel_c ]
 ; SPLIT-SRC-NEXT: [[S1:.*]].bc [kernel_a ]

@@ -60,9 +60,9 @@ public:
                                     const StringsAndChecksumsRef &State) = 0;
 };
 
-Error visitDebugSubsection(const DebugSubsectionRecord &R,
-                           DebugSubsectionVisitor &V,
-                           const StringsAndChecksumsRef &State);
+LLVM_ABI Error visitDebugSubsection(const DebugSubsectionRecord &R,
+                                    DebugSubsectionVisitor &V,
+                                    const StringsAndChecksumsRef &State);
 
 namespace detail {
 template <typename T>

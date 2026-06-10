@@ -18,11 +18,14 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
@@ -53,6 +56,7 @@ void HLSLExternalSemaSource::InitializeSema(Sema &S) {
   (void)HLSLNamespace->getCanonicalDecl()->decls_begin();
   defineTrivialHLSLTypes();
   defineHLSLTypesWithForwardDeclarations();
+  defineHLSLAtomicIntrinsics();
 
   // This adds a `using namespace hlsl` directive. In DXC, we don't put HLSL's
   // built in types inside a namespace, but we are planning to change that in
@@ -312,12 +316,6 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
           ElaboratedTypeKeyword::Class, TemplateName(TextureTemplate),
           {TemplateArgument(VectorType)}, {}));
 
-  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
-      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
-      SourceLocation(), TemplateParams, TextureTemplate,
-      {TemplateArgument(VectorType)},
-      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
-
   // Set the template arguments as written.
   TemplateArgument Arg(VectorType);
   TemplateArgumentLoc ArgLoc =
@@ -325,8 +323,13 @@ addVectorTexturePartialSpecialization(Sema &S, NamespaceDecl *HLSLNamespace,
   TemplateArgumentListInfo ArgsInfo =
       TemplateArgumentListInfo(SourceLocation(), SourceLocation());
   ArgsInfo.addArgument(ArgLoc);
-  PartialSpec->setTemplateArgsAsWritten(
-      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo));
+
+  auto *PartialSpec = ClassTemplatePartialSpecializationDecl::Create(
+      AST, TagDecl::TagKind::Class, HLSLNamespace, SourceLocation(),
+      SourceLocation(), TemplateParams,
+      ASTTemplateArgumentListInfo::Create(AST, ArgsInfo), TextureTemplate,
+      {TemplateArgument(VectorType)},
+      CanQualType::CreateUnsafe(CanonInjectedTST), nullptr);
 
   PartialSpec->setImplicit(true);
   PartialSpec->setLexicalDeclContext(HLSLNamespace);
@@ -685,6 +688,79 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
                      ResourceDimension::Dim2D)
         .completeDefinition();
   });
+}
+
+// Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.
+// `dest` is an address-space-qualified reference; `original_value` (when
+// present) is a plain reference. The synthesized FunctionDecl aliases the
+// underlying clang builtin via BuiltinAliasAttr.
+static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
+                                StringRef BuiltinName, QualType ElemTy,
+                                LangAS DestAS, bool ThreeArg) {
+  ASTContext &AST = S.getASTContext();
+
+  QualType DestTy =
+      AST.getLValueReferenceType(AST.getAddrSpaceQualType(ElemTy, DestAS));
+  QualType OrigRefTy = AST.getLValueReferenceType(ElemTy);
+
+  SmallVector<QualType, 3> ParamTypes;
+  ParamTypes.push_back(DestTy);
+  ParamTypes.push_back(ElemTy);
+  if (ThreeArg)
+    ParamTypes.push_back(OrigRefTy);
+
+  FunctionProtoType::ExtProtoInfo EPI;
+  QualType FuncTy = AST.getFunctionType(AST.VoidTy, ParamTypes, EPI);
+  auto *TSInfo = AST.getTrivialTypeSourceInfo(FuncTy, SourceLocation());
+
+  IdentifierInfo &FuncII = AST.Idents.get(FuncName, tok::TokenKind::identifier);
+  DeclarationName FuncDeclName(&FuncII);
+
+  FunctionDecl *FD = FunctionDecl::Create(
+      AST, NS, SourceLocation(), SourceLocation(), FuncDeclName, FuncTy, TSInfo,
+      SC_Extern, /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
+      /*hasWrittenPrototype=*/true);
+
+  constexpr const char *ParamNames[] = {"dest", "value", "original_value"};
+  SmallVector<ParmVarDecl *, 3> ParmDecls;
+  unsigned I = 0;
+  for (auto [ParamType, ParamName] : llvm::zip(ParamTypes, ParamNames)) {
+    IdentifierInfo &PII = AST.Idents.get(ParamName, tok::TokenKind::identifier);
+    ParmVarDecl *Parm = ParmVarDecl::Create(
+        AST, FD, SourceLocation(), SourceLocation(), &PII, ParamType,
+        AST.getTrivialTypeSourceInfo(ParamType, SourceLocation()), SC_None,
+        nullptr);
+    Parm->setScopeInfo(0, I++);
+    ParmDecls.push_back(Parm);
+  }
+  FD->setParams(ParmDecls);
+
+  IdentifierInfo &BuiltinII =
+      S.getPreprocessor().getIdentifierTable().get(BuiltinName);
+  FD->addAttr(BuiltinAliasAttr::CreateImplicit(AST, &BuiltinII));
+  FD->setImplicit();
+  NS->addDecl(FD);
+}
+
+// Synthesize the InterlockedAdd overload set: {int, uint, int64_t, uint64_t}
+// x {groupshared, device} x {2-arg, 3-arg}.
+static void defineHLSLInterlockedAdd(Sema &S, NamespaceDecl *NS) {
+  ASTContext &AST = S.getASTContext();
+  // HLSL: int64_t == long, uint64_t == unsigned long (see hlsl_basic_types.h).
+  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                      AST.UnsignedLongTy};
+  LangAS AddrSpaces[] = {LangAS::hlsl_groupshared, LangAS::hlsl_device};
+
+  for (QualType ElemTy : Elems)
+    for (LangAS AS : AddrSpaces)
+      for (bool ThreeArg : {false, true})
+        buildAtomicOverload(S, NS, "InterlockedAdd",
+                            "__builtin_hlsl_interlocked_add", ElemTy, AS,
+                            ThreeArg);
+}
+
+void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
+  defineHLSLInterlockedAdd(*SemaPtr, HLSLNamespace);
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,

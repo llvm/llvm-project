@@ -1401,6 +1401,33 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(ID, {Op->getType()}, ArrayRef{Op},
                              "hlsl.wave.active.bit.and");
   }
+  case Builtin::BI__builtin_hlsl_interlocked_add: {
+    // HLSL signatures (synthesized as overloads in HLSLExternalSemaSource):
+    //   void InterlockedAdd(groupshared|device T &dest, T value);
+    //   void InterlockedAdd(groupshared|device T &dest, T value,
+    //                       T &original_value);
+    // Both `dest` and `original_value` are plain references, so we can use
+    // the underlying lvalue directly without HLSLOutArgExpr unwrapping.
+    LValue DestLV = EmitLValue(E->getArg(0));
+    Value *Ptr = DestLV.getAddress().emitRawPointer(*this);
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    assert(E->getArg(1)->getType()->isIntegerType() &&
+           "Intrinsic InterlockedAdd value operand must be an integer");
+
+    Intrinsic::ID ID = CGM.getHLSLRuntime().getInterlockedAddIntrinsic();
+    Value *Call = EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID,
+                                          {Val->getType(), Ptr->getType()}),
+        ArrayRef<Value *>{Ptr, Val}, "hlsl.interlocked.add");
+
+    // The 3-arg overload writes the old value (the intrinsic's return value)
+    // into the `original_value` reference parameter.
+    if (E->getNumArgs() == 3) {
+      LValue OrigLV = EmitLValue(E->getArg(2));
+      EmitStoreThroughLValue(RValue::get(Call), OrigLV);
+    }
+    return Call;
+  }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
     [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
     assert(Op->getType()->isIntegerTy(1) &&

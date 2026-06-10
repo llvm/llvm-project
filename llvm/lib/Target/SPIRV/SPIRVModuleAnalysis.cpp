@@ -1195,7 +1195,10 @@ static void AddAtomicVectorFloatRequirements(const MachineInstr &MI,
         "The element type for the result type of an atomic vector float "
         "instruction must be a 16-bit floating-point scalar");
 
-  if (isBFloat16Type(EltTypeDef))
+  // The extension is defined for fp16, but the AMD target lets a bf16 vector
+  // use the same instruction so it can lower to a packed bf16 atomic.
+  if (isBFloat16Type(EltTypeDef) &&
+      ST.getTargetTriple().getVendor() != Triple::AMD)
     reportFatalUsageError(
         "The element type for the result type of an atomic vector float "
         "instruction cannot be a bfloat16 scalar");
@@ -1478,7 +1481,8 @@ void addPrintfRequirements(const MachineInstr &MI,
                            SPIRV::RequirementHandler &Reqs,
                            const SPIRVSubtarget &ST) {
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
-  SPIRVTypeInst PtrType = GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg());
+  SPIRVTypeInst PtrType =
+      GR->getSPIRVTypeForVReg(MI.getOperand(4).getReg(), MI.getMF());
   if (PtrType) {
     MachineOperand ASOp = PtrType->getOperand(1);
     if (ASOp.isImm()) {
