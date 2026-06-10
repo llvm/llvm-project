@@ -1470,12 +1470,13 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
             continue;
 
           auto *CurrI = dyn_cast<Instruction>(CurrV);
+          BasicBlock *LoopPred = TheLoop->getLoopPredecessor();
           if (!CurrI || !TheLoop->contains(CurrI)) {
             // If operands from outside the loop may be poison then Ptr may also
             // be poison.
-            if (!isGuaranteedNotToBePoison(CurrV, AC,
-                                           TheLoop->getLoopPredecessor()
-                                               ->getTerminator()
+            if (!LoopPred ||
+                !isGuaranteedNotToBePoison(CurrV, AC,
+                                           LoopPred->getTerminator()
                                                ->getIterator(),
                                            DT))
               return false;
