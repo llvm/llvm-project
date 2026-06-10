@@ -1221,7 +1221,11 @@ void LayoutInfoPropagation::visitLoadGatherOp(
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
-    requiredAnchorLayoutAttr = anchorLayoutAttr;
+    // The user-provided anchor may carry only inst_data; complete it with
+    // a lane factorization derived from the load-side Lane setup so
+    // downstream paths see a fully-populated layout.
+    requiredAnchorLayoutAttr = xegpu::completeLoadGatherLayoutFromInstData(
+        anchorLayoutAttr, resVecTy.getElementType(), uArch);
   } else {
     if (!resVecTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
@@ -1261,7 +1265,11 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   int chunkSize = storeScatter.getChunkSize().value_or(1);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
-    requiredAnchorLayoutAttr = anchorLayoutAttr;
+    // The user-provided anchor may carry only inst_data; complete it with
+    // a lane factorization derived from the store-side Lane setup so
+    // downstream paths see a fully-populated layout.
+    requiredAnchorLayoutAttr = xegpu::completeStoreScatterLayoutFromInstData(
+        anchorLayoutAttr, srcVecTy.getElementType(), uArch);
   } else {
     if (!srcVecTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
@@ -1322,14 +1330,18 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
     ArrayRef<const LayoutInfoLattice *> results) {
   xegpu::DistributeLayoutAttr anchorLayout = storeMatrix.getLayoutAttr();
   LayoutInfo layout;
+  VectorType srcVecTy =
+      llvm::cast<VectorType>(storeMatrix.getData().getType());
+  const uArch *uArch = getUArch(getChipStr(storeMatrix).value_or(""));
+  if (!uArch)
+    return;
   if (hasParamsOfLayoutKind(anchorLayout)) {
-    layout = LayoutInfo(anchorLayout);
+    // The user-provided anchor may carry only inst_data; complete it with
+    // a lane factorization derived from the store-side Lane setup.
+    auto completed = xegpu::completeStoreScatterLayoutFromInstData(
+        anchorLayout, srcVecTy.getElementType(), uArch);
+    layout = LayoutInfo(completed);
   } else {
-    VectorType srcVecTy =
-        llvm::cast<VectorType>(storeMatrix.getData().getType());
-    const uArch *uArch = getUArch(getChipStr(storeMatrix).value_or(""));
-    if (!uArch)
-      return;
     int chunkSize =
         1; // placeHolder for future use when StoreMatrix supports coalescing
     auto requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
