@@ -6115,27 +6115,27 @@ APFloat::opStatus getOpStatusFromLibc(int libc_exceptions) {
 
 // TODO: Support other rounding modes when LLVM libc math implement static
 // roundings.
-std::optional<APFloat> exp(const APFloat &X, RoundingMode rounding_mode,
-                           APFloat::opStatus *Status) {
+std::optional<APFloat> exp(const APFloat &x, RoundingMode rounding_mode,
+                           APFloat::opStatus *status) {
 
   if (rounding_mode == APFloatBase::rmNearestTiesToEven) {
-    if (APFloat::SemanticsToEnum(X.getSemantics()) ==
+    if (APFloat::SemanticsToEnum(x.getSemantics()) ==
         APFloatBase::S_IEEEsingle) {
-      float x_val = X.convertToFloat();
+      float x_val = x.convertToFloat();
       int exc =
           LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
-      if (Status)
-        *Status = getOpStatusFromLibc(exc);
+      if (status)
+        *status = getOpStatusFromLibc(exc);
       float result = LIBC_NAMESPACE::shared::expf(x_val);
       return APFloat(result);
     }
-    if (APFloat::SemanticsToEnum(X.getSemantics()) ==
+    if (APFloat::SemanticsToEnum(x.getSemantics()) ==
         APFloatBase::S_IEEEdouble) {
-      double x_val = X.convertToDouble();
+      double x_val = x.convertToDouble();
       int exc =
           LIBC_NAMESPACE::shared::check::exp_exceptions(x_val, FE_TONEAREST);
-      if (Status)
-        *Status = getOpStatusFromLibc(exc);
+      if (status)
+        *status = getOpStatusFromLibc(exc);
       double result = LIBC_NAMESPACE::shared::exp(x_val);
       return APFloat(result);
     }
