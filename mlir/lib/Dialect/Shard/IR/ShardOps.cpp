@@ -631,8 +631,12 @@ public:
     bool modified = succeeded(foldDynamicIndexList(mixedHalos, true)) ||
                     succeeded(foldDynamicIndexList(mixedOffs, true));
 
-    auto [staticHalos, dynamicHalos] = decomposeMixedValues(mixedHalos);
-    auto [staticOffs, dynamicOffs] = decomposeMixedValues(mixedOffs);
+    auto decomposedHalos = decomposeMixedValues(mixedHalos);
+    auto staticHalos = decomposedHalos.first;
+    auto dynamicHalos = decomposedHalos.second;
+    auto decomposedOffs = decomposeMixedValues(mixedOffs);
+    auto staticOffs = decomposedOffs.first;
+    auto dynamicOffs = decomposedOffs.second;
 
     if (dynamicHalos.empty() && !staticHalos.empty()) {
       if (staticHalos[0] == 0 && llvm::all_equal(staticHalos)) {
@@ -666,11 +670,12 @@ public:
       return failure();
     }
 
-    op.setStaticHaloSizes(staticHalos);
-    op.getDynamicHaloSizesMutable().assign(dynamicHalos);
-    op.setStaticShardedDimsOffsets(staticOffs);
-    op.getDynamicShardedDimsOffsetsMutable().assign(dynamicOffs);
-
+    b.modifyOpInPlace(op, [&]() {
+      op.setStaticHaloSizes(staticHalos);
+      op.getDynamicHaloSizesMutable().assign(dynamicHalos);
+      op.setStaticShardedDimsOffsets(staticOffs);
+      op.getDynamicShardedDimsOffsetsMutable().assign(dynamicOffs);
+    });
     return success();
   }
 };
@@ -877,7 +882,8 @@ public:
           b.eraseOp(op.getOperation());
         } else {
           // use the other sharding as input for op
-          op.getSrcMutable().assign(otherOp.getResult());
+          b.modifyOpInPlace(
+              op, [&]() { op.getSrcMutable().assign(otherOp.getResult()); });
         }
         return success();
       }
@@ -1416,7 +1422,7 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getScatterAxis().getSExtValue(), getGridAxes(),
+      getOperand(), getResult(), getScatterDim().getSExtValue(), getGridAxes(),
       grid.value().getShape());
 }
 
@@ -1445,9 +1451,9 @@ LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
 
-  auto scatterAxis = getScatterAxis().getSExtValue();
+  auto scatterDim = getScatterDim().getSExtValue();
   return verifyScatterOrSliceOperandAndResultShape(getInput(), getResult(),
-                                                   scatterAxis, getGridAxes(),
+                                                   scatterDim, getGridAxes(),
                                                    grid.value().getShape());
 }
 

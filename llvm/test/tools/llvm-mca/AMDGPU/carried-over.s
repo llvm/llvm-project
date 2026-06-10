@@ -84,4 +84,4 @@ v_sub_u32 v5, v1, v2
 # CHECK-NEXT: 4.     1     0.0    0.0    0.0       v_sub_co_u32_e64 v5, s[0:1], v1, v2
 # CHECK-NEXT: 5.     1     0.0    0.0    0.0       v_add_u32_e32 v5, v1, v2
 # CHECK-NEXT: 6.     1     0.0    0.0    0.0       v_sub_u32_e32 v5, v1, v2
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        7     0.0    0.0    0.0       <total>

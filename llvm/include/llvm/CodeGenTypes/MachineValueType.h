@@ -108,11 +108,21 @@ namespace llvm {
               SimpleTy <= MVT::LAST_VECTOR_VALUETYPE);
     }
 
+    /// Return true if this is a vector with matching element type.
+    bool isVectorOf(MVT EltVT) const {
+      return isVector() && getVectorElementType() == EltVT;
+    }
+
     /// Return true if this is a vector value type where the
     /// runtime length is machine dependent
     bool isScalableVector() const {
       return (SimpleTy >= MVT::FIRST_SCALABLE_VECTOR_VALUETYPE &&
               SimpleTy <= MVT::LAST_SCALABLE_VECTOR_VALUETYPE);
+    }
+
+    /// Return true if this is a scalable vector with matching element type.
+    bool isScalableVectorOf(MVT EltVT) const {
+      return isScalableVector() && getVectorElementType() == EltVT;
     }
 
     /// Return true if this is a RISCV vector tuple type where the
@@ -135,6 +145,11 @@ namespace llvm {
     bool isFixedLengthVector() const {
       return (SimpleTy >= MVT::FIRST_FIXEDLEN_VECTOR_VALUETYPE &&
               SimpleTy <= MVT::LAST_FIXEDLEN_VECTOR_VALUETYPE);
+    }
+
+    /// Return true if this is a fixed length vector with matching element type.
+    bool isFixedLengthVectorOf(MVT EltVT) const {
+      return isFixedLengthVector() && getVectorElementType() == EltVT;
     }
 
     /// Return true if this is a 16-bit vector type.
@@ -215,6 +230,13 @@ namespace llvm {
       assert(VecTy.SimpleTy != MVT::INVALID_SIMPLE_VALUE_TYPE &&
              "Simple vector VT not representable by simple integer vector VT!");
       return VecTy;
+    }
+
+    /// Return a VT for a vector type whose attributes match ourselves with
+    /// the exception of the element count that is chosen by the caller.
+    MVT changeVectorElementCount(ElementCount EC) const {
+      assert(isVector() && "Not a vector MVT!");
+      return MVT::getVectorVT(getVectorElementType(), EC);
     }
 
     /// Return the type converted to an equivalently sized integer or vector

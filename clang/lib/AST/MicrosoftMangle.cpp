@@ -25,9 +25,11 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
+#include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
@@ -119,10 +121,6 @@ static const DeclContext *getEffectiveDeclContext(const Decl *D) {
   }
 
   return DC->getRedeclContext();
-}
-
-static const DeclContext *getEffectiveParentContext(const DeclContext *DC) {
-  return getEffectiveDeclContext(cast<Decl>(DC));
 }
 
 static const FunctionDecl *getStructor(const NamedDecl *ND) {
@@ -506,8 +504,13 @@ MicrosoftMangleContextImpl::MicrosoftMangleContextImpl(ASTContext &Context,
   // which are something like "?A0x01234567@".
   SourceManager &SM = Context.getSourceManager();
   if (OptionalFileEntryRef FE = SM.getFileEntryRefForID(SM.getMainFileID())) {
+    SmallString<256> Path(FE->getName());
+    // Do a path substitution from the MacroPrefixMap if needed.
+    clang::Preprocessor::processPathForFileMacro(Path, Context.getLangOpts(),
+                                                 Context.getTargetInfo());
+
     // Truncate the hash so we get 8 characters of hexadecimal.
-    uint32_t TruncatedHash = uint32_t(xxh3_64bits(FE->getName()));
+    uint32_t TruncatedHash = uint32_t(xxh3_64bits(Path));
     AnonymousNamespaceHash = llvm::utohexstr(TruncatedHash);
   } else {
     // If we don't have a path to the main file, we'll just use 0.
@@ -556,11 +559,6 @@ bool MicrosoftMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
 
     // Variables at global scope with internal linkage are not mangled.
     const DeclContext *DC = getEffectiveDeclContext(D);
-    // Check for extern variable declared locally.
-    if (DC->isFunctionOrMethod() && D->hasLinkage())
-      while (!DC->isNamespace() && !DC->isTranslationUnit())
-        DC = getEffectiveParentContext(DC);
-
     if (DC->isTranslationUnit() && D->getFormalLinkage() == Linkage::Internal &&
         !isa<VarTemplateSpecializationDecl>(D) && D->getIdentifier() != nullptr)
       return false;
@@ -578,25 +576,20 @@ DiagnosticBuilder MicrosoftCXXNameMangler::Error(SourceLocation loc,
                                                  StringRef thing1,
                                                  StringRef thing2) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 %1 yet");
-  return Diags.Report(loc, DiagID) << thing1 << thing2;
+  return Diags.Report(loc, diag::err_ms_mangle_unsupported_with_detail)
+         << thing1 << thing2;
 }
 
 DiagnosticBuilder MicrosoftCXXNameMangler::Error(SourceLocation loc,
                                                  StringRef thingy) {
   DiagnosticsEngine &Diags = Context.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 yet");
-  return Diags.Report(loc, DiagID) << thingy;
+  return Diags.Report(loc, diag::err_ms_mangle_unsupported) << thingy;
 }
 
 DiagnosticBuilder MicrosoftCXXNameMangler::Error(StringRef thingy) {
   DiagnosticsEngine &Diags = Context.getDiags();
   // extra placeholders are ignored quietly when not used
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot mangle this %0 yet");
-  return Diags.Report(DiagID) << thingy;
+  return Diags.Report(diag::err_ms_mangle_unsupported) << thingy;
 }
 
 void MicrosoftCXXNameMangler::mangle(GlobalDecl GD, StringRef Prefix) {
@@ -1184,7 +1177,9 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
 
       if (const NamespaceDecl *NS = dyn_cast<NamespaceDecl>(ND)) {
         if (NS->isAnonymousNamespace()) {
-          Out << "?A0x" << Context.getAnonymousNamespaceHash() << '@';
+          llvm::SmallString<16> Name("?A0x");
+          Name += Context.getAnonymousNamespaceHash();
+          mangleSourceName(Name);
           break;
         }
       }
@@ -2158,6 +2153,11 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
     return;
   }
 
+  case APValue::Matrix: {
+    Error("template argument (value type: matrix)");
+    return;
+  }
+
   case APValue::AddrLabelDiff: {
     Error("template argument (value type: address label diff)");
     return;
@@ -2831,14 +2831,202 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
-#define SVE_TYPE(Name, Id, SingletonId)                                        \
-  case BuiltinType::Id:                                                        \
-    mangleArtificialTagType(TagTypeKind::Struct, #Name, {"__clang"});          \
+  case BuiltinType::SveBool:
+    Out << "$_CA";
     break;
-#define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)
-#include "clang/Basic/AArch64ACLETypes.def"
 
-    // Issue an error for any type not explicitly handled.
+  case BuiltinType::SveInt8:
+    Out << "$_CB";
+    break;
+  case BuiltinType::SveInt16:
+    Out << "$_CC";
+    break;
+  case BuiltinType::SveInt32:
+    Out << "$_CD";
+    break;
+  case BuiltinType::SveInt64:
+    Out << "$_CE";
+    break;
+
+  case BuiltinType::SveUint8:
+    Out << "$_CF";
+    break;
+  case BuiltinType::SveUint16:
+    Out << "$_CG";
+    break;
+  case BuiltinType::SveUint32:
+    Out << "$_CH";
+    break;
+  case BuiltinType::SveUint64:
+    Out << "$_CI";
+    break;
+
+  case BuiltinType::SveBFloat16:
+    Out << "$_CJ";
+    break;
+  case BuiltinType::SveFloat16:
+    Out << "$_CK";
+    break;
+  case BuiltinType::SveFloat32:
+    Out << "$_CL";
+    break;
+  case BuiltinType::SveFloat64:
+    Out << "$_CM";
+    break;
+
+  case BuiltinType::SveInt8x2:
+    Out << "$_C2B";
+    break;
+  case BuiltinType::SveInt16x2:
+    Out << "$_C2C";
+    break;
+  case BuiltinType::SveInt32x2:
+    Out << "$_C2D";
+    break;
+  case BuiltinType::SveInt64x2:
+    Out << "$_C2E";
+    break;
+
+  case BuiltinType::SveUint8x2:
+    Out << "$_C2F";
+    break;
+  case BuiltinType::SveUint16x2:
+    Out << "$_C2G";
+    break;
+  case BuiltinType::SveUint32x2:
+    Out << "$_C2H";
+    break;
+  case BuiltinType::SveUint64x2:
+    Out << "$_C2I";
+    break;
+
+  case BuiltinType::SveBFloat16x2:
+    Out << "$_C2J";
+    break;
+  case BuiltinType::SveFloat16x2:
+    Out << "$_C2K";
+    break;
+  case BuiltinType::SveFloat32x2:
+    Out << "$_C2L";
+    break;
+  case BuiltinType::SveFloat64x2:
+    Out << "$_C2M";
+    break;
+
+  case BuiltinType::SveInt8x3:
+    Out << "$_C3B";
+    break;
+  case BuiltinType::SveInt16x3:
+    Out << "$_C3C";
+    break;
+  case BuiltinType::SveInt32x3:
+    Out << "$_C3D";
+    break;
+  case BuiltinType::SveInt64x3:
+    Out << "$_C3E";
+    break;
+
+  case BuiltinType::SveUint8x3:
+    Out << "$_C3F";
+    break;
+  case BuiltinType::SveUint16x3:
+    Out << "$_C3G";
+    break;
+  case BuiltinType::SveUint32x3:
+    Out << "$_C3H";
+    break;
+  case BuiltinType::SveUint64x3:
+    Out << "$_C3I";
+    break;
+
+  case BuiltinType::SveBFloat16x3:
+    Out << "$_C3J";
+    break;
+  case BuiltinType::SveFloat16x3:
+    Out << "$_C3K";
+    break;
+  case BuiltinType::SveFloat32x3:
+    Out << "$_C3L";
+    break;
+  case BuiltinType::SveFloat64x3:
+    Out << "$_C3M";
+    break;
+
+  case BuiltinType::SveInt8x4:
+    Out << "$_C4B";
+    break;
+  case BuiltinType::SveInt16x4:
+    Out << "$_C4C";
+    break;
+  case BuiltinType::SveInt32x4:
+    Out << "$_C4D";
+    break;
+  case BuiltinType::SveInt64x4:
+    Out << "$_C4E";
+    break;
+
+  case BuiltinType::SveUint8x4:
+    Out << "$_C4F";
+    break;
+  case BuiltinType::SveUint16x4:
+    Out << "$_C4G";
+    break;
+  case BuiltinType::SveUint32x4:
+    Out << "$_C4H";
+    break;
+  case BuiltinType::SveUint64x4:
+    Out << "$_C4I";
+    break;
+
+  case BuiltinType::SveBFloat16x4:
+    Out << "$_C4J";
+    break;
+  case BuiltinType::SveFloat16x4:
+    Out << "$_C4K";
+    break;
+  case BuiltinType::SveFloat32x4:
+    Out << "$_C4L";
+    break;
+  case BuiltinType::SveFloat64x4:
+    Out << "$_C4M";
+    break;
+
+  // SVE types not supported by MSVC still use clang-specific
+  // artificial tag mangling
+  case BuiltinType::SveMFloat8:
+    mangleArtificialTagType(TagTypeKind::Struct, "__SVMfloat8_t", {"__clang"});
+    break;
+
+  case BuiltinType::SveMFloat8x2:
+    mangleArtificialTagType(TagTypeKind::Struct, "__clang_svmfloat8x2_t",
+                            {"__clang"});
+    break;
+
+  case BuiltinType::SveMFloat8x3:
+    mangleArtificialTagType(TagTypeKind::Struct, "__clang_svmfloat8x3_t",
+                            {"__clang"});
+    break;
+
+  case BuiltinType::SveMFloat8x4:
+    mangleArtificialTagType(TagTypeKind::Struct, "__clang_svmfloat8x4_t",
+                            {"__clang"});
+    break;
+
+  case BuiltinType::SveBoolx2:
+    mangleArtificialTagType(TagTypeKind::Struct, "__clang_svboolx2_t",
+                            {"__clang"});
+    break;
+
+  case BuiltinType::SveBoolx4:
+    mangleArtificialTagType(TagTypeKind::Struct, "__clang_svboolx4_t",
+                            {"__clang"});
+    break;
+
+  case BuiltinType::SveCount:
+    mangleArtificialTagType(TagTypeKind::Struct, "__SVCount_t", {"__clang"});
+    break;
+
+  // Issue an error for any type not explicitly handled.
   default:
     Error(Range.getBegin(), "built-in type: ",
           T->getName(Context.getASTContext().getPrintingPolicy()))
@@ -2909,6 +3097,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   }
 
   mangleCallingConvention(CC, Range);
+
+  if (Proto) {
+    unsigned SMEAttrs = Proto->getAArch64SMEAttributes();
+    if (SMEAttrs)
+      Out << "__clang_sme_attr" << SMEAttrs;
+  }
 
   // <return-type> ::= <type>
   //               ::= @ # structors (they have no declared return type)

@@ -38,9 +38,12 @@ void M68kAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
                                   raw_ostream &OS) {
   const MachineOperand &MO = MI->getOperand(OpNum);
   switch (MO.getType()) {
-  case MachineOperand::MO_Register:
-    OS << "%" << M68kInstPrinter::getRegisterName(MO.getReg());
+  case MachineOperand::MO_Register: {
+    Register Reg = MO.getReg();
+    if (Reg.isValid())
+      OS << "%" << M68kInstPrinter::getRegisterName(Reg);
     break;
+  }
   case MachineOperand::MO_Immediate:
     OS << '#' << MO.getImm();
     break;
@@ -55,7 +58,7 @@ void M68kAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     break;
   case MachineOperand::MO_ConstantPoolIndex: {
     const DataLayout &DL = getDataLayout();
-    OS << DL.getPrivateGlobalPrefix() << "CPI" << getFunctionNumber() << '_'
+    OS << DL.getInternalSymbolPrefix() << "CPI" << getFunctionNumber() << '_'
        << MO.getIndex();
     break;
   }
@@ -87,6 +90,16 @@ void M68kAsmPrinter::printDisp(const MachineInstr *MI, unsigned opNum,
   // Displacement is relocatable, so we're pretty permissive about what
   // can be put here.
   printOperand(MI, opNum, O);
+}
+
+void M68kAsmPrinter::printScale(const MachineInstr *MI, unsigned opNum,
+                                raw_ostream &O) {
+  const MachineOperand &Op = MI->getOperand(opNum);
+  // Scale has to be an immediate.
+  unsigned Scale = Op.getImm();
+  // We only print it out when it's larger than 1
+  if (Scale > 1)
+    O << "*" << Scale;
 }
 
 void M68kAsmPrinter::printAbsMem(const MachineInstr *MI, unsigned OpNum,

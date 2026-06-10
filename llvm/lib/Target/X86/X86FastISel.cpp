@@ -21,6 +21,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -760,7 +761,7 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
 
       // Ok, we need to do a load from a stub.  If we've already loaded from
       // this stub, reuse the loaded pointer, otherwise emit the load now.
-      DenseMap<const Value *, Register>::iterator I = LocalValueMap.find(V);
+      auto I = LocalValueMap.find(V);
       Register LoadReg;
       if (I != LocalValueMap.end() && I->second) {
         LoadReg = I->second;
@@ -873,8 +874,7 @@ redo_gep:
   case Instruction::Alloca: {
     // Do static allocas.
     const AllocaInst *A = cast<AllocaInst>(V);
-    DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(A);
+    auto SI = FuncInfo.StaticAllocaMap.find(A);
     if (SI != FuncInfo.StaticAllocaMap.end()) {
       AM.BaseType = X86AddressMode::FrameIndexBase;
       AM.Base.FrameIndex = SI->second;
@@ -1643,7 +1643,7 @@ bool X86FastISel::X86SelectSExt(const Instruction *I) {
 bool X86FastISel::X86SelectBranch(const Instruction *I) {
   // Unconditional branches are selected by tablegen-generated code.
   // Handle a conditional branch.
-  const BranchInst *BI = cast<BranchInst>(I);
+  const CondBrInst *BI = cast<CondBrInst>(I);
   MachineBasicBlock *TrueMBB = FuncInfo.getMBB(BI->getSuccessor(0));
   MachineBasicBlock *FalseMBB = FuncInfo.getMBB(BI->getSuccessor(1));
 
@@ -2635,7 +2635,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     return false;
   case Intrinsic::frameaddress: {
     MachineFunction *MF = FuncInfo.MF;
-    if (MF->getTarget().getMCAsmInfo()->usesWindowsCFI())
+    if (MF->getTarget().getMCAsmInfo().usesWindowsCFI())
       return false;
 
     Type *RetTy = II->getCalledFunction()->getReturnType();
@@ -3200,6 +3200,32 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   bool Is64Bit        = Subtarget->is64Bit();
   bool IsWin64        = Subtarget->isCallingConvWin64(CC);
 
+  // If the return type is illegal, check if the ABI requires a type conversion
+  // that FastISel cannot handle. Fall back to DAG ISel in such cases.
+  // For example, bfloat is returned as f16 in XMM0, however FastISel would
+  // assign f32 register type and store it in FuncInfo.ValueMap. This would
+  // cause DAG incorrectly perform type conversion from f32 to bfloat after get
+  // the value from FuncInfo.ValueMap.
+  // However, i1 is promoted to i8 and return i8 defined by ABI, so FastISel can
+  // lower it without switching to DAGISel.
+  SmallVector<Type *> RetTys;
+  ComputeValueTypes(DL, CLI.RetTy, RetTys);
+  for (Type *RetTy : RetTys) {
+    MVT RetVT = MVT::Other;
+    if (!isTypeLegal(RetTy, RetVT)) {
+      if (RetVT == MVT::Other)
+        return false; // Unknown type, let DAG ISel handle it.
+
+      // RetVT is not MVT::Other, it must be simple now. It is something rely on
+      // the logic of isTypeLegal().
+      MVT ABIVT = TLI.getRegisterTypeForCallingConv(CLI.RetTy->getContext(),
+                                                    CLI.CallConv, RetVT);
+      MVT RegVT = TLI.getRegisterType(CLI.RetTy->getContext(), RetVT);
+      if (ABIVT != RegVT)
+        return false;
+    }
+  }
+
   // Call / invoke instructions with NoCfCheck attribute require special
   // handling.
   if (CB && CB->doesNoCfCheck())
@@ -3303,8 +3329,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
       ResultReg = fastEmit_ri(VT, VT, ISD::AND, ResultReg, 1);
     } else {
-      if (!isTypeLegal(Val->getType(), VT) ||
-          (VT.isVector() && VT.getVectorElementType() == MVT::i1))
+      if (!isTypeLegal(Val->getType(), VT) || VT.isVectorOf(MVT::i1))
         return false;
       ResultReg = getRegForValue(Val);
     }
@@ -3645,7 +3670,7 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
     return X86SelectZExt(I);
   case Instruction::SExt:
     return X86SelectSExt(I);
-  case Instruction::Br:
+  case Instruction::CondBr:
     return X86SelectBranch(I);
   case Instruction::LShr:
   case Instruction::AShr:
@@ -3970,9 +3995,10 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
   SmallVector<MachineOperand, 8> AddrOps;
   AM.getFullAddress(AddrOps);
 
+  MachineInstr *CopyMI = nullptr;
   MachineInstr *Result = XII.foldMemoryOperandImpl(
       *FuncInfo.MF, *MI, OpNo, AddrOps, FuncInfo.InsertPt, Size, LI->getAlign(),
-      /*AllowCommute=*/true);
+      /*AllowCommute=*/true, CopyMI);
   if (!Result)
     return false;
 

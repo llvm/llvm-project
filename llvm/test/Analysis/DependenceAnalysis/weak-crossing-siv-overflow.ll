@@ -27,17 +27,17 @@ define void @weakcorssing_delta_ovfl(ptr %A) {
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-CROSSING-SIV-LABEL: 'weakcorssing_delta_ovfl'
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop.header
@@ -73,33 +73,29 @@ exit:
 ;   A[3*i + 1] = 1;
 ; }
 ;
-; FIXME: DependenceAnalysis currently detects no dependency between
-; `A[-3*i + INT64_MAX]` and `A[3*i - 2]`, but it does exist. For example,
+; There is a dependency between `A[-3*i + INT64_MAX]` and `A[3*i - 2]`, for example,
 ;
 ;  memory access       | i == 0 | i == 1           | i == max_i - 1 | i == max_i
 ; ---------------------|--------|------------------|----------------|------------------
 ;  A[-3*i + INT64_MAX] |        | A[INT64_MAX - 3] | A[1]           |
 ;  A[3*i + 1]          | A[1]   |                  |                | A[INT64_MAX - 3]
 ;
-; The root cause is that the product of the BTC, the coefficient, and 2
-; triggers an overflow.
-;
 define void @weakcorssing_prod_ovfl(ptr %A) {
 ; CHECK-ALL-LABEL: 'weakcorssing_prod_ovfl'
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:    da analyze - output [*|<]!
 ; CHECK-ALL-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
 ; CHECK-ALL-NEXT:    da analyze - none!
 ;
 ; CHECK-WEAK-CROSSING-SIV-LABEL: 'weakcorssing_prod_ovfl'
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - none!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*|<]!
 ; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
-; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - consistent output [*]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
 ;
 entry:
   br label %loop
@@ -116,6 +112,62 @@ loop:
   %subscript.0.next = add nsw i64 %subscript.0, -3
   %subscript.1.next = add nsw i64 %subscript.1, 3
   %ec = icmp sgt i64 %i.inc, 3074457345618258602
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; max_i = 1ULL << 62 // 4611686018427387904
+; for (long long i = 0; i <= max_i; i++) {
+;   A[i - ((1ULL << 62) - 1)] = 0;
+;   A[-i + (1ULL << 62)] = 1;
+; }
+;
+; There is a dependence between `A[i - ((1ULL << 62) - 1)]`
+; and `A[-i + (1ULL << 62)]`, for example,
+;
+;  memory access              | i == 0                  | i == 1                  | i == max_i - 1 | i == max_i
+; ----------------------------|-------------------------|-------------------------|----------------|------------------
+;  A[i - ((1ULL << 62) - 1)]  | A[-4611686018427387903] | A[-4611686018427387902] | A[0]           | A[1]
+;  A[-i + (1ULL << 62)]       | A[4611686018427387904]  | A[4611686018427387903]  | A[1]           | A[0]
+;
+define void @test_weakcrossing_siv_overflow(ptr %A) {
+; CHECK-ALL-LABEL: 'test_weakcrossing_siv_overflow'
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+; CHECK-ALL-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-ALL-NEXT:    da analyze - output [<>]!
+; CHECK-ALL-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-ALL-NEXT:    da analyze - none!
+;
+; CHECK-WEAK-CROSSING-SIV-LABEL: 'test_weakcrossing_siv_overflow'
+; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 0, ptr %idx.0, align 1
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 0, ptr %idx.0, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [<>]!
+; CHECK-WEAK-CROSSING-SIV-NEXT:  Src: store i8 1, ptr %idx.1, align 1 --> Dst: store i8 1, ptr %idx.1, align 1
+; CHECK-WEAK-CROSSING-SIV-NEXT:    da analyze - output [*]!
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.inc, %loop ]
+  %subscript.0 = phi i64 [ -4611686018427387903, %entry ], [ %subscript.0.next, %loop ]
+  %subscript.1 = phi i64 [ 4611686018427387904, %entry ], [ %subscript.1.next, %loop ]
+
+  %idx.0 = getelementptr inbounds i8, ptr %A, i64 %subscript.0
+  store i8 0, ptr %idx.0
+
+  %idx.1 = getelementptr inbounds i8, ptr %A, i64 %subscript.1
+  store i8 1, ptr %idx.1
+
+  %i.inc = add nuw nsw i64 %i, 1
+  %subscript.0.next = add nsw i64 %subscript.0, 1
+  %subscript.1.next = add nsw i64 %subscript.1, -1
+
+  %ec = icmp sgt i64 %i.inc, 4611686018427387904
   br i1 %ec, label %exit, label %loop
 
 exit:

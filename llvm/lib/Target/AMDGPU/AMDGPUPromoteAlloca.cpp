@@ -90,7 +90,7 @@ static cl::opt<unsigned>
 // VarIndex is A, VarMul is stride, VarShift is shift and ConstIndex is B. All
 // parts are optional.
 struct GEPToVectorIndex {
-  Value *VarIndex = nullptr;         // defaults to 0
+  WeakTrackingVH VarIndex = nullptr; // defaults to 0
   ConstantInt *VarMul = nullptr;     // defaults to 1
   ConstantInt *VarShift = nullptr;   // defaults to 0
   ConstantInt *ConstIndex = nullptr; // defaults to 0
@@ -423,8 +423,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(*DL);
-      if (!Size)
-        continue; // Skip dynamic allocas
+      assert(Size); // Expected to succeed on non-array alloca.
       const unsigned AllocaCost = Size->getFixedValue() * 8;
       // First, check if we have enough budget to vectorize this alloca.
       if (AllocaCost <= VectorizationBudget) {
@@ -1141,7 +1140,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   //
   // Insert a placeholder whenever we need the vector value at the top of a
   // basic block.
-  SmallVector<Instruction *> Placeholders;
+  SmallSetVector<Instruction *, 8> Placeholders;
   forEachWorkListItem(AA.Vector.Worklist, [&](Instruction *I) {
     BasicBlock *BB = I->getParent();
     auto GetCurVal = [&]() -> Value * {
@@ -1156,29 +1155,27 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
       IRBuilder<> Builder(I);
       auto *Placeholder = cast<Instruction>(Builder.CreateFreeze(
           PoisonValue::get(AA.Vector.Ty), "promotealloca.placeholder"));
-      Placeholders.push_back(Placeholder);
+      Placeholders.insert(Placeholder);
       return Placeholders.back();
     };
 
     Value *Result = promoteAllocaUserToVector(I, *DL, AA, VecStoreSize,
                                               ElementSize, GetCurVal);
-    if (Result)
+    // If the returned result is a placeholder, it means the instruction does
+    // not really modify the alloca. So no need to make it being available value
+    // to SSAUpdater.
+    // This will stop placeholder being cached in SSAUpdater. The cached
+    // placeholder may cause stale pointer being referenced when doing
+    // placeholder replacement.
+    if (Result && (!isa<Instruction>(Result) ||
+                   !Placeholders.contains(cast<Instruction>(Result))))
       Updater.AddAvailableValue(BB, Result);
   });
 
   // Now fixup the placeholders.
-  SmallVector<Value *> PlaceholderToNewVal(Placeholders.size());
-  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
-    Value *NewVal = Updater.GetValueInMiddleOfBlock(Placeholder->getParent());
-    PlaceholderToNewVal[Index] = NewVal;
-    Placeholder->replaceAllUsesWith(NewVal);
-  }
-  // Note: we cannot merge this loop with the previous one because it is
-  // possible that the placeholder itself can be used in the SSAUpdater. The
-  // replaceAllUsesWith doesn't replace those uses.
-  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
-    if (!Placeholder->use_empty())
-      Placeholder->replaceAllUsesWith(PlaceholderToNewVal[Index]);
+  for (Instruction *Placeholder : Placeholders) {
+    Placeholder->replaceAllUsesWith(
+        Updater.GetValueInMiddleOfBlock(Placeholder->getParent()));
     Placeholder->eraseFromParent();
   }
 

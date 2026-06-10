@@ -64,68 +64,48 @@ define hidden i32 @i32_mac_u8_s8(ptr nocapture noundef readonly %a, ptr nocaptur
 
 ; MAX-BANDWIDTH: loop
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle   12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_u
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
+; MAX-BANDWIDTH: i16x8.extend_high_i8x16_u
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_u
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i8x16.shuffle   12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
 ; MAX-BANDWIDTH: i32x4.mul
 ; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle   8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_u
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i8x16.shuffle   8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; MAX-BANDWIDTH: i32x4.mul
-; MAX-BANDWIDTH: i32x4.add
-; MAX-BANDWIDTH: i8x16.shuffle   4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_u
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; MAX-BANDWIDTH: i8x16.shuffle   4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; MAX-BANDWIDTH: i32x4.mul
 ; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i16x8.extend_low_i8x16_u
-; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_u
 ; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
+; MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
+; MAX-BANDWIDTH: i32x4.mul
+; MAX-BANDWIDTH: i32x4.add
+; MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
 ; MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; MAX-BANDWIDTH: i32x4.mul
 ; MAX-BANDWIDTH: i32x4.add
 
 ; RELAXED-MAX-BANDWIDTH: loop
 ; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle   12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; RELAXED-MAX-BANDWIDTH: i16x8.extend_low_i8x16_u
-; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
+; RELAXED-MAX-BANDWIDTH: i16x8.extend_high_i8x16_u
+; RELAXED-MAX-BANDWIDTH: i32x4.extend_high_i16x8_u
 ; RELAXED-MAX-BANDWIDTH: v128.load
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle   12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; RELAXED-MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
+; RELAXED-MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
+; RELAXED-MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
 ; RELAXED-MAX-BANDWIDTH: i32x4.mul
 ; RELAXED-MAX-BANDWIDTH: i32x4.add
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle   8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; RELAXED-MAX-BANDWIDTH: i16x8.extend_low_i8x16_u
 ; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle   8, 9, 10, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; RELAXED-MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
-; RELAXED-MAX-BANDWIDTH: i32x4.mul
-; RELAXED-MAX-BANDWIDTH: i32x4.add
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle   4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; RELAXED-MAX-BANDWIDTH: i16x8.extend_low_i8x16_u
-; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
-; RELAXED-MAX-BANDWIDTH: i8x16.shuffle   4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; RELAXED-MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
 ; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; RELAXED-MAX-BANDWIDTH: i32x4.mul
 ; RELAXED-MAX-BANDWIDTH: i32x4.add
 ; RELAXED-MAX-BANDWIDTH: i16x8.extend_low_i8x16_u
-; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
+; RELAXED-MAX-BANDWIDTH: i32x4.extend_high_i16x8_u
 ; RELAXED-MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
+; RELAXED-MAX-BANDWIDTH: i32x4.extend_high_i16x8_s
+; RELAXED-MAX-BANDWIDTH: i32x4.mul
+; RELAXED-MAX-BANDWIDTH: i32x4.add
+; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_u
 ; RELAXED-MAX-BANDWIDTH: i32x4.extend_low_i16x8_s
 ; RELAXED-MAX-BANDWIDTH: i32x4.mul
 ; RELAXED-MAX-BANDWIDTH: i32x4.add

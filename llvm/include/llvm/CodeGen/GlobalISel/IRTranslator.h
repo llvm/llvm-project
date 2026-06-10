@@ -63,7 +63,7 @@ class Value;
 // the information from the LLVM IR.
 // The idea is that ultimately we would be able to free up the memory used
 // by the LLVM IR as soon as the translation is over.
-class IRTranslator : public MachineFunctionPass {
+class LLVM_ABI IRTranslator : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -380,7 +380,8 @@ private:
 
   /// Translate branch (br) instruction.
   /// \pre \p U is a branch instruction.
-  bool translateBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateUncondBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateCondBr(const User &U, MachineIRBuilder &MIRBuilder);
 
   // Begin switch lowering functions.
   bool emitJumpTableHeader(SwitchCG::JumpTable &JT,
@@ -648,6 +649,8 @@ private:
   bool HasTailCall = false;
 
   StackProtectorDescriptor SPDescriptor;
+
+  bool mayTranslateUserTypes(const User &U) const;
 
   /// Switch analysis and optimization.
   class GISelSwitchLowering : public SwitchCG::SwitchLowering {

@@ -22,13 +22,13 @@ void ExprEngine::VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *Ex,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
   ProgramStateRef state = Pred->getState();
-  const LocationContext *LCtx = Pred->getLocationContext();
-  SVal baseVal = state->getSVal(Ex->getBase(), LCtx);
+  const StackFrame *SF = Pred->getStackFrame();
+  SVal baseVal = state->getSVal(Ex->getBase(), SF);
   SVal location = state->getLValue(Ex->getDecl(), baseVal);
 
   ExplodedNodeSet dstIvar;
   NodeBuilder Bldr(Pred, dstIvar, *currBldrCtx);
-  Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, location));
+  Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, SF, location));
 
   // Perform the post-condition check of the ObjCIvarRefExpr and store
   // the created nodes in 'Dst'.
@@ -48,15 +48,15 @@ static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
                                           const ObjCForCollectionStmt *S,
                                           ConstCFGElementRef elem,
                                           SVal elementV, SymbolManager &SymMgr,
-                                          const NodeBuilderContext *currBldrCtx,
+                                          unsigned NumVisitedCurrent,
                                           NodeBuilder &Bldr, bool hasElements) {
 
   for (ExplodedNode *Pred : dstLocation) {
     ProgramStateRef state = Pred->getState();
-    const LocationContext *LCtx = Pred->getLocationContext();
+    const StackFrame *SF = Pred->getStackFrame();
 
     ProgramStateRef nextState =
-        ExprEngine::setWhetherHasMoreIteration(state, S, LCtx, hasElements);
+        ExprEngine::setWhetherHasMoreIteration(state, S, SF, hasElements);
 
     if (auto MV = elementV.getAs<loc::MemRegionVal>())
       if (const auto *R = dyn_cast<TypedValueRegion>(MV->getRegion())) {
@@ -68,14 +68,13 @@ static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
 
         SVal V;
         if (hasElements) {
-          SymbolRef Sym =
-              SymMgr.conjureSymbol(elem, LCtx, T, currBldrCtx->blockCount());
+          SymbolRef Sym = SymMgr.conjureSymbol(elem, SF, T, NumVisitedCurrent);
           V = svalBuilder.makeLoc(Sym);
         } else {
           V = svalBuilder.makeIntVal(0, T);
         }
 
-        nextState = nextState->bindLoc(elementV, V, LCtx);
+        nextState = nextState->bindLoc(elementV, V, SF);
       }
 
     Bldr.generateNode(S, Pred, nextState);
@@ -111,18 +110,19 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   //    result in state splitting.
 
   const Stmt *elem = S->getElement();
-  const Stmt *collection = S->getCollection();
+  const Expr *collection = S->getCollection();
   const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
-  SVal collectionV = state->getSVal(collection, Pred->getLocationContext());
 
-  SVal elementV;
+  SVal collectionV = state->getSVal(collection, Pred->getStackFrame());
+
+  SVal elementV = UnknownVal();
   if (const auto *DS = dyn_cast<DeclStmt>(elem)) {
     const VarDecl *elemD = cast<VarDecl>(DS->getSingleDecl());
     assert(elemD->getInit() == nullptr);
-    elementV = state->getLValue(elemD, Pred->getLocationContext());
-  } else {
-    elementV = state->getSVal(elem, Pred->getLocationContext());
+    elementV = state->getLValue(elemD, Pred->getStackFrame());
+  } else if (const auto *Ex = dyn_cast<Expr>(elem)) {
+    elementV = state->getSVal(Ex, Pred->getStackFrame());
   }
 
   bool isContainerNull = state->isNull(collectionV).isConstrainedTrue();
@@ -136,12 +136,13 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
     if (!isContainerNull)
       populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S,
-                                    elemRef, elementV, SymMgr, currBldrCtx,
-                                    Bldr,
+                                    elemRef, elementV, SymMgr,
+                                    getNumVisitedCurrent(), Bldr,
                                     /*hasElements=*/true);
 
     populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S, elemRef,
-                                  elementV, SymMgr, currBldrCtx, Bldr,
+                                  elementV, SymMgr, getNumVisitedCurrent(),
+                                  Bldr,
                                   /*hasElements=*/false);
 
     // Finally, run any custom checkers.
@@ -155,7 +156,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
                                   ExplodedNodeSet &Dst) {
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<ObjCMethodCall> Msg = CEMgr.getObjCMethodCall(
-      ME, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
+      ME, Pred->getState(), Pred->getStackFrame(), getCFGElementRef());
 
   // There are three cases for the receiver:
   //   (1) it is definitely nil,

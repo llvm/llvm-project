@@ -33,17 +33,20 @@ struct RISCVMoveMerge : public MachineFunctionPass {
   // Track which register units have been modified and used.
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 
-  bool isRegisterEven(const DestSourcePair &RegPair);
+  bool isGPRPairCopyCandidate(const DestSourcePair &RegPair, bool EvenRegPair);
 
   bool isCandidateToMergeMVA01S(const DestSourcePair &RegPair);
   bool isCandidateToMergeMVSA01(const DestSourcePair &RegPair);
   // Merge the two instructions indicated into a single pair instruction.
   MachineBasicBlock::iterator
+  mergeGPRPairInsns(MachineBasicBlock::iterator I,
+                    MachineBasicBlock::iterator Paired, bool RegPairIsEven);
+  MachineBasicBlock::iterator
   mergePairedInsns(MachineBasicBlock::iterator I,
                    MachineBasicBlock::iterator Paired, bool MoveFromSToA);
 
   MachineBasicBlock::iterator
-  findMatchingInstPair(MachineBasicBlock::iterator &MBBI,
+  findMatchingInstPair(MachineBasicBlock::iterator &MBBI, bool EvenRegPair,
                        const DestSourcePair &RegPair);
   // Look for C.MV instruction that can be combined with
   // the given instruction into CM.MVA01S or CM.MVSA01. Return the matching
@@ -64,33 +67,43 @@ char RISCVMoveMerge::ID = 0;
 INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
 
-static unsigned getMoveFromOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
-  if (ST.hasStdExtZcmp())
-    return MoveFromSToA ? RISCV::CM_MVA01S : RISCV::CM_MVSA01;
-
-  if (ST.hasVendorXqccmp())
-    return MoveFromSToA ? RISCV::QC_CM_MVA01S : RISCV::QC_CM_MVSA01;
-
+static unsigned getGPRPairCopyOpcode(const RISCVSubtarget &ST) {
   if (ST.hasStdExtZdinx())
     return RISCV::FSGNJ_D_IN32X;
 
   if (ST.hasStdExtP())
     return RISCV::PADD_DW;
 
-  llvm_unreachable("Unhandled subtarget with paired A to S move.");
+  llvm_unreachable("Unhandled subtarget with paired move.");
 }
 
-bool RISCVMoveMerge::isRegisterEven(const DestSourcePair &RegPair) {
+static unsigned getCM_MVOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
+  if (ST.hasStdExtZcmp())
+    return MoveFromSToA ? RISCV::CM_MVA01S : RISCV::CM_MVSA01;
+
+  if (ST.hasVendorXqccmp())
+    return MoveFromSToA ? RISCV::QC_CM_MVA01S : RISCV::QC_CM_MVSA01;
+
+  llvm_unreachable("Unhandled subtarget with paired move.");
+}
+
+bool RISCVMoveMerge::isGPRPairCopyCandidate(const DestSourcePair &RegPair,
+                                            bool EvenRegPair) {
   Register Destination = RegPair.Destination->getReg();
   Register Source = RegPair.Source->getReg();
 
   if (Source == Destination)
     return false;
 
-  Register SrcPair = TRI->getMatchingSuperReg(Source, RISCV::sub_gpr_even,
-                                              &RISCV::GPRPairRegClass);
-  Register DestPair = TRI->getMatchingSuperReg(Destination, RISCV::sub_gpr_even,
-                                               &RISCV::GPRPairRegClass);
+  if ((!ST->hasStdExtZdinx() && !ST->hasStdExtP()) || ST->is64Bit())
+    return false;
+
+  unsigned SubIdx = EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+
+  Register SrcPair =
+      TRI->getMatchingSuperReg(Source, SubIdx, &RISCV::GPRPairRegClass);
+  Register DestPair =
+      TRI->getMatchingSuperReg(Destination, SubIdx, &RISCV::GPRPairRegClass);
 
   return SrcPair.isValid() && DestPair.isValid();
 }
@@ -120,14 +133,56 @@ bool RISCVMoveMerge::isCandidateToMergeMVSA01(const DestSourcePair &RegPair) {
 }
 
 MachineBasicBlock::iterator
+RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
+                                  MachineBasicBlock::iterator Paired,
+                                  bool RegPairIsEven) {
+  MachineBasicBlock::iterator E = I->getParent()->end();
+  MachineBasicBlock::iterator NextI = next_nodbg(I, E);
+  DestSourcePair FirstPair = *TII->isCopyInstrImpl(*I);
+  DestSourcePair SecondPair = *TII->isCopyInstrImpl(*Paired);
+
+  if (NextI == Paired)
+    NextI = next_nodbg(NextI, E);
+  DebugLoc DL = I->getDebugLoc();
+
+  // Make a copy of the second instruction to update the kill
+  // flag.
+  MachineOperand PairedSource = *SecondPair.Source;
+
+  unsigned Opcode = getGPRPairCopyOpcode(*ST);
+  for (auto It = std::next(I); It != Paired && PairedSource.isKill(); ++It)
+    if (It->readsRegister(PairedSource.getReg(), TRI))
+      PairedSource.setIsKill(false);
+
+  Register SrcReg1, SrcReg2, DestReg;
+  unsigned GPRPairIdx =
+      RegPairIsEven ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+  SrcReg1 = TRI->getMatchingSuperReg(FirstPair.Source->getReg(), GPRPairIdx,
+                                     &RISCV::GPRPairRegClass);
+  SrcReg2 = ST->hasStdExtZdinx() ? SrcReg1 : Register(RISCV::X0_Pair);
+  DestReg = TRI->getMatchingSuperReg(FirstPair.Destination->getReg(),
+                                     GPRPairIdx, &RISCV::GPRPairRegClass);
+
+  BuildMI(*I->getParent(), I, DL, TII->get(Opcode), DestReg)
+      .addReg(SrcReg1, getKillRegState(PairedSource.isKill() &&
+                                       FirstPair.Source->isKill()))
+      .addReg(SrcReg2, getKillRegState(PairedSource.isKill() &&
+                                       FirstPair.Source->isKill()));
+
+  I->eraseFromParent();
+  Paired->eraseFromParent();
+  return NextI;
+}
+
+MachineBasicBlock::iterator
 RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
                                  MachineBasicBlock::iterator Paired,
                                  bool MoveFromSToA) {
   const MachineOperand *Sreg1, *Sreg2;
   MachineBasicBlock::iterator E = I->getParent()->end();
   MachineBasicBlock::iterator NextI = next_nodbg(I, E);
-  DestSourcePair FirstPair = TII->isCopyInstrImpl(*I).value();
-  DestSourcePair PairedRegs = TII->isCopyInstrImpl(*Paired).value();
+  DestSourcePair FirstPair = *TII->isCopyInstrImpl(*I);
+  DestSourcePair PairedRegs = *TII->isCopyInstrImpl(*Paired);
 
   if (NextI == Paired)
     NextI = next_nodbg(NextI, E);
@@ -146,16 +201,15 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   //
   //   mv a0, s2
   //   mv a1, s1    =>  cm.mva01s s2,s1
-  unsigned Opcode = getMoveFromOpcode(*ST, MoveFromSToA);
-  // We are moving one of the copies earlier so its kill flag may become
-  // invalid. Clear the copied kill flag if there are any reads of the
-  // register between the new location and the old location.
-  if (MoveFromSToA || (!ST->hasStdExtZcmp() && !ST->hasVendorXqccmp()))
+  unsigned Opcode = getCM_MVOpcode(*ST, MoveFromSToA);
+  if (MoveFromSToA) {
+    // We are moving one of the copies earlier so its kill flag may become
+    // invalid. Clear the copied kill flag if there are any reads of the
+    // register between the new location and the old location.
     for (auto It = std::next(I); It != Paired && PairedSource.isKill(); ++It)
       if (It->readsRegister(PairedSource.getReg(), TRI))
         PairedSource.setIsKill(false);
 
-  if (MoveFromSToA) {
     Sreg1 = FirstPair.Source;
     Sreg2 = &PairedSource;
     if (FirstPair.Destination->getReg() != RISCV::X10)
@@ -167,25 +221,7 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
       std::swap(Sreg1, Sreg2);
   }
 
-  if (!ST->hasStdExtZcmp() && !ST->hasVendorXqccmp()) {
-    Register SrcReg1, SrcReg2, DestReg;
-
-    SrcReg1 =
-        TRI->getMatchingSuperReg(FirstPair.Source->getReg(),
-                                 RISCV::sub_gpr_even, &RISCV::GPRPairRegClass);
-    SrcReg2 = ST->hasStdExtZdinx() ? SrcReg1 : Register(RISCV::X0_Pair);
-    DestReg =
-        TRI->getMatchingSuperReg(FirstPair.Destination->getReg(),
-                                 RISCV::sub_gpr_even, &RISCV::GPRPairRegClass);
-
-    BuildMI(*I->getParent(), I, DL, TII->get(Opcode), DestReg)
-        .addReg(SrcReg1, getKillRegState(PairedSource.isKill() &&
-                                         FirstPair.Source->isKill()))
-        .addReg(SrcReg2, getKillRegState(PairedSource.isKill() &&
-                                         FirstPair.Source->isKill()));
-  } else {
-    BuildMI(*I->getParent(), I, DL, TII->get(Opcode)).add(*Sreg1).add(*Sreg2);
-  }
+  BuildMI(*I->getParent(), I, DL, TII->get(Opcode)).add(*Sreg1).add(*Sreg2);
 
   I->eraseFromParent();
   Paired->eraseFromParent();
@@ -194,10 +230,22 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
 
 MachineBasicBlock::iterator
 RISCVMoveMerge::findMatchingInstPair(MachineBasicBlock::iterator &MBBI,
+                                     bool EvenRegPair,
                                      const DestSourcePair &RegPair) {
   MachineBasicBlock::iterator E = MBBI->getParent()->end();
   ModifiedRegUnits.clear();
   UsedRegUnits.clear();
+  unsigned RegPairIdx = EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+  unsigned SecondPairIdx =
+      !EvenRegPair ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+
+  // Get the expected source/destination registers of the matching lane.
+  Register SrcGPRPair = TRI->getMatchingSuperReg(
+      RegPair.Source->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
+  Register DestGPRPair = TRI->getMatchingSuperReg(
+      RegPair.Destination->getReg(), RegPairIdx, &RISCV::GPRPairRegClass);
+  Register ExpectedSourceReg = TRI->getSubReg(SrcGPRPair, SecondPairIdx);
+  Register ExpectedDestReg = TRI->getSubReg(DestGPRPair, SecondPairIdx);
 
   for (MachineBasicBlock::iterator I = next_nodbg(MBBI, E); I != E;
        I = next_nodbg(I, E)) {
@@ -212,29 +260,19 @@ RISCVMoveMerge::findMatchingInstPair(MachineBasicBlock::iterator &MBBI,
           RegPair.Source->getReg() == SourceReg)
         return E;
 
-      // Get the register pair from the even half
-      Register SrcGPRPair = TRI->getMatchingSuperReg(RegPair.Source->getReg(),
-                                                     RISCV::sub_gpr_even,
-                                                     &RISCV::GPRPairRegClass);
-
-      Register DestGPRPair = TRI->getMatchingSuperReg(
-          RegPair.Destination->getReg(), RISCV::sub_gpr_even,
-          &RISCV::GPRPairRegClass);
-
-      // Check if the second pair match the odd registers of the GPR pair.
-      if (SourceReg != TRI->getSubReg(SrcGPRPair, RISCV::sub_gpr_odd) ||
-          DestReg != TRI->getSubReg(DestGPRPair, RISCV::sub_gpr_odd))
-        return E;
-
-      if (!ModifiedRegUnits.available(DestReg) ||
-          !UsedRegUnits.available(DestReg) ||
-          !ModifiedRegUnits.available(SourceReg))
-        return E;
-
-      return I;
+      // Check if the second pair's registers match the other lane of the
+      // GPRPairs.
+      if (SourceReg == ExpectedSourceReg && DestReg == ExpectedDestReg)
+        return I;
     }
     // Update modified / used register units.
     LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits, TRI);
+    // Once expected lane registers are clobbered/read in-between, we can stop
+    // scanning since the pair cannot be legally merged anymore.
+    if (!ModifiedRegUnits.available(ExpectedDestReg) ||
+        !UsedRegUnits.available(ExpectedDestReg) ||
+        !ModifiedRegUnits.available(ExpectedSourceReg))
+      return E;
   }
   return E;
 }
@@ -299,22 +337,30 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
     auto RegPair = TII->isCopyInstrImpl(*MBBI);
     if (RegPair.has_value()) {
       bool MoveFromSToA = isCandidateToMergeMVA01S(*RegPair);
-      bool IsEven = isRegisterEven(*RegPair);
-      if (!MoveFromSToA && !isCandidateToMergeMVSA01(*RegPair) && !IsEven) {
+      bool MoveFromAToS = isCandidateToMergeMVSA01(*RegPair);
+      bool IsEven = isGPRPairCopyCandidate(*RegPair, /*EvenRegPair=*/true);
+      bool IsOdd = isGPRPairCopyCandidate(*RegPair, /*EvenRegPair=*/false);
+      if (!MoveFromSToA && !MoveFromAToS && !IsEven && !IsOdd) {
         ++MBBI;
         continue;
       }
 
       MachineBasicBlock::iterator Paired = E;
-      if (ST->hasStdExtZcmp() || ST->hasVendorXqccmp())
-        Paired = findMatchingInst(MBBI, MoveFromSToA, RegPair.value());
-      else if (IsEven)
-        Paired = findMatchingInstPair(MBBI, RegPair.value());
-      // If matching instruction can be found merge them.
-      if (Paired != E) {
-        MBBI = mergePairedInsns(MBBI, Paired, MoveFromSToA);
-        Modified = true;
-        continue;
+      if (MoveFromSToA || MoveFromAToS) {
+        Paired = findMatchingInst(MBBI, MoveFromSToA, *RegPair);
+        if (Paired != E) {
+          MBBI = mergePairedInsns(MBBI, Paired, MoveFromSToA);
+          Modified = true;
+          continue;
+        }
+      }
+      if (IsEven != IsOdd) {
+        Paired = findMatchingInstPair(MBBI, IsEven, *RegPair);
+        if (Paired != E) {
+          MBBI = mergeGPRPairInsns(MBBI, Paired, IsEven);
+          Modified = true;
+          continue;
+        }
       }
     }
     ++MBBI;
@@ -327,11 +373,9 @@ bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   ST = &Fn.getSubtarget<RISCVSubtarget>();
-  if (!ST->hasStdExtZcmp() && !ST->hasVendorXqccmp() && !ST->hasStdExtZdinx() &&
-      !ST->hasStdExtP())
-    return false;
-
-  if ((ST->hasStdExtP() || ST->hasStdExtZdinx()) && ST->is64Bit())
+  bool HasGPRPairCopy =
+      !ST->is64Bit() && (ST->hasStdExtZdinx() || ST->hasStdExtP());
+  if (!ST->hasStdExtZcmp() && !ST->hasVendorXqccmp() && !HasGPRPairCopy)
     return false;
 
   TII = ST->getInstrInfo();

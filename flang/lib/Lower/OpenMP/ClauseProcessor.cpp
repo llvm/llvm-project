@@ -202,9 +202,148 @@ getIfClauseOperand(lower::AbstractConverter &converter,
                                     ifVal);
 }
 
+template <typename SomeType, typename IteratorSpecT>
+static IteratorRange lowerIteratorRange(
+    Fortran::lower::AbstractConverter &converter, const IteratorSpecT &itSpec,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc) {
+  auto &builder = converter.getFirOpBuilder();
+
+  using IdTy =
+      Fortran::lower::omp::IdTyTemplate<Fortran::evaluate::Expr<SomeType>>;
+  using ExprTy = Fortran::evaluate::Expr<SomeType>;
+
+  using ObjTy = tomp::type::ObjectT<IdTy, ExprTy>;
+  using RangeTy = tomp::type::RangeT<ExprTy>;
+
+  const ObjTy &ivObj = std::get<1>(itSpec.t);
+  const RangeTy &range = std::get<2>(itSpec.t);
+
+  IteratorRange r;
+  r.ivSym = ivObj.sym();
+  assert(r.ivSym && "expected iterator induction symbol");
+
+  const auto &lbExpr = std::get<0>(range.t);
+  const auto &ubExpr = std::get<1>(range.t);
+  const auto &stExpr = std::get<2>(range.t);
+
+  mlir::Value lbVal =
+      fir::getBase(converter.genExprValue(toEvExpr(lbExpr), stmtCtx));
+  mlir::Value ubVal =
+      fir::getBase(converter.genExprValue(toEvExpr(ubExpr), stmtCtx));
+
+  auto toIndex = [](fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value v) -> mlir::Value {
+    if (v.getType().isIndex())
+      return v;
+    return fir::ConvertOp::create(builder, loc, builder.getIndexType(), v);
+  };
+
+  r.lb = toIndex(builder, loc, lbVal);
+  r.ub = toIndex(builder, loc, ubVal);
+
+  if (stExpr) {
+    mlir::Value stVal =
+        fir::getBase(converter.genExprValue(toEvExpr(*stExpr), stmtCtx));
+    r.step = toIndex(builder, loc, stVal);
+  } else {
+    r.step = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
+  }
+
+  return r;
+}
+
+template <typename BodyFn>
+static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
+                                   mlir::Location loc, mlir::Type iterTy,
+                                   llvm::ArrayRef<IteratorRange> ranges,
+                                   BodyFn &&bodyGen) {
+
+  auto &builder = converter.getFirOpBuilder();
+
+  llvm::SmallVector<mlir::Value> lbs, ubs, steps;
+  lbs.reserve(ranges.size());
+  ubs.reserve(ranges.size());
+  steps.reserve(ranges.size());
+  for (auto &r : ranges) {
+    lbs.push_back(r.lb);
+    ubs.push_back(r.ub);
+    steps.push_back(r.step);
+  }
+
+  auto itOp = mlir::omp::IteratorOp::create(
+      builder, loc, iterTy, mlir::ValueRange{lbs}, mlir::ValueRange{ubs},
+      mlir::ValueRange{steps});
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+
+  mlir::Region &reg = itOp.getRegion();
+  mlir::Block *body = builder.createBlock(&reg);
+
+  llvm::SmallVector<mlir::Value> ivs;
+  ivs.reserve(ranges.size());
+  for (size_t i = 0; i < ranges.size(); ++i)
+    ivs.push_back(body->addArgument(builder.getIndexType(), loc));
+
+  Fortran::lower::SymMap &symMap = converter.getSymbolMap();
+  Fortran::lower::SymMapScope scope(symMap);
+  for (size_t i = 0; i < ranges.size(); ++i) {
+    mlir::Value ivVal = ivs[i];
+    mlir::Type ivTy = converter.genType(*ranges[i].ivSym);
+    if (ivVal.getType() != ivTy)
+      ivVal = fir::ConvertOp::create(builder, loc, ivTy, ivVal);
+    symMap.addSymbol(*ranges[i].ivSym, ivVal, /*force=*/true);
+  }
+
+  mlir::omp::YieldOp::create(builder, loc, bodyGen(builder, loc, ivs));
+
+  return itOp.getResult();
+}
+
+template <typename ClauseTuple>
+static void collectIteratorIVs(
+    const ClauseTuple &clause, Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::StatementContext &stmtCtx,
+    llvm::SmallVectorImpl<IteratorRange> &iteratorRanges,
+    llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms) {
+  auto &iteratorModifier =
+      std::get<std::optional<omp::clause::Iterator>>(clause.t);
+  if (!iteratorModifier.has_value())
+    return;
+
+  mlir::Location clauseLocation = converter.getCurrentLocation();
+  const auto &iteratorModifierSpecs = *iteratorModifier;
+  iteratorRanges.reserve(iteratorModifierSpecs.size());
+  for (const auto &itSpec : iteratorModifierSpecs)
+    iteratorRanges.push_back(lowerIteratorRange<Fortran::evaluate::SomeType>(
+        converter, itSpec, stmtCtx, clauseLocation));
+
+  for (const IteratorRange &r : iteratorRanges)
+    ivSyms.insert(&r.ivSym->GetUltimate());
+}
+
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
+
+bool ClauseProcessor::processAlign(mlir::omp::AlignClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Align>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    const std::optional<std::int64_t> align = evaluate::ToInt64(clause->v);
+    result.align = firOpBuilder.getI64IntegerAttr(*align);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processAllocator(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::AllocatorClauseOps &result) const {
+  if (auto *clause = findUniqueClause<omp::clause::Allocator>()) {
+    result.allocator = fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    return true;
+  }
+  return false;
+}
 
 bool ClauseProcessor::processBare(mlir::omp::BareClauseOps &result) const {
   return markClauseOccurrence<omp::clause::OmpxBare>(result.bare);
@@ -384,11 +523,26 @@ bool ClauseProcessor::processInclusive(
 }
 
 bool ClauseProcessor::processInitializer(
-    lower::SymMap &symMap,
-    ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
+    lower::SymMap &symMap, ReductionProcessor::GenInitValueCBTy &genInitValueCB,
+    const parser::OmpStylizedInstance *parserInitInstance) const {
   if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
-    genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Type type, mlir::Value ompOrig) {
+    // Extract the typed assignment from the parser-level instance, if
+    // the initializer is an assignment statement (as opposed to a call).
+    const evaluate::Assignment *assign = nullptr;
+    if (parserInitInstance) {
+      const auto &instance = std::get<parser::OmpStylizedInstance::Instance>(
+          parserInitInstance->t);
+      if (const auto *assignStmt =
+              std::get_if<parser::AssignmentStmt>(&instance.u)) {
+        if (auto *wrapper = assignStmt->typedAssignment.get())
+          if (wrapper->v)
+            assign = &*wrapper->v;
+      }
+    }
+    genInitValueCB = [&, clause, assign](fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Type type,
+                                         mlir::Value moldArg,
+                                         mlir::Value privArg) {
       lower::SymMapScope scope(symMap);
       mlir::Value ompPrivVar;
       const StylizedInstance &inst = clause->v.front();
@@ -396,9 +550,10 @@ bool ClauseProcessor::processInitializer(
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
         mlir::Value addr;
-        mlir::Type ompOrigType = ompOrig.getType();
+        std::string name = object.sym()->name().ToString();
+        mlir::Type moldArgType = moldArg.getType();
         // Check for unsupported dynamic-length character reductions
-        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        mlir::Type unwrappedType = fir::unwrapRefType(moldArgType);
         if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
           TODO(loc, "OpenMP reduction allocation for dynamic length character");
         }
@@ -408,18 +563,20 @@ bool ClauseProcessor::processInitializer(
                  "OpenMP reduction allocation for dynamic length character");
           }
         }
-        // If ompOrig is already a reference, we can use it directly
-        if (fir::isa_ref_type(ompOrigType)) {
-          addr = ompOrig;
+        // For by-ref reductions, omp_priv maps to privArg (the private
+        // allocation) and omp_orig maps to moldArg (the original).
+        if (name == "omp_priv" && privArg) {
+          addr = privArg;
+        } else if (fir::isa_ref_type(moldArgType)) {
+          addr = moldArg;
         } else {
-          addr = builder.createTemporary(loc, ompOrigType);
-          fir::StoreOp::create(builder, loc, ompOrig, addr);
+          addr = builder.createTemporary(loc, moldArgType);
+          fir::StoreOp::create(builder, loc, moldArg, addr);
         }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
-        std::string name = object.sym()->name().ToString();
         // Get length parameters for types that need them (e.g., characters).
         // Note: DeclareOp requires exactly one type parameter for non-boxed
         // characters, unlike EmboxOp which doesn't allow them for constant-len.
@@ -449,11 +606,39 @@ bool ClauseProcessor::processInitializer(
                 return privVal;
               },
               [&](const auto &expr) -> mlir::Value {
+                // For by-ref reductions with a typed assignment, lower
+                // the full assignment (both LHS and RHS) directly.
+                // This handles both whole-variable (omp_priv = val) and
+                // component-level (omp_priv%member = val) initializers.
+                // Mirror the combiner pattern: dispatch on assign->u to
+                // handle both intrinsic and user-defined assignment.
+                if (privArg && assign) {
+                  lower::StatementContext assignCtx;
+                  hlfir::Entity rhs = lower::convertExprToHLFIR(
+                      loc, converter, assign->rhs, symMap, assignCtx);
+                  rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
+                  hlfir::Entity lhs = lower::convertExprToHLFIR(
+                      loc, converter, assign->lhs, symMap, assignCtx);
+                  common::visit(
+                      common::visitors{
+                          [&](const evaluate::Assignment::Intrinsic &) {
+                            hlfir::AssignOp::create(builder, loc, rhs, lhs);
+                          },
+                          [&](const evaluate::ProcedureRef &procRef) {
+                            lower::convertUserDefinedAssignmentToHLFIR(
+                                loc, converter, procRef, lhs, rhs, symMap);
+                          },
+                          [&](const auto &) {
+                            llvm_unreachable("Unexpected assignment type in "
+                                             "reduction initializer");
+                          },
+                      },
+                      assign->u);
+                  assignCtx.finalizeAndPop();
+                  return mlir::Value{};
+                }
                 mlir::Value exprResult = fir::getBase(convertExprToValue(
                     loc, converter, initExpr, symMap, stmtCtx));
-                // Conversion can either give a value or a refrence to a value,
-                // we need to return the reduction type, so an optional load may
-                // be generated.
                 if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
                         exprResult.getType()))
                   if (ompPrivVar.getType() == refType)
@@ -466,9 +651,7 @@ bool ClauseProcessor::processInitializer(
     };
     return true;
   }
-  TODO(converter.getCurrentLocation(),
-       "declare reduction without an initializer clause is not yet "
-       "supported");
+  return false;
 }
 
 bool ClauseProcessor::processMergeable(
@@ -761,14 +944,82 @@ bool ClauseProcessor::processAffinity(
     mlir::omp::AffinityClauseOps &result) const {
   return findRepeatableClause<omp::clause::Affinity>(
       [&](const omp::clause::Affinity &clause, const parser::CharBlock &) {
-        if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
-          TODO(converter.getCurrentLocation(),
-               "Support for iterator modifiers is not implemented yet");
-        }
-
         const auto &objects = std::get<omp::ObjectList>(clause.t);
-        if (!objects.empty())
-          genObjectList(objects, converter, result.affinityVars);
+        lower::StatementContext stmtCtx;
+        auto &builder = converter.getFirOpBuilder();
+        auto &context = converter.getMLIRContext();
+        mlir::Location clauseLocation = converter.getCurrentLocation();
+
+        mlir::Type refI8Ty = fir::ReferenceType::get(builder.getIntegerType(8));
+        mlir::Type entryTy = mlir::omp::AffinityEntryType::get(
+            &context, refI8Ty, builder.getI64Type());
+        mlir::Type iterTy =
+            mlir::omp::IteratedType::get(&converter.getMLIRContext(), entryTy);
+
+        auto makeAffinityEntry = [&](fir::FirOpBuilder &b, mlir::Location l,
+                                     mlir::Type entryTy, mlir::Value addr,
+                                     mlir::Value len) -> mlir::Value {
+          mlir::Value addrI8 = fir::ConvertOp::create(b, l, refI8Ty, addr);
+          return mlir::omp::AffinityEntryOp::create(b, l, entryTy, addrI8, len)
+              .getResult();
+        };
+
+        llvm::SmallVector<IteratorRange> iteratorRanges;
+        llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
+
+        auto &iteratorModifier =
+            std::get<std::optional<omp::clause::Iterator>>(clause.t);
+        collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+
+        for (const omp::Object &object : objects) {
+          llvm::SmallVector<mlir::Value> bounds;
+          std::stringstream asFortran;
+          if (iteratorModifier.has_value() &&
+              hasIteratorIVReference(object, ivSyms)) {
+            mlir::Value iterHandle = buildIteratorOp(
+                converter, clauseLocation, iterTy, iteratorRanges,
+                [&](fir::FirOpBuilder &builder, mlir::Location loc,
+                    llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
+                  lower::StatementContext iterStmtCtx;
+
+                  if (std::optional<llvm::SmallVector<mlir::Value>>
+                          loweredIndices = getIteratorElementIndices(
+                              converter, object, iterStmtCtx, loc)) {
+                    const Fortran::semantics::Symbol *sym = object.sym();
+                    assert(sym && "expected symbol for iterator object");
+                    fir::factory::AddrAndBoundsInfo info =
+                        Fortran::lower::getDataOperandBaseAddr(
+                            converter, builder, *sym, loc,
+                            /*unwrapFirBox=*/false);
+                    hlfir::Entity entity{info.addr};
+                    mlir::Value iteratedAddr = genIteratorCoordinate(
+                        converter, entity, *loweredIndices, loc);
+                    mlir::Value len = genElementSizeInBytes(
+                        builder, loc, builder.getDataLayout(), entity);
+                    return makeAffinityEntry(builder, loc, entryTy,
+                                             iteratedAddr, len);
+                  }
+
+                  TODO(loc, "object type not supported by iterator modifier");
+                });
+            result.iterated.push_back(iterHandle);
+          } else {
+            mlir::Value addr =
+                genAffinityAddr(converter, object, stmtCtx, clauseLocation);
+            // get hlfir.declare for length calculation
+            fir::factory::AddrAndBoundsInfo info =
+                lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
+                                                      mlir::omp::MapBoundsType>(
+                    converter, builder, semaCtx, stmtCtx, *object.sym(),
+                    object.ref(), clauseLocation, asFortran, bounds,
+                    treatIndexAsSection);
+            mlir::Value len =
+                genAffinityLen(builder, clauseLocation, builder.getDataLayout(),
+                               hlfir::Entity{info.addr}, bounds);
+            result.affinityVars.push_back(
+                makeAffinityEntry(builder, clauseLocation, entryTy, addr, len));
+          }
+        }
 
         return true;
       });
@@ -926,9 +1177,13 @@ void TypeInfo::typeScan(mlir::Type ty) {
     typeScan(pty.getEleTy());
   } else {
     // The scan ends when reaching any built-in, record or boxproc type.
+    // A `none` element type is reached for unlimited polymorphic entities
+    // (e.g. `class(*)`), which are always inside a box; the copy is then
+    // performed through the descriptor, so no scalar type info is needed.
     assert(ty.isIntOrIndexOrFloat() || mlir::isa<mlir::ComplexType>(ty) ||
            mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty) ||
-           mlir::isa<fir::BoxProcType>(ty));
+           mlir::isa<fir::BoxProcType>(ty) ||
+           (inBox && mlir::isa<mlir::NoneType>(ty)));
   }
 }
 
@@ -939,10 +1194,10 @@ createCopyFunc(mlir::Location loc, lower::AbstractConverter &converter,
                mlir::Type varType, fir::FortranVariableFlagsEnum varAttrs) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::ModuleOp module = builder.getModule();
-  mlir::Type eleTy = mlir::cast<fir::ReferenceType>(varType).getEleTy();
+  mlir::Type eleTy = fir::unwrapRefType(varType);
   TypeInfo typeInfo(eleTy);
   std::string copyFuncName =
-      fir::getTypeAsString(eleTy, builder.getKindMap(), "_copy");
+      fir::getTypeAsString(varType, builder.getKindMap(), "_copy");
 
   if (auto decl = module.lookupSymbol<mlir::func::FuncOp>(copyFuncName))
     return decl;
@@ -1102,16 +1357,14 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
     auto depType = std::get<clause::DependenceType>(clause.t);
     auto &objects = std::get<omp::ObjectList>(clause.t);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.getCurrentLocation();
 
-    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
-      TODO(converter.getCurrentLocation(),
-           "Support for iterator modifiers is not implemented yet");
-    }
     mlir::omp::ClauseTaskDependAttr dependTypeOperand =
         genDependKindAttr(converter, depType);
-    result.dependKinds.append(objects.size(), dependTypeOperand);
 
-    for (const omp::Object &object : objects) {
+    auto genDependVar =
+        [&](const omp::Object &object, lower::SymMap &localSymMap,
+            lower::StatementContext &localStmtCtx) -> mlir::Value {
       assert(object.ref() && "Expecting designator");
       mlir::Value dependVar;
       SomeExpr expr = *object.ref();
@@ -1124,18 +1377,18 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
           // don't need an accurate length for the array section because the
           // OpenMP standard forbids overlapping array sections.
           dependVar = genVectorSubscriptedDesignatorFirstElementAddress(
-              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+              clauseLocation, converter, expr, localSymMap, localStmtCtx);
         } else {
           // Ordinary array section e.g. A(1:512:2)
           hlfir::EntityWithAttributes entity = convertExprToHLFIR(
-              converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+              clauseLocation, converter, expr, localSymMap, localStmtCtx);
           dependVar = entity.getBase();
         }
       } else if (evaluate::isStructureComponent(expr) ||
                  evaluate::ExtractComplexPart(expr)) {
         SomeExpr expr = *object.ref();
         hlfir::EntityWithAttributes entity = convertExprToHLFIR(
-            converter.getCurrentLocation(), converter, expr, symMap, stmtCtx);
+            clauseLocation, converter, expr, localSymMap, localStmtCtx);
         dependVar = entity.getBase();
       } else {
         semantics::Symbol *sym = object.sym();
@@ -1148,8 +1401,7 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       // allocations so this is not a reliable way to identify the dependency.
       if (auto ref = mlir::dyn_cast<fir::ReferenceType>(dependVar.getType()))
         if (fir::isa_box_type(ref.getElementType()))
-          dependVar = fir::LoadOp::create(
-              builder, converter.getCurrentLocation(), dependVar);
+          dependVar = fir::LoadOp::create(builder, clauseLocation, dependVar);
 
       // The openmp dialect doesn't know what to do with boxes (and it would
       // break layering to teach it about them). The dependency variable can be
@@ -1158,14 +1410,134 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
       // Getting the address of the box data is okay because all the runtime
       // ultimately cares about is the base address of the array.
       if (fir::isa_box_type(dependVar.getType()))
-        dependVar = fir::BoxAddrOp::create(
-            builder, converter.getCurrentLocation(), dependVar);
+        dependVar = fir::BoxAddrOp::create(builder, clauseLocation, dependVar);
 
-      result.dependVars.push_back(dependVar);
+      return dependVar;
+    };
+
+    auto &iteratorModifier =
+        std::get<std::optional<omp::clause::Iterator>>(clause.t);
+
+    llvm::SmallVector<IteratorRange> iteratorRanges;
+    llvm::SmallPtrSet<const Fortran::semantics::Symbol *, 4> ivSyms;
+    collectIteratorIVs(clause, converter, stmtCtx, iteratorRanges, ivSyms);
+
+    mlir::Type ptrTy =
+        mlir::LLVM::LLVMPointerType::get(&converter.getMLIRContext());
+    mlir::Type iterTy =
+        mlir::omp::IteratedType::get(&converter.getMLIRContext(), ptrTy);
+
+    for (const omp::Object &object : objects) {
+      if (iteratorModifier.has_value() &&
+          hasIteratorIVReference(object, ivSyms)) {
+        mlir::Value iterHandle = buildIteratorOp(
+            converter, clauseLocation, iterTy, iteratorRanges,
+            [&](fir::FirOpBuilder &builder, mlir::Location loc,
+                llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
+              lower::StatementContext iterStmtCtx;
+              if (std::optional<llvm::SmallVector<mlir::Value>> loweredIndices =
+                      getIteratorElementIndices(converter, object, iterStmtCtx,
+                                                loc)) {
+                const Fortran::semantics::Symbol *sym = object.sym();
+                assert(sym && "expected symbol for iterator object");
+                // We currently cannot reuse genDependVar here because
+                // buildIteratorOp maps iterator IV symbols to bare scalar
+                // values (e.g. i32), but genDependVar uses convertExprToHLFIR
+                // which expects memory-backed references. Instead, manually get
+                // the base address and compute the element coordinate from the
+                // FIR-level lowered indices.
+                fir::factory::AddrAndBoundsInfo info =
+                    Fortran::lower::getDataOperandBaseAddr(
+                        converter, builder, *sym, loc,
+                        /*unwrapFirBox=*/false);
+                hlfir::Entity entity{info.addr};
+                mlir::Value iteratedAddr = genIteratorCoordinate(
+                    converter, entity, *loweredIndices, loc);
+                // Convert to !llvm.ptr for the omp.yield
+                return fir::ConvertOp::create(builder, loc, ptrTy,
+                                              iteratedAddr);
+              }
+
+              TODO(loc, "object type not supported by iterator modifier");
+            });
+        result.dependIterated.push_back(iterHandle);
+        result.dependIteratedKinds.push_back(dependTypeOperand);
+      } else {
+        result.dependVars.push_back(genDependVar(object, symMap, stmtCtx));
+        result.dependKinds.push_back(dependTypeOperand);
+      }
     }
   };
 
   return findRepeatableClause<omp::clause::Depend>(process);
+}
+
+bool ClauseProcessor::processDynGroupprivate(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::DynGroupprivateClauseOps &result) const {
+  using DynGroupprivate = omp::clause::DynGroupprivate;
+
+  // OpenMP 6.1 allows the `dyn_groupprivate` clause to appear more than once
+  // on the same construct (with distinct access-group modifiers). Semantics
+  // already rejects two clauses sharing the same access-group, but multiple
+  // clauses with different access-groups are spec-legal. The current MLIR
+  // representation (`mlir::omp::DynGroupprivateClauseOps`) and the OMPIRBuilder
+  // only support a single set of modifiers + size, so reject the multi-clause
+  // form up-front.
+  unsigned count = 0;
+  parser::CharBlock duplicateSource;
+  findRepeatableClause<DynGroupprivate>(
+      [&](const DynGroupprivate &, const parser::CharBlock &source) {
+        if (++count == 2)
+          duplicateSource = source;
+      });
+  if (count > 1) {
+    TODO(converter.genLocation(duplicateSource),
+         "multiple dyn_groupprivate clauses on the same construct");
+  }
+
+  if (auto *clause = findUniqueClause<DynGroupprivate>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+
+    // Process AccessGroup modifier (cgroup).
+    if (auto accessGroup =
+            std::get<std::optional<DynGroupprivate::AccessGroup>>(clause->t)) {
+      switch (*accessGroup) {
+      case DynGroupprivate::AccessGroup::Cgroup:
+        result.dynGroupprivateAccessGroup =
+            mlir::omp::AccessGroupModifierAttr::get(
+                context, mlir::omp::AccessGroupModifier::cgroup);
+        break;
+      }
+    }
+
+    // Process Fallback modifier (abort, default_mem, null).
+    if (auto fallback =
+            std::get<std::optional<DynGroupprivate::Fallback>>(clause->t)) {
+      switch (*fallback) {
+      case DynGroupprivate::Fallback::Abort:
+        result.dynGroupprivateFallback = mlir::omp::FallbackModifierAttr::get(
+            context, mlir::omp::FallbackModifier::abort);
+        break;
+      case DynGroupprivate::Fallback::Default_Mem:
+        result.dynGroupprivateFallback = mlir::omp::FallbackModifierAttr::get(
+            context, mlir::omp::FallbackModifier::default_mem);
+        break;
+      case DynGroupprivate::Fallback::Null:
+        result.dynGroupprivateFallback = mlir::omp::FallbackModifierAttr::get(
+            context, mlir::omp::FallbackModifier::null);
+        break;
+      }
+    }
+
+    // Process size expression.
+    const auto &sizeExpr = std::get<SomeExpr>(clause->t);
+    result.dynGroupprivateSize =
+        fir::getBase(converter.genExprValue(sizeExpr, stmtCtx));
+    return true;
+  }
+  return false;
 }
 
 bool ClauseProcessor::processGrainsize(
@@ -1191,7 +1563,7 @@ bool ClauseProcessor::processGrainsize(
 
 bool ClauseProcessor::processHasDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::HasDeviceAddrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const {
+    llvm::SmallVectorImpl<Object> &hasDeviceObjects) const {
   // For HAS_DEVICE_ADDR objects, implicitly map the top-level entities.
   // Their address (or the whole descriptor, if the entity had one) will be
   // passed to the target region.
@@ -1211,11 +1583,11 @@ bool ClauseProcessor::processHasDeviceAddr(
                         });
         processMapObjects(stmtCtx, location, baseObjects, mapTypeBits,
                           parentMemberIndices, result.hasDeviceAddrVars,
-                          hasDeviceSyms);
+                          hasDeviceObjects);
       });
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.hasDeviceAddrVars, hasDeviceSyms);
+                               result.hasDeviceAddrVars, hasDeviceObjects);
   return clauseFound;
 }
 
@@ -1239,26 +1611,35 @@ bool ClauseProcessor::processIf(
 }
 
 template <typename T>
-void collectReductionSyms(
-    const T &reduction,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
-  const auto &objectList{std::get<omp::ObjectList>(reduction.t)};
-  for (const Object &object : objectList) {
-    const semantics::Symbol *symbol = object.sym();
-    reductionSyms.push_back(symbol);
-  }
+void collectReductionObjects(const T &reduction,
+                             llvm::SmallVectorImpl<Object> &reductionObjects) {
+  const omp::ObjectList &objectList{std::get<omp::ObjectList>(reduction.t)};
+  reductionObjects.reserve(objectList.size());
+  llvm::copy(objectList, std::back_inserter(reductionObjects));
+}
+
+static llvm::SmallVector<const semantics::Symbol *>
+getObjectsSyms(llvm::ArrayRef<Object> objects) {
+  llvm::SmallVector<const semantics::Symbol *> syms;
+  syms.reserve(objects.size());
+  llvm::transform(
+      objects, std::back_inserter(syms),
+      [](const Fortran::lower::omp::Object &object) { return object.sym(); });
+  return syms;
 }
 
 bool ClauseProcessor::processInReduction(
     mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+    llvm::SmallVectorImpl<Object> &outReductionObjects) const {
   return findRepeatableClause<omp::clause::InReduction>(
       [&](const omp::clause::InReduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> inReductionVars;
         llvm::SmallVector<bool> inReduceVarByRef;
         llvm::SmallVector<mlir::Attribute> inReductionDeclSymbols;
-        llvm::SmallVector<const semantics::Symbol *> inReductionSyms;
-        collectReductionSyms(clause, inReductionSyms);
+        llvm::SmallVector<Object> inReductionObjects;
+        collectReductionObjects(clause, inReductionObjects);
+        llvm::SmallVector<const semantics::Symbol *> inReductionSyms =
+            getObjectsSyms(inReductionObjects);
 
         ReductionProcessor rp;
         if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
@@ -1274,13 +1655,13 @@ bool ClauseProcessor::processInReduction(
                    std::back_inserter(result.inReductionByref));
         llvm::copy(inReductionDeclSymbols,
                    std::back_inserter(result.inReductionSyms));
-        llvm::copy(inReductionSyms, std::back_inserter(outReductionSyms));
+        llvm::copy(inReductionObjects, std::back_inserter(outReductionObjects));
       });
 }
 
 bool ClauseProcessor::processIsDevicePtr(
     lower::StatementContext &stmtCtx, mlir::omp::IsDevicePtrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const {
+    llvm::SmallVectorImpl<Object> &isDeviceObjects) const {
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::IsDevicePtr>(
       [&](const omp::clause::IsDevicePtr &clause,
@@ -1293,24 +1674,40 @@ bool ClauseProcessor::processIsDevicePtr(
             mlir::omp::ClauseMapFlags::to;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.isDevicePtrVars,
-                          isDeviceSyms);
+                          isDeviceObjects);
       });
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.isDevicePtrVars, isDeviceSyms);
+                               result.isDevicePtrVars, isDeviceObjects);
   return clauseFound;
 }
 
-bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
+bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
+                                    bool isDeclareSimd) const {
   lower::StatementContext stmtCtx;
+  std::vector<mlir::Attribute> typeAttrs;
+  std::vector<mlir::Attribute> linearModAttrs;
   return findRepeatableClause<
       omp::clause::Linear>([&](const omp::clause::Linear &clause,
                                const parser::CharBlock &) {
     auto &objects = std::get<omp::ObjectList>(clause.t);
-    static std::vector<mlir::Attribute> typeAttrs;
 
-    if (!result.linearVars.size())
-      typeAttrs.clear();
+    std::optional<mlir::omp::LinearModifier> explicitLinearMod;
+    if (auto &linearModifier =
+            std::get<std::optional<omp::clause::Linear::LinearModifier>>(
+                clause.t)) {
+      switch (*linearModifier) {
+      case omp::clause::Linear::LinearModifier::Val:
+        explicitLinearMod = mlir::omp::LinearModifier::val;
+        break;
+      case omp::clause::Linear::LinearModifier::Ref:
+        explicitLinearMod = mlir::omp::LinearModifier::ref;
+        break;
+      case omp::clause::Linear::LinearModifier::Uval:
+        explicitLinearMod = mlir::omp::LinearModifier::uval;
+        break;
+      }
+    }
 
     for (const omp::Object &object : objects) {
       semantics::Symbol *sym = object.sym();
@@ -1325,10 +1722,6 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
         mlir::Value operand =
             fir::getBase(converter.genExprValue(toEvExpr(*mod), stmtCtx));
         result.linearStepVars.append(objects.size(), operand);
-      } else if (std::get<std::optional<omp::clause::Linear::LinearModifier>>(
-                     clause.t)) {
-        mlir::Location currentLocation = converter.getCurrentLocation();
-        TODO(currentLocation, "Linear modifiers not yet implemented");
       } else {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -1338,9 +1731,44 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
             firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
         result.linearStepVars.append(objects.size(), operand);
       }
+
+      // Determine the linear modifier:
+      // 1. Use explicit modifier if provided.
+      // 2. For OpenMP >= 5.2 (Section 5.4.6: "the default linear-modifier
+      //    is val"):
+      //    - declare simd: "ref" for POINTER or non-VALUE dummy args,
+      //      "val" otherwise.
+      //    - do/simd: always "val".
+      // 3. Otherwise, leave unset (UnitAttr placeholder).
+      auto getDeclareSimdDefaultMod = [](const semantics::Symbol &sym) {
+        const auto &ultimate = sym.GetUltimate();
+        if (semantics::IsPointer(ultimate))
+          return mlir::omp::LinearModifier::ref;
+        if (const auto *obj =
+                ultimate.detailsIf<semantics::ObjectEntityDetails>())
+          if (obj->isDummy() && !semantics::IsValue(ultimate))
+            return mlir::omp::LinearModifier::ref;
+        return mlir::omp::LinearModifier::val;
+      };
+
+      std::optional<mlir::omp::LinearModifier> linearMod;
+      if (explicitLinearMod)
+        linearMod = *explicitLinearMod;
+      else if (semaCtx.langOptions().OpenMPVersion >= 52)
+        linearMod = isDeclareSimd ? getDeclareSimdDefaultMod(*sym)
+                                  : mlir::omp::LinearModifier::val;
+
+      if (linearMod)
+        linearModAttrs.push_back(mlir::omp::LinearModifierAttr::get(
+            &converter.getMLIRContext(), *linearMod));
+      else
+        linearModAttrs.push_back(
+            mlir::UnitAttr::get(&converter.getMLIRContext()));
     }
     result.linearVarTypes =
         mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
+    result.linearModifiers =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), linearModAttrs);
   });
 }
 
@@ -1360,91 +1788,9 @@ void ClauseProcessor::processMapObjects(
     const omp::ObjectList &objects, mlir::omp::ClauseMapFlags mapTypeBits,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapVars,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::StringRef mapperIdNameRef) const {
+    llvm::SmallVectorImpl<Object> &mapObjects, llvm::StringRef mapperIdNameRef,
+    bool isMotionModifier, llvm::omp::Directive directive) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
-  auto getSymbolDerivedType = [](const semantics::Symbol &symbol)
-      -> const semantics::DerivedTypeSpec * {
-    const semantics::Symbol &ultimate = symbol.GetUltimate();
-    if (const semantics::DeclTypeSpec *declType = ultimate.GetType())
-      if (const auto *derived = declType->AsDerived())
-        return derived;
-    return nullptr;
-  };
-
-  auto addImplicitMapper = [&](const omp::Object &object,
-                               std::string &mapperIdName,
-                               bool allowGenerate) -> mlir::FlatSymbolRefAttr {
-    if (mapperIdName.empty())
-      return mlir::FlatSymbolRefAttr();
-
-    if (converter.getModuleOp().lookupSymbol(mapperIdName))
-      return mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                          mapperIdName);
-
-    if (!allowGenerate)
-      return mlir::FlatSymbolRefAttr();
-
-    const semantics::DerivedTypeSpec *typeSpec =
-        getSymbolDerivedType(*object.sym());
-    if (!typeSpec && object.sym()->owner().IsDerivedType())
-      typeSpec = object.sym()->owner().derivedTypeSpec();
-
-    if (!typeSpec)
-      return mlir::FlatSymbolRefAttr();
-
-    mlir::Type type = converter.genType(*typeSpec);
-    auto recordType = mlir::dyn_cast<fir::RecordType>(type);
-    if (!recordType)
-      return mlir::FlatSymbolRefAttr();
-
-    return getOrGenImplicitDefaultDeclareMapper(converter, clauseLocation,
-                                                recordType, mapperIdName);
-  };
-
-  auto getDefaultMapperID =
-      [&](const semantics::DerivedTypeSpec *typeSpec) -> std::string {
-    if (mlir::isa<mlir::omp::DeclareMapperOp>(
-            firOpBuilder.getRegion().getParentOp()) ||
-        !typeSpec)
-      return {};
-
-    std::string mapperIdName =
-        typeSpec->name().ToString() + llvm::omp::OmpDefaultMapperName;
-    if (auto *sym = converter.getCurrentScope().FindSymbol(mapperIdName)) {
-      mapperIdName =
-          converter.mangleName(mapperIdName, sym->GetUltimate().owner());
-    } else {
-      mapperIdName = converter.mangleName(mapperIdName, *typeSpec->GetScope());
-    }
-
-    // Make sure we don't return a mapper to self.
-    if (auto declMapOp = mlir::dyn_cast<mlir::omp::DeclareMapperOp>(
-            firOpBuilder.getRegion().getParentOp()))
-      if (mapperIdName == declMapOp.getSymName())
-        return {};
-    return mapperIdName;
-  };
-
-  // Create the mapper symbol from its name, if specified.
-  mlir::FlatSymbolRefAttr mapperId;
-  if (!mapperIdNameRef.empty() && !objects.empty() &&
-      mapperIdNameRef != "__implicit_mapper") {
-    std::string mapperIdName = mapperIdNameRef.str();
-    const omp::Object &object = objects.front();
-    if (mapperIdNameRef == "default") {
-      const semantics::DerivedTypeSpec *typeSpec =
-          getSymbolDerivedType(*object.sym());
-      if (!typeSpec && object.sym()->owner().IsDerivedType())
-        typeSpec = object.sym()->owner().derivedTypeSpec();
-      mapperIdName = getDefaultMapperID(typeSpec);
-    }
-    assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
-           "mapper not found");
-    mapperId =
-        mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
-  }
 
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -1459,7 +1805,7 @@ void ClauseProcessor::processMapObjects(
             treatIndexAsSection);
 
     mlir::Value baseOp = info.rawInput;
-    if (object.sym()->owner().IsDerivedType()) {
+    if (object.sym()->owner().IsDerivedType() && !isMotionModifier) {
       omp::ObjectList objectList = gatherObjectsOf(object, semaCtx);
       assert(!objectList.empty() &&
              "could not find parent objects of derived type member");
@@ -1477,26 +1823,9 @@ void ClauseProcessor::processMapObjects(
       }
     }
 
-    const semantics::DerivedTypeSpec *objectTypeSpec =
-        getSymbolDerivedType(*object.sym());
-
-    if (mapperIdNameRef == "__implicit_mapper") {
-      if (parentObj.has_value()) {
-        mapperId = mlir::FlatSymbolRefAttr();
-      } else if (objectTypeSpec) {
-        std::string mapperIdName = getDefaultMapperID(objectTypeSpec);
-        bool needsDefaultMapper =
-            semantics::IsAllocatableOrObjectPointer(object.sym()) ||
-            requiresImplicitDefaultDeclareMapper(*objectTypeSpec);
-        if (!mapperIdName.empty())
-          mapperId = addImplicitMapper(object, mapperIdName,
-                                       /*allowGenerate=*/needsDefaultMapper);
-        else
-          mapperId = mlir::FlatSymbolRefAttr();
-      } else {
-        mapperId = mlir::FlatSymbolRefAttr();
-      }
-    }
+    mlir::FlatSymbolRefAttr mapperId =
+        resolveMapperId(converter, clauseLocation, object, mapperIdNameRef,
+                        mapTypeBits, directive, parentObj.has_value());
 
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
@@ -1516,21 +1845,47 @@ void ClauseProcessor::processMapObjects(
           object, mapOp, semaCtx);
     } else {
       mapVars.push_back(mapOp);
-      mapSyms.push_back(object.sym());
+      mapObjects.push_back(object);
     }
   }
+}
+
+/// Extract and mangle the mapper identifier name from a mapper clause.
+/// Returns "__implicit_mapper" if no mapper is specified, or "default" if
+/// the default mapper is specified, otherwise returns the mangled mapper name.
+/// This handles both the Map clause (which uses a vector of mappers) and
+/// To/From clauses (which use a DefinedOperator).
+template <typename MapperType>
+static std::string
+getMapperIdentifier(lower::AbstractConverter &converter,
+                    const std::optional<MapperType> &mapper) {
+  if (!mapper)
+    return "__implicit_mapper";
+
+  // Handle mapper types (both have the same structure)
+  assert(mapper->size() == 1 && "more than one mapper");
+  const semantics::Symbol *mapperSym = mapper->front().v.id().symbol;
+
+  std::string mapperIdName = mapperSym->name().ToString();
+  if (mapperIdName != "default") {
+    // Mangle with the ultimate owner so that use-associated mapper
+    // identifiers resolve to the same symbol as their defining scope.
+    const semantics::Symbol &ultimate = mapperSym->GetUltimate();
+    mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
+  }
+  return mapperIdName;
 }
 
 bool ClauseProcessor::processMap(
     mlir::Location currentLocation, lower::StatementContext &stmtCtx,
     mlir::omp::MapClauseOps &result, llvm::omp::Directive directive,
-    llvm::SmallVectorImpl<const semantics::Symbol *> *mapSyms) const {
-  // We always require tracking of symbols, even if the caller does not,
-  // so we create an optionally used local set of symbols when the mapSyms
+    llvm::SmallVectorImpl<Object> *mapObjects) const {
+  // We always require tracking of objects, even if the caller does not,
+  // so we create an optionally used local set of objects when the mapObjects
   // argument is not present.
-  llvm::SmallVector<const semantics::Symbol *> localMapSyms;
-  llvm::SmallVectorImpl<const semantics::Symbol *> *ptrMapSyms =
-      mapSyms ? mapSyms : &localMapSyms;
+  llvm::SmallVector<Object> localMapObjects;
+  llvm::SmallVectorImpl<Object> *ptrMapObjects =
+      mapObjects ? mapObjects : &localMapObjects;
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
 
   auto process = [&](const omp::clause::Map &clause,
@@ -1539,10 +1894,10 @@ bool ClauseProcessor::processMap(
     mlir::Location clauseLocation = converter.genLocation(source);
     const auto &[mapType, typeMods, attachMod, refMod, mappers, iterator,
                  objects] = clause.t;
-    if (attachMod)
-      TODO(currentLocation, "ATTACH modifier is not implemented yet");
     mlir::omp::ClauseMapFlags mapTypeBits = mlir::omp::ClauseMapFlags::none;
-    std::string mapperIdName = "__implicit_mapper";
+
+    std::string mapperIdName = getMapperIdentifier(converter, mappers);
+
     // If the map type is specified, then process it else set the appropriate
     // default value
     Map::MapType type;
@@ -1585,31 +1940,48 @@ bool ClauseProcessor::processMap(
         mapTypeBits |= mlir::omp::ClauseMapFlags::ompx_hold;
     }
 
-    if (iterator) {
-      TODO(currentLocation,
-           "Support for iterator modifiers is not implemented yet");
-    }
-    if (mappers) {
-      assert(mappers->size() == 1 && "more than one mapper");
-      const semantics::Symbol *mapperSym = mappers->front().v.id().symbol;
-      mapperIdName = mapperSym->name().ToString();
-      if (mapperIdName != "default") {
-        // Mangle with the ultimate owner so that use-associated mapper
-        // identifiers resolve to the same symbol as their defining scope.
-        const semantics::Symbol &ultimate = mapperSym->GetUltimate();
-        mapperIdName = converter.mangleName(mapperIdName, ultimate.owner());
+    if (refMod) {
+      switch (*refMod) {
+      case Map::RefModifier::RefPtee:
+        mapTypeBits |= mlir::omp::ClauseMapFlags::ref_ptee;
+        break;
+      case Map::RefModifier::RefPtr:
+        mapTypeBits |= mlir::omp::ClauseMapFlags::ref_ptr;
+        break;
+      case Map::RefModifier::RefPtrPtee:
+        mapTypeBits |= mlir::omp::ClauseMapFlags::ref_ptr |
+                       mlir::omp::ClauseMapFlags::ref_ptee;
+        break;
       }
     }
 
+    if (attachMod) {
+      switch (*attachMod) {
+      case Map::AttachModifier::Always:
+        mapTypeBits |= mlir::omp::ClauseMapFlags::attach_always;
+        break;
+      case Map::AttachModifier::Never:
+        mapTypeBits |= mlir::omp::ClauseMapFlags::attach_never;
+        break;
+      case Map::AttachModifier::Auto:
+        mapTypeBits |= mlir::omp::ClauseMapFlags::attach_auto;
+        break;
+      }
+    }
+
+    if (iterator)
+      TODO(currentLocation,
+           "Support for iterator modifiers is not implemented yet");
+
     processMapObjects(stmtCtx, clauseLocation,
                       std::get<omp::ObjectList>(clause.t), mapTypeBits,
-                      parentMemberIndices, result.mapVars, *ptrMapSyms,
-                      mapperIdName);
+                      parentMemberIndices, result.mapVars, *ptrMapObjects,
+                      mapperIdName, /*isMotionModifier=*/false, directive);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::Map>(process);
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.mapVars, *ptrMapSyms);
+                               result.mapVars, *ptrMapObjects);
 
   return clauseFound;
 }
@@ -1617,18 +1989,11 @@ bool ClauseProcessor::processMap(
 bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
                                            mlir::omp::MapClauseOps &result) {
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
-  llvm::SmallVector<const semantics::Symbol *> mapSymbols;
+  llvm::SmallVector<Object> mapObjects;
 
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
     const auto &[expectation, mapper, iterator, objects] = clause.t;
-
-    // TODO Support motion modifiers: mapper, iterator.
-    if (mapper) {
-      TODO(clauseLocation, "Mapper modifier is not supported yet");
-    } else if (iterator) {
-      TODO(clauseLocation, "Iterator modifier is not supported yet");
-    }
 
     mlir::omp::ClauseMapFlags mapTypeBits =
         std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
@@ -1636,8 +2001,16 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
             : mlir::omp::ClauseMapFlags::from;
     if (expectation && *expectation == omp::clause::To::Expectation::Present)
       mapTypeBits |= mlir::omp::ClauseMapFlags::present;
+
+    // Support motion modifiers: iterator.
+    std::string mapperIdName = getMapperIdentifier(converter, mapper);
+
+    if (iterator)
+      TODO(clauseLocation, "Iterator modifier is not supported yet");
+
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
-                      parentMemberIndices, result.mapVars, mapSymbols);
+                      parentMemberIndices, result.mapVars, mapObjects,
+                      mapperIdName, /*isMotionModifier=*/true);
   };
 
   bool clauseFound = findRepeatableClause<omp::clause::To>(callbackFn);
@@ -1645,7 +2018,7 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
       findRepeatableClause<omp::clause::From>(callbackFn) || clauseFound;
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.mapVars, mapSymbols);
+                               result.mapVars, mapObjects);
 
   return clauseFound;
 }
@@ -1664,14 +2037,18 @@ bool ClauseProcessor::processNontemporal(
 
 bool ClauseProcessor::processReduction(
     mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+    llvm::SmallVectorImpl<Object> &outReductionObjects,
+    llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache)
+    const {
   return findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> reductionVars;
         llvm::SmallVector<bool> reduceVarByRef;
         llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
-        llvm::SmallVector<const semantics::Symbol *> reductionSyms;
-        collectReductionSyms(clause, reductionSyms);
+        llvm::SmallVector<Object> reductionObjects;
+        collectReductionObjects(clause, reductionObjects);
+        llvm::SmallVector<const semantics::Symbol *> reductionSyms =
+            getObjectsSyms(reductionObjects);
 
         auto mod = std::get<std::optional<ReductionModifier>>(clause.t);
         if (mod.has_value()) {
@@ -1688,27 +2065,29 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms))
+                reductionSyms, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
         llvm::copy(reductionDeclSymbols,
                    std::back_inserter(result.reductionSyms));
-        llvm::copy(reductionSyms, std::back_inserter(outReductionSyms));
+        llvm::copy(reductionObjects, std::back_inserter(outReductionObjects));
       });
 }
 
 bool ClauseProcessor::processTaskReduction(
     mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &outReductionSyms) const {
+    llvm::SmallVectorImpl<Object> &outReductionObjects) const {
   return findRepeatableClause<omp::clause::TaskReduction>(
       [&](const omp::clause::TaskReduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> taskReductionVars;
         llvm::SmallVector<bool> taskReduceVarByRef;
         llvm::SmallVector<mlir::Attribute> taskReductionDeclSymbols;
-        llvm::SmallVector<const semantics::Symbol *> taskReductionSyms;
-        collectReductionSyms(clause, taskReductionSyms);
+        llvm::SmallVector<Object> taskReductionObjects;
+        collectReductionObjects(clause, taskReductionObjects);
+        llvm::SmallVector<const semantics::Symbol *> taskReductionSyms =
+            getObjectsSyms(taskReductionObjects);
 
         ReductionProcessor rp;
         if (!rp.processReductionArguments<mlir::omp::DeclareReductionOp>(
@@ -1724,7 +2103,8 @@ bool ClauseProcessor::processTaskReduction(
                    std::back_inserter(result.taskReductionByref));
         llvm::copy(taskReductionDeclSymbols,
                    std::back_inserter(result.taskReductionSyms));
-        llvm::copy(taskReductionSyms, std::back_inserter(outReductionSyms));
+        llvm::copy(taskReductionObjects,
+                   std::back_inserter(outReductionObjects));
       });
 }
 
@@ -1755,7 +2135,7 @@ bool ClauseProcessor::processEnter(
 
 bool ClauseProcessor::processUseDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
+    llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
       [&](const omp::clause::UseDeviceAddr &clause,
@@ -1765,17 +2145,17 @@ bool ClauseProcessor::processUseDeviceAddr(
             mlir::omp::ClauseMapFlags::return_param;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
-                          useDeviceSyms);
+                          useDeviceObjects);
       });
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.useDeviceAddrVars, useDeviceSyms);
+                               result.useDeviceAddrVars, useDeviceObjects);
   return clauseFound;
 }
 
 bool ClauseProcessor::processUseDevicePtr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDevicePtrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) const {
+    llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
 
   bool clauseFound = findRepeatableClause<omp::clause::UseDevicePtr>(
@@ -1786,11 +2166,11 @@ bool ClauseProcessor::processUseDevicePtr(
             mlir::omp::ClauseMapFlags::return_param;
         processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
                           parentMemberIndices, result.useDevicePtrVars,
-                          useDeviceSyms);
+                          useDeviceObjects);
       });
 
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
-                               result.useDevicePtrVars, useDeviceSyms);
+                               result.useDevicePtrVars, useDeviceObjects);
   return clauseFound;
 }
 

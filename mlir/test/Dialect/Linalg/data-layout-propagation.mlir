@@ -1,4 +1,7 @@
-// RUN: mlir-opt %s -test-linalg-data-layout-propagation -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -split-input-file \
+// RUN: -transform-preload-library='transform-library-paths=%p/td/propagate-data-layout.mlir' \
+// RUN: -transform-interpreter=entry-point=propagate_data_layout \
+// RUN: | FileCheck %s
 
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
 func.func @dynamic_elem_pack(%arg0: tensor<?x?xf32>, %dest: tensor<?x?x8x2xf32>) -> tensor<?x?x8x2xf32>

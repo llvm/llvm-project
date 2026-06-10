@@ -527,11 +527,13 @@ TEST_P(ImportExpr, ImportInitListExpr) {
              "                        [0].x = 1.0 }; }",
              Lang_CXX03, "", Lang_CXX03, Verifier,
              functionDecl(hasDescendant(initListExpr(
+                 unless(isImplicit()),
                  has(cxxConstructExpr(requiresZeroInitialization())),
                  has(initListExpr(
-                     hasType(asString("point")), has(floatLiteral(equals(1.0))),
+                     isImplicit(), hasType(asString("point")),
+                     has(floatLiteral(equals(1.0))),
                      has(implicitValueInitExpr(hasType(asString("double")))))),
-                 has(initListExpr(hasType(asString("point")),
+                 has(initListExpr(isImplicit(), hasType(asString("point")),
                                   has(floatLiteral(equals(2.0))),
                                   has(floatLiteral(equals(1.0)))))))));
 }
@@ -4099,6 +4101,40 @@ TEST_P(ASTImporterOptionSpecificTestBase,
                               unless(classTemplatePartialSpecializationDecl()))));
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParamObjectDecl) {
+  const char *Code = R"(
+    struct A { int x, y; };
+    template<A> struct S1 {};
+    template<A, int> struct S2 {};
+    S1<A{1, 2}> s1;
+    S2<A{1, 2}, 3> s2;
+  )";
+  Decl *TU = getTuDecl(Code, Lang_CXX20, "input.cc");
+
+  auto *FromFirstSpec =
+      FirstDeclMatcher<ClassTemplateSpecializationDecl>().match(
+          TU, classTemplateSpecializationDecl());
+  auto *FromLastSpec = LastDeclMatcher<ClassTemplateSpecializationDecl>().match(
+      TU, classTemplateSpecializationDecl());
+  auto *FromFirstParamObject = dyn_cast<TemplateParamObjectDecl>(
+      FromFirstSpec->getTemplateArgs().get(0).getAsDecl());
+  auto *FromLastParamObject = dyn_cast<TemplateParamObjectDecl>(
+      FromLastSpec->getTemplateArgs().get(0).getAsDecl());
+  ASSERT_TRUE(FromFirstParamObject);
+  ASSERT_EQ(FromFirstParamObject, FromLastParamObject);
+
+  auto *ToFirstSpec = Import(FromFirstSpec, Lang_CXX20);
+  EXPECT_TRUE(ToFirstSpec);
+  auto *ToLastSpec = Import(FromLastSpec, Lang_CXX20);
+  EXPECT_TRUE(ToLastSpec);
+  auto *ToFirstParamObject = dyn_cast<TemplateParamObjectDecl>(
+      ToFirstSpec->getTemplateArgs().get(0).getAsDecl());
+  auto *ToLastParamObject = dyn_cast<TemplateParamObjectDecl>(
+      ToLastSpec->getTemplateArgs().get(0).getAsDecl());
+  EXPECT_NE(FromFirstParamObject, ToFirstParamObject);
+  EXPECT_EQ(ToFirstParamObject, ToLastParamObject);
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase,
        InitListExprValueKindShouldBeImported) {
   Decl *TU = getTuDecl(
@@ -5253,11 +5289,13 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportTemplateParameterLists) {
   Decl *FromTU = getTuDecl(Code, Lang_CXX03);
   auto *FromD = FirstDeclMatcher<FunctionDecl>().match(FromTU,
       functionDecl(hasName("f"), isExplicitTemplateSpecialization()));
-  ASSERT_EQ(FromD->getNumTemplateParameterLists(), 1u);
+  ASSERT_EQ(FromD->getTemplateSpecializationInfo()->TemplateParameters->size(),
+            0u);
 
   auto *ToD = Import(FromD, Lang_CXX03);
   // The template parameter list should exist.
-  EXPECT_EQ(ToD->getNumTemplateParameterLists(), 1u);
+  ASSERT_EQ(ToD->getTemplateSpecializationInfo()->TemplateParameters->size(),
+            0u);
 }
 
 const internal::VariadicDynCastAllOfMatcher<Decl, VarTemplateDecl>
@@ -8142,7 +8180,7 @@ TEST_P(ImportAttributes, ImportGuardedBy) {
       int test __attribute__((guarded_by(G)));
       )",
       FromAttr, ToAttr);
-  checkImported(FromAttr->getArg(), ToAttr->getArg());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
 TEST_P(ImportAttributes, ImportPtGuardedBy) {
@@ -8153,7 +8191,7 @@ TEST_P(ImportAttributes, ImportPtGuardedBy) {
       int *test __attribute__((pt_guarded_by(G)));
       )",
       FromAttr, ToAttr);
-  checkImported(FromAttr->getArg(), ToAttr->getArg());
+  checkImportVariadicArg(FromAttr->args(), ToAttr->args());
 }
 
 TEST_P(ImportAttributes, ImportAcquiredAfter) {

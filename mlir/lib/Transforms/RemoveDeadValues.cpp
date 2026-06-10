@@ -19,12 +19,7 @@
 // (C) Removes unneccesary operands, results, region arguments, and region
 // terminator operands of region branch ops, and,
 // (D) Removes simple and region branch ops that have all non-live results and
-// don't affect memory in any way,
-//
-// iff
-//
-// the IR doesn't have any non-function symbol ops, non-call symbol user ops and
-// branch ops.
+// don't affect memory in any way.
 //
 // Here, a "simple op" refers to an op that isn't a symbol op, symbol-user op,
 // region branch op, branch op, region branch terminator op, or return-like.
@@ -63,7 +58,7 @@
 #define DEBUG_TYPE "remove-dead-values"
 
 namespace mlir {
-#define GEN_PASS_DEF_REMOVEDEADVALUES
+#define GEN_PASS_DEF_REMOVEDEADVALUESPASS
 #include "mlir/Transforms/Passes.h.inc"
 } // namespace mlir
 
@@ -142,9 +137,8 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
     if (liveness->isLive) {
       LDBG() << "Value " << value << " is live according to liveness analysis";
       return true;
-    } else {
-      LDBG() << "Value " << value << " is dead according to liveness analysis";
     }
+    LDBG() << "Value " << value << " is dead according to liveness analysis";
   }
   return false;
 }
@@ -764,7 +758,10 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
   LDBG() << "Finished cleanup of dead values";
 }
 
-struct RemoveDeadValues : public impl::RemoveDeadValuesBase<RemoveDeadValues> {
+struct RemoveDeadValues
+    : public impl::RemoveDeadValuesPassBase<RemoveDeadValues> {
+  using impl::RemoveDeadValuesPassBase<
+      RemoveDeadValues>::RemoveDeadValuesPassBase;
   void runOnOperation() override;
 };
 } // namespace
@@ -822,8 +819,4 @@ void RemoveDeadValues::runOnOperation() {
     module->emitError("greedy pattern rewrite failed to converge");
     signalPassFailure();
   }
-}
-
-std::unique_ptr<Pass> mlir::createRemoveDeadValuesPass() {
-  return std::make_unique<RemoveDeadValues>();
 }

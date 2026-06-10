@@ -28,10 +28,10 @@ class LPMUpdater;
 
 /// A custom std::array with 256 entries, that also has a print function.
 struct CRCTable : public std::array<APInt, 256> {
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
 #endif
 };
 
@@ -65,9 +65,9 @@ struct PolynomialInfo {
   // zero.
   Value *LHSAux;
 
-  PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
-                 Value *ComputedValue, bool ByteOrderSwapped,
-                 Value *LHSAux = nullptr);
+  LLVM_ABI PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
+                          Value *ComputedValue, bool ByteOrderSwapped,
+                          Value *LHSAux = nullptr);
 };
 
 /// The analysis.
@@ -76,17 +76,18 @@ class HashRecognize {
   ScalarEvolution &SE;
 
 public:
-  HashRecognize(const Loop &L, ScalarEvolution &SE);
+  LLVM_ABI HashRecognize(const Loop &L, ScalarEvolution &SE);
 
   // The main analysis entry points.
-  std::variant<PolynomialInfo, StringRef> recognizeCRC() const;
-  std::optional<PolynomialInfo> getResult() const;
+  LLVM_ABI std::variant<PolynomialInfo, StringRef> recognizeCRC() const;
+  LLVM_ABI std::optional<PolynomialInfo> getResult() const;
 
   // Auxilary entry point after analysis to interleave the generating polynomial
   // and return a 256-entry CRC table.
-  static CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped);
+  LLVM_ABI static CRCTable genSarwateTable(const APInt &GenPoly,
+                                           bool ByteOrderSwapped);
 
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
@@ -94,13 +95,13 @@ public:
 };
 
 class HashRecognizePrinterPass
-    : public PassInfoMixin<HashRecognizePrinterPass> {
+    : public RequiredPassInfoMixin<HashRecognizePrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit HashRecognizePrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &);
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR, LPMUpdater &);
 };
 } // namespace llvm
 

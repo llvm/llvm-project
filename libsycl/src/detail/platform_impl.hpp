@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the PlatformImpl class, which
+/// implements sycl::platform functionality.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef _LIBSYCL_PLATFORM_IMPL
 #define _LIBSYCL_PLATFORM_IMPL
@@ -69,7 +75,9 @@ public:
   /// within its lifetime.
   ///
   /// \return a raw offload platform handle.
-  const ol_platform_handle_t &getHandleRef() const { return MOffloadPlatform; }
+  const ol_platform_handle_t &getOLHandleRef() const {
+    return MOffloadPlatform;
+  }
 
   /// Queries the cache to get the implementation for specified offloading RT
   /// platform. All platform implementation objects are created at first

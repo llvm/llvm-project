@@ -48,6 +48,16 @@ class ACCOpReplaceWithVarConversion : public OpRewritePattern<OpTy> {
 public:
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    // Defer if any user validates its operands as data entry ops (e.g.
+    // acc.data, acc.parallel, acc.declare_enter). Replacing the data entry
+    // op before these are processed would leave them with an invalid operand
+    // and fail IR verification.
+    for (Operation *user : op->getUsers()) {
+      if (isa<acc::DataOp, acc::HostDataOp, acc::KernelEnvironmentOp,
+              acc::ParallelOp, acc::SerialOp, acc::KernelsOp,
+              acc::DeclareEnterOp, acc::EnterDataOp>(user))
+        return failure();
+    }
     // Replace this op with its var operand; it's possible the op has no uses
     // if the op that had previously used it was already converted.
     if (op->use_empty())

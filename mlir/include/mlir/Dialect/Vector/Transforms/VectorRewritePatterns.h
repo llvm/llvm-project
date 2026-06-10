@@ -322,6 +322,12 @@ void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options,
                                   PatternBenefit benefit = 1);
 
+/// Compute indices for a transfer op slice.
+SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
+                                        ArrayRef<Value> indices,
+                                        AffineMap permutationMap, Location loc,
+                                        OpBuilder &builder);
+
 /// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
 /// outermost dimension of the operand.
 void populateVectorToElementsUnrollPatterns(RewritePatternSet &patterns,

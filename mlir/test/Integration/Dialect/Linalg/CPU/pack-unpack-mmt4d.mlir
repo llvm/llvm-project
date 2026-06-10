@@ -159,7 +159,8 @@ module @transforms attributes { transform.with_named_sequence } {
       -> (!transform.op<"tensor.empty">,
           !transform.op<"linalg.transpose">,
           !transform.op<"tensor.collapse_shape">,
-          !transform.op<"tensor.extract_slice">)
+          !transform.op<"tensor.extract_slice">,
+          !transform.op<"linalg.copy">)
     transform.yield
   }
 

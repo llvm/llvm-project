@@ -58,11 +58,14 @@ public:
   bool loadDialectModule(std::string_view dialectNamespace);
 
   /// Adds a user-friendly Attribute builder.
-  /// Raises an exception if the mapping already exists and replace == false.
+  /// Raises an exception if the mapping already exists and replace == false
+  /// and allow_existing == false.
+  /// Silently skips registration if allow_existing == true and the mapping
+  /// already exists (first registration wins).
   /// This is intended to be called by implementation code.
   void registerAttributeBuilder(const std::string &attributeKind,
-                                nanobind::callable pyFunc,
-                                bool replace = false);
+                                nanobind::callable pyFunc, bool replace = false,
+                                bool allow_existing = false);
 
   /// Adds a user-friendly type caster. Raises an exception if the mapping
   /// already exists and replace == false. This is intended to be called by
@@ -78,10 +81,10 @@ public:
                            bool replace = false);
 
   /// Adds a concrete implementation dialect class.
-  /// Raises an exception if the mapping already exists.
+  /// Raises an exception if the mapping already exists and replace == false.
   /// This is intended to be called by implementation code.
   void registerDialectImpl(const std::string &dialectNamespace,
-                           nanobind::object pyClass);
+                           nanobind::object pyClass, bool replace = false);
 
   /// Adds a concrete implementation operation class.
   /// Raises an exception if the mapping already exists and replace == false.
@@ -126,6 +129,20 @@ public:
 
   class MLIR_PYTHON_API_EXPORTED TracebackLoc {
   public:
+    /// Policy for handling explicit loc= when loc_tracebacks() is active.
+    enum class OnExplicitAction : uint8_t {
+      UseExplicit,  // use loc= as base (default)
+      UseTraceback, // discard loc=, generate traceback
+    };
+
+    /// Policy for composing Location.current with the computed location.
+    /// TODO: possibly add CallSiteLoc wrap and a generic Fuse option
+    ///       (`fused[Location.current, baseLoc]`) for non-NameLoc cases.
+    enum class CurrentLocAction : uint8_t {
+      Fallback,    // use Location.current only as fallback (default)
+      NamelocWrap, // extract NameLoc names, wrap computed loc
+    };
+
     bool locTracebacksEnabled();
 
     void setLocTracebacksEnabled(bool value);
@@ -140,12 +157,22 @@ public:
 
     bool isUserTracebackFilename(std::string_view file);
 
+    OnExplicitAction tracebackActionOnExplicitLoc();
+
+    void setTracebackActionOnExplicitLoc(OnExplicitAction action);
+
+    CurrentLocAction tracebackActionOnCurrentLoc();
+
+    void setTracebackActionOnCurrentLoc(CurrentLocAction action);
+
     static constexpr size_t kMaxFrames = 512;
 
   private:
     nanobind::ft_mutex mutex;
     bool locTracebackEnabled_ = false;
     size_t locTracebackFramesLimit_ = 10;
+    OnExplicitAction onExplicitAction = OnExplicitAction::UseExplicit;
+    CurrentLocAction currentLocAction = CurrentLocAction::Fallback;
     std::unordered_set<std::string> userTracebackIncludeFiles;
     std::unordered_set<std::string> userTracebackExcludeFiles;
     std::regex userTracebackIncludeRegex;

@@ -89,7 +89,9 @@ constexpr int *escape = std::allocator<int>().allocate(3); // expected-error {{c
                                                            // expected-note {{heap allocation performed here}}
 constexpr int leak = (std::allocator<int>().allocate(3), 0); // expected-error {{constant expression}} \
                                                              // expected-note {{not deallocated}}
-constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // expected-error {{constant expression}} expected-note {{assignment to object outside its lifetime}}
+constexpr int no_lifetime_start = (*std::allocator<int>().allocate(1) = 1); // expected-error {{constant expression}} \
+                                                                            // expected-note {{assignment to object outside its lifetime}} \
+                                                                            // expected-note {{heap allocation performed here}}
 constexpr int no_deallocate_nullptr = (std::allocator<int>().deallocate(nullptr), 1); // expected-error {{constant expression}} expected-note {{in call}}
 // expected-note@#dealloc {{'std::allocator<...>::deallocate' used to delete a null pointer}}
 constexpr int no_deallocate_nonalloc = (std::allocator<int>().deallocate((int*)&no_deallocate_nonalloc), 1); // expected-error {{constant expression}} expected-note {{in call}}
@@ -182,7 +184,7 @@ static_assert(construct_after_lifetime()); // expected-error {{}} expected-note 
 
 constexpr bool construct_after_lifetime_2() {
   struct A { struct B {} b; };
-  A a;
+  A a; // expected-note {{declared here}}
   a.~A();
   std::construct_at<A::B>(&a.b); // expected-note {{in call}}
   // expected-note@#new {{construction of subobject of object outside its lifetime is not allowed in a constant expression}}

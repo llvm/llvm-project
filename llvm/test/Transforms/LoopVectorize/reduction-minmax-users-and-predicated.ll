@@ -51,36 +51,35 @@ define i32 @chained_smax(i32 %x, ptr %src) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[BROADCAST_SPLAT]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; CHECK:       [[PRED_LOAD_IF]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; CHECK:       [[PRED_LOAD_CONTINUE]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP6]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <4 x i32> [ poison, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_LOAD_IF]] ]
 ; CHECK-NEXT:    br i1 true, label %[[PRED_LOAD_IF1:.*]], label %[[PRED_LOAD_CONTINUE2:.*]]
 ; CHECK:       [[PRED_LOAD_IF1]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[TMP11]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE2]]
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i32> [ [[TMP7]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP12]], %[[PRED_LOAD_IF1]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i32> [ [[TMP6]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP7]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    br i1 false, label %[[PRED_LOAD_IF3:.*]], label %[[PRED_LOAD_CONTINUE4:.*]]
 ; CHECK:       [[PRED_LOAD_IF3]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP13]], i32 [[TMP17]], i32 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP17]], i64 2
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE4]]
 ; CHECK:       [[PRED_LOAD_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = phi <4 x i32> [ [[TMP13]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP18]], %[[PRED_LOAD_IF3]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i32> [ [[TMP8]], %[[PRED_LOAD_CONTINUE2]] ], [ [[TMP13]], %[[PRED_LOAD_IF3]] ]
 ; CHECK-NEXT:    br i1 false, label %[[PRED_LOAD_IF5:.*]], label %[[PRED_LOAD_CONTINUE6:.*]]
 ; CHECK:       [[PRED_LOAD_IF5]]:
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr [3 x i32], ptr [[SRC]], i64 3
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x i32> [[TMP19]], i32 [[TMP23]], i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP12]], i32 [[TMP23]], i64 3
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE6]]
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i32> [ [[TMP19]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], %[[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi <4 x i32> [ [[TMP12]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP15]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP21:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP20]], <4 x i32> [[TMP1]])
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -93,7 +92,7 @@ define i32 @chained_smax(i32 %x, ptr %src) {
 entry:
   br label %loop
 
-loop:                              ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %max = phi i32 [ 0, %entry ], [ %max.next, %loop ]
   %gep.src = getelementptr [3 x i32], ptr %src, i64 %iv
@@ -390,7 +389,7 @@ define i32 @chained_instructions_feeding_max1(i32 %x, ptr %src) {
 entry:
   br label %loop
 
-loop:                              ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %max = phi i32 [ 0, %entry ], [ %max.next, %loop ]
   %gep.src = getelementptr [3 x i32], ptr %src, i64 %iv
@@ -428,7 +427,7 @@ define i32 @chained_instructions_feeding_max2(i32 %x, ptr %src) {
 entry:
   br label %loop
 
-loop:                              ; preds = %loop, %entry
+loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %max = phi i32 [ 0, %entry ], [ %max.next, %loop ]
   %gep.src = getelementptr [3 x i32], ptr %src, i64 %iv
@@ -508,8 +507,8 @@ define i32 @smax_reduction_multiple_incoming(ptr %src, i32 %n, i1 %cond) {
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_PH:%.*]] = phi i32 [ 10, %[[ELSE]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[MAX_PH:%.*]] = phi i32 [ 5, %[[ELSE]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[IV_PH]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[IV_PH]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:

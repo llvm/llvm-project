@@ -554,7 +554,7 @@ They are only supported in C++. ``__char8_t`` is not available.
 Vectors and Extended Vectors
 ============================
 
-Supports the GCC, OpenCL, AltiVec, NEON and SVE vector extensions.
+Supports the GCC, OpenCL, AltiVec, NEON, SVE and RVV vector extensions.
 
 OpenCL vector types are created using the ``ext_vector_type`` attribute.  It
 supports the ``V.xyzw`` syntax and other tidbits as seen in OpenCL.  An example
@@ -653,8 +653,6 @@ differences:
   boolean vectors.
 * Casting a scalar bool value to a boolean vector type means broadcasting the
   scalar value onto all lanes (same as general ext_vector_type).
-* It is not possible to access or swizzle elements of a boolean vector
-  (different than general ext_vector_type).
 
 The size and alignment are both the number of bits rounded up to the next power
 of two, but the alignment is at most the maximum vector alignment of the
@@ -704,36 +702,45 @@ The table below shows the support for each operation by vector extension.  A
 dash indicates that an operation is not accepted according to a corresponding
 specification.
 
-============================== ======= ======= ============= ======= =====
-         Operator              OpenCL  AltiVec     GCC        NEON    SVE
-============================== ======= ======= ============= ======= =====
-[]                               yes     yes       yes         yes    yes
-unary operators +, --            yes     yes       yes         yes    yes
-++, -- --                        yes     yes       yes         no     no
-+,--,*,/,%                       yes     yes       yes         yes    yes
-bitwise operators &,|,^,~        yes     yes       yes         yes    yes
->>,<<                            yes     yes       yes         yes    yes
-!, &&, ||                        yes     --        yes         yes    yes
-==, !=, >, <, >=, <=             yes     yes       yes         yes    yes
-=                                yes     yes       yes         yes    yes
-?: [#]_                          yes     --        yes         yes    yes
-sizeof                           yes     yes       yes         yes    yes [#]_
-C-style cast                     yes     yes       yes         no     no
-reinterpret_cast                 yes     no        yes         no     no
-static_cast                      yes     no        yes         no     no
-const_cast                       no      no        no          no     no
-address &v[i]                    no      no        no [#]_     no     no
-============================== ======= ======= ============= ======= =====
+============================== ======= ======= ============= ======= ============ ===========
+         Operator              OpenCL  AltiVec     GCC        NEON    SVE          RVV
+============================== ======= ======= ============= ======= ============ ===========
+[]                               yes     yes       yes         yes    yes          yes
+unary operators +, --            yes     yes       yes         yes    yes          yes
+++, -- --                        yes     yes       yes         no     no           no
++,--,*,/,%                       yes     yes       yes         yes    yes          yes
+bitwise operators &,|,^,~        yes     yes       yes         yes    yes          yes
+>>,<<                            yes     yes       yes         yes    yes          yes
+!, &&, ||                        yes     --        yes         yes    yes          yes
+==, !=, >, <, >=, <=             yes     yes       yes         yes    yes          yes
+=                                yes     yes       yes         yes    yes          yes
+?: [#]_                          yes     --        yes         yes    yes          yes
+sizeof                           yes     yes       yes         yes    yes [#vls]_  yes [#vls]_
+C-style cast                     yes     yes       yes         no     no           yes
+reinterpret_cast                 yes     no        yes         no     no           yes
+static_cast                      yes     no        yes         no     no           yes
+const_cast                       no      no        no          no     no           no
+address &v[i]                    no      no        no [#]_     no     no           no
+============================== ======= ======= ============= ======= ============ ===========
+
+Both SVE and RVV define sizeless vector types which cannot be used in globals,
+structs, unions, or arrays.  Both provide an attribute (``arm_sve_vector_bits``
+and ``riscv_rvv_vector_bits`` respectively) to create fixed-length
+vector-length-specific (VLS) variants that remove these restrictions.  Using
+these attributes requires the command line option ``-msve-vector-bits=<N>`` or
+``-mrvv-vector-bits=<N>`` respectively.  For SVE, the operators above are
+supported on both sizeless and VLS types.  For RVV, the operators are only
+supported on VLS types.
 
 See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convertvector`.
 
 .. [#] ternary operator(?:) has different behaviors depending on the condition
   operand's vector type. If the condition is a GNU vector (i.e., ``__vector_size__``),
-  a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
-  conversions (that is, != 0).
+  a NEON vector, an SVE vector or an RVV vector, it's only available in C++
+  and uses normal bool conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
   And it selects based on the signedness of the condition operands (OpenCL v1.1 s6.3.9).
-.. [#] sizeof can only be used on vector length specific SVE types.
+.. [#vls] sizeof can only be used on vector length specific SVE and RVV types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
    not implemented otherwise.
@@ -839,13 +846,13 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_copysign(T x, T y)     return the magnitude of x with the sign of y.                          floating point types
  T __builtin_elementwise_fmod(T x, T y)         return the floating-point remainder of (x/y) whose sign                floating point types
                                                 matches the sign of x.
- T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
-                                                For floating point types, follows semantics of maxNum
+ T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer
+                                                For floating point types, follows semantics of maxNum                  floating point types (deprecated)
                                                 in IEEE 754-2008. See `LangRef
                                                 <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
- T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
-                                                For floating point types, follows semantics of minNum
+ T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer
+                                                For floating point types, follows semantics of minNum                  floating point types (deprecated)
                                                 in IEEE 754-2008. See `LangRef
                                                 <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
@@ -896,6 +903,8 @@ T __builtin_elementwise_fshr(T x, T y, T z)     perform a funnel shift right. Co
                                                 the first argument is 0 and an optional second argument is provided,
                                                 the second argument is returned. It is undefined behaviour if the
                                                 first argument is 0 and no second argument is provided.
+T __builtin_elementwise_clmul(T x, T y)         perform a carry-less multiplication of x and y, returning the least    integer types
+                                                significant bits of the wide result.
 ============================================== ====================================================================== =========================================
 
 
@@ -2710,8 +2719,9 @@ programming patterns, makes programs more concise, and improves the safety of
 container creation.  There are several feature macros associated with object
 literals and subscripting: ``__has_feature(objc_array_literals)`` tests the
 availability of array literals; ``__has_feature(objc_dictionary_literals)``
-tests the availability of dictionary literals;
-``__has_feature(objc_subscripting)`` tests the availability of object
+tests the availability of dictionary literals; ``objc_constant_literals``
+tests the availability of having number, array, and dictionary literals
+emitted at compile time; ``__has_feature(objc_subscripting)`` tests the availability of object
 subscripting.
 
 Objective-C Autosynthesis of Properties
@@ -3998,6 +4008,63 @@ be used within constant expressions.
   unsigned _BitInt(20) value = 0xABCDE;
   unsigned _BitInt(20) rotated = __builtin_stdc_rotate_left(value, 5);
 
+``__builtin_stdc_*`` bit utilities
+----------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+  unsigned int __builtin_stdc_leading_zeros(T value);
+  unsigned int __builtin_stdc_leading_ones(T value);
+  unsigned int __builtin_stdc_trailing_zeros(T value);
+  unsigned int __builtin_stdc_trailing_ones(T value);
+  unsigned int __builtin_stdc_first_leading_zero(T value);
+  unsigned int __builtin_stdc_first_leading_one(T value);
+  unsigned int __builtin_stdc_first_trailing_zero(T value);
+  unsigned int __builtin_stdc_first_trailing_one(T value);
+  unsigned int __builtin_stdc_count_zeros(T value);
+  unsigned int __builtin_stdc_count_ones(T value);
+  bool         __builtin_stdc_has_single_bit(T value);
+  unsigned int __builtin_stdc_bit_width(T value);
+  T            __builtin_stdc_bit_floor(T value);
+  T            __builtin_stdc_bit_ceil(T value);
+
+where ``T`` is any unsigned integer type except ``bool`` and enumeration types,
+including ``_BitInt`` types.
+
+**Description**:
+
+These builtins implement the C23 ``<stdbit.h>`` operations. Following the C23
+standard, ``unsigned int`` is used as the ``generic_return_type`` for count and
+position queries (``leading_zeros``, ``leading_ones``, ``trailing_zeros``,
+``trailing_ones``, ``first_leading_zero``, ``first_leading_one``,
+``first_trailing_zero``, ``first_trailing_one``, ``count_zeros``,
+``count_ones``, ``bit_width``); ``has_single_bit`` returns ``bool``; and
+``bit_floor``/``bit_ceil`` return the same type as the operand. Zero and
+all-ones cases follow the C23 definitions. All are usable in constant
+expressions.
+
+``bool`` and enumeration types are rejected as arguments because C23 does not
+permit them for these functions.
+
+As a Clang extension, ``_BitInt`` types of arbitrary widths are supported. C23
+only requires support for bit-precise integers whose width matches a standard
+or extended integer type.
+
+**Examples**:
+
+.. code-block:: c
+
+  unsigned _BitInt(9) x = 0x11;
+  unsigned int lz  = __builtin_stdc_leading_zeros(x);
+  unsigned int tz  = __builtin_stdc_trailing_zeros(x);
+  unsigned int fto = __builtin_stdc_first_trailing_one(x);
+  unsigned int cz  = __builtin_stdc_count_zeros(x);
+  bool has_one    = __builtin_stdc_has_single_bit(x);
+  unsigned _BitInt(9) ceilv  = __builtin_stdc_bit_ceil((unsigned _BitInt(9))5);
+  unsigned _BitInt(9) floorv = __builtin_stdc_bit_floor((unsigned _BitInt(9))5);
+
 ``__builtin_unreachable``
 -------------------------
 
@@ -5194,6 +5261,8 @@ builtin function, and are named with a ``__opencl_`` prefix. The macros
 and ``__OPENCL_MEMORY_SCOPE_SUB_GROUP`` are provided, with values
 corresponding to the enumerators of OpenCL's ``memory_scope`` enumeration.)
 
+.. _langext-__scoped_atomic:
+
 __scoped_atomic builtins
 ------------------------
 
@@ -5557,6 +5626,120 @@ If no address spaces names are provided, all address spaces are fenced.
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local")
   __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "workgroup", "local", "global")
 
+__builtin_amdgcn_processor_is and __builtin_amdgcn_is_invocable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``__builtin_amdgcn_processor_is`` and ``__builtin_amdgcn_is_invocable`` provide
+a functional mechanism for programatically querying:
+
+* the identity of the current target processor;
+* the capability of the current target processor to invoke a particular builtin.
+
+**Syntax**:
+
+.. code-block:: c
+
+  __amdgpu_feature_predicate_t __builtin_amdgcn_processor_is(const char*);
+  __amdgpu_feature_predicate_t __builtin_amdgcn_is_invocable(builtin_name);
+
+**Example of use**:
+
+.. code-block:: c++
+
+  if (__builtin_amdgcn_processor_is("gfx1201") ||
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var))
+    __builtin_amdgcn_s_sleep_var(x);
+
+  if (!__builtin_amdgcn_processor_is("gfx906"))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_processor_is("gfx1010") ||
+           __builtin_amdgcn_processor_is("gfx1101"))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  while (__builtin_amdgcn_processor_is("gfx1101")) *p += x;
+
+  do {
+    break;
+  } while (__builtin_amdgcn_processor_is("gfx1010"));
+
+  for (; __builtin_amdgcn_processor_is("gfx1201"); ++*p) break;
+
+  if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready))
+    __builtin_amdgcn_s_wait_event_export_ready();
+  else if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_ttracedata_imm))
+    __builtin_amdgcn_s_ttracedata_imm(1);
+
+  do {
+    break;
+  } while (
+      __builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
+
+  for (; __builtin_amdgcn_is_invocable(__builtin_amdgcn_permlane64); ++*p)
+    break;
+
+**Description**:
+
+The builtins return a value of type ``__amdgpu_feature_predicate_t``, which is a
+target specific type that behaves as if its C++ definition was the following:
+
+.. code-block:: c++
+
+  struct __amdgpu_feature_predicate_t {
+    __amdgpu_feature_predicate_t() = delete;
+    __amdgpu_feature_predicate_t(const __amdgpu_feature_predicate_t&) = delete;
+    __amdgpu_feature_predicate_t(__amdgpu_feature_predicate_t&&) = delete;
+
+    explicit
+    operator bool() const noexcept;
+  };
+
+The builtins can be used in C as well, wherein the
+``__amdgpu_feature_predicate_t`` type behaves as an opaque, forward declared
+type with conditional automated conversion to ``_Bool`` when used as the
+predicate argument to a control structure:
+
+.. code-block:: c
+
+  struct __amdgpu_feature_predicate_t ret();     // Error
+  void arg(struct __amdgpu_feature_predicate_t); // Error
+  void local() {
+    struct __amdgpu_feature_predicate_t x;       // Error
+    struct __amdgpu_feature_predicate_t y =
+        __builtin_amdgcn_processor_is("gfx900"); // Error
+  }
+  void valid_use() {
+    _Bool x = (_Bool)__builtin_amdgcn_processor_is("gfx900"); // OK
+    if (__builtin_amdgcn_processor_is("gfx900"))       // Implicit cast to _Bool
+      return;
+    for (; __builtin_amdgcn_processor_is("gfx900");)   // Implicit cast to _Bool
+      break;
+    while (__builtin_amdgcn_processor_is("gfx900"))    // Implicit cast to _Bool
+      break;
+    do {
+      break;
+    } while (__builtin_amdgcn_processor_is("gfx900")); // Implicit cast to _Bool
+
+    __builtin_amdgcn_processor_is("gfx900") ? x : !x;
+  }
+
+The boolean interpretation of the predicate values returned by the builtins:
+
+* indicates whether the current target matches the argument; the argument MUST
+  be a string literal and a valid AMDGPU target
+* indicates whether the builtin function passed as the argument can be invoked
+  by the current target; the argument MUST be either a generic or AMDGPU
+  specific builtin name
+
+When invoked while compiling for a concrete target, the builtins are evaluated
+early by Clang, and never produce any CodeGen effects / have no observable
+side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
+which is an abstract target, a series of specialization constants are implicitly
+created, in correspondence with the predicates. These predicates get resolved
+when finalizing the compilation process for a concrete target, and shall reflect
+the latter's identity and features. Thus, it is possible to author high-level
+code, in e.g. HIP, that is target adaptive in a dynamic fashion, contrary to
+macro based mechanisms.
+
 __builtin_amdgcn_ballot_w{32,64}
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -5574,6 +5757,32 @@ Given a wave-uniform bitmask, ``__builtin_amdgcn_inverse_ballot_w{32,64}(mask)``
 returns the bit at the position of the current lane. It is almost equivalent to
 ``(mask & (1 << lane_id)) != 0``, except that its behavior is only defined if
 the given mask has the same value for all active lanes of the current wave.
+
+
+__builtin_amdgcn_av_{load,store}_b128
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Signature:
+
+.. code-block:: c
+
+    typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u;
+
+    v4u __builtin_amdgcn_av_load_b128(v4u *src, int scope);
+
+    void __builtin_amdgcn_av_store_b128(v4u *dst, v4u data, int scope);
+
+Load or store a vector of 4 unsigned integers from or to memory with cache
+behavior specified by ``scope``, which is one of the ``__MEMORY_SCOPE_*`` macros
+defined for :ref:`scoped atomic builtins<langext-__c11_atomic>`.
+
+The pointer argument must point to the global or generic address space.
+
+These builtins are supported on gfx9, gfx10, gfx11, and gfx12 targets.
+
+They map to the LLVM intrinsics ``llvm.amdgcn.av.load.b128`` and
+``llvm.amdgcn.av.store.b128`` documented in `User Guide for AMDGPU Backend
+<https://llvm.org/docs/AMDGPUUsage.html>`_.
 
 ARM/AArch64 Language Extensions
 -------------------------------
@@ -5992,6 +6201,23 @@ statements S1 and S2 above.
 If Loop Distribution is turned on globally with
 ``-mllvm -enable-loop-distribution``, specifying ``distribute(disable)`` can
 be used the disable it on a per-loop basis.
+
+Disable Loop Invariant Code Motion
+----------------------------------
+
+Loop Invariant Code Motion (LICM) moves loop invariant code outside of the loop.
+If ``licm(disable))`` is specified, compiler will skip LICM on the specific loop.
+
+.. code-block:: c++
+
+  #pragma clang loop licm(disable)
+  while (i < Length) {
+    List[i] = A[x] * i * 2;
+    i++;
+  }
+
+The load for A[x] is loop invariant, it will not be hoisted out of the loop
+when LICM is disabled.
 
 Additional Information
 ----------------------

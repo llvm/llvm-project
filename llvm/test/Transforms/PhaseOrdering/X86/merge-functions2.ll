@@ -12,11 +12,12 @@ define i32 @f(i32 noundef %x) {
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[SWITCH_LOOKUP:.*]], label %[[SW_EPILOG:.*]]
 ; CHECK:       [[SWITCH_LOOKUP]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[X]] to i64
-; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw i32, ptr @switch.table.g, i64 [[TMP1]]
-; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i32, ptr [[SWITCH_GEP]], align 4
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds nuw i8, ptr @switch.table.g, i64 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32
 ; CHECK-NEXT:    br label %[[SW_EPILOG]]
 ; CHECK:       [[SW_EPILOG]]:
-; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi i32 [ [[SWITCH_LOAD]], %[[SWITCH_LOOKUP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[X_ADDR_0:%.*]] = phi i32 [ [[SWITCH_EXT]], %[[SWITCH_LOOKUP]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    ret i32 [[X_ADDR_0]]
 ;
 entry:

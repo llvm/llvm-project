@@ -11,12 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
+#include <cstdint>
 
 #define DEBUG_TYPE "amdgpu-attributor"
 
@@ -107,6 +109,9 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     // offsets.
     return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
                                                     : QUEUE_PTR;
+  case Intrinsic::amdgcn_wwm:
+  case Intrinsic::amdgcn_strict_wwm:
+    return WHOLE_WAVE_MODE;
   case Intrinsic::trap:
   case Intrinsic::debugtrap:
   case Intrinsic::ubsantrap:
@@ -158,7 +163,8 @@ public:
     ADDR_SPACE_CAST_PRIVATE_TO_FLAT = 1 << 1,
     ADDR_SPACE_CAST_LOCAL_TO_FLAT = 1 << 2,
     ADDR_SPACE_CAST_BOTH_TO_FLAT =
-        ADDR_SPACE_CAST_PRIVATE_TO_FLAT | ADDR_SPACE_CAST_LOCAL_TO_FLAT
+        ADDR_SPACE_CAST_PRIVATE_TO_FLAT | ADDR_SPACE_CAST_LOCAL_TO_FLAT,
+    CS_WORST = DS_GLOBAL | ADDR_SPACE_CAST_BOTH_TO_FLAT,
   };
 
   /// Check if the subtarget has aperture regs.
@@ -241,26 +247,45 @@ private:
   }
 
   /// Get the constant access bitmap for \p C.
-  uint8_t getConstantAccess(const Constant *C,
-                            SmallPtrSetImpl<const Constant *> &Visited) {
-    auto It = ConstantStatus.find(C);
+  uint8_t getConstantAccess(const Constant *C) {
+    const auto &It = ConstantStatus.find(C);
     if (It != ConstantStatus.end())
-      return It->second;
+      return It->second.value();
+
+    SmallPtrSet<const Constant *, 8> Visited;
+    SmallVector<const Constant *> Worklist;
+    Worklist.push_back(C);
+    Visited.insert(C);
 
     uint8_t Result = 0;
-    if (isDSAddress(C))
-      Result = DS_GLOBAL;
+    while (Result != CS_WORST && !Worklist.empty()) {
+      const Constant *CurC = Worklist.pop_back_val();
 
-    if (const auto *CE = dyn_cast<ConstantExpr>(C))
-      Result |= visitConstExpr(CE);
-
-    for (const Use &U : C->operands()) {
-      const auto *OpC = dyn_cast<Constant>(U);
-      if (!OpC || !Visited.insert(OpC).second)
+      std::optional<uint8_t> &CurCResultOrNone = ConstantStatus[CurC];
+      if (CurCResultOrNone) {
+        Result |= CurCResultOrNone.value();
         continue;
+      }
+      uint8_t CurCResult = 0;
 
-      Result |= getConstantAccess(OpC, Visited);
+      if (isDSAddress(CurC))
+        CurCResult |= DS_GLOBAL;
+
+      if (const auto *CE = dyn_cast<ConstantExpr>(CurC))
+        CurCResult |= visitConstExpr(CE);
+
+      for (const Use &U : CurC->operands()) {
+        if (const auto *OpC = dyn_cast<Constant>(U)) {
+          if (Visited.insert(OpC).second)
+            Worklist.push_back(OpC);
+        }
+      }
+
+      CurCResultOrNone = CurCResult;
+      Result |= CurCResult;
     }
+
+    ConstantStatus[C] = Result;
     return Result;
   }
 
@@ -274,8 +299,7 @@ public:
     if (!IsNonEntryFunc && HasAperture)
       return false;
 
-    SmallPtrSet<const Constant *, 8> Visited;
-    uint8_t Access = getConstantAccess(C, Visited);
+    uint8_t Access = getConstantAccess(C);
 
     // We need to trap on DS globals in non-entry functions.
     if (IsNonEntryFunc && (Access & DS_GLOBAL))
@@ -285,14 +309,13 @@ public:
   }
 
   bool checkConstForAddrSpaceCastFromPrivate(const Constant *C) {
-    SmallPtrSet<const Constant *, 8> Visited;
-    uint8_t Access = getConstantAccess(C, Visited);
+    uint8_t Access = getConstantAccess(C);
     return Access & ADDR_SPACE_CAST_PRIVATE_TO_FLAT;
   }
 
 private:
   /// Used to determine if the Constant needs the queue pointer.
-  DenseMap<const Constant *, uint8_t> ConstantStatus;
+  DenseMap<const Constant *, std::optional<uint8_t>> ConstantStatus;
   const unsigned CodeObjectVersion;
 };
 
@@ -362,11 +385,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     if (CC != CallingConv::AMDGPU_KERNEL)
       return;
 
-    bool InitialValue = false;
-    if (F->hasFnAttribute("uniform-work-group-size"))
-      InitialValue =
-          F->getFnAttribute("uniform-work-group-size").getValueAsString() ==
-          "true";
+    bool InitialValue = F->hasFnAttribute("uniform-work-group-size");
 
     if (InitialValue)
       indicateOptimisticFixpoint();
@@ -405,10 +424,9 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
       return ChangeStatus::UNCHANGED;
 
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
-    return A.manifestAttrs(
-        getIRPosition(),
-        {Attribute::get(Ctx, "uniform-work-group-size", "true")},
-        /*ForceReplace=*/true);
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, "uniform-work-group-size")},
+                           /*ForceReplace=*/true);
   }
 
   bool isValidState() const override {
@@ -1296,8 +1314,13 @@ struct AAAMDGPUMinAGPRAlloc
     auto [MinNumAGPR, MaxNumAGPR] =
         AMDGPU::getIntegerPairAttribute(*F, "amdgpu-agpr-alloc", {~0u, ~0u},
                                         /*OnlyFirstRequired=*/true);
-    if (MinNumAGPR == 0)
+    if (MinNumAGPR == 0) {
       indicateOptimisticFixpoint();
+      return;
+    }
+
+    if (hasSanitizerAttributes(*F))
+      indicatePessimisticFixpoint();
   }
 
   const std::string getAsStr(Attributor *A) const override {
@@ -1568,14 +1591,10 @@ AAAMDGPUClusterDims::createForPosition(const IRPosition &IRP, Attributor &A) {
   llvm_unreachable("AAAMDGPUClusterDims is only valid for function position");
 }
 
-static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
-                    AMDGPUAttributorOptions Options,
+static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
+                    bool DeleteFns, Module &M, AnalysisGetter &AG,
+                    TargetMachine &TM, AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
-  SetVector<Function *> Functions;
-  for (Function &F : M) {
-    if (!F.isIntrinsic())
-      Functions.insert(&F);
-  }
 
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
@@ -1592,7 +1611,8 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
   AC.Allowed = &Allowed;
-  AC.IsModulePass = true;
+  AC.IsModulePass = IsModulePass;
+  AC.DeleteFns = DeleteFns;
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
@@ -1664,7 +1684,41 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   AnalysisGetter AG(FAM);
 
+  SetVector<Function *> Functions;
+  for (Function &F : M) {
+    if (!F.isDeclaration())
+      Functions.insert(&F);
+  }
+
   // TODO: Probably preserves CFG
-  return runImpl(M, AG, TM, Options, LTOPhase) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  return runImpl(Functions, /*IsModulePass=*/true, /*DeleteFns=*/true, M, AG,
+                 TM, Options, LTOPhase)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
+}
+
+PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
+                                                       CGSCCAnalysisManager &AM,
+                                                       LazyCallGraph &CG,
+                                                       CGSCCUpdateResult &UR) {
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+  AnalysisGetter AG(FAM);
+
+  SetVector<Function *> Functions;
+  for (LazyCallGraph::Node &N : C) {
+    Function *F = &N.getFunction();
+    if (!F->isIntrinsic())
+      Functions.insert(F);
+  }
+
+  AMDGPUAttributorOptions Options;
+  Module *M = C.begin()->getFunction().getParent();
+  // In the CGSCC pipeline, avoid untracked call graph modifications by
+  // disabling function deletion, mirroring the generic AttributorCGSCCPass.
+  return runImpl(Functions, /*IsModulePass=*/false, /*DeleteFns=*/false, *M, AG,
+                 TM, Options, ThinOrFullLTOPhase::None)
+             ? PreservedAnalyses::none()
+             : PreservedAnalyses::all();
 }

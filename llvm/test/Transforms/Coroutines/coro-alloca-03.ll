@@ -2,22 +2,23 @@
 ; Tests that allocas escaped through function calls will live on the frame.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-; CHECK:        %f.Frame = type { ptr, ptr, i64, i1 }
+
+target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 define ptr @f() presplitcoroutine {
 ; CHECK-LABEL: define ptr @f() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @f.resumers)
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr @f.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 32)
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
 ; CHECK-NEXT:    store ptr @f.resume, ptr [[HDL]], align 8
-; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds nuw [[F_FRAME:%.*]], ptr [[HDL]], i32 0, i32 1
+; CHECK-NEXT:    [[DESTROY_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 8
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
-; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
+; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 16
 ; CHECK-NEXT:    call void @capture_call(ptr [[X_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @nocapture_call(ptr [[Y]])
-; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds nuw [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
+; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
 ; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
@@ -25,7 +26,7 @@ entry:
   ; %x needs to go to the frame since it's escaped; %y will stay as local since it doesn't escape.
   %x = alloca i64
   %y = alloca i64
-  %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr null, ptr @f, ptr null)
   %size = call i32 @llvm.coro.size.i32()
   %alloc = call ptr @malloc(i32 %size)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr %alloc)
