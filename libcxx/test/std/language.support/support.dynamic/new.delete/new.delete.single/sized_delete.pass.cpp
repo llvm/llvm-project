@@ -17,7 +17,8 @@
 // ADDITIONAL_COMPILE_FLAGS(target=aarch64-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=armv7-w64-windows-gnu): -fsized-deallocation
 // ADDITIONAL_COMPILE_FLAGS(target=arm64ec-w64-windows-gnu): -fsized-deallocation
-// ADDITIONAL_COMPILE_FLAGS(buildhost=aix): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=powerpc-ibm-aix): -fsized-deallocation
+// ADDITIONAL_COMPILE_FLAGS(target=powerpc64-ibm-aix): -fsized-deallocation
 // UNSUPPORTED: sanitizer-new-delete
 
 // AIX, and z/OS default to -fno-sized-deallocation.
