@@ -14,7 +14,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/StringSaver.h"
 #include "llvm/HTTP/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
@@ -41,6 +40,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -1597,15 +1597,16 @@ static void handleExtBinaryWriter(sampleprof::SampleProfileWriter &Writer,
 
 /// Make a deep copy of the given function samples, interning all FunctionIds
 /// and context frames into a shared pool using the provided \p Remap function.
-static sampleprof::FunctionSamples
-internFunctionSamples(const sampleprof::FunctionSamples &Samples,
-                      function_ref<sampleprof::FunctionId(sampleprof::FunctionId)> Remap,
-                      std::list<sampleprof::SampleContextFrameVector> &CtxFrameStorage) {
+static sampleprof::FunctionSamples internFunctionSamples(
+    const sampleprof::FunctionSamples &Samples,
+    function_ref<sampleprof::FunctionId(sampleprof::FunctionId)> Remap,
+    std::list<sampleprof::SampleContextFrameVector> &CtxFrameStorage) {
   sampleprof::FunctionSamples Result;
   Result.setFunctionHash(Samples.getFunctionHash());
 
   if (Samples.getContext().hasContext()) {
-    sampleprof::SampleContextFrames OldFrames = Samples.getContext().getContextFrames();
+    sampleprof::SampleContextFrames OldFrames =
+        Samples.getContext().getContextFrames();
     CtxFrameStorage.emplace_back();
     sampleprof::SampleContextFrameVector &NewFrames = CtxFrameStorage.back();
     NewFrames.reserve(OldFrames.size());
@@ -1707,9 +1708,9 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
       sampleprof_error Result = sampleprof_error::success;
       FunctionSamples Interned =
           internFunctionSamples(I->second, InternFunctionId, CtxFrameStorage);
-      FunctionSamples Remapped =
-          Remapper ? remapSamples(Interned, *Remapper, Result)
-                   : FunctionSamples();
+      FunctionSamples Remapped = Remapper
+                                     ? remapSamples(Interned, *Remapper, Result)
+                                     : FunctionSamples();
       FunctionSamples &Samples = Remapper ? Remapped : Interned;
       SampleContext FContext = Samples.getContext();
       mergeSampleProfErrors(Result,
