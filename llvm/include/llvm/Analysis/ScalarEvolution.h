@@ -1983,10 +1983,11 @@ private:
   /// operands iteratively first.
   const ConstantRange &getRangeRefIter(const SCEV *S, RangeSignHint Hint);
 
-  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step}.
-  /// Helper for \c getRange.
-  ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
-                                    const APInt &MaxBECount);
+  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step},
+  /// and whether it may wrap. Helper for \c getRange.
+  std::pair<ConstantRange, SCEV::NoWrapFlags>
+  getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
+                      const APInt &MaxBECount);
 
   /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
   /// Start,+,\p Step}<nw>.
