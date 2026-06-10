@@ -555,11 +555,11 @@ HexagonToolChain::getEffectiveSysRoot(const ArgList &Args) const {
   SmallString<128> Dir(getHexagonTargetDir(D.Dir, D.PrefixDirs));
   // For Picolibc, use picolibc/<triple> with no fallback.
   if (GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
-    llvm::sys::path::append(Dir, "picolibc", getTriple().normalize());
+    llvm::sys::path::append(Dir, "picolibc", getTripleString());
     return Dir;
   }
   // Otherwise, try a triple subdirectory first, then fall back to "hexagon".
-  llvm::sys::path::append(Dir, getTriple().normalize());
+  llvm::sys::path::append(Dir, getTripleString());
   if (getVFS().exists(Dir))
     return Dir;
   Dir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
@@ -723,7 +723,7 @@ void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
     const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ);
     if (A) {
       getDriver().Diag(diag::err_drv_unsupported_unwind_for_platform)
-          << A->getValue() << getTriple().normalize();
+          << A->getValue() << getTripleString();
       return;
     }
   }
