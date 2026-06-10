@@ -4,12 +4,12 @@
 define void @test_2x4bit_mask_with_extracts(i64 %i, i64 %n) #0 {
 ; CHECK-LABEL: test_2x4bit_mask_with_extracts:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vsetvli a3, zero, e64, m4, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    srli a2, a2, 1
 ; CHECK-NEXT:    vsaddu.vx v12, v8, a0
 ; CHECK-NEXT:    vmsltu.vx v0, v12, a1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    srli a2, a2, 1
 ; CHECK-NEXT:    add a2, a0, a2
 ; CHECK-NEXT:    sltu a0, a2, a0
 ; CHECK-NEXT:    neg a0, a0
@@ -27,12 +27,12 @@ define void @test_2x4bit_mask_with_extracts(i64 %i, i64 %n) #0 {
 define void @test_2x8bit_mask_with_extracts(i64 %i, i64 %n) #0 {
 ; CHECK-LABEL: test_2x8bit_mask_with_extracts:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    vsaddu.vx v16, v8, a0
-; CHECK-NEXT:    add a2, a0, a2
 ; CHECK-NEXT:    vmsltu.vx v0, v16, a1
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    add a2, a0, a2
 ; CHECK-NEXT:    sltu a0, a2, a0
 ; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    or a0, a0, a2
@@ -51,10 +51,10 @@ define void @test_fixed_2x4bit_mask_with_extract(i64 %i, i64 %n) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    addi a2, a0, 4
 ; CHECK-NEXT:    vsaddu.vx v10, v8, a0
-; CHECK-NEXT:    sltu a0, a2, a0
 ; CHECK-NEXT:    vmsltu.vx v0, v10, a1
+; CHECK-NEXT:    addi a2, a0, 4
+; CHECK-NEXT:    sltu a0, a2, a0
 ; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    or a0, a0, a2
 ; CHECK-NEXT:    vsaddu.vx v10, v8, a0
@@ -127,8 +127,8 @@ define void @test_partial_extract_legal_types(i64 %i, i64 %n) #0 {
 ; CHECK-NEXT:    vmsltu.vx v0, v8, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a0, a0, 1
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
