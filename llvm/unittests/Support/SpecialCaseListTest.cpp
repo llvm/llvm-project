@@ -426,11 +426,12 @@ TEST_F(SpecialCaseListTest, CanonicalizePathsOnWindows) {
                           "fun:hi\\\\bye=category\n");
   EXPECT_TRUE(SCL->inSection("", "src", "foo/bar"));
   EXPECT_TRUE(SCL->inSection("", "src", "foo\\bar"));
-  // The baz pattern doesn't match because paths are canonicalized first
-  EXPECT_FALSE(SCL->inSection("", "src", "foo/baz"));
-  EXPECT_FALSE(SCL->inSection("", "src", "foo\\baz"));
+  // The baz pattern matches because both paths and patterns are canonicalized
+  EXPECT_TRUE(SCL->inSection("", "src", "foo/baz"));
+  EXPECT_TRUE(SCL->inSection("", "src", "foo\\baz"));
   // The canonicalization only applies to files
   EXPECT_TRUE(SCL->inSection("", "fun", "hi\\bye", "category"));
+  EXPECT_FALSE(SCL->inSection("", "fun", "hi/bye", "category"));
 }
 
 #endif

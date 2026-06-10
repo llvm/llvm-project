@@ -43,7 +43,7 @@ namespace {
 // Lagacy v1 matcher.
 class RegexMatcher {
 public:
-  Error insert(StringRef Pattern, unsigned LineNumber);
+  Error insert(StringRef Pattern, unsigned LineNumber, bool SlashAgnostic);
   unsigned match(StringRef Query) const;
 
 private:
@@ -60,7 +60,7 @@ private:
 
 class GlobMatcher {
 public:
-  Error insert(StringRef Pattern, unsigned LineNumber);
+  Error insert(StringRef Pattern, unsigned LineNumber, bool SlashAgnostic);
   unsigned match(StringRef Query) const;
 
 private:
@@ -91,7 +91,7 @@ private:
 /// Represents a set of patterns and their line numbers
 class Matcher {
 public:
-  Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizeSlashes);
+  Matcher(bool UseGlobs, bool RemoveDotSlash, bool SlashAgnostic);
 
   Error insert(StringRef Pattern, unsigned LineNumber);
   unsigned match(StringRef Query) const;
@@ -100,10 +100,11 @@ public:
 
   std::variant<RegexMatcher, GlobMatcher> M;
   bool RemoveDotSlash;
-  bool CanonicalizeSlashes;
+  bool SlashAgnostic;
 };
 
-Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber) {
+Error RegexMatcher::insert(StringRef Pattern, unsigned LineNumber,
+                           bool SlashAgnostic) {
   if (Pattern.empty())
     return createStringError(errc::invalid_argument,
                              "Supplied regex was blank");
@@ -134,11 +135,13 @@ unsigned RegexMatcher::match(StringRef Query) const {
   return 0;
 }
 
-Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber) {
+Error GlobMatcher::insert(StringRef Pattern, unsigned LineNumber,
+                          bool SlashAgnostic) {
   if (Pattern.empty())
     return createStringError(errc::invalid_argument, "Supplied glob was blank");
 
-  auto Res = GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024);
+  auto Res =
+      GlobPattern::create(Pattern, /*MaxSubPatterns=*/1024, SlashAgnostic);
   if (auto Err = Res.takeError())
     return Err;
   Globs.emplace_back(Pattern, LineNumber, std::move(Res.get()));
@@ -220,8 +223,8 @@ unsigned GlobMatcher::match(StringRef Query) const {
   return Best < 0 ? 0 : Globs[Best].LineNo;
 }
 
-Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizeSlashes)
-    : RemoveDotSlash(RemoveDotSlash), CanonicalizeSlashes(CanonicalizeSlashes) {
+Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash, bool SlashAgnostic)
+    : RemoveDotSlash(RemoveDotSlash), SlashAgnostic(SlashAgnostic) {
   if (UseGlobs)
     M.emplace<GlobMatcher>();
   else
@@ -229,15 +232,11 @@ Matcher::Matcher(bool UseGlobs, bool RemoveDotSlash, bool CanonicalizeSlashes)
 }
 
 Error Matcher::insert(StringRef Pattern, unsigned LineNumber) {
-  return std::visit([&](auto &V) { return V.insert(Pattern, LineNumber); }, M);
+  return std::visit(
+      [&](auto &V) { return V.insert(Pattern, LineNumber, SlashAgnostic); }, M);
 }
 
 unsigned Matcher::match(StringRef Query) const {
-  std::string CanonicalizedQuery;
-  if (CanonicalizeSlashes) {
-    CanonicalizedQuery = llvm::sys::path::convert_to_slash(Query);
-    Query = CanonicalizedQuery;
-  }
   if (RemoveDotSlash)
     Query = llvm::sys::path::remove_leading_dotslash(Query);
   return std::visit([&](auto &V) -> unsigned { return V.match(Query); }, M);
@@ -252,7 +251,7 @@ public:
 
   explicit SectionImpl(bool UseGlobs)
       : SectionMatcher(UseGlobs, /*RemoveDotSlash=*/false,
-                       /*CanonicalizeSlashes=*/false) {}
+                       /*SlashAgnostic=*/false) {}
 
   Matcher SectionMatcher;
   SectionEntries Entries;
@@ -345,7 +344,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
 
   bool RemoveDotSlash = Version > 2;
 
-  bool CanonicalizeSlashes = Version > 3 && llvm::sys::path::is_separator('\\');
+  bool SlashAgnostic = Version > 3 && llvm::sys::path::is_separator('\\');
 
   auto ErrOrSection = addSection("*", FileIdx, 1, true);
   if (auto Err = ErrOrSection.takeError()) {
@@ -395,8 +394,7 @@ bool SpecialCaseList::parse(unsigned FileIdx, const MemoryBuffer *MB,
     auto [Pattern, Category] = Postfix.split("=");
     bool IsPath = llvm::is_contained(PathPrefixes, Prefix);
     auto [It, _] = CurrentImpl->Entries[Prefix].try_emplace(
-        Category, UseGlobs, RemoveDotSlash && IsPath,
-        CanonicalizeSlashes && IsPath);
+        Category, UseGlobs, RemoveDotSlash && IsPath, SlashAgnostic && IsPath);
     Pattern = Pattern.copy(StrAlloc);
     if (auto Err = It->second.insert(Pattern, LineNo)) {
       Error =
