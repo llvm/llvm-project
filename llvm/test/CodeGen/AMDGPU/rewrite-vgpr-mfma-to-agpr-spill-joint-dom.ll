@@ -156,4 +156,4 @@ bb49:                                             ; preds = %bb2, %bb1
 
 declare <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat>, <8 x bfloat>, <16 x float>, i32 immarg, i32 immarg, i32 immarg)
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1, 256" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
