@@ -16057,7 +16057,7 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
-  if (N0.getOpcode() != ISD::SETCC || !N0.hasOneUse())
+  if (N0.getOpcode() != ISD::SETCC)
     return SDValue();
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
@@ -16083,8 +16083,6 @@ SDValue PPCTargetLowering::combineSignExtendSetCC(SDNode *N,
   // so we must use i64 operations to avoid incorrect results.
   // Use i64 operations and truncate the result if needed.
   if (XVT != MVT::i64 && Subtarget.isPPC64()) {
-    if (!X.hasOneUse())
-      return SDValue();
     // Zero-extend if input type is not 64bits.
     X = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i64, X);
   }
