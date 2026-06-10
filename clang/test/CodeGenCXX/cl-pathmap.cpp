@@ -1,3 +1,6 @@
+// Note: %s and %S must be preceded by --, otherwise it may be interpreted as a
+// command-line option, e.g. on Mac where %s is commonly under /Users.
+
 // RUN: %clang_cl /clang:-emit-llvm /pathmap:%p=x:/path-to/ -clang:-S -clang:-o- -- %s  2>&1 | FileCheck %s --check-prefix=CHECK-PREFIX-MAP 
 
 // CHECK-PREFIX-MAP: c"x:\\path-to\\cl-pathmap.cpp\00"
