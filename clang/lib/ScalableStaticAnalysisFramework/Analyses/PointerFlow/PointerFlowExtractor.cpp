@@ -107,8 +107,9 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
     return LHS.takeError();
   if (!RHS)
     return RHS.takeError();
-  for (auto L : *LHS)
-    Results[L].insert(RHS->begin(), RHS->end());
+  if (!RHS->empty())
+    for (auto L : *LHS)
+      Results[L].insert(RHS->begin(), RHS->end());
   return llvm::Error::success();
 }
 
@@ -222,9 +223,8 @@ llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
   if (RecordTy->isUnion()) {
     auto *InitField = ILE->getInitializedFieldInUnion();
 
-    if (!InitField)
+    if (!InitField || ILE->getNumInits() == 0)
       return llvm::Error::success();
-    assert(!ILE->inits().empty());
     return Matcher.matchesInitializerList(InitField, ILE->getInit(0));
   }
   // Handle struct/class:
@@ -299,8 +299,11 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
   if (Type->isArrayType())
     return matchInitializerListForArray(*this, Base, ILE,
                                         ArrayElementIndirectLevel);
-  // Must be the case of using a initializer-list for a scalar:
-  return matchesInitializerList(Base, ILE->getInit(0));
+
+  // Must be the case of using an initializer-list for a scalar:
+  if (ILE->getNumInits() > 0)
+    return matchesInitializerList(Base, ILE->getInit(0));
+  return llvm::Error::success();
 }
 
 class PointerFlowTUSummaryExtractor : public TUSummaryExtractor {

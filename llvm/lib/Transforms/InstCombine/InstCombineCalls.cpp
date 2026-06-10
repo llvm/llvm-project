@@ -3717,6 +3717,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           return CallBase::removeOperandBundleAt(II, Idx);
         }
 
+        if (auto *GEP = dyn_cast<GEPOperator>(Ptr);
+            GEP && GEP->isInBounds() &&
+            !NullPointerIsDefined(II->getFunction(),
+                                  Ptr->getType()->getPointerAddressSpace())) {
+          Builder.CreateNonnullAssumption(GEP->stripInBoundsOffsets());
+          return CallBase::removeOperandBundleAt(II, Idx);
+        }
+
         // TODO: apply nonnull return attributes to calls and invokes
         break;
       }

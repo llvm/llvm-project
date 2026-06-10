@@ -5452,7 +5452,11 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                                                   ScalarEvolution &SE) {
   auto *Entry = Plan.getEntry();
   VPBuilder Builder(Entry, Entry->begin());
-  VPSCEVExpander Expander(Builder, SE);
+  DebugLoc DL = cast<VPIRBasicBlock>(Entry)
+                    ->getIRBasicBlock()
+                    ->getTerminator()
+                    ->getDebugLoc();
+  VPSCEVExpander Expander(Builder, SE, DL);
 
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander. During
   // the transition, unsupported VPExpandSCEVRecipes are skipped and left for
