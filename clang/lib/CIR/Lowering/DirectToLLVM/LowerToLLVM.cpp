@@ -4156,21 +4156,6 @@ mlir::LogicalResult CIRToLLVMStackRestoreOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMLifetimeStartOpLowering::matchAndRewrite(
-    cir::LifetimeStartOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::LifetimeStartOp>(op,
-                                                           adaptor.getPtr());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMLifetimeEndOpLowering::matchAndRewrite(
-    cir::LifetimeEndOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::LifetimeEndOp>(op, adaptor.getPtr());
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
     cir::VecCreateOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {

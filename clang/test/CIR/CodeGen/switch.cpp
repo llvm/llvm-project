@@ -27,7 +27,7 @@ void sw1(int a) {
 // CIR-NEXT: cir.break
 // CIR: cir.case(equal, [#cir.int<2> : !s32i]) {
 // CIR: cir.scope {
-// CIR: cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
+// CIR: cir.alloca "yolo" {{.*}} init : !cir.ptr<!s32i>
 // CIR: cir.break
 
 // LLVM: define{{.*}} void @_Z3sw1i
@@ -99,8 +99,8 @@ void sw2(int a) {
 
 // CIR: cir.func{{.*}} @_Z3sw2i
 // CIR: cir.scope {
-// CIR-NEXT:   %[[YOLO:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["yolo", init]
-// CIR-NEXT:   %[[FOMO:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["fomo", init]
+// CIR-NEXT:   %[[YOLO:.*]] = cir.alloca "yolo" {{.*}} init : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[FOMO:.*]] = cir.alloca "fomo" {{.*}} init : !cir.ptr<!s32i>
 // CIR:        cir.switch(%[[COND:.*]] : !s32i) {
 // CIR-NEXT:   cir.case(equal, [#cir.int<3> : !s32i]) {
 // CIR-NEXT:     %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
@@ -405,7 +405,7 @@ void sw7(int a) {
 }
 
 // CIR: cir.func{{.*}} @_Z3sw7i
-// CIR: %[[X:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x"]
+// CIR: %[[X:.*]] = cir.alloca "x" {{.*}} : !cir.ptr<!s32i>
 // CIR: cir.switch(%[[A:.*]] : !s32i)
 // CIR-NEXT: cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR-NEXT:     cir.yield
@@ -978,7 +978,7 @@ void sw15(int x) {
 }
 
 // CIR:      cir.func{{.*}} @_Z4sw15i
-// CIR:      %[[Y:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["y"]
+// CIR:      %[[Y:.*]] = cir.alloca "y" {{.*}} : !cir.ptr<!s32i>
 // CIR:      cir.switch
 // CIR-NEXT: cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR-NEXT:   cir.yield

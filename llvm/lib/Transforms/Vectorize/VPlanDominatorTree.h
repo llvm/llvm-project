@@ -43,7 +43,7 @@ public:
 
   /// Returns true if \p A properly dominates \p B.
   using Base::properlyDominates;
-  bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B);
+  bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B) const;
 };
 
 /// Template specialization of the standard LLVM post-dominator tree utility for

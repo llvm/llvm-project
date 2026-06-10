@@ -640,7 +640,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
     if (!DarwinArchName.empty()) {
       tools::darwin::setTripleTypeForMachOArchName(Target, DarwinArchName,
                                                    Args);
-      return Target;
+      return llvm::Triple(Target.normalize());
     }
 
     // Handle the Darwin '-arch' flag.
@@ -658,7 +658,7 @@ static llvm::Triple computeTargetTriple(const Driver &D,
                          ? Target.getLittleEndianArchVariant()
                          : Target.getBigEndianArchVariant();
     if (T.getArch() != llvm::Triple::UnknownArch) {
-      Target = std::move(T);
+      Target = llvm::Triple(T.normalize());
       Args.claimAllArgs(options::OPT_mlittle_endian, options::OPT_mbig_endian);
     }
   }
@@ -684,8 +684,10 @@ static llvm::Triple computeTargetTriple(const Driver &D,
         D.Diag(diag::err_drv_invalid_object_mode) << ObjectMode;
       }
 
-      if (AT != llvm::Triple::UnknownArch && AT != Target.getArch())
+      if (AT != llvm::Triple::UnknownArch && AT != Target.getArch()) {
         Target.setArch(AT);
+        Target = llvm::Triple(Target.normalize());
+      }
     }
   }
 #endif
@@ -745,6 +747,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       if (Target.isWindowsGNUEnvironment())
         toolchains::MinGW::fixTripleArch(D, Target, Args);
     }
+
+    Target = llvm::Triple(Target.normalize());
   }
 
   if (Target.isOSzOS()) {
@@ -765,11 +769,9 @@ static llvm::Triple computeTargetTriple(const Driver &D,
 
     Target.setArch(llvm::Triple::x86);
     Target.setArchName("i586");
-    Target.setEnvironment(llvm::Triple::UnknownEnvironment);
     Target.setEnvironmentName("");
     Target.setOS(llvm::Triple::ELFIAMCU);
-    Target.setVendor(llvm::Triple::UnknownVendor);
-    Target.setVendorName("intel");
+    Target.setVendor(llvm::Triple::Intel);
   }
 
   // If target is MIPS adjust the target triple
@@ -801,6 +803,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
                  Target.getEnvironment() == llvm::Triple::MuslABIN32)
           Target.setEnvironment(llvm::Triple::MuslABI64);
       }
+
+      Target = llvm::Triple(Target.normalize());
     }
   }
 
@@ -819,11 +823,13 @@ static llvm::Triple computeTargetTriple(const Driver &D,
             Target.setArch(llvm::Triple::riscv32);
           else
             Target.setArch(llvm::Triple::riscv32be);
+          Target = llvm::Triple(Target.normalize());
         } else if (XLen == 64) {
           if (Target.isLittleEndian())
             Target.setArch(llvm::Triple::riscv64);
           else
             Target.setArch(llvm::Triple::riscv64be);
+          Target = llvm::Triple(Target.normalize());
         }
       }
     }
@@ -1734,7 +1740,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
        TC.getTriple().getSubArch() != llvm::Triple::AArch64SubArch_arm64ec) &&
       UArgs->hasArg(options::OPT__SLASH_arm64EC)) {
     getDiags().Report(clang::diag::warn_target_override_arm64ec)
-        << TC.getTriple().str();
+        << TC.getTripleString();
   }
 
   // A common user mistake is specifying a target of aarch64-none-eabi or
@@ -2835,7 +2841,7 @@ static unsigned PrintActions1(const Compilation &C, Action *A,
           os << '"';
           os << A->getOffloadingKindPrefix();
           os << " (";
-          os << TC->getTriple().normalize();
+          os << TC->getTripleString();
           if (BoundArch)
             os << ":" << BoundArch;
           os << ")";
@@ -5133,22 +5139,10 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
           OffloadTriple && OffloadTriple->isSPIRV() &&
           (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
            OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
-      bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
-                                          options::OPT_no_use_spirv_backend,
-                                          /*Default=*/false);
-
-      // Special handling for the HIP SPIR-V toolchains in device-only.
-      // The translator path has a linking step, whereas the SPIR-V backend path
-      // does not to avoid any external dependency such as spirv-link. The
-      // linking step is skipped for the SPIR-V backend path.
-      bool IsAMDGCNSPIRVWithBackend =
-          IsHIPSPV && OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA &&
-          UseSPIRVBackend;
 
       if ((A->getType() != types::TY_Object && !IsHIPSPV &&
            A->getType() != types::TY_LTO_BC) ||
-          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
-          (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
+          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
@@ -5368,17 +5362,6 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
-    // Skip a redundant Backend phase for HIP device code when using the new
-    // offload driver, where mid-end is done in linker wrapper. With
-    // -save-temps, we still need the Backend phase to produce optimized IR.
-    if (TargetDeviceOffloadKind == Action::OFK_HIP &&
-        Args.hasFlag(options::OPT_offload_new_driver,
-                     options::OPT_no_offload_new_driver,
-                     C.getActiveOffloadKinds() != Action::OFK_None) &&
-        !offloadDeviceOnly() && !isSaveTempsEnabled() &&
-        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm)))
-      return Input;
-
     if (TargetLTOMode != LTOK_None) {
       bool IsDeviceOffload = TargetDeviceOffloadKind != Action::OFK_None;
       if (!IsDeviceOffload) {
@@ -5392,81 +5375,29 @@ Action *Driver::ConstructPhaseAction(
           Output = types::TY_LTO_BC;
         return C.MakeAction<BackendJobAction>(Input, Output);
       }
-      types::ID Output =
-          Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
+      types::ID Output;
+      if (Args.hasArg(options::OPT_emit_llvm)) {
+        Output =
+            Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
+      } else if (Args.hasArg(options::OPT_S) && offloadDeviceOnly() &&
+                 !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                               false)) {
+        // For non-RDC device-only compilations with -S, produce real assembly
+        // since the user explicitly requested assembly output.
+        Output = types::TY_PP_Asm;
+      } else if (Args.hasArg(options::OPT_S)) {
+        Output = types::TY_LTO_IR;
+      } else {
+        Output = types::TY_LTO_BC;
+      }
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-    bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
-                                        options::OPT_no_use_spirv_backend,
-                                        /*Default=*/false);
-
-    auto OffloadingToolChain = Input->getOffloadingToolChain();
-    // For AMD SPIRV, if offloadDeviceOnly(), we call the SPIRV backend unless
-    // LLVM bitcode was requested explicitly or RDC is set. If
-    // !offloadDeviceOnly, we emit LLVM bitcode, and clang-linker-wrapper will
-    // compile it to SPIRV.
-    bool UseSPIRVBackendForHipDeviceOnlyNoRDC =
-        TargetDeviceOffloadKind == Action::OFK_HIP && OffloadingToolChain &&
-        OffloadingToolChain->getTriple().isSPIRV() && UseSPIRVBackend &&
-        offloadDeviceOnly() &&
-        !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
-
-    const ToolChain &DefaultToolChain = C.getDefaultToolChain();
-    const llvm::Triple &DefaultToolChainTriple = DefaultToolChain.getTriple();
-    // For regular C/C++ to AMD SPIRV emit bitcode to avoid spirv-link
-    // dependency, SPIRVAMDToolChain's linker takes care of the generation of
-    // the final SPIRV. The only exception is -S without -emit-llvm to output
-    // textual SPIRV assembly, which fits the default compilation path.
-    bool EmitBitcodeForNonOffloadAMDSPIRV =
-        !OffloadingToolChain && DefaultToolChainTriple.isSPIRV() &&
-        DefaultToolChainTriple.getVendor() == llvm::Triple::VendorType::AMD &&
-        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm));
-
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        EmitBitcodeForNonOffloadAMDSPIRV ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL ||
-        (((Input->getOffloadingToolChain() &&
-           Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&
-           TargetDeviceOffloadKind != Action::OFK_None) ||
-          TargetDeviceOffloadKind == Action::OFK_HIP) &&
-         !UseSPIRVBackendForHipDeviceOnlyNoRDC &&
-         ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
-                        false) ||
-           (Args.hasFlag(options::OPT_offload_new_driver,
-                         options::OPT_no_offload_new_driver,
-                         C.getActiveOffloadKinds() != Action::OFK_None) &&
-            !(Args.hasArg(options::OPT_S) &&
-              !Args.hasArg(options::OPT_emit_llvm)) &&
-            (!offloadDeviceOnly() ||
-             (Input->getOffloadingToolChain() &&
-              TargetDeviceOffloadKind == Action::OFK_HIP &&
-              Input->getOffloadingToolChain()->getTriple().isSPIRV())))) ||
-          TargetDeviceOffloadKind == Action::OFK_OpenMP))) {
+        TargetDeviceOffloadKind == Action::OFK_SYCL) {
       types::ID Output =
-          Args.hasArg(options::OPT_S) &&
-                  (TargetDeviceOffloadKind == Action::OFK_None ||
-                   offloadDeviceOnly() ||
-                   (TargetDeviceOffloadKind == Action::OFK_HIP &&
-                    !Args.hasFlag(options::OPT_offload_new_driver,
-                                  options::OPT_no_offload_new_driver,
-                                  C.getActiveOffloadKinds() !=
-                                      Action::OFK_None)))
-              ? types::TY_LLVM_IR
-              : types::TY_LLVM_BC;
+          Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
-
-    // The SPIRV backend compilation path for HIP must avoid external
-    // dependencies. The default compilation path assembles and links its
-    // output, but the SPIRV assembler and linker are external tools. This code
-    // ensures the backend emits binary SPIRV directly to bypass those steps and
-    // avoid failures. Without -save-temps, the compiler may already skip
-    // assembling and linking. With -save-temps, these steps must be explicitly
-    // disabled, as done here. We also force skipping these steps regardless of
-    // -save-temps to avoid relying on optimizations (unless -S is set).
-    // The current HIP bundling expects the type to be types::TY_Image
-    if (UseSPIRVBackendForHipDeviceOnlyNoRDC && !Args.hasArg(options::OPT_S))
-      return C.MakeAction<BackendJobAction>(Input, types::TY_Image);
 
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }
@@ -6015,7 +5946,7 @@ public:
 static std::string GetTriplePlusArchString(const ToolChain *TC,
                                            StringRef BoundArch,
                                            Action::OffloadKind OffloadKind) {
-  std::string TriplePlusArch = TC->getTriple().normalize();
+  std::string TriplePlusArch = TC->getTriple().str();
   if (!BoundArch.empty()) {
     TriplePlusArch += "-";
     TriplePlusArch += BoundArch;
@@ -6056,7 +5987,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
   if (JA->getOffloadingDeviceKind() != Action::OFK_None) {
     const ToolChain *TC = JA->getOffloadingToolChain();
     OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
-        JA->getOffloadingDeviceKind(), TC ? TC->getTriple().normalize() : "",
+        JA->getOffloadingDeviceKind(), TC ? TC->getTripleString() : "",
         /*CreatePrefixForHost=*/false);
     if (const char *Arch = JA->getOffloadingArch()) {
       OffloadingPrefix += "-";
@@ -6065,7 +5996,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
   } else if (JA->getOffloadingHostActiveKinds() != Action::OFK_None &&
              C.getDriver().isSaveTempsEnabled()) {
     OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
-        Action::OFK_None, C.getDefaultToolChain().getTriple().normalize(),
+        Action::OFK_None, C.getDefaultToolChain().getTripleString(),
         /*CreatePrefixForHost=*/true);
   }
 
@@ -6314,8 +6245,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
       // unbundling action does not change the type of the output which can
       // cause a overwrite.
       std::string OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
-          UI.DependentOffloadKind,
-          UI.DependentToolChain->getTriple().normalize(),
+          UI.DependentOffloadKind, UI.DependentToolChain->getTripleString(),
           /*CreatePrefixForHost=*/true);
       auto CurI = InputInfo(
           UA,
@@ -6357,7 +6287,7 @@ InputInfoList Driver::BuildJobsForActionNoCache(
     // We only have to generate a prefix for the host if this is not a top-level
     // action.
     std::string OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
-        A->getOffloadingDeviceKind(), EffectiveTriple.normalize(),
+        A->getOffloadingDeviceKind(), EffectiveTriple.str(),
         /*CreatePrefixForHost=*/isa<OffloadPackagerJobAction>(A) ||
             !(A->getOffloadingHostActiveKinds() == Action::OFK_None ||
               AtTopLevel));

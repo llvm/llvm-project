@@ -18,6 +18,7 @@
 
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
+include "mlir/IR/CommonAttrConstraints.td"
 
 // This file is intended to be included from OpenACCOps.td, which provides
 // the necessary includes and definitions. The operations defined here use
@@ -127,6 +128,46 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
   let assemblyFormat = [{
     $srcMemref `into` $destMemref $reductionOperator `:` type($destMemref) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// acc.reduction_accumulate
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ReductionAccumulateOp
+    : OpenACC_Op<"reduction_accumulate", []> {
+  let summary = "Accumulate an SSA value into a reduction variable";
+  let description = [{
+    Accumulates a scalar SSA value into a pointer-like reduction variable.
+
+    Example:
+    ```mlir
+    %private = memref.alloca() {acc.par_dims = #acc<par_dims[thread_x]>} : memref<i32>
+    memref.store %c0, %private[] : memref<i32>
+    %partial = scf.parallel (%iv) = (%c0) to (%cN) step (%c1) init (%c0) -> i32 {
+      %v = memref.load %data[%iv] : memref<Nxi32>
+      scf.reduce(%v : i32) {
+      ^bb0(%lhs: i32, %rhs: i32):
+        %sum = arith.addi %lhs, %rhs : i32
+        scf.reduce.return %sum : i32
+      }
+    } {acc.par_dims = #acc<par_dims[thread_x]>}
+    acc.reduction_accumulate %partial to %private <add>
+        : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
+    acc.reduction_combine %private into %shared <add> : memref<i32>
+        {acc.par_dims = #acc<par_dims[thread_x]>}
+    ```
+  }];
+  let arguments = (ins AnyTypeOf<[AnyInteger, AnyFloat, AnyComplex]>:$value,
+                       Arg<OpenACC_PointerLikeType,
+                           "Reduction variable to update",
+                           [MemRead, MemWrite]>:$memref,
+                       OpenACC_ReductionOperatorAttr:$reductionOperator,
+                       OpenACC_GPUParallelDimsAttr:$par_dims);
+  let assemblyFormat = [{
+    $value `to` $memref $reductionOperator `:` type($value) `->` type($memref) attr-dict
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -484,6 +525,61 @@ def OpenACC_ComputeRegionOp
 
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// acc.predicate_region
+//===----------------------------------------------------------------------===//
+
+def OpenACC_PredicateRegionOp
+    : OpenACC_Op<"predicate_region", [RecursiveMemoryEffects, NoTerminator]> {
+  let summary = "Groups operations at intermediate loop-nest points";
+  let description = [{
+    Groups statements within an `acc.compute_region` that sit at an
+    intermediate point in a loop nest (outside a partitioned loop body,
+    between or around nested loops). This grouping marks code whose execution
+    scope differs from that of surrounding partitioned loops, so predication
+    and synchronization can be applied correctly during lowering. Corresponds
+    to OpenACC single or redundant execution at nest transitions.
+
+    Example:
+    ```mlir
+    // !$acc parallel num_gangs(NG) vector_length(VL)
+    // !$acc loop gang
+    //   !$acc atomic update
+    //   !$acc loop vector
+    //     !$acc atomic update
+    %w_gang = acc.par_width %cNG {par_dim = #acc.par_dim<block_x>}
+    %w_vector = acc.par_width %cVL {par_dim = #acc.par_dim<thread_x>}
+    acc.compute_region launch(%ng = %w_gang, %vl = %w_vector)
+        ins(%arg_c1 = %c1, %arg_c2 = %c2) : (memref<i32>, memref<i32>) {
+      scf.parallel (%i) = (%c1) to (%cN) step (%c1) {
+        acc.predicate_region {
+          acc.atomic.update %arg_c1 : memref<i32> {
+          ^bb0(%old: i32):
+            %one = arith.constant 1 : i32
+            %sum = arith.addi %old, %one : i32
+            acc.yield %sum : i32
+          }
+        }
+        scf.parallel (%j) = (%c1) to (%cN) step (%c1) {
+          acc.atomic.update %arg_c2 : memref<i32> {
+          ^bb0(%old: i32):
+            %one = arith.constant 1 : i32
+            %sum = arith.addi %old, %one : i32
+            acc.yield %sum : i32
+          }
+          scf.reduce
+        } {acc.par_dims = #acc<par_dims[thread_x]>}
+        scf.reduce
+      } {acc.par_dims = #acc<par_dims[block_x]>}
+      acc.yield
+    } {origin = "acc.parallel"}
+    ```
+  }];
+  let regions = (region AnyRegion:$region);
+  let assemblyFormat = "$region attr-dict";
+  let hasVerifier = 1;
 }
 
 #endif // OPENACC_CG_OPS

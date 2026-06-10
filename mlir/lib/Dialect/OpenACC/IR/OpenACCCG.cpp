@@ -469,6 +469,23 @@ LogicalResult ReductionCombineRegionOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionAccumulateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateOp::verify() {
+  Type valueType = getValue().getType();
+  auto ptrLikeTy = cast<PointerLikeType>(getMemref().getType());
+  Type elementType = ptrLikeTy.getElementType();
+  if (!elementType)
+    return emitOpError("pointer-like destination must have an element type");
+  if (elementType != valueType)
+    return emitOpError("pointer-like element type must match value type");
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
@@ -762,6 +779,20 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PredicateRegionOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult PredicateRegionOp::verify() {
+  if (getRegion().empty())
+    return emitOpError("region needs to have at least one block");
+  if (getRegion().front().getNumArguments() > 0)
+    return emitOpError("region cannot have any arguments");
+  if (!getOperation()->getParentOfType<ComputeRegionOp>())
+    return emitOpError("must be nested within an acc.compute_region operation");
   return success();
 }
 

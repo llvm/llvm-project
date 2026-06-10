@@ -60,7 +60,10 @@ Improvements and New Features
   for ``std::deque<int>`` iterators.
 - ``std::copy(CharT*, CharT*, ostreambuf_iterator<CharT>)`` has been optimized, resulting in performance improvements
   of up to 25x.
-- A lot of transitive includes have been removed, resulting in significant compile time improvements.
+- ``std::bad_variant_access::what()`` now returns a message identifying the cause of the failure:
+  ``"std::visit: variant is valueless"``, ``"std::get: variant is valueless"``, or
+  ``"std::get: wrong alternative for variant"``. The standard only requires ``what()`` to return an
+  unspecified non-null string, so user code that does not match on the exact message remains correct.
 
 Deprecations and Removals
 -------------------------

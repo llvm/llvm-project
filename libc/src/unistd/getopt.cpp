@@ -23,6 +23,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+LLVM_LIBC_VARIABLE(char *, optarg) = nullptr;
+LLVM_LIBC_VARIABLE(int, optind) = 1;
+LLVM_LIBC_VARIABLE(int, optopt) = 0;
+LLVM_LIBC_VARIABLE(int, opterr) = 0;
+
 template <typename T> struct RefWrapper {
   RefWrapper() = delete;
   constexpr RefWrapper(T *p) : ptr{p} {}
@@ -177,17 +182,10 @@ int getopt_r(int argc, char *const argv[], const char *optstring,
 
 namespace impl {
 
-extern "C" {
-char *optarg = nullptr;
-int optind = 1;
-int optopt = 0;
-int opterr = 0;
-}
-
 static unsigned optpos;
 
-static GetoptContext ctx{&impl::optarg, &impl::optind, &impl::optopt,
-                         &optpos,       &impl::opterr, /*errstream=*/nullptr};
+static GetoptContext ctx{&optarg, &optind, &optopt,
+                         &optpos, &opterr, /*errstream=*/nullptr};
 
 #ifndef LIBC_COPT_PUBLIC_PACKAGING
 // This is used exclusively in tests.

@@ -440,10 +440,6 @@ raw_ostream &operator<<(raw_ostream &, Block &);
 namespace llvm {
 template <>
 struct DenseMapInfo<mlir::Block::iterator> {
-  static mlir::Block::iterator getEmptyKey() {
-    void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Block::iterator((mlir::Operation *)pointer);
-  }
   static unsigned getHashValue(mlir::Block::iterator iter) {
     return hash_value(iter.getNodePtr());
   }
