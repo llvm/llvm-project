@@ -365,7 +365,6 @@ TEST_F(IR2VecTestFixture, GetInstVec_Symbolic) {
 
   EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 26.7)));
   EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 16.2)));
-
 }
 
 TEST_F(IR2VecTestFixture, GetInstVec_FlowAware) {
