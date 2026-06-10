@@ -480,6 +480,13 @@ int returnTypeConflict(int *returnTypePtr) { return *returnTypePtr; }
 
 long returnTypeConflict(const int *returnTypePtr) { return *returnTypePtr; }
 
+namespace UsingOverloadConflict {
+int usingConflict(const int *usingConflictPtr) { return *usingConflictPtr; }
+} // namespace UsingOverloadConflict
+
+using UsingOverloadConflict::usingConflict;
+int usingConflict(int *usingConflictPtr) { return *usingConflictPtr; }
+
 template <int>
 int templateOverloadConflict(int *templateConflictPtr) {
   return *templateConflictPtr;

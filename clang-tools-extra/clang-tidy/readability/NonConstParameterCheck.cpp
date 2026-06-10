@@ -37,6 +37,8 @@ static bool wouldConflictWithOverload(const FunctionDecl &Function,
 
   return llvm::any_of(
       Function.getParent()->lookup(Function.getDeclName()), [&](const Decl *D) {
+        if (const auto *Using = dyn_cast<UsingShadowDecl>(D))
+          D = Using->getTargetDecl();
         const FunctionDecl *Overload = D->getAsFunction();
         if (!Overload ||
             Overload->getCanonicalDecl() == Function.getCanonicalDecl())
