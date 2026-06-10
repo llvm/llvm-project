@@ -247,8 +247,7 @@ private:
   ClassDescriptorV2(AppleObjCRuntimeV2 &runtime,
                     ObjCLanguageRuntime::ObjCISA isa, const char *name)
       : m_runtime(runtime), m_objc_class_ptr(isa), m_name(name),
-        m_ivars_storage(), m_image_to_method_lists(), m_last_version_updated() {
-  }
+        m_ivars_storage() {}
 
   static llvm::Expected<class_ro_t>
   Read_class_row(Process *process, const objc_class_t &objc_class);
@@ -269,10 +268,6 @@ private:
                                  // their ISA)
   ConstString m_name;            // May be NULL
   iVarsStorage m_ivars_storage;
-
-  mutable std::map<uint16_t, std::vector<method_list_t>>
-      m_image_to_method_lists;
-  mutable std::optional<uint64_t> m_last_version_updated;
 };
 
 // tagged pointer descriptor
