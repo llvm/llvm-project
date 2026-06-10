@@ -224,12 +224,13 @@ define half @vreduce_fadd_nxv1f16(<vscale x 1 x half> %v, half %s) {
 ;
 ; ZVFHMIN-LABEL: vreduce_fadd_nxv1f16:
 ; ZVFHMIN:       # %bb.0:
-; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
 ; ZVFHMIN-NEXT:    lui a0, 524288
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vmv.s.x v9, a0
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; ZVFHMIN-NEXT:    vmv.s.x v8, a0
-; ZVFHMIN-NEXT:    vfredusum.vs v8, v9, v8
+; ZVFHMIN-NEXT:    vfredusum.vs v8, v10, v9
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa5
@@ -253,11 +254,12 @@ define half @vreduce_fadd_nxv2f16(<vscale x 2 x half> %v, half %s) {
 ; ZVFHMIN-LABEL: vreduce_fadd_nxv2f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 524288
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vmv.s.x v9, a0
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; ZVFHMIN-NEXT:    vmv.s.x v8, a0
-; ZVFHMIN-NEXT:    vfredusum.vs v8, v9, v8
+; ZVFHMIN-NEXT:    vfredusum.vs v8, v10, v9
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa5
@@ -281,11 +283,12 @@ define half @vreduce_fadd_nxv4f16(<vscale x 4 x half> %v, half %s) {
 ; ZVFHMIN-LABEL: vreduce_fadd_nxv4f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 524288
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vmv.s.x v9, a0
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
-; ZVFHMIN-NEXT:    vmv.s.x v8, a0
-; ZVFHMIN-NEXT:    vfredusum.vs v8, v10, v8
+; ZVFHMIN-NEXT:    vfredusum.vs v8, v10, v9
 ; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; ZVFHMIN-NEXT:    fcvt.s.h fa5, fa5
@@ -309,12 +312,14 @@ define half @vreduce_fmin_nxv32f16(<vscale x 32 x half> %v) {
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; ZVFHMIN-NEXT:    vfredmin.vs v12, v16, v16
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfredmin.vs v8, v16, v16
-; ZVFHMIN-NEXT:    vfredmin.vs v9, v24, v24
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
-; ZVFHMIN-NEXT:    vfmv.f.s fa4, v9
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v12
+; ZVFHMIN-NEXT:    vfmv.f.s fa4, v8
 ; ZVFHMIN-NEXT:    fmin.s fa5, fa4, fa5
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -334,12 +339,14 @@ define half @vreduce_fmax_nxv32f16(<vscale x 32 x half> %v) {
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; ZVFHMIN-NEXT:    vfredmax.vs v12, v16, v16
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfredmax.vs v8, v16, v16
-; ZVFHMIN-NEXT:    vfredmax.vs v9, v24, v24
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v8
-; ZVFHMIN-NEXT:    vfmv.f.s fa4, v9
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v12
+; ZVFHMIN-NEXT:    vfmv.f.s fa4, v8
 ; ZVFHMIN-NEXT:    fmax.s fa5, fa4, fa5
 ; ZVFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; ZVFHMIN-NEXT:    ret
@@ -483,14 +490,17 @@ define half @vreduce_fadd_nxv32f16(<vscale x 32 x half> %v, half %s) {
 ; ZVFHMIN-LABEL: vreduce_fadd_nxv32f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    lui a0, 524288
-; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; ZVFHMIN-NEXT:    vmv.s.x v24, a0
+; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
-; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmv.s.x v8, a0
-; ZVFHMIN-NEXT:    vfredusum.vs v9, v16, v8
-; ZVFHMIN-NEXT:    vfredusum.vs v8, v24, v8
-; ZVFHMIN-NEXT:    vfmv.f.s fa5, v9
+; ZVFHMIN-NEXT:    vfredusum.vs v12, v16, v24
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
+; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
+; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; ZVFHMIN-NEXT:    vfredusum.vs v8, v16, v24
+; ZVFHMIN-NEXT:    vfmv.f.s fa5, v12
 ; ZVFHMIN-NEXT:    vfmv.f.s fa4, v8
 ; ZVFHMIN-NEXT:    fcvt.h.s fa5, fa5
 ; ZVFHMIN-NEXT:    fcvt.h.s fa4, fa4

@@ -120,7 +120,7 @@ for cachedir in [config.clang_module_cache, config.lldb_module_cache]:
 # lit complains if the value is set but it is not supported.
 supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
 if supported:
-    lit_config.maxIndividualTestTime = 600
+    config.maxIndividualTestTime = 600
 else:
     lit_config.warning("Could not set a default per-test timeout. " + errormsg)
 
@@ -177,6 +177,8 @@ if config.have_dia_sdk:
     config.available_features.add("diasdk")
 
 if platform.system() == "Windows":
+    if getattr(config, "lldb_use_lldb_server", False):
+        config.environment["LLDB_USE_LLDB_SERVER"] = "1"
     # Use anonymous pipes instead of ConPTY for all tests. ConPTY injects VT
     # escape sequences into the output stream, which breaks tests that check
     # for specific stdout/stderr content.

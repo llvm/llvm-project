@@ -118,6 +118,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.imaxdiv
     libc.src.inttypes.strtoimax
     libc.src.inttypes.strtoumax
+    libc.src.inttypes.wcstoimax
+    libc.src.inttypes.wcstoumax
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
@@ -327,6 +329,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
     libc.src.sys.socket.recvmsg
+    libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
 
     # sys/stat.h entrypoints
@@ -378,6 +381,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.termios.tcsetattr
 
     # unistd.h entrypoints
+    libc.src.unistd.alarm
     libc.src.unistd.access
     libc.src.unistd.chdir
     libc.src.unistd.chown
@@ -479,6 +483,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wctype.iswprint
     libc.src.wctype.iswctype
     libc.src.wctype.wctype
+    libc.src.wctype.towlower
+    libc.src.wctype.towupper
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -847,6 +853,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
+    libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
@@ -990,6 +997,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -1349,12 +1357,14 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.setenv
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc
+    libc.src.stdlib.mblen
     libc.src.stdlib.quick_exit
     libc.src.stdlib.wcstombs
     libc.src.stdlib.wctomb
 
     # signal.h entrypoints
     libc.src.signal.kill
+    libc.src.signal.pthread_sigmask
     libc.src.signal.raise
     libc.src.signal.sigaction
     libc.src.signal.sigaddset
@@ -1462,7 +1472,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.select
 
     # wchar.h entrypoints
-    libc.src.wchar.mblen
     libc.src.wchar.mbrlen
     libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc
@@ -1472,13 +1481,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.wchar.wcsrtombs
     libc.src.wchar.wcsnrtombs
     libc.src.wchar.fgetwc
-    # libc.src.wchar.fgetws
-    # libc.src.wchar.fputwc
-    # libc.src.wchar.fputws
+    libc.src.wchar.fgetws
+    libc.src.wchar.fputwc
+    libc.src.wchar.fputws
     libc.src.wchar.fwide
     libc.src.wchar.getwc
-    # libc.src.wchar.getwchar
-    # libc.src.wchar.putwc
+    libc.src.wchar.getwchar
+    libc.src.wchar.putwc
     libc.src.wchar.putwchar
     libc.src.wchar.ungetwc
 
@@ -1500,6 +1509,12 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
       libc.src.regex.regexec
       libc.src.regex.regerror
       libc.src.regex.regfree
+
+      # sys/ptrace.h entrypoints
+      libc.src.sys.ptrace.ptrace
+
+      # wchar.h entrypoints
+      libc.src.wchar.swprintf
     )
   endif()
 endif()

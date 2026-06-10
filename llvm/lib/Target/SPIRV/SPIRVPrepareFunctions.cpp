@@ -814,8 +814,8 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
       ->resolveEnvFromModule(M);
 
   bool Changed = false;
-  if (M.functions().empty()) {
-    // If there are no functions, insert a service
+  if (M.getFunctionDefs().empty()) {
+    // If there are no function definitions, insert a service
     // function so that the global/constant tracking intrinsics
     // will be created. Without these intrinsics the generated SPIR-V
     // will be empty. The service function itself is not emitted.
@@ -829,7 +829,24 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
   Changed |= terminateBlocksAfterTrap(M, Intrinsic::trap);
   Changed |= terminateBlocksAfterTrap(M, Intrinsic::ubsantrap);
 
+  for (GlobalVariable &GV : M.globals()) {
+    // Strip + tag available_externally globals so AuxData can re-emit the
+    // original linkage as NonSemantic.AuxData::Linkage.
+    if (GV.hasAvailableExternallyLinkage() && !GV.isDeclaration()) {
+      GV.addAttribute(SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR);
+      GV.setLinkage(GlobalValue::ExternalLinkage);
+      Changed = true;
+    }
+  }
+
   for (Function &F : M) {
+    // MachineFunctionPass skips available_externally; strip + tag so AuxData
+    // can re-emit the original linkage as NonSemantic.AuxData::Linkage.
+    if (F.hasAvailableExternallyLinkage() && !F.isDeclaration()) {
+      F.addFnAttr(SPIRV_WAS_AVAILABLE_EXTERNALLY_ATTR);
+      F.setLinkage(GlobalValue::ExternalLinkage);
+      Changed = true;
+    }
     Changed |= substituteAbortKHRCalls(&F);
     Changed |= substituteIntrinsicCalls(&F);
     Changed |= sortBlocks(F);

@@ -49,6 +49,26 @@ LIBC_INLINE constexpr bool all_of(InputIt first, InputIt last, UnaryPred p) {
   return find_if_not(first, last, p) == last;
 }
 
+template <typename It, typename T, typename Comp>
+LIBC_INLINE constexpr It lower_bound(It first, It last, const T &value,
+                                     Comp comp) {
+  auto count = last - first;
+
+  while (count > 0) {
+    It it = first;
+    auto step = count / 2;
+    it += step;
+
+    if (comp(*it, value)) {
+      first = ++it;
+      count -= step + 1;
+    } else {
+      count = step;
+    }
+  }
+  return first;
+}
+
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
 

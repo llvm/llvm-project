@@ -52,7 +52,6 @@ fir.global @_QMtestEarray_src : !fir.array<200xf32>
 fir.global @_QMtestEarray_dst : !fir.array<200xf32>
 
 // Check that 'dst = -volatile_src' is optimized.
-// TODO: opt-bufferization needs to be fixed.
 func.func @volatile_src_nonvolatile_dst() {
   %c1 = arith.constant 1 : index
   %c200 = arith.constant 200 : index
@@ -79,22 +78,21 @@ func.func @volatile_src_nonvolatile_dst() {
 }
 
 // CHECK-LABEL:   func.func @volatile_src_nonvolatile_dst() {
-// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 200 : index
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 200 : index
 // CHECK:           %[[ADDRESS_OF_0:.*]] = fir.address_of(@_QMtestEarray_src) : !fir.ref<!fir.array<200xf32>>
 // CHECK:           %[[ADDRESS_OF_1:.*]] = fir.address_of(@_QMtestEarray_dst) : !fir.ref<!fir.array<200xf32>>
-// CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
+// CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_1]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VOLATILE_CAST_0:.*]] = fir.volatile_cast %[[ADDRESS_OF_0]] : (!fir.ref<!fir.array<200xf32>>) -> !fir.ref<!fir.array<200xf32>, volatile>
 // CHECK:           %[[DECLARE_0:.*]]:2 = hlfir.declare %[[VOLATILE_CAST_0]](%[[SHAPE_0]]) {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QMtestEarray_src"} : (!fir.ref<!fir.array<200xf32>, volatile>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>, volatile>, !fir.ref<!fir.array<200xf32>, volatile>)
 // CHECK:           %[[DECLARE_1:.*]]:2 = hlfir.declare %[[ADDRESS_OF_1]](%[[SHAPE_0]]) {uniq_name = "_QMtestEarray_dst"} : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<200xf32>>, !fir.ref<!fir.array<200xf32>>)
-// CHECK:           %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<200xf32> {
-// CHECK:           ^bb0(%[[VAL_0:.*]]: index):
+// CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_1]] step %[[CONSTANT_0]] unordered {
 // CHECK:             %[[DESIGNATE_0:.*]] = hlfir.designate %[[DECLARE_0]]#0 (%[[VAL_0]])  : (!fir.ref<!fir.array<200xf32>, volatile>, index) -> !fir.ref<f32, volatile>
 // CHECK:             %[[LOAD_0:.*]] = fir.load %[[DESIGNATE_0]] : !fir.ref<f32, volatile>
 // CHECK:             %[[NEGF_0:.*]] = arith.negf %[[LOAD_0]] : f32
-// CHECK:             hlfir.yield_element %[[NEGF_0]] : f32
+// CHECK:             %[[DESIGNATE_1:.*]] = hlfir.designate %[[DECLARE_1]]#0 (%[[VAL_0]])  : (!fir.ref<!fir.array<200xf32>>, index) -> !fir.ref<f32>
+// CHECK:             hlfir.assign %[[NEGF_0]] to %[[DESIGNATE_1]] : f32, !fir.ref<f32>
 // CHECK:           }
-// CHECK:           hlfir.assign %[[ELEMENTAL_0]] to %[[DECLARE_1]]#0 : !hlfir.expr<200xf32>, !fir.ref<!fir.array<200xf32>>
-// CHECK:           hlfir.destroy %[[ELEMENTAL_0]] : !hlfir.expr<200xf32>
 // CHECK:           return
 // CHECK:         }
 

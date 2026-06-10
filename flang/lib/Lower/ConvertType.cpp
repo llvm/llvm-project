@@ -371,6 +371,9 @@ struct TypeBuilderImpl {
                                   mlir::IntegerType::get(context, 1));
     case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
       Fortran::common::die("Vector element type not implemented");
+    case (Fortran::semantics::DerivedTypeSpec::Category::EnumerationType):
+      Fortran::common::die(
+          "Vector element type not implemented for enumeration");
     }
   }
 
@@ -671,3 +674,69 @@ void Fortran::lower::ComponentReverseIterator::setCurrentType(
 using namespace Fortran::evaluate;
 using namespace Fortran::common;
 FOR_EACH_SPECIFIC_TYPE(template class Fortran::lower::TypeBuilder, )
+
+/// Convert parser's INTEGER relational operators to MLIR.
+mlir::arith::CmpIPredicate
+Fortran::lower::translateSignedRelational(RelationalOperator rop) {
+  switch (rop) {
+  case RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::slt;
+  case RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::sle;
+  case RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::sgt;
+  case RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::sge;
+  }
+  llvm_unreachable("unhandled INTEGER relational operator");
+}
+
+mlir::arith::CmpIPredicate
+Fortran::lower::translateUnsignedRelational(RelationalOperator rop) {
+  switch (rop) {
+  case RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::ult;
+  case RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::ule;
+  case RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::ugt;
+  case RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::uge;
+  }
+  llvm_unreachable("unhandled UNSIGNED relational operator");
+}
+
+/// Convert parser's REAL relational operators to MLIR.
+/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
+/// requirements in the IEEE context (table 17.1 of F2018). This choice is
+/// also applied in other contexts because it is easier and in line with
+/// other Fortran compilers.
+/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
+/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
+/// whether the comparison will signal or not in case of quiet NaN argument.
+mlir::arith::CmpFPredicate
+Fortran::lower::translateFloatRelational(RelationalOperator rop) {
+  switch (rop) {
+  case RelationalOperator::LT:
+    return mlir::arith::CmpFPredicate::OLT;
+  case RelationalOperator::LE:
+    return mlir::arith::CmpFPredicate::OLE;
+  case RelationalOperator::EQ:
+    return mlir::arith::CmpFPredicate::OEQ;
+  case RelationalOperator::NE:
+    return mlir::arith::CmpFPredicate::UNE;
+  case RelationalOperator::GT:
+    return mlir::arith::CmpFPredicate::OGT;
+  case RelationalOperator::GE:
+    return mlir::arith::CmpFPredicate::OGE;
+  }
+  llvm_unreachable("unhandled REAL relational operator");
+}

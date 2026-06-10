@@ -32,8 +32,9 @@ define i1 @extract_bitcast_sign_set_not_pos(<4 x i32> %bits, ptr %p) nounwind {
 ; CHECK-NEXT:    lui a1, 524288
 ; CHECK-NEXT:    vrsub.vx v9, v9, a1
 ; CHECK-NEXT:    vor.vv v8, v8, v9
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %masked = or <4 x i32> %bits, <i32 u0x80000000, i32 0, i32 u0x80000000, i32 0>
   %fvec = bitcast <4 x i32> %masked to <4 x float>
@@ -58,8 +59,9 @@ define i1 @extract_bitcast_unknown_sign_ispos(<4 x i32> %bits, ptr %p) nounwind 
 ; CHECK-NEXT:    fclass.s a1, fa5
 ; CHECK-NEXT:    andi a1, a1, 240
 ; CHECK-NEXT:    snez a1, a1
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
   %masked = or <4 x i32> %bits, <i32 u0x80000000, i32 0, i32 u0x80000000, i32 0>
   %fvec = bitcast <4 x i32> %masked to <4 x float>
@@ -79,8 +81,9 @@ define i1 @extract_bitcast_not_nan(<4 x i32> %bits, ptr %p) nounwind {
 ; CHECK-NEXT:    vmv.v.x v9, a1
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vand.vv v8, v8, v9
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
   %masked = and <4 x i32> %bits, <i32 u0xBFFFFFFF, i32 -1, i32 u0xBFFFFFFF, i32 -1>
   %fvec = bitcast <4 x i32> %masked to <4 x float>
@@ -105,8 +108,9 @@ define i1 @extract_bitcast_maybe_nan(<4 x i32> %bits, ptr %p) nounwind {
 ; CHECK-NEXT:    fclass.s a1, fa5
 ; CHECK-NEXT:    andi a1, a1, 768
 ; CHECK-NEXT:    snez a1, a1
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
   %masked = and <4 x i32> %bits, <i32 u0xBFFFFFFF, i32 -1, i32 u0xBFFFFFFF, i32 -1>
   %fvec = bitcast <4 x i32> %masked to <4 x float>
@@ -122,19 +126,20 @@ define i1 @extract_bitcast_unknown_idx_not_pos(<4 x i32> %bits, ptr %p, i32 %idx
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v9
-; CHECK-NEXT:    lui a2, 524288
-; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    vsll.vi v9, v9, 31
+; CHECK-NEXT:    lui a2, 524288
 ; CHECK-NEXT:    vrsub.vx v9, v9, a2
 ; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    slli a1, a1, 32
 ; CHECK-NEXT:    srli a1, a1, 32
 ; CHECK-NEXT:    vslidedown.vx v9, v8, a1
 ; CHECK-NEXT:    vfmv.f.s fa5, v9
 ; CHECK-NEXT:    fclass.s a1, fa5
 ; CHECK-NEXT:    andi a1, a1, 240
 ; CHECK-NEXT:    snez a1, a1
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:    mv a0, a1
+; CHECK-NEXT:    vse32.v v8, (a2)
 ; CHECK-NEXT:    ret
   %masked = or <4 x i32> %bits, <i32 u0x80000000, i32 0, i32 u0x80000000, i32 0>
   %fvec = bitcast <4 x i32> %masked to <4 x float>

@@ -269,8 +269,8 @@ namespace cwg625 { // cwg625: 2.9
   void f(int);
   void (*p)(auto) = f;
   // cxx98-error@-1 {{'auto' type specifier is a C++11 extension}}
-  // cxx98-17-error@-2 {{'auto' not allowed in function prototype}}
-  // since-cxx20-error@-3 {{'auto' not allowed in function prototype that is not a function declaration}}
+  // cxx98-17-error@-2 {{'auto' parameters are a C++20 extension}}
+  // expected-error@-3 {{'auto' not allowed in function prototype that is not a function declaration}}
 } // namespace cwg625
 
 namespace cwg626 { // cwg626: 2.7
