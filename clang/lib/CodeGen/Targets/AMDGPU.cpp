@@ -64,12 +64,6 @@ static llvm::Type *buildAMDGPUAggregateReturnCoerceType(CodeGenTypes &CGT,
     return nullptr;
   assert(!RD->hasFlexibleArrayMember());
 
-  // Vtable and dynamic-class layout are not represented here; use the normal
-  // LLVM record type as the coerce-to type.
-  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
-    if (CXXRD->isDynamicClass())
-      return nullptr;
-
   const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(RD);
 
   struct CoerceMember {
@@ -79,14 +73,18 @@ static llvm::Type *buildAMDGPUAggregateReturnCoerceType(CodeGenTypes &CGT,
   llvm::SmallVector<CoerceMember, 16> Members;
 
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+    // Vtable and dynamic-class layout are not represented here; use the normal
+    // LLVM record type as the coerce-to type.
+    if (CXXRD->isDynamicClass())
+      return nullptr;
     for (const CXXBaseSpecifier &B : CXXRD->bases()) {
       const CXXRecordDecl *BaseDecl = B.getType()->getAsCXXRecordDecl();
       if (!BaseDecl || BaseDecl->isEmpty())
         continue;
       BaseDecl = BaseDecl->getDefinition();
-      CharUnits Off = B.isVirtual() ? Layout.getVBaseClassOffset(BaseDecl)
-                                    : Layout.getBaseClassOffset(BaseDecl);
-      Members.push_back({Off, B.getType()});
+      // isDynamicClass() above guards against any class that has virtual bases
+      assert(!B.isVirtual() && "virtual base implies isDynamicClass");
+      Members.push_back({Layout.getBaseClassOffset(BaseDecl), B.getType()});
     }
   }
 
