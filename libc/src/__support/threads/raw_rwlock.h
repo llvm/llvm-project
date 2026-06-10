@@ -375,7 +375,7 @@ private:
         return result;
 
       // Phase 5: register ourselves as a  reader.
-      int serial_number;
+      FutexWordType serial_number;
       {
         // The queue need to be protected by a mutex since the operations in
         // this block must be executed as a whole transaction. It is possible
@@ -411,14 +411,14 @@ private:
         // transaction.
         WaitingQueue::Guard guard = queue.acquire(is_pshared);
         guard.pending_count<role>()--;
-        // Clear the flag if we are the last one. The flag must be
-        // cleared otherwise operations like trylock may fail even though
-        // there is no competitors.
+        // Clear the flag if we are the last pending thread of this role. The
+        // flag must be cleared; otherwise operations like trylock may fail even
+        // though there are no competitors.
         if (guard.pending_count<role>() == 0)
           RwState::fetch_clear_pending_bit<role>(state,
                                                  cpp::MemoryOrder::RELAXED);
         if constexpr (role == Role::Writer) {
-          int new_serial =
+          FutexWordType new_serial =
               guard.serialization<role>().load(cpp::MemoryOrder::RELAXED);
           writer_serial_changed = new_serial != serial_number;
         }
@@ -426,30 +426,10 @@ private:
 
       // Phase 8: exit the loop if timeout is reached.
       if (timeout_flag) {
-        // When a timeout triggers, the waiting thread wakes up, unregisters
-        // itself from the waiting queue, and exits. However, if the timing-out
-        // thread is preempted after waking up but before it can unregister,
-        // and a concurrent unlock occurs during this window, the timing-out
-        // thread may consume the wake-up signal.
-        //
-        // For example, assume the lock is in writer-preference mode and a
-        // writer (W0) holds the lock. A reader (R) and another writer (W1,
-        // with a short timeout) arrive and join the queue. W1's timeout
-        // expires, so it wakes up and attempts to acquire the queue lock,
-        // but is preempted before succeeding. W0 then releases the lock and,
-        // preferring writers, sends a wake-up signal to W1. When W1 resumes,
-        // it acquires the queue lock, unregisters, and exits due to the
-        // timeout, ignoring the wake-up signal. As a result, the reader (R)
-        // is left waiting indefinitely, leading to a deadlock.
-        //
-        // To fix this, we track whether the serialization number changed
-        // specifically for writers, and propagate the wake signal if it did.
-        // If the timing-out thread is a reader, signal consumption is safe
-        // because:
-        // 1. If there are pending writers, they will be woken up first.
-        // 2. Otherwise, if there are pending readers, they are all woken up
-        //    via broadcasting (notify_all), so one reader timing out does not
-        //    steal others' signal.
+        // A timed out (but not unregistered) thread can still be the target of
+        // a wakeup signal. If this happens, we must wake up the next thread to
+        // avoid a deadlock. This is only a problem for writers because readers
+        // are woken up all at once and we prefer waking up writers first.
         if (writer_serial_changed)
           notify_pending_threads();
         return LockResult::TimedOut;
@@ -465,6 +445,13 @@ private:
   // Since notifcation routine is colder we mark it as noinline explicitly.
   [[gnu::noinline]]
   LIBC_INLINE void notify_pending_threads() {
+    // We wake up writers first. This ordering is relevant for the correctness
+    // of timeout handling in lock_slow. Because writers are preferred, we do
+    // not need to handle reader timeouts specially:
+    // 1. If there are pending writers, they are woken up first, so a reader
+    //    cannot steal their wake-up signal.
+    // 2. If there are only pending readers, they are all woken up together
+    //    (via notify_all), so a timed-out reader cannot starve other readers.
     enum class WakeTarget { Readers, Writers, None };
     WakeTarget status;
 
