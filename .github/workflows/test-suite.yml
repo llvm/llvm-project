@@ -19,19 +19,34 @@ permissions:
   contents: read
 
 jobs:
-  test-suite:
-    name: Build test-suite and diff
-    runs-on: ubuntu-24.04
-    container:
-      image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
+  permission-check:
     if: github.event.issue.pull_request && startswith(github.event.comment.body, '/test-suite')
+    runs-on: ubuntu-24.04
+    environment:
+      name: main-branch-only
+      deployment: false
     steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/workflows/
+
       - name: Check Permissions
         uses: ./.github/workflows/require-team-membership
         with:
           team-slug: llvm-committers
           LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+  test-suite:
+    name: Build test-suite and diff
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/llvm/ci-ubuntu-24.04:35e958d7f0b7
+    needs:
+      - permission-check
+    steps:
       - name: Get pull request
         id: get-pr
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
