@@ -1191,8 +1191,7 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
                         /*RefersToEnclosingVariableOrCapture=*/true,
                         BD->getType(), VK_LValue, (*IRef)->getExprLoc());
         LValue OriginalLVal = EmitLValue(&DRE);
-        Address OriginalAddr =
-            OriginalLVal.getAddress();
+        Address OriginalAddr = OriginalLVal.getAddress();
         // Emit private VarDecl with copy init. Remap VDInit to point to the
         // original binding so EmitDecl properly initializes VD.
         setAddrOfLocalVar(VDInit, OriginalAddr);
@@ -1948,7 +1947,7 @@ checkForLastprivateConditionalUpdate(CodeGenFunction &CGF,
       if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
         PrivateDecls.insert(VD);
         CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
-      } 
+      }
     }
   }
   for (const auto *C : S.getClausesOfKind<OMPLinearClause>()) {
