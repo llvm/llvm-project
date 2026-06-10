@@ -24,7 +24,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -2997,19 +2996,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
     return new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe), Addr,
                                     EVL, Mask);
 
-  VPValue *ReversedVal;
-  if (match(&CurRecipe, m_Reverse(m_VPValue(ReversedVal))) &&
-      match(ReversedVal,
+  if (match(&CurRecipe,
             m_MaskedLoad(m_VPValue(EndPtr),
                          m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    auto *LoadR = new VPWidenLoadEVLRecipe(
-        *cast<VPWidenLoadRecipe>(ReversedVal), Addr, EVL, Mask);
+    auto *LoadR = new VPWidenLoadEVLRecipe(cast<VPWidenLoadRecipe>(CurRecipe),
+                                           Addr, EVL, Mask);
     LoadR->insertBefore(&CurRecipe);
-    return new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_reverse,
-                                      {LoadR, Plan->getTrue(), &EVL},
+    VPValue *Poison =
+        Plan->getOrAddLiveIn(PoisonValue::get(LoadR->getScalarType()));
+    return new VPWidenIntrinsicRecipe(Intrinsic::vector_splice_left,
+                                      {Poison, LoadR, &EVL},
                                       LoadR->getScalarType(), {}, {}, DL);
   }
 
@@ -3033,14 +3032,19 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                      StoredVal, EVL, Mask);
 
   if (match(&CurRecipe,
-            m_MaskedStore(m_VPValue(EndPtr), m_Reverse(m_VPValue(ReversedVal)),
+            m_MaskedStore(m_VPValue(EndPtr), m_VPValue(StoredVal),
                           m_Reverse(m_RemoveMask(HeaderMask, Mask)))) &&
       match(EndPtr, m_VecEndPtr(m_VPValue(), m_Specific(&Plan->getVF())))) {
     Mask = GetVPReverse(Mask);
     Addr = AdjustEndPtr(EndPtr);
-    StoredVal = GetVPReverse(ReversedVal);
+    VPValue *Poison =
+        Plan->getOrAddLiveIn(PoisonValue::get(StoredVal->getScalarType()));
+    auto *SpliceR = new VPWidenIntrinsicRecipe(
+        Intrinsic::vector_splice_right, {StoredVal, Poison, &EVL},
+        StoredVal->getScalarType(), {}, {}, DL);
+    SpliceR->insertBefore(&CurRecipe);
     return new VPWidenStoreEVLRecipe(cast<VPWidenStoreRecipe>(CurRecipe), Addr,
-                                     StoredVal, EVL, Mask);
+                                     SpliceR, EVL, Mask);
   }
 
   if (auto *Rdx = dyn_cast<VPReductionRecipe>(&CurRecipe))
@@ -3131,6 +3135,28 @@ void VPlanTransforms::optimizeEVLMasks(VPlan &Plan) {
       LogicalAnd->replaceAllUsesWith(Merge);
       OldRecipes.push_back(LogicalAnd);
     }
+  }
+
+  // Fold the following splice patterns into vp.reverse for reverse accesses:
+  //   vector.reverse(splice.left(poison, x, evl))  -> vp.reverse(x, true, evl)
+  //   splice.right(vector.reverse(x), poison, evl) -> vp.reverse(x, true, evl)
+  for (VPUser *U : collectUsersRecursively(EVL)) {
+    VPValue *X;
+    if (!match(U,
+               m_CombineOr(
+                   m_Reverse(m_Intrinsic<Intrinsic::vector_splice_left>(
+                       m_Poison(), m_VPValue(X), m_Specific(EVL))),
+                   m_Intrinsic<Intrinsic::vector_splice_right>(
+                       m_Reverse(m_VPValue(X)), m_Poison(), m_Specific(EVL)))))
+      continue;
+
+    auto *Def = cast<VPSingleDefRecipe>(U);
+    auto *VPReverse = new VPWidenIntrinsicRecipe(
+        Intrinsic::experimental_vp_reverse, {X, Plan.getTrue(), EVL},
+        X->getScalarType(), {}, {}, Def->getDebugLoc());
+    VPReverse->insertBefore(Def);
+    Def->replaceAllUsesWith(VPReverse);
+    OldRecipes.push_back(Def);
   }
 
   for (VPRecipeBase *R : reverse(OldRecipes)) {
@@ -3458,13 +3484,13 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
 
 void VPlanTransforms::replaceSymbolicStrides(
     VPlan &Plan, PredicatedScalarEvolution &PSE,
-    const DenseMap<Value *, const SCEV *> &StridesMap) {
+    const DenseMap<Value *, const SCEV *> &StridesMap,
+    const VPDominatorTree &VPDT) {
   // Replace VPValues for known constant strides guaranteed by predicated scalar
   // evolution that are guaranteed to be guarded by the runtime checks; that is,
   // blocks dominated by the vector preheader.
   assert(!Plan.getVectorLoopRegion() &&
          "expected to run before loop regions are created");
-  VPDominatorTree VPDT(Plan);
   VPBlockBase *Preheader = Plan.getEntry()->getSuccessors()[1];
   auto CanUseVersionedStride = [&VPDT, Preheader](VPUser &U, unsigned) {
     auto *R = cast<VPRecipeBase>(&U);

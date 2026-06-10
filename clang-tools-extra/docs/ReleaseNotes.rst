@@ -590,6 +590,12 @@ Changes in existing checks
   positives on project headers that use the same name as a standard library
   header.
 
+- Improve :doc:`modernize-loop-convert
+  <clang-tidy/checks/modernize/loop-convert>` checks to insert a space when
+  replacing ``*it`` with the loop variable in expressions like ``delete*it``,
+  where the missing space would cause the keyword and the new variable to
+  merge into a single identifier.
+
 - Improved :doc:`modernize-macro-to-enum
   <clang-tidy/checks/modernize/macro-to-enum>` check by preserving source file
   line endings in fix-it replacements.
@@ -722,6 +728,10 @@ Changes in existing checks
 
   - Correctly detecting ``this`` usage when a generic lambda calls an overloaded
     member function.
+
+- Improved :doc:`readability-delete-null-pointer
+  <clang-tidy/checks/readability/delete-null-pointer>` check by avoiding invalid
+  fix-its for ``if`` statements with condition variables or initializers.
 
 - Improved :doc:`readability-else-after-return
   <clang-tidy/checks/readability/else-after-return>` check:

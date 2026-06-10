@@ -28,7 +28,7 @@ ZOS::ZOS(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 ZOS::~ZOS() {}
 
 void ZOS::addClangTargetOptions(const ArgList &DriverArgs,
-                                ArgStringList &CC1Args,
+                                ArgStringList &CC1Args, StringRef BoundArch,
                                 Action::OffloadKind DeviceOffloadKind) const {
   // Pass "-faligned-alloc-unavailable" only when the user hasn't manually
   // enabled or disabled aligned allocations.
