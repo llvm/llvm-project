@@ -2769,6 +2769,13 @@ SDValue SelectionDAG::FoldSetCC(EVT VT, SDValue N1, SDValue N2,
       return getBoolConstant(ICmpInst::compare(C1, C2, getICmpCondCode(Cond)),
                              dl, VT, OpVT);
     }
+
+    // Fold setugt(X, 0) -> setne(X, 0) since X > 0 iff X != 0
+    // This is here so the fold fires at construction time before expanded
+    // types like i128 undergo multi-word comparison lowering.
+    if (C2.isZero() && Cond == ISD::SETUGT &&
+        TLI->isCondCodeLegal(ISD::SETNE, OpVT.getSimpleVT()))
+      return getSetCC(dl, VT, N1, N2, ISD::SETNE, {}, false, Flags);
   }
 
   auto *N1CFP = dyn_cast<ConstantFPSDNode>(N1);

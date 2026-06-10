@@ -145,3 +145,41 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
+; CHECK-LABEL: scmp_i128_zero_to_i8:
+; CHECK:         .functype scmp_i128_zero_to_i8 (i64, i64) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push10=, 1
+; CHECK-NEXT:    i64.const $push5=, 63
+; CHECK-NEXT:    i64.shr_s $push6=, $pop10, $pop5
+; CHECK-NEXT:    i64.const $push3=, 1
+; CHECK-NEXT:    i64.const $push1=, 0
+; CHECK-NEXT:    local.get $push12=, 0
+; CHECK-NEXT:    local.get $push11=, 1
+; CHECK-NEXT:    i64.or $push0=, $pop12, $pop11
+; CHECK-NEXT:    i64.const $push9=, 0
+; CHECK-NEXT:    i64.ne $push2=, $pop0, $pop9
+; CHECK-NEXT:    i64.select $push4=, $pop3, $pop1, $pop2
+; CHECK-NEXT:    i64.or $push7=, $pop6, $pop4
+; CHECK-NEXT:    i32.wrap_i64 $push8=, $pop7
+; CHECK-NEXT:    # fallthrough-return
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+define i8 @scmp_i32_zero_to_i8(i32 %x) nounwind {
+; CHECK-LABEL: scmp_i32_zero_to_i8:
+; CHECK:         .functype scmp_i32_zero_to_i8 (i32) -> (i32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push5=, 0
+; CHECK-NEXT:    i32.const $push0=, 0
+; CHECK-NEXT:    i32.gt_s $push2=, $pop5, $pop0
+; CHECK-NEXT:    local.get $push6=, 0
+; CHECK-NEXT:    i32.const $push4=, 0
+; CHECK-NEXT:    i32.lt_s $push1=, $pop6, $pop4
+; CHECK-NEXT:    i32.sub $push3=, $pop2, $pop1
+; CHECK-NEXT:    # fallthrough-return
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}

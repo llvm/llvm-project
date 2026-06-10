@@ -418,3 +418,78 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
+; THUMB1-LABEL: scmp_i128_zero_to_i8:
+; THUMB1:       @ %bb.0:
+; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    subs r1, r0, #1
+; THUMB1-NEXT:    sbcs r0, r1
+; THUMB1-NEXT:    asrs r1, r3, #31
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: scmp_i128_zero_to_i8:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    orrs r1, r3
+; THUMB2-NEXT:    orrs r0, r2
+; THUMB2-NEXT:    orrs r0, r1
+; THUMB2-NEXT:    mov.w r1, #1
+; THUMB2-NEXT:    asr.w r0, r3, #31
+; THUMB2-NEXT:    it ne
+; THUMB2-NEXT:    orrne.w r0, r1, r3, asr #31
+; THUMB2-NEXT:    bx lr
+;
+; V81M-LABEL: scmp_i128_zero_to_i8:
+; V81M:       @ %bb.0:
+; V81M-NEXT:    orrs r1, r3
+; V81M-NEXT:    orrs r0, r2
+; V81M-NEXT:    orrs r0, r1
+; V81M-NEXT:    mov.w r1, #1
+; V81M-NEXT:    asr.w r0, r3, #31
+; V81M-NEXT:    it ne
+; V81M-NEXT:    orrne.w r0, r1, r3, asr #31
+; V81M-NEXT:    bx lr
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+define i8 @scmp_i32_zero_to_i8(i32 %x) nounwind {
+; THUMB1-LABEL: scmp_i32_zero_to_i8:
+; THUMB1:       @ %bb.0:
+; THUMB1-NEXT:    cmp r0, #0
+; THUMB1-NEXT:    bgt .LBB9_2
+; THUMB1-NEXT:  @ %bb.1:
+; THUMB1-NEXT:    movs r1, #0
+; THUMB1-NEXT:    b .LBB9_3
+; THUMB1-NEXT:  .LBB9_2:
+; THUMB1-NEXT:    movs r1, #1
+; THUMB1-NEXT:  .LBB9_3:
+; THUMB1-NEXT:    lsrs r0, r0, #31
+; THUMB1-NEXT:    subs r0, r1, r0
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: scmp_i32_zero_to_i8:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    subs r0, #0
+; THUMB2-NEXT:    it gt
+; THUMB2-NEXT:    movgt r0, #1
+; THUMB2-NEXT:    it lt
+; THUMB2-NEXT:    movlt.w r0, #-1
+; THUMB2-NEXT:    bx lr
+;
+; V81M-LABEL: scmp_i32_zero_to_i8:
+; V81M:       @ %bb.0:
+; V81M-NEXT:    cmp r0, #0
+; V81M-NEXT:    mov.w r2, #0
+; V81M-NEXT:    cset r1, gt
+; V81M-NEXT:    cmp.w r2, r0, lsr #31
+; V81M-NEXT:    it ne
+; V81M-NEXT:    movne.w r1, #-1
+; V81M-NEXT:    mov r0, r1
+; V81M-NEXT:    bx lr
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}

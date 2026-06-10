@@ -3388,3 +3388,30 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
   %1 = call <17 x i2> @llvm.ucmp(<17 x i71> %x, <17 x i71> %y)
   ret <17 x i2> %1
 }
+
+
+define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
+; X64-LABEL: ucmp_i128_zero_to_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    orq %rsi, %rdi
+; X64-NEXT:    setne %al
+; X64-NEXT:    retq
+;
+; X86-LABEL: ucmp_i128_zero_to_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    orl 20(%ebp), %ecx
+; X86-NEXT:    orl 16(%ebp), %eax
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    setne %al
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+  %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}

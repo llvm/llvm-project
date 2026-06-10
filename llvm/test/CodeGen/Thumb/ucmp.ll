@@ -374,3 +374,33 @@ define i64 @ucmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.ucmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
+; THUMB1-LABEL: ucmp_i128_zero_to_i8:
+; THUMB1:       @ %bb.0:
+; THUMB1-NEXT:    orrs r1, r3
+; THUMB1-NEXT:    orrs r0, r2
+; THUMB1-NEXT:    orrs r0, r1
+; THUMB1-NEXT:    subs r1, r0, #1
+; THUMB1-NEXT:    sbcs r0, r1
+; THUMB1-NEXT:    bx lr
+;
+; THUMB2-LABEL: ucmp_i128_zero_to_i8:
+; THUMB2:       @ %bb.0:
+; THUMB2-NEXT:    orrs r1, r3
+; THUMB2-NEXT:    orrs r0, r2
+; THUMB2-NEXT:    orrs r0, r1
+; THUMB2-NEXT:    it ne
+; THUMB2-NEXT:    movne r0, #1
+; THUMB2-NEXT:    bx lr
+;
+; V81M-LABEL: ucmp_i128_zero_to_i8:
+; V81M:       @ %bb.0:
+; V81M-NEXT:    orrs r1, r3
+; V81M-NEXT:    orrs r0, r2
+; V81M-NEXT:    orrs r0, r1
+; V81M-NEXT:    cset r0, ne
+; V81M-NEXT:    bx lr
+  %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}

@@ -318,3 +318,42 @@ entry:
   %or.i = tail call <16 x i8> @llvm.scmp.v16i8.v16i16(<16 x i16> %0, <16 x i16> %1)
   ret <16 x i8> %or.i
 }
+
+define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
+; CHECK-SD-LABEL: scmp_i128_zero_to_i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    orr x8, x0, x1
+; CHECK-SD-NEXT:    cmp x8, #0
+; CHECK-SD-NEXT:    asr x8, x1, #63
+; CHECK-SD-NEXT:    cset w9, ne
+; CHECK-SD-NEXT:    orr w0, w8, w9
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: scmp_i128_zero_to_i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp x0, #0
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    cmp x1, #0
+; CHECK-GI-NEXT:    cset w9, gt
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
+; CHECK-GI-NEXT:    cset w9, mi
+; CHECK-GI-NEXT:    csel w9, wzr, w9, eq
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    cset w8, ne
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    csinv w0, w8, wzr, eq
+; CHECK-GI-NEXT:    ret
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+define i8 @scmp_i32_zero_to_i8(i32 %x) nounwind {
+; CHECK-LABEL: scmp_i32_zero_to_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    cset w8, gt
+; CHECK-NEXT:    csinv w0, w8, wzr, pl
+; CHECK-NEXT:    ret
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}

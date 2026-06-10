@@ -11995,6 +11995,19 @@ SDValue TargetLowering::expandCMP(SDNode *Node, SelectionDAG &DAG) const {
   EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   SDLoc dl(Node);
 
+  // fold scmp(x, 0) -> or(sra(x, bw-1), select(setne(x, 0), 1, 0))
+  // only when VT is a non-native integer type.
+  if (Opcode == ISD::SCMP && isNullConstant(RHS) && !isTypeLegal(VT)) {
+    SDValue ShiftAmt =
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, dl);
+    SDValue SignMask = DAG.getNode(ISD::SRA, dl, VT, LHS, ShiftAmt);
+    SDValue IsNZ = DAG.getSetCC(dl, BoolVT, LHS, RHS, ISD::SETNE);
+    SDValue IsNZExt = DAG.getSelect(dl, VT, IsNZ, DAG.getConstant(1, dl, VT),
+                                    DAG.getConstant(0, dl, VT));
+    SDValue Result = DAG.getNode(ISD::OR, dl, VT, SignMask, IsNZExt);
+    return DAG.getSExtOrTrunc(Result, dl, ResVT);
+  }
+
   auto LTPredicate = (Opcode == ISD::UCMP ? ISD::SETULT : ISD::SETLT);
   auto GTPredicate = (Opcode == ISD::UCMP ? ISD::SETUGT : ISD::SETGT);
   SDValue IsLT = DAG.getSetCC(dl, BoolVT, LHS, RHS, LTPredicate);

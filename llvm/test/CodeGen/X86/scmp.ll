@@ -4,8 +4,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=X64,AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=X64,AVX,AVX512
 ; RUN: llc < %s -mtriple=i686-unknown-unknown | FileCheck %s --check-prefix=X86
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu | FileCheck %s --check-prefixes=SSE,SETZUCC
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu,+prefer-legacy-setcc | FileCheck %s --check-prefixes=SSE,NO-SETZUCC
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu | FileCheck %s --check-prefixes=SSE,ZU,SETZUCC
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+zu,+prefer-legacy-setcc | FileCheck %s --check-prefixes=SSE,ZU,NO-SETZUCC
 
 define i8 @scmp.8.8(i8 %x, i8 %y) nounwind {
 ; X64-LABEL: scmp.8.8:
@@ -1105,35 +1105,20 @@ define <4 x i32> @scmp_narrow_vec_op(<4 x i8> %x, <4 x i8> %y) nounwind {
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
 ;
-; SETZUCC-LABEL: scmp_narrow_vec_op:
-; SETZUCC:       # %bb.0:
-; SETZUCC-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
-; SETZUCC-NEXT:    psrad $24, %xmm1
-; SETZUCC-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; SETZUCC-NEXT:    psrad $24, %xmm0
-; SETZUCC-NEXT:    movdqa %xmm0, %xmm2
-; SETZUCC-NEXT:    pcmpgtd %xmm1, %xmm2
-; SETZUCC-NEXT:    pcmpgtd %xmm0, %xmm1
-; SETZUCC-NEXT:    psubd %xmm2, %xmm1
-; SETZUCC-NEXT:    movdqa %xmm1, %xmm0
-; SETZUCC-NEXT:    retq
-;
-; NO-SETZUCC-LABEL: scmp_narrow_vec_op:
-; NO-SETZUCC:       # %bb.0:
-; NO-SETZUCC-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; NO-SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm1
-; NO-SETZUCC-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; NO-SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm0
-; NO-SETZUCC-NEXT:    movdqa %xmm0, %xmm2
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm1, %xmm2
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm0, %xmm1
-; NO-SETZUCC-NEXT:    psubd %xmm2, %xmm1
-; NO-SETZUCC-NEXT:    movdqa %xmm1, %xmm0
-; NO-SETZUCC-NEXT:    retq
+; ZU-LABEL: scmp_narrow_vec_op:
+; ZU:       # %bb.0:
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; ZU-NEXT:    psrad $24, %xmm1
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; ZU-NEXT:    psrad $24, %xmm0
+; ZU-NEXT:    movdqa %xmm0, %xmm2
+; ZU-NEXT:    pcmpgtd %xmm1, %xmm2
+; ZU-NEXT:    pcmpgtd %xmm0, %xmm1
+; ZU-NEXT:    psubd %xmm2, %xmm1
+; ZU-NEXT:    movdqa %xmm1, %xmm0
+; ZU-NEXT:    retq
   %1 = call <4 x i32> @llvm.scmp(<4 x i8> %x, <4 x i8> %y)
   ret <4 x i32> %1
 }
@@ -1381,89 +1366,47 @@ define <16 x i32> @scmp_wide_vec_result(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    retl $4
 ;
-; SETZUCC-LABEL: scmp_wide_vec_result:
-; SETZUCC:       # %bb.0:
-; SETZUCC-NEXT:    movdqa %xmm1, %xmm2
-; SETZUCC-NEXT:    movdqa %xmm0, %xmm3
-; SETZUCC-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SETZUCC-NEXT:    psrad $24, %xmm0
-; SETZUCC-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
-; SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; SETZUCC-NEXT:    psrad $24, %xmm5
-; SETZUCC-NEXT:    movdqa %xmm5, %xmm6
-; SETZUCC-NEXT:    pcmpgtd %xmm0, %xmm6
-; SETZUCC-NEXT:    pcmpgtd %xmm5, %xmm0
-; SETZUCC-NEXT:    psubd %xmm6, %xmm0
-; SETZUCC-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
-; SETZUCC-NEXT:    psrad $24, %xmm1
-; SETZUCC-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
-; SETZUCC-NEXT:    psrad $24, %xmm4
-; SETZUCC-NEXT:    movdqa %xmm4, %xmm5
-; SETZUCC-NEXT:    pcmpgtd %xmm1, %xmm5
-; SETZUCC-NEXT:    pcmpgtd %xmm4, %xmm1
-; SETZUCC-NEXT:    psubd %xmm5, %xmm1
-; SETZUCC-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
-; SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
-; SETZUCC-NEXT:    psrad $24, %xmm2
-; SETZUCC-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm3[8],xmm5[9],xmm3[9],xmm5[10],xmm3[10],xmm5[11],xmm3[11],xmm5[12],xmm3[12],xmm5[13],xmm3[13],xmm5[14],xmm3[14],xmm5[15],xmm3[15]
-; SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
-; SETZUCC-NEXT:    psrad $24, %xmm3
-; SETZUCC-NEXT:    movdqa %xmm3, %xmm6
-; SETZUCC-NEXT:    pcmpgtd %xmm2, %xmm6
-; SETZUCC-NEXT:    pcmpgtd %xmm3, %xmm2
-; SETZUCC-NEXT:    psubd %xmm6, %xmm2
-; SETZUCC-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
-; SETZUCC-NEXT:    psrad $24, %xmm3
-; SETZUCC-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
-; SETZUCC-NEXT:    psrad $24, %xmm4
-; SETZUCC-NEXT:    movdqa %xmm4, %xmm5
-; SETZUCC-NEXT:    pcmpgtd %xmm3, %xmm5
-; SETZUCC-NEXT:    pcmpgtd %xmm4, %xmm3
-; SETZUCC-NEXT:    psubd %xmm5, %xmm3
-; SETZUCC-NEXT:    retq
-;
-; NO-SETZUCC-LABEL: scmp_wide_vec_result:
-; NO-SETZUCC:       # %bb.0:
-; NO-SETZUCC-NEXT:    movdqa %xmm1, %xmm2
-; NO-SETZUCC-NEXT:    movdqa %xmm0, %xmm3
-; NO-SETZUCC-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; NO-SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm0
-; NO-SETZUCC-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
-; NO-SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm5
-; NO-SETZUCC-NEXT:    movdqa %xmm5, %xmm6
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm0, %xmm6
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm5, %xmm0
-; NO-SETZUCC-NEXT:    psubd %xmm6, %xmm0
-; NO-SETZUCC-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm1
-; NO-SETZUCC-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm4
-; NO-SETZUCC-NEXT:    movdqa %xmm4, %xmm5
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm1, %xmm5
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm4, %xmm1
-; NO-SETZUCC-NEXT:    psubd %xmm5, %xmm1
-; NO-SETZUCC-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
-; NO-SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm2
-; NO-SETZUCC-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm3[8],xmm5[9],xmm3[9],xmm5[10],xmm3[10],xmm5[11],xmm3[11],xmm5[12],xmm3[12],xmm5[13],xmm3[13],xmm5[14],xmm3[14],xmm5[15],xmm3[15]
-; NO-SETZUCC-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm3
-; NO-SETZUCC-NEXT:    movdqa %xmm3, %xmm6
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm2, %xmm6
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm3, %xmm2
-; NO-SETZUCC-NEXT:    psubd %xmm6, %xmm2
-; NO-SETZUCC-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm3
-; NO-SETZUCC-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
-; NO-SETZUCC-NEXT:    psrad $24, %xmm4
-; NO-SETZUCC-NEXT:    movdqa %xmm4, %xmm5
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm3, %xmm5
-; NO-SETZUCC-NEXT:    pcmpgtd %xmm4, %xmm3
-; NO-SETZUCC-NEXT:    psubd %xmm5, %xmm3
-; NO-SETZUCC-NEXT:    retq
+; ZU-LABEL: scmp_wide_vec_result:
+; ZU:       # %bb.0:
+; ZU-NEXT:    movdqa %xmm1, %xmm2
+; ZU-NEXT:    movdqa %xmm0, %xmm3
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; ZU-NEXT:    psrad $24, %xmm0
+; ZU-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
+; ZU-NEXT:    psrad $24, %xmm5
+; ZU-NEXT:    movdqa %xmm5, %xmm6
+; ZU-NEXT:    pcmpgtd %xmm0, %xmm6
+; ZU-NEXT:    pcmpgtd %xmm5, %xmm0
+; ZU-NEXT:    psubd %xmm6, %xmm0
+; ZU-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
+; ZU-NEXT:    psrad $24, %xmm1
+; ZU-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4,4,5,5,6,6,7,7]
+; ZU-NEXT:    psrad $24, %xmm4
+; ZU-NEXT:    movdqa %xmm4, %xmm5
+; ZU-NEXT:    pcmpgtd %xmm1, %xmm5
+; ZU-NEXT:    pcmpgtd %xmm4, %xmm1
+; ZU-NEXT:    psubd %xmm5, %xmm1
+; ZU-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; ZU-NEXT:    psrad $24, %xmm2
+; ZU-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm3[8],xmm5[9],xmm3[9],xmm5[10],xmm3[10],xmm5[11],xmm3[11],xmm5[12],xmm3[12],xmm5[13],xmm3[13],xmm5[14],xmm3[14],xmm5[15],xmm3[15]
+; ZU-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
+; ZU-NEXT:    psrad $24, %xmm3
+; ZU-NEXT:    movdqa %xmm3, %xmm6
+; ZU-NEXT:    pcmpgtd %xmm2, %xmm6
+; ZU-NEXT:    pcmpgtd %xmm3, %xmm2
+; ZU-NEXT:    psubd %xmm6, %xmm2
+; ZU-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; ZU-NEXT:    psrad $24, %xmm3
+; ZU-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm5[4],xmm4[5],xmm5[5],xmm4[6],xmm5[6],xmm4[7],xmm5[7]
+; ZU-NEXT:    psrad $24, %xmm4
+; ZU-NEXT:    movdqa %xmm4, %xmm5
+; ZU-NEXT:    pcmpgtd %xmm3, %xmm5
+; ZU-NEXT:    pcmpgtd %xmm4, %xmm3
+; ZU-NEXT:    psubd %xmm5, %xmm3
+; ZU-NEXT:    retq
   %1 = call <16 x i32> @llvm.scmp(<16 x i8> %x, <16 x i8> %y)
   ret <16 x i32> %1
 }
@@ -3899,3 +3842,86 @@ define <2 x i16> @scmp_ret_wider_than_operands(<2 x i8> %x, <2 x i8> %y) nounwin
   ret <2 x i16> %1
 }
 
+
+define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
+; X64-LABEL: scmp_i128_zero_to_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    orq %rsi, %rdi
+; X64-NEXT:    setne %al
+; X64-NEXT:    sarq $63, %rsi
+; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; X86-LABEL: scmp_i128_zero_to_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 8(%ebp), %edx
+; X86-NEXT:    movl 20(%ebp), %ecx
+; X86-NEXT:    movl 12(%ebp), %esi
+; X86-NEXT:    orl %ecx, %esi
+; X86-NEXT:    orl 16(%ebp), %edx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    setne %al
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    orl %ecx, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    leal -4(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; ZU-LABEL: scmp_i128_zero_to_i8:
+; ZU:       # %bb.0:
+; ZU-NEXT:    orq %rsi, %rdi
+; ZU-NEXT:    setzune %al
+; ZU-NEXT:    sarq $63, %rsi
+; ZU-NEXT:    orl %esi, %eax
+; ZU-NEXT:    # kill: def $al killed $al killed $eax
+; ZU-NEXT:    retq
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+
+define i8 @scmp_i32_zero_to_i8(i32 %x) nounwind {
+; X64-LABEL: scmp_i32_zero_to_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    testl %edi, %edi
+; X64-NEXT:    sets %cl
+; X64-NEXT:    setg %al
+; X64-NEXT:    subb %cl, %al
+; X64-NEXT:    retq
+;
+; X86-LABEL: scmp_i32_zero_to_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    sets %cl
+; X86-NEXT:    setg %al
+; X86-NEXT:    subb %cl, %al
+; X86-NEXT:    retl
+;
+; SETZUCC-LABEL: scmp_i32_zero_to_i8:
+; SETZUCC:       # %bb.0:
+; SETZUCC-NEXT:    testl %edi, %edi
+; SETZUCC-NEXT:    setzus %cl
+; SETZUCC-NEXT:    setzug %al
+; SETZUCC-NEXT:    subb %cl, %al
+; SETZUCC-NEXT:    retq
+;
+; NO-SETZUCC-LABEL: scmp_i32_zero_to_i8:
+; NO-SETZUCC:       # %bb.0:
+; NO-SETZUCC-NEXT:    testl %edi, %edi
+; NO-SETZUCC-NEXT:    sets %cl
+; NO-SETZUCC-NEXT:    setg %al
+; NO-SETZUCC-NEXT:    subb %cl, %al
+; NO-SETZUCC-NEXT:    retq
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}

@@ -356,3 +356,25 @@ entry:
   %or.i = tail call <16 x i8> @llvm.ucmp.v16i8.v16i16(<16 x i16> %0, <16 x i16> %1)
   ret <16 x i8> %or.i
 }
+
+define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
+; CHECK-SD-LABEL: ucmp_i128_zero_to_i8:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    orr x8, x0, x1
+; CHECK-SD-NEXT:    cmp x8, #0
+; CHECK-SD-NEXT:    cset w0, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: ucmp_i128_zero_to_i8:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    cmp x0, #0
+; CHECK-GI-NEXT:    cset w8, hi
+; CHECK-GI-NEXT:    cmp x1, #0
+; CHECK-GI-NEXT:    cset w9, hi
+; CHECK-GI-NEXT:    csel w8, w8, w9, eq
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    cset w0, ne
+; CHECK-GI-NEXT:    ret
+  %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}

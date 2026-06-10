@@ -129,3 +129,15 @@ define i64 @ucmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.ucmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @ucmp_i128_zero_to_i8(i128 %x) nounwind {
+; CHECK-LABEL: ucmp_i128_zero_to_i8:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    orr r1, r1, r3
+; CHECK-NEXT:    orr r0, r0, r2
+; CHECK-NEXT:    orrs r0, r0, r1
+; CHECK-NEXT:    movwne r0, #1
+; CHECK-NEXT:    bx lr
+  %r = call i8 @llvm.ucmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}

@@ -107,3 +107,38 @@ define i64 @scmp.64.64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_i128_zero_to_i8(i128 %x) nounwind {
+; CHECK-LABEL: scmp_i128_zero_to_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl %v0, 0(%r2), 3
+; CHECK-NEXT:    vgbm %v1, 0
+; CHECK-NEXT:    vecg %v1, %v0
+; CHECK-NEXT:    jlh .LBB8_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    vchlgs %v2, %v0, %v1
+; CHECK-NEXT:  .LBB8_2:
+; CHECK-NEXT:    lhi %r2, 0
+; CHECK-NEXT:    lochil %r2, 1
+; CHECK-NEXT:    vecg %v0, %v1
+; CHECK-NEXT:    jlh .LBB8_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    vchlgs %v0, %v1, %v0
+; CHECK-NEXT:  .LBB8_4:
+; CHECK-NEXT:    lochil %r2, -1
+; CHECK-NEXT:    br %r14
+  %r = call i8 @llvm.scmp.i8.i128(i128 %x, i128 0)
+  ret i8 %r
+}
+
+define i8 @scmp_i32_zero_to_i8(i32 %x) nounwind {
+; CHECK-LABEL: scmp_i32_zero_to_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    chi %r2, 0
+; CHECK-NEXT:    lhi %r2, 0
+; CHECK-NEXT:    lochih %r2, 1
+; CHECK-NEXT:    lochil %r2, -1
+; CHECK-NEXT:    br %r14
+  %r = call i8 @llvm.scmp.i8.i32(i32 %x, i32 0)
+  ret i8 %r
+}
