@@ -64,8 +64,8 @@ else
 	# valid when transferred to a remote device.
 	LN_SF = ln -sf $(patsubst $(dir $(2))%,%,$(1)) $(2)
 	ECHO = echo $(1);
-	ECHO_TO_FILE = printf '%s\n' $(1) > "$(2)"
-	ECHO_APPEND_FILE = printf '%s\n' $(1) >> "$(2)"
+	ECHO_TO_FILE = echo $(subst ',,$(1))> "$(subst /,\,$(2))"
+	ECHO_APPEND_FILE = echo $(subst ',,$(1))>> "$(subst /,\,$(2))"
 endif
 
 # Suppress built-in suffix rules. We explicitly define rules for %.o.
