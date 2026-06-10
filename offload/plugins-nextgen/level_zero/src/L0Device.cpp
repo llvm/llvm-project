@@ -714,11 +714,14 @@ Error L0DeviceTy::makeMemoryResident(void *Mem, size_t Size) {
 Expected<ze_command_list_handle_t>
 L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index, bool InOrder) {
   ze_command_queue_flags_t Flags = InOrder ? ZE_COMMAND_QUEUE_FLAG_IN_ORDER : 0;
+  if (getPlugin().getOptions().Flags.UseCopyOffloadHint)
+    Flags |= ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT;
+
   ze_command_queue_desc_t Desc{ZE_STRUCTURE_TYPE_COMMAND_QUEUE_DESC,
                                nullptr,
                                Ordinal,
                                Index,
-                               Flags | ZE_COMMAND_QUEUE_FLAG_COPY_OFFLOAD_HINT,
+                               Flags,
                                ZE_COMMAND_QUEUE_MODE_ASYNCHRONOUS,
                                ZE_COMMAND_QUEUE_PRIORITY_NORMAL};
   ze_command_list_handle_t CmdList = nullptr;
