@@ -1581,7 +1581,10 @@ public:
 
   /// Return the cost of this VPInstruction.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
 
   Type *getResultType() const { return getScalarType(); }
 
