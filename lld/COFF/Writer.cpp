@@ -216,6 +216,8 @@ private:
   void appendImportThunks();
   void locateImportTables();
   void createExportTable();
+  StringRef getMergeDestination(const StringRef sectionName,
+                                const StringRef toName);
   void mergeSection(const std::map<StringRef, StringRef>::value_type &p);
   void mergeSections();
   void sortECChunks();
@@ -1656,19 +1658,27 @@ void Writer::createSymbolAndStringTable() {
   fileSize = alignTo(fileOff, ctx.config.fileAlign);
 }
 
-void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
-  StringRef toName = p.second;
-  if (p.first == toName)
-    return;
+StringRef Writer::getMergeDestination(const StringRef sectionName,
+                                      const StringRef destName) {
+  StringRef toName = destName;
   StringSet<> names;
   while (true) {
     if (!names.insert(toName).second)
-      Fatal(ctx) << "/merge: cycle found for section '" << p.first << "'";
+      Fatal(ctx) << "/merge: cycle found for section '" << sectionName << "'";
     auto i = ctx.config.merge.find(toName);
     if (i == ctx.config.merge.end())
       break;
     toName = i->second;
   }
+  return toName;
+}
+
+void Writer::mergeSection(const std::map<StringRef, StringRef>::value_type &p) {
+  if (p.first == p.second)
+    return;
+
+  StringRef toName = getMergeDestination(p.first, p.second);
+
   OutputSection *from = findSection(p.first);
   OutputSection *to = findSection(toName);
   if (!from)
@@ -1716,8 +1726,17 @@ void Writer::mergeSections() {
   // whatever section it is being merged into (usually .data) so that the image
   // need not actually contain all of the zeros.
   auto it = ctx.config.merge.find(".bss");
-  if (it != ctx.config.merge.end())
-    mergeSection(*it);
+  if (it != ctx.config.merge.end()) {
+    // Resolve the final merge target name following the chain.
+    StringRef toName = getMergeDestination(it->first, it->second);
+    // Don't merge .bss into a shared section. MSVC link.exe keeps .bss
+    // separate when the target has IMAGE_SCN_MEM_SHARED, preventing unexpected
+    // sharing across processes.
+    auto secIt = ctx.config.section.find(toName);
+    if (secIt == ctx.config.section.end() ||
+        !(secIt->second & IMAGE_SCN_MEM_SHARED))
+      mergeSection({it->first, toName});
+  }
 }
 
 // EC targets may have chunks of various architectures mixed together at this
