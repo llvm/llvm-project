@@ -635,7 +635,7 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
                            const InductionDescriptor &IndDesc, VPlan &Plan,
                            PredicatedScalarEvolution &PSE, Loop &OrigLoop,
                            DebugLoc DL) {
-  ScalarEvolution &SE = *PSE.getSE();
+  [[maybe_unused] ScalarEvolution &SE = *PSE.getSE();
   assert(SE.isLoopInvariant(IndDesc.getStep(), &OrigLoop) &&
          "step must be loop invariant");
   assert((Plan.getLiveIn(IndDesc.getStartValue()) == Start ||
@@ -648,7 +648,6 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
       vputils::getOrCreateVPValueForSCEVExpr(Plan, IndDesc.getStep());
 
   VPValue *BackedgeVal = PhiR->getOperand(1);
-
   // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
   // recipes. optimizeInductionLiveOutUsers will later compute the proper
   // DerivedIV.
@@ -966,6 +965,7 @@ bool VPlanTransforms::createHeaderPhiRecipes(
   if (!tryToSinkOrHoistRecurrenceUsers(HeaderVPBB, VPDT))
     return false;
 
+  // Skip renaming resume phi recipes, if any header phi as been removed.
   if (range_size(HeaderVPBB->phis()) !=
       range_size(Plan.getScalarPreheader()->phis()))
     return true;
