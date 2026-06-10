@@ -34,8 +34,8 @@ rbi:
 */
 
 int main() {
-    int ret = 0;
-    return ret; // !dex_label ret
+  int ret = 0;
+  return ret; // !dex_label ret
 }
 
 /*
