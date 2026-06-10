@@ -29,6 +29,23 @@ class ProcessAPITestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetScriptedImplementation(), None)
 
+    def test_is_live_debug_session(self):
+        """Test that a launched process reports as a live debug session."""
+        self.build()
+
+        (target, process, _, _) = lldbutil.run_to_source_breakpoint(
+            self, "Set break point", lldb.SBFileSpec("main.cpp")
+        )
+
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertTrue(process.IsLiveDebugSession())
+
+    def test_is_live_debug_session_invalid_process(self):
+        """Test that an invalid process is not reported as a live session."""
+        process = lldb.SBProcess()
+        self.assertFalse(process.IsValid())
+        self.assertFalse(process.IsLiveDebugSession())
+
     def test_read_memory(self):
         """Test Python SBProcess.ReadMemory() API."""
         self.build()

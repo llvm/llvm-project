@@ -42,6 +42,7 @@ config.lldb_use_lldb_server = @LLDB_TEST_USE_LLDB_SERVER@
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-shell")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-shell")
 config.clang_resource_dir = os.path.join("@CLANG_RESOURCE_DIR@")
+config.targets_to_build = "@LLVM_TARGETS_TO_BUILD@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)

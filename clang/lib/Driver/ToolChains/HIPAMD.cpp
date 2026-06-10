@@ -282,7 +282,8 @@ void HIPAMDToolChain::addClangTargetOptions(
     return; // No DeviceLibs for SPIR-V.
   }
 
-  for (auto BCFile : getDeviceLibs(DriverArgs, DeviceOffloadingKind)) {
+  for (auto BCFile :
+       getDeviceLibs(DriverArgs, BoundArch, DeviceOffloadingKind)) {
     CC1Args.push_back(BCFile.ShouldInternalize ? "-mlink-builtin-bitcode"
                                                : "-mlink-bitcode-file");
     CC1Args.push_back(DriverArgs.MakeArgStringRef(BCFile.Path));
@@ -371,7 +372,10 @@ VersionTuple HIPAMDToolChain::computeMSVCVersion(const Driver *D,
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
+                               llvm::StringRef BoundArch,
                                Action::OffloadKind DeviceOffloadingKind) const {
+  assert(!BoundArch.empty() && "Must have an explicit GPU arch.");
+
   llvm::SmallVector<BitCodeLibraryInfo, 12> BCLibs;
   const llvm::Triple &TT = getEffectiveTriple();
 
@@ -380,8 +384,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
       TT.getEnvironment() == llvm::Triple::LLVM)
     return {};
 
-  AMDGPUToolChain::ParsedTargetIDType TargetID = getParsedTargetID(DriverArgs);
-  if (!TargetID.OptionalTargetID || TargetID.OptionalTargetID == "amdgcnspirv")
+  StringRef GpuArch = getProcessorFromTargetID(getTriple(), BoundArch);
+  if (GpuArch == "amdgcnspirv")
     return {};
 
   ArgStringList LibraryPaths;
@@ -418,9 +422,8 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
     }
 
     // Add common device libraries like ocml etc.
-    for (auto N : getCommonDeviceLibNames(
-             DriverArgs, *TargetID.OptionalTargetID, *TargetID.OptionalGPUArch,
-             DeviceOffloadingKind))
+    for (auto N : getCommonDeviceLibNames(DriverArgs, BoundArch, GpuArch,
+                                          DeviceOffloadingKind))
       BCLibs.emplace_back(N);
 
     // Add instrument lib.

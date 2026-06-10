@@ -1631,6 +1631,13 @@ functions:
     return_type: int
     arguments:
       - type: float
+  - name: isnanf128
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: float128
+    guard: LIBC_TYPES_HAS_FLOAT128
   - name: isnanl
     standards:
       - bsd
