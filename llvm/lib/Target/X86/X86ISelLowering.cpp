@@ -29474,7 +29474,7 @@ SDValue X86TargetLowering::LowerRESET_FPENV(SDValue Op,
   MachinePointerInfo MPI =
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MPI, MachineMemOperand::MOStore, X87StateSize, Align(4));
+      MPI, MachineMemOperand::MOLoad, X87StateSize, Align(4));
 
   return createSetFPEnvNodes(Env, Chain, DL, MVT::i32, MMO, DAG, Subtarget);
 }
@@ -60974,7 +60974,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PCMPEQ:
     case X86ISD::PCMPGT:
-      // TODO: 512-bit PCMPEQ/PCMPGT -> VPCMP+VPMOVM2 handling.
       if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256()) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
@@ -60982,6 +60981,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           return DAG.getNode(Opcode, DL, VT,
                              Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
                              Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+        break;
+      }
+      if (!IsSplat && VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+          (EltSizeInBits >= 32 || Subtarget.useBWIRegs())) {
+        if (IsConcatFree(VT, Ops, 0) && IsConcatFree(VT, Ops, 1)) {
+          MVT BoolVT = VT.changeVectorElementType(MVT::i1);
+          SDValue Cmp =
+              DAG.getSetCC(DL, BoolVT, ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1),
+                           Opcode == X86ISD::PCMPEQ ? ISD::CondCode::SETEQ
+                                                    : ISD::CondCode::SETGT);
+          return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cmp);
+        }
         break;
       }
 

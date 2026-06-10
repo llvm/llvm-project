@@ -1316,6 +1316,10 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
   CmpInst::Predicate Pred = getMinMaxReductionPredicate(RK);
   Value *Cmp = Builder.CreateCmp(Pred, Left, Right, "rdx.minmax.cmp");
   Value *Select = Builder.CreateSelect(Cmp, Left, Right, "rdx.minmax.select");
+  // This select is synthesized fresh, not lowered from an existing branch, so
+  // it carries no real profile. Mark its weights as explicitly unknown.
+  if (auto *SI = dyn_cast<SelectInst>(Select))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
   return Select;
 }
 
