@@ -677,69 +677,52 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
 
 def AnyI32Like : TypeOrValueSemanticsContainer<I32, "scalar i32 or vector of i32">;
 
-def NVGPU_FPTruncOp : NVGPU_Op<"convert.fptrunc",
-    [Pure]> {
-  let summary = "Truncate floating-point to narrower floating-point";
-  let description = [{
-    Truncate a floating-point value to a smaller floating-point type.
-    Destination must be strictly narrower than source.
+// nvgpu.convert.float only supports the satfinite and none saturation modes.
+def NVGPU_SaturationModeSatfiniteOrNone :
+  ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr,
+                [SaturationModeNone, SaturationModeFinite]>]>;
 
-    Supported paths:
+def NVGPU_ConvertFloatOp : NVGPU_Op<"convert.float", [Pure]> {
+  let summary = "Convert between floating-point types of different widths";
+  let description = [{
+    Convert a floating-point value to a floating-point type of a different
+    width. The direction is inferred from the bitwidths: a narrower result is a
+    truncation, a wider result is an extension. Source and destination must have
+    different bitwidths.
+
+    Supported truncation paths:
+      f64 -> f32, f16, bf16
       f32 -> f16, bf16, f8, f6, f4
       f16 -> f8, f6, f4
       bf16 -> f8, f6, f4
 
-    The `random_bits` operand enables stochastic rounding (RS mode)
-    for f32->f16/bf16 conversions. When provided, `rnd` must be RS.
+    Supported extension paths:
+      f8 -> f16, bf16
+      f6 -> f16, bf16
+      f4 -> f16, bf16
+      f16 -> f32
+      bf16 -> f32
+
+    The `sat` and `random_bits` operands apply to truncation only. The
+    `random_bits` operand enables stochastic rounding (RS mode) for
+    f32->f16/bf16 conversions; when provided, `rnd` must be RS.
 
     Example:
     ```mlir
-    %r = nvgpu.cvt_fptrunc %in : vector<8xf32> to vector<8xf8E4M3FN>
-    %r = nvgpu.cvt_fptrunc %in : vector<8xf32> to vector<8xf6E2M3FN>
-    %r = nvgpu.cvt_fptrunc %in : f32 to f16
-    %r = nvgpu.cvt_fptrunc %in : vector<2x4xf16> to vector<2x4xf8E5M2>
+    %r = nvgpu.convert.float %in : vector<8xf32> to vector<8xf8E4M3FN>
+    %r = nvgpu.convert.float %in : f32 to f16
+    %r = nvgpu.convert.float %in : vector<8xf8E4M3FN> to vector<8xf16>
+    %r = nvgpu.convert.float %in : vector<4xf8E5M2> to vector<4xf32>
     ```
   }];
   let arguments = (ins FloatLike:$in,
                        DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
-                       DefaultValuedAttr<SaturationModeAttr, "NVVM::SaturationMode::SATFINITE">:$sat,
+                       DefaultValuedAttr<NVGPU_SaturationModeSatfiniteOrNone, "NVVM::SaturationMode::SATFINITE">:$sat,
                        DefaultValuedAttr<BoolAttr, "false">:$relu,
                        Optional<I32>:$random_bits
                        );
   let results = (outs FloatLike:$out);
   let assemblyFormat = "$in (`,` $random_bits^)? attr-dict `:` type($in) `to` type($out)";
-  let hasVerifier = 1;
-}
-
-def NVGPU_FPExtOp : NVGPU_Op<"convert.fpext", [Pure]> {
-  let summary = "Extend floating-point to wider floating-point";
-  let description = [{
-    Extend a floating-point value to a wider floating-point type.
-    Destination must be strictly wider than source.
-
-    Supported paths:
-      f8 -> f16, bf16
-      f6 -> f16
-      f4 -> f16
-      f16 -> f32
-      bf16 -> f32
-    Narrow->f32 uses two-step lowering (NVVM op to f16/bf16 intermediate,
-    then LLVM FPExt). e8m0->bf16 and e8m0->f32 supported (f32 goes through
-    bf16 intermediate).
-
-    Example:
-    ```mlir
-    %r = nvgpu.cvt_fpext %in : vector<8xf8E4M3FN> to vector<8xf16>
-    %r = nvgpu.cvt_fpext %in : vector<8xf6E3M2FN> to vector<8xf16>
-    %r = nvgpu.cvt_fpext %in : vector<4xf8E5M2> to vector<4xf32>
-    %r = nvgpu.cvt_fpext %in : f8E4M3FN to f32
-    ```
-  }];
-  let arguments = (ins FloatLike:$in,
-                       DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
-                       DefaultValuedAttr<BoolAttr, "false">:$relu);
-  let results = (outs FloatLike:$out);
-  let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
   let hasVerifier = 1;
 }
 
