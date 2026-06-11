@@ -121,9 +121,6 @@ namespace llvm {
 /// DenseMapInfo implementation.
 /// \{
 template <> struct DenseMapInfo<lldb_private::UUID> {
-  static inline lldb_private::UUID getEmptyKey() {
-    return lldb_private::UUID();
-  }
   static unsigned getHashValue(lldb_private::UUID uuid) {
     return DenseMapInfo<llvm::ArrayRef<uint8_t>>::getHashValue(uuid.GetBytes());
   }

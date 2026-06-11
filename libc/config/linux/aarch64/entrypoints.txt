@@ -874,6 +874,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
     libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -909,6 +910,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf

@@ -180,7 +180,6 @@ complex tuple
 complex typeinfo
 complex version
 concepts version
-condition_variable atomic
 condition_variable cerrno
 condition_variable climits
 condition_variable cstdint
@@ -876,7 +875,6 @@ stack limits
 stack stdexcept
 stack tuple
 stack version
-stop_token atomic
 stop_token climits
 stop_token cstdint
 stop_token cstring
@@ -1009,7 +1007,6 @@ system_error string_view
 system_error tuple
 system_error version
 thread array
-thread atomic
 thread bitset
 thread cctype
 thread cerrno

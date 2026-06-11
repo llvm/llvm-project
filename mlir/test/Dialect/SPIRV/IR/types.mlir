@@ -18,6 +18,12 @@ func.func private @array_type_stride(!spirv.array< 4 x !spirv.array<4 x f32, str
 // CHECK: func private @vector_array_type_bf16(!spirv.array<32 x vector<4xbf16>>)
 func.func private @vector_array_type_bf16(!spirv.array<32 x vector<4xbf16> >) -> ()
 
+// CHECK: func private @scalar_array_type_f64(!spirv.array<16 x f16>, !spirv.array<16 x f64>)
+func.func private @scalar_array_type_f64(!spirv.array<16xf16>, !spirv.array<16xf64>) -> ()
+
+// CHECK: func private @scalar_array_type_f8(!spirv.array<16 x f8E4M3FN>, !spirv.array<16 x f8E5M2>)
+func.func private @scalar_array_type_f8(!spirv.array<16xf8E4M3FN>, !spirv.array<16xf8E5M2>) -> ()
+
 // -----
 
 // expected-error @+1 {{expected '<'}}
@@ -62,6 +68,16 @@ func.func private @tensor_type(!spirv.array<4xtensor<4xf32>>) -> ()
 
 // expected-error @+1 {{only 1/8/16/32/64-bit integer type allowed but found 'i256'}}
 func.func private @i256_type(!spirv.array<4xi256>) -> ()
+
+// -----
+
+// expected-error @+1 {{only 8/16/32/64-bit float type allowed but found 'f80'}}
+func.func private @f80_type(!spirv.array<4xf80>) -> ()
+
+// -----
+
+// expected-error @+1 {{only 8/16/32/64-bit float type allowed but found 'f128'}}
+func.func private @f128_type(!spirv.array<4xf128>) -> ()
 
 // -----
 
