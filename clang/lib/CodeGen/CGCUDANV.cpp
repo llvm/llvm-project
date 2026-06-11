@@ -1433,6 +1433,7 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
     OffloadProfSectionShadows.push_back({Shadow, DeviceName.str()});
   };
 
+  // Keep this order in sync with the runtime: data, counters, then names.
   for (auto &&I : EmittedKernels) {
     std::string KernelName = getDeviceSideName(cast<NamedDecl>(I.D));
     AddSectionShadow("data", Twine("__profd_") + KernelName);

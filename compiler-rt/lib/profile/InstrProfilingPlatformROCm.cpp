@@ -645,6 +645,7 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
   if (NumShadowVariables == 0)
     return;
 
+  /* Match CGCUDANV.cpp: data, counters, then names for each kernel. */
   OffloadSectionShadowGroup *Group =
       &OffloadSectionShadowGroups[NumShadowVariables - 1];
   int ShadowIndex = Group->NumSections / 3;
