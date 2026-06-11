@@ -148,7 +148,7 @@ public:
   }
 
   /// Returns a parameter descriptor.
-  ParamDescriptor getParamDescriptor(unsigned Index) const {
+  const ParamDescriptor &getParamDescriptor(unsigned Index) const {
     return ParamDescriptors[Index];
   }
 
@@ -252,6 +252,10 @@ public:
             dyn_cast<const FunctionDecl *>(Source)))
       return MD->isExplicitObjectMemberFunction();
     return false;
+  }
+
+  bool hasImplicitThisParam() const {
+    return hasThisPointer() && !isThisPointerExplicit();
   }
 
 private:

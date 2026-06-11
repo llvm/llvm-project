@@ -476,6 +476,8 @@ public:
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
+  ModuleSpecList GetSeparateDebugInfoFiles();
+
   void PreloadSymbols();
 
   void SetSymbolFileFileSpec(const FileSpec &file);
@@ -521,6 +523,10 @@ public:
   lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
   ConstString GetObjectName() const;
+
+  std::optional<lldb::addr_t> GetMemoryModuleAddress() const {
+    return m_memory_module_addr;
+  }
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
@@ -1008,23 +1014,27 @@ public:
   /// file, then the hash should include the object name and object offset to
   /// ensure a unique hash. Some examples:
   /// - just a regular object file (mach-o, elf, coff, etc) should create a hash
-  /// - a universal mach-o file that contains to multiple architectures,
+  /// - a universal mach-o file that contains multiple architectures,
   ///   each architecture slice should have a unique hash even though they come
   ///   from the same file
   /// - a .o file inside of a BSD archive. Each .o file will have an object name
   ///   and object offset that should produce a unique hash. The object offset
   ///   is needed as BSD archive files can contain multiple .o files that have
   ///   the same name.
+  ///
+  /// This hash value does not change as the binary is recompiled during
+  /// development.  DataFileCache's CacheSignature() creates a hash based
+  /// on the mod time/UUID to reflect when a binary has been recompiled.
   uint32_t Hash();
 
   /// Get a unique cache key for the current module.
   ///
   /// The cache key must be unique for a file on disk and not change if the file
   /// is updated. This allows cache data to use this key as a prefix and as
-  /// files are modified in disk, we will overwrite the cache files. If one file
-  /// can contain multiple files, like a universal mach-o file or like a BSD
-  /// archive, the cache key must contain enough information to differentiate
-  /// these different files.
+  /// files are modified on disk, we will overwrite the previous cache file. If
+  /// one file can contain multiple files, like a universal mach-o file or like
+  /// BSD archive, the cache key must contain enough information to
+  /// differentiate these different files.
   std::string GetCacheKey();
 
   /// Get the global index file cache.
@@ -1062,6 +1072,9 @@ protected:
   ConstString m_object_name; ///< The name an object within this module that is
                              /// selected, or empty of the module is represented
                              /// by \a m_file.
+  std::optional<lldb::addr_t>
+      m_memory_module_addr; ///< For a Module read from memory,
+                            ///  the address it was read from.
   uint64_t m_object_offset = 0;
   llvm::sys::TimePoint<> m_object_mod_time;
 

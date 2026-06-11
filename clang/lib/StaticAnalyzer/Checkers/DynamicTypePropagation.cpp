@@ -190,7 +190,7 @@ RuntimeType inferReceiverType(const ObjCMethodCall &Message,
         return {cast<ObjCObjectType>(DTI.getType()), !DTI.canBeASubClass()};
       }
 
-      SVal SelfSVal = State->getSelfSVal(C.getLocationContext());
+      SVal SelfSVal = State->getSelfSVal(C.getStackFrame());
 
       // Another way we can guess what is in Class object, is when it is a
       // 'self' variable of the current class method.
@@ -369,7 +369,7 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
       if (const MemRegion *Target = Ctor->getCXXThisVal().getAsRegion()) {
         // We just finished a base constructor. Now we can use the subclass's
         // type when resolving virtual calls.
-        const LocationContext *LCtx = C.getLocationContext();
+        const StackFrame *SF = C.getStackFrame();
 
         // FIXME: In C++17 classes with non-virtual bases may be treated as
         // aggregates, and in such case no top-frame constructor will be called.
@@ -378,10 +378,10 @@ void DynamicTypePropagation::checkPostCall(const CallEvent &Call,
         // trigger-statement (InitListExpr or CXXParenListInitExpr in this case)
         // available in this callback, ideally as part of CallEvent.
         if (isa_and_nonnull<InitListExpr, CXXParenListInitExpr>(
-                LCtx->getParentMap().getParent(Ctor->getOriginExpr())))
+                SF->getParentMap().getParent(Ctor->getOriginExpr())))
           return;
 
-        recordFixedType(Target, cast<CXXConstructorDecl>(LCtx->getDecl()), C);
+        recordFixedType(Target, cast<CXXConstructorDecl>(SF->getDecl()), C);
       }
       return;
     }
@@ -1090,8 +1090,7 @@ PathDiagnosticPieceRef DynamicTypePropagation::GenericsBugVisitor::VisitNode(
   }
 
   // Generate the extra diagnostic.
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
 }
 

@@ -32,7 +32,7 @@ class Function;
 
 /// Base class for use as a mix-in that aids implementing
 /// a TargetTransformInfo-compatible class.
-class TargetTransformInfoImplBase {
+class LLVM_ABI TargetTransformInfoImplBase {
 
 protected:
   typedef TargetTransformInfo TTI;
@@ -1154,6 +1154,8 @@ public:
     return false;
   }
   virtual bool preferAlternateOpcodeVectorization() const { return true; }
+
+  virtual bool preferSLPInstCountCheck() const { return true; }
 
   virtual bool preferPredicatedReductionSelect() const { return false; }
 

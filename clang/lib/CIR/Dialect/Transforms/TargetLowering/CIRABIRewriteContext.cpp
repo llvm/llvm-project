@@ -27,20 +27,16 @@ using namespace mlir::abi;
 namespace {
 
 bool needsRewrite(const FunctionClassification &fc) {
+  // Direct without coercion is a true pass-through; any other kind (or a
+  // coerced Direct) means the rewriter must touch the IR.  Extend is
+  // technically attribute-only at the IR level but still counts because the
+  // attribute attachment changes observable behavior.
   if ((fc.returnInfo.kind != ArgKind::Direct) || fc.returnInfo.coercedType)
     return true;
   for (const ArgClassification &ac : fc.argInfos)
     if ((ac.kind != ArgKind::Direct) || ac.coercedType)
       return true;
   return false;
-}
-
-SmallVector<unsigned> ignoredArgIndices(const FunctionClassification &fc) {
-  SmallVector<unsigned> v;
-  for (auto [idx, ac] : llvm::enumerate(fc.argInfos))
-    if (ac.kind == ArgKind::Ignore)
-      v.push_back(idx);
-  return v;
 }
 
 /// Build the new argument-type list for a function whose ABI classification
@@ -58,12 +54,11 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
     Type origTy = oldArgTypes[idx];
     switch (ac.kind) {
     case ArgKind::Direct:
-      if (ac.coercedType) {
-        emitError() << "Direct with coerced type at arg " << idx
-                    << " not yet implemented in CallConvLowering";
-        return failure();
-      }
-      newArgTypes.push_back(origTy);
+      // Direct with a coerced type means the wire signature uses the
+      // coerced type; the body still expects origTy and we'll insert a
+      // coercion at the entry block.  Direct without a coerced type is a
+      // true pass-through.
+      newArgTypes.push_back(ac.coercedType ? ac.coercedType : origTy);
       break;
     case ArgKind::Ignore:
       break;
@@ -72,9 +67,14 @@ LogicalResult buildNewArgTypes(ArrayRef<Type> oldArgTypes,
                   << " not yet implemented in CallConvLowering";
       return failure();
     case ArgKind::Extend:
-      emitError() << "Extend at arg " << idx
-                  << " not yet implemented in CallConvLowering";
-      return failure();
+      // Extend keeps the original (narrow) type in the signature; the
+      // sign/zero extension is communicated to LLVM via the llvm.signext /
+      // llvm.zeroext arg attribute, attached separately below.  Any
+      // coercedType the classifier set on the Extend ArgClassification is
+      // informational (typically the register-width type the value gets
+      // extended to in registers) but does not change the CIR signature.
+      newArgTypes.push_back(origTy);
+      break;
     case ArgKind::Indirect:
       emitError() << "Indirect at arg " << idx
                   << " not yet implemented in CallConvLowering";
@@ -92,12 +92,9 @@ Type computeNewReturnType(Type origRetTy, const ArgClassification &retInfo,
                           function_ref<InFlightDiagnostic()> emitError) {
   switch (retInfo.kind) {
   case ArgKind::Direct:
-    if (retInfo.coercedType) {
-      emitError() << "Direct return with coerced type not yet implemented "
-                  << "in CallConvLowering";
-      return nullptr;
-    }
-    return origRetTy;
+    // Direct return with a coerced type uses the coerced type on the wire;
+    // the rewriter inserts a coercion before each cir.return.
+    return retInfo.coercedType ? retInfo.coercedType : origRetTy;
   case ArgKind::Ignore:
     return cir::VoidType::get(ctx);
   case ArgKind::Expand:
@@ -105,8 +102,10 @@ Type computeNewReturnType(Type origRetTy, const ArgClassification &retInfo,
                 << "it in EmitFunctionEpilog)";
     return nullptr;
   case ArgKind::Extend:
-    emitError() << "Extend return not yet implemented in CallConvLowering";
-    return nullptr;
+    // Same convention as Extend args: keep the original return type in the
+    // signature; the sign/zero extension is communicated via the
+    // llvm.signext / llvm.zeroext res attribute attached separately below.
+    return origRetTy;
   case ArgKind::Indirect:
     emitError() << "Indirect return (sret) not yet implemented in "
                 << "CallConvLowering";
@@ -124,17 +123,202 @@ Value createIgnoredValue(OpBuilder &builder, Location loc, Type ty) {
   return cir::ConstantOp::create(builder, loc, ty, cir::PoisonAttr::get(ty));
 }
 
+/// Build an updated arg_attrs ArrayAttr that drops Ignore'd args and adds
+/// llvm.signext / llvm.zeroext on Extend args.  Preserves any existing arg
+/// attributes on retained arg slots.
+ArrayAttr updateArgAttrs(MLIRContext *ctx, ArrayAttr existingArgAttrs,
+                         const FunctionClassification &fc) {
+  SmallVector<Attribute> newArgAttrs;
+  newArgAttrs.reserve(fc.argInfos.size());
+  for (auto [oldIdx, ac] : llvm::enumerate(fc.argInfos)) {
+    if (ac.kind == ArgKind::Ignore)
+      continue;
+    DictionaryAttr existing = DictionaryAttr::get(ctx);
+    if (existingArgAttrs && oldIdx < existingArgAttrs.size())
+      existing = cast<DictionaryAttr>(existingArgAttrs[oldIdx]);
+    if (ac.kind == ArgKind::Extend) {
+      StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
+      NamedAttribute extAttr(StringAttr::get(ctx, attrName),
+                             UnitAttr::get(ctx));
+      if (existing.empty()) {
+        newArgAttrs.push_back(DictionaryAttr::get(ctx, {extAttr}));
+      } else {
+        SmallVector<NamedAttribute> attrs(existing.begin(), existing.end());
+        attrs.push_back(extAttr);
+        newArgAttrs.push_back(DictionaryAttr::get(ctx, attrs));
+      }
+    } else {
+      newArgAttrs.push_back(existing);
+    }
+  }
+  return ArrayAttr::get(ctx, newArgAttrs);
+}
+
+/// Build an updated res_attrs ArrayAttr (single entry, since CIR funcs have
+/// at most one result) that adds llvm.signext / llvm.zeroext on an Extend
+/// return.  Preserves any existing res attributes.
+ArrayAttr updateResAttrs(MLIRContext *ctx, ArrayAttr existingResAttrs,
+                         const ArgClassification &retInfo) {
+  if (retInfo.kind != ArgKind::Extend)
+    return existingResAttrs;
+
+  SmallVector<NamedAttribute> attrs;
+  if (existingResAttrs && !existingResAttrs.empty())
+    for (NamedAttribute na : cast<DictionaryAttr>(existingResAttrs[0]))
+      attrs.push_back(na);
+  StringRef attrName = retInfo.signExtend ? "llvm.signext" : "llvm.zeroext";
+  attrs.push_back(
+      NamedAttribute(StringAttr::get(ctx, attrName), UnitAttr::get(ctx)));
+  return ArrayAttr::get(ctx, {DictionaryAttr::get(ctx, attrs)});
+}
+
+/// Coerce \p src to type \p dstTy at the current builder insertion point by
+/// going through memory: allocate a slot, store the source, then load the
+/// destination type back out.  Lowers uniformly for scalar, vector, and
+/// record types.
+///
+/// The slot is sized to the larger of the two types so that neither the
+/// store nor the load ever runs past it: the coerced ABI type can be larger
+/// than the original (e.g. a 12-byte aggregate returned as `{i64, i64}`), so
+/// loading the destination out of a source-sized slot would over-read.
+/// Alignment is max(srcAlign, dstAlign) to satisfy both accesses.  The slot
+/// is accessed through a source-typed view for the store and a
+/// destination-typed view for the load.
+///
+/// The temporary alloca is placed at the start of the enclosing function's
+/// entry block so that it composes correctly with the HoistAllocas pass
+/// regardless of pipeline ordering.
+///
+/// Any operations the helper creates are appended to \p createdOps so the
+/// caller can pass them to replaceAllUsesExcept and avoid clobbering the
+/// store's value operand when later rewiring the source value.
+Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
+                   FunctionOpInterface funcOp, const DataLayout &dl,
+                   SmallPtrSetImpl<Operation *> &createdOps) {
+  Type srcTy = src.getType();
+  assert(srcTy != dstTy &&
+         "emitCoercion callers must pre-check that the types differ");
+
+  uint64_t srcAlign = dl.getTypeABIAlignment(srcTy);
+  uint64_t dstAlign = dl.getTypeABIAlignment(dstTy);
+  uint64_t allocaAlign = std::max(srcAlign, dstAlign);
+  Type slotTy = dl.getTypeSize(srcTy) >= dl.getTypeSize(dstTy) ? srcTy : dstTy;
+
+  auto slotPtrTy = cir::PointerType::get(slotTy);
+  auto srcPtrTy = cir::PointerType::get(srcTy);
+  auto dstPtrTy = cir::PointerType::get(dstTy);
+
+  cir::AllocaOp alloca;
+  {
+    OpBuilder::InsertionGuard guard(rewriter);
+    Block &entry = funcOp->getRegion(0).front();
+    rewriter.setInsertionPointToStart(&entry);
+    alloca = cir::AllocaOp::create(rewriter, loc, slotPtrTy,
+                                   rewriter.getStringAttr("coerce"),
+                                   rewriter.getI64IntegerAttr(allocaAlign));
+  }
+  createdOps.insert(alloca);
+
+  // Store through a source-typed view of the slot.
+  Value srcSlot = alloca;
+  if (slotTy != srcTy) {
+    auto srcCast = cir::CastOp::create(rewriter, loc, srcPtrTy,
+                                       cir::CastKind::bitcast, alloca);
+    createdOps.insert(srcCast);
+    srcSlot = srcCast;
+  }
+  auto store = cir::StoreOp::create(rewriter, loc, src, srcSlot);
+  createdOps.insert(store);
+
+  // Load through a destination-typed view of the slot.
+  Value dstSlot = alloca;
+  if (slotTy != dstTy) {
+    auto dstCast = cir::CastOp::create(rewriter, loc, dstPtrTy,
+                                       cir::CastKind::bitcast, alloca);
+    createdOps.insert(dstCast);
+    dstSlot = dstCast;
+  }
+  auto load = cir::LoadOp::create(rewriter, loc, dstSlot);
+  createdOps.insert(load);
+  return load;
+}
+
+/// Convenience overload for callers that don't need the createdOps set
+/// (e.g. call-site coercion where we don't replaceAllUsesExcept).
+Value emitCoercion(OpBuilder &rewriter, Location loc, Type dstTy, Value src,
+                   FunctionOpInterface funcOp, const DataLayout &dl) {
+  SmallPtrSet<Operation *, 4> ignored;
+  return emitCoercion(rewriter, loc, dstTy, src, funcOp, dl, ignored);
+}
+
+/// Insert coercion before each cir.return so the returned value matches the
+/// new (coerced) return type.
+void insertReturnCoercion(FunctionOpInterface funcOp, Type origRetTy,
+                          Type coercedRetTy, OpBuilder &rewriter,
+                          const DataLayout &dl) {
+  SmallVector<cir::ReturnOp> returns;
+  funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
+  for (cir::ReturnOp r : returns) {
+    if (r.getInput().empty())
+      continue;
+    Value origVal = r.getInput()[0];
+    if (origVal.getType() == coercedRetTy)
+      continue;
+    rewriter.setInsertionPoint(r);
+    Value coerced =
+        emitCoercion(rewriter, r.getLoc(), coercedRetTy, origVal, funcOp, dl);
+    r->setOperand(0, coerced);
+  }
+}
+
+/// For each Direct arg with a coerced type, change the block argument's type
+/// to the coerced type and insert a coercion at function entry that maps it
+/// back to the original type for body uses.
+void insertArgCoercion(FunctionOpInterface funcOp,
+                       const FunctionClassification &fc, OpBuilder &rewriter,
+                       const DataLayout &dl) {
+  Region &body = funcOp->getRegion(0);
+  if (body.empty())
+    return;
+  Block &entry = body.front();
+
+  for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
+    if (ac.kind != ArgKind::Direct || !ac.coercedType)
+      continue;
+    if (idx >= entry.getNumArguments())
+      continue;
+
+    BlockArgument blockArg = entry.getArgument(idx);
+    Type oldArgTy = blockArg.getType();
+    Type newArgTy = ac.coercedType;
+    if (oldArgTy == newArgTy)
+      continue;
+
+    blockArg.setType(newArgTy);
+
+    rewriter.setInsertionPointToStart(&entry);
+    SmallPtrSet<Operation *, 4> coercionOps;
+    Value adapted = emitCoercion(rewriter, funcOp.getLoc(), oldArgTy, blockArg,
+                                 funcOp, dl, coercionOps);
+
+    // Replace blockArg uses with the adapted value, except inside the helper
+    // ops we just created.  This is critical: the StoreOp's value operand is
+    // blockArg, and if we naively replaceAllUses it gets swapped to adapted
+    // (now of the original type != the alloca's pointee type).
+    blockArg.replaceAllUsesExcept(adapted, coercionOps);
+  }
+}
+
 } // namespace
 
 LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     FunctionOpInterface funcOpInterface, const FunctionClassification &fc,
     OpBuilder &builder) {
-  // The pass driver (CallConvLoweringPass) only ever hands us cir.func ops,
-  // and the body of this routine is end-to-end CIR (it creates cir.constant,
-  // cir.return, etc.).  Cast once at the top so the rest of the function
-  // reads in CIR's own vocabulary, and so we can dispatch to the
-  // CIRGlobalValueInterface for isDefinition() (FunctionOpInterface alone
-  // does not inherit from CIRGlobalValueInterface).
+  // The pass driver (CallConvLoweringPass) only ever hands us cir.func ops.
+  // Cast once at the top so the rest of the function reads in CIR's own
+  // vocabulary, and so we can dispatch to the CIRGlobalValueInterface for
+  // isDefinition() (FunctionOpInterface alone does not inherit from
+  // CIRGlobalValueInterface).
   cir::FuncOp funcOp = cast<cir::FuncOp>(funcOpInterface);
 
   if (!needsRewrite(fc))
@@ -166,16 +350,36 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   if (funcOp.isDefinition()) {
     Region &body = funcOp->getRegion(0);
     if (!body.empty()) {
+      // In-body coercion for Direct-with-coerce / Extend args: change
+      // block-arg types to the coerced types and insert a memory roundtrip
+      // at the top of the entry block that converts each coerced value back
+      // to its original type, then route existing body uses (including
+      // in-body cir.call operands) through the recovered value.  Done before
+      // the Ignore-drop below so the entry block argument indices used here
+      // still refer to the original positions.
+      insertArgCoercion(funcOp, fc, builder, dl);
+
+      // Direct return with coerced type: insert a coercion at every
+      // cir.return so the returned value matches the (coerced) return
+      // type in the new function signature set below.
+      if (fc.returnInfo.kind == ArgKind::Direct && fc.returnInfo.coercedType &&
+          !oldResultTypes.empty() && fc.returnInfo.coercedType != origRetTy)
+        insertReturnCoercion(funcOp, origRetTy, fc.returnInfo.coercedType,
+                             builder, dl);
+
       Block &entry = body.front();
 
       // For each Ignored argument: drop the block argument and, if the
       // body still references it, replace those uses with a poison
       // constant.  Ignore classifications mean the value is empty / not
       // passed at the ABI level, so any remaining uses are vacuous;
-      // poison says exactly that.
-      SmallVector<unsigned> ignored = ignoredArgIndices(fc);
-      for (unsigned blockIdx : llvm::reverse(ignored)) {
-        if (blockIdx >= entry.getNumArguments())
+      // poison says exactly that.  Iterate in reverse so that earlier
+      // indices stay stable as later ones are erased.
+      for (int blockIdx = static_cast<int>(fc.argInfos.size()) - 1;
+           blockIdx >= 0; --blockIdx) {
+        if (fc.argInfos[blockIdx].kind != ArgKind::Ignore)
+          continue;
+        if (static_cast<unsigned>(blockIdx) >= entry.getNumArguments())
           continue;
         BlockArgument arg = entry.getArgument(blockIdx);
         if (!arg.use_empty()) {
@@ -212,22 +416,22 @@ LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   Type newFnTy = funcOp.cloneTypeWith(newArgTypes, newResultTypes);
   funcOp.setFunctionTypeAttr(TypeAttr::get(newFnTy));
 
-  // Keep the arg_attrs array in sync with the new argument count by
-  // dropping entries for every Ignored argument.  Without this the
-  // attribute array would have stale entries that no longer match any
-  // block argument.
-  SmallVector<unsigned> ignored = ignoredArgIndices(fc);
-  if (!ignored.empty()) {
-    if (auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs")) {
-      SmallVector<Attribute> kept;
-      kept.reserve(newArgTypes.size());
-      for (auto [oldIdx, attr] : llvm::enumerate(existing.getValue())) {
-        if (oldIdx >= fc.argInfos.size() ||
-            fc.argInfos[oldIdx].kind != ArgKind::Ignore)
-          kept.push_back(attr);
-      }
-      funcOp->setAttr("arg_attrs", ArrayAttr::get(ctx, kept));
-    }
+  // Rebuild arg_attrs when any arg is Ignore (dropped from the output array)
+  // or Extend (needs llvm.signext / llvm.zeroext layered on).
+  bool needsArgAttrUpdate =
+      llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
+      });
+  if (needsArgAttrUpdate) {
+    auto existing = funcOp->getAttrOfType<ArrayAttr>("arg_attrs");
+    funcOp->setAttr("arg_attrs", updateArgAttrs(ctx, existing, fc));
+  }
+
+  // Rebuild res_attrs: layer llvm.signext / llvm.zeroext onto an Extend
+  // return.
+  if (fc.returnInfo.kind == ArgKind::Extend) {
+    auto existing = funcOp->getAttrOfType<ArrayAttr>("res_attrs");
+    funcOp->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
   }
 
   return success();
@@ -247,27 +451,28 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
     return call.emitOpError()
            << "indirect call not yet implemented in CallConvLowering";
 
+  MLIRContext *ctx = callOp->getContext();
+  auto enclosingFunc = call->getParentOfType<FunctionOpInterface>();
+
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     switch (ac.kind) {
     case ArgKind::Direct:
-      if (ac.coercedType)
-        return call.emitOpError()
-               << "Direct with coerced type at call-site arg " << idx
-               << " not yet implemented in CallConvLowering";
-      break;
     case ArgKind::Ignore:
       break;
     case ArgKind::Expand:
       return call.emitOpError() << "Expand at call-site arg " << idx
                                 << " not yet implemented in CallConvLowering";
     case ArgKind::Extend:
-      return call.emitOpError() << "Extend at call-site arg " << idx
-                                << " not yet implemented in CallConvLowering";
+      // Direct (with or without coercion), Ignore, Expand, and Extend are
+      // all handled below.  Extend is attribute-only at the IR level.
+      break;
     case ArgKind::Indirect:
       return call.emitOpError() << "Indirect at call-site arg " << idx
                                 << " not yet implemented in CallConvLowering";
     }
   }
+
+  builder.setInsertionPoint(call);
 
   SmallVector<Value> newArgs;
   ValueRange argOperands = call.getArgOperands();
@@ -280,21 +485,25 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;
-    newArgs.push_back(argOperands[idx]);
+    Value arg = argOperands[idx];
+    if (ac.kind == ArgKind::Direct && ac.coercedType &&
+        arg.getType() != ac.coercedType)
+      arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg,
+                         enclosingFunc, dl);
+    newArgs.push_back(arg);
   }
 
   bool hasResult = call.getNumResults() > 0;
-  Type origRetTy = hasResult ? call.getResult().getType()
-                             : cir::VoidType::get(callOp->getContext());
+  Type origRetTy =
+      hasResult ? call.getResult().getType() : cir::VoidType::get(ctx);
   Type callRetTy = origRetTy;
   if (fc.returnInfo.kind == ArgKind::Ignore && hasResult)
-    callRetTy = cir::VoidType::get(callOp->getContext());
-  if ((fc.returnInfo.kind == ArgKind::Direct ||
-       fc.returnInfo.kind == ArgKind::Extend) &&
-      fc.returnInfo.coercedType)
-    return call.emitOpError() << "Direct/Extend return with coerced type at "
-                              << "call-site not yet implemented in "
-                              << "CallConvLowering";
+    callRetTy = cir::VoidType::get(ctx);
+  bool returnNeedsCoercion =
+      hasResult && fc.returnInfo.kind == ArgKind::Direct &&
+      fc.returnInfo.coercedType && fc.returnInfo.coercedType != origRetTy;
+  if (returnNeedsCoercion)
+    callRetTy = fc.returnInfo.coercedType;
 
   builder.setInsertionPoint(call);
   auto newCall = cir::CallOp::create(builder, call.getLoc(),
@@ -302,6 +511,31 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
   for (NamedAttribute attr : call->getAttrs())
     if (!newCall->hasAttr(attr.getName()))
       newCall->setAttr(attr.getName(), attr.getValue());
+
+  // Direct return with coercion: the new call returns the coerced type;
+  // emit a coercion back to the original type for the call's existing uses.
+  if (returnNeedsCoercion) {
+    builder.setInsertionPointAfter(newCall);
+    Value coercedBack = emitCoercion(builder, call.getLoc(), origRetTy,
+                                     newCall.getResult(), enclosingFunc, dl);
+    call.getResult().replaceAllUsesWith(coercedBack);
+  }
+
+  // Layer llvm.signext / llvm.zeroext onto the new call's arg_attrs and
+  // res_attrs for Extend args/return.  Ignore args also require a rebuild
+  // because their slots are dropped from the output array.
+  bool needsArgAttrUpdate =
+      llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
+        return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend;
+      });
+  if (needsArgAttrUpdate) {
+    auto existing = call->getAttrOfType<ArrayAttr>("arg_attrs");
+    newCall->setAttr("arg_attrs", updateArgAttrs(ctx, existing, fc));
+  }
+  if (fc.returnInfo.kind == ArgKind::Extend) {
+    auto existing = call->getAttrOfType<ArrayAttr>("res_attrs");
+    newCall->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
+  }
 
   if (hasResult && fc.returnInfo.kind == ArgKind::Ignore) {
     // The new call returns void, but the original call's result may still
@@ -313,7 +547,8 @@ LogicalResult CIRABIRewriteContext::rewriteCallSite(
       Value poison = createIgnoredValue(builder, call.getLoc(), origRetTy);
       call.getResult().replaceAllUsesWith(poison);
     }
-  } else if (hasResult) {
+  } else if (hasResult && !returnNeedsCoercion) {
+    // returnNeedsCoercion already wired up the coerced result above.
     call.getResult().replaceAllUsesWith(newCall.getResult());
   }
 

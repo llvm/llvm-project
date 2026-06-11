@@ -549,7 +549,11 @@ void ProcessDebugger::OnUnloadDll(lldb::addr_t module_addr) {
   // Do nothing by default
 }
 
-void ProcessDebugger::OnDebugString(const std::string &string) {}
+void ProcessDebugger::OnDebugString(lldb::addr_t debug_string_addr,
+                                    bool is_unicode,
+                                    uint16_t length_lower_word) {
+  // Do nothing by default
+}
 
 void ProcessDebugger::OnDebuggerError(const Status &error, uint32_t type) {
   llvm::sys::ScopedLock lock(m_mutex);

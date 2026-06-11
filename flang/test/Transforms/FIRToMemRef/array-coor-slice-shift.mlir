@@ -75,17 +75,20 @@ func.func @array_coor_slice_shift_section() {
   return
 }
 
-// Descriptor-backed array_coor with shape_shift + slice.
-// TODO: the strides must still be taken from the descriptor.
+// Descriptor-backed array_coor with shape_shift + slice. The descriptor owns
+// the layout: extents and strides must come from fir.box_dims, not from the
+// shape_shift extents. This matches the CodeGen XArrayCoorOp lowering, which
+// reads stride from the box (getStrideFromBox) regardless of any explicit
+// shape; the shape_shift only contributes lower bounds for index translation.
 // CHECK-LABEL: func.func @array_coor_box_shape_shift_slice
-// CHECK:       %[[C1:.*]] = arith.constant 1 : index
-// CHECK:       %[[C5:.*]] = arith.constant 5 : index
-// CHECK:       %[[C10:.*]] = arith.constant 10 : index
 // CHECK:       fir.box_addr %arg0
-// CHECK:       memref.reinterpret_cast %{{.+}} to offset: [%{{.+}}], sizes: [%[[C5]], %[[C10]]], strides: [%[[C10]], %{{.+}}]
+// CHECK:       fir.box_elesize %arg0
+// CHECK:       fir.box_dims %arg0
+// CHECK:       arith.divsi
+// CHECK:       fir.box_dims %arg0
+// CHECK:       arith.divsi
+// CHECK:       memref.reinterpret_cast %{{.+}} to offset: [%{{.+}}], sizes: [{{%.+}}, {{%.+}}], strides: [{{%.+}}, {{%.+}}]
 // CHECK:       memref.load
-// CHECK-NOT:   fir.box_dims
-// CHECK-NOT:   fir.box_elesize
 // CHECK-NOT:   fir.array_coor
 func.func @array_coor_box_shape_shift_slice(%arg0: !fir.box<!fir.array<?x?xi32>>) {
   %c1 = arith.constant 1 : index

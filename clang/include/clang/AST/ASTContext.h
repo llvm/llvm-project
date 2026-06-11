@@ -40,6 +40,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -69,12 +70,6 @@ struct ScalableVecTyKey {
 // Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
 // as a key in DenseMap.
 template <> struct DenseMapInfo<ScalableVecTyKey> {
-  static inline ScalableVecTyKey getEmptyKey() {
-    return {DenseMapInfo<clang::QualType>::getEmptyKey(), ~0U, ~0U};
-  }
-  static inline ScalableVecTyKey getTombstoneKey() {
-    return {DenseMapInfo<clang::QualType>::getTombstoneKey(), ~0U, ~0U};
-  }
   static unsigned getHashValue(const ScalableVecTyKey &Val) {
     return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
                         Val.NumElts, Val.NumFields);
@@ -293,7 +288,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
-  mutable llvm::FoldingSet<AttributedType> AttributedTypes;
+  mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
+      AttributedTypes;
   mutable llvm::FoldingSet<PipeType> PipeTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
@@ -949,6 +945,9 @@ public:
   QualType getIntTypeForBitwidth(unsigned DestWidth,
                                  unsigned Signed) const;
 
+  QualType getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                      unsigned Signed) const;
+
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
@@ -1402,6 +1401,9 @@ public:
   /// Keep track of CUDA/HIP implicit host device functions used on device side
   /// in device compilation.
   llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
+
+  /// Functions whose device body should be replaced with a trap stub.
+  llvm::SmallPtrSet<const FunctionDecl *, 4> CUDADeviceInvalidFuncs;
 
   /// Map of SYCL kernels indexed by the unique type used to name the kernel.
   /// Entries are not serialized but are recreated on deserialization of a
@@ -4003,16 +4005,6 @@ typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
   return Value;
 }
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
-  static FoldingSetNodeID getEmptyKey() { return FoldingSetNodeID{}; }
-
-  static FoldingSetNodeID getTombstoneKey() {
-    FoldingSetNodeID ID;
-    for (size_t I = 0; I < sizeof(ID) / sizeof(unsigned); ++I) {
-      ID.AddInteger(std::numeric_limits<unsigned>::max());
-    }
-    return ID;
-  }
-
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
     return Val.ComputeHash();
   }

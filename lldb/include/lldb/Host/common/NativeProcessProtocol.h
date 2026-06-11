@@ -247,8 +247,12 @@ public:
   // Access to inferior stdio
   virtual int GetTerminalFileDescriptor() { return m_terminal_fd; }
 
-  // Stop id interface
+  /// Write up to \p len bytes from \p buf to the inferior's stdin.
+  virtual size_t WriteStdin(const void *buf, size_t len, Status &error) {
+    return 0;
+  }
 
+  // Stop id interface
   uint32_t GetStopID() const;
 
   // Callbacks for low-level process state changes
@@ -266,6 +270,11 @@ public:
     virtual void
     NewSubprocess(NativeProcessProtocol *parent_process,
                   std::unique_ptr<NativeProcessProtocol> child_process) = 0;
+
+    /// Called by the platform when the inferior writes to stdout/stderr
+    /// through a redirected pseudoconsole that the platform owns.
+    virtual void NewProcessOutput(NativeProcessProtocol *process,
+                                  llvm::StringRef data) {}
   };
 
   virtual Status GetLoadedModuleFileSpec(const char *module_path,
@@ -287,8 +296,9 @@ public:
     savecore = (1u << 7),
     siginfo_read = (1u << 8),
     libraries = (1u << 9),
+    accelerator_plugins = (1u << 10),
 
-    LLVM_MARK_AS_BITMASK_ENUM(libraries)
+    LLVM_MARK_AS_BITMASK_ENUM(accelerator_plugins)
   };
 
   class Manager {

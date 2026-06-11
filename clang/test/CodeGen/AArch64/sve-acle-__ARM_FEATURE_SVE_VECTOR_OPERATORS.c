@@ -58,7 +58,7 @@ typedef int8_t vec_int8 __attribute__((vector_size(N / 8)));
 // CHECK128-NEXT:    ret <16 x i8> [[CASTFIXEDSVE]]
 
 // CHECK-LABEL: define{{.*}} void @f2(
-// CHECK-SAME:   ptr dead_on_unwind noalias writable writeonly sret(<[[#div(VBITS,8)]] x i8>) align 16 captures(none) initializes((0, [[#div(VBITS,8)]])) %agg.result, ptr noundef readonly captures(none) dead_on_return %0)
+// CHECK-SAME:   ptr dead_on_unwind noalias nofree writable writeonly sret(<[[#div(VBITS,8)]] x i8>) align 16 captures(none) initializes((0, [[#div(VBITS,8)]])) %agg.result, ptr nofree noundef readonly captures(none) dead_on_return %0)
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[X:%.*]] = load <[[#div(VBITS,8)]] x i8>, ptr [[TMP0:%.*]], align 16, [[TBAA6:!tbaa !.*]]
 // CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v[[#div(VBITS,8)]]i8(<vscale x 16 x i8> poison, <[[#div(VBITS,8)]] x i8> [[X]], i64 0)

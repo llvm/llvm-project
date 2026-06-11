@@ -102,6 +102,7 @@ private:
   bool selectG_AMDGPU_MAD_64_32(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectG_FMA_FMAD(MachineInstr &I) const;
+  bool selectS16MergeToS32(MachineInstr &MI) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
   bool selectG_BUILD_VECTOR(MachineInstr &I) const;
@@ -247,8 +248,9 @@ private:
   InstructionSelector::ComplexRendererFns
   selectSmrdSgprImm(MachineOperand &Root) const;
 
-  std::pair<Register, int> selectFlatOffsetImpl(MachineOperand &Root,
-                                                uint64_t FlatVariant) const;
+  std::pair<Register, int>
+  selectFlatOffsetImpl(MachineOperand &Root,
+                       AMDGPU::FlatAddrSpace FlatVariant) const;
 
   InstructionSelector::ComplexRendererFns
   selectFlatOffset(MachineOperand &Root) const;

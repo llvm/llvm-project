@@ -67,6 +67,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   const LLT bf16 = LLT::bfloat16();
   const LLT v4bf16 = LLT::fixed_vector(4, bf16);
+  const LLT v8bf16 = LLT::fixed_vector(8, bf16);
 
   const LLT f16 = LLT::float16();
   const LLT v4f16 = LLT::fixed_vector(4, f16);
@@ -424,6 +425,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .lower();
 
+  getActionDefinitionsBuilder(G_CLMUL).legalFor({v8i8, v16i8});
+
   getActionDefinitionsBuilder(G_BSWAP)
       .legalFor({i32, i64, v4i16, v8i16, v2i32, v4i32, v2i64})
       .widenScalarOrEltToNextPow2(0, 16)
@@ -465,33 +468,26 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_FABS, G_FNEG})
       .legalFor({f32, f64, v2f32, v4f32, v2f64})
-      .legalFor(HasFP16, {f16, v4f16, v8f16})
+      .legalFor(HasFP16, {f16, bf16, v4f16, v4bf16, v8f16, v8bf16})
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0)
       .lowerIf(scalarOrEltWiderThan(0, 64))
       .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0)
-      .lowerFor({f16, v4f16, v8f16});
+      .lowerFor({f16, bf16, v4f16, v4bf16, v8f16, v8bf16});
 
-  getActionDefinitionsBuilder(G_FREM)
-      .libcallFor({f32, f64, f128})
-      .minScalar(0, f32)
-      .scalarize(0);
-
-  getActionDefinitionsBuilder({G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2,
+  getActionDefinitionsBuilder({G_FREM, G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2,
                                G_FLOG10, G_FTAN, G_FEXP, G_FEXP2, G_FEXP10,
                                G_FACOS, G_FASIN, G_FATAN, G_FATAN2, G_FCOSH,
                                G_FSINH, G_FTANH, G_FMODF})
-      // We need a call for these, so we always need to scalarize.
-      .scalarize(0)
-      // Regardless of FP16 support, widen 16-bit elements to 32-bits.
-      .minScalar(0, f32)
-      .libcallFor({f32, f64, f128});
+      .libcallFor({f32, f64, f128})
+      .widenScalarFor({f16, bf16}, changeElementTo(0, f32))
+      .scalarize(0);
   getActionDefinitionsBuilder({G_FPOWI, G_FLDEXP})
-      .scalarize(0)
-      .minScalar(0, f32)
-      .libcallFor({{f32, i32}, {f64, i32}, {f128, i32}});
+      .libcallFor({{f32, i32}, {f64, i32}, {f128, i32}})
+      .widenScalarFor({f16, bf16}, changeElementTo(0, f32))
+      .scalarize(0);
 
   getActionDefinitionsBuilder({G_LROUND, G_INTRINSIC_LRINT})
       .legalFor({{i32, f32}, {i32, f64}, {i64, f32}, {i64, f64}})
@@ -1940,6 +1936,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_FMAXNUM);
   case Intrinsic::aarch64_neon_fminnm:
     return LowerBinOp(TargetOpcode::G_FMINNUM);
+  case Intrinsic::aarch64_neon_pmul:
+    return LowerBinOp(TargetOpcode::G_CLMUL);
   case Intrinsic::aarch64_neon_pmull:
   case Intrinsic::aarch64_neon_pmull64:
     return LowerBinOp(AArch64::G_PMULL);
@@ -2101,6 +2099,8 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerUnaryOp(TargetOpcode::G_FPTOUI_SAT);
   case Intrinsic::aarch64_neon_fcvtzs:
     return LowerUnaryOp(TargetOpcode::G_FPTOSI_SAT);
+  case Intrinsic::aarch64_neon_cls:
+    return LowerUnaryOp(TargetOpcode::G_CTLS);
 
   case Intrinsic::vector_reverse:
     // TODO: Add support for vector_reverse
