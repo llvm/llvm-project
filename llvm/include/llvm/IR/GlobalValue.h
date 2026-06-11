@@ -493,9 +493,7 @@ public:
   /// interposable (see \c isInterposable), since in such cases the currently
   /// visible variant is *a* correct implementation of the original source
   /// function; it just isn't the *only* correct implementation.
-  bool isDefinitionExact() const {
-    return !mayBeDerefinedOrNoIPA();
-  }
+  bool isDefinitionExact() const { return !mayBeDerefinedOrNoIPA(); }
 
   /// Return true if this global has an exact defintion.
   bool hasExactDefinition() const {
