@@ -79,6 +79,10 @@ typedef int (*hipModuleGetGlobalTy)(void **, size_t *, void *, const char *);
 typedef int (*hipGetDeviceCountTy)(int *);
 typedef int (*hipGetDeviceTy)(int *);
 typedef int (*hipSetDeviceTy)(int);
+#if defined(__linux__) && !defined(_WIN32)
+typedef void *HipStream;
+typedef int (*hipStreamGetDeviceTy)(HipStream, int *);
+#endif
 
 /* Minimal hipDeviceProp_t (HIP 6.x R0600): only gcnArchName at offset 1160
  * is read. Padded to 4096 to tolerate ABI growth. */
@@ -96,6 +100,9 @@ static hipModuleGetGlobalTy pHipModuleGetGlobal = nullptr;
 static hipGetDeviceCountTy pHipGetDeviceCount = nullptr;
 static hipGetDeviceTy pHipGetDevice = nullptr;
 static hipSetDeviceTy pHipSetDevice = nullptr;
+#if defined(__linux__) && !defined(_WIN32)
+static hipStreamGetDeviceTy pHipStreamGetDevice = nullptr;
+#endif
 static hipGetDevicePropertiesTy pHipGetDeviceProperties = nullptr;
 
 static int NumDevices = 0;
@@ -148,6 +155,10 @@ static void doEnsureHipLoaded(void) {
       (hipGetDeviceTy)__interception::LookupSymbol(Handle, "hipGetDevice");
   pHipSetDevice =
       (hipSetDeviceTy)__interception::LookupSymbol(Handle, "hipSetDevice");
+#if defined(__linux__) && !defined(_WIN32)
+  pHipStreamGetDevice = (hipStreamGetDeviceTy)__interception::LookupSymbol(
+      Handle, "hipStreamGetDevice");
+#endif
   pHipGetDeviceProperties =
       (hipGetDevicePropertiesTy)__interception::LookupSymbol(
           Handle, "hipGetDevicePropertiesR0600");
@@ -244,13 +255,31 @@ static int hipSetDevice(int DeviceId) {
 }
 
 #if defined(__linux__) && !defined(_WIN32)
-static void markCurrentDeviceUsed(void) {
-  int DeviceId = -1;
-  if (hipGetDevice(&DeviceId) != 0 || DeviceId < 0 || DeviceId >= NumDevices ||
-      !UsedDevices)
+static int hipStreamGetDevice(HipStream Stream, int *DeviceId) {
+  ensureHipLoaded();
+  return pHipStreamGetDevice ? pHipStreamGetDevice(Stream, DeviceId) : -1;
+}
+
+static void markDeviceUsed(int DeviceId) {
+  if (DeviceId < 0 || DeviceId >= NumDevices || !UsedDevices)
     return;
   __atomic_store_n(&UsedDevices[DeviceId], 1, __ATOMIC_RELAXED);
   __atomic_store_n(&AnyDeviceUsed, 1, __ATOMIC_RELEASE);
+}
+
+static void markCurrentDeviceUsed(void) {
+  int DeviceId = -1;
+  if (hipGetDevice(&DeviceId) == 0)
+    markDeviceUsed(DeviceId);
+}
+
+static void markLaunchStreamDeviceUsed(HipStream Stream) {
+  int DeviceId = -1;
+  if (Stream && hipStreamGetDevice(Stream, &DeviceId) == 0) {
+    markDeviceUsed(DeviceId);
+    return;
+  }
+  markCurrentDeviceUsed();
 }
 
 static int shouldCollectDevice(int DeviceId) {
@@ -1138,29 +1167,144 @@ typedef struct {
   unsigned int z;
 } HipDim3;
 
-typedef void *HipFunction;
-typedef void *HipStream;
+typedef struct {
+  void *Func;
+  HipDim3 GridDim;
+  HipDim3 BlockDim;
+  void **Args;
+  size_t SharedMem;
+  HipStream Stream;
+} HipLaunchParams;
 
-static int recordHipLaunchResult(int Rc) {
+typedef struct {
+  HipDim3 GridDim;
+  HipDim3 BlockDim;
+  size_t DynamicSmemBytes;
+  HipStream Stream;
+  void *Attrs;
+  unsigned NumAttrs;
+} HipLaunchConfig;
+
+typedef void *HipFunction;
+typedef void *HipEvent;
+typedef void *HipGraphExec;
+
+static int recordHipLaunchResult(int Rc, HipStream Stream) {
   if (Rc == 0)
-    markCurrentDeviceUsed();
+    markLaunchStreamDeviceUsed(Stream);
+  return Rc;
+}
+
+static int recordHipMultiDeviceLaunchResult(int Rc,
+                                            HipLaunchParams *LaunchParams,
+                                            int NumLaunches) {
+  if (Rc != 0 || !LaunchParams || NumLaunches <= 0)
+    return Rc;
+  for (int I = 0; I < NumLaunches; ++I)
+    markLaunchStreamDeviceUsed(LaunchParams[I].Stream);
   return Rc;
 }
 
 INTERCEPTOR(int, hipLaunchKernel, const void *Function, HipDim3 GridDim,
             HipDim3 BlockDim, void **Args, size_t SharedMemBytes,
             HipStream Stream) {
-  return recordHipLaunchResult(REAL(hipLaunchKernel)(
-      Function, GridDim, BlockDim, Args, SharedMemBytes, Stream));
+  return recordHipLaunchResult(REAL(hipLaunchKernel)(Function, GridDim,
+                                                     BlockDim, Args,
+                                                     SharedMemBytes, Stream),
+                               Stream);
+}
+
+INTERCEPTOR(int, hipLaunchKernel_spt, const void *Function, HipDim3 GridDim,
+            HipDim3 BlockDim, void **Args, size_t SharedMemBytes,
+            HipStream Stream) {
+  return recordHipLaunchResult(
+      REAL(hipLaunchKernel_spt)(Function, GridDim, BlockDim, Args,
+                                SharedMemBytes, Stream),
+      Stream);
+}
+
+INTERCEPTOR(int, hipExtLaunchKernel, const void *Function, HipDim3 GridDim,
+            HipDim3 BlockDim, void **Args, size_t SharedMemBytes,
+            HipStream Stream, HipEvent StartEvent, HipEvent StopEvent,
+            int Flags) {
+  return recordHipLaunchResult(
+      REAL(hipExtLaunchKernel)(Function, GridDim, BlockDim, Args,
+                               SharedMemBytes, Stream, StartEvent, StopEvent,
+                               Flags),
+      Stream);
+}
+
+INTERCEPTOR(int, hipLaunchKernelExC, const HipLaunchConfig *Config,
+            const void *Function, void **Args) {
+  int Rc = REAL(hipLaunchKernelExC)(Config, Function, Args);
+  return recordHipLaunchResult(Rc, Config ? Config->Stream : nullptr);
+}
+
+INTERCEPTOR(int, hipLaunchCooperativeKernel, const void *Function,
+            HipDim3 GridDim, HipDim3 BlockDim, void **KernelParams,
+            unsigned SharedMemBytes, HipStream Stream) {
+  return recordHipLaunchResult(
+      REAL(hipLaunchCooperativeKernel)(Function, GridDim, BlockDim,
+                                       KernelParams, SharedMemBytes, Stream),
+      Stream);
+}
+
+INTERCEPTOR(int, hipLaunchCooperativeKernel_spt, const void *Function,
+            HipDim3 GridDim, HipDim3 BlockDim, void **KernelParams,
+            unsigned SharedMemBytes, HipStream Stream) {
+  return recordHipLaunchResult(
+      REAL(hipLaunchCooperativeKernel_spt)(
+          Function, GridDim, BlockDim, KernelParams, SharedMemBytes, Stream),
+      Stream);
+}
+
+INTERCEPTOR(int, hipLaunchCooperativeKernelMultiDevice,
+            HipLaunchParams *LaunchParams, int NumDevices, unsigned Flags) {
+  return recordHipMultiDeviceLaunchResult(
+      REAL(hipLaunchCooperativeKernelMultiDevice)(LaunchParams, NumDevices,
+                                                  Flags),
+      LaunchParams, NumDevices);
+}
+
+INTERCEPTOR(int, hipExtLaunchMultiKernelMultiDevice,
+            HipLaunchParams *LaunchParams, int NumDevices, unsigned Flags) {
+  return recordHipMultiDeviceLaunchResult(
+      REAL(hipExtLaunchMultiKernelMultiDevice)(LaunchParams, NumDevices, Flags),
+      LaunchParams, NumDevices);
 }
 
 INTERCEPTOR(int, hipModuleLaunchKernel, HipFunction Function, unsigned GridDimX,
             unsigned GridDimY, unsigned GridDimZ, unsigned BlockDimX,
             unsigned BlockDimY, unsigned BlockDimZ, unsigned SharedMemBytes,
             HipStream Stream, void **KernelParams, void **Extra) {
-  return recordHipLaunchResult(REAL(hipModuleLaunchKernel)(
-      Function, GridDimX, GridDimY, GridDimZ, BlockDimX, BlockDimY, BlockDimZ,
-      SharedMemBytes, Stream, KernelParams, Extra));
+  return recordHipLaunchResult(
+      REAL(hipModuleLaunchKernel)(Function, GridDimX, GridDimY, GridDimZ,
+                                  BlockDimX, BlockDimY, BlockDimZ,
+                                  SharedMemBytes, Stream, KernelParams, Extra),
+      Stream);
+}
+
+INTERCEPTOR(int, hipExtModuleLaunchKernel, HipFunction Function,
+            unsigned GridDimX, unsigned GridDimY, unsigned GridDimZ,
+            unsigned BlockDimX, unsigned BlockDimY, unsigned BlockDimZ,
+            size_t SharedMemBytes, HipStream Stream, void **KernelParams,
+            void **Extra, HipEvent StartEvent, HipEvent StopEvent,
+            unsigned Flags) {
+  return recordHipLaunchResult(
+      REAL(hipExtModuleLaunchKernel)(Function, GridDimX, GridDimY, GridDimZ,
+                                     BlockDimX, BlockDimY, BlockDimZ,
+                                     SharedMemBytes, Stream, KernelParams,
+                                     Extra, StartEvent, StopEvent, Flags),
+      Stream);
+}
+
+INTERCEPTOR(int, hipGraphLaunch, HipGraphExec GraphExec, HipStream Stream) {
+  return recordHipLaunchResult(REAL(hipGraphLaunch)(GraphExec, Stream), Stream);
+}
+
+INTERCEPTOR(int, hipGraphLaunch_spt, HipGraphExec GraphExec, HipStream Stream) {
+  return recordHipLaunchResult(REAL(hipGraphLaunch_spt)(GraphExec, Stream),
+                               Stream);
 }
 
 INTERCEPTOR(int, hipModuleLoad, void **module, const char *fname) {
@@ -1194,17 +1338,26 @@ INTERCEPTOR(int, hipModuleUnload, void *module) {
 
 __attribute__((constructor)) static void installHipInterceptors() {
   /* Avoid interception unless the HIP runtime is already loaded. */
-  int HasLaunchKernel = dlsym(RTLD_DEFAULT, "hipLaunchKernel") != nullptr;
-  int HasModuleLaunchKernel =
-      dlsym(RTLD_DEFAULT, "hipModuleLaunchKernel") != nullptr;
   int HasModuleLoad = dlsym(RTLD_DEFAULT, "hipModuleLoad") != nullptr;
-  if (!HasLaunchKernel && !HasModuleLaunchKernel && !HasModuleLoad)
-    return;
   int InstalledLaunch = 0;
-  if (HasLaunchKernel)
-    InstalledLaunch |= INTERCEPT_FUNCTION(hipLaunchKernel);
-  if (HasModuleLaunchKernel)
-    InstalledLaunch |= INTERCEPT_FUNCTION(hipModuleLaunchKernel);
+#define TRY_INTERCEPT_LAUNCH(Name)                                             \
+  do {                                                                         \
+    if (dlsym(RTLD_DEFAULT, #Name))                                            \
+      InstalledLaunch |= INTERCEPT_FUNCTION(Name);                             \
+  } while (0)
+  TRY_INTERCEPT_LAUNCH(hipLaunchKernel);
+  TRY_INTERCEPT_LAUNCH(hipLaunchKernel_spt);
+  TRY_INTERCEPT_LAUNCH(hipExtLaunchKernel);
+  TRY_INTERCEPT_LAUNCH(hipLaunchKernelExC);
+  TRY_INTERCEPT_LAUNCH(hipLaunchCooperativeKernel);
+  TRY_INTERCEPT_LAUNCH(hipLaunchCooperativeKernel_spt);
+  TRY_INTERCEPT_LAUNCH(hipLaunchCooperativeKernelMultiDevice);
+  TRY_INTERCEPT_LAUNCH(hipExtLaunchMultiKernelMultiDevice);
+  TRY_INTERCEPT_LAUNCH(hipModuleLaunchKernel);
+  TRY_INTERCEPT_LAUNCH(hipExtModuleLaunchKernel);
+  TRY_INTERCEPT_LAUNCH(hipGraphLaunch);
+  TRY_INTERCEPT_LAUNCH(hipGraphLaunch_spt);
+#undef TRY_INTERCEPT_LAUNCH
   int InstalledAny = InstalledLaunch;
   if (HasModuleLoad) {
     HasModuleLoad = INTERCEPT_FUNCTION(hipModuleLoad);
