@@ -1299,6 +1299,45 @@ def and_or_disjoint_mask : GICombineRule<
          [{ return Helper.matchAndOrDisjointMask(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${info}); }])>;
 
+// (X&~Y)|Y --> X|Y
+def or_and_xor_to_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_AND $and, $x, $not),
+         (G_OR $root, $and, $y)),
+  (apply (G_OR $root, $x, $y))>;
+
+// (X&Y)|~Y --> X|~Y
+def or_and_xor_to_xor_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_AND $and, $x, $y),
+         (G_OR $root, $and, $not)),
+  (apply (G_XOR $xor, $y, -1),
+         (G_OR $root, $x, $xor))>;
+
+// (X|~Y)&Y --> X&Y
+def and_xor_or_to_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_OR $or, $x, $not),
+         (G_AND $root, $or, $y)),
+  (apply (G_AND $root, $x, $y))>;
+
+// (X|Y)&~Y --> X&~Y
+def and_xor_or_to_xor_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_OR $and, $x, $y),
+         (G_AND $root, $and, $not)),
+  (apply (G_XOR $xor, $y, -1),
+         (G_AND $root, $x, $xor))>;
+
+def or_and_xor_combines : GICombineGroup<[or_and_xor_to_or,
+                                          or_and_xor_to_xor_or,
+                                          and_xor_or_to_and,
+                                          and_xor_or_to_xor_and]>;
+
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (G_CONSTANT $mask, $imm2),
@@ -2518,7 +2557,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,
     sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    simplify_neg_minmax, combine_concat_vector,
+    or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,

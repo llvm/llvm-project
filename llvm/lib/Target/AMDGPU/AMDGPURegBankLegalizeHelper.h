@@ -18,6 +18,7 @@
 namespace llvm {
 
 class MachineIRBuilder;
+class SIMachineFunctionInfo;
 
 namespace AMDGPU {
 
@@ -38,6 +39,7 @@ struct WaterfallInfo {
 // instruction(s).
 class RegBankLegalizeHelper {
   MachineFunction &MF;
+  const SIMachineFunctionInfo *MFI;
   const GCNSubtarget &ST;
   MachineIRBuilder &B;
   MachineRegisterInfo &MRI;
