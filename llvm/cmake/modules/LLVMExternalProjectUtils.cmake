@@ -85,9 +85,16 @@ function(llvm_ExternalProject_Add name source_dir)
   endforeach()
 
   # If CMAKE_SYSTEM_NAME is not set explicitly in the arguments passed to us,
-  # reflect CMake's own default.
+  # derive it from the target triple if available, otherwise reflect CMake's
+  # own default. This ensures that cross-compilation targets get the correct
+  # platform files (e.g. AMDGPU targets on a Darwin host won't get macOS flags).
   if (NOT _cmake_system_name)
-    set(_cmake_system_name "${CMAKE_HOST_SYSTEM_NAME}")
+    if(ARG_TARGET_TRIPLE)
+      include(GetTripleCMakeSystemName)
+      get_triple_cmake_system_name("${ARG_TARGET_TRIPLE}" _cmake_system_name)
+    else()
+      set(_cmake_system_name "${CMAKE_HOST_SYSTEM_NAME}")
+    endif()
   endif()
 
   if(NOT ARG_TARGET_TRIPLE)
@@ -376,6 +383,22 @@ function(llvm_ExternalProject_Add name source_dir)
     list(APPEND compiler_args -DCMAKE_CXX_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
     list(APPEND compiler_args -DCMAKE_Fortran_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
     list(APPEND compiler_args -DCMAKE_ASM_COMPILER_TARGET=${ARG_TARGET_TRIPLE})
+
+    # Pass CMAKE_SYSTEM_NAME derived from the target triple so the sub-build
+    # loads the correct platform files instead of the host's.
+    if(NOT "${_cmake_system_name}" STREQUAL "${CMAKE_HOST_SYSTEM_NAME}")
+      list(APPEND compiler_args -DCMAKE_SYSTEM_NAME=${_cmake_system_name})
+    endif()
+
+    # Forward Darwin-specific variables only when targeting Darwin.
+    if("${_cmake_system_name}" STREQUAL "Darwin")
+      if(CMAKE_OSX_SYSROOT)
+        list(APPEND compiler_args -DCMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT})
+      endif()
+      if(CMAKE_OSX_DEPLOYMENT_TARGET)
+        list(APPEND compiler_args -DCMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET})
+      endif()
+    endif()
   endif()
 
   if(CMAKE_VERBOSE_MAKEFILE)
