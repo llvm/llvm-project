@@ -10,6 +10,8 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyValueInfo.h"
@@ -40,6 +42,12 @@ void ejit::EJitPassBuilder::registerFunctionAnalyses(
   FAM.registerPass([&] { return TypeBasedAA(); });
 
   FAM.registerPass([&] { return AssumptionAnalysis(); });
+  // BranchProbabilityAnalysis + BlockFrequencyAnalysis are required by the L3
+  // loop-unroll pipeline (LoopFullUnrollPass queries them via getCachedResult).
+  // Without them an EJIT_OPT_L3 compile asserts/crashes. Registering them keeps
+  // the default (L2) behavior unchanged while making the L3 path functional.
+  FAM.registerPass([&] { return BranchProbabilityAnalysis(); });
+  FAM.registerPass([&] { return BlockFrequencyAnalysis(); });
   FAM.registerPass([&] { return DemandedBitsAnalysis(); });
   FAM.registerPass([&] { return DominatorTreeAnalysis(); });
   FAM.registerPass([&] { return LazyValueAnalysis(); });

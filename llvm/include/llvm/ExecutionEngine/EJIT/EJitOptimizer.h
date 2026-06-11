@@ -68,6 +68,11 @@ private:
   FunctionPassManager L1FPM_;   // SCCP + ADCE + SimplifyCFG (always runs)
   FunctionPassManager L2FPM_;   // SimplifyCFG only (L2 inline cleanup)
   FunctionPassManager L3FPM_;   // LoopSimplify + LoopFullUnroll + Promote + SimplifyCFG
+
+  // Grant the unit-test accessor visibility into the private pipeline steps.
+  // runPipeline() remains the only production entry point; this friend keeps
+  // the per-step API private while letting tests exercise steps in isolation.
+  friend struct EJitOptimizerTestAccess;
 };
 
 } // namespace ejit
