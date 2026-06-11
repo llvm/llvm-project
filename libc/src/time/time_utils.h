@@ -36,12 +36,17 @@ namespace time_utils {
 /// \return The epoch time on success, or nullopt on failure.
 cpp::optional<time_t> mktime_internal(const tm *tm_out);
 
-// For non-POSIX targets where EOVERFLOW is not defined, we map it to ERANGE.
-// The C standard does not require setting errno on overflow for these
-// functions, but doing so is compliant and provides consistent error reporting.
-#ifndef EOVERFLOW
-#define EOVERFLOW ERANGE
+// EOVERFLOW is a POSIX extension and might not be defined on targets that only
+// support the C standard (e.g. generic baremetal). The C standard does not
+// require setting errno on overflow for time functions, but POSIX does.
+// We map it to ERANGE on non-POSIX targets to provide consistent error
+// reporting while remaining compliant.
+#ifdef EOVERFLOW
+constexpr int TIME_OVERFLOW = EOVERFLOW;
+#else
+constexpr int TIME_OVERFLOW = ERANGE;
 #endif
+
 
 /// Update the "tm" structure's year, month, etc. members from seconds.
 ///
@@ -75,7 +80,7 @@ LIBC_INLINE ErrorOr<char *> asctime(const tm *timeptr, char *buffer,
   if (written_size < 0)
     return cpp::unexpected(EINVAL);
   if (static_cast<size_t>(written_size) >= bufferLength) {
-    return cpp::unexpected(EOVERFLOW);
+    return cpp::unexpected(TIME_OVERFLOW);
   }
   return buffer;
 }
@@ -339,11 +344,11 @@ public:
 
   /// Get epoch time.
   ///
-  /// \return Epoch time in seconds on success, or EOVERFLOW on failure.
+  /// \return Epoch time in seconds on success, or TIME_OVERFLOW on failure.
   LIBC_INLINE ErrorOr<time_t> get_epoch() const {
     auto seconds = mktime_internal(timeptr);
     if (!seconds)
-      return cpp::unexpected(EOVERFLOW);
+      return cpp::unexpected(TIME_OVERFLOW);
     return *seconds;
   }
 

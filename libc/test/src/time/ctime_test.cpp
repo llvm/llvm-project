@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/signal_macros.h"
+#include "src/time/time_utils.h"
 #include "src/time/ctime.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
@@ -47,6 +48,6 @@ TEST_F(LlvmLibcCtime, InvalidArgument) {
   char *result;
   t = 253402300800; // 10000-01-01 00:00:00 UTC (overflows 26-byte buffer)
   result = LIBC_NAMESPACE::ctime(&t);
-  ASSERT_ERRNO_EQ(EOVERFLOW);
+  ASSERT_ERRNO_EQ(LIBC_NAMESPACE::time_utils::TIME_OVERFLOW);
   ASSERT_STREQ(nullptr, result);
 }

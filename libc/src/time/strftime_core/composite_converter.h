@@ -22,7 +22,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {
 
-LIBC_INLINE ErrorOr<IntFormatSection>
+LIBC_INLINE IntFormatSection
 get_specific_int_format(const tm *timeptr, const FormatSection &base_to_conv,
                         char new_conv_name, int TRAILING_CONV_LEN = -1) {
   // a negative padding will be treated as the default
@@ -32,10 +32,8 @@ get_specific_int_format(const tm *timeptr, const FormatSection &base_to_conv,
   new_conv.conv_name = new_conv_name;
   new_conv.min_width = NEW_MIN_WIDTH;
 
-  auto result_or = get_int_format(new_conv, timeptr);
-  if (!result_or)
-    return cpp::unexpected(result_or.error());
-  IntFormatSection result = result_or.value();
+  // We only call this for formats that cannot fail (not %s).
+  IntFormatSection result = get_int_format(new_conv, timeptr).value();
 
   // If the user set the padding, but it's below the width of the trailing
   // conversions, then there should be no padding.
@@ -53,25 +51,11 @@ LIBC_INLINE int convert_date_us(printf_core::Writer<write_mode> *writer,
   // we only pad the first conversion, and we assume all the other values are in
   // their valid ranges.
   constexpr int TRAILING_CONV_LEN = 1 + 2 + 1 + 2; // sizeof("/01/02")
-  IntFormatSection year_conv;
-  IntFormatSection mon_conv;
-  IntFormatSection mday_conv;
 
-  auto mon_conv_or =
+  IntFormatSection mon_conv =
       get_specific_int_format(timeptr, to_conv, 'm', TRAILING_CONV_LEN);
-  if (!mon_conv_or)
-    return -mon_conv_or.error();
-  mon_conv = mon_conv_or.value();
-
-  auto mday_conv_or = get_specific_int_format(timeptr, to_conv, 'd');
-  if (!mday_conv_or)
-    return -mday_conv_or.error();
-  mday_conv = mday_conv_or.value();
-
-  auto year_conv_or = get_specific_int_format(timeptr, to_conv, 'y');
-  if (!year_conv_or)
-    return -year_conv_or.error();
-  year_conv = year_conv_or.value();
+  IntFormatSection mday_conv = get_specific_int_format(timeptr, to_conv, 'd');
+  IntFormatSection year_conv = get_specific_int_format(timeptr, to_conv, 'y');
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, mon_conv));
   RET_IF_RESULT_NEGATIVE(writer->write('/'));
@@ -90,25 +74,11 @@ LIBC_INLINE int convert_date_iso(printf_core::Writer<write_mode> *writer,
   // we only pad the first conversion, and we assume all the other values are in
   // their valid ranges.
   constexpr int TRAILING_CONV_LEN = 1 + 2 + 1 + 2; // sizeof("-01-02")
-  IntFormatSection year_conv;
-  IntFormatSection mon_conv;
-  IntFormatSection mday_conv;
 
-  auto year_conv_or =
+  IntFormatSection year_conv =
       get_specific_int_format(timeptr, to_conv, 'Y', TRAILING_CONV_LEN);
-  if (!year_conv_or)
-    return -year_conv_or.error();
-  year_conv = year_conv_or.value();
-
-  auto mon_conv_or = get_specific_int_format(timeptr, to_conv, 'm');
-  if (!mon_conv_or)
-    return -mon_conv_or.error();
-  mon_conv = mon_conv_or.value();
-
-  auto mday_conv_or = get_specific_int_format(timeptr, to_conv, 'd');
-  if (!mday_conv_or)
-    return -mday_conv_or.error();
-  mday_conv = mday_conv_or.value();
+  IntFormatSection mon_conv = get_specific_int_format(timeptr, to_conv, 'm');
+  IntFormatSection mday_conv = get_specific_int_format(timeptr, to_conv, 'd');
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, year_conv));
   RET_IF_RESULT_NEGATIVE(writer->write('-'));
@@ -128,27 +98,13 @@ LIBC_INLINE int convert_time_am_pm(printf_core::Writer<write_mode> *writer,
   // their valid ranges.
   constexpr int TRAILING_CONV_LEN =
       1 + 2 + 1 + 2 + 1 + 2; // sizeof(":01:02 AM")
-  IntFormatSection hour_conv;
-  IntFormatSection min_conv;
-  IntFormatSection sec_conv;
 
   const time_utils::TMReader time_reader(timeptr);
 
-  auto hour_conv_or =
+  IntFormatSection hour_conv =
       get_specific_int_format(timeptr, to_conv, 'I', TRAILING_CONV_LEN);
-  if (!hour_conv_or)
-    return -hour_conv_or.error();
-  hour_conv = hour_conv_or.value();
-
-  auto min_conv_or = get_specific_int_format(timeptr, to_conv, 'M');
-  if (!min_conv_or)
-    return -min_conv_or.error();
-  min_conv = min_conv_or.value();
-
-  auto sec_conv_or = get_specific_int_format(timeptr, to_conv, 'S');
-  if (!sec_conv_or)
-    return -sec_conv_or.error();
-  sec_conv = sec_conv_or.value();
+  IntFormatSection min_conv = get_specific_int_format(timeptr, to_conv, 'M');
+  IntFormatSection sec_conv = get_specific_int_format(timeptr, to_conv, 'S');
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, hour_conv));
   RET_IF_RESULT_NEGATIVE(writer->write(':'));
@@ -169,19 +125,10 @@ LIBC_INLINE int convert_time_minute(printf_core::Writer<write_mode> *writer,
   // we only pad the first conversion, and we assume all the other values are in
   // their valid ranges.
   constexpr int TRAILING_CONV_LEN = 1 + 2; // sizeof(":01")
-  IntFormatSection hour_conv;
-  IntFormatSection min_conv;
 
-  auto hour_conv_or =
+  IntFormatSection hour_conv =
       get_specific_int_format(timeptr, to_conv, 'H', TRAILING_CONV_LEN);
-  if (!hour_conv_or)
-    return -hour_conv_or.error();
-  hour_conv = hour_conv_or.value();
-
-  auto min_conv_or = get_specific_int_format(timeptr, to_conv, 'M');
-  if (!min_conv_or)
-    return -min_conv_or.error();
-  min_conv = min_conv_or.value();
+  IntFormatSection min_conv = get_specific_int_format(timeptr, to_conv, 'M');
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, hour_conv));
   RET_IF_RESULT_NEGATIVE(writer->write(':'));
@@ -198,25 +145,11 @@ LIBC_INLINE int convert_time_second(printf_core::Writer<write_mode> *writer,
   // we only pad the first conversion, and we assume all the other values are in
   // their valid ranges.
   constexpr int TRAILING_CONV_LEN = 1 + 2 + 1 + 2; // sizeof(":01:02")
-  IntFormatSection hour_conv;
-  IntFormatSection min_conv;
-  IntFormatSection sec_conv;
 
-  auto hour_conv_or =
+  IntFormatSection hour_conv =
       get_specific_int_format(timeptr, to_conv, 'H', TRAILING_CONV_LEN);
-  if (!hour_conv_or)
-    return -hour_conv_or.error();
-  hour_conv = hour_conv_or.value();
-
-  auto min_conv_or = get_specific_int_format(timeptr, to_conv, 'M');
-  if (!min_conv_or)
-    return -min_conv_or.error();
-  min_conv = min_conv_or.value();
-
-  auto sec_conv_or = get_specific_int_format(timeptr, to_conv, 'S');
-  if (!sec_conv_or)
-    return -sec_conv_or.error();
-  sec_conv = sec_conv_or.value();
+  IntFormatSection min_conv = get_specific_int_format(timeptr, to_conv, 'M');
+  IntFormatSection sec_conv = get_specific_int_format(timeptr, to_conv, 'S');
 
   RET_IF_RESULT_NEGATIVE(write_padded_int(writer, hour_conv));
   RET_IF_RESULT_NEGATIVE(writer->write(':'));
@@ -244,18 +177,8 @@ LIBC_INLINE int convert_full_date_time(printf_core::Writer<write_mode> *writer,
 
   cpp::string_view wday_str = unwrap_opt(time_reader.get_weekday_short_name());
   cpp::string_view month_str = unwrap_opt(time_reader.get_month_short_name());
-  IntFormatSection mday_conv;
-  IntFormatSection year_conv;
-
-  auto mday_conv_or = get_specific_int_format(timeptr, to_conv, 'e');
-  if (!mday_conv_or)
-    return -mday_conv_or.error();
-  mday_conv = mday_conv_or.value();
-
-  auto year_conv_or = get_specific_int_format(timeptr, to_conv, 'Y');
-  if (!year_conv_or)
-    return -year_conv_or.error();
-  year_conv = year_conv_or.value();
+  IntFormatSection mday_conv = get_specific_int_format(timeptr, to_conv, 'e');
+  IntFormatSection year_conv = get_specific_int_format(timeptr, to_conv, 'Y');
 
   FormatSection raw_time_conv = to_conv;
   raw_time_conv.conv_name = 'T';

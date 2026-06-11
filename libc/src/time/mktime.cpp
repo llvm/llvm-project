@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(time_t, mktime, (struct tm * tm_out)) {
 
   auto mktime_result = time_utils::mktime_internal(tm_out);
   if (!mktime_result) {
-    libc_errno = EOVERFLOW;
+    libc_errno = time_utils::TIME_OVERFLOW;
     return time_constants::OUT_OF_RANGE_RETURN_VALUE;
   }
 

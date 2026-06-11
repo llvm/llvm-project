@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
+
+#include "src/time/time_utils.h"
 #include "hdr/signal_macros.h"
 #include "src/time/asctime.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -208,6 +210,6 @@ TEST_F(LlvmLibcAsctime, Max64BitYear) {
                         50,         // sec
                         2,          // wday
                         50);        // yday
-  ASSERT_ERRNO_EQ(EOVERFLOW);
+  ASSERT_ERRNO_EQ(LIBC_NAMESPACE::time_utils::TIME_OVERFLOW);
   ASSERT_STREQ(nullptr, result);
 }
