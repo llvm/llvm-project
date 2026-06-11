@@ -133,6 +133,12 @@ bool EJitRuntimeState::isActive(const std::string &periodName,
 #ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
 #endif
+  // The built-in "static" time window is always active (SPEC4 §2.1).
+  // static variables are registered via ejit_register_static_var, not
+  // listed in arraysByPeriod_, so getArrays("static") returns nullptr.
+  if (periodName == "static")
+    return true;
+
   // Return true if ANY array registered under this period name is active
   // at the given cellIdx (period-level semantics for JIT compile decisions).
   const auto *arrs = registry_.getArrays(periodName);
