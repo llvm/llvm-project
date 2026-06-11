@@ -1257,6 +1257,23 @@ define void @assume_dereferenceable_variable_on_nullptr(i64 %count) {
   ret void
 }
 
+define void @assume_noundef(i32 %val) {
+; CHECK-LABEL: @assume_noundef(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i32 [[VAL:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
+  ret void
+}
+
+define void @redundant_assume_noundef(i32 noundef %val) {
+; CHECK-LABEL: @redundant_assume_noundef(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "noundef"(i32 %val) ]
+  ret void
+}
+
 declare void @use(i1)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
