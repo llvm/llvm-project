@@ -606,7 +606,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // Custom handling for PowerPC ucmp instruction
   if (isPPC64) {
     // UCMP involves using carries, which only works in 64-bit
-    setOperationAction(ISD::UCMP, MVT::i32, Promote);
+    setOperationPromotedToType(ISD::UCMP, MVT::i32, MVT::i64);
     setOperationAction(ISD::UCMP, MVT::i64, Custom);
   } else {
     setOperationAction(ISD::UCMP, MVT::i32, Custom);
@@ -12801,6 +12801,15 @@ SDValue PPCTargetLowering::LowerUCMP(SDValue Op, SelectionDAG &DAG) const {
   SDValue B = DAG.getFreeze(Op.getOperand(1));
   EVT OpVT = A.getValueType();
   EVT ResVT = Op.getValueType();
+
+  // On PPC64, carry ops use the full 64-bit register. UCMP i32 is promoted to
+  // i64 by the legalizer; this only runs for UCMP i64 with operands still
+  // narrower than i64 (e.g. i64 @llvm.ucmp(i8, i8)).
+  if (Subtarget.isPPC64() && OpVT != MVT::i64) {
+    A = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, A);
+    B = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, B);
+    OpVT = MVT::i64;
+  }
 
   // First compute diff = A - B.
   SDValue Diff = DAG.getNode(ISD::SUB, DL, OpVT, A, B);

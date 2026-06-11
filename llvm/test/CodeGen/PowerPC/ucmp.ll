@@ -108,3 +108,30 @@ define i64 @ucmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.ucmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i64 @ucmp_64_8_zero(i8 %x) nounwind {
+; CHECK-LABEL: ucmp_64_8_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrldi 3, 3, 56
+; CHECK-NEXT:    subfic 4, 3, 0
+; CHECK-NEXT:    li 4, 0
+; CHECK-NEXT:    subfe 4, 4, 3
+; CHECK-NEXT:    subfe 3, 4, 3
+; CHECK-NEXT:    blr
+  %1 = call i64 @llvm.ucmp(i8 %x, i8 0)
+  ret i64 %1
+}
+
+define i64 @ucmp_64_8(i8 %x, i8 %y) nounwind {
+; CHECK-LABEL: ucmp_64_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrldi 3, 3, 56
+; CHECK-NEXT:    clrldi 4, 4, 56
+; CHECK-NEXT:    sub 5, 3, 4
+; CHECK-NEXT:    subc 6, 4, 3
+; CHECK-NEXT:    subfe 3, 4, 3
+; CHECK-NEXT:    subfe 3, 3, 5
+; CHECK-NEXT:    blr
+  %1 = call i64 @llvm.ucmp(i8 %x, i8 %y)
+  ret i64 %1
+}
