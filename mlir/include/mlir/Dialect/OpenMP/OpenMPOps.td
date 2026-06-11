@@ -2293,9 +2293,10 @@ def DispatchOp : OpenMP_Op<"dispatch", singleRegion = true> {
   let summary = "dispatch construct";
   let description = [{
     The dispatch construct enables the invocation of a variant of a
-    base procedure. The structured block of a dispatch construct is a
-    single expression statement that contains a function call or a
-    subroutine call.
+    base procedure (without any construct's clauses: device, is_device_ptr,
+    nowait, nocontext, novariants). The structured block of a dispatch
+    construct is a single expression statement that contains a function
+    call or a subroutine call.
   }];
 
   let assemblyFormat = "$region attr-dict";

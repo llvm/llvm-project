@@ -5337,6 +5337,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::omp::Directive directive = beginSpec.DirId();
   mlir::Location currentLocation = converter.genLocation(beginSpec.source);
 
+  if (!clauses.empty())
+    TODO(currentLocation, "OpenMP Dispatch clauses");
+
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, beginSpec.source, directive, clauses)};
