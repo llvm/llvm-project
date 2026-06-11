@@ -252,12 +252,12 @@ CowCompilerInvocation::getMutPreprocessorOutputOpts() {
 
 using ArgumentConsumer = CompilerInvocation::ArgumentConsumer;
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_OPTION_STR_TABLE_CODE
 #include "clang/Options/Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
+#undef OPTTABLE_OPTION_STR_TABLE_CODE
 
 static llvm::StringRef lookupStrInTable(unsigned Offset) {
-  return OptionStrTable[Offset];
+  return llvm::StringTable(OptionNameStrTable)[Offset];
 }
 
 #define SIMPLE_ENUM_VALUE_TABLE

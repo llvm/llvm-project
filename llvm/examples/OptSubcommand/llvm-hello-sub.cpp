@@ -78,8 +78,8 @@ int main(int argc, char **argv) {
   InputArgList Args = T.ParseArgs(ArrayRef(argv + 1, argc - 1), MissingArgIndex,
                                   MissingArgCount);
 
-  StringRef SubCommand = Args.getSubCommand(
-      T.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
+  StringRef SubCommand =
+      Args.getSubCommand(T, HandleMultipleSubcommands, HandleOtherPositionals);
   // Handle help. When help options is found, ignore all other options and exit
   // after printing help.
 

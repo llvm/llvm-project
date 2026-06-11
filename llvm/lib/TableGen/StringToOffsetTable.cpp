@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TableGen/StringToOffsetTable.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -26,10 +27,9 @@ unsigned StringToOffsetTable::GetOrAddStringOffset(StringRef Str) {
   return II->second;
 }
 
-void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
-                                             const Twine &Name) const {
-  // This generates a `llvm::StringTable` which expects that entries are null
-  // terminated. So fail with an error if `AppendZero` is false.
+void StringToOffsetTable::emitStringTableStorageDef(raw_ostream &OS,
+                                                    const Twine &Name,
+                                                    bool IsStatic) const {
   if (!AppendZero)
     PrintFatalError("llvm::StringTable requires null terminated strings");
 
@@ -38,9 +38,8 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
 #endif
-{} constexpr char {}{}Storage[] =)",
-                ClassPrefix.empty() ? "static" : "",
-                UsePrefixForStorageMember ? ClassPrefix : "", Name);
+{}constexpr char {}[] =)",
+                IsStatic ? "static " : "", Name);
 
   // MSVC silently miscompiles string literals longer than 64k in some
   // circumstances. The build system sets EmitLongStrLiterals to false when it
@@ -70,20 +69,37 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
     }
 
     ListSeparator CharSep(", ");
-    for (char C : Str) {
-      OS << CharSep << "'";
-      OS.write_escaped(StringRef(&C, 1));
-      OS << "'";
-    }
+    for (unsigned char C : Str)
+      OS << CharSep << "'\\x" << format_hex_no_prefix(C, 2) << "'";
     OS << CharSep << "'\\0'";
   }
   OS << LineSep << (UseChars ? "};" : "  ;");
 
-  OS << formatv(R"(
+  OS << R"(
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
+)";
+}
 
+void StringToOffsetTable::EmitStringTableStorageDef(raw_ostream &OS,
+                                                    const Twine &Name) const {
+  emitStringTableStorageDef(OS, Name, /*IsStatic=*/true);
+}
+
+void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
+                                             const Twine &Name) const {
+  // This generates a `llvm::StringTable` which expects that entries are null
+  // terminated. So fail with an error if `AppendZero` is false.
+  SmallString<128> StorageName;
+  raw_svector_ostream StorageNameOS(StorageName);
+  if (UsePrefixForStorageMember)
+    StorageNameOS << ClassPrefix;
+  StorageNameOS << Name << "Storage";
+  emitStringTableStorageDef(OS, StorageName,
+                            /*IsStatic=*/ClassPrefix.empty());
+
+  OS << formatv(R"(
 {1} llvm::StringTable
 {2}{0} = {0}Storage;
 )",
