@@ -3339,22 +3339,17 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
 
     // shr (add nuw A, B), C is non-zero if A or B has a known-one bit at
     // position >= C, because the sum >= max(A, B).
-    const APInt *ShAmtC;
+    Value *A, *B;
+    const APInt *C;
     if (Depth + 1 < MaxAnalysisRecursionDepth &&
-        match(I->getOperand(1), m_APInt(ShAmtC)) && ShAmtC->ult(BitWidth)) {
-      Value *ShiftIn = I->getOperand(0);
-      if (auto *Add = dyn_cast<OverflowingBinaryOperator>(ShiftIn);
-          Add && Add->getOpcode() == Instruction::Add &&
-          Add->hasNoUnsignedWrap()) {
-        KnownBits KnownA =
-            computeKnownBits(Add->getOperand(0), DemandedElts, Q, Depth + 1);
-        if (!KnownA.One.lshr(*ShAmtC).isZero())
-          return true;
-        KnownBits KnownB =
-            computeKnownBits(Add->getOperand(1), DemandedElts, Q, Depth + 1);
-        if (!KnownB.One.lshr(*ShAmtC).isZero())
-          return true;
-      }
+        match(I->getOperand(0), m_NUWAdd(m_Value(A), m_Value(B))) &&
+        match(I->getOperand(1), m_APInt(C)) && C->ult(BitWidth)) {
+      KnownBits KnownA = computeKnownBits(A, DemandedElts, Q, Depth + 1);
+      if (!KnownA.One.lshr(*C).isZero())
+        return true;
+      KnownBits KnownB = computeKnownBits(B, DemandedElts, Q, Depth + 1);
+      if (!KnownB.One.lshr(*C).isZero())
+        return true;
     }
 
     return isNonZeroShift(I, DemandedElts, Q, Known, Depth);
