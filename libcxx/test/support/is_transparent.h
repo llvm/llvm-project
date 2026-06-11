@@ -81,16 +81,17 @@ struct transparent_less_not_a_type
 };
 
 struct C2Int { // comparable to int
-    C2Int() : i_(0) {}
-    C2Int(int i): i_(i) {}
-    int get () const { return i_; }
+  TEST_CONSTEXPR_CXX26 C2Int() : i_(0) {}
+  TEST_CONSTEXPR_CXX26 C2Int(int i) : i_(i) {}
+  TEST_CONSTEXPR_CXX26 int get() const { return i_; }
+
 private:
     int i_;
     };
 
-bool operator <(int          rhs,   const C2Int& lhs) { return rhs       < lhs.get(); }
-bool operator <(const C2Int& rhs,   const C2Int& lhs) { return rhs.get() < lhs.get(); }
-bool operator <(const C2Int& rhs,            int lhs) { return rhs.get() < lhs; }
+    TEST_CONSTEXPR_CXX26 bool operator<(int rhs, const C2Int& lhs) { return rhs < lhs.get(); }
+    TEST_CONSTEXPR_CXX26 bool operator<(const C2Int& rhs, const C2Int& lhs) { return rhs.get() < lhs.get(); }
+    TEST_CONSTEXPR_CXX26 bool operator<(const C2Int& rhs, int lhs) { return rhs.get() < lhs; }
 
 #endif // TEST_STD_VER > 11
 

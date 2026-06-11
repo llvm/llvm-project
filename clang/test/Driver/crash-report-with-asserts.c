@@ -30,7 +30,7 @@
 #pragma clang __debug llvm_unreachable
 #endif
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}crash-report-with-asserts-{{.*}}.c
 FOO
 // CHECKSRC: FOO

@@ -1583,9 +1583,11 @@ bool IRTranslator::translateCopy(const User &U, const Value &V,
 
 bool IRTranslator::translateBitCast(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
+  Type *SrcTy = U.getOperand(0)->getType();
+  Type *DstTy = U.getType();
+
   // If we're bitcasting to the source type, we can reuse the source vreg.
-  if (getLLTForType(*U.getOperand(0)->getType(), *DL) ==
-      getLLTForType(*U.getType(), *DL)) {
+  if (getLLTForType(*SrcTy, *DL) == getLLTForType(*DstTy, *DL)) {
     // If the source is a ConstantInt then it was probably created by
     // ConstantHoisting and we should leave it alone.
     if (isa<ConstantInt>(U.getOperand(0)))
@@ -1593,6 +1595,17 @@ bool IRTranslator::translateBitCast(const User &U,
                            MIRBuilder);
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
   }
+
+  // Only the scalar byte<->ptr crossing is redirected to G_INTTOPTR/G_PTRTOINT,
+  // which is the well-typed MIR shape for that boundary. Vector byte<->ptr
+  // (e.g. <N x b32> -> ptr produced by mixed-type load coalescing) and other
+  // legacy ptr/non-ptr IR bitcasts (AMDGPU iN<->p3 kernarg packing, etc.)
+  // keep their historical G_BITCAST lowering — G_INTTOPTR has no vector-src
+  // -> scalar-ptr form, and downstream passes already handle G_BITCAST.
+  if (DstTy->isPointerTy() && SrcTy->isByteTy())
+    return translateCast(TargetOpcode::G_INTTOPTR, U, MIRBuilder);
+  if (SrcTy->isPointerTy() && DstTy->isByteTy())
+    return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
 
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
 }
@@ -3846,6 +3859,10 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     if (isa<VectorType>(CI->getType()))
       CI = ConstantInt::get(CI->getContext(), CI->getValue());
     EntryBuilder->buildConstant(Reg, *CI);
+  } else if (auto CB = dyn_cast<ConstantByte>(&C)) {
+    // Byte constants share G_CONSTANT with integers; the destination Reg's
+    // LLT (an integer LLT, see getLLTForType) determines vector splatting.
+    EntryBuilder->buildConstant(Reg, CB->getValue());
   } else if (auto CF = dyn_cast<ConstantFP>(&C)) {
     // buildFConstant expects a to-be-splatted scalar ConstantFP.
     if (isa<VectorType>(CF->getType()))
@@ -4237,7 +4254,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MRI = &MF->getRegInfo();
   DL = &F.getDataLayout();
   const TargetMachine &TM = MF->getTarget();
-  TM.resetTargetOptions(F);
   EnableOpts = OptLevel != CodeGenOptLevel::None && !skipFunction(F);
   FuncInfo.MF = MF;
   if (EnableOpts) {

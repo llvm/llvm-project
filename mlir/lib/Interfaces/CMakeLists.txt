@@ -9,6 +9,7 @@ set(LLVM_OPTIONAL_SOURCES
   FunctionImplementation.cpp
   FunctionInterfaces.cpp
   IndexingMapOpInterface.cpp
+  InferIntDivisibilityOpInterface.cpp
   InferIntRangeInterface.cpp
   InferStridedMetadataInterface.cpp
   InferTypeOpInterface.cpp
@@ -66,6 +67,7 @@ add_mlir_library(MLIRFunctionInterfaces
 )
 
 add_mlir_interface_library(IndexingMapOpInterface)
+add_mlir_interface_library(InferIntDivisibilityOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
 
 add_mlir_library(MLIRInferStridedMetadataInterface

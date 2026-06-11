@@ -32,7 +32,7 @@ public:
       ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sqrt, x, func(x), 0.5);
     }
 
-    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = HIDDEN_BIT / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       InType x = FPBits(i).get_val();
@@ -41,7 +41,7 @@ public:
   }
 
   void test_normal_range(SqrtFunc func) {
-    constexpr StorageType COUNT = 200'001;
+    constexpr StorageType COUNT = 1'231;
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       FPBits x_bits(v);

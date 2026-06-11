@@ -15,6 +15,8 @@
 #include "LoongArchSubtarget.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -182,6 +184,118 @@ void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
+// Allocate stack space and probe it if necessary.
+void LoongArchFrameLowering::allocateStack(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           MachineFunction &MF, uint64_t Offset,
+                                           uint64_t RealStackSize, bool EmitCFI,
+                                           bool NeedProbe, uint64_t ProbeSize,
+                                           bool DynAllocation,
+                                           MachineInstr::MIFlag Flag) const {
+  DebugLoc DL;
+  const LoongArchInstrInfo *TII = STI.getInstrInfo();
+  const bool IsLA64 = STI.is64Bit();
+  const Register SPReg = LoongArch::R3;
+  CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
+
+  // Simply allocate the stack if it's not big enough to require a probe.
+  if (!NeedProbe || Offset <= ProbeSize) {
+    adjustReg(MBB, MBBI, DL, SPReg, SPReg, -Offset, Flag);
+    if (EmitCFI)
+      CFIBuilder.buildDefCFAOffset(RealStackSize);
+
+    if (NeedProbe && DynAllocation) {
+      // st.{w/d} $zero, $sp, 0
+      BuildMI(MBB, MBBI, DL,
+              TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+          .addReg(LoongArch::R0)
+          .addReg(SPReg)
+          .addImm(0)
+          .setMIFlag(Flag);
+    }
+
+    return;
+  }
+
+  // Unroll the probe loop depending on the number of iterations.
+  if (Offset < ProbeSize * 5) {
+    const uint64_t CFAAdjust = RealStackSize - Offset;
+
+    uint64_t CurrentOffset = 0;
+    while (CurrentOffset + ProbeSize <= Offset) {
+      adjustReg(MBB, MBBI, DL, SPReg, SPReg, -ProbeSize, Flag);
+      // st.{w/d} $zero, $sp, 0
+      BuildMI(MBB, MBBI, DL,
+              TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+          .addReg(LoongArch::R0)
+          .addReg(SPReg)
+          .addImm(0)
+          .setMIFlag(Flag);
+
+      CurrentOffset += ProbeSize;
+      if (EmitCFI)
+        CFIBuilder.buildDefCFAOffset(CurrentOffset + CFAAdjust);
+    }
+
+    const uint64_t Residual = Offset - CurrentOffset;
+    if (Residual) {
+      adjustReg(MBB, MBBI, DL, SPReg, SPReg, -Residual, Flag);
+      if (EmitCFI)
+        CFIBuilder.buildDefCFAOffset(RealStackSize);
+
+      if (DynAllocation) {
+        // st.{w/d} $zero, $sp, 0
+        BuildMI(MBB, MBBI, DL,
+                TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+            .addReg(LoongArch::R0)
+            .addReg(SPReg)
+            .addImm(0)
+            .setMIFlag(Flag);
+      }
+    }
+    return;
+  }
+
+  // Emit a variable-length allocation probing loop.
+  const uint64_t RoundedSize = alignDown(Offset, ProbeSize);
+  const uint64_t Residual = Offset - RoundedSize;
+  const uint64_t CFAAdjust = RealStackSize - Offset;
+
+  const Register TargetReg = LoongArch::R13;
+  // SUB TargetReg, $sp, RoundedSize
+  adjustReg(MBB, MBBI, DL, TargetReg, SPReg, -RoundedSize, Flag);
+
+  if (EmitCFI) {
+    // Set the CFA register to TargetReg.
+    CFIBuilder.buildDefCFA(TargetReg, RoundedSize + CFAAdjust);
+  }
+
+  // It will be expanded to a probe loop in inlineStackProbe().
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PROBED_STACKALLOC))
+      .addReg(TargetReg);
+
+  if (EmitCFI) {
+    // Set the CFA register back to SP.
+    CFIBuilder.buildDefCFARegister(SPReg);
+  }
+
+  if (Residual) {
+    adjustReg(MBB, MBBI, DL, SPReg, SPReg, -Residual, Flag);
+    if (DynAllocation) {
+      // st.{w/d} $zero, $sp, 0
+      BuildMI(MBB, MBBI, DL,
+              TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+          .addReg(LoongArch::R0)
+          .addReg(SPReg)
+          .addImm(0)
+          .setMIFlag(Flag);
+    }
+  }
+
+  if (EmitCFI)
+    CFIBuilder.buildDefCFAOffset(RealStackSize);
+}
+
 void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
                                           MachineBasicBlock &MBB) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -218,13 +332,15 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
     StackSize = FirstSPAdjustAmount;
 
   // Adjust stack.
-  adjustReg(MBB, MBBI, DL, SPReg, SPReg, -StackSize, MachineInstr::FrameSetup);
-  // Emit ".cfi_def_cfa_offset StackSize".
-  unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
-  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex)
-      .setMIFlag(MachineInstr::FrameSetup);
+  const LoongArchTargetLowering *TLI = STI.getTargetLowering();
+  const bool NeedProbe = TLI->hasInlineStackProbe(MF);
+  const uint64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
+  const bool DynAllocation =
+      MF.getInfo<LoongArchMachineFunctionInfo>()->hasDynamicAllocation();
+  if (StackSize != 0)
+    allocateStack(MBB, MBBI, MF, StackSize, StackSize,
+                  /*EmitCFI=*/true, NeedProbe, ProbeSize, DynAllocation,
+                  MachineInstr::FrameSetup);
 
   const auto &CSI = MFI.getCalleeSavedInfo();
 
@@ -265,19 +381,9 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
     uint64_t SecondSPAdjustAmount = RealStackSize - FirstSPAdjustAmount;
     assert(SecondSPAdjustAmount > 0 &&
            "SecondSPAdjustAmount should be greater than zero");
-    adjustReg(MBB, MBBI, DL, SPReg, SPReg, -SecondSPAdjustAmount,
-              MachineInstr::FrameSetup);
-
-    if (!hasFP(MF)) {
-      // If we are using a frame-pointer, and thus emitted ".cfi_def_cfa fp, 0",
-      // don't emit an sp-based .cfi_def_cfa_offset
-      // Emit ".cfi_def_cfa_offset RealStackSize"
-      unsigned CFIIndex = MF.addFrameInst(
-          MCCFIInstruction::cfiDefCfaOffset(nullptr, RealStackSize));
-      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlag(MachineInstr::FrameSetup);
-    }
+    allocateStack(MBB, MBBI, MF, SecondSPAdjustAmount, RealStackSize,
+                  !hasFP(MF), NeedProbe, ProbeSize, DynAllocation,
+                  MachineInstr::FrameSetup);
   }
 
   if (hasFP(MF)) {
@@ -353,6 +459,89 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
   adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackSize, MachineInstr::FrameDestroy);
 }
 
+// Synthesize the probe loop.
+static void emitStackProbeInline(MachineBasicBlock::iterator MBBI, DebugLoc DL,
+                                 Register TargetReg) {
+  assert(TargetReg != LoongArch::R3 &&
+         "New top of stack cannot already be in $sp");
+
+  MachineBasicBlock &MBB = *MBBI->getParent();
+  MachineFunction &MF = *MBB.getParent();
+
+  const LoongArchSubtarget &STI = MF.getSubtarget<LoongArchSubtarget>();
+  const LoongArchInstrInfo *TII = STI.getInstrInfo();
+  const bool IsLA64 = STI.is64Bit();
+  const Align StackAlign = STI.getFrameLowering()->getStackAlign();
+  const LoongArchTargetLowering *TLI = STI.getTargetLowering();
+  const uint64_t ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+
+  MachineFunction::iterator MBBInsertPoint = std::next(MBB.getIterator());
+  MachineBasicBlock *LoopTestMBB =
+      MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+  MF.insert(MBBInsertPoint, LoopTestMBB);
+  MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(MBB.getBasicBlock());
+  MF.insert(MBBInsertPoint, ExitMBB);
+  const Register SPReg = LoongArch::R3;
+  const Register ScratchReg = LoongArch::R14;
+  const MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
+
+  // ScratchReg = ProbeSize
+  TII->movImm(MBB, MBBI, DL, ScratchReg, ProbeSize, Flags);
+
+  // LoopTest:
+  //   sub.{w/d} $sp, $sp, ScratchReg
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+          TII->get(IsLA64 ? LoongArch::SUB_D : LoongArch::SUB_W), SPReg)
+      .addReg(SPReg)
+      .addReg(ScratchReg)
+      .setMIFlag(Flags);
+
+  //   st.{w/d} $zero, $sp, 0
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL,
+          TII->get(IsLA64 ? LoongArch::ST_D : LoongArch::ST_W))
+      .addReg(LoongArch::R0)
+      .addReg(SPReg)
+      .addImm(0)
+      .setMIFlag(Flags);
+
+  //   bne $sp, TargetReg, LoopTest
+  BuildMI(*LoopTestMBB, LoopTestMBB->end(), DL, TII->get(LoongArch::BNE))
+      .addReg(SPReg)
+      .addReg(TargetReg)
+      .addMBB(LoopTestMBB)
+      .setMIFlag(Flags);
+
+  ExitMBB->splice(ExitMBB->end(), &MBB, std::next(MBBI), MBB.end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(&MBB);
+
+  LoopTestMBB->addSuccessor(ExitMBB);
+  LoopTestMBB->addSuccessor(LoopTestMBB);
+  MBB.addSuccessor(LoopTestMBB);
+  // Update liveins.
+  fullyRecomputeLiveIns({ExitMBB, LoopTestMBB});
+}
+
+void LoongArchFrameLowering::inlineStackProbe(MachineFunction &MF,
+                                              MachineBasicBlock &MBB) const {
+  // Get the instructions that need to be replaced. We emit at most two of
+  // these. Remember them in order to avoid complications coming from the need
+  // to traverse the block while potentially creating more blocks.
+  SmallVector<MachineInstr *, 2> ToReplace;
+  for (MachineInstr &MI : MBB) {
+    if (MI.getOpcode() == LoongArch::PROBED_STACKALLOC) {
+      ToReplace.push_back(&MI);
+    }
+  }
+
+  for (MachineInstr *MI : ToReplace) {
+    MachineBasicBlock::iterator MBBI = MI->getIterator();
+    DebugLoc DL = MBB.findDebugLoc(MBBI);
+    Register TargetReg = MI->getOperand(0).getReg();
+    emitStackProbeInline(MBBI, DL, TargetReg);
+    MBBI->eraseFromParent();
+  }
+}
+
 // We would like to split the SP adjustment to reduce prologue/epilogue
 // as following instructions. In this way, the offset of the callee saved
 // register could fit in a single store.
@@ -425,7 +614,23 @@ LoongArchFrameLowering::eliminateCallFramePseudoInstr(
       if (MI->getOpcode() == LoongArch::ADJCALLSTACKDOWN)
         Amount = -Amount;
 
-      adjustReg(MBB, MI, DL, SPReg, SPReg, Amount, MachineInstr::NoFlags);
+      const LoongArchTargetLowering *TLI =
+          MF.getSubtarget<LoongArchSubtarget>().getTargetLowering();
+      const int64_t ProbeSize = TLI->getStackProbeSize(MF, getStackAlign());
+      if (TLI->hasInlineStackProbe(MF) && -Amount >= ProbeSize) {
+        // When stack probing is enabled, the decrement of SP may need to be
+        // probed. We can handle both the decrement and the probing in
+        // allocateStack.
+        const bool DynAllocation =
+            MF.getInfo<LoongArchMachineFunctionInfo>()->hasDynamicAllocation();
+        allocateStack(MBB, MI, MF, -Amount, -Amount,
+                      MF.needsFrameMoves() && !hasFP(MF),
+                      /*NeedProbe=*/true, ProbeSize, DynAllocation,
+                      MachineInstr::NoFlags);
+        inlineStackProbe(MF, MBB);
+      } else {
+        adjustReg(MBB, MI, DL, SPReg, SPReg, Amount, MachineInstr::NoFlags);
+      }
     }
   }
 

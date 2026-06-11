@@ -9,9 +9,9 @@ emitc.include "test.h"
 // CHECK-LABEL: func @f(%{{.*}}: i32, %{{.*}}: !emitc.opaque<"int32_t">) {
 func.func @f(%arg0: i32, %f: !emitc.opaque<"int32_t">) {
   %1 = "emitc.call_opaque"() {callee = "blah"} : () -> i64
-  emitc.call_opaque "foo" (%1) {args = [
+  emitc.call_opaque "foo" (%1) <{args = [
     0 : index, dense<[0, 1]> : tensor<2xi32>, 0 : index
-  ]} : (i64) -> ()
+  ]}> : (i64) -> ()
   return
 }
 

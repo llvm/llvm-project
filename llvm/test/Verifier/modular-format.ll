@@ -12,11 +12,6 @@ define void @test_first_arg_index_not_integer(i32 %arg, ...) "modular-format"="p
 ; CHECK: modular-format attribute first arg index is not an integer
 ; CHECK-NEXT: ptr @test_first_arg_index_not_integer
 
-define void @test_first_arg_index_zero(i32 %arg) "modular-format"="printf,1,0,basic_mod,basic_impl" {
-  ret void
-}
-; CHECK: modular-format attribute first arg index is out of bounds
-; CHECK-NEXT: ptr @test_first_arg_index_zero
 
 define void @test_first_arg_index_out_of_bounds(i32 %arg) "modular-format"="printf,1,2,basic_mod,basic_impl" {
   ret void
@@ -37,5 +32,10 @@ define void @test_first_arg_index_in_bounds(i32 %arg) "modular-format"="printf,1
 
 ; CHECK-NOT: ptr @test_first_arg_index_in_bounds_varargs
 define void @test_first_arg_index_in_bounds_varargs(i32 %arg, ...) "modular-format"="printf,1,2,basic_mod,basic_impl" {
+  ret void
+}
+
+; CHECK-NOT: ptr @test_first_arg_index_zero
+define void @test_first_arg_index_zero(i32 %arg) "modular-format"="printf,1,0,basic_mod,basic_impl" {
   ret void
 }

@@ -2170,7 +2170,7 @@ copy-construction, which :ref:`SmallSet <dss_smallset>` and :ref:`SmallPtrSet
 llvm/ADT/DenseSet.h
 ^^^^^^^^^^^^^^^^^^^
 
-``DenseSet`` is a simple quadratically probed hash table.  It excels at supporting
+``DenseSet`` is a simple linearly probed hash table.  It excels at supporting
 small values: it uses a single allocation to hold all of the pairs that are
 currently inserted in the set.  ``DenseSet`` is a great way to unique small values
 that are not simple pointers (use :ref:`SmallPtrSet <dss_smallptrset>` for
@@ -2397,6 +2397,10 @@ copies a string if a value is inserted into the table.
 ``StringMap`` iteration order, however, is not guaranteed to be deterministic, so
 any uses which require that should instead use a ``std::map``.
 
+Like ``DenseMap``, ``StringMap`` iterators are invalidated whenever an insertion
+or erasure occurs.  To erase matching elements in a single pass, use the
+``remove_if`` member instead of erasing while iterating.
+
 .. _dss_indexmap:
 
 llvm/ADT/IndexedMap.h
@@ -2416,19 +2420,20 @@ virtual register ID).
 llvm/ADT/DenseMap.h
 ^^^^^^^^^^^^^^^^^^^
 
-``DenseMap`` is a simple quadratically probed hash table.  It excels at supporting
+``DenseMap`` is a simple linearly probed hash table.  It excels at supporting
 small keys and values: it uses a single allocation to hold all of the pairs
 that are currently inserted in the map.  ``DenseMap`` is a great way to map
 pointers to pointers, or map other small types to each other.
 
 There are several aspects of ``DenseMap`` that you should be aware of, however.
-The iterators in a ``DenseMap`` are invalidated whenever an insertion occurs,
-unlike ``map``.  Also, because ``DenseMap`` allocates space for a large number of
-key/value pairs (it starts with 64 by default), it will waste a lot of space if
-your keys or values are large.  Finally, you must implement a partial
-specialization of ``DenseMapInfo`` for the key that you want, if it isn't already
-supported.  This is required to tell ``DenseMap`` about two special marker values
-(which can never be inserted into the map) that it needs internally.
+The iterators in a ``DenseMap`` are invalidated whenever an insertion or
+erasure occurs, unlike ``map``.  Also, because ``DenseMap`` allocates space for
+a large number of key/value pairs (it starts with 64 by default), it will waste
+a lot of space if your keys or values are large.  Finally, you must implement a
+partial specialization of ``DenseMapInfo`` for the key that you want, if it
+isn't already supported.  This is required to tell ``DenseMap`` about two
+special marker values (which can never be inserted into the map) that it needs
+internally.
 
 ``DenseMap``'s ``find_as()`` method supports lookup operations using an alternate key
 type.  This is useful in cases where the normal key type is expensive to

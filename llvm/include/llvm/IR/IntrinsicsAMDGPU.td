@@ -904,6 +904,31 @@ def int_amdgcn_bitop3 :
                         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                         [ImmArg<ArgIndex<3>>]>;
 
+class AMDGPUAVStore : Intrinsic <
+  [],
+  [llvm_anyptr_ty,         // Pointer to store to (flat or global)
+   llvm_v4i32_ty,          // Data to store
+   llvm_metadata_ty],      // Scope
+  [ IntrWriteMem, WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    NonNull<ArgIndex<0>>, IntrWillReturn, IntrNoCallback, IntrNoFree ],
+  "",
+  [SDNPMemOperand, SDNPMayStore]
+>;
+
+def int_amdgcn_av_store_b128 : AMDGPUAVStore;
+
+class AMDGPUAVLoad : Intrinsic <
+  [llvm_v4i32_ty],
+  [llvm_anyptr_ty,         // Pointer to load from (flat or global)
+   llvm_metadata_ty],      // Scope
+  [ IntrReadMem, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+    NonNull<ArgIndex<0>>, IntrWillReturn, IntrNoCallback, IntrNoFree ],
+  "",
+  [SDNPMemOperand, SDNPMayLoad]
+>;
+
+def int_amdgcn_av_load_b128 : AMDGPUAVLoad;
+
 } // TargetPrefix = "amdgcn"
 
 // New-style image intrinsics
@@ -3191,10 +3216,22 @@ def int_amdgcn_wave_id :
 
 def int_amdgcn_s_prefetch_data :
   Intrinsic<[],
-  [llvm_anyptr_ty, // Pointer to a constant/global memory
-   llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
-    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
-    "", [SDNPMemOperand]
+    [llvm_anyptr_ty, // Pointer to a constant/global memory
+     llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chaunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
+     IntrNoCallback, IntrNoFree],
+    "",
+    [SDNPMemOperand]
+  >;
+
+def int_amdgcn_s_prefetch_inst :
+  Intrinsic<[],
+    [llvm_anyptr_ty, // Pointer to instruction memory
+     llvm_i32_ty],   // Length to prefetch 0-31 (1-32 chunks, units of 128 bytes)
+    [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
+     IntrNoCallback, IntrNoFree],
+    "",
+    [SDNPMemOperand]
   >;
 
 // llvm.amdgcn.ds.bpermute.fi.b32 <index> <src>
@@ -3205,20 +3242,22 @@ def int_amdgcn_ds_bpermute_fi_b32 :
 
 def int_amdgcn_flat_prefetch : ClangBuiltin<"__builtin_amdgcn_flat_prefetch">,
   Intrinsic<[],
-  [llvm_ptr_ty,    // Pointer
-   llvm_i32_ty],   // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
+    [llvm_ptr_ty,  // Pointer
+     llvm_i32_ty], // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
      IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
-    "", [SDNPMemOperand]
+    "",
+    [SDNPMemOperand]
   >;
 
 def int_amdgcn_global_prefetch : ClangBuiltin<"__builtin_amdgcn_global_prefetch">,
   Intrinsic<[],
-  [LLVMQualPointerType<1>,    // Pointer
-   llvm_i32_ty],              // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
+    [LLVMQualPointerType<1>, // Pointer
+     llvm_i32_ty],           // cachepolicy(imm), bits [0-2] = th, bits [3-4] = scope
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>,
      IntrNoCallback, IntrNoFree, ImmArg<ArgIndex<1>>],
-    "", [SDNPMemOperand]
+    "",
+    [SDNPMemOperand]
   >;
 
 //===----------------------------------------------------------------------===//

@@ -336,7 +336,7 @@ public:
   }
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator*() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator*() const _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__ctz_ < __bits_per_word, "Dereferencing an invalid __bit_iterator.");
     return __conditional_t<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> >(
         __seg_, __storage_type(1) << __ctz_);
@@ -389,29 +389,32 @@ public:
     return *this += -__n;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator operator+(difference_type __n) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator
+  operator+(difference_type __n) const {
     __bit_iterator __t(*this);
     __t += __n;
     return __t;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator operator-(difference_type __n) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator
+  operator-(difference_type __n) const {
     __bit_iterator __t(*this);
     __t -= __n;
     return __t;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend __bit_iterator
   operator+(difference_type __n, const __bit_iterator& __it) {
     return __it + __n;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend difference_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 friend difference_type
   operator-(const __bit_iterator& __x, const __bit_iterator& __y) {
     return (__x.__seg_ - __y.__seg_) * __bits_per_word + __x.__ctz_ - __y.__ctz_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](difference_type __n) const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference
+  operator[](difference_type __n) const {
     return *(*this + __n);
   }
 

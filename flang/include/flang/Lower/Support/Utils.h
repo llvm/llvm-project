@@ -120,7 +120,8 @@ void privatizeSymbol(
     llvm::SetVector<const semantics::Symbol *> &allPrivatizedSymbols,
     llvm::SmallPtrSet<const semantics::Symbol *, 16> &mightHaveReadHostSym,
     const semantics::Symbol *symToPrivatize, OperandsStructType *clauseOps,
-    std::optional<llvm::omp::Directive> dir = std::nullopt);
+    std::optional<llvm::omp::Directive> dir = std::nullopt,
+    bool forceHeapAllocationForPrivateDynamicArrays = false);
 
 } // end namespace Fortran::lower
 
@@ -128,12 +129,6 @@ void privatizeSymbol(
 namespace llvm {
 template <>
 struct DenseMapInfo<const Fortran::lower::SomeExpr *> {
-  static inline const Fortran::lower::SomeExpr *getEmptyKey() {
-    return reinterpret_cast<Fortran::lower::SomeExpr *>(~0);
-  }
-  static inline const Fortran::lower::SomeExpr *getTombstoneKey() {
-    return reinterpret_cast<Fortran::lower::SomeExpr *>(~0 - 1);
-  }
   static unsigned getHashValue(const Fortran::lower::SomeExpr *v) {
     return Fortran::lower::getHashValue(v);
   }
@@ -146,12 +141,6 @@ struct DenseMapInfo<const Fortran::lower::SomeExpr *> {
 // DenseMapInfo for pointers to Fortran::evaluate::Component.
 template <>
 struct DenseMapInfo<const Fortran::evaluate::Component *> {
-  static inline const Fortran::evaluate::Component *getEmptyKey() {
-    return reinterpret_cast<Fortran::evaluate::Component *>(~0);
-  }
-  static inline const Fortran::evaluate::Component *getTombstoneKey() {
-    return reinterpret_cast<Fortran::evaluate::Component *>(~0 - 1);
-  }
   static unsigned getHashValue(const Fortran::evaluate::Component *v) {
     return Fortran::lower::getHashValue(v);
   }

@@ -511,12 +511,14 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
   findDeviceSymbol(GenericDeviceTy &Device, StringRef SymbolName) const;
 
   /// Get additional info for kernel, e.g., register spill counts
-  std::optional<offloading::amdgpu::AMDGPUKernelMetaData>
+  Expected<offloading::amdgpu::AMDGPUKernelMetaData>
   getKernelInfo(StringRef Identifier) const {
     auto It = KernelInfoMap.find(Identifier);
 
     if (It == KernelInfoMap.end())
-      return {};
+      return Plugin::error(ErrorCode::INVALID_BINARY,
+                           "could not find metadata for kernel %s",
+                           Identifier.str().c_str());
 
     return It->second;
   }
@@ -593,10 +595,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     ODBG(OLDT_Module) << "ELFABIVersion: " << AMDImage.getELFABIVersion();
 
     // Get additional kernel info read from image
-    KernelInfo = AMDImage.getKernelInfo(getName());
-    if (!KernelInfo.has_value())
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
-           "Could not read extra information for kernel %s.", getName());
+    auto KernelInfoOrErr = AMDImage.getKernelInfo(getName());
+    if (!KernelInfoOrErr)
+      return KernelInfoOrErr.takeError();
+    KernelInfo = std::move(*KernelInfoOrErr);
 
     return Plugin::success();
   }
@@ -649,7 +651,7 @@ private:
   uint32_t ImplicitArgsSize;
 
   /// Additional Info for the AMD GPU Kernel
-  std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo;
+  offloading::amdgpu::AMDGPUKernelMetaData KernelInfo;
 };
 
 /// Class representing an HSA signal. Signals are used to define dependencies
@@ -1688,12 +1690,22 @@ public:
 
   const AMDGPUQueueTy *getQueue() const { return Queue; }
 
-  /// Record an event by enqueuing a barrier marker packet on the stream.
+  /// Record an event on the stream. If \p EnableProfiling is true, a barrier
+  /// marker packet is enqueued to record timestamps.
   Error recordEvent(AMDGPUEventTy &Event,
-                    AMDGPUSignalTy *ReusedSignal = nullptr);
+                    AMDGPUSignalTy *ReusedSignal = nullptr,
+                    bool EnableProfiling = false);
 
   /// Make the stream wait on an event.
   Error waitEvent(const AMDGPUEventTy &Event);
+
+private:
+  /// Lightweight sync-only recording.
+  Error recordEventSyncOnly(AMDGPUEventTy &Event, AMDGPUSignalTy *ReusedSignal);
+
+  /// Full profiling recording.
+  Error recordEventWithProfiling(AMDGPUEventTy &Event,
+                                 AMDGPUSignalTy *ReusedSignal);
 
   friend struct AMDGPUStreamManagerTy;
 };
@@ -1720,7 +1732,7 @@ struct AMDGPUEventTy {
   }
 
   /// Record the current stream point on the event.
-  Error record(AMDGPUStreamTy &Stream) {
+  Error record(AMDGPUStreamTy &Stream, bool EnableProfiling = false) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     // Discard the previous recording and retained timing state, reusing the
@@ -1731,7 +1743,7 @@ struct AMDGPUEventTy {
 
     RecordedStream = &Stream;
 
-    if (auto Err = Stream.recordEvent(*this, Signal)) {
+    if (auto Err = Stream.recordEvent(*this, Signal, EnableProfiling)) {
       if (auto ResetErr = resetState())
         return joinErrors(std::move(Err), std::move(ResetErr));
       return Err;
@@ -1805,11 +1817,43 @@ protected:
 };
 
 Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
-                                  AMDGPUSignalTy *ReusedSignal) {
+                                  AMDGPUSignalTy *ReusedSignal,
+                                  bool EnableProfiling) {
   if (Queue == nullptr)
     return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
                          "target queue was nullptr");
 
+  if (EnableProfiling)
+    return recordEventWithProfiling(Event, ReusedSignal);
+  return recordEventSyncOnly(Event, ReusedSignal);
+}
+
+Error AMDGPUStreamTy::recordEventSyncOnly(AMDGPUEventTy &Event,
+                                          AMDGPUSignalTy *ReusedSignal) {
+  std::lock_guard<std::mutex> StreamLock(Mutex);
+
+  if (size() > 0) {
+    // Record the synchronize identifier (to detect stale recordings) and
+    // the last valid stream's operation.
+    Event.RecordedSyncCycle = SyncCycle;
+    Event.RecordedSlot = last();
+
+    assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
+    assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
+  } else {
+    // The stream is empty, everything already completed, record nothing.
+    Event.RecordedSyncCycle = -1;
+    Event.RecordedSlot = -1;
+  }
+
+  // Return the unused reusable signal back to the manager.
+  if (ReusedSignal)
+    return SignalManager.returnResource(ReusedSignal);
+  return Plugin::success();
+}
+
+Error AMDGPUStreamTy::recordEventWithProfiling(AMDGPUEventTy &Event,
+                                               AMDGPUSignalTy *ReusedSignal) {
   // One use for the stream slot and one for the event timing signal.
   const uint32_t OutputSignalUses = 2;
 
@@ -3015,7 +3059,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   };
 
   /// Create an event.
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     AMDGPUEventTy **Event = reinterpret_cast<AMDGPUEventTy **>(EventPtrStorage);
     if (auto Err = AMDGPUEventManager.getResource(*Event))
       return Err;
@@ -3023,7 +3067,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Destroy a previously created event.
-  Error destroyEventImpl(void *EventPtr) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
     assert(Event && "Invalid event");
 
@@ -3034,8 +3078,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Record the event.
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
     assert(Event && "Invalid event");
 
@@ -3043,7 +3087,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
 
-    return Event->record(*Stream);
+    return Event->record(*Stream, EnableProfiling);
   }
 
   /// Make the stream wait on the event.
@@ -4149,11 +4193,39 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
     return Err;
 
-  // Copy the explicit arguments.
-  // TODO: We should expose the args memory manager alloc to the common part as
-  // 	   alternative to copying them twice.
-  if (LaunchParams.Size)
-    std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
+  // Copy explicit arguments.
+  size_t ExplicitEnd = 0;
+  if (KernelArgs.Flags.IsPtrArgs) {
+    if (KernelArgs.ArgPtrs) {
+      const auto &ArgMDs = KernelInfo.ArgMDs;
+
+      // ArgMDs might also contain hidden implicit arguments, so we can't check
+      // if user-provided NumArgs matches exactly.
+      if (KernelArgs.NumArgs > ArgMDs.size())
+        return Plugin::error(
+            ErrorCode::INVALID_ARGUMENT,
+            "number of arguments (%u) exceeds the number of arguments "
+            "expected by the kernel (%zu)",
+            KernelArgs.NumArgs, ArgMDs.size());
+
+      for (size_t I = 0; I < KernelArgs.NumArgs; I++) {
+        auto [Offset, Size] = ArgMDs[I];
+        std::memcpy(utils::advancePtr(AllArgs, Offset), KernelArgs.ArgPtrs[I],
+                    Size);
+      }
+
+      if (KernelArgs.NumArgs) {
+        auto [Offset, Size] = ArgMDs[KernelArgs.NumArgs - 1];
+        ExplicitEnd = Offset + Size;
+      }
+    }
+  } else {
+    // TODO: We should expose the args memory manager alloc to the common part
+    // as alternative to copying them twice.
+    if (LaunchParams.Size)
+      std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
+    ExplicitEnd = LaunchParams.Size;
+  }
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
 
@@ -4161,8 +4233,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
-  uint64_t ImplArgsOffset = llvm::alignTo(
-      LaunchParams.Size, alignof(hsa_utils::AMDGPUImplicitArgsTy));
+  uint64_t ImplArgsOffset =
+      llvm::alignTo(ExplicitEnd, alignof(hsa_utils::AMDGPUImplicitArgsTy));
   if (ArgsSize > ImplArgsOffset) {
     hsa_utils::AMDGPUImplicitArgsTy *ImplArgs =
         reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
@@ -4213,10 +4285,6 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   if (!(getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
     return Plugin::success();
 
-  // We don't have data to print additional info, but no hard error
-  if (!KernelInfo.has_value())
-    return Plugin::success();
-
   // General Info
   auto *NumGroups = NumBlocks;
   auto *ThreadsPerGroup = NumThreads;
@@ -4227,12 +4295,12 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
 
   // Details for AMDGPU kernels (read from image)
   // https://www.llvm.org/docs/AMDGPUUsage.html#code-object-v4-metadata
-  auto GroupSegmentSize = (*KernelInfo).GroupSegmentList;
-  auto SGPRCount = (*KernelInfo).SGPRCount;
-  auto VGPRCount = (*KernelInfo).VGPRCount;
-  auto SGPRSpillCount = (*KernelInfo).SGPRSpillCount;
-  auto VGPRSpillCount = (*KernelInfo).VGPRSpillCount;
-  auto MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
+  auto GroupSegmentSize = KernelInfo.GroupSegmentList;
+  auto SGPRCount = KernelInfo.SGPRCount;
+  auto VGPRCount = KernelInfo.VGPRCount;
+  auto SGPRSpillCount = KernelInfo.SGPRSpillCount;
+  auto VGPRSpillCount = KernelInfo.VGPRSpillCount;
+  auto MaxFlatWorkgroupSize = KernelInfo.MaxFlatWorkgroupSize;
 
   // Prints additional launch info that contains the following.
   // Num Args: The number of kernel arguments

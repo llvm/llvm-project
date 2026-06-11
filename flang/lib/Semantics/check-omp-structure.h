@@ -258,13 +258,17 @@ private:
   void CheckScanModifier(const parser::OmpClause::Reduction &x);
   void CheckDistLinear(const parser::OpenMPLoopConstruct &x);
 
-  // check-omp-metadirective.cpp
+  // check-omp-variant.cpp
+  void CheckOmpDeclareVariantDirective(
+      const parser::OmpDeclareVariantDirective &);
+  void CheckDeclareVariantUserConditions(const parser::OmpContextSelector &);
   const std::list<parser::OmpTraitProperty> &GetTraitPropertyList(
       const parser::OmpTraitSelector &);
   std::optional<llvm::omp::Clause> GetClauseFromProperty(
       const parser::OmpTraitProperty &);
 
   void CheckTraitSelectorList(const std::list<parser::OmpTraitSelector> &);
+  void CheckContextSelectorSpecification(const parser::OmpContextSelector &);
   void CheckTraitSetSelector(const parser::OmpTraitSetSelector &);
   void CheckTraitScore(const parser::OmpTraitScore &);
   bool VerifyTraitPropertyLists(
@@ -285,12 +289,11 @@ private:
   // check-omp-structure.cpp
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   bool CheckAllowedClause(llvm::omp::Clause clause);
-  void CheckVariableListItem(const SymbolSourceMap &symbols);
+  void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
   void AnalyzeObject(const parser::OmpObject &object);
-  void AnalyzeObjects(const parser::OmpObjectList &objects);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
   void CheckSourceLabel(const parser::Label &);
@@ -301,6 +304,8 @@ private:
       const std::list<parser::Name> &nameList, const parser::CharBlock &item,
       const std::string &clauseName);
   void CheckMultListItems();
+  void CheckStructureComponent(
+      const parser::OmpObject &object, llvm::omp::Clause clauseId);
   void CheckStructureComponent(
       const parser::OmpObjectList &objects, llvm::omp::Clause clauseId);
   bool HasInvalidWorksharingNesting(
@@ -328,21 +333,19 @@ private:
   void CheckDoacross(const parser::OmpDoacross &doa);
   void CheckDimsModifier(parser::CharBlock source, size_t numValues,
       const parser::OmpDimsModifier &x);
-  bool IsDataRefTypeParamInquiry(const parser::DataRef *dataRef);
+  void CheckTypeParamInquiry(
+      const parser::CharBlock &source, const parser::OmpObject &object);
+  void CheckTypeParamInquiry(
+      const parser::CharBlock &source, const parser::OmpObjectList &objects);
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
-      const parser::OmpObject &obj, llvm::StringRef clause = "");
+      const parser::OmpObject &object, llvm::StringRef clause = "");
   void CheckVarIsNotPartOfAnotherVar(const parser::CharBlock &source,
       const parser::OmpObjectList &objList, llvm::StringRef clause = "");
   void CheckThreadprivateOrDeclareTargetVar(const parser::Designator &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::Name &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObject &);
   void CheckThreadprivateOrDeclareTargetVar(const parser::OmpObjectList &);
-  void CheckSymbolName(
-      const parser::CharBlock &source, const parser::OmpObject &object);
-  void CheckSymbolNames(
-      const parser::CharBlock &source, const parser::OmpObjectList &objList);
   void CheckIntentInPointer(SymbolSourceMap &, const llvm::omp::Clause);
-  void CheckAssumedSizeArray(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckProcedurePointer(SymbolSourceMap &, const llvm::omp::Clause);
   void CheckCrayPointee(const parser::OmpObjectList &objectList,
       llvm::StringRef clause, bool suggestToUseCrayPointer = true);
@@ -400,6 +403,7 @@ private:
       const parser::OmpClause &initClause);
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+  void CheckTempDescriptorMappings();
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
@@ -417,8 +421,16 @@ private:
   };
   int directiveNest_[LastType + 1] = {0};
 
+  std::set<std::pair<const Symbol *, const Symbol *>> declareVariantPairs_;
+
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
+
+  // Track symbols with temporary stack descriptors mapped in TARGET ENTER DATA
+  // and symbols mapped in TARGET EXIT DATA within the current function scope.
+  // Used to warn about potential issues with mapping temporary descriptors.
+  std::multimap<const Symbol *, parser::CharBlock> tempDescriptorEnterMaps_;
+  std::set<const Symbol *> tempDescriptorExitMaps_;
 
   // Stack of nested DO loops and OpenMP constructs.
   // This is used to verify DO loop nest for DOACROSS, and branches into
