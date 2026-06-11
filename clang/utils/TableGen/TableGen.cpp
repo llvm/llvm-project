@@ -455,7 +455,7 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     EmitClangAttrNodeTraverse(Records, OS);
     break;
   case GenClangAttrUndocumentedAttrList:
-    EmitClangUndocumentedAttrlist(Records, OS);
+    EmitClangUndocumentedAttrList(Records, OS);
     break;
   case GenClangBuiltins:
     EmitClangBuiltins(Records, OS);

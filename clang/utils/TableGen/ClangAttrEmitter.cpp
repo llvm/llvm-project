@@ -5590,7 +5590,7 @@ void GetListOfUndocumentedAttributes(
   }
 }
 
-void EmitClangUndocumentedAttrlist(const llvm::RecordKeeper &Records,
+void EmitClangUndocumentedAttrList(const llvm::RecordKeeper &Records,
                                    llvm::raw_ostream &OS) {
   // Emit a newline separated list of attributes whose Documentation is set to
   // Undocumented.
