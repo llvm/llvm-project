@@ -22516,13 +22516,13 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                "  // a comment\n"
                "  // that's too long\n"
                "  #pragma omp\n"
-               "  my_pragma();\n"
+               "  _pragma();\n"
                "}",
                "void pragmas () {\n"
                "  // a comment that's\n"
                "  // too long\n"
                "  #pragma omp\n"
-               " my_pragma();\n"
+               " _pragma();\n"
                "}",
                Style);
 
