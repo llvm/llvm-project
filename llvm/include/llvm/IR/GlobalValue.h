@@ -136,7 +136,7 @@ private:
   /// Returns true if the definition of this global may be replaced by a
   /// differently optimized variant of the same source level function at link
   /// time.
-  bool mayBeDerefined() const {
+  bool mayBeDerefinedOrNoIPA() const {
     switch (getLinkage()) {
     case WeakODRLinkage:
     case LinkOnceODRLinkage:
@@ -155,7 +155,7 @@ private:
       // nobuiltin due to attributes at call-sites. To avoid applying IPO based
       // on nobuiltin semantics, treat such function definitions as maybe
       // derefined.
-      return isInterposable() || isNobuiltinFnDef();
+      return isInterposable() || isNobuiltinFnDef() || isNoipaFnDef();
     }
 
     llvm_unreachable("Fully covered switch above!");
@@ -164,6 +164,10 @@ private:
   /// Returns true if the global is a function definition with the nobuiltin
   /// attribute.
   LLVM_ABI bool isNobuiltinFnDef() const;
+
+  /// Returns true if the global is a function definition with the noipa
+  /// attribute.
+  LLVM_ABI bool isNoipaFnDef() const;
 
 protected:
   /// The intrinsic ID for this subclass (which must be a Function).
@@ -490,7 +494,7 @@ public:
   /// visible variant is *a* correct implementation of the original source
   /// function; it just isn't the *only* correct implementation.
   bool isDefinitionExact() const {
-    return !mayBeDerefined();
+    return !mayBeDerefinedOrNoIPA();
   }
 
   /// Return true if this global has an exact defintion.

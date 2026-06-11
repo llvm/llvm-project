@@ -2390,6 +2390,11 @@ For example:
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
     with the ``alwaysinline`` attribute.
+``noipa``
+    Disables any interprocedural analysis that inspects the definition of this
+    function. Equivalent to moving this function definition to a separate,
+    optimizer-opaque, module. Any attributes on the function are still respected
+    (as they would be if they remained on a function declaration in this module).
 ``nomerge``
     This attribute indicates that calls to this function should never be merged
     during optimization. For example, it will prevent tail merging otherwise
