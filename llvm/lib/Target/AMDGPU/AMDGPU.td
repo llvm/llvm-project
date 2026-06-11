@@ -982,6 +982,10 @@ defm GFX1251GEMMInsts : AMDGPUSubtargetFeature<"gfx1251-gemm-insts",
   "Has additional gfx1251 DGEMM instructions"
 >;
 
+defm GFX125xLowestRateWMMA : AMDGPUSubtargetFeature<"gfx125x-lowest-rate-wmma",
+  "Has the lowest rate wmma in the gfx125x family, mainly for the gfx12-5-generic"
+>;
+
 defm FlatBufferGlobalAtomicFaddF64Inst : AMDGPUSubtargetFeature<"flat-buffer-global-fadd-f64-inst",
   "Has flat, buffer, and global instructions for f64 atomic fadd"
 >;
@@ -2219,6 +2223,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
    FeatureGFX1251GEMMInsts,
+   FeatureGFX125xLowestRateWMMA,
    FeatureCubeInsts,
    FeatureLerpInst,
    FeatureSadInsts,
@@ -2241,7 +2246,8 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   [FeatureAddressableLocalMemorySize327680,
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
-   FeatureXNACKAnyOnly])>;
+   FeatureXNACKAnyOnly,
+   FeatureGFX125xLowestRateWMMA])>;
 
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
