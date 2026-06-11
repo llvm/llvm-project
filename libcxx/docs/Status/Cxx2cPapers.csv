@@ -216,3 +216,4 @@
 "`P4159R0 <https://wg21.link/P4159R0>`__","Make ``sender_in`` and ``receiver_of`` exposition-only","2026-03 (Croydon)","","","`#189632 <https://github.com/llvm/llvm-project/issues/189632>`__",""
 "`P4154R0 <https://wg21.link/P4154R0>`__","Renaming various execution things","2026-03 (Croydon)","","","`#189633 <https://github.com/llvm/llvm-project/issues/189633>`__",""
 "","","","","","",""
+"`P3726R2 <https://wg21.link/4206R0>`__","Revert string support in ``std::constant_wrapper``","2026-06 (Brno)","|Complete|","23","`#203336 <https://github.com/llvm/llvm-project/issues/203336>`__",""
