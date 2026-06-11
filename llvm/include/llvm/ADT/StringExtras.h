@@ -63,7 +63,7 @@ inline StringRef toStringRef(ArrayRef<char> Input) {
   return StringRef(Input.begin(), Input.size());
 }
 
-/// Construct an array ref of unsigned bytes from a string ref.
+/// Construct a string ref from an array ref of unsigned chars.
 template <class CharT = uint8_t>
 inline ArrayRef<CharT> arrayRefFromStringRef(StringRef Input) {
   static_assert(std::is_same<CharT, char>::value ||
