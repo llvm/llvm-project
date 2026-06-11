@@ -116,6 +116,7 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   let TSFlags{2} = HasVGPR;
   let TSFlags{3} = HasAGPR;
   let TSFlags{4} = HasSGPR;
+  let SpillStackID = !if(HasSGPR, 1, 0); // TargetStackID::SGPRSpill
 
   // RA will use RegisterClass AllocationPriority amongst other info (e.g. ordering in the basic block)
   // to decide which registers to try to assign first. Usually, this RegisterClass priority is given

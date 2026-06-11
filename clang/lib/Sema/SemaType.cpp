@@ -3262,6 +3262,10 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         (Auto && Auto->getKeyword() != AutoTypeKeyword::GNUAutoType);
     bool IsDeducedReturnType = false;
 
+    SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
+    if (D.getName().getKind() == UnqualifiedIdKind::IK_ConversionFunctionId)
+      AutoRange = D.getName().getSourceRange();
+
     switch (D.getContext()) {
     case DeclaratorContext::LambdaExpr:
       // Declared return type of a lambda-declarator is implicit and is always
@@ -3279,11 +3283,16 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       InventedTemplateParameterInfo *Info = nullptr;
       if (D.getContext() == DeclaratorContext::Prototype) {
         // With concepts we allow 'auto' in function parameters.
-        if (!SemaRef.getLangOpts().CPlusPlus20 || !Auto ||
+        if (!SemaRef.getLangOpts().CPlusPlus || !Auto ||
             Auto->getKeyword() != AutoTypeKeyword::Auto) {
           Error = 0;
           break;
-        } else if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
+        }
+
+        if (!SemaRef.getLangOpts().CPlusPlus20)
+          SemaRef.DiagCompat(AutoRange.getBegin(), diag_compat::auto_param);
+
+        if (!SemaRef.getCurScope()->isFunctionDeclarationScope()) {
           Error = 21;
           break;
         }
@@ -3418,10 +3427,6 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     if (D.isFunctionDeclarator() &&
         (!SemaRef.getLangOpts().CPlusPlus11 || !IsCXXAutoType))
       Error = 13;
-
-    SourceRange AutoRange = D.getDeclSpec().getTypeSpecTypeLoc();
-    if (D.getName().getKind() == UnqualifiedIdKind::IK_ConversionFunctionId)
-      AutoRange = D.getName().getSourceRange();
 
     if (Error != -1) {
       unsigned Kind;
