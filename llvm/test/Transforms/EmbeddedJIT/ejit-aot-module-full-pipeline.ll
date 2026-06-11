@@ -6,11 +6,11 @@
 
 ; CHECK: define{{.*}}@process_cell
 ; CHECK: jit_entry:
-; CHECK: call ptr @ejit_compile_or_get(ptr {{.*}}, ptr {{.*}}, i32 2, ptr null)
+; CHECK: call ptr @ejit_compile_or_get(i64 {{.*}}, ptr null)
 
 ; CHECK: define{{.*}}@process_static
 ; CHECK: jit_entry:
-; CHECK: call ptr @ejit_compile_or_get(ptr {{.*}}, ptr null, i32 0, ptr null)
+; CHECK: call ptr @ejit_compile_or_get(i64 {{.*}}, ptr null)
 
 ; CHECK: define{{.*}}@update_config
 ; CHECK: call void @ejit_deactivate_array
@@ -25,7 +25,7 @@
 ; CHECK: call void @ejit_register_static_var(ptr {{.*}}, ptr @board_cfg)
 ; CHECK: call void @ejit_register_static_var(ptr {{.*}}, ptr @sys_thresh)
 
-; CHECK-DAG: declare ptr @ejit_compile_or_get(ptr, ptr, i32, ptr)
+; CHECK-DAG: declare ptr @ejit_compile_or_get(i64, ptr)
 
 
 @cell_cfg = global [10 x i32] zeroinitializer, !ejit.metadata !10

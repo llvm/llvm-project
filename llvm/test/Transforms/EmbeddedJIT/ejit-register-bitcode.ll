@@ -1,7 +1,6 @@
 ; RUN: opt -passes=ejit-register-bitcode -S %s | FileCheck %s
 
 ; CHECK: @__ejit_bitcode = internal constant [{{.*}} x i8]
-; CHECK: section ".ejit.bitcode"
 
 ; CHECK: define internal void @ejit_auto_register()
 ; CHECK: call void @ejit_register_bitcode

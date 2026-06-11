@@ -2,7 +2,7 @@
 
 ; CHECK: define void @static_only_entry()
 ; CHECK: jit_entry:
-; CHECK: call ptr @ejit_compile_or_get(ptr {{.*}}, ptr null, i32 0, ptr null)
+; CHECK: call ptr @ejit_compile_or_get(i64 {{.*}}, ptr null)
 ; CHECK: icmp eq ptr {{.*}}, null
 ; CHECK: br i1 {{.*}}, label %jit_fallback, label %jit_dispatch
 ; CHECK: jit_fallback:
