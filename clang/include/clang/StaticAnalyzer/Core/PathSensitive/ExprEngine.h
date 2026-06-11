@@ -908,7 +908,7 @@ private:
                             const StackFrame *SF);
 
   void inlineCall(WorkList *WList, const CallEvent &Call, const Decl *D,
-                  NodeBuilder &Bldr, ExplodedNode *Pred, ProgramStateRef State);
+                  ExplodedNode *Pred, ProgramStateRef State);
 
   void ctuBifurcate(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
                     ExplodedNode *Pred, ProgramStateRef State);

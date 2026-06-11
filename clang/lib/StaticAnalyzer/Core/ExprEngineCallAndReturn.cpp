@@ -502,13 +502,15 @@ void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
                           (IK == CTUPhase1InliningKind::Small &&
                            isSmall(AMgr.getAnalysisDeclContext(D)));
     if (DoInline) {
-      inlineCall(Engine.getWorkList(), Call, D, Bldr, Pred, State);
+      Bldr.takeNodes(Pred);
+      inlineCall(Engine.getWorkList(), Call, D, Pred, State);
       return;
     }
     const bool BState = State->get<CTUDispatchBifurcation>();
     if (!BState) { // This is the first time we see this foreign function.
       // Enqueue it to be analyzed in the second (ctu) phase.
-      inlineCall(Engine.getCTUWorkList(), Call, D, Bldr, Pred, State);
+      Bldr.takeNodes(Pred);
+      inlineCall(Engine.getCTUWorkList(), Call, D, Pred, State);
       // Conservatively evaluate in the first phase.
       ConservativeEvalState = State->set<CTUDispatchBifurcation>(true);
       conservativeEvalCall(Call, Bldr, Pred, ConservativeEvalState);
@@ -517,12 +519,13 @@ void ExprEngine::ctuBifurcate(const CallEvent &Call, const Decl *D,
     }
     return;
   }
-  inlineCall(Engine.getWorkList(), Call, D, Bldr, Pred, State);
+  Bldr.takeNodes(Pred);
+  inlineCall(Engine.getWorkList(), Call, D, Pred, State);
 }
 
 void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
-                            const Decl *D, NodeBuilder &Bldr,
-                            ExplodedNode *Pred, ProgramStateRef State) {
+                            const Decl *D, ExplodedNode *Pred,
+                            ProgramStateRef State) {
   assert(D);
 
   const StackFrame *CallerSF = Pred->getStackFrame();
@@ -555,10 +558,6 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
     if (isNew)
       WList->enqueue(N);
   }
-
-  // If we decided to inline the call, the successor has been manually
-  // added onto the work list so remove it from the node builder.
-  Bldr.takeNodes(Pred);
 
   NumInlinedCalls++;
   Engine.FunctionSummaries->bumpNumTimesInlined(D);
