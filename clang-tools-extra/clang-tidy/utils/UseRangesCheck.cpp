@@ -110,9 +110,9 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
   auto Replaces = getReplacerMap();
   ReverseDescriptor = getReverseDescriptor();
   auto BeginEndNames = getFreeBeginEndMethods();
-  const llvm::SmallVector<StringRef, 4> BeginNames{
+  const SmallVector<StringRef, 4> BeginNames{
       llvm::make_first_range(BeginEndNames)};
-  const llvm::SmallVector<StringRef, 4> EndNames{
+  const SmallVector<StringRef, 4> EndNames{
       llvm::make_second_range(BeginEndNames)};
   Replacers.clear();
   llvm::DenseSet<Replacer *> SeenRepl;
@@ -123,7 +123,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
     Replacers.push_back(Replacer);
     assert(!Replacer->getReplacementSignatures().empty() &&
            llvm::all_of(Replacer->getReplacementSignatures(),
-                        [](auto Index) { return !Index.empty(); }));
+                        [](const Signature &Index) { return !Index.empty(); }));
     std::vector<StringRef> Names(1, I->getKey());
     for (auto J = std::next(I); J != E; ++J)
       if (J->getValue() == Replacer)
@@ -163,7 +163,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
 static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
                                ArrayRef<unsigned> Indexes,
                                const ASTContext &Ctx) {
-  llvm::SmallVector<unsigned> Sorted(Indexes);
+  SmallVector<unsigned> Sorted(Indexes);
   llvm::sort(Sorted);
   // Keep track of commas removed
   llvm::SmallBitVector Commas(Call.getNumArgs());
@@ -189,6 +189,34 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
       Commas[Index] = true;
     }
   }
+}
+
+static bool isResultUsed(const DynTypedNode &Node,
+                         const ast_matchers::MatchFinder::MatchResult &Result) {
+  const DynTypedNodeList Parents = Result.Context->getParents(Node);
+  assert(Parents.size() == 1 &&
+         "Expected exactly one parent for a matched algorithm call");
+  const DynTypedNode &Parent = Parents[0];
+  if (Parent.get<CompoundStmt>())
+    return false;
+  if (const auto *Cleanups = Parent.get<ExprWithCleanups>())
+    return isResultUsed(DynTypedNode::create(*Cleanups), Result);
+  if (const auto *Temporary = Parent.get<CXXBindTemporaryExpr>())
+    return isResultUsed(DynTypedNode::create(*Temporary), Result);
+  return true;
+}
+
+static bool isResultUsed(const CallExpr &Call,
+                         const ast_matchers::MatchFinder::MatchResult &Result) {
+  return isResultUsed(DynTypedNode::create(Call), Result);
+}
+
+static void insertAccessor(DiagnosticBuilder &Diag, const CallExpr &Call,
+                           StringRef Accessor, const ASTContext &Ctx) {
+  const SourceLocation End = Lexer::getLocForEndOfToken(
+      Call.getEndLoc(), 0, Ctx.getSourceManager(), Ctx.getLangOpts());
+  if (End.isValid())
+    Diag << FixItHint::CreateInsertion(End, Accessor);
 }
 
 void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
@@ -226,6 +254,9 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
         return;
     }
 
+    const bool ResultUsed = isResultUsed(*Call, Result);
+    auto ResultPolicy = Replacer->getResultUsePolicy(*Function, false);
+
     auto Diag = createDiag(*Call);
     if (auto ReplaceName = Replacer->getReplaceName(*Function))
       Diag << FixItHint::CreateReplacement(Call->getCallee()->getSourceRange(),
@@ -233,7 +264,7 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     if (auto Include = Replacer->getHeaderInclusion(*Function))
       Diag << Inserter.createIncludeInsertion(
           Result.SourceManager->getFileID(Call->getBeginLoc()), *Include);
-    llvm::SmallVector<unsigned, 3> ToRemove;
+    SmallVector<unsigned, 3> ToRemove;
     for (const auto &[First, Second, Replace] : Sig) {
       auto ArgNode = ArgName + std::to_string(First);
       if (const auto *ArgExpr = Result.Nodes.getNodeAs<Expr>(ArgNode)) {
@@ -271,6 +302,11 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
       ToRemove.push_back(Replace == Indexes::Second ? First : Second);
     }
     removeFunctionArgs(Diag, *Call, ToRemove, *Result.Context);
+    using ResultPolicyKind = Replacer::ResultUsePolicy::Kind;
+    if (ResultUsed && ResultPolicy.PolicyKind ==
+                          ResultPolicyKind::AppendAccessorForUsedResult) {
+      insertAccessor(Diag, *Call, ResultPolicy.Accessor, *Result.Context);
+    }
     return;
   }
   llvm_unreachable("No valid signature found");
@@ -299,6 +335,11 @@ void UseRangesCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 std::optional<std::string>
 UseRangesCheck::Replacer::getHeaderInclusion(const NamedDecl &) const {
   return std::nullopt;
+}
+
+UseRangesCheck::Replacer::ResultUsePolicy
+UseRangesCheck::Replacer::getResultUsePolicy(const NamedDecl &, bool) const {
+  return {};
 }
 
 DiagnosticBuilder UseRangesCheck::createDiag(const CallExpr &Call) {

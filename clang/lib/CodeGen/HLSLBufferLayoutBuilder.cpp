@@ -103,10 +103,8 @@ HLSLBufferLayoutBuilder::layOutStruct(const RecordType *RT,
   return NewTy;
 }
 
-llvm::Type *HLSLBufferLayoutBuilder::layOutArray(const ConstantArrayType *AT) {
-  llvm::Type *EltTy = layOutType(AT->getElementType());
-  uint64_t Count = AT->getZExtSize();
-
+llvm::Type *HLSLBufferLayoutBuilder::padArrayElements(llvm::Type *EltTy,
+                                                      uint64_t Count) {
   CharUnits EltSize =
       CharUnits::fromQuantity(CGM.getDataLayout().getTypeSizeInBits(EltTy) / 8);
   CharUnits Padding = EltSize.alignTo(CBufferRowSize) - EltSize;
@@ -127,6 +125,22 @@ llvm::Type *HLSLBufferLayoutBuilder::layOutArray(const ConstantArrayType *AT) {
       /*IsPacked=*/true);
 }
 
+llvm::Type *HLSLBufferLayoutBuilder::layOutArray(const ConstantArrayType *AT) {
+  llvm::Type *EltTy = layOutType(AT->getElementType());
+  uint64_t Count = AT->getZExtSize();
+  return padArrayElements(EltTy, Count);
+}
+
+llvm::Type *HLSLBufferLayoutBuilder::layOutMatrix(QualType Ty) {
+  // ConvertTypeForMem already handles row/column-major layout and bool
+  // promotion, producing [Count x <VecLen x EltTy>]. We just need to add
+  // cbuffer padding between the array elements. Pass the sugared QualType so
+  // that the `row_major`/`column_major` orientation attribute is preserved.
+  llvm::ArrayType *MemTy =
+      cast<llvm::ArrayType>(CGM.getTypes().ConvertTypeForMem(Ty));
+  return padArrayElements(MemTy->getElementType(), MemTy->getNumElements());
+}
+
 llvm::Type *HLSLBufferLayoutBuilder::layOutType(QualType Ty) {
   if (const auto *AT = CGM.getContext().getAsConstantArrayType(Ty))
     return layOutArray(AT);
@@ -135,6 +149,9 @@ llvm::Type *HLSLBufferLayoutBuilder::layOutType(QualType Ty) {
     CGHLSLOffsetInfo EmptyOffsets;
     return layOutStruct(Ty->getAsCanonical<RecordType>(), EmptyOffsets);
   }
+
+  if (Ty->isConstantMatrixType())
+    return layOutMatrix(Ty);
 
   return CGM.getTypes().ConvertTypeForMem(Ty);
 }

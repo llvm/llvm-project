@@ -1,0 +1,25 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "TagsAnalysisResult",
+      "result": {
+        "tags": []
+      }
+    },
+    {
+      "analysis_name": "PairsAnalysisResult",
+      "result": {
+        "pair_counts": []
+      }
+    },
+    {
+      "analysis_name": "TagsPairsAnalysisResult",
+      "result": {
+        "entity_count": 1,
+        "total_pair_count": 1,
+        "unique_tag_count": 1
+      }
+    }
+  ]
+}

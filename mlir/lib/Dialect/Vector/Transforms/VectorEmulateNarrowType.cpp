@@ -635,19 +635,9 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
       return success();
     }
 
-    // Do the trailing dim for source and destination match? If yes, then the
-    // corresponding index must be 0.
-    // FIXME: There's no way to tell for dynamic shapes, so we should bail out.
-    // However, that makes some tests fail, so we need to audit first.
-    auto trailingDim = op.getBase().getType().getShape().back();
-    bool trailingDimsMatch =
-        ShapedType::isDynamic(trailingDim) || trailingDim == origElements;
-
     auto stridedMetadata =
         memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getBase());
 
-    // FIXME: ATM, we do not test cases where offsets, sizes, or strides are
-    // non-zero. As such, this is not needed.
     OpFoldResult linearizedIndices;
     memref::LinearizedMemRefInfo linearizedInfo;
     std::tie(linearizedInfo, linearizedIndices) =
@@ -658,10 +648,12 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             stridedMetadata.getConstifiedMixedStrides(),
             getAsOpFoldResult(adaptor.getIndices()));
 
+    // Use the exact intraDataOffset when it can be folded. Dynamic values are
+    // rejected in this path because a dynamic offset is not necessarily aligned
+    // to a container element boundary. Callers that can guarantee alignment
+    // should use assumeAligned.
     std::optional<int64_t> foldedNumFrontPadElems =
-        (isDivisibleInSize && trailingDimsMatch)
-            ? 0
-            : getConstantIntValue(linearizedInfo.intraDataOffset);
+        getConstantIntValue(linearizedInfo.intraDataOffset);
 
     if (!foldedNumFrontPadElems) {
       return rewriter.notifyMatchFailure(
@@ -2163,9 +2155,14 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
       return failure();
     }
 
-    // Finalize the rewrite.
-    rewriter.replaceOpWithNewOp<ConversionOpType>(
-        conversionOp, conversionOp.getType(), subByteExt);
+    // Finalize the rewrite. If subByteExt already has the destination type
+    // (e.g. extsi i4->i8 where the container is i8), replace directly without
+    // creating a new conversion op that would have identical src and dst types.
+    if (subByteExt.getType() == conversionOp.getType())
+      rewriter.replaceOp(conversionOp, subByteExt);
+    else
+      rewriter.replaceOpWithNewOp<ConversionOpType>(
+          conversionOp, conversionOp.getType(), subByteExt);
     return success();
   }
 };
@@ -2213,11 +2210,13 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
             /*containerTy=*/rewriter.getI8Type(), truncOp)))
       return failure();
 
-    // Create a new iX -> i8 truncation op.
+    // Create a new iX -> i8 truncation op, unless the source is already i8.
     Location loc = truncOp.getLoc();
     auto i8VecType = srcVecType.cloneWith(std::nullopt, rewriter.getI8Type());
     Value i8TruncVal =
-        arith::TruncIOp::create(rewriter, loc, i8VecType, srcValue);
+        srcVecType == i8VecType
+            ? srcValue
+            : arith::TruncIOp::create(rewriter, loc, i8VecType, srcValue);
 
     // Rewrite the i8 -> i4 truncation part.
     Value subByteTrunc = rewriteI8ToI4Trunc(rewriter, loc, i8TruncVal);
@@ -2329,6 +2328,6 @@ void vector::populateVectorTransposeNarrowTypeRewritePatterns(
 void vector::populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
     arith::NarrowTypeEmulationConverter &typeConverter,
     RewritePatternSet &patterns) {
-  memref::populateFlattenVectorOpsOnMemrefPatterns(patterns);
+  memref::populateFlattenMemrefsPatterns(patterns);
   vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns);
 }

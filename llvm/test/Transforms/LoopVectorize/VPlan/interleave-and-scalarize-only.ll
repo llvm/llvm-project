@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -vplan-print-after="optimize$" -disable-output %s 2>&1 | FileCheck --check-prefix=DBG %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -vplan-print-after=printOptimizedVPlan -disable-output %s 2>&1 | FileCheck --check-prefix=DBG %s
 ; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S %s | FileCheck %s
 
 ; DBG-LABEL: 'test_scalarize_call'
@@ -17,8 +17,9 @@
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
+; DBG-NEXT:     vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; DBG-EMPTY:
 ; DBG-NEXT:   vector.body:
-; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<%start> + vp<[[CAN_IV]]> * ir<1>
 ; DBG-NEXT:     vp<[[IV_STEPS:%.]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<1>, vp<[[VF]]>
 ; DBG-NEXT:     CLONE ir<%min> = call @llvm.smin.i32(vp<[[IV_STEPS]]>, ir<65535>)
@@ -62,7 +63,6 @@ exit:
   ret void
 }
 
-declare i32 @llvm.smin.i32(i32, i32)
 
 
 ; DBG-LABEL: 'test_scalarize_with_branch_cond'
@@ -79,8 +79,9 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
+; DBG-NEXT:     vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; DBG-EMPTY:
 ; DBG-NEXT:   vector.body:
-; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     vp<[[DERIVED_IV:%.+]]> = DERIVED-IV ir<false> + vp<[[CAN_IV]]> * ir<true>
 ; DBG-NEXT:     vp<[[STEPS1:%.+]]>    = SCALAR-STEPS vp<[[DERIVED_IV]]>, ir<true>
 ; DBG-NEXT:   Successor(s): pred.store
@@ -135,10 +136,8 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue4 ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i1
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i1 false, [[TMP0]]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add i1 [[OFFSET_IDX]], false
-; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i1 [[OFFSET_IDX]], true
-; CHECK-NEXT:    br i1 [[INDUCTION]], label %pred.store.if, label %pred.store.continue
+; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i1 [[TMP0]], true
+; CHECK-NEXT:    br i1 [[TMP0]], label %pred.store.if, label %pred.store.continue
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
@@ -203,8 +202,9 @@ exit:
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
+; DBG-NEXT:     vp<[[CAN_IV:%.+]]> = CANONICAL-IV
+; DBG-EMPTY:
 ; DBG-NEXT:   vector.body:
-; DBG-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; DBG-NEXT:     FIRST-ORDER-RECURRENCE-PHI ir<%for> = phi ir<0>, vp<[[SCALAR_STEPS:.+]]>
 ; DBG-NEXT:     EMIT-SCALAR vp<[[TRUNC_IV:%.+]]> = trunc vp<[[CAN_IV]]> to i32
 ; DBG-NEXT:     vp<[[SCALAR_STEPS]]> = SCALAR-STEPS vp<[[TRUNC_IV]]>, ir<1>, vp<[[VF]]
@@ -387,7 +387,7 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[DOTCAST1]], 3
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %b, [[TMP10]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 128
+; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = shl i64 [[INDEX]], 7
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX2]], 128
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP15]]

@@ -426,7 +426,7 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GFX9-NEXT:    s_sub_i32 s4, 0, s3
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
@@ -456,7 +456,7 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX90A-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX90A-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GFX90A-NEXT:    s_sub_i32 s4, 0, s3
-; GFX90A-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX90A-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX90A-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX90A-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX90A-NEXT:    v_readfirstlane_b32 s5, v0
@@ -485,7 +485,7 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GFX10-NEXT:    s_sub_i32 s5, 0, s3
-; GFX10-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX10-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
@@ -516,7 +516,7 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX9-FLATSCR-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GFX9-FLATSCR-NEXT:    s_sub_i32 s4, 0, s3
-; GFX9-FLATSCR-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX9-FLATSCR-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX9-FLATSCR-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-FLATSCR-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-FLATSCR-NEXT:    v_readfirstlane_b32 s5, v0
@@ -546,7 +546,7 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX11-NEXT:    v_cvt_f32_u32_e32 v0, s3
 ; GFX11-NEXT:    s_sub_i32 s5, 0, s3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_rcp_iflag_f32_e32 v0, v0
+; GFX11-NEXT:    v_rcp_f32_e32 v0, v0
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_va_vdst(0)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX11-NEXT:    v_cvt_u32_f32_e32 v0, v0
@@ -582,8 +582,7 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX12-NEXT:    s_cvt_f32_u32 s4, s3
 ; GFX12-NEXT:    s_sub_co_i32 s5, 0, s3
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX12-NEXT:    v_rcp_iflag_f32_e32 v0, s4
-; GFX12-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX12-NEXT:    v_s_rcp_f32 s4, s4
 ; GFX12-NEXT:    s_mul_f32 s4, s4, 0x4f7ffffe
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
@@ -905,7 +904,7 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX9-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
@@ -934,7 +933,7 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
-; GFX90A-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX90A-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX90A-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_endpgm
@@ -964,7 +963,7 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX10-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
@@ -993,7 +992,7 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX9-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-FLATSCR-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX9-FLATSCR-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX9-FLATSCR-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT:    s_endpgm
@@ -1024,7 +1023,7 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX11-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
@@ -1058,7 +1057,7 @@ define amdgpu_kernel void @atomic_add_ret_local(ptr addrspace(1) %out, ptr addrs
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX12-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_endpgm
@@ -1096,7 +1095,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX9-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_endpgm
@@ -1124,7 +1123,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, 0
-; GFX90A-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX90A-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX90A-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    s_endpgm
@@ -1152,7 +1151,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX10-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX10-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_endpgm
@@ -1180,7 +1179,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v2, 0
-; GFX9-FLATSCR-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX9-FLATSCR-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX9-FLATSCR-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT:    s_endpgm
@@ -1210,7 +1209,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX11-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
@@ -1241,7 +1240,7 @@ define amdgpu_kernel void @add_i32_constant(ptr addrspace(1) %out, ptr addrspace
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_mad_u32_u24 v0, v0, 5, s2
+; GFX12-NEXT:    v_mad_u32_u24 v0, 5, v0, s2
 ; GFX12-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_endpgm

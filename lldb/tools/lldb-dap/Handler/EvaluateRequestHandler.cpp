@@ -11,6 +11,7 @@
 #include "EventHelper.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
@@ -92,7 +93,8 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
 
     bool required_command_failed = false;
     body.result = RunLLDBCommands(
-        dap.debugger, llvm::StringRef(), {expression}, required_command_failed,
+        dap.debugger, dap.GetAPIMutex(), llvm::StringRef(), {expression},
+        required_command_failed,
         /*parse_command_directives=*/false, /*echo_commands=*/false);
     return body;
   }
@@ -132,15 +134,16 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
   body.type = desc.display_type_name;
 
   if (value.MightHaveChildren() || ValuePointsToCode(value))
-    body.variablesReference =
-        dap.variables.InsertVariable(value, /*is_permanent=*/is_repl_context);
+    body.variablesReference = dap.reference_storage.Insert(
+        value, /*is_permanent=*/is_repl_context, /*is_internal=*/false);
 
   if (lldb::addr_t addr = value.GetLoadAddress(); addr != LLDB_INVALID_ADDRESS)
     body.memoryReference = EncodeMemoryReference(addr);
 
   if (ValuePointsToCode(value) &&
-      body.variablesReference != LLDB_DAP_INVALID_VAR_REF)
-    body.valueLocationReference = PackLocation(body.variablesReference, true);
+      body.variablesReference.Kind() != eReferenceKindInvalid)
+    body.valueLocationReference =
+        PackLocation(body.variablesReference.AsUInt32(), true);
 
   return body;
 }

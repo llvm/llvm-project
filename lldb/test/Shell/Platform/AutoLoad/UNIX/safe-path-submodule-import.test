@@ -1,0 +1,30 @@
+# REQUIRES: python, asserts, !system-windows
+#
+# Test that an auto-loaded script can import a sibling Python submodule
+# from the same directory.
+
+# RUN: split-file %s %t
+# RUN: %clang_host %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/safe-path/TestModule
+
+# RUN: cp %t/script.py %t/safe-path/TestModule/TestModule.py
+# RUN: cp %t/helper.py %t/safe-path/TestModule/helper.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'settings append testing.safe-auto-load-paths %t/safe-path' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s
+
+# CHECK: HELPER_LOADED
+
+#--- main.c
+int main() { return 0; }
+
+#--- script.py
+import sys
+import helper
+def __lldb_init_module(debugger, internal_dict):
+    print(helper.get_marker(), file=sys.stderr)
+
+#--- helper.py
+def get_marker():
+    return "HELPER_LOADED"

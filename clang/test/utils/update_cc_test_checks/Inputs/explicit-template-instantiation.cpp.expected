@@ -184,7 +184,7 @@ template struct Bar<int>;
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS:%.*]], ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NEXT:    call void @_ZN3BazIlED2Ev(ptr noundef nonnull align 8 dereferenceable(8) [[THIS1]]) #[[ATTR1]]
+// CHECK-NEXT:    call void @_ZN3BazIlED2Ev(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) [[THIS1]]) #[[ATTR1]]
 // CHECK-NEXT:    ret void
 //
 template struct Baz<long>;

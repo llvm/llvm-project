@@ -10,7 +10,8 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRV_H
 
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Pass.h"
+#include "llvm/PassRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -24,7 +25,6 @@ FunctionPass *createSPIRVStructurizerPass();
 ModulePass *createSPIRVCBufferAccessLegacyPass();
 ModulePass *createSPIRVPushConstantAccessLegacyPass(SPIRVTargetMachine *TM);
 FunctionPass *createSPIRVMergeRegionExitTargetsPass();
-FunctionPass *createSPIRVStripConvergenceIntrinsicsPass();
 ModulePass *createSPIRVLegalizeImplicitBindingPass();
 ModulePass *createSPIRVLegalizeZeroSizeArraysPass(const SPIRVTargetMachine &TM);
 FunctionPass *createSPIRVLegalizePointerCastPass(SPIRVTargetMachine *TM);
@@ -32,9 +32,9 @@ FunctionPass *createSPIRVRegularizerPass();
 FunctionPass *createSPIRVPreLegalizerCombiner();
 FunctionPass *createSPIRVPreLegalizerPass();
 FunctionPass *createSPIRVPostLegalizerPass();
-ModulePass *createSPIRVEmitIntrinsicsPass(SPIRVTargetMachine *TM);
+ModulePass *createSPIRVEmitIntrinsicsPass(const SPIRVTargetMachine &TM);
 ModulePass *createSPIRVPrepareGlobalsPass();
-MachineFunctionPass *createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM);
+ModulePass *createSPIRVCtorDtorLoweringLegacyPass();
 InstructionSelector *
 createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
                                const SPIRVSubtarget &Subtarget,
@@ -50,15 +50,14 @@ void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsPass(PassRegistry &);
-void initializeSPIRVEmitNonSemanticDIPass(PassRegistry &);
-void initializeSPIRVLegalizePointerCastPass(PassRegistry &);
-void initializeSPIRVRegularizerPass(PassRegistry &);
-void initializeSPIRVMergeRegionExitTargetsPass(PassRegistry &);
-void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
-void initializeSPIRVPrepareGlobalsPass(PassRegistry &);
-void initializeSPIRVStripConvergentIntrinsicsPass(PassRegistry &);
-void initializeSPIRVLegalizeImplicitBindingPass(PassRegistry &);
+void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);
+void initializeSPIRVRegularizerLegacyPass(PassRegistry &);
+void initializeSPIRVMergeRegionExitTargetsLegacyPass(PassRegistry &);
+void initializeSPIRVPrepareFunctionsLegacyPass(PassRegistry &);
+void initializeSPIRVPrepareGlobalsLegacyPass(PassRegistry &);
+void initializeSPIRVLegalizeImplicitBindingLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PassRegistry &);
+void initializeSPIRVCtorDtorLoweringLegacyPass(PassRegistry &);
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRV_H

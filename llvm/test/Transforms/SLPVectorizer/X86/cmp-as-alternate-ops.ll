@@ -44,11 +44,13 @@ define { <2 x float>, <2 x float> } @test1(i32 %conv.i32.i.i.i) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV_I32_I_I_I1:%.*]] = fptosi float 0.000000e+00 to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 poison, i32 0, i32 poison, i32 0>, i32 [[CONV_I32_I_I_I:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[CONV_I32_I_I_I1]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[CONV_I32_I_I_I1]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[CONV_I32_I_I_I:%.*]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i1> [[TMP3]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i1> [[TMP1]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP9]], <4 x i1> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x float> zeroinitializer, <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <2 x i32> <i32 0, i32 1>

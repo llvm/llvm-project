@@ -171,8 +171,11 @@ AddressSanitizer can detect overflows in containers with custom allocators
 (such as std::vector) where the library developers have added calls into the
 AddressSanitizer runtime to indicate which memory is poisoned etc.
 
-In environments where not all the process binaries can be recompiled with 
-AddressSanitizer enabled, these checks can cause false positives.
+Note that this feature is prone to false positives:
+  * Partially poisoning objects on stack, e.g. for small string optimization, can
+    cause both false positives and negatives.
+  * If the binary is partially AddressSanitizer instrumented, these
+    checks can cause false positives.
 
 See `Disabling container overflow checks`_ for details on suppressing checks.
 

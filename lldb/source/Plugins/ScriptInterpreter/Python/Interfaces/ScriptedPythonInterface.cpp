@@ -6,21 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 
-#if LLDB_ENABLE_PYTHON
-
-// LLDB Python header must be included first
-#include "../lldb-python.h"
-
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
-#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/FileSpecList.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include <optional>
 
@@ -293,6 +287,21 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
 }
 
 template <>
+lldb::TargetSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::TargetSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBTarget *sb_target = reinterpret_cast<lldb::SBTarget *>(
+      python::LLDBSWIGPython_CastPyObjectToSBTarget(p.get()));
+  if (!sb_target) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBTarget to lldb::TargetSP");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBTarget(*sb_target);
+}
+
+template <>
 lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
     python::PythonObject &p, Status &error) {
@@ -313,79 +322,3 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
 
   return out;
 }
-
-template <>
-FileSpec ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpec>(
-    python::PythonObject &p, Status &error) {
-  if (lldb::SBFileSpec *sb_file_spec = reinterpret_cast<lldb::SBFileSpec *>(
-          python::LLDBSWIGPython_CastPyObjectToSBFileSpec(p.get()))) {
-    if (auto file_spec =
-            m_interpreter.GetOpaqueTypeFromSBFileSpec(*sb_file_spec))
-      return *file_spec;
-  }
-  error = Status::FromErrorString(
-      "couldn't cast lldb::SBFileSpec to lldb_private::FileSpec.");
-
-  return {};
-}
-
-template <>
-ModuleSpec ScriptedPythonInterface::ExtractValueFromPythonObject<ModuleSpec>(
-    python::PythonObject &p, Status &error) {
-  if (lldb::SBModuleSpec *sb_module_spec =
-          reinterpret_cast<lldb::SBModuleSpec *>(
-              python::LLDBSWIGPython_CastPyObjectToSBModuleSpec(p.get()))) {
-    if (auto module_spec =
-            m_interpreter.GetOpaqueTypeFromSBModuleSpec(*sb_module_spec))
-      return *module_spec;
-  }
-  error = Status::FromErrorString(
-      "couldn't cast lldb::SBModuleSpec to lldb_private::ModuleSpec.");
-
-  return {};
-}
-
-template <>
-FileSpecList
-ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpecList>(
-    python::PythonObject &p, Status &error) {
-  FileSpecList result;
-  if (lldb::SBFileSpecList *sb_list = reinterpret_cast<lldb::SBFileSpecList *>(
-          python::LLDBSWIGPython_CastPyObjectToSBFileSpecList(p.get()))) {
-    for (uint32_t i = 0; i < sb_list->GetSize(); i++) {
-      lldb::SBFileSpec sb_file_spec = sb_list->GetFileSpecAtIndex(i);
-      if (auto file_spec =
-              m_interpreter.GetOpaqueTypeFromSBFileSpec(sb_file_spec))
-        result.Append(*file_spec);
-    }
-    return result;
-  }
-  error = Status::FromErrorString(
-      "couldn't cast Python object to lldb::SBFileSpecList.");
-  return result;
-}
-
-template <>
-lldb::ModuleSP
-ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ModuleSP>(
-    python::PythonObject &p, Status &error) {
-  if (lldb::SBModule *sb_module = reinterpret_cast<lldb::SBModule *>(
-          python::LLDBSWIGPython_CastPyObjectToSBModule(p.get())))
-    return m_interpreter.GetOpaqueTypeFromSBModule(*sb_module);
-  error = Status::FromErrorString(
-      "couldn't cast lldb::SBModule to lldb::ModuleSP.");
-
-  return {};
-}
-
-// MakeSBModuleSpec is defined here rather than in ScriptInterpreter.cpp
-// because it constructs an SBModuleSpec, whose symbols live in liblldb.
-// ScriptInterpreter.cpp is part of lldbInterpreter which is also linked
-// into lldb-server, which does not link the API library.
-std::unique_ptr<lldb::SBModuleSpec>
-ScriptInterpreter::MakeSBModuleSpec(const ModuleSpec &module_spec) const {
-  return std::unique_ptr<lldb::SBModuleSpec>(
-      new lldb::SBModuleSpec(module_spec));
-}
-
-#endif

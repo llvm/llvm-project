@@ -26,6 +26,7 @@
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
+#include "llvm/MC/SectionKind.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -320,6 +321,15 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   RemarksSection = Ctx->getMachOSection(
       "__LLVM", "__remarks", MachO::S_ATTR_DEBUG, SectionKind::getMetadata());
 
+  PseudoProbeSection =
+      Ctx->getMachOSection("__PSEUDO_PROBE", "__probes",
+                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+                           SectionKind::getMetadata());
+  PseudoProbeDescSection =
+      Ctx->getMachOSection("__PSEUDO_PROBE", "__probe_descs",
+                           MachO::S_ATTR_DEBUG | MachO::S_ATTR_NO_DEAD_STRIP,
+                           SectionKind::getMetadata());
+
   // The architecture of dsymutil makes it very difficult to copy the Swift
   // reflection metadata sections into the __TEXT segment, so dsymutil creates
   // these sections in the __DWARF segment instead.
@@ -348,7 +358,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
     if (PositionIndependent)
       FDECFIEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
     else
-      FDECFIEncoding = Ctx->getAsmInfo()->getCodePointerSize() == 4
+      FDECFIEncoding = Ctx->getAsmInfo().getCodePointerSize() == 4
                            ? dwarf::DW_EH_PE_sdata4
                            : dwarf::DW_EH_PE_sdata8;
     break;
@@ -805,46 +815,57 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                           COFF::IMAGE_SCN_MEM_READ);
   DwarfMacinfoDWOSection = Ctx->getCOFFSection(
       ".debug_macinfo.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                COFF::IMAGE_SCN_LNK_REMOVE |
                                 COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                 COFF::IMAGE_SCN_MEM_READ);
   DwarfMacroDWOSection = Ctx->getCOFFSection(
       ".debug_macro.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                              COFF::IMAGE_SCN_LNK_REMOVE |
                               COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                               COFF::IMAGE_SCN_MEM_READ);
   DwarfInfoDWOSection = Ctx->getCOFFSection(
       ".debug_info.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                             COFF::IMAGE_SCN_LNK_REMOVE |
                              COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                              COFF::IMAGE_SCN_MEM_READ);
   DwarfTypesDWOSection = Ctx->getCOFFSection(
       ".debug_types.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                              COFF::IMAGE_SCN_LNK_REMOVE |
                               COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                               COFF::IMAGE_SCN_MEM_READ);
   DwarfAbbrevDWOSection = Ctx->getCOFFSection(
       ".debug_abbrev.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                               COFF::IMAGE_SCN_LNK_REMOVE |
                                COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                COFF::IMAGE_SCN_MEM_READ);
   DwarfStrDWOSection = Ctx->getCOFFSection(
       ".debug_str.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                            COFF::IMAGE_SCN_LNK_REMOVE |
                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                             COFF::IMAGE_SCN_MEM_READ);
   DwarfLineDWOSection = Ctx->getCOFFSection(
       ".debug_line.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                             COFF::IMAGE_SCN_LNK_REMOVE |
                              COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                              COFF::IMAGE_SCN_MEM_READ);
   DwarfLocDWOSection = Ctx->getCOFFSection(
       ".debug_loc.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                            COFF::IMAGE_SCN_LNK_REMOVE |
                             COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                             COFF::IMAGE_SCN_MEM_READ);
   DwarfLoclistsDWOSection = Ctx->getCOFFSection(
       ".debug_loclists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_LNK_REMOVE |
                                  COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                  COFF::IMAGE_SCN_MEM_READ);
   DwarfStrOffDWOSection = Ctx->getCOFFSection(
       ".debug_str_offsets.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                    COFF::IMAGE_SCN_LNK_REMOVE |
                                     COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                     COFF::IMAGE_SCN_MEM_READ);
   DwarfRnglistsDWOSection = Ctx->getCOFFSection(
       ".debug_rnglists.dwo", COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                                 COFF::IMAGE_SCN_LNK_REMOVE |
                                  COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                  COFF::IMAGE_SCN_MEM_READ);
   DwarfAddrSection = Ctx->getCOFFSection(
@@ -1256,23 +1277,42 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
 
 MCSection *
 MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
-  if (Ctx->getObjectFileType() != MCContext::IsELF)
-    return nullptr;
+  constexpr StringLiteral Name = ".llvm_bb_addr_map";
+  if (Ctx->getObjectFileType() == MCContext::IsELF) {
+    const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+    unsigned Flags = ELF::SHF_LINK_ORDER;
+    StringRef GroupName;
+    if (const MCSymbol *Group = ElfSec.getGroup()) {
+      GroupName = Group->getName();
+      Flags |= ELF::SHF_GROUP;
+    }
 
-  const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
-  unsigned Flags = ELF::SHF_LINK_ORDER;
-  StringRef GroupName;
-  if (const MCSymbol *Group = ElfSec.getGroup()) {
-    GroupName = Group->getName();
-    Flags |= ELF::SHF_GROUP;
+    // Use the text section's begin symbol and unique ID to create a separate
+    // .llvm_bb_addr_map section associated with every unique text section.
+    return Ctx->getELFSection(
+        Name, ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
+        ElfSec.getUniqueID(),
+        static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
+  } else if (Ctx->getObjectFileType() == MCContext::IsCOFF) {
+    StringRef COMDATSymName;
+    int Selection = 0;
+    unsigned Characteristics = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
+                               COFF::IMAGE_SCN_MEM_DISCARDABLE |
+                               COFF::IMAGE_SCN_MEM_READ;
+    const auto &COFFSec = static_cast<const MCSectionCOFF &>(TextSec);
+    if (const MCSymbol *COMDATSym = COFFSec.getCOMDATSymbol()) {
+      if (!Ctx->getAsmInfo().hasCOFFAssociativeComdats())
+        report_fatal_error("BB address map requires associative COMDAT "
+                           "support for COMDAT functions");
+      COMDATSymName = COMDATSym->getName();
+      Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
+      Selection = COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+    }
+    return Ctx->getCOFFSection(Name, Characteristics, COMDATSymName, Selection,
+                               COFFSec.getUniqueID());
   }
 
-  // Use the text section's begin symbol and unique ID to create a separate
-  // .llvm_bb_addr_map section associated with every unique text section.
-  return Ctx->getELFSection(
-      ".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
-      ElfSec.getUniqueID(),
-      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
+  return nullptr;
 }
 
 MCSection *
@@ -1329,31 +1369,38 @@ MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
 }
 
 MCSection *
-MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
+MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName,
+                                            uint64_t FuncHash) const {
   if (!Ctx->getTargetTriple().supportsCOMDAT() || FuncName.empty())
     return PseudoProbeDescSection;
 
   // Create a separate comdat group for each function's descriptor in order
   // for the linker to deduplicate. The duplication, must be from different
-  // tranlation unit, can come from:
+  // translation unit, can come from:
   //  1. Inline functions defined in header files;
-  //  2. ThinLTO imported funcions;
+  //  2. ThinLTO imported functions;
   //  3. Weak-linkage definitions.
-  // Use a concatenation of the section name and the function name as the
-  // group name so that descriptor-only groups won't be folded with groups of
-  // code.
+  // Use a concatenation of the section name, function name, and function hash
+  // as the group name so that descriptors with different hashes (due to user
+  // code not following ODR or compiler codegen inconsistencies) get separate
+  // COMDAT sections instead of being silently dropped (ELF) or causing linker
+  // errors (COFF). Duplicate GUIDs with mismatching hashes are detected
+  // during descriptor decoding and reported by llvm-profgen.
   auto ObjFileType = Ctx->getObjectFileType();
   if (ObjFileType == MCContext::IsELF) {
     auto *S = static_cast<MCSectionELF *>(PseudoProbeDescSection);
     auto Flags = S->getFlags() | ELF::SHF_GROUP;
-    return Ctx->getELFSection(S->getName(), S->getType(), Flags,
-                              S->getEntrySize(), S->getName() + "_" + FuncName,
-                              /*IsComdat=*/true);
+    return Ctx->getELFSection(
+        S->getName(), S->getType(), Flags, S->getEntrySize(),
+        S->getName() + "_" + FuncName + "." + Twine::utohexstr(FuncHash),
+        /*IsComdat=*/true);
   } else if (ObjFileType == MCContext::IsCOFF) {
     auto *S = static_cast<MCSectionCOFF *>(PseudoProbeDescSection);
     unsigned Characteristics =
         S->getCharacteristics() | COFF::IMAGE_SCN_LNK_COMDAT;
-    std::string COMDATSymName = (S->getName() + "_" + FuncName).str();
+    std::string COMDATSymName =
+        (S->getName() + "_" + FuncName + "." + Twine::utohexstr(FuncHash))
+            .str();
     return Ctx->getCOFFSection(S->getName(), Characteristics, COMDATSymName,
                                COFF::IMAGE_COMDAT_SELECT_EXACT_MATCH);
   }

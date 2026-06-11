@@ -229,13 +229,14 @@ TEST(DependencyScanner, ScanDepsWithFS) {
                llvm::MemoryBuffer::getMemBuffer("#include \"header.h\"\n"));
 
   DependencyScanningServiceOptions Opts;
-  Opts.Format = ScanningOutputFormat::Make;
+  Opts.MakeVFS = [&] { return VFS; };
   DependencyScanningService Service(std::move(Opts));
-  DependencyScanningTool ScanTool(Service, VFS);
+  DependencyScanningTool ScanTool(Service);
 
   TextDiagnosticBuffer DiagConsumer;
-  std::optional<std::string> DepFile =
-      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
+  std::optional<std::string> DepFile = ScanTool.getDependencyFile(
+      CommandLine, CWD, CallbackActionController::lookupUnreachableModuleOutput,
+      DiagConsumer);
   ASSERT_TRUE(DepFile.has_value());
   EXPECT_EQ(llvm::sys::path::convert_to_slash(*DepFile),
             "test.cpp.o: /root/test.cpp /root/header.h\n");
@@ -287,16 +288,17 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
   auto InterceptFS = llvm::makeIntrusiveRefCnt<InterceptorFS>(VFS);
 
   DependencyScanningServiceOptions Opts;
-  Opts.Format = ScanningOutputFormat::Make;
+  Opts.MakeVFS = [&] { return InterceptFS; };
   DependencyScanningService Service(std::move(Opts));
-  DependencyScanningTool ScanTool(Service, InterceptFS);
+  DependencyScanningTool ScanTool(Service);
 
   // This will fail with "fatal error: module 'Foo' not found" but it doesn't
   // matter, the point of the test is to check that files are not read
   // unnecessarily.
   TextDiagnosticBuffer DiagConsumer;
-  std::optional<std::string> DepFile =
-      ScanTool.getDependencyFile(CommandLine, CWD, DiagConsumer);
+  std::optional<std::string> DepFile = ScanTool.getDependencyFile(
+      CommandLine, CWD, CallbackActionController::lookupUnreachableModuleOutput,
+      DiagConsumer);
   ASSERT_FALSE(DepFile.has_value());
 
   EXPECT_TRUE(!llvm::is_contained(InterceptFS->StatPaths, OtherPath));

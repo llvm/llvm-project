@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include <list>
@@ -49,20 +50,24 @@ private:
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const TargetSchedModel &TSchedModel;
+
+  // Loop info for V_NOP hoisting, passed from the pass manager.
+  MachineLoopInfo *MLI = nullptr;
+
   bool RunLdsBranchVmemWARHazardFixup;
 
   /// RegUnits of uses in the current soft memory clause.
-  BitVector ClauseUses;
+  mutable BitVector ClauseUses;
 
   /// RegUnits of defs in the current soft memory clause.
-  BitVector ClauseDefs;
+  mutable BitVector ClauseDefs;
 
-  void resetClause() {
+  void resetClause() const {
     ClauseUses.reset();
     ClauseDefs.reset();
   }
 
-  void addClauseInst(const MachineInstr &MI);
+  void addClauseInst(const MachineInstr &MI) const;
 
   /// \returns the number of wait states before another MFMA instruction can be
   /// issued after \p MI.
@@ -77,30 +82,33 @@ private:
   void runOnInstruction(MachineInstr *MI);
 
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
-                         GetNumWaitStatesFn GetNumWaitStates);
-  int getWaitStatesSince(IsHazardFn IsHazard, int Limit);
-  int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef, int Limit);
-  int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit);
+                         GetNumWaitStatesFn GetNumWaitStates) const;
+  int getWaitStatesSince(IsHazardFn IsHazard, int Limit) const;
+  int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef,
+                            int Limit) const;
+  int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit) const;
 
-  int checkSoftClauseHazards(MachineInstr *SMEM);
-  int checkSMRDHazards(MachineInstr *SMRD);
-  int checkVMEMHazards(MachineInstr* VMEM);
-  int checkDPPHazards(MachineInstr *DPP);
-  int checkDivFMasHazards(MachineInstr *DivFMas);
-  int checkGetRegHazards(MachineInstr *GetRegInstr);
-  int checkSetRegHazards(MachineInstr *SetRegInstr);
-  int createsVALUHazard(const MachineInstr &MI);
-  int checkVALUHazards(MachineInstr *VALU);
-  int checkVALUHazardsHelper(const MachineOperand &Def, const MachineRegisterInfo &MRI);
-  int checkRWLaneHazards(MachineInstr *RWLane);
-  int checkRFEHazards(MachineInstr *RFE);
-  int checkInlineAsmHazards(MachineInstr *IA);
-  int checkReadM0Hazards(MachineInstr *SMovRel);
-  int checkNSAtoVMEMHazard(MachineInstr *MI);
-  int checkFPAtomicToDenormModeHazard(MachineInstr *MI);
-  // Emit V_NOP instructions. \p WaitStatesNeeded is the number of V_NOPs we
-  // need to insert, negative means not needed.
-  bool emitVNops(MachineInstr *MI, int WaitStatesNeeded);
+  int checkSoftClauseHazards(MachineInstr *SMEM) const;
+  int checkSMRDHazards(MachineInstr *SMRD) const;
+  int checkVMEMHazards(MachineInstr *VMEM) const;
+  int checkDPPHazards(MachineInstr *DPP) const;
+  int checkDivFMasHazards(MachineInstr *DivFMas) const;
+  int checkGetRegHazards(MachineInstr *GetRegInstr) const;
+  int checkSetRegHazards(MachineInstr *SetRegInstr) const;
+  int createsVALUHazard(const MachineInstr &MI) const;
+  int checkVALUHazards(MachineInstr *VALU) const;
+  int checkVALUHazardsHelper(const MachineOperand &Def,
+                             const MachineRegisterInfo &MRI) const;
+  int checkRWLaneHazards(MachineInstr *RWLane) const;
+  int checkRFEHazards(MachineInstr *RFE) const;
+  int checkInlineAsmHazards(MachineInstr *IA) const;
+  int checkReadM0Hazards(MachineInstr *SMovRel) const;
+  int checkNSAtoVMEMHazard(MachineInstr *MI) const;
+  int checkFPAtomicToDenormModeHazard(MachineInstr *MI) const;
+  // Emit \p WaitStatesNeeded V_NOP instructions before \p InsertPt.
+  // If IsHoisting is true, uses empty DebugLoc for compiler-inserted NOPs.
+  void emitVNops(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
+                 int WaitStatesNeeded, bool IsHoisting = false);
   void fixHazards(MachineInstr *MI);
   bool fixVcmpxPermlaneHazards(MachineInstr *MI);
   bool fixVMEMtoScalarWriteHazards(MachineInstr *MI);
@@ -113,7 +121,17 @@ private:
   bool fixVALUTransUseHazard(MachineInstr *MI);
   bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
-  int checkWMMACoexecutionHazards(MachineInstr *MI);
+  int checkWMMACoexecutionHazards(MachineInstr *MI) const;
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
+  bool tryHoistWMMAVnopsFromLoop(MachineInstr *MI, int WaitStatesNeeded);
+  bool hasWMMAHazardInLoop(MachineLoop *L, MachineInstr *MI,
+                           bool IncludeSubloops = true);
+  bool hasWMMAToWMMARegOverlap(const MachineInstr &WMMA,
+                               const MachineInstr &MI) const;
+  bool hasWMMAToVALURegOverlap(const MachineInstr &WMMA,
+                               const MachineInstr &MI) const;
+  bool isCoexecutionHazardFor(const MachineInstr &I,
+                              const MachineInstr &MI) const;
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
@@ -122,9 +140,9 @@ private:
   bool fixScratchBaseForwardingHazard(MachineInstr *MI);
   bool fixSetRegMode(MachineInstr *MI);
 
-  int checkMAIHazards(MachineInstr *MI);
-  int checkMAIHazards908(MachineInstr *MI);
-  int checkMAIHazards90A(MachineInstr *MI);
+  int checkMAIHazards(MachineInstr *MI) const;
+  int checkMAIHazards908(MachineInstr *MI) const;
+  int checkMAIHazards90A(MachineInstr *MI) const;
   /// Pad the latency between neighboring MFMA instructions with s_nops. The
   /// percentage of wait states to fill with s_nops is specified by the command
   /// line option '-amdgpu-mfma-padding-ratio'.
@@ -140,24 +158,31 @@ private:
   /// V_MFMA_F32_4X4X1F32
   /// S_NOP 1
   /// V_MFMA_F32_4X4X1F32
-  int checkMFMAPadding(MachineInstr *MI);
-  int checkMAIVALUHazards(MachineInstr *MI);
-  int checkMAILdStHazards(MachineInstr *MI);
-  int checkPermlaneHazards(MachineInstr *MI);
+  int checkMFMAPadding(MachineInstr *MI) const;
+  int checkMAIVALUHazards(MachineInstr *MI) const;
+  int checkMAILdStHazards(MachineInstr *MI) const;
+  int checkPermlaneHazards(MachineInstr *MI) const;
 
 public:
-  GCNHazardRecognizer(const MachineFunction &MF);
+  GCNHazardRecognizer(const MachineFunction &MF,
+                      MachineLoopInfo *MLI = nullptr);
   // We can only issue one instruction per cycle.
   bool atIssueLimit() const override { return true; }
   void EmitInstruction(SUnit *SU) override;
   void EmitInstruction(MachineInstr *MI) override;
   HazardType getHazardType(SUnit *SU, int Stalls) override;
+
+  /// Returns the number of wait states until all hazards for \p MI are
+  /// resolved. This is useful for scheduling heuristics that want
+  /// cycle-accurate hazard information rather than just a boolean.  Unlike
+  /// PreEmitNoops, this does not modify state or fix hazards.
+  unsigned getHazardWaitStates(MachineInstr *MI) const;
   void EmitNoop() override;
   unsigned PreEmitNoops(MachineInstr *) override;
-  unsigned PreEmitNoopsCommon(MachineInstr *);
+  unsigned PreEmitNoopsCommon(MachineInstr *) const;
   void AdvanceCycle() override;
   void RecedeCycle() override;
-  bool ShouldPreferAnother(SUnit *SU) override;
+  bool ShouldPreferAnother(SUnit *SU) const override;
   void Reset() override;
 };
 

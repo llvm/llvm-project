@@ -54,22 +54,10 @@ protected:
   using BlockTraits = GraphTraits<GraphTy>;
 
   DomSetMapType Frontiers;
-  // Postdominators can have multiple roots.
-  SmallVector<BlockT *, IsPostDom ? 4 : 1> Roots;
   static constexpr bool IsPostDominators = IsPostDom;
 
 public:
   DominanceFrontierBase() = default;
-
-  /// getRoots - Return the root blocks of the current CFG.  This may include
-  /// multiple blocks if we are computing post dominators.  For forward
-  /// dominators, this will always be a single block (the entry node).
-  const SmallVectorImpl<BlockT *> &getRoots() const { return Roots; }
-
-  BlockT *getRoot() const {
-    assert(Roots.size() == 1 && "Should always have entry node!");
-    return Roots[0];
-  }
 
   /// isPostDominator - Returns true if analysis based of postdoms
   bool isPostDominator() const {
@@ -100,17 +88,7 @@ public:
   void dump() const;
 #endif
 
-  void analyze(DomTreeT &DT) {
-    assert(IsPostDom || DT.root_size() == 1 &&
-                            "Only one entry block for forward domfronts!");
-    assert(DT.root_size() == 1 &&
-           "Support for post-dom frontiers with multiple roots hasn't been "
-           "implemented yet!");
-    this->Roots = {DT.getRoot()};
-    calculate(DT, DT[this->Roots[0]]);
-  }
-
-  void calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
+  void analyze(const DomTreeT &DT);
 };
 
 class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
@@ -122,11 +100,11 @@ public:
   using const_iterator = DominanceFrontier::const_iterator;
 
   /// Handle invalidation explicitly.
-  bool invalidate(Function &F, const PreservedAnalyses &PA,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Function &F, const PreservedAnalyses &PA,
+                           FunctionAnalysisManager::Invalidator &);
 };
 
-class DominanceFrontierWrapperPass : public FunctionPass {
+class LLVM_ABI DominanceFrontierWrapperPass : public FunctionPass {
   DominanceFrontier DF;
 
 public:
@@ -148,8 +126,9 @@ public:
   void dump() const;
 };
 
-extern template class DominanceFrontierBase<BasicBlock, false>;
-extern template class DominanceFrontierBase<BasicBlock, true>;
+extern template class LLVM_TEMPLATE_ABI
+    DominanceFrontierBase<BasicBlock, false>;
+extern template class LLVM_TEMPLATE_ABI DominanceFrontierBase<BasicBlock, true>;
 
 /// Analysis pass which computes a \c DominanceFrontier.
 class DominanceFrontierAnalysis
@@ -163,20 +142,18 @@ public:
   using Result = DominanceFrontier;
 
   /// Run the analysis pass over a function and produce a dominator tree.
-  DominanceFrontier run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI DominanceFrontier run(Function &F, FunctionAnalysisManager &AM);
 };
 
 /// Printer pass for the \c DominanceFrontier.
 class DominanceFrontierPrinterPass
-    : public PassInfoMixin<DominanceFrontierPrinterPass> {
+    : public RequiredPassInfoMixin<DominanceFrontierPrinterPass> {
   raw_ostream &OS;
 
 public:
-  explicit DominanceFrontierPrinterPass(raw_ostream &OS);
+  LLVM_ABI explicit DominanceFrontierPrinterPass(raw_ostream &OS);
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm

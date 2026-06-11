@@ -46,10 +46,9 @@ typedef ObjectContainer *(*ObjectContainerCreateInstance)(
 typedef ObjectContainer *(*ObjectContainerCreateMemoryInstance)(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t offset);
-typedef size_t (*ObjectFileGetModuleSpecifications)(
+typedef ModuleSpecList (*ObjectFileGetModuleSpecifications)(
     const FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, ModuleSpecList &module_specs);
+    lldb::offset_t file_offset, lldb::offset_t length);
 typedef ObjectFile *(*ObjectFileCreateInstance)(
     const lldb::ModuleSP &module_sp, lldb::DataExtractorSP extractor_sp,
     lldb::offset_t data_offset, const FileSpec *file,
@@ -87,6 +86,7 @@ typedef lldb::RegisterTypeBuilderSP (*RegisterTypeBuilderCreateInstance)(
     Target &target);
 typedef lldb::ScriptInterpreterSP (*ScriptInterpreterCreateInstance)(
     Debugger &debugger);
+typedef FileSpec (*ScriptInterpreterGetPath)();
 typedef llvm::Expected<lldb::SyntheticFrameProviderSP> (
     *ScriptedFrameProviderCreateInstance)(
     lldb::StackFrameListSP input_frames,
@@ -110,8 +110,6 @@ typedef std::optional<FileSpec> (*SymbolLocatorLocateExecutableSymbolFile)(
 typedef bool (*SymbolLocatorDownloadObjectAndSymbolFile)(
     ModuleSpec &module_spec, Status &error, bool force_lookup,
     bool copy_executable);
-typedef std::optional<FileSpec> (*SymbolLocatorLocateSourceFile)(
-    const lldb::ModuleSP &module_sp, const FileSpec &original_source_file);
 using BreakpointHitCallback =
     std::function<bool(void *baton, StoppointCallbackContext *context,
                        lldb::user_id_t break_id, lldb::user_id_t break_loc_id)>;

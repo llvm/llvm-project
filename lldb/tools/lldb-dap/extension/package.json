@@ -63,6 +63,7 @@
     "watch": "npm run bundle-webview && tsc -watch -p ./",
     "format": "npx prettier . --write",
     "package": "rm -rf ./out && vsce package --out ./out/lldb-dap.vsix",
+    "compile-debug": "npm run bundle-webview && npx esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node22 --sourcemap",
     "compile": "tsc -p ./",
     "publish": "vsce publish",
     "publish-ovsx": "ovsx publish",
@@ -228,6 +229,11 @@
             "type": "string",
             "description": "Name of the execution platform to override value derived from the program file."
           },
+          "lldb-dap.platformUrl": {
+            "order": 1,
+            "type": "string",
+            "description": "URL used to connect to the execution platform (e.g. \"connect://localhost:1234\"). Only meaningful for remote platforms selected via lldb-dap.platformName."
+          },
           "lldb-dap.initCommands": {
             "order": 2,
             "type": "array",
@@ -298,6 +304,16 @@
         "category": "lldb-dap",
         "command": "lldb-dap.debug.showSymbols",
         "title": "Show Symbols of a Module"
+      },
+      {
+        "category": "LLDB DAP",
+        "command": "lldb-dap.pickProcess",
+        "title": "Pick Process"
+      },
+      {
+        "category": "LLDB DAP",
+        "command": "lldb-dap.attachToProcess",
+        "title": "Attach to Process..."
       }
     ],
     "menus": {
@@ -313,6 +329,10 @@
         {
           "command": "lldb-dap.debug.showSymbols",
           "when": "debuggersAvailable && debugType == 'lldb-dap' && lldb-dap.supportsModuleSymbolsRequest"
+        },
+        {
+          "command": "lldb-dap.pickProcess",
+          "when": "false"
         }
       ],
       "view/item/context": [
@@ -400,6 +420,9 @@
           "rust",
           "swift"
         ],
+        "variables": {
+          "pickProcess": "lldb-dap.pickProcess"
+        },
         "configurationAttributes": {
           "launch": {
             "required": [
@@ -557,6 +580,10 @@
               "platformName": {
                 "type": "string",
                 "description": "Name of the execution platform to override value derived from the program file."
+              },
+              "platformUrl": {
+                "type": "string",
+                "description": "URL used to connect to the execution platform (e.g. \"connect://localhost:1234\"). Only meaningful for remote platforms selected via platformName."
               },
               "initCommands": {
                 "type": "array",
@@ -731,8 +758,18 @@
                 "description": "Path to the program to attach to."
               },
               "pid": {
-                "type": "number",
-                "description": "System process ID to attach to."
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "description": "System process ID to attach to."
+                  },
+                  {
+                    "enum": [
+                      "${command:pickProcess}"
+                    ],
+                    "description": "Use the LLDB DAP process picker to select a process to attach to."
+                  }
+                ]
               },
               "waitFor": {
                 "type": "boolean",
@@ -787,6 +824,10 @@
                 "type": "string",
                 "description": "Name of the execution platform to override value derived from the program file."
               },
+              "platformUrl": {
+                "type": "string",
+                "description": "URL used to connect to the execution platform (e.g. \"connect://localhost:1234\"). Only meaningful for remote platforms selected via platformName."
+              },
               "attachCommands": {
                 "type": "array",
                 "items": {
@@ -807,7 +848,10 @@
                     "description": "ID of an existing debugger instance to use."
                   },
                   "additionalProperties": false,
-                  "required": ["targetId", "debuggerId"]
+                  "required": [
+                    "targetId",
+                    "debuggerId"
+                  ]
                 },
                 "description": "This property is Experimental.\nAttach to an existing debugging session.\nAdded in version 22.0."
               },
@@ -945,6 +989,16 @@
               "name": "${2:Attach}",
               "program": "${1:<your program>}",
               "waitFor": true
+            }
+          },
+          {
+            "label": "LLDB: Attach to Process",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "attach",
+              "name": "${1:Attach}",
+              "pid": "^\"\\${command:pickProcess}\""
             }
           },
           {

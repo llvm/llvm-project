@@ -185,6 +185,11 @@ namespace llvm {
     /// scoped local types.
     SmallVector<DISubprogram *> NewDistinctSPs;
 
+    SmallVector<std::tuple<LocTy, DbgRecord *, TrackingMDNodeRef>>
+        PendingDbgRecords;
+    SmallVector<std::tuple<LocTy, Instruction *, TrackingMDNodeRef>>
+        PendingDbgInsts;
+
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
@@ -334,6 +339,7 @@ namespace llvm {
     bool parseOptionalCallingConv(unsigned &CC);
     bool parseOptionalAlignment(MaybeAlign &Alignment,
                                 bool AllowParens = false);
+    bool parseOptionalPrefAlignment(MaybeAlign &Alignment);
     bool parseOptionalCodeModel(CodeModel::Model &model);
     bool parseOptionalAttrBytes(lltok::Kind AttrKind,
                                 std::optional<uint64_t> &Bytes,
@@ -700,7 +706,6 @@ namespace llvm {
 
     // Use-list order directives.
     bool parseUseListOrder(PerFunctionState *PFS = nullptr);
-    bool parseUseListOrderBB();
     bool parseUseListOrderIndexes(SmallVectorImpl<unsigned> &Indexes);
     bool sortUseListOrder(Value *V, ArrayRef<unsigned> Indexes, SMLoc Loc);
   };
