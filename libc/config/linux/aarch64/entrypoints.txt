@@ -302,6 +302,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.socket.socketpair
     # TODO: These functions are not compatible with 64-bit musl. They need to
     # be excluded if overlaying musl.
+    libc.src.sys.socket.recvmmsg
     libc.src.sys.socket.recvmsg
     libc.src.sys.socket.sendmmsg
     libc.src.sys.socket.sendmsg
