@@ -300,11 +300,12 @@ static bool scanSymbols(const IRSymtabFile &MemberSymtab,
       StringMap<Symbol> &Target = IsNewSymbol ? PendingSymbols : LinkerSymtab;
       Symbol Sym(IRSym);
       auto [It, Inserted] = Target.try_emplace(IRSym.getName(), Sym);
-      Symbol &OldSym = It->second;
-
-      if (Inserted && !IsNewSymbol)
+      // A freshly inserted entry has no prior symbol to resolve or upgrade, so
+      // it cannot trigger extraction
+      if (Inserted)
         continue;
 
+      Symbol &OldSym = It->second;
       bool ResolvesReference =
           !Sym.isUndefined() &&
           (OldSym.isUndefined() || (OldSym.isWeak() && !Sym.isWeak())) &&
