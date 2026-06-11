@@ -10,7 +10,7 @@ void foo(void *a) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @foo(
-// CIR: %[[ALLOCA:.*]] = cir.alloca !cir.ptr<!void>
+// CIR: %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!cir.ptr<!void>>
 // CIR: cir.store %arg0, %[[ALLOCA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: %[[P1:.*]] = cir.load{{.*}} %[[ALLOCA]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR: cir.prefetch read locality(3) %[[P1]] : !cir.ptr<!void>

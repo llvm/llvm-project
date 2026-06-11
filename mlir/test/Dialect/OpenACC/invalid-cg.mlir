@@ -72,3 +72,39 @@ func.func @reduction_accumulate_empty_par_dims() {
       : i32 -> memref<i32> {par_dims = #acc<par_dims[]>}
   return
 }
+
+// -----
+
+func.func @predicate_region_empty() {
+  acc.compute_region {
+    // expected-error@+1 {{region needs to have at least one block}}
+    acc.predicate_region {
+    }
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// -----
+
+func.func @predicate_region_with_args() {
+  acc.compute_region {
+    // expected-error@+1 {{region cannot have any arguments}}
+    acc.predicate_region {
+    ^bb0(%arg0: index):
+      %c0 = arith.constant 0 : index
+    }
+    acc.yield
+  } {origin = "acc.parallel"}
+  return
+}
+
+// -----
+
+func.func @predicate_region_outside_compute_region() {
+  // expected-error@+1 {{must be nested within an acc.compute_region operation}}
+  acc.predicate_region {
+    %c0 = arith.constant 0 : i32
+  }
+  return
+}
