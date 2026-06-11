@@ -21,13 +21,13 @@ void double_unlock(void) {
 }
 
 void use_after_destroy(void) {
-  pthread_mutex_destroy(&mtx); // expected-note{{Destroying mutex here}}
+  pthread_mutex_destroy(&mtx); // expected-note{{Destroying 'mtx' here}}
   pthread_mutex_lock(&mtx);    // expected-warning{{This lock has already been destroyed}}
                                // expected-note@-1{{This lock has already been destroyed}}
 }
 
 void double_init(void) {
-  pthread_mutex_init(&mtx, 0); // expected-note{{Initializing mutex here}}
+  pthread_mutex_init(&mtx, 0); // expected-note{{Initializing 'mtx' here}}
   pthread_mutex_init(&mtx, 0); // expected-warning{{This lock has already been initialized}}
                                // expected-note@-1{{This lock has already been initialized}}
 }
@@ -39,4 +39,11 @@ void lock_order_reversal(void) {
   pthread_mutex_lock(&mtx2);   // expected-note{{Locking 'mtx2' here}}
   pthread_mutex_unlock(&mtx);  // expected-warning{{This was not the most recently acquired lock}}
                                // expected-note@-1{{This was not the most recently acquired lock}}
+}
+
+
+void double_lock_via_param(pthread_mutex_t *m) {
+  pthread_mutex_lock(m);   // expected-note{{Mutex acquired here}}
+  pthread_mutex_lock(m);   // expected-warning{{This lock has already been acquired}}
+                           // expected-note@-1{{This lock has already been acquired}}
 }

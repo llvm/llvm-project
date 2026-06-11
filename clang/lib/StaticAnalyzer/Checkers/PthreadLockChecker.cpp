@@ -22,9 +22,34 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/StringRef.h"
 
 using namespace clang;
 using namespace ento;
+
+constexpr llvm::StringRef LOCK_CHECKER_CATEGORY = "Lock checker";
+
+static bool isLockRelevant(const MemRegion *R,
+                           const PathSensitiveBugReport &BR) {
+  return BR.getBugType().getCategory() == LOCK_CHECKER_CATEGORY &&
+         BR.isInteresting(R);
+}
+
+static const NoteTag *createMutexNote(CheckerContext &C, const MemRegion *R,
+                                      StringRef MsgForNamed,
+                                      StringRef MsgForUnnamed) {
+  return C.getNoteTag(
+      [R, Named = MsgForNamed.str(), Unnamed = MsgForUnnamed.str()](
+          PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
+        if (!isLockRelevant(R, BR))
+          return;
+        std::string Name = R->getDescriptiveName();
+        if (Name.empty())
+          OS << Unnamed;
+        else
+          OS << Named << Name << " here";
+      });
+}
 
 namespace {
 
@@ -264,16 +289,16 @@ private:
   void initBugType(CheckerKind CheckKind) const {
     if (BT_doublelock[CheckKind])
       return;
-    BT_doublelock[CheckKind].reset(
-        new BugType{CheckNames[CheckKind], "Double locking", "Lock checker"});
-    BT_doubleunlock[CheckKind].reset(
-        new BugType{CheckNames[CheckKind], "Double unlocking", "Lock checker"});
+    BT_doublelock[CheckKind].reset(new BugType{
+        CheckNames[CheckKind], "Double locking", LOCK_CHECKER_CATEGORY});
+    BT_doubleunlock[CheckKind].reset(new BugType{
+        CheckNames[CheckKind], "Double unlocking", LOCK_CHECKER_CATEGORY});
     BT_destroylock[CheckKind].reset(new BugType{
-        CheckNames[CheckKind], "Use destroyed lock", "Lock checker"});
+        CheckNames[CheckKind], "Use destroyed lock", LOCK_CHECKER_CATEGORY});
     BT_initlock[CheckKind].reset(new BugType{
-        CheckNames[CheckKind], "Init invalid lock", "Lock checker"});
-    BT_lor[CheckKind].reset(new BugType{CheckNames[CheckKind],
-                                        "Lock order reversal", "Lock checker"});
+        CheckNames[CheckKind], "Init invalid lock", LOCK_CHECKER_CATEGORY});
+    BT_lor[CheckKind].reset(new BugType{
+        CheckNames[CheckKind], "Lock order reversal", LOCK_CHECKER_CATEGORY});
   }
 };
 } // end anonymous namespace
@@ -490,19 +515,8 @@ void PthreadLockChecker::AcquireLockAux(const CallEvent &Call,
   // Record that the lock was acquired.
   lockSucc = lockSucc->add<LockSet>(lockR);
   lockSucc = lockSucc->set<LockMap>(lockR, LockState::getLocked());
-  const NoteTag *Note =
-      C.getNoteTag([lockR](PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
-        if (BR.getBugType().getCategory() != "Lock checker")
-          return;
-        if (!BR.isInteresting(lockR))
-          return;
-        std::string Name = lockR->getDescriptiveName();
-        if (Name.empty())
-          OS << "Mutex acquired here";
-        else
-          OS << "Locking " << Name << " here";
-      });
-  C.addTransition(lockSucc, Note);
+  C.addTransition(lockSucc,
+                  createMutexNote(C, lockR, "Locking ", "Mutex acquired here"));
 }
 
 void PthreadLockChecker::ReleaseAnyLock(const CallEvent &Call,
@@ -564,19 +578,8 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
   }
 
   state = state->set<LockMap>(lockR, LockState::getUnlocked());
-  const NoteTag *Note =
-      C.getNoteTag([lockR](PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
-        if (BR.getBugType().getCategory() != "Lock checker")
-          return;
-        if (!BR.isInteresting(lockR))
-          return;
-        std::string Name = lockR->getDescriptiveName();
-        if (Name.empty())
-          OS << "Mutex released here";
-        else
-          OS << "Unlocking " << Name << " here";
-      });
-  C.addTransition(state, Note);
+  C.addTransition(
+      state, createMutexNote(C, lockR, "Unlocking ", "Mutex released here"));
 }
 
 void PthreadLockChecker::DestroyPthreadLock(const CallEvent &Call,
@@ -619,15 +622,8 @@ void PthreadLockChecker::DestroyLockAux(const CallEvent &Call,
       SymbolRef sym = Call.getReturnValue().getAsSymbol();
       if (!sym) {
         State = State->remove<LockMap>(LockR);
-        const NoteTag *Note = C.getNoteTag(
-            [LockR](PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
-              if (BR.getBugType().getCategory() != "Lock checker")
-                return;
-              if (!BR.isInteresting(LockR))
-                return;
-              OS << "Destroying mutex here";
-            });
-        C.addTransition(State, Note);
+        C.addTransition(State, createMutexNote(C, LockR, "Destroying ",
+                                               "Mutex destroyed here"));
         return;
       }
       State = State->set<DestroyRetVal>(LockR, sym);
@@ -637,29 +633,15 @@ void PthreadLockChecker::DestroyLockAux(const CallEvent &Call,
       else
         State = State->set<LockMap>(
             LockR, LockState::getUntouchedAndPossiblyDestroyed());
-      const NoteTag *Note = C.getNoteTag(
-          [LockR](PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
-            if (BR.getBugType().getCategory() != "Lock checker")
-              return;
-            if (!BR.isInteresting(LockR))
-              return;
-            OS << "Destroying mutex here";
-          });
-      C.addTransition(State, Note);
+      C.addTransition(State, createMutexNote(C, LockR, "Destroying ",
+                                             "Mutex destroyed here"));
       return;
     }
   } else {
     if (!LState || LState->isUnlocked()) {
       State = State->set<LockMap>(LockR, LockState::getDestroyed());
-      const NoteTag *Note = C.getNoteTag(
-          [LockR](PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
-            if (BR.getBugType().getCategory() != "Lock checker")
-              return;
-            if (!BR.isInteresting(LockR))
-              return;
-            OS << "Destroying mutex here";
-          });
-      C.addTransition(State, Note);
+      C.addTransition(State, createMutexNote(C, LockR, "Destroying ",
+                                             "Mutex destroyed here"));
       return;
     }
   }
@@ -695,15 +677,8 @@ void PthreadLockChecker::InitLockAux(const CallEvent &Call, CheckerContext &C,
   const struct LockState *LState = State->get<LockMap>(LockR);
   if (!LState || LState->isDestroyed()) {
     State = State->set<LockMap>(LockR, LockState::getUnlocked());
-    const NoteTag *Note = C.getNoteTag(
-        [LockR](PathSensitiveBugReport &BR, llvm::raw_ostream &OS) {
-          if (BR.getBugType().getCategory() != "Lock checker")
-            return;
-          if (!BR.isInteresting(LockR))
-            return;
-          OS << "Initializing mutex here";
-        });
-    C.addTransition(State, Note);
+    C.addTransition(State, createMutexNote(C, LockR, "Initializing ",
+                                           "Mutex initialized here"));
     return;
   }
 
