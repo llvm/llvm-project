@@ -34,6 +34,52 @@ using namespace llvm;
 
 using SetVectorType = SmallSetVector<MachineInstr *, 32>;
 
+/// Helper data structure for grouping together uses where the head of the group
+/// dominates all the other uses in the group.
+class DomGroup {
+  SmallVector<MachineInstr *> Uses;
+  SmallVector<MachineBasicBlock *> UseBlocks;
+  SmallDenseMap<MachineInstr *, MachineBasicBlock *> PHIInstrToRestoreBlock;
+  MachineBasicBlock *CommonDominator = nullptr;
+  bool Deleted = false;
+
+public:
+  DomGroup(MachineInstr *MI, MachineBasicBlock *RestoreBlock) {
+    Uses.push_back(MI);
+    UseBlocks.push_back(RestoreBlock);
+    if (MI->isPHI())
+      PHIInstrToRestoreBlock[MI] = RestoreBlock;
+  }
+  MachineInstr *getHead() const { return Uses.front(); }
+  bool isDeleted() const { return Deleted; }
+  void merge(DomGroup &Other) {
+    for (auto *MI : Other.Uses)
+      Uses.push_back(MI);
+
+    for (auto *UseMBB : Other.UseBlocks)
+      UseBlocks.push_back(UseMBB);
+
+    PHIInstrToRestoreBlock.insert(Other.PHIInstrToRestoreBlock.begin(),
+                                  Other.PHIInstrToRestoreBlock.end());
+
+    Other.Deleted = true;
+  }
+  const auto &getUses() const { return Uses; }
+  const auto &getUseBlocks() const { return UseBlocks; }
+  size_t size() const { return Uses.size(); }
+  void setCommonDominator(MachineBasicBlock *CD) { CommonDominator = CD; }
+  MachineBasicBlock *getCommonDominator() const { return CommonDominator; }
+  bool hasCommonDominator() const { return CommonDominator != nullptr; }
+  MachineBasicBlock *getRestoreBlock() const { return UseBlocks.front(); }
+  MachineBasicBlock *getRestoreBlockForPHI(MachineInstr *PHI) const {
+    assert(PHI->isPHI() && "The instruction is not a PHI node.");
+    auto It = PHIInstrToRestoreBlock.find(PHI);
+    assert(It != PHIInstrToRestoreBlock.end() &&
+           "The PHI node does not exist in the map.");
+    return It->second;
+  }
+};
+
 class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
@@ -48,8 +94,8 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   // Spilled registers are kept here to avoid respilling.
   // TODO: Support spilling of a register more than once.
   DenseSet<Register> SpilledRegs;
-  // We avoid spilling restored registers.
-  DenseSet<Register> RestoredRegs;
+  // We do not spill the registers that are returned by restore instructions.
+  DenseSet<Register> RestoreDstRegs;
 
   unsigned MaxVGPRs = 0;
   unsigned MaxSGPRs = 0;
@@ -60,16 +106,17 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
 
   /// Return the registers with the longest next-use distance that we need to
   /// spill. \p CurMI is the high-register-pressure point.
-  SmallVector<std::pair<Register, LaneBitmask>>
+  /// Returns a tuple of (Register, NextUseDistance, LaneBitmask).
+  SmallVector<std::tuple<Register, int64_t, LaneBitmask>>
   getRegistersToSpill(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker);
 
-  /// Return where we have to spill \p DefRegToSpill. It can be one of:
+  /// Return where we have to spill \p RegToSpill. It can be one of:
   /// (i) the high register pressure point,
-  /// (ii) the definition block of \p DefRegToSpill,
+  /// (ii) the definition block of \p RegToSpill,
   /// (iii) the common dominator of \p CurMI and related uses.
   /// \p CurMI is the high-register-pressure point.
   std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>
-  getWhereToSpill(MachineInstr *CurMI, Register DefRegToSpill);
+  getWhereToSpill(MachineInstr *CurMI, Register RegToSpill);
 
   /// Return where we have to spill if the definition of the spilled register is
   /// inside a loop. \p CurMI is the high-register-pressure point.
@@ -81,19 +128,11 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   void spill(MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker,
              unsigned NumOfSpills);
 
-  /// Emit restore instruction where it is needed
-  MachineInstr *emitRestore(Register SpillReg, MachineInstr *UseMI, int FI);
-  /// Emit restore instruction at the end of a basic block.
-  MachineInstr *emitRestore(Register SpillReg, MachineBasicBlock &InsertBB,
-                            int FI);
-
   /// Emit restore instructions for each group that contains the uses that are
   /// dominated by the head of the group.
-  void emitRestoreInstrsForDominatedUses(
-      Register DefRegToSpill, MachineInstr *SpillInstruction,
-      MachineInstr *CurMI, SetVectorType &DominatedUses,
-      SmallVector<MachineInstr *> &RestoreInstrs,
-      SmallVector<MachineInstr *> &RestoreUses, int FI);
+  void groupUses(Register RegToSpill, MachineBasicBlock *SpillBlock,
+                 MachineInstr *CurMI, SetVectorType &DominatedUses,
+                 SmallVector<DomGroup> &GroupOfUses);
 
   /// Check if it is legal or profitable to emit a restore in the common
   /// dominator.
@@ -104,21 +143,14 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
   /// Find the common dominator of the reachable uses and the block that we
   /// intend to spill.
   MachineBasicBlock *
-  findCommonDominatorToSpill(MachineBasicBlock *SpillBlock,
-                             Register DefRegToSpill,
+  findCommonDominatorToSpill(MachineBasicBlock *SpillBlock, Register RegToSpill,
                              const SetVectorType &NonDominatedReachableUses);
 
   /// Collect Non Dominated Reachable and Unreachable uses.
-  void classifyUses(MachineBasicBlock *SpillBlock, Register DefRegToSpill,
+  void classifyUses(MachineBasicBlock *SpillBlock, Register RegToSpill,
                     MachineInstr *CurMI, SetVectorType &DominatedUses,
                     SetVectorType &NonDominatedReachableUses,
                     SetVectorType &UnreachableUses);
-
-  /// Helper functions to update the live interval analysis which is used by
-  /// the Register Pressure Tracker.
-  void updateIndexes(MachineInstr *MI);
-  void updateLiveness(Register Reg);
-  void updateLiveness(MachineInstr *MI);
 
   bool hasPHIUseInSameBB(Register Reg, MachineBasicBlock *MBB);
 
@@ -128,11 +160,11 @@ class AMDGPUEarlyRegisterSpilling : public MachineFunctionPass {
 
   bool isSpilledReg(Register Reg) { return SpilledRegs.contains(Reg); }
 
-  bool isRestoredReg(Register Reg) { return RestoredRegs.contains(Reg); }
+  bool isRestoredReg(Register Reg) { return RestoreDstRegs.contains(Reg); }
 
   void clearTables() {
     SpilledRegs.clear();
-    RestoredRegs.clear();
+    RestoreDstRegs.clear();
   }
 
 public:

@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/InitializePasses.h"
+#include <algorithm>
 #include <cmath>
 
 using namespace llvm;
@@ -30,27 +31,237 @@ static cl::opt<bool>
     EmitRestoreInCommonDominator("emit-restore-in-common-dominator",
                                  cl::init(false), cl::Hidden);
 
+static cl::opt<bool> DisableRestoreGrouping("disable-restore-grouping",
+                                            cl::init(false), cl::Hidden);
+
 // TODO: Remove this flag.
 static cl::opt<unsigned>
     VGPRMaxNums("max-vgprs", cl::Hidden,
                 cl::desc("The maximum number of VGPRs per wave."),
                 cl::init(96));
 
+class SpillCandidate {
+private:
+  Register RegToSpill;
+  LaneBitmask Mask;
+  MachineBasicBlock *SpillBlock;
+  MachineBasicBlock::iterator WhereToSpill;
+  // We group the uses based on dominance. Uses that are dominated by one use
+  // are all in the same group.
+  std::vector<DomGroup> GroupsOfUses;
+  int64_t RestoreCost = 0;
+  int64_t NextUseDistance = 0;
+  int64_t NormalizedCost = 0;
+
+  const SIRegisterInfo *TRI;
+  MachineRegisterInfo *MRI;
+  const SIInstrInfo *TII;
+  MachineFrameInfo *FrameInfo;
+  LiveIntervals *LIS;
+  SlotIndexes *Indexes;
+  MachineDominatorTree *DT;
+  const MachineLoopInfo *MLI;
+
+  /// Helper functions to update the live interval analysis which is used by
+  /// the Register Pressure Tracker.
+  void updateIndexes(MachineInstr *MI);
+  void updateLiveness(Register Reg);
+  void updateLiveness(MachineInstr *MI);
+
+  /// Emit restore instruction where it is needed
+  MachineInstr *emitRestore(Register SpillReg, MachineInstr *UseMI, int FI);
+  /// Emit restore instruction at the end of a basic block.
+  MachineInstr *emitRestore(Register SpillReg, MachineBasicBlock &InsertBB,
+                            int FI);
+  unsigned loopWeight(unsigned LoopDepth) { return 1000 * LoopDepth; }
+
+public:
+  SpillCandidate(Register RegToSpill, LaneBitmask Mask,
+                 MachineBasicBlock *SpillBlock,
+                 MachineBasicBlock::iterator WhereToSpill,
+                 const SIRegisterInfo *TRI, MachineRegisterInfo *MRI,
+                 const SIInstrInfo *TII, MachineFrameInfo *FrameInfo,
+                 LiveIntervals *LIS, SlotIndexes *Indexes,
+                 MachineDominatorTree *DT, const MachineLoopInfo *MLI)
+      : RegToSpill(RegToSpill), Mask(Mask), SpillBlock(SpillBlock),
+        WhereToSpill(WhereToSpill), TRI(TRI), MRI(MRI), TII(TII),
+        FrameInfo(FrameInfo), LIS(LIS), Indexes(Indexes), DT(DT), MLI(MLI) {}
+
+  void addGroup(DomGroup DG) { GroupsOfUses.push_back(DG); }
+  Register getSpilledRegister() const { return RegToSpill; }
+  LaneBitmask getMask() const { return Mask; }
+  MachineBasicBlock *getSpillBlock() const { return SpillBlock; }
+  MachineBasicBlock::iterator getWhereToSpill() const { return WhereToSpill; }
+  auto groups() { return make_range(GroupsOfUses.begin(), GroupsOfUses.end()); }
+  void setRestoreCost(int64_t RC) { RestoreCost = RC; }
+  int64_t getRestoreCost() const { return RestoreCost; }
+  void setNextUseDistance(int64_t NUD) { NextUseDistance = NUD; }
+  int64_t getNextUseDistance() const { return NextUseDistance; }
+  void setNormalizedCost(int64_t NC) { NormalizedCost = NC; }
+  int64_t getNormalizedCost() const { return NormalizedCost; }
+  void calculateRestoreCost();
+  void generateSpillRestoreInstrs(MachineInstr *CurMI,
+                                  DenseSet<Register> &RestoreDstRegs);
+};
+
+void SpillCandidate::calculateRestoreCost() {
+  RestoreCost = 0;
+  for (auto &G : GroupsOfUses) {
+    MachineBasicBlock *RestoreBlock = G.getRestoreBlock();
+    MachineLoop *RestoreLoop = MLI->getLoopFor(RestoreBlock);
+
+    if (RestoreLoop) {
+      RestoreCost += loopWeight(RestoreLoop->getLoopDepth());
+    } else {
+      RestoreCost += 1;
+    }
+  }
+}
+
+void SpillCandidate::generateSpillRestoreInstrs(
+    MachineInstr *CurMI, DenseSet<Register> &RestoreDstRegs) {
+
+  MachineInstr *InstrOfRegToSpill = MRI->getOneDef(RegToSpill)->getParent();
+  MachineInstr *SpillInstruction = nullptr;
+  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, RegToSpill);
+  unsigned Size = TRI->getSpillSize(*RC);
+  Align Alignment = TRI->getSpillAlign(*RC);
+  int FI = FrameInfo->CreateSpillStackObject(Size, Alignment);
+
+  // Emit the spill instruction.
+  TII->storeRegToStackSlot(*SpillBlock, WhereToSpill, RegToSpill,
+                           true, /* kill */
+                           FI, RC, 0);
+  SpillInstruction = &*(std::prev(WhereToSpill));
+  LIS->InsertMachineInstrInMaps(*SpillInstruction);
+
+  assert(SpillInstruction && "There is not a spill instruction");
+  LLVM_DEBUG(dbgs() << "High register pressure point = " << *CurMI);
+  LLVM_DEBUG(dbgs() << "Register to spill = " << printReg(RegToSpill, TRI)
+                    << "\n");
+  LLVM_DEBUG(dbgs() << "Spill instruction = " << *SpillInstruction);
+  LLVM_DEBUG(dbgs() << "Spill block = "
+                    << SpillInstruction->getParent()->getName() << "\n");
+
+  // For each group emit one restore for the group header in the parent block
+  // of the group header or the common dominator. The rest of the uses in the
+  // group will reuse the value loaded by the restore of the header.
+  SmallVector<MachineInstr *> RestoreInstrs;
+  SmallVector<MachineInstr *> RestoreUses;
+  for (auto &G1 : groups()) {
+    if (G1.isDeleted())
+      continue;
+    MachineInstr *Head = G1.getHead();
+    MachineBasicBlock *HeadMBB = G1.getRestoreBlock();
+    MachineInstr *Restore = nullptr;
+    if (G1.hasCommonDominator() && EmitRestoreInCommonDominator) {
+      MachineBasicBlock *CommonDominator = G1.getCommonDominator();
+      MachineInstr *UseInCommonDominator = nullptr;
+      for (auto *U : G1.getUses()) {
+        if (U->getParent() == CommonDominator) {
+          if (UseInCommonDominator) {
+            if (DT->dominates(U, UseInCommonDominator))
+              UseInCommonDominator = U;
+          } else {
+            UseInCommonDominator = U;
+          }
+        }
+      }
+      if (UseInCommonDominator) {
+        Restore = emitRestore(RegToSpill, UseInCommonDominator, FI);
+        Head = UseInCommonDominator;
+        HeadMBB = CommonDominator;
+        RestoreDstRegs.insert(Restore->getOperand(0).getReg());
+      } else {
+        Restore = emitRestore(RegToSpill, *CommonDominator, FI);
+        Head->substituteRegister(RegToSpill, Restore->getOperand(0).getReg(), 0,
+                                 *TRI);
+        RestoreDstRegs.insert(Restore->getOperand(0).getReg());
+      }
+    } else if (Head->isPHI()) {
+      Restore = emitRestore(RegToSpill, *HeadMBB, FI);
+      for (unsigned i = 1; i < Head->getNumOperands(); i += 2) {
+        if (Head->getOperand(i).getReg() == RegToSpill &&
+            Head->getOperand(i + 1).getMBB() == HeadMBB) {
+          Head->getOperand(i).setReg(Restore->getOperand(0).getReg());
+        }
+      }
+      RestoreDstRegs.insert(Restore->getOperand(0).getReg());
+    } else if (Head->getParent() != HeadMBB) {
+      Restore = emitRestore(RegToSpill, *HeadMBB, FI);
+      Head->substituteRegister(RegToSpill, Restore->getOperand(0).getReg(), 0,
+                               *TRI);
+      RestoreDstRegs.insert(Restore->getOperand(0).getReg());
+    } else {
+      Restore = emitRestore(RegToSpill, Head, FI);
+      RestoreDstRegs.insert(Restore->getOperand(0).getReg());
+    }
+    RestoreInstrs.push_back(Restore);
+    RestoreUses.push_back(Head);
+
+    // Update the rest of the uses in the group to reuse the value restored by
+    // the head of the group.
+    for (auto *U : G1.getUses()) {
+      assert(U != SpillInstruction);
+      if (U == Head)
+        continue;
+
+      if (U->isPHI()) {
+        for (unsigned i = 1; i < U->getNumOperands(); i += 2) {
+          if (U->getOperand(i).getReg() == RegToSpill &&
+              U->getOperand(i + 1).getMBB() == G1.getRestoreBlockForPHI(U)) {
+            U->getOperand(i).setReg(Restore->getOperand(0).getReg());
+          }
+        }
+      } else {
+        U->substituteRegister(RegToSpill, Restore->getOperand(0).getReg(), 0,
+                              *TRI);
+      }
+      RestoreUses.push_back(U);
+      LLVM_DEBUG(dbgs() << "Updated use: " << *U);
+      LLVM_DEBUG(dbgs() << "With register = "
+                        << printReg(Restore->getOperand(0).getReg(), TRI)
+                        << "\n");
+    }
+  }
+
+  // Update the live interval analysis.
+  updateIndexes(InstrOfRegToSpill);
+  updateIndexes(SpillInstruction);
+  updateLiveness(InstrOfRegToSpill);
+  updateLiveness(SpillInstruction);
+
+  if (InstrOfRegToSpill != CurMI) {
+    updateIndexes(CurMI);
+    updateLiveness(CurMI);
+  }
+
+  for (auto *Use : RestoreInstrs) {
+    updateIndexes(Use);
+    updateLiveness(Use);
+  }
+
+  for (auto *Use : RestoreUses) {
+    updateIndexes(Use);
+    updateLiveness(Use);
+  }
+}
+
 // TODO: Preserve SlotIndexes analysis in getAnalysisUsage()
-void AMDGPUEarlyRegisterSpilling::updateIndexes(MachineInstr *MI) {
+void SpillCandidate::updateIndexes(MachineInstr *MI) {
   if (Indexes->hasIndex(*MI))
     Indexes->removeMachineInstrFromMaps(*MI);
   Indexes->insertMachineInstrInMaps(*MI);
 }
 
 // TODO: Preserve LiveIntervals analysis in getAnalysisUsage()
-void AMDGPUEarlyRegisterSpilling::updateLiveness(Register Reg) {
+void SpillCandidate::updateLiveness(Register Reg) {
   if (LIS->hasInterval(Reg))
     LIS->removeInterval(Reg);
   LIS->createAndComputeVirtRegInterval(Reg);
 }
 
-void AMDGPUEarlyRegisterSpilling::updateLiveness(MachineInstr *MI) {
+void SpillCandidate::updateLiveness(MachineInstr *MI) {
   for (auto &MO : MI->operands()) {
     if (!MO.isReg())
       continue;
@@ -63,22 +274,11 @@ void AMDGPUEarlyRegisterSpilling::updateLiveness(MachineInstr *MI) {
   }
 }
 
-// We need this because it does not make sense to spill a def which has a use in
-// a phi at the beginning of a basic block and it is defined a bit later.
-bool AMDGPUEarlyRegisterSpilling::hasPHIUseInSameBB(Register Reg,
-                                                    MachineBasicBlock *CurMBB) {
-  for (auto &UseMI : MRI->use_nodbg_instructions(Reg))
-    if (UseMI.isPHI() && UseMI.getParent() == CurMBB)
-      return true;
-  return false;
-}
-
-MachineInstr *
-AMDGPUEarlyRegisterSpilling::emitRestore(Register DefRegToSpill,
-                                         MachineInstr *DefRegUseInstr, int FI) {
-  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, DefRegToSpill);
+MachineInstr *SpillCandidate::emitRestore(Register RegToSpill,
+                                          MachineInstr *DefRegUseInstr,
+                                          int FI) {
+  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, RegToSpill);
   Register NewReg = MRI->createVirtualRegister(RC);
-  RestoredRegs.insert(NewReg);
   MachineBasicBlock *DefRegUseInstrBB = DefRegUseInstr->getParent();
   MachineInstr *Restore = nullptr;
   assert(DefRegUseInstr->getOpcode() != AMDGPU::PHI &&
@@ -86,7 +286,7 @@ AMDGPUEarlyRegisterSpilling::emitRestore(Register DefRegToSpill,
   TII->loadRegFromStackSlot(*DefRegUseInstrBB, DefRegUseInstr->getIterator(),
                             NewReg, FI, RC, 0);
   Restore = DefRegUseInstr->getPrevNode();
-  DefRegUseInstr->substituteRegister(DefRegToSpill, NewReg, 0, *TRI);
+  DefRegUseInstr->substituteRegister(RegToSpill, NewReg, 0, *TRI);
   LIS->InsertMachineInstrInMaps(*Restore);
   LLVM_DEBUG(dbgs() << "Emit restore before use: " << *DefRegUseInstr);
   LLVM_DEBUG(dbgs() << "Restore instruction = " << *Restore);
@@ -97,12 +297,10 @@ AMDGPUEarlyRegisterSpilling::emitRestore(Register DefRegToSpill,
   return Restore;
 }
 
-MachineInstr *
-AMDGPUEarlyRegisterSpilling::emitRestore(Register DefRegToSpill,
-                                         MachineBasicBlock &InsertBB, int FI) {
-  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, DefRegToSpill);
+MachineInstr *SpillCandidate::emitRestore(Register RegToSpill,
+                                          MachineBasicBlock &InsertBB, int FI) {
+  const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, RegToSpill);
   Register NewReg = MRI->createVirtualRegister(RC);
-  RestoredRegs.insert(NewReg);
   auto It = InsertBB.getFirstTerminator();
   if (It == InsertBB.end())
     It = InsertBB.instr_end();
@@ -115,6 +313,16 @@ AMDGPUEarlyRegisterSpilling::emitRestore(Register DefRegToSpill,
   LLVM_DEBUG(dbgs() << "Register to replace spilled register = "
                     << printReg(NewReg, TRI) << "\n");
   return Restore;
+}
+
+// We need this because it does not make sense to spill a def which has a use in
+// a phi at the beginning of a basic block and it is defined a bit later.
+bool AMDGPUEarlyRegisterSpilling::hasPHIUseInSameBB(Register Reg,
+                                                    MachineBasicBlock *CurMBB) {
+  for (auto &UseMI : MRI->use_nodbg_instructions(Reg))
+    if (UseMI.isPHI() && UseMI.getParent() == CurMBB)
+      return true;
+  return false;
 }
 
 // TODO: Tune this check to improve spilling.
@@ -130,12 +338,11 @@ bool AMDGPUEarlyRegisterSpilling::isLegalToSpill(Register CandidateReg) {
          !CandidateMI->isTerminator() && TRI->isVGPR(*MRI, CandidateReg);
 }
 
-SmallVector<std::pair<Register, LaneBitmask>>
+SmallVector<std::tuple<Register, int64_t, LaneBitmask>>
 AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     MachineInstr *CurMI, GCNDownwardRPTracker &RPTracker) {
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
-  bool IsCurMIInLoop = CurLoop ? true : false;
   SmallVector<std::tuple<Register, int64_t, LaneBitmask>> RegCandidates;
   DenseMap<Register, unsigned> RegNumOfUses;
   MachineLoop *OutermostLoopOfCurLoop = nullptr;
@@ -162,55 +369,32 @@ AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     // In the following check, we reject candidates which are defined in the
     // same loop nest.
     MachineLoop *CandidateLoop = MLI->getLoopFor(CandidateMIMBB);
-    bool IsDifferentLoopThanCurLoop =
+    bool AreIndependentLoops =
         CandidateLoop && OutermostLoopOfCurLoop &&
         (!CandidateLoop->contains(OutermostLoopOfCurLoop) &&
          !CandidateLoop->contains(CurLoop) &&
          !OutermostLoopOfCurLoop->contains(CandidateLoop));
-    bool IsLoopCandidate =
-        IsCurMIInLoop && (!CandidateLoop || IsDifferentLoopThanCurLoop);
 
-    if (IsCurMIInLoop && !IsLoopCandidate)
+    // If the high register pressure point is inside a loop, then we spill loop
+    // live-ins and loop live-thoughs.
+    // We spill values that are defined inside a loop in the exit block of the
+    // loop when the high register pressure point is outside of the loop.
+    if (!AreIndependentLoops && CandidateLoop && OutermostLoopOfCurLoop)
       continue;
 
-    // If CurMI is in a loop, then we spill all the registers with livethrough
-    // uses.
-    //
-    //             BB1
-    //               r1 = ...
-    //               r2 = ...
-    //              |
-    //          +-->+
-    //          |  BB2
-    //          |   |
-    //          |  BB3
-    //          |   CurMI <--high register pressure point
-    //          |   |
-    //          |  BB4
-    //          |   = r2
-    //          +---+
-    //              |
-    //             BB5
-    //               = r1
-    //               = r2
-    //
-    // 1. Register r1 is a livethrough with no uses inside the loop. This is a
-    // high priority candidate for spilling.
-    // 2. Register r2 is a livethrough with a use inside the loop (BB4). In this
-    // case, we spill r2 in BB1 and emit a restore only for the use outside
-    // the loop(BB5).
-
-    // This is tuning for next-use distance. We skip the the registers that are
-    // used inside the loop because we focus on livethrough uses.
-    // TODO: Add more candidates for loops.
     SmallVector<const MachineOperand *> UsesForNextUseDistCalculation;
     for (const MachineOperand &UseMO : MRI->use_nodbg_operands(CandidateReg)) {
       const MachineInstr *UseMI = UseMO.getParent();
       const MachineBasicBlock *UseMBB = UseMI->getParent();
-      MachineLoop *UseLoop = MLI->getLoopFor(UseMBB);
-      if (UseLoop && OutermostLoopOfCurLoop &&
-          (OutermostLoopOfCurLoop->contains(UseLoop) ||
-           (UseLoop == OutermostLoopOfCurLoop)))
+
+      if (UseMI == CurMI) {
+        UsesForNextUseDistCalculation.clear();
+        break;
+      }
+
+      // Bail-out if a use is reachable from a backendge.
+      if (((CurMBB != UseMBB) && NUA->isReachable(UseMBB, CurMBB)) ||
+          ((CurMBB == UseMBB) && DT->dominates(UseMI, CurMI)))
         continue;
 
       if ((CurMBB == UseMBB) && !DT->dominates(CurMI, UseMI))
@@ -226,27 +410,17 @@ AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
       continue;
 
     RegNumOfUses[CandidateReg] = UsesForNextUseDistCalculation.size();
-    auto NextUseDist = NUA->getShortestDistance(CandidateReg, *CurMI,
-                                                UsesForNextUseDistCalculation);
 
     LLVM_DEBUG(CandidateCnt++);
-    if (!IsCurMIInLoop) {
-      // If CurMI is not in a loop, then we collect the registers that we
-      // can spill based on their next-use-distance from CurMI in
-      // 'RegCandidates'.
-      RegCandidates.push_back(
-          std::make_tuple(CandidateReg, NextUseDist.getRawValue(), Mask));
-      LLVM_DEBUG(dbgs() << CandidateCnt << ": Candidate register to spill = "
-                        << printReg(CandidateReg, TRI) << " with distance = "
-                        << NextUseDist.getRawValue() << "\n");
-    } else if (IsLoopCandidate) {
-      // Collect registers with livethrough uses.
-      RegCandidates.push_back(
-          std::make_tuple(CandidateReg, NextUseDist.getRawValue(), Mask));
-      LLVM_DEBUG(dbgs() << CandidateCnt << ": Candidate register to spill = "
-                        << printReg(CandidateReg, TRI) << " with distance = "
-                        << NextUseDist.getRawValue() << "\n");
-    }
+    // Calculate the next-use distance for the spill candidates and add them in
+    // 'RegCandidates'.
+    auto NextUseDist = NUA->getShortestDistance(CandidateReg, *CurMI,
+                                                UsesForNextUseDistCalculation);
+    RegCandidates.push_back(
+        std::make_tuple(CandidateReg, NextUseDist.getRawValue(), Mask));
+    LLVM_DEBUG(dbgs() << CandidateCnt << ": Candidate register to spill = "
+                      << printReg(CandidateReg, TRI) << " with distance = "
+                      << NextUseDist.getRawValue() << "\n");
   }
 
   LLVM_DEBUG(dbgs() << "==========================================\n");
@@ -271,18 +445,18 @@ AMDGPUEarlyRegisterSpilling::getRegistersToSpill(
     return NumOfUses1 < NumOfUses2;
   });
 
-  SmallVector<std::pair<Register, LaneBitmask>> RegistersToSpill;
+  SmallVector<std::tuple<Register, int64_t, LaneBitmask>> RegistersToSpill;
   RegistersToSpill.reserve(RegCandidates.size());
-  for (const auto &[Reg, Distance, Mask] : RegCandidates)
-    RegistersToSpill.push_back(std::make_pair(Reg, Mask));
+  for (const auto &Candidate : RegCandidates)
+    RegistersToSpill.push_back(Candidate);
 
   return RegistersToSpill;
 }
 
 // Helper function for finding the incoming blocks that are related to
-// DefRegToSpill
+// RegToSpill
 static SmallVector<MachineBasicBlock *>
-getPhiBlocksOfSpillReg(MachineInstr *UseMI, Register DefRegToSpill) {
+getPhiBlocksOfSpillReg(MachineInstr *UseMI, Register RegToSpill) {
   assert(UseMI->isPHI() && "The use is not phi instruction");
   SmallVector<MachineBasicBlock *> Blocks;
   auto Ops = UseMI->operands();
@@ -294,7 +468,7 @@ getPhiBlocksOfSpillReg(MachineInstr *UseMI, Register DefRegToSpill) {
     auto &MBBMO = *std::next(It);
     assert(RegMO.isReg() && "Expected register operand of PHI");
     assert(MBBMO.isMBB() && "Expected MBB operand of PHI");
-    if (RegMO.getReg() == DefRegToSpill)
+    if (RegMO.getReg() == RegToSpill)
       Blocks.push_back(MBBMO.getMBB());
   }
   return Blocks;
@@ -322,82 +496,63 @@ bool AMDGPUEarlyRegisterSpilling::shouldEmitRestoreInCommonDominator(
   return true;
 }
 
-/// Helper data structure for grouping together uses where the head of the group
-/// dominates all the other uses in the group.
-class DomGroup {
-  SmallVector<MachineInstr *> Uses;
-  SmallVector<MachineBasicBlock *> UseBlocks;
-  SmallDenseMap<MachineInstr *, MachineBasicBlock *> PHIInstrToRestoreBlock;
-  MachineBasicBlock *CommonDominator = nullptr;
-  bool Deleted = false;
-
-public:
-  DomGroup(MachineInstr *MI, MachineBasicBlock *RestoreBlock) {
-    Uses.push_back(MI);
-    UseBlocks.push_back(RestoreBlock);
-    if (MI->isPHI())
-      PHIInstrToRestoreBlock[MI] = RestoreBlock;
-  }
-  MachineInstr *getHead() const { return Uses.front(); }
-  bool isDeleted() const { return Deleted; }
-  void merge(DomGroup &Other) {
-    for (auto *MI : Other.Uses)
-      Uses.push_back(MI);
-
-    for (auto *UseMBB : Other.UseBlocks)
-      UseBlocks.push_back(UseMBB);
-
-    PHIInstrToRestoreBlock.insert(Other.PHIInstrToRestoreBlock.begin(),
-                                  Other.PHIInstrToRestoreBlock.end());
-
-    Other.Deleted = true;
-  }
-  const auto &getUses() const { return Uses; }
-  const auto &getUseBlocks() const { return UseBlocks; }
-  size_t size() const { return Uses.size(); }
-  void setCommonDominator(MachineBasicBlock *CD) { CommonDominator = CD; }
-  MachineBasicBlock *getCommonDominator() const { return CommonDominator; }
-  bool hasCommonDominator() const { return CommonDominator != nullptr; }
-  MachineBasicBlock *getRestoreBlock() const { return UseBlocks.front(); }
-  MachineBasicBlock *getRestoreBlockForPHI(MachineInstr *PHI) const {
-    assert(PHI->isPHI() && "The instruction is not a PHI node.");
-    auto It = PHIInstrToRestoreBlock.find(PHI);
-    assert(It != PHIInstrToRestoreBlock.end() &&
-           "The PHI node does not exist in the map.");
-    return It->second;
-  }
-};
-
-void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
-    Register DefRegToSpill, MachineInstr *SpillInstruction, MachineInstr *CurMI,
-    SetVectorType &DominatedUses, SmallVector<MachineInstr *> &RestoreInstrs,
-    SmallVector<MachineInstr *> &RestoreUses, int FI) {
-  MachineBasicBlock *SpillBlock = SpillInstruction->getParent();
+void AMDGPUEarlyRegisterSpilling::groupUses(
+    Register RegToSpill, MachineBasicBlock *SpillBlock, MachineInstr *CurMI,
+    SetVectorType &DominatedUses, SmallVector<DomGroup> &GroupOfUses) {
+  // MachineBasicBlock *SpillBlock = SpillInstruction->getParent();
   MachineBasicBlock *CurMBB = CurMI->getParent();
+  MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
   MachineLoop *SpillLoop = MLI->getLoopFor(SpillBlock);
   assert(!SpillLoop && "There should not be a spill loop.");
+  MachineLoop *OutermostLoopOfCurLoop = nullptr;
+  if (CurLoop)
+    OutermostLoopOfCurLoop = CurLoop->getOutermostLoop();
+
+  auto AreLoopsInSameLoopNest = [OutermostLoopOfCurLoop](MachineLoop *UseLoop,
+                                                         MachineLoop *CurLoop) {
+    return (UseLoop && CurLoop &&
+            (UseLoop->contains(CurLoop) ||
+             OutermostLoopOfCurLoop->contains(UseLoop)));
+  };
 
   std::vector<DomGroup> Groups;
   for (auto *Use : DominatedUses) {
     MachineLoop *UseLoop = MLI->getLoopFor(Use->getParent());
     if (UseLoop) {
-      // If a use is in a loop then the restore instruction is emitted in the
-      // outermost loop's preheader.
-      MachineLoop *OutermostLoop = UseLoop->getOutermostLoop();
-      MachineBasicBlock *OutermostLoopPreheader =
-          OutermostLoop->getLoopPreheader();
-      Groups.emplace_back(Use, OutermostLoopPreheader);
+      if (CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
+        // If the high register pressure point and the use are in the same
+        // loop nest then the restore instruction is emitted before the use.
+        Groups.emplace_back(Use, Use->getParent());
+      } else {
+        // If the high register pressure point is outside of the loop nest of
+        // the use, then the restore instruction is emitted in the outermost
+        // loop's preheader.
+        MachineLoop *OutermostLoop = UseLoop->getOutermostLoop();
+        MachineBasicBlock *OutermostLoopPreheader =
+            OutermostLoop->getLoopPreheader();
+        Groups.emplace_back(Use, OutermostLoopPreheader);
+      }
     } else if (Use->isPHI()) {
       // In case of phi nodes, the restore instructions are emitted at the
       // bottom of the incoming blocks.
       for (MachineBasicBlock *PhiOpMBB :
-           getPhiBlocksOfSpillReg(Use, DefRegToSpill)) {
+           getPhiBlocksOfSpillReg(Use, RegToSpill)) {
         Groups.emplace_back(Use, PhiOpMBB);
       }
     } else {
       // Emit restore before Use.
       Groups.emplace_back(Use, Use->getParent());
     }
+  }
+
+  if (DisableRestoreGrouping) {
+    for (auto &G1 : Groups) {
+      if (G1.isDeleted())
+        continue;
+
+      GroupOfUses.push_back(G1);
+    }
+    return;
   }
 
   // Our goal is to emit as few restores as possible by avoiding emitting
@@ -454,8 +609,24 @@ void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
       MachineBasicBlock *RestoreBlock2 = G2.getRestoreBlock();
       MachineLoop *Head1Loop = MLI->getLoopFor(Head1->getParent());
       MachineLoop *Head2Loop = MLI->getLoopFor(Head2->getParent());
+      // Disable the grouping of the restore instructions for the following loop
+      // scenarios.
+      // TODO: Change this if it creates performance degradation.
       if ((Head1Loop && !Head2Loop) || (!Head1Loop && Head2Loop) ||
-          (Head1Loop && Head2Loop && (RestoreBlock1 != RestoreBlock2)))
+          ((Head1Loop && Head2Loop && (RestoreBlock1 != RestoreBlock2)) &&
+           (!CurLoop ||
+            (CurLoop && !OutermostLoopOfCurLoop->contains(Head1Loop) &&
+             !OutermostLoopOfCurLoop->contains(Head2Loop) &&
+             !Head1Loop->contains(Head2Loop) &&
+             !Head2Loop->contains(Head1Loop)))) ||
+          (CurLoop && ((OutermostLoopOfCurLoop->contains(Head1Loop) &&
+                        !OutermostLoopOfCurLoop->contains(Head2Loop)) ||
+                       (!OutermostLoopOfCurLoop->contains(Head1Loop) &&
+                        OutermostLoopOfCurLoop->contains(Head2Loop)))) ||
+          (CurLoop && OutermostLoopOfCurLoop->contains(CurLoop) &&
+           OutermostLoopOfCurLoop->contains(Head1Loop) &&
+           OutermostLoopOfCurLoop->contains(Head2Loop) &&
+           !Head1Loop->contains(Head2Loop) && !Head2Loop->contains(Head1Loop)))
         continue;
       SmallVector<MachineBasicBlock *> UseBlocks;
       for (auto *Block : G1.getUseBlocks())
@@ -486,9 +657,6 @@ void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
           // then we can merge the two groups.
           G1.merge(G2);
         }
-      } else if (Head1Loop && Head2Loop && (RestoreBlock1 == RestoreBlock2) &&
-                 DT->dominates(Head1, Head2)) {
-        G1.merge(G2);
       } else if ((RestoreBlock1 == RestoreBlock2) &&
                  DT->dominates(Head1, Head2)) {
         G1.merge(G2);
@@ -499,79 +667,11 @@ void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
     }
   }
 
-  // For each group emit one restore for the group header in the parent block of
-  // the group header or the common dominator. The rest of the uses in the group
-  // will reuse the value loaded by the restore of the header.
   for (auto &G1 : Groups) {
     if (G1.isDeleted())
       continue;
-    MachineInstr *Head = G1.getHead();
-    MachineBasicBlock *HeadMBB = G1.getRestoreBlock();
-    MachineInstr *Restore = nullptr;
-    if (G1.hasCommonDominator() && EmitRestoreInCommonDominator) {
-      MachineBasicBlock *CommonDominator = G1.getCommonDominator();
-      MachineInstr *UseInCommonDominator = nullptr;
-      for (auto *U : G1.getUses()) {
-        if (U->getParent() == CommonDominator) {
-          if (UseInCommonDominator) {
-            if (DT->dominates(U, UseInCommonDominator))
-              UseInCommonDominator = U;
-          } else {
-            UseInCommonDominator = U;
-          }
-        }
-      }
-      if (UseInCommonDominator) {
-        Restore = emitRestore(DefRegToSpill, UseInCommonDominator, FI);
-        Head = UseInCommonDominator;
-        HeadMBB = CommonDominator;
-      } else {
-        Restore = emitRestore(DefRegToSpill, *CommonDominator, FI);
-        Head->substituteRegister(DefRegToSpill, Restore->getOperand(0).getReg(),
-                                 0, *TRI);
-      }
-    } else if (Head->isPHI()) {
-      Restore = emitRestore(DefRegToSpill, *HeadMBB, FI);
-      for (unsigned i = 1; i < Head->getNumOperands(); i += 2) {
-        if (Head->getOperand(i).getReg() == DefRegToSpill &&
-            Head->getOperand(i + 1).getMBB() == HeadMBB) {
-          Head->getOperand(i).setReg(Restore->getOperand(0).getReg());
-        }
-      }
-    } else if (MLI->getLoopFor(Head->getParent())) {
-      Restore = emitRestore(DefRegToSpill, *HeadMBB, FI);
-      Head->substituteRegister(DefRegToSpill, Restore->getOperand(0).getReg(),
-                               0, *TRI);
-    } else {
-      Restore = emitRestore(DefRegToSpill, Head, FI);
-    }
-    RestoreInstrs.push_back(Restore);
-    RestoreUses.push_back(Head);
 
-    // Update the rest of the uses in the group to reuse the value restored by
-    // the head of the group.
-    for (auto *U : G1.getUses()) {
-      assert(U != SpillInstruction);
-      if (U == Head)
-        continue;
-
-      if (U->isPHI()) {
-        for (unsigned i = 1; i < U->getNumOperands(); i += 2) {
-          if (U->getOperand(i).getReg() == DefRegToSpill &&
-              U->getOperand(i + 1).getMBB() == G1.getRestoreBlockForPHI(U)) {
-            U->getOperand(i).setReg(Restore->getOperand(0).getReg());
-          }
-        }
-      } else {
-        U->substituteRegister(DefRegToSpill, Restore->getOperand(0).getReg(), 0,
-                              *TRI);
-      }
-      RestoreUses.push_back(U);
-      LLVM_DEBUG(dbgs() << "Updated use: " << *U);
-      LLVM_DEBUG(dbgs() << "With register = "
-                        << printReg(Restore->getOperand(0).getReg(), TRI)
-                        << "\n");
-    }
+    GroupOfUses.push_back(G1);
   }
 }
 
@@ -579,60 +679,40 @@ void AMDGPUEarlyRegisterSpilling::emitRestoreInstrsForDominatedUses(
 // This is due to the fact that some unreachable uses might become reachable if
 // we spill in common dominator.
 void AMDGPUEarlyRegisterSpilling::classifyUses(
-    MachineBasicBlock *SpillBlock, Register DefRegToSpill, MachineInstr *CurMI,
+    MachineBasicBlock *SpillBlock, Register RegToSpill, MachineInstr *CurMI,
     SetVectorType &DominatedUses, SetVectorType &NonDominatedReachableUses,
     SetVectorType &UnreachableUses) {
 
   MachineBasicBlock *CurMBB = CurMI->getParent();
-  MachineLoop *CurLoop = MLI->getLoopFor(CurMBB);
-  MachineLoop *OutermostLoopOfCurLoop = nullptr;
-  if (CurLoop)
-    OutermostLoopOfCurLoop = CurLoop->getOutermostLoop();
 
-  auto AreLoopsInSameLoopNest = [OutermostLoopOfCurLoop](MachineLoop *UseLoop,
-                                                         MachineLoop *CurLoop) {
-    return (UseLoop && CurLoop &&
-            (UseLoop->contains(CurLoop) ||
-             OutermostLoopOfCurLoop->contains(UseLoop)));
-  };
-
-  for (MachineInstr &U : MRI->use_nodbg_instructions(DefRegToSpill)) {
+  for (MachineInstr &U : MRI->use_nodbg_instructions(RegToSpill)) {
     if (U.isPHI()) {
-      for (auto *PhiOpMBB : getPhiBlocksOfSpillReg(&U, DefRegToSpill)) {
-        if (DT->dominates(SpillBlock, PhiOpMBB)) {
-          MachineLoop *UseLoop = MLI->getLoopFor(U.getParent());
-          if (UseLoop && CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
-            UnreachableUses.insert(&U);
-          } else {
-            DominatedUses.insert(&U);
-          }
+      for (auto *PhiOpMBB : getPhiBlocksOfSpillReg(&U, RegToSpill)) {
+        MachineBasicBlock *UseMBB = U.getParent();
+        // The uses which are before the high register pressure point are
+        // unreachable.
+        if (((CurMBB != UseMBB) && NUA->isReachable(UseMBB, CurMBB)) ||
+            ((CurMBB == UseMBB) && DT->dominates(&U, CurMI))) {
+          UnreachableUses.insert(&U);
+        } else if (DT->dominates(SpillBlock, PhiOpMBB)) {
+          DominatedUses.insert(&U);
         } else if (NUA->isReachable(SpillBlock, PhiOpMBB)) {
-          MachineLoop *UseLoop = MLI->getLoopFor(PhiOpMBB);
-          if (UseLoop && CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
-            UnreachableUses.insert(&U);
-          } else {
-            NonDominatedReachableUses.insert(&U);
-          }
+          NonDominatedReachableUses.insert(&U);
         } else {
           UnreachableUses.insert(&U);
         }
       }
     } else {
-      MachineBasicBlock *UMBB = U.getParent();
-      if (DT->dominates(CurMI, &U)) {
-        MachineLoop *UseLoop = MLI->getLoopFor(UMBB);
-        if (UseLoop && CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
-          UnreachableUses.insert(&U);
-        } else {
-          DominatedUses.insert(&U);
-        }
-      } else if (NUA->isReachable(SpillBlock, UMBB)) {
-        MachineLoop *UseLoop = MLI->getLoopFor(UMBB);
-        if (UseLoop && CurLoop && AreLoopsInSameLoopNest(UseLoop, CurLoop)) {
-          UnreachableUses.insert(&U);
-        } else {
-          NonDominatedReachableUses.insert(&U);
-        }
+      MachineBasicBlock *UseMBB = U.getParent();
+      // The uses which are before the high register pressure point are
+      // unreachable.
+      if (((CurMBB != UseMBB) && NUA->isReachable(UseMBB, CurMBB)) ||
+          ((CurMBB == UseMBB) && DT->dominates(&U, CurMI))) {
+        UnreachableUses.insert(&U);
+      } else if (DT->dominates(CurMI, &U)) {
+        DominatedUses.insert(&U);
+      } else if (NUA->isReachable(SpillBlock, UseMBB)) {
+        NonDominatedReachableUses.insert(&U);
       } else {
         UnreachableUses.insert(&U);
       }
@@ -643,12 +723,12 @@ void AMDGPUEarlyRegisterSpilling::classifyUses(
 // Find the common dominator of the reachable uses and the block that we
 // intend to spill(SpillBlock).
 MachineBasicBlock *AMDGPUEarlyRegisterSpilling::findCommonDominatorToSpill(
-    MachineBasicBlock *SpillBlock, Register DefRegToSpill,
+    MachineBasicBlock *SpillBlock, Register RegToSpill,
     const SetVectorType &NonDominatedReachableUses) {
   SmallPtrSet<MachineBasicBlock *, 2> Blocks;
   for (auto *RU : NonDominatedReachableUses) {
     if (RU->isPHI()) {
-      for (auto *PhiOpMBB : getPhiBlocksOfSpillReg(RU, DefRegToSpill))
+      for (auto *PhiOpMBB : getPhiBlocksOfSpillReg(RU, RegToSpill))
         Blocks.insert(PhiOpMBB);
     } else
       Blocks.insert(RU->getParent());
@@ -695,12 +775,11 @@ AMDGPUEarlyRegisterSpilling::getWhereToSpillIfDefintionInLoop(
 
 std::pair<MachineBasicBlock *, MachineBasicBlock::iterator>
 AMDGPUEarlyRegisterSpilling::getWhereToSpill(MachineInstr *CurMI,
-                                             Register DefRegToSpill) {
-  assert(MRI->hasOneDef(DefRegToSpill) &&
+                                             Register RegToSpill) {
+  assert(MRI->hasOneDef(RegToSpill) &&
          "The Register does not have one definition");
-  MachineInstr *InstrOfDefRegToSpill =
-      MRI->getOneDef(DefRegToSpill)->getParent();
-  MachineBasicBlock *DefRegMBB = InstrOfDefRegToSpill->getParent();
+  MachineInstr *InstrOfRegToSpill = MRI->getOneDef(RegToSpill)->getParent();
+  MachineBasicBlock *DefRegMBB = InstrOfRegToSpill->getParent();
   MachineBasicBlock *CurMBB = CurMI->getParent();
   MachineLoop *DefInstrLoop = MLI->getLoopFor(DefRegMBB);
   MachineLoop *CurLoop = MLI->getLoopFor(CurMI->getParent());
@@ -713,7 +792,7 @@ AMDGPUEarlyRegisterSpilling::getWhereToSpill(MachineInstr *CurMI,
   MachineBasicBlock *SpillBlock = nullptr;
   MachineBasicBlock::iterator WhereToSpill;
   // case 1:
-  // - the register we are about to spill (DefRegToSpill) is defined in loop
+  // - the register we are about to spill (RegToSpill) is defined in loop
   // - the high register pressure (CurMI) is outside the loop
   // - we emit the spill instruction in the exit block of the loop
   // TODO: improve spilling in loops
@@ -771,32 +850,135 @@ AMDGPUEarlyRegisterSpilling::getWhereToSpill(MachineInstr *CurMI,
   return {SpillBlock, WhereToSpill};
 }
 
+/// Normalize the next-use distance and restore cost for all spill candidates
+/// using log-scale normalization.
+static void normalizeCosts(SmallVector<SpillCandidate> &AllCandidates,
+                           const SIRegisterInfo *TRI) {
+  if (AllCandidates.empty())
+    return;
+
+  int64_t MinRestoreCost = AllCandidates[0].getRestoreCost();
+  int64_t MaxRestoreCost = AllCandidates[0].getRestoreCost();
+  int64_t MinNextUseDist = AllCandidates[0].getNextUseDistance();
+  int64_t MaxNextUseDist = AllCandidates[0].getNextUseDistance();
+  int64_t SumNextUseDist = 0;
+  int64_t SumRestoreCost = 0;
+
+  for (const auto &C : AllCandidates) {
+    MinRestoreCost = std::min(MinRestoreCost, C.getRestoreCost());
+    MaxRestoreCost = std::max(MaxRestoreCost, C.getRestoreCost());
+    MinNextUseDist = std::min(MinNextUseDist, C.getNextUseDistance());
+    MaxNextUseDist = std::max(MaxNextUseDist, C.getNextUseDistance());
+    SumNextUseDist += C.getNextUseDistance();
+    SumRestoreCost += C.getRestoreCost();
+  }
+
+  // Calculate mean and standard deviation for outlier detection.
+  int64_t NumCandidates = AllCandidates.size();
+  int64_t MeanNextUseDist = SumNextUseDist / NumCandidates;
+  int64_t MeanRestoreCost = SumRestoreCost / NumCandidates;
+
+  int64_t SumSqDiffNextUseDist = 0;
+  int64_t SumSqDiffRestoreCost = 0;
+  for (const auto &C : AllCandidates) {
+    int64_t DiffNextUseDist = C.getNextUseDistance() - MeanNextUseDist;
+    SumSqDiffNextUseDist += DiffNextUseDist * DiffNextUseDist;
+    int64_t DiffRestoreCost = C.getRestoreCost() - MeanRestoreCost;
+    SumSqDiffRestoreCost += DiffRestoreCost * DiffRestoreCost;
+  }
+  int64_t StdDevNextUseDist = std::sqrt(SumSqDiffNextUseDist / NumCandidates);
+  int64_t StdDevRestoreCost = std::sqrt(SumSqDiffRestoreCost / NumCandidates);
+
+  LLVM_DEBUG(dbgs() << "RestoreCost (min=" << MinRestoreCost << ", max="
+                    << MaxRestoreCost << ", mean=" << MeanRestoreCost
+                    << ", stddev=" << StdDevRestoreCost << ")\n");
+  LLVM_DEBUG(dbgs() << "NextUseDist (min=" << MinNextUseDist << ", max="
+                    << MaxNextUseDist << ", mean=" << MeanNextUseDist
+                    << ", stddev=" << StdDevNextUseDist << ")\n");
+
+  // Log-scale normalization.
+  static constexpr int64_t Limit = 100;
+  static constexpr int64_t OutlierBonus = 20;
+  double LogMaxNextUseDist = std::log(MaxNextUseDist - MinNextUseDist + 1);
+  double LogMaxRestoreCost = std::log(MaxRestoreCost - MinRestoreCost + 1);
+
+  for (auto &C : AllCandidates) {
+    // Log-scale normalization for NextUseDistance.
+    double LogNextUseDist =
+        std::log(C.getNextUseDistance() - MinNextUseDist + 1);
+    int64_t NormalizedNextUseDist =
+        (LogMaxNextUseDist > 0)
+            ? static_cast<int64_t>((LogNextUseDist * Limit) / LogMaxNextUseDist)
+            : 0;
+
+    // // Outlier bonus for NextUseDistance (higher is better for spilling).
+    // bool IsNextUseDistOutlier =
+    //     C.getNextUseDistance() > MeanNextUseDist + 2 * StdDevNextUseDist;
+    // if (IsNextUseDistOutlier)
+    //   NormalizedNextUseDist += OutlierBonus;
+
+    C.setNextUseDistance(NormalizedNextUseDist);
+
+    // Log-scale normalization for RestoreCost.
+    double LogRestoreCost = std::log(C.getRestoreCost() - MinRestoreCost + 1);
+    int64_t NormalizedRestoreCost =
+        (LogMaxRestoreCost > 0)
+            ? static_cast<int64_t>((LogRestoreCost * Limit) / LogMaxRestoreCost)
+            : 0;
+
+    // // Outlier penalty for RestoreCost (higher cost is worse for spilling).
+    // bool IsRestoreCostOutlier =
+    //     C.getRestoreCost() > MeanRestoreCost + 2 * StdDevRestoreCost;
+    // if (IsRestoreCostOutlier)
+    //   NormalizedRestoreCost += OutlierBonus;
+
+    C.setRestoreCost(NormalizedRestoreCost);
+
+    // Combined cost: prefer high next-use distance, low restore cost.
+    int64_t NormalizedCost =
+        NormalizedNextUseDist * 0.8 - NormalizedRestoreCost * 0.2;
+    C.setNormalizedCost(NormalizedCost);
+
+    LLVM_DEBUG(dbgs() << "Register " << printReg(C.getSpilledRegister(), TRI)
+                      << " with NormalizedCost = " << NormalizedCost
+                      << " , NormalizedRestoreCost = " << NormalizedRestoreCost
+                      << " , NormalizedNextUseDist = " << NormalizedNextUseDist
+                      << "\n");
+  }
+}
+
 void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
                                         GCNDownwardRPTracker &RPTracker,
                                         unsigned NumOfSpills) {
   // CurMI is the high register pressure point in the IR.
-  MachineBasicBlock *CurMBB = CurMI->getParent();
-  // Iterate over all register candidates for spilling, skip them if needed, and
-  // spill up to NumOfSpills registers.
-  unsigned SpillCnt = 0;
-  for (const auto &[DefRegToSpill, Mask] :
-       getRegistersToSpill(CurMI, RPTracker)) {
-    if (SpillCnt >= NumOfSpills)
-      break;
 
-    // Don't spill registers with a partial lanebitmask.
+  // How we select which register to spill
+  // -------------------------------------
+  // The spill candidate registers are sorted by next-use-distance are placed in
+  // the AllCandidates vector. We get the top N (LiveRegsWindow) candidates and
+  // sort them based on a secondary metric, the restore cost. We select the best
+  // register and emit the spill and restore instructions.
+  //
+  SmallVector<SpillCandidate> AllCandidates;
+  SmallVector<std::tuple<Register, int64_t, LaneBitmask>> RegistersToSpill =
+      getRegistersToSpill(CurMI, RPTracker);
+  static constexpr unsigned LiveRegsWindow = 50;
+  unsigned NumOfTopCandidates =
+      std::min((unsigned)RegistersToSpill.size(), NumOfSpills + LiveRegsWindow);
+  ArrayRef<std::tuple<Register, int64_t, LaneBitmask>> TopRegistersToSpill(
+      RegistersToSpill.begin(), RegistersToSpill.begin() + NumOfTopCandidates);
+  for (const auto &[RegToSpill, NextUseDist, Mask] : TopRegistersToSpill) {
+    // TODO: Check if this is needed.
     unsigned NumOfCoveredRegs = SIRegisterInfo::getNumCoveredRegs(Mask);
-    unsigned NumOfSubregisters =
-        (TRI->getRegSizeInBits(DefRegToSpill, *MRI)) / 32;
+    unsigned NumOfSubregisters = TRI->getRegSizeInBits(RegToSpill, *MRI) / 32;
     if (NumOfCoveredRegs != NumOfSubregisters)
       continue;
 
-    // First we find where we should emit the spill instruction.
-    MachineInstr *SpillInstruction = nullptr;
+    // To get the restore cost we first need to find where we should emit the
+    // spill instruction.
     MachineBasicBlock *SpillBlock = nullptr;
     MachineBasicBlock::iterator WhereToSpill;
-
-    std::tie(SpillBlock, WhereToSpill) = getWhereToSpill(CurMI, DefRegToSpill);
+    std::tie(SpillBlock, WhereToSpill) = getWhereToSpill(CurMI, RegToSpill);
     if (SpillBlock == nullptr)
       continue;
 
@@ -812,13 +994,13 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     // The unreachable uses are the ones that are not reachable by the
     // SpillBlock.
     SetVectorType UnreachableUses;
-    classifyUses(SpillBlock, DefRegToSpill, CurMI, DominatedUses,
+    classifyUses(SpillBlock, RegToSpill, CurMI, DominatedUses,
                  NonDominatedReachableUses, UnreachableUses);
 
     if (NonDominatedReachableUses.empty() && DominatedUses.empty() &&
         !UnreachableUses.empty()) {
       assert(UnreachableUses.size() ==
-                 llvm::range_size(MRI->use_nodbg_operands(DefRegToSpill)) &&
+                 llvm::range_size(MRI->use_nodbg_operands(RegToSpill)) &&
              "Missing uses\n");
       continue;
     }
@@ -826,11 +1008,11 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
     MachineBasicBlock *CommonDominatorToSpill = nullptr;
     if (!NonDominatedReachableUses.empty()) {
       CommonDominatorToSpill = findCommonDominatorToSpill(
-          SpillBlock, DefRegToSpill, NonDominatedReachableUses);
+          SpillBlock, RegToSpill, NonDominatedReachableUses);
 
       // If there are non-dominated reachable uses and we could not find a
       // common dominator, then we skip this regitster. The reason is that the
-      // spill s and the uses should be executing with either equal execution
+      // spill and the uses should be executing with either equal execution
       // masks or the spill should have a superset mask compared to the uses.
       if (!CommonDominatorToSpill)
         continue;
@@ -844,66 +1026,59 @@ void AMDGPUEarlyRegisterSpilling::spill(MachineInstr *CurMI,
         WhereToSpill = SpillBlock->instr_end();
     }
 
-    const TargetRegisterClass *RC = TRI->getRegClassForReg(*MRI, DefRegToSpill);
-    unsigned Size = TRI->getSpillSize(*RC);
-    Align Alignment = TRI->getSpillAlign(*RC);
-    int FI = FrameInfo->CreateSpillStackObject(Size, Alignment);
+    SmallVector<DomGroup> GroupOfUses;
+    // Find the restore locations.
+    groupUses(RegToSpill, SpillBlock, CurMI, DominatedUses, GroupOfUses);
 
-    // Emit the spill instruction.
-    TII->storeRegToStackSlot(*SpillBlock, WhereToSpill, DefRegToSpill,
-                             true, /* kill */
-                             FI, RC, 0);
-    SpillInstruction = &*(std::prev(WhereToSpill));
-    LIS->InsertMachineInstrInMaps(*SpillInstruction);
+    // Create Candidate information.
+    SpillCandidate Candidate(RegToSpill, Mask, SpillBlock, WhereToSpill, TRI,
+                             MRI, TII, FrameInfo, LIS, Indexes, DT, MLI);
 
-    SpilledRegs.insert(DefRegToSpill);
+    for (DomGroup &G : GroupOfUses)
+      Candidate.addGroup(G);
+
+    // Calculate the restore cost.
+    Candidate.calculateRestoreCost();
+    Candidate.setNextUseDistance(NextUseDist);
+    AllCandidates.push_back(Candidate);
+    LLVM_DEBUG(dbgs() << "Register to spill " << printReg(RegToSpill, TRI)
+                      << " = " << Candidate.getRestoreCost() << "\n");
+  }
+
+  // Normalize restore costs and next-use distances.
+  normalizeCosts(AllCandidates, TRI);
+
+  llvm::sort(AllCandidates, [&](auto &Candidate1, auto &Candidate2) {
+    int64_t Cost1 = Candidate1.getNormalizedCost();
+    int64_t Cost2 = Candidate2.getNormalizedCost();
+    if (Cost1 == Cost2)
+      return Candidate1.getRestoreCost() < Candidate2.getRestoreCost();
+    return Cost1 > Cost2;
+  });
+
+  unsigned SpillCnt = 0;
+  for (auto &C : AllCandidates) {
+    if (SpillCnt >= NumOfSpills)
+      break;
+
+    Register RegToSpill = C.getSpilledRegister();
+    unsigned NumOfCoveredRegs = SIRegisterInfo::getNumCoveredRegs(C.getMask());
+    unsigned NumOfSubregisters = (TRI->getRegSizeInBits(RegToSpill, *MRI)) / 32;
+    assert(NumOfCoveredRegs == NumOfSubregisters &&
+           "The number of the sub-registers is different than number of "
+           "covered registers.");
+
+    SpillCnt += NumOfCoveredRegs;
+
+    SpilledRegs.insert(RegToSpill);
     NumOfERSSpills++;
 
-    SpillCnt = SpillCnt + NumOfCoveredRegs;
-
-    assert(SpillInstruction && "There is not a spill instruction");
-    LLVM_DEBUG(dbgs() << "High register pressure point = " << *CurMI);
-    LLVM_DEBUG(dbgs() << "Register to spill = " << printReg(DefRegToSpill, TRI)
-                      << "\n");
-    LLVM_DEBUG(dbgs() << "Spill instruction = " << *SpillInstruction);
-    LLVM_DEBUG(dbgs() << "Spill block = "
-                      << SpillInstruction->getParent()->getName() << "\n");
-
-    MachineInstr *InstrOfDefRegToSpill =
-        MRI->getOneDef(DefRegToSpill)->getParent();
-
-    SmallVector<MachineInstr *> RestoreInstrs;
-    SmallVector<MachineInstr *> RestoreUses;
-    // Find the restore locations, emit the restore instructions and maintain
-    // SSA when needed.
-    emitRestoreInstrsForDominatedUses(DefRegToSpill, SpillInstruction, CurMI,
-                                      DominatedUses, RestoreInstrs, RestoreUses,
-                                      FI);
-
-    // Update the live interval analysis.
-    updateIndexes(InstrOfDefRegToSpill);
-    updateIndexes(SpillInstruction);
-    updateLiveness(InstrOfDefRegToSpill);
-    updateLiveness(SpillInstruction);
-
-    if (InstrOfDefRegToSpill != CurMI) {
-      updateIndexes(CurMI);
-      updateLiveness(CurMI);
-    }
-
-    for (auto *Use : RestoreInstrs) {
-      updateIndexes(Use);
-      updateLiveness(Use);
-    }
-
-    for (auto *Use : RestoreUses) {
-      updateIndexes(Use);
-      updateLiveness(Use);
-    }
+    C.generateSpillRestoreInstrs(CurMI, RestoreDstRegs);
   }
+
   // Reset the tracker because it has already read the next instruction which
   // we might have modified by emitting a spill or restore instruction.
-  RPTracker.reset(*CurMI, CurMBB->end());
+  RPTracker.reset(*CurMI, CurMI->getParent()->end());
   RPTracker.advance();
 }
 
@@ -930,6 +1105,14 @@ bool AMDGPUEarlyRegisterSpilling::runOnMachineFunction(MachineFunction &MF) {
 
   if (skipFunction(MF.getFunction()))
     return false;
+
+  Function &F = MF.getFunction();
+  AttrBuilder builder(F.getContext());
+  F.removeFnAttr("amdgpu-num-vgpr");
+  // unsigned RAMaxVGPRs = VGPRMaxNums + 3;
+  unsigned RAMaxVGPRs = VGPRMaxNums;
+  builder.addAttribute("amdgpu-num-vgpr", std::to_string(RAMaxVGPRs));
+  F.addFnAttrs(builder);
 
   if (!EarlyRegisterSpilling)
     return false;
