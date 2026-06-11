@@ -1,0 +1,17 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck %s
+
+# CHECK: warning: {{.*}} module data size too big: got 10, section size is 10
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     '010001010A0000001234'
+    SizeOfRawData:   10
+symbols:
+...

@@ -1,0 +1,17 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck %s
+
+# CHECK: warning: {{.*}} unsupported symbol index width: 3
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     0100010318000000FF0103FF090CFF0D0FFF03FFFF0EFFFF006D006F00
+    SizeOfRawData:   29
+symbols:
+...

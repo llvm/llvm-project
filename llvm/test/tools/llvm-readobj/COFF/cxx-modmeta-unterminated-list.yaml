@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --coff-cxx-module-metadata %t 2>&1 | FileCheck %s
+
+# CHECK:      CxxModuleMetadata {
+# CHECK-NEXT:   Version: 1
+# CHECK-NEXT:   Reserved: 0
+# CHECK-NEXT:   ModuleIndexWidth: 1
+# CHECK-NEXT:   SymbolIndexWidth: 1
+# CHECK-NEXT:   Modules [
+# CHECK-NEXT:     CxxModule {
+# CHECK-NEXT:       ID: 0x1
+# CHECK-NEXT:       Name: o
+# CHECK-NEXT:       IsHeaderUnit: No
+# CHECK-NEXT:       Dependents: []
+# CHECK-NEXT:       Symbols: []
+# CHECK-NEXT: warning: {{.*}} missing end sentinel
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .modmeta
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     010001010F000000FF01FFFF000000006F00
+    SizeOfRawData:   18
+symbols:
+  - Name:            '?fn@@YAXXZ::<!o>'
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
