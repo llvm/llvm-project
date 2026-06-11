@@ -347,6 +347,17 @@ bool OpFilter::isOpAllowed(Operation *op) const {
 
 namespace {
 
+// A helper overload for bufferization::getMemRefTypeWithFullyDynamicLayout().
+BaseMemRefType getMemRefTypeWithFullyDynamicLayout(ArrayRef<int64_t> shape,
+                                                   mlir::Type elementType,
+                                                   Attribute memorySpace) {
+  int64_t dynamicOffset = ShapedType::kDynamic;
+  SmallVector<int64_t> dynamicStrides(shape.size(), ShapedType::kDynamic);
+  auto stridedLayout = StridedLayoutAttr::get(elementType.getContext(),
+                                              dynamicOffset, dynamicStrides);
+  return MemRefType::get(shape, elementType, stridedLayout, memorySpace);
+}
+
 /// Default function arg type converter: Use a fully dynamic layout map.
 BufferLikeType
 defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
@@ -354,7 +365,8 @@ defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
                                 const BufferizationOptions &options) {
   if (auto tensorType = mlir::dyn_cast<TensorType>(type)) {
     return cast<BufferLikeType>(
-        getMemRefTypeWithFullyDynamicLayout(tensorType, memorySpace));
+        bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType,
+                                                           memorySpace));
   }
 
   // If not builtin, fallback to unknown type conversion.
@@ -364,37 +376,29 @@ defaultFunctionArgTypeConverter(TensorLikeType type, Attribute memorySpace,
 BufferLikeType
 defaultUnknownTypeConverter(TensorLikeType tensorType, Attribute memorySpace,
                             const BufferizationOptions &options) {
-  return cast<BufferLikeType>(getMemRefTypeWithFullyDynamicLayout(
-      cast<TensorType>(tensorType), memorySpace));
+  return cast<BufferLikeType>(
+      bufferization::getMemRefTypeWithFullyDynamicLayout(
+          cast<TensorType>(tensorType), memorySpace));
 }
 
 /// Default reconcile hook: memory space mismatch is an error, layout mismatch
 /// is resolved by promoting to fully dynamic.
 FailureOr<BufferLikeType>
-defaultReconcileBufferTypeMismatch(Operation *op, BufferLikeType x,
-                                   BufferLikeType y,
+defaultReconcileBufferTypeMismatch(BufferLikeType x, BufferLikeType y,
                                    const BufferizationOptions &) {
   const auto xMemRef = cast<BaseMemRefType>(x);
   const auto yMemRef = cast<BaseMemRefType>(y);
 
   if (xMemRef.getMemorySpace() != yMemRef.getMemorySpace())
-    return op->emitError(
-        "inconsistent memory spaces in buffers provided for reconciliation");
+    return failure();
 
   if (isa<UnrankedMemRefType>(xMemRef)) {
     // unranked memrefs have no layout.
     return x;
   }
 
-  const auto xRankedMemref = cast<MemRefType>(xMemRef);
-  int64_t dynamicOffset = ShapedType::kDynamic;
-  SmallVector<int64_t> dynamicStrides(xRankedMemref.getRank(),
-                                      ShapedType::kDynamic);
-  auto stridedLayout = StridedLayoutAttr::get(xRankedMemref.getContext(),
-                                              dynamicOffset, dynamicStrides);
-  return cast<BufferLikeType>(
-      MemRefType::get(xRankedMemref.getShape(), xRankedMemref.getElementType(),
-                      stridedLayout, xRankedMemref.getMemorySpace()));
+  return cast<BufferLikeType>(::getMemRefTypeWithFullyDynamicLayout(
+      xMemRef.getShape(), xMemRef.getElementType(), xMemRef.getMemorySpace()));
 }
 
 } // namespace
@@ -851,15 +855,8 @@ bufferization::getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
   }
 
   // Case 2: Ranked memref type.
-  auto rankedTensorType = llvm::cast<RankedTensorType>(tensorType);
-  int64_t dynamicOffset = ShapedType::kDynamic;
-  SmallVector<int64_t> dynamicStrides(rankedTensorType.getRank(),
-                                      ShapedType::kDynamic);
-  auto stridedLayout = StridedLayoutAttr::get(tensorType.getContext(),
-                                              dynamicOffset, dynamicStrides);
-  return MemRefType::get(rankedTensorType.getShape(),
-                         rankedTensorType.getElementType(), stridedLayout,
-                         memorySpace);
+  return ::getMemRefTypeWithFullyDynamicLayout(
+      tensorType.getShape(), tensorType.getElementType(), memorySpace);
 }
 
 /// Return a MemRef type with a static identity layout (i.e., no layout map). If

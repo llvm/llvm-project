@@ -166,10 +166,12 @@ struct SelectOpInterface
     // both of them to the reconciled type.
     if (trueBuffer.getType() != falseBuffer.getType()) {
       auto targetType = options.reconcileBufferTypeMismatchFn(
-          selectOp, cast<BufferLikeType>(trueBuffer.getType()),
+          cast<BufferLikeType>(trueBuffer.getType()),
           cast<BufferLikeType>(falseBuffer.getType()), options);
-      if (failed(targetType))
-        return failure();
+      if (failed(targetType)) {
+        return selectOp->emitError(
+            "incompatible buffer types on true/false operands");
+      }
       if (trueBuffer.getType() != *targetType)
         trueBuffer =
             memref::CastOp::create(rewriter, loc, *targetType, trueBuffer);
@@ -189,20 +191,17 @@ struct SelectOpInterface
                 SmallVector<Value> &invocationStack) const {
     auto selectOp = cast<arith::SelectOp>(op);
     assert(value == selectOp.getResult() && "invalid value");
-    auto trueType =
-        bufferization::detail::asMemRefType(bufferization::getBufferType(
-            selectOp.getTrueValue(), options, state, invocationStack));
-    auto falseType =
-        bufferization::detail::asMemRefType(bufferization::getBufferType(
-            selectOp.getFalseValue(), options, state, invocationStack));
+    auto trueType = bufferization::getBufferType(
+        selectOp.getTrueValue(), options, state, invocationStack);
+    auto falseType = bufferization::getBufferType(
+        selectOp.getFalseValue(), options, state, invocationStack);
     if (failed(trueType) || failed(falseType))
       return failure();
     if (*trueType == *falseType)
       return cast<BufferLikeType>(*trueType);
 
-    return options.reconcileBufferTypeMismatchFn(
-        op, cast<BufferLikeType>(*trueType), cast<BufferLikeType>(*falseType),
-        options);
+    return options.reconcileBufferTypeMismatchFn(*trueType, *falseType,
+                                                 options);
   }
 };
 

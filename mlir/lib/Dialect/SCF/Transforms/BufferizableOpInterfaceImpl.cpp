@@ -315,8 +315,12 @@ struct IfOpInterface
     if (thenBufferType == elseBufferType)
       return cast<BufferLikeType>(thenBufferType);
 
-    return options.reconcileBufferTypeMismatchFn(op, thenBufferType,
-                                                 elseBufferType, options);
+    auto reconciled = options.reconcileBufferTypeMismatchFn(
+        thenBufferType, elseBufferType, options);
+    if (failed(reconciled))
+      return op->emitError("incompatible buffer types on then/else branches");
+
+    return *reconciled;
   }
 };
 
@@ -421,9 +425,9 @@ struct IndexSwitchOpInterface
         continue;
 
       auto reconciled = options.reconcileBufferTypeMismatchFn(
-          op, bufferType, *yieldedBufferType, options);
+          bufferType, *yieldedBufferType, options);
       if (failed(reconciled))
-        return failure();
+        return op->emitError("incompatible buffer types on switch cases");
       bufferType = *reconciled;
     }
 
@@ -539,9 +543,9 @@ static FailureOr<BufferLikeType> computeLoopRegionIterArgBufferType(
 
   // Compute the buffer type of the yielded value.
   BufferLikeType yieldedValueBufferType;
-  if (isa<BufferLikeType>(yieldedValue.getType())) {
+  if (auto bufferType = dyn_cast<BufferLikeType>(yieldedValue.getType())) {
     // scf.yield was already bufferized.
-    yieldedValueBufferType = cast<BufferLikeType>(yieldedValue.getType());
+    yieldedValueBufferType = bufferType;
   } else {
     // Note: This typically triggers a recursive call for the buffer type of
     // the iter_arg.
@@ -559,22 +563,25 @@ static FailureOr<BufferLikeType> computeLoopRegionIterArgBufferType(
   // If there is a mismatch between the yielded buffer type and the init_arg
   // buffer type, the buffer type must be reconciled.
 #ifndef NDEBUG
-  if (auto iterTensorType = dyn_cast<TensorType>(iterArg.getType())) {
-    auto yieldedBufferType = cast<BaseMemRefType>(yieldedValueBufferType);
-    auto initBufferType = cast<BaseMemRefType>(*initArgBufferType);
-    if (auto yieldedRankedBufferType =
-            dyn_cast<MemRefType>(yieldedBufferType)) {
-      assert(llvm::all_equal(
-                 {yieldedRankedBufferType.getShape(),
-                  cast<MemRefType>(initBufferType).getShape(),
-                  cast<RankedTensorType>(iterTensorType).getShape()}) &&
-             "expected same shape");
-    }
+  if (auto iterTensorType = dyn_cast<TensorLikeType>(iterArg.getType())) {
+    const auto emitOpError = [&]() { return loopOp->emitOpError(); };
+    assert(succeeded(iterTensorType.verifyCompatibleBufferType(
+               yieldedValueBufferType, emitOpError)) &&
+           "incompatible yielded type");
+    assert(succeeded(iterTensorType.verifyCompatibleBufferType(
+               *initArgBufferType, emitOpError)) &&
+           "incompatible init_arg type");
   }
 #endif // NDEBUG
 
-  return options.reconcileBufferTypeMismatchFn(loopOp, *initArgBufferType,
-                                               yieldedValueBufferType, options);
+  auto reconciled = options.reconcileBufferTypeMismatchFn(
+      *initArgBufferType, yieldedValueBufferType, options);
+  if (failed(reconciled)) {
+    return loopOp->emitError(
+        "init_arg and yielded value bufferize to incompatible buffer types");
+  }
+
+  return *reconciled;
 }
 
 /// Return `true` if the given loop may have 0 iterations.

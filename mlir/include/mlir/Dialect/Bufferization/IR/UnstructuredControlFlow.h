@@ -59,10 +59,10 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
 
       // Compute the bufferized type of the forwarded operand.
       BufferLikeType callerType;
-      if (auto memrefType =
-              dyn_cast<BaseMemRefType>(opOperand->get().getType())) {
+      if (auto bufferType =
+              dyn_cast<BufferLikeType>(opOperand->get().getType())) {
         // The operand was already bufferized. Take its type directly.
-        callerType = cast<BufferLikeType>(memrefType);
+        callerType = bufferType;
       } else {
         FailureOr<BufferLikeType> maybeCallerType =
             bufferization::getBufferType(opOperand->get(), options, state,
@@ -84,29 +84,22 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
       // If the computed buffer type does not match the computed buffer type of
       // the earlier forwarded operands, fall back to a reconciled buffer type.
 #ifndef NDEBUG
-      auto tensorType = value.getType();
-      if (isa<TensorType>(tensorType)) {
-        auto bufferMemRefType = llvm::cast<BaseMemRefType>(bufferType);
-        auto callerMemRefType = llvm::cast<BaseMemRefType>(callerType);
-        if (auto rankedTensorType = dyn_cast<RankedTensorType>(tensorType)) {
-          assert(bufferMemRefType.hasRank() && callerMemRefType.hasRank() &&
-                 "expected ranked memrefs");
-          assert(llvm::all_equal({bufferMemRefType.getShape(),
-                                  callerMemRefType.getShape(),
-                                  rankedTensorType.getShape()}) &&
-                 "expected same shape");
-        } else {
-          assert(!bufferMemRefType.hasRank() && !callerMemRefType.hasRank() &&
-                 "expected unranked memrefs");
-        }
+      if (auto tensorType = dyn_cast<TensorLikeType>(value.getType())) {
+        const auto emitOpError = [&]() { return op->emitOpError(); };
+        assert(succeeded(tensorType.verifyCompatibleBufferType(bufferType,
+                                                               emitOpError)) &&
+               "incompatible buffer type");
+        assert(succeeded(tensorType.verifyCompatibleBufferType(callerType,
+                                                               emitOpError)) &&
+               "incompatible caller type");
       }
 #endif // NDEBUG
 
       auto reconciled = options.reconcileBufferTypeMismatchFn(
-          op, cast<BufferLikeType>(bufferType),
-          cast<BufferLikeType>(callerType), options);
+          bufferType, callerType, options);
       if (failed(reconciled)) {
-        return failure();
+        return op->emitError("incoming operands of block argument have "
+                             "incompatible buffer types");
       }
 
       bufferType = *reconciled;
@@ -115,7 +108,7 @@ struct OpWithUnstructuredControlFlowBufferizableOpInterfaceExternalModel
     if (!bufferType)
       return op->emitOpError("could not infer buffer type of block argument");
 
-    return cast<BufferLikeType>(bufferType);
+    return bufferType;
   }
 
 protected:

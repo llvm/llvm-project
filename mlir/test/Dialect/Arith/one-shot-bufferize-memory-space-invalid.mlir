@@ -5,7 +5,7 @@ func.func @inconsistent_memory_space_arith_select(%c: i1) -> tensor<10xf32> {
   // bufferized.
   %0 = bufferization.alloc_tensor() {memory_space = 0 : ui64} : tensor<10xf32>
   %1 = bufferization.alloc_tensor() {memory_space = 1 : ui64} : tensor<10xf32>
-  // expected-error @+2 {{inconsistent memory spaces in buffers provided for reconciliation}}
+  // expected-error @+2 {{incompatible buffer types on true/false operands}}
   // expected-error @+1 {{failed to bufferize op}}
   %r = arith.select %c, %0, %1 : tensor<10xf32>
   func.return %r : tensor<10xf32>

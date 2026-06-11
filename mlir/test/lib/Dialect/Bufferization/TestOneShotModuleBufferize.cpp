@@ -94,8 +94,7 @@ struct TestOneShotModuleBufferizePass
     // A simple yet distinct (from upstream) policy: compare layouts and return
     // "smaller" one.
     opt.reconcileBufferTypeMismatchFn =
-        [](Operation *, bufferization::BufferLikeType x,
-           bufferization::BufferLikeType y,
+        [](bufferization::BufferLikeType x, bufferization::BufferLikeType y,
            const bufferization::BufferizationOptions &)
         -> FailureOr<bufferization::BufferLikeType> {
       auto getLayout = [](bufferization::BufferLikeType t) {
