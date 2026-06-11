@@ -221,7 +221,7 @@
 // CHECK-NO-FAT-LTO-NOT: "--fat-lto-objects"
 // CHECK-NO-FAT-LTO-SAME: {{$}}
 
-// Check -plugin-opt=mcpu=znver2s is passed to prospero-lld.
+// Check -plugin-opt=mcpu=znver2 is passed to prospero-lld.
 // RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-CLANG-TARGET-CPU %s
 
 // CHECK-CLANG-TARGET-CPU: {{ld(\.exe)?}}"
