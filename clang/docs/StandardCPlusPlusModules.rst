@@ -646,8 +646,6 @@ compilation:
     helloUniverse();
   }
 
-Then, invoke Clang like:
-
 .. code-block:: console
 
   $ clang++ -std=c++20 -fmodules -fmodules-driver -fmodule-map-file=module.modulemap HelloWorld.cppm main.cpp
