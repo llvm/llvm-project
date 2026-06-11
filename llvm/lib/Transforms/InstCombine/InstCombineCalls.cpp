@@ -3695,8 +3695,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       case BundleAttr::Dereferenceable: {
         auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
 
-        if (Count && *Count == 0)
+        if (!Count)
+          break;
+
+        if (*Count == 0 || isDereferenceableAndAlignedPointer(
+                               Ptr, Align(1), APInt(64, *Count),
+                               getSimplifyQuery().getWithInstruction(II)))
           return RemoveBundle();
+
         break;
       }
 
@@ -3732,6 +3738,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         break;
       }
 
+      case BundleAttr::NoUndef: {
+        auto [Val] = getAssumeNoUndefInfo(OBU);
+
+        if (isGuaranteedNotToBeUndefOrPoison(Val, &AC, II, &DT))
+          return RemoveBundle();
+      } break;
+
       case BundleAttr::SeparateStorage: {
         auto [Ptr1, Ptr2] = getAssumeSeparateStorageInfo(OBU);
         // Separate storage assumptions apply to the underlying allocations, not
@@ -3752,7 +3765,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
-      case BundleAttr::NoUndef:
         break;
 
       // This cannot be simplified

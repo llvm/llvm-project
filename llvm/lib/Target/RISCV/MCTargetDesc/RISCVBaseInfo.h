@@ -683,6 +683,7 @@ enum ABI {
   ABI_L64PC128,
   ABI_L64PC128F,
   ABI_L64PC128D,
+  ABI_CHERIOT,
   ABI_Unknown
 };
 

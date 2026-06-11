@@ -4250,6 +4250,8 @@ static bool handleUncountableExitsWithSideEffects(
     VPBlockUtils::disconnectBlocks(Exit.EarlyExitingVPBB, Exit.EarlyExitVPBB);
   }
 
+  VPDT.recalculate(Plan);
+
   // We can abandon a VPlan entirely if we return false here, so we shouldn't
   // crash if some earlier assumptions on scalar IR don't hold for the vplan
   // version of the loop.

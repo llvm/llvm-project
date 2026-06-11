@@ -47,9 +47,9 @@
 // CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [4 x i64] [i64 544, i64 800, i64 3, i64 288]
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 
-// TCHECK: @{{.+}} = constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = {{.*}}constant [[ENTTY]]
-// TCHECK-NOT: @{{.+}} = constant [[ENTTY]]
+// TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
 template<typename tx, typename ty>
 struct TT{
