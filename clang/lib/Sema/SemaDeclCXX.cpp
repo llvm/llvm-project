@@ -18653,40 +18653,40 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
     }
   }
 
-    // C++11 [dcl.fct.default]p4: If a friend declaration specifies a
-    // default argument expression, that declaration shall be a definition
-    // and shall be the only declaration of the function or function
-    // template in the translation unit.
-    if (functionDeclHasDefaultArgument(FD)) {
-      // We can't look at FD->getPreviousDecl() because it may not have been set
-      // if we're in a dependent context. If the function is known to be a
-      // redeclaration, we will have narrowed Previous down to the right decl.
-      if (D.isRedeclaration()) {
-        Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_redeclared);
-        Diag(Previous.getRepresentativeDecl()->getLocation(),
-             diag::note_previous_declaration);
-      } else if (!D.isFunctionDefinition())
-        Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_must_be_def);
-    }
+  // C++11 [dcl.fct.default]p4: If a friend declaration specifies a
+  // default argument expression, that declaration shall be a definition
+  // and shall be the only declaration of the function or function
+  // template in the translation unit.
+  if (functionDeclHasDefaultArgument(FD)) {
+    // We can't look at FD->getPreviousDecl() because it may not have been set
+    // if we're in a dependent context. If the function is known to be a
+    // redeclaration, we will have narrowed Previous down to the right decl.
+    if (D.isRedeclaration()) {
+      Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_redeclared);
+      Diag(Previous.getRepresentativeDecl()->getLocation(),
+           diag::note_previous_declaration);
+    } else if (!D.isFunctionDefinition())
+      Diag(FD->getLocation(), diag::err_friend_decl_with_def_arg_must_be_def);
+  }
 
-    ArrayRef<TemplateParameterList *> TPL = FD->getTemplateParameterLists();
-    FriendDecl *Friend;
-    if (TPL.size() > 0 && SS.isValid()) {
-      if (CheckTemplateDeclScope(S, TPL.back()))
-        return nullptr;
+  ArrayRef<TemplateParameterList *> TPL = FD->getTemplateParameterLists();
+  FriendDecl *Friend;
+  if (TPL.size() > 0 && SS.isValid()) {
+    if (CheckTemplateDeclScope(S, TPL.back()))
+      return nullptr;
 
-      Friend =
-          FriendTemplateDecl::Create(Context, CurContext, D.getIdentifierLoc(),
-                                     ND, DS.getFriendSpecLoc(), TPL);
-    } else {
-      Friend = FriendDecl::Create(Context, CurContext, D.getIdentifierLoc(), ND,
-                                  DS.getFriendSpecLoc());
-    }
+    Friend =
+        FriendTemplateDecl::Create(Context, CurContext, D.getIdentifierLoc(),
+                                   ND, DS.getFriendSpecLoc(), TPL);
+  } else {
+    Friend = FriendDecl::Create(Context, CurContext, D.getIdentifierLoc(), ND,
+                                DS.getFriendSpecLoc());
+  }
 
-    Friend->setAccess(AS_public);
-    CurContext->addDecl(Friend);
+  Friend->setAccess(AS_public);
+  CurContext->addDecl(Friend);
 
-    return ND;
+  return ND;
 }
 
 void Sema::SetDeclDeleted(Decl *Dcl, SourceLocation DelLoc,
