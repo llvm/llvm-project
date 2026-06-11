@@ -3054,6 +3054,14 @@ const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
 
 // Resolve a call to a generic procedure with given actual arguments.
 // adjustActuals is called on procedure bindings to handle pass arg.
+static bool IsCudaGpuReductionsModule(const semantics::Scope &scope) {
+  // gpu_reductions is the CUDA runtime module whose host-side wrappers share
+  // names with reduction intrinsics.
+  return scope.IsModule() && scope.GetName() &&
+      parser::ToLowerCaseLetters(scope.GetName()->ToString()) ==
+      "gpu_reductions";
+}
+
 static bool IsCudaDeviceIntrinsicShadowedByGpuReductions(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
     const Symbol *resolution) {
@@ -3063,9 +3071,7 @@ static bool IsCudaDeviceIntrinsicShadowedByGpuReductions(
   }
   const Symbol &ultimate{resolution->GetUltimate()};
   const semantics::Scope &owner{ultimate.owner()};
-  return owner.IsModule() && owner.GetName() &&
-      parser::ToLowerCaseLetters(owner.GetName()->ToString()) ==
-      "gpu_reductions";
+  return IsCudaGpuReductionsModule(owner);
 }
 
 auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
