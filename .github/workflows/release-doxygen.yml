@@ -104,7 +104,7 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.release-version }}
         run: |
-          ./llvm/utils/release/build-docs.sh -release "$RELEASE_VERSION" -no-sphinx
+          ./llvm/utils/release/build-docs.sh -release "$RELEASE_VERSION" -no-sphinx -no-man-pages
 
       - id: app-token
         uses: actions/create-github-app-token@1b10c78c7865c340bc4f6099eb2f838309f1e8c3  # v3.1.1

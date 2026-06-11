@@ -4876,6 +4876,7 @@ def CIR_LifetimeStartOp : CIR_Op<"lifetime.start"> {
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
   let hasVerifier = 1;
+  let llvmOp = "LifetimeStartOp";
 }
 
 def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
@@ -4911,6 +4912,7 @@ def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
   let arguments = (ins CIR_PointerType:$ptr);
   let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
   let hasVerifier = 1;
+  let llvmOp = "LifetimeEndOp";
 }
 
 //===----------------------------------------------------------------------===//

@@ -12,6 +12,7 @@
 #include "libc_common.h"
 
 #include "math/acos.h"
+#include "math/acosbf16.h"
 #include "math/acosf.h"
 #include "math/acosf16.h"
 #include "math/acoshf.h"

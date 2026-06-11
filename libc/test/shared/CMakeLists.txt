@@ -19,6 +19,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.math.acos
+    libc.src.__support.math.acosbf16
     libc.src.__support.math.acosf
     libc.src.__support.math.acosf16
     libc.src.__support.math.acoshf
@@ -841,3 +842,15 @@ add_libc_test(
     libc.src.__support.arg_list
 )
 endif()
+
+add_fp_unittest(
+  shared_math_check_exp_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_math_check_exp_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)

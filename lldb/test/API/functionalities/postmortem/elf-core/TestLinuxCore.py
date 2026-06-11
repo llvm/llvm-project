@@ -350,11 +350,9 @@ class LinuxCoreTestCase(TestBase):
         lldbutil.mkdir_p(os.path.dirname(executable))
         shutil.copyfile("linux-i386.out", executable)
 
-        # Replace the original module path at /home/labath/test and load the core
+        # Replace the original module path at /tmp/core and load the core
         self.runCmd(
-            "settings set target.object-map /home/labath/test {}".format(
-                tmp_object_map_root
-            )
+            "settings set target.object-map /tmp/core {}".format(tmp_object_map_root)
         )
 
         target = self.dbg.CreateTarget(None)

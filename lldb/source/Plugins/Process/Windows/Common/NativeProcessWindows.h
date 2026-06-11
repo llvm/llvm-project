@@ -107,6 +107,13 @@ public:
 
   bool HasPendingLibraryEvents() override;
 
+  /// Forward bytes from the gdb-remote `I` packet into the inferior's
+  /// ConPTY-backed stdin via `m_stdio_communication.Write` →
+  /// `ConnectionConPTY::Write` → `WriteFile` on the parent-side STDIN
+  /// HANDLE. Returns the number of bytes written (0 if the PTY is
+  /// disconnected or write fails).
+  size_t WriteStdin(const void *buf, size_t len, Status &error) override;
+
   // ProcessDebugger Overrides
   void OnExitProcess(uint32_t exit_code) override;
   void OnDebuggerConnected(lldb::addr_t image_base) override;

@@ -469,6 +469,23 @@ LogicalResult ReductionCombineRegionOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionAccumulateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateOp::verify() {
+  Type valueType = getValue().getType();
+  auto ptrLikeTy = cast<PointerLikeType>(getMemref().getType());
+  Type elementType = ptrLikeTy.getElementType();
+  if (!elementType)
+    return emitOpError("pointer-like destination must have an element type");
+  if (elementType != valueType)
+    return emitOpError("pointer-like element type must match value type");
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
