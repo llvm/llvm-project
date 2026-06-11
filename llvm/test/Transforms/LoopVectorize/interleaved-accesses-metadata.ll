@@ -36,8 +36,7 @@ define void @merge_tbaa_interleave_group(ptr nocapture readonly %p, ptr noalias 
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> poison, double [[TMP12]], i32 0
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x double> [[TMP14]], double [[TMP13]], i32 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = fmul <2 x double> [[TMP15]], splat (double 3.000000e+00)
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x double> [[TMP17]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> [[TMP8]], <2 x double> [[TMP16]])
 ; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP9]], align 8, !tbaa [[TBAA6:![0-9]+]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
@@ -112,12 +111,12 @@ define void @ir_tbaa_different(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4, !alias.scope [[META13:![0-9]+]], !noalias [[META10]]
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <2 x float>, <2 x float> } @llvm.vector.deinterleave2.v4f32(<4 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <2 x float>, <2 x float> } [[STRIDED_VEC1]], 0
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = extractvalue { <2 x float>, <2 x float> } [[STRIDED_VEC1]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x float> [[STRIDED_VEC]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[STRIDED_VEC3]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x float> @llvm.vector.interleave2.v4f32(<2 x float> [[TMP6]], <2 x float> [[TMP7]])
 ; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META13]], !noalias [[META10]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -189,12 +188,12 @@ define void @noalias_metadata_from_versioning(ptr %base, ptr %end, ptr %src) {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x float>, ptr [[NEXT_GEP]], align 4
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <4 x float> [[WIDE_VEC]], <4 x float> poison, <2 x i32> <i32 1, i32 3>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <2 x float>, <2 x float> } @llvm.vector.deinterleave2.v4f32(<4 x float> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <2 x float>, <2 x float> } [[STRIDED_VEC1]], 0
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = extractvalue { <2 x float>, <2 x float> } [[STRIDED_VEC1]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x float> [[STRIDED_VEC]], splat (float 1.000000e+01)
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[STRIDED_VEC3]], splat (float 1.000000e+01)
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <4 x float> [[TMP8]], <4 x float> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x float> @llvm.vector.interleave2.v4f32(<2 x float> [[TMP6]], <2 x float> [[TMP7]])
 ; CHECK-NEXT:    store <4 x float> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

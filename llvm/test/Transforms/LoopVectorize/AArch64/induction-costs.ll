@@ -616,37 +616,41 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK-NEXT:    [[TMP52:%.*]] = sext <2 x i32> [[TMP44]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <2 x i64> [[TMP52]], i64 0
 ; CHECK-NEXT:    [[TMP54:%.*]] = extractelement <2 x i64> [[TMP52]], i64 1
-; CHECK-NEXT:    [[TMP56:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP45]]
+; CHECK-NEXT:    [[TMP55:%.*]] = sext <2 x i32> [[TMP45]] to <2 x i64>
+; CHECK-NEXT:    [[TMP56:%.*]] = extractelement <2 x i64> [[TMP55]], i64 0
+; CHECK-NEXT:    [[TMP79:%.*]] = extractelement <2 x i64> [[TMP55]], i64 1
 ; CHECK-NEXT:    [[TMP57:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP47]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP48]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP50]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP51]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP53]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP54]]
-; CHECK-NEXT:    [[TMP63:%.*]] = load double, ptr [[TMP55]], align 8, !alias.scope [[META17:![0-9]+]]
-; CHECK-NEXT:    [[TMP64:%.*]] = load double, ptr [[TMP56]], align 8, !alias.scope [[META17]]
+; CHECK-NEXT:    [[TMP80:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP56]]
+; CHECK-NEXT:    [[TMP81:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP79]]
+; CHECK-NEXT:    [[TMP63:%.*]] = load double, ptr [[TMP57]], align 8, !alias.scope [[META17:![0-9]+]]
+; CHECK-NEXT:    [[TMP64:%.*]] = load double, ptr [[TMP58]], align 8, !alias.scope [[META17]]
 ; CHECK-NEXT:    [[TMP65:%.*]] = insertelement <2 x double> poison, double [[TMP63]], i32 0
 ; CHECK-NEXT:    [[TMP66:%.*]] = insertelement <2 x double> [[TMP65]], double [[TMP64]], i32 1
-; CHECK-NEXT:    [[TMP67:%.*]] = load double, ptr [[TMP57]], align 8, !alias.scope [[META17]]
-; CHECK-NEXT:    [[TMP68:%.*]] = load double, ptr [[TMP58]], align 8, !alias.scope [[META17]]
+; CHECK-NEXT:    [[TMP67:%.*]] = load double, ptr [[TMP59]], align 8, !alias.scope [[META17]]
+; CHECK-NEXT:    [[TMP68:%.*]] = load double, ptr [[TMP60]], align 8, !alias.scope [[META17]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = insertelement <2 x double> poison, double [[TMP67]], i32 0
 ; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <2 x double> [[TMP69]], double [[TMP68]], i32 1
-; CHECK-NEXT:    [[TMP71:%.*]] = load double, ptr [[TMP59]], align 8, !alias.scope [[META17]]
-; CHECK-NEXT:    [[TMP72:%.*]] = load double, ptr [[TMP60]], align 8, !alias.scope [[META17]]
+; CHECK-NEXT:    [[TMP71:%.*]] = load double, ptr [[TMP61]], align 8, !alias.scope [[META17]]
+; CHECK-NEXT:    [[TMP72:%.*]] = load double, ptr [[TMP62]], align 8, !alias.scope [[META17]]
 ; CHECK-NEXT:    [[TMP73:%.*]] = insertelement <2 x double> poison, double [[TMP71]], i32 0
 ; CHECK-NEXT:    [[TMP74:%.*]] = insertelement <2 x double> [[TMP73]], double [[TMP72]], i32 1
-; CHECK-NEXT:    [[TMP75:%.*]] = load double, ptr [[TMP61]], align 8, !alias.scope [[META17]]
-; CHECK-NEXT:    [[TMP76:%.*]] = load double, ptr [[TMP62]], align 8, !alias.scope [[META17]]
+; CHECK-NEXT:    [[TMP75:%.*]] = load double, ptr [[TMP80]], align 8, !alias.scope [[META17]]
+; CHECK-NEXT:    [[TMP76:%.*]] = load double, ptr [[TMP81]], align 8, !alias.scope [[META17]]
 ; CHECK-NEXT:    [[TMP77:%.*]] = insertelement <2 x double> poison, double [[TMP75]], i32 0
 ; CHECK-NEXT:    [[TMP78:%.*]] = insertelement <2 x double> [[TMP77]], double [[TMP76]], i32 1
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP66]])
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP35]], align 8, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC]], ptr [[TMP38]], align 8, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC17:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP70]])
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC17]], ptr [[TMP36]], align 8, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC17]], ptr [[TMP39]], align 8, !alias.scope [[META20]], !noalias [[META17]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC18:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP74]])
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC18]], ptr [[TMP37]], align 8, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC18]], ptr [[TMP40]], align 8, !alias.scope [[META20]], !noalias [[META17]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC19:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP78]])
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC19]], ptr [[TMP38]], align 8, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC19]], ptr [[TMP41]], align 8, !alias.scope [[META20]], !noalias [[META17]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[STEP_ADD_3]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP86:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -674,12 +678,12 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK-NEXT:    [[INDEX23:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT26:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND24:%.*]] = phi <2 x i32> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT27:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX23]], 1
-; CHECK-NEXT:    [[TMP87:%.*]] = getelementptr double, ptr [[SRC]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP88:%.*]] = getelementptr i8, ptr [[TMP87]], i64 -8
-; CHECK-NEXT:    [[TMP89:%.*]] = sub nsw <2 x i32> zeroinitializer, [[VEC_IND24]]
-; CHECK-NEXT:    [[TMP90:%.*]] = sext <2 x i32> [[TMP89]] to <2 x i64>
-; CHECK-NEXT:    [[TMP91:%.*]] = extractelement <2 x i64> [[TMP90]], i64 0
-; CHECK-NEXT:    [[TMP92:%.*]] = extractelement <2 x i64> [[TMP90]], i64 1
+; CHECK-NEXT:    [[TMP99:%.*]] = getelementptr double, ptr [[SRC]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP101:%.*]] = getelementptr i8, ptr [[TMP99]], i64 -8
+; CHECK-NEXT:    [[TMP102:%.*]] = sub nsw <2 x i32> zeroinitializer, [[VEC_IND24]]
+; CHECK-NEXT:    [[TMP103:%.*]] = sext <2 x i32> [[TMP102]] to <2 x i64>
+; CHECK-NEXT:    [[TMP91:%.*]] = extractelement <2 x i64> [[TMP103]], i64 0
+; CHECK-NEXT:    [[TMP92:%.*]] = extractelement <2 x i64> [[TMP103]], i64 1
 ; CHECK-NEXT:    [[TMP93:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP91]]
 ; CHECK-NEXT:    [[TMP94:%.*]] = getelementptr double, ptr [[BASE]], i64 [[TMP92]]
 ; CHECK-NEXT:    [[TMP95:%.*]] = load double, ptr [[TMP93]], align 8, !alias.scope [[META17]]
@@ -687,10 +691,10 @@ define void@sext_sub_nsw_for_address(ptr %base, i64 %n, ptr %src) #0 {
 ; CHECK-NEXT:    [[TMP97:%.*]] = insertelement <2 x double> poison, double [[TMP95]], i32 0
 ; CHECK-NEXT:    [[TMP98:%.*]] = insertelement <2 x double> [[TMP97]], double [[TMP96]], i32 1
 ; CHECK-NEXT:    [[INTERLEAVED_VEC26:%.*]] = call <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> zeroinitializer, <2 x double> [[TMP98]])
-; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC26]], ptr [[TMP88]], align 8, !alias.scope [[META20]], !noalias [[META17]]
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC26]], ptr [[TMP101]], align 8, !alias.scope [[META20]], !noalias [[META17]]
 ; CHECK-NEXT:    [[INDEX_NEXT26]] = add nuw i64 [[INDEX23]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT27]] = add <2 x i32> [[VEC_IND24]], splat (i32 4)
-; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq i64 [[INDEX_NEXT26]], [[N_VEC21]]
+; CHECK-NEXT:    [[TMP100:%.*]] = icmp eq i64 [[INDEX_NEXT26]], [[N_VEC23]]
 ; CHECK-NEXT:    br i1 [[TMP100]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N29:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC23]]

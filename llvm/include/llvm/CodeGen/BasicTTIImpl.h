@@ -1047,7 +1047,7 @@ public:
 
   bool supportsVectorInterleaveDeinterleaveIntrinsics(
       unsigned Factor, VectorType *VecTy) const override {
-    return VecTy->isScalableTy();
+    return Factor <= 8; // VecTy->isScalableTy();
   }
 
   InstructionCost getArithmeticInstrCost(

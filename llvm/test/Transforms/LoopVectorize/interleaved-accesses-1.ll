@@ -37,8 +37,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK: vector.body:
 ; CHECK: %wide.vec = load <8 x i32>, ptr {{.*}}, align 4
-; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK: deinterleave2
 
 %class.Complex = type { float, float }
 

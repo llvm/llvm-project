@@ -726,7 +726,7 @@ public:
   virtual bool
   supportsVectorInterleaveDeinterleaveIntrinsics(unsigned Factor,
                                                  VectorType *VecTy) const {
-    return VecTy->isScalableTy();
+    return Factor <= 8; // VecTy->isScalableTy();
   }
 
   virtual InstructionCost getArithmeticInstrCost(

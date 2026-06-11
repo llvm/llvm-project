@@ -3,16 +3,16 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; Check that the compile-time-unknown depenendece-distance is resolved 
+; Check that the compile-time-unknown depenendece-distance is resolved
 ; statically. Due to the non-unit stride of the accesses in this testcase
 ; we are currently not able to create runtime dependence checks, and therefore
 ; if we don't resolve the dependence statically we cannot vectorize the loop.
 ;
-; Specifically in this example, during dependence analysis we get 6 unknown 
-; dependence distances between the 8 real/imaginary accesses below: 
+; Specifically in this example, during dependence analysis we get 6 unknown
+; dependence distances between the 8 real/imaginary accesses below:
 ;    dist = 8*D, 4+8*D, -4+8*D, -8*D, 4-8*D, -4-8*D.
 ; At compile time we can prove for all of the above that |dist|>loopBound*step
-; (where the step is 8bytes, and the loopBound is D-1), and thereby conclude 
+; (where the step is 8bytes, and the loopBound is D-1), and thereby conclude
 ; that there are no dependencies (without runtime tests):
 ; |8*D|>8*D-8, |4+8*D|>8*D-8, |-4+8*D|>8*D-8, etc.
 
@@ -26,10 +26,10 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;   Complex() : real_(0), imaginary_(0) { }
 ;   Complex(float real, float imaginary) : real_(real), imaginary_(imaginary) { }
 ;   Complex(const Complex &rhs) : real_(rhs.real()), imaginary_(rhs.imaginary()) { }
-; 
+;
 ;   inline float real() const { return real_; }
 ;   inline float imaginary() const { return imaginary_; }
-; 
+;
 ;   Complex operator+(const Complex& rhs) const
 ;   {
 ;    return Complex(real_ + rhs.real_, imaginary_ + rhs.imaginary_);
@@ -56,7 +56,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-LABEL: Test
 ; CHECK: LAA: No unsafe dependent memory operations in loop.  We don't need runtime memory checks.
 ; CHECK: vector.body:
-; CHECK: <4 x i32>
+; CHECK: deinterleave2
 
 %class.Complex = type { float, float }
 
