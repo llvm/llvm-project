@@ -341,8 +341,7 @@ enum LoweringMethodID {
   InsVecEltTo32,
   AbsToNegMax,
   AbsToS32,
-  DynStackAlloc,
-  IcmpI1ToBallot
+  DynStackAlloc
 };
 
 enum FastRulesTypes {
