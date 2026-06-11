@@ -1161,11 +1161,11 @@ static VPValue *optimizeLatchExitInductionUser(
   VPValue *StepVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Step);
   VPBuilder Builder(ExtractR);
   Type *TCTy = ResumeTC->getScalarType();
-  VPValue *It = Builder.createSub(ResumeTC, Plan.getConstantInt(TCTy, 1),
-                                  DebugLoc::getUnknown());
-  It = Builder.createScalarZExtOrTrunc(It, StepVPV->getScalarType(), TCTy,
-                                       DebugLoc::getUnknown());
-  return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartIRV, It,
+  VPValue *ExitCount = Builder.createSub(ResumeTC, Plan.getConstantInt(TCTy, 1),
+                                         DebugLoc::getUnknown());
+  ExitCount = Builder.createScalarZExtOrTrunc(
+      ExitCount, StepVPV->getScalarType(), TCTy, DebugLoc::getUnknown());
+  return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartIRV, ExitCount,
                                  StepVPV);
 }
 
