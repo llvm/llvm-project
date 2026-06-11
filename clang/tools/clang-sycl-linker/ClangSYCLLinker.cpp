@@ -301,7 +301,7 @@ static bool scanSymbols(const IRSymtabFile &MemberSymtab,
       Symbol Sym(IRSym);
       auto [It, Inserted] = Target.try_emplace(IRSym.getName(), Sym);
       // A freshly inserted entry has no prior symbol to resolve or upgrade, so
-      // it cannot trigger extraction
+      // it cannot trigger extraction.
       if (Inserted)
         continue;
 
