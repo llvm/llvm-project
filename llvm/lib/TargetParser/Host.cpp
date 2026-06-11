@@ -301,6 +301,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
     // contents are specified in the various processor manuals.
     return StringSwitch<const char *>(Part)
       .Case("0xd01", "tsv110")
+      .Case("0xd06", "hip12")
       .Default("generic");
 
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
