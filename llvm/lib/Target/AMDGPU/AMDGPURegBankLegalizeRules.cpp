@@ -2227,6 +2227,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
                     amdgcn_global_store_async_from_lds_b128})
       .Any({{}, {{}, {IntrId, VgprP1, VgprP3}}});
 
+  addRulesForIOpcs({amdgcn_global_load_async_lds})
+      .Any({{}, {{}, {IntrId, VgprP1, SgprB32_M0}}});
+
   addRulesForIOpcs({amdgcn_tensor_load_to_lds, amdgcn_tensor_store_from_lds})
       .Any({{},
             {{},
