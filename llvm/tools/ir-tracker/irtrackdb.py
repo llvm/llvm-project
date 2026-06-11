@@ -14,7 +14,7 @@ T_FILES = "ir_tracker_files"
 T_INSTR = "ir_tracker_instructions"
 T_META = "ir_tracker_meta"
 T_PASSES = "ir_tracker_passes"
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 VALID_KINDS = {"ir", "mir", "all"}
 
 
@@ -73,6 +73,7 @@ def init_schema(con: sqlite3.Connection) -> None:
           basicblock TEXT NOT NULL,
           inst_seq INTEGER NOT NULL,
           opcode TEXT NOT NULL,
+          tracker_id INTEGER NOT NULL,
           inst_text TEXT NOT NULL,
           file_id INTEGER NOT NULL REFERENCES {T_FILES}(id),
           line INTEGER NOT NULL,
@@ -82,6 +83,8 @@ def init_schema(con: sqlite3.Connection) -> None:
           ON {T_INSTR}(file_id, line, col);
         CREATE INDEX ir_tracker_idx_instr_pass
           ON {T_INSTR}(pass_id);
+        CREATE INDEX ir_tracker_idx_instr_tracker
+          ON {T_INSTR}(tracker_id, pass_id);
         """
     )
     con.execute(
@@ -132,19 +135,21 @@ def _insert_inst(
     bb: str,
     inst_seq_s: int,
     opcode: str,
+    tracker_id: int,
     inst_text: str,
 ) -> None:
     file_id = _get_or_create_file_id(con, file_cache, file_path)
     con.execute(
         f"INSERT INTO {T_INSTR}("
-        "pass_id, function, basicblock, inst_seq, opcode, inst_text, "
-        "file_id, line, col) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "pass_id, function, basicblock, inst_seq, opcode, tracker_id, "
+        "inst_text, file_id, line, col) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             current_pass_id,
             func,
             bb,
             inst_seq_s,
             opcode,
+            tracker_id,
             inst_text,
             file_id,
             line_s,
@@ -244,16 +249,17 @@ def _build_db_from_tsv(con: sqlite3.Connection, input_path: str) -> tuple[int, i
                     )
                     raise ValueError("malformed instruction row")
 
-                tracker_id = parts[5]
-                loc = tracker_locs.get(tracker_id)
+                tracker_id_s = parts[5]
+                loc = tracker_locs.get(tracker_id_s)
                 if loc is None:
                     print(
-                        f"ir-tracker: unknown tracker id at line {line_no}: {tracker_id}",
+                        f"ir-tracker: unknown tracker id at line {line_no}: {tracker_id_s}",
                         file=sys.stderr,
                     )
                     raise ValueError("unknown tracker id")
 
                 file_path, src_line, src_col = loc
+                tracker_id = _parse_int("tracker id", tracker_id_s, line_no)
                 _insert_inst(
                     con,
                     file_cache,
@@ -265,6 +271,7 @@ def _build_db_from_tsv(con: sqlite3.Connection, input_path: str) -> tuple[int, i
                     parts[2],
                     _parse_int("instruction sequence", parts[3], line_no),
                     parts[4],
+                    tracker_id,
                     parts[6],
                 )
                 n_rows += 1

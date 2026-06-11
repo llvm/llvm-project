@@ -83,7 +83,7 @@ The Python driver can convert the TSV output into a SQLite database:
   python3 llvm/tools/ir-tracker/ir-tracker.py build \
     --input /tmp/pipeline.tsv --db /tmp/pipeline.db
 
-The resulting database uses ``schema_version = 2`` in ``ir_tracker_meta``. The
+The resulting database uses ``schema_version = 3`` in ``ir_tracker_meta``. The
 main tables are:
 
 * ``ir_tracker_meta`` — key/value metadata (including ``schema_version``)
@@ -91,8 +91,8 @@ main tables are:
   such as ``sum.c``)
 * ``ir_tracker_passes`` — one row per snapshot: ``seq``, ``kind`` (``ir`` or
   ``mir``), ``phase`` (``initial`` or ``after``), ``pass_class``, ``ir_unit``
-* ``ir_tracker_instructions`` — instruction text and opcode per pass, keyed by
-  ``file_id``, ``line``, ``col``
+* ``ir_tracker_instructions`` — instruction text, opcode, and ``tracker_id``
+  per pass, keyed by ``file_id``, ``line``, ``col``
 
 Query tool
 ==========

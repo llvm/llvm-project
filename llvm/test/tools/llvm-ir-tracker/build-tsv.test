@@ -1,8 +1,11 @@
 RUN: rm -f %t.tsv %t.db
-RUN: printf 'P\t0\tinitial\t<initial>\tf\nT\t1\t/tmp/tsv.c\t8\t3\nI\tf\tentry\t0\tadd\t1\tadd i32 1, 2\nP\t1\tafter\tinstcombine\tf\nI\tf\tentry\t0\tadd\t1\tadd i32 1, 3\n' > %t.tsv
+RUN: printf 'P\t0\tinitial\t<initial>\tf\nT\t1\t/tmp/tsv.c\t8\t3\nI\tf\tentry\t0\tadd\t1\tadd i32 1, 2\nP\t1\tafter\tinstcombine\tf\nI\tf\tentry\t0\tadd\t1\tadd <2 x i32> zeroinitializer, zeroinitializer\n' > %t.tsv
 RUN: %ir-tracker build --input %t.tsv --db %t.db | FileCheck %s --check-prefix=BUILD
 RUN: %ir-tracker passes --db %t.db | FileCheck %s --check-prefix=PASSES
 RUN: %ir-tracker trace --db %t.db --file tsv.c --line 8 | FileCheck %s --check-prefix=TRACE
+RUN: %ir-tracker sql --db %t.db "SELECT value FROM ir_tracker_meta WHERE key = 'schema_version'" | FileCheck %s --check-prefix=SCHEMA
+RUN: %ir-tracker sql --db %t.db "SELECT tracker_id FROM ir_tracker_instructions ORDER BY id" | FileCheck %s --check-prefix=TRACKER
+RUN: %ir-tracker sql --db %t.db "WITH hist AS (SELECT i.tracker_id, p.pass_class, i.inst_text, lag(i.inst_text) OVER (PARTITION BY i.tracker_id ORDER BY p.seq, i.id) AS prev_text FROM ir_tracker_instructions i JOIN ir_tracker_passes p ON p.id = i.pass_id) SELECT pass_class, tracker_id FROM hist WHERE inst_text GLOB '*<[0-9]* x *>*' AND prev_text IS NOT NULL AND prev_text NOT GLOB '*<[0-9]* x *>*'" | FileCheck %s --check-prefix=VECTOR
 
 BUILD: built {{.*}} pass snapshots, 2 instruction rows
 PASSES: 0  id={{[0-9]+}}  initial  '<initial>'  on 'f'
@@ -10,3 +13,7 @@ PASSES: 1  id={{[0-9]+}}  after  'instcombine'  on 'f'
 PASSES: total passes recorded: 2
 TRACE: Matches at final pass (seq=1): 1 instruction(s)
 TRACE: First pass with any matching instruction: seq=0 <initial> on f (1 row(s))
+SCHEMA: (3)
+TRACKER: (1)
+TRACKER-NEXT: (1)
+VECTOR: (instcombine, 1)
