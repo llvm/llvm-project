@@ -697,7 +697,8 @@ CallInst *IRBuilderBase::CreateMaskedExpandLoad(Type *Ty, Value *Ptr,
   assert(Mask && "Mask should not be all-ones (null)");
   if (!PassThru)
     PassThru = PoisonValue::get(Ty);
-  Type *OverloadedTypes[] = {Ty};
+  Type *PtrTy = Ptr->getType();
+  Type *OverloadedTypes[] = {Ty, PtrTy};
   Value *Ops[] = {Ptr, Mask, PassThru};
   CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_expandload, Ops,
                                        OverloadedTypes, Name);
@@ -718,7 +719,8 @@ CallInst *IRBuilderBase::CreateMaskedCompressStore(Value *Val, Value *Ptr,
   Type *DataTy = Val->getType();
   assert(DataTy->isVectorTy() && "Val should be a vector");
   assert(Mask && "Mask should not be all-ones (null)");
-  Type *OverloadedTypes[] = {DataTy};
+  Type *PtrTy = Ptr->getType();
+  Type *OverloadedTypes[] = {DataTy, PtrTy};
   Value *Ops[] = {Val, Ptr, Mask};
   CallInst *CI = CreateMaskedIntrinsic(Intrinsic::masked_compressstore, Ops,
                                        OverloadedTypes);
@@ -909,12 +911,15 @@ CallInst *IRBuilderBase::CreateGCGetPointerOffset(Value *DerivedPtr,
                          {DerivedPtr}, {}, Name);
 }
 
-CallInst *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *V,
-                                              FMFSource FMFSource,
-                                              const Twine &Name) {
+Value *IRBuilderBase::CreateUnaryIntrinsic(Intrinsic::ID ID, Value *Op,
+                                           FMFSource FMFSource,
+                                           const Twine &Name) {
   Module *M = BB->getModule();
-  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {V->getType()});
-  return createCallHelper(Fn, {V}, Name, FMFSource);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, Op->getType());
+  if (Value *V = Folder.FoldUnaryIntrinsic(ID, Op, Fn->getReturnType(),
+                                           FMFSource.get(FMF)))
+    return V;
+  return createCallHelper(Fn, Op, Name, FMFSource);
 }
 
 Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
@@ -923,7 +928,7 @@ Value *IRBuilderBase::CreateBinaryIntrinsic(Intrinsic::ID ID, Value *LHS,
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getOrInsertDeclaration(M, ID, {LHS->getType()});
   if (Value *V = Folder.FoldBinaryIntrinsic(ID, LHS, RHS, Fn->getReturnType(),
-                                            /*FMFSource=*/nullptr))
+                                            FMFSource.get(FMF)))
     return V;
   return createCallHelper(Fn, {LHS, RHS}, Name, FMFSource);
 }
@@ -1112,7 +1117,7 @@ Value *IRBuilderBase::CreateSelect(Value *C, Value *True, Value *False,
 Value *IRBuilderBase::CreateSelectFMF(Value *C, Value *True, Value *False,
                                       FMFSource FMFSource, const Twine &Name,
                                       Instruction *MDFrom) {
-  if (auto *V = Folder.FoldSelect(C, True, False))
+  if (auto *V = Folder.FoldSelect(C, True, False, FMFSource.get(FMF)))
     return V;
 
   SelectInst *Sel = SelectInst::Create(C, True, False);

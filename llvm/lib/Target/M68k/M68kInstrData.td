@@ -85,6 +85,10 @@ multiclass MxMoveOperandEncodings<string opnd_name> {
   def MxMove#NAME#OpEnc_e : MxEncAddrMode_e<opnd_name>;
   // (i,PC,Xn)
   def MxMove#NAME#OpEnc_k : MxEncAddrMode_k<opnd_name>;
+  // (bd,PC,Xn.L*SCALE)
+  def MxMove#NAME#OpEnc_l : MxEncAddrMode_l<opnd_name>;
+  // (bd,PC,Xn.W*SCALE)
+  def MxMove#NAME#OpEnc_L : MxEncAddrMode_L<opnd_name>;
   // (i,PC)
   def MxMove#NAME#OpEnc_q : MxEncAddrMode_q<opnd_name>;
   // (i,An,Xn)
@@ -528,7 +532,7 @@ class MxLEA<MxOpBundle SRC, MxEncMemOp SRC_ENC>
   );
 }
 
-foreach AM = ["p", "f", "b", "q", "k"] in
+foreach AM = ["p", "f", "b", "q", "k", "l", "L"] in
 def LEA32 # AM : MxLEA<!cast<MxOpBundle>("MxOp32AddrMode_"#AM),
                        !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
 

@@ -251,8 +251,8 @@ public:
   ProgramStateRef
   checkRegionChanges(ProgramStateRef State, const InvalidatedSymbols *Symbols,
                      ArrayRef<const MemRegion *> ExplicitRegions,
-                     ArrayRef<const MemRegion *> Regions,
-                     const LocationContext *LCtx, const CallEvent *Call) const;
+                     ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
+                     const CallEvent *Call) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
 
@@ -694,7 +694,7 @@ void PthreadLockChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 ProgramStateRef PthreadLockChecker::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Symbols,
     ArrayRef<const MemRegion *> ExplicitRegions,
-    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
+    ArrayRef<const MemRegion *> Regions, const StackFrame *SF,
     const CallEvent *Call) const {
 
   bool IsLibraryFunction = false;

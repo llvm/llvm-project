@@ -258,7 +258,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64PreLegalizerCombinerLegacyPass(PR);
   initializeAArch64PointerAuthLegacyPass(PR);
   initializeAArch64PostCoalescerLegacyPass(PR);
-  initializeAArch64PostLegalizerCombinerPass(PR);
+  initializeAArch64PostLegalizerCombinerLegacyPass(PR);
   initializeAArch64PostSelectOptimizeLegacyPass(PR);
   initializeAArch64PostLegalizerLoweringLegacyPass(PR);
   initializeAArch64PromoteConstantPass(PR);
@@ -277,10 +277,20 @@ LLVMInitializeAArch64Target() {
   initializeAArch64SLSHardeningLegacyPass(PR);
   initializeAArch64StackTaggingPass(PR);
   initializeAArch64StackTaggingPreRALegacyPass(PR);
-  initializeAArch64LowerHomogeneousPrologEpilogPass(PR);
+  initializeAArch64LowerHomogeneousPrologEpilogLegacyPass(PR);
   initializeAArch64DAGToDAGISelLegacyPass(PR);
   initializeAArch64CondBrTuningPass(PR);
   initializeAArch64Arm64ECCallLoweringPass(PR);
+}
+
+bool AArch64TargetMachine::isGlobalISelOptNone() const {
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
+
+  return getOptLevel() == CodeGenOptLevel::None ||
+         (static_cast<unsigned>(getOptLevel()) >
+              static_cast<unsigned>(EnableGlobalISelAtO) &&
+          !GlobalISelFlag);
 }
 
 void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
@@ -481,10 +491,6 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[Key];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
         MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize,
@@ -585,9 +591,6 @@ public:
   bool addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
-
-private:
-  bool isGlobalISelOptNone() const;
 };
 
 } // end anonymous namespace
@@ -619,21 +622,6 @@ TargetPassConfig *AArch64TargetMachine::createPassConfig(PassManagerBase &PM) {
 
 std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
-}
-
-// This function checks whether the opt level is explicitly set to none,
-// or whether GlobalISel was enabled due to SDAG encountering an optnone
-// function. If the opt level is greater than the level we automatically enable
-// globalisel at, and it wasn't enabled via CLI, we know that it must be because
-// of an optnone function.
-bool AArch64PassConfig::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag =
-      getCGPassBuilderOption().EnableGlobalISelOption.value_or(false);
-
-  return getOptLevel() == CodeGenOptLevel::None ||
-         (static_cast<unsigned>(getOptLevel()) >
-              getAArch64TargetMachine().getEnableGlobalISelAtO() &&
-          !GlobalISelFlag);
 }
 
 void AArch64PassConfig::addIRPasses() {
@@ -764,7 +752,7 @@ bool AArch64PassConfig::addIRTranslator() {
 }
 
 void AArch64PassConfig::addPreLegalizeMachineIR() {
-  if (isGlobalISelOptNone()) {
+  if (getAArch64TargetMachine().isGlobalISelOptNone()) {
     addPass(createAArch64O0PreLegalizerCombiner());
     addPass(new Localizer());
   } else {
@@ -781,8 +769,10 @@ bool AArch64PassConfig::addLegalizeMachineIR() {
 }
 
 void AArch64PassConfig::addPreRegBankSelect() {
-  if (!isGlobalISelOptNone()) {
-    addPass(createAArch64PostLegalizerCombiner(isGlobalISelOptNone()));
+  const bool IsGlobalISelOptNone =
+      getAArch64TargetMachine().isGlobalISelOptNone();
+  if (!IsGlobalISelOptNone) {
+    addPass(createAArch64PostLegalizerCombinerLegacy(IsGlobalISelOptNone));
     if (EnableGISelLoadStoreOptPostLegal)
       addPass(new LoadStoreOpt());
   }
@@ -796,7 +786,7 @@ bool AArch64PassConfig::addRegBankSelect() {
 
 bool AArch64PassConfig::addGlobalInstructionSelect() {
   addPass(new InstructionSelect(getOptLevel()));
-  if (!isGlobalISelOptNone())
+  if (!getAArch64TargetMachine().isGlobalISelOptNone())
     addPass(createAArch64PostSelectOptimize());
   return false;
 }

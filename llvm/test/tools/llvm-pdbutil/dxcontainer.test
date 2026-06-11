@@ -1,0 +1,143 @@
+## Check DXContainer support within a PDB file.
+
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil pdb2yaml --all %t.pdb > %t.yaml
+# RUN: llvm-pdbutil yaml2pdb %t.yaml --pdb=%t.yaml.pdb
+
+## Check that converting YAML to PDB and back results in the same YAML.
+# RUN: FileCheck -input-file=%t.yaml %s
+
+## Check that converting PDB to YAML and back results in the same binary.
+# RUN: diff %t.pdb %t.yaml.pdb
+
+# CHECK: ---
+# CHECK: MSF:
+# CHECK:   SuperBlock:
+# CHECK:     BlockSize:       512
+# CHECK:     FreeBlockMap:    2
+# CHECK:     NumBlocks:       7
+# CHECK:     NumDirectoryBytes: 36
+# CHECK:     Unknown1:        0
+# CHECK:     BlockMapAddr:    3
+# CHECK:   NumDirectoryBlocks: 1
+# CHECK:   DirectoryBlocks: [ 6 ]
+# CHECK:   NumStreams:      6
+# CHECK:   FileSize:        3584
+# CHECK: StreamSizes:     [ 0, 52, 0, 0, 0, 140 ]
+# CHECK: StreamMap:
+# CHECK:   - Stream:          [  ]
+# CHECK:   - Stream:          [ 5 ]
+# CHECK:   - Stream:          [  ]
+# CHECK:   - Stream:          [  ]
+# CHECK:   - Stream:          [  ]
+# CHECK:   - Stream:          [ 4 ]
+# CHECK: PdbStream:
+# CHECK:   Age:             1
+# CHECK:   Guid:            '{15C920AB-F953-7F22-4045-454D275D98D6}'
+# CHECK:   Signature:       0
+# CHECK:   Version:         VC70
+# CHECK: PublicsStream:
+# CHECK:   Records:         []
+# CHECK: DXContainerStream:
+# CHECK:   DXContainer: !dxcontainer
+# CHECK:     Header:
+# CHECK:       Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+# CHECK:                          0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+# CHECK:       Version:
+# CHECK:         Major:           1
+# CHECK:         Minor:           0
+# CHECK:       FileSize:        140
+# CHECK:       PartCount:       3
+# CHECK:       PartOffsets:     [ 52, 76, 104 ]
+# CHECK:     Parts:
+# CHECK:       - Name:            ILDN
+# CHECK:         Size:            16
+# CHECK:         DebugName:
+# CHECK:           Flags:           0
+# CHECK:           NameLength:      10
+# CHECK:           DebugName:       simple.pdb
+# CHECK:       - Name:            HASH
+# CHECK:         Size:            20
+# CHECK:         Hash:
+# CHECK:           IncludesSource:  false
+# CHECK:           Digest:          [ 0xAB, 0x20, 0xC9, 0x15, 0x53, 0xF9, 0x22,
+# CHECK:                              0x7F, 0x40, 0x45, 0x45, 0x4D, 0x27, 0x5D,
+# CHECK:                              0x98, 0xD6 ]
+# CHECK:       - Name:            ILDB
+# CHECK:         Size:            28
+# CHECK:         Program:
+# CHECK:           MajorVersion:    6
+# CHECK:           MinorVersion:    5
+# CHECK:           ShaderKind:      6
+# CHECK:           Size:            8
+# CHECK:           DXILMajorVersion: 1
+# CHECK:           DXILMinorVersion: 5
+# CHECK:           DXILSize:        4
+# CHECK:           DXIL:            [ 0x42, 0x43, 0xC0, 0xDE ]
+# CHECK: ...
+
+---
+MSF:
+  SuperBlock:
+    BlockSize:       512
+    FreeBlockMap:    2
+    NumBlocks:       7
+    NumDirectoryBytes: 36
+    Unknown1:        0
+    BlockMapAddr:    3
+  NumDirectoryBlocks: 1
+  DirectoryBlocks: [ 6 ]
+  NumStreams:      6
+  FileSize:        3584
+StreamSizes:     [ 0, 52, 0, 0, 0, 140 ]
+StreamMap:
+  - Stream:          [  ]
+  - Stream:          [ 5 ]
+  - Stream:          [  ]
+  - Stream:          [  ]
+  - Stream:          [  ]
+  - Stream:          [ 4 ]
+PdbStream:
+  Age:             1
+  Guid:            '{15C920AB-F953-7F22-4045-454D275D98D6}'
+  Signature:       0
+  Version:         VC70
+PublicsStream:
+  Records:         []
+DXContainerStream:
+  DXContainer: !dxcontainer
+    Header:
+      Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                         0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+      Version:
+        Major:           1
+        Minor:           0
+      FileSize:        140
+      PartCount:       3
+      PartOffsets:     [ 52, 76, 104 ]
+    Parts:
+      - Name:            ILDN
+        Size:            16
+        DebugName:
+          Flags:           0
+          NameLength:      10
+          DebugName:       simple.pdb
+      - Name:            HASH
+        Size:            20
+        Hash:
+          IncludesSource:  false
+          Digest:          [ 0xAB, 0x20, 0xC9, 0x15, 0x53, 0xF9, 0x22,
+                             0x7F, 0x40, 0x45, 0x45, 0x4D, 0x27, 0x5D,
+                             0x98, 0xD6 ]
+      - Name:            ILDB
+        Size:            28
+        Program:
+          MajorVersion:    6
+          MinorVersion:    5
+          ShaderKind:      6
+          Size:            8
+          DXILMajorVersion: 1
+          DXILMinorVersion: 5
+          DXILSize:        4
+          DXIL:            [ 0x42, 0x43, 0xC0, 0xDE ]
+...

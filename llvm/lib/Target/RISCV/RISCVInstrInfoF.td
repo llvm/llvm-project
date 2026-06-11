@@ -530,7 +530,7 @@ defvar FRM_DYN = 0b111;
 
 /// Floating point constants
 def fpimm0 : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+0.0);
+  return Imm.isPosZero();
 }]>;
 
 /// Generic pattern classes

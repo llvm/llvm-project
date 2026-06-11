@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines an analysis that builds directed graphs where nodes
-//  are pointers and edges are assignment operations, each of which bridges two
-//  nodes.
+//  This file defines the per-translation-unit summary type for the
+//  pointer-flow analysis, which records static pointer assignment sites
+//  as directed graph edges (EdgeSet).
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_CLANG_SCALABLESTATICANALYSISFRAMEWORK_ANALYSES_POINTERFLOW_POINTERFLOW_H
@@ -19,7 +19,8 @@
 
 namespace clang::ssaf {
 
-/// Maps each source node to its destination nodes:
+/// Maps each LHS pointer (source / assignee) to the set of RHS pointers
+/// (destinations / assigned values) at static assignment sites.
 using EdgeSet = std::map<EntityPointerLevel, EntityPointerLevelSet>;
 
 class PointerFlowEntitySummary final : public EntitySummary {

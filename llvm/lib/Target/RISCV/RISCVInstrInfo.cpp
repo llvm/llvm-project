@@ -3042,8 +3042,14 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM6_PLUS1:
           Ok = Imm >= 1 && Imm <= 64;
           break;
+        case RISCVOp::OPERAND_UIMM7_EQ_XLEN:
+          Ok = Imm == STI.getXLen();
+          break;
         case RISCVOp::OPERAND_UIMM8_GE32:
           Ok = isUInt<8>(Imm) && Imm >= 32;
+          break;
+        case RISCVOp::OPERAND_UIMM9_YBNDSWI:
+          Ok = RISCV::isValidYBNDSWImm(Imm);
           break;
         case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
           Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
@@ -3069,6 +3075,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_SIMM(8)
         CASE_OPERAND_SIMM(10)
         CASE_OPERAND_SIMM(11)
+        CASE_OPERAND_SIMM(12)
         CASE_OPERAND_SIMM(26)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
@@ -3934,6 +3941,22 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
                       .addGlobalAddress(M.getNamedValue(MF.getName()), 0,
                                         RISCVII::MO_CALL));
   return It;
+}
+
+void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator Iter,
+                                        DebugLoc &DL,
+                                        bool AllowSideEffects) const {
+
+  const MachineFunction &MF = *MBB.getParent();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
+
+  if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearGPR), Reg);
+  } else {
+    llvm::reportFatalInternalError(
+        "buildClearRegister is not implemented for non-GPR registers");
+  }
 }
 
 std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,
@@ -4953,7 +4976,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
                             Register DestReg, uint32_t Amount,
                             MachineInstr::MIFlag Flag) const {
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (llvm::has_single_bit<uint32_t>(Amount)) {
+  if (llvm::has_single_bit(Amount)) {
     uint32_t ShiftAmount = Log2_32(Amount);
     if (ShiftAmount == 0)
       return;
@@ -4988,7 +5011,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(DestReg, RegState::Kill)
         .addReg(DestReg)
         .setMIFlag(Flag);
-  } else if (llvm::has_single_bit<uint32_t>(Amount - 1)) {
+  } else if (llvm::has_single_bit(Amount - 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(Amount - 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)
@@ -4999,7 +5022,7 @@ void RISCVInstrInfo::mulImm(MachineFunction &MF, MachineBasicBlock &MBB,
         .addReg(ScaledRegister, RegState::Kill)
         .addReg(DestReg, RegState::Kill)
         .setMIFlag(Flag);
-  } else if (llvm::has_single_bit<uint32_t>(Amount + 1)) {
+  } else if (llvm::has_single_bit(Amount + 1)) {
     Register ScaledRegister = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     uint32_t ShiftAmount = Log2_32(Amount + 1);
     BuildMI(MBB, II, DL, get(RISCV::SLLI), ScaledRegister)

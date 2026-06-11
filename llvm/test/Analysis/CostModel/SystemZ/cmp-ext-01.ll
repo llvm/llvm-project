@@ -2401,3 +2401,42 @@ define <16 x i64> @fun239(<16 x double> %val1, <16 x double> %val2) {
 ; CHECK: cost of 8 for instruction:   %v = zext <16 x i1> %cmp to <16 x i64>
 }
 
+define <16 x i8> @fun240(<16 x ptr> %val1, <16 x ptr> %val2) {
+  %cmp = icmp eq <16 x ptr> %val1, %val2
+  %v = zext <16 x i1> %cmp to <16 x i8>
+  ret <16 x i8> %v
+
+; CHECK: fun240
+; CHECK: cost of 8 for instruction:   %cmp = icmp eq <16 x ptr> %val1, %val2
+; CHECK: cost of 8 for instruction:   %v = zext <16 x i1> %cmp to <16 x i8>
+}
+
+define <16 x i16> @fun241(<16 x ptr> %val1, <16 x ptr> %val2) {
+  %cmp = icmp eq <16 x ptr> %val1, %val2
+  %v = zext <16 x i1> %cmp to <16 x i16>
+  ret <16 x i16> %v
+
+; CHECK: fun241
+; CHECK: cost of 8 for instruction:   %cmp = icmp eq <16 x ptr> %val1, %val2
+; CHECK: cost of 8 for instruction:   %v = zext <16 x i1> %cmp to <16 x i16>
+}
+
+define <16 x i32> @fun242(<16 x ptr> %val1, <16 x ptr> %val2) {
+  %cmp = icmp eq <16 x ptr> %val1, %val2
+  %v = zext <16 x i1> %cmp to <16 x i32>
+  ret <16 x i32> %v
+
+; CHECK: fun242
+; CHECK: cost of 8 for instruction:   %cmp = icmp eq <16 x ptr> %val1, %val2
+; CHECK: cost of 8 for instruction:   %v = zext <16 x i1> %cmp to <16 x i32>
+}
+
+define <16 x i64> @fun243(<16 x ptr> %val1, <16 x ptr> %val2) {
+  %cmp = icmp eq <16 x ptr> %val1, %val2
+  %v = zext <16 x i1> %cmp to <16 x i64>
+  ret <16 x i64> %v
+
+; CHECK: fun243
+; CHECK: cost of 8 for instruction:   %cmp = icmp eq <16 x ptr> %val1, %val2
+; CHECK: cost of 8 for instruction:   %v = zext <16 x i1> %cmp to <16 x i64>
+}

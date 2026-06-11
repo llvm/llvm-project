@@ -127,6 +127,30 @@ func.func @test_scalar_output_transpose(%arg0: tensor<*xf32>) -> tensor<f32> {
 
 // -----
 
+func.func @test_reverse_element_type_mismatch(%arg0: tensor<2x3xi32>) -> tensor<2x3xf32> {
+  // expected-error@+1 {{'tosa.reverse' op requires the same element type for all operands and results}}
+  %0 = tosa.reverse %arg0 {axis = 1 : i32} : (tensor<2x3xi32>) -> tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
+func.func @test_reverse_shape_mismatch(%arg0: tensor<2x3xi32>) -> tensor<2x4xi32> {
+  // expected-error@+1 {{'tosa.reverse' op requires the same shape for all operands and results}}
+  %0 = tosa.reverse %arg0 {axis = 1 : i32} : (tensor<2x3xi32>) -> tensor<2x4xi32>
+  return %0 : tensor<2x4xi32>
+}
+
+// -----
+
+func.func @test_reverse_rank_mismatch(%arg0: tensor<2x3xi32>) -> tensor<1x2x3xi32> {
+  // expected-error@+1 {{'tosa.reverse' op result type has different rank than operands}}
+  %0 = tosa.reverse %arg0 {axis = 1 : i32} : (tensor<2x3xi32>) -> tensor<1x2x3xi32>
+  return %0 : tensor<1x2x3xi32>
+}
+
+// -----
+
 func.func @test_slice_invalid_output_rank() {
   %0 = tensor.empty() : tensor<4x31x31xf32>
   %start = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
@@ -2032,4 +2056,20 @@ func.func @test_maxpool2d_adaptive_unexpected_output_width(%arg0: tensor<1x32x32
   %0 = tosa.max_pool2d_adaptive %arg0, %kernel, %stride, %pad :
          (tensor<1x32x32x8xf32>, !tosa.shape<2>, !tosa.shape<2>, !tosa.shape<4>) -> tensor<1x32x2x8xf32>
   return %0 : tensor<1x32x2x8xf32>
+}
+
+// -----
+
+func.func @test_const_mxint8_uint8(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+  // expected-error@+1 {{incompatible attribute for element type}}
+  %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127: ui8, 245: ui8]>} : () -> tensor<2x!tosa.mxint8>
+  return %0 : tensor<2x!tosa.mxint8>
+}
+
+// -----
+
+func.func @test_const_mxint8_int64(%arg0 : index) -> tensor<2x!tosa.mxint8> {
+  // expected-error@+1 {{incompatible attribute for element type}}
+  %0 = "tosa.const"() {values = dense<tensor<2x!tosa.mxint8> : [127, 245]>} : () -> tensor<2x!tosa.mxint8>
+  return %0 : tensor<2x!tosa.mxint8>
 }

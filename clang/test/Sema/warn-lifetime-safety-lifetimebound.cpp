@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety-lifetimebound-violation -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -43,6 +43,24 @@ View return_alias_through_unannotated_passthrough(
   const MyObj &alias = obj;
   return not_lb(alias);
 }
+
+View global_view;
+
+View assign_param_to_global(
+    const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+  global_view = obj; // Wrong kind of escape.
+  return View(); // Unrelated view.
+}
+
+struct EnclosingState {
+  View member;
+
+  View assign_param_to_field(
+      const MyObj &obj [[clang::lifetimebound]]) { // expected-warning {{could not verify that the return value can be lifetime bound to 'obj'}}
+    member = obj; // Wrong kind of escape.
+    return View(); // Unrelated view.
+  }
+};
 
 View not_lb_view(View v);
 
@@ -131,3 +149,20 @@ struct ThisAndMixedParams {
     return cond() ? lb(a) : not_lb(b);
   }
 };
+
+struct AssignmentCorr {
+  AssignmentCorr& operator=(const AssignmentCorr& other) {
+    return *this;
+  }
+};
+
+struct AssignementIncorr {
+  AssignementIncorr& operator=(const AssignementIncorr& other) {
+    AssignementIncorr tmp;
+    return tmp;
+  }
+};
+
+void implicit_lifetimebound_in_nested_std_namespace() {
+  (void)std::basic_string_view<char>("hello");
+}

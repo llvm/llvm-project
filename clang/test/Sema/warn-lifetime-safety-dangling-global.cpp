@@ -22,14 +22,14 @@ void invoke_function_with_side_effects() {
 // We can however catch the inlined one of course!
 void inlined() {
   int local;
-  global = &local; // expected-warning {{address of stack memory escapes to global or static storage}}
+  global = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global_backup' which will dangle}}
   global_backup = global; 
   global = nullptr;
 }
 
 void store_local_in_global() {
   int local;
-  global = &local; // expected-warning {{address of stack memory escapes to global or static storage}}
+  global = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the global variable 'global' which will dangle}}
 }
 
 void store_then_clear() {
@@ -40,5 +40,5 @@ void store_then_clear() {
 
 void dangling_static_field() {
   int local;
-  ObjWithStaticField::static_field = &local; // expected-warning {{address of stack memory escapes to global or static storage}}
+  ObjWithStaticField::static_field = &local; // expected-warning {{stack memory associated with local variable 'local' escapes to the static variable 'static_field' which will dangle}}
 }

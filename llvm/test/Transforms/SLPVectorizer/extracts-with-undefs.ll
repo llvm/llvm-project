@@ -34,9 +34,9 @@ define void @test() {
 ; AARCH64:       body:
 ; AARCH64-NEXT:    [[PHI1:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ 0.000000e+00, [[BODY]] ]
 ; AARCH64-NEXT:    [[TMP0:%.*]] = phi <2 x double> [ zeroinitializer, [[ENTRY]] ], [ zeroinitializer, [[BODY]] ]
-; AARCH64-NEXT:    [[MUL_I478_I:%.*]] = fmul fast double [[PHI1]], 0.000000e+00
-; AARCH64-NEXT:    [[MUL7_I485_I:%.*]] = fmul fast double undef, 0.000000e+00
-; AARCH64-NEXT:    [[ADD8_I_I:%.*]] = fadd fast double [[MUL_I478_I]], [[MUL7_I485_I]]
+; AARCH64-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[PHI1]], i32 0
+; AARCH64-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> <double 0.000000e+00, double undef>, [[TMP8]]
+; AARCH64-NEXT:    [[ADD8_I_I:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP9]])
 ; AARCH64-NEXT:    [[CMP42_I:%.*]] = fcmp fast ole double [[ADD8_I_I]], 0.000000e+00
 ; AARCH64-NEXT:    br i1 false, label [[BODY]], label [[EXIT:%.*]]
 ; AARCH64:       exit:
