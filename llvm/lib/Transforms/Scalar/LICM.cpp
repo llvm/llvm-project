@@ -1112,14 +1112,10 @@ hoistInsertPastInsert(InsertElementInst *Ins, Loop *CurLoop, DominatorTree *DT,
     return false;
 
   InsertElementInst *Inner = Ins;
-  while (true) {
-    Value *InnerVal = Inner->getOperand(0);
-    if (CurLoop->isLoopInvariant(InnerVal))
-      break;
-
+  while (!CurLoop->isLoopInvariant(Inner->getOperand(0))) {
     // If the inner value isn't invariant, check to see if it is another insert
     // All instructions in the chain must be in the same basic block
-    auto *InnerIns = dyn_cast<InsertElementInst>(InnerVal);
+    auto *InnerIns = dyn_cast<InsertElementInst>(Inner->getOperand(0));
     if (!InnerIns || InnerIns->getParent() != Ins->getParent())
       return false;
 
