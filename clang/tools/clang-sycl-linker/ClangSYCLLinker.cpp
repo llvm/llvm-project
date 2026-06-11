@@ -298,14 +298,12 @@ static bool scanSymbols(const IRSymtabFile &MemberSymtab,
 
       bool IsNewSymbol = IsLazy && !LinkerSymtab.count(IRSym.getName());
       StringMap<Symbol> &Target = IsNewSymbol ? PendingSymbols : LinkerSymtab;
-      Symbol &OldSym = Target[IRSym.getName()];
       Symbol Sym(IRSym);
+      auto [It, Inserted] = Target.try_emplace(IRSym.getName(), Sym);
+      Symbol &OldSym = It->second;
 
-      if (OldSym.SymFlags == Symbol::None) {
-        OldSym = Sym;
-        if (!IsNewSymbol)
+      if (Inserted && !IsNewSymbol)
           continue;
-      }
 
       bool ResolvesReference =
           !Sym.isUndefined() &&
