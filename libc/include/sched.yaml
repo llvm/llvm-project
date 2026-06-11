@@ -23,7 +23,7 @@ functions:
       - llvm_libc_ext
     return_type: cpu_set_t *
     arguments:
-      - type: int
+      - type: size_t
   - name: __sched_cpufree
     standards:
       - llvm_libc_ext
