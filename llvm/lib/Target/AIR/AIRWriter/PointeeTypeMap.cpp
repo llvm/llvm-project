@@ -34,6 +34,14 @@ static bool isIntegerDevicePointer(Value *Ptr);
 // and atomic intrinsic name inference.
 
 Type *PointeeTypeMap::inferFromUsage(Value *Ptr) {
+  SmallPtrSet<Value *, 8> Visited;
+  return inferFromUsage(Ptr, Visited);
+}
+
+Type *PointeeTypeMap::inferFromUsage(Value *Ptr,
+                                     SmallPtrSetImpl<Value *> &Visited) {
+  if (!Visited.insert(Ptr).second)
+    return nullptr;
   // Prioritize load/store types over GEP source types.
   // Recurse through GEP chains to find the ultimate store/load type.
   // NOTE: Do NOT follow atomic intrinsic calls through GEP chains.
@@ -49,8 +57,24 @@ Type *PointeeTypeMap::inferFromUsage(Value *Ptr) {
       if (SI->getPointerOperand() == Ptr)
         return SI->getValueOperand()->getType();
     }
+    // Follow identity pointer bitcasts on DEVICE (addrspace 1) pointers: a
+    // device output buffer's store often sits past a no-op ptr→ptr bitcast the
+    // mid-end leaves between a byte-form GEP and the typed store, so the base
+    // would otherwise infer the [N x i8] GEP source type instead of the stored
+    // element type (div7's i64 outputs). Restricted to addrspace(1):
+    // threadgroup (addrspace 3) smem uses array-typed globals (`[N x float]`)
+    // whose GEP chain must keep its array element type — following identity
+    // smem bitcasts there makes the base infer a scalar pointee that disagrees
+    // with the array GEP and the AIR writer rejects it ("Explicit gep type does
+    // not match pointee type").
+    if (auto *BC = dyn_cast<BitCastInst>(U)) {
+      if (BC->getType()->isPointerTy() &&
+          BC->getType()->getPointerAddressSpace() == AS::Device)
+        if (Type *T = inferFromUsage(BC, Visited))
+          return T;
+    }
     if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
-      if (Type *T = inferFromUsage(GEP))
+      if (Type *T = inferFromUsage(GEP, Visited))
         return T;
       if (!GepType)
         GepType = GEP->getSourceElementType();
@@ -59,12 +83,36 @@ Type *PointeeTypeMap::inferFromUsage(Value *Ptr) {
     // (the writer cannot emit a typed `select ptr` otherwise).
     if (auto *Sel = dyn_cast<SelectInst>(U)) {
       if (Sel->getType()->isPointerTy())
-        if (Type *T = inferFromUsage(Sel))
+        if (Type *T = inferFromUsage(Sel, Visited))
+          return T;
+    }
+    // Follow pointer-typed phi users (loop-carried operand pointers): the
+    // loads often happen only through the phi, and the phi's own pointee is
+    // force-set elsewhere — without this the base infers the byte-GEP type
+    // and the phi record's operand types disagree. Visited guards cycles.
+    if (auto *PN = dyn_cast<PHINode>(U)) {
+      if (PN->getType()->isPointerTy())
+        if (Type *T = inferFromUsage(PN, Visited))
           return T;
     }
     if (auto *CI = dyn_cast<CallInst>(U)) {
       if (auto *Callee = CI->getCalledFunction()) {
         StringRef Name = Callee->getName();
+        // The simdgroup-matrix intrinsic's pointer suffix is definitive
+        // element-type evidence — byte-form GEP source types are mere
+        // addressing artifacts and must not outvote it (bf16 before f16:
+        // substring overlap).
+        if (Name.starts_with("air.simdgroup_matrix_8x8_")) {
+          auto &Ctx = Ptr->getContext();
+          if (Name.contains("p1bf16") || Name.contains("p3bf16"))
+            return Type::getBFloatTy(Ctx);
+          if (Name.contains("p1f16") || Name.contains("p3f16"))
+            return Type::getHalfTy(Ctx);
+          if (Name.contains("p1i8") || Name.contains("p3i8"))
+            return Type::getInt8Ty(Ctx);
+          if (Name.contains("p1f32") || Name.contains("p3f32"))
+            return Type::getFloatTy(Ctx);
+        }
         // Only use atomic type if the pointer is NOT a GEP result.
         // GEP results must keep their source element type for consistency;
         // the atomic type mismatch is handled by inserting ptrtoint+inttoptr.

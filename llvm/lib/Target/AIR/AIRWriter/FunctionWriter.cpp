@@ -49,15 +49,23 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
   // constant entries; referencing module constants directly from function
   // instructions causes GPU JIT materializeAll failures.
   SmallVector<const Constant *, 32> FuncConsts;
+  auto CollectConst = [&](const Value *Op) {
+    if (auto *C = dyn_cast<Constant>(Op))
+      if (!isa<GlobalValue>(C) && !LocalMap.count(C) &&
+          !E.globalValueMap.count(C)) {
+        LocalMap[C] = NextID++;
+        FuncConsts.push_back(C);
+      }
+  };
   for (auto &BB : F)
-    for (auto &I : BB)
+    for (auto &I : BB) {
       for (auto &Op : I.operands())
-        if (auto *C = dyn_cast<Constant>(Op))
-          if (!isa<GlobalValue>(C) && !LocalMap.count(C) &&
-              !E.globalValueMap.count(C)) {
-            LocalMap[C] = NextID++;
-            FuncConsts.push_back(C);
-          }
+        CollectConst(Op);
+      // The shuffle mask is not an operand in-memory but is referenced by
+      // the INST_SHUFFLEVEC record like one.
+      if (auto *SV = dyn_cast<ShuffleVectorInst>(&I))
+        CollectConst(SV->getShuffleMaskForBitcode());
+    }
 
   // Instruction results
   for (auto &BB : F)
@@ -323,6 +331,13 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         V.push_back(GetAbsID(AI->getArraySize()));
         V.push_back((1 << 6) | (Log2_32(AI->getAlign().value()) + 1));
         W.EmitRecord(bitc::FUNC_CODE_INST_ALLOCA, V);
+      } else {
+        // Emitting nothing here while CurInstID still advances silently
+        // desynchronizes every later relative operand ID in the bitstream
+        // (reader-side "Invalid record" far from the cause). Fail loud.
+        report_fatal_error(Twine("AIRWriter: unhandled instruction '") +
+                           I.getOpcodeName() + "' in function '" + F.getName() +
+                           "'");
       }
 
       if (I.hasMetadataOtherThanDebugLoc())

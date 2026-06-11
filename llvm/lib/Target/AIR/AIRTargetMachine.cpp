@@ -19,6 +19,7 @@
 #include "AIRAsyncEventToAlloca.h"
 #include "AIRBFloat16CastDecompose.h"
 #include "AIRBarrierRename.h"
+#include "AIRCrossBufferStoreSeparate.h"
 #include "AIRAliasAnnotate.h"
 #include "AIRDemoteF64.h"
 #include "AIRDeviceLoadsVolatile.h"
@@ -30,6 +31,7 @@
 #include "AIRNormalizeAllocas.h"
 #include "AIRPrepare.h"
 #include "AIRScalarBufferPacking.h"
+#include "AIRScalarizeShuffleOperands.h"
 #include "AIRScalarStoreGuard.h"
 #include "AIRSplitI64Shuffle.h"
 #include "AIRSubtarget.h"
@@ -51,6 +53,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Transforms/Utils.h"
 #include <optional>
 
 using namespace llvm;
@@ -58,6 +61,20 @@ using namespace llvm;
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   RegisterTargetMachine<AIRTargetMachine> X(getTheAIRTarget());
   auto *PR = PassRegistry::getPassRegistry();
+  // TargetPassConfig::addIRPasses() schedules these through the legacy PM.
+  // They must be registered in THIS image's PassRegistry: the target lib is
+  // a dylib with its own statically-linked LLVM copy, so registrations done
+  // in the driver binary land in a different registry singleton.
+  initializeCore(*PR);
+  initializeCodeGen(*PR);
+  initializeScalarOpts(*PR);
+  initializeTransformUtils(*PR);
+  initializeAnalysis(*PR);
+  initializeLoopStrengthReducePass(*PR);
+  initializeUnreachableBlockElimLegacyPassPass(*PR);
+  initializeConstantHoistingLegacyPassPass(*PR);
+  initializeScalarizeMaskedMemIntrinLegacyPassPass(*PR);
+  initializePostInlineEntryExitInstrumenterPass(*PR);
   initializeAIRInlineNonKernelLegacyPass(*PR);
   initializeAIRDemoteF64LegacyPass(*PR);
   initializeAIRLowerFNegLegacyPass(*PR);
@@ -67,6 +84,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRLowerAtomicRMWLegacyPass(*PR);
   initializeAIRSplitI64ShuffleLegacyPass(*PR);
   initializeAIRScalarStoreGuardLegacyPass(*PR);
+  initializeAIRScalarizeShuffleOperandsLegacyPass(*PR);
   initializeAIRTGGlobalCoalesceLegacyPass(*PR);
   initializeAIRTGBarrierInsertLegacyPass(*PR);
   initializeAIRDeviceLoadsVolatileLegacyPass(*PR);
@@ -77,6 +95,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRSystemValuesLegacyPass(*PR);
   initializeAIRAliasAnnotateLegacyPass(*PR);
   initializeAIRPrepareLegacyPass(*PR);
+  initializeAIRCrossBufferStoreSeparateLegacyPass(*PR);
   initializeAIREmbedderLegacyPassPass(*PR);
 }
 
@@ -112,6 +131,25 @@ public:
 
   void addCodeGenPrepare() override {
     // IR-to-AIR conformance passes, in order.
+    // AIR bitcode has no switch encoding; lower to branch chains first.
+    addPass(createLowerSwitchPass());
+    // AGX-1 (cross-buffer same-offset device-store warp-0 miscompile).
+    // Run EARLY, while the in-bounds predicate icmp (and its assume) are still
+    // intact, so the separation guard can use the REAL mask. Sinks the run of
+    // conflicting cross-buffer stores behind one shared in-bounds branch; a
+    // no-op on single-output kernels (needs >=2 device-output buffers writing
+    // the same per-thread offset). See AIRCrossBufferStoreSeparate.cpp.
+    addPass(createAIRCrossBufferStoreSeparateLegacyPass());
+    // The Apple AGX GPU JIT miscompiles cross-lane `air.simd_shuffle*` when the
+    // shuffle's scalar operand is sourced via `extractelement` from a vector
+    // SSA value (a vector register): the permute reads the wrong physical lane
+    // for some SIMD threads, corrupting cross-lane reductions. Apple's own
+    // `metal` frontend never feeds vector-extracted values into shuffles. The
+    // SLP vectorizer (O1+) creates exactly this pattern in reduce/scan kernels,
+    // so scalarize the vector chains entangled with shuffle operands back to
+    // scalars before AIR emission. GEMM's pure load/store vectors are
+    // untouched.
+    addPass(createAIRScalarizeShuffleOperandsLegacyPass());
     addPass(createAIRInlineNonKernelLegacyPass());
     addPass(createAIRDemoteF64LegacyPass());
     addPass(createAIRLowerFNegLegacyPass());
@@ -136,6 +174,7 @@ public:
     addPass(createAIRAliasAnnotateLegacyPass());
     // Final pre-serialization normalizations.
     addPass(createAIRPrepareLegacyPass());
+    // (AGX-1 cross-buffer store separation now runs early, after LowerSwitch.)
     // AIRPrepare's mergeByteGlobals now emits the identity bitcast
     // inline on bfloat/half/float-through-bfloat typed-base GEPs, so the
     // post-Prepare NormalizeAllocas re-run is no longer needed.
@@ -169,6 +208,9 @@ bool AIRTargetMachine::addPassesToEmitFile(
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
   TargetPassConfig *PassConfig = createPassConfig(PM);
+  // Standard llc IR prologue (verifier, LSR + codegen-prep IR passes) at
+  // -O1+, same as every upstream backend; -O0 / -disable-lsr opt out.
+  PassConfig->addIRPasses();
   PassConfig->addCodeGenPrepare();
 
   switch (FileType) {

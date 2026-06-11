@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_AIR_AIRWRITER_POINTEETYPEMAP_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -118,6 +119,9 @@ public:
   // Infer pointee type from how a pointer is used (loads, stores, GEPs).
   // Returns nullptr if no usage gives a clear type.
   static llvm::Type *inferFromUsage(llvm::Value *Ptr);
+  static llvm::Type *
+  inferFromUsage(llvm::Value *Ptr,
+                 llvm::SmallPtrSetImpl<llvm::Value *> &Visited);
 
   // Apply the "MMA present → all device ptrs are float*" rule.
   void collapseDevicePointersToFloat(llvm::Module &M);

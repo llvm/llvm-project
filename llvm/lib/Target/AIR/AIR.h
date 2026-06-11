@@ -78,8 +78,16 @@ ModulePass *createAIRDeviceLoadsVolatileLegacyPass();
 /// Initializer for the AIR scalar-store-guard pass.
 void initializeAIRScalarStoreGuardLegacyPass(PassRegistry &);
 
+/// Initializer for the AIR scalarize-shuffle-operands pass.
+void initializeAIRScalarizeShuffleOperandsLegacyPass(PassRegistry &);
+
 /// Pass to guard scalar device stores with a `tid.x == 0` check.
 ModulePass *createAIRScalarStoreGuardLegacyPass();
+
+/// Pass to scalarize vector data-flow feeding `air.simd_shuffle*` operands,
+/// working around an AGX JIT miscompile of cross-lane shuffles whose operand
+/// lives in a vector register.
+ModulePass *createAIRScalarizeShuffleOperandsLegacyPass();
 
 /// Initializer for the AIR threadgroup-global coalesce pass.
 void initializeAIRTGGlobalCoalesceLegacyPass(PassRegistry &);
@@ -144,6 +152,14 @@ void initializeAIRPrepareLegacyPass(PassRegistry &);
 /// Pass to normalize i1 GEPs to i8, lower oversized / undef-bearing ptr phis
 /// to i64, and insert typed-pointer transitions before atomic intrinsics.
 ModulePass *createAIRPrepareLegacyPass();
+
+/// Initializer for the AIR cross-buffer store-separate pass.
+void initializeAIRCrossBufferStoreSeparateLegacyPass(PassRegistry &);
+
+/// Pass to restore O0-style control-flow separation of same-offset
+/// cross-buffer device stores, working around the AGX-1 JIT store-coalescing
+/// miscompile. No-op on single-output kernels. See AGX_BUGS.md (AGX-1).
+ModulePass *createAIRCrossBufferStoreSeparateLegacyPass();
 
 } // namespace llvm
 

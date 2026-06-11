@@ -32,7 +32,25 @@ void emitConstantsBlock(BitstreamWriter &W, ValueEnumerator &E,
       W.EmitRecord(bitc::CST_CODE_SETTYPE, V);
       V.clear();
     }
-    if (isa<UndefValue>(C)) {
+    // In current LLVM, ConstantInt/ConstantFP can be *vector*-typed: a
+    // `<N x T> splat (T val)` is a single scalar ConstantInt/ConstantFP whose
+    // getType() is the vector type (the textual `splat (...)` form). The
+    // scalar INTEGER/FLOAT records below would emit one element against a
+    // vector SETTYPE, which the AIR reader decodes as undef. Emit these as a
+    // replicated CST_CODE_DATA so the splat survives the round-trip.
+    if ((isa<ConstantInt>(C) || isa<ConstantFP>(C)) &&
+        isa<FixedVectorType>(C->getType())) {
+      auto *VT = cast<FixedVectorType>(C->getType());
+      uint64_t Bits;
+      if (auto *CI = dyn_cast<ConstantInt>(C))
+        Bits = CI->getValue().getZExtValue();
+      else
+        Bits =
+            cast<ConstantFP>(C)->getValueAPF().bitcastToAPInt().getZExtValue();
+      for (unsigned I = 0; I < VT->getNumElements(); I++)
+        V.push_back(Bits);
+      W.EmitRecord(bitc::CST_CODE_DATA, V);
+    } else if (isa<UndefValue>(C)) {
       W.EmitRecord(bitc::CST_CODE_UNDEF, V);
     } else if (auto *CI = dyn_cast<ConstantInt>(C)) {
       // Always use INTEGER for ints (even zero) - AIR doesn't

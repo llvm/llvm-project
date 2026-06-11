@@ -29,23 +29,82 @@ static bool bfloat16CastDecompose(Module &M) {
   Type *I32 = Type::getInt32Ty(M.getContext());
   Type *I16 = Type::getInt16Ty(M.getContext());
 
+  // Widen a scalar type to match the vector shape of Ref (no-op for scalars).
+  auto matchShape = [](Type *Elem, Type *Ref) -> Type * {
+    if (auto *VT = dyn_cast<FixedVectorType>(Ref))
+      return FixedVectorType::get(Elem, VT->getNumElements());
+    return Elem;
+  };
+
+  // Phase 0: decompose fptrunc f32 -> bfloat (round-to-nearest-even) and
+  // fpext bfloat -> f32, both as integer bit manipulation — the native casts
+  // are miscompiled by the GPU JIT. Scalar and vector.
+  //
+  // NB: no NaN-quieting branch. A `fcmp uno` + `select` to force the QNaN bit
+  // is undefined under the module's `air.compile.fast_math_enable` (which
+  // implies `nnan`); the AGX JIT miscompiles the resulting select and its
+  // surrounding bitcast chain — most visibly inside the bf16 atomic-add CAS
+  // loop, which corrupts adjacent lanes into NaN. Plain RTNE truncation is
+  // the correct lowering for a no-NaN target.
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      for (auto It = BB.begin(); It != BB.end();) {
+        Instruction *I = &*It++;
+        if (isa<FPTruncInst>(I) && I->getType()->getScalarType() == BF16 &&
+            I->getOperand(0)->getType()->getScalarType() == F32) {
+          IRBuilder<> B(I);
+          Value *Src = I->getOperand(0);
+          Type *I32T = matchShape(I32, I->getType());
+          Type *I16T = matchShape(I16, I->getType());
+          Value *Bits = B.CreateBitCast(Src, I32T, "f32_bits");
+          Value *Lsb = B.CreateAnd(B.CreateLShr(Bits, 16), 1, "bf16_lsb");
+          Value *Rounded = B.CreateAdd(
+              Bits, B.CreateAdd(Lsb, ConstantInt::get(I32T, 0x7fff)),
+              "bf16_rnd");
+          Value *Res = B.CreateTrunc(B.CreateLShr(Rounded, 16), I16T);
+          Value *BF = B.CreateBitCast(Res, I->getType(), I->getName());
+          I->replaceAllUsesWith(BF);
+          I->eraseFromParent();
+          Changed = true;
+        } else if (isa<FPExtInst>(I) &&
+                   I->getOperand(0)->getType()->getScalarType() == BF16 &&
+                   I->getType()->getScalarType() == F32) {
+          IRBuilder<> B(I);
+          Value *Src = I->getOperand(0);
+          Type *I32T = matchShape(I32, I->getType());
+          Type *I16T = matchShape(I16, I->getType());
+          Value *Bits = B.CreateBitCast(Src, I16T, "bf16_bits");
+          Value *Wide = B.CreateZExt(Bits, I32T, "bf16_zext");
+          Value *Shifted = B.CreateShl(Wide, 16, "f32_bits");
+          Value *FP = B.CreateBitCast(Shifted, I->getType(), I->getName());
+          I->replaceAllUsesWith(FP);
+          I->eraseFromParent();
+          Changed = true;
+        }
+      }
+    }
+  }
+
   // Phase 1: decompose sitofp/uitofp iN -> bfloat via f32 + bit manipulation.
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       for (auto It = BB.begin(); It != BB.end();) {
         Instruction *I = &*It++;
         if ((isa<SIToFPInst>(I) || isa<UIToFPInst>(I)) &&
-            I->getType() == BF16) {
+            I->getType()->getScalarType() == BF16) {
           IRBuilder<> B(I);
+          Type *F32T = matchShape(F32, I->getType());
+          Type *I32T = matchShape(I32, I->getType());
+          Type *I16T = matchShape(I16, I->getType());
           Value *ToFloat =
               isa<SIToFPInst>(I)
-                  ? B.CreateSIToFP(I->getOperand(0), F32, "to_f32")
-                  : B.CreateUIToFP(I->getOperand(0), F32, "to_f32");
+                  ? B.CreateSIToFP(I->getOperand(0), F32T, "to_f32")
+                  : B.CreateUIToFP(I->getOperand(0), F32T, "to_f32");
           // bf16 = upper 16 bits of f32.
-          Value *AsInt = B.CreateBitCast(ToFloat, I32, "f32_bits");
+          Value *AsInt = B.CreateBitCast(ToFloat, I32T, "f32_bits");
           Value *Shifted = B.CreateLShr(AsInt, 16, "bf16_bits");
-          Value *Narrow = B.CreateTrunc(Shifted, I16, "bf16_i16");
-          Value *Trunc = B.CreateBitCast(Narrow, BF16, I->getName());
+          Value *Narrow = B.CreateTrunc(Shifted, I16T, "bf16_i16");
+          Value *Trunc = B.CreateBitCast(Narrow, I->getType(), I->getName());
           I->replaceAllUsesWith(Trunc);
           I->eraseFromParent();
           Changed = true;
@@ -128,7 +187,7 @@ static bool bfloat16CastDecompose(Module &M) {
       for (BasicBlock &BB : F) {
         for (auto It = BB.begin(); It != BB.end();) {
           auto *Trn = dyn_cast<TruncInst>(&*It++);
-          if (!Trn)
+          if (!Trn || !Trn->getType()->isIntegerTy())
             continue;
           unsigned Bits = Trn->getType()->getIntegerBitWidth();
           if (Bits >= 32)

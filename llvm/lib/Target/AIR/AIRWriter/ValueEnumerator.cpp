@@ -140,6 +140,9 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
         for (auto &Op : I.operands())
           if (!isa<BasicBlock>(Op))
             addType(Op->getType());
+        // The shuffle mask constant is not an in-memory operand.
+        if (auto *SV = dyn_cast<ShuffleVectorInst>(&I))
+          addType(SV->getShuffleMaskForBitcode()->getType());
         // Alloca: enumerate the allocated type AND the result's typed-pointer.
         // The alloca result is pointer_to(allocatedType, addrspace=0).
         // Both the allocated type and the result pointer type must exist
@@ -165,6 +168,17 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
             }
             ptrTypeIdx(PointerType::get(M.getContext(), AddrSpace),
                        ResultPointee);
+          }
+        }
+        // Pointer PHIs (e.g. LSR loop-carried operand pointers) need their
+        // typed pointer entry in the table before emission.
+        if (auto *PN = dyn_cast<PHINode>(&I)) {
+          if (PN->getType()->isPointerTy()) {
+            unsigned AddrSpace = PN->getType()->getPointerAddressSpace();
+            Type *Pointee = PTM.get(PN);
+            if (!Pointee)
+              Pointee = Type::getFloatTy(M.getContext());
+            ptrTypeIdx(PointerType::get(M.getContext(), AddrSpace), Pointee);
           }
         }
         // Bitcast ptr→ptr: in AIR v1 these change typed pointer.
@@ -217,24 +231,29 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
   // AGGREGATE records that reference sub-constants by moduleConstIdx.
   // If a function-level constant is a non-data aggregate, its sub-constants
   // must be in the module constant table.
+  auto addSubConstants = [&](const Value *Op) {
+    auto *C = dyn_cast<Constant>(Op);
+    if (!C || isa<GlobalValue>(C))
+      return;
+    if (isa<ConstantArray>(C) || isa<ConstantStruct>(C) ||
+        isa<ConstantVector>(C)) {
+      for (unsigned J = 0; J < C->getNumOperands(); J++)
+        if (auto *OC = dyn_cast<Constant>(C->getOperand(J)))
+          addModuleConstant(OC);
+    }
+    if (auto *CDA = dyn_cast<ConstantDataArray>(C)) {
+      for (unsigned J = 0; J < CDA->getNumElements(); J++)
+        addModuleConstant(CDA->getElementAsConstant(J));
+    }
+  };
   for (auto &F : M) {
     for (auto &BB : F) {
       for (auto &I : BB) {
-        for (auto &Op : I.operands()) {
-          auto *C = dyn_cast<Constant>(Op);
-          if (!C || isa<GlobalValue>(C))
-            continue;
-          if (isa<ConstantArray>(C) || isa<ConstantStruct>(C) ||
-              isa<ConstantVector>(C)) {
-            for (unsigned J = 0; J < C->getNumOperands(); J++)
-              if (auto *OC = dyn_cast<Constant>(C->getOperand(J)))
-                addModuleConstant(OC);
-          }
-          if (auto *CDA = dyn_cast<ConstantDataArray>(C)) {
-            for (unsigned J = 0; J < CDA->getNumElements(); J++)
-              addModuleConstant(CDA->getElementAsConstant(J));
-          }
-        }
+        for (auto &Op : I.operands())
+          addSubConstants(Op);
+        // The shuffle mask constant is not an in-memory operand.
+        if (auto *SV = dyn_cast<ShuffleVectorInst>(&I))
+          addSubConstants(SV->getShuffleMaskForBitcode());
       }
     }
   }

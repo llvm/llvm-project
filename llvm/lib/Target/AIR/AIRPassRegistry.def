@@ -35,6 +35,7 @@ MODULE_PASS("air-scalar-buffer-packing", AIRScalarBufferPackingPass())
 MODULE_PASS("air-air-system-values", AIRSystemValuesPass())
 MODULE_PASS("air-alias-annotate", AIRAliasAnnotatePass())
 MODULE_PASS("air-prepare", AIRPreparePass())
+MODULE_PASS("air-cross-buffer-store-separate", AIRCrossBufferStoreSeparatePass())
 MODULE_PASS("air-embed", AIREmbedderPass())
 #undef MODULE_PASS
 

@@ -15,6 +15,7 @@ add_llvm_target(AIRCodeGen
   AIRAsyncEventToAlloca.cpp
   AIRBFloat16CastDecompose.cpp
   AIRBarrierRename.cpp
+  AIRCrossBufferStoreSeparate.cpp
   AIRDemoteF64.cpp
   AIRDeviceLoadsVolatile.cpp
   AIRInlineNonKernel.cpp
@@ -25,6 +26,7 @@ add_llvm_target(AIRCodeGen
   AIRNormalizeAllocas.cpp
   AIRPrepare.cpp
   AIRScalarBufferPacking.cpp
+  AIRScalarizeShuffleOperands.cpp
   AIRScalarStoreGuard.cpp
   AIRSplitI64Shuffle.cpp
   AIRTGBarrierInsert.cpp
@@ -42,6 +44,8 @@ add_llvm_target(AIRCodeGen
   CodeGenTypes
   Core
   MC
+  Passes
+  ScalarOpts
   AIRWriter
   AIRDesc
   AIRInfo

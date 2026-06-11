@@ -55,14 +55,23 @@ static bool inlineNonKernel(Module &M) {
     }
   }
 
-  // Erase functions that were fully inlined and are now unused. Entry points
-  // (never called by another function) are preserved.
+  // Erase functions that were fully inlined and are now unused. When the
+  // frontend marked the launchable entry ("air-kernel" fn attribute), also
+  // erase any other unused defined function: the mid-end optimizer may
+  // inline a helper's only call site itself, leaving it uncalled here, and
+  // a stray second function corrupts the metallib container.
+  bool HaveKernelAttr = llvm::any_of(M, [](const Function &F) {
+    return !F.isDeclaration() && F.hasFnAttribute("air-kernel");
+  });
   SmallVector<Function *, 4> Dead;
   for (Function &F : M)
-    if (!F.isDeclaration() && F.use_empty() && WasCallee.contains(&F))
+    if (!F.isDeclaration() && F.use_empty() &&
+        (WasCallee.contains(&F) ||
+         (HaveKernelAttr && !F.hasFnAttribute("air-kernel"))))
       Dead.push_back(&F);
   for (Function *F : Dead)
     F->eraseFromParent();
+  Changed |= !Dead.empty();
 
   return Changed;
 }
