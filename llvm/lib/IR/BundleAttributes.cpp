@@ -22,6 +22,7 @@ StringRef llvm::getNameFromBundleAttr(BundleAttr BA) {
   case BundleAttr::None:
     return "none";
   }
+  llvm_unreachable("unknonwn bundle attribute");
 }
 
 BundleAttr llvm::getBundleAttrFromString(StringRef Str) {
