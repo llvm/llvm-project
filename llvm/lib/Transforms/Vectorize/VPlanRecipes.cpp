@@ -388,12 +388,8 @@ void VPIRFlags::intersectFlags(const VPIRFlags &Other) {
 }
 
 FastMathFlags VPIRFlags::getFastMathFlagsOrNone() const {
-  assert((OpType == OperationType::FPMathOp || OpType == OperationType::FCmp ||
-          OpType == OperationType::ReductionOp ||
-          OpType == OperationType::Other) &&
-         "recipe doesn't have fast math flags");
-  if (OpType == OperationType::Other)
-    return FastMathFlags();
+  if (!hasFastMathFlags())
+    return {};
   const FastMathFlagsTy &F = getFMFsRef();
   FastMathFlags Res;
   Res.setAllowReassoc(F.AllowReassoc);
@@ -1513,8 +1509,7 @@ void VPInstruction::execute(VPTransformState &State) {
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
-  if (hasFastMathFlags())
-    State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
+  State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
   Value *GeneratedValue = generate(State);
   if (!hasResult())
     return;
