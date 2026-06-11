@@ -2247,8 +2247,8 @@ bool llvm::canLowerMemCpyFamily(const MachineInstr &MI,
   }
   case TargetOpcode::G_MEMSET:
   case TargetOpcode::G_MEMSET_INLINE: {
-    uint64_t Limit = Opc == TargetOpcode::G_MEMSET_INLINE
-                         ? std::numeric_limits<uint64_t>::max()
+    unsigned Limit = Opc == TargetOpcode::G_MEMSET_INLINE
+                         ? std::numeric_limits<unsigned>::max()
                          : TLI.getMaxStoresPerMemset(OptSize);
     auto ValVRegAndVal = getIConstantVRegValWithLookThrough(Src, MRI);
     bool IsZeroVal = ValVRegAndVal && ValVRegAndVal->Value == 0;
