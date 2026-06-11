@@ -904,6 +904,12 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          {MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32},
                          Custom);
     }
+    if (Subtarget->hasPackedFP64Ops()) {
+      setOperationAction(ISD::FADD, MVT::v2f64, Legal);
+      setOperationAction(ISD::FADD,
+                         {MVT::v4f64, MVT::v8f64, MVT::v16f64, MVT::v32f64},
+                         Custom);
+    }
   }
 
   setOperationAction({ISD::FNEG, ISD::FABS}, MVT::v4f16, Custom);
@@ -7446,7 +7452,8 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
          VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
          VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16);
+         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
+         VT == MVT::v16f64 || VT == MVT::v32f64);
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
 
@@ -7482,7 +7489,8 @@ SDValue SITargetLowering::splitBinaryVectorOp(SDValue Op,
          VT == MVT::v8bf16 || VT == MVT::v16i16 || VT == MVT::v16f16 ||
          VT == MVT::v16bf16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32i16 || VT == MVT::v32f16 ||
-         VT == MVT::v32bf16);
+         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
+         VT == MVT::v16f64 || VT == MVT::v32f64);
 
   auto [Lo0, Hi0] = DAG.SplitVectorOperand(Op.getNode(), 0);
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
@@ -7506,7 +7514,8 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
          VT == MVT::v16f16 || VT == MVT::v8f32 || VT == MVT::v16f32 ||
          VT == MVT::v32f32 || VT == MVT::v32f16 || VT == MVT::v32i16 ||
          VT == MVT::v4bf16 || VT == MVT::v8bf16 || VT == MVT::v16bf16 ||
-         VT == MVT::v32bf16);
+         VT == MVT::v32bf16 || VT == MVT::v4f64 || VT == MVT::v8f64 ||
+         VT == MVT::v16f64 || VT == MVT::v16f64);
 
   SDValue Op0 = Op.getOperand(0);
   auto [Lo0, Hi0] = Op0.getValueType().isVector()
