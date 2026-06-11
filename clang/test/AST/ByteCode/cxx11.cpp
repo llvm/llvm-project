@@ -445,3 +445,32 @@ namespace AddSubMulNonNumber {
     a:b:return;
   }
 }
+
+namespace SubobjectCompare {
+  struct S {
+    int i;
+  };
+  constexpr S s[2] = {};
+  static_assert(&s[0].i < &s[1].i, "");
+  static_assert(&s[0].i != &s[1].i, "");
+  static_assert(!(&s[0] < &s[0]), "");
+
+  class A            { public: int a; };
+  class B : public A { public: int b; };
+  class C : public B {                };
+  constexpr C c{};
+  static_assert(&c.a < &c.b, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{comparison of address of base class subobject 'A' of class 'B' to field 'b' has unspecified value}}
+  static_assert(&c.a != &c.b, "");
+
+  class X { public: int x; };
+  class Y { public: int y; };
+  class Z : public X, public Y {};
+  constexpr Z z{};
+  static_assert(&z.x < &z.y, ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  static_assert(&z.x != &z.y, ""); // expected-error {{failed}} FIXME
+  static_assert((void*)(X*)&z < (void*)(Y*)&z, ""); // both-error {{not an integral constant expression}} \
+                                                    // both-note {{comparison of addresses of subobjects of different base classes has unspecified value}}
+  static_assert((void*)(X*)&z != (void*)(Y*)&z, ""); // expected-error {{failed}} FIXME
+}
