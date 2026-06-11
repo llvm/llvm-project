@@ -420,8 +420,8 @@ public:
         std::move(__last),
         std::move(__result),
         std::move(__init),
-        std::move(__binary_op),
-        std::move(__unary_op),
+        __binary_op,
+        __unary_op,
         std::move(__phase3));
   }
 
