@@ -35,8 +35,6 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
            "Override module's tune CPU.">,
     Option<"forcedTargetFeatures", "target-features", "std::string",
            /*default=*/"", "Override module's target features.">,
-    Option<"forcedTargetABI", "target-abi", "std::string", /*default=*/"",
-           "Override module's target ABI.">,
     Option<"applyTBAA", "apply-tbaa", "bool", /*default=*/"false",
            "Attach TBAA tags to memory accessing operations.">,
     Option<"typeDescriptorsRenamedForAssembly",
