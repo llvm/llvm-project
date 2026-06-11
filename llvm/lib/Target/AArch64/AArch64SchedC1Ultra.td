@@ -178,7 +178,6 @@ class C1UStreamingOnlySchedWrite<SchedWrite StreamingWrite>
 
 // Detailed CME scheduling derived from the SME2 software optimization guide.
 def C1UWrite_1c_CMEPERMS : C1UCMEWrite<1, [C1UUnitCMEPERMS]>;
-def C1UWrite_1c_CMEPERMS_1rc : C1UCMEWriteRC<1, [C1UUnitCMEPERMS], [1]>;
 def C1UWrite_1c_CMEPERMS_2rc : C1UCMEWriteRC<1, [C1UUnitCMEPERMS], [2]>;
 def C1UWrite_1c_CMERNMRET : C1UCMEWrite<1, [C1UUnitCMERNMRET]>;
 def C1UWrite_1c_CMEMML0_4rc : C1UCMEWriteRC<1, [C1UUnitCMEMML0], [4]>;
@@ -201,32 +200,16 @@ def C1UWrite_2c_3SA_3V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
                                                  C1UUnitSA, C1UUnitV01,
                                                  C1UUnitV01, C1UUnitV01,
                                                  C1UUnitCMEST]>;
-def C1UWrite_2c_3SA_6V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
-                                                 C1UUnitSA, C1UUnitV01,
-                                                 C1UUnitV01, C1UUnitV01,
-                                                 C1UUnitV01, C1UUnitV01,
-                                                 C1UUnitV01, C1UUnitCMEST]>;
 def C1UWrite_2c_4SA_4V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
                                                  C1UUnitSA, C1UUnitSA,
                                                  C1UUnitV01, C1UUnitV01,
                                                  C1UUnitV01, C1UUnitV01,
                                                  C1UUnitCMEST]>;
-def C1UWrite_2c_5SA_5V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
-                                                 C1UUnitSA, C1UUnitSA,
-                                                 C1UUnitSA, C1UUnitV01,
-                                                 C1UUnitV01, C1UUnitV01,
-                                                 C1UUnitV01, C1UUnitV01,
-                                                 C1UUnitCMEST]>;
 def C1UWrite_4c_CMEPERMS : C1UCMEWrite<4, [C1UUnitCMEPERMS]>;
 def C1UWrite_4c_CMEPERMS_2rc : C1UCMEWriteRC<4, [C1UUnitCMEPERMS], [2]>;
-//def C1UWrite_5c_CMEPERMS : C1UCMEWrite<5, [C1UUnitCMEPERMS]>;
 def C1UWrite_5c_CMEPERMS_2rc : C1UCMEWriteRC<5, [C1UUnitCMEPERMS], [2]>;
 def C1UWrite_4c_CMEPERMF : C1UCMEWrite<4, [C1UUnitCMEPERMF]>;
 def C1UWrite_4c_CMEPERMF_1rc : C1UCMEWriteRC<4, [C1UUnitCMEPERMF], [3]>;
-def C1UWrite_4c_CMEPERMF_VX0ALU : C1UCMEWrite<4, [C1UUnitCMEPERMF,
-                                                  C1UUnitCMEVX0ALU]>;
-def C1UWrite_1c_CMEMML0 : C1UCMEWrite<1, [C1UUnitCMEMML0]>;
-def C1UWrite_4c_CMEPERMF_5rc : C1UCMEWriteRC<4, [C1UUnitCMEPERMF], [6]>;
 def C1UWrite_4c_CMEMML0_4rc : C1UCMEWriteRC<4, [C1UUnitCMEMML0], [4]>;
 def C1UWrite_4c_CMEMML0_6rc : C1UCMEWriteRC<4, [C1UUnitCMEMML0], [6]>;
 def C1UWrite_4c_CMEMML0_8rc : C1UCMEWriteRC<4, [C1UUnitCMEMML0], [8]>;
@@ -241,12 +224,8 @@ def C1UWrite_4c_CMEVX0ALU_PERMF_2rc
 def C1UWrite_4c_CMEVXFPDOT : C1UCMEWrite<4, [C1UUnitCMEVXFPDOT]>;
 def C1UWrite_4c_CMEVXMUL : C1UCMEWrite<4, [C1UUnitCMEVXMUL]>;
 def C1UWrite_4c_CMEMML0 : C1UCMEWrite<4, [C1UUnitCMEMML0]>;
-def C1UWrite_4c_CMEPF_2rc : C1UCMEWriteRC<4, [C1UUnitCMEPF], [2]>;
 def C1UWrite_8c_CMEVXMUL_1rc : C1UCMEWriteRC<8, [C1UUnitCMEVXMUL], [2]>;
 def C1UWrite_8c_CMEVXALU_1rc : C1UCMEWriteRC<8, [C1UUnitCMEVXALU], [2]>;
-def C1UWrite_4c_1M0_CMEPERMF_VX0ALU : C1UCMEWrite<12, [C1UUnitM0,
-                                                       C1UUnitCMEPERMF,
-                                                       C1UUnitCMEVX0ALU]>;
 def C1UWrite_12c_1M0_CMEPERMF_VX0ALU_2rc
     : C1UCMEWriteRC<12, [C1UUnitM0, C1UUnitCMEPERMF, C1UUnitCMEVX0ALU],
                     [1, 6, 2]>;
@@ -308,12 +287,10 @@ def C1UWrite_13c_CMEMML1_PERMF_5rc
 def C1UWrite_10c_CMEMC_10rc : C1UCMEWriteRC<10, [C1UUnitCMEMC], [10]>;
 def C1UWrite_11c_CMEMC_11rc : C1UCMEWriteRC<11, [C1UUnitCMEMC], [11]>;
 def C1UWrite_12c_CMEMC_12rc : C1UCMEWriteRC<12, [C1UUnitCMEMC], [12]>;
-def C1UWrite_13c_CMEMC_13rc : C1UCMEWriteRC<13, [C1UUnitCMEMC], [13]>;
 def C1UWrite_17c_CMEMC_17rc : C1UCMEWriteRC<17, [C1UUnitCMEMC], [17]>;
 def C1UWrite_25c_CMEMC_25rc : C1UCMEWriteRC<25, [C1UUnitCMEMC], [25]>;
 
 // Define a small set of generic 1 micro-op types as placeholders.
-def C1UWrite_1c_1B      : SchedWriteRes<[C1UUnitB]>  { let Latency = 1; }
 def C1UWrite_2c_1B      : SchedWriteRes<[C1UUnitB]>  { let Latency = 2; }
 def C1UWrite_2c_1B_1I   : SchedWriteRes<[C1UUnitB, C1UUnitI]>  { let Latency = 2; }
 def C1UWrite_1c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 1; }
@@ -321,9 +298,7 @@ def C1UWrite_1c_8I          : SchedWriteRes<[
     C1UUnitI, C1UUnitI, C1UUnitI, C1UUnitI,
     C1UUnitI, C1UUnitI, C1UUnitI, C1UUnitI
 ]>  { let Latency = 1; }
-def C1UWrite_1c_2I      : SchedWriteRes<[C1UUnitI, C1UUnitI]>  { let Latency = 1; }
 def C1UWrite_2c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 2; }
-def C1UWrite_2c_2I      : SchedWriteRes<[C1UUnitI, C1UUnitI]>  { let Latency = 2; }
 def C1UWrite_3c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 3; }
 def C1UWrite_2c_1I4     : SchedWriteRes<[C1UUnitI4]> { let Latency = 2; }
 def C1UWrite_1c_1M      : SchedWriteRes<[C1UUnitM]>  { let Latency = 1; }
@@ -338,34 +313,25 @@ def C1UWrite_12c_1M0    : SchedWriteRes<[C1UUnitM0]>  { let Latency = 12;
                                                         let ReleaseAtCycles = [12]; }
 def C1UWrite_20c_1M0    : SchedWriteRes<[C1UUnitM0]>  { let Latency = 20;
                                                         let ReleaseAtCycles = [20]; }
-def C1UWrite_1c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 1; }
 def C1UWrite_2c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 2; }
 def C1UWrite_2c_3V      : SchedWriteRes<[C1UUnitV, C1UUnitV, C1UUnitV]>  { let Latency = 2; }
 def C1UWrite_3c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 3; }
-def C1UWrite_3c_2V      : SchedWriteRes<[C1UUnitV, C1UUnitV]>  { let Latency = 3; }
 def C1UWrite_4c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 4; }
 def C1UWrite_4c_2V      : SchedWriteRes<[C1UUnitV, C1UUnitV]>  { let Latency = 4; }
 def C1UWrite_4c_3V      : SchedWriteRes<[C1UUnitV, C1UUnitV, C1UUnitV]>  { let Latency = 4; }
-def C1UWrite_6c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 6; }
 def C1UWrite_6c_3V      : SchedWriteRes<[C1UUnitV, C1UUnitV, C1UUnitV]>  { let Latency = 6; }
 def C1UWrite_6c_5V      : SchedWriteRes<[C1UUnitV, C1UUnitV, C1UUnitV, C1UUnitV, C1UUnitV]>  { let Latency = 6; }
-def C1UWrite_8c_1V      : SchedWriteRes<[C1UUnitV]>  { let Latency = 8; }
 def C1UWrite_8c_4V      : SchedWriteRes<[C1UUnitV, C1UUnitV, C1UUnitV, C1UUnitV]>  { let Latency = 8; }
-def C1UWrite_1c_1V0     : SchedWriteRes<[C1UUnitV0]> { let Latency = 1; }
 def C1UWrite_2c_1V0     : SchedWriteRes<[C1UUnitV0]> { let Latency = 2; }
 def C1UWrite_4c_1V0     : SchedWriteRes<[C1UUnitV0]> { let Latency = 4; }
-def C1UWrite_6c_1V0     : SchedWriteRes<[C1UUnitV0]> { let Latency = 6; }
 def C1UWrite_6c_6V0     : SchedWriteRes<[C1UUnitV0, C1UUnitV0, C1UUnitV0,
                                          C1UUnitV0, C1UUnitV0, C1UUnitV0, ]> { let Latency = 6; }
-def C1UWrite_10c_1V0    : SchedWriteRes<[C1UUnitV0]> { let Latency = 10; }
 def C1UWrite_10c_10V0   : SchedWriteRes<[C1UUnitV0, C1UUnitV0, C1UUnitV0,
                                          C1UUnitV0, C1UUnitV0, C1UUnitV0,
                                          C1UUnitV0, C1UUnitV0, C1UUnitV0,
                                          C1UUnitV0]> { let Latency = 10; }
-def C1UWrite_12c_1V0    : SchedWriteRes<[C1UUnitV0]> { let Latency = 12; }
 def C1UWrite_12c_7V0    : SchedWriteRes<[C1UUnitV0, C1UUnitV0, C1UUnitV0, C1UUnitV0,
                                          C1UUnitV0, C1UUnitV0, C1UUnitV0]> { let Latency = 12; }
-def C1UWrite_20c_1V0    : SchedWriteRes<[C1UUnitV0]> { let Latency = 20; }
 def C1UWrite_20c_7V0    : SchedWriteRes<[C1UUnitV0, C1UUnitV0, C1UUnitV0, C1UUnitV0,
                                          C1UUnitV0, C1UUnitV0, C1UUnitV0]> { let Latency = 20; }
 def C1UWrite_3c_1V1     : SchedWriteRes<[C1UUnitV1]> { let Latency = 3; }
@@ -376,7 +342,6 @@ def C1UWrite_2c_1V01    : SchedWriteRes<[C1UUnitV01]>  { let Latency = 2; }
 def C1UWrite_3c_1V01    : SchedWriteRes<[C1UUnitV01]>  { let Latency = 3; }
 def C1UWrite_2c_1V0134  : SchedWriteRes<[C1UUnitV0134]>  { let Latency = 2; }
 def C1UWrite_3c_1V0134  : SchedWriteRes<[C1UUnitV0134]>  { let Latency = 3; }
-def C1UWrite_3c_2V0134  : SchedWriteRes<[C1UUnitV0134, C1UUnitV0134]>  { let Latency = 3; }
 def C1UWrite_4c_1V0134  : SchedWriteRes<[C1UUnitV0134]>  { let Latency = 4; }
 def C1UWrite_4c_2V0134  : SchedWriteRes<[C1UUnitV0134, C1UUnitV0134]>  { let Latency = 4; }
 def C1UWrite_6c_1V0134  : SchedWriteRes<[C1UUnitV0134]>  { let Latency = 6; }
@@ -384,16 +349,12 @@ def C1UWrite_6c_4V0134  : SchedWriteRes<[C1UUnitV0134, C1UUnitV0134,
                                          C1UUnitV0134, C1UUnitV0134]> {
   let Latency = 6;
 }
-def C1UWrite_1c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 1; }
 def C1UWrite_4c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 4; }
 def C1UWrite_4c_1L_1I   : SchedWriteRes<[C1UUnitL, C1UUnitI]>  { let Latency = 4; }
 def C1UWrite_6c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 6; }
 def C1UWrite_1c_1SA     : SchedWriteRes<[C1UUnitSA]> { let Latency = 1; }
 
-def C1UWrite_2c_1B_1S : SchedWriteRes<[C1UUnitB, C1UUnitS]> { let Latency = 2; }
-
 def C1UWrite_1c_1I_1Flg : SchedWriteRes<[C1UUnitI, C1UUnitFlg]> { let Latency = 1; }
-def C1UWrite_1c_2I_2Flg : SchedWriteRes<[C1UUnitI, C1UUnitI, C1UUnitFlg, C1UUnitFlg]> { let Latency = 1; }
 def C1UWrite_2c_1I_1Flg : SchedWriteRes<[C1UUnitI, C1UUnitFlg]> { let Latency = 2; }
 
 def C1UWrite_1c_1SA_1D : SchedWriteRes<[C1UUnitSA, C1UUnitD]> { let Latency = 1; }
@@ -410,14 +371,6 @@ def C1UWrite_2c_3SA_6V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA,
                                           C1UUnitV01, C1UUnitV01, C1UUnitV01,
                                           C1UUnitV01, C1UUnitV01, C1UUnitV01]> { let Latency = 2; }
 def C1UWrite_2c_1SA_1V01_1I : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitI]> { let Latency = 2; }
-
-def C1UWrite_2c_1I_1M : SchedWriteRes<[C1UUnitI, C1UUnitM]> { let Latency = 2; }
-
-def C1UWrite_2c_1L_1I : SchedWriteRes<[C1UUnitL, C1UUnitI]> { let Latency = 2; }
-
-def C1UWrite_3c_1I_1M : SchedWriteRes<[C1UUnitI, C1UUnitM]> {
-  let Latency = 3;
-}
 
 def C1UWrite_4c_2L    : SchedWriteRes<[C1UUnitL, C1UUnitL]> { let Latency = 4; }
 def C1UWrite_4c_2L_1I : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitI]> { let Latency = 4; }
@@ -440,9 +393,6 @@ def C1UWrite_7c_1L_1I : SchedWriteRes<[C1UUnitL, C1UUnitI]> {
 
 def C1UWrite_5c_1M0_1V : SchedWriteRes<[C1UUnitM0, C1UUnitV]> {
   let Latency = 5;
-}
-def C1UWrite_2c_1M0_1V : SchedWriteRes<[C1UUnitM0, C1UUnitV]> {
-  let Latency = 2;
 }
 def C1UWrite_3c_1M0_1V : SchedWriteRes<[C1UUnitM0, C1UUnitV]> {
   let Latency = 3;
@@ -486,10 +436,6 @@ def C1UWrite_6c_4L : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitL, C1UUnitL]> {
 
 def C1UWrite_7c_4L : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitL, C1UUnitL]> {
   let Latency = 7;
-}
-
-def C1UWrite_8c_1L_1V : SchedWriteRes<[C1UUnitL, C1UUnitV]> {
-  let Latency = 8;
 }
 
 def C1UWrite_6c_1L_1V : SchedWriteRes<[C1UUnitL, C1UUnitV]> {
@@ -545,35 +491,19 @@ def C1UWrite_11c_4L_8V_1I : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitL, C1UUnit
   let Latency = 11;
 }
 
-def C1UWrite_9c_6L_4V : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitL, C1UUnitL,
-                                      C1UUnitL, C1UUnitL, C1UUnitV, C1UUnitV,
-                                      C1UUnitV, C1UUnitV]> {
-  let Latency = 9;
-}
-
 def C1UWrite_9c_4L_8V : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitL, C1UUnitL,
                                        C1UUnitV, C1UUnitV, C1UUnitV, C1UUnitV,
                                        C1UUnitV, C1UUnitV, C1UUnitV, C1UUnitV]> {
   let Latency = 9;
 }
 
-def C1UWrite_8c_3L_4V : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitL,
-                                      C1UUnitV, C1UUnitV, C1UUnitV, C1UUnitV]> {
-  let Latency = 8;
-}
-
 def C1UWrite_8c_2L_4V : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitV, C1UUnitV, C1UUnitV, C1UUnitV]> {
-  let Latency = 8;
-}
-def C1UWrite_8c_4L_4V : SchedWriteRes<[C1UUnitL, C1UUnitL, C1UUnitL, C1UUnitL,
-                                      C1UUnitV, C1UUnitV, C1UUnitV, C1UUnitV]> {
   let Latency = 8;
 }
 
 def C1UWrite_4c_1SA_1V01_1V : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitV]> { let Latency = 4; }
 def C1UWrite_4c_2SA_2V01_2V : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitV01, C1UUnitV01,
                                              C1UUnitV, C1UUnitV]> { let Latency = 4; }
-def C1UWrite_5c_1SA_1V01_1V : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitV]> { let Latency = 5; }
 def C1UWrite_5c_5SA_5V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA, C1UUnitSA, C1UUnitSA,
                                           C1UUnitV01, C1UUnitV01, C1UUnitV01, C1UUnitV01, C1UUnitV01]> {
   let Latency = 5;
@@ -609,12 +539,6 @@ def C1UWrite_7c_5SA_5V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA, C1UUn
   let Latency = 7;
 }
 
-def C1UWrite_7c_1SA_1V01_1V : SchedWriteRes<[
-    C1UUnitSA, C1UUnitV01, C1UUnitV
-]> {
-  let Latency = 7;
-}
-
 def C1UWrite_7c_12SA_12V01_12V : SchedWriteRes<[
     C1UUnitSA, C1UUnitV01, C1UUnitV,
     C1UUnitSA, C1UUnitV01, C1UUnitV,
@@ -638,7 +562,6 @@ def C1UWrite_6c_2V1 : SchedWriteRes<[C1UUnitV1, C1UUnitV1]> { let Latency = 6; }
 
 def C1UWrite_8c_1M0_1V1_1V01 : SchedWriteRes<[C1UUnitM0, C1UUnitV1, C1UUnitV01]> { let Latency = 8; }
 
-def C1UWrite_6c_1V1_1V01 : SchedWriteRes<[C1UUnitV1, C1UUnitV01]> { let Latency = 6; }
 def C1UWrite_5c_1V1_1V01 : SchedWriteRes<[C1UUnitV1, C1UUnitV01]> { let Latency = 5; }
 
 def C1UWrite_7c_1M0_1V0134 : SchedWriteRes<[C1UUnitM0, C1UUnitV0134]> { let Latency = 7; }
@@ -691,35 +614,6 @@ def C1UWrite_9c_1V01_1L : SchedWriteRes<[C1UUnitV01, C1UUnitL]> {
   let Latency = 9;
 }
 
-def C1UWrite_9c_1I_1L_1V : SchedWriteRes<[C1UUnitI, C1UUnitL, C1UUnitV]> {
-  let Latency = 9;
-}
-
-def C1UWrite_10c_1L_1V : SchedWriteRes<[C1UUnitL, C1UUnitV]> {
-  let Latency = 10;
-}
-
-def C1UWrite_11c_1I_1L_1V : SchedWriteRes<[C1UUnitI, C1UUnitL, C1UUnitV]> {
-  let Latency = 11;
-}
-
-
-def C1UWrite_4c_1I_1V_1SA_V : SchedWriteRes<[C1UUnitI, C1UUnitV, C1UUnitSA, C1UUnitV]> {
-  let Latency = 4;
-}
-
-
-def C1UWrite_5c_1I_1V_1SA_V : SchedWriteRes<[C1UUnitI, C1UUnitV, C1UUnitSA, C1UUnitV]> {
-  let Latency = 5;
-}
-
-def C1UWrite_7c_1I_1V_1SA_V : SchedWriteRes<[C1UUnitI, C1UUnitV, C1UUnitSA, C1UUnitV]> {
-  let Latency = 7;
-}
-
-def C1UWrite_2c_1SA_2V01 : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitV01]> {
-  let Latency = 2;
-}
 def C1UWrite_4c_2SA_2V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA,
                                          C1UUnitV01, C1UUnitV01]> {
   let Latency     = 4;
@@ -749,32 +643,24 @@ def C1UWrite_7c_4SA_4V01_1I : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA, C1
 }
 
 def C1UWrite_4c_1SA_1V01 : SchedWriteRes<[C1UUnitSA, C1UUnitV01]> { let Latency = 4; }
-def C1UWrite_4c_1SA_2V01 : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitV01]> { let Latency = 4; }
 def C1UWrite_4c_3SA_3V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA,
                                           C1UUnitV01, C1UUnitV01, C1UUnitV01]> { let Latency = 4; }
 def C1UWrite_4c_3SA_6V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA,
                                           C1UUnitV01, C1UUnitV01, C1UUnitV01, C1UUnitV01,
                                           C1UUnitV01, C1UUnitV01]> { let Latency = 4; }
 
-def C1UWrite_5c_1SA_2V01 : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitV01]> { let Latency = 5; }
 def C1UWrite_5c_3SA_6V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA,
                                           C1UUnitV01, C1UUnitV01,
                                           C1UUnitV01, C1UUnitV01,
                                           C1UUnitV01, C1UUnitV01]> { let Latency = 5; }
 
-def C1UWrite_6c_1SA_2V01 : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitV01]> { let Latency = 6; }
 def C1UWrite_6c_3SA_3V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA,
                                           C1UUnitV01, C1UUnitV01, C1UUnitV01]> { let Latency = 6; }
 
-def C1UWrite_7c_1SA_2V01 : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitV01]> { let Latency = 7; }
 def C1UWrite_7c_3SA_6V01 : SchedWriteRes<[C1UUnitSA, C1UUnitSA, C1UUnitSA,
                                           C1UUnitV01, C1UUnitV01,
                                           C1UUnitV01, C1UUnitV01,
                                           C1UUnitV01, C1UUnitV01]> { let Latency = 7;}
-
-def C1UWrite_3c_1M0_1M : SchedWriteRes<[C1UUnitM0, C1UUnitM]> { let Latency = 3; }
-
-def C1UWrite_4c_1M0_1M : SchedWriteRes<[C1UUnitM0, C1UUnitM]> { let Latency = 4; }
 
 // Forwarded types
 def C1UWr_FMA     : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
@@ -889,14 +775,6 @@ def C1UWrite_Extr : SchedWriteVariant<[
                      SchedVar<IsRORImmIdiomPred, [C1UWrite_1c_1I]>,
                      SchedVar<NoSchedPred,       [C1UWrite_3c_1I]>]>;
 
-def C1UWrite_LdrQ : SchedWriteVariant<[
-                      SchedVar<FPIsQForm,   [C1UWrite_7c_1L_1I]>,
-                      SchedVar<NoSchedPred,     [C1UWrite_6c_1L]>]>;
-
-def C1UWrite_StrQ : SchedWriteVariant<[
-                      SchedVar<FPIsQForm,   [C1UWrite_2c_1SA_1V01_1I]>,
-                      SchedVar<NoSchedPred,     [C1UWrite_2c_1SA_1V01]>]>;
-
 def C1UWrite_1or2c_1I : SchedWriteVariant<[
                       SchedVar<IsXOrWDest, [C1UWrite_1c_1I]>,
                       SchedVar<NoSchedPred, [C1UWrite_2c_1I]>]>;
@@ -906,10 +784,6 @@ def C1UWrite_1or2c_1I_1Flg : SchedWriteVariant<[
                       SchedVar<NoSchedPred, [C1UWrite_2c_1I_1Flg]>]>;
 
 
-def C1UWrite_2or3c_1V0 : SchedWriteVariant<[
-                      SchedVar<NeoversePdIsPg,  [C1UWrite_1c_1V0]>,
-                      SchedVar<NoSchedPred,     [C1UWrite_2c_1V0]>]>;
-
 def C1UWrite_2or4c_1SA_1V01 : SchedWriteVariant<[
                                 SchedVar<SameZRegDstSrcPred, [C1UWrite_4c_1SA_1V01]>,
                                 SchedVar<NoSchedPred, [C1UWrite_2c_1SA_1V01]>]>;
@@ -918,17 +792,9 @@ def C1UWrite_2or4c_3SA_6V01 : SchedWriteVariant<[
                                 SchedVar<SameZRegDstSrcPred, [C1UWrite_4c_3SA_6V01]>,
                                 SchedVar<NoSchedPred, [C1UWrite_2c_3SA_6V01]>]>;
 
-def C1UWrite_4or6c_1SA_2V01 : SchedWriteVariant<[
-                                SchedVar<SameZRegDstSrcPred, [C1UWrite_6c_1SA_2V01]>,
-                                SchedVar<NoSchedPred, [C1UWrite_4c_1SA_2V01]>]>;
-
 def C1UWrite_4or6c_3SA_3V01 : SchedWriteVariant<[
                                 SchedVar<SameZRegDstSrcPred, [C1UWrite_6c_3SA_3V01]>,
                                 SchedVar<NoSchedPred, [C1UWrite_4c_3SA_3V01]>]>;
-
-def C1UWrite_5or7c_1SA_2V01 : SchedWriteVariant<[
-                                SchedVar<SameZRegDstSrcPred, [C1UWrite_7c_1SA_2V01]>,
-                                SchedVar<NoSchedPred, [C1UWrite_5c_1SA_2V01]>]>;
 
 def C1UWrite_5or7c_3SA_6V01 : SchedWriteVariant<[
                                 SchedVar<SameZRegDstSrcPred, [C1UWrite_7c_3SA_6V01]>,
@@ -938,10 +804,6 @@ def C1UWrite_5or7c_3SA_6V01 : SchedWriteVariant<[
 def C1UWrite_5or7c_5SA_5V01 : SchedWriteVariant<[
                                 SchedVar<SameZRegDstSrcPred, [C1UWrite_7c_5SA_5V01]>,
                                 SchedVar<NoSchedPred, [C1UWrite_5c_5SA_5V01]>]>;
-
-def C1UWrite_3or4c_1M0_1M : SchedWriteVariant<[
-                      SchedVar<NeoversePdIsPg,  [C1UWrite_4c_1M0_1M]>,
-                      SchedVar<NoSchedPred,     [C1UWrite_3c_1M0_1M]>]>;
 
 def C1UWr_FMA_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXMUL, C1UWr_FMA>;
 def C1UWr_VA_CME : C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_1rc, C1UWr_VA>;
@@ -1024,10 +886,6 @@ def C1UWrite_2c_1V01_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
                                                   C1UWrite_2c_1V01>;
 def C1UWrite_2c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
                                                     C1UWrite_2c_1V0134>;
-def C1UWrite_3c_1V_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
-                                                C1UWrite_3c_1V>;
-def C1UWrite_3c_1V01_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
-                                                  C1UWrite_3c_1V01>;
 def C1UWrite_3c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
                                                     C1UWrite_3c_1V0134>;
 def C1UWrite_3c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEPERMF_1rc,
@@ -1046,10 +904,6 @@ def C1UWrite_4c_2V_CME : C1UStreamingSchedWrite<C1UWrite_16c_CMEVXALU_PERMF_2d3r
                                                 C1UWrite_4c_2V>;
 def C1UWrite_4c_2V0134_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
                                                     C1UWrite_4c_2V0134>;
-def C1UWrite_5c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_PERMF_1rc,
-                                                 C1UWrite_5c_1V1>;
-def C1UWrite_6c_1V0134_CME : C1UStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
-                                                    C1UWrite_6c_1V0134>;
 def C1UWrite_6c_1V_2V0134_CME
     : C1UStreamingSchedWrite<C1UWrite_12c_CMEVXALU_PERMF_2d3rc,
                              C1UWrite_6c_1V_2V0134>;
@@ -1058,15 +912,11 @@ def C1UWrite_6c_2V_1V0134_CME
                              C1UWrite_6c_2V_1V0134>;
 def C1UWrite_6c_3V_CME : C1UStreamingSchedWrite<C1UWrite_16c_CMEVXALU_PERMF_2d3rc,
                                                 C1UWrite_6c_3V>;
-def C1UWrite_8c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_PERMF_1rc,
-                                                 C1UWrite_8c_1V1>;
 def C1UWrite_8c_1V1_4rc_CME
     : C1UStreamingSchedWrite<C1UWrite_10c_CMEMC_10rc, C1UWrite_8c_1V1_4rc>;
 def C1UWrite_8c_1V_3V0134_CME
     : C1UStreamingSchedWrite<C1UWrite_12c_CMEVXALU_PERMF_2d3rc,
                              C1UWrite_8c_1V_3V0134>;
-def C1UWrite_8c_4V_CME : C1UStreamingSchedWrite<C1UWrite_24c_CMEVXALU_PERMS_2d5rc,
-                                                C1UWrite_8c_4V>;
 def C1UWrite_9c_1V1_2rc_CME
     : C1UStreamingSchedWrite<C1UWrite_11c_CMEMC_11rc, C1UWrite_9c_1V1_2rc>;
 def C1UWrite_11c_1V0_4rc_CME
@@ -1075,8 +925,6 @@ def C1UWrite_11c_1V1_4rc_CME
     : C1UStreamingSchedWrite<C1UWrite_12c_CMEMC_12rc, C1UWrite_11c_1V1_4rc>;
 def C1UWrite_12c_1V0_8rc_CME
     : C1UStreamingSchedWrite<C1UWrite_10c_CMEMC_10rc, C1UWrite_12c_1V0_8rc>;
-def C1UWrite_12c_1V1_CME : C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_PERMF_1rc,
-                                                  C1UWrite_12c_1V1>;
 def C1UWrite_12c_1V1_8rc_CME
     : C1UStreamingSchedWrite<C1UWrite_10c_CMEMC_10rc, C1UWrite_12c_1V1_8rc>;
 def C1UWrite_12c_7V0_CME
@@ -1090,8 +938,6 @@ def C1UWrite_20c_7V0_CME
 
 def C1UWrite_3c_1M0_CME : C1UStreamingSchedWrite<C1UWrite_4c_1M0_CMEVXALU,
                                                  C1UWrite_3c_1M0>;
-def C1UWrite_3c_1M0_1V_CME : C1UStreamingSchedWrite<C1UWrite_4c_1M_CMEPERMS_1rc,
-                                                    C1UWrite_3c_1M0_1V>;
 def C1UWrite_5c_1M0_1V_CME : C1UStreamingSchedWrite<C1UWrite_4c_1M0_CMEVXALU,
                                                     C1UWrite_5c_1M0_1V>;
 def C1UWrite_5c_1V1_1V01_CME : C1UStreamingSchedWrite<C1UWrite_8c_CMEVXALU_PERMF_1rc,
@@ -1184,22 +1030,6 @@ def C1UWrite_1c_1M_Streaming : SchedWriteVariant<[
                       SchedVar<SMESchedPred, [C1UWrite_1c_1M]>,
                       SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
 
-def C1UWrite_2c_1V_Streaming : SchedWriteVariant<[
-                      SchedVar<SMESchedPred, [C1UWrite_2c_1V]>,
-                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
-
-def C1UWrite_3c_1V_Streaming : SchedWriteVariant<[
-                      SchedVar<SMESchedPred, [C1UWrite_3c_1V]>,
-                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
-
-def C1UWrite_3c_1V01_Streaming : SchedWriteVariant<[
-                      SchedVar<SMESchedPred, [C1UWrite_3c_1V01]>,
-                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
-
-def C1UWrite_4c_1V_Streaming : SchedWriteVariant<[
-                      SchedVar<SMESchedPred, [C1UWrite_4c_1V]>,
-                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
-
 def C1UWrite_2c_1M_Streaming : SchedWriteVariant<[
                       SchedVar<SMESchedPred, [C1UWrite_2c_1M]>,
                       SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
@@ -1208,16 +1038,10 @@ def C1UWrite_3c_1M_Streaming : SchedWriteVariant<[
                       SchedVar<SMESchedPred, [C1UWrite_3c_1M]>,
                       SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
 
-def C1UWrite_2c_2M_Streaming : SchedWriteVariant<[
-                      SchedVar<SMESchedPred, [C1UWrite_2c_2M]>,
-                      SchedVar<NoSchedPred,          [C1UWrite_0c]>]>;
-
 def C1UWrite_2c_1V_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
                                                             C1UWrite_2c_1V>;
 def C1UWrite_3c_1V01_StreamingCME
     : C1USMEStreamingSchedWrite<C1UWrite_4c_CMEVXALU, C1UWrite_3c_1V01>;
-def C1UWrite_4c_1V_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_4c_CMEVXALU,
-                                                            C1UWrite_4c_1V>;
 def C1UWrite_2c_1M_StreamingCME
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1M_CMEVX0ALU, C1UWrite_2c_1M>;
 def C1UWrite_2c_2M_StreamingCME
