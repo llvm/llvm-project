@@ -2438,12 +2438,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       FTD1->getFriendTypeTemplateParameterLists();
   ArrayRef<TemplateParameterList *> TPL2 =
       FTD2->getFriendTypeTemplateParameterLists();
-  if (TPL1.size() != TPL2.size())
+  bool EquivalentTemplateParameterLists = llvm::equal(
+      TPL1, TPL2,
+      [&Context](TemplateParameterList *LHS, TemplateParameterList *RHS) {
+        return IsStructurallyEquivalent(Context, LHS, RHS);
+      });
+  if (!EquivalentTemplateParameterLists)
     return false;
-
-  for (unsigned I = 0, N = TPL1.size(); I != N; ++I)
-    if (!IsStructurallyEquivalent(Context, TPL1[I], TPL2[I]))
-      return false;
 
   TemplateName TN1 = FTD1->getFriendTemplateName();
   TemplateName TN2 = FTD2->getFriendTemplateName();
