@@ -11,7 +11,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 using namespace llvm::hlsl;
