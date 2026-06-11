@@ -2887,9 +2887,7 @@ VPWidenIntOrFpInductionRecipe::computeCost(ElementCount VF,
   assert(!getTruncInst() &&
          "truncated inductions should be costed by the legacy model");
   const InductionDescriptor &ID = getInductionDescriptor();
-
   InstructionCost Cost = Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
-
   Type *StepTy = getScalarType();
   unsigned IncOpc = ID.getKind() == InductionDescriptor::IK_IntInduction
                         ? Instruction::Add
