@@ -26,10 +26,9 @@ unsigned StringToOffsetTable::GetOrAddStringOffset(StringRef Str) {
   return II->second;
 }
 
-void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
-                                             const Twine &Name) const {
-  // This generates a `llvm::StringTable` which expects that entries are null
-  // terminated. So fail with an error if `AppendZero` is false.
+void StringToOffsetTable::EmitStringTableStorageDef(raw_ostream &OS,
+                                                    const Twine &Name) const {
+  // String table entries must be null terminated.
   if (!AppendZero)
     PrintFatalError("llvm::StringTable requires null terminated strings");
 
@@ -79,11 +78,17 @@ void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
   }
   OS << LineSep << (UseChars ? "};" : "  ;");
 
-  OS << formatv(R"(
+  OS << R"(
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
+)";
+}
 
+void StringToOffsetTable::EmitStringTableDef(raw_ostream &OS,
+                                             const Twine &Name) const {
+  EmitStringTableStorageDef(OS, Name);
+  OS << formatv(R"(
 {1} llvm::StringTable
 {2}{0} = {0}Storage;
 )",

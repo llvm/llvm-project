@@ -1736,10 +1736,11 @@ public:
   ///     static constexpr llvm::StringTable DiagStableIds;
   ///  #endif
   /// \endcode
-  void emit(raw_ostream &OS) const {
+  void emit(raw_ostream &OS, const RecordKeeper &Records) const {
     OS << "\n#ifdef GET_DIAG_STABLE_ID_ARRAYS\n";
     emitStableIDs(OS);
     emitLegacyStableIDs(OS);
+    emitDescriptions(OS, Records);
     OS << "#endif // GET_DIAG_STABLE_ID_ARRAYS\n\n";
   }
 
@@ -1795,6 +1796,28 @@ private:
     }
     OS << "};\n\n";
   }
+
+  static void emitDescriptions(raw_ostream &OS, const RecordKeeper &Records) {
+    DiagnosticTextBuilder DiagTextBuilder(Records);
+    StringToOffsetTable Descriptions;
+
+    OS << "enum {\n";
+    for (const Record &R :
+         make_pointee_range(Records.getAllDerivedDefinitions("Diagnostic"))) {
+      std::string Description = DiagTextBuilder.buildForDefinition(&R);
+      if (Description.size() >= (1U << 12))
+        PrintFatalError(R.getLoc(),
+                        "diagnostic description exceeds 12-bit length limit");
+
+      unsigned Offset = Descriptions.GetOrAddStringOffset(Description);
+      OS << "  DIAG_DESC_OFFSET_" << R.getName() << " = " << Offset << ",\n";
+    }
+    OS << "};\n\n";
+
+    if (Descriptions.size() >= (1U << 20))
+      PrintFatalError("diagnostic descriptions exceed 20-bit offset limit");
+    Descriptions.EmitStringTableStorageDef(OS, "StaticDiagInfoDescriptions");
+  }
 };
 } // namespace
 
@@ -1802,7 +1825,7 @@ private:
 void clang::EmitClangDiagsStableIDs(const RecordKeeper &Records,
                                     raw_ostream &OS) {
   DiagStableIDsMap StableIDs(Records);
-  StableIDs.emit(OS);
+  StableIDs.emit(OS, Records);
 }
 
 /// ClangDiagsDefsEmitter - The top-level class emits .def files containing
