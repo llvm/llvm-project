@@ -783,6 +783,20 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
+// PredicateRegionOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult PredicateRegionOp::verify() {
+  if (getRegion().empty())
+    return emitOpError("region needs to have at least one block");
+  if (getRegion().front().getNumArguments() > 0)
+    return emitOpError("region cannot have any arguments");
+  if (!getOperation()->getParentOfType<ComputeRegionOp>())
+    return emitOpError("must be nested within an acc.compute_region operation");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GPUParallelDimAttr
 //===----------------------------------------------------------------------===//
 

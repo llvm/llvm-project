@@ -18045,6 +18045,21 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
   if (!DebugCounter::shouldExecute(VectorizedGraphs))
     return true;
 
+  // If we are revectorizing reduction, it may result in same reduction pattern
+  // with shuffles as leaves of the reduction. Prevent SLP from revectorizing
+  // that shuffle pattern.
+  if (SLPReVec && ForReduction && VectorizableTree.size() == 3 &&
+      VectorizableTree[0]->State == TreeEntry::Vectorize &&
+      VectorizableTree[0]->getOpcode() == Instruction::ShuffleVector &&
+      VectorizableTree[1]->isGather() &&
+      isSplat(VectorizableTree[1]->Scalars) &&
+      VectorizableTree[2]->isGather() &&
+      allConstant(VectorizableTree[2]->Scalars)) {
+    LLVM_DEBUG(dbgs() << "SLP: Rejecting reduction tree with 3 nodes(shuffle "
+                         "as root and remaining are gather nodes).\n");
+    return true;
+  }
+
   // Graph is empty - do nothing.
   if (VectorizableTree.empty()) {
     assert(ExternalUses.empty() && "We shouldn't have any external users");
@@ -26218,6 +26233,20 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
        I = I->getNextNode()) {
     ArrayRef<ScheduleBundle *> Bundles = BS->getScheduleBundles(I);
     if (!Bundles.empty()) {
+      // An instruction that is modeled as a copyable element in some node may
+      // also be used directly by another node that was registered only after
+      // this instruction's dependencies were last computed. The deferred
+      // copyable-operand recomputation (RecalcCopyableOperandDeps) is consumed
+      // at the next bundle scheduling, which clears the operand's dependencies
+      // before that node joins the tree, so the recomputation misses the
+      // direct def-use edge and the count stays too low. The scheduler would
+      // then decrement the instruction more times than its dependency count,
+      // tripping the unscheduled-deps assertion. The whole tree is registered
+      // now, so clear and recompute such dependencies against the full tree.
+      if (ScheduleData *SD = BS->getScheduleData(I);
+          SD && SD->hasValidDependencies() &&
+          !BS->getScheduleCopyableData(I).empty())
+        SD->clearDirectDependencies();
       for (ScheduleBundle *Bundle : Bundles) {
         Bundle->setSchedulingPriority(Idx++);
         if (const TreeEntry *TE = Bundle->getTreeEntry();
@@ -30216,25 +30245,33 @@ private:
     } else if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
       unsigned DestTyNumElements = getNumElements(VecTy);
       unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
-      Rdx = PoisonValue::get(
-          getWidenedType(Vec->getType()->getScalarType(), DestTyNumElements));
-      for (unsigned I : seq<unsigned>(DestTyNumElements)) {
-        // Do reduction for each lane.
-        // e.g., do reduce add for
-        // VL[0] = <4 x Ty> <a, b, c, d>
-        // VL[1] = <4 x Ty> <e, f, g, h>
-        // Lane[0] = <2 x Ty> <a, e>
-        // Lane[1] = <2 x Ty> <b, f>
-        // Lane[2] = <2 x Ty> <c, g>
-        // Lane[3] = <2 x Ty> <d, h>
-        // result[0] = reduce add Lane[0]
-        // result[1] = reduce add Lane[1]
-        // result[2] = reduce add Lane[2]
-        // result[3] = reduce add Lane[3]
-        SmallVector<int, 16> Mask = createStrideMask(I, DestTyNumElements, VF);
-        Value *Lane = Builder.CreateShuffleVector(Vec, Mask);
-        Rdx = Builder.CreateInsertElement(
-            Rdx, emitReduction(Lane, Builder, &TTI, DestTy), I);
+      // e.g. Consider vector reduce add.
+      // Initial reduction is
+      // clang-format off
+      // %add0 = add <4 x i32> zeroinitializer, %A
+      // %add1 = add <4 x i32> %add0, %B
+      //
+      // where,
+      // %A = <a, b, c, d>
+      // %B = <e, f, g, h>
+      // %add1 = A + B = <a + e, b + f, c + g, d + h>
+      //
+      // After revectorization with VF=2 and Vec = <a, b, c, d, e, f, g, h>,
+      // the reduction can be expressed as:
+      // %A = shufflevector <8 x i32> %Vec, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+      // %B = shufflevector <8 x i32> %Vec, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+      // %add0 = add <4 x i32> zeroinitializer, %A
+      // %add1 = add <4 x i32> %add0, %B
+      // clang-format on
+      Rdx = nullptr;
+      for (auto I : seq<unsigned>(VF)) {
+        auto Position = I * DestTyNumElements;
+        Value *SubVec =
+            createExtractVector(Builder, Vec, DestTyNumElements, Position);
+        if (!Rdx)
+          Rdx = SubVec;
+        else
+          Rdx = createOp(Builder, RdxKind, Rdx, SubVec, "rdx.op", ReductionOps);
       }
     } else {
       Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
@@ -30263,57 +30300,61 @@ private:
     // If all of the reduced values are constant, the vector cost is 0, since
     // the reduction value can be calculated at the compile time.
     bool AllConsts = allConstant(ReducedVals);
-    auto EvaluateScalarCost = [&](function_ref<InstructionCost()> GenCostFn) {
-      InstructionCost Cost = 0;
-      // Scalar cost is repeated for N-1 elements.
-      int Cnt = ReducedVals.size();
-      for (Value *RdxVal : ReducedVals) {
-        if (!isa<Instruction>(RdxVal))
-          continue;
-        if (Cnt == 1) {
-          unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
-          Cost += (SameValueCount ? SameValueCount - 1 : 0) * GenCostFn();
-          break;
-        }
-        --Cnt;
-        if (RdxVal->hasNUsesOrMore(IsCmpSelMinMax ? 3 : 2)) {
-          unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
-          Cost += (SameValueCount ? SameValueCount : 1) * GenCostFn();
-          continue;
-        }
-        InstructionCost ScalarCost = 0;
-        for (User *U : RdxVal->users()) {
-          auto *RdxOp = cast<Instruction>(U);
-          if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
-            if (RdxKind == RecurKind::FAdd) {
-              InstructionCost FMACost = canConvertToFMA(
-                  RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
-              if (FMACost.isValid()) {
-                LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
-                if (auto *I = dyn_cast<Instruction>(RdxVal)) {
-                  // Also, exclude scalar fmul cost.
-                  InstructionCost FMulCost =
-                      TTI->getInstructionCost(I, CostKind);
-                  LLVM_DEBUG(dbgs() << "Minus FMul cost: " << FMulCost << "\n");
-                  FMACost -= FMulCost;
+    auto EvaluateScalarCost =
+        [&](function_ref<InstructionCost(Instruction *)> GenCostFn) {
+          InstructionCost Cost = 0;
+          // Scalar cost is repeated for N-1 elements.
+          int Cnt = ReducedVals.size();
+          for (auto [Idx, RdxVal] : enumerate(ReducedVals)) {
+            if (!isa<Instruction>(RdxVal))
+              continue;
+            Instruction *RdxOp = ReducedValsToOps[ReducedVals[Idx]].front();
+            if (Cnt == 1) {
+              unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
+              Cost +=
+                  (SameValueCount ? SameValueCount - 1 : 0) * GenCostFn(RdxOp);
+              break;
+            }
+            --Cnt;
+            if (RdxVal->hasNUsesOrMore(IsCmpSelMinMax ? 3 : 2)) {
+              unsigned SameValueCount = SameValuesCounter.lookup(RdxVal);
+              Cost += (SameValueCount ? SameValueCount : 1) * GenCostFn(RdxOp);
+              continue;
+            }
+            InstructionCost ScalarCost = 0;
+            for (User *U : RdxVal->users()) {
+              auto *RdxOp = cast<Instruction>(U);
+              if (hasRequiredNumberOfUses(IsCmpSelMinMax, RdxOp)) {
+                if (RdxKind == RecurKind::FAdd) {
+                  InstructionCost FMACost = canConvertToFMA(
+                      RdxOp, getSameOpcode(RdxOp, TLI), DT, DL, *TTI, TLI);
+                  if (FMACost.isValid()) {
+                    LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
+                    if (auto *I = dyn_cast<Instruction>(RdxVal)) {
+                      // Also, exclude scalar fmul cost.
+                      InstructionCost FMulCost =
+                          TTI->getInstructionCost(I, CostKind);
+                      LLVM_DEBUG(dbgs()
+                                 << "Minus FMul cost: " << FMulCost << "\n");
+                      FMACost -= FMulCost;
+                    }
+                    ScalarCost += FMACost;
+                    continue;
+                  }
                 }
-                ScalarCost += FMACost;
+                ScalarCost += TTI->getInstructionCost(RdxOp, CostKind);
                 continue;
               }
+              ScalarCost = InstructionCost::getInvalid();
+              break;
             }
-            ScalarCost += TTI->getInstructionCost(RdxOp, CostKind);
-            continue;
+            if (ScalarCost.isValid())
+              Cost += ScalarCost;
+            else
+              Cost += GenCostFn(RdxOp);
           }
-          ScalarCost = InstructionCost::getInvalid();
-          break;
-        }
-        if (ScalarCost.isValid())
-          Cost += ScalarCost;
-        else
-          Cost += GenCostFn();
-      }
-      return Cost;
-    };
+          return Cost;
+        };
     // Require reduction cost if:
     // 1. This type is not a full register type and no other vectors with the
     // same type in the storage (first vector with small type).
@@ -30335,18 +30376,20 @@ private:
             assert(SLPReVec && "FixedVectorType is not expected.");
             unsigned ScalarTyNumElements = VecTy->getNumElements();
             for (unsigned I : seq<unsigned>(ReducedVals.size())) {
-              VectorCost += TTI->getShuffleCost(
-                  TTI::SK_PermuteSingleSrc,
-                  FixedVectorType::get(VecTy->getScalarType(),
-                                       ReducedVals.size()),
-                  VectorTy,
-                  createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
-              VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy,
-                                                            FMF, CostKind);
+              VectorCost +=
+                  ::getShuffleCost(*TTI, TTI::SK_ExtractSubvector, VectorTy, {},
+                                   CostKind, I * ScalarTyNumElements, VecTy);
             }
-            VectorCost += TTI->getScalarizationOverhead(
-                VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
-                /*Extract*/ false, TTI::TCK_RecipThroughput);
+            // We get one less arithmetic instruction compared to number of
+            // reduced values. We are also passing CtxI so that the backend can
+            // synthesize FMF from the respective reduction instruction.
+            for (unsigned I : seq<unsigned>(ReducedVals.size() - 1)) {
+              VectorCost += TTI->getArithmeticInstrCost(
+                  RdxOpcode, VecTy, CostKind,
+                  TTI::getOperandInfo(ReducedVals[I]),
+                  TTI::getOperandInfo(ReducedVals[I + 1]), {},
+                  ReducedValsToOps[ReducedVals[I]].front());
+            }
           } else {
             Type *RedTy = VectorTy->getElementType();
             auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
@@ -30415,8 +30458,11 @@ private:
           }
         }
       }
-      ScalarCost = EvaluateScalarCost([&]() {
-        return TTI->getArithmeticInstrCost(RdxOpcode, ScalarTy, CostKind);
+      ScalarCost = EvaluateScalarCost([&](Instruction *RdxOp) {
+        return TTI->getArithmeticInstrCost(
+            RdxOpcode, ScalarTy, CostKind,
+            TTI::getOperandInfo(RdxOp->getOperand(0)),
+            TTI::getOperandInfo(RdxOp->getOperand(1)), {}, RdxOp);
       });
       break;
     }
@@ -30451,7 +30497,7 @@ private:
           }
         }
       }
-      ScalarCost = EvaluateScalarCost([&]() {
+      ScalarCost = EvaluateScalarCost([&](Instruction *RdxOp) {
         IntrinsicCostAttributes ICA(Id, ScalarTy, {ScalarTy, ScalarTy}, FMF);
         return TTI->getIntrinsicInstrCost(ICA, CostKind);
       });

@@ -1027,13 +1027,18 @@ clang::FunctionDecl *PdbAstBuilderClang::CreateFunctionDecl(
     TypeIndex class_index = func_record.getClassType();
 
     CVType parent_cvt = index.tpi().getType(class_index);
+    if (!IsTagRecord(parent_cvt))
+      return nullptr;
     TagRecord tag_record = CVTagRecord::create(parent_cvt).asTag();
     // If it's a forward reference, try to get the real TypeIndex.
     if (tag_record.isForwardRef()) {
       llvm::Expected<TypeIndex> eti =
           index.tpi().findFullDeclForForwardRef(class_index);
       if (eti) {
-        tag_record = CVTagRecord::create(index.tpi().getType(*eti)).asTag();
+        CVType resolved_tag_record = index.tpi().getType(*eti);
+        if (!IsTagRecord(resolved_tag_record))
+          return nullptr;
+        tag_record = CVTagRecord::create(resolved_tag_record).asTag();
       } else {
         LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), eti.takeError(),
                        "failed to find full decl for forward ref: {0}");
@@ -1229,6 +1234,8 @@ PdbAstBuilderClang::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
 
   const clang::FunctionProtoType *func_type =
       llvm::dyn_cast<clang::FunctionProtoType>(qt);
+  if (!func_type)
+    return nullptr;
 
   CompilerType func_ct = ToCompilerType(qt);
 
