@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/string_view.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::cpp::string_view;
@@ -282,4 +283,20 @@ TEST(LlvmLibcStringViewTest, Contains) {
   EXPECT_FALSE(Tmp.substr(6).contains('c'));
   EXPECT_FALSE(Tmp.substr(6).contains('d'));
   EXPECT_FALSE(Tmp.substr(6).contains('e'));
+}
+
+TEST(LlvmLibcStringViewTest, WideCharacterComparison) {
+  // Check that wide character comparison is lexicographic by character and not
+  // equivalent to memcmp, which would be incorrect on little endian.
+  char BytesA[] = {1, 2, 3, 4};
+  char BytesB[] = {4, 3, 2, 1};
+  char32_t CharA;
+  char32_t CharB;
+  LIBC_NAMESPACE::inline_memcpy(&CharA, BytesA, sizeof(CharA));
+  LIBC_NAMESPACE::inline_memcpy(&CharB, BytesB, sizeof(CharB));
+
+  LIBC_NAMESPACE::cpp::basic_string_view<char32_t> StringViewA(&CharA, 1);
+  LIBC_NAMESPACE::cpp::basic_string_view<char32_t> StringViewB(&CharB, 1);
+
+  EXPECT_EQ(StringViewA < StringViewB, CharA < CharB);
 }
