@@ -4,8 +4,6 @@
 // wraps a scalar with identical size and alignment (e.g. std::atomic<int>
 // wrapping int, or struct { int c; } vs int).
 
-// expected-no-diagnostics
-
 typedef int int32_t;
 using size_t = unsigned long long;
 void *malloc(size_t size);
@@ -39,4 +37,25 @@ int main() {
   work<int>();
   work<s_int>();
   return 0;
+}
+
+void test_no_false_negatives() {
+  // Unrelated struct with the same size
+  struct Color { float r; };
+  int *p = (int *)malloc(sizeof(Color));
+  // expected-warning@-1{{Result of 'malloc' is converted to a pointer of type 'int', which is incompatible with sizeof operand type 'Color'}}
+
+  // Multi-field struct with the same size and alignment as the scalar
+  struct Pair { int a; int b; };  // 8 bytes, align 4
+  Pair *pr = (Pair *)malloc(sizeof(long));
+  // expected-warning@-1{{Result of 'malloc' is converted to a pointer of type 'Pair', which is incompatible with sizeof operand type 'long'}}
+
+  struct Status { int code; };
+  float *f = (float *)malloc(sizeof(Status));
+  // expected-warning@-1{{Result of 'malloc' is converted to a pointer of type 'float', which is incompatible with sizeof operand type 'Status'}}
+
+  // Pointer-sized struct vs. pointer-sized scalar
+  struct Handle { long opaque; };
+  double *d = (double *)malloc(sizeof(Handle));
+  // expected-warning@-1{{Result of 'malloc' is converted to a pointer of type 'double', which is incompatible with sizeof operand type 'Handle'}}
 }
