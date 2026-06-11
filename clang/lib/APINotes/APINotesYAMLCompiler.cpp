@@ -1151,9 +1151,8 @@ public:
     }
 
     for (const auto &CXXMethod : T.Methods) {
-      if (CXXMethod.Where && CXXMethod.Where->Parameters) {
-        emitError(
-            "'Where.Parameters' is not supported by binary API notes yet");
+      if (CXXMethod.Where) {
+        emitError("'Where' is not supported by binary API notes yet");
         continue;
       }
 
@@ -1230,9 +1229,8 @@ public:
     // Write all global functions.
     llvm::StringSet<> KnownFunctions;
     for (const auto &Function : TLItems.Functions) {
-      if (Function.Where && Function.Where->Parameters) {
-        emitError(
-            "'Where.Parameters' is not supported by binary API notes yet");
+      if (Function.Where) {
+        emitError("'Where' is not supported by binary API notes yet");
         continue;
       }
 
