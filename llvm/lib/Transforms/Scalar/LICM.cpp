@@ -1080,7 +1080,7 @@ getConstantInsertionIndex(InsertElementInst *Ins) {
     return std::nullopt;
   auto *VecTy = cast<VectorType>(Ins->getType());
 
-  // Avoid hoisting past out of bounds inserts
+  // Avoid hoisting past out of bounds inserts.
   if (InsertedIdxCI->isNegative() ||
       InsertedIdxCI->getValue().uge(
           VecTy->getElementCount().getKnownMinValue()))
