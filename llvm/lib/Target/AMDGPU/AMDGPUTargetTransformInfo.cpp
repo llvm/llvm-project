@@ -1805,7 +1805,34 @@ InstructionCost GCNTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       return divideCeil(DL.getTypeSizeInBits(VecTy) - 1,
                         getLoadStoreVecRegBitWidth(AddressSpace));
     }
+
+    InstructionCost BaseCost = BaseT::getMemoryOpCost(
+        Opcode, Src, Alignment, AddressSpace, CostKind, OpInfo, I);
+    if (Opcode != Instruction::Load || CostKind != TTI::TCK_RecipThroughput)
+      return BaseCost;
+
+    switch (AddressSpace) {
+    case AMDGPUAS::GLOBAL_ADDRESS:
+    case AMDGPUAS::CONSTANT_ADDRESS:
+    case AMDGPUAS::CONSTANT_ADDRESS_32BIT:
+    case AMDGPUAS::FLAT_ADDRESS:
+    case AMDGPUAS::LOCAL_ADDRESS:
+    case AMDGPUAS::PRIVATE_ADDRESS:
+      break;
+    default:
+      return BaseCost;
+    }
+
+    TypeSize StoreSize = DL.getTypeStoreSizeInBits(VecTy);
+    if (StoreSize.isScalable())
+      return BaseCost;
+
+    constexpr uint64_t MaxSingleMemoryOpBits = 128;
+    InstructionCost WidthCost =
+        divideCeil(StoreSize.getFixedValue(), MaxSingleMemoryOpBits);
+    return std::max(BaseCost, WidthCost);
   }
+
   return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
                                 OpInfo, I);
 }

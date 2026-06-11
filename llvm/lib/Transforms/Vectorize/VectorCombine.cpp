@@ -133,6 +133,7 @@ private:
   bool foldBinopOfReductions(Instruction &I);
   bool foldSingleElementStore(Instruction &I);
   bool scalarizeLoad(Instruction &I);
+  bool shrinkLoadForExtracts(Instruction &I);
   bool scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy, Value *Ptr);
   bool scalarizeExtExtract(Instruction &I);
@@ -2154,6 +2155,173 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
   }
 
   FailureGuard.release();
+  return true;
+}
+
+/// Try to shrink vector loads feeding extractelement instructions when some
+/// of the loaded lanes are not demanded.
+bool VectorCombine::shrinkLoadForExtracts(Instruction &I) {
+  auto *OldLoad = dyn_cast<LoadInst>(&I);
+  if (!OldLoad || !OldLoad->isSimple())
+    return false;
+
+  auto *OldLoadTy = dyn_cast<FixedVectorType>(OldLoad->getType());
+  if (!OldLoadTy)
+    return false;
+
+  Type *EltTy = OldLoadTy->getElementType();
+  if (!EltTy->isSized())
+    return false;
+
+  TypeSize EltSizeInBits = DL->getTypeSizeInBits(EltTy);
+  if (EltSizeInBits.isScalable())
+    return false;
+  uint64_t EltBits = EltSizeInBits.getFixedValue();
+  if (EltBits < 8 || EltBits % 8 != 0)
+    return false;
+  uint64_t EltBytes = EltBits / 8;
+
+  TypeSize OldLoadSize = DL->getTypeStoreSize(OldLoadTy);
+  if (OldLoadSize.isScalable())
+    return false;
+  InstructionCost OldLoadCost =
+      TTI.getMemoryOpCost(Instruction::Load, OldLoadTy, OldLoad->getAlign(),
+                          OldLoad->getPointerAddressSpace(), CostKind);
+  if (!OldLoadCost.isValid())
+    return false;
+
+  struct ChunkRun {
+    unsigned Start;
+    unsigned Length;
+  };
+
+  unsigned NumElts = OldLoadTy->getNumElements();
+  SmallVector<ExtractElementInst *, 8> Extracts;
+  APInt DemandedElts = APInt::getZero(NumElts);
+
+  for (User *U : OldLoad->users()) {
+    auto *Ext = dyn_cast<ExtractElementInst>(U);
+    if (!Ext)
+      return false;
+    if (Ext->use_empty())
+      continue;
+
+    auto *Idx = dyn_cast<ConstantInt>(Ext->getIndexOperand());
+    if (!Idx || Idx->getValue().uge(NumElts))
+      return false;
+
+    Extracts.push_back(Ext);
+    DemandedElts.setBit(Idx->getZExtValue());
+  }
+
+  if (Extracts.empty() || DemandedElts.isAllOnes())
+    return false;
+
+  SmallVector<ChunkRun, 4> ElementRuns;
+  SmallVector<Type *, 4> NewLoadTys;
+  SmallVector<uint64_t, 4> NewLoadOffsets;
+
+  for (unsigned I = 0; I != NumElts;) {
+    if (!DemandedElts[I]) {
+      ++I;
+      continue;
+    }
+
+    unsigned Start = I;
+    do {
+      ++I;
+    } while (I != NumElts && DemandedElts[I]);
+    unsigned Length = I - Start;
+
+    // Single element runs are better handled by existing scalarization. Keep
+    // this fold focused on forming narrower vector loads.
+    if (Length == 1)
+      return false;
+
+    ElementRuns.push_back({Start, Length});
+  }
+
+  TypeSize NewLoadSize = TypeSize::getFixed(0);
+  InstructionCost NewLoadCost = 0;
+  for (const ChunkRun &Run : ElementRuns) {
+    auto *NewLoadTy = FixedVectorType::get(EltTy, Run.Length);
+    uint64_t NewLoadOffset = Run.Start * EltBytes;
+    NewLoadTys.push_back(NewLoadTy);
+    NewLoadOffsets.push_back(NewLoadOffset);
+    NewLoadSize += DL->getTypeStoreSize(NewLoadTy);
+    NewLoadCost +=
+        TTI.getMemoryOpCost(Instruction::Load, NewLoadTy,
+                            commonAlignment(OldLoad->getAlign(), NewLoadOffset),
+                            OldLoad->getPointerAddressSpace(), CostKind);
+  }
+
+  if (NewLoadSize >= OldLoadSize)
+    return false;
+
+  if (!NewLoadCost.isValid() || NewLoadCost > OldLoadCost)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Found a vector load with undemanded elements: " << I
+                    << "\n");
+
+  Builder.SetInsertPoint(OldLoad);
+  Builder.SetCurrentDebugLocation(OldLoad->getDebugLoc());
+
+  SmallVector<LoadInst *, 4> NewLoads;
+  SmallVector<unsigned, 4> RunStarts;
+  Type *OffsetTy = DL->getIndexType(OldLoad->getPointerOperandType());
+  auto CreateNarrowLoad = [&](Type *NewLoadTy,
+                              uint64_t NewLoadOffset) -> LoadInst * {
+    Value *NewPtr = OldLoad->getPointerOperand();
+    if (NewLoadOffset != 0)
+      NewPtr = Builder.CreateGEP(Builder.getInt8Ty(), NewPtr,
+                                 ConstantInt::get(OffsetTy, NewLoadOffset));
+
+    auto *NewLoad = cast<LoadInst>(Builder.CreateAlignedLoad(
+        NewLoadTy, NewPtr,
+        commonAlignment(OldLoad->getAlign(), NewLoadOffset)));
+    copyMetadataForLoad(*NewLoad, *OldLoad);
+    if (auto *RangeMD = OldLoad->getMetadata(LLVMContext::MD_range))
+      NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
+
+    AAMDNodes OldAAMD = OldLoad->getAAMetadata();
+    NewLoad->setAAMetadata(
+        OldAAMD.adjustForAccess(NewLoadOffset, NewLoadTy, *DL));
+    return NewLoad;
+  };
+
+  for (auto [Idx, Run] : enumerate(ElementRuns)) {
+    NewLoads.push_back(CreateNarrowLoad(NewLoadTys[Idx], NewLoadOffsets[Idx]));
+    RunStarts.push_back(Run.Start);
+  }
+
+  auto ExtractSubElt = [&](unsigned SubElt, Instruction *InsertPt) -> Value * {
+    for (auto [I, NewLoad] : enumerate(NewLoads)) {
+      unsigned Start = RunStarts[I];
+      unsigned Length =
+          cast<FixedVectorType>(NewLoad->getType())->getNumElements();
+      if (SubElt < Start || SubElt >= Start + Length)
+        continue;
+
+      Builder.SetInsertPoint(InsertPt);
+      return Builder.CreateExtractElement(NewLoad,
+                                          Builder.getInt32(SubElt - Start));
+    }
+    llvm_unreachable("Extracted element is not covered by a new load");
+  };
+
+  for (ExtractElementInst *Ext : Extracts) {
+    auto *Idx = cast<ConstantInt>(Ext->getIndexOperand());
+    unsigned EltIdx = Idx->getZExtValue();
+
+    Builder.SetInsertPoint(Ext);
+    Builder.SetCurrentDebugLocation(Ext->getDebugLoc());
+
+    Value *NewValue = ExtractSubElt(EltIdx, Ext);
+    replaceValue(*Ext, *NewValue, false);
+  }
+
+  Worklist.push(OldLoad);
   return true;
 }
 
@@ -6277,6 +6445,8 @@ bool VectorCombine::run() {
           return true;
         break;
       case Instruction::Load:
+        if (shrinkLoadForExtracts(I))
+          return true;
         if (shrinkLoadForShuffles(I))
           return true;
         break;
