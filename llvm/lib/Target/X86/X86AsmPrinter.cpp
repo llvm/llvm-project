@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Mangler.h"
@@ -511,6 +512,34 @@ void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
   }
   AsmPrinter::emitBasicBlockEnd(MBB);
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
+}
+
+static bool isX86RepeatedConstReplacedGlobal(const GlobalVariable *GV) {
+  const Module *M = GV->getParent();
+  const NamedMDNode *NMD = M->getNamedMetadata("x86.repeated_const_replaced");
+  if (!NMD)
+    return false;
+
+  for (const MDNode *Node : NMD->operands()) {
+    if (Node->getNumOperands() != 1)
+      continue;
+
+    auto *VAM = dyn_cast<ValueAsMetadata>(Node->getOperand(0).get());
+    if (!VAM)
+      continue;
+
+    if (VAM->getValue() == GV)
+      return true;
+  }
+
+  return false;
+}
+
+void X86AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  if (isX86RepeatedConstReplacedGlobal(GV))
+    return;
+
+  AsmPrinter::emitGlobalVariable(GV);
 }
 
 void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,
