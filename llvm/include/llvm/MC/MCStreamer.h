@@ -436,7 +436,7 @@ public:
     return MCSectionSubPair();
   }
   MCSection *getCurrentSectionOnly() const {
-    return CurFrag->getParent();
+    return CurFrag ? CurFrag->getParent() : nullptr;
   }
 
   /// Return the previous section that the streamer is emitting code to.
