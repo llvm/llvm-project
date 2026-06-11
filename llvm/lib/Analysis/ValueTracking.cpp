@@ -8178,6 +8178,23 @@ bool llvm::intrinsicPropagatesPoison(Intrinsic::ID IID) {
   case Intrinsic::llrint:
   case Intrinsic::fshl:
   case Intrinsic::fshr:
+  case Intrinsic::frexp:
+  case Intrinsic::get_active_lane_mask:
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_umin:
+  case Intrinsic::amdgcn_wave_reduce_umax:
+  case Intrinsic::amdgcn_wave_reduce_max:
+  case Intrinsic::amdgcn_wave_reduce_min:
+  case Intrinsic::amdgcn_wave_reduce_and:
+  case Intrinsic::amdgcn_wave_reduce_or:
     return true;
   default:
     return false;

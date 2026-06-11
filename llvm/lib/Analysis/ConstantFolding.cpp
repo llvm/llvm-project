@@ -2298,8 +2298,9 @@ Constant *ConstantFoldFP128(float128 (*NativeFP)(float128), const APFloat &V,
 }
 #endif
 
-Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
-                               const APFloat &V, const APFloat &W, Type *Ty) {
+static Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
+                                      const APFloat &V, const APFloat &W,
+                                      Type *Ty) {
   llvm_fenv_clearexcept();
   double Result = NativeFP(V.convertToDouble(), W.convertToDouble());
   if (llvm_fenv_testexcept()) {
@@ -2310,7 +2311,7 @@ Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double),
   return GetConstantFoldFPValue(Result, Ty);
 }
 
-Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
+static Constant *constantFoldVectorReduce(Intrinsic::ID IID, Constant *Op) {
   auto *OpVT = cast<VectorType>(Op->getType());
 
   // This is the same as the underlying binops - poison propagates.
@@ -2441,6 +2442,14 @@ static bool getConstIntOrUndef(Value *Op, const APInt *&C) {
     return true;
   }
   return false;
+}
+
+template <typename ConstTy>
+static Constant *foldPoisonOperands(Intrinsic::ID ID,
+                                    ArrayRef<ConstTy *> Operands, Type *Ty) {
+  if (intrinsicPropagatesPoison(ID) && any_of(Operands, IsaPred<PoisonValue>))
+    return PoisonValue::get(Ty);
+  return nullptr;
 }
 
 /// Checks if the given intrinsic call, which evaluates to constant, is allowed
@@ -4252,15 +4261,12 @@ static Constant *ConstantFoldScalarCall3(StringRef Name,
 }
 
 static Constant *ConstantFoldScalarCall(StringRef Name,
-                                        Intrinsic::ID IntrinsicID,
-                                        Type *Ty,
+                                        Intrinsic::ID IntrinsicID, Type *Ty,
                                         ArrayRef<Constant *> Operands,
                                         const TargetLibraryInfo *TLI,
                                         const CallBase *Call) {
-  if (IntrinsicID != Intrinsic::not_intrinsic &&
-      any_of(Operands, IsaPred<PoisonValue>) &&
-      intrinsicPropagatesPoison(IntrinsicID))
-    return PoisonValue::get(Ty);
+  if (auto *C = foldPoisonOperands<Constant>(IntrinsicID, Operands, Ty))
+    return C;
 
   if (Operands.size() == 1)
     return ConstantFoldScalarCall1(Name, IntrinsicID, Ty, Operands, TLI, Call);
@@ -4286,6 +4292,9 @@ static Constant *ConstantFoldFixedVectorCall(
   SmallVector<Constant *, 4> Result(FVTy->getNumElements());
   SmallVector<Constant *, 4> Lane(Operands.size());
   Type *Ty = FVTy->getElementType();
+
+  if (auto *C = foldPoisonOperands<Constant>(IntrinsicID, Operands, FVTy))
+    return C;
 
   switch (IntrinsicID) {
   case Intrinsic::masked_load: {
@@ -4496,6 +4505,9 @@ static Constant *ConstantFoldScalableVectorCall(
     StringRef Name, Intrinsic::ID IntrinsicID, ScalableVectorType *SVTy,
     ArrayRef<Constant *> Operands, const DataLayout &DL,
     const TargetLibraryInfo *TLI, const CallBase *Call) {
+  if (auto *C = foldPoisonOperands<Constant>(IntrinsicID, Operands, SVTy))
+    return C;
+
   switch (IntrinsicID) {
   case Intrinsic::aarch64_sve_convert_from_svbool: {
     Constant *Src = Operands[0];
@@ -4698,11 +4710,15 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
 
 Constant *llvm::ConstantFoldUnaryIntrinsic(Intrinsic::ID ID, Constant *Op,
                                            Type *Ty) {
+  if (auto *C = foldPoisonOperands<Constant>(ID, Op, Ty))
+    return C;
   return ConstantFoldScalarCall1("", ID, Ty, Op, nullptr, nullptr);
 }
 
 Constant *llvm::ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
                                             Constant *RHS, Type *Ty) {
+  if (auto *C = foldPoisonOperands<Constant>(ID, {LHS, RHS}, Ty))
+    return C;
   return ConstantFoldIntrinsicCall2(ID, Ty, {LHS, RHS}, nullptr);
 }
 
@@ -4730,6 +4746,9 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
   Type *Ty = F->getReturnType();
   if (!AllowNonDeterministic && Ty->isFPOrFPVectorTy())
     return nullptr;
+
+  if (auto *C = foldPoisonOperands(IID, Operands, Ty))
+    return C;
 
   StringRef Name = F->getName();
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
