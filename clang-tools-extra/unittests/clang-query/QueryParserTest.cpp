@@ -70,8 +70,9 @@ TEST_F(QueryParserTest, Set) {
 
   Q = parse("set output");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("expected 'diag', 'print', 'detailed-ast', 'dump' or 'json', got ''",
-            cast<InvalidQuery>(Q)->ErrStr);
+  EXPECT_EQ(
+      "expected 'diag', 'print', 'detailed-ast', 'dump' or 'json', got ''",
+      cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("set bind-root true foo");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
@@ -79,8 +80,9 @@ TEST_F(QueryParserTest, Set) {
 
   Q = parse("set output foo");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("expected 'diag', 'print', 'detailed-ast', 'dump' or 'json', got 'foo'",
-            cast<InvalidQuery>(Q)->ErrStr);
+  EXPECT_EQ(
+      "expected 'diag', 'print', 'detailed-ast', 'dump' or 'json', got 'foo'",
+      cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("set output dump");
   ASSERT_TRUE(isa<SetExclusiveOutputQuery >(Q));
