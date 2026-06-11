@@ -38,7 +38,7 @@ set(RTSAN_DYNAMIC_LIBS
 
 append_rtti_flag(OFF RTSAN_CFLAGS)
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   add_compiler_rt_object_libraries(RTRtsan
     OS ${SANITIZER_COMMON_SUPPORTED_OS}
     ARCHS ${RTSAN_SUPPORTED_ARCH}
@@ -75,7 +75,7 @@ append_list_if(COMPILER_RT_HAS_LIBLOG log RTSAN_DYNAMIC_LIBS)
 
 add_compiler_rt_component(rtsan)
 
-if (APPLE)
+if (COMPILER_RT_TARGET_APPLE)
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   set(RTSAN_LINK_FLAGS ${RTSAN_LINK_FLAGS} ${WEAK_SYMBOL_LINK_FLAGS})
 

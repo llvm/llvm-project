@@ -23,7 +23,7 @@ add_custom_target(dd)
 set_target_properties(dd PROPERTIES FOLDER "Compiler-RT/Metatargets")
 
 # Deadlock detector is currently supported on 64-bit Linux only.
-if(CAN_TARGET_x86_64 AND UNIX AND NOT APPLE AND NOT ANDROID)
+if(CAN_TARGET_x86_64 AND UNIX AND NOT COMPILER_RT_TARGET_APPLE AND NOT ANDROID)
   set(arch "x86_64")
   add_compiler_rt_runtime(clang_rt.dd
     STATIC

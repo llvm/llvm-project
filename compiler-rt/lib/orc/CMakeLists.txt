@@ -49,7 +49,7 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(ORC_DEPS cxx-headers)
 endif()
 
-if (APPLE)
+if (COMPILER_RT_TARGET_APPLE)
   set(ORC_ASM_SOURCES
     macho_tlv.x86-64.S
     macho_tlv.arm64.S

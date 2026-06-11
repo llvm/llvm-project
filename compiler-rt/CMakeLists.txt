@@ -141,7 +141,7 @@ if (COMPILER_RT_STANDALONE_BUILD)
   endif()
 
   # Ensure that fat libraries are built correctly on Darwin
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     include(UseLibtool)
   endif()
 
@@ -193,7 +193,7 @@ option(COMPILER_RT_INTERCEPT_LIBDISPATCH
   "Support interception of libdispatch (GCD). Requires '-fblocks'" OFF)
 option(COMPILER_RT_LIBDISPATCH_INSTALL_PATH
   "Specify if libdispatch is installed in a custom location" "")
-if (COMPILER_RT_INTERCEPT_LIBDISPATCH AND NOT APPLE)
+if (COMPILER_RT_INTERCEPT_LIBDISPATCH AND NOT COMPILER_RT_TARGET_APPLE)
   set(COMPILER_RT_LIBDISPATCH_CFLAGS -fblocks)
   set(COMPILER_RT_TEST_LIBDISPATCH_CFLAGS)
   if (COMPILER_RT_LIBDISPATCH_INSTALL_PATH)
@@ -204,12 +204,12 @@ if (COMPILER_RT_INTERCEPT_LIBDISPATCH AND NOT APPLE)
   endif()
   list(APPEND COMPILER_RT_TEST_LIBDISPATCH_CFLAGS -lBlocksRuntime -ldispatch)
 endif()
-if (APPLE) # Always enable on Apple platforms.
+if (COMPILER_RT_TARGET_APPLE) # Always enable on Apple platforms.
   set(COMPILER_RT_INTERCEPT_LIBDISPATCH ON)
 endif()
 pythonize_bool(COMPILER_RT_INTERCEPT_LIBDISPATCH)
 
-if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
+if(COMPILER_RT_TARGET_APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
   set(cxxabi_supported OFF)
@@ -231,7 +231,7 @@ macro(handle_default_cxx_lib var)
     set(${var}_LIBNAME "${CMAKE_MATCH_1}")
     set(${var}_SYSTEM 1)
   elseif (${var} STREQUAL "default")
-    if (APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
+    if (COMPILER_RT_TARGET_APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "OpenBSD")
       set(${var}_LIBNAME "libc++")
       set(${var}_SYSTEM 1)
     elseif (FUCHSIA)
@@ -398,7 +398,7 @@ if(NOT WIN32)
 endif()
 append_list_if(COMPILER_RT_HAS_FNO_BUILTIN_FLAG -fno-builtin SANITIZER_COMMON_CFLAGS)
 append_list_if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG -fno-exceptions SANITIZER_COMMON_CFLAGS)
-if(NOT COMPILER_RT_DEBUG AND NOT APPLE)
+if(NOT COMPILER_RT_DEBUG AND NOT COMPILER_RT_TARGET_APPLE)
   append_list_if(COMPILER_RT_HAS_FOMIT_FRAME_POINTER_FLAG -fomit-frame-pointer SANITIZER_COMMON_CFLAGS)
 endif()
 append_list_if(COMPILER_RT_HAS_FUNWIND_TABLES_FLAG -funwind-tables SANITIZER_COMMON_CFLAGS)
@@ -522,7 +522,7 @@ endif()
 # in cflags during testing. This fixes the compiler/linker version mismatch
 # issue when running a clang built with a newer Xcode in an older Xcode
 set(COMPILER_RT_DARWIN_LINKER_VERSION)
-if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+if (COMPILER_RT_TARGET_APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   get_darwin_linker_version(COMPILER_RT_DARWIN_LINKER_VERSION)
   message(STATUS "Host linker version: ${COMPILER_RT_DARWIN_LINKER_VERSION}")
 endif()
@@ -540,7 +540,7 @@ if(MSVC)
     string(REGEX REPLACE "(^| )/Z[i7I]($| )" " /Z7 "
            "${var_to_update}" "${${var_to_update}}")
   endforeach()
-elseif("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES "apple")
+elseif(COMPILER_RT_TARGET_APPLE)
   # On Apple platforms use full debug info (i.e. not `-gline-tables-only`)
   # for all build types so that the runtime can be debugged.
   if(NOT COMPILER_RT_HAS_G_FLAG)

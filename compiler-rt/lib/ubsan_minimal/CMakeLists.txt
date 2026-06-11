@@ -43,7 +43,7 @@ add_compiler_rt_runtime(clang_rt.ubsan_minimal
   LINK_LIBS ${UBSAN_DYNAMIC_LIBS}
   PARENT_TARGET ubsan-minimal)
 
-if (SANITIZER_USE_SYMBOLS AND NOT APPLE)
+if (SANITIZER_USE_SYMBOLS AND NOT COMPILER_RT_TARGET_APPLE)
   set(ARCHS_FOR_SYMBOLS ${UBSAN_SUPPORTED_ARCH})
   list(REMOVE_ITEM ARCHS_FOR_SYMBOLS i386 i686)
   add_sanitizer_rt_symbols(clang_rt.ubsan_minimal

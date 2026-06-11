@@ -38,7 +38,7 @@ function(add_xray_lib library)
 endfunction()
 
 function(get_xray_lib_for_arch arch lib)
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     set(tgt_name "RTXRay.test.osx")
   else()
     set(tgt_name "RTXRay.test.${arch}")
@@ -53,7 +53,7 @@ set(XRAY_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${COMPILER_RT_CXX_LINK_LIBS})
 
-if (NOT APPLE)
+if (NOT COMPILER_RT_TARGET_APPLE)
   # We add the library directories one at a time in our CFLAGS.
   foreach (DIR ${LLVM_LIBRARY_DIR})
     list(APPEND XRAY_UNITTEST_LINK_FLAGS -L${DIR})
@@ -87,7 +87,7 @@ endif()
 
 macro(add_xray_unittest testname)
   cmake_parse_arguments(TEST "" "" "SOURCES;HEADERS" ${ARGN})
-  if(UNIX AND NOT APPLE)
+  if(UNIX AND NOT COMPILER_RT_TARGET_APPLE)
     set(CMAKE_DL_LIBS_INIT "")
     foreach(arch ${XRAY_TEST_ARCH})
       set(TEST_OBJECTS)
@@ -116,7 +116,7 @@ macro(add_xray_unittest testname)
 endmacro()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
-  if (APPLE)
+  if (COMPILER_RT_TARGET_APPLE)
     add_xray_lib("RTXRay.test.osx"
       $<TARGET_OBJECTS:RTXray.osx>
       $<TARGET_OBJECTS:RTXrayFDR.osx>

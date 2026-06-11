@@ -4,7 +4,7 @@ clang_compiler_add_cxx_check()
 
 # FIXME: use SANITIZER_COMMON_SUPPORTED_ARCH here
 filter_available_targets(SANITIZER_UNITTEST_SUPPORTED_ARCH x86_64 i386 mips64 mips64el riscv64 sparcv9 sparc)
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   list(APPEND SANITIZER_UNITTEST_SUPPORTED_ARCH arm64)
   darwin_filter_host_archs(SANITIZER_UNITTEST_SUPPORTED_ARCH SANITIZER_UNITTEST_SUPPORTED_ARCH)
 endif()
@@ -104,7 +104,7 @@ if(ANDROID)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -pie)
 endif()
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   list(APPEND SANITIZER_TEST_CFLAGS_COMMON ${DARWIN_osx_CFLAGS})
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON ${DARWIN_osx_LINK_FLAGS})
 
@@ -151,7 +151,7 @@ macro(add_sanitizer_common_lib library)
 endmacro()
 
 function(get_sanitizer_common_lib_for_arch arch lib)
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     set(tgt_name "RTSanitizerCommon.test.osx")
   else()
     set(tgt_name "RTSanitizerCommon.test.${arch}")
@@ -206,7 +206,7 @@ endmacro()
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
   # We use just-built clang to build sanitizer_common unittests, so we must
   # be sure that produced binaries would work.
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     add_sanitizer_common_lib("RTSanitizerCommon.test.osx"
                              $<TARGET_OBJECTS:RTSanitizerCommon.osx>
                              $<TARGET_OBJECTS:RTSanitizerCommonLibc.osx>

@@ -101,7 +101,7 @@ set(WASM64 wasm64)
 set(VE ve)
 set(M68K m68k)
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   set(ARM64 arm64 arm64e)
   set(ARM32 armv7 armv7k armv7s)
   set(X86_64 x86_64 x86_64h)
@@ -116,7 +116,7 @@ set(ALL_BUILTIN_SUPPORTED_ARCH
 include(CompilerRTUtils)
 include(CompilerRTDarwinUtils)
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
 
   find_darwin_sdk_dir(DARWIN_osx_SYSROOT macosx)
   if(COMPILER_RT_ENABLE_IOS)

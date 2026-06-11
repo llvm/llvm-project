@@ -195,7 +195,7 @@ if(COMPILER_RT_GPU_BUILD AND TARGET runtimes-libc-headers)
   list(APPEND PROFILE_LINK_LIBS runtimes-libc-headers)
 endif()
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   add_compiler_rt_runtime(clang_rt.profile
     STATIC
     OS ${PROFILE_SUPPORTED_OS}

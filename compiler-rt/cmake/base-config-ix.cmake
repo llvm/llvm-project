@@ -123,13 +123,13 @@ if(NOT DEFINED COMPILER_RT_OS_DIR)
 endif()
 
 # TODO: Use common runtimes infrastructure for output and install paths
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT COMPILER_RT_TARGET_APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib)
   extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" lib)
   set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
     "Path where built compiler-rt libraries should be installed.")
-else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT COMPILER_RT_TARGET_APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
   extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "lib/${COMPILER_RT_OS_DIR}")
@@ -146,7 +146,7 @@ extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_
 set(COMPILER_RT_INSTALL_DATA_DIR "${default_install_path}" CACHE PATH
   "Path where compiler-rt data files should be installed.")
 
-if(APPLE)
+macro(detect_darwin_sdk)
   # On Darwin if /usr/include/c++ doesn't exist, the user probably has Xcode but
   # not the command line tools (or is using macOS 10.14 or newer). If this is
   # the case, we need to find the OS X sysroot to pass to clang.
@@ -186,8 +186,9 @@ if(APPLE)
   option(COMPILER_RT_ENABLE_WATCHOS "Enable building for watchOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_TVOS "Enable building for tvOS - Experimental" Off)
   option(COMPILER_RT_ENABLE_XROS "Enable building for xrOS - Experimental" Off)
+endmacro()
 
-else()
+if(NOT COMPILER_RT_TARGET_APPLE)
   option(COMPILER_RT_DEFAULT_TARGET_ONLY "Build builtins only for the default target" Off)
 endif()
 
@@ -201,10 +202,8 @@ if(WIN32 AND NOT MINGW AND NOT CYGWIN)
 endif()
 
 macro(test_targets)
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgpu|amdgcn")
-    set(COMPILER_RT_TARGET_AMDGPU TRUE)
-  else()
-    set(COMPILER_RT_TARGET_AMDGPU FALSE)
+  if(COMPILER_RT_TARGET_APPLE)
+    detect_darwin_sdk()
   endif()
 
   # Find and run MSVC (not clang-cl) and get its version. This will tell clang-cl
@@ -235,7 +234,7 @@ macro(test_targets)
     # Examine compiler output to determine target architecture.
     detect_target_arch()
     set(COMPILER_RT_OS_SUFFIX "-android")
-  elseif(NOT APPLE) # Supported archs for Apple platforms are generated later
+  elseif(NOT COMPILER_RT_TARGET_APPLE) # Supported archs for Apple platforms are generated later
     if(COMPILER_RT_DEFAULT_TARGET_ONLY)
       add_default_target_arch(${COMPILER_RT_DEFAULT_TARGET_ARCH})
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "i[2-6]86|x86|amd64")

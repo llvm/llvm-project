@@ -31,10 +31,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   construct_compiler_rt_default_triple()
 
   include(SetPlatformToolchainTools)
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     include(CompilerRTDarwinUtils)
   endif()
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     include(UseLibtool)
   endif()
   include(AddCompilerRT)
@@ -274,7 +274,7 @@ if(COMPILER_RT_HAS_ATOMIC_KEYWORD AND NOT COMPILER_RT_EXCLUDE_ATOMIC_BUILTIN)
   )
 endif()
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   set(GENERIC_SOURCES
     ${GENERIC_SOURCES}
     atomic_flag_clear.c
@@ -724,10 +724,10 @@ if(CLANG_CL OR NOT MSVC)
   )
 endif()
 
-set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR APPLE))
+set(COMPILER_RT_AARCH64_FMV_USES_GLOBAL_CONSTRUCTOR NOT(FUCHSIA OR COMPILER_RT_TARGET_APPLE))
 
 if (COMPILER_RT_HAS_AARCH64_SME)
-  if (APPLE)
+  if (COMPILER_RT_TARGET_APPLE)
     list(APPEND aarch64_SOURCES aarch64/arm_apple_sme_abi.s)
     set_source_files_properties(aarch64/arm_apple_sme_abi.s PROPERTIES COMPILE_FLAGS -march=armv8a+sme)
     message(STATUS "AArch64 Apple SME ABI routines enabled")
@@ -798,7 +798,7 @@ if (MINGW)
 endif()
 
 # Don't build enable_execute_stack on arm64 darwin.
-if (APPLE)
+if (COMPILER_RT_TARGET_APPLE)
   list(REMOVE_ITEM aarch64_SOURCES enable_execute_stack.c)
 endif()
 
@@ -975,7 +975,7 @@ option(COMPILER_RT_ENABLE_SOFTWARE_INT128
   "Enable the int128 builtin routines for all targets."
   OFF)
 
-if (APPLE)
+if (COMPILER_RT_TARGET_APPLE)
   add_subdirectory(Darwin-excludes)
   add_subdirectory(macho_embedded)
   darwin_add_builtin_libraries(${BUILTIN_SUPPORTED_OS})

@@ -85,7 +85,7 @@ macro(add_interceptor_lib library)
 endmacro()
 
 function(get_interception_lib_for_arch arch lib)
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     set(tgt_name "RTInterception.test.osx")
   else()
     set(tgt_name "RTInterception.test.${arch}")
@@ -111,10 +111,10 @@ macro(add_interception_tests_for_arch arch)
     LINK_FLAGS ${INTERCEPTION_TEST_LINK_FLAGS_COMMON})
 endmacro()
 
-if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID AND NOT APPLE)
+if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID AND NOT COMPILER_RT_TARGET_APPLE)
   # We use just-built clang to build interception unittests, so we must
   # be sure that produced binaries would work.
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     add_interceptor_lib("RTInterception.test.osx"
                         $<TARGET_OBJECTS:RTInterception.osx>)
   else()

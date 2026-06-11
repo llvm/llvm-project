@@ -6,7 +6,7 @@ include_directories(..)
 add_custom_target(stats)
 set_target_properties(stats PROPERTIES FOLDER "Compiler-RT/Metatargets")
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   set(STATS_LIB_FLAVOR SHARED)
 
   set(STATS_LINK_LIBS ${SANITIZER_COMMON_LINK_LIBS})

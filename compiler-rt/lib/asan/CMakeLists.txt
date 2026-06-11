@@ -47,7 +47,7 @@ if(WIN32)
     )
 endif()
 
-if (NOT WIN32 AND NOT APPLE)
+if (NOT WIN32 AND NOT COMPILER_RT_TARGET_APPLE)
   list(APPEND ASAN_SOURCES
     asan_interceptors_vfork.S
     )
@@ -61,7 +61,7 @@ set(ASAN_STATIC_SOURCES
   asan_rtl_static.cpp
   )
 
-if ("x86_64" IN_LIST ASAN_SUPPORTED_ARCH AND NOT WIN32 AND NOT APPLE)
+if ("x86_64" IN_LIST ASAN_SUPPORTED_ARCH AND NOT WIN32 AND NOT COMPILER_RT_TARGET_APPLE)
   list(APPEND ASAN_STATIC_SOURCES
     asan_rtl_x86_64.S
   )
@@ -235,7 +235,7 @@ add_compiler_rt_object_libraries(RTAsan_dynamic_cxx
   DEFS ${ASAN_DYNAMIC_DEFINITIONS}
   DEPS ${ASAN_CXX_DEPS})
 
-if(NOT APPLE)
+if(NOT COMPILER_RT_TARGET_APPLE)
   add_compiler_rt_object_libraries(RTAsan
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_SOURCES}
@@ -273,7 +273,7 @@ endif()
 # Build ASan runtimes shipped with Clang.
 add_compiler_rt_component(asan)
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   add_weak_symbols("asan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("lsan" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("ubsan" WEAK_SYMBOL_LINK_FLAGS)

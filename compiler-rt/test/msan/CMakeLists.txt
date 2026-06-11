@@ -4,7 +4,7 @@ set(MSAN_TESTSUITES)
 set(MSAN_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS} msan)
 
 set(MSAN_TEST_ARCH ${MSAN_SUPPORTED_ARCH})
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   darwin_filter_host_archs(MSAN_SUPPORTED_ARCH MSAN_TEST_ARCH)
 endif()
 
@@ -36,7 +36,7 @@ endmacro()
 foreach(arch ${MSAN_TEST_ARCH})
   add_msan_testsuite(${arch} False False)
 
-  if(COMPILER_RT_HAS_LLD AND arch STREQUAL "x86_64" AND NOT (APPLE OR WIN32))
+  if(COMPILER_RT_HAS_LLD AND arch STREQUAL "x86_64" AND NOT (COMPILER_RT_TARGET_APPLE OR WIN32))
     add_msan_testsuite(${arch} True False)
   endif()
 endforeach()

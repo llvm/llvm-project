@@ -12,7 +12,7 @@ include_directories(..)
 
 add_compiler_rt_component(asan_abi)
 
-if (APPLE)
+if (COMPILER_RT_TARGET_APPLE)
   # Compile Stable API sources into an object library.
   add_compiler_rt_object_libraries(RTASAN_ABI
     OS ${SANITIZER_COMMON_SUPPORTED_OS}

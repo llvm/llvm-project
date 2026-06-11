@@ -60,7 +60,7 @@ add_compiler_rt_object_libraries(RTNsan_dynamic
   ADDITIONAL_HEADERS ${NSAN_HEADERS}
   CFLAGS ${NSAN_CFLAGS})
 
-if(NOT APPLE)
+if(NOT COMPILER_RT_TARGET_APPLE)
   add_compiler_rt_object_libraries(RTNsan
       ARCHS ${NSAN_SUPPORTED_ARCH}
       SOURCES ${NSAN_SOURCES}
@@ -89,7 +89,7 @@ add_compiler_rt_runtime(
   CFLAGS ${NSAN_CFLAGS}
   PARENT_TARGET nsan)
 
-if(NOT APPLE)
+if(NOT COMPILER_RT_TARGET_APPLE)
   foreach(arch ${NSAN_SUPPORTED_ARCH})
     if (COMPILER_RT_HAS_VERSION_SCRIPT)
       add_sanitizer_rt_version_list(clang_rt.nsan-dynamic-${arch}

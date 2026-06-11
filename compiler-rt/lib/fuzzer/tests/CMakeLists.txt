@@ -7,7 +7,7 @@ set(LIBFUZZER_UNITTEST_CFLAGS
   -fno-rtti
   -O2)
 
-if (APPLE)
+if (COMPILER_RT_TARGET_APPLE)
   set(FUZZER_SUPPORTED_OS osx)
 endif()
 
@@ -23,7 +23,7 @@ list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS --driver-mode=g++)
 if(MSVC)
   list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -Wl,-defaultlib:libcmt,-defaultlib:oldnames)
 else()
-  if (APPLE)
+  if (COMPILER_RT_TARGET_APPLE)
     list(APPEND LIBFUZZER_UNITTEST_CFLAGS -isysroot ${DARWIN_osx_SYSROOT})
     list(APPEND LIBFUZZER_UNITTEST_LINK_FLAGS -isysroot ${DARWIN_osx_SYSROOT})
   endif()
@@ -68,7 +68,7 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
   set(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})
 
   set(LIBFUZZER_TEST_RUNTIME RTFuzzerTest.${arch})
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     set(LIBFUZZER_TEST_RUNTIME_OBJECTS
       $<TARGET_OBJECTS:RTfuzzer.osx>)
   else()

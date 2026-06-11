@@ -228,7 +228,7 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
   set(XRAY_DEPS cxx-headers)
 endif()
 
-if (APPLE)
+if (COMPILER_RT_TARGET_APPLE)
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
   add_weak_symbols("xray" WEAK_SYMBOL_LINK_FLAGS)
 

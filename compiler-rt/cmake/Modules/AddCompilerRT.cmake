@@ -39,7 +39,7 @@ function(add_compiler_rt_object_libraries name)
   cmake_parse_arguments(LIB "" "" "OS;ARCHS;SOURCES;CFLAGS;DEFS;DEPS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     foreach(os ${LIB_OS})
       set(libname "${name}.${os}")
       set(libnames ${libnames} ${libname})
@@ -73,12 +73,12 @@ function(add_compiler_rt_object_libraries name)
 
     # Strip out -msse3 if this isn't macOS.
     set(target_flags ${LIB_CFLAGS})
-    if(APPLE AND NOT "${libname}" MATCHES ".*\.osx.*")
+    if(COMPILER_RT_TARGET_APPLE AND NOT "${libname}" MATCHES ".*\.osx.*")
       list(REMOVE_ITEM target_flags "-msse3")
     endif()
 
     # Build the macOS sanitizers with Mac Catalyst support.
-    if (APPLE AND
+    if (COMPILER_RT_TARGET_APPLE AND
         "${COMPILER_RT_ENABLE_MACCATALYST}" AND
         "${libname}" MATCHES ".*\.osx.*")
       foreach(arch ${LIB_ARCHS_${libname}})
@@ -92,7 +92,7 @@ function(add_compiler_rt_object_libraries name)
     set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT/Libraries")
-    if(APPLE)
+    if(COMPILER_RT_TARGET_APPLE)
       set_target_properties(${libname} PROPERTIES
         OSX_ARCHITECTURES "${LIB_ARCHS_${libname}}")
     endif()
@@ -219,7 +219,7 @@ function(add_compiler_rt_runtime name type)
     )
   endif()
 
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     foreach(os ${LIB_OS})
       # Strip out -msse3 if this isn't macOS.
       list(LENGTH LIB_CFLAGS HAS_EXTRA_CFLAGS)
@@ -395,7 +395,7 @@ function(add_compiler_rt_runtime name type)
       target_link_libraries(${libname} PRIVATE ${builtins_${libname}})
     endif()
     if(${type} STREQUAL "SHARED")
-      if(APPLE OR WIN32)
+      if(COMPILER_RT_TARGET_APPLE OR WIN32)
         set_property(TARGET ${libname} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
       endif()
       if(WIN32 AND NOT CYGWIN AND NOT MINGW)
@@ -406,7 +406,7 @@ function(add_compiler_rt_runtime name type)
         endif()
       endif()
       find_program(CODESIGN codesign)
-      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
+      if (COMPILER_RT_TARGET_APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
         # Apple's linker signs the resulting dylib with an ad-hoc code signature in
         # most situations, except:
         # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
@@ -445,7 +445,7 @@ function(add_compiler_rt_runtime name type)
     endif()
     add_compiler_rt_install_targets(${libname} ${parent_target_arg})
 
-    if(APPLE)
+    if(COMPILER_RT_TARGET_APPLE)
       set_target_properties(${libname} PROPERTIES
       OSX_ARCHITECTURES "${LIB_ARCHS_${libname}}")
     endif()
@@ -797,7 +797,7 @@ function(rt_externalize_debuginfo name)
     set(strip_command COMMAND xcrun strip -Sl $<TARGET_FILE:${name}>)
   endif()
 
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     if(CMAKE_CXX_FLAGS MATCHES "-flto"
       OR CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} MATCHES "-flto")
 

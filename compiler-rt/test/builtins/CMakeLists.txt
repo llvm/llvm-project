@@ -44,7 +44,7 @@ endif()
 pythonize_bool(BUILTINS_IS_MSVC)
 
 set(BUILTIN_TEST_ARCH ${BUILTIN_SUPPORTED_ARCH})
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   darwin_filter_host_archs(BUILTIN_SUPPORTED_ARCH BUILTIN_TEST_ARCH)
 endif()
 
@@ -76,7 +76,7 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     # TODO: Support the new ABI on Apple platforms.
     if (${arch} MATCHES "arm|armhf|aarch64|arm64" AND COMPILER_RT_HAS_${arch}_FLOAT16)
       list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_HAS_FLOAT16)
@@ -125,7 +125,7 @@ foreach(arch ${BUILTIN_TEST_ARCH})
   endif()
 
   # Compute builtins available in library and add them as lit features.
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     # TODO: Support other Apple platforms.
     set(BUILTIN_LIB_TARGET_NAME "clang_rt.builtins_${arch}_osx")
     set(BUILTIN_LIB_OUTPUT_NAME "clang_rt.builtins_${arch}_osx")

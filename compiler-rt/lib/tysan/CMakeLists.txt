@@ -36,7 +36,7 @@ add_compiler_rt_object_libraries(RTTysan_dynamic
 add_compiler_rt_component(tysan)
 
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
 
   add_compiler_rt_runtime(clang_rt.tysan

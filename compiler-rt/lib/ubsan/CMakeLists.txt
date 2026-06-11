@@ -78,7 +78,7 @@ endif()
 
 add_compiler_rt_component(ubsan)
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   set(UBSAN_COMMON_SOURCES ${UBSAN_SOURCES})
   if(SANITIZER_CAN_USE_CXXABI)
     list(APPEND UBSAN_COMMON_SOURCES ${UBSAN_CXXABI_SOURCES})
@@ -118,7 +118,7 @@ if(APPLE)
       LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
       PARENT_TARGET ubsan)
 
-    if (NOT APPLE)
+    if (NOT COMPILER_RT_TARGET_APPLE)
       add_compiler_rt_runtime(clang_rt.ubsan
         STATIC
         OS ${UBSAN_SUPPORTED_OS}

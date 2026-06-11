@@ -38,7 +38,7 @@ set(ALL_CRT_SUPPORTED_ARCH ${X86} ${X86_64} ${ARM32} ${ARM64} ${PPC32}
 
 include(CompilerRTUtils)
 
-if(NOT APPLE)
+if(NOT COMPILER_RT_TARGET_APPLE)
   if(COMPILER_RT_CRT_STANDALONE_BUILD)
     test_targets()
   endif()

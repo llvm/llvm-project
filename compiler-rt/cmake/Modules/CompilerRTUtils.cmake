@@ -425,6 +425,12 @@ macro(construct_compiler_rt_default_triple)
     set(COMPILER_RT_TARGET_AMDGPU FALSE)
   endif()
 
+  if("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES "apple")
+    set(COMPILER_RT_TARGET_APPLE TRUE)
+  else()
+    set(COMPILER_RT_TARGET_APPLE FALSE)
+  endif()
+
   # If we are directly targeting a GPU we need to check that the compiler is
   # compatible and pass some default arguments.
   if(COMPILER_RT_DEFAULT_TARGET_ONLY)
@@ -501,7 +507,7 @@ endfunction()
 
 function(get_compiler_rt_install_dir arch install_dir)
   # TODO: Use RUNTIMES_INSTALL_RESOURCE_LIB_PATH instead
-  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT COMPILER_RT_TARGET_APPLE)
     get_compiler_rt_target(${arch} target)
     set(${install_dir} ${COMPILER_RT_INSTALL_LIBRARY_DIR}/${target} PARENT_SCOPE)
   else()
@@ -511,7 +517,7 @@ endfunction()
 
 function(get_compiler_rt_output_dir arch output_dir)
   # TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
-  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT COMPILER_RT_TARGET_APPLE)
     get_compiler_rt_target(${arch} target)
     set(${output_dir} ${COMPILER_RT_OUTPUT_LIBRARY_DIR}/${target} PARENT_SCOPE)
   else()

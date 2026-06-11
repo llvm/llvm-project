@@ -60,7 +60,7 @@ set(TSAN_PREINIT_SOURCES
   tsan_preinit.cpp
   )
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   list(APPEND TSAN_SOURCES
     tsan_interceptors_mac.cpp
     tsan_interceptors_mach_vm.cpp
@@ -116,7 +116,7 @@ if("${CMAKE_C_FLAGS}" MATCHES "-Wno-(error=)?unused-command-line-argument")
   set(EXTRA_CFLAGS "-Wno-error=unused-command-line-argument ${EXTRA_CFLAGS}")
 endif()
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   # Ideally we would check the SDK version for the actual platform we are
   # building for here.  To make our lifes easier we assume the host SDK setup is
   # sane and use the macOS SDK version as a proxy for aligned SDKs.

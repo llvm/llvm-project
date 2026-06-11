@@ -26,7 +26,7 @@ function(add_orc_lib library)
 endfunction()
 
 function(get_orc_lib_for_arch arch lib)
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     if("osx" IN_LIST ORC_SUPPORTED_OS)
       set(tgt_name "RTOrc.test.osx")
     endif()
@@ -43,7 +43,7 @@ set(ORC_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${COMPILER_RT_CXX_LINK_LIBS})
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   darwin_filter_host_archs(ORC_SUPPORTED_ARCH ORC_TEST_ARCH)
   list(APPEND ORC_UNITTEST_CFLAGS ${DARWIN_osx_CFLAGS})
   list(APPEND ORC_UNITTEST_LINK_FLAGS ${DARWIN_osx_LINK_FLAGS})
@@ -101,7 +101,7 @@ macro(add_orc_tool toolname)
   endif()
 endmacro()
 
-if (APPLE)
+if (COMPILER_RT_TARGET_APPLE)
   if("osx" IN_LIST ORC_SUPPORTED_OS)
     add_orc_lib("RTOrc.test.osx"
       $<TARGET_OBJECTS:RTOrc.osx>)

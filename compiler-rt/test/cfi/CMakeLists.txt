@@ -35,14 +35,14 @@ macro (add_cfi_test_suites lld thinlto traploop)
 endmacro()
 
 set(CFI_TEST_ARCH ${CFI_SUPPORTED_ARCH})
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   darwin_filter_host_archs(CFI_SUPPORTED_ARCH CFI_TEST_ARCH)
 endif()
 
 foreach(arch ${CFI_TEST_ARCH})
   set(CFI_TEST_TARGET_ARCH ${arch})
   get_test_cc_for_arch(${arch} CFI_TEST_TARGET_CC CFI_TEST_TARGET_CFLAGS)
-  if (APPLE)
+  if (COMPILER_RT_TARGET_APPLE)
     # FIXME: enable ThinLTO tests after fixing http://llvm.org/pr32741
     add_cfi_test_suites(False False False)
   elseif(WIN32)
@@ -80,13 +80,13 @@ if(NOT COMPILER_RT_STANDALONE_BUILD)
         LLVMgold
       )
     endif()
-    if(APPLE)
+    if(COMPILER_RT_TARGET_APPLE)
       list(APPEND CFI_TEST_DEPS
         LTO
       )
     endif()
   endif()
-  if(NOT APPLE AND COMPILER_RT_HAS_LLD AND TARGET lld)
+  if(NOT COMPILER_RT_TARGET_APPLE AND COMPILER_RT_HAS_LLD AND TARGET lld)
     list(APPEND CFI_TEST_DEPS
       lld
     )

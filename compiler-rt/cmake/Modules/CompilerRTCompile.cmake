@@ -89,7 +89,7 @@ function(clang_compile object_file source)
       translate_msvc_cflags(global_flags "${global_flags}")
     endif()
 
-    if (APPLE)
+    if (COMPILER_RT_TARGET_APPLE)
       set(global_flags ${OSX_SYSROOT_FLAG} ${global_flags})
     endif()
 
@@ -135,7 +135,7 @@ endfunction()
 # it.
 # On other platforms, this is currently not an issue.
 macro(clang_compiler_add_cxx_check)
-  if (APPLE)
+  if (COMPILER_RT_TARGET_APPLE)
     set(CMD
       "echo '#include <iostream>' | ${COMPILER_RT_TEST_COMPILER} ${OSX_SYSROOT_FLAG} -E -x c++ - > /dev/null"
       "if [ $? != 0 ] "

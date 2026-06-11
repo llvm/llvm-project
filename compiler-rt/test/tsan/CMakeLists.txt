@@ -8,7 +8,7 @@ list(APPEND TSAN_TEST_DEPS tsan)
 if(COMPILER_RT_LIBCXX_PATH AND
    COMPILER_RT_LIBCXXABI_PATH AND
    COMPILER_RT_TEST_COMPILER_ID STREQUAL "Clang"
-   AND NOT APPLE AND NOT ANDROID)
+   AND NOT COMPILER_RT_TARGET_APPLE AND NOT ANDROID)
   list(APPEND TSAN_TEST_DEPS libcxx_tsan)
   set(TSAN_HAS_LIBCXX True)
 else()
@@ -24,7 +24,7 @@ if (NOT DEFINED TSAN_TEST_DEFLAKE_THRESHOLD)
 endif()
 
 set(TSAN_TEST_ARCH ${TSAN_SUPPORTED_ARCH})
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   darwin_filter_host_archs(TSAN_SUPPORTED_ARCH TSAN_TEST_ARCH)
 endif()
 
@@ -75,7 +75,7 @@ endforeach()
 # "check-tsan-iossim-x86_64" and similar. They also require an extra environment
 # variable to select which iOS device or simulator to use, e.g.:
 # SANITIZER_IOSSIM_TEST_DEVICE_IDENTIFIER="iPhone 6"
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   set(TSAN_TEST_TARGET_CC ${COMPILER_RT_TEST_COMPILER})
   set(TSAN_APPLE_PLATFORMS ${TSAN_SUPPORTED_OS})
   foreach(platform ${TSAN_APPLE_PLATFORMS})

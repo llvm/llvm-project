@@ -60,7 +60,7 @@ list(APPEND ASAN_UNITTEST_COMMON_CFLAGS
   -DASAN_UAR=0
   )
 
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   list(APPEND ASAN_UNITTEST_COMMON_CFLAGS ${DARWIN_osx_CFLAGS})
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS ${DARWIN_osx_LINK_FLAGS})
 
@@ -86,7 +86,7 @@ if(CMAKE_SYSTEM MATCHES "FreeBSD-9.2-RELEASE")
 endif()
 
 # Unit tests on Mac depend on Foundation.
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS -framework Foundation)
 endif()
 if(ANDROID)
@@ -105,7 +105,7 @@ set(ASAN_UNITTEST_INSTRUMENTED_LIBS)
 
 set(ASAN_UNITTEST_NOINST_LINK_FLAGS ${ASAN_UNITTEST_COMMON_LINK_FLAGS})
 append_list_if(MSVC -Wl,-nodefaultlib:msvcrt ASAN_UNITTEST_NOINST_LINK_FLAGS)
-if(NOT APPLE)
+if(NOT COMPILER_RT_TARGET_APPLE)
   append_list_if(COMPILER_RT_HAS_LIBM -lm ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBDL -ldl ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBRT -lrt ASAN_UNITTEST_NOINST_LINK_FLAGS)
@@ -148,7 +148,7 @@ set(ASAN_INST_TEST_SOURCES
   asan_str_test.cpp
   asan_test_main.cpp
   )
-if(APPLE)
+if(COMPILER_RT_TARGET_APPLE)
   list(APPEND ASAN_INST_TEST_SOURCES
     asan_mac_test.cpp
     asan_mac_test_helpers.mm
@@ -252,7 +252,7 @@ endfunction()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
   set(ASAN_TEST_ARCH ${ASAN_SUPPORTED_ARCH})
-  if(APPLE)
+  if(COMPILER_RT_TARGET_APPLE)
     darwin_filter_host_archs(ASAN_SUPPORTED_ARCH ASAN_TEST_ARCH)
   endif()
   list(REMOVE_ITEM ASAN_TEST_ARCH sparcv9)
@@ -264,7 +264,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID)
 
     # Add static ASan runtime that will be linked with uninstrumented tests.
     set(ASAN_TEST_RUNTIME RTAsanTest.${arch})
-    if(APPLE)
+    if(COMPILER_RT_TARGET_APPLE)
       set(ASAN_TEST_RUNTIME_OBJECTS
         $<TARGET_OBJECTS:RTAsan_dynamic.osx>
         $<TARGET_OBJECTS:RTInterception.osx>
