@@ -71,6 +71,8 @@ def cmd_html(args: argparse.Namespace) -> int:
             args.all_passes,
             args.no_highlight,
             args.file or "",
+            args.assembly or "",
+            args.mir or "",
         )
     finally:
         con.close()
@@ -142,6 +144,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "--file",
         default="",
         help="Only emit pages for source paths containing this substring",
+    )
+    html_p.add_argument(
+        "--assembly",
+        default="",
+        help="Assembly file to include as assembly.html",
+    )
+    html_p.add_argument(
+        "--mir",
+        default="",
+        help="Final MIR file to use for the final MIR panel",
     )
     html_p.add_argument(
         "--all-passes",
