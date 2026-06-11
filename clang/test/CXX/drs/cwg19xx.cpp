@@ -167,7 +167,6 @@ template<typename T> struct A {
 };
 class X {
   static int x;
-  // FIXME: this is ill-formed, because A<T>::B::C does not end with a simple-template-id
   template <typename T>
   friend class A<T>::B::C;
   // expected-error@-1 {{friend declaration does not name a member of a class template specialization}}
