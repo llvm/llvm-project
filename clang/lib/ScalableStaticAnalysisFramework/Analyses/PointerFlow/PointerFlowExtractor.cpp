@@ -335,7 +335,7 @@ public:
       // Templates are skipped, but their instantiations are handled. The idea
       // is that we can conclude facts about a template through all of its
       // instantiations.
-      if (CD->isTemplated() || CD->getDeclContext()->isDependentContext())
+      if (CD->isTemplated())
         continue;
 
       auto EntitySummary = extractEntitySummary(CD, Ctx, *this);
