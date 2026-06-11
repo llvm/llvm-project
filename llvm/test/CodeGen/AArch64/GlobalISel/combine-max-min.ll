@@ -2,11 +2,6 @@
 ; RUN: llc -global-isel=0 -mtriple=aarch64 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -global-isel -mtriple=aarch64 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-declare i64 @llvm.smax.i64(i64, i64)
-declare i64 @llvm.umax.i64(i64, i64)
-declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
-declare <4 x i32> @llvm.umax.v4i32(<4 x i32>, <4 x i32>)
-
 ; 0 - smax(a, 0 - a)  ->  smin(a, 0 - a)   (i.e. -abs(a))
 define i64 @ASubSMax(i64 %a) {
 ; CHECK-SD-LABEL: ASubSMax:
