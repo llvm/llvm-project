@@ -851,7 +851,7 @@ private:
   std::optional<Summary> findFunctionSummary(const CallEvent &Call,
                                              CheckerContext &C) const;
 
-  void initFunctionSummaries(CheckerContext &C) const;
+  LLVM_ATTRIBUTE_MINSIZE void initFunctionSummaries(CheckerContext &C) const;
 
   void reportBug(const CallEvent &Call, ExplodedNode *N,
                  const ValueConstraint *VC, const ValueConstraint *NegatedVC,

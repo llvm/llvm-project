@@ -13,12 +13,10 @@
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/LazyImport.h"
 #include "lldb/Host/windows/windows.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
-#include "lldb/lldb-forward.h"
 #include <llvm/Support/ConvertUTF.h>
 
 using namespace lldb;
@@ -27,7 +25,7 @@ using namespace lldb_private;
 NativeThreadWindows::NativeThreadWindows(NativeProcessWindows &process,
                                          const HostThread &thread)
     : NativeThreadProtocol(process, thread.GetNativeThread().GetThreadId()),
-      m_stop_info(), m_stop_description(), m_host_thread(thread) {
+      m_host_thread(thread) {
   m_reg_context_up =
       (NativeRegisterContextWindows::CreateHostNativeRegisterContextWindows(
           process.GetArchitecture(), *this));
@@ -61,8 +59,7 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
             eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FLAGS);
     uint64_t flags_value =
         GetRegisterContext().ReadRegisterAsUnsigned(flags_index, 0);
-    NativeProcessProtocol &process = GetProcess();
-    const ArchSpec &arch = process.GetArchitecture();
+    const ArchSpec &arch = GetProcess().GetArchitecture();
     switch (arch.GetMachine()) {
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -81,6 +78,9 @@ Status NativeThreadWindows::DoResume(lldb::StateType resume_state) {
   }
 
   if (resume_state == eStateStepping || resume_state == eStateRunning) {
+    // Clear any stop info left over from a previous stop.
+    ClearStopInfo();
+
     DWORD previous_suspend_count = 0;
     HANDLE thread_handle = m_host_thread.GetNativeThread().GetSystemHandle();
     do {
@@ -151,11 +151,8 @@ bool NativeThreadWindows::GetStopReason(ThreadStopInfo &stop_info,
   case eStateRunning:
   case eStateStepping:
   case eStateDetached:
-    if (log) {
-      log->Printf("NativeThreadWindows::%s tid %" PRIu64
-                  " in state %s cannot answer stop reason",
-                  __FUNCTION__, GetID(), StateAsCString(m_state));
-    }
+    LLDB_LOGF(log, "tid %" PRIu64 " in state %s cannot answer stop reason",
+              GetID(), StateAsCString(m_state));
     return false;
   }
   llvm_unreachable("unhandled StateType!");

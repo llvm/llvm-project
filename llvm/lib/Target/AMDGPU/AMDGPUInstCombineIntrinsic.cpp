@@ -52,16 +52,14 @@ struct AMDGPUImageDMaskIntrinsic {
 // handling NaNs.
 static APFloat fmed3AMDGCN(const APFloat &Src0, const APFloat &Src1,
                            const APFloat &Src2) {
+  assert(!Src0.isNaN() && !Src1.isNaN() && !Src2.isNaN() &&
+         "nans handled separately");
   APFloat Max3 = maxnum(maxnum(Src0, Src1), Src2);
 
-  APFloat::cmpResult Cmp0 = Max3.compare(Src0);
-  assert(Cmp0 != APFloat::cmpUnordered && "nans handled separately");
-  if (Cmp0 == APFloat::cmpEqual)
+  if (Max3.bitwiseIsEqual(Src0))
     return maxnum(Src1, Src2);
 
-  APFloat::cmpResult Cmp1 = Max3.compare(Src1);
-  assert(Cmp1 != APFloat::cmpUnordered && "nans handled separately");
-  if (Cmp1 == APFloat::cmpEqual)
+  if (Max3.bitwiseIsEqual(Src1))
     return maxnum(Src0, Src2);
 
   return maxnum(Src0, Src1);
@@ -143,6 +141,9 @@ static std::optional<Instruction *> modifyIntrinsicCall(
   NewCall->copyMetadata(OldIntr);
   if (isa<FPMathOperator>(NewCall))
     NewCall->copyFastMathFlags(&OldIntr);
+  // Copy attributes
+  AttributeList OldAttrList = OldIntr.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   // Erase and replace uses
   if (!InstToReplace.getType()->isVoidTy())
@@ -883,6 +884,29 @@ matchDsSwizzleBitmaskPattern(ArrayRef<uint8_t> Ids) {
          XorMask << AMDGPU::Swizzle::BITMASK_XOR_SHIFT;
 }
 
+/// Match a GFX9+ DS_SWIZZLE rotate-mode permutation: a cyclic left-rotation
+/// of all 32 lanes within each 32-lane group by a constant N in [0, 31],
+/// i.e. dst_lane = (src_lane + N) % 32. On wave64, hasPeriodicLayout<32>
+/// ensures both 32-lane groups rotate by the same amount.
+static std::optional<unsigned>
+matchDsSwizzleRotatePattern(ArrayRef<uint8_t> Ids) {
+  if (!hasPeriodicLayout<32>(Ids))
+    return std::nullopt;
+
+  // Determine the rotation amount from lane 0: every lane must read from
+  // lane (I + N) % 32 where N = Ids[0] and 0 <= N <= 31.
+  unsigned N = Ids[0];
+  if (N >= 32)
+    return std::nullopt;
+
+  for (unsigned I = 0; I < 32; ++I)
+    if (Ids[I] != (I + N) % 32)
+      return std::nullopt;
+
+  return AMDGPU::Swizzle::ROTATE_MODE_ENC |
+         (N << AMDGPU::Swizzle::ROTATE_SIZE_SHIFT);
+}
+
 /// Emit v_mov_b32_dpp with the given control word, row/bank masks 0xF, and
 /// bound_ctrl=1 so out-of-bounds lanes are well-defined and the DPP mov can
 /// be folded into a consuming VALU op by GCNDPPCombine.
@@ -1005,6 +1029,13 @@ static Value *matchShuffleToHWIntrinsic(IRBuilderBase &B, Value *Src,
   if (std::optional<unsigned> Imm = matchDsSwizzleBitmaskPattern(Ids))
     return createDsSwizzle(B, Src, *Imm, DL);
 
+  // DS_SWIZZLE rotate mode (GFX9+): handles cyclic 32-lane rotations that
+  // bitmask mode cannot express (e.g. +1 mod 32 requires inter-bit carry).
+  if (ST.hasDsSwizzleRotateMode()) {
+    if (std::optional<unsigned> Imm = matchDsSwizzleRotatePattern(Ids))
+      return createDsSwizzle(B, Src, *Imm, DL);
+  }
+
   if (ST.hasPermLane64() && matchHalfWaveSwapPattern(Ids))
     return createPermlane64(B, Src);
 
@@ -1048,7 +1079,6 @@ tryOptimizeShufflePattern(InstCombiner &IC, IntrinsicInst &II,
 
   return IC.replaceInstUsesWith(II, Result);
 }
-
 std::optional<Instruction *>
 GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   Intrinsic::ID IID = II.getIntrinsicID();
@@ -1644,15 +1674,13 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         // intrinsic exposes) is one bit per thread, masked with the EXEC
         // register (which contains the bitmask of live threads). So a
         // comparison that always returns true is the same as a read of the
-        // EXEC register.
-        Metadata *MDArgs[] = {MDString::get(II.getContext(), "exec")};
-        MDNode *MD = MDNode::get(II.getContext(), MDArgs);
-        Value *Args[] = {MetadataAsValue::get(II.getContext(), MD)};
-        CallInst *NewCall = IC.Builder.CreateIntrinsic(Intrinsic::read_register,
-                                                       II.getType(), Args);
-        NewCall->addFnAttr(Attribute::Convergent);
-        NewCall->takeName(&II);
-        return IC.replaceInstUsesWith(II, NewCall);
+        // EXEC register. ballot(true) reads EXEC at the wave-size width, so
+        // zext/trunc the result to the intrinsic's return type.
+        Type *WaveTy = IC.Builder.getIntNTy(ST->getWavefrontSize());
+        Value *Ballot = IC.Builder.CreateIntrinsic(
+            Intrinsic::amdgcn_ballot, WaveTy, IC.Builder.getTrue());
+        Value *Result = IC.Builder.CreateZExtOrTrunc(Ballot, II.getType());
+        return IC.replaceInstUsesWith(II, Result);
       }
 
       // Canonicalize constants to RHS.
@@ -2379,6 +2407,8 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
       IC.Builder.CreateIntrinsic(II.getIntrinsicID(), OverloadTys, Args);
   NewCall->takeName(&II);
   NewCall->copyMetadata(II);
+  AttributeList OldAttrList = II.getAttributes();
+  NewCall->setAttributes(OldAttrList);
 
   if (IsLoad) {
     if (NewNumElts == 1) {

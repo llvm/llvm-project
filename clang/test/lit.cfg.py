@@ -285,6 +285,10 @@ if config.clang_enable_cir:
 if lit.util.which("spirv-val", config.llvm_tools_dir):
     config.available_features.add("spirv-val")
 
+# SPIRV-Tools availability (e.g. built with -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS)
+if config.spirv_tools_tests:
+    config.available_features.add("spirv-tools")
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 config.substitutions.append(
@@ -419,6 +423,13 @@ if config.enable_backtrace:
 
 if config.enable_threads:
     config.available_features.add("thread_support")
+
+# Add clang resource directory as a substitution
+if config.clang:
+    clang_resource_dir = subprocess.run(
+        [config.clang, "-print-resource-dir"], stdout=subprocess.PIPE, text=True
+    ).stdout.rstrip()
+    config.substitutions.append(("%clang-resource-dir", clang_resource_dir))
 
 # Check if we should allow outputs to console.
 run_console_tests = int(lit_config.params.get("enable_console", "0"))

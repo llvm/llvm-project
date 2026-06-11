@@ -41,6 +41,7 @@ function(add_math_entrypoint_object name)
 endfunction()
 
 add_math_entrypoint_object(acos)
+add_math_entrypoint_object(acosbf16)
 add_math_entrypoint_object(acosf)
 add_math_entrypoint_object(acosf16)
 
@@ -368,6 +369,7 @@ add_math_entrypoint_object(ilogbbf16)
 add_math_entrypoint_object(isnan)
 add_math_entrypoint_object(isnanf)
 add_math_entrypoint_object(isnanf16)
+add_math_entrypoint_object(isnanf128)
 add_math_entrypoint_object(isnanl)
 
 add_math_entrypoint_object(issignaling)

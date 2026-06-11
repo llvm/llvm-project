@@ -533,6 +533,35 @@ def select_constant_cmp: GICombineRule<
   (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, ${matchinfo}); }])
 >;
 
+// select c, 0, x -> and (not c), x
+def select_zero_true: GICombineRule<
+  (defs root:$root),
+  (match (G_SELECT $dst, $c, 0, $x):$root,
+    [{ return MRI.getType(${c}.getReg()) == MRI.getType(${dst}.getReg()) &&
+              VT->computeNumSignBits(${c}.getReg()) == MRI.getType(${dst}.getReg()).getScalarSizeInBits(); }]),
+  (apply (G_XOR $xor, $c, -1),
+         (G_FREEZE $f, $x),
+         (G_AND $dst, $xor, $f))
+>;
+
+// select c, x, 0 -> and c, x
+def select_zero_false: GICombineRule<
+  (defs root:$root),
+  (match (G_SELECT $dst, $c, $x, 0):$root,
+    [{ return MRI.getType(${c}.getReg()) == MRI.getType(${dst}.getReg()) &&
+              VT->computeNumSignBits(${c}.getReg()) == MRI.getType(${dst}.getReg()).getScalarSizeInBits(); }]),
+  (apply (G_FREEZE $f, $x),
+         (G_AND $dst, $c, $f))
+>;
+
+// select (not c), x, y -> select c, y, x
+def select_not: GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $c, $src, -1),
+         (G_SELECT $dst, $c, $x, $y):$root),
+  (apply (G_SELECT $dst, $src, $y, $x))
+>;
+
 // Fold (C op x) -> (x op C)
 // TODO: handle more isCommutable opcodes
 // TODO: handle compares (currently not marked as isCommutable)
@@ -1270,6 +1299,45 @@ def and_or_disjoint_mask : GICombineRule<
          [{ return Helper.matchAndOrDisjointMask(*${root}, ${info}); }]),
   (apply [{ Helper.applyBuildFnNoErase(*${root}, ${info}); }])>;
 
+// (X&~Y)|Y --> X|Y
+def or_and_xor_to_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_AND $and, $x, $not),
+         (G_OR $root, $and, $y)),
+  (apply (G_OR $root, $x, $y))>;
+
+// (X&Y)|~Y --> X|~Y
+def or_and_xor_to_xor_or : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_AND $and, $x, $y),
+         (G_OR $root, $and, $not)),
+  (apply (G_XOR $xor, $y, -1),
+         (G_OR $root, $x, $xor))>;
+
+// (X|~Y)&Y --> X&Y
+def and_xor_or_to_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_OR $or, $x, $not),
+         (G_AND $root, $or, $y)),
+  (apply (G_AND $root, $x, $y))>;
+
+// (X|Y)&~Y --> X&~Y
+def and_xor_or_to_xor_and : GICombineRule<
+  (defs root:$root),
+  (match (G_XOR $not, $y, -1),
+         (G_OR $and, $x, $y),
+         (G_AND $root, $and, $not)),
+  (apply (G_XOR $xor, $y, -1),
+         (G_AND $root, $x, $xor))>;
+
+def or_and_xor_combines : GICombineGroup<[or_and_xor_to_or,
+                                          or_and_xor_to_xor_or,
+                                          and_xor_or_to_and,
+                                          and_xor_or_to_xor_and]>;
+
 def bitfield_extract_from_and : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (G_CONSTANT $mask, $imm2),
@@ -1634,6 +1702,11 @@ def bitcast_bitcast_fold : GICombineRule<
       [{ return MRI.getType(${src0}.getReg()) == MRI.getType(${dst}.getReg()); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${src0}.getReg()); }])>;
 
+def bitcast_bitcast_to_bitcast : GICombineRule<
+  (defs root:$dst),
+  (match (G_BITCAST $dst, $src1), (G_BITCAST $src1, $src0),
+      [{ return MRI.getType(${src0}.getReg()) != MRI.getType(${dst}.getReg()); }]),
+  (apply (G_BITCAST $dst, $src0))>;
 
 def fptrunc_fpext_fold : GICombineRule<
   (defs root:$dst),
@@ -2418,7 +2491,9 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         add_sub_reg, buildvector_identity_fold,
                                         trunc_buildvector_fold,
                                         trunc_lshr_buildvector_fold,
-                                        bitcast_bitcast_fold, fptrunc_fpext_fold,
+                                        bitcast_bitcast_fold,
+                                        bitcast_bitcast_to_bitcast,
+                                        fptrunc_fpext_fold,
                                         right_identity_neg_zero_fp, right_identity_neg_zero_fp_nsz,
                                         right_identity_neg_one_fp]>;
 
@@ -2469,7 +2544,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain, cmp_combines,
     shl_ashr_to_sext_inreg, neg_and_one_to_sext_inreg, sext_inreg_of_load,
-    width_reduction_combines, select_combines,
+    width_reduction_combines, select_combines, select_zero_false, select_not,
     known_bits_simplifications, trunc_shift,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
@@ -2482,7 +2557,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     intrem_combines, intdiv_combines, fdiv_repeated_divison,
     sub_add_reg, select_to_minmax,
     fsub_to_fneg, commute_constant_to_rhs, match_ands, match_ors,
-    simplify_neg_minmax, combine_concat_vector,
+    or_and_xor_combines, simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines,
     truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines, add_shift, sub_one_from_sub,

@@ -73,4 +73,11 @@ subroutine s(n,m,a,l,c)
   do j=1,n; end do
 !$cuf kernel do <<<*,*>>> reduce (+:cr) ! ok complex type
   do j=1,n; cr = cr + c(j); end do
+! '-' is not a supported CUF reduction operator, regardless of variable type
+!ERROR: '-' is not a supported !$CUF KERNEL DO REDUCE operator
+!$cuf kernel do <<<*,*>>> reduce (-:mr)
+  do j=1,n; end do
+!ERROR: '-' is not a supported !$CUF KERNEL DO REDUCE operator
+!$cuf kernel do <<<*,*>>> reduce (-:ar)
+  do j=1,n; end do
 end

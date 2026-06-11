@@ -184,7 +184,7 @@ void C::f(int x, ...) {}
 
 // The thunk adjusts 'this' by -8 bytes and calls C::f().
 // CIR: cir.func {{.*}} @_ZThn8_N5Test11C1fEv(%arg0: !cir.ptr<
-// CIR:   %[[T1_THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
+// CIR:   %[[T1_THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
 // CIR:   cir.store %arg0, %[[T1_THIS_ADDR]]
 // CIR:   %[[T1_THIS:.*]] = cir.load %[[T1_THIS_ADDR]]
 // CIR:   %[[T1_CAST:.*]] = cir.cast bitcast %[[T1_THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>
@@ -251,8 +251,8 @@ void C::f(int x, ...) {}
 // CIR: cir.func {{.*}} @_ZN5Test51C1hEv
 
 // CIR: cir.func {{.*}} @_ZThn8_N5Test51C1hEv(%arg0: !cir.ptr<
-// CIR:   %[[T5_THIS_ADDR:.*]] = cir.alloca {{.*}} ["this", init]
-// CIR:   %[[T5_RETVAL:.*]] = cir.alloca !rec_Test5{{.*}}NonTrivial, {{.*}} ["__retval"]
+// CIR:   %[[T5_THIS_ADDR:.*]] = cir.alloca "this" {{.*}} init
+// CIR:   %[[T5_RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Test53A3ANonTrivial>
 // CIR:   cir.store %arg0, %[[T5_THIS_ADDR]]
 // CIR:   %[[T5_THIS:.*]] = cir.load %[[T5_THIS_ADDR]]
 // CIR:   %[[T5_CAST:.*]] = cir.cast bitcast %[[T5_THIS]] : !cir.ptr<{{.*}}> -> !cir.ptr<!u8i>
@@ -354,27 +354,27 @@ void C::f(int x, ...) {}
 
 // --- OGCG checks ---
 
-// OGCG: @_ZTVN5Test11CE = constant { [3 x ptr], [3 x ptr] } {
+// OGCG: @_ZTVN5Test11CE = unnamed_addr constant { [3 x ptr], [3 x ptr] } {
 // OGCG-SAME: [3 x ptr] [ptr null, ptr null, ptr @_ZN5Test11C1fEv],
 // OGCG-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test11C1fEv]
 // OGCG-SAME: }
 
-// OGCG: @_ZTVN5Test21CE = constant { [3 x ptr], [3 x ptr] } {
+// OGCG: @_ZTVN5Test21CE = unnamed_addr constant { [3 x ptr], [3 x ptr] } {
 // OGCG-SAME: [3 x ptr] [ptr null, ptr null, ptr @_ZN5Test21C1gEv],
 // OGCG-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test21C1gEv]
 // OGCG-SAME: }
 
-// OGCG: @_ZTVN5Test31DE = constant { [4 x ptr], [4 x ptr] } {
+// OGCG: @_ZTVN5Test31DE = unnamed_addr constant { [4 x ptr], [4 x ptr] } {
 // OGCG-SAME: [4 x ptr] [ptr null, ptr null, ptr @_ZN5Test31DD1Ev, ptr @_ZN5Test31DD0Ev],
 // OGCG-SAME: [4 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test31DD1Ev, ptr @_ZThn8_N5Test31DD0Ev]
 // OGCG-SAME: }
 
-// OGCG: @_ZTVN5Test41CE = constant { [4 x ptr], [3 x ptr] } {
+// OGCG: @_ZTVN5Test41CE = unnamed_addr constant { [4 x ptr], [3 x ptr] } {
 // OGCG-SAME: [4 x ptr] [ptr null, ptr null, ptr @_ZN5Test41A1fEv, ptr @_ZN5Test41C1gEi],
 // OGCG-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test41C1gEi]
 // OGCG-SAME: }
 
-// OGCG: @_ZTVN5Test51CE = constant { [3 x ptr], [3 x ptr] } {
+// OGCG: @_ZTVN5Test51CE = unnamed_addr constant { [3 x ptr], [3 x ptr] } {
 // OGCG-SAME: [3 x ptr] [ptr null, ptr null, ptr @_ZN5Test51C1hEv],
 // OGCG-SAME: [3 x ptr] [ptr inttoptr (i64 -8 to ptr), ptr null, ptr @_ZThn8_N5Test51C1hEv]
 // OGCG-SAME: }

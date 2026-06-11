@@ -179,8 +179,6 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
   for (BasicBlock *BB : L->blocks()) {
     // Scan the BB and collect legal loads and stores.
     for (Instruction &I : *BB) {
-      if (!isa<Instruction>(I))
-        return false;
       NumInsts++;
       if (auto *Ld = dyn_cast<LoadInst>(&I)) {
         if (!Ld->isSimple())
@@ -824,12 +822,26 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
                     << "' and '" << InnerLoop->getName()
                     << "' are tightly nested\n");
 
-  // A perfectly nested loop will not have any branch in between the outer and
-  // inner block i.e. outer header will branch to either inner preheader and
-  // outerloop latch.
+  // In a perfectly nested loop the outer header branches only into the inner
+  // loop. If it can also reach the outer latch, it conditionally guards the
+  // inner loop (an imperfect nest), so the inner loop runs on only a subset of
+  // the outer iterations. Interchanging such a nest would run the inner loop on
+  // every outer iteration, including the guarded-off ones, which is illegal
+  // when the inner loop relies on the guard to terminate (e.g. an eq/ne exit
+  // whose trip count is degenerate once the guard is false). Reject by allowing
+  // the outer header to branch only into the inner loop.
+  //
+  // TODO: This is conservative. A guarded nest is still safe to interchange
+  // when the inner loop has a computable trip count that is empty exactly when
+  // the guard is false, e.g.:
+  //   for (i = 0; i < N; i++)
+  //     if (M > 0)                  // loop-invariant guard
+  //       for (j = 0; j < M; j++)   // empty when M <= 0
+  //         A[j][i] = ...;
+  // Interchanging is legal here because the inner loop runs zero times on the
+  // guarded-off iterations.
   for (BasicBlock *Succ : successors(OuterLoopHeader))
-    if (Succ != InnerLoopPreHeader && Succ != InnerLoop->getHeader() &&
-        Succ != OuterLoopLatch)
+    if (Succ != InnerLoopPreHeader && Succ != InnerLoop->getHeader())
       return false;
 
   LLVM_DEBUG(dbgs() << "Checking instructions in Loop header and Loop latch\n");
@@ -911,59 +923,61 @@ bool LoopInterchangeLegality::isLoopStructureUnderstood() {
       dyn_cast<CondBrInst>(InnerLoopLatch->getTerminator());
   if (!InnerLoopLatchBI)
     return false;
-  if (CmpInst *InnerLoopCmp =
-          dyn_cast<CmpInst>(InnerLoopLatchBI->getCondition())) {
-    Value *Op0 = InnerLoopCmp->getOperand(0);
-    Value *Op1 = InnerLoopCmp->getOperand(1);
 
-    // LHS and RHS of the inner loop exit condition, e.g.,
-    // in "for(int j=0;j<i;j++)", LHS is j and RHS is i.
-    Value *Left = nullptr;
-    Value *Right = nullptr;
+  CmpInst *InnerLoopCmp = dyn_cast<CmpInst>(InnerLoopLatchBI->getCondition());
+  if (!InnerLoopCmp)
+    return false;
 
-    // Check if V only involves inner loop induction variable.
-    // Return true if V is InnerInduction, or a cast from
-    // InnerInduction, or a binary operator that involves
-    // InnerInduction and a constant.
-    std::function<bool(Value *)> IsPathToInnerIndVar;
-    IsPathToInnerIndVar = [this, &IsPathToInnerIndVar](const Value *V) -> bool {
-      if (llvm::is_contained(InnerLoopInductions, V))
-        return true;
-      if (isa<Constant>(V))
-        return true;
-      const Instruction *I = dyn_cast<Instruction>(V);
-      if (!I)
-        return false;
-      if (isa<CastInst>(I))
-        return IsPathToInnerIndVar(I->getOperand(0));
-      if (isa<BinaryOperator>(I))
-        return IsPathToInnerIndVar(I->getOperand(0)) &&
-               IsPathToInnerIndVar(I->getOperand(1));
-      return false;
-    };
+  Value *Op0 = InnerLoopCmp->getOperand(0);
+  Value *Op1 = InnerLoopCmp->getOperand(1);
 
-    // In case of multiple inner loop indvars, it is okay if LHS and RHS
-    // are both inner indvar related variables.
-    if (IsPathToInnerIndVar(Op0) && IsPathToInnerIndVar(Op1))
+  // LHS and RHS of the inner loop exit condition, e.g.,
+  // in "for(int j=0;j<i;j++)", LHS is j and RHS is i.
+  Value *Left = nullptr;
+  Value *Right = nullptr;
+
+  // Check if V only involves inner loop induction variable.
+  // Return true if V is InnerInduction, or a cast from
+  // InnerInduction, or a binary operator that involves
+  // InnerInduction and a constant.
+  std::function<bool(Value *)> IsPathToInnerIndVar;
+  IsPathToInnerIndVar = [this, &IsPathToInnerIndVar](const Value *V) -> bool {
+    if (llvm::is_contained(InnerLoopInductions, V))
       return true;
-
-    // Otherwise we check if the cmp instruction compares an inner indvar
-    // related variable (Left) with a outer loop invariant (Right).
-    if (IsPathToInnerIndVar(Op0) && !isa<Constant>(Op0)) {
-      Left = Op0;
-      Right = Op1;
-    } else if (IsPathToInnerIndVar(Op1) && !isa<Constant>(Op1)) {
-      Left = Op1;
-      Right = Op0;
-    }
-
-    if (Left == nullptr)
+    if (isa<Constant>(V))
+      return true;
+    const Instruction *I = dyn_cast<Instruction>(V);
+    if (!I)
       return false;
+    if (isa<CastInst>(I))
+      return IsPathToInnerIndVar(I->getOperand(0));
+    if (isa<BinaryOperator>(I))
+      return IsPathToInnerIndVar(I->getOperand(0)) &&
+             IsPathToInnerIndVar(I->getOperand(1));
+    return false;
+  };
 
-    const SCEV *S = SE->getSCEV(Right);
-    if (!SE->isLoopInvariant(S, OuterLoop))
-      return false;
+  // In case of multiple inner loop indvars, it is okay if LHS and RHS
+  // are both inner indvar related variables.
+  if (IsPathToInnerIndVar(Op0) && IsPathToInnerIndVar(Op1))
+    return true;
+
+  // Otherwise we check if the cmp instruction compares an inner indvar
+  // related variable (Left) with a outer loop invariant (Right).
+  if (IsPathToInnerIndVar(Op0) && !isa<Constant>(Op0)) {
+    Left = Op0;
+    Right = Op1;
+  } else if (IsPathToInnerIndVar(Op1) && !isa<Constant>(Op1)) {
+    Left = Op1;
+    Right = Op0;
   }
+
+  if (Left == nullptr)
+    return false;
+
+  const SCEV *S = SE->getSCEV(Right);
+  if (!SE->isLoopInvariant(S, OuterLoop))
+    return false;
 
   return true;
 }
@@ -998,8 +1012,23 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
-    case RecurKind::AnyOf:
       return true;
+
+    // Interchanging the loops that contain AnyOf reduction is not always legal.
+    // Especially, when the result value of the AnyOf is not loop-invariant with
+    // respect to the outer loop, interchanging may change the semantics. The
+    // following is an example of such case:
+    //   int A = {{ 1, 0 }, { 0, 1 }};
+    //   int red = 0;
+    //   for (int i = 0; i < 2; i++)
+    //     for (int j = 0; j < 2; j++)
+    //       red = (A[j][i] == 0) ? i + 1 : red;
+    //
+    // TODO: We may be able to support interchanging loops with AnyOf reduction
+    // by checking the operand of the reduction is loop-invariant with respect
+    // to the outer loop as well.
+    case RecurKind::AnyOf:
+      return false;
 
     // Changing the order of floating-point operations may alter the results. If
     // a certain instruction has the ninf flag, it means that reordering can
@@ -1371,8 +1400,10 @@ areInnerLoopExitPHIsSupported(Loop *OuterL, Loop *InnerL,
     // from the loop latch.
     if (PHI.getNumIncomingValues() > 1)
       return false;
+    // The reduction LCSSA PHI's store user is rewritten by reduction2Memory();
+    // skip its user-check but keep validating the remaining LCSSA PHIs.
     if (&PHI == LcssaReduction)
-      return true;
+      continue;
     if (any_of(PHI.users(), [&Reductions, OuterL](User *U) {
           PHINode *PN = dyn_cast<PHINode>(U);
           if (!PN)
@@ -1472,25 +1503,28 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
   }
   // Check if outer and inner loop contain legal instructions only.
   for (auto *BB : OuterLoop->blocks())
-    for (Instruction &I : *BB)
-      if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-        // Functions which don't access memory and don't diverge do not prevent
-        // interchanging.
-        if ((CI->doesNotAccessMemory() && !CI->mayHaveSideEffects()) ||
-            isa<PseudoProbeInst>(CI))
-          continue;
-        LLVM_DEBUG(
-            dbgs() << "Loops with call instructions cannot be interchanged "
-                   << "safely.");
-        ORE->emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "CallInst",
-                                          CI->getDebugLoc(),
-                                          CI->getParent())
-                 << "Cannot interchange loops due to call instruction.";
-        });
+    for (Instruction &I : *BB) {
+      // Loads and stores are checked separately, so we can skip them here.
+      if (isa<LoadInst, StoreInst, PseudoProbeInst>(&I))
+        continue;
 
-        return false;
-      }
+      // We cannot ignore potential memory reads, e.g., loads inside the called
+      // function.
+      if (!I.mayHaveSideEffects() && !I.mayReadFromMemory())
+        continue;
+
+      LLVM_DEBUG(
+          dbgs()
+          << "Loops contain instructions that cannot be safely interchanged\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsafeInst",
+                                        I.getDebugLoc(), I.getParent())
+               << "Cannot interchange loops due to instruction that is "
+                  "potentially unsafe to interchange.";
+      });
+
+      return false;
+    }
 
   if (!findInductions(InnerLoop, InnerLoopInductions)) {
     LLVM_DEBUG(dbgs() << "Could not find inner loop induction variables.\n");
@@ -2226,12 +2260,14 @@ static void moveLCSSAPhis(BasicBlock *InnerExit, BasicBlock *InnerHeader,
 
     assert(all_of(P.users(),
                   [OuterHeader, OuterExit, IncI, InnerHeader](User *U) {
+                    if (!isa<PHINode>(U))
+                      return true;
                     return (cast<PHINode>(U)->getParent() == OuterHeader &&
                             IncI->getParent() == InnerHeader) ||
                            cast<PHINode>(U)->getParent() == OuterExit;
                   }) &&
-           "Can only replace phis iff the uses are in the loop nest exit or "
-           "the incoming value is defined in the inner header (it will "
+           "Can only replace phis iff the phi-uses are in the loop nest exit "
+           "or the incoming value is defined in the inner header (it will "
            "dominate all loop blocks after interchanging)");
     P.replaceAllUsesWith(IncI);
     P.eraseFromParent();
