@@ -21,7 +21,7 @@
 #include "hdr/types/struct_sockaddr_in6.h"
 
 TEST(LlvmLibcNetinetInTest, In6AddrLayout) {
-  EXPECT_EQ(sizeof(struct in6_addr), size_t(16));
+  EXPECT_EQ(sizeof(struct in6_addr), static_cast<size_t>(16));
 
   struct in6_addr addr = {};
 
