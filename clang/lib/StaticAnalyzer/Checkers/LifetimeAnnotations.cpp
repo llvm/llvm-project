@@ -24,8 +24,7 @@ public:
   void analyzerLifetimeBound(const CallEvent &Call, const CallExpr *,
                              CheckerContext &C) const;
   ProgramStateRef bindValues(ProgramStateRef State, SymbolRef RetValSym, SVal RetVal, const MemRegion *Source) const;
-  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
-
+  bool isSourceDangle(const MemRegion *Source, ProgramStateRef State, CheckerContext &C) const;
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
 
@@ -94,10 +93,19 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
   C.addTransition(State);
 }
 
-void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
+bool LifetimeAnnotations::isSourceDangle(const MemRegion *Source, ProgramStateRef State, CheckerContext &C) const {
+  // Q1: Am I sure I need ProgramStateRef State as a parameter?
 
-  LifetimeBoundMapTy TrackedRegion = State->get<LifetimeBoundMap>();
+  if (const auto *StackSpace = Source->getMemorySpaceAs<StackSpaceRegion>(State)) {
+    const StackFrame *SF = StackSpace->getStackFrame();
+    const StackFrame *CurrentSF = C.getStackFrame();
+    if (SF == CurrentSF || SF->isParentOf(CurrentSF))
+      return false;
+    return false;
+  }
+
+  // Currently return false, but this has to be replaced when the source is a SymRegion instead of a MemRegion
+  return true;
 }
 
 void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
