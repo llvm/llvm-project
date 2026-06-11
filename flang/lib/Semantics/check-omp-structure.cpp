@@ -1571,9 +1571,7 @@ void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
     const parser::Designator &designator) {
   auto *name{parser::Unwrap<parser::Name>(designator)};
-  // If the symbol is null, return early, CheckSymbolNames
-  // should have already reported the missing symbol as a
-  // diagnostic error
+  // If the symbol is null, return early.
   if (!name || !name->symbol) {
     return;
   }
@@ -1745,8 +1743,8 @@ void OmpStructureChecker::Leave(const parser::OmpThreadprivateDirective &x) {
   const parser::OmpDirectiveSpecification &dirSpec{x.v};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{GetArgumentObject(arg)}) {
-      CheckSymbolName(dirSpec.source, *object);
-      CheckTypeParamInquiry(dirSpec.source, *object);
+      CheckTypeParamInquiry(
+          dirSpec.source, *object, llvm::omp::Directive::OMPD_threadprivate);
       CheckVarIsNotPartOfAnotherVar(dirSpec.source, *object);
       CheckThreadprivateOrDeclareTargetVar(*object);
     }
@@ -1844,6 +1842,9 @@ void OmpStructureChecker::CheckInitOnDepobj(
     context_.Say(args.source,
         "The INIT clause is not allowed when the DEPOBJ directive has an argument"_err_en_US);
   }
+
+  CheckTypeParamInquiry(initClause.source, std::get<parser::OmpObject>(init.t),
+      llvm::omp::Clause::OMPC_init);
 
   if (!OmpVerifyModifiers(
           init, llvm::omp::Clause::OMPC_init, initClause.source, context_)) {
@@ -2124,7 +2125,8 @@ void OmpStructureChecker::CheckIndividualAllocateDirective(
       if (!IsTypeParamInquiry(*symbol)) {
         checkSymbol(*symbol, arg.source);
       }
-      CheckTypeParamInquiry(dirName.source, *object);
+      CheckTypeParamInquiry(
+          dirName.source, *object, llvm::omp::Directive::OMPD_allocate);
       CheckVarIsNotPartOfAnotherVar(dirName.source, *object);
     }
   }
@@ -2353,38 +2355,6 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareReductionDirective &) {
   dirContext_.pop_back();
 }
 
-void OmpStructureChecker::CheckSymbolName(
-    const parser::CharBlock &source, const parser::OmpObject &object) {
-  common::visit(
-      common::visitors{
-          [&](const parser::Designator &designator) {
-            if (const auto *name{parser::Unwrap<parser::Name>(object)}) {
-              if (!name->symbol) {
-                context_.Say(source,
-                    "The given %s directive clause has an invalid argument"_err_en_US,
-                    ContextDirectiveAsFortran());
-              }
-            }
-          },
-          [&](const parser::Name &name) {
-            if (!name.symbol) {
-              context_.Say(source,
-                  "The given %s directive clause has an invalid argument"_err_en_US,
-                  ContextDirectiveAsFortran());
-            }
-          },
-          [&](const parser::OmpObject::Invalid &invalid) {},
-      },
-      object.u);
-}
-
-void OmpStructureChecker::CheckSymbolNames(
-    const parser::CharBlock &source, const parser::OmpObjectList &objList) {
-  for (const auto &ompObject : objList.v) {
-    CheckSymbolName(source, ompObject);
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OmpDeclareTargetDirective &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContext(dirName.source, dirName.v);
@@ -2454,8 +2424,8 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{GetArgumentObject(arg)}) {
       deviceConstructFound_ = true;
-      CheckSymbolName(dirName.source, *object);
-      CheckTypeParamInquiry(dirName.source, *object);
+      CheckTypeParamInquiry(
+          dirName.source, *object, llvm::omp::Directive::OMPD_declare_target);
       CheckVarIsNotPartOfAnotherVar(dirName.source, *object);
       CheckThreadprivateOrDeclareTargetVar(*object);
     }
@@ -2500,7 +2470,6 @@ void OmpStructureChecker::Leave(const parser::OmpDeclareTargetDirective &x) {
                   std::is_same_v<TypeC, parser::OmpClause::Link> ||
                   std::is_same_v<TypeC, parser::OmpClause::To>) {
                 auto &objList{*GetOmpObjectList(c)};
-                CheckSymbolNames(dirName.source, objList);
                 CheckVarIsNotPartOfAnotherVar(dirName.source, objList);
                 CheckThreadprivateOrDeclareTargetVar(objList);
               }
@@ -2649,7 +2618,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
       continue;
     }
     for (auto &object : DEREF(GetOmpObjectList(clause)).v) {
-      CheckTypeParamInquiry(dirName.source, object);
       CheckVarIsNotPartOfAnotherVar(dirName.source, object);
       if (auto *symbol{GetObjectSymbol(object, /*ultimate=*/true)}) {
         if (IsStructureComponent(*symbol)) {
@@ -3750,6 +3718,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Destroy &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_destroy);
+  if (auto &present{x.v}) {
+    CheckTypeParamInquiry(
+        GetContext().clauseSource, present->v, llvm::omp::Clause::OMPC_destroy);
+  }
 
   llvm::omp::Directive dir{GetContext().directive};
   unsigned version{context_.langOptions().OpenMPVersion};
@@ -4260,21 +4232,25 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Nowait &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_nowait);
 }
 
-void OmpStructureChecker::CheckTypeParamInquiry(
-    const parser::CharBlock &source, const parser::OmpObject &object) {
+void OmpStructureChecker::CheckTypeParamInquiry(const parser::CharBlock &source,
+    const parser::OmpObject &object, llvm::omp::Directive dirId) {
   if (const Symbol *symbol{GetObjectSymbol(object)}) {
     if (IsTypeParamInquiry(*symbol)) {
       context_.Say(source,
           "A type parameter inquiry cannot appear on the %s directive"_err_en_US,
-          ContextDirectiveAsFortran());
+          GetUpperName(dirId, context_.langOptions().OpenMPVersion));
     }
   }
 }
 
-void OmpStructureChecker::CheckTypeParamInquiry(
-    const parser::CharBlock &source, const parser::OmpObjectList &objects) {
-  for (const parser::OmpObject &object : objects.v) {
-    CheckTypeParamInquiry(source, object);
+void OmpStructureChecker::CheckTypeParamInquiry(const parser::CharBlock &source,
+    const parser::OmpObject &object, llvm::omp::Clause clauseId) {
+  if (const Symbol *symbol{GetObjectSymbol(object)}) {
+    if (IsTypeParamInquiry(*symbol)) {
+      context_.Say(source,
+          "A type parameter inquiry cannot appear on the %s clause"_err_en_US,
+          GetUpperName(clauseId, context_.langOptions().OpenMPVersion));
+    }
   }
 }
 
@@ -4521,6 +4497,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Detach &x) {
     CheckAllowedClause(llvm::omp::Clause::OMPC_detach);
   }
 
+  CheckTypeParamInquiry(
+      GetContext().clauseSource, x.v.v, llvm::omp::Clause::OMPC_detach);
   // OpenMP 5.2: 12.5.2 Detach clause restrictions
   if (version >= 52) {
     CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v.v, "DETACH");
@@ -5846,42 +5824,49 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
                       desc.name.str());
                 }
               }
-              const auto &interopVar{parser::Unwrap<parser::OmpObject>(
+              const auto *interopVar{parser::Unwrap<parser::OmpObject>(
                   std::get<parser::OmpObject>(initClause.v.t))};
-              const auto *name{parser::Unwrap<parser::Name>(interopVar)};
-              const auto *objectSymbol{name->symbol};
-              if (llvm::is_contained(objectSymbolList, objectSymbol)) {
-                context_.Say(GetContext().directiveSource,
-                    "Each interop-var may be specified for at most one action-clause of each INTEROP construct."_err_en_US);
-              } else {
-                objectSymbolList.insert(objectSymbol);
+              CheckTypeParamInquiry(
+                  clause.source, *interopVar, llvm::omp::Clause::OMPC_init);
+              if (const auto *name{parser::Unwrap<parser::Name>(interopVar)}) {
+                const auto *objectSymbol{name->symbol};
+                if (llvm::is_contained(objectSymbolList, objectSymbol)) {
+                  context_.Say(GetContext().directiveSource,
+                      "Each interop-var may be specified for at most one action-clause of each INTEROP construct."_err_en_US);
+                } else {
+                  objectSymbolList.insert(objectSymbol);
+                }
               }
             },
             [&](const parser::OmpClause::Depend &dependClause) {
               isDependClauseOccurred = true;
             },
             [&](const parser::OmpClause::Destroy &destroyClause) {
-              const auto &interopVar{
+              const auto *interopVar{
                   parser::Unwrap<parser::OmpObject>(destroyClause.v)};
-              const auto *name{parser::Unwrap<parser::Name>(interopVar)};
-              const auto *objectSymbol{name->symbol};
-              if (llvm::is_contained(objectSymbolList, objectSymbol)) {
-                context_.Say(GetContext().directiveSource,
-                    "Each interop-var may be specified for at most one action-clause of each INTEROP construct."_err_en_US);
-              } else {
-                objectSymbolList.insert(objectSymbol);
+              if (const auto *name{parser::Unwrap<parser::Name>(interopVar)}) {
+                const auto *objectSymbol{name->symbol};
+                if (llvm::is_contained(objectSymbolList, objectSymbol)) {
+                  context_.Say(GetContext().directiveSource,
+                      "Each interop-var may be specified for at most one action-clause of each INTEROP construct."_err_en_US);
+                } else {
+                  objectSymbolList.insert(objectSymbol);
+                }
               }
             },
             [&](const parser::OmpClause::Use &useClause) {
-              const auto &interopVar{
+              const auto *interopVar{
                   parser::Unwrap<parser::OmpObject>(useClause.v)};
-              const auto *name{parser::Unwrap<parser::Name>(interopVar)};
-              const auto *objectSymbol{name->symbol};
-              if (llvm::is_contained(objectSymbolList, objectSymbol)) {
-                context_.Say(GetContext().directiveSource,
-                    "Each interop-var may be specified for at most one action-clause of each INTEROP construct."_err_en_US);
-              } else {
-                objectSymbolList.insert(objectSymbol);
+              CheckTypeParamInquiry(
+                  clause.source, *interopVar, llvm::omp::Clause::OMPC_use);
+              if (const auto *name{parser::Unwrap<parser::Name>(interopVar)}) {
+                const auto *objectSymbol{name->symbol};
+                if (llvm::is_contained(objectSymbolList, objectSymbol)) {
+                  context_.Say(GetContext().directiveSource,
+                      "Each interop-var may be specified for at most one action-clause of each INTEROP construct."_err_en_US);
+                } else {
+                  objectSymbolList.insert(objectSymbol);
+                }
               }
             },
             [&](const auto &) {},

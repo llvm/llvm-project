@@ -148,7 +148,7 @@ inline auto m_AnyIntrinsic() { return m_Isa<IntrinsicInst>(); }
 
 struct undef_match {
 private:
-  static bool checkAggregate(const ConstantAggregate *CA);
+  LLVM_ABI static bool checkAggregate(const ConstantAggregate *CA);
 
 public:
   static bool check(const Value *V) {

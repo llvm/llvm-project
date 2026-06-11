@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s --check-prefix=WIN-V3-REF
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+push2pop2 | FileCheck %s --check-prefix=WIN-V3
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+push2pop2,+ppx | FileCheck %s --check-prefix=WIN-V3-PPX
-; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids | FileCheck %s --check-prefix=WIN-V3-DR
+; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids | FileCheck %s --check-prefix=WIN-V3-PPX
 
 ; V3 unwind info is enabled module-wide here. diamondrapids (which enables
 ; EGPR) requires V3, but with V3 enabled the SEH prolog/epilogue ordering
@@ -115,47 +115,6 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-V3-PPX-NEXT:    .seh_endepilogue
 ; WIN-V3-PPX-NEXT:    retq
 ; WIN-V3-PPX-NEXT:    .seh_endproc
-;
-; WIN-V3-DR-LABEL: csr6_alloc16:
-; WIN-V3-DR:       # %bb.0: # %entry
-; WIN-V3-DR-NEXT:    .seh_pushreg %r15
-; WIN-V3-DR-NEXT:    pushq %r15
-; WIN-V3-DR-NEXT:    .seh_pushreg %r14
-; WIN-V3-DR-NEXT:    pushq %r14
-; WIN-V3-DR-NEXT:    .seh_pushreg %r13
-; WIN-V3-DR-NEXT:    pushq %r13
-; WIN-V3-DR-NEXT:    .seh_pushreg %r12
-; WIN-V3-DR-NEXT:    pushq %r12
-; WIN-V3-DR-NEXT:    .seh_pushreg %rbp
-; WIN-V3-DR-NEXT:    pushq %rbp
-; WIN-V3-DR-NEXT:    .seh_pushreg %rbx
-; WIN-V3-DR-NEXT:    pushq %rbx
-; WIN-V3-DR-NEXT:    .seh_stackalloc 56
-; WIN-V3-DR-NEXT:    subq $56, %rsp
-; WIN-V3-DR-NEXT:    .seh_endprologue
-; WIN-V3-DR-NEXT:    #APP
-; WIN-V3-DR-NEXT:    #NO_APP
-; WIN-V3-DR-NEXT:    xorl %eax, %eax
-; WIN-V3-DR-NEXT:    callq *%rax
-; WIN-V3-DR-NEXT:    nop
-; WIN-V3-DR-NEXT:    .seh_startepilogue
-; WIN-V3-DR-NEXT:    .seh_stackalloc 56
-; WIN-V3-DR-NEXT:    addq $56, %rsp
-; WIN-V3-DR-NEXT:    .seh_pushreg %rbx
-; WIN-V3-DR-NEXT:    popq %rbx
-; WIN-V3-DR-NEXT:    .seh_pushreg %rbp
-; WIN-V3-DR-NEXT:    popq %rbp
-; WIN-V3-DR-NEXT:    .seh_pushreg %r12
-; WIN-V3-DR-NEXT:    popq %r12
-; WIN-V3-DR-NEXT:    .seh_pushreg %r13
-; WIN-V3-DR-NEXT:    popq %r13
-; WIN-V3-DR-NEXT:    .seh_pushreg %r14
-; WIN-V3-DR-NEXT:    popq %r14
-; WIN-V3-DR-NEXT:    .seh_pushreg %r15
-; WIN-V3-DR-NEXT:    popq %r15
-; WIN-V3-DR-NEXT:    .seh_endepilogue
-; WIN-V3-DR-NEXT:    retq
-; WIN-V3-DR-NEXT:    .seh_endproc
 entry:
   tail call void asm sideeffect "", "~{rbp},~{r15},~{r14},~{r13},~{r12},~{rbx},~{dirflag},~{fpsr},~{flags}"()
   %a = alloca [3 x ptr], align 8
