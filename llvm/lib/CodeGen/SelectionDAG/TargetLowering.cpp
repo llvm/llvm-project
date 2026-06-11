@@ -9133,10 +9133,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
   // Work in the source integer type. Match the destination shape so the
   // expansion stays vector when ResVT is a vector.
   EVT IntScalarVT = EVT::getIntegerVT(*DAG.getContext(), SrcBits);
-  EVT IntVT = ResVT.isVector()
-                  ? EVT::getVectorVT(*DAG.getContext(), IntScalarVT,
-                                     ResVT.getVectorElementCount())
-                  : IntScalarVT;
+  EVT IntVT = ResVT.changeElementType(*DAG.getContext(), IntScalarVT);
   EVT SetCCVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IntVT);
   EVT FPSetCCVT =
@@ -9175,22 +9172,22 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
                                    DAG.getConstant(SrcMantMask, dl, IntVT));
 
   SDValue FrexpExpExt = DAG.getSExtOrTrunc(FrexpExp, dl, IntVT);
-  SDValue NewExp = DAG.getNode(
-      ISD::ADD, dl, IntVT, FrexpExpExt,
-      DAG.getConstant(APInt(SrcBits, DstBias - 1, true), dl, IntVT));
+  SDValue NewExp = DAG.getNode(ISD::ADD, dl, IntVT, FrexpExpExt,
+                               DAG.getConstant(DstBias - 1, dl, IntVT));
 
   // Compute rounding increment given the round bit, sticky bits, and LSB
   // of the truncated mantissa.
   auto ComputeRoundUp = [&](SDValue RoundBit, SDValue StickyBits,
                             SDValue LSB) -> SDValue {
-    if (RoundMode == RoundingMode::NearestTiesToEven) {
+    switch (RoundMode) {
+    case RoundingMode::NearestTiesToEven: {
       // Round up if round_bit && (sticky || lsb)
       SDValue StickyOrLSB = DAG.getNode(ISD::OR, dl, IntVT, StickyBits, LSB);
       return DAG.getNode(ISD::AND, dl, IntVT, RoundBit, StickyOrLSB);
     }
-    if (RoundMode == RoundingMode::TowardZero)
+    case RoundingMode::TowardZero:
       return Zero;
-    if (RoundMode == RoundingMode::TowardPositive) {
+    case RoundingMode::TowardPositive: {
       // Round up if positive and any truncated bits are set.
       SDValue AnyTruncBits =
           DAG.getNode(ISD::OR, dl, IntVT, RoundBit, StickyBits);
@@ -9201,7 +9198,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
           DAG.getNode(ISD::AND, dl, SetCCVT, HasTruncBits, IsPositive);
       return DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, DoRound);
     }
-    if (RoundMode == RoundingMode::TowardNegative) {
+    case RoundingMode::TowardNegative: {
       // Round up if negative and any truncated bits are set (to -Inf).
       SDValue AnyTruncBits =
           DAG.getNode(ISD::OR, dl, IntVT, RoundBit, StickyBits);
@@ -9212,9 +9209,11 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
           DAG.getNode(ISD::AND, dl, SetCCVT, HasTruncBits, IsNegative);
       return DAG.getNode(ISD::ZERO_EXTEND, dl, IntVT, DoRound);
     }
-    assert(RoundMode == RoundingMode::NearestTiesToAway &&
-           "Unsupported rounding mode; should have been rejected above");
-    return RoundBit;
+    case RoundingMode::NearestTiesToAway:
+      return RoundBit;
+    default:
+      llvm_unreachable("unsupported rounding mode");
+    }
   };
 
   // Round mantissa from SrcMant bits to DstMant bits.
@@ -9239,7 +9238,7 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
     // OR of all bits below the round bit to get sticky bits.
     SDValue StickyBits;
     if (Shift >= 2) {
-      uint64_t StickyMask = (1ULL << (Shift - 1)) - 1;
+      uint64_t StickyMask = maskTrailingOnes<uint64_t>(Shift - 1);
       StickyBits = DAG.getNode(ISD::AND, dl, IntVT, EffSrcMant,
                                DAG.getConstant(StickyMask, dl, IntVT));
       StickyBits = DAG.getSetCC(dl, SetCCVT, StickyBits, Zero, ISD::SETNE);
@@ -9303,12 +9302,14 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
         DAG.getNode(ISD::ADD, dl, IntVT, DenormShift,
                     DAG.getSignedConstant(MantDelta, dl, IntVT));
 
-    // Clamp total shift to avoid UB, then trancate denorm mantissa.
+    // Clamp total shift to avoid UB, then truncate denorm mantissa.
+    EVT ShiftVT = getShiftAmountTy(IntVT, DAG.getDataLayout());
     SDValue MaxShift = DAG.getConstant(SrcBits - 1, dl, IntVT);
     SDValue ClampedShift =
         DAG.getNode(ISD::UMIN, dl, IntVT, TotalShift, MaxShift);
     SDValue DenormTruncMant =
-        DAG.getNode(ISD::SRL, dl, IntVT, FullSrcMant, ClampedShift);
+        DAG.getNode(ISD::SRL, dl, IntVT, FullSrcMant,
+                    DAG.getZExtOrTrunc(ClampedShift, dl, ShiftVT));
 
     // Rounding for denorm path.
     SDValue DenormRoundUp;
@@ -9318,15 +9319,16 @@ SDValue TargetLowering::expandCONVERT_TO_ARBITRARY_FP(SDNode *Node,
       // shift nodes with invalid shift amounts.
       SDValue SafeShift = DAG.getNode(ISD::UMAX, dl, IntVT, ClampedShift, One);
       SDValue RoundBitPos = DAG.getNode(ISD::SUB, dl, IntVT, SafeShift, One);
+      SDValue RoundBitPosAmt = DAG.getZExtOrTrunc(RoundBitPos, dl, ShiftVT);
       SDValue DenormRoundBit = DAG.getNode(
           ISD::AND, dl, IntVT,
-          DAG.getNode(ISD::SRL, dl, IntVT, FullSrcMant, RoundBitPos), One);
+          DAG.getNode(ISD::SRL, dl, IntVT, FullSrcMant, RoundBitPosAmt), One);
 
       // Sticky: all bits below round bit.
       // sticky_mask = (1 << RoundBitPos) - 1
-      SDValue StickyMask =
-          DAG.getNode(ISD::SUB, dl, IntVT,
-                      DAG.getNode(ISD::SHL, dl, IntVT, One, RoundBitPos), One);
+      SDValue StickyMask = DAG.getNode(
+          ISD::SUB, dl, IntVT,
+          DAG.getNode(ISD::SHL, dl, IntVT, One, RoundBitPosAmt), One);
       SDValue DenormStickyBits =
           DAG.getNode(ISD::AND, dl, IntVT, FullSrcMant, StickyMask);
       SDValue HasSticky = DAG.getNode(
