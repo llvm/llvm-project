@@ -577,19 +577,6 @@ gpu.module @test {
 }
 
 // -----
-// shape_cast collapse where the collapsed dst dim is replicated across
-// subgroups: sg_layout[1] * sg_data[1] = 2 * 64 = 128 > extent 64, i.e. the
-// two subgroups along dim1 hold the same data (broadcast). This is the layout
-// shape produced by WG-level mxfp GEMM operands, where the per-block scale
-// spans the full K extent shared across the N-parallel subgroups.
-// srcShape=[16, 8, 8], resShape=[16, 64], consumer sg_layout=[2, 2],
-// sg_data=[8, 64]
-//  - dst[1]=64 collapses src[1, 2]: sg_layout outer-to-inner: dim1 take=
-//      min(2, 8)=2 (rem=1) -> [_, 2, 1]; sg_data innermost-first capped by the
-//      full extent (not the per-sg share): dim2 take=min(64, 8)=8 (rem=8);
-//      dim1 take=min(8, 8)=8 (rem=1) -> [_, 8, 8]. The replicated sg_data 64
-//      would not fit the per-sg share cap 64/2=32 on dim1, so the full extent
-//      is used.
 gpu.module @test {
 // CHECK-LABEL: gpu.func @shape_cast_collapse_replicated(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 1], sg_data = [8, 8, 8]>} dense<0.000000e+00> : vector<16x8x8xf16>

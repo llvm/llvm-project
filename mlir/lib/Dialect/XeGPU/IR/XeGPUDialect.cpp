@@ -757,14 +757,13 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     expSgLayout = spread(origSgLayoutDim, targetShape, /*outerToInner=*/true);
     splice(sgLayout, expSgLayout);
   }
+  bool sgDataReplicated =
+      hasSgData && origSgDataDim == computeProduct(targetShape);
   if (hasSgData) {
-    // Cap by the full extent targetShape[i], not the per-sg share
-    // targetShape[i] / sgLayout[i]: a replicated dim (sg_layout[dim] *
-    // sg_data[dim] > extent) has sg_data up to the full extent, which would not
-    // fit within the per-sg share. For evenly-distributed layouts the
-    // inner-first fill lands on the per-sg share regardless, so this is
-    // equivalent.
     SmallVector<int64_t> dimSizeCap(targetShape.begin(), targetShape.end());
+    if (hasSgLayout && !sgDataReplicated)
+      for (int64_t i = 0; i < expCount; ++i)
+        dimSizeCap[i] /= expSgLayout[i];
     SmallVector<int64_t> expSgData =
         spread(origSgDataDim, dimSizeCap, /*outerToInner=*/false);
     splice(sgData, expSgData);
@@ -774,7 +773,7 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   // targetShape[i] / sg_layout[i] when sg_layout is present, else
   // targetShape itself.
   SmallVector<int64_t> perSgShape(targetShape.begin(), targetShape.end());
-  if (hasSgLayout)
+  if (hasSgLayout && !sgDataReplicated)
     for (int64_t i = 0; i < expCount; ++i)
       perSgShape[i] /= expSgLayout[i];
 
