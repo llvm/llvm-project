@@ -284,14 +284,6 @@ public:
     startLine() << Label << ": " << (Value ? "Yes" : "No") << '\n';
   }
 
-  template <typename T, typename... TArgs>
-  void printVersion(StringRef Label, T MajorVersion, TArgs... MinorVersions) {
-    startLine() << Label << ": ";
-    getOStream() << MajorVersion;
-    ((getOStream() << '.' << MinorVersions), ...);
-    getOStream() << "\n";
-  }
-
   template <typename T>
   void printList(StringRef Label, const ArrayRef<T> List) {
     SmallVector<std::string, 10> StringList;
