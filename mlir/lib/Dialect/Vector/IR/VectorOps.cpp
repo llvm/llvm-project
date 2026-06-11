@@ -5035,6 +5035,7 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+/// If `padding` is null, a poison value is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
@@ -5044,12 +5045,17 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
   Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
   if (!padding)
     padding = ub::PoisonOp::create(builder, result.location, elemType);
+  // Delegate to the most general builder (see
+  // `mlir/Dialect/Vector/IR/VectorOps.cpp.inc`)
   build(builder, result, vectorType, source, indices, permutationMapAttr,
         *padding, /*mask=*/Value(), inBoundsAttr);
 }
 
 /// 2. Builder that sets padding to zero and an empty mask (variant without
-/// attrs). If `permutationMap` is null, a minor identity map is used.
+/// attrs).
+/// If `padding` is null, a poison value is used.
+/// If `permutationMap` is null, a minor identity map is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
@@ -5063,18 +5069,19 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                           ? builder.getBoolArrayAttr(inBounds.value())
                           : builder.getBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
-  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  if (!padding)
-    padding = ub::PoisonOp::create(builder, result.location, elemType);
-  build(builder, result, vectorType, source, indices, *padding,
+  // Delegate to Builder 1
+  build(builder, result, vectorType, source, indices, padding,
         permutationMapAttr, inBoundsAttr);
 }
 
 /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+/// If `padding` is null, a poison value is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
                            std::optional<ArrayRef<bool>> inBounds) {
+  // Delegate to Builder 2
   build(builder, result, vectorType, source, indices, padding,
         /*permutationMap=*/AffineMap(), inBounds);
 }
