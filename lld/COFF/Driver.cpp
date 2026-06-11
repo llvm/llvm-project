@@ -12,6 +12,7 @@
 #include "DebugTypes.h"
 #include "ICF.h"
 #include "InputFiles.h"
+#include "LTO.h"
 #include "MarkLive.h"
 #include "MinGW.h"
 #include "SymbolTable.h"
@@ -206,10 +207,12 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
 void LinkerDriver::addFile(InputFile *file) {
   Log(ctx) << "Reading " << toString(file);
   if (file->lazy) {
-    if (auto *f = dyn_cast<BitcodeFile>(file))
+    if (auto *f = dyn_cast<BitcodeFile>(file)) {
+      ctx.lazyBitcodeFileInstances.push_back(f);
       f->parseLazy();
-    else
+    } else {
       cast<ObjFile>(file)->parseLazy();
+    }
   } else {
     ctx.consumedInputsSize += file->mb.getBufferSize();
     file->parse();
@@ -2770,6 +2773,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Do LTO by compiling bitcode input files to a set of native COFF files then
   // link those files (unless -thinlto-index-only was given, in which case we
   // resolve symbols and write indices, but don't generate native code or link).
+  if (config->thinLTOIndexOnly)
+    thinLTOCreateEmptyIndexFiles(ctx);
   ltoCompilationDone = true;
   ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
 

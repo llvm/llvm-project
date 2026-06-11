@@ -156,6 +156,33 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
 
 BitcodeCompiler::~BitcodeCompiler() = default;
 
+// If a lazy BitcodeFile has not been added to the link, emit an empty index
+// file. This matches ELF and GNU gold plugin behavior for distributed builds.
+void lld::coff::thinLTOCreateEmptyIndexFiles(COFFLinkerContext &ctx) {
+  DenseSet<StringRef> linkedBitcodeFiles;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    for (BitcodeFile *f : symtab.bitcodeFileInstances)
+      linkedBitcodeFiles.insert(f->getName());
+  });
+
+  for (BitcodeFile *f : ctx.lazyBitcodeFileInstances) {
+    if (!f->lazy || linkedBitcodeFiles.contains(f->getName()))
+      continue;
+    std::string path = lto::getThinLTOOutputFile(
+        f->obj->getName(), ctx.config.thinLTOPrefixReplaceOld,
+        ctx.config.thinLTOPrefixReplaceNew);
+    std::unique_ptr<raw_fd_ostream> os = openFile(path + ".thinlto.bc");
+    if (!os)
+      continue;
+
+    ModuleSummaryIndex m(/*HaveGVs=*/false);
+    m.setSkipModuleByDistributedBackend();
+    writeIndexToFile(m, *os);
+    if (ctx.config.thinLTOEmitImportsFiles)
+      openFile(path + ".imports");
+  }
+}
+
 static void undefine(Symbol *s) { replaceSymbol<Undefined>(s, s->getName()); }
 
 void BitcodeCompiler::add(BitcodeFile &f) {
