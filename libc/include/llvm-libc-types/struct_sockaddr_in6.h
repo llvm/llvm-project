@@ -15,8 +15,8 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_SOCKADDR_IN6_H
 #define LLVM_LIBC_TYPES_STRUCT_SOCKADDR_IN6_H
 
+#include "../llvm-libc-macros/stdint-macros.h"
 #include "in_port_t.h"
-#include "llvm-libc-macros/stdint-macros.h"
 #include "sa_family_t.h"
 #include "struct_in6_addr.h"
 
