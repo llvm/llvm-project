@@ -340,6 +340,9 @@ void test_list_init(C *c) {
 }
 @end
 
+extern id foo; // expected-note {{previous declaration is here}}
+extern __weak id foo; // expected-error {{redeclaration of 'foo' with a different type}}
+
 @interface Base1
 @end
 @interface Sub1 : Base1
