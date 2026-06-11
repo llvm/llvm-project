@@ -15,7 +15,7 @@ REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SymbolRef, LifetimeSourceSet)
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMapVal, const MemRegion *, LifetimeSourceSet)
 
 namespace {
-class LifetimeAnnotations : public Checker<check::PostCall, eval::Call> {
+class LifetimeAnnotations : public Checker<check::PostCall, check::EndFunction, eval::Call> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
@@ -25,6 +25,7 @@ public:
                              CheckerContext &C) const;
   ProgramStateRef bindValues(ProgramStateRef State, SymbolRef RetValSym, SVal RetVal, const MemRegion *Source) const;
   bool isSourceDangle(const MemRegion *Source, ProgramStateRef State, CheckerContext &C) const;
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
 
