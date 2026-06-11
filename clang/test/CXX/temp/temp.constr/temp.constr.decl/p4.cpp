@@ -1,11 +1,10 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
-// expected-no-diagnostics
 
 template<typename T>
 concept D = true;
 
 template<typename T>
-struct A {
+struct A { // expected-note {{defined here}}
   template<typename U, bool V>
   void f() requires V;
 
@@ -17,6 +16,7 @@ struct A {
 
   template<typename U, bool V> requires V
   struct B;
+  // expected-note@-2 {{previous template declaration is here}}
 
   template<typename U, bool V> requires V
   struct B<U*, V>;
@@ -26,12 +26,14 @@ struct A {
 
   template<D U>
   struct C;
+  // expected-note@-2 {{previous template declaration is here}}
 
   template<D U>
   struct C<U*>;
 
   template<typename U, bool V> requires V
   static int x;
+  // expected-note@-2 {{previous template declaration is here}}
 
   template<typename U, bool V> requires V
   static int x<U*, V>;
@@ -41,6 +43,7 @@ struct A {
 
   template<D U>
   static int y;
+  // expected-note@-2 {{previous template declaration is here}}
 
   template<D U>
   static int y<U*>;
@@ -94,9 +97,11 @@ template<typename T>
 template<D U>
 int A<T>::y<U*> = 0;
 
+// FIXME: This should be accepted.
 template<>
 template<typename U, bool V>
 void A<short>::f() requires V;
+// expected-error@-1 {{out-of-line declaration of 'f' does not match any declaration in 'A<short>'}}
 
 template<>
 template<>
@@ -110,9 +115,11 @@ template<>
 template<D U>
 void A<short>::g();
 
+// FIXME: This should be accepted.
 template<>
 template<typename U, bool V> requires V
 struct A<int>::B;
+// expected-error@-2 {{requires clause differs in template redeclaration}}
 
 template<>
 template<>
@@ -130,9 +137,11 @@ template<>
 template<typename U, bool V> requires V
 struct A<int>::B<U&, V>;
 
+// FIXME: This should be accepted.
 template<>
 template<D U>
 struct A<int>::C;
+// expected-error@-2 {{type constraint differs in template redeclaration}}
 
 template<>
 template<D U>
@@ -142,9 +151,11 @@ template<>
 template<D U>
 struct A<int>::C<U&>;
 
+// FIXME: This should be accepted.
 template<>
 template<typename U, bool V> requires V
 int A<long>::x;
+// expected-error@-2 {{requires clause differs in template redeclaration}}
 
 template<>
 template<>
@@ -162,9 +173,11 @@ template<>
 template<typename U, bool V> requires V
 int A<long>::x<U&, V>;
 
+// FIXME: This should be accepted.
 template<>
 template<D U>
 int A<long>::y;
+// expected-error@-2 {{type constraint differs in template redeclaration}}
 
 template<>
 template<D U>

@@ -53,6 +53,8 @@ defm ctad_for_alias_templates
 defm implicit_typename
     : CXX20Compat<"missing 'typename' prior to dependent type name %0 is">;
 
+defm auto_param : CXX20Compat<"'auto' parameters are">;
+
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
   "definition of a %select{static|thread_local}1 variable "

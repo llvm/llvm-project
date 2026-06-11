@@ -20,7 +20,8 @@ class InjectedSourceStream;
 class PDBFile;
 class PDBStringTable;
 
-class NativeEnumInjectedSources : public IPDBEnumChildren<IPDBInjectedSource> {
+class LLVM_ABI NativeEnumInjectedSources
+    : public IPDBEnumChildren<IPDBInjectedSource> {
 public:
   NativeEnumInjectedSources(PDBFile &File, const InjectedSourceStream &IJS,
                             const PDBStringTable &Strings);

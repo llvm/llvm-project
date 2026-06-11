@@ -1610,7 +1610,46 @@ func.func @fold_padding_value_pack(%arg0: tensor<1200x500000xf32>) -> tensor<312
   return %pack : tensor<31250x1200x16x1xf32>
 }
 // CHECK-LABEL: func @fold_padding_value_pack
-// CHECK-NOT:     padding_value
+//       CHECK:   linalg.pack
+//   CHECK-NOT:   padding_value
+
+// -----
+
+func.func @fold_padding_value_pack_dynamic_with_unit_tile_size(%arg0: tensor<?x500000xf32>) -> tensor<31250x?x16x1xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %dim0 = tensor.dim %arg0, %c0 : tensor<?x500000xf32>
+  %0 = tensor.empty(%dim0) : tensor<31250x?x16x1xf32>
+  %pack = linalg.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 1]
+    into %0 : tensor<?x500000xf32> -> tensor<31250x?x16x1xf32>
+  return %pack : tensor<31250x?x16x1xf32>
+}
+// CHECK-LABEL: func @fold_padding_value_pack_dynamic_with_unit_tile_size
+//       CHECK:   linalg.pack
+//   CHECK-NOT:   padding_value
+
+// -----
+
+func.func @nofold_padding_value_pack_dynamic_with_non_unit_tile_size(%arg0: tensor<?x500000xf32>) -> tensor<31250x?x16x2xf32> {
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  %dim0 = tensor.dim %arg0, %c0 : tensor<?x500000xf32>
+  %0 = tensor.empty(%dim0) : tensor<31250x?x16x2xf32>
+  %pack = linalg.pack %arg0
+    padding_value(%cst : f32)
+    outer_dims_perm = [1, 0]
+    inner_dims_pos = [1, 0]
+    inner_tiles = [16, 2]
+    into %0 : tensor<?x500000xf32> -> tensor<31250x?x16x2xf32>
+  return %pack : tensor<31250x?x16x2xf32>
+}
+// CHECK-LABEL: func @nofold_padding_value_pack_dynamic_with_non_unit_tile_size
+//       CHECK:   linalg.pack
+//       CHECK:   padding_value
 
 // -----
 
