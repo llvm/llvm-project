@@ -303,7 +303,7 @@ static bool scanSymbols(const IRSymtabFile &MemberSymtab,
       Symbol &OldSym = It->second;
 
       if (Inserted && !IsNewSymbol)
-          continue;
+        continue;
 
       bool ResolvesReference =
           !Sym.isUndefined() &&
