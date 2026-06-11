@@ -11020,26 +11020,19 @@ ValueUniformity SIInstrInfo::getValueUniformity(const MachineInstr &MI,
   assert(DefReg.isVirtual() &&
          "DefIdx must name a virtual register def, not a physical register");
 
-  // A def whose register bank/class forces uniformity (e.g. an SGPR, but not a
-  // lane-mask class) cannot hold a divergent value regardless of the
-  // instruction's semantics. Resolve that here so the generic
-  // MachineUniformityAnalysis seeding stays target-agnostic and does not need
-  // to consult the register bank itself.
+  // A def already in a uniform register bank holds a uniform value regardless
+  // of what the instruction computes, so it is always uniform.
   if (RI.isUniformReg(MRI, *ST.getRegBankInfo(), DefReg))
-    return ValueUniformity::Default;
+    return ValueUniformity::AlwaysUniform;
 
   if (isNeverUniform(MI))
     return ValueUniformity::NeverUniform;
 
-  // Inline asm can define several registers with different reg classes, so the
-  // uniformity of each output is answered individually from its def reg class.
-  if (MI.isInlineAsm()) {
-    const MachineOperand &MO = *std::next(MI.all_defs().begin(), DefIdx);
-    const TargetRegisterClass *RC =
-        MI.getRegClassConstraint(MO.getOperandNo(), this, &RI);
-    return (!RC || !RI.isSGPRClass(RC)) ? ValueUniformity::NeverUniform
-                                        : ValueUniformity::Default;
-  }
+  // SGPR-constrained outputs are already reported uniform by the isUniformReg()
+  // check above, so any inline-asm def reaching here is in a divergent
+  // (VGPR/AGPR) bank.
+  if (MI.isInlineAsm())
+    return ValueUniformity::NeverUniform;
 
   unsigned opcode = MI.getOpcode();
   if (opcode == AMDGPU::V_READLANE_B32 ||
