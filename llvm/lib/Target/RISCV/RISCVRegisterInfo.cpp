@@ -922,7 +922,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() && !DisableCostPerUse
+  // Set CostPerUse to 1 only when optimizing for size and RVC exists.
+  return MF.getFunction().hasOptSize() &&
+                 MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
+                 !DisableCostPerUse
              ? 1
              : 0;
 }
