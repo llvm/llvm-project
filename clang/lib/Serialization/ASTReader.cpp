@@ -2004,6 +2004,11 @@ bool ASTReader::ReadSLocEntry(int ID) {
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
     FileID FID = SourceMgr.createFileID(*File, IncludeLoc, FileCharacter, ID,
                                         BaseOffset + Record[0]);
+    // Stage 1 (de-dup prototype): detect when this file's SLoc entry duplicates
+    // one already loaded by an earlier module, and measure the reusable bytes.
+    SourceMgr.noteLoadedFileSLocEntry(&File->getFileEntry(),
+                                      BaseOffset + Record[0],
+                                      File->getSize() + 1);
     SrcMgr::FileInfo &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
     FileInfo.NumCreatedFIDs = Record[5];
     if (Record[3])

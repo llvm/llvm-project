@@ -749,6 +749,32 @@ class SourceManager : public RefCountedBase<SourceManager> {
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
 
+  /// --- Source-location de-duplication: detection (prototype, Stage 1) ---
+  /// The first global offset at which each file's SLoc entry was loaded.
+  /// Lets us recognize when a later module re-loads a file already present in
+  /// the loaded address space (e.g. a header included by several modules).
+  llvm::DenseMap<const FileEntry *, SourceLocation::UIntTy> LoadedFileFirstOffset;
+  /// Number of loaded file SLoc entries that duplicated an already-loaded file.
+  unsigned NumDuplicateLoadedFiles = 0;
+  /// SLoc address-space bytes occupied by those duplicate entries (the prize
+  /// that reuse could reclaim).
+  uint64_t DuplicateLoadedBytes = 0;
+
+public:
+  /// Record that a loaded file SLoc entry was created. If the same file was
+  /// already loaded into the address space, it is counted as a duplicate.
+  void noteLoadedFileSLocEntry(const FileEntry *FE,
+                               SourceLocation::UIntTy Offset, uint64_t Size) {
+    if (!FE)
+      return;
+    auto Res = LoadedFileFirstOffset.try_emplace(FE, Offset);
+    if (!Res.second) {
+      ++NumDuplicateLoadedFiles;
+      DuplicateLoadedBytes += Size;
+    }
+  }
+
+private:
   /// A bitmap that indicates whether the entries of LoadedSLocEntryTable
   /// have already been loaded from the external source.
   ///

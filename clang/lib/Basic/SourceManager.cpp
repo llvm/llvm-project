@@ -2125,6 +2125,11 @@ void SourceManager::PrintStats() const {
                << " bytes of capacity), "
                << MaxLoadedOffset - CurrentLoadedOffset
                << "B of SLoc address space used.\n";
+  if (NumDuplicateLoadedFiles)
+    llvm::errs() << NumDuplicateLoadedFiles
+                 << " duplicate loaded file SLocEntries detected ("
+                 << DuplicateLoadedBytes
+                 << "B of SLoc address space reusable).\n";
 
   unsigned NumLineNumsComputed = 0;
   unsigned NumFileBytesMapped = 0;
