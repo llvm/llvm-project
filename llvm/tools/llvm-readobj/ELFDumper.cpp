@@ -8074,10 +8074,8 @@ void LLVMELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
     W.printNumber("Index", D.Ndx);
     W.printNumber("Hash", D.Hash);
     W.printString("Name", D.Name);
-    std::vector<std::string> Predecessors;
-    for (const VerdAux &Aux : D.AuxV)
-      Predecessors.push_back(Aux.Name);
-    W.printList("Predecessors", Predecessors);
+    W.printList("Predecessors", D.AuxV,
+                [](const VerdAux &Aux) { return Aux.Name; });
   }
 }
 
