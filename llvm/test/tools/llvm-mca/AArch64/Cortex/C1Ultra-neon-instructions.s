@@ -3144,112 +3144,112 @@
 # NONSTREAMING-NEXT: [0.0] - C1UUnitB
 # NONSTREAMING-NEXT: [0.1] - C1UUnitB
 # NONSTREAMING-NEXT: [0.2] - C1UUnitB
-# NONSTREAMING-NEXT: [1]   - C1UUnitCMELD
-# NONSTREAMING-NEXT: [2]   - C1UUnitCMEMC
-# NONSTREAMING-NEXT: [3.0] - C1UUnitCMEMML0
-# NONSTREAMING-NEXT: [3.1] - C1UUnitCMEMML0
-# NONSTREAMING-NEXT: [4]   - C1UUnitCMEMML1
-# NONSTREAMING-NEXT: [5.0] - C1UUnitCMEPERMF
-# NONSTREAMING-NEXT: [5.1] - C1UUnitCMEPERMF
-# NONSTREAMING-NEXT: [5.2] - C1UUnitCMEPERMF
-# NONSTREAMING-NEXT: [6.0] - C1UUnitCMEPERMS
-# NONSTREAMING-NEXT: [6.1] - C1UUnitCMEPERMS
-# NONSTREAMING-NEXT: [7]   - C1UUnitCMEPF
-# NONSTREAMING-NEXT: [8.0] - C1UUnitCMERNMRET
-# NONSTREAMING-NEXT: [8.1] - C1UUnitCMERNMRET
-# NONSTREAMING-NEXT: [8.2] - C1UUnitCMERNMRET
-# NONSTREAMING-NEXT: [9]   - C1UUnitCMEST
-# NONSTREAMING-NEXT: [10]  - C1UUnitCMEVX0ALU
-# NONSTREAMING-NEXT: [11]  - C1UUnitCMEVX0FPDOT
-# NONSTREAMING-NEXT: [12]  - C1UUnitCMEVX0MUL
-# NONSTREAMING-NEXT: [13]  - C1UUnitCMEVX1ALU
-# NONSTREAMING-NEXT: [14]  - C1UUnitCMEVX1FPDOT
-# NONSTREAMING-NEXT: [15]  - C1UUnitCMEVX1MUL
-# NONSTREAMING-NEXT: [16.0] - C1UUnitD
-# NONSTREAMING-NEXT: [16.1] - C1UUnitD
-# NONSTREAMING-NEXT: [17.0] - C1UUnitFlg
-# NONSTREAMING-NEXT: [17.1] - C1UUnitFlg
-# NONSTREAMING-NEXT: [17.2] - C1UUnitFlg
-# NONSTREAMING-NEXT: [17.3] - C1UUnitFlg
-# NONSTREAMING-NEXT: [18.0] - C1UUnitL23
-# NONSTREAMING-NEXT: [18.1] - C1UUnitL23
-# NONSTREAMING-NEXT: [19]  - C1UUnitLS0
-# NONSTREAMING-NEXT: [20]  - C1UUnitLS1
-# NONSTREAMING-NEXT: [21]  - C1UUnitM0
-# NONSTREAMING-NEXT: [22]  - C1UUnitM1
-# NONSTREAMING-NEXT: [23]  - C1UUnitS0
-# NONSTREAMING-NEXT: [24]  - C1UUnitS1
-# NONSTREAMING-NEXT: [25]  - C1UUnitS2
-# NONSTREAMING-NEXT: [26]  - C1UUnitS3
-# NONSTREAMING-NEXT: [27]  - C1UUnitS4
-# NONSTREAMING-NEXT: [28]  - C1UUnitS5
-# NONSTREAMING-NEXT: [29]  - C1UUnitV0
-# NONSTREAMING-NEXT: [30]  - C1UUnitV1
-# NONSTREAMING-NEXT: [31]  - C1UUnitV2
-# NONSTREAMING-NEXT: [32]  - C1UUnitV3
-# NONSTREAMING-NEXT: [33]  - C1UUnitV4
-# NONSTREAMING-NEXT: [34]  - C1UUnitV5
+# NONSTREAMING-NEXT: [1.0] - C1UUnitCME3PERMF
+# NONSTREAMING-NEXT: [1.1] - C1UUnitCME3PERMF
+# NONSTREAMING-NEXT: [1.2] - C1UUnitCME3PERMF
+# NONSTREAMING-NEXT: [2]   - C1UUnitCMELD
+# NONSTREAMING-NEXT: [3]   - C1UUnitCMEMC
+# NONSTREAMING-NEXT: [4.0] - C1UUnitCMEMML0
+# NONSTREAMING-NEXT: [4.1] - C1UUnitCMEMML0
+# NONSTREAMING-NEXT: [5]   - C1UUnitCMEMML1
+# NONSTREAMING-NEXT: [6]   - C1UUnitCMEPERMF
+# NONSTREAMING-NEXT: [7]   - C1UUnitCMEPERMS
+# NONSTREAMING-NEXT: [8]   - C1UUnitCMEPF
+# NONSTREAMING-NEXT: [9.0] - C1UUnitCMERNMRET
+# NONSTREAMING-NEXT: [9.1] - C1UUnitCMERNMRET
+# NONSTREAMING-NEXT: [9.2] - C1UUnitCMERNMRET
+# NONSTREAMING-NEXT: [10]  - C1UUnitCMEST
+# NONSTREAMING-NEXT: [11]  - C1UUnitCMEVX0ALU
+# NONSTREAMING-NEXT: [12]  - C1UUnitCMEVX0FPDOT
+# NONSTREAMING-NEXT: [13]  - C1UUnitCMEVX0MUL
+# NONSTREAMING-NEXT: [14]  - C1UUnitCMEVX1ALU
+# NONSTREAMING-NEXT: [15]  - C1UUnitCMEVX1FPDOT
+# NONSTREAMING-NEXT: [16]  - C1UUnitCMEVX1MUL
+# NONSTREAMING-NEXT: [17.0] - C1UUnitD
+# NONSTREAMING-NEXT: [17.1] - C1UUnitD
+# NONSTREAMING-NEXT: [18.0] - C1UUnitFlg
+# NONSTREAMING-NEXT: [18.1] - C1UUnitFlg
+# NONSTREAMING-NEXT: [18.2] - C1UUnitFlg
+# NONSTREAMING-NEXT: [18.3] - C1UUnitFlg
+# NONSTREAMING-NEXT: [19.0] - C1UUnitL23
+# NONSTREAMING-NEXT: [19.1] - C1UUnitL23
+# NONSTREAMING-NEXT: [20]  - C1UUnitLS0
+# NONSTREAMING-NEXT: [21]  - C1UUnitLS1
+# NONSTREAMING-NEXT: [22]  - C1UUnitM0
+# NONSTREAMING-NEXT: [23]  - C1UUnitM1
+# NONSTREAMING-NEXT: [24]  - C1UUnitS0
+# NONSTREAMING-NEXT: [25]  - C1UUnitS1
+# NONSTREAMING-NEXT: [26]  - C1UUnitS2
+# NONSTREAMING-NEXT: [27]  - C1UUnitS3
+# NONSTREAMING-NEXT: [28]  - C1UUnitS4
+# NONSTREAMING-NEXT: [29]  - C1UUnitS5
+# NONSTREAMING-NEXT: [30]  - C1UUnitV0
+# NONSTREAMING-NEXT: [31]  - C1UUnitV1
+# NONSTREAMING-NEXT: [32]  - C1UUnitV2
+# NONSTREAMING-NEXT: [33]  - C1UUnitV3
+# NONSTREAMING-NEXT: [34]  - C1UUnitV4
+# NONSTREAMING-NEXT: [35]  - C1UUnitV5
 
 # STREAMING:         Resources:
 # STREAMING-NEXT:    [0.0] - C1UUnitB
 # STREAMING-NEXT:    [0.1] - C1UUnitB
 # STREAMING-NEXT:    [0.2] - C1UUnitB
-# STREAMING-NEXT:    [1]   - C1UUnitCMELD
-# STREAMING-NEXT:    [2]   - C1UUnitCMEMC
-# STREAMING-NEXT:    [3.0] - C1UUnitCMEMML0
-# STREAMING-NEXT:    [3.1] - C1UUnitCMEMML0
-# STREAMING-NEXT:    [4]   - C1UUnitCMEMML1
-# STREAMING-NEXT:    [5.0] - C1UUnitCMEPERMF
-# STREAMING-NEXT:    [5.1] - C1UUnitCMEPERMF
-# STREAMING-NEXT:    [5.2] - C1UUnitCMEPERMF
-# STREAMING-NEXT:    [6.0] - C1UUnitCMEPERMS
-# STREAMING-NEXT:    [6.1] - C1UUnitCMEPERMS
-# STREAMING-NEXT:    [7]   - C1UUnitCMEPF
-# STREAMING-NEXT:    [8.0] - C1UUnitCMERNMRET
-# STREAMING-NEXT:    [8.1] - C1UUnitCMERNMRET
-# STREAMING-NEXT:    [8.2] - C1UUnitCMERNMRET
-# STREAMING-NEXT:    [9]   - C1UUnitCMEST
-# STREAMING-NEXT:    [10]  - C1UUnitCMEVX0ALU
-# STREAMING-NEXT:    [11]  - C1UUnitCMEVX0FPDOT
-# STREAMING-NEXT:    [12]  - C1UUnitCMEVX0MUL
-# STREAMING-NEXT:    [13]  - C1UUnitCMEVX1ALU
-# STREAMING-NEXT:    [14]  - C1UUnitCMEVX1FPDOT
-# STREAMING-NEXT:    [15]  - C1UUnitCMEVX1MUL
-# STREAMING-NEXT:    [16.0] - C1UUnitD
-# STREAMING-NEXT:    [16.1] - C1UUnitD
-# STREAMING-NEXT:    [17.0] - C1UUnitFlg
-# STREAMING-NEXT:    [17.1] - C1UUnitFlg
-# STREAMING-NEXT:    [17.2] - C1UUnitFlg
-# STREAMING-NEXT:    [17.3] - C1UUnitFlg
-# STREAMING-NEXT:    [18.0] - C1UUnitL23
-# STREAMING-NEXT:    [18.1] - C1UUnitL23
-# STREAMING-NEXT:    [19]  - C1UUnitLS0
-# STREAMING-NEXT:    [20]  - C1UUnitLS1
-# STREAMING-NEXT:    [21]  - C1UUnitM0
-# STREAMING-NEXT:    [22]  - C1UUnitM1
-# STREAMING-NEXT:    [23]  - C1UUnitS0
-# STREAMING-NEXT:    [24]  - C1UUnitS1
-# STREAMING-NEXT:    [25]  - C1UUnitS2
-# STREAMING-NEXT:    [26]  - C1UUnitS3
-# STREAMING-NEXT:    [27]  - C1UUnitS4
-# STREAMING-NEXT:    [28]  - C1UUnitS5
-# STREAMING-NEXT:    [29]  - C1UUnitV0
-# STREAMING-NEXT:    [30]  - C1UUnitV1
-# STREAMING-NEXT:    [31]  - C1UUnitV2
-# STREAMING-NEXT:    [32]  - C1UUnitV3
-# STREAMING-NEXT:    [33]  - C1UUnitV4
-# STREAMING-NEXT:    [34]  - C1UUnitV5
+# STREAMING-NEXT:    [1.0] - C1UUnitCME3PERMF
+# STREAMING-NEXT:    [1.1] - C1UUnitCME3PERMF
+# STREAMING-NEXT:    [1.2] - C1UUnitCME3PERMF
+# STREAMING-NEXT:    [2]   - C1UUnitCMELD
+# STREAMING-NEXT:    [3]   - C1UUnitCMEMC
+# STREAMING-NEXT:    [4.0] - C1UUnitCMEMML0
+# STREAMING-NEXT:    [4.1] - C1UUnitCMEMML0
+# STREAMING-NEXT:    [5]   - C1UUnitCMEMML1
+# STREAMING-NEXT:    [6]   - C1UUnitCMEPERMF
+# STREAMING-NEXT:    [7]   - C1UUnitCMEPERMS
+# STREAMING-NEXT:    [8]   - C1UUnitCMEPF
+# STREAMING-NEXT:    [9.0] - C1UUnitCMERNMRET
+# STREAMING-NEXT:    [9.1] - C1UUnitCMERNMRET
+# STREAMING-NEXT:    [9.2] - C1UUnitCMERNMRET
+# STREAMING-NEXT:    [10]  - C1UUnitCMEST
+# STREAMING-NEXT:    [11]  - C1UUnitCMEVX0ALU
+# STREAMING-NEXT:    [12]  - C1UUnitCMEVX0FPDOT
+# STREAMING-NEXT:    [13]  - C1UUnitCMEVX0MUL
+# STREAMING-NEXT:    [14]  - C1UUnitCMEVX1ALU
+# STREAMING-NEXT:    [15]  - C1UUnitCMEVX1FPDOT
+# STREAMING-NEXT:    [16]  - C1UUnitCMEVX1MUL
+# STREAMING-NEXT:    [17.0] - C1UUnitD
+# STREAMING-NEXT:    [17.1] - C1UUnitD
+# STREAMING-NEXT:    [18.0] - C1UUnitFlg
+# STREAMING-NEXT:    [18.1] - C1UUnitFlg
+# STREAMING-NEXT:    [18.2] - C1UUnitFlg
+# STREAMING-NEXT:    [18.3] - C1UUnitFlg
+# STREAMING-NEXT:    [19.0] - C1UUnitL23
+# STREAMING-NEXT:    [19.1] - C1UUnitL23
+# STREAMING-NEXT:    [20]  - C1UUnitLS0
+# STREAMING-NEXT:    [21]  - C1UUnitLS1
+# STREAMING-NEXT:    [22]  - C1UUnitM0
+# STREAMING-NEXT:    [23]  - C1UUnitM1
+# STREAMING-NEXT:    [24]  - C1UUnitS0
+# STREAMING-NEXT:    [25]  - C1UUnitS1
+# STREAMING-NEXT:    [26]  - C1UUnitS2
+# STREAMING-NEXT:    [27]  - C1UUnitS3
+# STREAMING-NEXT:    [28]  - C1UUnitS4
+# STREAMING-NEXT:    [29]  - C1UUnitS5
+# STREAMING-NEXT:    [30]  - C1UUnitV0
+# STREAMING-NEXT:    [31]  - C1UUnitV1
+# STREAMING-NEXT:    [32]  - C1UUnitV2
+# STREAMING-NEXT:    [33]  - C1UUnitV3
+# STREAMING-NEXT:    [34]  - C1UUnitV4
+# STREAMING-NEXT:    [35]  - C1UUnitV5
 
 # NONSTREAMING:      Resource pressure per iteration:
-# NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4]    [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
+# NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [2]    [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   [35]
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     69.25  69.25  179.25 179.25 15.13  6.13   6.13   6.13   6.13   6.13   6.13   6.13   450.83 490.83 237.83 340.83 340.83 237.83
 
 # STREAMING:         Resource pressure per iteration:
-# STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4]    [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
-# STREAMING-NEXT:     -      -      -      -     136.00  -      -      -     26.67  26.67  26.67  16.00  16.00   -      -      -      -      -     385.00  -     59.00  385.00  -     59.00   -      -      -      -      -      -     69.25  69.25  179.25 179.25 15.13  6.13   6.13   6.13   6.13   6.13   6.13   6.13   281.58 281.58 161.33 171.58 171.58 161.33
+# STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [2]    [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   [35]
+# STREAMING-NEXT:     -      -      -     26.67  26.67  26.67   -     136.00  -      -      -     16.00  16.00   -      -      -      -      -     385.00  -     59.00  385.00  -     59.00   -      -      -      -      -      -     69.25  69.25  179.25 179.25 15.13  6.13   6.13   6.13   6.13   6.13   6.13   6.13   281.58 281.58 161.33 171.58 171.58 161.33
 
 # NONSTREAMING:      Resource pressure by instruction:
-# NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4]    [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
+# NONSTREAMING-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [2]    [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   [35]   Instructions:
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   abs	d29, d24
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   abs	v0.16b, v0.16b
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   abs	v0.2d, v0.2d
@@ -4811,7 +4811,7 @@
 # NONSTREAMING-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   zip2	v0.8h, v0.8h, v0.8h
 
 # STREAMING:         Resource pressure by instruction:
-# STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4]    [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
+# STREAMING-NEXT:    [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [2]    [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   [35]   Instructions:
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   abs	d29, d24
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   abs	v0.16b, v0.16b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   abs	v0.2d, v0.2d
@@ -5100,11 +5100,11 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvtzu	v0.4s, v0.4s, #3
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvtzu	v0.8h, v0.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fcvtzu	v27.8h, v6.8h, #11
-# STREAMING-NEXT:     -      -      -      -     25.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.2d, v0.2d, v0.2d
-# STREAMING-NEXT:     -      -      -      -     11.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.2s, v0.2s, v0.2s
-# STREAMING-NEXT:     -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.4h, v0.4h, v0.4h
-# STREAMING-NEXT:     -      -      -      -     12.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.4s, v0.4s, v0.4s
-# STREAMING-NEXT:     -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.8h, v0.8h, v0.8h
+# STREAMING-NEXT:     -      -      -      -      -      -      -     25.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.2d, v0.2d, v0.2d
+# STREAMING-NEXT:     -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.2s, v0.2s, v0.2s
+# STREAMING-NEXT:     -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.4h, v0.4h, v0.4h
+# STREAMING-NEXT:     -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.4s, v0.4s, v0.4s
+# STREAMING-NEXT:     -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fdiv	v0.8h, v0.8h, v0.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmax	v0.2d, v0.2d, v0.2d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmax	v0.2s, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmax	v0.4s, v0.4s, v0.4s
@@ -5116,17 +5116,17 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmp	v0.2d, v0.2d, v0.2d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmp	v0.2s, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmp	v0.4s, v0.4s, v0.4s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmv	h0, v13.4h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmv	h12, v11.8h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmv	s28, v31.4s
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmv	h0, v13.4h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmv	h12, v11.8h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxnmv	s28, v31.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxp	v0.2d, v0.2d, v0.2d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxp	v0.2s, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxp	v0.4s, v0.4s, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxp	h15, v25.2h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxp	s6, v2.2s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxv	h0, v0.4h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxv	h0, v0.8h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxv	s0, v0.4s
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxv	h0, v0.4h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxv	h0, v0.8h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmaxv	s0, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmin	v0.2d, v0.2d, v0.2d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmin	v0.2s, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmin	v0.4s, v0.4s, v0.4s
@@ -5138,17 +5138,17 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmp	v0.2d, v0.2d, v0.2d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmp	v0.2s, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmp	v0.4s, v0.4s, v0.4s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmv	h19, v25.4h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmv	h23, v17.8h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmv	s29, v17.4s
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmv	h19, v25.4h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmv	h23, v17.8h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminnmv	s29, v17.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminp	v0.2d, v0.2d, v0.2d
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminp	v0.2s, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminp	v0.4s, v0.4s, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminp	h7, v10.2h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminp	s17, v7.2s
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminv	h3, v30.4h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminv	h29, v12.8h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminv	s16, v19.4s
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminv	h3, v30.4h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminv	h29, v12.8h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fminv	s16, v19.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmla	d0, d1, v0.d[1]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmla	h23, h24, v15.h[4]
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fmla	s0, s1, v0.s[3]
@@ -5263,11 +5263,11 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   frsqrts	d8, d22, d18
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   frsqrts	s21, s5, s12
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   frsqrts	v0.2d, v0.2d, v0.2d
-# STREAMING-NEXT:     -      -      -      -     25.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.2d, v0.2d
-# STREAMING-NEXT:     -      -      -      -     11.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.2s, v0.2s
-# STREAMING-NEXT:     -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.4h, v0.4h
-# STREAMING-NEXT:     -      -      -      -     12.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.4s, v0.4s
-# STREAMING-NEXT:     -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.8h, v0.8h
+# STREAMING-NEXT:     -      -      -      -      -      -      -     25.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.2d, v0.2d
+# STREAMING-NEXT:     -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.2s, v0.2s
+# STREAMING-NEXT:     -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.4h, v0.4h
+# STREAMING-NEXT:     -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.4s, v0.4s
+# STREAMING-NEXT:     -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsqrt	v0.8h, v0.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsub	v13.8h, v15.8h, v17.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     fsub	v0.2s, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -     ld1	{ v0.16b }, [x0]
@@ -5613,10 +5613,10 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smaxp	v0.4h, v0.4h, v0.4h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smaxp	v21.8h, v16.8h, v7.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smaxp	v0.8b, v0.8b, v0.8b
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smaxv	b0, v0.8b
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smaxv	b0, v0.8b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smaxv	b0, v0.16b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smaxv	h0, v0.4h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smaxv	h0, v0.8h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smaxv	h0, v0.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smaxv	s0, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smin	v0.16b, v0.16b, v0.16b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smin	v0.4s, v0.4s, v0.4s
@@ -5624,10 +5624,10 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sminp	v0.16b, v0.16b, v0.16b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sminp	v0.4s, v0.4s, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sminp	v0.8h, v0.8h, v0.8h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sminv	b0, v0.8b
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sminv	b0, v0.8b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sminv	b0, v0.16b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sminv	h0, v0.4h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sminv	h0, v0.8h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sminv	h0, v0.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sminv	s0, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smlal	v0.2d, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     smlal	v0.2d, v25.2s, v1.s[1]
@@ -6134,10 +6134,10 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umaxp	v0.16b, v0.16b, v0.16b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umaxp	v0.4s, v0.4s, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umaxp	v0.8h, v0.8h, v0.8h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umaxv	b0, v0.8b
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umaxv	b0, v0.8b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umaxv	b0, v0.16b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umaxv	h0, v0.4h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umaxv	h0, v0.8h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umaxv	h0, v0.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umaxv	s0, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umin	v0.2s, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   umin	v0.4h, v0.4h, v0.4h
@@ -6147,10 +6147,10 @@
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uminp	v28.4s, v16.4s, v15.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   uminp	v0.4h, v0.4h, v0.4h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uminp	v0.8b, v0.8b, v0.8b
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uminv	b0, v0.8b
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uminv	b0, v0.8b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uminv	b0, v0.16b
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uminv	h0, v0.4h
-# STREAMING-NEXT:     -      -      -      -      -      -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uminv	h0, v0.8h
+# STREAMING-NEXT:     -      -      -     1.33   1.33   1.33    -      -      -      -      -      -      -      -      -      -      -      -     1.50    -      -     1.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uminv	h0, v0.8h
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     uminv	s0, v0.4s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umlal	v0.2d, v0.2s, v0.2s
 # STREAMING-NEXT:     -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50    -      -     0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     umlal	v28.2d, v31.2s, v0.s[1]

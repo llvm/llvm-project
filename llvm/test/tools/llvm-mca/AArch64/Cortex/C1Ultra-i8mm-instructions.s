@@ -24,58 +24,58 @@
 # CHECK-NEXT: [0.0] - C1UUnitB
 # CHECK-NEXT: [0.1] - C1UUnitB
 # CHECK-NEXT: [0.2] - C1UUnitB
-# CHECK-NEXT: [1]   - C1UUnitCMELD
-# CHECK-NEXT: [2]   - C1UUnitCMEMC
-# CHECK-NEXT: [3.0] - C1UUnitCMEMML0
-# CHECK-NEXT: [3.1] - C1UUnitCMEMML0
-# CHECK-NEXT: [4]   - C1UUnitCMEMML1
-# CHECK-NEXT: [5.0] - C1UUnitCMEPERMF
-# CHECK-NEXT: [5.1] - C1UUnitCMEPERMF
-# CHECK-NEXT: [5.2] - C1UUnitCMEPERMF
-# CHECK-NEXT: [6.0] - C1UUnitCMEPERMS
-# CHECK-NEXT: [6.1] - C1UUnitCMEPERMS
-# CHECK-NEXT: [7]   - C1UUnitCMEPF
-# CHECK-NEXT: [8.0] - C1UUnitCMERNMRET
-# CHECK-NEXT: [8.1] - C1UUnitCMERNMRET
-# CHECK-NEXT: [8.2] - C1UUnitCMERNMRET
-# CHECK-NEXT: [9]   - C1UUnitCMEST
-# CHECK-NEXT: [10]  - C1UUnitCMEVX0ALU
-# CHECK-NEXT: [11]  - C1UUnitCMEVX0FPDOT
-# CHECK-NEXT: [12]  - C1UUnitCMEVX0MUL
-# CHECK-NEXT: [13]  - C1UUnitCMEVX1ALU
-# CHECK-NEXT: [14]  - C1UUnitCMEVX1FPDOT
-# CHECK-NEXT: [15]  - C1UUnitCMEVX1MUL
-# CHECK-NEXT: [16.0] - C1UUnitD
-# CHECK-NEXT: [16.1] - C1UUnitD
-# CHECK-NEXT: [17.0] - C1UUnitFlg
-# CHECK-NEXT: [17.1] - C1UUnitFlg
-# CHECK-NEXT: [17.2] - C1UUnitFlg
-# CHECK-NEXT: [17.3] - C1UUnitFlg
-# CHECK-NEXT: [18.0] - C1UUnitL23
-# CHECK-NEXT: [18.1] - C1UUnitL23
-# CHECK-NEXT: [19]  - C1UUnitLS0
-# CHECK-NEXT: [20]  - C1UUnitLS1
-# CHECK-NEXT: [21]  - C1UUnitM0
-# CHECK-NEXT: [22]  - C1UUnitM1
-# CHECK-NEXT: [23]  - C1UUnitS0
-# CHECK-NEXT: [24]  - C1UUnitS1
-# CHECK-NEXT: [25]  - C1UUnitS2
-# CHECK-NEXT: [26]  - C1UUnitS3
-# CHECK-NEXT: [27]  - C1UUnitS4
-# CHECK-NEXT: [28]  - C1UUnitS5
-# CHECK-NEXT: [29]  - C1UUnitV0
-# CHECK-NEXT: [30]  - C1UUnitV1
-# CHECK-NEXT: [31]  - C1UUnitV2
-# CHECK-NEXT: [32]  - C1UUnitV3
-# CHECK-NEXT: [33]  - C1UUnitV4
-# CHECK-NEXT: [34]  - C1UUnitV5
+# CHECK-NEXT: [1.0] - C1UUnitCME3PERMF
+# CHECK-NEXT: [1.1] - C1UUnitCME3PERMF
+# CHECK-NEXT: [1.2] - C1UUnitCME3PERMF
+# CHECK-NEXT: [2]   - C1UUnitCMELD
+# CHECK-NEXT: [3]   - C1UUnitCMEMC
+# CHECK-NEXT: [4.0] - C1UUnitCMEMML0
+# CHECK-NEXT: [4.1] - C1UUnitCMEMML0
+# CHECK-NEXT: [5]   - C1UUnitCMEMML1
+# CHECK-NEXT: [6]   - C1UUnitCMEPERMF
+# CHECK-NEXT: [7]   - C1UUnitCMEPERMS
+# CHECK-NEXT: [8]   - C1UUnitCMEPF
+# CHECK-NEXT: [9.0] - C1UUnitCMERNMRET
+# CHECK-NEXT: [9.1] - C1UUnitCMERNMRET
+# CHECK-NEXT: [9.2] - C1UUnitCMERNMRET
+# CHECK-NEXT: [10]  - C1UUnitCMEST
+# CHECK-NEXT: [11]  - C1UUnitCMEVX0ALU
+# CHECK-NEXT: [12]  - C1UUnitCMEVX0FPDOT
+# CHECK-NEXT: [13]  - C1UUnitCMEVX0MUL
+# CHECK-NEXT: [14]  - C1UUnitCMEVX1ALU
+# CHECK-NEXT: [15]  - C1UUnitCMEVX1FPDOT
+# CHECK-NEXT: [16]  - C1UUnitCMEVX1MUL
+# CHECK-NEXT: [17.0] - C1UUnitD
+# CHECK-NEXT: [17.1] - C1UUnitD
+# CHECK-NEXT: [18.0] - C1UUnitFlg
+# CHECK-NEXT: [18.1] - C1UUnitFlg
+# CHECK-NEXT: [18.2] - C1UUnitFlg
+# CHECK-NEXT: [18.3] - C1UUnitFlg
+# CHECK-NEXT: [19.0] - C1UUnitL23
+# CHECK-NEXT: [19.1] - C1UUnitL23
+# CHECK-NEXT: [20]  - C1UUnitLS0
+# CHECK-NEXT: [21]  - C1UUnitLS1
+# CHECK-NEXT: [22]  - C1UUnitM0
+# CHECK-NEXT: [23]  - C1UUnitM1
+# CHECK-NEXT: [24]  - C1UUnitS0
+# CHECK-NEXT: [25]  - C1UUnitS1
+# CHECK-NEXT: [26]  - C1UUnitS2
+# CHECK-NEXT: [27]  - C1UUnitS3
+# CHECK-NEXT: [28]  - C1UUnitS4
+# CHECK-NEXT: [29]  - C1UUnitS5
+# CHECK-NEXT: [30]  - C1UUnitV0
+# CHECK-NEXT: [31]  - C1UUnitV1
+# CHECK-NEXT: [32]  - C1UUnitV2
+# CHECK-NEXT: [33]  - C1UUnitV3
+# CHECK-NEXT: [34]  - C1UUnitV4
+# CHECK-NEXT: [35]  - C1UUnitV5
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4]    [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [2]    [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   [35]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.50   1.50   1.50   1.50   1.50   1.50
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4]    [5.0]  [5.1]  [5.2]  [6.0]  [6.1]  [7]    [8.0]  [8.1]  [8.2]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17.0] [17.1] [17.2] [17.3] [18.0] [18.1] [19]   [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   Instructions:
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [1.2]  [2]    [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9.0]  [9.1]  [9.2]  [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17.0] [17.1] [18.0] [18.1] [18.2] [18.3] [19.0] [19.1] [20]   [21]   [22]   [23]   [24]   [25]   [26]   [27]   [28]   [29]   [30]   [31]   [32]   [33]   [34]   [35]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   smmla	v0.4s, v0.16b, v0.16b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sudot	v0.2s, v0.8b, v0.4b[2]
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   sudot	v0.4s, v0.16b, v0.4b[2]
