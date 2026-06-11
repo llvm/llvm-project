@@ -1,0 +1,69 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+
+! CUDA Fortran exposes host-side reduction wrappers through cudafor's
+! gpu_reductions use association. In device code, the intrinsic lowering path
+! must still win so these calls do not become calls to host wrappers.
+module gpu_reductions
+  interface sum
+    function fake_sum(array_d) result(res)
+      real(8), device :: array_d(:)
+      real(8) :: res
+    end function
+  end interface
+  interface maxval
+    function fake_maxval(array_d) result(res)
+      real(8), device :: array_d(:)
+      real(8) :: res
+    end function
+  end interface
+  interface minval
+    function fake_minval(array_d) result(res)
+      real(8), device :: array_d(:)
+      real(8) :: res
+    end function
+  end interface
+  interface maxloc
+    function fake_maxloc(array_d, dim) result(res)
+      real(8), device :: array_d(:)
+      integer :: dim
+      integer :: res
+    end function
+  end interface
+  interface minloc
+    function fake_minloc(array_d, dim) result(res)
+      real(8), device :: array_d(:)
+      integer :: dim
+      integer :: res
+    end function
+  end interface
+  interface host_wrapper
+    function fake_host_wrapper(array_d) result(res)
+      real(8), device :: array_d(:)
+      real(8) :: res
+    end function
+  end interface
+end module
+
+module cudafor
+  use gpu_reductions
+end module
+
+module test
+  use cudafor
+contains
+  attributes(global) subroutine reduction_intrinsics(a, locs, vals)
+    real(8), intent(in) :: a(3)
+    integer, intent(out) :: locs(2)
+    real(8), intent(out) :: vals(3)
+    real(8) :: local(3)
+
+    local = a
+    locs(1) = maxloc(local, 1)
+    locs(2) = minloc(local, 1)
+    vals(1) = sum(local)
+    vals(2) = maxval(local)
+    vals(3) = minval(local)
+    !ERROR: 'fake_host_wrapper' may not be called in device code
+    vals(1) = host_wrapper(local)
+  end subroutine
+end module

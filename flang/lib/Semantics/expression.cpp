@@ -3054,6 +3054,20 @@ const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
 
 // Resolve a call to a generic procedure with given actual arguments.
 // adjustActuals is called on procedure bindings to handle pass arg.
+static bool IsCudaDeviceIntrinsicShadowedByGpuReductions(
+    const parser::CharBlock &callSite, semantics::SemanticsContext &context,
+    const Symbol *resolution) {
+  if (!resolution || !semantics::FindCUDADeviceContext(
+                         &context.FindScope(callSite))) {
+    return false;
+  }
+  const Symbol &ultimate{resolution->GetUltimate()};
+  const semantics::Scope &owner{ultimate.owner()};
+  return owner.IsModule() && owner.GetName() &&
+      parser::ToLowerCaseLetters(owner.GetName()->ToString()) ==
+      "gpu_reductions";
+}
+
 auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     const ActualArguments &actuals, const AdjustActuals &adjustActuals,
     bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
@@ -3307,6 +3321,18 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     resolution = result.specific;
     dueToAmbiguity = result.failedDueToAmbiguity;
     tried = std::move(result.tried);
+    if (IsCudaDeviceIntrinsicShadowedByGpuReductions(
+            name.source, context_, resolution)) {
+      ActualArguments localArguments{arguments};
+      if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
+              CallCharacteristics{ultimate.name().ToString(), isSubroutine},
+              localArguments, GetFoldingContext())}) {
+        CheckBadExplicitType(*specificCall, *symbol);
+        return CalleeAndArguments{
+            ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
+            std::move(specificCall->arguments)};
+      }
+    }
     if (resolution) {
       if (context_.GetPPCBuiltinsScope() &&
           resolution->name().ToString().rfind("__ppc_", 0) == 0) {
