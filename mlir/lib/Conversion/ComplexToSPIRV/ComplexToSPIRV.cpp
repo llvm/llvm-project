@@ -186,13 +186,16 @@ struct AbsOpPattern final : OpConversionPattern<complex::AbsOp> {
   }
 };
 
-struct NegOpPattern final : OpConversionPattern<complex::NegOp> {
-  using Base::Base;
+template <typename ComplexOp, bool NegateReal>
+struct NegationOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
 
   LogicalResult
-  matchAndRewrite(complex::NegOp op, OpAdaptor adaptor,
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type spirvType = getTypeConverter()->convertType(op.getResult().getType());
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
     if (!spirvType)
       return rewriter.notifyMatchFailure(op, "unable to convert result type");
 
@@ -204,37 +207,12 @@ struct NegOpPattern final : OpConversionPattern<complex::NegOp> {
     Value im =
         spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
 
-    Value resultRe = spirv::FNegateOp::create(rewriter, loc, re);
+    Value resultRe =
+        NegateReal ? spirv::FNegateOp::create(rewriter, loc, re) : re;
     Value resultIm = spirv::FNegateOp::create(rewriter, loc, im);
 
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
         op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
-    return success();
-  }
-};
-
-struct ConjOpPattern final : OpConversionPattern<complex::ConjOp> {
-  using Base::Base;
-
-  LogicalResult
-  matchAndRewrite(complex::ConjOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    Type spirvType = getTypeConverter()->convertType(op.getResult().getType());
-    if (!spirvType)
-      return rewriter.notifyMatchFailure(op, "unable to convert result type");
-
-    Location loc = op.getLoc();
-    Value complexVal = adaptor.getComplex();
-
-    Value re =
-        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
-    Value im =
-        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
-
-    Value resultIm = spirv::FNegateOp::create(rewriter, loc, im);
-
-    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
-        op, spirvType, llvm::ArrayRef<Value>{re, resultIm});
     return success();
   }
 };
@@ -289,7 +267,9 @@ void mlir::populateComplexToSPIRVPatterns(
   patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern,
                ElementwiseBinaryOpPattern<complex::AddOp, spirv::FAddOp>,
                ElementwiseBinaryOpPattern<complex::SubOp, spirv::FSubOp>,
-               MulOpPattern, DivOpPattern, NegOpPattern, ConjOpPattern,
+               MulOpPattern, DivOpPattern,
+               NegationOpPattern<complex::NegOp, /*NegateReal=*/true>,
+               NegationOpPattern<complex::ConjOp, /*NegateReal=*/false>,
                AbsOpPattern<spirv::GLSqrtOp>, AbsOpPattern<spirv::CLSqrtOp>>(
       typeConverter, context);
 }
