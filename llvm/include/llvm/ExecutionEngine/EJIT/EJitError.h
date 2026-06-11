@@ -15,20 +15,8 @@
 namespace llvm {
 namespace ejit {
 
-enum class ErrorCode {
-  Success = 0,
-  BitcodeNotFound,
-  SpecializationFailed,
-  CompilationFailed,
-  CacheFull,
-  Memory,
-  NotActive,
-  InvalidParam,
-  TimeWindowNotActive,
-};
-
 struct EJitError {
-  ErrorCode code;
+  int code;
   std::string message;
   std::string funcName;
   std::string cacheKey;

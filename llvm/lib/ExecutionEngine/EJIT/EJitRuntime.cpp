@@ -206,7 +206,7 @@ const ejit_error_t *ejit_get_last_error(void) {
   const EJitError *last = gEJIT->getLastError();
   if (!last)
     return nullptr;
-  err.code = static_cast<int>(last->code);
+  err.code = last->code;
   snprintf(err.message, sizeof(err.message), "%s", last->message.c_str());
   snprintf(err.funcName, sizeof(err.funcName), "%s", last->funcName.c_str());
   return &err;

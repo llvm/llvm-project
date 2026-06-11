@@ -7,6 +7,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistryEntry.h"
+#include "llvm/ExecutionEngine/EJIT/EJitRuntime.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -151,7 +152,7 @@ EJit::EJit(const Config &config) : config_(config) {
     llvm::handleAllErrors(engine.takeError(),
                           [&](const llvm::ErrorInfoBase &E) { errStr = E.message(); });
     if (logger_)
-      logger_->log(ErrorCode::CompilationFailed,
+      logger_->log(EJIT_ERR_COMPILE_FAILED,
                    "Failed to create OrcJIT engine: " + errStr, "", "");
 #else
     consumeError(engine.takeError());

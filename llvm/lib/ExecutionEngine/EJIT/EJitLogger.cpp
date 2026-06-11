@@ -9,7 +9,7 @@
 
 using namespace llvm::ejit;
 
-void EJitLogger::log(ErrorCode code, const std::string &message,
+void EJitLogger::log(int code, const std::string &message,
                      const std::string &funcName, const std::string &cacheKey,
                      size_t attemptedMemUsage) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -65,7 +65,7 @@ void EJitLogger::clear() {
 
 using namespace llvm::ejit;
 
-void EJitLogger::log(ErrorCode, const std::string &,
+void EJitLogger::log(int, const std::string &,
                      const std::string &, const std::string &, size_t) {}
 const EJitError *EJitLogger::getLastError() const { return nullptr; }
 bool EJitLogger::copyLastError(EJitError &) const { return false; }

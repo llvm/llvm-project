@@ -5,6 +5,7 @@
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #endif
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
+#include "llvm/ExecutionEngine/EJIT/EJitRuntime.h"
 #ifndef EJIT_FREESTANDING
 #include <chrono>
 #endif
@@ -60,7 +61,7 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
   if (!bitcodeOrErr) {
 #ifndef EJIT_FREESTANDING
     if (logger_)
-      logger_->log(ErrorCode::BitcodeNotFound,
+      logger_->log(EJIT_ERR_BITCODE_NOT_FOUND,
                    "No bitcode for function", funcName,
                    std::to_string(cacheKey));
 #endif
@@ -78,7 +79,7 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
     if (!runtimeState_.isActive(periodNames[i], dims[i])) {
 #ifndef EJIT_FREESTANDING
       if (logger_)
-        logger_->log(ErrorCode::TimeWindowNotActive,
+        logger_->log(EJIT_ERR_NOT_ACTIVE,
                      "Time window not active for " + periodNames[i],
                      funcName, std::to_string(cacheKey));
 #endif
@@ -97,7 +98,7 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
   if (!syncEngine_) {
 #ifndef EJIT_FREESTANDING
     if (logger_)
-      logger_->log(ErrorCode::NotActive,
+      logger_->log(EJIT_ERR_NOT_ACTIVE,
                    "Sync engine not initialized", funcName,
                    std::to_string(cacheKey));
 #endif
@@ -114,7 +115,7 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
     syncEngine_->setActiveContext(nullptr);
 #ifndef EJIT_FREESTANDING
     if (logger_)
-      logger_->log(ErrorCode::CompilationFailed,
+      logger_->log(EJIT_ERR_COMPILE_FAILED,
                    "Failed to load bitcode module", funcName,
                    std::to_string(cacheKey));
 #else
@@ -129,7 +130,7 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
   if (!addrOrErr) {
 #ifndef EJIT_FREESTANDING
     if (logger_)
-      logger_->log(ErrorCode::CompilationFailed,
+      logger_->log(EJIT_ERR_COMPILE_FAILED,
                    "Failed to look up compiled function", funcName,
                    std::to_string(cacheKey));
 #else

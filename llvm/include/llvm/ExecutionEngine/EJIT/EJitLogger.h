@@ -24,7 +24,7 @@ class EJitLogger {
 public:
   static constexpr size_t kMaxErrors = 32;
 
-  void log(ErrorCode code, const std::string &message,
+  void log(int code, const std::string &message,
            const std::string &funcName = {},
            const std::string &cacheKey = {},
            size_t attemptedMemUsage = 0);
