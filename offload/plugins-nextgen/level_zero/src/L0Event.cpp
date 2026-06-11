@@ -27,7 +27,9 @@ Expected<ze_event_handle_t> EventPoolTy::getEventLocked() {
     Desc.count = static_cast<uint32_t>(PoolSize);
 
     ze_event_pool_counter_based_exp_desc_t counterBasedDesc = {
-        ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC};
+        ZE_STRUCTURE_TYPE_COUNTER_BASED_EVENT_POOL_EXP_DESC,
+        /* pNext */ nullptr,
+        /* flags */ 0};
     counterBasedDesc.flags = ZE_EVENT_POOL_COUNTER_BASED_EXP_FLAG_IMMEDIATE;
 
     if (UseCounterBasedEvents)
