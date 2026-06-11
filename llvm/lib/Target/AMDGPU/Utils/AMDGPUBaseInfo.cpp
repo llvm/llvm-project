@@ -648,6 +648,37 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
   return getMFMA_F8F6F4_InstWithNumRegs(SrcANumRegs, SrcBNumRegs, F8F8Opcode);
 }
 
+bool isValidWMMAScaleFmtCombination(unsigned AFmt, unsigned AScale,
+                                    unsigned BFmt, unsigned BScale) {
+  auto isValid = [](unsigned Fmt, unsigned Scale) -> bool {
+    switch (Fmt) {
+    case WMMA::MATRIX_FMT_FP8:
+    case WMMA::MATRIX_FMT_BF8:
+    case WMMA::MATRIX_FMT_FP6:
+    case WMMA::MATRIX_FMT_BF6:
+      if (Scale != WMMA::MATRIX_SCALE_FMT_E8)
+        return false;
+      break;
+    case WMMA::MATRIX_FMT_FP4:
+      if (Scale != WMMA::MATRIX_SCALE_FMT_E8 &&
+          Scale != WMMA::MATRIX_SCALE_FMT_E5M3 &&
+          Scale != WMMA::MATRIX_SCALE_FMT_E4M3)
+        return false;
+      break;
+    }
+    return true;
+  };
+
+  if (!isValid(AFmt, AScale) || !isValid(BFmt, BScale))
+    return false;
+
+  if (AFmt == WMMA::MATRIX_FMT_FP4 && BFmt == WMMA::MATRIX_FMT_FP4 &&
+      AScale != BScale)
+    return false;
+
+  return true;
+}
+
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
   if (ST.hasFeature(AMDGPU::FeatureGFX13Insts))
     return SIEncodingFamily::GFX13;
