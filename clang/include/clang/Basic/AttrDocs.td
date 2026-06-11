@@ -9145,6 +9145,33 @@ point."
 }];
 }
 
+def AnnotateDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+This attribute is used to add annotations to declarations or statements,
+typically for use by static analysis tools that are not integrated into the
+core Clang compiler (e.g., Clang-Tidy checks or out-of-tree Clang-based tools).
+It is a counterpart to the `annotate_type` attribute, which serves the same
+purpose, but for types.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  [[clang::annotate("category1", "foo", 1)]] void func(int val [[clang::annotate("category2")]]) {
+    [[clang::annotate("category3")]] if (val) {
+
+    }
+  }
+
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
