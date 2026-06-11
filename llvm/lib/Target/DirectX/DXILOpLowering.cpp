@@ -700,6 +700,17 @@ public:
     });
   }
 
+  [[nodiscard]] bool lowerSample(Function &F, bool HasClamp) {
+    return lowerSampleOp(F, OpCode::Sample, /*CoordsIdx=*/2, /*OffsetsIdx=*/3,
+                         [HasClamp](IRBuilder<> &IRB, CallInst *CI,
+                                    SmallVectorImpl<Value *> &Args) {
+                           // Clamp
+                           Args.push_back(
+                               HasClamp ? CI->getArgOperand(4)
+                                        : UndefValue::get(IRB.getFloatTy()));
+                         });
+  }
+
   [[nodiscard]] bool lowerSampleBias(Function &F, bool HasClamp) {
     return lowerSampleOp(
         F, OpCode::SampleBias, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
@@ -710,6 +721,15 @@ public:
           // Clamp
           Args.push_back(HasClamp ? CI->getArgOperand(5)
                                   : UndefValue::get(IRB.getFloatTy()));
+        });
+  }
+
+  [[nodiscard]] bool lowerSampleLevel(Function &F) {
+    return lowerSampleOp(
+        F, OpCode::SampleLevel, /*CoordsIdx=*/2, /*OffsetsIdx=*/4,
+        [](IRBuilder<> &, CallInst *CI, SmallVectorImpl<Value *> &Args) {
+          // LOD is operand 3.
+          Args.push_back(CI->getArgOperand(3));
         });
   }
 
@@ -1151,11 +1171,20 @@ public:
       case Intrinsic::dx_resource_load_level:
         HasErrors |= lowerTextureLoad(F);
         break;
+      case Intrinsic::dx_resource_sample:
+        HasErrors |= lowerSample(F, /*HasClamp=*/false);
+        break;
+      case Intrinsic::dx_resource_sample_clamp:
+        HasErrors |= lowerSample(F, /*HasClamp=*/true);
+        break;
       case Intrinsic::dx_resource_samplebias:
         HasErrors |= lowerSampleBias(F, /*HasClamp=*/false);
         break;
       case Intrinsic::dx_resource_samplebias_clamp:
         HasErrors |= lowerSampleBias(F, /*HasClamp=*/true);
+        break;
+      case Intrinsic::dx_resource_samplelevel:
+        HasErrors |= lowerSampleLevel(F);
         break;
       case Intrinsic::dx_resource_samplegrad:
         HasErrors |= lowerSampleGrad(F, /*HasClamp=*/false);

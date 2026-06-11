@@ -369,8 +369,7 @@ namespace enable_if_2 {
 
 namespace GH150015 {
   extern int (& c)[8];
-  constexpr int x = c <= c+8; // interpreter-error {{constexpr variable 'x' must be initialized by a constant expression}} \
-                              // interpreter-note {{cannot refer to element 8 of non-array object in a constant expression}}
+  constexpr int x = c <= c+8;
 
   struct X {};
   struct Y {};

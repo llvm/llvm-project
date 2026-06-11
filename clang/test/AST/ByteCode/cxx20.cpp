@@ -1262,6 +1262,23 @@ namespace ConditionalTemporaries {
   }
   static_assert(foo(false)== 13);
   static_assert(foo(true)== 12);
+
+  struct S {
+    int *p;
+    constexpr S() { p = new int(); }
+    constexpr ~S() { delete p; }
+  };
+
+  constexpr bool func(S &s1, S s2) {
+    return true;
+  }
+
+  constexpr bool test() {
+    S s1;
+    func(s1, {}) ? void() : void();
+    return true;
+  }
+  static_assert(test());
 }
 
 namespace PointerCmp {
@@ -1365,10 +1382,34 @@ namespace IndirectFieldInitializer {
     constexpr A() {}
   };
   static_assert(A().x == 3, "");
+}
 
+namespace Covariant {
+  struct A {
+    int a;
+    constexpr virtual const A* getA() const = 0;
+  };
+  struct B { int b; };
+
+  struct C: A, B {
+    constexpr const C* getA() const override {
+      return this;
+    }
+  };
+  constexpr  C c{};
+  static_assert(c.getA() == &c);
 }
 
 namespace InvalidOMPRequiredSimdAlign {
   typedef decltype(sizeof(int)) T;
   constexpr T foo(T x) { return __builtin_omp_required_simd_align * 42; } // both-error {{indirection requires pointer operand}}
+}
+
+namespace StoreCannotDeref {
+  constexpr void foo() { // both-error {{never produces a constant expression}}
+    int l = 10;
+    int *n = &l;
+    int *m = (int *)&n; // both-note {{cast that performs the conversions of a reinterpret_cast}}
+    *m = 42;
+  }
 }

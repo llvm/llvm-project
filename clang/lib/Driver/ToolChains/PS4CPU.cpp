@@ -580,7 +580,7 @@ SanitizerMask toolchains::PS5CPU::getSupportedSanitizers(
 }
 
 void toolchains::PS4PS5Base::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadingKind) const {
   // PS4/PS5 do not use init arrays.
   if (DriverArgs.hasArg(options::OPT_fuse_init_array)) {
@@ -648,6 +648,12 @@ void toolchains::PS4PS5Base::addClangTargetOptions(
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-emit-jump-table-sizes-section");
   }
+}
+
+void toolchains::PS4PS5Base::addClangWarningOptions(
+    ArgStringList &CC1Args) const {
+  CC1Args.push_back("-Wnonportable-include-path-separator");
+  CC1Args.push_back("-Wnonportable-system-include-path");
 }
 
 // PS4 toolchain.

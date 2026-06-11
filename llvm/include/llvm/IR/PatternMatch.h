@@ -1978,6 +1978,10 @@ struct m_SpecificMask {
   bool match(ArrayRef<int> Mask) const { return Val == Mask; }
 };
 
+struct m_SplatMask {
+  bool match(ArrayRef<int> Mask) const { return all_equal(Mask); }
+};
+
 struct m_SplatOrPoisonMask {
   int &SplatIndex;
   m_SplatOrPoisonMask(int &SplatIndex) : SplatIndex(SplatIndex) {}

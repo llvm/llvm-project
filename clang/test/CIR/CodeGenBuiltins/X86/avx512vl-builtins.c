@@ -732,9 +732,9 @@ void test_mm_mask_compressstoreu_pd(void *__P, __mmask8 __U, __m128d __A) {
   // CIR-LABEL: _mm_mask_compressstoreu_pd
   // CIR: cir.call_llvm_intrinsic "masked.compressstore" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !cir.double>, !cir.ptr<!cir.vector<2 x !cir.double>>, !cir.vector<2 x !cir.int<s, 1>>){{.*}}
   // LLVM-LABEL: @test_mm_mask_compressstoreu_pd
-  // LLVM: @llvm.masked.compressstore.v2f64(<2 x double> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
+  // LLVM: @llvm.masked.compressstore.v2f64.p0(<2 x double> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
   // OGCG-LABEL: @test_mm_mask_compressstoreu_pd
-  // OGCG: @llvm.masked.compressstore.v2f64(<2 x double> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
+  // OGCG: @llvm.masked.compressstore.v2f64.p0(<2 x double> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
   return _mm_mask_compressstoreu_pd(__P, __U, __A);
 }
 
@@ -742,9 +742,9 @@ void test_mm256_mask_compressstoreu_pd(void *__P, __mmask8 __U, __m256d __A) {
   // CIR-LABEL: _mm256_mask_compressstoreu_pd
   // CIR: cir.call_llvm_intrinsic "masked.compressstore" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.double>, !cir.ptr<!cir.vector<4 x !cir.double>>, !cir.vector<4 x !cir.int<s, 1>>){{.*}}
   // LLVM-LABEL: @test_mm256_mask_compressstoreu_pd
-  // LLVM: @llvm.masked.compressstore.v4f64(<4 x double> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
+  // LLVM: @llvm.masked.compressstore.v4f64.p0(<4 x double> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
   // OGCG-LABEL: @test_mm256_mask_compressstoreu_pd
-  // OGCG: @llvm.masked.compressstore.v4f64(<4 x double> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
+  // OGCG: @llvm.masked.compressstore.v4f64.p0(<4 x double> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
   return _mm256_mask_compressstoreu_pd(__P, __U, __A);
 }
 
@@ -752,9 +752,9 @@ void test_mm_mask_compressstoreu_epi64(void *__P, __mmask8 __U, __m128i __A) {
   // CIR-LABEL: _mm_mask_compressstoreu_epi64
   // CIR: cir.call_llvm_intrinsic "masked.compressstore" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<2 x !s64i>, !cir.ptr<!cir.vector<2 x !s64i>>, !cir.vector<2 x !cir.int<s, 1>>){{.*}}
   // LLVM-LABEL: @test_mm_mask_compressstoreu_epi64
-  // LLVM: @llvm.masked.compressstore.v2i64(<2 x i64> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
+  // LLVM: @llvm.masked.compressstore.v2i64.p0(<2 x i64> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
   // OGCG-LABEL: @test_mm_mask_compressstoreu_epi64
-  // OGCG: @llvm.masked.compressstore.v2i64(<2 x i64> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
+  // OGCG: @llvm.masked.compressstore.v2i64.p0(<2 x i64> %{{.*}}, ptr %{{.*}}, <2 x i1> %{{.*}})
   return _mm_mask_compressstoreu_epi64(__P, __U, __A);
 }
 
@@ -762,9 +762,9 @@ void test_mm256_mask_compressstoreu_epi64(void *__P, __mmask8 __U, __m256i __A) 
   // CIR-LABEL: _mm256_mask_compressstoreu_epi64
   // CIR: cir.call_llvm_intrinsic "masked.compressstore" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s64i>, !cir.ptr<!cir.vector<4 x !s64i>>, !cir.vector<4 x !cir.int<s, 1>>){{.*}}
   // LLVM-LABEL: @test_mm256_mask_compressstoreu_epi64
-  // LLVM: @llvm.masked.compressstore.v4i64(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
+  // LLVM: @llvm.masked.compressstore.v4i64.p0(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
   // OGCG-LABEL: @test_mm256_mask_compressstoreu_epi64
-  // OGCG: @llvm.masked.compressstore.v4i64(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
+  // OGCG: @llvm.masked.compressstore.v4i64.p0(<4 x i64> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
   return _mm256_mask_compressstoreu_epi64(__P, __U, __A);
 }
 
@@ -772,9 +772,9 @@ void test_mm_mask_compressstoreu_ps(void *__P, __mmask8 __U, __m128 __A) {
   // CIR-LABEL: _mm_mask_compressstoreu_ps
   // CIR: cir.call_llvm_intrinsic "masked.compressstore" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !cir.float>, !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.int<s, 1>>){{.*}}
   // LLVM-LABEL: @test_mm_mask_compressstoreu_ps
-  // LLVM: @llvm.masked.compressstore.v4f32(<4 x float> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
+  // LLVM: @llvm.masked.compressstore.v4f32.p0(<4 x float> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
   // OGCG-LABEL: @test_mm_mask_compressstoreu_ps
-  // OGCG: @llvm.masked.compressstore.v4f32(<4 x float> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
+  // OGCG: @llvm.masked.compressstore.v4f32.p0(<4 x float> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
   return _mm_mask_compressstoreu_ps(__P, __U, __A);
 }
 
@@ -782,9 +782,9 @@ void test_mm256_mask_compressstoreu_ps(void *__P, __mmask8 __U, __m256 __A) {
   // CIR-LABEL: _mm256_mask_compressstoreu_ps
   // CIR: cir.call_llvm_intrinsic "masked.compressstore" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !cir.float>, !cir.ptr<!cir.vector<8 x !cir.float>>, !cir.vector<8 x !cir.int<s, 1>>){{.*}}
   // LLVM-LABEL: @test_mm256_mask_compressstoreu_ps
-  // LLVM: @llvm.masked.compressstore.v8f32(<8 x float> %{{.*}}, ptr %{{.*}}, <8 x i1> %{{.*}})
+  // LLVM: @llvm.masked.compressstore.v8f32.p0(<8 x float> %{{.*}}, ptr %{{.*}}, <8 x i1> %{{.*}})
   // OGCG-LABEL: @test_mm256_mask_compressstoreu_ps
-  // OGCG: @llvm.masked.compressstore.v8f32(<8 x float> %{{.*}}, ptr %{{.*}}, <8 x i1> %{{.*}})
+  // OGCG: @llvm.masked.compressstore.v8f32.p0(<8 x float> %{{.*}}, ptr %{{.*}}, <8 x i1> %{{.*}})
   return _mm256_mask_compressstoreu_ps(__P, __U, __A);
 }
 
@@ -792,9 +792,9 @@ void test_mm_mask_compressstoreu_epi32(void *__P, __mmask8 __U, __m128i __A) {
   // CIR-LABEL: _mm_mask_compressstoreu_epi32
   // CIR: cir.call_llvm_intrinsic "masked.compressstore" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !cir.int<s, 1>>){{.*}}
   // LLVM-LABEL: @test_mm_mask_compressstoreu_epi32
-  // LLVM: @llvm.masked.compressstore.v4i32(<4 x i32> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
+  // LLVM: @llvm.masked.compressstore.v4i32.p0(<4 x i32> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
   // OGCG-LABEL: @test_mm_mask_compressstoreu_epi32
-  // OGCG: @llvm.masked.compressstore.v4i32(<4 x i32> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
+  // OGCG: @llvm.masked.compressstore.v4i32.p0(<4 x i32> %{{.*}}, ptr %{{.*}}, <4 x i1> %{{.*}})
   return _mm_mask_compressstoreu_epi32(__P, __U, __A);
 }
 
@@ -802,8 +802,8 @@ void test_mm256_mask_compressstoreu_epi32(void *__P, __mmask8 __U, __m256i __A) 
   // CIR-LABEL: _mm256_mask_compressstoreu_epi32
   // CIR: cir.call_llvm_intrinsic "masked.compressstore" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s32i>, !cir.ptr<!cir.vector<8 x !s32i>>, !cir.vector<8 x !cir.int<s, 1>>){{.*}}
   // LLVM-LABEL: @test_mm256_mask_compressstoreu_epi32
-  // LLVM: @llvm.masked.compressstore.v8i32(<8 x i32> %{{.*}}, ptr %{{.*}}, <8 x i1> %{{.*}})
+  // LLVM: @llvm.masked.compressstore.v8i32.p0(<8 x i32> %{{.*}}, ptr %{{.*}}, <8 x i1> %{{.*}})
   // OGCG-LABEL: @test_mm256_mask_compressstoreu_epi32
-  // OGCG: @llvm.masked.compressstore.v8i32(<8 x i32> %{{.*}}, ptr %{{.*}}, <8 x i1> %{{.*}})
+  // OGCG: @llvm.masked.compressstore.v8i32.p0(<8 x i32> %{{.*}}, ptr %{{.*}}, <8 x i1> %{{.*}})
   return _mm256_mask_compressstoreu_epi32(__P, __U, __A);
 }

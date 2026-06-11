@@ -3349,6 +3349,9 @@ static mlir::omp::DistributeOp genStandaloneDistribute(
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
+  // Dynamic private arrays cannot safely be allocated in GPU scratch when the
+  // descriptor is captured through the distribute callback.
+  dsp.setForceHeapAllocationForPrivateDynamicArrays();
   dsp.processStep1(&distributeClauseOps);
 
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -3543,6 +3546,7 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
   DataSharingProcessor dsp(converter, semaCtx, doItem->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            /*useDelayedPrivatization=*/true, symTable);
+  dsp.setForceHeapAllocationForPrivateDynamicArrays();
   dsp.processStep1(&parallelClauseOps);
 
   ObjectEntryBlockArgs parallelArgs;
@@ -4585,7 +4589,7 @@ genOpenMPDeclareMapperImpl(lower::AbstractConverter &converter,
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processMap(loc, stmtCtx, clauseOps);
-  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps.mapVars);
+  mlir::omp::DeclareMapperInfoOp::create(firOpBuilder, loc, clauseOps);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
@@ -4690,13 +4694,19 @@ private:
 };
 
 struct MetadirectiveCandidate {
-  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
-                         llvm::omp::VariantMatchInfo vmi, bool isExplicit)
-      : spec(spec), vmi(vmi), isExplicit(isExplicit) {}
+  MetadirectiveCandidate(
+      const parser::OmpDirectiveSpecification *spec,
+      llvm::omp::VariantMatchInfo vmi, bool isExplicit,
+      std::optional<DynamicUserCondition> dynamicCond = std::nullopt,
+      bool conditionShouldBeTrue = true)
+      : spec(spec), vmi(vmi), isExplicit(isExplicit), dynamicCond(dynamicCond),
+        conditionShouldBeTrue(conditionShouldBeTrue) {}
 
   const parser::OmpDirectiveSpecification *spec = nullptr;
   llvm::omp::VariantMatchInfo vmi;
   bool isExplicit = false;
+  std::optional<DynamicUserCondition> dynamicCond;
+  bool conditionShouldBeTrue = true;
 };
 } // namespace
 
@@ -4775,19 +4785,96 @@ static void genMetadirective(lower::AbstractConverter &converter,
       const auto &ctxSel = getContextSelector(*whenClause);
       auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
 
-      llvm::omp::VariantMatchInfo vmi;
-      const parser::ScalarExpr *dynCondExpr = nullptr;
-      makeVariantMatchInfo(vmi, ctxSel, semaCtx,
-                           converter.genLocation(clause.source), dynCondExpr);
+      llvm::omp::VariantMatchInfo rawVMI;
+      std::optional<DynamicUserCondition> dynamicCond = makeVariantMatchInfo(
+          rawVMI, ctxSel, semaCtx, converter.genLocation(clause.source));
 
-      if (dynCondExpr)
-        TODO(converter.genLocation(clause.source),
-             "dynamic user condition in METADIRECTIVE");
+      if (dynamicCond) {
+        constexpr llvm::omp::TraitProperty dynamicConditionTrait =
+            llvm::omp::TraitProperty::user_condition_unknown;
+        constexpr llvm::omp::TraitProperty matchAnyTrait =
+            llvm::omp::TraitProperty::implementation_extension_match_any;
+        constexpr llvm::omp::TraitProperty matchNoneTrait =
+            llvm::omp::TraitProperty::implementation_extension_match_none;
 
-      if (!llvm::omp::isVariantApplicableInContext(vmi, ompCtx))
+        // Static applicability must only use traits known at lowering time.
+        // For example, in
+        //   when(implementation={vendor(llvm)},
+        //        user={condition(score(5): flag)}: barrier)
+        // vendor(llvm) can be checked now, but flag cannot. Drop the
+        // runtime-only user_condition_unknown for applicability, while keeping
+        // score(5) so ranking can still honor the user-condition selector.
+        llvm::omp::VariantMatchInfo staticVMI = rawVMI;
+        std::optional<llvm::APInt> conditionScore;
+        auto scoreIt = staticVMI.ScoreMap.find(dynamicConditionTrait);
+        if (scoreIt != staticVMI.ScoreMap.end()) {
+          conditionScore = scoreIt->second;
+          staticVMI.ScoreMap.erase(scoreIt);
+        }
+        staticVMI.RequiredTraits.reset(unsigned(dynamicConditionTrait));
+        llvm::APInt *conditionScorePtr =
+            conditionScore ? &*conditionScore : nullptr;
+
+        bool hasMatchAny = rawVMI.RequiredTraits.test(unsigned(matchAnyTrait));
+        bool hasMatchNone =
+            rawVMI.RequiredTraits.test(unsigned(matchNoneTrait));
+        bool isStaticVMIApplicable =
+            llvm::omp::isVariantApplicableInContext(staticVMI, ompCtx);
+        // If staticVMI does not match, only match_any can still apply. Check
+        // conditionTrueVMI because the runtime condition may satisfy match_any.
+        if (!isStaticVMIApplicable) {
+          if (!hasMatchAny || staticVMI.RequiredTraits.test(
+                                  unsigned(llvm::omp::TraitProperty::invalid)))
+            continue;
+
+          llvm::omp::VariantMatchInfo conditionTrueVMI = staticVMI;
+          conditionTrueVMI.addTrait(
+              llvm::omp::TraitProperty::user_condition_true, "<condition>",
+              conditionScorePtr);
+          if (!llvm::omp::isVariantApplicableInContext(conditionTrueVMI,
+                                                       ompCtx))
+            continue;
+        }
+
+        auto addConditionTraitForRanking =
+            [&](llvm::omp::VariantMatchInfo &rankingVMI) {
+              rankingVMI.addTrait(
+                  hasMatchNone ? dynamicConditionTrait
+                               : llvm::omp::TraitProperty::user_condition_true,
+                  "<condition>", conditionScorePtr);
+            };
+
+        if (hasMatchAny && isStaticVMIApplicable) {
+          // A statically matched match_any selector needs two candidates: a
+          // guarded candidate with the user condition and score, and an
+          // unguarded candidate with only the statically matched traits. If the
+          // when clause omits its directive, only add the unguarded candidate.
+          if (isExplicit) {
+            llvm::omp::VariantMatchInfo conditionTrueVMI = staticVMI;
+            addConditionTraitForRanking(conditionTrueVMI);
+            candidates.emplace_back(spec, conditionTrueVMI, isExplicit,
+                                    dynamicCond);
+          }
+          candidates.emplace_back(spec, staticVMI, isExplicit);
+          continue;
+        }
+
+        llvm::omp::VariantMatchInfo rankingVMI = staticVMI;
+        // An omitted directive is implicit nothing, so do not let the runtime
+        // condition raise its rank. Explicit `nothing` is still a variant.
+        if (!isExplicit && hasMatchAny && !isStaticVMIApplicable)
+          rankingVMI = llvm::omp::VariantMatchInfo();
+        else if (isExplicit)
+          addConditionTraitForRanking(rankingVMI);
+        candidates.emplace_back(spec, rankingVMI, isExplicit, dynamicCond,
+                                /*conditionShouldBeTrue=*/!hasMatchNone);
+        continue;
+      }
+
+      if (!llvm::omp::isVariantApplicableInContext(rawVMI, ompCtx))
         continue;
 
-      candidates.emplace_back(spec, vmi, isExplicit);
+      candidates.emplace_back(spec, rawVMI, isExplicit);
     } else if (const auto *otherwiseClause =
                    std::get_if<parser::OmpClause::Otherwise>(&clause.u)) {
       if (otherwiseClause->v && otherwiseClause->v->v)
@@ -4833,24 +4920,29 @@ static void genMetadirective(lower::AbstractConverter &converter,
                    queue.begin());
   };
 
-  const parser::OmpDirectiveSpecification *selected = fallback;
-  if (candidates.size() == 1) {
-    selected = candidates.front().spec;
-  } else if (!candidates.empty()) {
+  auto selectBestCandidate =
+      [](llvm::ArrayRef<unsigned> candidateIndices,
+         llvm::ArrayRef<MetadirectiveCandidate> candidates,
+         const TargetOMPContext &ompCtx) -> std::optional<unsigned> {
+    if (candidateIndices.empty())
+      return std::nullopt;
+    if (candidateIndices.size() == 1)
+      return candidateIndices.front();
+
     // The OpenMP context scorer preserves input order for tied candidates.
     // Put explicit variants first so they take precedence over implicit
     // `nothing`, as required by metadirective selection.
     llvm::SmallVector<unsigned, 4> candidateOrder;
-    candidateOrder.reserve(candidates.size());
-    for (auto [idx, candidate] : llvm::enumerate(candidates))
-      if (candidate.isExplicit)
+    candidateOrder.reserve(candidateIndices.size());
+    for (unsigned idx : candidateIndices)
+      if (candidates[idx].isExplicit)
         candidateOrder.push_back(idx);
-    for (auto [idx, candidate] : llvm::enumerate(candidates))
-      if (!candidate.isExplicit)
+    for (unsigned idx : candidateIndices)
+      if (!candidates[idx].isExplicit)
         candidateOrder.push_back(idx);
 
     llvm::SmallVector<llvm::omp::VariantMatchInfo, 4> orderedVMIs;
-    orderedVMIs.reserve(candidates.size());
+    orderedVMIs.reserve(candidateOrder.size());
     for (unsigned idx : candidateOrder)
       orderedVMIs.push_back(candidates[idx].vmi);
 
@@ -4858,10 +4950,96 @@ static void genMetadirective(lower::AbstractConverter &converter,
     if (bestIdx >= 0) {
       assert(static_cast<size_t>(bestIdx) < candidateOrder.size() &&
              "best variant index out of range");
-      selected = candidates[candidateOrder[bestIdx]].spec;
+      return candidateOrder[bestIdx];
     }
+    return std::nullopt;
+  };
+
+  llvm::SmallVector<unsigned, 4> remainingCandidates;
+  remainingCandidates.reserve(candidates.size());
+  for (unsigned idx = 0, end = candidates.size(); idx < end; ++idx)
+    remainingCandidates.push_back(idx);
+
+  lower::StatementContext stmtCtx;
+
+  // Candidates that reach this loop passed static filtering. Runtime user
+  // conditions are lowered as a ranked if/else cascade:
+  //
+  //   when(user={condition(a)}: barrier)
+  //   when(user={condition(b)}: taskwait)
+  //   otherwise(nothing)
+  //
+  // becomes:
+  //
+  //   if (a) barrier
+  //   else if (b) taskwait
+  //   else nothing
+  //
+  // If the else path selects the same unguarded directive, lower it directly.
+  // Stop when selection reaches an unguarded candidate or the fallback.
+  while (!remainingCandidates.empty()) {
+    std::optional<unsigned> selected =
+        selectBestCandidate(remainingCandidates, candidates, ompCtx);
+    if (!selected) {
+      genVariant(fallback);
+      return;
+    }
+
+    const MetadirectiveCandidate &candidate = candidates[*selected];
+    if (!candidate.dynamicCond) {
+      genVariant(candidate.spec);
+      return;
+    }
+
+    llvm::SmallVector<unsigned, 4> elsePathCandidates(remainingCandidates);
+    auto *remainingIt = llvm::find(elsePathCandidates, *selected);
+    assert(remainingIt != elsePathCandidates.end() &&
+           "selected candidate missing from remaining candidates");
+    elsePathCandidates.erase(remainingIt);
+
+    // match_any may create a guarded condition-true candidate and an unguarded
+    // static candidate for the same directive. If the else path picks the
+    // unguarded one then fold it:
+    //
+    //   if (flag) barrier    into just    barrier
+    //   else barrier
+    if (std::optional<unsigned> selectedInElse =
+            selectBestCandidate(elsePathCandidates, candidates, ompCtx)) {
+      const MetadirectiveCandidate &candidateInElse =
+          candidates[*selectedInElse];
+      if (!candidateInElse.dynamicCond &&
+          candidateInElse.spec == candidate.spec) {
+        genVariant(candidate.spec);
+        return;
+      }
+    }
+
+    mlir::Location condLoc =
+        converter.genLocation(candidate.dynamicCond->source);
+    const auto *condExpr =
+        semantics::GetExpr(semaCtx, *candidate.dynamicCond->expr);
+    assert(condExpr && "missing expression for user condition");
+    mlir::Value condVal =
+        fir::getBase(converter.genExprValue(*condExpr, stmtCtx, &condLoc));
+
+    if (condVal.getType() != builder.getI1Type())
+      condVal = builder.createConvert(condLoc, builder.getI1Type(), condVal);
+    if (!candidate.conditionShouldBeTrue) {
+      mlir::Value trueVal =
+          builder.createIntegerConstant(condLoc, builder.getI1Type(), 1);
+      condVal = mlir::arith::XOrIOp::create(builder, condLoc, condVal, trueVal);
+    }
+
+    stmtCtx.finalizeAndReset();
+    auto ifOp = fir::IfOp::create(builder, condLoc, condVal,
+                                  /*withElseRegion=*/true);
+    builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    genVariant(candidate.spec);
+
+    builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+    remainingCandidates = std::move(elsePathCandidates);
   }
-  genVariant(selected);
+  genVariant(fallback);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,

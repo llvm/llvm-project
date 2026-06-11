@@ -4946,9 +4946,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_MEMSET:
   case G_MEMCPY:
   case G_MEMMOVE:
-    return lowerMemCpyFamily(MI);
   case G_MEMCPY_INLINE:
-    return lowerMemcpyInline(MI);
+    return lowerMemCpyFamily(MI);
   case G_ZEXT:
   case G_SEXT:
   case G_ANYEXT:
@@ -10924,46 +10923,6 @@ LegalizerHelper::lowerMemset(MachineInstr &MI, Register Dst, Register Val,
 }
 
 LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerMemcpyInline(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_MEMCPY_INLINE);
-
-  auto [Dst, Src, Len] = MI.getFirst3Regs();
-
-  const auto *MMOIt = MI.memoperands_begin();
-  const MachineMemOperand *MemOp = *MMOIt;
-  bool IsVolatile = MemOp->isVolatile();
-
-  // See if this is a constant length copy
-  auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
-  // FIXME: support dynamically sized G_MEMCPY_INLINE
-  assert(LenVRegAndVal &&
-         "inline memcpy with dynamic size is not yet supported");
-  uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
-  if (KnownLen == 0) {
-    MI.eraseFromParent();
-    return Legalized;
-  }
-
-  const auto &DstMMO = **MI.memoperands_begin();
-  const auto &SrcMMO = **std::next(MI.memoperands_begin());
-  Align DstAlign = DstMMO.getBaseAlign();
-  Align SrcAlign = SrcMMO.getBaseAlign();
-
-  return lowerMemcpyInline(MI, Dst, Src, KnownLen, DstAlign, SrcAlign,
-                           IsVolatile);
-}
-
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerMemcpyInline(MachineInstr &MI, Register Dst, Register Src,
-                                   uint64_t KnownLen, Align DstAlign,
-                                   Align SrcAlign, bool IsVolatile) {
-  assert(MI.getOpcode() == TargetOpcode::G_MEMCPY_INLINE);
-  return lowerMemcpy(MI, Dst, Src, KnownLen,
-                     std::numeric_limits<uint64_t>::max(), DstAlign, SrcAlign,
-                     IsVolatile);
-}
-
-LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
                              uint64_t KnownLen, uint64_t Limit, Align DstAlign,
                              Align SrcAlign, bool IsVolatile) {
@@ -11182,8 +11141,9 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
   const unsigned Opc = MI.getOpcode();
   // This combine is fairly complex so it's not written with a separate
   // matcher function.
-  assert((Opc == TargetOpcode::G_MEMCPY || Opc == TargetOpcode::G_MEMMOVE ||
-          Opc == TargetOpcode::G_MEMSET) &&
+  assert((Opc == TargetOpcode::G_MEMCPY ||
+          Opc == TargetOpcode::G_MEMCPY_INLINE ||
+          Opc == TargetOpcode::G_MEMMOVE || Opc == TargetOpcode::G_MEMSET) &&
          "Expected memcpy like instruction");
 
   auto MMOIt = MI.memoperands_begin();
@@ -11201,8 +11161,12 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
 
   // See if this is a constant length copy
   auto LenVRegAndVal = getIConstantVRegValWithLookThrough(Len, MRI);
-  if (!LenVRegAndVal)
+  if (!LenVRegAndVal) {
+    // FIXME: support dynamically sized G_MEMCPY_INLINE
+    assert(Opc != TargetOpcode::G_MEMCPY_INLINE &&
+           "inline memcpy with dynamic size is not yet supported");
     return UnableToLegalize;
+  }
   uint64_t KnownLen = LenVRegAndVal->Value.getZExtValue();
 
   if (KnownLen == 0) {
@@ -11210,15 +11174,17 @@ LegalizerHelper::lowerMemCpyFamily(MachineInstr &MI, unsigned MaxLen) {
     return Legalized;
   }
 
-  if (MaxLen && KnownLen > MaxLen)
+  if (Opc != TargetOpcode::G_MEMCPY_INLINE && MaxLen && KnownLen > MaxLen)
     return UnableToLegalize;
 
   bool IsVolatile = MemOp->isVolatile();
-  if (Opc == TargetOpcode::G_MEMCPY) {
+  if (Opc == TargetOpcode::G_MEMCPY || Opc == TargetOpcode::G_MEMCPY_INLINE) {
     auto &MF = *MI.getParent()->getParent();
     const auto &TLI = *MF.getSubtarget().getTargetLowering();
     bool OptSize = shouldLowerMemFuncForSize(MF);
-    uint64_t Limit = TLI.getMaxStoresPerMemcpy(OptSize);
+    uint64_t Limit = Opc == TargetOpcode::G_MEMCPY_INLINE
+                         ? std::numeric_limits<uint64_t>::max()
+                         : TLI.getMaxStoresPerMemcpy(OptSize);
     return lowerMemcpy(MI, Dst, Src, KnownLen, Limit, DstAlign, SrcAlign,
                        IsVolatile);
   }

@@ -32,7 +32,7 @@ class raw_ostream;
 namespace Fortran::parser {
 struct Expr;
 struct OpenMPDeclarativeConstruct;
-}
+} // namespace Fortran::parser
 
 namespace Fortran::semantics {
 
@@ -526,6 +526,10 @@ public:
   const SymbolVector &paramDeclOrder() const { return paramDeclOrder_; }
   bool sequence() const { return sequence_; }
   bool isDECStructure() const { return isDECStructure_; }
+  bool isEnumerationType() const { return isEnumerationType_; }
+  void set_isEnumerationType(bool x = true) { isEnumerationType_ = x; }
+  int enumeratorCount() const { return enumeratorCount_; }
+  void set_enumeratorCount(int n) { enumeratorCount_ = n; }
   std::map<SourceName, SymbolRef> &finals() { return finals_; }
   const std::map<SourceName, SymbolRef> &finals() const { return finals_; }
   bool isForwardReferenced() const { return isForwardReferenced_; }
@@ -576,6 +580,10 @@ private:
   bool isDECStructure_{false};
   bool isForwardReferenced_{false};
   std::map<SourceName, const parser::Expr *> originalKindParameterMap_;
+
+  // These fields are only used if the derived type is an enumeration type.
+  bool isEnumerationType_{false};
+  int enumeratorCount_{0};
 
   friend llvm::raw_ostream &operator<<(
       llvm::raw_ostream &, const DerivedTypeDetails &);
@@ -881,6 +889,8 @@ public:
       AccPresent, AccLink, AccDeviceResident, AccDevicePtr, AccUseDevice,
       // OpenACC declare
       AccDeclare,
+      // OpenACC declare on allocatable/pointer needs cross-TU action recipes
+      AccDeclareAction,
       // OpenACC data-movement attribute
       AccDevice, AccHost, AccSelf,
       // OpenACC miscellaneous flags
@@ -1211,6 +1221,12 @@ inline const DeclTypeSpec *Symbol::GetTypeImpl(int depth) const {
 
 inline const DeclTypeSpec *Symbol::GetType() const { return GetTypeImpl(); }
 
+// Defined here, where Symbol is a complete type, so that it can be inlined
+// into FortranEvaluate without that library needing to link FortranSemantics.
+inline const Scope *DerivedTypeSpec::GetScope() const {
+  return scope_ ? scope_ : typeSymbol_.scope();
+}
+
 // Sets and maps keyed by Symbols
 
 struct SymbolAddressCompare {
@@ -1256,11 +1272,6 @@ SourceOrderedSymbolSet OrderBySourcePosition(const A &container) {
 // Define required  info so that SymbolRef can be used inside llvm::DenseMap.
 namespace llvm {
 template <> struct DenseMapInfo<Fortran::semantics::SymbolRef> {
-  static inline Fortran::semantics::SymbolRef getEmptyKey() {
-    auto ptr = DenseMapInfo<const Fortran::semantics::Symbol *>::getEmptyKey();
-    return *reinterpret_cast<Fortran::semantics::SymbolRef *>(&ptr);
-  }
-
   static unsigned getHashValue(const Fortran::semantics::SymbolRef &sym) {
     return DenseMapInfo<const Fortran::semantics::Symbol *>::getHashValue(
         &sym.get());
