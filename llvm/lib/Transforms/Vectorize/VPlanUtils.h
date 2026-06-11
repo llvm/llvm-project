@@ -100,16 +100,6 @@ template <typename Ty> Intrinsic::ID getIntrinsicID(const Ty *R) {
   return Intrinsic::not_intrinsic;
 }
 
-/// Returns the VPValue representing the uncountable exit comparison used by
-/// AnyOf if the recipes it depends on can be traced back to live-ins and
-/// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
-/// generating the values for the comparison. The recipes are stored in
-/// \p Recipes.
-LLVM_ABI_FOR_TEST
-std::optional<VPValue *>
-getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
-                             VPBasicBlock *LatchVPBB);
-
 /// Return a MemoryLocation for \p R with noalias metadata populated from
 /// \p R, if the recipe is supported and std::nullopt otherwise. The pointer of
 /// the location is conservatively set to nullptr.
