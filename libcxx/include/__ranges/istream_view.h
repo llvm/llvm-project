@@ -24,11 +24,13 @@
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
+#if _LIBCPP_HAS_LOCALIZATION
 
-#if _LIBCPP_STD_VER >= 20
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
+
+#  if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -99,10 +101,10 @@ private:
 template <class _Val>
 using istream_view = basic_istream_view<_Val, char>;
 
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
+#    if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Val>
 using wistream_view = basic_istream_view<_Val, wchar_t>;
-#  endif
+#    endif
 
 namespace views {
 namespace __istream {
@@ -136,6 +138,8 @@ inline constexpr auto istream = __istream::__fn<_Tp>{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 20
+#  endif // _LIBCPP_STD_VER >= 20
+
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___RANGES_ISTREAM_VIEW_H

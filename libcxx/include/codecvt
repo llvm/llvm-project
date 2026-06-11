@@ -58,11 +58,10 @@ class codecvt_utf8_utf16
 #  include <__cxx03/codecvt>
 #else
 #  include <__config>
+#  include <__locale>
+#  include <version>
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
-#    include <__locale>
-#    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header

@@ -654,14 +654,11 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <climits>
 #  include <cstdio> // EOF
 #  include <cstring>
+#  include <cwchar>
 #  include <limits>
 #  include <stdexcept>
 #  include <string_view>
 #  include <version>
-
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
-#    include <cwchar>
-#  endif
 
 // standard-mandated includes
 
@@ -932,7 +929,7 @@ private:
     return std::__make_bounded_iter(__p, __get_pointer(), __get_pointer() + size());
 #  else
     return const_iterator(__p);
-#  endif                    // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
+#  endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_STRING
   }
 
 public:

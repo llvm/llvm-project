@@ -46,16 +46,15 @@ template <class charT, class traits, class Allocator>
 #  include <__cxx03/iomanip>
 #else
 #  include <__config>
+#  include <__iterator/istreambuf_iterator.h>
+#  include <__locale_dir/money.h>
+#  include <__locale_dir/time.h>
+#  include <__ostream/put_character_sequence.h>
+#  include <ios>
+#  include <iosfwd>
+#  include <version>
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
-#    include <__iterator/istreambuf_iterator.h>
-#    include <__locale_dir/money.h>
-#    include <__locale_dir/time.h>
-#    include <__ostream/put_character_sequence.h>
-#    include <ios>
-#    include <iosfwd>
-#    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header

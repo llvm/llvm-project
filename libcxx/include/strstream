@@ -133,13 +133,12 @@ private:
 #  include <__cxx03/strstream>
 #else
 #  include <__config>
+#  include <__ostream/basic_ostream.h>
+#  include <istream>
+#  include <streambuf>
+#  include <version>
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
-#    include <__ostream/basic_ostream.h>
-#    include <istream>
-#    include <streambuf>
-#    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header

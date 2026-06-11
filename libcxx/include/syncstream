@@ -121,6 +121,15 @@ namespace std {
 #  include <__cxx03/__config>
 #else
 #  include <__config>
+#  include <__mutex/lock_guard.h>
+#  include <__utility/move.h>
+#  include <ios>
+#  include <iosfwd> // required for declaration of default arguments
+#  include <map>
+#  include <shared_mutex>
+#  include <streambuf>
+#  include <string>
+#  include <version>
 
 // standard-mandated includes
 
@@ -128,17 +137,6 @@ namespace std {
 #  include <ostream>
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
-#    include <__mutex/lock_guard.h>
-#    include <__utility/move.h>
-#    include <ios>
-#    include <iosfwd> // required for declaration of default arguments
-#    include <streambuf>
-#    include <string>
-#    if _LIBCPP_HAS_THREADS
-#      include <map>
-#      include <shared_mutex>
-#    endif
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header

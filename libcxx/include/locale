@@ -191,18 +191,17 @@ template <class charT> class messages_byname;
 #  include <__cxx03/locale>
 #else
 #  include <__config>
+#  include <__locale>
+#  include <__locale_dir/messages.h>
+#  include <__locale_dir/money.h>
+#  include <__locale_dir/num.h>
+#  include <__locale_dir/time.h>
+#  include <__locale_dir/wbuffer_convert.h>
+#  include <__locale_dir/wstring_convert.h>
+#  include <ios>
+#  include <version>
 
 #  if _LIBCPP_HAS_LOCALIZATION
-
-#    include <__locale>
-#    include <__locale_dir/messages.h>
-#    include <__locale_dir/money.h>
-#    include <__locale_dir/num.h>
-#    include <__locale_dir/time.h>
-#    include <__locale_dir/wbuffer_convert.h>
-#    include <__locale_dir/wstring_convert.h>
-#    include <ios>
-#    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header

@@ -1102,38 +1102,32 @@ namespace std {
 #    include <__chrono/calendar.h>
 #    include <__chrono/day.h>
 #    include <__chrono/exception.h>
+#    include <__chrono/formatter.h>
+#    include <__chrono/gps_clock.h>
 #    include <__chrono/hh_mm_ss.h>
 #    include <__chrono/is_clock.h>
+#    include <__chrono/leap_second.h>
 #    include <__chrono/literals.h>
 #    include <__chrono/local_info.h>
 #    include <__chrono/month.h>
 #    include <__chrono/month_weekday.h>
 #    include <__chrono/monthday.h>
+#    include <__chrono/ostream.h>
+#    include <__chrono/parser_std_format_spec.h>
+#    include <__chrono/statically_widen.h>
 #    include <__chrono/sys_info.h>
+#    include <__chrono/tai_clock.h>
+#    include <__chrono/time_zone.h>
+#    include <__chrono/time_zone_link.h>
+#    include <__chrono/tzdb.h>
+#    include <__chrono/tzdb_list.h>
+#    include <__chrono/utc_clock.h>
 #    include <__chrono/weekday.h>
 #    include <__chrono/year.h>
 #    include <__chrono/year_month.h>
 #    include <__chrono/year_month_day.h>
 #    include <__chrono/year_month_weekday.h>
-
-#    if _LIBCPP_HAS_LOCALIZATION
-#      include <__chrono/formatter.h>
-#      include <__chrono/ostream.h>
-#      include <__chrono/parser_std_format_spec.h>
-#      include <__chrono/statically_widen.h>
-#    endif
-
-#    if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
-#      include <__chrono/gps_clock.h>
-#      include <__chrono/leap_second.h>
-#      include <__chrono/tai_clock.h>
-#      include <__chrono/time_zone.h>
-#      include <__chrono/time_zone_link.h>
-#      include <__chrono/tzdb.h>
-#      include <__chrono/tzdb_list.h>
-#      include <__chrono/utc_clock.h>
-#      include <__chrono/zoned_time.h>
-#    endif
+#    include <__chrono/zoned_time.h>
 
 #  endif
 
@@ -1166,10 +1160,8 @@ namespace std {
 
 #  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER == 20
 #    include <charconv>
-#    if _LIBCPP_HAS_LOCALIZATION
-#      include <locale>
-#      include <ostream>
-#    endif
+#    include <locale>
+#    include <ostream>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

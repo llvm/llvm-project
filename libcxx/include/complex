@@ -268,11 +268,8 @@ template<class T> complex<T> tanh (const complex<T>&);
 #  include <__type_traits/conditional.h>
 #  include <__utility/move.h>
 #  include <cmath>
+#  include <sstream> // for std::basic_ostringstream
 #  include <version>
-
-#  if _LIBCPP_HAS_LOCALIZATION
-#    include <sstream> // for std::basic_ostringstream
-#  endif
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

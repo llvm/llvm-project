@@ -9,13 +9,12 @@
 #ifndef _LIBCPP___LOCALE_DIR_PAD_AND_OUTPUT_H
 #define _LIBCPP___LOCALE_DIR_PAD_AND_OUTPUT_H
 
+#include <__algorithm/copy.h>
+#include <__algorithm/fill_n.h>
 #include <__config>
+#include <ios>
 
 #if _LIBCPP_HAS_LOCALIZATION
-
-#  include <__algorithm/copy.h>
-#  include <__algorithm/fill_n.h>
-#  include <ios>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

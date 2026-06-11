@@ -10,16 +10,16 @@
 #ifndef _LIBCPP___CHRONO_TAI_CLOCK_H
 #define _LIBCPP___CHRONO_TAI_CLOCK_H
 
+#include <__assert>
+#include <__chrono/duration.h>
+#include <__chrono/time_point.h>
+#include <__chrono/utc_clock.h>
+#include <__config>
+#include <__type_traits/common_type.h>
 #include <version>
+
 // Enable the contents of the header only when libc++ was built with experimental features enabled.
 #if _LIBCPP_HAS_EXPERIMENTAL_TZDB
-
-#  include <__assert>
-#  include <__chrono/duration.h>
-#  include <__chrono/time_point.h>
-#  include <__chrono/utc_clock.h>
-#  include <__config>
-#  include <__type_traits/common_type.h>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

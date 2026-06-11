@@ -11,31 +11,30 @@
 #define _LIBCPP___LOCALE
 
 #include <__config>
-
-#if _LIBCPP_HAS_LOCALIZATION
-
-#  include <__locale_dir/locale_base_api.h>
-#  include <__memory/addressof.h>
-#  include <__memory/shared_count.h>
-#  include <__mutex/once_flag.h>
-#  include <__type_traits/make_unsigned.h>
-#  include <__utility/no_destroy.h>
-#  include <__utility/private_constructor_tag.h>
-#  include <cctype>
-#  include <clocale>
-#  include <cstdint>
-#  include <cstdlib>
-#  include <string>
+#include <__locale_dir/locale_base_api.h>
+#include <__memory/addressof.h>
+#include <__memory/shared_count.h>
+#include <__mutex/once_flag.h>
+#include <__type_traits/make_unsigned.h>
+#include <__utility/no_destroy.h>
+#include <__utility/private_constructor_tag.h>
+#include <cctype>
+#include <clocale>
+#include <cstdint>
+#include <cstdlib>
+#include <string>
 
 // Some platforms require more includes than others. Keep the includes on all plaforms for now.
-#  include <cstddef>
-#  include <cstring>
+#include <cstddef>
+#include <cstring>
 
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
-#    include <cwchar>
-#  else
-#    include <__std_mbstate_t.h>
-#  endif
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+#  include <cwchar>
+#else
+#  include <__std_mbstate_t.h>
+#endif
+
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

@@ -10,16 +10,15 @@
 #define _LIBCPP___OSTREAM_PRINT_H
 
 #include <__config>
+#include <__fwd/ostream.h>
+#include <__iterator/ostreambuf_iterator.h>
+#include <__ostream/basic_ostream.h>
+#include <format>
+#include <ios>
+#include <print>
+#include <streambuf>
 
 #if _LIBCPP_HAS_LOCALIZATION
-
-#  include <__fwd/ostream.h>
-#  include <__iterator/ostreambuf_iterator.h>
-#  include <__ostream/basic_ostream.h>
-#  include <format>
-#  include <ios>
-#  include <print>
-#  include <streambuf>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

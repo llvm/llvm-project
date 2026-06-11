@@ -246,6 +246,7 @@ namespace std {
 #    include <cstdint>
 #    include <cstdlib>
 #    include <cstring>
+#    include <cwchar>
 #    include <initializer_list>
 #    include <limits>
 #    include <locale>
@@ -258,9 +259,6 @@ namespace std {
 #    include <string_view>
 #    include <tuple>
 
-#    if _LIBCPP_HAS_WIDE_CHARACTERS
-#      include <cwchar>
-#    endif
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

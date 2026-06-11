@@ -27,11 +27,8 @@
 #include <__utility/is_pointer_in_range.h>
 #include <cstdint>
 #include <cstdio>
+#include <cwchar> // for wmemcpy
 #include <iosfwd>
-
-#if _LIBCPP_HAS_WIDE_CHARACTERS
-#  include <cwchar> // for wmemcpy
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

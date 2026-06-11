@@ -31,11 +31,8 @@
 #include <__type_traits/remove_cvref.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
+#include <sstream>
 #include <tuple>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <sstream>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -20,14 +20,11 @@
 #include <__fwd/format.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
+#include <__locale>
 #include <__memory/addressof.h>
 #include <__utility/move.h>
 #include <__variant/monostate.h>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
-#  include <optional>
-#endif
+#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -22,6 +22,7 @@
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__locale>
 #include <__memory/pointer_traits.h>
 #include <__system_error/errc.h>
 #include <__type_traits/make_unsigned.h>
@@ -31,10 +32,6 @@
 #include <limits>
 #include <string>
 #include <string_view>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

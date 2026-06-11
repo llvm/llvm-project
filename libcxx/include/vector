@@ -364,9 +364,7 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 #    include <concepts>
 #    include <cstdint>
 #    include <iosfwd>
-#    if _LIBCPP_HAS_LOCALIZATION
-#      include <locale>
-#    endif
+#    include <locale>
 #    include <optional>
 #    include <string>
 #    include <string_view>

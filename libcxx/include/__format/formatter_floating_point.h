@@ -32,16 +32,13 @@
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/concepts.h>
+#include <__locale>
 #include <__math/traits.h>
 #include <__memory/allocator.h>
 #include <__system_error/errc.h>
 #include <__type_traits/conditional.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <__locale>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

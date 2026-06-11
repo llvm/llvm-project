@@ -53,6 +53,12 @@ namespace std::pmr {
 #  include <__cxx03/__config>
 #else
 #  include <__config>
+#  include <version>
+
+// https://llvm.org/PR202246
+// FIXME: These headers are unconditionally included to harmonize transitive includes between configurations.
+#  include <ctime>
+#  include <ratio>
 
 #  if _LIBCPP_STD_VER >= 17
 #    include <__memory_resource/memory_resource.h>
@@ -62,8 +68,6 @@ namespace std::pmr {
 #    include <__memory_resource/synchronized_pool_resource.h>
 #    include <__memory_resource/unsynchronized_pool_resource.h>
 #  endif
-
-#  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

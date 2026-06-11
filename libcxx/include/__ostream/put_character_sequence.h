@@ -10,14 +10,13 @@
 #define _LIBCPP___OSTREAM_PUT_CHARACTER_SEQUENCE_H
 
 #include <__config>
+#include <__cstddef/size_t.h>
+#include <__fwd/ostream.h>
+#include <__iterator/ostreambuf_iterator.h>
+#include <__locale_dir/pad_and_output.h>
+#include <ios>
 
 #if _LIBCPP_HAS_LOCALIZATION
-
-#  include <__cstddef/size_t.h>
-#  include <__fwd/ostream.h>
-#  include <__iterator/ostreambuf_iterator.h>
-#  include <__locale_dir/pad_and_output.h>
-#  include <ios>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header

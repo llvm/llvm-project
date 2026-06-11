@@ -1717,6 +1717,11 @@ class piecewise_linear_distribution
 #  include <__random/weibull_distribution.h>
 #  include <version>
 
+// https://llvm.org/PR202246
+// FIXME: These headers are unconditionally included to harmonize transitive includes between configurations.
+#  include <ctime>
+#  include <ratio>
+
 // standard-mandated includes
 
 // [rand.synopsis]

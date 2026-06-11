@@ -488,6 +488,7 @@ namespace std {
 #    include <__ranges/enable_view.h>
 #    include <__ranges/filter_view.h>
 #    include <__ranges/iota_view.h>
+#    include <__ranges/istream_view.h>
 #    include <__ranges/join_view.h>
 #    include <__ranges/lazy_split_view.h>
 #    include <__ranges/rbegin.h>
@@ -504,9 +505,6 @@ namespace std {
 #    include <__ranges/view_interface.h>
 #    include <__ranges/views.h>
 
-#    if _LIBCPP_HAS_LOCALIZATION
-#      include <__ranges/istream_view.h>
-#    endif
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
