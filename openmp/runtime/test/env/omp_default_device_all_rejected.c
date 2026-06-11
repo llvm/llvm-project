@@ -1,5 +1,6 @@
 // RUN: %libomp-compile
-// RUN: env KMP_WARNINGS=1 OMP_DEFAULT_DEVICE_ALL=2 %libomp-run 2>&1 | FileCheck %s
+// RUN: env KMP_WARNINGS=1 OMP_DEFAULT_DEVICE_ALL=2 %libomp-run 2>&1 \
+// RUN:   | FileCheck %s
 //
 // Suffix on global-scope base must be rejected with a warning AND not
 // reach the ICV.
