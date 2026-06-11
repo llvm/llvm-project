@@ -157,9 +157,7 @@ define i1 @squared_nuw_slt_sqr(i8 %x) {
 
 define i1 @squared_nuw_ult_sqr_u32_max(i32 %x) {
 ; CHECK-LABEL: @squared_nuw_ult_sqr_u32_max(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[M]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %m = mul nuw i32 %x, %x
   %r = icmp ult i32 %m, -1
@@ -168,8 +166,7 @@ define i1 @squared_nuw_ult_sqr_u32_max(i32 %x) {
 
 define i1 @squared_nuw_ult_sqr_u64_max(i64 %x) {
 ; CHECK-LABEL: @squared_nuw_ult_sqr_u64_max(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i64 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[M]], -2
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[X:%.*]], 4294967296
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = mul nuw i64 %x, %x
@@ -179,8 +176,7 @@ define i1 @squared_nuw_ult_sqr_u64_max(i64 %x) {
 
 define i1 @squared_nuw_ult_sqr_u128_max(i128 %x) {
 ; CHECK-LABEL: @squared_nuw_ult_sqr_u128_max(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i128 [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i128 [[M]], -3
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i128 [[X:%.*]], 18446744073709551616
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %m = mul nuw i128 %x, %x
