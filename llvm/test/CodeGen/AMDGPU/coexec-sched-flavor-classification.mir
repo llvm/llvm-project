@@ -1,0 +1,61 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: HWUI Resource Pressure:
+# CHECK-DAG: VMEM: {{[0-9]+}} cycles, 10 instrs
+# CHECK-DAG: DS: {{[0-9]+}} cycles, 4 instrs
+# CHECK-DAG: DMA: {{[0-9]+}} cycles, 2 instrs
+# CHECK-DAG: VALU(1c): {{[0-9]+}} cycles, 4 instrs
+# CHECK-DAG: TRANS: {{[0-9]+}} cycles, 2 instrs
+
+--- |
+  define void @test_flavor_classification() #0 { ret void }
+
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
+...
+
+---
+name: test_flavor_classification
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:vreg_64_align2 = IMPLICIT_DEF
+    %1:sgpr_128 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:sgpr_256 = IMPLICIT_DEF
+    %4:vreg_256_align2 = IMPLICIT_DEF
+
+    %10:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec
+    %11:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 %0, 8, 0, implicit $exec
+
+    %12:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN %2, %1, 0, 0, 0, 0, implicit $exec
+    %13:vreg_64_align2 = BUFFER_LOAD_DWORDX2_OFFEN %2, %1, 0, 0, 0, 0, implicit $exec
+
+    %14:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr
+    %15:vreg_64_align2 = FLAT_LOAD_DWORDX2 %0, 0, 0, implicit $exec, implicit $flat_scr
+
+    GLOBAL_STORE_DWORD %0, %10, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 %0, %11, 0, 0, implicit $exec
+
+    BUFFER_STORE_DWORD_OFFEN %10, %2, %1, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORDX2_OFFEN %11, %2, %1, 0, 0, 0, 0, implicit $exec
+
+    %20:vgpr_32 = DS_READ_B32 %2, 0, 0, implicit $m0, implicit $exec
+    %21:vreg_64_align2 = DS_READ_B64 %2, 0, 0, implicit $m0, implicit $exec
+
+    DS_WRITE_B32 %2, %10, 0, 0, implicit $m0, implicit $exec
+    DS_WRITE_B64 %2, %11, 0, 0, implicit $m0, implicit $exec
+
+    TENSOR_LOAD_TO_LDS_d2 %1, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 %2, %0, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+
+    %30:vreg_64_align2 = V_PK_ADD_F32 8, %11, 8, %11, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %31:vgpr_32 = V_PERM_B32_e64 %10, %12, 84148480, implicit $exec
+    %32:vreg_64_align2 = V_MIN_I64_e64 %11, %13, implicit $exec
+    %33:vreg_64_align2 = V_CVT_SCALEF32_PK8_FP8_F32_e64 %4, %10, implicit $mode, implicit $exec
+
+    %40:vgpr_32 = V_EXP_F32_e32 %10, implicit $exec, implicit $mode
+    %41:vgpr_32 = V_EXP_F32_e32 %12, implicit $exec, implicit $mode
+
+    S_ENDPGM 0, implicit %10, implicit %11, implicit %12, implicit %13, implicit %14, implicit %15, implicit %20, implicit %21, implicit %30, implicit %31, implicit %32, implicit %33, implicit %40, implicit %41
+...
