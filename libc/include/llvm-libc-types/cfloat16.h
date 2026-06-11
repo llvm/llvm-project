@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_CFLOAT16_H
 #define LLVM_LIBC_TYPES_CFLOAT16_H
 
-#include "../llvm-libc-macros/cfloat16-macros.h"
+#include "llvm-libc-macros/cfloat16-macros.h"
 
 #ifdef LIBC_TYPES_HAS_CFLOAT16
 typedef _Complex _Float16 cfloat16;

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_ELF32_XWORD_H
 #define LLVM_LIBC_TYPES_ELF32_XWORD_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 typedef uint64_t Elf32_Xword;
 

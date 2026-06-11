@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_ELF64_AUXV_T_H
 #define LLVM_LIBC_TYPES_ELF64_AUXV_T_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 typedef struct {
   uint64_t a_type;

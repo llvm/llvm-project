@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_DL_PHDR_INFO_H
 #define LLVM_LIBC_TYPES_STRUCT_DL_PHDR_INFO_H
 
-#include "../llvm-libc-macros/link-macros.h"
+#include "llvm-libc-macros/link-macros.h"
 #include "size_t.h"
 #include <stdint.h>
 

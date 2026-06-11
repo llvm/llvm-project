@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_ELF64_SWORD_H
 #define LLVM_LIBC_TYPES_ELF64_SWORD_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 typedef int32_t Elf64_Sword;
 

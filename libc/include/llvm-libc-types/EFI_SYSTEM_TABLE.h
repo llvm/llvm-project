@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_EFI_SYSTEM_TABLE_H
 #define LLVM_LIBC_TYPES_EFI_SYSTEM_TABLE_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_BOOT_SERVICES.h"
 #include "EFI_CONFIGURATION_TABLE.h"
 #include "EFI_HANDLE.h"
@@ -18,6 +17,7 @@
 #include "EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.h"
 #include "EFI_STATUS.h"
 #include "EFI_TABLE_HEADER.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 #include "char16_t.h"
 #include "size_t.h"

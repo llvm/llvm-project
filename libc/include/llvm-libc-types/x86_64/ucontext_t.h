@@ -11,8 +11,8 @@
 #ifndef LLVM_LIBC_TYPES_X86_64_UCONTEXT_T_H
 #define LLVM_LIBC_TYPES_X86_64_UCONTEXT_T_H
 
-#include "../sigset_t.h"
-#include "../stack_t.h"
+#include "llvm-libc-types/sigset_t.h"
+#include "llvm-libc-types/stack_t.h"
 #include "mcontext_t.h"
 
 typedef struct ucontext_t {

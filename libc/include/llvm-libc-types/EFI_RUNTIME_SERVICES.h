@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_EFI_RUNTIME_SERVICES_H
 #define LLVM_LIBC_TYPES_EFI_RUNTIME_SERVICES_H
 
-#include "../llvm-libc-macros/EFIAPI-macros.h"
-#include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_CAPSULE.h"
 #include "EFI_MEMORY_DESCRIPTOR.h"
 #include "EFI_PHYSICAL_ADDRESS.h"
@@ -18,6 +16,8 @@
 #include "EFI_TABLE_HEADER.h"
 #include "EFI_TIME.h"
 #include "char16_t.h"
+#include "llvm-libc-macros/EFIAPI-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 #include "size_t.h"
 
 #define EFI_RUNTIME_SERVICES_SIGNATURE 0x56524553544e5552

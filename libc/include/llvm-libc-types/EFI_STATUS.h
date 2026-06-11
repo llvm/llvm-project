@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_EFI_STATUS_H
 #define LLVM_LIBC_TYPES_EFI_STATUS_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 typedef uintptr_t EFI_STATUS;
 

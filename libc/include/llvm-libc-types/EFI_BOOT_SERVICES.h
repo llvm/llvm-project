@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_TYPES_EFI_BOOT_SERVICES_H
 #define LLVM_LIBC_TYPES_EFI_BOOT_SERVICES_H
 
-#include "../llvm-libc-macros/EFIAPI-macros.h"
 #include "EFI_ALLOCATE_TYPE.h"
 #include "EFI_DEVICE_PATH_PROTOCOL.h"
 #include "EFI_EVENT.h"
@@ -25,6 +24,7 @@
 #include "EFI_TIMER_DELAY.h"
 #include "EFI_TPL.h"
 #include "char16_t.h"
+#include "llvm-libc-macros/EFIAPI-macros.h"
 #include "size_t.h"
 
 #define EFI_BOOT_SERVICES_SIGNATURE 0x56524553544f4f42

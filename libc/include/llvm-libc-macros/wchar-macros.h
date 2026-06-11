@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_WCHAR_MACROS_H
 #define LLVM_LIBC_MACROS_WCHAR_MACROS_H
 
-#include "../llvm-libc-types/wint_t.h"
+#include "llvm-libc-types/wint_t.h"
 
 #ifndef WEOF
 #define WEOF ((wint_t)(0xffffffffu))

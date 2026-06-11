@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_EFI_GUID_H
 #define LLVM_LIBC_TYPES_EFI_GUID_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 typedef struct {
   uint32_t Data1;

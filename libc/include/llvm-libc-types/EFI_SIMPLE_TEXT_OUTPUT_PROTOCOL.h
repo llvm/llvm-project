@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TYPES_EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_H
 #define LLVM_LIBC_TYPES_EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_H
 
-#include "../llvm-libc-macros/EFIAPI-macros.h"
-#include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_STATUS.h"
+#include "llvm-libc-macros/EFIAPI-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 #include "size_t.h"
 
 #define EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID                                   \

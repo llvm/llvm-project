@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_EFI_VIRTUAL_ADDRESS_H
 #define LLVM_LIBC_TYPES_EFI_VIRTUAL_ADDRESS_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 typedef uint64_t EFI_VIRTUAL_ADDRESS;
 

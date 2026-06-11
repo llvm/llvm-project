@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_EFI_TABLE_HEADER_H
 #define LLVM_LIBC_TYPES_EFI_TABLE_HEADER_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 typedef struct {
   uint64_t Signature;

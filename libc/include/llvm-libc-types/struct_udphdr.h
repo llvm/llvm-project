@@ -15,7 +15,7 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_UDPHDR_H
 #define LLVM_LIBC_TYPES_STRUCT_UDPHDR_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 struct udphdr {
   __extension__ union {

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_CFLOAT128_H
 #define LLVM_LIBC_TYPES_CFLOAT128_H
 
-#include "../llvm-libc-macros/cfloat128-macros.h"
+#include "llvm-libc-macros/cfloat128-macros.h"
 
 #ifdef LIBC_TYPES_HAS_CFLOAT128
 #ifndef LIBC_TYPES_CFLOAT128_IS_COMPLEX_LONG_DOUBLE

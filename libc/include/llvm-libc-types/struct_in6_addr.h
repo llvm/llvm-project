@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_TYPES_STRUCT_IN6_ADDR_H
 #define LLVM_LIBC_TYPES_STRUCT_IN6_ADDR_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 struct in6_addr {
   __extension__ union {

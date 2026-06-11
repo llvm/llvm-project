@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_LOCALE_MACROS_H
 #define LLVM_LIBC_MACROS_LOCALE_MACROS_H
 
-#include "../llvm-libc-types/locale_t.h"
+#include "llvm-libc-types/locale_t.h"
 
 #define LC_CTYPE 0
 #define LC_NUMERIC 1

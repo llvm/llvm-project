@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_TYPES_EFI_CAPSULE_H
 #define LLVM_LIBC_TYPES_EFI_CAPSULE_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_GUID.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 typedef struct {
   EFI_GUID CapsuleGuid;

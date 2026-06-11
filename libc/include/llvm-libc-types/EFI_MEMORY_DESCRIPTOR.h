@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_TYPES_EFI_MEMORY_DESCRIPTOR_H
 #define LLVM_LIBC_TYPES_EFI_MEMORY_DESCRIPTOR_H
 
-#include "../llvm-libc-macros/stdint-macros.h"
 #include "EFI_PHYSICAL_ADDRESS.h"
 #include "EFI_VIRTUAL_ADDRESS.h"
+#include "llvm-libc-macros/stdint-macros.h"
 
 #define EFI_MEMORY_DESCRIPTOR_VERSION 1
 

@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_STDIO_MACROS_H
 #define LLVM_LIBC_MACROS_STDIO_MACROS_H
 
-#include "../llvm-libc-types/FILE.h"
+#include "llvm-libc-types/FILE.h"
 
 #ifdef __cplusplus
 extern "C" FILE *stdin;
