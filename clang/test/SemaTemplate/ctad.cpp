@@ -38,8 +38,6 @@ namespace Access {
   //   expected-note@#Access-D {{candidate function template not viable: requires 1 argument, but 2 were provided}}
   //   expected-note@#Access-D-ctor {{candidate template ignored: substitution failure [with T = X]: 'type' is a private member of 'Access::X'}}
 
-  // Once we implement proper support for dependent nested name specifiers in
-  // friends, this should still work.
   class Y {
     template <typename T> friend D<T>::D(T, typename T::type);
     struct type {}; // #Access-Y-type

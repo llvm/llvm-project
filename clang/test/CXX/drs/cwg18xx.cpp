@@ -448,7 +448,8 @@ int A<int>::f() { (void)c.private_int; return 0; }
 // expected-error@-1 {{'private_int' is a private member of 'cwg1862::C'}}
 //   expected-note@#cwg1862-C-private_int {{implicitly declared private here}}
 
-// FIXME: both definition of 'D::g' are not friends, so they don't have access to 'private_int'
+// FIXME: the primary template definition of 'D::g' is not a friend either,
+// so it should not have access to 'private_int'.
 template<class T>
 void A<T>::D::g() { (void)c.private_int; }
 void A<int>::D::g() { (void)c.private_int; }
