@@ -600,15 +600,80 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
       }
     }
 
-    // Every reachable reload must be jointly dominated by the slot's stores.
-    if (!llvm::all_of(SpillReferences->second, [&](const MachineInstr *MI) {
-          return !MI->mayLoad() ||
-                 isLoadJointlyDominatedByStores(*MI, Slot, StoreFreeReachable);
-        })) {
-      LLVM_DEBUG(
-          dbgs() << "Skipping " << printReg(Slot, &TRI)
-                 << ": some reachable load not jointly dominated by stores\n");
-      continue;
+    // Collect basic blocks of any loads not jointly dominated by stores. After
+    // rewriting, we will attempt to insert a single IMPLICIT_DEF for those uses
+    // of NewVReg.
+    SmallVector<MachineBasicBlock *, 4> ProblematicLoadMBBs;
+    for (MachineInstr *MI : SpillReferences->second) {
+      if (MI->mayLoad() &&
+          !isLoadJointlyDominatedByStores(*MI, Slot, StoreFreeReachable))
+        ProblematicLoadMBBs.push_back(MI->getParent());
+    }
+
+    // If we have problematic reloads, compute the IMPLICIT_DEF insertion
+    // block. Safety condition for the insertion block P:
+    //   (a) P dominates every problematic load, and
+    //   (b) On every entry->P path no spill store has executed yet (so the
+    //       IMPLICIT_DEF cannot clobber a real spill-store COPY-def on
+    //       any path that reaches it).
+    //
+    // Build MayStored, where MayStored[B] is true iff some entry->B path
+    // crossed a store block strictly before B. (b) is equivalent to
+    // "P is not in MayStored".
+    MachineBasicBlock *ImplicitDefMBB = nullptr;
+    if (!ProblematicLoadMBBs.empty()) {
+      SmallPtrSet<MachineBasicBlock *, 16> MayStored;
+      SmallVector<MachineBasicBlock *, 16> MayStoredWL;
+      for (MachineBasicBlock *SB : StoreBlocks) {
+        for (MachineBasicBlock *Succ : SB->successors()) {
+          if (MayStored.insert(Succ).second)
+            MayStoredWL.push_back(Succ);
+        }
+      }
+      while (!MayStoredWL.empty()) {
+        MachineBasicBlock *MBB = MayStoredWL.pop_back_val();
+        for (MachineBasicBlock *Succ : MBB->successors()) {
+          if (MayStored.insert(Succ).second)
+            MayStoredWL.push_back(Succ);
+        }
+      }
+
+      // We start at the nearest common dominator of all problematic load blocks
+      // and walk up the dominator tree until (b) holds. The
+      // walk always terminates: the entry block has no predecessors and so
+      // can never be in MayStored.
+      ImplicitDefMBB = ProblematicLoadMBBs.front();
+      for (MachineBasicBlock *MBB : ArrayRef(ProblematicLoadMBBs).drop_front())
+        ImplicitDefMBB = MDT.findNearestCommonDominator(ImplicitDefMBB, MBB);
+      while (MayStored.contains(ImplicitDefMBB)) {
+        assert(ImplicitDefMBB != MDT.getRoot() &&
+               "MayStored unexpectedly reached the entry block");
+        ImplicitDefMBB = MDT.getNode(ImplicitDefMBB)->getIDom()->getBlock();
+      }
+      LLVM_DEBUG(dbgs() << "Selected IMPLICIT_DEF block for SS#" << Slot
+                        << ": %bb." << ImplicitDefMBB->getNumber() << " ("
+                        << ProblematicLoadMBBs.size()
+                        << " problematic reload block(s))\n");
+    }
+
+    // The IMPLICIT_DEF may extend NewVReg's live range beyond the slot's
+    // stack LI, so the usual interference check against the stack LI alone
+    // is not sufficient. Conservatively, the extension covers every block
+    // reachable from ImplicitDefMBB up to (and including) the first store
+    // block on each path, where a COPY-def will re-define NewVReg.
+    SmallPtrSet<MachineBasicBlock *, 8> ImpDefExtension;
+    if (ImplicitDefMBB) {
+      ImpDefExtension.insert(ImplicitDefMBB);
+      SmallVector<MachineBasicBlock *, 8> ExtensionWL;
+      ExtensionWL.push_back(ImplicitDefMBB);
+      while (!ExtensionWL.empty()) {
+        MachineBasicBlock *MBB = ExtensionWL.pop_back_val();
+        if (StoreBlocks.contains(MBB))
+          continue;
+        for (MachineBasicBlock *Succ : MBB->successors())
+          if (ImpDefExtension.insert(Succ).second)
+            ExtensionWL.push_back(Succ);
+      }
     }
 
     const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
@@ -622,14 +687,40 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
       if (LRM.checkInterference(*LI, PhysReg) != LiveRegMatrix::IK_Free)
         continue;
 
+      // If we are inserting an IMPLICIT_DEF, require conservatively that
+      // PhysReg is free over every block in the IMPLICIT_DEF's extra coverage.
+      if (ImplicitDefMBB &&
+          llvm::any_of(ImpDefExtension, [&](MachineBasicBlock *MBB) {
+            return LRM.checkInterference(LIS.getMBBStartIdx(MBB),
+                                         LIS.getMBBEndIdx(MBB), PhysReg);
+          })) {
+        LLVM_DEBUG(dbgs() << "Cannot use " << printReg(PhysReg, &TRI)
+                          << " for SS#" << Slot
+                          << ": IMPLICIT_DEF extension interferes\n");
+        continue;
+      }
+
       LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
                         << printReg(PhysReg, &TRI) << '\n');
 
-      const TargetRegisterClass *RC = LSS.getIntervalRegClass(Slot);
       Register NewVReg = MRI.createVirtualRegister(RC);
 
       for (MachineInstr *SpillMI : SpillReferences->second)
         replaceSpillWithCopyToVReg(*SpillMI, Slot, NewVReg);
+
+      // Insert an IMPLICIT_DEF for the NewVReg, if required to satisfy reaching
+      // defs for every use of NewVReg.
+      if (ImplicitDefMBB) {
+        MachineBasicBlock::iterator InsertPt =
+            ImplicitDefMBB->SkipPHIsLabelsAndDebug(ImplicitDefMBB->begin());
+        MachineInstr *ImpDef =
+            BuildMI(*ImplicitDefMBB, InsertPt, DebugLoc(),
+                    TII.get(TargetOpcode::IMPLICIT_DEF), NewVReg);
+        LIS.InsertMachineInstrInMaps(*ImpDef);
+        LLVM_DEBUG(dbgs() << "Inserted IMPLICIT_DEF for "
+                          << printReg(NewVReg, &TRI) << " in "
+                          << printMBBReference(*ImplicitDefMBB) << '\n');
+      }
 
       // TODO: We should be able to transfer the information from the stack
       // slot's LiveInterval without recomputing from scratch with the
