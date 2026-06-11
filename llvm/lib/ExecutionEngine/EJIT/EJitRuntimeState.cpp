@@ -1,6 +1,7 @@
 //===-- EJitRuntimeState.cpp - Activate/Deactivate State ------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#include <cassert>
 #include <mutex>
 
 using namespace llvm::ejit;
