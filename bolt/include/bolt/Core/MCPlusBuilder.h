@@ -1856,9 +1856,18 @@ public:
   ///
   ///     adrp x0, PageBase(label)
   ///     ldr  x0, [x0, PageOffset(label)]
-  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
-                                            MCContext *Ctx,
-                                            MCPhysReg Reg = 0) const {
+  ///
+  /// For
+  ///
+  ///     ldr  q0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     adrp Reg, PageBase(label)
+  ///     ldr  x0, [Reg, PageOffset(label)]
+  virtual InstructionListType
+  createAdrpLdr(const MCInst &LDRInst, MCContext *Ctx,
+                MCPhysReg Reg = MCRegister::NoRegister) const {
     llvm_unreachable("not implemented");
   }
 

@@ -2641,6 +2641,26 @@ public:
     return false;
   }
 
+  void createPushRegister(MCInst &Inst, MCPhysReg Reg,
+                          unsigned Size) const override {
+    assert(Size == 8 && "Unexpected Size");
+    Inst = MCInstBuilder(AArch64::STRXpre)
+               .addReg(AArch64::SP)
+               .addReg(Reg)
+               .addReg(AArch64::SP)
+               .addImm(-8);
+  }
+
+  void createPopRegister(MCInst &Inst, MCPhysReg Reg,
+                         unsigned Size) const override {
+    assert(Size == 8 && "Unexpected Size");
+    Inst = MCInstBuilder(AArch64::LDRXpost)
+               .addReg(AArch64::SP)
+               .addReg(Reg)
+               .addReg(AArch64::SP)
+               .addImm(8);
+  }
+
   void createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
                         bool IsTailCall) override {
     Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
