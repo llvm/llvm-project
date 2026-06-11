@@ -17,17 +17,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __KMP_ADT_H__
-#define __KMP_ADT_H__
+#ifndef KMP_ADT_H
+#define KMP_ADT_H
 
-#include <cassert>
 #include <cctype>
 #include <cstddef>
-#include <cstring>
+#include <cstdint>
 #include <string_view>
 #include <type_traits>
-
-#include "kmp.h"
 
 /// kmp_str_ref is a non-owning string class (similar to llvm::StringRef).
 class kmp_str_ref final {
@@ -36,7 +33,8 @@ class kmp_str_ref final {
 public:
   static constexpr size_t npos = SIZE_MAX;
 
-  kmp_str_ref(const char *str) : sv(str) {}
+  kmp_str_ref(const char *str)
+      : sv(str ? std::string_view(str) : std::string_view()) {}
   kmp_str_ref(std::string_view sv) : sv(sv) {}
 
   kmp_str_ref(const kmp_str_ref &other) = default;
@@ -57,43 +55,11 @@ public:
   /// the string afterwards.
   /// The maximum integer value that can currently be parsed is INT_MAX - 1.
   bool consume_integer(int &value, bool allow_zero = true,
-                       bool allow_negative = false) {
-    kmp_str_ref orig = *this; // save state
-    bool is_negative = consume_front("-");
-    if (is_negative && !allow_negative) {
-      *this = orig;
-      return false;
-    }
-    size_t num_digits = count_while(
-        [](char c) { return isdigit(static_cast<unsigned char>(c)) != 0; });
-    if (!num_digits) {
-      *this = orig;
-      return false;
-    }
-    value = __kmp_basic_str_to_int(sv.data(), num_digits);
-    if (value == INT_MAX) {
-      *this = orig;
-      return false;
-    }
-    drop_front(num_digits);
-    if (is_negative)
-      value = -value;
-    if (!allow_zero && value == 0) {
-      *this = orig;
-      return false;
-    }
-    return true;
-  }
+                       bool allow_negative = false);
 
   /// Get an own duplicate of the string.
   /// Must be freed with KMP_INTERNAL_FREE().
-  char *copy() const {
-    char *copy_str = static_cast<char *>(KMP_INTERNAL_MALLOC(length() + 1));
-    assert(copy_str && "copy() failed to allocate memory");
-    memcpy(copy_str, sv.data(), length());
-    copy_str[length()] = '\0';
-    return copy_str;
-  }
+  char *copy() const;
 
   /// Count the number of characters in the string while the predicate returns
   /// true.
@@ -164,4 +130,4 @@ public:
   const char *end() const { return sv.data() + length(); }
 };
 
-#endif // __KMP_ADT_H__
+#endif // KMP_ADT_H

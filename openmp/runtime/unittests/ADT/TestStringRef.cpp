@@ -43,6 +43,13 @@ TEST(kmp_str_ref_test, ConstructEmpty) {
   EXPECT_TRUE(s.empty());
 }
 
+TEST(kmp_str_ref_test, ConstructFromNullptr) {
+  const char *null_str = nullptr;
+  kmp_str_ref s(null_str);
+  EXPECT_EQ(s.length(), 0u);
+  EXPECT_TRUE(s.empty());
+}
+
 TEST(kmp_str_ref_test, Length) {
   EXPECT_EQ(kmp_str_ref("").length(), 0u);
   EXPECT_EQ(kmp_str_ref("a").length(), 1u);
