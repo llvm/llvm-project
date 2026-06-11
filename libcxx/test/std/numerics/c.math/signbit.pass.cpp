@@ -11,9 +11,6 @@
 // We don't control the implementation on windows
 // UNSUPPORTED: windows
 
-// These compilers don't support constexpr `__builtin_signbit` yet.
-// UNSUPPORTED: apple-clang-17
-
 // GCC warns about signbit comparing `bool_v < 0`, which we're testing
 // ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-bool-compare
 

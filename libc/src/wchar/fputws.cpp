@@ -14,6 +14,7 @@
 
 #include "src/wchar/fputws.h"
 #include "hdr/types/FILE.h"
+#include "hdr/types/wchar_t.h"
 #include "src/__support/File/file.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"

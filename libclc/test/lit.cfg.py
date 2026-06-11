@@ -59,11 +59,16 @@ llvm_config.use_clang()
 
 llvm_config.add_tool_substitutions(["llvm-nm"], config.llvm_tools_dir)
 
+is_standalone = config.libclc_standalone_build.lower() == "true"
+path = os.path.join(config.libclc_library_dir, config.libclc_target, "libclc.bc")
+libclc_lib = f"--libclc-lib=:{path}" if is_standalone else ""
+
 config.substitutions.extend(
     [
         ("%library_dir", config.libclc_library_dir),
         ("%target", config.libclc_target),
         ("%cpu", config.libclc_target_cpu),
+        ("%libclc_lib", libclc_lib),
         ("%check_prefix", config.libclc_target_arch.upper()),
     ]
 )

@@ -347,7 +347,7 @@ emitAtomicUpdate(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
     // nodes to worry about, so we can just count on opt to remove the extra
     // alloca/load/store set.
     auto alloca = cir::AllocaOp::create(
-        builder, start, x.getType(), argTy, "x_var",
+        builder, start, x.getType(), "x_var",
         cgf.cgm.getSize(
             cgf.getContext().getTypeAlignInChars(inf.X->getType())));
 

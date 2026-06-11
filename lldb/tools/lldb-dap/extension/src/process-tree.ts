@@ -57,6 +57,7 @@ interface LldbDapProcessEntry {
   pid: number;
   name?: string;
   executable?: string;
+  arguments?: string;
   triple?: string;
   user?: number;
 }
@@ -105,7 +106,7 @@ export function parseListProcessesOutput(stdout: string): Process[] {
     return {
       id: entry.pid,
       command: entry.executable ?? entry.name ?? "",
-      arguments: entry.arguments ?? "",
+      arguments: entry.arguments ?? entry.name ?? "",
     };
   });
 }

@@ -639,8 +639,7 @@ inline bool isValidAssumeForContext(const Instruction *I,
 }
 
 /// Returns true, if no instruction between \p Assume and \p CtxI may free
-/// memory and the function is marked as NoSync. The latter ensures the current
-/// function cannot arrange for another thread to free on its behalf.
+/// (including through synchronization).
 LLVM_ABI bool willNotFreeBetween(const Instruction *Assume,
                                  const Instruction *CtxI);
 

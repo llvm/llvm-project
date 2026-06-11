@@ -216,7 +216,7 @@ void dr250(void) {
 
   dr250_nothing(
 #nondirective    /* expected-error {{invalid preprocessing directive}}
-                    expected-warning {{embedding a #nondirective directive within macro arguments has undefined behavior}}
+                    expected-warning {{embedding a directive within macro arguments has undefined behavior}}
                   */
   )
 

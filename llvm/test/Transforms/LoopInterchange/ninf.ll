@@ -34,7 +34,7 @@ define noundef float @reduction_reassoc_ninf(ptr %A) {
 ; CHECK:       [[FOR_J_SPLIT1]]:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x float], ptr [[A]], i64 [[I]], i64 [[J]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load float, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[SUM_J_NEXT]] = fadd reassoc ninf float [[SUM_J]], [[VAL]]
+; CHECK-NEXT:    [[SUM_J_NEXT]] = fadd reassoc float [[SUM_J]], [[VAL]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
 ; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 2
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]

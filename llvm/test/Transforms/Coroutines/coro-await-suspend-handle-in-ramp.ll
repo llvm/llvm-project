@@ -17,12 +17,13 @@ entry:
     i8 1, label %cleanup
   ]
 
-; Check the calling convention for resuming function is fastcc
-; CHECK:     define {{[^@]*}} @f()
+; The `call void` below uses the default calling convention. This must match
+; the calling convention of the `@f.resume` function, tested further down.
+; CHECK:      define void @f() {
 ; CHECK:      entry:
 ; CHECK:        %[[NEXT_HDL:.+]] = call ptr @await_suspend_wrapper_handle(
 ; CHECK-NEXT:   %[[CONT:.+]] = call ptr @llvm.coro.subfn.addr(ptr %[[NEXT_HDL]], i8 0)
-; CHECK-NEXT:   call fastcc void %[[CONT]](ptr %[[NEXT_HDL]])
+; CHECK-NEXT:   call void %[[CONT]](ptr %[[NEXT_HDL]])
 step:
   br label %cleanup
 
@@ -36,10 +37,11 @@ ret:
   ret void
 }
 
-; check that we were haven't accidentally went out of @f body
-; CHECK-LABEL: @f.resume(
-; CHECK-LABEL: @f.destroy(
-; CHECK-LABEL: @f.cleanup(
+; Check that the clones use the same calling convention as the ramp's resuming
+; call (i.e. the default as there is no specifc calling convention mentioned).
+; CHECK-LABEL: define internal void @f.resume(
+; CHECK-LABEL: define internal void @f.destroy(
+; CHECK-LABEL: define internal void @f.cleanup(
 
 declare ptr @await_suspend_wrapper_handle(ptr, ptr)
 

@@ -82,8 +82,11 @@ static void emitPACCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
 
   CFIInstBuilder CFIBuilder(MBB, MBBI, Flags);
-  MFnI.branchProtectionPAuthLR() ? CFIBuilder.buildNegateRAStateWithPC()
-                                 : CFIBuilder.buildNegateRAState();
+  if (MFnI.branchProtectionPAuthLR()) {
+    CFIBuilder.buildNegateRAStateWithPC();
+  } else if (!MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
+    CFIBuilder.buildNegateRAState();
+  }
 }
 
 void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
@@ -98,7 +101,7 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   // Debug location must be unknown, see AArch64FrameLowering::emitPrologue.
   DebugLoc DL;
 
-  if (UseBKey) {
+  if (UseBKey && !MF.getTarget().getTargetTriple().isOSBinFormatMachO()) {
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
         .setMIFlag(MachineInstr::FrameSetup);
   }
@@ -115,8 +118,7 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
   if (MFnI.branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
     emitPACCFI(MBB, MBBI, MachineInstr::FrameSetup, EmitCFI);
     BuildMI(MBB, MBBI, DL,
-            TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSPPC
-                                               : AArch64::PACIASPPC))
+            TII->get(UseBKey ? AArch64::PACIBSPPC : AArch64::PACIASPPC))
         .setMIFlag(MachineInstr::FrameSetup)
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
   } else {
@@ -126,8 +128,7 @@ void AArch64PointerAuthImpl::signLR(MachineFunction &MF,
       emitPACCFI(MBB, MBBI, MachineInstr::FrameSetup, EmitCFI);
     }
     BuildMI(MBB, MBBI, DL,
-            TII->get(MFnI.shouldSignWithBKey() ? AArch64::PACIBSP
-                                               : AArch64::PACIASP))
+            TII->get(UseBKey ? AArch64::PACIBSP : AArch64::PACIASP))
         .setMIFlag(MachineInstr::FrameSetup)
         ->setPreInstrSymbol(MF, MFnI.getSigningInstrLabel());
     if (!MFnI.branchProtectionPAuthLR())

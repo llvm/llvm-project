@@ -436,9 +436,9 @@ struct FrameIndex {
   SMRange SourceRange;
 
   FrameIndex() = default;
-  FrameIndex(int FI, const llvm::MachineFrameInfo &MFI);
+  LLVM_ABI FrameIndex(int FI, const llvm::MachineFrameInfo &MFI);
 
-  Expected<int> getFI(const llvm::MachineFrameInfo &MFI) const;
+  LLVM_ABI Expected<int> getFI(const llvm::MachineFrameInfo &MFI) const;
 };
 
 template <> struct ScalarTraits<FrameIndex> {
