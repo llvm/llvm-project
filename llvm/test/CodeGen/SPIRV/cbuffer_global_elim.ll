@@ -1,6 +1,6 @@
 ; RUN: opt -S -passes='spirv-cbuffer-access' %s -o - | FileCheck %s
-; RUN: llc -disable-dxil-remove-unused-resources %s -o - | FileCheck %s
-; RUN: llc -disable-dxil-remove-unused-resources %s -O3 -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s
+; RUN: llc %s -O3 -o - | FileCheck %s
 
 target triple = "spirv-unknown-vulkan1.3-compute"
 
@@ -10,7 +10,7 @@ target triple = "spirv-unknown-vulkan1.3-compute"
 
 @llvm.compiler.used = appending global [1 x ptr] [ptr @CB.cb], section "llvm.metadata"
 
-; Check that SPIRVCBufferAccessPass removes the cbuffer global from @llvm.compiler.used
+; Check that SPRIVCBufferAccessPass removes the cbuffer global from @llvm.compiler.used
 ; and from the module.
 ;
 ; CHECK-NOT: @CB.cb = internal global target("spirv.VulkanBuffer", %__cblayout_CB, 2, 0) poison

@@ -39,6 +39,7 @@ LLVM_ABI AssumeAlignInfo getAssumeAlignInfo(OperandBundleUse);
 struct AssumeDereferenceableInfo {
   const Use &Ptr;
   const Use &Count;
+  std::optional<uint64_t> CountVal;
 };
 
 LLVM_ABI
@@ -49,6 +50,12 @@ struct AssumeNonNullInfo {
 };
 
 LLVM_ABI AssumeNonNullInfo getAssumeNonNullInfo(OperandBundleUse);
+
+struct AssumeNoUndefInfo {
+  const Use &Val;
+};
+
+LLVM_ABI AssumeNoUndefInfo getAssumeNoUndefInfo(OperandBundleUse);
 
 struct AssumeSeparateStorageInfo {
   const Use &Ptr1;

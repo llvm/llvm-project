@@ -169,6 +169,8 @@ protected:
   const parser::DoConstruct *GetDoConstructIf(
       const parser::ExecutionPartConstruct &);
   Symbol *DeclareNewAccessEntity(const Symbol &, Symbol::Flag, Scope &);
+  Symbol *DeclareNewAccessEntity(
+      const SourceName &, const Symbol &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *DeclareAccessEntity(Symbol &, Symbol::Flag, Scope &);
 
@@ -1128,15 +1130,21 @@ const parser::DoConstruct *DirectiveAttributeVisitor<T>::GetDoConstructIf(
 
 template <typename T>
 Symbol *DirectiveAttributeVisitor<T>::DeclareNewAccessEntity(
-    const Symbol &object, Symbol::Flag flag, Scope &scope) {
-  assert(object.owner() != currScope());
-  auto &symbol{MakeAssocSymbol(object.name(), object, scope)};
+    const SourceName &name, const Symbol &object, Symbol::Flag flag,
+    Scope &scope) {
+  auto &symbol{MakeAssocSymbol(name, object, scope)};
   symbol.set(flag);
   if (flag == Symbol::Flag::OmpCopyIn) {
     // The symbol in copyin clause must be threadprivate entity.
     symbol.set(Symbol::Flag::OmpThreadprivate);
   }
   return &symbol;
+}
+
+template <typename T>
+Symbol *DirectiveAttributeVisitor<T>::DeclareNewAccessEntity(
+    const Symbol &object, Symbol::Flag flag, Scope &scope) {
+  return DeclareNewAccessEntity(object.name(), object, flag, scope);
 }
 
 template <typename T>
@@ -1956,6 +1964,8 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     if (GetContext().directive == llvm::acc::ACCD_declare) {
       object.set(Symbol::Flag::AccDeclare);
       object.set(accFlag);
+      if (IsAllocatableOrObjectPointer(&object))
+        object.set(Symbol::Flag::AccDeclareAction);
     }
   }
   return &object;
@@ -2565,8 +2575,8 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
           lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
       assert(flags.LeastElement());
       Symbol::Flag flag = *flags.LeastElement();
-      lastDeclSymbol = DeclareNewAccessEntity(
-          *hostSymbol, flag, context_.FindScope(dirContext.directiveSource));
+      lastDeclSymbol = DeclareNewAccessEntity(symbol->name(), *hostSymbol, flag,
+          context_.FindScope(dirContext.directiveSource));
       lastDeclSymbol->flags() |= flags;
       return lastDeclSymbol;
     };
@@ -2574,7 +2584,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       if (lastDeclSymbol) {
         const Symbol *hostSymbol =
             lastDeclSymbol ? lastDeclSymbol : &symbol->GetUltimate();
-        MakeAssocSymbol(symbol->name(), *hostSymbol,
+        MakeAssocSymbol(hostSymbol->name(), *hostSymbol,
             context_.FindScope(dirContext.directiveSource));
       }
     };
@@ -2930,14 +2940,6 @@ void OmpAttributeVisitor::ResolveOmpDesignator(
 
   const auto *name{parser::GetDesignatorNameIfDataRef(designator)};
   if (!name) {
-    // Array sections to be changed to substrings as needed
-    if (AnalyzeExpr(context_, designator)) {
-      if (std::holds_alternative<parser::Substring>(designator.u)) {
-        context_.Say(designator.source,
-            "Substrings are not allowed on OpenMP directives or clauses"_err_en_US);
-      }
-    }
-    // other checks, more TBD
     return;
   }
 
@@ -3074,6 +3076,15 @@ void OmpAttributeVisitor::PropagateOmpFlagToEquivalenceSet(
 
 void OmpAttributeVisitor::ResolveOmpCommonBlock(
     const parser::Name &name, Symbol::Flag ompFlag) {
+  if (name.symbol) {
+    if (auto *details{name.symbol->detailsIf<CommonBlockDetails>()}) {
+      if (!details->objects().empty()) {
+        // Common block already resolved
+        return;
+      }
+    }
+  }
+
   if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
     if (!dataCopyingAttributeFlags.test(ompFlag)) {
       CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
@@ -3082,6 +3093,8 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
     // same meaning as if every explicit member of the common block
     // appeared in the list
     auto &details{symbol->get<CommonBlockDetails>()};
+    bool cloneCommonBlock{dataSharingAttributeFlags.test(ompFlag)};
+    CommonBlockDetails cloneDetails{symbol->name()};
     for (auto [index, object] : llvm::enumerate(details.objects())) {
       if (auto *resolvedObject{ResolveOmp(*object, ompFlag, currScope())}) {
         if (dataCopyingAttributeFlags.test(ompFlag)) {
@@ -3089,13 +3102,21 @@ void OmpAttributeVisitor::ResolveOmpCommonBlock(
         } else {
           AddToContextObjectWithExplicitDSA(*resolvedObject, ompFlag);
         }
-        details.replace_object(*resolvedObject, index);
+        if (cloneCommonBlock) {
+          cloneDetails.add_object(*resolvedObject);
+        } else {
+          details.replace_object(*resolvedObject, index);
+        }
 
         // Propagate the flag to symbols in the equivalence set
         if (ompFlag == Symbol::Flag::OmpThreadprivate) {
           PropagateOmpFlagToEquivalenceSet(*resolvedObject, ompFlag);
         }
       }
+    }
+    if (cloneCommonBlock) {
+      name.symbol = &currScope().MakeSymbol(
+          symbol->name(), symbol->attrs(), std::move(cloneDetails));
     }
   } else {
     context_.Say(name.source, // 2.15.3
