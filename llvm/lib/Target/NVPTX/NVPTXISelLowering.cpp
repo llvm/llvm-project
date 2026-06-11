@@ -561,6 +561,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
       IsOpSupported &= STI.getSmVersion() >= 80 && STI.getPTXVersion() >= 70;
       break;
     case ISD::FEXP2:
+    case ISD::FTANH:
       IsOpSupported &= STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70;
       break;
     }
@@ -1027,7 +1028,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
   // to f32.
   for (const auto &Op :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FTANH}) {
+       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS}) {
     setOperationAction(Op, MVT::f16, Promote);
     setOperationAction(Op, MVT::f32, Legal);
     // only div/rem/sqrt are legal for f64
@@ -1039,6 +1040,25 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     AddPromotedToType(Op, MVT::bf16, MVT::f32);
   }
   setOperationAction(ISD::FREM, {MVT::f32, MVT::f64}, Custom);
+
+  // FTANH support:
+  // - f32 (sm_75+, PTX 7.0+)
+  // - f16/f16x2 (sm_75+, PTX 7.0+)
+  // - bf16/bf16x2 (sm_90+, PTX 7.8+)
+  // When f16/bf16 types aren't supported, they are promoted/expanded to f32.
+  if (STI.getSmVersion() >= 75 && STI.getPTXVersion() >= 70)
+    setOperationAction(ISD::FTANH, MVT::f32, Legal);
+  setOperationAction(ISD::FTANH, MVT::v2f32, Expand);
+
+  // Scalar f16/bf16: promote to f32 when not natively supported.
+  setFP16OperationAction(ISD::FTANH, MVT::f16, Legal, Promote);
+  setBF16OperationAction(ISD::FTANH, MVT::bf16, Legal, Promote);
+  if (getOperationAction(ISD::FTANH, MVT::bf16) == Promote)
+    AddPromotedToType(ISD::FTANH, MVT::bf16, MVT::f32);
+
+  // Vector v2f16/v2bf16: expand when not natively supported.
+  setFP16OperationAction(ISD::FTANH, MVT::v2f16, Legal, Expand);
+  setBF16OperationAction(ISD::FTANH, MVT::v2bf16, Legal, Expand);
 
   setOperationAction(ISD::FABS, {MVT::f32, MVT::f64}, Legal);
   setOperationAction(ISD::FABS, MVT::v2f32, Expand);
