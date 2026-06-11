@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/scope.h"
 #include "src/sys/select/select.h"
 #include "src/unistd/read.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
@@ -31,6 +32,10 @@ TEST_F(LlvmLibcSelectTest, SelectInvalidFD) {
 TEST_F(LlvmLibcSelectTest, SelectAcceptsLargeMicroseconds) {
   int pipe_fds[2];
   ASSERT_EQ(0, ::pipe(pipe_fds));
+  LIBC_NAMESPACE::cpp::scope_exit close_pipes([&] {
+    ::close(pipe_fds[0]);
+    ::close(pipe_fds[1]);
+  });
 
   fd_set read_set;
   FD_ZERO(&read_set);
@@ -47,8 +52,4 @@ TEST_F(LlvmLibcSelectTest, SelectAcceptsLargeMicroseconds) {
   int ret = LIBC_NAMESPACE::select(pipe_fds[0] + 1, &read_set, nullptr, nullptr,
                                    &timeout);
   ASSERT_EQ(1, ret);
-
-  // Cleanup
-  ::close(pipe_fds[0]);
-  ::close(pipe_fds[1]);
 }

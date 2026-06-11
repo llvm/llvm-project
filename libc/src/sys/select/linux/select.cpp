@@ -36,9 +36,8 @@ LLVM_LIBC_FUNCTION(int, select,
   // instead of a struct timeval argument. Also, it takes an additional
   // argument which is a pointer to an object of a type defined above as
   // "pselect6_sigset_t".
-  struct timespec ts {
-    0, 0
-  };
+  struct timespec ts;
+  struct timespec *pts = nullptr;
   if (timeout != nullptr) {
     // In general, if the tv_sec and tv_usec in |timeout| are correctly set,
     // then converting tv_usec to nanoseconds will not be a problem. However,
@@ -52,14 +51,15 @@ LLVM_LIBC_FUNCTION(int, select,
       ts.tv_sec = timeout->tv_sec + timeout->tv_usec / 1000000;
       ts.tv_nsec = (timeout->tv_usec % 1000000) * 1000;
     }
+    pts = &ts;
   }
   pselect6_sigset_t pss{nullptr, sizeof(sigset_t)};
 #if SYS_pselect6
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_pselect6, nfds, read_set,
-                                              write_set, error_set, &ts, &pss);
+                                              write_set, error_set, pts, &pss);
 #elif defined(SYS_pselect6_time64)
   int ret = LIBC_NAMESPACE::syscall_impl<int>(
-      SYS_pselect6_time64, nfds, read_set, write_set, error_set, &ts, &pss);
+      SYS_pselect6_time64, nfds, read_set, write_set, error_set, pts, &pss);
 #else
 #error "SYS_pselect6 and SYS_pselect6_time64 syscalls not available."
 #endif

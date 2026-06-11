@@ -217,13 +217,13 @@ int64_t update_from_seconds(time_t total_seconds, tm *tm) {
     years++;
   }
 
+  // All the data (years, month and remaining days) was calculated from
+  // March, 2000. Thus adjust the data to be from January, 1900.
   constexpr int64_t YEAR_OFFSET = 2000 - time_constants::TIME_YEAR_BASE; // 100
   if (years > INT_MAX - YEAR_OFFSET || years < INT_MIN - YEAR_OFFSET)
     return time_utils::out_of_range();
 
-  // All the data (years, month and remaining days) was calculated from
-  // March, 2000. Thus adjust the data to be from January, 1900.
-  tm->tm_year = static_cast<int>(years + 2000 - time_constants::TIME_YEAR_BASE);
+  tm->tm_year = static_cast<int>(years + YEAR_OFFSET);
   tm->tm_mon = static_cast<int>(months + 2);
   tm->tm_mday = static_cast<int>(remainingDays + 1);
   tm->tm_wday = static_cast<int>(wday);
