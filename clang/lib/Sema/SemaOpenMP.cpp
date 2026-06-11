@@ -8082,6 +8082,8 @@ class OpenMPIterationSpaceChecker {
   SourceLocation ConditionLoc;
   /// The set of variables declared within the (to be collapsed) loop nest.
   const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls;
+  /// The set of induction variables from outer collapsed loops.
+  const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars;
   /// A source location for referring to loop init later.
   SourceRange InitSrcRange;
   /// A source location for referring to condition later.
@@ -8128,10 +8130,12 @@ public:
   OpenMPIterationSpaceChecker(
       Sema &SemaRef, bool SupportsNonRectangular, DSAStackTy &Stack,
       SourceLocation DefaultLoc,
-      const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopDecls)
+      const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopDecls,
+      const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars)
       : SemaRef(SemaRef), SupportsNonRectangular(SupportsNonRectangular),
         Stack(Stack), DefaultLoc(DefaultLoc), ConditionLoc(DefaultLoc),
-        CollapsedLoopVarDecls(CollapsedLoopDecls) {}
+        CollapsedLoopVarDecls(CollapsedLoopDecls),
+        CollapsedLoopInductionVars(CollapsedLoopInductionVars) {}
   /// Check init-expr for canonical loop form and save loop counter
   /// variable - #Var and its initialization value - #LB.
   bool checkAndSetInit(Stmt *S, bool EmitDiags = true);
@@ -8473,7 +8477,17 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
           if (auto *ME = dyn_cast<MemberExpr>(getExprAsWritten(CED->getInit())))
             return setLCDeclAndLB(ME->getMemberDecl(), ME, BO->getRHS(),
                                   EmitDiags);
-        return setLCDeclAndLB(DRE->getDecl(), DRE, BO->getRHS(), EmitDiags);
+        // Check if this variable is already used as an induction variable
+        // in an outer collapsed loop.
+        ValueDecl *LoopVar = DRE->getDecl();
+        if (!CollapsedLoopInductionVars.empty() &&
+            CollapsedLoopInductionVars.count(LoopVar) && EmitDiags) {
+          SemaRef.Diag(DRE->getLocation(),
+                       diag::err_omp_loop_var_reused_in_collapsed_loop)
+              << LoopVar;
+          return true;
+        }
+        return setLCDeclAndLB(LoopVar, DRE, BO->getRHS(), EmitDiags);
       }
       if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
         if (ME->isArrow() &&
@@ -9435,7 +9449,8 @@ void SemaOpenMP::ActOnOpenMPLoopInitialization(SourceLocation ForLoc,
   DSAStack->loopStart();
   llvm::SmallPtrSet<const Decl *, 1> EmptyDeclSet;
   OpenMPIterationSpaceChecker ISC(SemaRef, /*SupportsNonRectangular=*/true,
-                                  *DSAStack, ForLoc, EmptyDeclSet);
+                                  *DSAStack, ForLoc, EmptyDeclSet,
+                                  EmptyDeclSet);
   if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
     if (ValueDecl *D = ISC.getLoopDecl()) {
       auto *VD = dyn_cast<VarDecl>(D);
@@ -9535,7 +9550,8 @@ static bool checkOpenMPIterationSpace(
     SemaOpenMP::VarsWithInheritedDSAType &VarsWithImplicitDSA,
     llvm::MutableArrayRef<LoopIterationSpace> ResultIterSpaces,
     llvm::MapVector<const Expr *, DeclRefExpr *> &Captures,
-    const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls) {
+    const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopVarDecls,
+    const llvm::SmallPtrSetImpl<const Decl *> &CollapsedLoopInductionVars) {
   bool SupportsNonRectangular = !isOpenMPLoopTransformationDirective(DKind);
   // OpenMP [2.9.1, Canonical Loop Form]
   //   for (init-expr; test-expr; incr-expr) structured-block
@@ -9576,7 +9592,8 @@ static bool checkOpenMPIterationSpace(
 
   OpenMPIterationSpaceChecker ISC(SemaRef, SupportsNonRectangular, DSA,
                                   For ? For->getForLoc() : CXXFor->getForLoc(),
-                                  CollapsedLoopVarDecls);
+                                  CollapsedLoopVarDecls,
+                                  CollapsedLoopInductionVars);
 
   // Check init.
   Stmt *Init = For ? For->getInit() : CXXFor->getBeginStmt();
@@ -9999,6 +10016,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   bool SupportsNonPerfectlyNested = (SemaRef.LangOpts.OpenMP >= 50) &&
                                     !isOpenMPLoopTransformationDirective(DKind);
   llvm::SmallPtrSet<const Decl *, 4> CollapsedLoopVarDecls;
+  llvm::SmallPtrSet<const Decl *, 4> CollapsedLoopInductionVars;
 
   if (CollapseLoopCountExpr) {
     // Found 'collapse' clause - calculate collapse number.
@@ -10047,14 +10065,24 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
           SupportsNonPerfectlyNested, NumLoops,
           [DKind, &SemaRef, &DSA, NumLoops, NestedLoopCount,
            CollapseLoopCountExpr, OrderedLoopCountExpr, &VarsWithImplicitDSA,
-           &IterSpaces, &Captures,
-           &CollapsedLoopVarDecls](unsigned Cnt, Stmt *CurStmt) {
+           &IterSpaces, &Captures, &CollapsedLoopVarDecls,
+           &CollapsedLoopInductionVars](unsigned Cnt, Stmt *CurStmt) {
             if (checkOpenMPIterationSpace(
                     DKind, CurStmt, SemaRef, DSA, Cnt, NestedLoopCount,
                     NumLoops, CollapseLoopCountExpr, OrderedLoopCountExpr,
                     VarsWithImplicitDSA, IterSpaces, Captures,
-                    CollapsedLoopVarDecls))
+                    CollapsedLoopVarDecls, CollapsedLoopInductionVars))
               return true;
+            // Add the current loop's induction variable to the set so nested
+            // loops can check against it.
+            if (Cnt < NestedLoopCount && IterSpaces[Cnt].CounterVar) {
+              if (auto *DRE =
+                      dyn_cast<DeclRefExpr>(IterSpaces[Cnt].CounterVar)) {
+                if (ValueDecl *VD = DRE->getDecl()) {
+                  CollapsedLoopInductionVars.insert(VD->getCanonicalDecl());
+                }
+              }
+            }
             if (Cnt > 0 && Cnt >= NestedLoopCount &&
                 IterSpaces[Cnt].CounterVar) {
               // Handle initialization of captured loop iterator variables.

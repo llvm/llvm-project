@@ -1,18 +1,37 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 %s
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 %s
 
-// expected-no-diagnostics
+// This test verify two behaviors:
+// 1. No crash when the loop bound is an extern reference (fixed null pointer
+// dereference).
+// 2. Proper diagnostic when a nested loop reuses the outer loop's induction
+// variable
 
-// Verify no crash when collapsing a loop nest where the induction variable
-// is an extern reference type. PR/issue: null dereference in getInitLCDecl
-// when VarDecl::getDefinition() returns nullptr.
 
 extern int &dim;
-auto test() {
+auto test1() {
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < dim; ++i) {
+    // expected-error@+1{{loop iteration variable 'i' cannot be reused in a nested loop of a collapsed loop nest}}
     for (i = 0; i < 10; i++) {
-      int dummy;
+    }
+  }
+}
+
+auto test2() {
+#pragma omp parallel for collapse(2)
+  for (int i = 0; i < dim; ++i) {
+    for (int i = 0; i < 10; i++) {
+    }
+  }
+}
+
+int dim_storage = 10;
+int &dim = dim_storage;
+auto test3() {
+#pragma omp parallel for collapse(2)
+  for (int i = 0; i < dim; ++i) {
+    for (int j = 0; j < 10; j++) {
     }
   }
 }
