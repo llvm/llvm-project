@@ -40,6 +40,7 @@ public:
     bool stret_return = false;
     bool is_super = false;
     bool is_super2 = false;
+    bool might_be_reexport = false;
   };
 
   lldb::addr_t SetupDispatchFunction(Thread &thread,
