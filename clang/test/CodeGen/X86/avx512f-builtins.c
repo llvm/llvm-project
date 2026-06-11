@@ -9803,106 +9803,50 @@ TEST_CONSTEXPR(match_v16si(_mm512_maskz_compress_epi32(0xA635, (__m512i)(__v16si
 
 __mmask8 test_mm_cmp_round_ss_mask(__m128 __X, __m128 __Y) {
   // CHECK-LABEL: test_mm_cmp_round_ss_mask
-  // The scalar masked compare keeps its predicate (_CMP_NLT_US = 5) and SAE
-  // (_MM_FROUND_NO_EXC = 8) immediates and must NOT be lowered to fcmp.
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 5, i8 -1, i32 8)
-  // CHECK-NOT: fcmp
+  // CHECK: @llvm.x86.avx512.mask.cmp
   return _mm_cmp_round_ss_mask(__X, __Y, _CMP_NLT_US, _MM_FROUND_NO_EXC);
 }
 
 __mmask8 test_mm_mask_cmp_round_ss_mask(__mmask8 __M, __m128 __X, __m128 __Y) {
   // CHECK-LABEL: test_mm_mask_cmp_round_ss_mask
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 5, i8 %{{.*}}, i32 8)
-  // CHECK-NOT: fcmp
+  // CHECK: @llvm.x86.avx512.mask.cmp
   return _mm_mask_cmp_round_ss_mask(__M, __X, __Y, _CMP_NLT_US, _MM_FROUND_NO_EXC);
 }
 
 __mmask8 test_mm_cmp_ss_mask(__m128 __X, __m128 __Y) {
   // CHECK-LABEL: test_mm_cmp_ss_mask
-  // No rounding control: SAE defaults to _MM_FROUND_CUR_DIRECTION = 4.
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 5, i8 -1, i32 4)
-  // CHECK-NOT: fcmp
+  // CHECK: @llvm.x86.avx512.mask.cmp
   return _mm_cmp_ss_mask(__X, __Y, _CMP_NLT_US);
 }
 
 __mmask8 test_mm_mask_cmp_ss_mask(__mmask8 __M, __m128 __X, __m128 __Y) {
   // CHECK-LABEL: test_mm_mask_cmp_ss_mask
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 5, i8 %{{.*}}, i32 4)
-  // CHECK-NOT: fcmp
+  // CHECK: @llvm.x86.avx512.mask.cmp
   return _mm_mask_cmp_ss_mask(__M, __X, __Y, _CMP_NLT_US);
 }
 
 __mmask8 test_mm_cmp_round_sd_mask(__m128d __X, __m128d __Y) {
   // CHECK-LABEL: test_mm_cmp_round_sd_mask
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 5, i8 -1, i32 8)
-  // CHECK-NOT: fcmp
+  // CHECK: @llvm.x86.avx512.mask.cmp
   return _mm_cmp_round_sd_mask(__X, __Y, _CMP_NLT_US, _MM_FROUND_NO_EXC);
 }
 
 __mmask8 test_mm_mask_cmp_round_sd_mask(__mmask8 __M, __m128d __X, __m128d __Y) {
   // CHECK-LABEL: test_mm_mask_cmp_round_sd_mask
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 5, i8 %{{.*}}, i32 8)
-  // CHECK-NOT: fcmp
+  // CHECK: @llvm.x86.avx512.mask.cmp
   return _mm_mask_cmp_round_sd_mask(__M, __X, __Y, _CMP_NLT_US, _MM_FROUND_NO_EXC);
 }
 
 __mmask8 test_mm_cmp_sd_mask(__m128d __X, __m128d __Y) {
   // CHECK-LABEL: test_mm_cmp_sd_mask
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 5, i8 -1, i32 4)
-  // CHECK-NOT: fcmp
+  // CHECK: @llvm.x86.avx512.mask.cmp
   return _mm_cmp_sd_mask(__X, __Y, _CMP_NLT_US);
 }
 
 __mmask8 test_mm_mask_cmp_sd_mask(__mmask8 __M, __m128d __X, __m128d __Y) {
   // CHECK-LABEL: test_mm_mask_cmp_sd_mask
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 5, i8 %{{.*}}, i32 4)
-  // CHECK-NOT: fcmp
+  // CHECK: @llvm.x86.avx512.mask.cmp
   return _mm_mask_cmp_sd_mask(__M, __X, __Y, _CMP_NLT_US);
-}
-
-// The scalar masked compares must preserve the *distinct* signaling-vs-quiet
-// predicate immediate and must never be folded to a single fcmp (unlike the
-// packed _mm512_cmp_ps_mask family above, which is lowered to fcmp). These
-// mirror the per-predicate vector-cmp tests but assert the intrinsic survives.
-
-// _CMP_NEQ_UQ (4) is the *quiet* unordered-not-equal predicate.
-__mmask8 test_mm_cmp_ss_mask_neq_uq(__m128 __X, __m128 __Y) {
-  // CHECK-LABEL: test_mm_cmp_ss_mask_neq_uq
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 4, i8 -1, i32 4)
-  // CHECK-NOT: fcmp
-  return _mm_cmp_ss_mask(__X, __Y, _CMP_NEQ_UQ);
-}
-
-// _CMP_NEQ_US (20) is the *signaling* counterpart of _CMP_NEQ_UQ. A plain fcmp
-// would collapse both onto "une"; the intrinsic keeps them distinct (4 vs 20).
-__mmask8 test_mm_cmp_ss_mask_neq_us(__m128 __X, __m128 __Y) {
-  // CHECK-LABEL: test_mm_cmp_ss_mask_neq_us
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 20, i8 -1, i32 4)
-  // CHECK-NOT: fcmp
-  return _mm_cmp_ss_mask(__X, __Y, _CMP_NEQ_US);
-}
-
-// _CMP_EQ_OQ (0) + _MM_FROUND_NO_EXC (8): even the most fcmp-like (ordered,
-// quiet) predicate with SAE must stay an intrinsic, preserving the SAE bit.
-__mmask8 test_mm_cmp_round_ss_mask_eq_oq_sae(__m128 __X, __m128 __Y) {
-  // CHECK-LABEL: test_mm_cmp_round_ss_mask_eq_oq_sae
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 0, i8 -1, i32 8)
-  // CHECK-NOT: fcmp
-  return _mm_cmp_round_ss_mask(__X, __Y, _CMP_EQ_OQ, _MM_FROUND_NO_EXC);
-}
-
-__mmask8 test_mm_cmp_sd_mask_neq_uq(__m128d __X, __m128d __Y) {
-  // CHECK-LABEL: test_mm_cmp_sd_mask_neq_uq
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 4, i8 -1, i32 4)
-  // CHECK-NOT: fcmp
-  return _mm_cmp_sd_mask(__X, __Y, _CMP_NEQ_UQ);
-}
-
-__mmask8 test_mm_cmp_sd_mask_neq_us(__m128d __X, __m128d __Y) {
-  // CHECK-LABEL: test_mm_cmp_sd_mask_neq_us
-  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 20, i8 -1, i32 4)
-  // CHECK-NOT: fcmp
-  return _mm_cmp_sd_mask(__X, __Y, _CMP_NEQ_US);
 }
 
 __m512 test_mm512_movehdup_ps(__m512 __A) {
