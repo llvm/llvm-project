@@ -39,6 +39,8 @@ public:
   Derived &getDerived() { return *static_cast<Derived *>(this); }
 
   void visit(QualType QT) {
+    assert(!QT->isDependentType());
+
     // If the type is an array, visit its element type. Separate traversal of
     // arrays is not needed because the array will be encountered as a
     // FieldDecl.
