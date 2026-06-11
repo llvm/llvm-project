@@ -41,8 +41,8 @@ entry:
   ret void
 }
 
-; Inverted 1935: 011110001111
-; GCN:       After Inverting, SchedGroup Mask: 1935
+; Inverted 1807: 011100001111
+; GCN:       After Inverting, SchedGroup Mask: 1807
 define amdgpu_kernel void @invert16() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 16) #1
@@ -104,8 +104,8 @@ entry:
   ret void
 }
 
-; Inverted 2031: 011111101111
-; GCN:       After Inverting, SchedGroup Mask: 2031
+; Inverted 1903: 011101101111
+; GCN:       After Inverting, SchedGroup Mask: 1903
 define amdgpu_kernel void @invert2048() #0 {
 entry:
   call void @llvm.amdgcn.sched.barrier(i32 2048) #1
