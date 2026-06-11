@@ -740,6 +740,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::nearbyintf128(float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::rintf128(float128(0.0)));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf128(float128(0.0)));
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf128(float128(0.0)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf128(float128(0.0)));
   EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::roundf128(float128(0.0)));
