@@ -401,10 +401,6 @@ bool ARMSubtarget::isGVInGOT(const GlobalValue *GV) const {
          (!GV->isDSOLocal() || GV->isWeakForLinker());
 }
 
-unsigned ARMSubtarget::getMispredictionPenalty() const {
-  return SchedModel.MispredictPenalty;
-}
-
 bool ARMSubtarget::enableMachineScheduler() const {
   // The MachineScheduler can increase register usage, so we use more high
   // registers and end up with more T2 instructions that cannot be converted to
