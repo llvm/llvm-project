@@ -1790,4 +1790,183 @@ def LLVM_AnyMDAttr : AnyAttrOf<[
     LLVM_MDStringAttr, LLVM_MDConstantAttr, LLVM_MDFuncAttr, LLVM_MDNodeAttr],
     "LLVM metadata attribute (md_string, md_const, md_func, or md_node)">;
 
+//===----------------------------------------------------------------------===//
+// FenvAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_FenvAttr : LLVM_Attr<"Fenv", "fenv"> {
+  let summary = "Describes floating-point environment constraints";
+  let description = [{
+    The `#llvm.fenv` attribute describes constraints on the floating-point
+    handling of a floating-point operation. It can be attached to
+    floating-point operations to capture rounding and exception behavior. All
+    of its parameters are optional.
+
+    - `rounding_mode`: the rounding mode to use. Every value other than
+      `dynamic` specifies a static rounding mode.
+    - `dynamic_rounding_mode`: the known dynamic rounding mode at the point the
+      instruction is executed. Otherwise the behavior is undefined.
+    - `except_mode`: the known exception mode at the point the instruction is
+      executed. Otherwise the behavior is undefined.
+    - `strict_snan`: whether to handle sNaN according to IEEE rules (`true`) or
+      LLVM's relaxed NaN propagation rules (`false`). This flag is only
+      meaningful when `except_mode` is `unmasked` or `unknown`, where it
+      defaults to `true`; when `except_mode` is `masked` the flag is ignored.
+    - `strict_except`: if `false`, any case that would produce an FP exception
+      produces it non-deterministically instead (i.e. it may or may not occur).
+      This means the FP status is written non-deterministically, and, if
+      exceptions are unmasked, the instruction traps non-deterministically.
+      This flag is only meaningful when `except_mode` is `unmasked` or
+      `unknown`, where it defaults to `true`; when `except_mode` is `masked`
+      the flag is ignored.
+
+    When this attribute is present on an operation, the operation is lowered to
+    the corresponding `llvm.experimental.constrained.*` intrinsic during
+    translation to LLVM IR.
+
+    The default setting for each parameter (`dynamic` rounding mode, `unknown`
+    dynamic rounding mode, `masked` exception mode, and, when exceptions are not
+    masked, `true` for both `strict_snan` and `strict_except`) is canonically
+    represented as an unset parameter. Constructing an attribute whose
+    parameters are all set to their defaults therefore yields the same
+    canonical, empty attribute as `#llvm.fenv<>`.
+
+    Carrying the (possibly empty) attribute is *not* the same as having no
+    attribute at all. An operation that carries the attribute is lowered to the
+    corresponding constrained intrinsic, even when every parameter is at its
+    default value (the constrained intrinsic then uses the default rounding mode
+    and exception behavior). An operation with no `#llvm.fenv` attribute is
+    lowered to the regular, unconstrained operation.
+
+    Example:
+    ```mlir
+    #llvm.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown,
+               strict_snan = true, strict_except = true>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalParameter<"std::optional<::mlir::LLVM::FPRoundingMode>">:$rounding_mode,
+    OptionalParameter<
+        "std::optional<::mlir::LLVM::FPDynamicRoundingMode>">:$dynamic_rounding_mode,
+    OptionalParameter<"std::optional<::mlir::LLVM::FPExceptionMode>">:$except_mode,
+    OptionalParameter<"mlir::BoolAttr">:$strict_snan,
+    OptionalParameter<"mlir::BoolAttr">:$strict_except);
+
+  let assemblyFormat = [{
+    `<` struct($rounding_mode, $dynamic_rounding_mode, $except_mode,
+               $strict_snan, $strict_except) `>`
+  }];
+
+  // Replace the default builder so that constructing the attribute normalizes
+  // any parameter that is set to its default value to "unset". This keeps a
+  // single canonical representation for the default floating-point environment.
+  // Because `skipDefaultBuilders` suppresses the auto-synthesized const builder
+  // call, provide it explicitly. The `DefaultValuedAttr` form below uses a null
+  // attribute as its default, so this simply forwards its argument (a null
+  // attribute when the operation does not carry a `#llvm.fenv` attribute).
+  let skipDefaultBuilders = 1;
+  let constBuilderCall = "$0";
+  let builders = [
+    AttrBuilder<(ins
+        CArg<"std::optional<::mlir::LLVM::FPRoundingMode>",
+             "std::nullopt">:$roundingMode,
+        CArg<"std::optional<::mlir::LLVM::FPDynamicRoundingMode>",
+             "std::nullopt">:$dynamicRoundingMode,
+        CArg<"std::optional<::mlir::LLVM::FPExceptionMode>",
+             "std::nullopt">:$exceptMode,
+        CArg<"mlir::BoolAttr", "{}">:$strictSNaN,
+        CArg<"mlir::BoolAttr", "{}">:$strictExcept), [{
+      if (roundingMode == ::mlir::LLVM::FPRoundingMode::Dynamic)
+        roundingMode = std::nullopt;
+      if (dynamicRoundingMode == ::mlir::LLVM::FPDynamicRoundingMode::Unknown)
+        dynamicRoundingMode = std::nullopt;
+      if (exceptMode == ::mlir::LLVM::FPExceptionMode::Masked)
+        exceptMode = std::nullopt;
+      // `strict_snan` and `strict_except` are only meaningful when exceptions
+      // are not masked, where they default to `true`. When exceptions are
+      // masked (the default) they are ignored, so drop them; otherwise elide a
+      // flag only when it matches the `true` default. After the normalization
+      // above, masked == unset.
+      if (!exceptMode || (strictSNaN && strictSNaN.getValue()))
+        strictSNaN = {};
+      if (!exceptMode || (strictExcept && strictExcept.getValue()))
+        strictExcept = {};
+      return Base::get($_ctxt, roundingMode, dynamicRoundingMode, exceptMode,
+                       strictSNaN, strictExcept);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// The default rounding mode used when `rounding_mode` is unset.
+    static constexpr ::mlir::LLVM::FPRoundingMode getDefaultRoundingMode() {
+      return ::mlir::LLVM::FPRoundingMode::Dynamic;
+    }
+    /// The default dynamic rounding mode used when `dynamic_rounding_mode` is
+    /// unset.
+    static constexpr ::mlir::LLVM::FPDynamicRoundingMode
+    getDefaultDynamicRoundingMode() {
+      return ::mlir::LLVM::FPDynamicRoundingMode::Unknown;
+    }
+    /// The default exception mode used when `except_mode` is unset.
+    static constexpr ::mlir::LLVM::FPExceptionMode getDefaultExceptionMode() {
+      return ::mlir::LLVM::FPExceptionMode::Masked;
+    }
+
+    /// Returns the effective rounding mode, substituting the default when unset.
+    ::mlir::LLVM::FPRoundingMode getRoundingModeOrDefault() const {
+      return getRoundingMode().value_or(getDefaultRoundingMode());
+    }
+    /// Returns the effective dynamic rounding mode, substituting the default
+    /// when unset.
+    ::mlir::LLVM::FPDynamicRoundingMode getDynamicRoundingModeOrDefault() const {
+      return getDynamicRoundingMode().value_or(getDefaultDynamicRoundingMode());
+    }
+    /// Returns the effective exception mode, substituting the default when
+    /// unset.
+    ::mlir::LLVM::FPExceptionMode getExceptionModeOrDefault() const {
+      return getExceptMode().value_or(getDefaultExceptionMode());
+    }
+    /// Returns the effective `strict_snan` flag. This flag is only meaningful
+    /// when exceptions are not masked, where it defaults to `true`. When
+    /// exceptions are masked it is ignored and reported as `false`.
+    bool getStrictSNaNOrDefault() const {
+      if (getExceptionModeOrDefault() == ::mlir::LLVM::FPExceptionMode::Masked)
+        return false;
+      ::mlir::BoolAttr attr = getStrictSnan();
+      return attr ? attr.getValue() : true;
+    }
+    /// Returns the effective `strict_except` flag. This flag is only meaningful
+    /// when exceptions are not masked, where it defaults to `true`. When
+    /// exceptions are masked it is ignored and reported as `false`.
+    bool getStrictExceptOrDefault() const {
+      if (getExceptionModeOrDefault() == ::mlir::LLVM::FPExceptionMode::Masked)
+        return false;
+      ::mlir::BoolAttr attr = getStrictExcept();
+      return attr ? attr.getValue() : true;
+    }
+
+    /// Returns true if every parameter is at its default value, i.e. the
+    /// attribute describes the default floating-point environment and imposes
+    /// no constraints. Because the builder normalizes defaults to "unset", this
+    /// is equivalent to all parameters being unset.
+    bool isDefault() const {
+      return !getRoundingMode() && !getDynamicRoundingMode() &&
+             !getExceptMode() && !getStrictSnan() && !getStrictExcept();
+    }
+  }];
+}
+
+// Default-valued form of the fenv attribute. Using a `DefaultValuedAttr`
+// (instead of `OptionalAttr`) keeps the attribute optional in generated
+// builders without dropping the default values of any preceding optional
+// builder arguments (e.g. `fastmathFlags`), so existing call sites are not
+// broken. The default is a *null* attribute (rather than a materialized empty
+// `#llvm.fenv<>`): an operation that does not carry the attribute stores a null
+// attribute and `getFenvAttr()` returns null, which lets the lowering
+// distinguish "no `fenv` attribute" (regular operation) from "an explicit
+// `fenv` attribute, possibly empty" (constrained intrinsic with default
+// settings).
+def LLVM_DefaultFenvAttr : DefaultValuedAttr<LLVM_FenvAttr, "nullptr">;
+
 #endif // LLVMIR_ATTRDEFS

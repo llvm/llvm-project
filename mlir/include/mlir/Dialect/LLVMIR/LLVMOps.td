@@ -38,8 +38,7 @@ class LLVM_TerminatorOp<string mnemonic, list<Trait> traits = []> :
 // Class for arithmetic binary operations.
 class LLVM_ArithmeticOpBase<Type type, string mnemonic,
                             string instName, list<Trait> traits = []> :
-    LLVM_Op<mnemonic,
-           !listconcat([SameOperandsAndResultType, NoMemoryEffect], traits)>,
+    LLVM_Op<mnemonic, !listconcat([SameOperandsAndResultType], traits)>,
     LLVM_Builder<"$res = builder.Create" # instName # "($lhs, $rhs);"> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<type>:$lhs,
                     LLVM_ScalarOrVectorOf<type>:$rhs);
@@ -50,7 +49,8 @@ class LLVM_ArithmeticOpBase<Type type, string mnemonic,
 }
 class LLVM_IntArithmeticOp<string mnemonic, string instName,
                            list<Trait> traits = []> :
-    LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName, traits> {
+    LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
+    !listconcat([NoMemoryEffect], traits)> {
   let arguments = commonArgs;
   string mlirBuilder = [{
     $res = $_qualCppClassName::create($_builder, $_location, $lhs, $rhs);
@@ -59,7 +59,9 @@ class LLVM_IntArithmeticOp<string mnemonic, string instName,
 class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
-    !listconcat([DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>], traits)> {
+    !listconcat([NoMemoryEffect,
+                 DeclareOpInterfaceMethods<IntegerOverflowFlagsInterface>],
+                traits)> {
   dag iofArg = (ins LLVM_IntegerOverflowFlagsProp:$overflowFlags);
   let arguments = !con(commonArgs, iofArg);
 
@@ -78,7 +80,8 @@ class LLVM_IntArithmeticOpWithOverflowFlag<string mnemonic, string instName,
 class LLVM_IntArithmeticOpWithExactFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
-    !listconcat([DeclareOpInterfaceMethods<ExactFlagInterface>], traits)> {
+    !listconcat([NoMemoryEffect, DeclareOpInterfaceMethods<ExactFlagInterface>],
+                traits)> {
   let arguments = !con(commonArgs, (ins UnitAttr:$isExact));
 
   string mlirBuilder = [{
@@ -96,7 +99,9 @@ class LLVM_IntArithmeticOpWithExactFlag<string mnemonic, string instName,
 class LLVM_IntArithmeticOpWithDisjointFlag<string mnemonic, string instName,
                                    list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<AnySignlessInteger, mnemonic, instName,
-    !listconcat([DeclareOpInterfaceMethods<DisjointFlagInterface>], traits)> {
+    !listconcat([NoMemoryEffect,
+                 DeclareOpInterfaceMethods<DisjointFlagInterface>],
+                traits)> {
   let arguments = !con(commonArgs, (ins UnitAttr:$isDisjoint));
 
   string mlirBuilder = [{
@@ -116,11 +121,14 @@ class LLVM_IntArithmeticOpWithDisjointFlag<string mnemonic, string instName,
 class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, instName,
-    !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>, Pure],
+    !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>],
+                 LLVM_FPEnvConstrainedTraits,
                  traits)> {
-  dag fmfArg = (
-    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
-  let arguments = !con(commonArgs, fmfArg);
+  dag fpArgs = (
+    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
+        LLVM_DefaultFenvAttr:$fenv);
+  let arguments = !con(commonArgs, fpArgs);
+  let extraClassDefinition = LLVM_FPEnvConstrainedDefs;
   string mlirBuilder = [{
     auto op = $_qualCppClassName::create($_builder, $_location, $lhs, $rhs);
     moduleImport.setFastmathFlagsAttr(inst, op);
@@ -132,15 +140,25 @@ class LLVM_FloatArithmeticOp<string mnemonic, string instName,
 class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
                                   string instName, list<Trait> traits = []> :
     LLVM_Op<mnemonic,
-           !listconcat([Pure, SameOperandsAndResultType, DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
+           !listconcat([SameOperandsAndResultType, DeclareOpInterfaceMethods<FastmathFlagsInterface>], LLVM_FPEnvConstrainedTraits, traits)>,
     LLVM_Builder<"$res = builder.Create" # instName # "($operand);"> {
   let arguments = (
     ins type:$operand,
-    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
+    LLVM_DefaultFenvAttr:$fenv);
   let results = (outs type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$operand attr-dict `:` type($res)";
+  let extraClassDefinition = LLVM_FPEnvConstrainedDefs;
   string llvmInstName = instName;
+  // Unary floating-point arithmetic (`llvm.fneg`) has no constrained intrinsic
+  // counterpart, so reject a `fenv` attribute during translation.
+  let llvmBuilder = [{
+    if (op.getFenvAttr())
+      return op.emitError("no constrained intrinsic is available for '")
+             << op->getName().getStringRef() << "' carrying a 'fenv' attribute";
+    $res = builder.Create}] # instName # [{($operand);
+  }];
   string mlirBuilder = [{
     auto op = $_qualCppClassName::create($_builder, $_location, $operand);
     moduleImport.setFastmathFlagsAttr(inst, op);
@@ -206,17 +224,23 @@ def LLVM_ICmpOp : LLVM_ArithmeticCmpOp<"icmp", [Pure]> {
 }
 
 // Other floating-point operations.
-def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
-    Pure, DeclareOpInterfaceMethods<FastmathFlagsInterface>]> {
+def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", !listconcat(
+    [DeclareOpInterfaceMethods<FastmathFlagsInterface>],
+    LLVM_FPEnvConstrainedTraits)> {
   let arguments = (ins FCmpPredicate:$predicate,
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$lhs,
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$rhs,
                    DefaultValuedAttr<LLVM_FastmathFlagsAttr,
-                                     "{}">:$fastmathFlags);
+                                     "{}">:$fastmathFlags,
+                   LLVM_DefaultFenvAttr:$fenv);
   let hasCustomAssemblyFormat = 1;
+  let extraClassDefinition = LLVM_FPEnvConstrainedDefs;
   string llvmInstName = "FCmp";
+  // `emitConstrainedFCmp` chooses a plain `fcmp` or a quiet/signaling
+  // `experimental.constrained.fcmp(s)` based on the `fenv` attribute (it falls
+  // back to a plain `fcmp` when no `fenv` attribute is present).
   string llvmBuilder = [{
-    $res = builder.CreateFCmp(convertFCmpPredicateToLLVM($predicate), $lhs, $rhs);
+    return emitConstrainedFCmp(op, builder, moduleTranslation);
   }];
   string mlirBuilder = [{
     auto *fCmpInst = cast<llvm::FCmpInst>(inst);
@@ -226,8 +250,9 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
     $res = op;
   }];
   // Set the $predicate index to -1 to indicate there is no matching operand
-  // and decrement the following indices.
-  list<int> llvmArgIndices = [-1, 0, 1, 2];
+  // and decrement the following indices. The trailing -1 corresponds to the
+  // optional `fenv` attribute, which has no matching LLVM IR operand.
+  list<int> llvmArgIndices = [-1, 0, 1, 2, -1];
 }
 
 // Floating point binary operations.
@@ -590,15 +615,17 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
 
 class LLVM_CastOpWithFastMathFlag<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
-    LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
+    LLVM_Op<mnemonic, !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>], LLVM_FPEnvConstrainedTraits, traits)>,
     LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType);"> {
   let arguments = (
     ins type:$arg,
-    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
+    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags,
+    LLVM_DefaultFenvAttr:$fenv);
   let results = (outs resultType:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$arg (`fastmath` `` $fastmathFlags^)? "
                        "attr-dict `:` type($arg) `to` type($res)";
+  let extraClassDefinition = LLVM_FPEnvConstrainedDefs;
   string llvmInstName = instName;
   string mlirBuilder = [{
     auto op = $_qualCppClassName::create($_builder,
@@ -2574,7 +2601,8 @@ def LLVM_CallIntrinsicOp
     : LLVM_Op<"call_intrinsic",
               [ArgAndResultAttrsOpInterface,
                AttrSizedOperandSegments,
-               DeclareOpInterfaceMethods<FastmathFlagsInterface>]> {
+               DeclareOpInterfaceMethods<FastmathFlagsInterface>,
+               FPEnvConstrainedOpInterface]> {
   let summary = "Call to an LLVM intrinsic function.";
   let description = [{
     Call the specified llvm intrinsic. If the intrinsic is overloaded, use
@@ -2588,7 +2616,8 @@ def LLVM_CallIntrinsicOp
                        DenseI32ArrayAttr:$op_bundle_sizes,
                        OptionalAttr<ArrayAttr>:$op_bundle_tags,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       LLVM_DefaultFenvAttr:$fenv);
   let results = (outs Optional<LLVM_Type>:$results);
   let llvmBuilder = [{
     return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);

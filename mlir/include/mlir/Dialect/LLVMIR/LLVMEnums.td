@@ -546,6 +546,60 @@ def LLVM_FastmathFlagsAttr :
 }
 
 //===----------------------------------------------------------------------===//
+// Floating-point environment enums (used by the `#llvm.fenv` attribute)
+//===----------------------------------------------------------------------===//
+
+def FPRoundingMode : I32EnumAttr<
+    "FPRoundingMode", "floating-point rounding mode", [
+  I32EnumAttrCase<"Dynamic", 0, "dynamic">,
+  I32EnumAttrCase<"ToNearest", 1, "tonearest">,
+  I32EnumAttrCase<"Downward", 2, "downward">,
+  I32EnumAttrCase<"Upward", 3, "upward">,
+  I32EnumAttrCase<"UpwardZero", 4, "upwardzero">,
+  I32EnumAttrCase<"ToNearestAway", 5, "tonearestaway">
+]> {
+  let description = [{
+    The rounding mode to use for a floating-point operation. Every value other
+    than `dynamic` specifies a static rounding mode.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let genSpecializedAttr = 0;
+}
+
+def FPDynamicRoundingMode : I32EnumAttr<
+    "FPDynamicRoundingMode", "floating-point dynamic rounding mode", [
+  I32EnumAttrCase<"Unknown", 0, "unknown">,
+  I32EnumAttrCase<"ToNearest", 1, "tonearest">,
+  I32EnumAttrCase<"Downward", 2, "downward">,
+  I32EnumAttrCase<"Upward", 3, "upward">,
+  I32EnumAttrCase<"UpwardZero", 4, "upwardzero">,
+  I32EnumAttrCase<"ToNearestAway", 5, "tonearestaway">
+]> {
+  let description = [{
+    The known dynamic rounding mode at the point the instruction is executed.
+    If the actual dynamic rounding mode differs from this value, the behavior
+    is undefined.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let genSpecializedAttr = 0;
+}
+
+def FPExceptionMode : I32EnumAttr<
+    "FPExceptionMode", "floating-point exception mode", [
+  I32EnumAttrCase<"Unknown", 0, "unknown">,
+  I32EnumAttrCase<"Masked", 1, "masked">,
+  I32EnumAttrCase<"Unmasked", 2, "unmasked">
+]> {
+  let description = [{
+    The known floating-point exception mode at the point the instruction is
+    executed. If the actual exception mode differs from this value, the
+    behavior is undefined.
+  }];
+  let cppNamespace = "::mlir::LLVM";
+  let genSpecializedAttr = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FCmp and ICmp Predicates
 //===----------------------------------------------------------------------===//
 
