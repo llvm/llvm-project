@@ -2318,6 +2318,7 @@ TEST(LlvmLibcStrftimeTest, TimeFormatFullDateTime) {
   EXPECT_STREQ_LEN(written, buffer, "  Wed Jun 15 14:13:12 2011");
 }
 
+#if defined(__linux__)
 TEST(LlvmLibcStrftimeTest, TimezoneTest) {
   struct tm time;
   char buffer[100];
@@ -2371,6 +2372,7 @@ TEST(LlvmLibcStrftimeTest, TimezoneTest) {
   written = LIBC_NAMESPACE::strftime(buffer, sizeof(buffer), "%Z", &time);
   EXPECT_STREQ_LEN(written, buffer, "");
 }
+#endif // __linux__
 
 TEST(LlvmLibcStrftimeTest, BufferTooSmall) {
   struct tm time;

@@ -192,7 +192,7 @@ public:
 #if defined(__linux__)
     return timeptr->tm_zone ? timeptr->tm_zone : "";
 #else
-    return "";
+    return "UTC";
 #endif
   }
 
