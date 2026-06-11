@@ -32,7 +32,8 @@ get_specific_int_format(const tm *timeptr, const FormatSection &base_to_conv,
   new_conv.conv_name = new_conv_name;
   new_conv.min_width = NEW_MIN_WIDTH;
 
-  // We only call this for formats that cannot fail (not %s).
+  // This cannot error because we only call this for formats that cannot fail
+  // (not %s).
   IntFormatSection result = get_int_format(new_conv, timeptr).value();
 
   // If the user set the padding, but it's below the width of the trailing

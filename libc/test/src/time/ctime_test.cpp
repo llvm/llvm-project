@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/signal_macros.h"
-#include "src/time/time_utils.h"
 #include "src/time/ctime.h"
+#include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
@@ -38,7 +38,8 @@ TEST_F(LlvmLibcCtime, ValidUnixTimestamp32Int) {
 TEST_F(LlvmLibcCtime, ValidUnixTimestamp2039) {
   time_t t;
   char *result;
-  t = 2177452800; // 2039-01-01 00:00:00 UTC
+  // 2039-01-01 00:00:00 UTC. This is after the 32-bit time_t max.
+  t = 2177452800;
   result = LIBC_NAMESPACE::ctime(&t);
   ASSERT_STREQ("Sat Jan  1 00:00:00 2039\n", result);
 }

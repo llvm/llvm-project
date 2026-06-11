@@ -8,9 +8,9 @@
 
 #include "hdr/errno_macros.h"
 
-#include "src/time/time_utils.h"
 #include "hdr/signal_macros.h"
 #include "src/time/asctime.h"
+#include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
@@ -26,7 +26,7 @@ static inline char *call_asctime(struct tm *tm_data, int year, int month,
 }
 
 TEST_F(LlvmLibcAsctime, Nullptr) {
-  EXPECT_DEATH([] { LIBC_NAMESPACE::asctime(nullptr); }, WITH_SIGNAL(SIGILL));
+  EXPECT_DEATH([] { LIBC_NAMESPACE::asctime(nullptr); }, WITH_SIGNAL(-1));
 }
 
 // Weekdays are in the range 0 to 6. Test passing invalid value in wday.

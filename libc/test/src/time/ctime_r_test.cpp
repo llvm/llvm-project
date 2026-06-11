@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/signal_macros.h"
-#include "src/time/time_utils.h"
 #include "src/time/ctime_r.h"
 #include "src/time/time_constants.h"
+#include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
@@ -50,7 +50,8 @@ TEST_F(LlvmLibcCtimeR, ValidUnixTimestamp2039) {
   char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
   time_t t;
   char *result;
-  // 2039-01-01 00:00:00 UTC. Test with a valid buffer size.
+  // 2039-01-01 00:00:00 UTC. Test with a valid buffer size. This is after the
+  // 32-bit time_t max.
   t = 2177452800;
   result = LIBC_NAMESPACE::ctime_r(&t, buffer);
   ASSERT_STREQ("Sat Jan  1 00:00:00 2039\n", result);

@@ -20,8 +20,8 @@ namespace time_utils {
 cpp::optional<time_t> mktime_internal(const tm *tm_out) {
   // Unlike most C Library functions, mktime doesn't just die on bad input.
   // TODO(rtenneti); Handle leap seconds.
-  int64_t tm_year_from_base = static_cast<int64_t>(tm_out->tm_year) +
-                              time_constants::TIME_YEAR_BASE;
+  int64_t tm_year_from_base =
+      static_cast<int64_t>(tm_out->tm_year) + time_constants::TIME_YEAR_BASE;
 
   // Years are ints.  A 32-bit year will fit into a 64-bit time_t.
   // A 64-bit year will not.

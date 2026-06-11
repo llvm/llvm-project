@@ -8,12 +8,12 @@
 
 #include "hdr/errno_macros.h"
 
-#include "src/time/time_utils.h"
 #include "hdr/signal_macros.h"
 #include "hdr/types/struct_tm.h"
 #include "src/__support/CPP/limits.h" // INT_MAX, INT_MIN
 #include "src/time/gmtime.h"
 #include "src/time/time_constants.h"
+#include "src/time/time_utils.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 #include "test/src/time/TmMatcher.h"

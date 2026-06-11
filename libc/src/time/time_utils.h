@@ -47,7 +47,6 @@ constexpr int TIME_OVERFLOW = EOVERFLOW;
 constexpr int TIME_OVERFLOW = ERANGE;
 #endif
 
-
 /// Update the "tm" structure's year, month, etc. members from seconds.
 ///
 /// \param total_seconds The number of seconds since January 1st, 1970.
