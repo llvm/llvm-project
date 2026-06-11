@@ -2256,6 +2256,10 @@ let SubtargetPredicate = isGFX125xOnly in {
   def : SWMMACPat<V_SWMMAC_F32_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f32_16x16x64_f16,      F32_F16X64_SWMMAC_w32>;
   def : SWMMACPat<V_SWMMAC_F16_16X16X64_F16_w32_twoaddr,      int_amdgcn_swmmac_f16_16x16x64_f16,      F16_F16X64_SWMMAC_w32>;
 } // End SubtargetPredicate = isGFX125xOnly
+
+let SubtargetPredicate = HasGFX1251GEMMInsts in {
+  defm : WMMAPat<"V_WMMA_F64_16X16X4_F64_w32",  int_amdgcn_wmma_f64_16x16x4_f64,  F64_F64X4_WMMA_w32>;
+} // End SubtargetPredicate = HasGFX1251GEMMInsts
 } // End WaveSizePredicate = isWave32
 
 //===----------------------------------------------------------------------===//
