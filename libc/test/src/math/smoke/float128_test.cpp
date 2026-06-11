@@ -17,15 +17,29 @@ TEST(LlvmLibcFloat128Test, DefaultConstructor) {
   (void)x;
 }
 
-TEST(LlvmLibcFloat128Test, operators) {
+TEST(LlvmLibcFloat128Test, UnaryOperators) {
   Float128 a(1.0f), b(1.0f), c(2.0f);
 
   // comparison operators
   ASSERT_TRUE(a == b);
+  ASSERT_TRUE(a == Float128(1.0));
   ASSERT_TRUE(a != c);
   ASSERT_TRUE(b != c);
   ASSERT_TRUE(c > b);
   ASSERT_TRUE(a >= b);
   ASSERT_TRUE(b <= c);
   ASSERT_TRUE(a < c);
+
+  //negation 
+  Float128 pa(1.0),na(-1.0f);
+  ASSERT_TRUE(-pa == na);
+  ASSERT_TRUE(-(-pa)== -na);
+}
+
+TEST(LlvmLibcFloat128Test, BinaryOperators) {
+  Float128 a(1.0f), b(1.0f), c(2.0f), d(3.0);
+  ASSERT_TRUE((a + b) == c);
+  ASSERT_TRUE((a - b) == Float128(0.0));
+  ASSERT_TRUE((c * d) == Float128(6.0));
+  ASSERT_TRUE((Float128(6.0) / d) == Float128(2.0));
 }
