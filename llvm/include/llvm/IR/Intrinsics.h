@@ -177,6 +177,8 @@ struct IITDescriptor {
     AMX,
     PPCQuad,
     AArch64Svcount,
+    WasmExternref,
+    WasmFuncref,
 
     // Overloaded type.
     Overloaded, // AnyKind and overload index in OverloadInfo.

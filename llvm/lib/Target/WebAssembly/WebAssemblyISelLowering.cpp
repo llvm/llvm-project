@@ -436,24 +436,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setMinimumJumpTableEntries(2);
 }
 
-MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
-                                            uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return MVT::funcref;
-  return TargetLowering::getPointerTy(DL, AS);
-}
-
-MVT WebAssemblyTargetLowering::getPointerMemTy(const DataLayout &DL,
-                                               uint32_t AS) const {
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF)
-    return MVT::externref;
-  if (AS == WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF)
-    return MVT::funcref;
-  return TargetLowering::getPointerMemTy(DL, AS);
-}
-
 TargetLowering::AtomicExpansionKind
 WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(
     const AtomicRMWInst *AI) const {
@@ -1294,6 +1276,17 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction &MF = DAG.getMachineFunction();
   auto Layout = MF.getDataLayout();
 
+  // A call through a funcref is expressed in IR as a call through the pointer
+  // produced by the llvm.wasm.funcref.to_ptr intrinsic. Detect this here and
+  // recover the underlying funcref value so the call can be lowered to a
+  // table.set + call_indirect through the dedicated __funcref_call_table.
+  bool IsFuncrefCall = false;
+  if (Callee.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+      Callee.getConstantOperandVal(0) == Intrinsic::wasm_funcref_to_ptr) {
+    Callee = Callee.getOperand(1);
+    IsFuncrefCall = true;
+  }
+
   CallingConv::ID CallConv = CLI.CallConv;
   if (!callingConvSupported(CallConv))
     fail(DL, DAG,
@@ -1537,8 +1530,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Lastly, if this is a call to a funcref we need to add an instruction
   // table.set to the chain and transform the call.
-  if (CLI.CB && WebAssembly::isWebAssemblyFuncrefType(
-                    CLI.CB->getCalledOperand()->getType())) {
+  if (IsFuncrefCall) {
     // In the absence of function references proposal where a funcref call is
     // lowered to call_ref, using reference types we generate a table.set to set
     // the funcref to a special table used solely for this purpose, followed by
@@ -1554,11 +1546,7 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue TableSetOps[] = {Chain, Sym, TableSlot, Callee};
     SDValue TableSet = DAG.getMemIntrinsicNode(
         WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
-        MVT::funcref,
-        // Machine Mem Operand args
-        MachinePointerInfo(
-            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF),
-        CLI.CB->getCalledOperand()->getPointerAlignment(DAG.getDataLayout()),
+        MVT::funcref, MachinePointerInfo(), Align(1),
         MachineMemOperand::MOStore);
 
     Ops[0] = TableSet; // The new chain is the TableSet itself
@@ -2275,6 +2263,17 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
       }
     }
     return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
+  }
+
+  case Intrinsic::wasm_funcref_to_ptr: {
+    // llvm.wasm.funcref.to_ptr only has a defined lowering when its result
+    // feeds directly into an indirect call. Reaching here means the pointer
+    // escapes a direct call. We haven't implemented conversion of a funcref
+    // into a real function pointer so we crash if we get here.
+    fail(DL, DAG,
+         "a funcref can only be converted to a pointer to be directly called; "
+         "the resulting pointer cannot otherwise be used");
+    return DAG.getUNDEF(Op.getValueType());
   }
 
   case Intrinsic::thread_pointer: {
