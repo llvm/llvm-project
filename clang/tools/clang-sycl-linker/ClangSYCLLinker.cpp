@@ -283,21 +283,21 @@ searchLibrary(StringRef Input, ArrayRef<StringRef> SearchPaths) {
   return findFromSearchPaths(LibName, SearchPaths);
 }
 
-/// Scan a member's pre-parsed IR symbol table against \p SymTab and return true
-/// if the member should be extracted: it is non-lazy, or it defines a symbol
-/// that resolves a currently-undefined reference. Mirrors a linker's archive
-/// member selection.
-static bool scanSymbols(const IRSymtabFile &Symtab, StringMap<Symbol> &SymTab,
-                        bool IsLazy) {
+/// Scan a member's pre-parsed IR symbol table against \p LinkerSymtab and
+/// return true if the member should be extracted: it is non-lazy, or it defines
+/// a symbol that resolves a currently-undefined reference. Mirrors a linker's
+/// archive member selection.
+static bool scanSymbols(const IRSymtabFile &MemberSymtab,
+                        StringMap<Symbol> &LinkerSymtab, bool IsLazy) {
   bool Extracted = !IsLazy;
   StringMap<Symbol> PendingSymbols;
-  for (unsigned I = 0; I != Symtab.Mods.size(); ++I) {
-    for (const auto &IRSym : Symtab.TheReader.module_symbols(I)) {
+  for (unsigned I = 0; I != MemberSymtab.Mods.size(); ++I) {
+    for (const auto &IRSym : MemberSymtab.TheReader.module_symbols(I)) {
       if (IRSym.isFormatSpecific() || !IRSym.isGlobal())
         continue;
 
-      bool IsNewSymbol = IsLazy && !SymTab.count(IRSym.getName());
-      StringMap<Symbol> &Target = IsNewSymbol ? PendingSymbols : SymTab;
+      bool IsNewSymbol = IsLazy && !LinkerSymtab.count(IRSym.getName());
+      StringMap<Symbol> &Target = IsNewSymbol ? PendingSymbols : LinkerSymtab;
       Symbol &OldSym = Target[IRSym.getName()];
       Symbol Sym(IRSym);
 
@@ -319,7 +319,7 @@ static bool scanSymbols(const IRSymtabFile &Symtab, StringMap<Symbol> &SymTab,
   }
   if (Extracted && IsLazy)
     for (const auto &[Name, Sym] : PendingSymbols)
-      SymTab[Name] = Sym;
+      LinkerSymtab[Name] = Sym;
   return Extracted;
 }
 
