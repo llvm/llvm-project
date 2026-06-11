@@ -66,7 +66,7 @@ static bool typeContainsReference(const Type *Ty) {
   if (const auto *ArrTy = dyn_cast<ArrayType>(Ty))
     return typeContainsReference(ArrTy->getElementType());
   if (const auto *StructTy = dyn_cast<StructType>(Ty))
-    return llvm::any_of(StructTy->elements(), [](const Type *ElemTy) {
+    return any_of(StructTy->elements(), [](const Type *ElemTy) {
       return typeContainsReference(ElemTy);
     });
   return false;
@@ -133,7 +133,7 @@ bool WebAssemblyCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
             TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
         const LLT OrigLLT =
             getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-        const LLT NewLLT = llvm::getLLTForMVT(NewVT);
+        const LLT NewLLT = getLLTForMVT(NewVT);
 
         const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
@@ -313,7 +313,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
     const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
     const LLT OrigLLT =
         getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-    const LLT NewLLT = llvm::getLLTForMVT(NewVT);
+    const LLT NewLLT = getLLTForMVT(NewVT);
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
@@ -467,7 +467,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
     const LLT OrigLLT =
         getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-    const LLT NewLLT = llvm::getLLTForMVT(NewVT);
+    const LLT NewLLT = getLLTForMVT(NewVT);
 
     const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
@@ -563,7 +563,7 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
       const LLT OrigLLT =
           getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
-      const LLT NewLLT = llvm::getLLTForMVT(NewVT);
+      const LLT NewLLT = getLLTForMVT(NewVT);
 
       const TargetRegisterClass &NewRegClass = *TLI.getRegClassFor(NewVT);
 
