@@ -642,7 +642,7 @@ NativeProcessWindows::HandleGenericException(bool first_chance,
               << llvm::format_hex(record.GetExceptionAddress(), 8);
   record.Dump(desc_stream);
   StopThread(record.GetThreadID(), StopReason::eStopReasonException,
-             desc_stream.str());
+             std::move(desc));
 
   SetState(eStateStopped, true);
   return ExceptionResult::BreakInDebugger;

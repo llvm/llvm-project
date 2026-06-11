@@ -10,6 +10,7 @@
 #define liblldb_Plugins_Process_Windows_ExceptionRecord_H_
 
 #include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
 
 #include <memory>
 #include <vector>
@@ -41,7 +42,7 @@ public:
 
   lldb::tid_t GetThreadID() const { return m_thread_id; }
 
-  const std::vector<unsigned long long> &GetExceptionArguments() const {
+  llvm::ArrayRef<unsigned long long> GetExceptionArguments() const {
     return m_arguments;
   }
 
