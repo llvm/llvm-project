@@ -12356,7 +12356,8 @@ QualType ASTContext::mergeObjCGCQualifiers(QualType LHS, QualType RHS) {
   if (LQuals != RQuals) {
     // If any of these qualifiers are different, we have a type mismatch.
     if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
-        LQuals.getAddressSpace() != RQuals.getAddressSpace())
+        LQuals.getAddressSpace() != RQuals.getAddressSpace() ||
+        LQuals.getObjCLifetime() != RQuals.getObjCLifetime())
       return {};
 
     // Exactly one GC qualifier difference is allowed: __strong is
