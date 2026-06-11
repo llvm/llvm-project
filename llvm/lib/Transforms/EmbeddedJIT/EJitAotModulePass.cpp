@@ -101,7 +101,7 @@ EJitAotModulePass::run(Module &M, ModuleAnalysisManager &AM) {
 
   // Run sub-passes in order: PASS2 → PASS3 → PASS4
   // (PASS1 is an independent early pass, not part of this pipeline)
-  PreservedAnalyses PA = PreservedAnalyses::none();
+  PreservedAnalyses PA = PreservedAnalyses::all();
 
   PA.intersect(EJitRegisterPeriodPass().run(M, AM));
   PA.intersect(EJitWrapperGenPass().run(M, AM));

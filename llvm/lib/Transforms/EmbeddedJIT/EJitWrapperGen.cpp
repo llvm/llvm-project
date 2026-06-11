@@ -155,7 +155,10 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
 
     for (unsigned I = 0; I < DimCount; ++I) {
       Value *ArgVal = F->getArg(PeriodInds[I].ArgIndex);
-      Value *ZExt = Builder.CreateZExt(ArgVal, Type::getInt64Ty(Ctx));
+      // Trunc to i8 first: cellIdx > 255 would pollute adjacent dimension
+      // bit-fields after ZExt + Shl.
+      Value *Trunc = Builder.CreateTrunc(ArgVal, Type::getInt8Ty(Ctx));
+      Value *ZExt = Builder.CreateZExt(Trunc, Type::getInt64Ty(Ctx));
       if (I > 0)
         ZExt = Builder.CreateShl(ZExt, I * 8);
       Key = Builder.CreateOr(Key, ZExt);
