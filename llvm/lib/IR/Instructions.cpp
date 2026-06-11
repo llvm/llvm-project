@@ -2617,8 +2617,8 @@ bool BitInsertInst::isValidOperands(const Value *Base, const Value *Val,
                                     const Value *Offset) {
   if (!Base->getType()->isByteTy())
     return false; // First operand of bitinsert must be byte type.
-  if (!Val->getType()->isFirstClassType())
-    return false; // Second operand of bitinsert must be a first-class type.
+  if (!Val->getType()->isSingleValueType())
+    return false; // Second operand of bitinsert must be a single-value type.
   if (!Offset->getType()->isIntegerTy(32))
     return false; // Third operand of bitinsert must be i32.
   return true;
@@ -2639,8 +2639,8 @@ BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
 
 bool BitExtractInst::isValidOperands(const Type *Ty, const Value *Src,
                                      const Value *Offset) {
-  if (!Ty->isFirstClassType())
-    return false; // First operand of bitextract must be a first-class type.
+  if (!Ty->isSingleValueType())
+    return false; // First operand of bitextract must be a single-value type.
   if (!Src->getType()->isByteTy())
     return false; // Second operand of bitextract must be a byte type.
   if (!Offset->getType()->isIntegerTy(32))

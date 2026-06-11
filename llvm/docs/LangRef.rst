@@ -11520,7 +11520,7 @@ Example:
 Byte Operations
 -----------------
 
-Instructions for bit manipulation for bytes.
+Instructions for bit manipulation on Byte types.
 
 .. _i_bitextract:
 
@@ -11541,7 +11541,7 @@ The '``bitextract``' extracts a value from a byte type.
 
 Arguments:
 """"""""""
-The '``bitextract``' instruction takes any first-class type ty (the
+The '``bitextract``' instruction takes any single-value type ty (the
 return type), a Byte value source, and an offset.
 
 Semantics:
@@ -11581,7 +11581,7 @@ position within a byte type.
 Arguments:
 """"""""""
 The first argument (base) of '``bitinsert``' must be of a byte type.
-The second operand (val) must be an arbitrary type.
+The second operand (val) must be a single-value type.
 
 Semantics:
 """"""""""
