@@ -24,6 +24,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <vector>
@@ -579,35 +580,30 @@ collectRegionsConstants(OutlinableRegion &Region,
   return ConstantsTheSame;
 }
 
-/// Check whether \p Region contains a non-uniform constant operand that must
-/// remain an immediate argument.
+/// Check whether \p Region contains a non-uniform constant operand that cannot
+/// be replaced with a variable.
 ///
-/// \param Region - The region to check for non-uniform immarg constants.
+/// \param Region - The region to check for non-uniform constant operands.
 /// \param NotSame - The set of global value numbers that do not have the same
 /// constant in each region.
-/// \returns true if \p Region contains a non-uniform immarg constant, and false
-/// otherwise.
-static bool containsNonUniformImmArgConstant(OutlinableRegion &Region,
-                                             DenseSet<unsigned> &NotSame) {
+/// \returns true if \p Region contains an illegal non-uniform constant operand,
+/// and false otherwise.
+static bool
+containsIllegalNonUniformConstant(OutlinableRegion &Region,
+                                  const DenseSet<unsigned> &NotSame) {
   IRSimilarityCandidate &C = *Region.Candidate;
 
   for (IRInstructionData &ID : C) {
-    auto *CB = dyn_cast<CallBase>(ID.Inst);
-    if (!CB)
-      continue;
-
-    for (unsigned ArgIdx = 0, ArgEnd = CB->arg_size(); ArgIdx != ArgEnd;
-         ++ArgIdx) {
-      if (!CB->paramHasAttr(ArgIdx, Attribute::ImmArg))
+    Instruction *I = ID.Inst;
+    for (const Use &U : I->operands()) {
+      Value *V = U.get();
+      if (!isa<Constant>(V))
         continue;
 
-      Value *Arg = CB->getArgOperand(ArgIdx);
-      if (!isa<Constant>(Arg))
-        continue;
-
-      std::optional<unsigned> GVN = C.getGVN(Arg);
-      assert(GVN && "Expected a GVN for immarg operand?");
-      if (NotSame.contains(*GVN))
+      std::optional<unsigned> GVN = C.getGVN(V);
+      assert(GVN && "Expected a GVN for constant operand?");
+      if (NotSame.contains(*GVN) &&
+          !canReplaceOperandWithVariable(I, U.getOperandNo()))
         return true;
     }
   }

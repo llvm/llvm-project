@@ -2,9 +2,11 @@
 ; RUN: opt -S -passes=verify,iroutliner -ir-outlining-no-cost < %s | FileCheck %s
 
 ; Do not outline structurally similar regions when doing so would replace a
-; non-uniform immarg constant with an outlined-function argument.
+; non-uniform constant with an outlined-function argument where a variable is
+; not permitted.
 
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i64, i1 immarg)
+declare void @llvm.gcroot(ptr, ptr)
 
 @slot = global ptr null, align 8
 @buf = global [1 x i8] zeroinitializer, align 1
@@ -38,4 +40,45 @@ else:
   %2 = load ptr, ptr @slot, align 8
   call void @llvm.memcpy.p0.p0.i64(ptr @buf, ptr @buf, i64 0, i1 false)
   ret ptr null
+}
+
+@g7 = global i8 0
+@g9 = global i8 0
+
+define void @r1(ptr %p) gc "shadow-stack" {
+; CHECK-LABEL: define void @r1(
+; CHECK-SAME: ptr [[P:%.*]]) gc "shadow-stack" {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    call void @llvm.gcroot(ptr [[A]], ptr @g7)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[X]], ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca ptr, align 8
+  %x = load i32, ptr %p, align 4
+  call void @llvm.gcroot(ptr %a, ptr @g7)
+  %x2 = add i32 %x, 1
+  store i32 %x2, ptr %p, align 4
+  ret void
+}
+
+define void @r2(ptr %p) gc "shadow-stack" {
+; CHECK-LABEL: define void @r2(
+; CHECK-SAME: ptr [[P:%.*]]) gc "shadow-stack" {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    call void @llvm.gcroot(ptr [[A]], ptr @g9)
+; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[Y]], ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca ptr, align 8
+  %y = load i32, ptr %p, align 4
+  call void @llvm.gcroot(ptr %a, ptr @g9)
+  %y2 = add i32 %y, 1
+  store i32 %y2, ptr %p, align 4
+  ret void
 }
