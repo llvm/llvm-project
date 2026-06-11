@@ -1532,8 +1532,8 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
   AddCXXSummary(
       cpp_category_sp,
       lldb_private::formatters::LibStdcppSourceLocationSummaryProvider,
-      "libstdc++ std::source_location summary provider",
-      "std::source_location", stl_summary_flags);
+      "libstdc++ std::source_location summary provider", "std::source_location",
+      stl_summary_flags);
 }
 
 static lldb_private::SyntheticChildrenFrontEnd *
