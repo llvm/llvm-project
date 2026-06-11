@@ -502,14 +502,14 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::IsAddressInVTables(
 
 const AppleObjCTrampolineHandler::DispatchFunction
     AppleObjCTrampolineHandler::g_dispatch_functions[] = {
-        // NAME                              STRET  SUPER  SUPER2
-        {"objc_msgSend", false, false, false},
+        // NAME          STRET  SUPER  SUPER2 ReExp
+        {"objc_msgSend", false, false, false, true},
         {"objc_msgSend_stret", true, false, false},
         {"objc_msgSend_fpret", false, false, false},
         {"objc_msgSend_fp2ret", false, false, true},
-        {"objc_msgSendSuper", false, true, false},
+        {"objc_msgSendSuper", false, true, false, true},
         {"objc_msgSendSuper_stret", true, true, false},
-        {"objc_msgSendSuper2", false, true, true},
+        {"objc_msgSendSuper2", false, true, true, true},
         {"objc_msgSendSuper2_stret", true, true, true},
 };
 
@@ -618,20 +618,29 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
   // map from there.
 
   for (size_t i = 0; i != std::size(g_dispatch_functions); i++) {
-    ConstString name_const_str(g_dispatch_functions[i].name);
-    const Symbol *msgSend_symbol =
-        m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,
-                                                         eSymbolTypeCode);
-    if (msgSend_symbol && msgSend_symbol->ValueIsAddress()) {
-      // FIXME: Make g_dispatch_functions static table of
-      // DispatchFunctions, and have the map be address->index.
-      // Problem is we also need to lookup the dispatch function.  For
-      // now we could have a side table of stret & non-stret dispatch
-      // functions.  If that's as complex as it gets, we're fine.
+    const AppleObjCTrampolineHandler::DispatchFunction &dispatch_function =
+        g_dispatch_functions[i];
+    ConstString name_const_str(dispatch_function.name);
+    // If this might be a re-exported symbol look there first.
+    const Symbol *msgSend_symbol = nullptr;
+    if (dispatch_function.might_be_reexport) {
+      msgSend_symbol = m_objc_module_sp->FindFirstSymbolWithNameAndType(
+          name_const_str, eSymbolTypeReExported);
+      if (msgSend_symbol) {
+        while (msgSend_symbol->GetType() == eSymbolTypeReExported) {
+          msgSend_symbol = msgSend_symbol->ResolveReExportedSymbol(*target);
+          if (!msgSend_symbol)
+            break;
+        }
+      }
+    }
+    if (!msgSend_symbol)
+      msgSend_symbol = m_objc_module_sp->FindFirstSymbolWithNameAndType(
+          name_const_str, eSymbolTypeCode);
 
+    if (msgSend_symbol && msgSend_symbol->ValueIsAddress()) {
       lldb::addr_t sym_addr =
           msgSend_symbol->GetAddressRef().GetOpcodeLoadAddress(target);
-
       m_msgSend_map.insert(std::pair<lldb::addr_t, int>(sym_addr, i));
     }
   }
