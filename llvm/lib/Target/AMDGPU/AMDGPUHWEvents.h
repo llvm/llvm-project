@@ -17,6 +17,8 @@ class raw_ostream;
 
 namespace AMDGPU {
 
+/// TODO: This should be a bitmask from the start instead of having this enum
+///       + \ref HWEventSet below.
 enum class HWEvent : unsigned char {
 #define AMDGPU_HW_EVENT(X) X,
 #define AMDGPU_FIRST_HW_EVENT(X) FIRST_WAIT_EVENT = X,

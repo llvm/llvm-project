@@ -1321,7 +1321,6 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
   OS << "Pending Events: ";
   if (hasPendingEvent()) {
     ListSeparator LS;
-    // FIXME: use hw_events()
     for (auto E : AMDGPU::hw_events()) {
       if (hasPendingEvent(E)) {
         OS << LS << AMDGPU::toString(E);
