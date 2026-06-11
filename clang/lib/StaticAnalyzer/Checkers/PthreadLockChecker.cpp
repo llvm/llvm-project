@@ -24,6 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace ento;
@@ -541,9 +542,10 @@ void PthreadLockChecker::ReleaseLockAux(const CallEvent &Call,
     }
     auto &Factory = state->get_context<LockSet>();
     llvm::ImmutableList<const MemRegion *> NewLS = Factory.getEmptyList();
-    for (auto I = LS.begin(), E = LS.end(); I != E; ++I)
-      if (*I != lockR)
-        NewLS = Factory.add(*I, NewLS);
+    for (const MemRegion *LockReg :
+         llvm::make_filter_range(LS, llvm::not_equal_to(lockR))) {
+      NewLS = Factory.add(LockReg, NewLS);
+    }
     state = state->set<LockSet>(NewLS);
   }
 
