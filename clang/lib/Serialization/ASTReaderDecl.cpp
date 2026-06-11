@@ -2413,13 +2413,13 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   for (unsigned i = 0; i != D->NumTPLists; ++i)
     D->getTrailingObjects()[i] = Record.readTemplateParameterList();
   switch (Record.readInt()) {
-  case 0:
+  case FTDK_Type:
     D->Friend = readTypeSourceInfo();
     break;
-  case 1:
+  case FTDK_Decl:
     D->Friend = readDeclAs<NamedDecl>();
     break;
-  case 2:
+  case FTDK_Template:
     D->Template = Record.readTemplateName();
     break;
   }

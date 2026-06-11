@@ -1854,14 +1854,14 @@ void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     Record.AddTemplateParameterList(TPL);
   if (D->Template.isNull()) {
     if (D->getFriendDecl()) {
-      Record.push_back(1);
+      Record.push_back(FTDK_Decl);
       Record.AddDeclRef(D->getFriendDecl());
     } else {
-      Record.push_back(0);
+      Record.push_back(FTDK_Type);
       Record.AddTypeSourceInfo(D->getFriendType());
     }
   } else {
-    Record.push_back(2);
+    Record.push_back(FTDK_Template);
     Record.AddTemplateName(D->Template);
   }
   Record.AddDeclRef(D->getNextFriend());
