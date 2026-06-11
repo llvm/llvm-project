@@ -2674,11 +2674,13 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     // different number of arguments and generate a thunk instead.  This is
     // necessary because WebAssembly enforces strict call-site/callee signature
     // matching at runtime.  The fix is gated on -fwasm-fix-function-bitcasts
-    // and only triggers when the source expression can be statically traced
-    // back to a concrete function declaration.
+    // and handles both compile-time (static) and runtime function pointer casts.
     if (CGF.CGM.getTriple().isWasm() &&
         CGF.CGM.getLangOpts().WasmFixFunctionBitcasts &&
-        DestTy->isFunctionPointerType()) {
+        DestTy->isFunctionPointerType() &&
+        CE->getSubExpr()->getType()->isFunctionPointerType()) {
+
+      // Try compile-time thunk first (for statically traceable function refs)
       if (const DeclRefExpr *DRE =
               CGF.CGM.getTargetCodeGenInfo().getWasmFunctionDeclRefExpr(
                   E, CGF.CGM.getContext())) {
@@ -2689,6 +2691,17 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         if (Thunk)
           return Thunk;
       }
+
+      // If not statically traceable, use runtime binding for non-constant values
+      Value *Src = Visit(E);
+      if (!isa<llvm::Constant>(Src)) {
+        llvm::Value *RuntimeThunk =
+            CGF.CGM.getTargetCodeGenInfo().emitWasmRuntimeFunctionPointerBinding(
+                CGF, Src, CE->getSubExpr()->getType(), DestTy);
+        if (RuntimeThunk)
+          return RuntimeThunk;
+      }
+      // Fall through to normal bitcast if runtime binding returns nullptr
     }
 
     Value *Src = Visit(E);
