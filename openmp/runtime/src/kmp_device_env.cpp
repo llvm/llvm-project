@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // OpenMP 6.0 device-scope env-var registry. See kmp_device_env.h for the
-// public-internal contract; see openmp/docs/OpenMP_6_0_DeviceScope_EnvVars_
-// Walkthrough.md for the design notes and examples.
+// public-internal contract;
 //
 //===----------------------------------------------------------------------===//
 
