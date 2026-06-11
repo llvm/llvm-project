@@ -200,6 +200,8 @@ void MCAsmInfoELF::printSwitchToSection(const MCSection &Section,
     OS << "llvm_cfi_jump_table";
   else if (Sec.Type == ELF::SHT_LLVM_CALL_GRAPH)
     OS << "llvm_call_graph";
+  else if (Sec.Type == ELF::SHT_LLVM_ELF)
+    OS << "llvm_elf";
   else
     OS << "0x" << Twine::utohexstr(Sec.Type);
 

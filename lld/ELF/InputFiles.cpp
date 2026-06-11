@@ -586,28 +586,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
 
-    if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS)) {
-      // Check for presence of dynamic debugging section and create the input
-      // section but mark for discard.
-      // TODO: Should the dynamic debugging section have a new section type,
-      // e.g. SHT_LLVM_DYNAMIC_DEBUGGING? However, no other ".debug" section
-      // does.
-      StringRef name = check(obj.getSectionName(sec, shstrtab));
-      if (name == dynDbgSecName) {
-        sections[i] = &InputSection::discarded;
-        dynDbgSec = std::make_unique<InputSection>(*this, sec, name);
-        ctx.hasDynDbg = true;
-
-        // If ICF is enabled, warn and disable it because it's incompatible with
-        // dynamic debugging.
-        if (ctx.arg.icf != ICFLevel::None) {
-          Warn(ctx) << "ICF disabled because it is incompatible with dynamic "
-                       "debugging";
-          ctx.arg.icf = ICFLevel::None;
-        }
-      }
+    if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
-    }
 
     if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
       StringRef signature = getShtGroupSignature(objSections, sec);
@@ -657,6 +637,26 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         }
       }
       sections[i] = &InputSection::discarded;
+      continue;
+    }
+
+    if (sec.sh_type == SHT_LLVM_ELF) {
+      // Check for presence of dynamic debugging section and create the input
+      // section but mark for discard.
+      StringRef name = check(obj.getSectionName(sec, shstrtab));
+      if (name == dynDbgSecName) {
+        sections[i] = &InputSection::discarded;
+        dynDbgSec = std::make_unique<InputSection>(*this, sec, name);
+        ctx.hasDynDbg = true;
+
+        // If ICF is enabled, warn and disable it because it's incompatible with
+        // dynamic debugging.
+        if (ctx.arg.icf != ICFLevel::None) {
+          Warn(ctx) << "ICF disabled because it is incompatible with dynamic "
+                       "debugging";
+          ctx.arg.icf = ICFLevel::None;
+        }
+      }
       continue;
     }
 

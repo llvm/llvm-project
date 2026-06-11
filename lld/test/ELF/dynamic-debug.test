@@ -32,9 +32,11 @@ CHECK-DAG: {{.*}} 0 FUNC    GLOBAL DEFAULT [[#]] foo
 RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/main-unopt.s -o %t/main-unopt.o
 RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/foo-unopt.s -o %t/foo-unopt.o
 RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=%t/main-unopt.o %t/main.o
-RUN: llvm-objcopy --set-section-alignment=.debug_llvm_dyndbg=8 %t/main.o
+RUN: llvm-objcopy --set-section-type=.debug_llvm_dyndbg=0x6fff4c10 \
+RUN:              --set-section-alignment=.debug_llvm_dyndbg=8 %t/main.o
 RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=%t/foo-unopt.o %t/foo.o
-RUN: llvm-objcopy --set-section-alignment=.debug_llvm_dyndbg=8 %t/foo.o
+RUN: llvm-objcopy --set-section-type=.debug_llvm_dyndbg=0x6fff4c10 \
+RUN:              --set-section-alignment=.debug_llvm_dyndbg=8 %t/foo.o
 
 ## Create shared object to test handling of "inner" only dependencies.
 RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %t/shared.s -o %t/shared.o
@@ -53,7 +55,7 @@ RUN: llvm-readelf -Srsn %t/out-dd-gc | FileCheck --check-prefixes=DD,GC %s
 ## Check dynamic debugging related sections.
 DD: There are 20 section headers, starting at offset {{.*}}:
 DD:     Name               Type     Address          Off    Size   ES Flg Lk    Inf   Al
-DD-DAG: .debug_llvm_dyndbg PROGBITS 0000000000000000 {{.*}} {{.*}} 00      0      0    8
+DD-DAG: .debug_llvm_dyndbg LLVM_ELF 0000000000000000 {{.*}} {{.*}} 00      0      0    8
 DD-DAG: .note.llvm.dyndbg  NOTE     0000000000000000 {{.*}} {{.*}} 00      0      0    4
 
 ## Check GOT/PLT entries in "outer" ELF for shared symbols only referenced by "inner"

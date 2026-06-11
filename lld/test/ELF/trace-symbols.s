@@ -18,7 +18,8 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 # RUN: %p/Inputs/trace-symbols-dyndbg-unopt.s -o %t-unopt
 # RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=%t-unopt %t3
-# RUN: llvm-objcopy --set-section-alignment=.debug_llvm_dyndbg=8 %t3
+# RUN: llvm-objcopy --set-section-type=.debug_llvm_dyndbg=0x6fff4c10 \
+# RUN:              --set-section-alignment=.debug_llvm_dyndbg=8 %t3
 
 # RUN: ld.lld -y foo -shared %t1 %t1.so -o /dev/null | \
 # RUN:   FileCheck --check-prefix=PREEMPT %s --implicit-check-not=foo

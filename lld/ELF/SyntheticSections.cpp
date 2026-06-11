@@ -4360,7 +4360,7 @@ size_t MemtagGlobalDescriptors::getSize() const {
 }
 
 DynamicDebugSection::DynamicDebugSection(Ctx &ctx)
-    : SyntheticSection(ctx, dynDbgSecName, SHT_PROGBITS, 0, 8) {
+    : SyntheticSection(ctx, dynDbgSecName, SHT_LLVM_ELF, 0, 8) {
   assert(ctx.dynDbgOutput);
 }
 
