@@ -35,6 +35,7 @@ struct LifecycleInfo {
   std::string PeriodName;
   unsigned ArgIndex;
   GlobalVariable *ArrayGV;
+  bool HasArrInd = false; // true if matched by ejit_period_arr_ind
 };
 
 static SmallVector<LifecycleInfo, 4>
@@ -69,8 +70,10 @@ collectLifecycleInfo(Module &M, Function &F) {
         if (auto *IdxC = dyn_cast<ConstantAsMetadata>(Sub->getOperand(2)))
           if (auto *CI = dyn_cast<ConstantInt>(IdxC->getValue()))
             for (auto &LC : Result)
-              if (LC.PeriodName == PN->getString())
+              if (LC.PeriodName == PN->getString()) {
                 LC.ArgIndex = static_cast<unsigned>(CI->getZExtValue());
+                LC.HasArrInd = true;
+              }
       }
     }
   }
@@ -133,6 +136,17 @@ EJitPeriodHandlerPass::run(Module &M, ModuleAnalysisManager &AM) {
     auto LcInfos = collectLifecycleInfo(M, *F);
     if (LcInfos.empty())
       continue;
+
+    // Diagnose ejit_period_lc without matching ejit_period_arr_ind.
+    for (auto &LC : LcInfos) {
+      if (!LC.HasArrInd) {
+        errs() << "EJit warning: function '" << F->getName()
+               << "' has ejit_period_lc(\"" << LC.PeriodName
+               << "\") but no matching ejit_period_arr_ind(\""
+               << LC.PeriodName << "\") parameter; "
+               << "cellIdx will default to arg 0 which is likely wrong\n";
+      }
+    }
 
     FunctionCallee DeactivateFn = M.getFunction(FN_DEACTIVATE_ARRAY);
     FunctionCallee ActivateFn = M.getFunction(FN_ACTIVATE_ARRAY);
