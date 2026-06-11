@@ -10,6 +10,9 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include <chrono>
+#include <thread>
+
 using namespace lldb_private::process_gdb_remote;
 using namespace lldb_private;
 using namespace lldb;
@@ -97,6 +100,32 @@ TEST_F(GDBRemoteCommunicationTest, ReadPacketIgnoresNotifications) {
   // fails (times out) rather than returning the notification.
   ASSERT_TRUE(Write("%oocd_keepalive:03#57"));
   EXPECT_EQ(PacketResult::ErrorReplyTimeout, client.ReadPacket(response));
+}
+
+// Test the case where the notification and the actual response do NOT arrive
+// together in a single read: the notification is sent first, and the response
+// follows only after the client has already consumed the notification and gone
+// back to waiting. The notification must still be dropped and the client must
+// keep reading until the real response arrives, rather than giving up once the
+// receive buffer briefly drains.
+TEST_F(GDBRemoteCommunicationTest, ReadPacketIgnoresNotificationsAcrossReads) {
+  StringExtractorGDBRemote response;
+
+  // Send the notification on its own. The client should read it, drop it, and
+  // block on the next read with the buffer empty.
+  ASSERT_TRUE(Write("%oocd_keepalive:00#54"));
+
+  // Send the response from another thread after a short delay, so it lands in
+  // a separate read once the client is already waiting again.
+  std::thread responder([this] {
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    Write("$OK#9a");
+  });
+
+  EXPECT_EQ(PacketResult::Success, client.ReadPacket(response));
+  EXPECT_EQ("OK", response.GetStringRef());
+
+  responder.join();
 }
 
 // Test that packets with incorrect RLE sequences do not cause a crash and
