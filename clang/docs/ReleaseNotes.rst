@@ -1001,9 +1001,9 @@ Crash and bug fixes
 Improvements
 ^^^^^^^^^^^^
 
-- The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled
-  by default. It can be re-enabled with
-  ``-analyzer-config alpha.unix.PthreadLock:WarnOnLockOrderReversal=true``.
+- The lock-order-reversal check in ``alpha.unix.PthreadLock`` is now disabled by default.
+  It can be re-enabled with the
+  :ref:`WarnOnLockOrderReversal <alpha-unix-PthreadLock>` option.
 
 .. comment:
   This is for the Static Analyzer.
