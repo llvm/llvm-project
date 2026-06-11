@@ -53,6 +53,7 @@ class DXContainerGlobals : public llvm::ModulePass {
   void addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV);
   void addPipelineStateValidationInfo(Module &M,
                                       SmallVector<GlobalValue *> &Globals);
+  void addCompilerVersion(Module &M, SmallVector<GlobalValue *> &Globals);
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -83,6 +84,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   addSignature(M, Globals);
   addRootSignature(M, Globals);
   addPipelineStateValidationInfo(M, Globals);
+  addCompilerVersion(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
 }
@@ -111,17 +113,13 @@ void DXContainerGlobals::addSection(Module &M,
 
 void DXContainerGlobals::computeShaderHashAndDebugName(
     Module &M, SmallVector<GlobalValue *> &Globals) {
+  // TODO: Add -Zss flag to enable/disable calculating shader hash from ILDB.
   auto *DXILConstant =
       cast<ConstantDataArray>(M.getNamedGlobal("dx.dxil")->getInitializer());
   MD5 Digest;
   Digest.update(DXILConstant->getRawDataValues());
   MD5::MD5Result Result = Digest.final();
-
   dxbc::ShaderHash HashData = {0, {0}};
-  // The Hash's IncludesSource flag gets set whenever the hashed shader includes
-  // debug information.
-  if (!M.debug_compile_units().empty())
-    HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
 
   memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
   if (sys::IsBigEndianHost)
@@ -337,6 +335,18 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   PSV.finalize(MMI.ShaderProfile);
   PSV.write(OS);
   addSection(M, Globals, Data, "dx.psv0", "PSV0");
+}
+
+void DXContainerGlobals::addCompilerVersion(
+    Module &M, SmallVector<GlobalValue *> &Globals) {
+  if (M.debug_compile_units().empty())
+    return;
+
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+  mcdxbc::CompilerVersion CompilerVersion;
+  CompilerVersion.write(OS);
+  addSection(M, Globals, Data, "dx.vers", "VERS");
 }
 
 char DXContainerGlobals::ID = 0;

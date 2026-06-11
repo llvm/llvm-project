@@ -1691,9 +1691,21 @@ td_library(
         ":BuiltinDialectTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
+        ":ROCDLOpsTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "AMDGPUEnumsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc": ["-gen-enum-decls"],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc": ["-gen-enum-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.td",
+    deps = [":AMDGPUTdFiles"],
 )
 
 gentbl_cc_library(
@@ -1701,11 +1713,11 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.h.inc": [
             "-gen-attrdef-decls",
-            "-dialect=amdgpu",
+            "-attrdefs-dialect=amdgpu",
         ],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp.inc": [
             "-gen-attrdef-defs",
-            "-dialect=amdgpu",
+            "-attrdefs-dialect=amdgpu",
         ],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h.inc": [
             "-gen-dialect-decls",
@@ -1715,13 +1727,20 @@ gentbl_cc_library(
             "-gen-dialect-defs",
             "-dialect=amdgpu",
         ],
-        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc": ["-gen-typedef-decls"],
-        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc": ["-gen-typedef-defs"],
-        "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc": ["-gen-enum-decls"],
-        "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.cpp.inc": ["-gen-enum-defs"],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc": [
+            "-gen-typedef-decls",
+            "-typedefs-dialect=amdgpu",
+        ],
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc": [
+            "-gen-typedef-defs",
+            "-typedefs-dialect=amdgpu",
+        ],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPU.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/AMDGPU/IR/AMDGPU.md": ["-gen-op-doc"],
+        "g3doc/Dialects/AMDGPU/IR/AMDGPU.md": [
+            "-gen-op-doc",
+            "-dialect=amdgpu",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/AMDGPU/IR/AMDGPU.td",
@@ -1746,6 +1765,7 @@ cc_library(
     features = ["-parse_headers"],
     includes = ["include"],
     deps = [
+        ":AMDGPUEnumsIncGen",
         ":AMDGPUIncGen",
         ":ArithDialect",
         ":BytecodeOpInterface",
@@ -6625,9 +6645,15 @@ cc_library(
 
 td_library(
     name = "ROCDLOpsTdFiles",
-    srcs = ["include/mlir/Dialect/LLVMIR/ROCDLOps.td"],
+    srcs = [
+        "include/mlir/Dialect/LLVMIR/ROCDLAttrs.td",
+        "include/mlir/Dialect/LLVMIR/ROCDLDialect.td",
+        "include/mlir/Dialect/LLVMIR/ROCDLEnums.td",
+        "include/mlir/Dialect/LLVMIR/ROCDLOps.td",
+    ],
     includes = ["include"],
     deps = [
+        ":AttrTdFiles",
         ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
@@ -6648,6 +6674,8 @@ gentbl_cc_library(
             "-gen-dialect-defs",
             "-dialect=rocdl",
         ],
+        "include/mlir/Dialect/LLVMIR/ROCDLOpsEnums.h.inc": ["-gen-enum-decls"],
+        "include/mlir/Dialect/LLVMIR/ROCDLOpsEnums.cpp.inc": ["-gen-enum-defs"],
         "include/mlir/Dialect/LLVMIR/ROCDLOpsAttributes.h.inc": [
             "-gen-attrdef-decls",
             "-attrdefs-dialect=rocdl",
@@ -11989,6 +12017,7 @@ td_library(
     name = "TosaDialectTdFiles",
     srcs = glob(["include/mlir/Dialect/Tosa/IR/*.td"]),
     deps = [
+        ":BuiltinDialectTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":OpBaseTdFiles",

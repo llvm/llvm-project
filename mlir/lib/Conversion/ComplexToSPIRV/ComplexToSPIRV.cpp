@@ -157,6 +157,35 @@ struct MulOpPattern final : OpConversionPattern<complex::MulOp> {
   }
 };
 
+template <typename SqrtOp>
+struct AbsOpPattern final : OpConversionPattern<complex::AbsOp> {
+  using OpConversionPattern<complex::AbsOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::AbsOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value reSq = spirv::FMulOp::create(rewriter, loc, re, re);
+    Value imSq = spirv::FMulOp::create(rewriter, loc, im, im);
+    Value sum = spirv::FAddOp::create(rewriter, loc, reSq, imSq);
+
+    rewriter.replaceOpWithNewOp<SqrtOp>(op, sum);
+    return success();
+  }
+};
+
 struct DivOpPattern final : OpConversionPattern<complex::DivOp> {
   using Base::Base;
 
@@ -207,5 +236,6 @@ void mlir::populateComplexToSPIRVPatterns(
   patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern,
                ElementwiseBinaryOpPattern<complex::AddOp, spirv::FAddOp>,
                ElementwiseBinaryOpPattern<complex::SubOp, spirv::FSubOp>,
-               MulOpPattern, DivOpPattern>(typeConverter, context);
+               MulOpPattern, DivOpPattern, AbsOpPattern<spirv::GLSqrtOp>,
+               AbsOpPattern<spirv::CLSqrtOp>>(typeConverter, context);
 }

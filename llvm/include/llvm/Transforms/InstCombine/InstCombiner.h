@@ -47,6 +47,19 @@ class TargetTransformInfo;
 /// This class provides both the logic to recursively visit instructions and
 /// combine them.
 class LLVM_LIBRARY_VISIBILITY InstCombiner {
+  /// IRBuilder inserter that adds new instructions to the worklist and new
+  /// assumptions to the AssumptionCache.
+  class IRBuilderInstCombineInserter final : public IRBuilderDefaultInserter {
+    InstCombiner &IC;
+
+  public:
+    ~IRBuilderInstCombineInserter() override;
+    IRBuilderInstCombineInserter(InstCombiner &IC) : IC(IC) {}
+
+    void InsertHelper(Instruction *I, const Twine &Name,
+                      BasicBlock::iterator InsertPt) const override;
+  };
+
   /// Only used to call target specific intrinsic combining.
   /// It must **NOT** be used for any other purpose, as InstCombine is a
   /// target-independent canonicalization transform.
@@ -58,8 +71,8 @@ public:
 
   /// An IRBuilder that automatically inserts new instructions into the
   /// worklist.
-  using BuilderTy = IRBuilder<TargetFolder, IRBuilderCallbackInserter>;
-  BuilderTy &Builder;
+  using BuilderTy = IRBuilder<TargetFolder, IRBuilderInstCombineInserter>;
+  BuilderTy Builder;
 
 protected:
   /// A worklist of the instructions that need to be simplified.
@@ -100,18 +113,24 @@ protected:
   SmallDenseSet<std::pair<const BasicBlock *, const BasicBlock *>, 8> BackEdges;
   bool ComputedBackEdges = false;
 
+  /// Source for annotation metadata, used by the IRBuilder inserter.
+  Instruction *AnnotationMetadataSource = nullptr;
+
 public:
-  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder, Function &F,
-               AAResults *AA, AssumptionCache &AC, TargetLibraryInfo &TLI,
+  InstCombiner(InstructionWorklist &Worklist, Function &F, AAResults *AA,
+               AssumptionCache &AC, TargetLibraryInfo &TLI,
                TargetTransformInfo &TTI, DominatorTree &DT,
                OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
                BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
                const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
-      : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
-        F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC), TLI(TLI), DT(DT),
-        DL(DL), SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
-                   /*CanUseUndef*/ true, &DC),
+      : TTIForTargetIntrinsicsOnly(TTI),
+        Builder(F.getContext(), TargetFolder(DL),
+                IRBuilderInstCombineInserter(*this)),
+        Worklist(Worklist), F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC),
+        TLI(TLI), DT(DT), DL(DL),
+        SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
+           /*CanUseUndef*/ true, &DC),
         ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;

@@ -285,11 +285,9 @@ define void @interleaved_store_vf32_i8_stride4(<32 x i8> %x1, <32 x i8> %x2, <32
 ; AVX512-NEXT:    vpunpckhwd {{.*#+}} ymm1 = ymm4[4],ymm1[4],ymm4[5],ymm1[5],ymm4[6],ymm1[6],ymm4[7],ymm1[7],ymm4[12],ymm1[12],ymm4[13],ymm1[13],ymm4[14],ymm1[14],ymm4[15],ymm1[15]
 ; AVX512-NEXT:    vpunpcklwd {{.*#+}} ymm4 = ymm0[0],ymm2[0],ymm0[1],ymm2[1],ymm0[2],ymm2[2],ymm0[3],ymm2[3],ymm0[8],ymm2[8],ymm0[9],ymm2[9],ymm0[10],ymm2[10],ymm0[11],ymm2[11]
 ; AVX512-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm2[4],ymm0[5],ymm2[5],ymm0[6],ymm2[6],ymm0[7],ymm2[7],ymm0[12],ymm2[12],ymm0[13],ymm2[13],ymm0[14],ymm2[14],ymm0[15],ymm2[15]
-; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm2
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm4, %ymm5
-; AVX512-NEXT:    vinserti64x4 $1, %ymm5, %zmm2, %zmm2
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm4, %zmm0
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm3, %zmm1
+; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm2 = zmm1[0,1,4,5],zmm0[0,1,4,5]
 ; AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm1[2,3,6,7],zmm0[2,3,6,7]
 ; AVX512-NEXT:    vmovdqa64 %zmm0, 64(%rdi)
 ; AVX512-NEXT:    vmovdqa64 %zmm2, (%rdi)
@@ -1544,10 +1542,10 @@ define void @interleaved_store_vf64_i8_stride4(<64 x i8> %a, <64 x i8> %b, <64 x
 ; AVX2-NEXT:    vperm2i128 {{.*#+}} ymm1 = ymm8[2,3],ymm1[2,3]
 ; AVX2-NEXT:    vmovdqa %ymm1, 224(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm3, 192(%rdi)
-; AVX2-NEXT:    vmovdqa %ymm0, 96(%rdi)
-; AVX2-NEXT:    vmovdqa %ymm2, 64(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm9, 160(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm7, 128(%rdi)
+; AVX2-NEXT:    vmovdqa %ymm0, 96(%rdi)
+; AVX2-NEXT:    vmovdqa %ymm2, 64(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm5, 32(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm4, (%rdi)
 ; AVX2-NEXT:    vzeroupper

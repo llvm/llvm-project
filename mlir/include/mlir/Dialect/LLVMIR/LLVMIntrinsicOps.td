@@ -1195,7 +1195,7 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 
 /// Create a call to Masked Expand Load intrinsic.
 def LLVM_masked_expandload
-  : LLVM_OneResultIntrOp<"masked.expandload", [0], [],
+  : LLVM_OneResultIntrOp<"masked.expandload", [0], [0],
   /*traits=*/[], /*requiresFastMath=*/0, /*requiresArgAndResultAttrs=*/1,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {
   dag args = (ins LLVM_AnyPointer:$ptr,
@@ -1211,7 +1211,7 @@ def LLVM_masked_expandload
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
-    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0],
+    : LLVM_ZeroResultIntrOp<"masked.compressstore", [0, 1],
   /*traits=*/[], /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
   /*requiresArgAndResultAttrs=*/1, /*requiresOpBundles=*/0,
   /*immArgPositions=*/[], /*immArgAttrNames=*/[]> {

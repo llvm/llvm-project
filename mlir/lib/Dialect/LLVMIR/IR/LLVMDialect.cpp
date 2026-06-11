@@ -1943,12 +1943,16 @@ static Type getInsertExtractValueElementType(Type llvmType,
 }
 
 /// Extracts the element at the given index from an attribute. For
-/// `ElementsAttr` and `ArrayAttr`, returns the element at the specified index.
-/// For `ZeroAttr`, `UndefAttr`, and `PoisonAttr`, returns the attribute itself
-/// unchanged. Returns `nullptr` if the attribute is not one of these types or
-/// if the index is out of bounds.
+/// `ElementsAttr`, returns the element at the specified index, or `nullptr` if
+/// the shaped type does not have rank 1. For `ArrayAttr`, returns the element
+/// at the specified index. For `ZeroAttr`, `UndefAttr`, and `PoisonAttr`,
+/// returns the attribute itself unchanged. Returns `nullptr` if the attribute
+/// is not one of these types or if the index is out of bounds.
 static Attribute extractElementAt(Attribute attr, size_t index) {
   if (auto elementsAttr = dyn_cast<ElementsAttr>(attr)) {
+    ShapedType shapedType = elementsAttr.getShapedType();
+    if (!shapedType.hasRank() || shapedType.getRank() != 1)
+      return nullptr;
     if (index < static_cast<size_t>(elementsAttr.getNumElements()))
       return elementsAttr.getValues<Attribute>()[index];
     return nullptr;

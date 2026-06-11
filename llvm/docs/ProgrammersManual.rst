@@ -2397,6 +2397,10 @@ copies a string if a value is inserted into the table.
 ``StringMap`` iteration order, however, is not guaranteed to be deterministic, so
 any uses which require that should instead use a ``std::map``.
 
+Like ``DenseMap``, ``StringMap`` iterators are invalidated whenever an insertion
+or erasure occurs.  To erase matching elements in a single pass, use the
+``remove_if`` member instead of erasing while iterating.
+
 .. _dss_indexmap:
 
 llvm/ADT/IndexedMap.h
