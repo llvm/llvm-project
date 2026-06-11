@@ -197,6 +197,6 @@ define swifttailcc void @caller_to8_from0() "branch-protection-pauth-lr" "sign-r
 
 ; CHECK-NEXT:    mov x30, x17
 ; CHECK-NEXT:    b callee_stack8
-  tail call swifttailcc void @callee_stack8([8 x i64] undef, i64 42)
+  tail call swifttailcc void @callee_stack8([8 x i64] poison, i64 42)
   ret void
 }
