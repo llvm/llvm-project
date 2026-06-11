@@ -2070,7 +2070,7 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 // Classify XDL WMMA instructions into co-execution hazard categories
 // (Refer to SPG 4.6.12.1), mainly based on instruction latency.
 //
-// Category 0: WMMA with Latency 8
+// Category 0: WMMA with Latency 4 or 8
 //   WMMA_*F16, WMMA_*BF16
 //   WMMA_*FP8FP8
 //   WMMA_*FP8BF8
@@ -2100,6 +2100,7 @@ getWMMAHazardInstInCategory(const MachineInstr &MI, const SIInstrInfo *TII,
 
   unsigned Latency = SchedModel.computeInstrLatency(&MI);
   switch (Latency) {
+  case 4:
   case 8:
     Category = IsSWMMAC ? 2 : 0;
     break;
