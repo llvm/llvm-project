@@ -84,12 +84,12 @@ static cl::list<std::string>
                              "path matches this for -save-temps options"),
                     cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<unsigned> ThinLTOSplitPartitions(
-    "thinlto-split-partitions", cl::Hidden, cl::init(0),
-    cl::desc("Control split to how many partitions in thinlto backend."));
+static cl::opt<unsigned> LTOSplitPartitions(
+    "lto-split-partitions", cl::Hidden, cl::init(0),
+    cl::desc("Control split to how many partitions in lto backend."));
 
-static cl::opt<bool> ThinLTOSplit("thinlto-split", cl::init(false),
-			   cl::desc("Enable split module in thinlto backend."));
+static cl::opt<bool> LTOSplitByCG("lto-split-by-callgraph", cl::init(false),
+			   cl::desc("Enable split module in lto backend."));
 
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
@@ -146,7 +146,7 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
       // named from the provided OutputFileName with the Task ID appended.
       if (M.getModuleIdentifier() == "ld-temp.o" || !UseInputModulePath) {
         PathPrefix = OutputFileName;
-        if (ThinLTOSplit)
+        if (LTOSplitByCG)
           PathPrefix += extract_filename(M.getSourceFileName()) + ".";
         if (Task != (unsigned)-1)
           PathPrefix += utostr(Task) + ".";
@@ -538,7 +538,8 @@ static bool splitOptAndCodeGenThin(unsigned task, const Config &C,
                                    const ModuleSummaryIndex &CombinedIndex,
                                    const std::vector<uint8_t> &CmdArgs,
                                    bool DoOpt, AddStreamFn IRAddStream,
-                                   ArrayRef<StringRef> &BitcodeLibFuncs) {
+                                   ArrayRef<StringRef> &BitcodeLibFuncs,
+                                   bool IsThinLTO = true) {
   const Target *T = &TM->getTarget();
 
   SplitModuleCG SplitModuleCG(Mod, CombinedIndex, ParallelCodeGenParallelismLevel);
@@ -563,14 +564,16 @@ static bool splitOptAndCodeGenThin(unsigned task, const Config &C,
         cgdata::saveModuleForTwoRounds(*MPart, PartitionId,
                                        IRAddStream);
     }
-    
-    // Rename the GlobalValues whose internal is changed to external. That's
-    // can avoid duplicate symbols.
-    auto PromotedRenames = SplitModuleCG.getPromotedRenames();
-    for (auto &GV : MPart->global_values()) {
-      if (auto It = PromotedRenames.find(GV.getName());
-          It != PromotedRenames.end()) {
-        GV.setName(It->second);
+
+    if (IsThinLTO) {
+      // Rename the GlobalValues whose internal is changed to external. That's
+      // can avoid duplicate symbols int ThinLTO.
+      auto PromotedRenames = SplitModuleCG.getPromotedRenames();
+      for (auto &GV : MPart->global_values()) {
+        if (auto It = PromotedRenames.find(GV.getName());
+            It != PromotedRenames.end()) {
+          GV.setName(It->second);
+        }
       }
     }
 
@@ -690,6 +693,11 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
 
   if (ParallelCodeGenParallelismLevel == 1) {
     codegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
+  } else if (LTOSplitByCG) {
+    splitOptAndCodeGenThin(/*Task*/0, C, TM.get(), AddStream,
+                           ParallelCodeGenParallelismLevel, Mod, CombinedIndex,
+                           /*CmdArgs*/ std::vector<uint8_t>(), /*DoOpt*/false,
+                            AddStreamFn(), BitcodeLibFuncs, false);
   } else {
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel, Mod,
                  CombinedIndex);
@@ -755,9 +763,9 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   if (CodeGenOnly) {
-    if (ThinLTOSplit)
+    if (LTOSplitByCG)
       splitOptAndCodeGenThin(Task, Conf, TM.get(), AddStream,
-                             ThinLTOSplitPartitions, Mod, CombinedIndex,
+                             LTOSplitPartitions, Mod, CombinedIndex,
                              CmdArgs, false, IRAddStream, BitcodeLibFuncs);
     else
       // If CodeGenOnly is set, we only perform code generation and skip
@@ -772,9 +780,9 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   auto OptimizeAndCodegen =
       [&](Module &Mod, TargetMachine *TM,
           LLVMRemarkFileHandle DiagnosticOutputFile) {
-        if (ThinLTOSplit) {
+        if (LTOSplitByCG) {
           if (!splitOptAndCodeGenThin(
-                  Task, Conf, TM, AddStream, ThinLTOSplitPartitions, Mod,
+                  Task, Conf, TM, AddStream, LTOSplitPartitions, Mod,
                   CombinedIndex, CmdArgs, true, IRAddStream, BitcodeLibFuncs))
             return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
         } else {
