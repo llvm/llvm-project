@@ -1,6 +1,8 @@
 header: netinet/in.h
 standards:
   - posix
+merge_yaml_files:
+  - ../htons-family.yaml
 macros:
   - macro_name: IPPROTO_IP
     macro_header: netinet-in-macros.h

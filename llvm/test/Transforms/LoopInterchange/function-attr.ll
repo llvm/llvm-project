@@ -124,5 +124,151 @@ exit:
   ret void
 }
 
-declare void @writeonly(ptr %p) memory(write)
-declare void @mem_none(ptr %p) memory(none)
+; for (i = 0; i < 10; i++)
+;   for (j = 0; j < 10; j++) {
+;     A[j][i] = 0;
+;     if (j == 1)
+;       throw_exception();
+;   }
+;
+; Interchanging the loops changes the semantics of the program, e.g., `A[0][9]`
+; will be overwritten in the original code, but not in the interchanged one.
+;
+define void @call_throw_exception(ptr %A) {
+; CHECK-LABEL: define void @call_throw_exception(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  [[INNER_HEADER_PREHEADER:.*]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
+; CHECK:       [[INNER_HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[INNER_HEADER_PREHEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_HEADER]] ], [ [[TMP0:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [10 x i8], ptr [[A]], i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[COND]], label %[[UNWIND:.*]], label %[[INNER_LATCH]]
+; CHECK:       [[UNWIND]]:
+; CHECK-NEXT:    call void @throw_exception()
+; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_PREHEADER]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp eq i64 [[I_NEXT]], 10
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %inner.header
+
+inner.header:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.latch ]
+  %gep = getelementptr [10 x i8], ptr %A, i64 %j, i64 %i
+  store i8 0, ptr %gep
+  %cond = icmp eq i64 %j, 1
+  br i1 %cond, label %unwind, label %inner.latch
+
+unwind:
+  call void @throw_exception()
+  br label %inner.latch
+
+inner.latch:
+  %j.next = add i64 %j, 1
+  %ec.inner = icmp eq i64 %j.next, 10
+  br i1 %ec.inner, label %outer.latch, label %inner.header
+
+outer.latch:
+  %i.next = add i64 %i, 1
+  %ec.outer = icmp eq i64 %i.next, 10
+  br i1 %ec.outer, label %exit, label %outer.header
+
+exit:
+  ret void
+}
+
+; A[100];
+; for (i = 0; i < 1000; i++)
+;   for (j = 0; j < 10; j++) {
+;     A[i*10 + j] = 0;
+;     if (j == 1)
+;       not_return();
+;   }
+;
+; `no_return` may be something like `exit` or `abort`, and in such cases,
+; interchanging the loops will introduce additional accesses that are not
+; present in the original code (e.g., `A[9999]`) which results in UB. Thus we
+; cannot interchange the loops.
+;
+define void @call_not_return() {
+; CHECK-LABEL: define void @call_not_return() {
+; CHECK-NEXT:  [[OUTER_HEADER:.*]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER1:.*]]
+; CHECK:       [[INNER_HEADER1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER:.*]]
+; CHECK:       [[OUTER_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[INNER_HEADER1]] ], [ [[TMP0:%.*]], %[[INNER_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [10 x i8], ptr @ARR_100, i64 [[J]], i64 [[I]]
+; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[I]], 1
+; CHECK-NEXT:    br i1 [[COND]], label %[[TRAP:.*]], label %[[INNER_LATCH]]
+; CHECK:       [[TRAP]]:
+; CHECK-NEXT:    call void @not_return()
+; CHECK-NEXT:    br label %[[INNER_LATCH]]
+; CHECK:       [[INNER_LATCH]]:
+; CHECK-NEXT:    [[TMP0]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[OUTER_LATCH]], label %[[OUTER_HEADER_PREHEADER]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[I_NEXT]] = add i64 [[J]], 1
+; CHECK-NEXT:    [[EC_OUTER:%.*]] = icmp eq i64 [[I_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[EC_OUTER]], label %[[EXIT:.*]], label %[[INNER_HEADER1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %inner.header
+
+inner.header:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %inner.latch ]
+  %gep = getelementptr [10 x i8], ptr @ARR_100, i64 %i, i64 %j
+  store i8 0, ptr %gep
+  %cond = icmp eq i64 %j, 1
+  br i1 %cond, label %trap, label %inner.latch
+
+trap:
+  call void @not_return()
+  br label %inner.latch
+
+inner.latch:
+  %j.next = add i64 %j, 1
+  %ec.inner = icmp eq i64 %j.next, 10
+  br i1 %ec.inner, label %outer.latch, label %inner.header
+
+outer.latch:
+  %i.next = add i64 %i, 1
+  %ec.outer = icmp eq i64 %i.next, 1000
+  br i1 %ec.outer, label %exit, label %outer.header
+
+exit:
+  ret void
+}
+
+
+@ARR_100 = global [100 x i8] zeroinitializer
+declare void @writeonly(ptr %p) nounwind willreturn memory(write)
+declare void @mem_none(ptr %p) nounwind willreturn memory(none)
+declare void @throw_exception() willreturn memory(none)
+declare void @not_return() nounwind memory(none)

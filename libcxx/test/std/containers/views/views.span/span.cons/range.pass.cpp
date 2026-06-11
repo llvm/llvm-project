@@ -5,12 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-//  template<class R>
-//    constexpr explicit(Extent != dynamic_extent) span(R&& r);
+// template<class R>
+//   constexpr explicit(Extent != dynamic_extent) span(R&& r);
 
 #include <span>
 #include <cassert>

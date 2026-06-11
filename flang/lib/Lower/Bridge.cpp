@@ -2247,6 +2247,11 @@ private:
     switch (rOpr.v) {
     case Fortran::parser::ReductionOperator::Operator::Plus:
       return fir::ReduceOperationEnum::Add;
+    case Fortran::parser::ReductionOperator::Operator::Minus:
+      // '-' is not a valid reduction operator for DO CONCURRENT REDUCE or
+      // !$CUF KERNEL DO REDUCE; both are rejected during semantic checking
+      // before lowering is reached, so it is never lowered here.
+      llvm_unreachable("minus is not a valid reduction operator");
     case Fortran::parser::ReductionOperator::Operator::Multiply:
       return fir::ReduceOperationEnum::Multiply;
     case Fortran::parser::ReductionOperator::Operator::And:

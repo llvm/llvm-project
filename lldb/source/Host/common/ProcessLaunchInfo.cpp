@@ -244,7 +244,8 @@ llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
   LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
 #ifdef _WIN32
-  if (llvm::Error Err = m_pty->OpenPseudoConsole())
+  if (llvm::Error Err = m_pty->OpenPseudoConsole(m_stdio_window_size.cols,
+                                                 m_stdio_window_size.rows))
     return Err;
   return llvm::Error::success();
 #else

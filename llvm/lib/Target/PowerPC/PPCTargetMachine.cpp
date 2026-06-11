@@ -340,10 +340,6 @@ PPCTargetMachine::getSubtargetImpl(const Function &F) const {
 
   auto &I = SubtargetMap[CPU + TuneCPU + FS];
   if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
     I = std::make_unique<PPCSubtarget>(
         TargetTriple, CPU, TuneCPU,
         // FIXME: It would be good to have the subtarget additions here

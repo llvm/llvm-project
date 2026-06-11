@@ -182,11 +182,8 @@ define <8 x i16> @trunc_qw_512(<8 x i64> %i) #0 {
 define <8 x i16> @trunc_qw_512_maskz(<8 x i64> %i, i8 %m) #0 {
 ; KNL-LABEL: trunc_qw_512_maskz:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
-; KNL-NEXT:    vpmovdw %zmm1, %ymm1
-; KNL-NEXT:    vpand %xmm0, %xmm1, %xmm0
+; KNL-NEXT:    vpmovqw %zmm0, %xmm0 {%k1} {z}
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -205,11 +202,9 @@ define <8 x i16> @trunc_qw_512_maskz(<8 x i64> %i, i8 %m) #0 {
 define <8 x i16> @trunc_qw_512_mask(<8 x i64> %i, <8 x i16> %p, i8 %m) #0 {
 ; KNL-LABEL: trunc_qw_512_mask:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovqw %zmm0, %xmm0
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; KNL-NEXT:    vpmovdw %zmm2, %ymm2
-; KNL-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; KNL-NEXT:    vpmovqw %zmm0, %xmm1 {%k1}
+; KNL-NEXT:    vmovdqa %xmm1, %xmm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -439,8 +434,7 @@ define <16 x i8> @trunc_db_512_maskz(<16 x i32> %i, i16 %m) #0 {
 ; KNL-LABEL: trunc_db_512_maskz:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpmovdb %zmm0, %xmm0
+; KNL-NEXT:    vpmovdb %zmm0, %xmm0 {%k1} {z}
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -459,11 +453,9 @@ define <16 x i8> @trunc_db_512_maskz(<16 x i32> %i, i16 %m) #0 {
 define <16 x i8> @trunc_db_512_mask(<16 x i32> %i, <16 x i8> %p, i16 %m) #0 {
 ; KNL-LABEL: trunc_db_512_mask:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; KNL-NEXT:    vpmovdb %zmm2, %xmm2
-; KNL-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; KNL-NEXT:    vpmovdb %zmm0, %xmm1 {%k1}
+; KNL-NEXT:    vmovdqa %xmm1, %xmm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -570,8 +562,7 @@ define <16 x i16> @trunc_dw_512_maskz(<16 x i32> %i, i16 %m) #0 {
 ; KNL-LABEL: trunc_dw_512_maskz:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpmovdw %zmm0, %ymm0
+; KNL-NEXT:    vpmovdw %zmm0, %ymm0 {%k1} {z}
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_dw_512_maskz:
@@ -588,11 +579,9 @@ define <16 x i16> @trunc_dw_512_maskz(<16 x i32> %i, i16 %m) #0 {
 define <16 x i16> @trunc_dw_512_mask(<16 x i32> %i, <16 x i16> %p, i16 %m) #0 {
 ; KNL-LABEL: trunc_dw_512_mask:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovdw %zmm0, %ymm0
 ; KNL-NEXT:    kmovw %edi, %k1
-; KNL-NEXT:    vpternlogd {{.*#+}} zmm2 {%k1} {z} = -1
-; KNL-NEXT:    vpmovdw %zmm2, %ymm2
-; KNL-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
+; KNL-NEXT:    vpmovdw %zmm0, %ymm1 {%k1}
+; KNL-NEXT:    vmovdqa %ymm1, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_dw_512_mask:

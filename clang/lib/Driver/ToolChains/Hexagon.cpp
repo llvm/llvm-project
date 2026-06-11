@@ -358,9 +358,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
                               options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
-    if (D.isUsingLTO())
-      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
-                    D.getLTOMode() == LTOK_Thin);
+    if (auto LTO = HTC.getLTOMode(Args); LTO != LTOK_None)
+      addLTOOptions(HTC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
     ToolChain::UnwindLibType UNW = HTC.GetUnwindLibType(Args);
 
@@ -456,9 +455,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO())
-    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = HTC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(HTC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   //----------------------------------------------------------------------------
   // Libraries
@@ -557,11 +555,11 @@ HexagonToolChain::getEffectiveSysRoot(const ArgList &Args) const {
   SmallString<128> Dir(getHexagonTargetDir(D.Dir, D.PrefixDirs));
   // For Picolibc, use picolibc/<triple> with no fallback.
   if (GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
-    llvm::sys::path::append(Dir, "picolibc", getTriple().normalize());
+    llvm::sys::path::append(Dir, "picolibc", getTripleString());
     return Dir;
   }
   // Otherwise, try a triple subdirectory first, then fall back to "hexagon".
-  llvm::sys::path::append(Dir, getTriple().normalize());
+  llvm::sys::path::append(Dir, getTripleString());
   if (getVFS().exists(Dir))
     return Dir;
   Dir = getHexagonTargetDir(D.Dir, D.PrefixDirs);
@@ -725,7 +723,7 @@ void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
     const Arg *A = Args.getLastArg(options::OPT_unwindlib_EQ);
     if (A) {
       getDriver().Diag(diag::err_drv_unsupported_unwind_for_platform)
-          << A->getValue() << getTriple().normalize();
+          << A->getValue() << getTripleString();
       return;
     }
   }
@@ -781,6 +779,7 @@ unsigned HexagonToolChain::getOptimizationLevel(
 
 void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              ArgStringList &CC1Args,
+                                             StringRef BoundArch,
                                              Action::OffloadKind) const {
 
   bool UseInitArrayDefault = getTriple().isMusl();
