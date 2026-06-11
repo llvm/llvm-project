@@ -660,8 +660,14 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 //   - sg_layout / lane_layout: spread outer-to-inner; each dim takes
 //     min(remaining, targetShape[i]); leftover spills into the next inner
 //     dim.
-//   - sg_data: fill innermost-first, capped per dim by
-//     targetShape[i] / sgLayout[i] (the per-sg share of the extent).
+//   - sg_data: fill innermost-first, capped per dim by targetShape[i] (the
+//     full extent of the expanded dim). Capping by the full extent (rather
+//     than the per-sg share targetShape[i] / sgLayout[i]) keeps the inverse of
+//     collapseDims well-defined for replicated/broadcast layouts, where a dim
+//     is shared across subgroups so sg_layout[dim] * sg_data[dim] > extent and
+//     sg_data can be as large as the full extent. For evenly-distributed
+//     layouts the inner-first fill still lands on the per-sg share, so the
+//     result is unchanged.
 //   - lane_data: fill innermost-first, capped per dim by
 //     (targetShape[i] / sgLayout[i]) / laneLayout[i] (the per-lane share of
 //     the per-sg extent).
@@ -752,10 +758,13 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     splice(sgLayout, expSgLayout);
   }
   if (hasSgData) {
+    // Cap by the full extent targetShape[i], not the per-sg share
+    // targetShape[i] / sgLayout[i]: a replicated dim (sg_layout[dim] *
+    // sg_data[dim] > extent) has sg_data up to the full extent, which would not
+    // fit within the per-sg share. For evenly-distributed layouts the
+    // inner-first fill lands on the per-sg share regardless, so this is
+    // equivalent.
     SmallVector<int64_t> dimSizeCap(targetShape.begin(), targetShape.end());
-    if (hasSgLayout)
-      for (int64_t i = 0; i < expCount; ++i)
-        dimSizeCap[i] /= expSgLayout[i];
     SmallVector<int64_t> expSgData =
         spread(origSgDataDim, dimSizeCap, /*outerToInner=*/false);
     splice(sgData, expSgData);
