@@ -127,7 +127,6 @@ static SDValue getTagSymNode(int Tag, SelectionDAG *DAG) {
   return DAG->getTargetExternalSymbol(SymName, PtrVT);
 }
 
-
 static unsigned getWebAssemblyMemoryOrder(AtomicOrdering Ordering) {
   unsigned OrderVal = wasm::WASM_MEM_ORDER_SEQ_CST;
   switch (Ordering) {

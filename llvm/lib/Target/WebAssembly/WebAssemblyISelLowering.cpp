@@ -1361,7 +1361,6 @@ APInt WebAssembly::encodeFunctionSignature(SelectionDAG *DAG, SDLoc &DL,
   return Sig;
 }
 
-
 SDValue
 WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
                                      SmallVectorImpl<SDValue> &InVals) const {
