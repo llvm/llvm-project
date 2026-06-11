@@ -3035,18 +3035,29 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // The code below doesn't support truncating stores, so we need to split it
     // again.
     if (isa<GStore>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
-      unsigned SubReg;
       LLT MemTy = LdSt.getMMO().getMemoryType();
       auto *RC = getRegClassForTypeOnBank(MemTy, RB);
-      if (!getSubRegForClass(RC, TRI, SubReg))
+      if (!RC)
+        return false;
+      auto *ValRC = getRegClassForTypeOnBank(ValTy, RB);
+      if (!ValRC)
         return false;
 
-      // Generate a subreg copy.
-      auto Copy = MIB.buildInstr(TargetOpcode::COPY, {MemTy}, {})
-                      .addReg(ValReg, {}, SubReg)
-                      .getReg(0);
-      RBI.constrainGenericRegister(Copy, *RC, MRI);
-      LdSt.getOperand(0).setReg(Copy);
+      // Only insert a subregister copy when truncating changes register class.
+      // If both types use the same class, the store can consume ValReg
+      // directly.
+      if (ValRC != RC) {
+        unsigned SubReg;
+        if (!getSubRegForClass(RC, TRI, SubReg))
+          return false;
+
+        // Generate a subreg copy.
+        auto Copy = MIB.buildInstr(TargetOpcode::COPY, {MemTy}, {})
+                        .addReg(ValReg, {}, SubReg)
+                        .getReg(0);
+        RBI.constrainGenericRegister(Copy, *RC, MRI);
+        LdSt.getOperand(0).setReg(Copy);
+      }
     } else if (isa<GLoad>(LdSt) && ValTy.getSizeInBits() > MemSizeInBits) {
       // If this is an any-extending load from the FPR bank, split it into a regular
       // load + extend.
