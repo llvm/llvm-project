@@ -2004,11 +2004,6 @@ bool ASTReader::ReadSLocEntry(int ID) {
       FileCharacter = (SrcMgr::CharacteristicKind)Record[2];
     FileID FID = SourceMgr.createFileID(*File, IncludeLoc, FileCharacter, ID,
                                         BaseOffset + Record[0]);
-    // Stage 1 (de-dup prototype): detect when this file's SLoc entry duplicates
-    // one already loaded by an earlier module, and measure the reusable bytes.
-    SourceMgr.noteLoadedFileSLocEntry(&File->getFileEntry(),
-                                      BaseOffset + Record[0],
-                                      File->getSize() + 1);
     SrcMgr::FileInfo &FileInfo = SourceMgr.getSLocEntry(FID).getFile();
     FileInfo.NumCreatedFIDs = Record[5];
     if (Record[3])
@@ -4255,6 +4250,50 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
                            - SLocSpaceSize,&F));
 
       TotalNumSLocEntries += F.LocalNumSLocEntries;
+
+      // Eagerly scan this module's SLoc file
+      // entries to detect ones that duplicate a file already loaded by an
+      // earlier module, and measure the reusable address space.
+      // 
+      // Gated by an env var so normal builds and the test suite 
+      // are unaffected.
+      static const bool DedupDetect = ::getenv("CLANG_SLOC_DEDUP") != nullptr;
+      if (DedupDetect) {
+        unsigned N = F.LocalNumSLocEntries;
+        SavedStreamPosition SavedPos(F.SLocEntryCursor);
+        SmallVector<uint32_t, 64> Offs(N, 0);
+        SmallVector<const FileEntry *, 64> Files(N, nullptr);
+        bool ScanOK = true;
+        for (unsigned i = 0; i != N && ScanOK; ++i) {
+          if (llvm::Error Err = F.SLocEntryCursor.JumpToBit(
+                  F.SLocEntryOffsetsBase + F.SLocEntryOffsets[i])) {
+            consumeError(std::move(Err));
+            ScanOK = false;
+            break;
+          }
+          Expected<llvm::BitstreamEntry> E = F.SLocEntryCursor.advance();
+          if (!E) { consumeError(E.takeError()); ScanOK = false; break; }
+          if (E->Kind != llvm::BitstreamEntry::Record) { ScanOK = false; break; }
+          RecordData R;
+          StringRef B;
+          Expected<unsigned> C = F.SLocEntryCursor.readRecord(E->ID, R, &B);
+          if (!C) { consumeError(C.takeError()); ScanOK = false; break; }
+          Offs[i] = (uint32_t)R[0];
+          if (C.get() == SM_SLOC_FILE_ENTRY)
+            if (OptionalFileEntryRef File = getInputFile(F, R[4]).getFile())
+              Files[i] = &File->getFileEntry();
+        }
+        if (ScanOK) {
+          for (unsigned i = 0; i != N; ++i) {
+            if (!Files[i])
+              continue;
+            uint64_t Size =
+                (uint64_t)((i + 1 < N ? Offs[i + 1] : SLocSpaceSize) - Offs[i]);
+            SourceMgr.noteLoadedFileSLocEntry(
+                Files[i], F.SLocEntryBaseOffset + Offs[i], Size);
+          }
+        }
+      }
       break;
     }
 

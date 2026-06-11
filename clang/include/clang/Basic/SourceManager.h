@@ -749,7 +749,6 @@ class SourceManager : public RefCountedBase<SourceManager> {
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
 
-  /// --- Source-location de-duplication: detection (prototype, Stage 1) ---
   /// The first global offset at which each file's SLoc entry was loaded.
   /// Lets us recognize when a later module re-loads a file already present in
   /// the loaded address space (e.g. a header included by several modules).
