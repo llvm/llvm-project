@@ -445,6 +445,10 @@ static mlir::Value emitCommonNeonSISDBuiltinExpr(
   case NEON::BI__builtin_neon_vpmaxqd_f64:
   case NEON::BI__builtin_neon_vpmaxnms_f32:
   case NEON::BI__builtin_neon_vpmaxnmqd_f64:
+  case NEON::BI__builtin_neon_vqshlh_s16:
+  case NEON::BI__builtin_neon_vqshlh_u16:
+  case NEON::BI__builtin_neon_vqshlh_n_s16:
+  case NEON::BI__builtin_neon_vqshlh_n_u16:
     break;
   }
 
@@ -888,9 +892,24 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vqrdmulhq_laneq_v:
   case NEON::BI__builtin_neon_vqrdmulh_laneq_v:
   case NEON::BI__builtin_neon_vqshl_n_v:
-  case NEON::BI__builtin_neon_vqshlq_n_v:
+  case NEON::BI__builtin_neon_vqshlq_n_v: {
+    llvm::StringRef intrName =
+        usgn ? "aarch64.neon.uqshl" : "aarch64.neon.sqshl";
+    return emitNeonCall(
+        cgf.cgm, cgf.getBuilder(),
+        {ty, usgn ? getSignChangedVectorType(cgf.getBuilder(), ty) : ty}, ops,
+        intrName, ty, loc, /*isConstrainedFPIntrinsic=*/false,
+        /*shift=*/1);
+  }
   case NEON::BI__builtin_neon_vqshlu_n_v:
-  case NEON::BI__builtin_neon_vqshluq_n_v:
+  case NEON::BI__builtin_neon_vqshluq_n_v: {
+    llvm::StringRef intrName = "aarch64.neon.sqshlu";
+    return emitNeonCall(cgf.cgm, cgf.getBuilder(),
+                        {ty, getSignChangedVectorType(cgf.getBuilder(), ty)},
+                        ops, intrName, ty, loc,
+                        /*isConstrainedFPIntrinsic=*/false,
+                        /*shift=*/1);
+  }
   case NEON::BI__builtin_neon_vrecpe_v:
   case NEON::BI__builtin_neon_vrecpeq_v:
   case NEON::BI__builtin_neon_vrsqrte_v:
