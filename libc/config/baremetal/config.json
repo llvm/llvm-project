@@ -34,7 +34,7 @@
     "LIBC_CONF_PRINTF_MODULAR": {
       "value": true
     },
-    "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT": {
+    "LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320": {
       "value": true
     }
   },
