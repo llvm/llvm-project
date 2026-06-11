@@ -1264,6 +1264,15 @@ define void @redundant_assume_dereferenceable_2(ptr dereferenceable(2) %ptr) {
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %ptr, i64 2) ]
   ret void
 }
+define void @redundant_assume_dereferenceable_2_via_assume(ptr %ptr) {
+; CHECK-LABEL: @redundant_assume_dereferenceable_2_via_assume(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[PTR:%.*]], i64 2) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %ptr, i64 2) ]
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %ptr, i64 2) ]
+  ret void
+}
 
 define void @not_redundant_assume_dereferenceable_2(ptr dereferenceable(1) %ptr) {
 ; CHECK-LABEL: @not_redundant_assume_dereferenceable_2(
