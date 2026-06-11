@@ -81,14 +81,14 @@ body:             |
     ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; CHECK-NEXT: S_CMP_LT_I32 0, [[COPY3]], implicit-def $scc
-    ; CHECK-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[COPY]], [[COPY]], implicit-def $vcc, implicit $exec
-    ; CHECK-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sgpr_32 = S_CSELECT_B32 [[COPY1]], [[COPY2]], implicit $scc
-    ; CHECK-NEXT: [[V_ADD_CO_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_CSELECT_B32_]], [[V_ADD_CO_U32_e32_]], implicit-def $vcc, implicit $exec
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = override_convergence COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = override_convergence COPY $sgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = override_convergence COPY $sgpr1
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = override_convergence COPY $sgpr0
+    ; CHECK-NEXT: override_convergence S_CMP_LT_I32 0, [[COPY3]], implicit-def $scc
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = override_convergence V_ADD_CO_U32_e32 [[COPY]], [[COPY]], implicit-def $vcc, implicit $exec
+    ; CHECK-NEXT: [[S_CSELECT_B32_:%[0-9]+]]:sgpr_32 = override_convergence S_CSELECT_B32 [[COPY1]], [[COPY2]], implicit $scc
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e32_1:%[0-9]+]]:vgpr_32 = override_convergence V_ADD_CO_U32_e32 [[S_CSELECT_B32_]], [[V_ADD_CO_U32_e32_]], implicit-def $vcc, implicit $exec
     ; CHECK-NEXT: $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
     ; CHECK-NEXT: early-clobber $vgpr0 = V_MOV_B32_e32 [[V_ADD_CO_U32_e32_1]], implicit $exec
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG $vgpr0
@@ -117,7 +117,7 @@ body:             |
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = override_convergence COPY $vgpr0
   ; CHECK-NEXT:   $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -129,10 +129,10 @@ body:             |
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], [[DEF]], 0, 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY $scc
   ; CHECK-NEXT:   [[ENTER_STRICT_WWM1:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; CHECK-NEXT:   $scc = COPY [[COPY4]]
-  ; CHECK-NEXT:   [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[COPY]], [[COPY]], implicit-def $vcc, implicit $exec
-  ; CHECK-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sgpr_32 = S_CSELECT_B32 [[COPY1]], [[COPY2]], implicit $scc
-  ; CHECK-NEXT:   [[V_ADD_CO_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_CSELECT_B32_]], [[V_ADD_CO_U32_e32_]], implicit-def $vcc, implicit $exec
+  ; CHECK-NEXT:   $scc = override_convergence COPY [[COPY4]]
+  ; CHECK-NEXT:   [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = override_convergence V_ADD_CO_U32_e32 [[COPY]], [[COPY]], implicit-def $vcc, implicit $exec
+  ; CHECK-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sgpr_32 = override_convergence S_CSELECT_B32 [[COPY1]], [[COPY2]], implicit $scc
+  ; CHECK-NEXT:   [[V_ADD_CO_U32_e32_1:%[0-9]+]]:vgpr_32 = override_convergence V_ADD_CO_U32_e32 [[S_CSELECT_B32_]], [[V_ADD_CO_U32_e32_]], implicit-def $vcc, implicit $exec
   ; CHECK-NEXT:   $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM1]]
   ; CHECK-NEXT:   early-clobber $vgpr0 = V_MOV_B32_e32 [[V_ADD_CO_U32_e32_1]], implicit $exec
   ; CHECK-NEXT:   $vgpr1 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
@@ -213,7 +213,7 @@ body:             |
     ; CHECK-NEXT: dead [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY6]], implicit $exec, implicit-def $scc
     ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
-    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:vgpr_32 = override_convergence COPY [[S_MOV_B32_]]
     ; CHECK-NEXT: [[V_MOV_B32_dpp:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[COPY8]], [[COPY7]], 323, 12, 15, 0, implicit $exec
     ; CHECK-NEXT: $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
     ; CHECK-NEXT: early-clobber %15:vgpr_32 = V_MOV_B32_e32 [[V_MOV_B32_dpp]], implicit $exec
@@ -259,7 +259,7 @@ body:             |
     ; CHECK-NEXT: dead [[BUFFER_LOAD_DWORDX2_OFFSET:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFSET [[REG_SEQUENCE]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:sreg_64 = COPY $exec
     ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
-    ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = override_convergence V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
     ; CHECK-NEXT: [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY4]].sub0, 0, implicit $exec
     ; CHECK-NEXT: [[V_MOV_B32_dpp:%[0-9]+]]:vgpr_32 = V_MOV_B32_dpp [[V_MOV_B32_e32_]], [[V_MBCNT_LO_U32_B32_e64_]], 312, 15, 15, 0, implicit $exec
@@ -387,10 +387,10 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN [[COPY1]], [[COPY]], 0, 0, 0, 0, implicit $exec
     ; CHECK-NEXT: [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64_xexec = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
-    ; CHECK-NEXT: dead [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; CHECK-NEXT: dead [[DEF:%[0-9]+]]:sreg_64_xexec = override_convergence IMPLICIT_DEF
     ; CHECK-NEXT: [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]].sub0:vreg_64 = V_SET_INACTIVE_B32 0, [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0, 0, 0, undef [[ENTER_STRICT_WWM]], implicit $exec, implicit-def $scc
     ; CHECK-NEXT: [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]].sub1:vreg_64 = V_SET_INACTIVE_B32 0, [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1, 0, 0, undef [[ENTER_STRICT_WWM]], implicit $exec, implicit-def $scc
-    ; CHECK-NEXT: [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nnan nsz arcp contract reassoc nofpexcept V_MAX_F64_e64 0, [[BUFFER_LOAD_DWORDX2_OFFEN]], 0, [[BUFFER_LOAD_DWORDX2_OFFEN]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_MAX_F64_e64_:%[0-9]+]]:vreg_64 = nnan nsz arcp contract reassoc nofpexcept override_convergence V_MAX_F64_e64 0, [[BUFFER_LOAD_DWORDX2_OFFEN]], 0, [[BUFFER_LOAD_DWORDX2_OFFEN]], 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
     ; CHECK-NEXT: early-clobber $vgpr0 = V_MOV_B32_e32 [[V_MAX_F64_e64_]].sub0, implicit $exec
     ; CHECK-NEXT: early-clobber $vgpr1 = V_MOV_B32_e32 [[V_MAX_F64_e64_]].sub1, implicit $exec
