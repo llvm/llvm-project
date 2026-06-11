@@ -11,7 +11,6 @@ CHECK-NEXT:	AcquiredBefore
 CHECK-NEXT:	Alias
 CHECK-NEXT:	Aligned
 CHECK-NEXT:	AnalyzerNoReturn
-CHECK-NEXT:	Annotate
 CHECK-NEXT:	ArcWeakrefUnavailable
 CHECK-NEXT:	AvailableOnlyInDefaultEvalMethod
 CHECK-NEXT:	Blocks
@@ -91,4 +90,4 @@ CHECK-NEXT:	Visibility
 CHECK-NEXT:	WeakImport
 CHECK-NEXT:	WeakRef
 CHECK-NEXT:	WorkGroupSizeHint
-CHECK-NEXT: Total: 85
+CHECK-NEXT: Total: 84
