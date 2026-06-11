@@ -790,10 +790,7 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChainConstant(
 
   do {
     if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
-      TypeSize EltSizeBits = DL.getTypeSizeInBits(AT->getElementType());
-      if (EltSizeBits % 8 != 0)
-        return true;
-      uint32_t EltTypeSize = EltSizeBits / 8;
+      uint64_t EltTypeSize = DL.getTypeAllocSize(AT->getElementType());
       assert(Offset < AT->getNumElements() * EltTypeSize);
       uint64_t Index = Offset / EltTypeSize;
       Offset = Offset - (Index * EltTypeSize);
