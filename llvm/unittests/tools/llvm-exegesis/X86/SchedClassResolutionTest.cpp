@@ -64,20 +64,20 @@ protected:
 
 TEST_F(X86SchedClassResolutionTest, ComputeIdealizedProcResPressure_2P0) {
   const auto Pressure =
-      computeIdealizedProcResPressure(STI.getSchedModel(), {{P0Idx, 2, 0}});
+      computeIdealizedProcResPressure(STI.getSchedModel(), {{P0Idx, 2, 0, 0}});
   EXPECT_THAT(Pressure, UnorderedElementsAre(Pair(P0Idx, 2.0)));
 }
 
 TEST_F(X86SchedClassResolutionTest, ComputeIdealizedProcResPressure_2P05) {
   const auto Pressure =
-      computeIdealizedProcResPressure(STI.getSchedModel(), {{P05Idx, 2, 0}});
+      computeIdealizedProcResPressure(STI.getSchedModel(), {{P05Idx, 2, 0, 0}});
   EXPECT_THAT(Pressure,
               UnorderedElementsAre(Pair(P0Idx, 1.0), Pair(P5Idx, 1.0)));
 }
 
 TEST_F(X86SchedClassResolutionTest, ComputeIdealizedProcResPressure_2P05_2P0156) {
   const auto Pressure = computeIdealizedProcResPressure(
-      STI.getSchedModel(), {{P05Idx, 2, 0}, {P0156Idx, 2, 0}});
+      STI.getSchedModel(), {{P05Idx, 2, 0, 0}, {P0156Idx, 2, 0, 0}});
   EXPECT_THAT(Pressure,
               UnorderedElementsAre(Pair(P0Idx, 1.0), Pair(P1Idx, 1.0),
                                    Pair(P5Idx, 1.0), Pair(P6Idx, 1.0)));
@@ -86,7 +86,8 @@ TEST_F(X86SchedClassResolutionTest, ComputeIdealizedProcResPressure_2P05_2P0156)
 TEST_F(X86SchedClassResolutionTest,
        ComputeIdealizedProcResPressure_1P1_1P05_2P0156) {
   const auto Pressure = computeIdealizedProcResPressure(
-      STI.getSchedModel(), {{P1Idx, 1, 0}, {P05Idx, 1, 0}, {P0156Idx, 2, 0}});
+      STI.getSchedModel(),
+      {{P1Idx, 1, 0, 0}, {P05Idx, 1, 0, 0}, {P0156Idx, 2, 0, 0}});
   EXPECT_THAT(Pressure,
               UnorderedElementsAre(Pair(P0Idx, 1.0), Pair(P1Idx, 1.0),
                                    Pair(P5Idx, 1.0), Pair(P6Idx, 1.0)));

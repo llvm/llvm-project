@@ -41,22 +41,22 @@ let SchedModel = SchedModel_A in {
 // Check the generated data when there are no semantic issues.
 #ifdef CORRECT
 // CORRECT-LABEL: llvm::MCWriteProcResEntry MyTargetWriteProcResTable[] = {
-// CORRECT-NEXT: { 0, 0, 0 }, // Invalid
 def : WriteRes<WriteInst_A, [ResX0, ResX1, ResX2]> {
-// CORRECT-NEXT: { 1, 2, 0}, // #1
-// CORRECT-NEXT: { 2, 4, 1}, // #2
-// CORRECT-NEXT: { 3, 3, 2}, // #3
+// CORRECT-NEXT: { 0, 0, 0, 0 }, // Invalid
+// CORRECT-NEXT: { 1, 2, 0, 0}, // #1
+// CORRECT-NEXT: { 2, 4, 1, 0}, // #2
+// CORRECT-NEXT: { 3, 3, 2, 0}, // #3
     let ReleaseAtCycles = [2, 4, 3];
     let AcquireAtCycles = [0, 1, 2];
 }
 def : WriteRes<WriteInst_B, [ResX2]> {
 // If unspecified, AcquireAtCycle is set to 0.
-// CORRECT-NEXT: { 3, 1, 0}, // #4
+// CORRECT-NEXT: { 3, 1, 0, 0}, // #4
     let ReleaseAtCycles = [1];
 }
 def : WriteRes<WriteInst_C, [ResX0]> {
 // AcquireAtCycle and ReleaseAtCycle are allowed to be the same.
-// CORRECT-NEXT: { 1, 0, 0} // #5
+// CORRECT-NEXT: { 1, 0, 0, 0} // #5
     let ReleaseAtCycles = [0];
 }
 #endif // CORRECT
