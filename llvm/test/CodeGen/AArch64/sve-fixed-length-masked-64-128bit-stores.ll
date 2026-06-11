@@ -70,61 +70,11 @@ define void @masked_store_v2f64(ptr %dst, <2 x i1> %mask) {
 define void @masked_store_v8i8(ptr %ap, ptr %bp) {
 ; CHECK-LABEL: masked_store_v8i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI4_0
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    cmeq v1.8b, v0.8b, v1.8b
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    addv b1, v1.8b
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    tbnz w8, #0, .LBB4_9
-; CHECK-NEXT:  // %bb.1: // %else
-; CHECK-NEXT:    tbnz w8, #1, .LBB4_10
-; CHECK-NEXT:  .LBB4_2: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB4_11
-; CHECK-NEXT:  .LBB4_3: // %else4
-; CHECK-NEXT:    tbnz w8, #3, .LBB4_12
-; CHECK-NEXT:  .LBB4_4: // %else6
-; CHECK-NEXT:    tbnz w8, #4, .LBB4_13
-; CHECK-NEXT:  .LBB4_5: // %else8
-; CHECK-NEXT:    tbnz w8, #5, .LBB4_14
-; CHECK-NEXT:  .LBB4_6: // %else10
-; CHECK-NEXT:    tbnz w8, #6, .LBB4_15
-; CHECK-NEXT:  .LBB4_7: // %else12
-; CHECK-NEXT:    tbnz w8, #7, .LBB4_16
-; CHECK-NEXT:  .LBB4_8: // %else14
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB4_9: // %cond.store
-; CHECK-NEXT:    str b0, [x1]
-; CHECK-NEXT:    tbz w8, #1, .LBB4_2
-; CHECK-NEXT:  .LBB4_10: // %cond.store1
-; CHECK-NEXT:    mov b1, v0.b[1]
-; CHECK-NEXT:    stur b1, [x1, #1]
-; CHECK-NEXT:    tbz w8, #2, .LBB4_3
-; CHECK-NEXT:  .LBB4_11: // %cond.store3
-; CHECK-NEXT:    mov b1, v0.b[2]
-; CHECK-NEXT:    stur b1, [x1, #2]
-; CHECK-NEXT:    tbz w8, #3, .LBB4_4
-; CHECK-NEXT:  .LBB4_12: // %cond.store5
-; CHECK-NEXT:    mov b1, v0.b[3]
-; CHECK-NEXT:    stur b1, [x1, #3]
-; CHECK-NEXT:    tbz w8, #4, .LBB4_5
-; CHECK-NEXT:  .LBB4_13: // %cond.store7
-; CHECK-NEXT:    mov b1, v0.b[4]
-; CHECK-NEXT:    stur b1, [x1, #4]
-; CHECK-NEXT:    tbz w8, #5, .LBB4_6
-; CHECK-NEXT:  .LBB4_14: // %cond.store9
-; CHECK-NEXT:    mov b1, v0.b[5]
-; CHECK-NEXT:    stur b1, [x1, #5]
-; CHECK-NEXT:    tbz w8, #6, .LBB4_7
-; CHECK-NEXT:  .LBB4_15: // %cond.store11
-; CHECK-NEXT:    mov b1, v0.b[6]
-; CHECK-NEXT:    stur b1, [x1, #6]
-; CHECK-NEXT:    tbz w8, #7, .LBB4_8
-; CHECK-NEXT:  .LBB4_16: // %cond.store13
-; CHECK-NEXT:    mov b0, v0.b[7]
-; CHECK-NEXT:    stur b0, [x1, #7]
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    st1b { z0.b }, p1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %ap
   %b = load <8 x i8>, ptr %bp
@@ -136,37 +86,11 @@ define void @masked_store_v8i8(ptr %ap, ptr %bp) {
 define void @masked_store_v4i16(ptr %ap, ptr %bp) {
 ; CHECK-LABEL: masked_store_v4i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI5_0
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI5_0]
-; CHECK-NEXT:    cmeq v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    addv h1, v1.4h
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    tbnz w8, #0, .LBB5_5
-; CHECK-NEXT:  // %bb.1: // %else
-; CHECK-NEXT:    tbnz w8, #1, .LBB5_6
-; CHECK-NEXT:  .LBB5_2: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB5_7
-; CHECK-NEXT:  .LBB5_3: // %else4
-; CHECK-NEXT:    tbnz w8, #3, .LBB5_8
-; CHECK-NEXT:  .LBB5_4: // %else6
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_5: // %cond.store
-; CHECK-NEXT:    str h0, [x1]
-; CHECK-NEXT:    tbz w8, #1, .LBB5_2
-; CHECK-NEXT:  .LBB5_6: // %cond.store1
-; CHECK-NEXT:    mov h1, v0.h[1]
-; CHECK-NEXT:    str h1, [x1, #2]
-; CHECK-NEXT:    tbz w8, #2, .LBB5_3
-; CHECK-NEXT:  .LBB5_7: // %cond.store3
-; CHECK-NEXT:    mov h1, v0.h[2]
-; CHECK-NEXT:    str h1, [x1, #4]
-; CHECK-NEXT:    tbz w8, #3, .LBB5_4
-; CHECK-NEXT:  .LBB5_8: // %cond.store5
-; CHECK-NEXT:    mov h0, v0.h[3]
-; CHECK-NEXT:    str h0, [x1, #6]
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %ap
   %b = load <4 x i16>, ptr %bp
@@ -180,35 +104,10 @@ define void @masked_store_v4f16(ptr %ap, ptr %bp) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    fcmeq v1.4h, v0.4h, v1.4h
-; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
-; CHECK-NEXT:    addv h1, v1.4h
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    tbnz w8, #0, .LBB6_5
-; CHECK-NEXT:  // %bb.1: // %else
-; CHECK-NEXT:    tbnz w8, #1, .LBB6_6
-; CHECK-NEXT:  .LBB6_2: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB6_7
-; CHECK-NEXT:  .LBB6_3: // %else4
-; CHECK-NEXT:    tbnz w8, #3, .LBB6_8
-; CHECK-NEXT:  .LBB6_4: // %else6
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB6_5: // %cond.store
-; CHECK-NEXT:    str h0, [x1]
-; CHECK-NEXT:    tbz w8, #1, .LBB6_2
-; CHECK-NEXT:  .LBB6_6: // %cond.store1
-; CHECK-NEXT:    add x9, x1, #2
-; CHECK-NEXT:    st1 { v0.h }[1], [x9]
-; CHECK-NEXT:    tbz w8, #2, .LBB6_3
-; CHECK-NEXT:  .LBB6_7: // %cond.store3
-; CHECK-NEXT:    add x9, x1, #4
-; CHECK-NEXT:    st1 { v0.h }[2], [x9]
-; CHECK-NEXT:    tbz w8, #3, .LBB6_4
-; CHECK-NEXT:  .LBB6_8: // %cond.store5
-; CHECK-NEXT:    add x8, x1, #6
-; CHECK-NEXT:    st1 { v0.h }[3], [x8]
+; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-NEXT:    st1h { z0.h }, p1, [x1]
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, ptr %ap
   %b = load <4 x half>, ptr %bp

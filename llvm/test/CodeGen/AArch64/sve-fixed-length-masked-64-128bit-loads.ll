@@ -86,64 +86,12 @@ define <2 x double> @masked_load_passthru_v2f64(ptr %src, <2 x i1> %mask, <2 x d
 define <8 x i8> @masked_load_v8i8(ptr %ap, ptr %bp) {
 ; CHECK-LABEL: masked_load_v8i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI5_0
-; CHECK-NEXT:    cmeq v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI5_0]
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    addv b0, v0.8b
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tbz w8, #0, .LBB5_2
-; CHECK-NEXT:  // %bb.1: // %cond.load
-; CHECK-NEXT:    ldr b0, [x0]
-; CHECK-NEXT:    tbnz w8, #1, .LBB5_3
-; CHECK-NEXT:    b .LBB5_4
-; CHECK-NEXT:  .LBB5_2:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    tbz w8, #1, .LBB5_4
-; CHECK-NEXT:  .LBB5_3: // %cond.load1
-; CHECK-NEXT:    add x9, x0, #1
-; CHECK-NEXT:    ld1 { v0.b }[1], [x9]
-; CHECK-NEXT:  .LBB5_4: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB5_11
-; CHECK-NEXT:  // %bb.5: // %else5
-; CHECK-NEXT:    tbnz w8, #3, .LBB5_12
-; CHECK-NEXT:  .LBB5_6: // %else8
-; CHECK-NEXT:    tbnz w8, #4, .LBB5_13
-; CHECK-NEXT:  .LBB5_7: // %else11
-; CHECK-NEXT:    tbnz w8, #5, .LBB5_14
-; CHECK-NEXT:  .LBB5_8: // %else14
-; CHECK-NEXT:    tbnz w8, #6, .LBB5_15
-; CHECK-NEXT:  .LBB5_9: // %else17
-; CHECK-NEXT:    tbnz w8, #7, .LBB5_16
-; CHECK-NEXT:  .LBB5_10: // %else20
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB5_11: // %cond.load4
-; CHECK-NEXT:    add x9, x0, #2
-; CHECK-NEXT:    ld1 { v0.b }[2], [x9]
-; CHECK-NEXT:    tbz w8, #3, .LBB5_6
-; CHECK-NEXT:  .LBB5_12: // %cond.load7
-; CHECK-NEXT:    add x9, x0, #3
-; CHECK-NEXT:    ld1 { v0.b }[3], [x9]
-; CHECK-NEXT:    tbz w8, #4, .LBB5_7
-; CHECK-NEXT:  .LBB5_13: // %cond.load10
-; CHECK-NEXT:    add x9, x0, #4
-; CHECK-NEXT:    ld1 { v0.b }[4], [x9]
-; CHECK-NEXT:    tbz w8, #5, .LBB5_8
-; CHECK-NEXT:  .LBB5_14: // %cond.load13
-; CHECK-NEXT:    add x9, x0, #5
-; CHECK-NEXT:    ld1 { v0.b }[5], [x9]
-; CHECK-NEXT:    tbz w8, #6, .LBB5_9
-; CHECK-NEXT:  .LBB5_15: // %cond.load16
-; CHECK-NEXT:    add x9, x0, #6
-; CHECK-NEXT:    ld1 { v0.b }[6], [x9]
-; CHECK-NEXT:    tbz w8, #7, .LBB5_10
-; CHECK-NEXT:  .LBB5_16: // %cond.load19
-; CHECK-NEXT:    add x8, x0, #7
-; CHECK-NEXT:    ld1 { v0.b }[7], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    cmpeq p1.b, p0/z, z0.b, z1.b
+; CHECK-NEXT:    ld1b { z0.b }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %ap
   %b = load <8 x i8>, ptr %bp
@@ -155,40 +103,12 @@ define <8 x i8> @masked_load_v8i8(ptr %ap, ptr %bp) {
 define <4 x i16> @masked_load_v4i16(ptr %ap, ptr %bp) {
 ; CHECK-LABEL: masked_load_v4i16:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI6_0
-; CHECK-NEXT:    cmeq v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI6_0]
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    addv h0, v0.4h
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tbz w8, #0, .LBB6_2
-; CHECK-NEXT:  // %bb.1: // %cond.load
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    tbnz w8, #1, .LBB6_3
-; CHECK-NEXT:    b .LBB6_4
-; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    tbz w8, #1, .LBB6_4
-; CHECK-NEXT:  .LBB6_3: // %cond.load1
-; CHECK-NEXT:    add x9, x0, #2
-; CHECK-NEXT:    ld1 { v0.h }[1], [x9]
-; CHECK-NEXT:  .LBB6_4: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB6_7
-; CHECK-NEXT:  // %bb.5: // %else5
-; CHECK-NEXT:    tbnz w8, #3, .LBB6_8
-; CHECK-NEXT:  .LBB6_6: // %else8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB6_7: // %cond.load4
-; CHECK-NEXT:    add x9, x0, #4
-; CHECK-NEXT:    ld1 { v0.h }[2], [x9]
-; CHECK-NEXT:    tbz w8, #3, .LBB6_6
-; CHECK-NEXT:  .LBB6_8: // %cond.load7
-; CHECK-NEXT:    add x8, x0, #6
-; CHECK-NEXT:    ld1 { v0.h }[3], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    cmpeq p1.h, p0/z, z0.h, z1.h
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %ap
   %b = load <4 x i16>, ptr %bp
@@ -202,38 +122,11 @@ define <4 x half> @masked_load_v4f16(ptr %ap, ptr %bp) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    ldr d1, [x1]
-; CHECK-NEXT:    adrp x8, .LCPI7_0
+; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    fcmeq v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI7_0]
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-NEXT:    addv h1, v0.4h
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    tbnz w8, #0, .LBB7_5
-; CHECK-NEXT:  // %bb.1: // %else
-; CHECK-NEXT:    tbnz w8, #1, .LBB7_6
-; CHECK-NEXT:  .LBB7_2: // %else2
-; CHECK-NEXT:    tbnz w8, #2, .LBB7_7
-; CHECK-NEXT:  .LBB7_3: // %else5
-; CHECK-NEXT:    tbnz w8, #3, .LBB7_8
-; CHECK-NEXT:  .LBB7_4: // %else8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB7_5: // %cond.load
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    tbz w8, #1, .LBB7_2
-; CHECK-NEXT:  .LBB7_6: // %cond.load1
-; CHECK-NEXT:    add x9, x0, #2
-; CHECK-NEXT:    ld1 { v0.h }[1], [x9]
-; CHECK-NEXT:    tbz w8, #2, .LBB7_3
-; CHECK-NEXT:  .LBB7_7: // %cond.load4
-; CHECK-NEXT:    add x9, x0, #4
-; CHECK-NEXT:    ld1 { v0.h }[2], [x9]
-; CHECK-NEXT:    tbz w8, #3, .LBB7_4
-; CHECK-NEXT:  .LBB7_8: // %cond.load7
-; CHECK-NEXT:    add x8, x0, #6
-; CHECK-NEXT:    ld1 { v0.h }[3], [x8]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %a = load <4 x half>, ptr %ap
   %b = load <4 x half>, ptr %bp
