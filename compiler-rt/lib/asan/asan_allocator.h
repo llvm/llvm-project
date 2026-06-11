@@ -18,6 +18,11 @@
 #include "asan_interceptors.h"
 #include "asan_internal.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#if SANITIZER_AMDHSA
+namespace __sanitizer {
+#  include "sanitizer_common/sanitizer_allocator_amdgpu.h"
+}  // namespace __sanitizer
+#endif
 #include "sanitizer_common/sanitizer_list.h"
 #include "sanitizer_common/sanitizer_platform.h"
 
@@ -269,7 +274,14 @@ static const uptr kNumberOfSizeClasses = SizeClassMap::kNumClasses;
 
 template <typename AddressSpaceView>
 using AsanAllocatorASVT =
+#if SANITIZER_AMDHSA
+    CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>,
+                      DefaultLargeMmapAllocatorPtrArray,
+                      __sanitizer::AmdgpuDeviceAllocatorT<
+                          PrimaryAllocatorASVT<AddressSpaceView>>>;
+#else
     CombinedAllocator<PrimaryAllocatorASVT<AddressSpaceView>>;
+#endif
 using AsanAllocator = AsanAllocatorASVT<LocalAddressSpaceView>;
 using AllocatorCache = AsanAllocator::AllocatorCache;
 

@@ -16,6 +16,8 @@
 #  include "sanitizer_atomic.h"
 
 namespace __sanitizer {
+#  include "sanitizer_allocator_amdgpu.h"
+
 struct HsaFunctions {
   // -------------- Memory Allocate/Deallocate Functions ----------------
   hsa_status_t (*memory_pool_allocate)(hsa_amd_memory_pool_t memory_pool,
