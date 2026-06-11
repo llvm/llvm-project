@@ -676,6 +676,13 @@ public:
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
   }
 
+  bool haveFastClmul(Type *Ty) const override {
+    const TargetLoweringBase *TLI = getTLI();
+    EVT VT = TLI->getValueType(DL, Ty);
+    return TLI->isTypeLegal(VT) &&
+           TLI->isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT);
+  }
+
   bool isFCmpOrdCheaperThanFCmpZero(Type *Ty) const override { return true; }
 
   InstructionCost getFPOpCost(Type *Ty) const override {

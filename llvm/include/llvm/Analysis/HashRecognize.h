@@ -35,6 +35,23 @@ struct CRCTable : public std::array<APInt, 256> {
 #endif
 };
 
+/// The constants used to perform polynomial division with a Barrett-style
+/// reduction into two polynomial multiplications instead.
+struct CRCBarrettConstants {
+  // An approximation of the polynomial quotient floor(x^2w / P(x)), where P(x)
+  // is the generating polynomial and w is the CRC width.
+  APInt Reciprocal;
+
+  // The generating polynomial P(x) in full, adjusted for endianness.
+  APInt Generator;
+
+  LLVM_ABI void print(raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
+#endif
+};
+
 /// The structure that is returned when a polynomial algorithm was recognized by
 /// the analysis. Currently, only the CRC algorithm is recognized.
 struct PolynomialInfo {
@@ -87,6 +104,11 @@ public:
   // and return a 256-entry CRC table.
   LLVM_ABI static CRCTable genSarwateTable(const APInt &GenPoly,
                                            bool IsBigEndian);
+
+  // Auxilary entry point after analysis to generate constants for a
+  // Barrett-style reduction.
+  LLVM_ABI static CRCBarrettConstants
+  genBarrettConstants(const APInt &GenPoly, bool ByteOrderSwapped);
 
   LLVM_ABI void print(raw_ostream &OS) const;
 

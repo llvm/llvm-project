@@ -202,6 +202,8 @@ public:
 private:
   using StoreList = SmallVector<StoreInst *, 8>;
   using StoreListMap = MapVector<Value *, StoreList>;
+  using CRCTableFn =
+      function_ref<Value *(IRBuilderBase &Builder, Value *Indexer)>;
 
   StoreListMap StoreRefsForMemset;
   StoreListMap StoreRefsForMemsetPattern;
@@ -259,6 +261,9 @@ private:
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
   bool optimizeCRCLoop(const PolynomialInfo &Info);
+  bool optimizeCRCLoopWithFastClmul(const PolynomialInfo &Info);
+  void buildReducedCRCLoop(const PolynomialInfo &Info,
+                           CRCTableFn GetTableEntry);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -1560,10 +1565,14 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
+  // If using llvm.clmul would be more efficient, use that instead of a lookup
+  // table.
+  if (optimizeCRCLoopWithFastClmul(Info))
+    return true;
+
   // First, create a new GlobalVariable corresponding to the
   // Sarwate-lookup-table.
   Type *CRCTy = Info.LHS->getType();
-  unsigned CRCBW = CRCTy->getIntegerBitWidth();
   std::array<Constant *, 256> CRCConstants;
   transform(HashRecognize::genSarwateTable(Info.RHS, Info.IsBigEndian),
             CRCConstants.begin(),
@@ -1574,10 +1583,94 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       new GlobalVariable(M, ConstArray->getType(), true,
                          GlobalValue::PrivateLinkage, ConstArray, ".crctable");
 
+  // Build a reduced per-byte loop which loads an entry from the Sarwate lookup
+  // table each iteration.
+  //
+  // Little-endian:
+  //   crc = (crc >> 8) ^ tbl[(iv'th byte of data) ^ (bottom byte of crc)]
+  // Big-Endian:
+  //   crc = (crc << 8) ^ tbl[(iv'th byte of data) ^ (top byte of crc)]
+  buildReducedCRCLoop(Info, [&](auto &Builder, Value *Indexer) {
+    // Always index into a GEP using the index type.
+    Indexer = Builder.CreateZExt(
+        Indexer, SE->getDataLayout().getIndexType(GV->getType()),
+        "indexer.ext");
+
+    // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
+    Value *CRCTableGEP =
+        Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
+    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+
+    return CRCTableLd;
+  });
+
+  return true;
+}
+
+bool LoopIdiomRecognize::optimizeCRCLoopWithFastClmul(
+    const PolynomialInfo &Info) {
+  Type *CRCTy = Info.LHS->getType();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+  Type *ClmulTy = IntegerType::get(CRCTy->getContext(), 2 * CRCBW);
+
+  // Only apply this optimization strategy if llvm.clmul would lower into a
+  // native instruction.
+  if (!TTI->haveFastClmul(ClmulTy))
+    return false;
+
+  // First, generate the two constants required for a Barrett-style reduction.
+  CRCBarrettConstants Constants =
+      HashRecognize::genBarrettConstants(Info.RHS, Info.ByteOrderSwapped);
+  Value *Reciprocal = ConstantInt::get(ClmulTy, Constants.Reciprocal);
+  Value *Generator = ConstantInt::get(ClmulTy, Constants.Generator);
+
+  // Build a reduced per-byte loop which computes the lookup table entry on the
+  // fly each iteration using a Barrett-style reduction.
+  //
+  // Little-endian:
+  //   q = ((iv'th byte of data) ^ (bottom byte of crc)) clmul (reciprocal term)
+  //   entry = (bottom byte of q) clmul (generator term)
+  //   crc = (crc >> 8) ^ (top byte of entry)
+  // Big-Endian:
+  //   q = ((iv'th byte of data) ^ (top byte of crc)) clmul (reciprocal term)
+  //   entry = (top byte of q) clmul (generator term)
+  //   crc = (crc << 8) ^ (bottom byte of entry)
+  buildReducedCRCLoop(Info, [&](auto &Builder, Value *Indexer) {
+    // Approximate floor(Indexer / (generator term)) using Indexer * (reciprocal
+    // term).
+    Indexer = Builder.CreateZExt(Indexer, ClmulTy, "indexer.ext");
+    Value *Quotient = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, Indexer,
+                                                    Reciprocal, {}, "quot");
+    Quotient = Info.ByteOrderSwapped
+                   ? Builder.CreateLShr(Quotient, CRCBW, "quot.be.shift")
+                   : Builder.CreateAnd(Quotient, 0xFF, "quot.le.mask");
+
+    // floor(Indexer / (generator term)) * (generator term) should give us what
+    // the Sarwate table entry would be.
+    Value *Entry = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, Quotient,
+                                                 Generator, {}, "entry");
+    Entry =
+        Info.ByteOrderSwapped
+            ? Builder.CreateAnd(Entry, APInt::getLowBitsSet(2 * CRCBW, CRCBW),
+                                "entry.be.mask")
+            : Builder.CreateLShr(Entry, 8, "entry.le.shift");
+    Entry = Builder.CreateTrunc(Entry, CRCTy, "entry.cast");
+
+    return Entry;
+  });
+
+  return true;
+}
+
+void LoopIdiomRecognize::buildReducedCRCLoop(
+    const PolynomialInfo &Info, LoopIdiomRecognize::CRCTableFn GetTableEntry) {
+  Type *CRCTy = Info.LHS->getType();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+
   PHINode *IV = CurLoop->getCanonicalInductionVariable();
   SmallVector<PHINode *, 2> Cleanup;
 
-  // Next, mark all PHIs for removal except IV.
+  // First, mark all PHIs for removal except IV.
   {
     for (PHINode &PN : CurLoop->getHeader()->phis()) {
       if (&PN == IV)
@@ -1606,11 +1699,6 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
 
   // Finally, fill the loop with the Sarwate-table-lookup logic, and replace all
   // uses of ComputedValue.
-  //
-  // Little-endian:
-  //   crc = (crc >> 8) ^ tbl[(iv'th byte of data) ^ (bottom byte of crc)]
-  // Big-Endian:
-  //   crc = (crc << 8) ^ tbl[(iv'th byte of data) ^ (top byte of crc)]
   {
     auto LoByte = [](IRBuilderBase &Builder, Value *Op, const Twine &Name) {
       return Builder.CreateZExtOrTrunc(
@@ -1664,24 +1752,18 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     Indexer = Info.IsBigEndian ? HiIdx(Builder, Indexer, "indexer.hi")
                                : LoByte(Builder, Indexer, "indexer.lo");
 
-    // Always index into a GEP using the index type.
-    Indexer = Builder.CreateZExt(
-        Indexer, SE->getDataLayout().getIndexType(GV->getType()),
-        "indexer.ext");
-
-    // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
-    Value *CRCTableGEP =
-        Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
-    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
+    // Get the Sarwate lookup table entry corresponding to Indexer. This could
+    // either be a load or an on-the-fly computation, so let the caller decide.
+    Value *CRCTableEntry = GetTableEntry(Builder, Indexer);
 
     // CRCNext = (CRC (<<|>>) 8) ^ CRCTableLd, or simply CRCTableLd in case of
     // CRC-8.
-    Value *CRCNext = CRCTableLd;
+    Value *CRCNext = CRCTableEntry;
     if (CRCBW > 8) {
       Value *CRCShift = Info.IsBigEndian
                             ? Builder.CreateShl(CRC, 8, "crc.be.shift")
                             : Builder.CreateLShr(CRC, 8, "crc.le.shift");
-      CRCNext = Builder.CreateXor(CRCShift, CRCTableLd, "crc.next");
+      CRCNext = Builder.CreateXor(CRCShift, CRCTableEntry, "crc.next");
     }
 
     // Connect the back-edge for the loop, and RAUW the ComputedValue.
@@ -1696,7 +1778,6 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       RecursivelyDeleteDeadPHINode(PN);
     SE->forgetLoop(CurLoop);
   }
-  return true;
 }
 
 bool LoopIdiomRecognize::runOnNoncountableLoop() {

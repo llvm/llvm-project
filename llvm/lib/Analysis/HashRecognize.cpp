@@ -376,6 +376,48 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
+// Divide one GF(2) polynomial by another.
+static APInt calculateGF2Quotient(APInt Dividend, const APInt &Divisor) {
+  unsigned DivisorDeg = Divisor.getActiveBits() - 1;
+  APInt Quotient = APInt::getZero(Dividend.getBitWidth());
+  unsigned DividendDeg;
+  while (!Dividend.isZero() &&
+         (DividendDeg = Dividend.getActiveBits() - 1) >= DivisorDeg) {
+    unsigned Shift = DividendDeg - DivisorDeg;
+    Quotient.setBit(Shift);
+    Dividend ^= Divisor.shl(Shift);
+  }
+  return Quotient;
+}
+
+// Generate constants (mu/reciprocal, P/generator) for a Barrett-style
+// reduction. This reduction allows the Sarwate table entry to be computed on
+// the fly, rather than requiring a load from memory (on supporting hardware).
+CRCBarrettConstants HashRecognize::genBarrettConstants(const APInt &GenPoly,
+                                                       bool ByteOrderSwapped) {
+  unsigned BW = GenPoly.getBitWidth();
+  unsigned ClmulBW = BW * 2;
+  unsigned DivBW = ClmulBW + 1;
+  APInt Dividend = APInt::getSignedMinValue(DivBW);
+  CRCBarrettConstants C;
+
+  if (ByteOrderSwapped) {
+    APInt G = GenPoly.zext(DivBW);
+    G.setBit(BW);
+    APInt Mu = calculateGF2Quotient(Dividend, G);
+    C.Reciprocal = Mu.trunc(ClmulBW);
+    C.Generator = G.trunc(ClmulBW);
+    return C;
+  }
+
+  APInt G = GenPoly.reverseBits().zext(DivBW);
+  G.setBit(BW);
+  APInt Mu = calculateGF2Quotient(Dividend, G);
+  C.Reciprocal = Mu.trunc(BW + 1).reverseBits().zext(ClmulBW).getLoBits(8);
+  C.Generator = GenPoly.zext(ClmulBW).shl(1);
+  return C;
+}
+
 /// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
 /// of \p SI's condition, ignoring any casts. The purpose of this function is to
 /// ensure that LHSAux from the SimpleRecurrence is used correctly in the CRC
@@ -531,6 +573,14 @@ void CRCTable::print(raw_ostream &OS) const {
 void CRCTable::dump() const { print(dbgs()); }
 #endif
 
+void CRCBarrettConstants::print(raw_ostream &OS) const {
+  OS << "Reciprocal = " << Reciprocal << ", Generator = " << Generator << '\n';
+}
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void CRCBarrettConstants::dump() const { print(dbgs()); }
+#endif
+
 void HashRecognize::print(raw_ostream &OS) const {
   if (!L.isInnermost())
     return;
@@ -565,6 +615,8 @@ void HashRecognize::print(raw_ostream &OS) const {
   }
   OS.indent(2) << "Computed CRC lookup table:\n";
   genSarwateTable(Info.RHS, Info.IsBigEndian).print(OS);
+  OS.indent(2) << "Computed CRC Barrett constants:\n";
+  genBarrettConstants(Info.RHS, Info.IsBigEndian).print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
