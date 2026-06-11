@@ -85,10 +85,11 @@ struct ParserCallbacks {
   std::optional<MDTypeCallbackTy> MDType;
 
   /// If true, do not auto-upgrade debug intrinsic calls (llvm.dbg.*) to
-  /// non-instruction debug records during bitcode read. The caller is then
+  /// non-instruction debug records during bitcode read. This flag allows
+  /// direct manipulation of the old intrinsic-form debug info; beware that
+  /// LLVM does not support using these intrinsics any more. The caller is
   /// responsible for performing the upgrade manually (e.g. via
-  /// Module::convertToNewDbgValues()) after any custom processing of the
-  /// intrinsic-form IR.
+  /// Module::convertToNewDbgValues()).
   bool SkipDebugIntrinsicUpgrade = false;
 
   ParserCallbacks() = default;
