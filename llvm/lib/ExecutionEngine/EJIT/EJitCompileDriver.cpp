@@ -105,10 +105,6 @@ void *EJitCompileDriver::getOrCompile(uint64_t cacheKey) {
     return nullptr;
   }
 
-#ifndef EJIT_FREESTANDING
-  auto start = std::chrono::steady_clock::now();
-#endif
-
   syncEngine_->setActiveContext(&ctx);
 
   if (auto Err = syncEngine_->loadBitcodeModule(bitcode, cacheKey, funcName)) {
