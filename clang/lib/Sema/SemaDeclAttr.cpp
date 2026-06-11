@@ -4450,24 +4450,24 @@ LifetimeCaptureByAttr *Sema::ParseLifetimeCaptureByAttr(const ParsedAttr &AL,
     }
     assert(AL.isArgIdent(I));
     IdentifierLoc *IdLoc = AL.getArgAsIdent(I);
-    StringRef Name = IdLoc->getIdentifierInfo()->getName();
+    IdentifierInfo *Ident = IdLoc->getIdentifierInfo();
     StringRef Replacement;
-    if (Name == "this")
+    if (Ident->isStr("this"))
       Replacement = "lifetime_capture_by_this";
-    else if (Name == "global")
+    else if (Ident->isStr("global"))
       Replacement = "lifetime_capture_by_global";
-    else if (Name == "unknown")
+    else if (Ident->isStr("unknown"))
       Replacement = "lifetime_capture_by_unknown";
     if (!Replacement.empty())
       Diag(IdLoc->getLoc(), diag::warn_deprecated_capture_by_special_entity)
-          << Name << Replacement << IdLoc->getLoc();
-    if (IdLoc->getIdentifierInfo()->getName() == ParamName) {
+          << Ident << Replacement << IdLoc->getLoc();
+    if (Ident->getName() == ParamName) {
       Diag(IdLoc->getLoc(), diag::err_capture_by_references_itself)
           << IdLoc->getLoc();
       IsValid = false;
       continue;
     }
-    ParamIdents[I] = IdLoc->getIdentifierInfo();
+    ParamIdents[I] = Ident;
     ParamLocs[I] = IdLoc->getLoc();
   }
   if (!IsValid)
