@@ -116,6 +116,7 @@ public:
 
 private:
   StringRef getSymbolName(uint32_t Index);
+  Expected<StringRef> tryGetSymbolName(uint32_t Index);
   void printSymbols(bool ExtraSymInfo) override;
   void printDynamicSymbols() override;
   void printSymbol(const SymbolRef &Sym);
@@ -2502,15 +2503,19 @@ void COFFDumper::printStringTable() {
 }
 
 StringRef COFFDumper::getSymbolName(uint32_t Index) {
-  Expected<COFFSymbolRef> Sym = Obj->getSymbol(Index);
-  if (!Sym)
-    reportError(Sym.takeError(), Obj->getFileName());
-
-  Expected<StringRef> SymName = Obj->getSymbolName(*Sym);
+  Expected<StringRef> SymName = tryGetSymbolName(Index);
   if (!SymName)
     reportError(SymName.takeError(), Obj->getFileName());
 
   return *SymName;
+}
+
+Expected<StringRef> COFFDumper::tryGetSymbolName(uint32_t Index) {
+  Expected<COFFSymbolRef> Sym = Obj->getSymbol(Index);
+  if (!Sym)
+    return Sym.takeError();
+
+  return Obj->getSymbolName(*Sym);
 }
 
 void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
@@ -2566,7 +2571,11 @@ void COFFDumper::printCOFFCxxModuleMetadata() {
   SectionRef Sect;
   for (SectionRef S : Obj->sections()) {
     Expected<StringRef> SectionName = S.getName();
-    if (SectionName && *SectionName == ".modmeta") {
+    if (!SectionName) {
+      reportUniqueWarning(SectionName.takeError());
+      continue;
+    }
+    if (*SectionName == ".modmeta") {
       Sect = S;
       break;
     }
@@ -2604,6 +2613,17 @@ void COFFDumper::printCOFFCxxModuleMetadata() {
     return;
   }
 
+  const auto PrintSymbol = [&](raw_ostream &OS, uint32_t Index) {
+    Expected<StringRef> SymName = tryGetSymbolName(Index);
+    if (SymName) {
+      OS << *SymName;
+    } else {
+      reportUniqueWarning(SymName.takeError());
+      OS << "<error>";
+    }
+    OS << " (" << to_string<uint32_t>(Index) << ')';
+  };
+
   ListScope L(W, "Modules");
   while (Reader.hasModuleData()) {
     Expected<uint32_t> ModuleID = Reader.readModuleID();
@@ -2637,21 +2657,15 @@ void COFFDumper::printCOFFCxxModuleMetadata() {
       return;
     }
 
-    Err = Reader.readSymbolList([&](auto A) {
-      W.printList("Symbols", A, [&](auto &OS, auto V) {
-        OS << getSymbolName(V) << " (" << to_string<uint32_t>(V) << ')';
-      });
-    });
+    Err = Reader.readSymbolList(
+        [&](auto A) { W.printList("Symbols", A, PrintSymbol); });
     if (Err) {
       reportWarning(std::move(Err), Obj->getFileName());
       return;
     }
 
-    Err = Reader.readSymbolList([&](auto A) {
-      W.printList("Exports", A, [&](auto &OS, auto V) {
-        OS << getSymbolName(V) << " (" << to_string<uint32_t>(V) << ')';
-      });
-    });
+    Err = Reader.readSymbolList(
+        [&](auto A) { W.printList("Exports", A, PrintSymbol); });
     if (Err) {
       reportWarning(std::move(Err), Obj->getFileName());
       return;

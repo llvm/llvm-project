@@ -21,11 +21,10 @@ bool COFFCxxModuleMetadataReader::hasModuleData() const {
 }
 
 Expected<uint32_t> COFFCxxModuleMetadataReader::readModuleID() {
-  if (ModuleIndexWidth != 1 && ModuleIndexWidth != 2 && ModuleIndexWidth != 4)
-    return createStringError("unsupported index width: %d", ModuleIndexWidth);
-
   if (ModuleData.size() < ModuleIndexWidth)
-    return createStringError("not enough data");
+    return createStringError(
+        "not enough data: %d remaining, at least %d required",
+        ModuleData.size(), ModuleIndexWidth);
 
   uint32_t ID = std::numeric_limits<uint32_t>::max();
   switch (ModuleIndexWidth) {
@@ -43,6 +42,8 @@ Expected<uint32_t> COFFCxxModuleMetadataReader::readModuleID() {
   case 4: {
     ID = support::endian::read<uint32_t>(ModuleData.data(), endianness::little);
   } break;
+  default:
+    return createStringError("unsupported index width: %d", ModuleIndexWidth);
   }
 
   ModuleData = ModuleData.slice(ModuleIndexWidth, StringRef::npos);

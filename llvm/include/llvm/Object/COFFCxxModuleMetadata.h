@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// MSVC-specific.
-// Definitions and a parser for the C++ 20 ".modmeta" section.
+// Definitions and a parser for the MSVC-specific C++ 20 ".modmeta" section.
 //
 //===----------------------------------------------------------------------===//
 
@@ -92,18 +91,24 @@ private:
     if (!List)
       return List.takeError();
 
-    if (Width == 1)
+    switch (Width) {
+    case 1:
       Visitor(*List);
-    else if (Width == 2)
+      break;
+    case 2:
       Visitor(ArrayRef<support::ulittle16_t>(
           reinterpret_cast<const support::ulittle16_t *>(List->data()),
           List->size() / sizeof(support::ulittle16_t)));
-    else if (Width == 4)
+      break;
+    case 4:
       Visitor(ArrayRef<support::ulittle32_t>(
           reinterpret_cast<const support::ulittle32_t *>(List->data()),
           List->size() / sizeof(support::ulittle32_t)));
-    else
+      break;
+    default:
       assert(false && "unexpected list width");
+      break;
+    }
 
     return Error::success();
   }
