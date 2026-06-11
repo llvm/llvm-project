@@ -4341,23 +4341,24 @@ static Constant *ConstantFoldFixedVectorCall(
     return nullptr;
   }
   case Intrinsic::get_active_lane_mask: {
-    auto *Op0 = dyn_cast<ConstantInt>(Operands[0]);
-    auto *Op1 = dyn_cast<ConstantInt>(Operands[1]);
-    if (Op0 && Op1) {
-      unsigned Lanes = FVTy->getNumElements();
-      uint64_t Base = Op0->getZExtValue();
-      uint64_t Limit = Op1->getZExtValue();
+    const APInt *Op0, *Op1;
+    if (!getConstIntOrUndef(Operands[0], Op0) ||
+        !getConstIntOrUndef(Operands[1], Op1))
+      return nullptr;
+    if (!Op0 || !Op1)
+      return PoisonValue::get(FVTy);
+    unsigned Lanes = FVTy->getNumElements();
+    uint64_t Base = Op0->getZExtValue();
+    uint64_t Limit = Op1->getZExtValue();
 
-      SmallVector<Constant *, 16> NCs;
-      for (unsigned i = 0; i < Lanes; i++) {
-        if (Base + i < Limit)
-          NCs.push_back(ConstantInt::getTrue(Ty));
-        else
-          NCs.push_back(ConstantInt::getFalse(Ty));
-      }
-      return ConstantVector::get(NCs);
+    SmallVector<Constant *, 16> NCs;
+    for (unsigned i = 0; i < Lanes; i++) {
+      if (Base + i < Limit)
+        NCs.push_back(ConstantInt::getTrue(Ty));
+      else
+        NCs.push_back(ConstantInt::getFalse(Ty));
     }
-    return nullptr;
+    return ConstantVector::get(NCs);
   }
   case Intrinsic::vector_extract: {
     auto *Idx = dyn_cast<ConstantInt>(Operands[1]);
@@ -4500,9 +4501,13 @@ static Constant *ConstantFoldScalableVectorCall(
     return ConstantInt::getFalse(SVTy);
   }
   case Intrinsic::get_active_lane_mask: {
-    auto *Op0 = dyn_cast<ConstantInt>(Operands[0]);
-    auto *Op1 = dyn_cast<ConstantInt>(Operands[1]);
-    if (Op0 && Op1 && Op0->getValue().uge(Op1->getValue()))
+    const APInt *Op0, *Op1;
+    if (!getConstIntOrUndef(Operands[0], Op0) ||
+        !getConstIntOrUndef(Operands[1], Op1))
+      return nullptr;
+    if (!Op0 || !Op1)
+      return PoisonValue::get(SVTy);
+    if (Op0->uge(*Op1))
       return ConstantVector::getNullValue(SVTy);
     break;
   }
