@@ -238,7 +238,9 @@ Sections:
 ## in any known enum table.
 # RUN: yaml2obj %s --docnum=5 -o %t.unknown-machine
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --file-header \
-# RUN:   %t.unknown-machine | FileCheck %s --check-prefix=JSON-UNKNOWN-MACHINE
+# RUN:   %t.unknown-machine > %t.unknown-machine.json
+# RUN: FileCheck %s --check-prefix=JSON-UNKNOWN-MACHINE < %t.unknown-machine.json
+# RUN: %python -c 'import json, sys; json.load(sys.stdin)' < %t.unknown-machine.json
 
 # JSON-UNKNOWN-MACHINE:      "Type": "SharedObject (0x3)",
 # JSON-UNKNOWN-MACHINE-NEXT: "Machine": 36902,
