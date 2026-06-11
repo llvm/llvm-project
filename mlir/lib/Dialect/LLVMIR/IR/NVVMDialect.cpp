@@ -3427,9 +3427,10 @@ void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 /// intrinsic ID.
 static llvm::Intrinsic::ID getBarrierSyncIntrinsic(bool aligned,
                                                    bool hasCount) {
-  if (hasCount)
+  if (hasCount) {
     return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count
                    : llvm::Intrinsic::nvvm_barrier_cta_sync_count;
+  }
   return aligned ? llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all
                  : llvm::Intrinsic::nvvm_barrier_cta_sync_all;
 }
