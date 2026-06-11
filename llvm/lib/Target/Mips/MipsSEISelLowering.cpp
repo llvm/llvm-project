@@ -3132,11 +3132,8 @@ static SDValue lowerVECTOR_SHUFFLE_VSHF(SDValue Op, EVT ResTy,
   SDLoc DL(Op);
   int ResTyNumElts = ResTy.getVectorNumElements();
 
-  assert(Indices[0] >= 0 &&
-         "shuffle mask starts with an UNDEF, which is not expected");
-
   for (int i = 0; i < ResTyNumElts; ++i) {
-    // Idx == -1 means UNDEF
+    // Idx == -1 means UNDEF/poison
     int Idx = Indices[i];
 
     if (0 <= Idx && Idx < ResTyNumElts)
@@ -3144,15 +3141,22 @@ static SDValue lowerVECTOR_SHUFFLE_VSHF(SDValue Op, EVT ResTy,
     if (ResTyNumElts <= Idx && Idx < ResTyNumElts * 2)
       Using2ndVec = true;
   }
+
+  // Find the first non-undef index use as a default when there is a leading
+  // UNDEF/poison.
   int LastValidIndex = 0;
-  for (size_t i = 0; i < Indices.size(); i++) {
-    int Idx = Indices[i];
-    if (Idx < 0) {
-      // Continue using splati index or use the last valid index.
-      Idx = isSPLATI ? Indices[0] : LastValidIndex;
-    } else {
+  for (int Idx : Indices)
+    if (Idx >= 0) {
       LastValidIndex = Idx;
+      break;
     }
+
+  for (int Idx : Indices) {
+    if (Idx < 0)
+      Idx = LastValidIndex;
+    else
+      // Continue using splati index or use the last valid index.
+      LastValidIndex = isSPLATI ? LastValidIndex : Idx;
     Ops.push_back(DAG.getTargetConstant(Idx, DL, MaskEltTy));
   }
 
