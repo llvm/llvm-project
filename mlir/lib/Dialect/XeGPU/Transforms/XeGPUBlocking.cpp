@@ -422,6 +422,31 @@ void XeGPUBlockingPass::runOnOperation() {
         xegpu::precomputeLoopBlockArgTypes(op, getSubShapeAndCount);
     xegpu::addVectorTypeConversion(converter, getSubShapeAndCount,
                                    std::move(loopArgTypes));
+
+    // The loop-carried types are now captured in the converter's map (keyed
+    // by Value), so the transient per-position layout attributes on SCF loop
+    // ops are no longer needed for the structural conversion. Strip them
+    // before converting: the SCF structural converters copy the old op's
+    // attributes onto the converted op (e.g. ConvertForOpTypes calls
+    // setAttrs), and once a result is expanded 1:N the result numbering
+    // shifts, so a stale `layout_result_N` would land on the wrong
+    // (renumbered) result and corrupt the 1:N count invariant, leaving the
+    // converted loop illegal. The post-conversion walk below removes these
+    // attributes for the remaining ops anyway.
+    op->walk([](Operation *loopOp) {
+      if (!isa<scf::ForOp, scf::WhileOp, scf::ConditionOp>(loopOp))
+        return;
+      SmallVector<StringRef> toRemove;
+      for (const NamedAttribute &attr : loopOp->getAttrs()) {
+        StringRef name = attr.getName().strref();
+        if (name.starts_with("layout_operand_") ||
+            name.starts_with("layout_result_"))
+          toRemove.push_back(name);
+      }
+      for (StringRef name : toRemove)
+        loopOp->removeAttr(name);
+    });
+
     // Source (N:1) and target (1:1) materializations using
     // UnrealizedConversionCastOp.
     auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,

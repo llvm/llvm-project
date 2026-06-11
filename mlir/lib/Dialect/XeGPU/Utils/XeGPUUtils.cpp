@@ -863,65 +863,82 @@ bool xegpu::matchSplitDimExpansion(
 // Context-aware type conversion utilities
 //===----------------------------------------------------------------------===//
 
-// Pre-computes block argument type mappings for SCF loops (scf.while,
-// scf.for).
+// Pre-computes distributed VectorType mappings for every value carried
+// through an SCF loop (scf.while, scf.for): the region block arguments
+// (iter_args / before-/after-args), the loop results, and the terminator
+// operands that feed them.
 //
-// Block-arg layouts ARE available in the IR (layout recovery propagates
-// them onto the loop op as `layout_operand_N`). The reason we cannot rely
-// on the regular `getDistributeLayoutAttr(v)` lookup during structural
-// conversion is structural, not informational:
+// All of these positions describe the same logical loop-carried value and
+// MUST end up with identical 1:N-converted types, so we derive them from a
+// SINGLE authoritative source: the layout of the value that feeds the
+// position (the loop init for the before-args, the `scf.condition` operands
+// for the after-args / results), looked up via
+// `getDistributeLayoutAttr(Value)`. Recording the types by `Value` identity
+// is necessary because the SCF structural converters transiently
+// detach/replace the loop body before all queries against the old block
+// arguments have finished:
 //   - For `scf.while`, `scf::WhileOpConversion` detaches the before/after
 //     blocks from their parent region before invoking
-//     `convertSignatureBlock`. Looking up a detached BlockArgument's layout
+//     `convertSignatureBlock`; looking up a detached BlockArgument's layout
 //     walks `v.getParentBlock()->getParent()` and trips an LLVM ilist
 //     assertion.
 //   - For `scf.for`, `scf::ForOpConverter` builds a new `scf.for` and moves
-//     the body block into it. The new op does NOT inherit the temporary
-//     `layout_operand_N` attributes that layout recovery set on the old
-//     op, so any post-move query of a body block argument's layout (e.g.
-//     when a pattern that consumes the iter_arg via a non-anchor op like
-//     `vector.insert_strided_slice` runs after the move) returns null.
-// Caching the distributed types by `Value` identity sidesteps both failure
-// modes. `scf.if` has no block arguments and is therefore not covered here.
+//     the body block into it; the new op does NOT inherit the temporary
+//     `layout_operand_N` attributes, so a post-move layout query returns
+//     null.
+// Recording the loop results and the terminator operands (in addition to
+// the block arguments) lets the converter resolve those positions from the
+// map as well, which a 1:N pass relies on after it strips the loop op's
+// transient per-position layout attributes (see XeGPUBlocking). `scf.if`
+// has no loop-carried block arguments and is therefore not covered.
 DenseMap<Value, SmallVector<Type>>
 xegpu::precomputeLoopBlockArgTypes(Operation *topLevelOp,
                                    SubShapeAndCountFn getSubShapeAndCount) {
   DenseMap<Value, SmallVector<Type>> loopArgTypes;
-  auto recordBlockArgTypes = [&](Value init, BlockArgument arg) {
-    auto vecTy = dyn_cast<VectorType>(init.getType());
+  // Derive the distributed types from the feeding value's layout (the single
+  // authoritative source) and record them for every value that shares this
+  // loop-carried position.
+  auto recordTypes = [&](Value layoutSrc, ArrayRef<Value> dests) {
+    auto vecTy = dyn_cast<VectorType>(layoutSrc.getType());
     if (!vecTy)
       return;
-    auto layout = xegpu::getDistributeLayoutAttr(init);
+    auto layout = xegpu::getDistributeLayoutAttr(layoutSrc);
     if (!layout)
       return;
     auto [subShape, count] = getSubShapeAndCount(vecTy, layout);
     if (count <= 0)
       return;
     auto newTy = VectorType::get(subShape, vecTy.getElementType());
-    SmallVector<Type> types(count, newTy);
-    loopArgTypes[arg] = std::move(types);
+    for (Value dest : dests)
+      loopArgTypes[dest] = SmallVector<Type>(count, newTy);
   };
   topLevelOp->walk([&](Operation *op) {
     if (auto whileOp = dyn_cast<scf::WhileOp>(op)) {
-      // "before" region block arguments correspond to the `inits` operands.
-      for (auto [init, arg] :
-           llvm::zip(whileOp.getInits(), whileOp.getBeforeArguments()))
-        recordBlockArgTypes(init, arg);
-      // "after" region block arguments correspond to the operands of the
-      // embedded `scf.condition` op (not the `inits`). In general the two
-      // type lists may differ.
+      // "before" args (and the after-region yield operands that feed them)
+      // correspond to the while `inits` operands.
+      auto yieldOp =
+          cast<scf::YieldOp>(whileOp.getAfterBody()->getTerminator());
+      for (auto [init, beforeArg, yieldVal] :
+           llvm::zip(whileOp.getInits(), whileOp.getBeforeArguments(),
+                     yieldOp.getOperands()))
+        recordTypes(init, {beforeArg, yieldVal});
+      // "after" args and the while results correspond to the operands of the
+      // embedded `scf.condition` op (not the `inits`).
       scf::ConditionOp condOp = whileOp.getConditionOp();
-      for (auto [condArg, arg] :
-           llvm::zip(condOp.getArgs(), whileOp.getAfterArguments()))
-        recordBlockArgTypes(condArg, arg);
+      for (auto [condArg, afterArg, res] :
+           llvm::zip(condOp.getArgs(), whileOp.getAfterArguments(),
+                     whileOp.getResults()))
+        recordTypes(condArg, {afterArg, res});
       return;
     }
     if (auto forOp = dyn_cast<scf::ForOp>(op)) {
-      // Body block args (excluding the induction variable) correspond to
-      // the `initArgs` operands.
-      for (auto [init, arg] :
-           llvm::zip(forOp.getInitArgs(), forOp.getRegionIterArgs()))
-        recordBlockArgTypes(init, arg);
+      // Each loop-carried position pairs an init operand with its iter_arg,
+      // its loop result, and the yield operand that feeds the next iteration.
+      auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
+      for (auto [init, arg, res, yieldVal] :
+           llvm::zip(forOp.getInitArgs(), forOp.getRegionIterArgs(),
+                     forOp.getResults(), yieldOp.getOperands()))
+        recordTypes(init, {arg, res, yieldVal});
       return;
     }
   });
@@ -944,17 +961,16 @@ void xegpu::addVectorTypeConversion(
         if (!isa<VectorType>(v.getType()))
           return std::nullopt;
 
-        // Check pre-computed map first (for SCF loop block args).
-        if (isa<BlockArgument>(v)) {
-          auto it = loopArgTypeMap->find(v);
-          if (it != loopArgTypeMap->end()) {
-            result.append(it->second.begin(), it->second.end());
-            return success();
-          }
+        // Check the pre-computed map first. It covers every value carried
+        // through an SCF loop (operands, block args, results, yield
+        // operands), all keyed by Value identity.
+        auto it = loopArgTypeMap->find(v);
+        if (it != loopArgTypeMap->end()) {
+          result.append(it->second.begin(), it->second.end());
+          return success();
         }
 
-        // For OpResults and other block arguments (e.g. region args of
-        // non-loop ops), retrieve the layout directly.
+        // For all other Values, retrieve the layout directly.
         auto layout = xegpu::getDistributeLayoutAttr(v);
         if (!layout)
           return std::nullopt;
