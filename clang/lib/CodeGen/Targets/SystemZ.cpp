@@ -648,7 +648,7 @@ QualType ZOSXPLinkABIInfo::getSingleElementType(QualType Ty) const {
   if (const RecordType *RT = Ty->getAsUnionType()) {
     QualType Found;
     // Check the fields.
-    const RecordDecl *RD = RT->getAsRecordDecl();
+    const RecordDecl *RD = RT->getDecl();
     for (const auto *FD : RD->fields()) {
       if (Found.isNull())
         Found = getSingleElementType(FD->getType());
