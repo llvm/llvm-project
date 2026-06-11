@@ -8,16 +8,25 @@
 
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
+#include <vector>
 
 using namespace llvm;
 
@@ -45,23 +54,24 @@ static cl::opt<bool> PrintAfterAll("print-after-all",
 // this option. -filter-passes will limit the output to the named passes that
 // actually change the IR and other passes are reported as filtered out. The
 // specified passes will either be reported as making no changes (with no IR
-// reported) or the changed IR will be reported. Also, the -filter-print-funcs
-// and -print-module-scope options will do similar filtering based on function
-// name, reporting changed IRs as functions(or modules if -print-module-scope is
-// specified) for a particular function or indicating that the IR has been
-// filtered out. The extra options can be combined, allowing only changed IRs
-// for certain passes on certain functions to be reported in different formats,
-// with the rest being reported as filtered out.  The -print-before-changed
+// reported) or the changed IR will be reported. Also, the -filter-print-funcs,
+// -filter-print-source-locs and -print-module-scope options will do similar
+// filtering based on function name or source location, reporting changed IRs as
+// functions(or modules if -print-module-scope is specified) for a particular
+// function or indicating that the IR has been filtered out. The extra options
+// can be combined, allowing only changed IRs for certain passes on certain
+// functions or source locations to be reported in different formats, with the
+// rest being reported as filtered out.  The -print-before-changed
 // option will print the IR as it was before each pass that changed it. The
 // optional value of quiet will only report when the IR changes, suppressing all
 // other messages, including the initial IR. The values "diff" and "diff-quiet"
 // will present the changes in a form similar to a patch, in either verbose or
 // quiet mode, respectively. The lines that are removed and added are prefixed
-// with '-' and '+', respectively. The -filter-print-funcs and -filter-passes
-// can be used to filter the output.  This reporter relies on the linux diff
-// utility to do comparisons and insert the prefixes. For systems that do not
-// have the necessary facilities, the error message will be shown in place of
-// the expected output.
+// with '-' and '+', respectively. The -filter-print-funcs,
+// -filter-print-source-locs and -filter-passes can be used to filter the
+// output. This reporter relies on the linux diff utility to do comparisons and
+// insert the prefixes. For systems that do not have the necessary facilities,
+// the error message will be shown in place of the expected output.
 cl::opt<ChangePrinter> llvm::PrintChanged(
     "print-changed", cl::desc("Print changed IRs"), cl::Hidden,
     cl::ValueOptional, cl::init(ChangePrinter::None),
@@ -114,6 +124,10 @@ static cl::list<std::string>
                             "options"),
                    cl::CommaSeparated, cl::Hidden);
 
+static cl::list<std::string> PrintSourceLocs(
+    "filter-print-source-locs", cl::value_desc("file:line[,line-line][,line]"),
+    cl::desc("Only print IR containing matching source locations"), cl::Hidden);
+
 /// This is a helper to determine whether to print IR before or
 /// after a pass.
 
@@ -163,7 +177,151 @@ bool llvm::isFilterPassesEmpty() { return FilterPasses.empty(); }
 
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   static const StringSet<> PrintFuncNames(llvm::from_range, PrintFuncsList);
-  return PrintFuncNames.empty() || PrintFuncNames.contains(FunctionName);
+  return PrintFuncNames.empty() || PrintFuncNames.contains(FunctionName) ||
+         PrintFuncNames.contains("*");
+}
+
+namespace {
+
+struct PrintLineRange {
+  unsigned First;
+  unsigned Last;
+};
+
+struct PrintSourceLocSpec {
+  std::string File;
+  SmallVector<PrintLineRange, 4> Lines;
+};
+
+[[noreturn]] void reportBadLocSpec(StringRef Spec) {
+  report_fatal_error(Twine("Invalid -filter-print-source-locs value '") + Spec +
+                     "'. Expected file:line[,line-line][,line].");
+}
+
+std::string normalizeSlashes(StringRef Path) {
+  std::string Result = Path.str();
+  for (char &C : Result)
+    if (C == '\\')
+      C = '/';
+  return Result;
+}
+
+bool parseLine(StringRef LineText, unsigned &Line) {
+  return !LineText.empty() && !LineText.getAsInteger(10, Line);
+}
+
+PrintLineRange parseLineRange(StringRef RangeText, StringRef FullSpec) {
+  auto [FirstText, LastText] = RangeText.split('-');
+
+  unsigned First;
+  if (!parseLine(FirstText, First))
+    reportBadLocSpec(FullSpec);
+
+  if (LastText.empty())
+    return {First, First};
+
+  unsigned Last;
+  if (!parseLine(LastText, Last) || Last < First)
+    reportBadLocSpec(FullSpec);
+
+  return {First, Last};
+}
+
+std::vector<PrintSourceLocSpec> parseSourceLocSpecs() {
+  std::vector<PrintSourceLocSpec> Result;
+  for (const std::string &RawSpec : PrintSourceLocs) {
+    StringRef Spec(RawSpec);
+    auto [File, LineSpec] = Spec.rsplit(':');
+    if (File.empty() || LineSpec.empty())
+      reportBadLocSpec(Spec);
+
+    PrintSourceLocSpec Parsed;
+    Parsed.File = normalizeSlashes(File);
+    for (StringRef RangeText : llvm::split(LineSpec, ",")) {
+      Parsed.Lines.push_back(parseLineRange(RangeText, Spec));
+    }
+    Result.push_back(std::move(Parsed));
+  }
+  return Result;
+}
+
+ArrayRef<PrintSourceLocSpec> getSourceLocSpecs() {
+  static const std::vector<PrintSourceLocSpec> Specs = parseSourceLocSpecs();
+  return Specs;
+}
+
+std::string makeDebugLocPath(StringRef Directory, StringRef Filename) {
+  std::string NormalizedFilename = normalizeSlashes(Filename);
+  if (Directory.empty() || sys::path::is_absolute(NormalizedFilename))
+    return NormalizedFilename;
+
+  std::string NormalizedDirectory = normalizeSlashes(Directory);
+  if (NormalizedDirectory.empty())
+    return NormalizedFilename;
+  if (NormalizedDirectory.back() == '/')
+    return NormalizedDirectory + NormalizedFilename;
+  return NormalizedDirectory + "/" + NormalizedFilename;
+}
+
+bool matchesFile(StringRef SpecFile, StringRef Directory, StringRef Filename) {
+  std::string LocFile = normalizeSlashes(Filename);
+  std::string LocPath = makeDebugLocPath(Directory, Filename);
+
+  if (SpecFile == LocFile || SpecFile == LocPath)
+    return true;
+
+  StringRef LocFileRef(LocFile);
+  StringRef LocPathRef(LocPath);
+  if (sys::path::filename(LocFileRef) == SpecFile)
+    return true;
+
+  std::string Suffix = (Twine("/") + SpecFile).str();
+  return LocFileRef.ends_with(Suffix) || LocPathRef.ends_with(Suffix);
+}
+
+bool matchesLine(ArrayRef<PrintLineRange> Ranges, unsigned Line) {
+  return any_of(Ranges, [Line](const PrintLineRange &Range) {
+    return Range.First <= Line && Line <= Range.Last;
+  });
+}
+
+bool matchesSourceLocSpec(const DebugLoc &Loc, const PrintSourceLocSpec &Spec) {
+  auto *Scope = dyn_cast_or_null<DIScope>(Loc.getScope());
+  return Scope &&
+         matchesFile(Spec.File, Scope->getDirectory(), Scope->getFilename()) &&
+         matchesLine(Spec.Lines, Loc.getLine());
+}
+
+} // namespace
+
+bool llvm::isSourceLocInPrintList(const DebugLoc &Loc) {
+  ArrayRef<PrintSourceLocSpec> Specs = getSourceLocSpecs();
+  if (Specs.empty())
+    return true;
+
+  for (DebugLoc CurLoc = Loc; CurLoc; CurLoc = CurLoc.getInlinedAt()) {
+    if (any_of(Specs, [&CurLoc](const PrintSourceLocSpec &Spec) {
+          return matchesSourceLocSpec(CurLoc, Spec);
+        }))
+      return true;
+  }
+  return false;
+}
+
+bool llvm::isSourceLocFilterEmpty() { return PrintSourceLocs.empty(); }
+
+bool llvm::shouldPrintFunction(const Function &F) {
+  if (!isFunctionInPrintList(F.getName()))
+    return false;
+
+  if (isSourceLocFilterEmpty())
+    return true;
+
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB)
+      if (isSourceLocInPrintList(I.getDebugLoc()))
+        return true;
+  return false;
 }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,

@@ -22,6 +22,20 @@
 using namespace llvm;
 
 namespace {
+bool shouldPrintMachineFunction(const MachineFunction &MF) {
+  if (!isFunctionInPrintList(MF.getName()))
+    return false;
+
+  if (isSourceLocFilterEmpty())
+    return true;
+
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (isSourceLocInPrintList(MI.getDebugLoc()))
+        return true;
+  return false;
+}
+
 /// MachineFunctionPrinterPass - This is a pass to dump the IR of a
 /// MachineFunction.
 ///
@@ -44,7 +58,7 @@ struct MachineFunctionPrinterPass : public MachineFunctionPass {
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (!isFunctionInPrintList(MF.getName()))
+    if (!shouldPrintMachineFunction(MF))
       return false;
     OS << "# " << Banner << ":\n";
     auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();

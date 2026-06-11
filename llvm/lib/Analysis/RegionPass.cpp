@@ -172,6 +172,21 @@ void RGPassManager::dumpPassStructure(unsigned Offset) {
 }
 
 namespace {
+bool shouldPrintRegion(const Region &R) {
+  if (!isFunctionInPrintList(R.getEntry()->getParent()->getName()))
+    return false;
+
+  if (isSourceLocFilterEmpty())
+    return true;
+
+  for (const BasicBlock *BB : R.blocks())
+    if (BB)
+      for (const Instruction &I : *BB)
+        if (isSourceLocInPrintList(I.getDebugLoc()))
+          return true;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // PrintRegionPass
 class PrintRegionPass : public RegionPass {
@@ -189,7 +204,7 @@ public:
   }
 
   bool runOnRegion(Region *R, RGPassManager &RGM) override {
-    if (!isFunctionInPrintList(R->getEntry()->getParent()->getName()))
+    if (!shouldPrintRegion(*R))
       return false;
     Out << Banner;
     for (const auto *BB : R->blocks()) {
