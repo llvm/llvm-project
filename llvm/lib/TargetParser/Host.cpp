@@ -1820,10 +1820,10 @@ StringRef sys::getHostCPUName() {
   case CPUFAMILY_ARM_TAHITI: // A18 Pro
   case CPUFAMILY_ARM_TUPAI:  // A18
     return "apple-m4";
-  case CPUFAMILY_ARM_HIDRA:  // M5
-  case CPUFAMILY_ARM_SOTRA:  // M5 Pro/Max
-  case CPUFAMILY_ARM_THERA:  // A19 Pro
-  case CPUFAMILY_ARM_TILOS:  // A19
+  case CPUFAMILY_ARM_HIDRA: // M5
+  case CPUFAMILY_ARM_SOTRA: // M5 Pro/Max
+  case CPUFAMILY_ARM_THERA: // A19 Pro
+  case CPUFAMILY_ARM_TILOS: // A19
     return "apple-m5";
   default:
     // Default to the newest CPU we know about.
