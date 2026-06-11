@@ -9,9 +9,9 @@
 
 // REQUIRES: cxxabi
 
+#include "utils.h"
 #include <stdio.h>
 #include <string.h>
-#include "utils.h"
 
 struct A {
   virtual void f();
@@ -36,7 +36,7 @@ void D::f() {}
 void D::g() {}
 
 struct S {
-  void f(); // non-virtual
+  void f();         // non-virtual
   virtual void g(); // virtual
 };
 void S::f() {}
@@ -52,8 +52,7 @@ void T::g() {}
 typedef void (S::*S_void)();
 typedef int (S::*S_int)();
 
-template <typename To, typename From>
-To bitcast(From f) {
+template <typename To, typename From> To bitcast(From f) {
   To t;
   memcpy(&t, &f, sizeof(f));
   return t;
@@ -62,7 +61,8 @@ To bitcast(From f) {
 void g() {}
 
 int main(int argc, char **argv) {
-  if (argc < 2) return 0;
+  if (argc < 2)
+    return 0;
 
   create_derivers<B>();
   create_derivers<D>();
