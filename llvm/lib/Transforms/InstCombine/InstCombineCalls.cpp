@@ -3132,6 +3132,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
       return replaceOperand(*II, 0, X);
 
+    // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
+    // copysign ignores the sign bit of its magnitude argument (implicit fabs),
+    // so replacing floor(fabs(X)) with trunc(X) is correct for all inputs
+    // including NaN without requiring nnan. The m_FAbs match also ensures
+    // the floor argument is non-negative, so floor == trunc.
+    Value *FAbsArg;
+    if (match(Mag, m_Intrinsic<Intrinsic::floor>(m_FAbs(m_Value(FAbsArg)))) &&
+        FAbsArg == Sign) {
+      Value *Trunc = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, Sign, II);
+      return replaceOperand(*II, 0, Trunc);
+    }
+
     Type *SignEltTy = Sign->getType()->getScalarType();
 
     Value *CastSrc;
@@ -3683,8 +3695,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       case BundleAttr::Dereferenceable: {
         auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
 
-        if (Count && *Count == 0)
+        if (!Count)
+          break;
+
+        if (*Count == 0 || isDereferenceableAndAlignedPointer(
+                               Ptr, Align(1), APInt(64, *Count),
+                               getSimplifyQuery().getWithInstruction(II)))
           return RemoveBundle();
+
         break;
       }
 

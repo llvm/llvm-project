@@ -236,21 +236,15 @@ using SubShapeAndCountFn = std::function<std::pair<SmallVector<int64_t>, int>(
     VectorType, DistributeLayoutAttr)>;
 
 /// Pre-computes distributed VectorType mappings for every value carried
-/// through an SCF loop under `topLevelOp` (1:1 shape-changing or 1:N):
-/// the region block arguments (`scf.while` before/after args, `scf.for`
-/// iter_args), the loop results, and the terminator operands that feed them.
-/// All such positions are derived from a single authoritative source -- the
-/// layout of the value feeding the position (loop init, or `scf.condition`
-/// operand) -- and keyed by `Value` identity, because during structural type
-/// conversion the SCF converters transiently detach/replace the loop body
-/// before all queries against the old block arguments have finished, at which
-/// point `getDistributeLayoutAttr(BlockArgument)` returns null (either the
-/// parent op is gone, or the new parent op has not inherited the temporary
-/// `layout_operand_N` attributes set by layout recovery). Recording the loop
-/// results and terminator operands (not just the block arguments) lets a 1:N
-/// pass resolve those positions from the map after it strips the loop op's
-/// transient per-position layout attributes. `scf.if` has no loop-carried
-/// block arguments and therefore needs no entry.
+/// through an SCF loop under `topLevelOp` (1:1 shape-changing or 1:N): the
+/// region block args (`scf.while` before/after args, `scf.for` iter_args), the
+/// loop results, and the terminator operands feeding them. Each is derived from
+/// a single source -- the layout of the feeding value (loop init or
+/// `scf.condition` operand) -- and keyed by `Value`, because the SCF converters
+/// detach/replace the loop body mid-conversion, after which a layout query on a
+/// block arg returns null. Recording results and terminator operands lets a 1:N
+/// pass resolve them from the map after stripping the loop op's transient
+/// layout attrs. `scf.if` has no loop-carried block args and needs no entry.
 DenseMap<Value, SmallVector<Type>>
 precomputeLoopBlockArgTypes(Operation *topLevelOp,
                             SubShapeAndCountFn getSubShapeAndCount);

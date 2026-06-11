@@ -863,34 +863,19 @@ bool xegpu::matchSplitDimExpansion(
 // Context-aware type conversion utilities
 //===----------------------------------------------------------------------===//
 
-// Pre-computes distributed VectorType mappings for every value carried
-// through an SCF loop (scf.while, scf.for): the region block arguments
-// (iter_args / before-/after-args), the loop results, and the terminator
-// operands that feed them.
-//
-// All of these positions describe the same logical loop-carried value and
-// MUST end up with identical 1:N-converted types, so we derive them from a
-// SINGLE authoritative source: the layout of the value that feeds the
-// position (the loop init for the before-args, the `scf.condition` operands
-// for the after-args / results), looked up via
-// `getDistributeLayoutAttr(Value)`. Recording the types by `Value` identity
-// is necessary because the SCF structural converters transiently
-// detach/replace the loop body before all queries against the old block
-// arguments have finished:
-//   - For `scf.while`, `scf::WhileOpConversion` detaches the before/after
-//     blocks from their parent region before invoking
-//     `convertSignatureBlock`; looking up a detached BlockArgument's layout
-//     walks `v.getParentBlock()->getParent()` and trips an LLVM ilist
-//     assertion.
-//   - For `scf.for`, `scf::ForOpConverter` builds a new `scf.for` and moves
-//     the body block into it; the new op does NOT inherit the temporary
-//     `layout_operand_N` attributes, so a post-move layout query returns
-//     null.
-// Recording the loop results and the terminator operands (in addition to
-// the block arguments) lets the converter resolve those positions from the
-// map as well, which a 1:N pass relies on after it strips the loop op's
-// transient per-position layout attributes (see XeGPUBlocking). `scf.if`
-// has no loop-carried block arguments and is therefore not covered.
+// Pre-computes distributed VectorType mappings for every value carried through
+// an SCF loop (scf.while, scf.for): block args (iter_args /
+// before-/after-args), loop results, and the terminator operands feeding them.
+// These positions share one logical value and must convert identically, so each
+// is derived from a single source -- the layout of the feeding value (loop
+// init, or `scf.condition` operand) -- via `getDistributeLayoutAttr(Value)`,
+// and keyed by `Value`. Keying by Value is required because the SCF converters
+// detach/replace the loop body mid-conversion (scf.while detaches before/after
+// blocks -> a detached-arg layout query trips an ilist assertion; scf.for
+// rebuilds the op, which loses the temporary `layout_operand_N` attrs -> the
+// query returns null). Recording results and terminator operands lets a 1:N
+// pass resolve them from the map after stripping the loop op's transient attrs
+// (see XeGPUBlocking).
 DenseMap<Value, SmallVector<Type>>
 xegpu::precomputeLoopBlockArgTypes(Operation *topLevelOp,
                                    SubShapeAndCountFn getSubShapeAndCount) {
