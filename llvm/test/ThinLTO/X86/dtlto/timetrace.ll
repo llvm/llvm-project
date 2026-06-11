@@ -9,7 +9,7 @@ RUN: opt -thinlto-bc t2.ll -o t2.bc
 ; Generate fake object files for mock.py to return.
 RUN: touch t1.o t2.o
 
-RUN: rm -rf %t.cache && mkdir -p %t.cache
+RUN: mkdir cache
 
 ; Perform DTLTO and generate a time trace. mock.py does not do any compilation,
 ; instead it simply writes the contents of the object files supplied on the
@@ -17,7 +17,7 @@ RUN: rm -rf %t.cache && mkdir -p %t.cache
 RUN: llvm-lto2 run t1.bc t2.bc -o t.o \
 RUN:   -dtlto-distributor=%python \
 RUN:   -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py,t1.o,t2.o \
-RUN:   --cache-dir=%t.cache \
+RUN:   --cache-dir=cache \
 RUN:   --time-trace --time-trace-granularity=0 --time-trace-file=%t.json \
 RUN:   -r=t1.bc,t1,px \
 RUN:   -r=t2.bc,t2,px
