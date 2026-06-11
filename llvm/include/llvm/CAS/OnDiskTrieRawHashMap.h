@@ -53,8 +53,8 @@ class OnDiskCASLogger;
 ///   are only appropriate for local storage.
 class OnDiskTrieRawHashMap {
 public:
-  LLVM_DUMP_METHOD void dump() const;
-  void
+  LLVM_DUMP_METHOD LLVM_ABI void dump() const;
+  LLVM_ABI void
   print(raw_ostream &OS,
         function_ref<void(ArrayRef<char>)> PrintRecordData = nullptr) const;
 

@@ -199,6 +199,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetMachine.h"
@@ -398,10 +399,63 @@
 
 using namespace llvm;
 
-cl::opt<bool> llvm::PrintPipelinePasses(
-    "print-pipeline-passes",
-    cl::desc("Print a '-passes' compatible string describing the pipeline "
-             "(best-effort only)."));
+cl::opt<std::optional<PrintPipelinePassesFormat>, false,
+        PrintPipelinePassesFormatParser>
+    llvm::PrintPipelinePasses(
+        "print-pipeline-passes", cl::ValueOptional,
+        cl::desc(
+            "Print string describing the pipeline (best-effort only).\n"
+            "  - =text\tPrint a '-passes' compatible string describing the "
+            "pipeline.\n"
+            "  - =tree\tPrint a tree-like structure describing the pipeline."));
+
+bool PrintPipelinePassesFormatParser::parse(
+    cl::Option &O, StringRef ArgName, StringRef Arg,
+    std::optional<PrintPipelinePassesFormat> &Val) {
+  std::optional<PrintPipelinePassesFormat> Format =
+      StringSwitch<std::optional<PrintPipelinePassesFormat>>(Arg)
+          .Case("text", PrintPipelinePassesFormat::Text)
+          .Case("", PrintPipelinePassesFormat::Text)
+          .Case("tree", PrintPipelinePassesFormat::Tree)
+          .Default(std::nullopt);
+
+  if (!Format)
+    return O.error(formatv(
+        "'{0}' value invalid for print-pipeline-passes argument!", Arg));
+
+  Val = Format;
+  return false;
+}
+
+void llvm::printFormattedPipelinePasses(raw_ostream &OS, StringRef Pipeline,
+                                        PrintPipelinePassesFormat Format) {
+  switch (Format) {
+  case PrintPipelinePassesFormat::Text:
+    OS << Pipeline;
+    break;
+  case PrintPipelinePassesFormat::Tree: {
+    int IndentLevel = 0;
+    for (char C : Pipeline) {
+      switch (C) {
+      case '(':
+        ++IndentLevel;
+        OS << formatv("\n{0}", fmt_repeat("  ", IndentLevel));
+        break;
+      case ')':
+        --IndentLevel;
+        assert(IndentLevel >= 0 && "Invalid pipeline string!");
+        break;
+      case ',':
+        OS << formatv("\n{0}", fmt_repeat("  ", IndentLevel));
+        break;
+      default:
+        OS << C;
+      }
+    }
+    break;
+  }
+  }
+}
 
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;

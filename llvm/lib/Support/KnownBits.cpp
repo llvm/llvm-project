@@ -399,7 +399,10 @@ KnownBits KnownBits::abds(KnownBits LHS, KnownBits RHS) {
 
 static unsigned getMaxShiftAmount(const APInt &MaxValue, unsigned BitWidth) {
   if (isPowerOf2_32(BitWidth))
-    return MaxValue.extractBitsAsZExtValue(Log2_32(BitWidth), 0);
+    // Clamp to the shift amount's width: a narrower amount is already
+    // < BitWidth, so this stays a valid upper bound.
+    return MaxValue.extractBitsAsZExtValue(
+        std::min(Log2_32(BitWidth), MaxValue.getBitWidth()), 0);
   // This is only an approximate upper bound.
   return MaxValue.getLimitedValue(BitWidth - 1);
 }

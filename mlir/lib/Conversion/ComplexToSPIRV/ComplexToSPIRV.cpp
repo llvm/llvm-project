@@ -186,6 +186,37 @@ struct AbsOpPattern final : OpConversionPattern<complex::AbsOp> {
   }
 };
 
+template <typename ComplexOp, bool NegateReal>
+struct NegationOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    Value resultRe =
+        NegateReal ? spirv::FNegateOp::create(rewriter, loc, re) : re;
+    Value resultIm = spirv::FNegateOp::create(rewriter, loc, im);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
+
 struct DivOpPattern final : OpConversionPattern<complex::DivOp> {
   using Base::Base;
 
@@ -236,6 +267,9 @@ void mlir::populateComplexToSPIRVPatterns(
   patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern,
                ElementwiseBinaryOpPattern<complex::AddOp, spirv::FAddOp>,
                ElementwiseBinaryOpPattern<complex::SubOp, spirv::FSubOp>,
-               MulOpPattern, DivOpPattern, AbsOpPattern<spirv::GLSqrtOp>,
-               AbsOpPattern<spirv::CLSqrtOp>>(typeConverter, context);
+               MulOpPattern, DivOpPattern,
+               NegationOpPattern<complex::NegOp, /*NegateReal=*/true>,
+               NegationOpPattern<complex::ConjOp, /*NegateReal=*/false>,
+               AbsOpPattern<spirv::GLSqrtOp>, AbsOpPattern<spirv::CLSqrtOp>>(
+      typeConverter, context);
 }

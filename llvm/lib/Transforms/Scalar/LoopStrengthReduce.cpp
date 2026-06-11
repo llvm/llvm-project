@@ -5751,6 +5751,10 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
 
   // This is the type that the user actually needs.
   Type *OpTy = LF.OperandValToReplace->getType();
+  // For ICmpZero with pointer-typed operands, keep the comparison in the
+  // integer domain to avoid generating inttoptr casts.
+  if (LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())
+    OpTy = SE.getEffectiveSCEVType(OpTy);
   // This will be the type that we'll initially expand to.
   Type *Ty = F.getType();
   if (!Ty)
@@ -6059,8 +6063,11 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
     Value *FullV = Expand(LU, LF, F, LF.UserInst->getIterator(), DeadInsts);
 
     // If this is reuse-by-noop-cast, insert the noop cast.
+    // For ICmpZero with pointer operands, Expand() already set both operands
+    // in integer domain, so no cast is needed here.
     Type *OpTy = LF.OperandValToReplace->getType();
-    if (FullV->getType() != OpTy) {
+    if (FullV->getType() != OpTy &&
+        !(LU.Kind == LSRUse::ICmpZero && OpTy->isPointerTy())) {
       Instruction *Cast =
           CastInst::Create(CastInst::getCastOpcode(FullV, false, OpTy, false),
                            FullV, OpTy, "tmp", LF.UserInst->getIterator());

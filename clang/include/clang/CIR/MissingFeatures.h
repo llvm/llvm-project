@@ -320,7 +320,6 @@ struct MissingFeatures {
   static bool unsizedTypes() { return false; }
   static bool vectorType() { return false; }
   static bool fixedPointType() { return false; }
-  static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
   static bool callOp() { return false; }

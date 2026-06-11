@@ -203,6 +203,8 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
   case GK_GFX1251:
+    Features["gfx1251-gemm-insts"] = true;
+    [[fallthrough]];
   case GK_GFX1250:
     Features["swmmac-gfx1200-insts"] = true;
     Features["swmmac-gfx1250-insts"] = true;

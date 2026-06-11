@@ -43,18 +43,17 @@ namespace lto {
 /// set module ID to the on-disk member path; (4) for other archives and FatLTO,
 /// set module ID to a unique path and serialize content in
 /// serializeLTOInputs().
-class DTLTO : public LTO {
+class LLVM_ABI DTLTO : public LTO {
   using Base = LTO;
 
 public:
-  LLVM_ABI DTLTO(Config Conf, unsigned ParallelCodeGenParallelismLevel,
-                 LTOKind LTOMode, IndexWriteCallback OnWrite,
-                 bool EmitIndexFiles, bool EmitImportsFiles,
-                 StringRef LinkerOutputFile, StringRef Distributor,
-                 ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
-                 ArrayRef<StringRef> RemoteCompilerPrependArgs,
-                 ArrayRef<StringRef> RemoteCompilerArgs,
-                 AddBufferFn AddBufferArg, bool SaveTempsArg)
+  DTLTO(Config Conf, unsigned ParallelCodeGenParallelismLevel, LTOKind LTOMode,
+        IndexWriteCallback OnWrite, bool EmitIndexFiles, bool EmitImportsFiles,
+        StringRef LinkerOutputFile, StringRef Distributor,
+        ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+        ArrayRef<StringRef> RemoteCompilerPrependArgs,
+        ArrayRef<StringRef> RemoteCompilerArgs, AddBufferFn AddBufferArg,
+        bool SaveTempsArg)
       : Base(std::move(Conf), writeIndexesBackendInstance(),
              ParallelCodeGenParallelismLevel, LTOMode),
         AddBuffer(AddBufferArg), SaveTemps(SaveTempsArg),
@@ -85,7 +84,7 @@ public:
   ///    unique path (normalized on Windows) naming a file that will contain the
   ///    member content. The file is created and populated later (see
   ///    serializeInputs()).
-  LLVM_ABI Expected<std::shared_ptr<InputFile>>
+  Expected<std::shared_ptr<InputFile>>
   addInput(std::unique_ptr<InputFile> InputPtr) override;
 
   /// Runs the DTLTO pipeline. This function calls the supplied AddStream
@@ -96,8 +95,7 @@ public:
   ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
-  LLVM_ABI virtual Error run(AddStreamFn AddStream,
-                             FileCache Cache = {}) override;
+  virtual Error run(AddStreamFn AddStream, FileCache Cache = {}) override;
 
 private:
   /// DTLTO archives support.
@@ -109,10 +107,10 @@ private:
   /// Must be called after all input files are added but before optimization
   /// begins. If a file with that name already exists, it is likely a leftover
   /// from a previously terminated linker process and can be safely overwritten.
-  LLVM_ABI Error serializeLTOInputs();
+  Error serializeLTOInputs();
 
   // Remove temporary files created to enable distribution.
-  LLVM_ABI void cleanup() override;
+  void cleanup() override;
 
 public:
   // Mutable and const accessors to the LTO configuration object.
@@ -313,7 +311,7 @@ private:
 public:
   // Parameters and shared state for DistributorDriver class.
   struct DistributionDriverParams {
-    LLVM_ABI
+
     DistributionDriverParams() = default;
     DistributionDriverParams(StringRef DistributorArg,
                              ArrayRef<StringRef> DistributorArgsArg,
@@ -368,7 +366,6 @@ constexpr StringRef BCError = "DTLTO backend compilation: ";
 
 class DistributionDriver {
 public:
-  LLVM_ABI
   DistributionDriver(DTLTO::DistributionDriverParams &ParamsArg,
                      ArrayRef<DTLTO::Job> JobsArg, bool SaveTempsArg,
                      std::function<void(StringRef)> AddToClenupArg)
@@ -396,7 +393,7 @@ public:
   ///
   /// \returns Error::success() on success, or an Error if the distributor
   /// fails.
-  Error operator()();
+  LLVM_ABI Error operator()();
 };
 
 } // namespace lto

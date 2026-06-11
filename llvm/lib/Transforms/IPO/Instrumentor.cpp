@@ -1705,6 +1705,61 @@ Value *NumericIO::getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
     return PoisonValue::get(&Ty);
 }
 
+// NumericIO flag bitmask values.
+enum NumericFlags : uint64_t {
+  NUMERIC_FLAG_NONE = 0,
+  NUMERIC_FLAG_NO_SIGNED_WRAP = 1 << 0,
+  NUMERIC_FLAG_NO_UNSIGNED_WRAP = 1 << 1,
+  NUMERIC_FLAG_HAS_NO_NANS = 1 << 2,
+  NUMERIC_FLAG_HAS_NO_INFS = 1 << 3,
+  NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS = 1 << 4,
+  NUMERIC_FLAG_IS_DISJOINT = 1 << 5,
+  NUMERIC_FLAG_IS_EXACT = 1 << 6,
+};
+
+Value *NumericIO::getFlags(Value &V, Type &Ty, InstrumentationConfig &IConf,
+                           InstrumentorIRBuilderTy &IIRB) {
+  auto &I = cast<Instruction>(V);
+  uint64_t Flag = NUMERIC_FLAG_NONE;
+
+  switch (I.getOpcode()) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl:
+    if (I.hasNoSignedWrap())
+      Flag |= NUMERIC_FLAG_NO_SIGNED_WRAP;
+    if (I.hasNoUnsignedWrap())
+      Flag |= NUMERIC_FLAG_NO_UNSIGNED_WRAP;
+    break;
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FNeg:
+    if (I.hasNoNaNs())
+      Flag |= NUMERIC_FLAG_HAS_NO_NANS;
+    if (I.hasNoInfs())
+      Flag |= NUMERIC_FLAG_HAS_NO_INFS;
+    if (I.hasNoSignedZeros())
+      Flag |= NUMERIC_FLAG_HAS_NO_SIGNED_ZEROS;
+    break;
+  case Instruction::AShr:
+  case Instruction::LShr:
+  case Instruction::SDiv:
+  case Instruction::UDiv:
+    if (I.isExact())
+      Flag |= NUMERIC_FLAG_IS_EXACT;
+    break;
+  }
+
+  if (auto *DI = dyn_cast<PossiblyDisjointInst>(&V))
+    if (DI->isDisjoint())
+      Flag |= NUMERIC_FLAG_IS_DISJOINT;
+
+  return getCI(&Ty, Flag);
+}
+
 void NumericIO::init(InstrumentationConfig &IConf,
                      InstrumentorIRBuilderTy &IIRB, ConfigTy *UserConfig) {
   if (UserConfig)
@@ -1714,7 +1769,7 @@ void NumericIO::init(InstrumentationConfig &IConf,
       IRTArg::POTENTIALLY_INDIRECT |
       (Config.has(PassSize) ? IRTArg::INDIRECT_HAS_SIZE : IRTArg::NONE);
   if (Config.has(PassTypeId))
-    IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "type_id",
+    IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "type_id",
                              "The operation's type id.", IRTArg::NONE,
                              getTypeId));
   if (Config.has(PassSize))
@@ -1737,6 +1792,11 @@ void NumericIO::init(InstrumentationConfig &IConf,
         IRTArg(IIRB.Int64Ty, "result", "Result of the operation.",
                IRTArg::REPLACABLE | ValArgOpts, getValue,
                Config.has(ReplaceResult) ? replaceValue : nullptr));
+  if (Config.has(PassFlags))
+    IRTArgs.push_back(
+        IRTArg(IIRB.Int64Ty, "flags",
+               "A bitmask value signaling which instruction flags are present.",
+               IRTArg::NONE, getFlags));
   addCommonArgs(IConf, IIRB.Ctx, Config.has(PassId));
   IConf.addChoice(*this, IIRB.Ctx);
 }

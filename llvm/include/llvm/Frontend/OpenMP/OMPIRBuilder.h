@@ -594,12 +594,13 @@ public:
     /// The basic block to which control should be transferred to
     /// implement the FiniCB. Memoized to avoid generating finalization
     /// multiple times.
-    Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
+    LLVM_ABI Expected<BasicBlock *> getFiniBB(IRBuilderBase &Builder);
 
     /// For cases where there is an unavoidable existing finalization block
     /// (e.g. loop finialization after omp sections). The existing finalization
     /// block must not contain any non-finalization code.
-    Error mergeFiniBB(IRBuilderBase &Builder, BasicBlock *ExistingFiniBB);
+    LLVM_ABI Error mergeFiniBB(IRBuilderBase &Builder,
+                               BasicBlock *ExistingFiniBB);
 
   private:
     /// Access via getFiniBB.
@@ -2431,9 +2432,9 @@ public:
 
   LLVM_ABI Function *getOrCreateRuntimeFunctionPtr(omp::RuntimeFunction FnID);
 
-  CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
-                                      ArrayRef<Value *> Args,
-                                      StringRef Name = "");
+  LLVM_ABI CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
+                                               ArrayRef<Value *> Args,
+                                               StringRef Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
@@ -2560,7 +2561,7 @@ public:
 
   /// Helper that contains information about regions we need to outline
   /// during finalization.
-  struct OutlineInfo {
+  struct LLVM_ABI OutlineInfo {
     using PostOutlineCBTy = std::function<void(Function &)>;
     PostOutlineCBTy PostOutlineCB;
     BasicBlock *EntryBB, *ExitBB, *OuterAllocBB;
@@ -2570,18 +2571,18 @@ public:
     // TODO: this should be safe to enable by default
     bool FixUpNonEntryAllocas = false;
 
-    LLVM_ABI virtual ~OutlineInfo() = default;
+    virtual ~OutlineInfo() = default;
 
     /// Collect all blocks in between EntryBB and ExitBB in both the given
     /// vector and set.
-    LLVM_ABI void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
-                                SmallVectorImpl<BasicBlock *> &BlockVector);
+    void collectBlocks(SmallPtrSetImpl<BasicBlock *> &BlockSet,
+                       SmallVectorImpl<BasicBlock *> &BlockVector);
 
     /// Create a CodeExtractor instance based on the information stored in this
     /// structure, the list of collected blocks from a previous call to
     /// \c collectBlocks and a flag stating whether arguments must be passed in
     /// address space 0.
-    LLVM_ABI virtual std::unique_ptr<CodeExtractor>
+    virtual std::unique_ptr<CodeExtractor>
     createCodeExtractor(ArrayRef<BasicBlock *> Blocks,
                         bool ArgsInZeroAddressSpace, Twine Suffix = Twine(""));
 

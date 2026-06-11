@@ -8,16 +8,18 @@
 recording debugger output."""
 
 
+from collections import defaultdict
+from dataclasses import dataclass
 from enum import Enum
 import time
-from typing import Optional
+from typing import Dict, List, Optional
 
 from dex.debugger.DebuggerControllers.DebuggerControllerBase import (
     DebuggerControllerBase,
 )
 from dex.debugger.DebuggerBase import DebuggerBase
 from dex.debugger.DAP import DAP
-from dex.evaluation.StateMatch import get_active_where_expects
+from dex.evaluation.StateMatch import get_active_where_matches
 from dex.test_script.Nodes import Where
 from dex.test_script.Script import DexterScript, Scope
 from dex.tools import Context
@@ -30,7 +32,6 @@ class DebuggerAction(Enum):
     STEP_OUT = 1
     CONTINUE = 2
     EXIT = 3
-
 
 class ScriptDebuggerController(DebuggerControllerBase):
     """Uses a Dexter Script to drive a debugger session, using "where" nodes to make breakpoint/stepping decisions, and
@@ -49,9 +50,12 @@ class ScriptDebuggerController(DebuggerControllerBase):
         # and will be set back to None after we finish running the debugger.
         self.debugger: DebuggerBase = None  # type: ignore
 
+        # Breakpoint IDs currently set for each !where node.
+        self._where_bps: Dict[Where, List[int]] = defaultdict(list)
+
     def add_where_entry_bp(self, where: Where, default_file: Optional[str] = None):
         """Adds a breakpoint to catch when we enter the given !where node."""
-        added_ids = []
+        added_ids: List[int] = []
         if where.function:
             if where.lines:
                 raise NotImplementedError(
@@ -66,6 +70,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
             # If this Where covers a range of lines, we breakpoint each of them to ensure that we don't miss any lines.
             for line in where.get_lines():
                 added_ids.append(self.debugger.add_breakpoint(file, line))
+        self._where_bps[where] = added_ids
         for id in added_ids:
             self.context.logger.note(f"Added Entry BP {id} for {where}")
 
@@ -115,12 +120,12 @@ class ScriptDebuggerController(DebuggerControllerBase):
             ## Fetch frame information and breakpoint information from the debugger.
             step_info: StepIR = self.debugger.get_stack_frames(self._step_index)
 
-            active_where_expects = get_active_where_expects(script, step_info)
+            active_where_matches = get_active_where_matches(script, step_info)
 
             watches = [
                 watch
-                for frame_idx, expects in active_where_expects.values()
-                for expect in expects
+                for where_match in active_where_matches.values()
+                for expect in where_match.active_expects
                 if (watch := expect.get_watched_expr())
             ]
             self.debugger.collect_watches(step_info, watches)
@@ -130,13 +135,34 @@ class ScriptDebuggerController(DebuggerControllerBase):
             # - Otherwise, if any !where matches any non-current stack frame, we step out.
             # - Otherwise, we continue.
             if any(
-                frame_idx == 0 for frame_idx, expects in active_where_expects.values()
+                where_match.frame_idx == 0
+                for where_match in active_where_matches.values()
             ):
                 next_action = DebuggerAction.STEP_OVER
-            elif active_where_expects:
+            elif active_where_matches:
                 next_action = DebuggerAction.STEP_OUT
             else:
                 next_action = DebuggerAction.CONTINUE
+
+            # Update breakpoints: first remove unneeded breakpoints, then set newly desired breakpoints.
+            bp_to_delete = []
+            pending_wheres = set(
+                where
+                for where_match in active_where_matches.values()
+                for where in where_match.pending_wheres
+            )
+            for where, bp_ids in self._where_bps.items():
+                if (
+                    bp_ids
+                    and where not in script.root_wheres
+                    and where not in pending_wheres
+                ):
+                    bp_to_delete.extend(bp_ids)
+                    bp_ids.clear()
+            self.debugger.delete_breakpoints(bp_to_delete)
+            for where in pending_wheres:
+                if not self._where_bps[where]:
+                    self.add_where_entry_bp(where)
 
             if step_info.current_frame:
                 self._step_index += 1
@@ -147,7 +173,7 @@ class ScriptDebuggerController(DebuggerControllerBase):
 
             # If we have --trace enabled, report a short overview of this step.
             self.context.logger.note(
-                f"Stopped at {step_info.current_function} {step_info.current_location.short_str()}, {len(active_where_expects)} !wheres on the stack, next_action={next_action}"
+                f"Stopped at {step_info.current_function} {step_info.current_location.short_str()}, {len(active_where_matches)} !wheres on the stack, next_action={next_action}"
             )
 
             if next_action == DebuggerAction.EXIT:

@@ -186,7 +186,8 @@ int llvm::compileModuleWithNewPM(
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << PipelineStr << '\n';
+    printFormattedPipelinePasses(outs(), PipelineStr, *PrintPipelinePasses);
+    outs() << '\n';
     return 0;
   }
 

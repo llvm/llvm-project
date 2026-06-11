@@ -18,6 +18,18 @@ types:
 enums: []
 objects: []
 functions:
+  - name: __sched_cpualloc
+    standards:
+      - llvm_libc_ext
+    return_type: cpu_set_t *
+    arguments:
+      - type: size_t
+  - name: __sched_cpufree
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: cpu_set_t *
   - name: __sched_getcpucount
     standards:
       - llvm_libc_ext

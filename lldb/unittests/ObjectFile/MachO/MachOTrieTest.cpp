@@ -539,3 +539,18 @@ TEST(MachOTrieTest, ChildOffsetOutOfRange) {
   EXPECT_TRUE(result.ok);
   EXPECT_TRUE(result.ext_symbols.empty());
 }
+
+TEST(MachOTrieTest, OversizedEdgeLabelIsRejected) {
+  // A corrupt export trie can encode an edge label far longer than any real
+  // symbol name.  ParseTrieEntries appends every edge label onto the running
+  // symbol name without a length bound, so such a label drives an unbounded
+  // allocation.  The parser must treat an implausibly long name as corrupt data
+  // and bail instead of accepting it.
+  constexpr size_t kOversizedLabelLen = 8 * 1024 * 1024;
+  TrieBuilder b;
+  b.AddExport(b.Root(), std::string(kOversizedLabelLen, 'A'), 0x1000);
+
+  ParseResult result = Parse(b.Build());
+  EXPECT_FALSE(result.ok);
+  EXPECT_TRUE(result.ext_symbols.empty());
+}

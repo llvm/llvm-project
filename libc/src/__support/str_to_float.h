@@ -1129,7 +1129,9 @@ strtofloatingpoint(const CharType *__restrict src) {
 
   size_t index = first_non_whitespace(src);
   int sign = get_sign(src + index);
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   bool is_positive = (sign >= 0);
+#endif
   index += (sign != 0);
 
   if (sign < 0) {
@@ -1146,6 +1148,7 @@ strtofloatingpoint(const CharType *__restrict src) {
     }
 
     RoundDirection round_direction = RoundDirection::Nearest;
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     switch (fputil::quick_get_round()) {
     case FE_TONEAREST:
       round_direction = RoundDirection::Nearest;
@@ -1160,6 +1163,7 @@ strtofloatingpoint(const CharType *__restrict src) {
       round_direction = RoundDirection::Down;
       break;
     }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
     StrToNumResult<ExpandedFloat<T>> parse_result({0, 0});
     if (base == 16) {

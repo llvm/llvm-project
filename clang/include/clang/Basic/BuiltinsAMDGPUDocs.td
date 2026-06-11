@@ -645,6 +645,21 @@ scale variant.
 }];
 }
 
+def DocWMMA_f64_16x16x4_f64_GFX1251 : Documentation {
+  let Category = DocCatWMMA;
+  let Content = [{
+Wave matrix multiply-accumulate with f64 inputs and f64 output, using a
+4-deep K dimension. Multiplies a 16x4 matrix ``A`` by a 4x16 matrix ``B``
+and adds the 16x16 f64 accumulator ``C``.
+
+- ``a_neg`` / ``b_neg``: if true, negate the corresponding input matrix.
+- ``c_mod``: accumulator modifier (0 = none, 1 = neg, 2 = abs,
+  3 = neg(abs)).
+- ``matrix_a_reuse`` / ``matrix_b_reuse``: hints to the hardware that
+  matrix A or B data can be reused from a previous WMMA instruction.
+}];
+}
+
 //===----------------------------------------------------------------------===//
 // Tensor DMA Builtins
 //===----------------------------------------------------------------------===//

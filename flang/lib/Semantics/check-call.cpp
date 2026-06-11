@@ -27,7 +27,7 @@ namespace characteristics = Fortran::evaluate::characteristics;
 
 namespace Fortran::semantics {
 
-static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
+void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     parser::ContextualMessages &messages, SemanticsContext &context) {
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};

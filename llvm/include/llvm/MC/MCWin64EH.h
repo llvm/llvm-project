@@ -75,7 +75,8 @@ public:
 };
 /// Encode a single WinEH::Instruction as V3 WOD bytes.
 /// Appends encoded bytes to Out.
-void EncodeWOD(const WinEH::Instruction &Inst, SmallVectorImpl<uint8_t> &Out);
+LLVM_ABI void EncodeWOD(const WinEH::Instruction &Inst,
+                        SmallVectorImpl<uint8_t> &Out);
 } // namespace Win64EH
 } // namespace llvm
 

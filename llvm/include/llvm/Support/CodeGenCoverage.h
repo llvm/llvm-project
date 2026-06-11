@@ -23,15 +23,15 @@ protected:
 public:
   using const_covered_iterator = BitVector::const_set_bits_iterator;
 
-  CodeGenCoverage();
+  LLVM_ABI CodeGenCoverage();
 
-  void setCovered(uint64_t RuleID);
-  bool isCovered(uint64_t RuleID) const;
-  iterator_range<const_covered_iterator> covered() const;
+  LLVM_ABI void setCovered(uint64_t RuleID);
+  LLVM_ABI bool isCovered(uint64_t RuleID) const;
+  LLVM_ABI iterator_range<const_covered_iterator> covered() const;
 
-  bool parse(MemoryBuffer &Buffer, StringRef BackendName);
-  bool emit(StringRef FilePrefix, StringRef BackendName) const;
-  void reset();
+  LLVM_ABI bool parse(MemoryBuffer &Buffer, StringRef BackendName);
+  LLVM_ABI bool emit(StringRef FilePrefix, StringRef BackendName) const;
+  LLVM_ABI void reset();
 };
 } // namespace llvm
 

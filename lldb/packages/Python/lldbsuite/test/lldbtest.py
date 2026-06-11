@@ -32,6 +32,7 @@ from __future__ import annotations
 
 # System modules
 import abc
+import errno
 from functools import wraps
 import gc
 import io
@@ -791,7 +792,21 @@ class Base(unittest.TestCase):
                 "MAX_PATH limit): {}".format(bdir)
             )
         if os.path.isdir(bdir) and not self.SHARED_BUILD_TESTCASE:
-            shutil.rmtree(bdir)
+            # Tolerate files vanishing mid-walk. Clang's implicit module
+            # build leaves behind `*.pcm.lock` lockfiles whose lifetime is
+            # tied to the holding process; a concurrent or just-exited
+            # clang can unlink one between rmtree's scandir and unlink,
+            # raising ENOENT. The dir is going away anyway, so treat
+            # already-gone entries as success.
+            def _ignore_enoent(func, path, exc_info):
+                if (
+                    isinstance(exc_info[1], OSError)
+                    and exc_info[1].errno == errno.ENOENT
+                ):
+                    return
+                raise exc_info[1]
+
+            shutil.rmtree(bdir, onerror=_ignore_enoent)
         lldbutil.mkdir_p(bdir)
 
     def getBuildArtifact(self, name="a.out"):

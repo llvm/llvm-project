@@ -1078,22 +1078,26 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
     return getSectionForConstant(DL, Kind, C, Alignment, F);
 
   auto &Context = getContext();
+  StringRef CstPrefix = ".rodata";
+  unsigned MergeableCstFlags = ELF::SHF_ALLOC | ELF::SHF_MERGE;
+  if (TM->getCodeModel() == CodeModel::Large &&
+      TM->getTargetTriple().getArch() == Triple::x86_64) {
+    MergeableCstFlags |= ELF::SHF_X86_64_LARGE;
+    CstPrefix = ".lrodata";
+  }
+
   if (Kind.isMergeableConst4() && MergeableConst4Section)
-    return Context.getELFSection(".rodata.cst4." + SectionSuffix + ".",
-                                 ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
+    return Context.getELFSection(CstPrefix + ".cst4." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, MergeableCstFlags, 4);
   if (Kind.isMergeableConst8() && MergeableConst8Section)
-    return Context.getELFSection(".rodata.cst8." + SectionSuffix + ".",
-                                 ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
+    return Context.getELFSection(CstPrefix + ".cst8." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, MergeableCstFlags, 8);
   if (Kind.isMergeableConst16() && MergeableConst16Section)
-    return Context.getELFSection(".rodata.cst16." + SectionSuffix + ".",
-                                 ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
+    return Context.getELFSection(CstPrefix + ".cst16." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, MergeableCstFlags, 16);
   if (Kind.isMergeableConst32() && MergeableConst32Section)
-    return Context.getELFSection(".rodata.cst32." + SectionSuffix + ".",
-                                 ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+    return Context.getELFSection(CstPrefix + ".cst32." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, MergeableCstFlags, 32);
   if (Kind.isReadOnly())
     return Context.getELFSection(".rodata." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS, ELF::SHF_ALLOC);

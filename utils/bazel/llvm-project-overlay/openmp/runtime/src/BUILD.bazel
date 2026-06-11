@@ -1,0 +1,375 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Bazel port of openmp/runtime/src/CMakeLists.txt for the host libomp runtime.
+# Supports Linux, macOS, and Windows on x86_64 and aarch64.
+#
+# Windows note: the OS branch uses z_Windows_NT*_util.cpp plus z_Linux_asm.S
+# (which has KMP_OS_WINDOWS handling). z_Windows_NT-586_asm.asm is MASM
+# syntax and not used here, so a Clang-family toolchain (clang / clang-cl /
+# clang-mingw) is required on Windows — MSVC cl.exe alone won't assemble the
+# .S file.
+#
+# Optional features (HWLOC, OMPT, ITT, debugger, stats) are disabled to keep
+# the configuration matrix small; libomp builds as a fully-functional host
+# runtime without them.
+
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["layering_check"],
+)
+
+licenses(["notice"])
+
+# ---------------------------------------------------------------------------
+# Generated headers
+# ---------------------------------------------------------------------------
+
+# omp.h: only four version-related substitutions. Pin to the in-tree CMake
+# values (openmp/CMakeLists.txt: LIBOMP_VERSION_MAJOR=5, LIBOMP_VERSION_MINOR=0).
+expand_template(
+    name = "omp_h_gen",
+    out = "omp.h",
+    substitutions = {
+        "@LIBOMP_BUILD_DATE@": "No Timestamp",
+        "@LIBOMP_VERSION_BUILD@": "0",
+        "@LIBOMP_VERSION_MAJOR@": "5",
+        "@LIBOMP_VERSION_MINOR@": "0",
+    },
+    template = "include/omp.h.var",
+)
+
+# ompx.h has no @substitutions@ but the .var suffix means CMake copies it.
+# Mirror that with a trivial template expansion.
+expand_template(
+    name = "ompx_h_gen",
+    out = "ompx.h",
+    substitutions = {},
+    template = "include/ompx.h.var",
+)
+
+# kmp_config.h: feature macros. The substitutions dict is the union of four
+# parts — a constant base plus one select per dimension (OS, CPU, compiler
+# ABI). Bazel resolves each select() during analysis and the `|` operator
+# merges the results, so there's no need for an OS × CPU × ABI cross-product
+# even though each dimension has multiple possible values.
+expand_template(
+    name = "kmp_config_h_gen",
+    out = "kmp_config.h",
+    substitutions = {
+        "#cmakedefine01 DEBUG_BUILD": "#define DEBUG_BUILD 0",
+        # AARCH64_A64FX is a specific Fujitsu A64FX CPU detection; 0 for
+        # generic builds across all archs.
+        "#cmakedefine01 LIBOMP_ARCH_AARCH64_A64FX": "#define LIBOMP_ARCH_AARCH64_A64FX 0",
+        "#cmakedefine01 LIBOMP_ENABLE_ASSERTIONS": "#define LIBOMP_ENABLE_ASSERTIONS 1",
+        "#cmakedefine01 LIBOMP_ENABLE_SHARED": "#define LIBOMP_ENABLE_SHARED 1",
+        "#cmakedefine01 LIBOMP_HAVE_ATTRIBUTE_RTM": "#define LIBOMP_HAVE_ATTRIBUTE_RTM 0",
+        "#cmakedefine01 LIBOMP_HAVE_ATTRIBUTE_WAITPKG": "#define LIBOMP_HAVE_ATTRIBUTE_WAITPKG 0",
+        "#cmakedefine01 LIBOMP_HAVE_RTM_INTRINSICS": "#define LIBOMP_HAVE_RTM_INTRINSICS 0",
+        # WAITPKG / RTM are recent x86 ISA extensions; require matching
+        # compiler attributes. Disabled to keep the baseline portable across
+        # older toolchains; can be enabled per-microarch later.
+        "#cmakedefine01 LIBOMP_HAVE_WAITPKG_INTRINSICS": "#define LIBOMP_HAVE_WAITPKG_INTRINSICS 0",
+        "#cmakedefine01 LIBOMP_HAVE_WEAK_ATTRIBUTE": "#define LIBOMP_HAVE_WEAK_ATTRIBUTE 1",
+        "#cmakedefine01 LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER": "#define LIBOMP_HAVE___BUILTIN_READCYCLECOUNTER 0",
+        "#cmakedefine01 LIBOMP_OMPD_SUPPORT": "#define LIBOMP_OMPD_SUPPORT 0",
+        "#cmakedefine01 LIBOMP_OMPT_DEBUG": "#define LIBOMP_OMPT_DEBUG 0",
+        "#cmakedefine01 LIBOMP_OMPT_OPTIONAL": "#define LIBOMP_OMPT_OPTIONAL 0",
+        "#cmakedefine01 LIBOMP_OMPT_SUPPORT": "#define LIBOMP_OMPT_SUPPORT 0",
+        "#cmakedefine01 LIBOMP_PROFILING_SUPPORT": "#define LIBOMP_PROFILING_SUPPORT 0",
+        "#cmakedefine01 LIBOMP_STATS": "#define LIBOMP_STATS 0",
+        "#cmakedefine01 LIBOMP_TASKGRAPH_EXPERIMENTAL": "#define LIBOMP_TASKGRAPH_EXPERIMENTAL 0",
+        "#cmakedefine01 LIBOMP_USE_ADAPTIVE_LOCKS": "#define LIBOMP_USE_ADAPTIVE_LOCKS 1",
+        "#cmakedefine01 LIBOMP_USE_DEBUGGER": "#define LIBOMP_USE_DEBUGGER 0",
+        "#cmakedefine01 LIBOMP_USE_HIER_SCHED": "#define LIBOMP_USE_HIER_SCHED 0",
+        "#cmakedefine01 LIBOMP_USE_HWLOC": "#define LIBOMP_USE_HWLOC 0",
+        "#cmakedefine01 LIBOMP_USE_INTERNODE_ALIGNMENT": "#define LIBOMP_USE_INTERNODE_ALIGNMENT 0",
+        "#cmakedefine01 LIBOMP_USE_ITT_NOTIFY": "#define LIBOMP_USE_ITT_NOTIFY 0",
+        # No version script generated -> symbol versioning would leave
+        # references like `omp_set_lock_@OMP_1.0` unresolved at link time.
+        # Keep at 0 until a generate-def.py-driven version map is wired up.
+        "#cmakedefine01 LIBOMP_USE_VERSION_SYMBOLS": "#define LIBOMP_USE_VERSION_SYMBOLS 0",
+        "#cmakedefine01 OPENMP_ENABLE_LIBOMPTARGET": "#define OPENMP_ENABLE_LIBOMPTARGET 0",
+        "#cmakedefine01 RELWITHDEBINFO_BUILD": "#define RELWITHDEBINFO_BUILD 0",
+        "#cmakedefine01 STUBS_LIBRARY": "#define STUBS_LIBRARY 0",
+        "#define KMP_VERSION_MAJOR @LIBOMP_VERSION_MAJOR@": "#define KMP_VERSION_MAJOR 5",
+        "#define KMP_VERSION_MINOR @LIBOMP_VERSION_MINOR@": "#define KMP_VERSION_MINOR 0",
+    } | select({
+        # OS-only: library filename and OS-specific allocation/diagnostic
+        # APIs. The default falls back to Linux-like POSIX behavior, which
+        # is correct for any other KMP_OS_UNIX system (FreeBSD, OpenBSD,
+        # NetBSD, Solaris, Haiku — all use the z_Linux_* source path).
+        "@platforms//os:linux": {
+            "#cmakedefine01 LIBOMP_HAVE_ALIGNED_ALLOC": "#define LIBOMP_HAVE_ALIGNED_ALLOC 1",
+            "#cmakedefine01 LIBOMP_HAVE_INTRIN_H": "#define LIBOMP_HAVE_INTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE_POSIX_MEMALIGN": "#define LIBOMP_HAVE_POSIX_MEMALIGN 1",
+            "#cmakedefine01 LIBOMP_HAVE_PSAPI": "#define LIBOMP_HAVE_PSAPI 0",
+            "#cmakedefine01 LIBOMP_HAVE__ALIGNED_MALLOC": "#define LIBOMP_HAVE__ALIGNED_MALLOC 0",
+            "#define KMP_LIBRARY_FILE \"@LIBOMP_LIB_FILE@\"": "#define KMP_LIBRARY_FILE \"libomp.so\"",
+        },
+        "@platforms//os:macos": {
+            # aligned_alloc requires macOS 10.15+. Use posix_memalign codepath
+            # instead to keep the runtime compatible with older deployment
+            # targets.
+            "#cmakedefine01 LIBOMP_HAVE_ALIGNED_ALLOC": "#define LIBOMP_HAVE_ALIGNED_ALLOC 0",
+            "#cmakedefine01 LIBOMP_HAVE_INTRIN_H": "#define LIBOMP_HAVE_INTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE_POSIX_MEMALIGN": "#define LIBOMP_HAVE_POSIX_MEMALIGN 1",
+            "#cmakedefine01 LIBOMP_HAVE_PSAPI": "#define LIBOMP_HAVE_PSAPI 0",
+            "#cmakedefine01 LIBOMP_HAVE__ALIGNED_MALLOC": "#define LIBOMP_HAVE__ALIGNED_MALLOC 0",
+            "#define KMP_LIBRARY_FILE \"@LIBOMP_LIB_FILE@\"": "#define KMP_LIBRARY_FILE \"libomp.dylib\"",
+        },
+        "@platforms//os:windows": {
+            "#cmakedefine01 LIBOMP_HAVE_ALIGNED_ALLOC": "#define LIBOMP_HAVE_ALIGNED_ALLOC 0",
+            "#cmakedefine01 LIBOMP_HAVE_INTRIN_H": "#define LIBOMP_HAVE_INTRIN_H 1",
+            "#cmakedefine01 LIBOMP_HAVE_POSIX_MEMALIGN": "#define LIBOMP_HAVE_POSIX_MEMALIGN 0",
+            "#cmakedefine01 LIBOMP_HAVE_PSAPI": "#define LIBOMP_HAVE_PSAPI 1",
+            "#cmakedefine01 LIBOMP_HAVE__ALIGNED_MALLOC": "#define LIBOMP_HAVE__ALIGNED_MALLOC 1",
+            "#define KMP_LIBRARY_FILE \"@LIBOMP_LIB_FILE@\"": "#define KMP_LIBRARY_FILE \"libomp.dll\"",
+        },
+        # Conservative POSIX defaults for an unknown OS.
+        "//conditions:default": {
+            "#cmakedefine01 LIBOMP_HAVE_ALIGNED_ALLOC": "#define LIBOMP_HAVE_ALIGNED_ALLOC 1",
+            "#cmakedefine01 LIBOMP_HAVE_INTRIN_H": "#define LIBOMP_HAVE_INTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE_POSIX_MEMALIGN": "#define LIBOMP_HAVE_POSIX_MEMALIGN 1",
+            "#cmakedefine01 LIBOMP_HAVE_PSAPI": "#define LIBOMP_HAVE_PSAPI 0",
+            "#cmakedefine01 LIBOMP_HAVE__ALIGNED_MALLOC": "#define LIBOMP_HAVE__ALIGNED_MALLOC 0",
+            "#define KMP_LIBRARY_FILE \"@LIBOMP_LIB_FILE@\"": "#define KMP_LIBRARY_FILE \"libomp.so\"",
+        },
+    }) | select({
+        "@platforms//cpu:aarch64": {
+            "#cmakedefine01 LIBOMP_HAVE_IMMINTRIN_H": "#define LIBOMP_HAVE_IMMINTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE_X86INTRIN_H": "#define LIBOMP_HAVE_X86INTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE_XMMINTRIN_H": "#define LIBOMP_HAVE_XMMINTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE__MM_MALLOC": "#define LIBOMP_HAVE__MM_MALLOC 0",
+            "#cmakedefine01 LIBOMP_HAVE___RDTSC": "#define LIBOMP_HAVE___RDTSC 0",
+            "#define KMP_ARCH_STR \"@LIBOMP_LEGAL_ARCH@\"": "#define KMP_ARCH_STR \"AARCH64\"",
+        },
+        # CPU-only: arch name and x86 intrinsic header availability.
+        "@platforms//cpu:x86_64": {
+            "#cmakedefine01 LIBOMP_HAVE_IMMINTRIN_H": "#define LIBOMP_HAVE_IMMINTRIN_H 1",
+            "#cmakedefine01 LIBOMP_HAVE_X86INTRIN_H": "#define LIBOMP_HAVE_X86INTRIN_H 1",
+            "#cmakedefine01 LIBOMP_HAVE_XMMINTRIN_H": "#define LIBOMP_HAVE_XMMINTRIN_H 1",
+            "#cmakedefine01 LIBOMP_HAVE__MM_MALLOC": "#define LIBOMP_HAVE__MM_MALLOC 1",
+            "#cmakedefine01 LIBOMP_HAVE___RDTSC": "#define LIBOMP_HAVE___RDTSC 1",
+            "#define KMP_ARCH_STR \"@LIBOMP_LEGAL_ARCH@\"": "#define KMP_ARCH_STR \"Intel(R) 64\"",
+        },
+        # Unknown CPU: assume non-x86, no SSE/intrinsic headers. KMP_ARCH_STR
+        # is just the human-readable banner — the actual ARCH detection in
+        # kmp_platform.h uses compiler predefines (__aarch64__, __x86_64__,
+        # __powerpc__, …) so this label doesn't affect codegen.
+        "//conditions:default": {
+            "#cmakedefine01 LIBOMP_HAVE_IMMINTRIN_H": "#define LIBOMP_HAVE_IMMINTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE_X86INTRIN_H": "#define LIBOMP_HAVE_X86INTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE_XMMINTRIN_H": "#define LIBOMP_HAVE_XMMINTRIN_H 0",
+            "#cmakedefine01 LIBOMP_HAVE__MM_MALLOC": "#define LIBOMP_HAVE__MM_MALLOC 0",
+            "#cmakedefine01 LIBOMP_HAVE___RDTSC": "#define LIBOMP_HAVE___RDTSC 0",
+            "#define KMP_ARCH_STR \"@LIBOMP_LEGAL_ARCH@\"": "#define KMP_ARCH_STR \"Unknown\"",
+        },
+    }) | select({
+        "@rules_cc//cc/compiler:clang-cl": {"#cmakedefine01 MSVC": "#define MSVC 1"},
+        # ABI-only: KMP_MSVC_COMPAT in kmp_os.h gates intrinsic shapes on
+        # this; clang-cl and msvc-cl both use the MSVC ABI.
+        "@rules_cc//cc/compiler:msvc-cl": {"#cmakedefine01 MSVC": "#define MSVC 1"},
+        "//conditions:default": {"#cmakedefine01 MSVC": "#define MSVC 0"},
+    }),
+    template = "kmp_config.h.cmake",
+)
+
+# kmp_i18n_id.inc and kmp_i18n_default.inc are generated by message-converter.py
+# from i18n/en_US.txt. The script's output formatting differs by target system
+# (see message-converter.py:414: Windows path), so we pass --target-system-override
+# on Windows to ensure we get a Windows-formatted catalog even when generating
+# the inc files on another host.
+_i18n_target_system_arg = select({
+    "@platforms//os:windows": "--target-system-override=Windows ",
+    "//conditions:default": "",
+})
+
+genrule(
+    name = "kmp_i18n_id_inc_gen",
+    srcs = [
+        "i18n/en_US.txt",
+        "//openmp/runtime/tools:message-converter.py",
+        "//openmp/runtime/tools:libomputils.py",
+    ],
+    outs = ["kmp_i18n_id.inc"],
+    cmd = "PYTHONPATH=$$(dirname $(location //openmp/runtime/tools:libomputils.py)) " +
+          "python3 $(location //openmp/runtime/tools:message-converter.py) " +
+          "--enum=$@ " + _i18n_target_system_arg + "$(location i18n/en_US.txt)",
+)
+
+genrule(
+    name = "kmp_i18n_default_inc_gen",
+    srcs = [
+        "i18n/en_US.txt",
+        "//openmp/runtime/tools:message-converter.py",
+        "//openmp/runtime/tools:libomputils.py",
+    ],
+    outs = ["kmp_i18n_default.inc"],
+    cmd = "PYTHONPATH=$$(dirname $(location //openmp/runtime/tools:libomputils.py)) " +
+          "python3 $(location //openmp/runtime/tools:message-converter.py) " +
+          "--default=$@ " + _i18n_target_system_arg + "$(location i18n/en_US.txt)",
+)
+
+# ---------------------------------------------------------------------------
+# libomp
+# ---------------------------------------------------------------------------
+
+# Header-only library exposing the generated config + public headers, so that
+# both libomp's own .cpp files and external consumers see them at consistent
+# include paths. The hdrs list is explicit (not a glob) so the dependency
+# surface stays stable as upstream adds/removes headers.
+cc_library(
+    name = "omp_headers",
+    hdrs = [
+        "kmp.h",
+        "kmp_affinity.h",
+        "kmp_atomic.h",
+        "kmp_barrier.h",
+        "kmp_collapse.h",
+        "kmp_config.h",
+        "kmp_debug.h",
+        "kmp_dispatch.h",
+        "kmp_dispatch_hier.h",
+        "kmp_environment.h",
+        "kmp_error.h",
+        "kmp_ftn_entry.h",
+        "kmp_ftn_os.h",
+        "kmp_i18n.h",
+        "kmp_i18n_default.inc",
+        "kmp_i18n_id.inc",
+        "kmp_io.h",
+        "kmp_itt.h",
+        "kmp_itt.inl",
+        "kmp_lock.h",
+        "kmp_omp.h",
+        "kmp_os.h",
+        "kmp_platform.h",
+        "kmp_safe_c_api.h",
+        "kmp_settings.h",
+        "kmp_stats.h",
+        "kmp_stats_timing.h",
+        "kmp_str.h",
+        "kmp_taskdeps.h",
+        "kmp_utils.h",
+        "kmp_version.h",
+        "kmp_wait_release.h",
+        "kmp_wrapper_getpid.h",
+        "kmp_wrapper_malloc.h",
+        "omp.h",
+        "ompd-specific.h",
+        "ompt-event-specific.h",
+        "ompt-internal.h",
+        "ompt-specific.h",
+        "ompx.h",
+    ],
+    includes = [
+        ".",
+        "i18n",
+    ],
+    textual_hdrs = glob(["i18n/*"]),
+)
+
+# The host OpenMP runtime. z_Linux_asm.S handles x86_64, aarch64, darwin, and
+# windows internally via KMP_ARCH_* / KMP_OS_* guards.
+#
+# srcs: the always-built set mirrors LIBOMP_CXXFILES in
+# openmp/runtime/src/CMakeLists.txt minus the STUBS_LIBRARY / OMPT / OMPD /
+# ITT / STATS / DEBUGGER conditionals (all disabled in our kmp_config.h).
+# The OS select adds either the Unix path (z_Linux_util.cpp + the GOMP
+# compatibility layer kmp_gsupport.cpp) or the Windows path (two NT util
+# files; kmp_gsupport is Unix-only).
+#
+# copts: GCC/Clang-style flags. Currently fine for all supported
+# configurations because Windows requires a Clang-family toolchain (clang-cl
+# accepts both styles). If MSVC cl.exe support is ever added, this list
+# needs a select() with /EHs-c-, /GR-, /wd#### equivalents.
+#
+# linkopts: POSIX hosts pull in pthread/dl/m. Windows uses psapi.lib for
+# GetProcessMemoryInfo and otherwise lives in the platform libraries the
+# toolchain links by default.
+#
+# Note: SSE2 is part of the x86_64 baseline ABI, so neither GCC/Clang nor
+# MSVC need an explicit flag to enable it on x86_64. (Upstream's
+# LibompHandleFlags.cmake adds -msse2 / /arch:SSE2 only for IA32, which this
+# port doesn't support.)
+cc_library(
+    name = "omp",
+    srcs = [
+        "kmp_affinity.cpp",
+        "kmp_alloc.cpp",
+        "kmp_atomic.cpp",
+        "kmp_barrier.cpp",
+        "kmp_cancel.cpp",
+        "kmp_collapse.cpp",
+        "kmp_csupport.cpp",
+        "kmp_debug.cpp",
+        "kmp_dispatch.cpp",
+        "kmp_environment.cpp",
+        "kmp_error.cpp",
+        "kmp_ftn_cdecl.cpp",
+        "kmp_ftn_extra.cpp",
+        "kmp_global.cpp",
+        "kmp_i18n.cpp",
+        "kmp_invoke_microtask.cpp",
+        "kmp_io.cpp",
+        "kmp_itt.cpp",
+        "kmp_lock.cpp",
+        "kmp_runtime.cpp",
+        "kmp_sched.cpp",
+        "kmp_settings.cpp",
+        "kmp_str.cpp",
+        "kmp_taskdeps.cpp",
+        "kmp_tasking.cpp",
+        "kmp_threadprivate.cpp",
+        "kmp_utility.cpp",
+        "kmp_version.cpp",
+        "kmp_wait_release.cpp",
+        "z_Linux_asm.S",
+    ] + select({
+        # Source split is OS-only (CPU doesn't affect which .cpp files are
+        # in/out). Unknown OSes fall through to the Unix path since every
+        # KMP_OS_UNIX system uses the same z_Linux_* sources.
+        "@platforms//os:windows": [
+            "z_Windows_NT-586_util.cpp",
+            "z_Windows_NT_util.cpp",
+        ],
+        "//conditions:default": [
+            "kmp_gsupport.cpp",
+            "z_Linux_util.cpp",
+        ],
+    }),
+    copts = [
+        "-D_GLIBCXX_NO_ASSERTIONS",
+        "-D_GNU_SOURCE",
+        "-D_REENTRANT",
+        "-U_GLIBCXX_ASSERTIONS",
+        "-Wno-class-memaccess",
+        "-Wno-covered-switch-default",
+        "-Wno-deprecated-declarations",
+        "-Wno-maybe-uninitialized",
+        "-Wno-switch",
+        "-Wno-unused-value",
+        "-Wno-unused-variable",
+        "-fPIC",
+        "-fno-exceptions",
+        "-fno-rtti",
+        "-fno-strict-aliasing",
+    ],
+    linkopts = select({
+        "@platforms//os:windows": ["-Wl,-defaultlib:psapi.lib"],
+        "//conditions:default": [
+            "-lpthread",
+            "-ldl",
+            "-lm",
+        ],
+    }),
+    deps = [
+        ":omp_headers",
+    ],
+    alwayslink = True,
+)

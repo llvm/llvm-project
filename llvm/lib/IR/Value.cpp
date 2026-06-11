@@ -832,6 +832,12 @@ bool Value::canBeFreed() const {
   if (isa<Constant>(this))
     return false;
 
+  // Allocas cannot be freed: They remain dereferenceable after lifetime.end,
+  // in the sense that they can be loaded from without UB. They only become
+  // non-writable, which is not tracked by this API.
+  if (isa<AllocaInst>(this))
+    return false;
+
   // Handle byval/byref/sret/inalloca/preallocated arguments.  The storage
   // lifetime is guaranteed to be longer than the callee's lifetime.
   if (auto *A = dyn_cast<Argument>(this)) {

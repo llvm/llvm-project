@@ -677,7 +677,7 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
-  APInt getNaNPayload() const;
+  LLVM_ABI APInt getNaNPayload() const;
 
 private:
   /// \name Simple Queries
@@ -925,7 +925,7 @@ public:
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
 
-  APInt getNaNPayload() const;
+  LLVM_ABI APInt getNaNPayload() const;
 
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
@@ -1426,7 +1426,7 @@ public:
   ///
   /// If a floating-point exception occurs during conversion, then no error is
   /// returned, and the exception is indicated via opStatus.
-  Expected<opStatus> convertFromString(StringRef, roundingMode);
+  LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
   }
@@ -1762,7 +1762,8 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
 
 /// Implement IEEE 754-2019 exp functions
 LLVM_READONLY
-APFloat exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven);
+LLVM_ABI APFloat exp(const APFloat &X,
+                     RoundingMode RM = APFloat::rmNearestTiesToEven);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

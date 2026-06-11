@@ -53,7 +53,7 @@ struct ParserError : public ErrorInfo<ParserError, StringError> {
   using ErrorInfo<ParserError, StringError>::ErrorInfo;
   explicit ParserError(const Twine &S)
       : ErrorInfo(S, inconvertibleErrorCode()) {}
-  static char ID;
+  LLVM_ABI static char ID;
 };
 
 /// Warnings encountered during parsing.
@@ -61,7 +61,7 @@ struct ParserWarning : public ErrorInfo<ParserWarning, StringError> {
   using ErrorInfo<ParserWarning, StringError>::ErrorInfo;
   explicit ParserWarning(const Twine &S)
       : ErrorInfo(S, inconvertibleErrorCode()) {}
-  static char ID;
+  LLVM_ABI static char ID;
 };
 
 // We use 64 bits as the known part in the scalable vector types.

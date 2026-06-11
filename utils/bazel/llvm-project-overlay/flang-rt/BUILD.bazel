@@ -1,0 +1,50 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+exports_files(["cmake/config.h.cmake.in"])
+
+# Re-expose libc/shared/*.h so that flang-rt's io-api-server.cpp can include
+# `<shared/rpc.h>` and `<shared/rpc_dispatch.h>` without depending on the full
+# libc Bazel target graph (libc isn't packaged as a cc_library here). The
+# `strip_include_prefix = "/libc"` maps `libc/shared/rpc.h` to `shared/rpc.h`.
+cc_library(
+    name = "LibcSharedHeaders",
+    hdrs = [
+        "//libc:shared/rpc.h",
+        "//libc:shared/rpc_dispatch.h",
+        "//libc:shared/rpc_util.h",
+    ],
+    strip_include_prefix = "/libc",
+)
+
+# Public headers used by both the runtime implementation and external consumers
+# (e.g. flang_rt-using applications and the lowering codegen which references
+# runtime entry points by signature).  Mirrors the recursive include scan in
+# flang-rt/lib/runtime/CMakeLists.txt.
+cc_library(
+    name = "RuntimeHeaders",
+    hdrs = glob(["include/flang-rt/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:RuntimeHeaders",
+    ],
+)
+
+# Convenience alias matching the CMake target name.
+alias(
+    name = "runtime",
+    actual = "//flang-rt/lib/runtime:flang_rt.runtime",
+)

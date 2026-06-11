@@ -216,6 +216,157 @@ define double @round_double(double %a) {
   ret double %b
 }
 
+; ---- lround ----
+
+define i32 @lround_i32_float(float %a) {
+; CHECK-LABEL: lround_i32_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [lround_i32_float_param_0];
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147483648;
+; CHECK-NEXT:    or.b32 %r3, %r2, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r5, %r4;
+; CHECK-NEXT:    abs.f32 %r6, %r1;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r1;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
+; CHECK-NEXT:    cvt.rzi.s32.f32 %r10, %r9;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r10;
+; CHECK-NEXT:    ret;
+  %b = call i32 @llvm.lround.i32.f32(float %a)
+  ret i32 %b
+}
+
+define i64 @lround_i64_float(float %a) {
+; CHECK-LABEL: lround_i64_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [lround_i64_float_param_0];
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147483648;
+; CHECK-NEXT:    or.b32 %r3, %r2, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r5, %r4;
+; CHECK-NEXT:    abs.f32 %r6, %r1;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r1;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f32 %rd1, %r9;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %b = call i64 @llvm.lround.i64.f32(float %a)
+  ret i64 %b
+}
+
+define i32 @lround_i32_double(double %a) {
+; CHECK-LABEL: lround_i32_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<8>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [lround_i32_double_param_0];
+; CHECK-NEXT:    abs.f64 %rd2, %rd1;
+; CHECK-NEXT:    setp.lt.f64 %p1, %rd2, 0d3FE0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd3, %rd2, 0d3FE0000000000000;
+; CHECK-NEXT:    cvt.rzi.f64.f64 %rd4, %rd3;
+; CHECK-NEXT:    selp.f64 %rd5, 0d0000000000000000, %rd4, %p1;
+; CHECK-NEXT:    copysign.f64 %rd6, %rd1, %rd5;
+; CHECK-NEXT:    setp.gt.f64 %p2, %rd2, 0d4330000000000000;
+; CHECK-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p2;
+; CHECK-NEXT:    cvt.rzi.s32.f64 %r1, %rd7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
+  %b = call i32 @llvm.lround.i32.f64(double %a)
+  ret i32 %b
+}
+
+define i64 @lround_i64_double(double %a) {
+; CHECK-LABEL: lround_i64_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b64 %rd<9>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [lround_i64_double_param_0];
+; CHECK-NEXT:    abs.f64 %rd2, %rd1;
+; CHECK-NEXT:    setp.lt.f64 %p1, %rd2, 0d3FE0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd3, %rd2, 0d3FE0000000000000;
+; CHECK-NEXT:    cvt.rzi.f64.f64 %rd4, %rd3;
+; CHECK-NEXT:    selp.f64 %rd5, 0d0000000000000000, %rd4, %p1;
+; CHECK-NEXT:    copysign.f64 %rd6, %rd1, %rd5;
+; CHECK-NEXT:    setp.gt.f64 %p2, %rd2, 0d4330000000000000;
+; CHECK-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f64 %rd8, %rd7;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd8;
+; CHECK-NEXT:    ret;
+  %b = call i64 @llvm.lround.i64.f64(double %a)
+  ret i64 %b
+}
+
+; ---- llround ----
+
+define i64 @cpu_llround_i64_float(float %a) {
+; CHECK-LABEL: cpu_llround_i64_float(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b32 %r<10>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b32 %r1, [cpu_llround_i64_float_param_0];
+; CHECK-NEXT:    and.b32 %r2, %r1, -2147483648;
+; CHECK-NEXT:    or.b32 %r3, %r2, 1056964608;
+; CHECK-NEXT:    add.rn.f32 %r4, %r1, %r3;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r5, %r4;
+; CHECK-NEXT:    abs.f32 %r6, %r1;
+; CHECK-NEXT:    setp.gt.f32 %p1, %r6, 0f4B000000;
+; CHECK-NEXT:    selp.f32 %r7, %r1, %r5, %p1;
+; CHECK-NEXT:    cvt.rzi.f32.f32 %r8, %r1;
+; CHECK-NEXT:    setp.lt.f32 %p2, %r6, 0f3F000000;
+; CHECK-NEXT:    selp.f32 %r9, %r8, %r7, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f32 %rd1, %r9;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd1;
+; CHECK-NEXT:    ret;
+  %b = call i64 @llvm.llround.i64.f32(float %a)
+  ret i64 %b
+}
+
+define i64 @cpu_lround_i64_double(double %a) {
+; CHECK-LABEL: cpu_lround_i64_double(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<3>;
+; CHECK-NEXT:    .reg .b64 %rd<9>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [cpu_lround_i64_double_param_0];
+; CHECK-NEXT:    abs.f64 %rd2, %rd1;
+; CHECK-NEXT:    setp.lt.f64 %p1, %rd2, 0d3FE0000000000000;
+; CHECK-NEXT:    add.rn.f64 %rd3, %rd2, 0d3FE0000000000000;
+; CHECK-NEXT:    cvt.rzi.f64.f64 %rd4, %rd3;
+; CHECK-NEXT:    selp.f64 %rd5, 0d0000000000000000, %rd4, %p1;
+; CHECK-NEXT:    copysign.f64 %rd6, %rd1, %rd5;
+; CHECK-NEXT:    setp.gt.f64 %p2, %rd2, 0d4330000000000000;
+; CHECK-NEXT:    selp.f64 %rd7, %rd1, %rd6, %p2;
+; CHECK-NEXT:    cvt.rzi.s64.f64 %rd8, %rd7;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd8;
+; CHECK-NEXT:    ret;
+  %b = call i64 @llvm.lround.i64.f64(double %a)
+  ret i64 %b
+}
+
 ; ---- nearbyint ----
 
 define float @nearbyint_float(float %a) {

@@ -198,7 +198,7 @@ private:
   public:
     bool IsPossibleTaggedPointer(lldb::addr_t ptr) override;
 
-    ObjCLanguageRuntime::ClassDescriptorSP
+    std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) override;
 
   protected:
@@ -231,7 +231,7 @@ private:
   class TaggedPointerVendorExtended
       : public TaggedPointerVendorRuntimeAssisted {
   public:
-    ObjCLanguageRuntime::ClassDescriptorSP
+    std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) override;
 
   protected:
@@ -272,7 +272,7 @@ private:
   public:
     bool IsPossibleTaggedPointer(lldb::addr_t ptr) override;
 
-    ObjCLanguageRuntime::ClassDescriptorSP
+    std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) override;
 
   protected:

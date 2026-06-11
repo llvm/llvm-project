@@ -97,31 +97,33 @@ namespace llvm {
 namespace yaml {
 
 template <> struct MappingTraits<BBAddrMapYAML::BBAddrMapEntry> {
-  static void mapping(IO &IO, BBAddrMapYAML::BBAddrMapEntry &E);
+  LLVM_ABI static void mapping(IO &IO, BBAddrMapYAML::BBAddrMapEntry &E);
 };
 
 template <> struct MappingTraits<BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry> {
-  static void mapping(IO &IO, BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &E);
+  LLVM_ABI static void mapping(IO &IO,
+                               BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &E);
 };
 
 template <> struct MappingTraits<BBAddrMapYAML::BBAddrMapEntry::BBEntry> {
-  static void mapping(IO &IO, BBAddrMapYAML::BBAddrMapEntry::BBEntry &E);
+  LLVM_ABI static void mapping(IO &IO,
+                               BBAddrMapYAML::BBAddrMapEntry::BBEntry &E);
 };
 
 template <> struct MappingTraits<BBAddrMapYAML::PGOAnalysisMapEntry> {
-  static void mapping(IO &IO, BBAddrMapYAML::PGOAnalysisMapEntry &E);
+  LLVM_ABI static void mapping(IO &IO, BBAddrMapYAML::PGOAnalysisMapEntry &E);
 };
 
 template <>
 struct MappingTraits<BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry> {
-  static void mapping(IO &IO,
-                      BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry &E);
+  LLVM_ABI static void
+  mapping(IO &IO, BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry &E);
 };
 
 template <>
 struct MappingTraits<
     BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry> {
-  static void
+  LLVM_ABI static void
   mapping(IO &IO,
           BBAddrMapYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry &E);
 };

@@ -432,21 +432,24 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   DataRelROSection = Ctx->getELFSection(".data.rel.ro", ELF::SHT_PROGBITS,
                                         ELF::SHF_ALLOC | ELF::SHF_WRITE);
 
-  MergeableConst4Section =
-      Ctx->getELFSection(".rodata.cst4", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
+  unsigned MergeableCstFlags = ELF::SHF_ALLOC | ELF::SHF_MERGE;
+  StringRef CstPrefix = ".rodata";
+  if (Large && T.getArch() == Triple::x86_64) {
+    MergeableCstFlags |= ELF::SHF_X86_64_LARGE;
+    CstPrefix = ".lrodata";
+  }
 
-  MergeableConst8Section =
-      Ctx->getELFSection(".rodata.cst8", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
+  MergeableConst4Section = Ctx->getELFSection(
+      (CstPrefix + ".cst4").str(), ELF::SHT_PROGBITS, MergeableCstFlags, 4);
 
-  MergeableConst16Section =
-      Ctx->getELFSection(".rodata.cst16", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
+  MergeableConst8Section = Ctx->getELFSection(
+      (CstPrefix + ".cst8").str(), ELF::SHT_PROGBITS, MergeableCstFlags, 8);
 
-  MergeableConst32Section =
-      Ctx->getELFSection(".rodata.cst32", ELF::SHT_PROGBITS,
-                         ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+  MergeableConst16Section = Ctx->getELFSection(
+      (CstPrefix + ".cst16").str(), ELF::SHT_PROGBITS, MergeableCstFlags, 16);
+
+  MergeableConst32Section = Ctx->getELFSection(
+      (CstPrefix + ".cst32").str(), ELF::SHT_PROGBITS, MergeableCstFlags, 32);
 
   // Exception Handling Sections.
 

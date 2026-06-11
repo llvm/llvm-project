@@ -66,7 +66,7 @@ public:
 
   /// \returns the buffer that was allocated at \p create time, with size
   /// \p UserHeaderSize.
-  MutableArrayRef<uint8_t> getUserHeader() const;
+  LLVM_ABI MutableArrayRef<uint8_t> getUserHeader() const;
 
   LLVM_ABI_FOR_TEST size_t size() const;
   LLVM_ABI_FOR_TEST size_t capacity() const;

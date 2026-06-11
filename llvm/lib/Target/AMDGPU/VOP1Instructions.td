@@ -401,15 +401,6 @@ def : GCNPat<(i32 (fp_to_uint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)
 def : GCNPat<(i32 (fp_to_sint_sat (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)), i32)),
              (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
 
-def : GCNPat<(i32 (fp_to_uint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
-             (V_CVT_U32_F32_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi (f32 (VOP3Mods f32:$src0, i32:$src0_modifiers)))),
-             (V_CVT_I32_F32_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_uint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
-             (V_CVT_U32_F64_e64 $src0_modifiers, $src0)>;
-def : GCNPat<(i32 (fp_to_sint_sat_gi (f64 (VOP3Mods f64:$src0, i32:$src0_modifiers)))),
-             (V_CVT_I32_F64_e64 $src0_modifiers, $src0)>;
-
 defm V_CLREXCP : VOP1Inst <"v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 
 // Restrict src0 to be VGPR
@@ -637,11 +628,6 @@ multiclass fp16_fp_to_int_sat_Pats<Instruction cvt_u16_f16_inst_e64,
   def : GCNPat<(i16 (fp_to_uint_sat (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)), i16)),
                (cvt_u16_f16_inst_e64 $src0_modifiers, $src0)>;
   def : GCNPat<(i16 (fp_to_sint_sat (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)), i16)),
-               (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
-
-  def : GCNPat<(i16 (fp_to_uint_sat_gi (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)))),
-               (cvt_u16_f16_inst_e64 $src0_modifiers, $src0)>;
-  def : GCNPat<(i16 (fp_to_sint_sat_gi (f16 (VOP3Mods f16:$src0, i32:$src0_modifiers)))),
                (cvt_i16_f16_inst_e64 $src0_modifiers, $src0)>;
 }
 

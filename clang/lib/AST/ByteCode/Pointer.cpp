@@ -787,8 +787,13 @@ Pointer::computeSplitPoint(const Pointer &A, const Pointer &B) {
       IterB = getBase(IterB);
     }
 
-    if (IterA == IterB)
+    if (IterA == IterB) {
+      // If the Iter is an array, CurA and CurB are both elements of the same
+      // array. That is fine, so return nullopt.
+      if (IterA.getFieldDesc()->isArray())
+        return std::nullopt;
       return std::make_pair(CurA, CurB);
+    }
 
     if (IterA.isRoot() && IterB.isRoot())
       return std::nullopt;

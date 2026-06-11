@@ -105,8 +105,10 @@ LIBC_INLINE float16 erfcf16(float16 x) {
     }
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     if (fputil::fenv_is_round_up())
       return FPBits::min_subnormal().get_val();
+#endif
     return 0.0f16;
   }
 

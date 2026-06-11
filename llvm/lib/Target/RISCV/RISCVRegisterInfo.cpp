@@ -824,6 +824,16 @@ Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
 }
 
+bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
+                                           MCRegister Reg) const {
+  auto const &STI = MF.getSubtarget<RISCVSubtarget>();
+  if (!STI.getRegisterInfo()->isGeneralPurposeRegister(MF, Reg))
+    llvm::reportFatalInternalError(
+        "isArgumentRegister is not implemented for non-GPR registers");
+
+  return llvm::is_contained(RISCV::getArgGPRs(STI.getTargetABI()), Reg);
+}
+
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {
   if (Reg == RISCV::SF_VCIX_STATE)
     return "sf.vcix_state";
@@ -912,7 +922,10 @@ void RISCVRegisterInfo::getOffsetOpcodes(const StackOffset &Offset,
 
 unsigned
 RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
-  return MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() && !DisableCostPerUse
+  // Set CostPerUse to 1 only when optimizing for size and RVC exists.
+  return MF.getFunction().hasOptSize() &&
+                 MF.getSubtarget<RISCVSubtarget>().hasStdExtZca() &&
+                 !DisableCostPerUse
              ? 1
              : 0;
 }

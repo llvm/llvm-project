@@ -49,13 +49,14 @@ class Where:
     within scope of a "Where" will only be evaluated for the steps where the Where applies.
     """
 
-    def __init__(self, attributes: dict):
+    def __init__(self, attributes: dict, is_and: bool):
         self.file: Optional[str] = attributes.pop("file", None)
         self.function: Union[list[str], str, None] = attributes.pop("function", None)
         self.lines: Union[int, DexRange, None] = attributes.pop("lines", None)
         self.after_hit_count: Optional[int] = attributes.pop("after_hit_count", None)
         self.for_hit_count: Optional[int] = attributes.pop("for_hit_count", None)
         self.conditions: dict = attributes.pop("conditions", None)
+        self.is_and = is_and
         if attributes:
             raise DexterNodeError(
                 self, f"unexpected attributes {', '.join(attributes)}"
@@ -75,7 +76,8 @@ class Where:
             for name, value in self.get_attrs().items()
             if value is not None
         ]
-        return f"Where(" + ", ".join(elts) + ")"
+        name = "And" if self.is_and else "Where"
+        return f"{name}(" + ", ".join(elts) + ")"
 
     def get_attrs(self) -> Dict[str, Any]:
         return {
@@ -88,19 +90,24 @@ class Where:
         }
 
     @staticmethod
-    def constructor(loader: yaml.Loader, node):
-        return Where(loader.construct_mapping(node))
+    def get_constructor(is_and: bool):
+        def constructor(loader, node):
+            return Where(loader.construct_mapping(node), is_and)
+
+        return constructor
 
     @staticmethod
     def representer(dumper: yaml.Dumper, data: "Where"):
         mapping = {
             name: value for name, value in data.get_attrs().items() if value is not None
         }
-        return dumper.represent_mapping("!where", mapping, flow_style=True)
+        tag = "!and" if data.is_and else "!where"
+        return dumper.represent_mapping(tag, mapping, flow_style=True)
 
     @staticmethod
     def register_yaml(loader):
-        yaml.add_constructor("!where", Where.constructor, loader)
+        yaml.add_constructor("!where", Where.get_constructor(False), loader)
+        yaml.add_constructor("!and", Where.get_constructor(True), loader)
         yaml.add_representer(Where, Where.representer)
 
     def get_lines(self) -> range:

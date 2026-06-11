@@ -27,6 +27,15 @@ constexpr auto Req = NativeDylibManager::RequiredSymbol;
 constexpr auto Weak = NativeDylibManager::WeaklyReferencedSymbol;
 } // namespace
 
+// Wrap a symbol-name string literal in the platform's linker-mangling.
+// NativeDylibManager::lookup takes linker-mangled names; on Darwin the
+// linker prefixes C names with '_'.
+#if defined(__APPLE__)
+#define MANGLED(name) "_" name
+#else
+#define MANGLED(name) name
+#endif
+
 #ifndef NDM_TEST_LIB_PATH
 #error                                                                         \
     "NDM_TEST_LIB_PATH must be defined to the path of the test shared library"
@@ -94,7 +103,7 @@ TEST(NativeDylibManagerTest, LoadEmptyPathReturnsGlobalHandle) {
   ASSERT_TRUE(!!LoadResult) << toString(LoadResult.takeError());
   void *Handle = *LoadResult;
 
-  auto Result = syncLookup(*NDM, Handle, {{"malloc", Req}});
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("malloc"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 1U);
   ASSERT_TRUE((*Result)[0].has_value())
@@ -110,7 +119,8 @@ TEST(NativeDylibManagerTest, LookupSingleSymbol) {
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(*NDM, Handle, {{"NativeDylibManagerTestFunc", Req}});
+  auto Result =
+      syncLookup(*NDM, Handle, {{MANGLED("NativeDylibManagerTestFunc"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 1U);
   ASSERT_TRUE((*Result)[0].has_value());
@@ -130,8 +140,8 @@ TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
   auto Result = syncLookup(*NDM, Handle,
-                           {{"NativeDylibManagerTestFunc", Req},
-                            {"NativeDylibManagerTestFunc2", Req}});
+                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
+                            {MANGLED("NativeDylibManagerTestFunc2"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 2U);
   ASSERT_TRUE((*Result)[0].has_value());
@@ -153,7 +163,7 @@ TEST(NativeDylibManagerTest, LookupWeakMissingSymbol) {
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(*NDM, Handle, {{"no_such_symbol", Weak}});
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("no_such_symbol"), Weak}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 1U);
   ASSERT_TRUE((*Result)[0].has_value())
@@ -169,7 +179,7 @@ TEST(NativeDylibManagerTest, LookupRequiredMissingSymbol) {
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(*NDM, Handle, {{"no_such_symbol", Req}});
+  auto Result = syncLookup(*NDM, Handle, {{MANGLED("no_such_symbol"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 1U);
   EXPECT_FALSE((*Result)[0].has_value())
@@ -184,9 +194,9 @@ TEST(NativeDylibManagerTest, LookupMixedRequiredAndWeak) {
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(
-      *NDM, Handle,
-      {{"NativeDylibManagerTestFunc", Req}, {"no_such_symbol", Weak}});
+  auto Result = syncLookup(*NDM, Handle,
+                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
+                            {MANGLED("no_such_symbol"), Weak}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 2U);
   ASSERT_TRUE((*Result)[0].has_value());
