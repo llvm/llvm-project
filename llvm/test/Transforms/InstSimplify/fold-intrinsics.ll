@@ -670,36 +670,3 @@ define void @umul_extractvalue_vec(ptr %P, <4 x i32> %x) {
 
   ret void
 }
-
-define <16 x i1> @active_lane_mask_fixed() {
-; CHECK-LABEL: @active_lane_mask_fixed(
-; CHECK-NEXT:    [[MASK2:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 26, i64 poison)
-; CHECK-NEXT:    [[MASK3:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 poison, i64 6)
-; CHECK-NEXT:    [[ADD1:%.*]] = add <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>, [[MASK2]]
-; CHECK-NEXT:    [[RES:%.*]] = add <16 x i1> [[ADD1]], [[MASK3]]
-; CHECK-NEXT:    ret <16 x i1> [[RES]]
-;
-  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 2, i64 6)
-  %mask1 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 26, i64 6)
-  %mask2 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 26, i64 poison)
-  %mask3 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 poison, i64 6)
-  %add = add <16 x i1> %mask, %mask1
-  %add1 = add <16 x i1> %add, %mask2
-  %res = add <16 x i1> %add1, %mask3
-  ret <16 x i1> %res
-}
-
-define <vscale x 16 x i1> @active_lane_mask_scalable() {
-; CHECK-LABEL: @active_lane_mask_scalable(
-; CHECK-NEXT:    [[MASK2:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 26, i64 poison)
-; CHECK-NEXT:    [[MASK3:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 poison, i64 6)
-; CHECK-NEXT:    [[RES:%.*]] = add <vscale x 16 x i1> [[MASK2]], [[MASK3]]
-; CHECK-NEXT:    ret <vscale x 16 x i1> [[RES]]
-;
-  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 26, i64 6)
-  %mask2 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 26, i64 poison)
-  %mask3 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 poison, i64 6)
-  %add = add <vscale x 16 x i1> %mask, %mask2
-  %res = add <vscale x 16 x i1> %add, %mask3
-  ret <vscale x 16 x i1> %res
-}

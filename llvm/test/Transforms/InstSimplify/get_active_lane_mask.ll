@@ -66,3 +66,28 @@ define <vscale x 4 x i1> @foo_vscale_max_nxv4i1_2_4_1_16() vscale_range(2,4) {
   ret <vscale x 4 x i1> %mask
 }
 
+define <16 x i1> @active_lane_mask_fixed_poison() {
+; CHECK-LABEL: define <16 x i1> @active_lane_mask_fixed_poison() {
+; CHECK-NEXT:    [[MASK:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 26, i64 poison)
+; CHECK-NEXT:    [[MASK1:%.*]] = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 poison, i64 6)
+; CHECK-NEXT:    [[RES:%.*]] = add <16 x i1> [[MASK]], [[MASK1]]
+; CHECK-NEXT:    ret <16 x i1> [[RES]]
+;
+  %mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 26, i64 poison)
+  %mask1 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 poison, i64 6)
+  %res = add <16 x i1> %mask, %mask1
+  ret <16 x i1> %res
+}
+
+define <vscale x 16 x i1> @active_lane_mask_scalable_poison() {
+; CHECK-LABEL: define <vscale x 16 x i1> @active_lane_mask_scalable_poison() {
+; CHECK-NEXT:    [[MASK:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 26, i64 poison)
+; CHECK-NEXT:    [[MASK1:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 poison, i64 6)
+; CHECK-NEXT:    [[RES:%.*]] = add <vscale x 16 x i1> [[MASK]], [[MASK1]]
+; CHECK-NEXT:    ret <vscale x 16 x i1> [[RES]]
+;
+  %mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 26, i64 poison)
+  %mask1 = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 poison, i64 6)
+  %res = add <vscale x 16 x i1> %mask, %mask1
+  ret <vscale x 16 x i1> %res
+}
