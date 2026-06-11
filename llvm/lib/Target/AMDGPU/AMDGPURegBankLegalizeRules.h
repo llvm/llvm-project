@@ -170,6 +170,7 @@ enum RegBankLLTMappingApplyID {
   // any LLT, bank-only apply IDs
   VgprAnyTy,
   AgprAnyTy,
+  VgprOrAgprAnyTy,
 
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,

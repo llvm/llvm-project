@@ -32,7 +32,7 @@ module @gemm attributes {gpu.container_module} {
       %scale_b_elem = memref.load %scale_b[%c0, %id_x] : memref<1x16xf8E8M0FNU>
       %scale_b_loaded = vector.insert %scale_b_elem, %scale_b_undef[%c0] : f8E8M0FNU into vector<1xf8E8M0FNU>
 
-      %c_result = xegpu.dpas_mx %a_trunc, %b_trunc, %c_loaded scale_a = %scale_a_loaded scale_b = %scale_b_loaded : vector<16xf8E5M2>, vector<32xf8E5M2>, vector<8xf32>, vector<1xf8E8M0FNU>, vector<1xf8E8M0FNU> -> vector<8xf32>
+      %c_result = xegpu.dpas_mx %a_trunc, %b_trunc, %c_loaded scale_a = %scale_a_loaded scale_b = %scale_b_loaded : (vector<16xf8E5M2>, vector<32xf8E5M2>, vector<8xf32>, vector<1xf8E8M0FNU>, vector<1xf8E8M0FNU>) -> vector<8xf32>
 
       xegpu.store_nd %c_result, %tdesc_c[0, 0] : vector<8xf32>, !xegpu.tensor_desc<8x16xf32>
       gpu.return

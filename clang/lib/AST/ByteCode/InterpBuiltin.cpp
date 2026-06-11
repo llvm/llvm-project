@@ -984,7 +984,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   if (!popToAPSInt(S.Stk, LHST, LHS))
     return false;
 
-  if (CarryOutPtr.isDummy() || !CarryOutPtr.isBlockPointer())
+  if (!isReadable(CarryOutPtr))
     return false;
 
   APSInt CarryOut;

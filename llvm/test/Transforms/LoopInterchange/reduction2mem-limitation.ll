@@ -24,7 +24,7 @@
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
 ; CHECK-NEXT: Function:        reduction_01
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
+; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchanged currently.
 
 ; IR-LABEL: @reduction_01(
 ; IR-NOT: split
@@ -82,12 +82,6 @@ exit:
 ; CHECK-NEXT: Function:        reduction_02
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:   - String:          Only supports at most one reduction.
-; CHECK: --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        reduction_02
-; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
 
 ; IR-LABEL: @reduction_02(
 ; IR-NOT: split
@@ -151,7 +145,7 @@ exit:
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
 ; CHECK-NEXT: Function:        reduction_03
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
+; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchanged currently.
 
 ; IR-LABEL: @reduction_03(
 ; IR-NOT: split
@@ -221,7 +215,7 @@ exit:
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
 ; CHECK-NEXT: Function:        reduction_04
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
+; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchanged currently.
 
 ; IR-LABEL: @reduction_04(
 ; IR-NOT: split
@@ -290,7 +284,7 @@ exit:
 ; CHECK-NEXT: Name:            UnsupportedPHIInner
 ; CHECK-NEXT: Function:        reduction_05
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
+; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchanged currently.
 
 ; IR-LABEL: @reduction_05(
 ; IR-NOT: split
