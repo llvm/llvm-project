@@ -682,7 +682,6 @@ static void SetupLangOpts(CompilerInstance &compiler,
         lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
         break;
       case ObjCLanguageRuntime::ObjCRuntimeVersions::eObjC_VersionUnknown:
-      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V1:
         lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
                                   VersionTuple(10, 7));
         break;
