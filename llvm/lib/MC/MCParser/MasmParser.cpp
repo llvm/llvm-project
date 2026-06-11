@@ -3704,8 +3704,12 @@ bool MasmParser::parseStructInitializer(const StructInfo &Structure,
   if (parseOptionalToken(AsmToken::LCurly)) {
     EndToken = AsmToken::RCurly;
   } else if (parseOptionalAngleBracketOpen()) {
+    // Note: parseOptionalAngleBracketOpen() has already incremented
+    // AngleBracketDepth; the matching parseAngleBracketClose() below decrements
+    // it once, so it must not be incremented again here (otherwise the depth
+    // leaks and a later '>' is misparsed as a closing bracket instead of the
+    // GT operator).
     EndToken = AsmToken::Greater;
-    AngleBracketDepth++;
   } else if (FirstToken.is(AsmToken::Identifier) &&
              FirstToken.getString() == "?") {
     // ? initializer; leave EndToken uninitialized to treat as empty.
