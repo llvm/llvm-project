@@ -1590,7 +1590,7 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
     using SSI = StringSwitch<int>;
     AddrNum =
         SSI(Str).Cases({"T", "R"}, 3).Case("S", 1).Case("E", 0).Default(2);
-    CounterNum = SSI(Str).Case("B", 2).Case("E", 0).Default(1);
+    CounterNum = Str != "E";
   }
 
   /// Parse locations depending on entry type, recording them in \p Addr array.
@@ -1609,6 +1609,8 @@ std::error_code DataAggregator::parseAggregatedLBREntry() {
   }
 
   /// Parse counters depending on entry type.
+  if (Type == BRANCH || Type == TRACE || Type == RETURN)
+    CounterNum += ParsingBuf.split('\n').first.contains(FieldSeparator);
   for (int I = 0; I < CounterNum; ++I) {
     while (checkAndConsumeFS()) {
     }
@@ -2467,8 +2469,9 @@ DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
     return EC;
 
   for (const auto &[Trace, Info] : Traces)
-    OS << Trace << " " << Info.TakenCount << '\n';
-  OS << formatv("E {0:$[,]}\n", EventNames.keys());
+    OS << Trace << " " << Info << '\n';
+  if (!EventNames.empty())
+    OS << formatv("E {0:$[,]}\n", EventNames.keys());
   for (const auto &[PC, Count] : BasicSamples)
     OS << formatv("S {0:x-} {1}\n", PC, Count);
 
