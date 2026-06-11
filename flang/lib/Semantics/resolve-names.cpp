@@ -3635,13 +3635,17 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
       context().SetError(symbol);
       return true;
     }
-    if ((IsDummy(symbol) || IsNamedConstant(symbol) ||
-            (!symbol.has<UseDetails>() && FindCommonBlockContaining(symbol))) &&
+    if ((IsDummy(symbol) ||
+            (!symbol.has<UseDetails>() &&
+                (IsNamedConstant(symbol) || FindCommonBlockContaining(symbol)))) &&
         isImplicitNoneType() && symbol.test(Symbol::Flag::Implicit) &&
         !context().HasError(symbol)) {
       // Dummy, COMMON, or PARAMETER named constant was implicitly typed despite
       // IMPLICIT NONE(TYPE) in ApplyImplicitRules() due to a forward reference,
-      // and no explicit type declaration appeared later.
+      // and no explicit type declaration appeared later.  A use-associated
+      // named constant is excluded: its Symbol::Flag::Implicit may have been
+      // set legitimately by an IMPLICIT statement in the module that defined
+      // it, where IMPLICIT NONE(TYPE) was not in effect.
       Say(symbol.name(), "No explicit type declared for '%s'"_err_en_US);
       context().SetError(symbol);
       return true;
