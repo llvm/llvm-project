@@ -16,4 +16,27 @@ t1 PROC FRAME
   ret
 t1 ENDP
 
+; .beginepilog before the prolog has ended (.endprolog) is also rejected.
+t2 PROC FRAME
+  push r10
+  .pushreg r10
+; CHECK: .beginepilog must come after .endprolog or .endepilog
+  .beginepilog
+  .popreg r10
+  pop r10
+  .endepilog
+  ret
+t2 ENDP
+
+; .endepilog without a matching .beginepilog is rejected.
+t3 PROC FRAME
+  push r10
+  .pushreg r10
+  .endprolog
+  pop r10
+; CHECK: epilog directive must be used inside an epilog
+  .endepilog
+  ret
+t3 ENDP
+
 END

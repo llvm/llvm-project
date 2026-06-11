@@ -603,7 +603,9 @@ bool COFFMasmParser::parseSEHDirectiveBeginEpilog(StringRef /*Directive*/,
                                                   SMLoc Loc) {
   if (ensureInsideFrame(Loc))
     return true;
-  if (getStreamer().isInEpilogCFI()) {
+  // .beginepilog is only valid after the prolog has ended (.endprolog) and
+  // when not already inside an epilog (i.e. after a prior .endepilog).
+  if (!getStreamer().isWinCFIPrologEnded() || getStreamer().isInEpilogCFI()) {
     return Error(Loc, ".beginepilog must come after .endprolog or .endepilog");
   }
   getStreamer().emitWinCFIBeginEpilogue(Loc);
@@ -612,7 +614,7 @@ bool COFFMasmParser::parseSEHDirectiveBeginEpilog(StringRef /*Directive*/,
 
 bool COFFMasmParser::parseSEHDirectiveEndEpilog(StringRef /*Directive*/,
                                                 SMLoc Loc) {
-  if (ensureInsideFrame(Loc))
+  if (ensureInEpilog(Loc))
     return true;
   getStreamer().emitWinCFIEndEpilogue(Loc);
   return false;
