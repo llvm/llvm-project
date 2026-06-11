@@ -26865,11 +26865,12 @@ static SDValue LowerVACOPY(SDValue Op, const X86Subtarget &Subtarget,
   const Value *DstSV = cast<SrcValueSDNode>(Op.getOperand(3))->getValue();
   const Value *SrcSV = cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
   SDLoc DL(Op);
+  Align Alignment = Align(Subtarget.isTarget64BitLP64() ? 8 : 4);
 
   return DAG.getMemcpy(
       Chain, DL, DstPtr, SrcPtr,
       DAG.getIntPtrConstant(Subtarget.isTarget64BitLP64() ? 24 : 16, DL),
-      Align(Subtarget.isTarget64BitLP64() ? 8 : 4), /*isVolatile*/ false, false,
+      Alignment, Alignment, /*isVolatile*/ false, false,
       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DstSV),
       MachinePointerInfo(SrcSV));
 }
@@ -29473,7 +29474,7 @@ SDValue X86TargetLowering::LowerRESET_FPENV(SDValue Op,
   MachinePointerInfo MPI =
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction());
   MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MPI, MachineMemOperand::MOStore, X87StateSize, Align(4));
+      MPI, MachineMemOperand::MOLoad, X87StateSize, Align(4));
 
   return createSetFPEnvNodes(Env, Chain, DL, MVT::i32, MMO, DAG, Subtarget);
 }
@@ -43973,20 +43974,26 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         return lowerShuffleWithPERMV(DL, VT, Mask, N.getOperand(0),
                                      DAG.getUNDEF(VT), Subtarget, DAG);
       }
-      // If sources are half width, then concat and use VPERMV with adjusted
-      // mask.
+      // If sources are widened, then concat and use VPERMV with adjusted mask.
       SDValue Ops[2];
-      MVT HalfVT = VT.getHalfNumVectorElementsVT();
       if (sd_match(V1,
                    m_InsertSubvector(m_Undef(), m_Value(Ops[0]), m_Zero())) &&
           sd_match(V2,
                    m_InsertSubvector(m_Undef(), m_Value(Ops[1]), m_Zero())) &&
-          Ops[0].getValueType() == HalfVT && Ops[1].getValueType() == HalfVT) {
+          (Ops[0].getValueSizeInBits() % VT.getScalarSizeInBits()) == 0 &&
+          Ops[0].getValueType() == Ops[1].getValueType() &&
+          Ops[0].getValueType().isSimple()) {
+        MVT SubVT = Ops[0].getSimpleValueType();
+        MVT ConcatVT = SubVT.getDoubleNumVectorElementsVT();
+        unsigned NumSubElts = SubVT.getSizeInBits() / VT.getScalarSizeInBits();
         if (SDValue ConcatSrc =
-                combineConcatVectorOps(DL, VT, Ops, DAG, Subtarget)) {
+                combineConcatVectorOps(DL, ConcatVT, Ops, DAG, Subtarget)) {
+          ConcatSrc = widenSubVector(ConcatSrc, false, Subtarget, DAG, DL,
+                                     VT.getSizeInBits());
           for (int &M : Mask)
-            M = (M < (int)NumElts ? M : (M - (NumElts / 2)));
-          return lowerShuffleWithPERMV(DL, VT, Mask, ConcatSrc,
+            M = (M < (int)NumElts ? M : (M - (NumElts - NumSubElts)));
+          return lowerShuffleWithPERMV(DL, VT, Mask,
+                                       DAG.getBitcast(VT, ConcatSrc),
                                        DAG.getUNDEF(VT), Subtarget, DAG);
         }
       }
@@ -60973,7 +60980,6 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PCMPEQ:
     case X86ISD::PCMPGT:
-      // TODO: 512-bit PCMPEQ/PCMPGT -> VPCMP+VPMOVM2 handling.
       if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256()) {
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
@@ -60981,6 +60987,19 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           return DAG.getNode(Opcode, DL, VT,
                              Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
                              Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+        break;
+      }
+      if (!IsSplat && VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+          (EltSizeInBits >= 32 || Subtarget.useBWIRegs())) {
+        if (IsConcatFree(VT, Ops, 0) && IsConcatFree(VT, Ops, 1)) {
+          MVT BoolVT = VT.changeVectorElementType(MVT::i1);
+          SDValue Cmp =
+              DAG.getSetCC(DL, BoolVT, ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1),
+                           Opcode == X86ISD::PCMPEQ ? ISD::CondCode::SETEQ
+                                                    : ISD::CondCode::SETGT);
+          return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cmp);
+        }
         break;
       }
 

@@ -156,18 +156,13 @@ define <4 x i1> @test6(ptr %in1, ptr %in2) {
 ; CHECK-NEXT:    [[TMP22:%.*]] = and <16 x i1> [[TMP11]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <32 x i1> [[TMP6]], <32 x i1> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP24:%.*]] = and <16 x i1> [[TMP22]], [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
-; CHECK-NEXT:    [[TMP26:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP25]])
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x i1> poison, i1 [[TMP26]], i64 0
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
-; CHECK-NEXT:    [[TMP29:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP28]])
-; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i1> [[TMP27]], i1 [[TMP29]], i64 1
-; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
-; CHECK-NEXT:    [[TMP32:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP31]])
-; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i1> [[TMP30]], i1 [[TMP32]], i64 2
-; CHECK-NEXT:    [[TMP34:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
-; CHECK-NEXT:    [[TMP35:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP34]])
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i1> [[TMP33]], i1 [[TMP35]], i64 3
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i1> [[TMP15]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[RDX_OP1:%.*]] = or <4 x i1> [[RDX_OP]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <16 x i1> [[TMP24]], <16 x i1> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[TMP36:%.*]] = or <4 x i1> [[RDX_OP1]], [[TMP14]]
 ; CHECK-NEXT:    [[VBSL:%.*]] = select <4 x i1> [[TMP36]], <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> <i32 5, i32 6, i32 7, i32 8>
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <4 x i32> [[VBSL]], <i32 2, i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x i1> [[CMP]]
@@ -473,4 +468,33 @@ entry:
   store <4 x float> %10, ptr %0, align 16
   store <4 x float> %11, ptr %1, align 16
   ret i32 0
+}
+
+define <4 x i32> @hor_reduction_four_points(ptr %a) {
+; CHECK-LABEL: @hor_reduction_four_points(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[RDX_OP1:%.*]] = add <4 x i32> [[RDX_OP]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
+; CHECK-NEXT:    [[RDX_OP2:%.*]] = add <4 x i32> [[RDX_OP1]], [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add <4 x i32> [[RDX_OP2]], <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x i32> [[OP_RDX]]
+;
+entry:
+  %gep1 = getelementptr <4 x i32>, ptr %a, i64 1
+  %gep2 = getelementptr <4 x i32>, ptr %a, i64 2
+  %gep3 = getelementptr <4 x i32>, ptr %a, i64 3
+  %a0 = load <4 x i32>, ptr %a
+  %a1 = load <4 x i32>, ptr %gep1
+  %a2 = load <4 x i32>, ptr %gep2
+  %a3 = load <4 x i32>, ptr %gep3
+  %add0 = add <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %a0
+  %add1 = add <4 x i32> %add0, %a1
+  %add2 = add <4 x i32> %add1, %a2
+  %add3 = add <4 x i32> %add2, %a3
+  ret <4 x i32> %add3
 }

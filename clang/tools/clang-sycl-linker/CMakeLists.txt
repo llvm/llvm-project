@@ -2,7 +2,6 @@ set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
   BinaryFormat
-  BitReader
   BitWriter
   Core
   FrontendOffloading

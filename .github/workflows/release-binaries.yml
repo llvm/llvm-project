@@ -289,12 +289,17 @@ jobs:
       id: build-windows
       if: runner.os == 'Windows'
       env:
+        INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
         .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout
-        $installer = (Get-ChildItem -Recurse -Filter "*.exe" | Select-Object -First 1).fullName
+        if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
+          $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
+          mv $zstd $env:GITHUB_WORKSPACE
+        }
+        $installer = (Get-ChildItem -Recurse -Filter "LLVM-*.exe" | Select-Object -First 1).fullName
         $tarball = (Get-ChildItem -Recurse -Filter "*.tar.xz" | Select-Object -First 1).fullName
         # Move installer to top-level directory so it is easier to upload.
         mv $installer $env:GITHUB_WORKSPACE
@@ -306,8 +311,9 @@ jobs:
       env:
         RELEASE_BINARY_FILENAME: ${{ needs.prepare.outputs.release-binary-filename }}
         RELEASE_BINARY_FILENAME_ZSTD: ${{ needs.prepare.outputs.release-binary-filename-zstd }}
+        ZSTD: ${{ inputs.runs-on == 'windows-11-arm' && './zstd.exe' || 'zstd' }}
       run: |
-        xz -dc "$RELEASE_BINARY_FILENAME" | zstd --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
+        xz -dc "$RELEASE_BINARY_FILENAME" | "$ZSTD" --ultra -22 -T0 -o "$RELEASE_BINARY_FILENAME_ZSTD"
 
     - name: Generate sha256 digest for binaries
       id: digest
