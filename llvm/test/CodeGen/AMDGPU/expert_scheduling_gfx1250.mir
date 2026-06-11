@@ -29,6 +29,25 @@ body: |
 ...
 
 ---
+name: async_global_to_lds_vaddr_raw
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr1, $vgpr2
+    ; CHECK-LABEL: name: async_global_to_lds_vaddr_raw
+    ; CHECK: liveins: $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: S_SETREG_IMM32_B32 2, 2074, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; CHECK-NEXT: S_WAIT_KMCNT 0
+    ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
+    ; CHECK-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+    $vgpr0 = V_MOV_B32_e32 1, implicit $exec
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load (s32), addrspace 1), (store (s32), addrspace 3)
+...
+
+---
 name: async_global_to_lds_vaddr_vsrc_war
 tracksRegLiveness: true
 machineFunctionInfo:
