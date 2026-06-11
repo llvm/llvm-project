@@ -778,8 +778,9 @@ inline auto m_GetElementPtr(const Op0_t &Op0, const Op1_t &Op1) {
       VPInstruction_match<VPInstruction::WidePtrAdd, Op0_t, Op1_t>(Op0, Op1));
 }
 
-/// Match a  VPBlendRecipe with 2 incoming values ([M0, I0, M1, I1]) as
-/// select(M1, I1, I0). Also matches the normalized form, where M0 is dropped.
+/// Match a VPBlendRecipe with 2 incoming values ([I0, I1, M1] ==
+/// normalized([I0, M0, I1, M1])) as select(M1, I1, I0), mirroring how it is
+/// lowered.
 template <typename Op0_t, typename Op1_t, typename Op2_t> struct Blend2_match {
   Op0_t MaskOp;
   Op1_t TrueOp;
@@ -792,11 +793,9 @@ template <typename Op0_t, typename Op1_t, typename Op2_t> struct Blend2_match {
     auto *Blend = dyn_cast<VPBlendRecipe>(Val);
     if (!Blend || Blend->getNumIncomingValues() != 2)
       return false;
-    unsigned TrueIdx = Blend->isNormalized() ? 1 : 0;
-    unsigned FalseIdx = 1 - TrueIdx;
-    return MaskOp.match(Blend->getMask(TrueIdx)) &&
-           TrueOp.match(Blend->getIncomingValue(TrueIdx)) &&
-           FalseOp.match(Blend->getIncomingValue(FalseIdx));
+    return MaskOp.match(Blend->getMask(1)) &&
+           TrueOp.match(Blend->getIncomingValue(1)) &&
+           FalseOp.match(Blend->getIncomingValue(0));
   }
 };
 
