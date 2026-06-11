@@ -24,7 +24,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -367,10 +366,10 @@ static bool sinkScalarOperands(VPlan &Plan) {
               dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
         // TODO: Handle converting to uniform recipes as separate transform,
         // then cloning should be sufficient here.
-        Instruction *I = SinkCandidate->getUnderlyingInstr();
-        Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true,
-                                      nullptr /*Mask*/, *SinkCandidateRepR,
-                                      *SinkCandidateRepR);
+        Clone = VPBuilder::createSingleScalarOp(
+            SinkCandidateRepR->getOpcode(), SinkCandidate->operands(),
+            /*Mask=*/nullptr, *SinkCandidateRepR, *SinkCandidateRepR,
+            SinkCandidate->getDebugLoc(), SinkCandidate->getUnderlyingInstr());
         // TODO: add ".cloned" suffix to name of Clone's VPValue.
       } else {
         Clone = SinkCandidate->clone();
@@ -903,9 +902,10 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
                 m_Binary<Instruction::ExtractValue>(m_VPValue(), m_VPValue())))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(Def->getUnderlyingInstr(),
-                                          Def->operands(), /*IsUniform*/ true,
-                                          /*Mask*/ nullptr, /*Flags*/ *Def);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          Def->getUnderlyingInstr()->getOpcode(), Def->operands(),
+          /*Mask=*/nullptr, *Def, {}, DebugLoc::getUnknown(),
+          Def->getUnderlyingInstr());
       Clone->insertAfter(Def);
       Def->replaceAllUsesWith(Clone);
     }
@@ -1299,9 +1299,6 @@ static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
       return Folder.FoldCast(static_cast<Instruction::CastOps>(Opcode), Ops[0],
                              R.getVPSingleValue()->getScalarType());
     switch (Opcode) {
-    case VPInstruction::LogicalAnd:
-      return Folder.FoldSelect(Ops[0], Ops[1],
-                               ConstantInt::getNullValue(Ops[1]->getType()));
     case VPInstruction::Not:
       return Folder.FoldBinOp(Instruction::BinaryOps::Xor, Ops[0],
                               Constant::getAllOnesValue(Ops[0]->getType()));
@@ -1968,9 +1965,10 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
           }))
         continue;
 
-      auto *Clone = new VPReplicateRecipe(
-          RepOrWidenR->getUnderlyingInstr(), RepOrWidenR->operands(),
-          true /*IsSingleScalar*/, nullptr, *RepOrWidenR);
+      auto *Clone = VPBuilder::createSingleScalarOp(
+          getOpcodeOrIntrinsicID(RepOrWidenR)->second, RepOrWidenR->operands(),
+          /*Mask=*/nullptr, *RepOrWidenR, {}, DebugLoc::getUnknown(),
+          RepOrWidenR->getUnderlyingInstr());
       Clone->insertBefore(RepOrWidenR);
       RepOrWidenR->replaceAllUsesWith(Clone);
       if (isDeadRecipe(*RepOrWidenR))
@@ -3485,13 +3483,13 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
 
 void VPlanTransforms::replaceSymbolicStrides(
     VPlan &Plan, PredicatedScalarEvolution &PSE,
-    const DenseMap<Value *, const SCEV *> &StridesMap) {
+    const DenseMap<Value *, const SCEV *> &StridesMap,
+    const VPDominatorTree &VPDT) {
   // Replace VPValues for known constant strides guaranteed by predicated scalar
   // evolution that are guaranteed to be guarded by the runtime checks; that is,
   // blocks dominated by the vector preheader.
   assert(!Plan.getVectorLoopRegion() &&
          "expected to run before loop regions are created");
-  VPDominatorTree VPDT(Plan);
   VPBlockBase *Preheader = Plan.getEntry()->getSuccessors()[1];
   auto CanUseVersionedStride = [&VPDT, Preheader](VPUser &U, unsigned) {
     auto *R = cast<VPRecipeBase>(&U);
@@ -6994,9 +6992,9 @@ void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
       if (!vputils::onlyFirstLaneUsed(VPI))
         continue;
 
-      auto *Recipe = new VPReplicateRecipe(
-          I, VPI->operandsWithoutMask(), /*IsSingleScalar=*/true,
-          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc());
+      auto *Recipe = VPBuilder::createSingleScalarOp(
+          VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr, *VPI,
+          *VPI, VPI->getDebugLoc(), I);
       Recipe->insertBefore(VPI);
       VPI->replaceAllUsesWith(Recipe);
       VPI->eraseFromParent();

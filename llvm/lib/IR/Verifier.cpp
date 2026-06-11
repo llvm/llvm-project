@@ -555,7 +555,6 @@ private:
   void visitInlineHistoryMetadata(Instruction &I, MDNode *MD);
   void visitMemCacheHintMetadata(Instruction &I, MDNode *MD);
 
-  template <class Ty> bool isValidMetadataArray(const MDTuple &N);
 #define HANDLE_SPECIALIZED_MDNODE_LEAF(CLASS) void visit##CLASS(const CLASS &N);
 #include "llvm/IR/Metadata.def"
   void visitDIType(const DIType &N);
