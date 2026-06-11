@@ -3814,6 +3814,8 @@ bool isPacked64BitInst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F64:
   case AMDGPU::V_PK_ADD_F64_gfx1250:
+  case AMDGPU::V_PK_MUL_F64:
+  case AMDGPU::V_PK_MUL_F64_gfx1250:
     return true;
   default:
     return false;
