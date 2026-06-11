@@ -175,7 +175,7 @@ define amdgpu_ps void @global_atomic_fadd_f32_saddr_no_rtn_atomicrmw(ptr addrspa
   ; GFX11_GFX12-NEXT: bb.1 (%ir-block.5):
   ; GFX11_GFX12-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GFX11_GFX12-NEXT: {{  $}}
-  ; GFX11_GFX12-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $exec_lo
+  ; GFX11_GFX12-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $exec_lo
   ; GFX11_GFX12-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX11_GFX12-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY4]], [[S_MOV_B32_]], implicit $exec
   ; GFX11_GFX12-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2147483648, implicit $exec

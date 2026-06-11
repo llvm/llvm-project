@@ -223,7 +223,7 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX11-NEXT: bb.1 (%ir-block.5):
   ; GFX11-NEXT:   successors: %bb.2(0x40000000), %bb.4(0x40000000)
   ; GFX11-NEXT: {{  $}}
-  ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $exec_lo
+  ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY $exec_lo
   ; GFX11-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GFX11-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY4]], [[S_MOV_B32_]], implicit $exec
   ; GFX11-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -2147483648, implicit $exec

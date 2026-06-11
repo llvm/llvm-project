@@ -1764,9 +1764,12 @@ define amdgpu_kernel void @fptrunc_f64_to_f16_afn(
 ; GFX1250-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-TRUE16-NEXT:    v_cvt_f32_f64_e32 v0, s[2:3]
 ; GFX1250-GISEL-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_3)
+; GFX1250-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX1250-GISEL-TRUE16-NEXT:    s_cvt_f16_f32 s2, s2
+; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX1250-GISEL-TRUE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-GISEL-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX1250-GISEL-TRUE16-NEXT:    s_endpgm
 ;
@@ -1779,9 +1782,12 @@ define amdgpu_kernel void @fptrunc_f64_to_f16_afn(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f64_e32 v0, s[2:3]
 ; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_3)
+; GFX1250-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GFX1250-GISEL-FAKE16-NEXT:    s_cvt_f16_f32 s2, s2
+; GFX1250-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
 ; GFX1250-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], null
 ; GFX1250-GISEL-FAKE16-NEXT:    s_endpgm
     ptr addrspace(1) %r,
@@ -4143,7 +4149,6 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16_afn(
 ; GFX1250-GISEL-FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f64_e32 v0, s[4:5]
 ; GFX1250-GISEL-FAKE16-NEXT:    v_cvt_f32_f64_e32 v1, s[6:7]
-; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX1250-GISEL-FAKE16-NEXT:    v_readfirstlane_b32 s3, v1

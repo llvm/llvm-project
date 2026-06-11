@@ -125,10 +125,8 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
         if (User->isMachineOpcode()) {
           const MCInstrDesc &II = TII->get(User->getMachineOpcode());
           const TargetRegisterClass *RC = nullptr;
-          if (i + II.getNumDefs() < II.getNumOperands()) {
-            RC = TRI->getAllocatableClass(
-                TII->getRegClass(II, i + II.getNumDefs()));
-          }
+          if (i + II.getNumDefs() < II.getNumOperands())
+            RC = TII->getRegClass(II, i + II.getNumDefs());
           if (!UseRC)
             UseRC = RC;
           else if (RC) {
@@ -152,12 +150,16 @@ void InstrEmitter::EmitCopyFromReg(SDValue Op, bool IsClone, Register SrcReg,
   const TargetRegisterClass *RegClassForVT =
       VT == MVT::Untyped ? nullptr : TLI->getRegClassFor(VT, Op->isDivergent());
 
-  if (!UseRC || !UseRC->isAllocatable()) {
+  if (!UseRC) {
     UseRC = RegClassForVT;
-  } else if (const TargetRegisterClass *CommonSubClass =
-                 TRI->getCommonSubClass(UseRC, RegClassForVT)) {
-    UseRC = CommonSubClass;
+  } else if (RegClassForVT) {
+    if (const TargetRegisterClass *CommonSubClass =
+            TRI->getCommonSubClass(UseRC, RegClassForVT))
+      UseRC = CommonSubClass;
+    else if (!UseRC->isAllocatable())
+      UseRC = RegClassForVT;
   }
+  UseRC = TRI->getAllocatableClass(UseRC);
 
   const TargetRegisterClass *SrcRC = nullptr, *DstRC = nullptr;
   SrcRC = TRI->getMinimalPhysRegClass(SrcReg, VT);

@@ -330,15 +330,15 @@ define amdgpu_kernel void @s_cmp_zext_i1_to_i16(ptr addrspace(1) %out, [8 x i32]
 ; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x70 nv
 ; GFX1250-NEXT:    s_load_b32 s3, s[4:5], 0x4c nv
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
-; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX1250-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cmp_eq_u32 s3, s2
 ; GFX1250-NEXT:    s_cselect_b32 s2, -1, 0
-; GFX1250-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
-; GFX1250-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s2
+; GFX1250-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_endpgm
   %tmp0 = icmp eq i16 %a, %b
   %tmp1 = zext i1 %tmp0 to i16

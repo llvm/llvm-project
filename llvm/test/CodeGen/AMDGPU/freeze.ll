@@ -15856,7 +15856,9 @@ define void @freeze_i1_scc(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %ptrb) {
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GFX803-SDAG-NEXT:    s_cmp_eq_u32 s16, s17
 ; GFX8-GFX803-SDAG-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GFX8-GFX803-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
+; GFX8-GFX803-SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX8-GFX803-SDAG-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX8-GFX803-SDAG-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-GFX803-SDAG-NEXT:    flat_store_byte v[0:1], v2
 ; GFX8-GFX803-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GFX803-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -15879,7 +15881,9 @@ define void @freeze_i1_scc(i32 inreg %a, i32 inreg %b, ptr addrspace(1) %ptrb) {
 ; GFX8-GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-GFX900-SDAG-NEXT:    s_cmp_eq_u32 s16, s17
 ; GFX8-GFX900-SDAG-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GFX8-GFX900-SDAG-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s[4:5]
+; GFX8-GFX900-SDAG-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; GFX8-GFX900-SDAG-NEXT:    s_cselect_b32 s4, 1, 0
+; GFX8-GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8-GFX900-SDAG-NEXT:    global_store_byte v[0:1], v2, off
 ; GFX8-GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GFX900-SDAG-NEXT:    s_setpc_b64 s[30:31]

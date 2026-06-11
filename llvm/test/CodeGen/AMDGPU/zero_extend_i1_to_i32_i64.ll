@@ -810,7 +810,7 @@ define amdgpu_ps void @ps_uniform_i16_eq_i32(
 ; GFX1250-LABEL: ps_uniform_i16_eq_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_eq_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_eq_u16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -837,7 +837,7 @@ define amdgpu_ps void @ps_uniform_i16_eq_i64(
 ; GFX1250-LABEL: ps_uniform_i16_eq_i64:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_eq_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_eq_u16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    s_mov_b32 s0, 0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, s0
@@ -866,7 +866,7 @@ define amdgpu_ps void @ps_uniform_i16_ne_i32(
 ; GFX1250-LABEL: ps_uniform_i16_ne_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_ne_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_ne_u16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -892,7 +892,7 @@ define amdgpu_ps void @ps_uniform_i16_ugt_i32(
 ; GFX1250-LABEL: ps_uniform_i16_ugt_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_gt_u16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -918,7 +918,7 @@ define amdgpu_ps void @ps_uniform_i16_uge_i32(
 ; GFX1250-LABEL: ps_uniform_i16_uge_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_ge_u16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -944,7 +944,7 @@ define amdgpu_ps void @ps_uniform_i16_ult_i32(
 ; GFX1250-LABEL: ps_uniform_i16_ult_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_lt_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_lt_u16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -970,7 +970,7 @@ define amdgpu_ps void @ps_uniform_i16_ule_i32(
 ; GFX1250-LABEL: ps_uniform_i16_ule_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_le_u16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_le_u16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -996,7 +996,7 @@ define amdgpu_ps void @ps_uniform_i16_sgt_i32(
 ; GFX1250-LABEL: ps_uniform_i16_sgt_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_gt_i16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -1022,7 +1022,7 @@ define amdgpu_ps void @ps_uniform_i16_sge_i32(
 ; GFX1250-LABEL: ps_uniform_i16_sge_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_ge_i16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -1048,7 +1048,7 @@ define amdgpu_ps void @ps_uniform_i16_slt_i32(
 ; GFX1250-LABEL: ps_uniform_i16_slt_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_lt_i16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_lt_i16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
@@ -1074,7 +1074,7 @@ define amdgpu_ps void @ps_uniform_i16_sle_i32(
 ; GFX1250-LABEL: ps_uniform_i16_sle_i32:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_cmp_le_i16_e32 vcc_lo, v2, v3
+; GFX1250-NEXT:    v_cmp_le_i16_e32 vcc_lo, v2.l, v3.l
 ; GFX1250-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm

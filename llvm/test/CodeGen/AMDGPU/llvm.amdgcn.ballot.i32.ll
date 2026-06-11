@@ -21,8 +21,7 @@ define amdgpu_cs i32 @constant_false() {
 define amdgpu_cs i32 @constant_true() {
 ; CHECK-LABEL: constant_true:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v0, exec_lo
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
+; CHECK-NEXT:    s_mov_b32 s0, exec_lo
 ; CHECK-NEXT:    ; return to shader part epilog
   %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 1)
   ret i32 %ballot

@@ -478,7 +478,7 @@ define amdgpu_gfx void @test34(i32 inreg %arg1, i32 inreg %arg2) {
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -499,7 +499,7 @@ define amdgpu_gfx void @test35(i32 inreg %arg1, i32 inreg %arg2) {
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -520,7 +520,7 @@ define amdgpu_gfx void @test36(i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -541,7 +541,7 @@ define amdgpu_gfx void @test37(i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -562,7 +562,7 @@ define amdgpu_gfx void @test38(i32 inreg %arg1, i32 inreg %arg2) {
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -583,7 +583,7 @@ define amdgpu_gfx void @test39(i32 inreg %arg1, i32 inreg %arg2) {
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -604,7 +604,7 @@ define amdgpu_gfx void @test40(i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -625,7 +625,7 @@ define amdgpu_gfx void @test41(i32 inreg %arg1, i32 inreg %arg2, i32 inreg %arg3
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
-; GCN-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v2, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-NEXT:    global_store_b8 v[0:1], v2, off dlc
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
