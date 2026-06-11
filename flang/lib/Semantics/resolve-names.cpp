@@ -3637,7 +3637,8 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
     }
     if ((IsDummy(symbol) ||
             (!symbol.has<UseDetails>() &&
-                (IsNamedConstant(symbol) || FindCommonBlockContaining(symbol)))) &&
+                (IsNamedConstant(symbol) ||
+                    FindCommonBlockContaining(symbol)))) &&
         isImplicitNoneType() && symbol.test(Symbol::Flag::Implicit) &&
         !context().HasError(symbol)) {
       // Dummy, COMMON, or PARAMETER named constant was implicitly typed despite
