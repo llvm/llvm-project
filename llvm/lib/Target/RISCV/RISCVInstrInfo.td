@@ -238,8 +238,8 @@ def GPRMem : MemOperand<GPR>;
 def BasePtr : MemOperand<BasePtrRegClass>;
 def SPMem : MemOperand<SP>;
 
-// Note: despite the GPRC name, GPRCMem can be a YGPRC in RVY mode.
-// Alternatively, we could rename it to BasePtrC.
+// Note: GPRCMem is a YGPRC in RVY mode. We could rename it but
+// that would result in a lot of code churn for no good reason.
 def GPRCMem : MemOperand<BasePtrCRegClass>;
 
 class SImmAsmOperand<int width, string suffix = "">
@@ -2384,6 +2384,7 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvabd.td"
+include "RISCVInstrInfoZvdota.td"
 include "RISCVInstrInfoZvk.td"
 include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"

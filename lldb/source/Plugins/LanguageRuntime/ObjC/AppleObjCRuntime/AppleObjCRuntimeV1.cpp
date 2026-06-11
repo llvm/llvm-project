@@ -259,9 +259,9 @@ AppleObjCRuntimeV1::ClassDescriptorV1::GetSuperclass() {
       new AppleObjCRuntimeV1::ClassDescriptorV1(m_parent_isa, process_sp));
 }
 
-AppleObjCRuntime::ClassDescriptorSP
+std::unique_ptr<AppleObjCRuntime::ClassDescriptor>
 AppleObjCRuntimeV1::ClassDescriptorV1::GetMetaclass() const {
-  return ClassDescriptorSP();
+  return nullptr;
 }
 
 bool AppleObjCRuntimeV1::ClassDescriptorV1::Describe(

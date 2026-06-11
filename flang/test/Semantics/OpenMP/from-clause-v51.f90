@@ -13,6 +13,6 @@ subroutine f03(x)
 end
 
 subroutine f04
-!ERROR: 'f04' must be a variable
+!ERROR: 'f04' must be a locator list item
   !$omp target update from(f04)
 end

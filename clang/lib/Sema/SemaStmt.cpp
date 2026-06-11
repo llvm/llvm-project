@@ -2942,7 +2942,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
           ActOnFinishFullExpr(NotEqExpr.get(), /*DiscardedValue*/ false);
     if (NotEqExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 0 << BeginRangeRef.get()->getType();
+          << RangeLoc << diag::InvalidRangeForIterator::OpNotEq
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
       if (!Context.hasSameType(BeginType, EndType))
         NoteForRangeBeginEndFunction(*this, EndExpr.get(), BEF_end);
@@ -2965,7 +2966,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
       IncrExpr = ActOnFinishFullExpr(IncrExpr.get(), /*DiscardedValue*/ false);
     if (IncrExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 2 << BeginRangeRef.get()->getType() ;
+          << RangeLoc << diag::InvalidRangeForIterator::OpAdvance
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
       return StmtError();
     }
@@ -2979,7 +2981,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
     ExprResult DerefExpr = ActOnUnaryOp(S, ColonLoc, tok::star, BeginRef.get());
     if (DerefExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
-        << RangeLoc << 1 << BeginRangeRef.get()->getType();
+          << RangeLoc << diag::InvalidRangeForIterator::OpDeref
+          << BeginRef.get()->getType();
       NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
       return StmtError();
     }
@@ -4275,11 +4278,7 @@ class CatchHandlerType {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsPointer : 1;
 
-  // This is a special constructor to be used only with DenseMapInfo's
-  // getEmptyKey() function.
   friend struct llvm::DenseMapInfo<CatchHandlerType>;
-  enum Unique { ForDenseMap };
-  CatchHandlerType(QualType QT, Unique) : QT(QT), IsPointer(false) {}
 
 public:
   /// Used when creating a CatchHandlerType from a handler type; will determine
@@ -4316,11 +4315,6 @@ public:
 
 namespace llvm {
 template <> struct DenseMapInfo<CatchHandlerType> {
-  static CatchHandlerType getEmptyKey() {
-    return CatchHandlerType(DenseMapInfo<QualType>::getEmptyKey(),
-                       CatchHandlerType::ForDenseMap);
-  }
-
   static unsigned getHashValue(const CatchHandlerType &Base) {
     return DenseMapInfo<QualType>::getHashValue(Base.underlying());
   }

@@ -471,7 +471,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::nxv16i1, &AArch64::PPRRegClass);
 
     // Add sve predicate as counter type
-    addRegisterClass(MVT::aarch64svcount, &AArch64::PPRRegClass);
+    addRegisterClass(MVT::aarch64svcount, &AArch64::PNRRegClass);
 
     // Add legal sve data types
     addRegisterClass(MVT::nxv16i8, &AArch64::ZPRRegClass);
@@ -3758,13 +3758,13 @@ static bool isLegalArithImmed(uint64_t C) {
   return IsLegal;
 }
 
-bool isLegalCmpImmed(APInt C) {
+bool isLegalCmpImmed(const APInt &C) {
   // Works for negative immediates too, as it can be written as an ADDS
   // instruction with a negated immediate.
   return isLegalArithImmed(C.abs().getZExtValue());
 }
 
-unsigned numberOfInstrToLoadImm(APInt C) {
+unsigned numberOfInstrToLoadImm(const APInt &C) {
   uint64_t Imm = C.getZExtValue();
   SmallVector<AArch64_IMM::ImmInsnModel> Insn;
   AArch64_IMM::expandMOVImm(Imm, 32, Insn);
@@ -4229,7 +4229,8 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
 // emitComparison() converts comparison with one or negative one to comparison
 // with 0. Note that this only works for signed comparisons because of how ANDS
 // works.
-static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
+static bool shouldBeAdjustedToZero(SDValue LHS, const APInt &C,
+                                   ISD::CondCode &CC) {
   // Only works for ANDS and AND.
   if (LHS.getOpcode() != ISD::AND && LHS.getOpcode() != AArch64ISD::ANDS)
     return false;
@@ -6467,8 +6468,8 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     const auto &SDI =
         static_cast<const AArch64SelectionDAGInfo &>(DAG.getSelectionDAGInfo());
     SDValue MS = SDI.EmitMOPS(AArch64::MOPSMemorySetTaggingPseudo, DAG, DL,
-                              Chain, Dst, Val, Size, Alignment, IsVol,
-                              DstPtrInfo, MachinePointerInfo{});
+                              Chain, Dst, Val, Size, Alignment, Alignment,
+                              IsVol, DstPtrInfo, MachinePointerInfo{});
 
     // MOPS_MEMSET_TAGGING has 3 results (DstWb, SizeWb, Chain) whereas the
     // intrinsic has 2. So hide SizeWb using MERGE_VALUES. Otherwise
@@ -10373,6 +10374,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         SDValue Cpy = DAG.getMemcpy(
             Chain, DL, DstAddr, Arg, SizeNode,
             Outs[i].Flags.getNonZeroByValAlign(),
+            Outs[i].Flags.getNonZeroByValAlign(),
             /*isVol = */ false, /*AlwaysInline = */ false,
             /*CI=*/nullptr, std::nullopt, DstInfo, MachinePointerInfo());
 
@@ -13026,8 +13028,8 @@ SDValue AArch64TargetLowering::LowerVACOPY(SDValue Op,
 
   return DAG.getMemcpy(Op.getOperand(0), DL, Op.getOperand(1), Op.getOperand(2),
                        DAG.getConstant(VaListSize, DL, MVT::i32),
-                       Align(PtrSize), false, false, /*CI=*/nullptr,
-                       std::nullopt, MachinePointerInfo(DestSV),
+                       Align(PtrSize), Align(PtrSize), false, false,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(DestSV),
                        MachinePointerInfo(SrcSV));
 }
 
@@ -13135,18 +13137,22 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
 #define GET_REGISTER_MATCHER
 #include "AArch64GenAsmMatcher.inc"
 
+Register AArch64TargetLowering::matchRegisterName(StringRef RegName) const {
+  return MatchRegisterName(RegName);
+}
+
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register AArch64TargetLowering::
 getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const {
-  Register Reg = MatchRegisterName(RegName);
-  if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
-    const AArch64RegisterInfo *MRI = Subtarget->getRegisterInfo();
-    unsigned DwarfRegNum = MRI->getDwarfRegNum(Reg, false);
-    if (!Subtarget->isXRegisterReserved(DwarfRegNum) &&
-        !MRI->isReservedReg(MF, Reg))
-      Reg = Register();
-  }
+  Register Reg = matchRegisterName(RegName);
+  // llvm.read_register / llvm.write_register instrisinc handled through the
+  // generic SelectionDAG path can only access a register that is not
+  // allocatable: reading one would use an undefined physical register, and its
+  // contents are not meaningful. Reject anything allocatable here so the
+  // generic path diagnoses rather than emitting invalid code.
+  if (Reg && !Subtarget->getRegisterInfo()->isReservedReg(MF, Reg))
+    Reg = Register();
   return Reg;
 }
 
@@ -20347,7 +20353,7 @@ static EVT calculatePreExtendType(SDValue Extend) {
     if (!Constant)
       return MVT::Other;
 
-    uint32_t Mask = Constant->getZExtValue();
+    uint64_t Mask = Constant->getZExtValue();
 
     if (Mask == UCHAR_MAX)
       return MVT::i8;
@@ -25397,7 +25403,7 @@ static SDValue tryCombineExtendRShTrunc(SDNode *N, SelectionDAG &DAG) {
   // Same unextended operand value?
   SDValue Lo = Op0.getOperand(0);
   SDValue Hi = Op1.getOperand(0);
-  if (Lo.getOpcode() != AArch64ISD::UUNPKLO &&
+  if (Lo.getOpcode() != AArch64ISD::UUNPKLO ||
       Hi.getOpcode() != AArch64ISD::UUNPKHI)
     return SDValue();
   SDValue OrigArg = Lo.getOperand(0);
@@ -25814,8 +25820,8 @@ static SDValue performPostLD1Combine(SDNode *N,
     // If the increment is a constant, it must match the memory ref size.
     SDValue Inc = User->getOperand(User->getOperand(0) == Addr ? 1 : 0);
     if (ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode())) {
-      uint32_t IncVal = CInc->getZExtValue();
-      unsigned NumBytes = VT.getScalarSizeInBits() / 8;
+      uint64_t IncVal = CInc->getZExtValue();
+      uint64_t NumBytes = VT.getScalarSizeInBits() / 8;
       if (IncVal != NumBytes)
         continue;
       Inc = DAG.getRegister(AArch64::XZR, MVT::i64);
@@ -26343,9 +26349,11 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
 
   assert(ST->getOffset().isUndef() && "undef offset expected");
   SDLoc DL(ST);
-  auto WideVT = EVT::getVectorVT(
+  EVT WideVT = EVT::getVectorVT(
       *DAG.getContext(),
       Value->getOperand(0).getValueType().getVectorElementType(), 4);
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(WideVT))
+    return SDValue();
   SDValue PoisonVector = DAG.getPOISON(WideVT);
   SDValue WideTrunc = DAG.getNode(
       ISD::INSERT_SUBVECTOR, DL, WideVT,
@@ -26951,8 +26959,8 @@ static SDValue performNEONPostLDSTCombine(SDNode *N,
     // If the increment is a constant, it must match the memory ref size.
     SDValue Inc = User->getOperand(User->getOperand(0) == Addr ? 1 : 0);
     if (ConstantSDNode *CInc = dyn_cast<ConstantSDNode>(Inc.getNode())) {
-      uint32_t IncVal = CInc->getZExtValue();
-      unsigned NumBytes = NumVecs * VecTy.getSizeInBits() / 8;
+      uint64_t IncVal = CInc->getZExtValue();
+      uint64_t NumBytes = NumVecs * VecTy.getSizeInBits() / 8;
       if (IsLaneOp || IsDupOp)
         NumBytes /= VecTy.getVectorNumElements();
       if (IncVal != NumBytes)
@@ -28460,7 +28468,7 @@ static SDValue performDUPCombine(SDNode *N,
       EVT ElemVT = VT.getVectorElementType();
       if ((ExtType == ISD::EXTLOAD || ExtType == ISD::ZEXTLOAD) &&
           (MemVT == MVT::i8 || MemVT == MVT::i16 || MemVT == MVT::i32) &&
-          ElemVT != MemVT && LD->hasOneUse()) {
+          ElemVT != MemVT && Op.hasOneUse()) {
         EVT Vec128VT = EVT::getVectorVT(*DCI.DAG.getContext(), ElemVT,
                                         128 / ElemVT.getSizeInBits());
         SDValue ScalarToVec =

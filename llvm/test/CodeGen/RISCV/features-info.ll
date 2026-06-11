@@ -40,12 +40,18 @@
 ; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvfofp8min          - 'Zvfofp8min' (Vector OFP8 Converts).
 ; CHECK-NEXT:   experimental-zvfqwbdota8f        - 'Zvfqwbdota8f' (OCP FP8 batched dot-product extension).
+; CHECK-NEXT:   experimental-zvfqwdota8f         - 'Zvfqwdota8f' (OCP FP8 Dot-Product).
 ; CHECK-NEXT:   experimental-zvfwbdota16bf       - 'Zvfwbdota16bf' (BF16 batched dot-product extension).
+; CHECK-NEXT:   experimental-zvfwdota16bf        - 'Zvfwdota16bf' (BF16 Dot-Product).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
 ; CHECK-NEXT:   experimental-zvqwbdota16i        - 'Zvqwbdota16i' (16-bit integer batched dot-product extension).
 ; CHECK-NEXT:   experimental-zvqwbdota8i         - 'Zvqwbdota8i' (8-bit integer batched dot-product extension).
+; CHECK-NEXT:   experimental-zvqwdota16i         - 'Zvqwdota16i' (16-bit Integer Dot-Product).
+; CHECK-NEXT:   experimental-zvqwdota8i          - 'Zvqwdota8i' (8-bit Integer Dot-Product).
 ; CHECK-NEXT:   experimental-zvvfmm              - 'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate).
 ; CHECK-NEXT:   experimental-zvvmm               - 'Zvvmm' (Integer Matrix Multiply-Accumulate).
+; CHECK-NEXT:   experimental-zvvmtls             - 'Zvvmtls' (Matrix Tile Load/Store).
+; CHECK-NEXT:   experimental-zvvmttls            - 'Zvvmttls' (Transposing Matrix Tile Load/Store).
 ; CHECK-NEXT:   experimental-zvzip               - 'Zvzip' (Vector Reordering Structured Data).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
@@ -131,7 +137,6 @@
 ; CHECK-NEXT:   rvb23u64                         - RISC-V rvb23u64 profile.
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.
 ; CHECK-NEXT:   rvi20u64                         - RISC-V rvi20u64 profile.
-; CHECK-NEXT:   rvy-int-mode                     - Using RVY Base ISA in Compatibility Mode.
 ; CHECK-NEXT:   save-restore                     - Enable save/restore.
 ; CHECK-NEXT:   sdext                            - 'Sdext' (External debugger).
 ; CHECK-NEXT:   sdtrig                           - 'Sdtrig' (Debugger triggers).
@@ -211,6 +216,7 @@
 ; CHECK-NEXT:   xcvmac                           - 'XCVmac' (CORE-V Multiply-Accumulate).
 ; CHECK-NEXT:   xcvmem                           - 'XCVmem' (CORE-V Post-incrementing Load & Store).
 ; CHECK-NEXT:   xcvsimd                          - 'XCVsimd' (CORE-V SIMD ALU).
+; CHECK-NEXT:   xllvmrvyipm                      - 'XLLVMRVYIPM' (Using RVY Base ISA with Integral Pointer (Compatibility) Mode).
 ; CHECK-NEXT:   xmipscbop                        - 'XMIPSCBOP' (MIPS Software Prefetch).
 ; CHECK-NEXT:   xmipscmov                        - 'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov)).
 ; CHECK-NEXT:   xmipsexectl                      - 'XMIPSEXECTL' (MIPS execution control).
@@ -239,13 +245,13 @@
 ; CHECK-NEXT:   xsfmm128t                        - 'XSfmm128t' (TE=128 configuration).
 ; CHECK-NEXT:   xsfmm16t                         - 'XSfmm16t' (TE=16 configuration).
 ; CHECK-NEXT:   xsfmm32a                         - 'XSfmm32a' (TEW=32-bit accumulation operands - int: 8b; float: fp16, bf16, fp32)
-; CHECK-NEXT:   xsfmm32a16f                      - 'XSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)).
-; CHECK-NEXT:   xsfmm32a32f                      - 'XSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b).
-; CHECK-NEXT:   xsfmm32a8f                       - 'XSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8).
-; CHECK-NEXT:   xsfmm32a8i                       - 'XSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b).
-; CHECK-NEXT:   xsfmm32t                         - 'XSfmm32t' (TE=32 configuration).
-; CHECK-NEXT:   xsfmm64a64f                      - 'XSfmm64a64f' (TEW=64-bit accumulation, operands - float: fp64).
-; CHECK-NEXT:   xsfmm64t                         - 'XSfmm64t' (TE=64 configuration).
+; CHECK-NEXT:   xsfmm32a16f                      - 'XSfmm32a16f' (TEW=32-bit accumulation, operands - float: 16b, widen=2 (IEEE, BF)). 
+; CHECK-NEXT:   xsfmm32a32f                      - 'XSfmm32a32f' (TEW=32-bit accumulation, operands - float: 32b). 
+; CHECK-NEXT:   xsfmm32a8f                       - 'XSfmm32a8f' (TEW=32-bit accumulation, operands - float: fp8). 
+; CHECK-NEXT:   xsfmm32a8i                       - 'XSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b). 
+; CHECK-NEXT:   xsfmm32t                         - 'XSfmm32t' (TE=32 configuration). 
+; CHECK-NEXT:   xsfmm64a64f                      - 'XSfmm64a64f' (TEW=64-bit accumulation, operands - float: fp64). 
+; CHECK-NEXT:   xsfmm64t                         - 'XSfmm64t' (TE=64 configuration). 
 ; CHECK-NEXT:   xsfmmbase                        - 'XSfmmbase' (All non arithmetic instructions for all TEWs and sf.vtzero).
 ; CHECK-NEXT:   xsfvcp                           - 'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions).
 ; CHECK-NEXT:   xsfvfbfexp16e                    - 'XSfvfbfexp16e' (SiFive Vector Floating-Point Exponential Function Instruction, BFloat16).
@@ -324,7 +330,7 @@
 ; CHECK-NEXT:   zihintpause                      - 'Zihintpause' (Pause Hint).
 ; CHECK-NEXT:   zihpm                            - 'Zihpm' (Hardware Performance Counters).
 ; CHECK-NEXT:   zilsd                            - 'Zilsd' (Load/Store Pair Instructions).
-; CHECK-NEXT:   zilsd-4byte-align                - Allow 4-byte alignment for Zilsd LD/SD instructions.
+; CHECK-NEXT:   zilsd-word-align                 - Allow 4-byte alignment for Zilsd LD/SD instructions.
 ; CHECK-NEXT:   zimop                            - 'Zimop' (May-Be-Operations).
 ; CHECK-NEXT:   zk                               - 'Zk' (Standard scalar cryptography extension).
 ; CHECK-NEXT:   zkn                              - 'Zkn' (NIST Algorithm Suite).

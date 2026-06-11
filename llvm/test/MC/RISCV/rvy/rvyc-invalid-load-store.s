@@ -3,9 +3,9 @@
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-RVY,CHECK-RVY32 --implicit-check-not=error: %s
 // RUN: not llvm-mc --triple=riscv64 --mattr=+c,+zcb,+experimental-y --defsym=RV64=1 < %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-RVY,CHECK-RVY64,CHECK-64  --implicit-check-not=error: %s
-// RUN: not llvm-mc --triple=riscv32 --mattr=+c,+zcb,+zclsd,+rvy-int-mode < %s 2>&1 \
+// RUN: not llvm-mc --triple=riscv32 --mattr=+c,+zcb,+zclsd,+xllvmrvyipm < %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-COMPAT,CHECK-COMPAT32 --implicit-check-not=error: %s
-// RUN: not llvm-mc --triple=riscv64 --mattr=+c,+zcb,+rvy-int-mode --defsym=RV64=1 < %s 2>&1 \
+// RUN: not llvm-mc --triple=riscv64 --mattr=+c,+zcb,+xllvmrvyipm --defsym=RV64=1 < %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-COMPAT,CHECK-64 --implicit-check-not=error: %s
 
 /// Note: Invalid operand currently has priority over missing features, so we

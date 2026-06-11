@@ -1,0 +1,63 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "FIRSupport",
+    srcs = glob(
+        [
+            "*.cpp",
+            "*.h",
+        ],
+        allow_empty = True,
+    ),
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:ToolsHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/CodeGen:CodeGenHeaders",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect:FIRDialectSupportHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//flang/include/flang/Optimizer/OpenACC:OpenACCHeaders",
+        "//flang/include/flang/Optimizer/OpenMP:OpenMPHeaders",
+        "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//flang/lib/Optimizer/Dialect:FIRDialect",
+        "//flang/lib/Optimizer/Dialect/MIF:MIFDialect",
+        "//llvm:Core",
+        "//llvm:MC",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TargetParser",
+        "//llvm:ir_headers",
+        "//mlir:AllExtensions",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:ConversionPasses",
+        "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FromLLVMIRTranslation",
+        "//mlir:FuncExtensions",
+        "//mlir:GPUDialect",
+        "//mlir:IR",
+        "//mlir:LLVMDialect",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:OpenACCToLLVMIRTranslation",
+        "//mlir:OpenACCTransforms",
+        "//mlir:OpenMPToLLVMIRTranslation",
+        "//mlir:OpenMPTransforms",
+        "//mlir:RegisterAllDialects",
+        "//mlir:Support",
+        "//mlir:ToLLVMIRTranslation",
+    ],
+)

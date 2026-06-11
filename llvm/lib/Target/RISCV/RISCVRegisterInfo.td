@@ -345,8 +345,9 @@ def YGPR : YGPRRegisterClass<(add (sequence "X%u_Y", 10, 17),
 
 // Note: We have to use a multiclass here instead of inheriting from
 // RegClassByHwMode since tablegen does not allow subclasses.
-// TODO: could add a usage assert here that AddrRC is XLenVT and CapRC YLenVT?
 multiclass PtrRegClassByHwMode<RegisterClass AddrRC, RegisterClass CapRC> {
+  assert !eq(!head(AddrRC.RegTypes), XLenVT), "AddrRC must be XLenVT";
+  assert !eq(!head(CapRC.RegTypes), YLenVT), "CapRC must be YLenVT";
   def "" : RegClassByHwMode<[RV32I,  RV64I,  RV32Y, RV64Y],
                             [AddrRC, AddrRC, CapRC, CapRC]>;
 }
@@ -419,14 +420,14 @@ def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
                                   (sequence "X%u", 28, 31))>;
 def GPRTCNonX7 : GPRRegisterClass<(sub GPRTC, X7)>;
 
-def GPRSP : GPRRegisterClass<(add X2)> {
-  let DiagnosticType = "InvalidRegClassGPRSP";
+def SP_X : GPRRegisterClass<(add X2)> {
+  let DiagnosticType = "InvalidRegClassSP_X";
   let DiagnosticString = "register must be sp (x2)";
 }
-def YGPRSP : YGPRRegisterClass<(add X2_Y)> {
-  let DiagnosticType = GPRSP.DiagnosticType;
+def SP_Y : YGPRRegisterClass<(add X2_Y)> {
+  let DiagnosticType = SP_X.DiagnosticType;
 }
-defm SP : PtrRegClassByHwMode<GPRSP, YGPRSP>;
+defm SP : PtrRegClassByHwMode<SP_X, SP_Y>;
 
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),

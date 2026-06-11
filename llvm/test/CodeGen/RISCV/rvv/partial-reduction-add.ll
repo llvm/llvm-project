@@ -16,12 +16,11 @@ entry:
 define <4 x i32> @partial_reduce_add_v4i32_v8i32(<4 x i32> %accumulator, <8 x i32> %0) {
 ; CHECK-LABEL: partial_reduce_add_v4i32_v8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v12, v8, v10
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v10, 4
+; CHECK-NEXT:    vslidedown.vi v12, v10, 4
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v8, v12
+; CHECK-NEXT:    vadd.vv v8, v8, v10
+; CHECK-NEXT:    vadd.vv v8, v12, v8
 ; CHECK-NEXT:    ret
 entry:
   %partial.reduce = call <4 x i32> @llvm.vector.partial.reduce.add(<4 x i32> %accumulator, <8 x i32> %0)

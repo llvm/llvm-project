@@ -362,6 +362,9 @@ add_entrypoint_object(
     environ.cpp
   HDRS
     environ.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -372,6 +375,10 @@ add_entrypoint_object(
     getopt.h
   DEPENDS
     libc.include.unistd
+    libc.hdr.unistd_macros
+    libc.hdr.types.FILE
+    libc.src.__support.common
+    libc.src.__support.macros.config
     libc.src.__support.CPP.optional
     libc.src.__support.CPP.string_view
     libc.src.__support.File.file

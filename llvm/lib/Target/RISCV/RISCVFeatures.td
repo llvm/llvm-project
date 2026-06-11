@@ -194,8 +194,8 @@ def HasStdExtZilsd : Predicate<"Subtarget->hasStdExtZilsd()">,
                        AssemblerPredicate<(all_of FeatureStdExtZilsd),
                                           "'Zilsd' (Load/Store pair instructions)">;
 
-def FeatureZilsd4ByteAlign
-    : SubtargetFeature<"zilsd-4byte-align", "AllowZilsd4ByteAlign", "true",
+def FeatureZilsdWordAlign
+    : SubtargetFeature<"zilsd-word-align", "AllowZilsdWordAlign", "true",
                        "Allow 4-byte alignment for Zilsd LD/SD instructions">;
 
 // Multiply Extensions
@@ -689,6 +689,32 @@ def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
 
+def FeatureStdExtZvqwdota8i
+    : RISCVExperimentalExtension<0, 2, "8-bit Integer Dot-Product",
+                                 [FeatureStdExtZve32x]>;
+
+def FeatureStdExtZvqwdota16i
+    : RISCVExperimentalExtension<0, 2, "16-bit Integer Dot-Product",
+                                 [FeatureStdExtZve64x]>;
+
+def HasStdExtZvqwdota8iOrZvqwdota16i
+    : Predicate<"Subtarget->hasStdExtZvqwdota8i() || Subtarget->hasStdExtZvqwdota16i()">,
+      AssemblerPredicate<(any_of FeatureStdExtZvqwdota8i, FeatureStdExtZvqwdota16i),
+                         "'Zvqwdota8i' (8-bit Integer Dot-Product) or "
+                         "'Zvqwdota16i' (16-bit Integer Dot-Product)">;
+
+def FeatureStdExtZvfwdota16bf
+    : RISCVExperimentalExtension<0, 2, "BF16 Dot-Product", [FeatureStdExtZve32f]>;
+def HasStdExtZvfwdota16bf : Predicate<"Subtarget->hasStdExtZvfwdota16bf()">,
+                            AssemblerPredicate<(all_of FeatureStdExtZvfwdota16bf),
+                                               "'Zvfwdota16bf' (BF16 Dot-Product)">;
+
+def FeatureStdExtZvfqwdota8f
+    : RISCVExperimentalExtension<0, 2, "OCP FP8 Dot-Product", [FeatureStdExtZve32f]>;
+def HasStdExtZvfqwdota8f : Predicate<"Subtarget->hasStdExtZvfqwdota8f()">,
+                           AssemblerPredicate<(all_of FeatureStdExtZvfqwdota8f),
+                                              "'Zvfqwdota8f' (OCP FP8 Dot-Product)">;
+
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
                                  [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
@@ -900,6 +926,23 @@ def FeatureStdExtZvvfmm
 def HasStdExtZvvfmm : Predicate<"Subtarget->hasStdExtZvvfmm()">,
                       AssemblerPredicate<(all_of FeatureStdExtZvvfmm),
                           "'Zvvfmm' (Floating-Point Matrix Multiply-Accumulate)">;
+
+// Integrated Matrix Extension matrix tile load/store
+def FeatureStdExtZvvmtls
+    : RISCVExperimentalExtension<0, 1, "Matrix Tile Load/Store",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvvmtls : Predicate<"Subtarget->hasStdExtZvvmtls()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZvvmtls),
+                           "'Zvvmtls' (Matrix Tile Load/Store)">;
+
+// Integrated Matrix Extension transposing matrix tile load/store
+def FeatureStdExtZvvmttls
+    : RISCVExperimentalExtension<0, 1,
+                                 "Transposing Matrix Tile Load/Store",
+                                 [FeatureStdExtZve32x]>;
+def HasStdExtZvvmttls : Predicate<"Subtarget->hasStdExtZvvmttls()">,
+                        AssemblerPredicate<(all_of FeatureStdExtZvvmttls),
+                            "'Zvvmttls' (Transposing Matrix Tile Load/Store)">;
 
 // Zvbdota family of batched dot-product extensions
 def FeatureStdExtZvqwbdota8i
@@ -1838,13 +1881,12 @@ def Feature32Bit
 def Feature64Bit
     : SubtargetFeature<"64bit", "IsRV64", "true", "Implements RV64">;
 // By default enabling RVY uses capability pointers, to use RVI/RVE compatible
-// integral addresses the internal +rvy-int-mode flag can be used.
-// NOTE: the final user-visible flag is still TBD, this flag only exists for
-// testing of the internals.
-def FeatureRVYIntMode
-    : SubtargetFeature<"rvy-int-mode", "IsRVYIntMode", "true",
-                       "Using RVY Base ISA in Compatibility Mode",
-                       [FeatureStdExtY]>;
+// integral addresses the internal +xllvmrvyipm extension can be used.
+// NOTE: the final user-visible extension is still TBD, this extension only
+// exists for testing of the internals.
+def FeatureVendorXLLVMRVYIPM
+    : RISCVExtension<1, 0, "Using RVY Base ISA with Integral Pointer "
+                     "(Compatibility) Mode", [FeatureStdExtY], "IsRVYIntMode">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,
              AssemblerPredicate<(all_of Feature64Bit),
                                 "RV64I Base Instruction Set">;
@@ -1853,11 +1895,11 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
                                 "RV32I Base Instruction Set">;
 def IsStdExtYCapMode
     : Predicate<"Subtarget->hasStdExtY() && !Subtarget->isRVYIntMode()">,
-      AssemblerPredicate<(all_of FeatureStdExtY, (not FeatureRVYIntMode)),
+      AssemblerPredicate<(all_of FeatureStdExtY, (not FeatureVendorXLLVMRVYIPM)),
                          "Using RVY Capability pointer mode">;
 def NotStdExtYCapMode
     : Predicate<"!Subtarget->hasStdExtY() || Subtarget->isRVYIntMode()">,
-      AssemblerPredicate<(any_of (not FeatureStdExtY), FeatureRVYIntMode),
+      AssemblerPredicate<(any_of (not FeatureStdExtY), FeatureVendorXLLVMRVYIPM),
                          "Not using RVY Capability Pointer Mode">;
 defvar RV32I = DefaultMode;
 def RV64I : HwMode<[IsRV64, NotStdExtYCapMode]>;

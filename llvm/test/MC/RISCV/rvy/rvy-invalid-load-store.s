@@ -1,25 +1,25 @@
 /// For RVY, the loads and stores with the zero register as the base are reserved
 /// since this is an always-trapping encoding that may be reused in the future:
-/// - Check that the assembler rejects zero reg base for capmode but allows it in integer mode.
+/// - Check that the assembler rejects zero reg base for capmode but allows it in integral pointer mode.
 /// - Check that the disassembler with +cap-mode decodes zero reg base as invalid instructions.
-// RUN: llvm-mc --triple=riscv32 --mattr=+rvy-int-mode --show-encoding < %s \
+// RUN: llvm-mc --triple=riscv32 --mattr=+xllvmrvyipm --show-encoding < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK-ASM,CHECK %s
 // RUN: not llvm-mc --triple=riscv32 --mattr=+experimental-y < %s 2>&1 \
 // RUN:   |  FileCheck %s --check-prefixes=ERR-RVY --implicit-check-not=error:
-// RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+rvy-int-mode -o %t.rv32i.o < %s
-// RUN: llvm-objdump -M no-aliases --mattr=+rvy-int-mode -d --no-print-imm-hex %t.rv32i.o \
+// RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+xllvmrvyipm -o %t.rv32i.o < %s
+// RUN: llvm-objdump -M no-aliases --mattr=+xllvmrvyipm -d --no-print-imm-hex %t.rv32i.o \
 // RUN:   | FileCheck --check-prefixes=CHECK %s
-// RUN: llvm-objdump -M no-aliases --mattr=+experimental-y -d --no-print-imm-hex %t.rv32i.o \
+// RUN: llvm-objdump -M no-aliases --mattr=+experimental-y,-xllvmrvyipm -d --no-print-imm-hex %t.rv32i.o \
 // RUN:   | FileCheck --check-prefixes=CHECK-CAP-MODE-DISASM %s
 
-// RUN: llvm-mc --triple=riscv64 --mattr=+rvy-int-mode --show-encoding --defsym=RV64=1 < %s \
+// RUN: llvm-mc --triple=riscv64 --mattr=+xllvmrvyipm --show-encoding --defsym=RV64=1 < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK-ASM,CHECK-ASM-64,CHECK,CHECK-64 %s
 // RUN: not llvm-mc --triple=riscv64 --mattr=+experimental-y --defsym=RV64=1 < %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=ERR-RVY,ERR-RVY-64 --implicit-check-not=error: %s
-// RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+rvy-int-mode --defsym=RV64=1 -o %t.rv64i.o < %s
-// RUN: llvm-objdump -M no-aliases --mattr=+rvy-int-mode -d --no-print-imm-hex %t.rv64i.o \
+// RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+xllvmrvyipm --defsym=RV64=1 -o %t.rv64i.o < %s
+// RUN: llvm-objdump -M no-aliases --mattr=+xllvmrvyipm -d --no-print-imm-hex %t.rv64i.o \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-64 %s
-// RUN: llvm-objdump -M no-aliases --mattr=+experimental-y -d --no-print-imm-hex %t.rv64i.o \
+// RUN: llvm-objdump -M no-aliases --mattr=+experimental-y,-xllvmrvyipm -d --no-print-imm-hex %t.rv64i.o \
 // RUN:   | FileCheck --check-prefixes=CHECK-CAP-MODE-DISASM,CHECK-CAP-MODE-DISASM-64 %s
 
 // CHECK: lb	a0, 16(zero)
