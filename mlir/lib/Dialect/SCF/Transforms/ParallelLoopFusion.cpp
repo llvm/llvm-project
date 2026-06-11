@@ -782,15 +782,6 @@ struct LoopIV {
 
 template <>
 struct llvm::DenseMapInfo<LoopIV> {
-  static inline LoopIV getEmptyKey() {
-    auto e = DenseMapInfo<mlir::Value>::getEmptyKey();
-    return {e, e, e}; // Must be impossible to occur naturally
-  }
-  static inline LoopIV getTombstoneKey() {
-    auto t = DenseMapInfo<mlir::Value>::getTombstoneKey();
-    return {t, t, t}; // Must be impossible to occur naturally
-  }
-
   static inline bool isEqual(const LoopIV &lhs, const LoopIV &rhs) {
     return (lhs == rhs);
   }
