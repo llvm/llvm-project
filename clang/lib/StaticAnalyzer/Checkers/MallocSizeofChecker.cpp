@@ -166,8 +166,7 @@ static bool typesCompatible(ASTContext &C, QualType A, QualType B) {
         RecTy = B->getAs<RecordType>();
         Scalar = A;
       }
-      if (const CXXRecordDecl *RD =
-              dyn_cast<CXXRecordDecl>(RecTy->getDecl())) {
+      if (const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(RecTy->getDecl())) {
         if (RD->isStandardLayout()) {
           const CXXRecordDecl *Base = RD->getStandardLayoutBaseWithFields();
           auto F = Base->field_begin();
