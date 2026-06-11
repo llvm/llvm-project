@@ -40,14 +40,14 @@ public:
         ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {}
 
   bool runOnModule(Module &M) override {
-    if (llvm::isFunctionInPrintList("*")) {
+    if (llvm::isFunctionInPrintList("*") && isSourceLocFilterEmpty()) {
       if (!Banner.empty())
         OS << Banner << "\n";
       M.print(OS, nullptr, ShouldPreserveUseListOrder);
     } else {
       bool BannerPrinted = false;
       for (const auto &F : M.functions()) {
-        if (llvm::isFunctionInPrintList(F.getName())) {
+        if (shouldPrintFunction(F)) {
           if (!BannerPrinted && !Banner.empty()) {
             OS << Banner << "\n";
             BannerPrinted = true;
@@ -79,7 +79,7 @@ public:
 
   // This pass just prints a banner followed by the function as it's processed.
   bool runOnFunction(Function &F) override {
-    if (isFunctionInPrintList(F.getName())) {
+    if (shouldPrintFunction(F)) {
       if (forcePrintModuleIR())
         OS << Banner << " (function: " << F.getName() << ")\n"
            << *F.getParent();

@@ -31,6 +31,21 @@ using namespace llvm;
 
 namespace {
 
+bool shouldPrintLoop(const Loop &L) {
+  Function *F = L.getHeader()->getParent();
+  if (!isFunctionInPrintList(F->getName()))
+    return false;
+
+  if (isSourceLocFilterEmpty())
+    return true;
+
+  for (const BasicBlock *BB : L.blocks())
+    for (const Instruction &I : *BB)
+      if (isSourceLocInPrintList(I.getDebugLoc()))
+        return true;
+  return false;
+}
+
 /// PrintLoopPass - Print a Function corresponding to a Loop.
 ///
 class PrintLoopPassWrapper : public LoopPass {
@@ -48,11 +63,8 @@ public:
   }
 
   bool runOnLoop(Loop *L, LPPassManager &) override {
-    auto BBI = llvm::find_if(L->blocks(), [](BasicBlock *BB) { return BB; });
-    if (BBI != L->blocks().end() &&
-        isFunctionInPrintList((*BBI)->getParent()->getName())) {
+    if (shouldPrintLoop(*L))
       printLoop(*L, OS, Banner);
-    }
     return false;
   }
 
