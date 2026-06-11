@@ -85,7 +85,8 @@ An ``asyncmark()`` operation ``X`` that inserts an asyncmark ``M`` is
 if:
 
 - ``X`` is *program-ordered* before ``Y``, and
-- ``M`` is not in the current sequence after ``Y`` returns.
+- ``M`` is not in the current sequence at any operation ``Z`` that immediately
+  follows ``Y`` in *program-order*.
 
 An async operation ``A`` is *completed-at* a ``wait.asyncmark()`` operation
 ``Y`` if there exists an ``asyncmark()`` operation ``X`` such that:
