@@ -1721,15 +1721,7 @@ void CombinerHelper::applyOptBrCondByInvertingCond(
   Observer.changedInstr(*BrCond);
 }
 
-bool CombinerHelper::tryEmitMemcpyInline(MachineInstr &MI) const {
-  MachineIRBuilder HelperBuilder(MI);
-  GISelObserverWrapper DummyObserver;
-  LegalizerHelper Helper(HelperBuilder.getMF(), DummyObserver, HelperBuilder);
-  return Helper.lowerMemCpyFamily(MI) ==
-         LegalizerHelper::LegalizeResult::Legalized;
-}
-
-bool CombinerHelper::tryEmitMemsetInline(MachineInstr &MI) const {
+bool CombinerHelper::tryEmitMemcpyInlineFamily(MachineInstr &MI) const {
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
   LegalizerHelper Helper(HelperBuilder.getMF(), DummyObserver, HelperBuilder);
