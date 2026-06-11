@@ -5048,8 +5048,8 @@ void TransferReadOp::build(OpBuilder &builder, OperationState &result,
         *padding, /*mask=*/Value(), inBoundsAttr);
 }
 
-/// 2. Builder that sets padding to zero an empty mask (variant without attrs).
-/// If `permutationMap` is null, a minor identity map is used.
+/// 2. Builder that sets padding to zero and an empty mask (variant without
+/// attrs). If `permutationMap` is null, a minor identity map is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
                            ValueRange indices, std::optional<Value> padding,
