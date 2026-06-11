@@ -24,6 +24,7 @@ public:
   void analyzerLifetimeBound(const CallEvent &Call, const CallExpr *,
                              CheckerContext &C) const;
   ProgramStateRef bindValues(ProgramStateRef State, SymbolRef RetValSym, SVal RetVal, const MemRegion *Source) const;
+  void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
 
 
   const BugType BugMsg{this, "LifetimeAnnotations", "LifetimeBound"};
@@ -91,6 +92,12 @@ void LifetimeAnnotations::checkPostCall(const CallEvent &Call,
     }
   }
   C.addTransition(State);
+}
+
+void LifetimeAnnotations::checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+
+  LifetimeBoundMapTy TrackedRegion = State->get<LifetimeBoundMap>();
 }
 
 void LifetimeAnnotations::printState(raw_ostream &Out, ProgramStateRef State,
