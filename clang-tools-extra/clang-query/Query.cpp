@@ -225,9 +225,9 @@ bool MatchQuery::run(llvm::raw_ostream &OS, QuerySession &QS) const {
             llvm::raw_string_ostream DetailOS(DetailStr);
             ASTContext &Ctx = AST->getASTContext();
             JSONDumper Dumper(DetailOS, AST->getSourceManager(), Ctx,
-                             Ctx.getPrintingPolicy(),
-                             &Ctx.getCommentCommandTraits(),
-                             /*IndentSize=*/0);
+                              Ctx.getPrintingPolicy(),
+                              &Ctx.getCommentCommandTraits(),
+                              /*IndentSize=*/0);
             Dumper.SetTraversalKind(QS.TK);
             Dumper.Visit(Node);
             JOS.rawValue(DetailStr);
