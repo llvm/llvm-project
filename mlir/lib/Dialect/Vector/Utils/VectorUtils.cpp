@@ -492,12 +492,11 @@ Value vector::createReadOrMaskedRead(OpBuilder &builder, Location loc,
       (customIndices.empty() || customIndices.size() == sourceShape.size()) &&
       "expected as many custom indices as source dims.");
   SmallVector<Value> indices;
-  if (customIndices.empty()) {
-    auto zero = arith::ConstantIndexOp::create(builder, loc, 0);
-    indices.assign(sourceShape.size(), zero);
-  } else {
-    indices.assign(customIndices.begin(), customIndices.end());
-  }
+  customIndices.empty()
+      ? indices.assign(sourceShape.size(),
+                       arith::ConstantIndexOp::create(builder, loc, 0))
+      : indices.assign(customIndices.begin(), customIndices.end());
+
   // A null permutation map means the builder defaults to a minor identity map.
   auto transferReadOp =
       vector::TransferReadOp::create(builder, loc, /*vectorType=*/vecToReadTy,
