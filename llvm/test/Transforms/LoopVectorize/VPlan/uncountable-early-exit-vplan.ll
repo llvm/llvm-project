@@ -308,12 +308,11 @@ define i64 @two_early_exits_same_exit_with_constant_live_outs() {
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.early.exit.0:
-; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = first-active-lane vp<[[VP7]]>
-; CHECK-NEXT:    EMIT vp<[[VP14:%[0-9]+]]> = add vp<[[VP3]]>, vp<[[VP13]]>
+; CHECK-NEXT:    EMIT vp<[[VP13:%[0-9]+]]> = add vp<[[VP3]]>, vp<%first.active.lane>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<exit>:
-; CHECK-NEXT:    IR   %retval = phi i64 [ %iv, %loop.header ], [ 100, %early.exit.0 ], [ 43, %loop.latch ] (extra operands: ir<43> from middle.block, vp<[[VP14]]> from vector.early.exit.0, ir<100> from vector.early.exit.1)
+; CHECK-NEXT:    IR   %retval = phi i64 [ %iv, %loop.header ], [ 100, %early.exit.0 ], [ 43, %loop.latch ] (extra operands: ir<43> from middle.block, vp<[[VP13]]> from vector.early.exit.0, ir<100> from vector.early.exit.1)
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:

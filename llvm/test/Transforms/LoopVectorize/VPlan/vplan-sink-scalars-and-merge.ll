@@ -732,12 +732,11 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then.0.0:
 ; CHECK-NEXT:      BLEND ir<%p> = ir<0> vp<%11>/ir<%c.0>
-; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = logical-and vp<[[VP8]]>, ir<%c.0>
 ; CHECK-NEXT:    Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    <xVFxUF> pred.store: {
 ; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP12]]>
+; CHECK-NEXT:        BRANCH-ON-MASK vp<[[VP9]]>
 ; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      pred.store.if:
