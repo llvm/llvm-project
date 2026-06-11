@@ -753,16 +753,16 @@ REGISTER_CHECKER(C11LockChecker)
 
 #undef REGISTER_CHECKER
 
-void ento::registerPthreadLockChecker(CheckerManager &mgr) {
-  PthreadLockChecker *checker = mgr.getChecker<PthreadLockChecker>();
-  checker->ChecksEnabled[PthreadLockChecker::CK_PthreadLockChecker] = true;
-  checker->CheckNames[PthreadLockChecker::CK_PthreadLockChecker] =
-      mgr.getCurrentCheckerName();
-  checker->WarnOnLockOrderReversal =
-      mgr.getAnalyzerOptions().getCheckerBooleanOption(
-          mgr.getCurrentCheckerName(), "WarnOnLockOrderReversal");
+void ento::registerPthreadLockChecker(CheckerManager &Mgr) {
+  PthreadLockChecker *Checker = Mgr.getChecker<PthreadLockChecker>();
+  Checker->ChecksEnabled[PthreadLockChecker::CK_PthreadLockChecker] = true;
+  Checker->CheckNames[PthreadLockChecker::CK_PthreadLockChecker] =
+      Mgr.getCurrentCheckerName();
+  Checker->WarnOnLockOrderReversal =
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+          Mgr.getCurrentCheckerName(), "WarnOnLockOrderReversal");
 }
 
-bool ento::shouldRegisterPthreadLockChecker(const CheckerManager &mgr) {
+bool ento::shouldRegisterPthreadLockChecker(const CheckerManager &) {
   return true;
 }
