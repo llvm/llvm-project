@@ -635,6 +635,16 @@ class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : ThreeOpFragSDA
   }];
 }
 
+// Uniform counterpart of ThreeOpFragSDAG: matches the non-divergent case so it
+// can be selected to a scalar pseudo (e.g. S_LSHL_OR_B32).
+class UniformThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
+  (ops node:$x, node:$y, node:$z),
+  (op2 (HasOneUseBinOp<op1> node:$x, node:$y), node:$z),
+  [{ return !N->isDivergent(); }]> {
+  // GlobalISel chooses scalar vs vector via register banks; disable there.
+  let GISelPredicateCode = [{ return false; }];
+}
+
 def shl_0_to_4 : PatFrag<
   (ops node:$src0, node:$src1), (shl node:$src0, node:$src1), [{
     KnownBits KB = CurDAG->computeKnownBits(N->getOperand(1));

@@ -2092,6 +2092,28 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
   switch (MI.getOpcode()) {
   default: return TargetInstrInfo::expandPostRAPseudo(MI);
+  case AMDGPU::S_LSHL_OR_B32: {
+    // Expand into s_lshl_b32 + s_or_b32. The earlyclobber on $sdst lets the
+    // shift write Dst directly without aliasing a source.
+    Register Dst = MI.getOperand(0).getReg();
+    MachineOperand Src0 = MI.getOperand(1);
+    MachineOperand Src1 = MI.getOperand(2);
+    const MachineOperand &Src2 = MI.getOperand(3);
+    // The s_or_b32 reads Src2 after the s_lshl_b32, so if a shift operand
+    // aliases Src2 (e.g. (x << c) | x) it must not kill it.
+    if (Src2.isReg()) {
+      if (Src0.isReg() && Src0.isKill() &&
+          RI.regsOverlap(Src0.getReg(), Src2.getReg()))
+        Src0.setIsKill(false);
+      if (Src1.isReg() && Src1.isKill() &&
+          RI.regsOverlap(Src1.getReg(), Src2.getReg()))
+        Src1.setIsKill(false);
+    }
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_LSHL_B32), Dst).add(Src0).add(Src1);
+    BuildMI(MBB, MI, DL, get(AMDGPU::S_OR_B32), Dst).addReg(Dst).add(Src2);
+    MI.eraseFromParent();
+    break;
+  }
   case AMDGPU::S_MOV_B64_term:
     // This is only a terminator to get the correct spill code placement during
     // register allocation.
@@ -8297,6 +8319,28 @@ void SIInstrInfo::moveToVALUImpl(
 
     legalizeOperands(*NewInstr, MDT);
     MRI.replaceRegWith(Dest0.getReg(), DestReg);
+    addUsersToMoveToVALUWorklist(DestReg, MRI, Worklist);
+    Inst.eraseFromParent();
+  }
+    return;
+  case AMDGPU::S_LSHL_OR_B32: {
+    // A VGPR operand turned up; move to the equivalent VALU instruction.
+    MachineOperand &Dest = Inst.getOperand(0);
+    MachineOperand &Src0 = Inst.getOperand(1);
+    MachineOperand &Src1 = Inst.getOperand(2);
+    MachineOperand &Src2 = Inst.getOperand(3);
+
+    const TargetRegisterClass *NewRC =
+        RI.getEquivalentVGPRClass(MRI.getRegClass(Dest.getReg()));
+    Register DestReg = MRI.createVirtualRegister(NewRC);
+    MachineInstr *NewInstr =
+        BuildMI(*MBB, &Inst, DL, get(AMDGPU::V_LSHL_OR_B32_e64), DestReg)
+            .add(Src0)
+            .add(Src1)
+            .add(Src2);
+
+    legalizeOperands(*NewInstr, MDT);
+    MRI.replaceRegWith(Dest.getReg(), DestReg);
     addUsersToMoveToVALUWorklist(DestReg, MRI, Worklist);
     Inst.eraseFromParent();
   }

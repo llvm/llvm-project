@@ -1056,7 +1056,12 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
 
   unsigned Penalty =
       Info->NumSVCopies + Info->SiblingPenalty + Info->NumReadfirstlanes;
-  unsigned Profit = Info->SChain.size();
+  // Weight each instruction by how many it expands to, so a fused pseudo
+  // (e.g. S_LSHL_OR_B32 -> S_LSHL_B32 + S_OR_B32) is not mistaken for a
+  // shorter, cheaper chain.
+  unsigned Profit = 0;
+  for (MachineInstr *MI : Info->SChain)
+    Profit += MI->getOpcode() == AMDGPU::S_LSHL_OR_B32 ? 2 : 1;
   Info->Score = Penalty > Profit ? 0 : Profit - Penalty;
   Info->NeedToBeConvertedToVALU = Info->Score < 3;
   return Info->NeedToBeConvertedToVALU;

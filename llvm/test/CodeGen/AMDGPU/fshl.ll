@@ -905,8 +905,9 @@ define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_lshl_b32 s4, s2, 7
-; GFX9-NEXT:    s_or_b32 s4, s3, s4
-; GFX9-NEXT:    s_cselect_b32 s2, s3, s2
+; GFX9-NEXT:    s_or_b32 s4, s4, s3
+; GFX9-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX9-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -931,8 +932,9 @@ define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_lshl_b32 s4, s2, 7
-; GFX10-NEXT:    s_or_b32 s4, s3, s4
-; GFX10-NEXT:    s_cselect_b32 s2, s3, s2
+; GFX10-NEXT:    s_or_b32 s4, s4, s3
+; GFX10-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX10-NEXT:    s_cselect_b32 s2, s2, s3
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
@@ -942,9 +944,11 @@ define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
 ; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_lshl_b32 s4, s2, 7
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_or_b32 s4, s3, s4
-; GFX11-NEXT:    s_cselect_b32 s2, s3, s2
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_or_b32 s4, s4, s3
+; GFX11-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX11-NEXT:    s_cselect_b32 s2, s2, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_endpgm

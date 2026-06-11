@@ -9,8 +9,8 @@ define amdgpu_kernel void @test_should_convert_to_v_readfirstlane_b32(float %fva
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v0, s0
 ; GCN-NEXT:    s_nop 0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    s_lshl_b32 s0, s0, 16
-; GCN-NEXT:    s_or_b32 s5, s0, s1
+; GCN-NEXT:    s_lshl_b32 s5, s0, 16
+; GCN-NEXT:    s_or_b32 s5, s5, s1
 ; GCN-NEXT:    s_and_b32 s6, s5, s2
 ; GCN-NEXT:    s_lshr_b32 s4, s6, 2
 ; GCN-NEXT:    s_mov_b32 s7, s4

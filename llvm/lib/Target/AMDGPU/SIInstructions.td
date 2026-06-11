@@ -464,6 +464,21 @@ def GET_GROUPSTATICSIZE : SPseudoInstSI <(outs SReg_32:$sdst), (ins),
   [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;
 } // End let usesCustomInserter = 1, SALU = 1
 
+// Scalar (x << y) | z for uniform values. SIFixSGPRCopies promotes this to the
+// VALU V_LSHL_OR_B32 if an operand is VGPR-resident, otherwise
+// expandPostRAPseudo lowers it to S_LSHL_B32 + S_OR_B32. The earlyclobber on
+// $sdst keeps the destination from aliasing a source so the expansion can write
+// the shift result into it. Gated on GFX9+, where V_LSHL_OR_B32 exists.
+let Defs = [SCC], Constraints = "@earlyclobber $sdst",
+    SubtargetPredicate = isGFX9Plus in
+def S_LSHL_OR_B32 : SPseudoInstSI <
+  (outs SReg_32:$sdst),
+  (ins SSrc_b32:$src0, SSrc_b32:$src1, SSrc_b32:$src2),
+  [(set i32:$sdst,
+        (UniformThreeOpFrag<cshl_32, or> i32:$src0, i32:$src1, i32:$src2))]> {
+  let Size = 8;
+}
+
 // Wrap an instruction by duplicating it, except for setting isTerminator.
 class WrapTerminatorInst<SOP_Pseudo base_inst> : SPseudoInstSI<
       base_inst.OutOperandList,
