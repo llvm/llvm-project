@@ -451,13 +451,15 @@ static Expected<ResolvedInputs> resolveArchiveMembers(
       // a real linker treats device libraries built for other architectures.
       if (In.FromArchive) {
         StringRef MemberTriple = In.Symtab.TheReader.getTargetTriple();
-        if (!MemberTriple.empty() && MemberTriple != TargetTriple.str()) {
+        if (!MemberTriple.empty() &&
+            llvm::Triple(MemberTriple) != TargetTriple) {
           if (Verbose)
             errs() << formatv(
                 "archive resolution: skipping {0}: triple {1} != {2}\n",
                 In.Buffer->getBufferIdentifier(), MemberTriple,
                 TargetTriple.str());
           In.Buffer.reset();
+          In.Symtab = {};
           continue;
         }
       }
