@@ -93,6 +93,7 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
       CachedExceptionsMode(CalculateExceptionsMode(Args)) {
+  assert(T.str() == T.normalize() && "triple should be normalized");
   auto addIfExists = [this](path_list &List, const std::string &Path) {
     if (getVFS().exists(Path))
       List.push_back(Path);
@@ -1871,7 +1872,7 @@ void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args) const {}
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ToolChain::getDeviceLibs(const ArgList &DriverArgs,
+ToolChain::getDeviceLibs(const ArgList &DriverArgs, StringRef BoundArch,
                          const Action::OffloadKind DeviceOffloadingKind) const {
   return {};
 }
