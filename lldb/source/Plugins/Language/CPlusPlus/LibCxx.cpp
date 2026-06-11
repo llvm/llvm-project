@@ -1008,10 +1008,8 @@ bool lldb_private::formatters::LibcxxSourceLocationSummaryProvider(
   if (!success)
     return false;
 
-  if (const char *file = file_sp->GetSummaryAsCString())
-    stream.Printf("%s:%lu:%lu", file, line, column);
-  else
-    stream.Printf("Location Unavailable");
+  const char *file = file_sp->GetSummaryAsCString();
+  stream.Printf("%s:%lu:%lu", file ? file : "<unknown>", line, column);
 
   if (const char *function = function_sp->GetSummaryAsCString())
     stream.Printf(" (%s)", function);
