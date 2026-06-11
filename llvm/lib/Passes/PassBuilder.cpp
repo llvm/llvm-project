@@ -83,6 +83,7 @@
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
+#include "llvm/CodeGen/BreakFalseDeps.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -198,6 +199,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetMachine.h"
@@ -384,6 +386,7 @@
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
+#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Utils/UnifyFunctionExitNodes.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -396,10 +399,63 @@
 
 using namespace llvm;
 
-cl::opt<bool> llvm::PrintPipelinePasses(
-    "print-pipeline-passes",
-    cl::desc("Print a '-passes' compatible string describing the pipeline "
-             "(best-effort only)."));
+cl::opt<std::optional<PrintPipelinePassesFormat>, false,
+        PrintPipelinePassesFormatParser>
+    llvm::PrintPipelinePasses(
+        "print-pipeline-passes", cl::ValueOptional,
+        cl::desc(
+            "Print string describing the pipeline (best-effort only).\n"
+            "  - =text\tPrint a '-passes' compatible string describing the "
+            "pipeline.\n"
+            "  - =tree\tPrint a tree-like structure describing the pipeline."));
+
+bool PrintPipelinePassesFormatParser::parse(
+    cl::Option &O, StringRef ArgName, StringRef Arg,
+    std::optional<PrintPipelinePassesFormat> &Val) {
+  std::optional<PrintPipelinePassesFormat> Format =
+      StringSwitch<std::optional<PrintPipelinePassesFormat>>(Arg)
+          .Case("text", PrintPipelinePassesFormat::Text)
+          .Case("", PrintPipelinePassesFormat::Text)
+          .Case("tree", PrintPipelinePassesFormat::Tree)
+          .Default(std::nullopt);
+
+  if (!Format)
+    return O.error(formatv(
+        "'{0}' value invalid for print-pipeline-passes argument!", Arg));
+
+  Val = Format;
+  return false;
+}
+
+void llvm::printFormattedPipelinePasses(raw_ostream &OS, StringRef Pipeline,
+                                        PrintPipelinePassesFormat Format) {
+  switch (Format) {
+  case PrintPipelinePassesFormat::Text:
+    OS << Pipeline;
+    break;
+  case PrintPipelinePassesFormat::Tree: {
+    int IndentLevel = 0;
+    for (char C : Pipeline) {
+      switch (C) {
+      case '(':
+        ++IndentLevel;
+        OS << formatv("\n{0}", fmt_repeat("  ", IndentLevel));
+        break;
+      case ')':
+        --IndentLevel;
+        assert(IndentLevel >= 0 && "Invalid pipeline string!");
+        break;
+      case ',':
+        OS << formatv("\n{0}", fmt_repeat("  ", IndentLevel));
+        break;
+      default:
+        OS << C;
+      }
+    }
+    break;
+  }
+  }
+}
 
 AnalysisKey NoOpModuleAnalysis::Key;
 AnalysisKey NoOpCGSCCAnalysis::Key;
@@ -420,28 +476,6 @@ bool applyMIRDebugify(DIBuilder &DIB, Function &F, ModuleAnalysisManager &AM) {
         return MFA ? &MFA->getMF() : nullptr;
       });
 }
-
-// Passes for testing crashes.
-// DO NOT USE THIS EXCEPT FOR TESTING!
-class TriggerCrashModulePass
-    : public OptionalPassInfoMixin<TriggerCrashModulePass> {
-public:
-  PreservedAnalyses run(Module &, ModuleAnalysisManager &) {
-    abort();
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "TriggerCrashModulePass"; }
-};
-
-class TriggerCrashFunctionPass
-    : public OptionalPassInfoMixin<TriggerCrashFunctionPass> {
-public:
-  PreservedAnalyses run(Function &, FunctionAnalysisManager &) {
-    abort();
-    return PreservedAnalyses::all();
-  }
-  static StringRef name() { return "TriggerCrashFunctionPass"; }
-};
 
 // A pass for testing message reporting of -verify-each failures.
 // DO NOT USE THIS EXCEPT FOR TESTING!
@@ -829,6 +863,12 @@ Expected<HardwareLoopOptions> parseHardwareLoopOptions(StringRef Params) {
 Expected<bool> parseLintOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "abort-on-error",
                                             "LintPass");
+}
+
+/// Parser of parameters for FunctionPropertiesStatistics pass.
+Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(Params, "pre-opt",
+                                            "FunctionPropertiesStatisticsPass");
 }
 
 /// Parser of parameters for InstCount pass.
@@ -1433,16 +1473,36 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
 }
 
 Expected<SROAOptions> parseSROAOptions(StringRef Params) {
-  if (Params.empty() || Params == "modify-cfg")
-    return SROAOptions::ModifyCFG;
-  if (Params == "preserve-cfg")
-    return SROAOptions::PreserveCFG;
-  return make_error<StringError>(
-      formatv("invalid SROA pass parameter '{}' (either preserve-cfg or "
-              "modify-cfg can be specified)",
-              Params)
-          .str(),
-      inconvertibleErrorCode());
+  SROAOptions Result(SROAOptions::ModifyCFG);
+  bool SawCFGOption = false;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "modify-cfg") {
+      if (SawCFGOption)
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
+      Result.CFG = SROAOptions::ModifyCFG;
+      SawCFGOption = true;
+    } else if (ParamName == "preserve-cfg") {
+      if (SawCFGOption)
+        return make_error<StringError>("multiple SROA CFG options specified",
+                                       inconvertibleErrorCode());
+      Result.CFG = SROAOptions::PreserveCFG;
+      SawCFGOption = true;
+    } else if (ParamName == "aggregate-to-vector") {
+      Result.AggregateToVector = true;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid SROA pass parameter '{}' (expected preserve-cfg, "
+                  "modify-cfg, or aggregate-to-vector)",
+                  ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 Expected<StackLifetime::LivenessType>

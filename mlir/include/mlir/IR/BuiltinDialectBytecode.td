@@ -205,6 +205,15 @@ def DistinctAttr : DialectAttribute<(attr
   Attribute:$referencedAttr
 )>;
 
+// Make easy to disable until version number gets added.
+class EnableAffineMapPrintingJuly2026<dag d> : DialectAttribute<d>;
+
+def AffineMapAttr : EnableAffineMapPrintingJuly2026<(attr
+  WithParser<"succeeded(readAffineMap($_reader, context, $_var))",
+    WithPrinter<"writeAffineMap($_writer, $_name)",
+    WithType<"AffineMap">>>:$value
+)>;
+
 // Types
 // -----
 
@@ -324,6 +333,8 @@ def UnrankedTensorType : DialectType<(type
   Type:$elementType
 )>;
 
+def TokenType : DialectType<(type)>;
+
 let cType = "VectorType" in {
 def VectorType : DialectType<(type
   Array<SignedVarIntList>:$shape,
@@ -376,6 +387,7 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     SparseElementsAttr,
     DistinctAttr,
     FileLineColRange,
+    AffineMapAttr,
   ];
 }
 
@@ -413,7 +425,8 @@ def BuiltinDialectTypes : DialectTypes<"Builtin"> {
     Float4E2M1FNType,
     Float6E2M3FNType,
     Float6E3M2FNType,
-    Float8E8M0FNUType
+    Float8E8M0FNUType,
+    TokenType
   ];
 }
 

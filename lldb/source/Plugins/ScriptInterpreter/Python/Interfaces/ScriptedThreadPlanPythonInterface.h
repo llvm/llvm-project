@@ -24,8 +24,7 @@ public:
 
   llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(const ScriptedMetadata &scripted_metadata,
-                     lldb::ThreadPlanSP thread_plan_sp,
-                     const StructuredDataImpl &args_sp) override;
+                     lldb::ThreadPlanSP thread_plan_sp) override;
 
   llvm::SmallVector<AbstractMethodRequirement>
   GetAbstractMethodRequirements() const override {

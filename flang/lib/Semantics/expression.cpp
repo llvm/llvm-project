@@ -2850,12 +2850,14 @@ static int CompareCudaMatchingDistance(
 //
 //                       Actual argument attribute
 //                 None                              ACC      gpu=    gpu=
-//   Dummy attr   (Host)  Device  Managed Unified  use_dev  unified  managed
-//   ----------+--------+-------+--------+-------+--------+--------+--------+
-//   None(host)|    0   |  INF  |   3    |   3   |   3    |   3    |   3    |
-//   Device    |   INF  |   0   |   2    |   2   |   0    |   2    |   2    |
-//   Managed   |   INF  |  INF  |   0    |   1   |  INF   |   1    |   0    |
-//   Unified   |   INF  |  INF  |   1    |   0   |  INF   |   0    |   1    |
+//   Dummy attr   (Host)  Device  Managed  Unified  use_dev  unified  managed
+//   ----------+--------+-------+--------+--------+--------+--------+--------+
+//   None(host)|    0   |  INF  |   3    |   3    |   3    |   3    |   3    |
+//   Device    |   INF  |   0   |   2    |   2    |   0    |   2    |   2    |
+//   Managed   |   INF  |  INF  |   0    |   1    |  INF   |   1    |   0    |
+//   Unified   |   INF  |  INF  |   1    |   0    |  INF   |   0    |   1    |
+//
+// Constant and Shared actuals use the Device column (all are device memory).
 //
 // In addition: a dummy declared TYPE(*) (assumed-size/rank opaque buffer)
 // is "CUDA address space agnostic" and accepts any attributed actual at a
@@ -2914,13 +2916,20 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     return 3;
   }
 
+  auto actualIsDeviceMemory{[&]() {
+    return actualDataAttr &&
+        (*actualDataAttr == common::CUDADataAttr::Device ||
+            *actualDataAttr == common::CUDADataAttr::Constant ||
+            *actualDataAttr == common::CUDADataAttr::Shared);
+  }};
+
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
       if (isCudaUnified || isCudaManaged) {
         return 3;
       }
       return 0;
-    } else if (*actualDataAttr == common::CUDADataAttr::Device) {
+    } else if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
         *actualDataAttr == common::CUDADataAttr::Unified) {
@@ -2932,7 +2941,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
         return 2;
       }
       return cudaInfMatchingValue;
-    } else if (*actualDataAttr == common::CUDADataAttr::Device) {
+    } else if (actualIsDeviceMemory()) {
       return 0;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed ||
         *actualDataAttr == common::CUDADataAttr::Unified) {
@@ -2942,7 +2951,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     if (!actualDataAttr) {
       return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
     }
-    if (*actualDataAttr == common::CUDADataAttr::Device) {
+    if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 0;
@@ -2953,7 +2962,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     if (!actualDataAttr) {
       return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
     }
-    if (*actualDataAttr == common::CUDADataAttr::Device) {
+    if (actualIsDeviceMemory()) {
       return cudaInfMatchingValue;
     } else if (*actualDataAttr == common::CUDADataAttr::Managed) {
       return 1;
@@ -3769,6 +3778,9 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   bool treatExternalAsImplicit{
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
+  // Statement functions have implicit interfaces and require the same checks
+  bool isStatementFunction{
+      procSymbol && procSymbol->flags().test(Symbol::Flag::StmtFunction)};
   std::optional<characteristics::Procedure> chars;
   if (procSymbol && procSymbol->has<semantics::ProcEntityDetails>() &&
       procSymbol->owner().IsGlobal()) {
@@ -3836,6 +3848,17 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
         Say(callSite,
             "Procedure %s referenced in pure subprogram '%s' must be pure too"_err_en_US,
             name, DEREF(pure->symbol()).name());
+      }
+    }
+    if (isStatementFunction) {
+      // Statement functions have implicit interfaces; check for
+      // keyword arguments and other implicit interface constraints
+      parser::ContextualMessages &messages{
+          context_.foldingContext().messages()};
+      for (auto &arg : arguments) {
+        if (arg) {
+          semantics::CheckImplicitInterfaceArg(*arg, messages, context_);
+        }
       }
     }
     ok &= semantics::CheckArguments(*chars, arguments, context_,
@@ -5538,7 +5561,9 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
         : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
         : type->IsPolymorphic()          ? type->AsFortran()
         : type->category() == TypeCategory::Derived
-        ? "TYPE("s + type->AsFortran() + ')'
+        ? (type->GetDerivedTypeSpec().IsVectorType()
+                  ? type->AsFortran()
+                  : "TYPE("s + type->AsFortran() + ')')
         : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
         : ToUpperCase(type->AsFortran());

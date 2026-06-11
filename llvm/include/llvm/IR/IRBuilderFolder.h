@@ -77,6 +77,10 @@ public:
                           Type *DestTy) const = 0;
 
   virtual Value *
+  FoldUnaryIntrinsic(Intrinsic::ID ID, Value *Op, Type *Ty,
+                     FastMathFlags FMF = FastMathFlags()) const = 0;
+
+  virtual Value *
   FoldBinaryIntrinsic(Intrinsic::ID ID, Value *LHS, Value *RHS, Type *Ty,
                       FastMathFlags FMF = FastMathFlags()) const = 0;
 

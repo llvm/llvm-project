@@ -1,5 +1,4 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
-; RUN: llvm-as -use-constant-ptrnull-for-fixed-length-splat=false -use-constant-ptrnull-for-scalable-splat=false < %s | llvm-dis -use-constant-ptrnull-for-fixed-length-splat=false -use-constant-ptrnull-for-scalable-splat=false | FileCheck %s --check-prefix=DISABLED
 ; RUN: verify-uselistorder %s
 
 ; CHECK: @foo
