@@ -128,6 +128,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - arch: armhf
+            target_triple: arm-linux-gnueabihf
+            c_compiler: clang-23
+            cxx_compiler: clang++-23
           - arch: riscv64
             target_triple: riscv64-linux-gnu
             c_compiler: clang-23
