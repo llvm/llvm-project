@@ -660,14 +660,9 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 //   - sg_layout / lane_layout: spread outer-to-inner; each dim takes
 //     min(remaining, targetShape[i]); leftover spills into the next inner
 //     dim.
-//   - sg_data: fill innermost-first, capped per dim by targetShape[i] (the
-//     full extent of the expanded dim). Capping by the full extent (rather
-//     than the per-sg share targetShape[i] / sgLayout[i]) keeps the inverse of
-//     collapseDims well-defined for replicated/broadcast layouts, where a dim
-//     is shared across subgroups so sg_layout[dim] * sg_data[dim] > extent and
-//     sg_data can be as large as the full extent. For evenly-distributed
-//     layouts the inner-first fill still lands on the per-sg share, so the
-//     result is unchanged.
+//   - sg_data: fill innermost-first, capped per dim by
+//     targetShape[i] / sgLayout[i] (the per-sg share of the extent),
+//     or targetShape[i] (if sg_data is replicated across all subgroups).
 //   - lane_data: fill innermost-first, capped per dim by
 //     (targetShape[i] / sgLayout[i]) / laneLayout[i] (the per-lane share of
 //     the per-sg extent).
