@@ -88,11 +88,7 @@ add_header(pthread_spinlock_t HDR pthread_spinlock_t.h DEPENDS .pid_t)
 add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(pthread_id_np_t HDR pthread_id_np_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(rlim_t HDR rlim_t.h)
-if(LIBC_TYPES_TIME_T_IS_32_BIT)
-  add_header(time_t HDR time_t_32.h DEST_HDR time_t.h)
-else()
-  add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
-endif()
+add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
 add_header(sighandler_t HDR sighandler_t.h)
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
@@ -202,6 +198,16 @@ add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr_in HDR struct_sockaddr_in.h DEPENDS .in_port_t .sa_family_t .struct_in_addr)
+add_header(
+    struct_sockaddr_in6
+  HDR
+    struct_sockaddr_in6.h
+  DEPENDS
+    .in_port_t
+    .sa_family_t
+    .struct_in6_addr
+    libc.include.llvm-libc-macros.stdint_macros
+)
 add_header(struct_sockaddr_storage HDR struct_sockaddr_storage.h DEPENDS .sa_family_t)
 add_header(struct_sockaddr_un HDR struct_sockaddr_un.h DEPENDS .sa_family_t)
 add_header(struct_iovec HDR struct_iovec.h DEPENDS .size_t)

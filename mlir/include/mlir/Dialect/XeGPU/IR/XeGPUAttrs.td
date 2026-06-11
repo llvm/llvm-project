@@ -214,6 +214,23 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                     "xegpu::DistributeLayoutAttr",
                     "collapseDims",
                     (ins "SmallVector<int64_t>": $dimGroup)>,
+    InterfaceMethod<[{Derive a new layout by expanding a single dimension into
+                      multiple adjacent dimensions whose extents are given by `targetShape`
+                      (`product(targetShape) == originalSize` on `dim`). The original layout's
+                      per-dim values on `dim` are distributed across the new dims:
+                      `sg_layout` and `lane_layout` spread outer-to-inner (capped per dim by
+                      `targetShape[i]`); `sg_data`, `lane_data`, and `inst_data` fill innermost-
+                      first; `inst_data` is seeded from `lane_layout * lane_data` per new dim.
+                      `order`, when present, is rewritten so the expanded dims appear
+                      innermost-fastest in the original dim's slot; if the input has no
+                      `order`, the result has no `order` either (the default FCD-first
+                      order `[rank-1, ..., 0]` is assumed).
+                      Example: layout<sg_layout=[2, 16], sg_data=[1, 1]> with
+                      expandDim(1, [2, 8]) -> layout<sg_layout=[2, 2, 8], sg_data=[1, 1, 1]>
+                      (no order in, no order out).}],
+                    "xegpu::DistributeLayoutAttr",
+                    "expandDim",
+                    (ins "int64_t": $dim, "ArrayRef<int64_t>": $targetShape)>,
     InterfaceMethod<[{Derive a new layout by trasnposing it using `permutation`.}],
                     "xegpu::DistributeLayoutAttr",
                     "transposeDims",
@@ -582,6 +599,12 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     // that are collapsed into a single dimension in the derived layout.
     DistributeLayoutAttr collapseDims(SmallVector<int64_t> dimGroup);
 
+    // Derive a new layout by expanding a single dimension `dim` into
+    // multiple adjacent dimensions whose shape is given by `targetShape`.
+    // See the interface method documentation for the per-field distribution
+    // policy.
+    DistributeLayoutAttr expandDim(int64_t dim, ArrayRef<int64_t> targetShape);
+
     // Derive a new layout by transposing the layout using `permutation`.
     DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);
 
@@ -813,6 +836,12 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     // `dimGroup` specifies a group of adjacent dimensions
     // that are collapsed into a single dimension in the derived layout.
     DistributeLayoutAttr collapseDims(SmallVector<int64_t> dimGroup);
+
+    // Derive a new layout by expanding a single dimension `dim` into
+    // multiple adjacent dimensions whose shape is given by `targetShape`.
+    // See the interface method documentation for the per-field distribution
+    // policy.
+    DistributeLayoutAttr expandDim(int64_t dim, ArrayRef<int64_t> targetShape);
 
     // Derive a new layout by transposing the layout using `permutation`.
     DistributeLayoutAttr transposeDims(ArrayRef<int64_t> permutation);

@@ -479,11 +479,6 @@ hasHazard(StateT InitialState,
     }
   };
   struct StateMapKeyTraits : DenseMapInfo<StateMapKey> {
-    static inline StateMapKey getEmptyKey() {
-      return {static_cast<SmallVectorImpl<StateT> *>(
-                  DenseMapInfo<void *>::getEmptyKey()),
-              DenseMapInfo<unsigned>::getEmptyKey()};
-    }
     static unsigned getHashValue(const StateMapKey &Key) {
       return StateT::getHashValue((*Key.States)[Key.Idx]);
     }
@@ -491,14 +486,9 @@ hasHazard(StateT InitialState,
       return StateT::getHashValue(State);
     }
     static bool isEqual(const StateMapKey &LHS, const StateMapKey &RHS) {
-      const auto EKey = getEmptyKey();
-      if (StateMapKey::isEqual(LHS, EKey) || StateMapKey::isEqual(RHS, EKey))
-        return StateMapKey::isEqual(LHS, RHS);
       return StateT::isEqual((*LHS.States)[LHS.Idx], (*RHS.States)[RHS.Idx]);
     }
     static bool isEqual(const StateT &LHS, const StateMapKey &RHS) {
-      if (StateMapKey::isEqual(RHS, getEmptyKey()))
-        return false;
       return StateT::isEqual(LHS, (*RHS.States)[RHS.Idx]);
     }
   };
@@ -2101,11 +2091,27 @@ static bool isCoexecutableVALUInst(const MachineInstr &MI) {
 //
 // Category 3: SWMMAC with Latency 16
 //   SWMMAC_IU8
-static unsigned
-getWMMAHazardInstInCategory(const MachineInstr &MI, const SIInstrInfo *TII,
-                            const TargetSchedModel &SchedModel) {
+//
+// Category 4: 16 Pass GFX1251 WMMA with latency 16
+//   V_WMMA_*_16X16X32_{F16,BF16}
+//   V_WMMA_{F32,F16}_16X16X64_{FP8,BF8}*
+//   V_WMMA_F32_16x16x128_F8F6F4 (F4 only)
+//   V_SWMMAC_*_16X16X64_{F16,BF16}
+//   V_SWMMAC_{F32,F16}_16X16X128_{FP8,BF8}*
+//
+// Category: 32 Pass GFX1251 WMMA with latency 32
+//   V_WMMA_F32_16x16x128_F8F6F4 (not all F4)
+//   V_WMMA_{F32,F16}_16X16X128_{FP8,BF8}*
+//   V_WMMA_F32_32X16X128_F4
+//   V_WMMA_I32_16X16X64_IU8
+//   V_WMMA_I32_16X16X64_IU8
+static unsigned getWMMAHazardInstInCategory(const MachineInstr &MI,
+                                            const SIInstrInfo *TII,
+                                            const TargetSchedModel &SchedModel,
+                                            const GCNSubtarget &ST) {
   assert(TII->isXDLWMMA(MI) && "must be xdl wmma");
   bool IsSWMMAC = SIInstrInfo::isSWMMAC(MI);
+  bool IsLowestRateWMMA = ST.hasGFX125xLowestRateWMMA();
   unsigned Category = 0;
 
   unsigned Latency = SchedModel.computeInstrLatency(&MI);
@@ -2114,7 +2120,11 @@ getWMMAHazardInstInCategory(const MachineInstr &MI, const SIInstrInfo *TII,
     Category = IsSWMMAC ? 2 : 0;
     break;
   case 16:
-    Category = IsSWMMAC ? 3 : 1;
+    Category = IsLowestRateWMMA ? 4 : (IsSWMMAC ? 3 : 1);
+    break;
+  case 32:
+    assert(IsLowestRateWMMA && "latency 32 is not expected");
+    Category = 5;
     break;
   default:
     llvm_unreachable("unexpected xdl wmma latency");
@@ -2136,15 +2146,15 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   // (WMMAWaitStates if the second is also a WMMA, VALUWaitStates if the second
   // is a VALU). Refer to SPG 4.6.12.1. "Requirements for WMMA data hazards" for
   // numbers, which depends on the category of the first WMMA.
-  const int WMMAWaitStates[] = {5, 9, 3, 5};
-  const int VALUWaitStates[] = {4, 8, 2, 4};
+  const int WMMAWaitStates[] = {5, 9, 3, 5, 9, 17};
+  const int VALUWaitStates[] = {4, 8, 2, 4, 8, 16};
   unsigned Category = 0;
 
   auto IsWMMAHazardFn = [MI, TII, &Category, this](const MachineInstr &I) {
     if (!TII->isXDLWMMA(I))
       return false;
 
-    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel);
+    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel, ST);
     return hasWMMAToWMMARegOverlap(I, *MI);
   };
 
@@ -2152,7 +2162,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
     if (!TII->isXDLWMMA(I))
       return false;
 
-    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel);
+    Category = getWMMAHazardInstInCategory(I, TII, TSchedModel, ST);
     return hasWMMAToVALURegOverlap(I, *MI);
   };
 
@@ -2162,6 +2172,7 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
 
   int WaitStatesNeeded = -1;
   int ExistingVALUs = 0; // Existing number of VALU ops in between.
+  bool IsLowestRateWMMA = ST.hasGFX125xLowestRateWMMA();
 
   // getWaitStatesSince checks for a hazard between instruction 'I' and 'MI':
   // - If a hazard exists: returns the number of VALUs in between and sets
@@ -2169,12 +2180,14 @@ int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) const {
   // - If no hazard exists: returns INT_MAX, making WaitStatesNeeded negative,
   //   so no V_NOP insertion is needed.
   if (TII->isXDLWMMA(*MI)) {
-    const int WMMAWaitsLimit = 9; // Maximum of WMMAWaitStates
+    // Maximum of MMAWaitStates.
+    const int WMMAWaitsLimit = IsLowestRateWMMA ? 17 : 9;
     ExistingVALUs =
         getWaitStatesSince(IsWMMAHazardFn, WMMAWaitsLimit, GetWaitStatesFn);
     WaitStatesNeeded = WMMAWaitStates[Category] - ExistingVALUs;
   } else { // Must be a co-executable VALU.
-    const int VALUWaitsLimit = 8; // Maximum of VALUWaitStates
+           // Maximum of VALUWaitStates.
+    const int VALUWaitsLimit = IsLowestRateWMMA ? 16 : 8;
     ExistingVALUs =
         getWaitStatesSince(IsVALUHazardFn, VALUWaitsLimit, GetWaitStatesFn);
     WaitStatesNeeded = VALUWaitStates[Category] - ExistingVALUs;

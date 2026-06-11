@@ -758,13 +758,6 @@ struct DenseMapInfo<mlir::remark::detail::Remark> {
   }
 
   /// Create an empty remark
-  static inline mlir::remark::detail::Remark getEmptyKey() {
-    return mlir::remark::detail::Remark(
-        mlir::remark::RemarkKind::RemarkUnknown, mlir::DiagnosticSeverity::Note,
-        mlir::UnknownLoc::get(getStaticDummyContext()),
-        mlir::remark::RemarkOpts::name(kEmptyKey));
-  }
-
   /// Compute the hash value of the remark
   static unsigned getHashValue(const mlir::remark::detail::Remark &remark) {
     return llvm::hash_combine(
