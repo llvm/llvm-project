@@ -706,6 +706,32 @@ private:
     ASSERT_EQ_ROUNDING_TOWARD_ZERO((expected), (actual));                      \
   } while (0)
 
+#define ASSERT_EQ_ALL_ROUNDING_4(expected_nearest, expected_upward,            \
+                                 expected_downward, expected_toward_zero,      \
+                                 actual)                                       \
+  do {                                                                         \
+    ASSERT_EQ_ROUNDING_NEAREST((expected_nearest), (actual));                  \
+    ASSERT_EQ_ROUNDING_UPWARD((expected_upward), (actual));                    \
+    ASSERT_EQ_ROUNDING_DOWNWARD((expected_downward), (actual));                \
+    ASSERT_EQ_ROUNDING_TOWARD_ZERO((expected_toward_zero), (actual));          \
+  } while (0)
+
+#define ASSERT_EQ_ALL_ROUNDING_UNSUPPORTED(...)                                \
+  static_assert(false, "Unsupported number of arguments")
+
+#define ASSERT_EQ_ALL_ROUNDING_GET_6TH_ARG(ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, \
+                                           ...)                                \
+  ARG6
+
+#define ASSERT_EQ_ALL_ROUNDING_SELECTION(...)                                  \
+  ASSERT_EQ_ALL_ROUNDING_GET_6TH_ARG(__VA_ARGS__, ASSERT_EQ_ALL_ROUNDING_4,    \
+                                     ASSERT_EQ_ALL_ROUNDING_UNSUPPORTED,       \
+                                     ASSERT_EQ_ALL_ROUNDING_UNSUPPORTED,       \
+                                     ASSERT_EQ_ALL_ROUNDING_1)
+
+#define ASSERT_EQ_ALL_ROUNDING(...)                                            \
+  ASSERT_EQ_ALL_ROUNDING_SELECTION(__VA_ARGS__)(__VA_ARGS__)
+
 #define EXPECT_EQ_ROUNDING_MODE(expected, actual, rounding_mode)               \
   do {                                                                         \
     using namespace LIBC_NAMESPACE::fputil::testing;                           \
@@ -746,5 +772,31 @@ private:
     EXPECT_EQ_ROUNDING_DOWNWARD((expected), (actual));                         \
     EXPECT_EQ_ROUNDING_TOWARD_ZERO((expected), (actual));                      \
   } while (0)
+
+#define EXPECT_EQ_ALL_ROUNDING_4(expected_nearest, expected_upward,            \
+                                 expected_downward, expected_toward_zero,      \
+                                 actual)                                       \
+  do {                                                                         \
+    EXPECT_EQ_ROUNDING_NEAREST((expected_nearest), (actual));                  \
+    EXPECT_EQ_ROUNDING_UPWARD((expected_upward), (actual));                    \
+    EXPECT_EQ_ROUNDING_DOWNWARD((expected_downward), (actual));                \
+    EXPECT_EQ_ROUNDING_TOWARD_ZERO((expected_toward_zero), (actual));          \
+  } while (0)
+
+#define EXPECT_EQ_ALL_ROUNDING_UNSUPPORTED(...)                                \
+  static_assert(false, "Unsupported number of arguments")
+
+#define EXPECT_EQ_ALL_ROUNDING_GET_6TH_ARG(ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, \
+                                           ...)                                \
+  ARG6
+
+#define EXPECT_EQ_ALL_ROUNDING_SELECTION(...)                                  \
+  EXPECT_EQ_ALL_ROUNDING_GET_6TH_ARG(__VA_ARGS__, EXPECT_EQ_ALL_ROUNDING_4,    \
+                                     EXPECT_EQ_ALL_ROUNDING_UNSUPPORTED,       \
+                                     EXPECT_EQ_ALL_ROUNDING_UNSUPPORTED,       \
+                                     EXPECT_EQ_ALL_ROUNDING_1)
+
+#define EXPECT_EQ_ALL_ROUNDING(...)                                            \
+  EXPECT_EQ_ALL_ROUNDING_SELECTION(__VA_ARGS__)(__VA_ARGS__)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_FPMATCHER_H

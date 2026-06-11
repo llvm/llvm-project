@@ -86,8 +86,8 @@ public:
   void testInfinityAndNaN(RoundToIntegerFunc func) {
     libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-    ASSERT_EQ_ALL_ROUNDING_1(INTEGER_MAX, func(inf));
-    ASSERT_EQ_ALL_ROUNDING_1(INTEGER_MIN, func(neg_inf));
+    ASSERT_EQ_ALL_ROUNDING(INTEGER_MAX, func(inf));
+    ASSERT_EQ_ALL_ROUNDING(INTEGER_MIN, func(neg_inf));
     ASSERT_FP_EXCEPTION(FE_INVALID);
     ASSERT_MATH_ERRNO(EDOM);
     // This is currently never enabled, the
@@ -100,14 +100,14 @@ public:
   }
 
   void testRoundNumbers(RoundToIntegerFunc func) {
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(0), func(zero));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(0), func(neg_zero));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(1), func(FloatType(1.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(-1), func(FloatType(-1.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(10), func(FloatType(10.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(-10), func(FloatType(-10.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(1232), func(FloatType(1232.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(-1232), func(FloatType(-1232.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(0), func(zero));
+    ASSERT_EQ_ALL_ROUNDING(IntType(0), func(neg_zero));
+    ASSERT_EQ_ALL_ROUNDING(IntType(1), func(FloatType(1.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-1), func(FloatType(-1.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(10), func(FloatType(10.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-10), func(FloatType(-10.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(1232), func(FloatType(1232.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-1232), func(FloatType(-1232.0)));
 
     // The rest of this function compares with an equivalent MPFR function
     // which rounds floating point numbers to long values. There is no MPFR
@@ -132,7 +132,7 @@ public:
     long mpfr_result;
     bool erangeflag = mpfr::round_to_long(x, mpfr_result);
     ASSERT_FALSE(erangeflag);
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(mpfr_result), func(x));
+    ASSERT_EQ_ALL_ROUNDING(IntType(mpfr_result), func(x));
   }
 
   void testFractions(RoundToIntegerFunc func) {

@@ -74,8 +74,8 @@ public:
   void testInfinityAndNaN(RoundToIntegerFunc func) {
     libc_errno = 0;
     LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-    ASSERT_EQ_ALL_ROUNDING_1(INTEGER_MAX, func(inf));
-    ASSERT_EQ_ALL_ROUNDING_1(INTEGER_MIN, func(neg_inf));
+    ASSERT_EQ_ALL_ROUNDING(INTEGER_MAX, func(inf));
+    ASSERT_EQ_ALL_ROUNDING(INTEGER_MIN, func(neg_inf));
     ASSERT_FP_EXCEPTION(FE_INVALID);
     ASSERT_MATH_ERRNO(EDOM);
     // This is currently never enabled, the
@@ -88,14 +88,14 @@ public:
   }
 
   void testRoundNumbers(RoundToIntegerFunc func) {
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(0), func(zero));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(0), func(neg_zero));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(1), func(FloatType(1.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(-1), func(FloatType(-1.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(10), func(FloatType(10.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(-10), func(FloatType(-10.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(1232), func(FloatType(1232.0)));
-    ASSERT_EQ_ALL_ROUNDING_1(IntType(-1232), func(FloatType(-1232.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(0), func(zero));
+    ASSERT_EQ_ALL_ROUNDING(IntType(0), func(neg_zero));
+    ASSERT_EQ_ALL_ROUNDING(IntType(1), func(FloatType(1.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-1), func(FloatType(-1.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(10), func(FloatType(10.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-10), func(FloatType(-10.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(1232), func(FloatType(1232.0)));
+    ASSERT_EQ_ALL_ROUNDING(IntType(-1232), func(FloatType(-1232.0)));
   }
 
   void testSubnormalRange(RoundToIntegerFunc func) {
