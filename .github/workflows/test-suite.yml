@@ -3,11 +3,6 @@
 # the PR, builds clang and the test-suite again, and then uploads the diff of
 # the codegen.
 
-# TODO: React to the comment to let the user know the workflow has kicked
-# off. We'll need to do this in a separate workflow like issue-write.yml with
-# elevated permissions, since this workflow can't have write permissions on
-# account for the arbitrary code execution.
-
 name: Diff test-suite codegen
 
 on:
@@ -38,6 +33,24 @@ jobs:
           team-slug: llvm-committers
           LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
+
+  react-to-comment:
+    needs:
+      - permission-check
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Thumbs up comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            })
 
   test-suite:
     name: Build test-suite and diff
