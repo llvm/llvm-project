@@ -168,7 +168,7 @@ void RISCVInstPrinter::printSMTVType(const MCInst *MI, unsigned OpNo,
   auto VType =
       static_cast<XSMTVTypeMode::SMTVTypeMode>(MI->getOperand(OpNo).getImm());
   assert(XSMTVTypeMode::isValidSMTVTypeMode(VType) &&
-         "SpacemiT AI only support [i4|i8|fp16|bfp16] Mode");
+         "SpacemiT AI only supports [i4|i8|fp16|bfp16] Mode");
   O << ", " << XSMTVTypeMode::SMTVTypeModeToString(VType);
 }
 

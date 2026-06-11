@@ -1169,7 +1169,7 @@ public:
       OS << '>';
       break;
     case KindTy::SMTVType:
-      OS << "<smt: ";
+      OS << "<smtvtype: ";
       SMTVTypeModeToString(getSMTVType());
       OS << '>';
       break;
@@ -2796,10 +2796,10 @@ ParseStatus RISCVAsmParser::parseSMTVType(OperandVector &Operands) {
   XSMTVTypeMode::SMTVTypeMode VType = XSMTVTypeMode::stringToSMTVTypeMode(Str);
 
   if (!isValidSMTVTypeMode(VType))
-    return TokError("SpacemiT AI only support [i4|i8|bfp16|fp16] Mode");
+    return TokError("SpacemiT AI only supports [i4|i8|bfp16|fp16] Mode");
 
   // bfp16 and fp16 has the same encoding in SpacemiT AI
-  // In AsmParse, need conside bfp16 as fp16
+  // In AsmParser, need to consider bfp16 as fp16
   if (VType == XSMTVTypeMode::SMTVTypeMode::SMT_BFP16) {
     VType = XSMTVTypeMode::SMTVTypeMode::SMT_FP16;
   }

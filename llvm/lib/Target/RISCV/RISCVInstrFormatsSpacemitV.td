@@ -71,7 +71,7 @@ class SMTVType<bit isFP> : AsmOperandClass {
   let DiagnosticType = "InvalidSMTType"#isFP;
   let DiagnosticString = !if(isFP,
       "This Inst only supports bfp16 and fp16",
-      "This Inst only supports i4 and i8, i8 is defuat type"
+      "This Inst only supports i4 and i8, i8 is the default type"
   );
   let IsOptional = 1;
   let DefaultMethod = "defaultSMTVType";
@@ -94,7 +94,7 @@ def SMTI8 : AsmOperandClass {
   let Name = "SMTI8";
   let RenderMethod = "addSMTVTypeOperand";
   let DiagnosticType = "InvalidSMTI8";
-  let DiagnosticString = "smt.vmadot with slide only support i8 type";
+  let DiagnosticString = "smt.vmadot with slide only supports i8 type";
   let ParserMethod = "parseSMTVType";
   let IsOptional = 1;
   let DefaultMethod = "defaultSMTVType";
@@ -116,7 +116,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   // Base vector dot product (no slide) format.
   class SMTVMADot<bits<2> sign, string opcodestr, bit EarlyClobber = 0>
       : RVInst<(outs VRM2:$vd_wb), (ins VRM2:$vd, VR:$vs1, VR:$vs2),
-               opcodestr, "$vd, $vs1, $vs2", [], InstFormatSMT> {
+               opcodestr, "$vd, $vs1, $vs2", [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;
@@ -137,7 +137,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   class SMTVMADotSlide<bits<2> funct2, bits<2> sign, string opcodestr,
                        bit EarlyClobber = 0>
       : RVInst<(outs VRM2:$vd_wb), (ins VRM2:$vd, VRM2:$vs1, VR:$vs2),
-               opcodestr, "$vd, $vs1, $vs2", [], InstFormatSMT> {
+               opcodestr, "$vd, $vs1, $vs2", [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;
@@ -157,7 +157,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   class SMTVMADotII<bits<2> sign, string opcodestr, bit EarlyClobber = 0>
       : RVInst<(outs VRM2:$vd_wb),
                (ins VRM2:$vd, VR:$vs1, VR:$vs2, SMT_INT:$vtype), opcodestr,
-               "$vd, $vs1, $vs2$vtype", [], InstFormatSMT> {
+               "$vd, $vs1, $vs2$vtype", [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;
@@ -177,13 +177,13 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let UseNamedOperandTable = true;
   }
 
-  // Now only support element type i8 for sliding-window dot-product
+  // Currently only i8 element type is supported for sliding-window dot-product
   // instructions
   class SMTVMADotSlideII<bits<2> slide, bits<2> sign, string opcodestr,
                          bit EarlyClobber = 0>
       : RVInst<(outs VRM2:$vd_wb),
                (ins VRM2:$vd, VRM2:$vs1, VR:$vs2, SMT_I8:$vtype), opcodestr,
-               "$vd, $vs1, $vs2$vtype", [], InstFormatSMT> {
+               "$vd, $vs1, $vs2$vtype", [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;
@@ -208,7 +208,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
       : RVInst<(outs VRM2NoV0:$vd_wb),
                (ins VRM2NoV0:$vd, VRM2NoV0:$vs1, VRNoV0V1:$vs2, VRV0V1:$vmask, uimm2:$imm2,
                    SMT_INT:$vtype),
-               opcodestr, argstr, [], InstFormatSMT> {
+               opcodestr, argstr, [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;
@@ -238,7 +238,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
       : RVInst<(outs VRNoV0V1:$vd_wb),
                (ins VRNoV0V1:$vd, VRNoV0V1:$vs1, VRNoV0V1:$vs2, VRV0V1:$vmask, uimm3:$imm3,
                    SMT_INT:$vtype),
-               opcodestr, argstr, [], InstFormatSMT> {
+               opcodestr, argstr, [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;
@@ -262,7 +262,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
   class SMTVFWMADOT<bits<3> funct3, dag outs, dag ins, string opcodestr,
                     string argstr>
-      : RVInst<outs, ins, opcodestr, argstr, [], InstFormatSMT> {
+      : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;
@@ -281,7 +281,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
   class SMTVPACK<bits<7> funct7, bit funct1, dag outs, dag ins,
                  string opcodestr, string argstr>
-      : RVInst<outs, ins, opcodestr, argstr, [], InstFormatSMT> {
+      : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
     bits<5> vd;
     bits<5> vs1;
     bits<5> vs2;

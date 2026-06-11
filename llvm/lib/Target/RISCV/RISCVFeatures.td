@@ -1857,7 +1857,7 @@ def HasVendorXSMTVDot
                          "'XSMTVDot' (SpacemiT Vector Dot Product Extension)">;
 
 def FeatureVendorXSMTVDotII
-    : RISCVExtension<1, 0, "SpacemiT Vector Dot Product 2.0 Extension",
+    : RISCVExtension<1, 0, "SpacemiT Vector Extension for Matrix(2.0)",
                      [FeatureStdExtZve32f]>;
 def HasVendorXSMTVDotII
     : Predicate<"Subtarget->hasVendorXSMTVDotII()">,

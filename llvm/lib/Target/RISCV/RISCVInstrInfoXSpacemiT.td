@@ -88,7 +88,7 @@ let DecoderNamespace = "XSMT" in {
             SMTVMADOTHP<c.Encoding, "smt.vmadot"#c.Name#".hp",
                         "$vd, $vs1, $vs2, $vmask, $imm3$vtype">, Sched<[]>;
 
-      let DestEEW = EEWSEWx2, Constraints = "$vd = $vd_wb"in {
+      let DestEEW = EEWSEWx2, Constraints = "$vd = $vd_wb" in {
         // VFWMADOT
         def VFWMADOT :
             SMTVFWMADOT<0b100, (outs VRM2:$vd_wb),
