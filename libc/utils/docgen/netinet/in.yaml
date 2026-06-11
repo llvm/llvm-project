@@ -17,6 +17,10 @@ macros:
     in-latest-posix: ''
   INADDR_LOOPBACK:
     c-definition: ''
+  IN6ADDR_ANY_INIT:
+    in-latest-posix: ''
+  IN6ADDR_LOOPBACK_INIT:
+    in-latest-posix: ''
   INET6_ADDRSTRLEN:
     in-latest-posix: ''
   INET_ADDRSTRLEN:

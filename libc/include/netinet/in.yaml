@@ -16,6 +16,10 @@ macros:
     macro_header: netinet-in-macros.h
   - macro_name: IPPROTO_RAW
     macro_header: netinet-in-macros.h
+  - macro_name: IN6ADDR_ANY_INIT
+    macro_header: netinet-in-macros.h
+  - macro_name: IN6ADDR_LOOPBACK_INIT
+    macro_header: netinet-in-macros.h
   - macro_name: INET_ADDRSTRLEN
     macro_header: inet-address-macros.h
   - macro_name: INET6_ADDRSTRLEN
@@ -25,6 +29,7 @@ types:
   - type_name: in_addr_t
   - type_name: sa_family_t
   - type_name: struct_sockaddr_in
+  - type_name: struct_sockaddr_in6
   - type_name: struct_in_addr
   - type_name: struct_in6_addr
 enums: []

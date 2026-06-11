@@ -42,6 +42,7 @@ add_libc_unittest(
     libc.hdr.netinet_in_macros
     libc.hdr.sys_socket_macros
     libc.hdr.types.struct_sockaddr_in
+    libc.hdr.types.struct_sockaddr_in6
     libc.hdr.types.struct_sockaddr_un
     libc.src.arpa.inet.htonl
     libc.src.errno.errno
