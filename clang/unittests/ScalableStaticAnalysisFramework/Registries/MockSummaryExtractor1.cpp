@@ -38,7 +38,7 @@ public:
   }
 };
 
+} // namespace
+
 static TUSummaryExtractorRegistry::Add<MockSummaryExtractor1>
     RegisterExtractor("MockSummaryExtractor1", "Mock summary extractor 1");
-
-} // namespace

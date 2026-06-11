@@ -52,11 +52,11 @@
 #define DEBUG_TYPE "block-freq"
 
 namespace llvm {
-extern llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
+extern LLVM_ABI llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
 
-extern llvm::cl::opt<bool> UseIterativeBFIInference;
-extern llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
-extern llvm::cl::opt<double> IterativeBFIPrecision;
+extern LLVM_ABI llvm::cl::opt<bool> UseIterativeBFIInference;
+extern LLVM_ABI llvm::cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock;
+extern LLVM_ABI llvm::cl::opt<double> IterativeBFIPrecision;
 
 class BranchProbabilityInfo;
 class Function;
@@ -141,10 +141,10 @@ public:
   ///
   /// Convert to \a ScaledNumber.  \a isFull() gives 1.0, while \a isEmpty()
   /// gives slightly above 0.0.
-  ScaledNumber<uint64_t> toScaled() const;
+  LLVM_ABI ScaledNumber<uint64_t> toScaled() const;
 
-  void dump() const;
-  raw_ostream &print(raw_ostream &OS) const;
+  LLVM_ABI void dump() const;
+  LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 };
 
 inline BlockMass operator+(BlockMass L, BlockMass R) {
@@ -174,7 +174,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, BlockMass X) {
 ///
 /// Nevertheless, the majority of the overall algorithm documentation lives with
 /// BlockFrequencyInfoImpl.  See there for details.
-class BlockFrequencyInfoImplBase {
+class LLVM_ABI BlockFrequencyInfoImplBase {
 public:
   using Scaled64 = ScaledNumber<uint64_t>;
   using BlockMass = bfi_detail::BlockMass;
@@ -409,10 +409,11 @@ public:
     /// cases, adjacent edge weights are combined by sorting WeightList and
     /// combining adjacent weights.  However, for very large edge lists an
     /// auxiliary hash table is used.
-    void normalize();
+    LLVM_ABI void normalize();
 
   private:
-    void add(const BlockNode &Node, uint64_t Amount, Weight::DistType Type);
+    LLVM_ABI void add(const BlockNode &Node, uint64_t Amount,
+                      Weight::DistType Type);
   };
 
   /// Data about each block.  This is used downstream.
@@ -541,7 +542,6 @@ namespace bfi_detail {
 template <class BlockT> struct TypeMap {};
 template <> struct TypeMap<BasicBlock> {
   using BlockT = BasicBlock;
-  using BlockKeyT = AssertingVH<const BasicBlock>;
   using FunctionT = Function;
   using BranchProbabilityInfoT = BranchProbabilityInfo;
   using LoopT = Loop;
@@ -549,15 +549,11 @@ template <> struct TypeMap<BasicBlock> {
 };
 template <> struct TypeMap<MachineBasicBlock> {
   using BlockT = MachineBasicBlock;
-  using BlockKeyT = const MachineBasicBlock *;
   using FunctionT = MachineFunction;
   using BranchProbabilityInfoT = MachineBranchProbabilityInfo;
   using LoopT = MachineLoop;
   using LoopInfoT = MachineLoopInfo;
 };
-
-template <class BlockT, class BFIImplT>
-class BFICallbackVH;
 
 /// Get the name of a MachineBasicBlock.
 ///
@@ -636,20 +632,20 @@ struct IrreducibleGraph {
   template <class BlockEdgesAdder>
   void initialize(const BFIBase::LoopData *OuterLoop,
                   BlockEdgesAdder addBlockEdges);
-  void addNodesInLoop(const BFIBase::LoopData &OuterLoop);
-  void addNodesInFunction();
+  LLVM_ABI void addNodesInLoop(const BFIBase::LoopData &OuterLoop);
+  LLVM_ABI void addNodesInFunction();
 
   void addNode(const BlockNode &Node) {
     Nodes.emplace_back(Node);
     BFI.Working[Node.Index].getMass() = BlockMass::getEmpty();
   }
 
-  void indexNodes();
+  LLVM_ABI void indexNodes();
   template <class BlockEdgesAdder>
   void addEdges(const BlockNode &Node, const BFIBase::LoopData *OuterLoop,
                 BlockEdgesAdder addBlockEdges);
-  void addEdge(IrrNode &Irr, const BlockNode &Succ,
-               const BFIBase::LoopData *OuterLoop);
+  LLVM_ABI void addEdge(IrrNode &Irr, const BlockNode &Succ,
+                        const BFIBase::LoopData *OuterLoop);
 };
 
 template <class BlockEdgesAdder>
@@ -841,7 +837,6 @@ void IrreducibleGraph::addEdges(const BlockNode &Node,
 ///         series by simulation.)
 template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
   using BlockT = typename bfi_detail::TypeMap<BT>::BlockT;
-  using BlockKeyT = typename bfi_detail::TypeMap<BT>::BlockKeyT;
   using FunctionT = typename bfi_detail::TypeMap<BT>::FunctionT;
   using BranchProbabilityInfoT =
       typename bfi_detail::TypeMap<BT>::BranchProbabilityInfoT;
@@ -849,18 +844,23 @@ template <class BT> class BlockFrequencyInfoImpl : BlockFrequencyInfoImplBase {
   using LoopInfoT = typename bfi_detail::TypeMap<BT>::LoopInfoT;
   using Successor = GraphTraits<const BlockT *>;
   using Predecessor = GraphTraits<Inverse<const BlockT *>>;
-  using BFICallbackVH =
-      bfi_detail::BFICallbackVH<BlockT, BlockFrequencyInfoImpl>;
 
   const BranchProbabilityInfoT *BPI = nullptr;
   const LoopInfoT *LI = nullptr;
   const FunctionT *F = nullptr;
 
   // All blocks in reverse postorder.
-  std::vector<BFICallbackVH> RPOT;
-  DenseMap<const BlockT *, BlockNode> Nodes;
+  std::vector<const BlockT *> RPOT;
+  /// Map from block number to number on RPOT/Freqs.
+  SmallVector<BlockNode, 0> Nodes;
+  unsigned BlockNumberEpoch;
 
-  BlockNode getNode(const BlockT *BB) const { return Nodes.lookup(BB); }
+  BlockNode getNode(const BlockT *BB) const {
+    assert(BlockNumberEpoch ==
+           GraphTraits<const FunctionT *>::getNumberEpoch(F));
+    unsigned BlockNumber = GraphTraits<const BlockT *>::getNumber(BB);
+    return BlockNumber < Nodes.size() ? Nodes[BlockNumber] : BlockNode();
+  }
 
   const BlockT *getBlock(const BlockNode &Node) const {
     assert(Node.Index < RPOT.size());
@@ -1020,16 +1020,6 @@ public:
 
   void setBlockFreq(const BlockT *BB, BlockFrequency Freq);
 
-  void forgetBlock(const BlockT *BB) {
-    // We don't erase corresponding items from `Freqs`, `RPOT` and other to
-    // avoid invalidating indices. Doing so would have saved some memory, but
-    // it's not worth it.
-    auto It = Nodes.find(BB);
-    assert(It != Nodes.end() && "cannot forget block that was never seen");
-    RPOT[It->second.Index] = {}; // Clear value handle.
-    Nodes.erase(It);
-  }
-
   Scaled64 getFloatingBlockFreq(const BlockT *BB) const {
     return BlockFrequencyInfoImplBase::getFloatingBlockFreq(getNode(BB));
   }
@@ -1053,45 +1043,6 @@ public:
 
   void verifyMatch(BlockFrequencyInfoImpl<BT> &Other) const;
 };
-
-namespace bfi_detail {
-
-template <class BFIImplT>
-class BFICallbackVH<BasicBlock, BFIImplT> : public CallbackVH {
-  BFIImplT *BFIImpl;
-
-public:
-  BFICallbackVH() = default;
-
-  BFICallbackVH(const BasicBlock *BB, BFIImplT *BFIImpl)
-      : CallbackVH(BB), BFIImpl(BFIImpl) {}
-
-  virtual ~BFICallbackVH() = default;
-
-  void deleted() override {
-    BFIImpl->forgetBlock(cast<BasicBlock>(getValPtr()));
-  }
-
-  operator const BasicBlock *() const {
-    Value *V = *static_cast<const CallbackVH *>(this);
-    return cast<BasicBlock>(V);
-  }
-};
-
-/// Dummy implementation since MachineBasicBlocks aren't Values, so ValueHandles
-/// don't apply to them.
-template <class BFIImplT>
-class BFICallbackVH<MachineBasicBlock, BFIImplT> {
-  const MachineBasicBlock *MBB;
-
-public:
-  BFICallbackVH() = default;
-  BFICallbackVH(const MachineBasicBlock *MBB, BFIImplT *) : MBB(MBB) {}
-
-  operator const MachineBasicBlock *() const { return MBB; }
-};
-
-} // end namespace bfi_detail
 
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
@@ -1130,44 +1081,48 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
     // blocks, if any. This is to distinguish between known/existing unreachable
     // blocks and unknown blocks.
     for (const BlockT &BB : F)
-      if (!Nodes.count(&BB))
+      if (!getNode(&BB).isValid())
         setBlockFreq(&BB, BlockFrequency());
   }
+
+  RPOT.clear();
 }
 
 template <class BT>
 void BlockFrequencyInfoImpl<BT>::setBlockFreq(const BlockT *BB,
                                               BlockFrequency Freq) {
-  auto [It, Inserted] = Nodes.try_emplace(BB);
-  if (!Inserted)
-    BlockFrequencyInfoImplBase::setBlockFreq(It->second, Freq);
-  else {
+  assert(BlockNumberEpoch == GraphTraits<const FunctionT *>::getNumberEpoch(F));
+  unsigned BlockNumber = GraphTraits<const BlockT *>::getNumber(BB);
+  if (Nodes.size() <= BlockNumber)
+    Nodes.resize(GraphTraits<const FunctionT *>::getMaxNumber(F));
+  BlockNode &Node = Nodes[BlockNumber];
+  if (!Node.isValid()) {
     // If BB is a newly added block after BFI is done, we need to create a new
     // BlockNode for it assigned with a new index. The index can be determined
     // by the size of Freqs.
-    BlockNode NewNode(Freqs.size());
-    It->second = NewNode;
+    Node = BlockNode(Freqs.size());
     Freqs.emplace_back();
-    RPOT.emplace_back(BB, this);
-    BlockFrequencyInfoImplBase::setBlockFreq(NewNode, Freq);
   }
+  BlockFrequencyInfoImplBase::setBlockFreq(Node, Freq);
 }
 
 template <class BT> void BlockFrequencyInfoImpl<BT>::initializeRPOT() {
   const BlockT *Entry = &F->front();
   RPOT.reserve(F->size());
   for (const BlockT *BB : post_order(Entry))
-    RPOT.emplace_back(BB, this);
+    RPOT.emplace_back(BB);
   std::reverse(RPOT.begin(), RPOT.end());
 
   assert(RPOT.size() - 1 <= BlockNode::getMaxIndex() &&
          "More nodes in function than Block Frequency Info supports");
 
   LLVM_DEBUG(dbgs() << "reverse-post-order-traversal\n");
+  Nodes.resize(GraphTraits<const FunctionT *>::getMaxNumber(F));
+  BlockNumberEpoch = GraphTraits<const FunctionT *>::getNumberEpoch(F);
   for (auto [Idx, Block] : enumerate(RPOT)) {
     BlockNode Node = BlockNode(Idx);
     LLVM_DEBUG(dbgs() << " - " << Idx << ": " << getBlockName(Node) << "\n");
-    Nodes[Block] = Node;
+    Nodes[GraphTraits<const BlockT *>::getNumber(Block)] = Node;
   }
 
   Working.reserve(RPOT.size());
@@ -1510,12 +1465,12 @@ void BlockFrequencyInfoImpl<BT>::findReachableBlocks(
   while (!Queue.empty()) {
     const BlockT *SrcBB = Queue.front();
     Queue.pop();
-    for (const BlockT *DstBB : children<const BlockT *>(SrcBB)) {
-      auto EP = BPI->getEdgeProbability(SrcBB, DstBB);
+    for (auto It : enumerate(children<const BlockT *>(SrcBB))) {
+      auto EP = BPI->getEdgeProbability(SrcBB, It.index());
       if (EP.isZero())
         continue;
-      if (Reachable.insert(DstBB).second)
-        Queue.push(DstBB);
+      if (Reachable.insert(It.value()).second)
+        Queue.push(It.value());
     }
   }
 
@@ -1564,7 +1519,8 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
   for (size_t Src = 0; Src < NumBlocks; Src++) {
     const BlockT *BB = Blocks[Src];
     SmallPtrSet<const BlockT *, 2> UniqueSuccs;
-    for (const auto SI : children<const BlockT *>(BB)) {
+    for (auto It : enumerate(children<const BlockT *>(BB))) {
+      const BlockT *SI = It.value();
       // Ignore cold blocks
       auto BlockIndexIt = BlockIndex.find(SI);
       if (BlockIndexIt == BlockIndex.end())
@@ -1573,7 +1529,7 @@ void BlockFrequencyInfoImpl<BT>::initTransitionProbabilities(
       if (!UniqueSuccs.insert(SI).second)
         continue;
       // Ignore jumps with zero probability
-      auto EP = BPI->getEdgeProbability(BB, SI);
+      auto EP = BPI->getEdgeProbability(BB, It.index());
       if (EP.isZero())
         continue;
 
@@ -1672,12 +1628,10 @@ BlockFrequencyInfoImpl<BT>::propagateMassToSuccessors(LoopData *OuterLoop,
       return false;
   } else {
     const BlockT *BB = getBlock(Node);
-    for (auto SI = GraphTraits<const BlockT *>::child_begin(BB),
-              SE = GraphTraits<const BlockT *>::child_end(BB);
-         SI != SE; ++SI)
+    for (auto It : enumerate(children<const BlockT *>(BB)))
       if (!addToDist(
-              Dist, OuterLoop, Node, getNode(*SI),
-              getWeightFromBranchProb(BPI->getEdgeProbability(BB, SI))))
+              Dist, OuterLoop, Node, getNode(It.value()),
+              getWeightFromBranchProb(BPI->getEdgeProbability(BB, It.index()))))
         // Irreducible backedge.
         return false;
   }
@@ -1716,48 +1670,47 @@ template <class BT>
 void BlockFrequencyInfoImpl<BT>::verifyMatch(
     BlockFrequencyInfoImpl<BT> &Other) const {
   bool Match = true;
-  DenseMap<const BlockT *, BlockNode> ValidNodes;
-  DenseMap<const BlockT *, BlockNode> OtherValidNodes;
-  for (auto &Entry : Nodes) {
-    const BlockT *BB = Entry.first;
-    if (BB) {
-      ValidNodes[BB] = Entry.second;
-    }
-  }
-  for (auto &Entry : Other.Nodes) {
-    const BlockT *BB = Entry.first;
-    if (BB) {
-      OtherValidNodes[BB] = Entry.second;
-    }
-  }
-  unsigned NumValidNodes = ValidNodes.size();
-  unsigned NumOtherValidNodes = OtherValidNodes.size();
-  if (NumValidNodes != NumOtherValidNodes) {
-    Match = false;
-    dbgs() << "Number of blocks mismatch: " << NumValidNodes << " vs "
-           << NumOtherValidNodes << "\n";
-  } else {
-    for (auto &Entry : ValidNodes) {
-      const BlockT *BB = Entry.first;
-      BlockNode Node = Entry.second;
-      if (auto It = OtherValidNodes.find(BB); It != OtherValidNodes.end()) {
-        BlockNode OtherNode = It->second;
-        const auto &Freq = Freqs[Node.Index];
-        const auto &OtherFreq = Other.Freqs[OtherNode.Index];
-        if (Freq.Integer != OtherFreq.Integer) {
-          Match = false;
-          dbgs() << "Freq mismatch: " << bfi_detail::getBlockName(BB) << " "
-                 << Freq.Integer << " vs " << OtherFreq.Integer << "\n";
-        }
-      } else {
+  // Gather blocks for numbers so that we can print names and determine whether
+  // they still exist.
+  SmallVector<const BlockT *> Blocks;
+  Blocks.resize(GraphTraits<const FunctionT *>::getMaxNumber(F));
+  for (const auto &BB : *F)
+    Blocks[GraphTraits<const BlockT *>::getNumber(&BB)] = &BB;
+
+  size_t MinSize = std::min(Nodes.size(), Other.Nodes.size());
+  for (size_t i = 0; i < MinSize; ++i) {
+    if (!Blocks[i])
+      continue; // Block got deleted in the mean time, ignore.
+    if (Nodes[i].isValid() != Other.Nodes[i].isValid()) {
+      Match = false;
+      dbgs() << "Block " << bfi_detail::getBlockName(Blocks[i])
+             << " existence mismatch.\n";
+    } else if (Nodes[i].isValid()) {
+      const auto &Freq = Freqs[Nodes[i].Index];
+      const auto &OtherFreq = Other.Freqs[Other.Nodes[i].Index];
+      if (Freq.Integer != OtherFreq.Integer) {
         Match = false;
-        dbgs() << "Block " << bfi_detail::getBlockName(BB) << " index "
-               << Node.Index << " does not exist in Other.\n";
+        dbgs() << "Freq mismatch: " << bfi_detail::getBlockName(Blocks[i])
+               << " " << Freq.Integer << " vs " << OtherFreq.Integer << "\n";
       }
     }
-    // If there's a valid node in OtherValidNodes that's not in ValidNodes,
-    // either the above num check or the check on OtherValidNodes will fail.
   }
+  // Block with higher numbers must not exist in either state.
+  for (size_t i = MinSize; i < Nodes.size(); ++i) {
+    if (Nodes[i].isValid()) {
+      Match = false;
+      dbgs() << "Block " << bfi_detail::getBlockName(Blocks[i])
+             << " existence mismatch.\n";
+    }
+  }
+  for (size_t i = MinSize; i < Other.Nodes.size(); ++i) {
+    if (Other.Nodes[i].isValid()) {
+      Match = false;
+      dbgs() << "Block " << bfi_detail::getBlockName(Blocks[i])
+             << " existence mismatch.\n";
+    }
+  }
+
   if (!Match) {
     dbgs() << "This\n";
     print(dbgs());
@@ -1855,7 +1808,8 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     if (!BPI)
       return Str;
 
-    BranchProbability BP = BPI->getEdgeProbability(Node, EI);
+    unsigned SuccIdx = std::distance(succ_begin(Node), EI);
+    BranchProbability BP = BPI->getEdgeProbability(Node, SuccIdx);
     uint32_t N = BP.getNumerator();
     uint32_t D = BP.getDenominator();
     double Percent = 100.0 * N / D;

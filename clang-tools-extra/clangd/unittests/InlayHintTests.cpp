@@ -890,6 +890,21 @@ TEST(ParameterHints, DeducingThis) {
                        ExpectedHint{"Param: ", "3"}, ExpectedHint{"C: ", "4"});
 }
 
+TEST(ParameterHints, DependentDeducingThis) {
+  assertParameterHints(R"cpp(
+   template <typename T>
+   struct S {
+      void f1(this S& obj);
+      void f2(this S& obj, int x, int y);
+      void g(S s) {
+        s.f1();  // no crash
+        s.f2($x[[42]], $y[[43]]);
+      }
+    };
+  )cpp",
+                       ExpectedHint{"x: ", "x"}, ExpectedHint{"y: ", "y"});
+}
+
 TEST(ParameterHints, Macros) {
   // Handling of macros depends on where the call's argument list comes from.
 

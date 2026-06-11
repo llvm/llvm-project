@@ -225,6 +225,23 @@ foreach vec = StdVecs in {
                  inst>;
 }
 
+// Match f16x8.splat of a loaded f16 value and fold it into v128.load16_splat.
+def loadf16_any : PatFrags<(ops node:$addr), [
+  (extloadf16 node:$addr),
+  (int_wasm_loadf16_f32 node:$addr)
+]>;
+
+multiclass LoadSplatFP16Pat<SDPatternOperator kind> {
+  def : Pat<(v8f16 (int_wasm_splat_f16x8 (kind (AddrOps32 offset32_op:$offset, I32:$addr)))),
+            (LOAD16_SPLAT_A32 0, offset32_op:$offset, I32:$addr)>,
+        Requires<[HasAddr32]>;
+  def : Pat<(v8f16 (int_wasm_splat_f16x8 (kind (AddrOps64 offset64_op:$offset, I64:$addr)))),
+            (LOAD16_SPLAT_A64 0, offset64_op:$offset, I64:$addr)>,
+        Requires<[HasAddr64]>;
+}
+
+defm : LoadSplatFP16Pat<loadf16_any>;
+
 // Load and extend
 multiclass SIMDLoadExtend<Vec vec, string loadPat, bits<32> simdop> {
   defvar signed = vec.prefix#".load"#loadPat#"_s";
@@ -911,6 +928,15 @@ def : Pat<(vec.vt (xor (and (xor (vec.vt V128:$v1), (vec.vt V128:$v2)),
                        (vec.vt V128:$v2))),
           (BITSELECT $v2, $v1, $c)>;
 
+// vselect(cond, vnot(X), zero) => andnot(cond, X)
+// DAGCombiner converts and(vnot(X), sext(cmp)) into vselect(cmp, vnot(X), zero)
+// which the generic vselect pattern below lowers to v128.not + v128.bitselect.
+// Match it first and emit a single v128.andnot instead.
+foreach vec = IntVecs in
+def : Pat<(vec.vt (vselect
+            (vec.int_vt V128:$c), (vnot (vec.vt V128:$x)), immAllZerosV)),
+          (ANDNOT $c, $x)>;
+
 // Also implement vselect in terms of bitselect
 foreach vec = StdVecs in
 def : Pat<(vec.vt (vselect
@@ -1360,7 +1386,7 @@ multiclass PMinMaxInt<Vec vec, NI baseMinInst, NI baseMaxInst> {
 // the wasm_simd128.h intrinsics because v128_t is an integer vector.
 foreach vec = [F32x4, F64x2, F16x8] in {
   defvar pmin = !cast<NI>("PMIN_"#vec);
-  defvar pmax = !cast<NI>("PMAX_"#vec); 
+  defvar pmax = !cast<NI>("PMAX_"#vec);
   defm : PMinMaxInt<vec, pmin, pmax>;
 }
 
@@ -1505,12 +1531,26 @@ multiclass SignedSaturatingTruncate<ValueType input, ValueType output,
 defm : SignedSaturatingTruncate<v8i16, v16i8, NARROW_S_I8x16, -128, 127, 0xFF>;
 defm : SignedSaturatingTruncate<v4i32, v8i16, NARROW_S_I16x8, -32768, 32767, 0xFFFF>;
 
+// NOTE: the saturating is actually signed, the truncation is unsigned, see
+// https://www.w3.org/TR/wasm-core-2/#-hrefop-narrowmathrmnarrowmathsfu_m-n-i
 multiclass UnsignedSaturatingTruncate<ValueType input, ValueType output,
-                                    Instruction narrow, int maxval> {
+                                      Instruction narrow, int maxval> {
   def : Pat<
     (output (wasm_narrow_u
-      (umin (input V128:$a), (splat_vector (i32 maxval))),
-      (umin (input V128:$b), (splat_vector (i32 maxval)))
+      (smin (smax (input V128:$a), (splat_vector (i32 0))),
+            (splat_vector (i32 maxval))),
+      (smin (smax (input V128:$b), (splat_vector (i32 0))),
+            (splat_vector (i32 maxval)))
+    )),
+    (narrow V128:$a, V128:$b)
+  >;
+
+  def : Pat<
+    (output (wasm_narrow_u
+      (smax (smin (input V128:$a), (splat_vector (i32 maxval))),
+            (splat_vector (i32 0))),
+      (smax (smin (input V128:$b), (splat_vector (i32 maxval))),
+            (splat_vector (i32 0)))
     )),
     (narrow V128:$a, V128:$b)
   >;
@@ -1623,15 +1663,18 @@ defm : ExtAddPairwiseShuffleExtend<v16i8, v8i16, "I16x8",
                                    18, 19, 22, 23,
                                    26, 27, 30, 31>;
 
-// f64x2 <-> f32x4 conversions
+// f64x2 <-> f32x4 and f32x4 <-> f16x8 conversions
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def demote_zero : SDNode<"WebAssemblyISD::DEMOTE_ZERO", demote_t>;
 defm "" : SIMDConvert<F32x4, F64x2, demote_zero,
                       "demote_f64x2_zero", 0x5e>;
+defm "" : HalfPrecisionConvert<F16x8, F32x4, demote_zero, "demote_f32x4_zero", 0x149>;
 
 def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def promote_low : SDNode<"WebAssemblyISD::PROMOTE_LOW", promote_t>;
 defm "" : SIMDConvert<F64x2, F32x4, promote_low, "promote_low_f32x4", 0x5f>;
+defm "" : HalfPrecisionConvert<F32x4, I16x8, promote_low, "promote_low_f16x8",
+                               0x14b>;
 
 // Lower extending loads to load64_zero + promote_low
 def extloadv2f32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
@@ -1833,21 +1876,21 @@ def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
 def relaxed_pmin :
   PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+          (CurDAG->isKnownNeverNaN(N->getOperand(1)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
 }]>;
 
 def relaxed_pmax :
   PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
   return (N->getFlags().hasNoNaNs() ||
-          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
-           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+          ((CurDAG->isKnownNeverNaN(N->getOperand(1))) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(2)))) &&
          (N->getFlags().hasNoSignedZeros() ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
-          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(1)) ||
+          CurDAG->isKnownNeverLogicalZero(N->getOperand(2)));
 }]>;
 
 let Predicates = [HasRelaxedSIMD] in {

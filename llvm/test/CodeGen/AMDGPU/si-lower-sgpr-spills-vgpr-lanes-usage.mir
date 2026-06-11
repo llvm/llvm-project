@@ -24,10 +24,11 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; SGPR_SPILLED-LABEL: name: stack-slot-share-equal-sized-spills
-    ; SGPR_SPILLED: liveins: $sgpr30, $sgpr31, $vgpr62
+    ; SGPR_SPILLED: liveins: $vgpr62, $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: {{  $}}
-    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr30, 0, $vgpr62
-    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62
+    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr62, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
+    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62, implicit killed $sgpr30_sgpr31
+    ; SGPR_SPILLED-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr0, 1, [[DEF]], implicit-def $sgpr0_sgpr1, implicit $sgpr0_sgpr1
@@ -42,7 +43,6 @@ body:             |
     ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit undef $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: $sgpr0 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1, implicit-def $sgpr0_sgpr1
     ; SGPR_SPILLED-NEXT: $sgpr1 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 2
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr2, 1, [[DEF]], implicit-def $sgpr2_sgpr3, implicit $sgpr2_sgpr3
@@ -90,10 +90,11 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; SGPR_SPILLED-LABEL: name: stack-slot-share-unequal-sized-spills-with-large-spill-first
-    ; SGPR_SPILLED: liveins: $sgpr30, $sgpr31, $vgpr62
+    ; SGPR_SPILLED: liveins: $vgpr62, $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: {{  $}}
-    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr30, 0, $vgpr62
-    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62
+    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr62, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
+    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62, implicit killed $sgpr30_sgpr31
+    ; SGPR_SPILLED-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr2, 1, [[DEF]], implicit-def $sgpr2_sgpr3, implicit $sgpr2_sgpr3
@@ -108,7 +109,6 @@ body:             |
     ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit undef $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: $sgpr2 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1, implicit-def $sgpr2_sgpr3
     ; SGPR_SPILLED-NEXT: $sgpr3 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 2
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr2, 1, [[DEF]]
@@ -154,10 +154,11 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; SGPR_SPILLED-LABEL: name: stack-slot-share-unequal-sized-spills-with-small-spill-first
-    ; SGPR_SPILLED: liveins: $sgpr30, $sgpr31, $vgpr62
+    ; SGPR_SPILLED: liveins: $vgpr62, $sgpr30_sgpr31
     ; SGPR_SPILLED-NEXT: {{  $}}
-    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr30, 0, $vgpr62
-    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62
+    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr62, implicit-def $sgpr30_sgpr31, implicit $sgpr30_sgpr31
+    ; SGPR_SPILLED-NEXT: $vgpr62 = SI_SPILL_S32_TO_VGPR killed $sgpr31, 1, $vgpr62, implicit killed $sgpr30_sgpr31
+    ; SGPR_SPILLED-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_registers $pc_reg, $vgpr62, 0, 32, $vgpr62, 1, 32
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr0, 1, [[DEF]]
@@ -171,7 +172,6 @@ body:             |
     ; SGPR_SPILLED-NEXT: $sgpr5 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 4
     ; SGPR_SPILLED-NEXT: dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr4_sgpr5, 0, csr_amdgpu, implicit undef $vgpr0
     ; SGPR_SPILLED-NEXT: $sgpr32 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
-    ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr32, 0, [[DEF]]
     ; SGPR_SPILLED-NEXT: $sgpr0 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 1
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr2, 1, [[DEF]], implicit-def $sgpr2_sgpr3, implicit $sgpr2_sgpr3
     ; SGPR_SPILLED-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = SI_SPILL_S32_TO_VGPR $sgpr3, 2, [[DEF]], implicit $sgpr2_sgpr3

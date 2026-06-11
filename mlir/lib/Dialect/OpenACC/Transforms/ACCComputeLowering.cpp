@@ -24,13 +24,17 @@
 // ----------------
 // 1. Compute constructs: acc.parallel, acc.serial, and acc.kernels are
 //    replaced by acc.kernel_environment containing a single acc.compute_region.
-//    Launch arguments (num_gangs, num_workers, vector_length) become
-//    acc.par_width ops and are passed as compute_region launch operands.
+//    For acc.parallel / acc.kernels, launch arguments (num_gangs, num_workers,
+//    vector_length) become acc.par_width ops (each result is `index`) and are
+//    passed as compute_region launch operands. Compute regions with
+//    num_gangs(1), num_workers(1), and vector_length(1) and acc serial use a
+//    single sequential acc.par_width launch operand.
 //
 // 2. acc.loop: Converted according to context and attributes:
 //    - Unstructured: body wrapped in scf.execute_region.
-//    - Sequential (serial region or seq clause): scf.parallel with
-//      par_dims = sequential.
+//    - Sequential (serial region, seq clause, or compute region with
+//    num_gangs(1), num_workers(1), and vector_length(1)):
+//      scf.parallel with par_dims = sequential.
 //    - Auto (in parallel/kernels): scf.for with collapse when
 //    multi-dimensional.
 //    - Orphan (not inside a compute construct): scf.for, no collapse.
@@ -50,9 +54,11 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 namespace acc {
@@ -79,22 +85,32 @@ static Value stripIndexCasts(Value val) {
   return val;
 }
 
-/// A parallel construct is "effectively serial" when it specifies
-/// num_gangs(1), num_workers(1), and vector_length(1). This matches
-/// the semantics of acc.serial but expressed through acc.parallel.
-static bool isEffectivelySerial(ParallelOp op) {
+template <typename ComputeOpT>
+static bool isGangWorkerVectorAllOne(ComputeOpT op) {
   auto numGangs = op.getNumGangsValues();
-  if (numGangs.size() != 1)
+  if (numGangs.empty())
     return false;
+  for (Value gangSize : numGangs) {
+    if (!isConstantIntValue(stripIndexCasts(gangSize), 1))
+      return false;
+  }
   Value numWorkers = op.getNumWorkersValue();
   if (!numWorkers)
     return false;
   Value vectorLength = op.getVectorLengthValue();
   if (!vectorLength)
     return false;
-  return isConstantIntValue(stripIndexCasts(numGangs.front()), 1) &&
-         isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
+  return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
          isConstantIntValue(stripIndexCasts(vectorLength), 1);
+}
+
+/// A compute construct is "effectively serial" when it specifies
+/// num_gangs(1), num_workers(1), and vector_length(1). This is because
+/// these are the only parallelism dimensions expressible from OpenACC spec
+/// point-of-view and is consistent with how `serial` semantics are defined.
+template <typename ComputeOpT>
+static bool isEffectivelySerial(ComputeOpT op) {
+  return isGangWorkerVectorAllOne(op);
 }
 
 static bool isOpInComputeRegion(Operation *op) {
@@ -105,10 +121,12 @@ static bool isOpInComputeRegion(Operation *op) {
 static bool isOpInSerialRegion(Operation *op) {
   if (auto parallelOp = op->getParentOfType<ParallelOp>())
     return isEffectivelySerial(parallelOp);
-  if (auto computeRegion = op->getParentOfType<ComputeRegionOp>())
-    return computeRegion.isEffectivelySerial();
+  if (auto kernelsOp = op->getParentOfType<KernelsOp>())
+    return isEffectivelySerial(kernelsOp);
   if (op->getParentOfType<SerialOp>())
     return true;
+  if (auto computeRegion = op->getParentOfType<ComputeRegionOp>())
+    return computeRegion.isEffectivelySerial();
   if (auto funcOp = op->getParentOfType<FunctionOpInterface>()) {
     if (isSpecializedAccRoutine(funcOp)) {
       auto attr = funcOp->getAttrOfType<SpecializedRoutineAttr>(
@@ -124,6 +142,36 @@ static void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
   op->setAttr(GPUParallelDimsAttr::name, attr);
 }
 
+/// Clone defining ops of constant live-in values into `region`, rewrite uses
+/// inside the region to the clones, and remove those values from
+/// `liveInValues` so they are not threaded through `acc.compute_region` ins.
+static void materializeConstantLiveInsIntoRegion(Region &region,
+                                                 SetVector<Value> &liveInValues,
+                                                 RewriterBase &rewriter) {
+  SmallVector<Value> constantLiveIns;
+  for (Value v : liveInValues) {
+    Operation *defOp = v.getDefiningOp();
+    if (defOp && matchPattern(defOp, m_Constant())) {
+      // As per the definition of ConstantLike trait, constants must have a
+      // single result.
+      assert(defOp->getNumResults() == 1 &&
+             "constants must have a single result");
+      constantLiveIns.push_back(v);
+    }
+  }
+  if (constantLiveIns.empty())
+    return;
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(&region.front());
+
+  for (Value v : constantLiveIns) {
+    Value newV = rewriter.clone(*v.getDefiningOp())->getResult(0);
+    replaceAllUsesInRegionWith(v, newV, region);
+    liveInValues.remove(v);
+  }
+}
+
 /// Insert a parallel dimension into the list, maintaining order by
 /// GPUParallelDimAttr::getOrder (descending).
 static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
@@ -137,11 +185,32 @@ static void insertParDim(SmallVectorImpl<GPUParallelDimAttr> &parDims,
     parDims.insert(lb, parDim);
 }
 
+/// Return the device type from which gang/worker/vector clauses should be read.
+/// If the requested device type has any such clauses, use that exclusively;
+/// otherwise fall back to the default (DeviceType::None).
+static DeviceType getGangWorkerVectorDeviceType(LoopOp loopOp,
+                                                DeviceType deviceType) {
+  if (deviceType != DeviceType::None &&
+      loopOp.hasAnyGangWorkerVector(deviceType))
+    return deviceType;
+  return DeviceType::None;
+}
+
+template <typename ComputeConstructT>
+static DeviceType getParDimsDeviceType(ComputeConstructT computeOp,
+                                       DeviceType deviceType) {
+  if (deviceType != DeviceType::None &&
+      computeOp.hasAnyGangWorkerVector(deviceType))
+    return deviceType;
+  return DeviceType::None;
+}
+
 /// Map loop parallelism clauses (gang/worker/vector) to GPU parallel
 /// dimensions using the given mapping policy.
 static SmallVector<GPUParallelDimAttr>
 getParallelDimensions(LoopOp loopOp, const ACCToGPUMappingPolicy &policy,
                       DeviceType deviceType) {
+  deviceType = getGangWorkerVectorDeviceType(loopOp, deviceType);
   SmallVector<GPUParallelDimAttr> parDims;
   auto *ctx = loopOp->getContext();
 
@@ -161,61 +230,63 @@ getParallelDimensions(LoopOp loopOp, const ACCToGPUMappingPolicy &policy,
   return parDims;
 }
 
-/// Create acc.par_width operations from gang/worker/vector values of a
-/// compute construct. Queries the device-type-specific values first, falling
-/// back to the default (DeviceType::None) values.
+/// Build `acc.compute_region` launch operands: one sequential `acc.par_width`
+/// for `acc.serial`, for `acc.parallel` / `acc.kernels` when every num_gangs
+/// operand and num_workers / vector_length are the constant 1, and otherwise
+/// `acc.par_width` from gang/worker/vector (device-type operands first, then
+/// default DeviceType::None).
 template <typename ComputeConstructT>
 static SmallVector<Value>
 assignKnownLaunchArgs(ComputeConstructT computeOp, DeviceType deviceType,
                       RewriterBase &rewriter,
                       const ACCToGPUMappingPolicy &policy) {
-  SmallVector<Value> values;
   auto *ctx = rewriter.getContext();
-  auto indexTy = rewriter.getIndexType();
   auto loc = computeOp->getLoc();
 
-  auto numGangs = computeOp.getNumGangsValues(deviceType);
-  if (numGangs.empty())
-    numGangs = computeOp.getNumGangsValues();
-  for (auto [gangDimIdx, gangSize] : llvm::enumerate(numGangs)) {
-    auto gangLevel = getGangParLevel(gangDimIdx + 1);
-    values.push_back(
-        ParWidthOp::create(rewriter, loc,
-                           getValueOrCreateCastToIndexLike(
-                               rewriter, gangSize.getLoc(), indexTy, gangSize),
-                           policy.gangDim(ctx, gangLevel)));
-  }
+  if constexpr (std::is_same_v<ComputeConstructT, SerialOp>) {
+    return {ParWidthOp::create(rewriter, loc, Value(), policy.seqDim(ctx))};
+  } else if constexpr (llvm::is_one_of<ComputeConstructT, ParallelOp,
+                                       KernelsOp>::value) {
+    if (isEffectivelySerial(computeOp))
+      return {ParWidthOp::create(rewriter, loc, Value(), policy.seqDim(ctx))};
 
-  Value numWorkers = computeOp.getNumWorkersValue(deviceType);
-  if (!numWorkers)
-    numWorkers = computeOp.getNumWorkersValue();
-  if (numWorkers) {
-    values.push_back(ParWidthOp::create(
-        rewriter, loc,
-        getValueOrCreateCastToIndexLike(rewriter, numWorkers.getLoc(), indexTy,
-                                        numWorkers),
-        policy.workerDim(ctx)));
-  }
+    deviceType = getParDimsDeviceType(computeOp, deviceType);
 
-  Value vectorLength = computeOp.getVectorLengthValue(deviceType);
-  if (!vectorLength)
-    vectorLength = computeOp.getVectorLengthValue();
-  if (vectorLength) {
-    values.push_back(ParWidthOp::create(
-        rewriter, loc,
-        getValueOrCreateCastToIndexLike(rewriter, vectorLength.getLoc(),
-                                        indexTy, vectorLength),
-        policy.vectorDim(ctx)));
-  }
-  return values;
-}
+    SmallVector<Value> values;
+    auto indexTy = rewriter.getIndexType();
 
-/// SerialOp has no gang/worker/vector clauses.
-template <>
-SmallVector<Value>
-assignKnownLaunchArgs<SerialOp>(SerialOp, DeviceType, RewriterBase &,
-                                const ACCToGPUMappingPolicy &) {
-  return {};
+    auto numGangs = computeOp.getNumGangsValues(deviceType);
+    for (auto [gangDimIdx, gangSize] : llvm::enumerate(numGangs)) {
+      auto gangLevel = getGangParLevel(gangDimIdx + 1);
+      values.push_back(ParWidthOp::create(
+          rewriter, loc,
+          getValueOrCreateCastToIndexLike(rewriter, gangSize.getLoc(), indexTy,
+                                          gangSize),
+          policy.gangDim(ctx, gangLevel)));
+    }
+
+    Value numWorkers = computeOp.getNumWorkersValue(deviceType);
+    if (numWorkers) {
+      values.push_back(ParWidthOp::create(
+          rewriter, loc,
+          getValueOrCreateCastToIndexLike(rewriter, numWorkers.getLoc(),
+                                          indexTy, numWorkers),
+          policy.workerDim(ctx)));
+    }
+
+    Value vectorLength = computeOp.getVectorLengthValue(deviceType);
+    if (vectorLength) {
+      values.push_back(ParWidthOp::create(
+          rewriter, loc,
+          getValueOrCreateCastToIndexLike(rewriter, vectorLength.getLoc(),
+                                          indexTy, vectorLength),
+          policy.vectorDim(ctx)));
+    }
+    return values;
+  } else {
+    llvm_unreachable("assignKnownLaunchArgs: expected parallel, kernels, or "
+                     "serial");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -260,6 +331,13 @@ public:
           convertACCLoopToSCFFor(loopOp, rewriter, /*enableCollapse=*/true);
       if (!forOp)
         return failure();
+      SmallVector<GPUParallelDimAttr> parDims =
+          getParallelDimensions(loopOp, policy, deviceType);
+      if (!parDims.empty()) {
+        auto parDimsAttr =
+            GPUParallelDimsAttr::get(loopOp->getContext(), parDims);
+        setParDimsAttr(forOp, parDimsAttr);
+      }
       rewriter.replaceOp(loopOp, forOp);
     } else if (!isOpInComputeRegion(loopOp) &&
                !isSpecializedAccRoutine(
@@ -312,12 +390,13 @@ public:
                                 PatternRewriter &rewriter) const override {
     rewriter.setInsertionPoint(computeOp);
     auto kernelEnv =
-        KernelEnvironmentOp::createAndPopulate(computeOp, rewriter);
+        KernelEnvironmentOp::createAndPopulate(computeOp, deviceType, rewriter);
     auto launchArgs =
         assignKnownLaunchArgs(computeOp, deviceType, rewriter, policy);
     Region &region = computeOp.getRegion();
     SetVector<Value> liveInValues;
     getUsedValuesDefinedAbove(region, region, liveInValues);
+    materializeConstantLiveInsIntoRegion(region, liveInValues, rewriter);
     IRMapping mapping;
     auto computeRegion = buildComputeRegion(
         computeOp->getLoc(), launchArgs, liveInValues.getArrayRef(),

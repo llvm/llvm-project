@@ -340,10 +340,10 @@ to an entity of type ``bits<4>``.
 .. productionlist::
    Value: `SimpleValue` `ValueSuffix`*
         :| `Value` "#" [`Value`]
-   ValueSuffix: "{" `RangeList` "}"
+   ValueSuffix: `RangeList`
               :| "[" `SliceElements` "]"
               :| "." `TokIdentifier`
-   RangeList: `RangePiece` ("," `RangePiece`)*
+   RangeList: "{" `RangePiece` ("," `RangePiece`)* "}"
    RangePiece: `TokInteger`
              :| `TokInteger` "..." `TokInteger`
              :| `TokInteger` "-" `TokInteger`
@@ -686,7 +686,7 @@ arguments.
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
    BodyItem: `Type` `TokIdentifier` ["=" `Value`] ";"
-           :| "let" [`LetMode`] `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
+           :| "let" [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
            :| `Assert`
    LetMode: "append" | "prepend"
@@ -923,7 +923,7 @@ statements within the scope of the ``let``.
    Let:  "let" `LetList` "in" "{" `Statement`* "}"
       :| "let" `LetList` "in" `Statement`
    LetList: `LetItem` ("," `LetItem`)*
-   LetItem: [`LetMode`] `TokIdentifier` ["<" `RangeList` ">"] "=" `Value`
+   LetItem: [`LetMode`] `TokIdentifier` [`RangeList`] "=" `Value`
 
 The ``let`` statement establishes a scope, which is a sequence of statements
 in braces or a single statement with no braces. The bindings in the
@@ -1321,7 +1321,7 @@ variable over a sequence of values.
 .. productionlist::
    Foreach: "foreach" `ForeachIterator` "in" "{" `Statement`* "}"
           :| "foreach" `ForeachIterator` "in" `Statement`
-   ForeachIterator: `TokIdentifier` "=" ("{" `RangeList` "}" | `RangePiece` | `Value`)
+   ForeachIterator: `TokIdentifier` "=" (`RangeList` | `RangePiece` | `Value`)
 
 The body of the ``foreach`` is a series of statements in braces or a
 single statement with no braces. The statements are re-evaluated once for
@@ -2008,6 +2008,21 @@ and non-0 as true.
     This operator produces the size of the string, list, or dag *a*.
     The size of a DAG is the number of arguments; the operator does not count.
 
+``!sort(``\ *var*\ ``,`` *list*\ ``,`` *key*\ ``)``
+    This operator creates a new ``list`` containing the same elements as *list*
+    but in sorted order. To determine the order, TableGen binds the variable
+    *var* to each element and evaluates the *key* expression, which presumably
+    refers to *var*. The key must produce a ``string`` or integer value
+    (``bit``, ``bits``, or ``int``); all keys must be of the same type. Elements
+    with equal keys preserve their original relative order, resulting in a
+    stable sort.
+
+    For example, to sort a list of records by their ``Name`` field::
+
+    .. code-block:: text
+
+      list<Thing> sorted = !sort(t, Things, t.Name);
+
 ``!sra(``\ *a*\ ``,`` *count*\ ``)``
     This operator shifts *a* right arithmetically by *count* bits and produces the resulting
     value. The operation is performed on a 64-bit integer; the result
@@ -2040,6 +2055,24 @@ and non-0 as true.
     between 0 and the length of the string. The length of the substring
     is specified by *length*; if not specified, the rest of the string is
     extracted. The *start* and *length* arguments must be integers.
+
+``!switch(``\ *key*\ ``,`` *case1* ``:`` *val1*\ ``, ...,`` *casen* ``:`` *valn*\ ``,`` *default*\ ``)``
+    This operator compares *key* to each *casei* in turn using ``!eq``.
+    If *key* equals *casei*, the operator returns *vali*. If no case
+    matches, the operator returns *default* --- the trailing argument
+    with no ``:`` is the default value, identified by position. Both 
+    the trailing default and at least one *casei* : *vali* pair are 
+    mandatory.
+
+    ``!switch`` is a compact form of ``!cond`` using ``!eq`` comparisons.
+    The expression ``!switch(key, c1: v1, c2: v2, vd)`` is equivalent to
+    ``!cond(!eq(key, c1): v1, !eq(key, c2): v2, true: vd)``.
+
+    This example maps an integer size to a register-class name::
+
+    !switch(size, 1: "byte", 2: "halfword", 4: "word", "unknown")
+
+    (See also ``!cond``.)
 
 ``!tail(``\ *a*\ ``)``
     This operator produces a new list with all the elements

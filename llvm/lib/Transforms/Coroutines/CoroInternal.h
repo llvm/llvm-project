@@ -21,7 +21,7 @@ namespace llvm::coro {
 bool isSuspendBlock(BasicBlock *BB);
 bool declaresAnyIntrinsic(const Module &M);
 bool declaresIntrinsics(const Module &M, ArrayRef<Intrinsic::ID> List);
-void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
+void elideCoroFree(Value *FramePtr);
 
 /// Replaces all @llvm.coro.alloc intrinsics calls associated with a given
 /// call @llvm.coro.id instruction with boolean value false.

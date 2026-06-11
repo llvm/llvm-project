@@ -9,6 +9,7 @@
 #include "Context.h"
 #include "Boolean.h"
 #include "ByteCodeEmitter.h"
+#include "Char.h"
 #include "Compiler.h"
 #include "EvalEmitter.h"
 #include "Integral.h"
@@ -34,7 +35,7 @@ Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {
          "We're assuming 8 bit chars");
 }
 
-Context::~Context() {}
+Context::~Context() = default;
 
 bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   assert(Stk.empty());
@@ -160,6 +161,22 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
+bool Context::evaluateDestruction(State &Parent, const VarDecl *VD,
+                                  APValue Value) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto Res = C.interpretDestructor(VD, Value);
+
+  if (Res.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+
+  return true;
+}
+
 template <typename ResultT>
 bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
                                  const Expr *PtrExpr, ResultT &Result) {
@@ -186,7 +203,7 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
 
     // Must be char.
-    if (Ptr.getFieldDesc()->getElemSize() != 1 /*bytes*/)
+    if (Ptr.getFieldDesc()->getElemDataSize() != 1 /*bytes*/)
       return false;
 
     if (Size > Ptr.getNumElems()) {
@@ -344,7 +361,7 @@ Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
 
   std::optional<uint64_t> Result;
 
-  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+  auto PtrRes = C.interpretAsLValuePointer(E, [&](const Pointer &Ptr) {
     const Descriptor *DeclDesc = Ptr.getDeclDesc();
     if (!DeclDesc)
       return false;
@@ -498,11 +515,19 @@ const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
 
 bool Context::Run(State &Parent, const Function *Func) {
   InterpState State(Parent, *P, Stk, *this, Func);
+  auto Memory = std::make_unique<char[]>(InterpFrame::allocSize(Func));
+  InterpFrame *Frame = new (Memory.get()) InterpFrame(
+      State, Func, /*Caller=*/nullptr, CodePtr(), Func->getArgSize());
+  State.Current = Frame;
+
   if (Interpret(State)) {
     assert(Stk.empty());
     return true;
   }
+
   Stk.clear();
+  Frame->~InterpFrame();
+  State.Current = &State.BottomFrame;
   return false;
 }
 
@@ -575,7 +600,6 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   bool HasRVO = false;
   if (!Ty->isVoidType() && !canClassify(Ty)) {
     HasRVO = true;
-    ParamDescriptors.emplace_back(nullptr, ParamOffset, PT_Ptr);
     ParamOffset += align(primSize(PT_Ptr));
   }
 
@@ -586,10 +610,8 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl)) {
     if (!IsLambdaStaticInvoker) {
       HasThisPointer = MD->isInstance();
-      if (MD->isImplicitObjectMemberFunction()) {
-        ParamDescriptors.emplace_back(nullptr, ParamOffset, PT_Ptr);
+      if (MD->isImplicitObjectMemberFunction())
         ParamOffset += align(primSize(PT_Ptr));
-      }
     }
 
     if (isLambdaCallOperator(MD)) {
@@ -613,6 +635,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
   const auto *FuncProto = FuncDecl->getType()->getAs<FunctionProtoType>();
+  unsigned BlockOffset = 0;
   for (auto [ParamIndex, PD] : llvm::enumerate(FuncDecl->parameters())) {
     bool IsConst = PD->getType().isConstQualified();
     bool IsVolatile = PD->getType().isVolatileQualified();
@@ -626,8 +649,10 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
                                            IsConst, /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
-    ParamDescriptors.emplace_back(Desc, ParamOffset, PT);
-    ParamOffset += align(primSize(PT));
+    unsigned PrimTSize = align(primSize(PT));
+    ParamDescriptors.emplace_back(Desc, ParamOffset, BlockOffset, PT);
+    ParamOffset += PrimTSize;
+    BlockOffset += sizeof(Block) + PrimTSize;
   }
 
   // Create a handle over the emitted code.
@@ -655,7 +680,7 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
     Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
                                            IsConst, /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
-    ParamDescriptors.emplace_back(Desc, ParamOffset, PT);
+    ParamDescriptors.emplace_back(Desc, ParamOffset, ~0u, PT);
     ParamOffset += align(primSize(PT));
   }
 

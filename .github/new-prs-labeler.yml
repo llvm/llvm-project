@@ -376,6 +376,12 @@ mlir:llvm:
       - mlir/**/LLVM*
       - mlir/**/LLVM*/**
 
+mlir:nvvm:
+  - changed-files:
+    - any-glob-to-any-file:
+      - mlir/**/NVVM*
+      - mlir/**/NVVM*/**
+
 mlir:linalg:
   - changed-files:
     - any-glob-to-any-file:
@@ -1425,6 +1431,7 @@ clang:temporal-safety:
       - clang/test/Sema/*lifetime-safety*
       - clang/test/Sema/*lifetime-analysis*
       - clang/test/Analysis/LifetimeSafety/**
+      - clang/docs/LifetimeSafety.rst
 
 clang:as-a-library:
   - changed-files:
@@ -1467,3 +1474,9 @@ infrastructure:
   - changed-files:
     - any-glob-to-any-file:
       - .ci/**
+
+tools:llubi:
+  - changed-files:
+    - any-glob-to-any-file:
+      - llvm/tools/llubi/**
+      - llvm/test/tools/llubi/**

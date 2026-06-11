@@ -166,10 +166,12 @@ private:
     parseConfig.getBytecodeReaderConfig().attachTypeCallback(
         [&](DialectBytecodeReader &reader, StringRef dialectName,
             Type &entry) -> LogicalResult {
-          // Get test dialect version from the version map.
+          // Get test dialect version from the version map. If the test dialect
+          // is not present in the bytecode (e.g., the module contains no test
+          // dialect types), version info will be absent -- just skip.
           auto versionOr = reader.getDialectVersion<test::TestDialect>();
-          assert(succeeded(versionOr) && "expected reader to be able to access "
-                                         "the version for test dialect");
+          if (failed(versionOr))
+            return success();
           const auto *version =
               reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
           if (version->major_ >= 2)

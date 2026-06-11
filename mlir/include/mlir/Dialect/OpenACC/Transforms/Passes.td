@@ -79,7 +79,14 @@ def ACCImplicitData : Pass<"acc-implicit-data", "mlir::ModuleOp"> {
            "variables between combined constructs (e.g., 'parallel loop') and "
            "separate constructs (e.g., 'parallel' followed by 'loop'), where "
            "the OpenACC spec requires copy semantics for the former but "
-           "firstprivate would normally apply for the latter.">
+           "firstprivate would normally apply for the latter.">,
+    Option<"ignoreDefaultNone", "ignore-default-none", "bool", "false",
+           "When disabled (default), if the region has a default(none) clause, "
+           "this pass does not generate implicit data attributes. When enabled, "
+           "implicit data is generated even with default(none). This is useful "
+           "when the frontend has robust default(none) verification: user "
+           "variables are already verified, so any remaining live-ins are "
+           "variables that still need mapping handling.">
   ];
 }
 
@@ -472,6 +479,28 @@ def ACCRoutineLowering : Pass<"acc-routine-lowering", "mlir::ModuleOp"> {
     "mlir::func::FuncDialect",
     "mlir::scf::SCFDialect"
   ];
+  let options = [ AccDeviceTypeOption ];
+}
+
+def ACCRoutineToGPUFunc : Pass<"acc-routine-to-gpu-func", "mlir::ModuleOp"> {
+  let summary = "Move ACC routine functions into the GPU module as gpu.func";
+  let description = [{
+    This pass moves functions associated with `acc routine` (and any callees
+    that must be present on the device) into the GPU module as `gpu.func`
+    operations.
+  }];
+  let dependentDialects = ["mlir::gpu::GPUDialect"];
+  let options = [ AccDeviceTypeOption ];
+}
+
+def ACCBindRoutine : Pass<"acc-bind-routine", "mlir::func::FuncOp"> {
+  let summary = "Apply bind clause to function calls in ACC compute regions";
+  let description = [{
+    For calls inside offload regions that target a function with an
+    `acc routine` directive and a `bind(name)` clause, rewrite the
+    call to use the bound symbol so device code calls the correct
+    call target.
+  }];
   let options = [ AccDeviceTypeOption ];
 }
 

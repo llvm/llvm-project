@@ -21,6 +21,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/File.h"
 #include "lldb/Interpreter/Options.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
@@ -270,13 +271,35 @@ public:
   virtual Status GetFileWithUUID(const FileSpec &platform_file,
                                  const UUID *uuid_ptr, FileSpec &local_file);
 
-  // Locate the scripting resource given a module specification.
-  //
-  // Locating the file should happen only on the local computer or using the
-  // current computers global settings.
-  virtual FileSpecList
+  /// Locate the scripting resource given a module specification.
+  ///
+  /// Returns a map from a located script's \c FileSpec to the
+  /// \c LoadScriptFromSymFile with which LLDB should load it.
+  llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
   LocateExecutableScriptingResources(Target *target, Module &module,
                                      Stream &feedback_stream);
+
+  /// Locate the platform-specific scripting resource given a module
+  /// specification.
+  virtual llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesForPlatform(Target *target, Module &module,
+                                                Stream &feedback_stream);
+
+  /// Helper function for \c LocateExecutableScriptingResources
+  /// which gathers FileSpecs for executable scripts from
+  /// pre-configured "safe" auto-load paths.
+  ///
+  /// E.g., for Python it will look for a script at:
+  ///   \c <safe-path>/<module-name>/<module-name>.py
+  static llvm::SmallDenseMap<FileSpec, LoadScriptFromSymFile>
+  LocateExecutableScriptingResourcesFromSafePaths(Stream &feedback_stream,
+                                                  FileSpec module_spec,
+                                                  const Target &target);
+
+  /// Returns true if the module's symbol file (e.g. a dSYM bundle) is
+  /// code-signed with a trusted signature. Used to decide whether to
+  /// auto-loaded scripts.
+  virtual bool IsSymbolFileTrusted(Module &module);
 
   /// \param[in] module_spec
   ///     The ModuleSpec of a binary to find.
@@ -330,6 +353,35 @@ public:
   ///     represents that the process host architecture is unknown.
   virtual std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
+
+  /// Get the bytes of the platform's software interrupt instruction. If there
+  /// are multiple possible encodings, for example where there are immediate
+  /// values encoded in the instruction, this will return the instruction with
+  /// those bits set as 0.
+  ///
+  /// \param[in] arch
+  ///     The architecture of the inferior.
+  /// \param size_hint
+  ///     A hint to disambiguate which instruction is used on platforms where
+  ///     there are multiple interrupts with different sizes in the ISA (e.g
+  ///     ARM Thumb, RISC-V).
+  ///
+  /// \return
+  ///     The bytes of the interrupt instruction, with any immediate value
+  ///     bits set to 0.
+  llvm::ArrayRef<uint8_t> SoftwareTrapOpcodeBytes(const ArchSpec &arch,
+                                                  size_t size_hint = 0);
+
+  /// Get the suggested size hint for a trap instruction on the given target.
+  /// Some platforms have a compressed instruction set which can be used
+  /// instead of the "normal" encoding. This function attempts to determine
+  /// a size hint for the size of the instruction at address \a addr, and
+  /// return 0, 2 or 4, with 2 and 4 corresponding to the estimated size
+  /// and zero meaning no applicable hint. Returns the estimated size in bytes
+  /// of the instruction for this target at the given address, or 0 if no
+  /// estimate is available.
+  size_t GetTrapOpcodeSizeHint(Target &target, Address addr,
+                               llvm::ArrayRef<uint8_t> bytes);
 
   virtual size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                                  BreakpointSite *bp_site);
@@ -986,6 +1038,13 @@ public:
 
   LocateModuleCallback GetLocateModuleCallback() const;
 
+  /// Returns a \c FileSpecList of safe paths to auto-load scripting resources
+  /// from for a particular platform.
+  virtual llvm::Expected<FileSpecList>
+  GetSafeAutoLoadPaths(const Target &target) const {
+    return FileSpecList();
+  }
+
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
   /// vendor field is left as an "unspecified unknown".
@@ -1059,6 +1118,21 @@ protected:
                                     const FileSpec &dst_file_spec);
 
   virtual const char *GetCacheHostname();
+
+  /// If we did some replacements of reserved characters, and a
+  /// file with the untampered name exists, then warn the user
+  /// that the file as-is shall not be loaded.
+  static void WarnIfInvalidUnsanitizedScriptExists(
+      Stream &os,
+      const ScriptInterpreter::SanitizedScriptingModuleName &sanitized_name,
+      const FileSpec &original_fspec, const FileSpec &fspec);
+
+  /// Returns the \c LoadScriptFromSymFile of scripting resource associated
+  /// with the specified module \c FileSpec. If the load style wasn't explicitly
+  /// set for a module, returns the target-wide default.
+  static LoadScriptFromSymFile
+  GetScriptLoadStyleForModule(const FileSpec &module_fspec,
+                              const Target &target);
 
 private:
   typedef std::function<Status(const ModuleSpec &)> ModuleResolver;

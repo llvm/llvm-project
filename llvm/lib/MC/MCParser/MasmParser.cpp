@@ -1203,7 +1203,7 @@ const AsmToken MasmParser::peekTok(bool ShouldSkipSpace) {
 bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // Create the initial section, if requested.
   if (!NoInitialTextSection)
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
 
   // Prime the lexer.
   Lex();
@@ -1273,7 +1273,7 @@ bool MasmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 bool MasmParser::checkForValidSection() {
   if (!ParsingMSInlineAsm && !(getStreamer().getCurrentFragment() &&
                                getStreamer().getCurrentSectionOnly())) {
-    Out.initSections(false, getTargetParser().getSTI());
+    Out.initSections(getTargetParser().getSTI());
     return Error(getTok().getLoc(),
                  "expected section directive before assembly directive");
   }
@@ -5271,6 +5271,10 @@ void MasmParser::initializeDirectiveKindMap() {
   // DirectiveKindMap[".cfi_def_cfa_register"] = DK_CFI_DEF_CFA_REGISTER;
   // DirectiveKindMap[".cfi_offset"] = DK_CFI_OFFSET;
   // DirectiveKindMap[".cfi_rel_offset"] = DK_CFI_REL_OFFSET;
+  // DirectiveKindMap[".cfi_llvm_register_pair"] = DK_CFI_LLVM_REGISTER_PAIR;
+  // DirectiveKindMap[".cfi_llvm_vector_registers"] =
+  //   DK_CFI_LLVM_VECTOR_REGISTERS;
+  // DirectiveKindMap[".cfi_llvm_vector_offset"] = DK_CFI_LLVM_VECTOR_OFFSET;
   // DirectiveKindMap[".cfi_personality"] = DK_CFI_PERSONALITY;
   // DirectiveKindMap[".cfi_lsda"] = DK_CFI_LSDA;
   // DirectiveKindMap[".cfi_remember_state"] = DK_CFI_REMEMBER_STATE;
@@ -6070,7 +6074,7 @@ bool MasmParser::parseMSInlineAsm(
         OS << "]";
       break;
     case AOK_Label:
-      OS << Ctx.getAsmInfo()->getPrivateLabelPrefix() << AR.Label;
+      OS << Ctx.getAsmInfo().getInternalSymbolPrefix() << AR.Label;
       break;
     case AOK_Input:
       OS << '$' << InputIdx++;
@@ -6100,7 +6104,7 @@ bool MasmParser::parseMSInlineAsm(
       // MS alignment directives are measured in bytes. If the native assembler
       // measures alignment in bytes, we can pass it straight through.
       OS << ".align";
-      if (getContext().getAsmInfo()->getAlignmentIsInBytes())
+      if (getContext().getAsmInfo().getAlignmentIsInBytes())
         break;
 
       // Alignment is in log2 form, so print that instead and skip the original

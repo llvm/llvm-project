@@ -33,8 +33,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 
-namespace llvm {
-namespace {
+using namespace llvm;
 
 static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
   SMDiagnostic Err;
@@ -43,6 +42,8 @@ static std::unique_ptr<Module> parseIR(LLVMContext &C, const char *IR) {
     Err.print("InstructionsTests", errs());
   return Mod;
 }
+
+namespace {
 
 TEST(InstructionsTest, ReturnInst) {
   LLVMContext C;
@@ -138,8 +139,10 @@ TEST(InstructionsTest, UncondBrInst) {
   const UncondBrInst *b0 = UncondBrInst::Create(bb0);
 
   // Test legacy BranchInst API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_TRUE(cast<BranchInst>(b0)->isUnconditional());
   EXPECT_FALSE(cast<BranchInst>(b0)->isConditional());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   EXPECT_EQ(1U, b0->getNumSuccessors());
 
@@ -169,8 +172,10 @@ TEST(InstructionsTest, CondBrInst) {
   CondBrInst *b1 = CondBrInst::Create(One, bb0, bb1);
 
   // Test legacy BranchInst API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_FALSE(cast<BranchInst>(b1)->isUnconditional());
   EXPECT_TRUE(cast<BranchInst>(b1)->isConditional());
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
   EXPECT_EQ(2U, b1->getNumSuccessors());
 
@@ -763,7 +768,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Call->setDebugLoc(DebugLoc(MDNode::get(C, {})));
+  Call->setDebugLoc(DebugLoc(DILocation::get(C, 1, 1, MDNode::get(C, {}))));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
@@ -793,7 +798,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, {})));
+  Invoke->setDebugLoc(DebugLoc(DILocation::get(C, 1, 1, MDNode::get(C, {}))));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<InvokeInst> Clone(
@@ -2007,4 +2012,3 @@ TEST(InstructionsTest, StripAndAccumulateConstantOffset) {
 }
 
 } // end anonymous namespace
-} // end namespace llvm

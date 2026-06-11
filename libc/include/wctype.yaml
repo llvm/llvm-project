@@ -1,6 +1,9 @@
 header: wctype.h
+standards:
+  - stdc
 types:
   - type_name: wint_t
+  - type_name: wctype_t
 functions:
   - name: iswalpha
     standards:
@@ -60,5 +63,42 @@ functions:
     standards:
       - stdc
     return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswpunct
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswprint
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+  - name: iswctype
+    standards:
+      - stdc
+    return_type: int
+    arguments:
+      - type: wint_t
+      - type: wctype_t
+  - name: wctype
+    standards:
+      - stdc
+    return_type: wctype_t
+    arguments:
+      - type: const char*
+  - name: towlower
+    standards:
+      - stdc
+    return_type: wint_t
+    arguments:
+      - type: wint_t
+  - name: towupper
+    standards:
+      - stdc
+    return_type: wint_t
     arguments:
       - type: wint_t

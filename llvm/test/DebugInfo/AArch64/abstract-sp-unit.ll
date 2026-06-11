@@ -28,14 +28,14 @@ define void @a() !dbg !10 {
 !11 = !DISubroutineType(types: !12)
 !12 = !{}
 !13 = !DILocation(scope: !14, inlinedAt: !15)
-!14 = distinct !DISubprogram(unit: !6)
+!14 = distinct !DISubprogram(unit: !6, type: !11)
 !15 = !DILocation(scope: !16, inlinedAt: !25)
 !16 = distinct !DISubprogram(type: !11, unit: !6, declaration: !17)
 !17 = !DISubprogram(scope: !5, type: !11, spFlags: DISPFlagOptimized, templateParams: !18)
 !18 = !{!19}
 !19 = !DITemplateTypeParameter(type: !20)
 !20 = !DICompositeType(tag: DW_TAG_class_type, scope: !21)
-!21 = distinct !DISubprogram(unit: !6, retainedNodes: !22)
+!21 = distinct !DISubprogram(unit: !6, retainedNodes: !22, type: !11)
 !22 = !{!23}
 !23 = !DILocalVariable(scope: !21, type: !24)
 !24 = !DIBasicType()

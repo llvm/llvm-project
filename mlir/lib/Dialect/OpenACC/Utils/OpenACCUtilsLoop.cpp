@@ -14,7 +14,6 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -149,15 +148,13 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
 /// Wrap a multi-block region with scf.execute_region.
 scf::ExecuteRegionOp
 wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
-                                         Location loc, RewriterBase &rewriter,
-                                         bool convertFuncReturn) {
+                                         Location loc, RewriterBase &rewriter) {
   SmallVector<Operation *> terminators;
   for (Block &block : region.getBlocks()) {
     if (block.empty())
       continue;
     Operation *term = block.getTerminator();
-    if ((convertFuncReturn && isa<func::ReturnOp>(*term)) ||
-        isa<acc::YieldOp>(*term))
+    if (term->getNumSuccessors() == 0)
       terminators.push_back(term);
   }
   SmallVector<Type> resultTypes;
@@ -252,9 +249,13 @@ scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
   }
 
   // Optionally collapse nested loops
-  if (enableCollapse && forOps.size() > 1)
+  if (enableCollapse && forOps.size() > 1) {
+    unsigned numCollapsed = forOps.size();
     if (failed(coalesceLoops(rewriter, forOps)))
       loopOp.emitError("failed to collapse acc.loop");
+    else
+      setCollapseCountAttr(forOps.front(), numCollapsed);
+  }
 
   return forOps.front();
 }
@@ -335,6 +336,17 @@ convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
   IRMapping mapping;
   return wrapMultiBlockRegionWithSCFExecuteRegion(loopOp.getRegion(), mapping,
                                                   loopOp->getLoc(), rewriter);
+}
+
+void setCollapseCountAttr(Operation *op, uint64_t count) {
+  op->setAttr(getCollapseCountAttrName(),
+              IntegerAttr::get(IntegerType::get(op->getContext(), 64), count));
+}
+
+uint64_t getCollapseCount(Operation *op) {
+  if (auto attr = op->getAttrOfType<IntegerAttr>(getCollapseCountAttrName()))
+    return attr.getValue().getZExtValue();
+  return 1;
 }
 
 } // namespace acc

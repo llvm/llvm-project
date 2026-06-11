@@ -518,8 +518,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
   Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
-  if (!Opts.CodeComplete.BundleOverloads)
-    Opts.CodeComplete.BundleOverloads = Params.capabilities.HasSignatureHelp;
+  Opts.CodeComplete.EnableInsertReplace = Params.capabilities.InsertReplace;
   Opts.CodeComplete.DocumentationFormat =
       Params.capabilities.CompletionDocumentationFormat;
   Opts.SignatureHelpDocumentationFormat =
@@ -809,7 +808,7 @@ void ClangdLSPServer::onCommandApplyEdit(const WorkspaceEdit &WE,
 
 void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
                                           Callback<llvm::json::Value> Reply) {
-  auto Action = [this, Reply = std::move(Reply)](
+  auto Action = [this, Reply = std::move(Reply), &ServerRef = *Server](
                     llvm::Expected<Tweak::Effect> R) mutable {
     if (!R)
       return Reply(R.takeError());
@@ -826,7 +825,7 @@ void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
     if (R->ApplyEdits.empty())
       return Reply("Tweak applied.");
 
-    if (auto Err = validateEdits(*Server, R->ApplyEdits))
+    if (auto Err = validateEdits(ServerRef, R->ApplyEdits))
       return Reply(std::move(Err));
 
     WorkspaceEdit WE;
@@ -910,11 +909,11 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
     return Reply(llvm::make_error<LSPError>(
         "onRename called for non-added file", ErrorCode::InvalidParams));
   Server->rename(File, Params.position, Params.newName, Opts.Rename,
-                 [File, Params, Reply = std::move(Reply),
-                  this](llvm::Expected<RenameResult> R) mutable {
+                 [File, Params, Reply = std::move(Reply), &ServerRef = *Server](
+                     llvm::Expected<RenameResult> R) mutable {
                    if (!R)
                      return Reply(R.takeError());
-                   if (auto Err = validateEdits(*Server, R->GlobalChanges))
+                   if (auto Err = validateEdits(ServerRef, R->GlobalChanges))
                      return Reply(std::move(Err));
                    WorkspaceEdit Result;
                    // FIXME: use documentChanges if SupportDocumentChanges is
@@ -1799,9 +1798,9 @@ bool ClangdLSPServer::shouldRunCompletion(
   auto Offset = positionToOffset(*Code, Params.position,
                                  /*AllowColumnsBeyondLineLength=*/false);
   if (!Offset) {
-    vlog("could not convert position '{0}' to offset for file '{1}'",
-         Params.position, Params.textDocument.uri.file());
-    return true;
+    elog("could not convert position '{0}' to offset for file '{1}': {2}",
+         Params.position, Params.textDocument.uri.file(), Offset.takeError());
+    return false;
   }
   return allowImplicitCompletion(*Code, *Offset);
 }

@@ -1,0 +1,5 @@
+# RUN: llvm-mc --disassemble %s -triple=x86_64 | FileCheck %s 
+
+# IBHF - Indirect Branch History Fence
+# CHECK: ibhf
+0xf3 0x48 0x0f 0x1e 0xf8
