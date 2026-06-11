@@ -10,6 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if defined(EJIT_TRIM_LLVM_BACKEND) && !defined(EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL)
+#define EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
+#endif
+
 #include "AArch64ISelLowering.h"
 #include "AArch64CallingConvention.h"
 #include "AArch64ExpandImm.h"
@@ -40,7 +44,9 @@
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#endif
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -148,10 +154,12 @@ static cl::opt<unsigned> MaxXors("aarch64-max-xors", cl::init(16), cl::Hidden,
 // scalable vector types for all instruction, even if SVE is not yet supported
 // with some instructions.
 // See [AArch64TargetLowering::fallbackToDAGISel] for implementation details.
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
 cl::opt<bool> EnableSVEGISel(
     "aarch64-enable-gisel-sve", cl::Hidden,
     cl::desc("Enable / disable SVE scalable vectors in Global ISel"),
     cl::init(false));
+#endif
 
 // TODO: This option should be removed once we switch to always using PTRADD in
 // the SelectionDAG.
@@ -27122,6 +27130,7 @@ bool AArch64TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
                                             Register Offset, bool IsPre,
                                             MachineRegisterInfo &MRI) const {
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   auto CstOffset = getIConstantVRegVal(Offset, MRI);
   if (!CstOffset || CstOffset->isZero())
     return false;
@@ -27130,6 +27139,9 @@ bool AArch64TargetLowering::isIndexingLegal(MachineInstr &MI, Register Base,
   // immediate offset. Our CstOffset is a G_PTR_ADD offset so it already
   // encodes the sign/indexing direction.
   return isInt<9>(CstOffset->getSExtValue());
+#else
+  return false;
+#endif
 }
 
 bool AArch64TargetLowering::getIndexedAddressParts(SDNode *N, SDNode *Op,
@@ -28678,6 +28690,7 @@ bool AArch64TargetLowering::shouldLocalize(
 }
 
 bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+#ifndef EJIT_TRIM_LLVM_BACKEND_EXPERIMENTAL
   // Fallback for scalable vectors.
   // Note that if EnableSVEGISel is true, we allow scalable vector types for
   // all instructions, regardless of whether they are actually supported.
@@ -28705,6 +28718,9 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       return true;
   }
   return false;
+#else
+  return false;
+#endif
 }
 
 // Return the largest legal scalable vector type that matches VT's element type.
