@@ -1253,10 +1253,8 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
       if (InductionDescriptor::isInductionPHI(&PHI, CurLoop, SE, ID)) {
         if (CurLoop == InnerLoop) {
           const SCEV *Step = ID.getStep();
-          if (!SE->isLoopInvariant(Step, OuterLoop)) {
-            InnerLoopInductions.clear();
+          if (!SE->isLoopInvariant(Step, OuterLoop))
             return false;
-          }
           InnerLoopInductions.push_back(&PHI);
         }
         continue;
