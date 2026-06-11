@@ -425,7 +425,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 
 #define ptrauth_auth_with_pc_and_resign(__value, __old_key, __old_data,        \
                                         __old_pc, __new_key, __new_data)       \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
     (void)__old_pc;                                                            \
