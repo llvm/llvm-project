@@ -991,7 +991,7 @@ bool SIFoldOperandsImpl::isRegFoldSafeAcrossLoopExit(
     return true;
   const MachineInstr *DefMI = OpToFold.DefMI;
   if (!DefMI || !DefMI->isCopy() ||
-      !TRI->isVGPR(*MRI, DefMI->getOperand(0).getReg()) ||
+      TRI->isSGPRReg(*MRI, DefMI->getOperand(0).getReg()) ||
       !TRI->isSGPRReg(*MRI, OpToFold.getReg()))
     return true;
   const MachineLoop *DefLoop = MLI->getLoopFor(DefMI->getParent());
