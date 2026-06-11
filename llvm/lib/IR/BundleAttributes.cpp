@@ -46,6 +46,11 @@ AssumeAlignInfo llvm::getAssumeAlignInfo(OperandBundleUse OBU) {
   return Ret;
 }
 
+AssumeNoUndefInfo llvm::getAssumeNoUndefInfo(OperandBundleUse OBU) {
+  assert(OBU.getTagName() == "noundef" && OBU.Inputs.size() == 1);
+  return {OBU.Inputs[0]};
+}
+
 AssumeSeparateStorageInfo
 llvm::getAssumeSeparateStorageInfo(OperandBundleUse OBU) {
   assert(OBU.getTagName() == "separate_storage" && OBU.Inputs.size() == 2);
