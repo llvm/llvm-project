@@ -240,8 +240,8 @@ public:
 
 template <> struct DenseMapInfo<SDValue> {
   static unsigned getHashValue(const SDValue &Val) {
-    return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
-            (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();
+    return DenseMapInfo<const void *>::getHashValue(Val.getNode()) +
+           Val.getResNo();
   }
 
   static bool isEqual(const SDValue &LHS, const SDValue &RHS) {

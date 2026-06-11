@@ -76,7 +76,7 @@ private:
 
   void handlePointerArithmetic(const BinaryOperator *BO);
 
-  void handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
+  bool handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
 
   void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
 

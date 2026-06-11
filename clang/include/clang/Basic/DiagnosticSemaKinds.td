@@ -53,6 +53,8 @@ defm ctad_for_alias_templates
 defm implicit_typename
     : CXX20Compat<"missing 'typename' prior to dependent type name %0 is">;
 
+defm auto_param : CXX20Compat<"'auto' parameters are">;
+
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
   "definition of a %select{static|thread_local}1 variable "
@@ -10706,6 +10708,9 @@ def warn_missing_format_string : Warning<
 def warn_scanf_nonzero_width : Warning<
   "zero field width in scanf format string is unused">,
   InGroup<Format>;
+def warn_format_unsupported_type : Warning<
+  "format specifies type %0 which is not supported yet">,
+  InGroup<Format>;
 def warn_format_conversion_argument_type_mismatch : Warning<
   "format specifies type %0 but the argument has "
   "%select{type|underlying type}2 %1">,
@@ -11530,6 +11535,8 @@ def err_builtin_setjmp_unsupported : Error<
 def err_builtin_longjmp_invalid_val : Error<
   "argument to __builtin_longjmp must be a constant 1">;
 def err_builtin_requires_language : Error<"'%0' is only available in %1">;
+def err_builtin_requires_char_bit_8 : Error<
+  "'%0' is only available on targets where 'CHAR_BIT == 8'">;
 
 def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
@@ -12715,6 +12722,12 @@ def err_omp_interop_variable_wrong_type : Error<
 def err_omp_interop_prefer_type : Error<
   "prefer_list item must be a string literal or constant integral "
   "expression">;
+def err_omp_interop_attr_not_string : Error<
+  "attr() argument must be a string literal">;
+def err_omp_interop_attr_missing_ompx_prefix : Error<
+  "attr() argument '%0' must start with the 'ompx_' prefix">;
+def err_omp_interop_attr_contains_comma : Error<
+  "attr() argument '%0' must not contain a comma">;
 def err_omp_interop_bad_depend_clause : Error<
   "'depend' clause requires the 'targetsync' interop type">;
 def err_omp_interop_var_multiple_actions : Error<
@@ -13722,7 +13735,11 @@ def warn_hlsl_availability_unavailable :
   Warning<err_unavailable.Summary>,
   InGroup<HLSLAvailability>, DefaultError;
 def error_hlsl_inout_scalar_extension : Error<"illegal scalar extension cast on argument %0 to %select{|in}1out paramemter">;
-def error_hlsl_inout_lvalue : Error<"cannot bind non-lvalue argument %0 to %select{|in}1out paramemter">;
+def error_hlsl_inout_lvalue : Error<"cannot bind non-lvalue argument %0 to %select{|in}1out parameter">;
+
+def err_hlsl_atomic_arg_addr_space : Error<
+  "%ordinal0 argument to atomic builtin must reference groupshared or device "
+  "memory (was %1)">;
 
 def err_hlsl_export_not_on_function : Error<
   "export declaration can only be used on functions">;

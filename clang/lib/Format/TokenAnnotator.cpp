@@ -2701,6 +2701,7 @@ private:
 
     // int a or auto a.
     if (PreviousNotConst->isOneOf(tok::identifier, tok::kw_auto) &&
+        !PreviousNotConst->endsSequence(Keywords.kw_import, tok::kw_export) &&
         PreviousNotConst->isNot(TT_StatementAttributeLikeMacro)) {
       return true;
     }
@@ -3656,22 +3657,29 @@ void TokenAnnotator::setCommentLineLevels(
 
     // If the comment is currently aligned with the line immediately following
     // it, that's probably intentional and we should keep it.
-    if (NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
+    if (const auto Column = Line->First->OriginalColumn;
+        NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
         Line->isComment() && !isClangFormatOff(Line->First->TokenText) &&
-        NextNonCommentLine->First->OriginalColumn ==
-            Line->First->OriginalColumn) {
+        NextNonCommentLine->First->OriginalColumn == Column) {
       const bool PPDirectiveOrImportStmt =
           NextNonCommentLine->Type == LT_PreprocessorDirective ||
           NextNonCommentLine->Type == LT_ImportStatement;
       if (PPDirectiveOrImportStmt)
         Line->Type = LT_CommentAbovePPDirective;
-      // Align comments for preprocessor lines with the # in column 0 if
-      // preprocessor lines are not indented. Otherwise, align with the next
-      // line.
-      Line->Level = Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
-                            PPDirectiveOrImportStmt
-                        ? 0
-                        : NextNonCommentLine->Level;
+      if (const auto IndentWidth = Style.IndentWidth;
+          NextNonCommentLine->First->Finalized && IndentWidth > 0 &&
+          Column % IndentWidth == 0) {
+        Line->Level = Column / IndentWidth;
+      } else {
+        // Align comments for preprocessor lines with the # in column 0 if
+        // preprocessor lines are not indented. Otherwise, align with the next
+        // line.
+        Line->Level =
+            Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
+                    PPDirectiveOrImportStmt
+                ? 0
+                : NextNonCommentLine->Level;
+      }
     } else {
       NextNonCommentLine = Line->First->isNot(tok::r_brace) ? Line : nullptr;
     }
@@ -5227,23 +5235,19 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (!BeforeLeft || BeforeLeft->is(tok::kw_export))) {
       return true;
     }
-    // Space between `module :` and `import :`.
-    if (Left.isOneOf(Keywords.kw_module, Keywords.kw_import) &&
-        Right.is(TT_ModulePartitionColon)) {
+    // Space between `import :`.
+    if (Left.is(Keywords.kw_import) && Right.is(TT_ModulePartitionColon))
       return true;
-    }
 
     if (Right.is(TT_AfterPPDirective))
       return true;
 
-    // No space between import foo:bar but keep a space between import :bar;
+    // No space between `module foo:bar`.
     if (Left.is(tok::identifier) && Right.is(TT_ModulePartitionColon))
       return false;
     // No space between :bar;
-    if (Left.is(TT_ModulePartitionColon) &&
-        Right.isOneOf(tok::identifier, tok::kw_private)) {
+    if (Left.is(TT_ModulePartitionColon) && Right.is(tok::identifier))
       return false;
-    }
     if (Left.is(tok::ellipsis) && Right.is(tok::identifier) &&
         Line.First->is(Keywords.kw_import)) {
       return false;
