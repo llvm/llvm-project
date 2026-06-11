@@ -38,6 +38,7 @@ endif()
 
 add_lldb_unittest(HostTests
   ${FILES}
+  PARTIAL_SOURCES_INTENDED
   LINK_LIBS
     lldbHost
     lldbCore

@@ -13,7 +13,7 @@ target triple = "systemz"
 
 define dso_local zeroext i32 @foo(ptr noundef %a) #0 {
 ; CHECK-LABEL: define dso_local zeroext i32 @foo(
-; CHECK-SAME: ptr noundef readnone captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr nofree noundef readnone captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    tail call void @populate(ptr noundef nonnull @ARR) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    br label %[[FOR_BODY4:.*]]

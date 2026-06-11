@@ -1,0 +1,61 @@
+# RUN: not llc -mtriple=x86_64-pc-windows-msvc -o /dev/null %s \
+# RUN:    -run-pass=x86-wineh-unwindv3 2>&1 | FileCheck %s
+
+# Exceeding the V3 epilog op limit (31 ops in a single epilog) is a
+# recoverable diagnostic - llc exits non-zero but does not crash or produce
+# a stack trace.
+
+# CHECK: error: {{.*}}: number of unwind v3 epilog operations required ({{[0-9]+}}) exceeds limit (31) in function 'too_many_epilog_ops'
+# CHECK: note: {{.*}}: sub-fragment splitting for epilog overflow is not yet implemented
+
+--- |
+  define dso_local void @too_many_epilog_ops() local_unnamed_addr uwtable {
+  entry:
+    ret void
+  }
+
+  !llvm.module.flags = !{!0}
+  !0 = !{i32 1, !"winx64-eh-unwind", i32 3}
+...
+---
+name:            too_many_epilog_ops
+body:             |
+  bb.0.entry:
+    frame-setup SEH_PushReg 51
+    frame-setup SEH_EndPrologue
+    SEH_BeginEpilogue
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_StackAlloc 8
+    SEH_EndEpilogue
+    RET64
+...

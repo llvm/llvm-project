@@ -88,10 +88,13 @@ MCFixupKindInfo RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_call", 0, 64, 0},
       {"fixup_riscv_call_plt", 0, 64, 0},
 
+      // Qualcomm fixups
       {"fixup_riscv_qc_e_branch", 0, 48, 0},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
       {"fixup_riscv_qc_abs20_u", 0, 32, 0},
       {"fixup_riscv_qc_e_call_plt", 0, 48, 0},
+      {"fixup_qc_access_16", 0, 0, 0},
+      {"fixup_qc_access_32", 0, 0, 0},
 
       // Andes fixups
       {"fixup_riscv_nds_branch_10", 0, 32, 0},
@@ -638,6 +641,9 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
             (Bit15_13 << 17) | (Bit4_1 << 8) | (Bit11 << 7);
     return Value;
   }
+  case RISCV::fixup_qc_access_16:
+  case RISCV::fixup_qc_access_32:
+    return 0;
   case RISCV::fixup_riscv_nds_branch_10: {
     if (!isInt<11>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -737,6 +743,10 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
   default:
     // Use default handling for `Value` and `IsResolved`.
     return {};
+  case RISCV::fixup_qc_access_16:
+  case RISCV::fixup_qc_access_32:
+    // Never resolved in the assembler
+    return false;
   case RISCV::fixup_riscv_pcrel_lo12_i:
   case RISCV::fixup_riscv_pcrel_lo12_s: {
     AUIPCFixup =
@@ -787,6 +797,8 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
   case RISCV::fixup_riscv_qc_abs20_u:
   case RISCV::fixup_riscv_qc_e_32:
   case RISCV::fixup_riscv_qc_e_call_plt:
+  case RISCV::fixup_qc_access_16:
+  case RISCV::fixup_qc_access_32:
     VendorIdentifier = "QUALCOMM";
     break;
   case RISCV::fixup_riscv_nds_branch_10:

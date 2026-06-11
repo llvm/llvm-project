@@ -1526,6 +1526,15 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
+SDValue AMDGPUTargetLowering::LowerBlockAddress(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  BlockAddressSDNode *BA = cast<BlockAddressSDNode>(Op);
+  SDLoc SL(Op);
+  EVT VT = Op.getValueType();
+  return DAG.getTargetBlockAddress(BA->getBlockAddress(), VT, BA->getOffset(),
+                                   BA->getTargetFlags());
+}
+
 SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
                                                  SDValue Op,
                                                  SelectionDAG &DAG) const {

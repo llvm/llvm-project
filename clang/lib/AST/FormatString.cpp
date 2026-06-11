@@ -14,6 +14,7 @@
 #include "FormatStringParsing.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include <optional>
 
@@ -57,6 +58,21 @@ OptionalAmount clang::analyze_format_string::ParseAmount(const char *&Beg,
   }
 
   return OptionalAmount();
+}
+
+static bool ParseWidthModifier(const char *&I, const char *E,
+                               unsigned &BitWidth, unsigned &ModifierLength) {
+  StringRef W = StringRef(I, E - I).take_while(llvm::isDigit);
+  if (W.empty() || W.front() == '0')
+    return false;
+
+  if (W.getAsInteger(10, BitWidth))
+    return false;
+
+  I = W.end();
+  ModifierLength += W.size();
+
+  return true;
 }
 
 OptionalAmount clang::analyze_format_string::ParseNonPositionAmount(
@@ -286,7 +302,45 @@ bool clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
     ++I;
     lmKind = LengthModifier::AsInt3264;
     break;
+  case 'H':
+    if (LO.C23) {
+      lmKind = LengthModifier::AsDecimal32;
+      ++I;
+      break;
+    }
+    return false;
+  case 'D':
+    if (LO.C23) {
+      ++I;
+      if (I != E && *I == 'D') {
+        ++I;
+        lmKind = LengthModifier::AsDecimal128;
+      } else {
+        lmKind = LengthModifier::AsDecimal64;
+      }
+      break;
+    }
+    return false;
   case 'w':
+    if (LO.C23) {
+      const char *WidthModifier = I + 1;
+      unsigned BitWidth = 0;
+      unsigned ModifierLength = 1;
+
+      LengthModifier::Kind WidthKind = LengthModifier::AsIntN;
+      if (WidthModifier != E && *WidthModifier == 'f') {
+        WidthModifier = I + 2;
+        ModifierLength = 2;
+        WidthKind = LengthModifier::AsFastIntN;
+      }
+
+      if (ParseWidthModifier(WidthModifier, E, BitWidth, ModifierLength)) {
+        I = WidthModifier;
+        FS.setLengthModifier(
+            LengthModifier(lmPosition, WidthKind, BitWidth, ModifierLength));
+        return true;
+      }
+    }
     lmKind = LengthModifier::AsWide;
     ++I;
     break;
@@ -415,6 +469,9 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
   case InvalidTy:
     llvm_unreachable("ArgType must be valid");
 
+  case UnsupportedTy:
+    return NoMatch;
+
   case UnknownTy:
     return Match;
 
@@ -464,7 +521,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
   }
 
   case SpecificTy: {
-    if (TK != TypeKind::DontCare) {
+    if (TK == TypeKind::SizeT || TK == TypeKind::PtrdiffT) {
       return matchesSizeTPtrdiffT(C, argTy, T);
     }
 
@@ -691,6 +748,8 @@ ArgType::matchesArgType(ASTContext &C, const ArgType &Other) const {
   // Per matchesType.
   if (K == AK::InvalidTy || Other.K == AK::InvalidTy)
     return NoMatch;
+  if (K == AK::UnsupportedTy || Other.K == AK::UnsupportedTy)
+    return NoMatch;
   if (K == AK::UnknownTy || Other.K == AK::UnknownTy)
     return Match;
 
@@ -774,6 +833,22 @@ ArgType ArgType::makeVectorType(ASTContext &C, unsigned NumElts) const {
   return ArgType(Vec, Name);
 }
 
+ArgType ArgType::makeIntNType(ASTContext &Ctx, const LengthModifier &LengthMod,
+                              bool Signed) {
+  bool IsFast = LengthMod.getKind() == LengthModifier::AsFastIntN;
+  QualType Ty =
+      IsFast ? Ctx.getLeastIntTypeForBitwidth(LengthMod.getBitWidth(), Signed)
+             : Ctx.getIntTypeForBitwidth(LengthMod.getBitWidth(), Signed);
+  if (Ty.isNull())
+    return ArgType::Invalid();
+
+  ArgType Res(Ty);
+  Res.TK = IsFast ? (Signed ? TypeKind::FastIntN : TypeKind::FastUIntN)
+                  : (Signed ? TypeKind::IntN : TypeKind::UIntN);
+  Res.BitWidth = LengthMod.getBitWidth();
+  return Res;
+}
+
 QualType ArgType::getRepresentativeType(ASTContext &C) const {
   QualType Res;
   switch (K) {
@@ -781,6 +856,8 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
     llvm_unreachable("No representative type for Invalid ArgType");
   case UnknownTy:
     llvm_unreachable("No representative type for Unknown ArgType");
+  case UnsupportedTy:
+    llvm_unreachable("No representative type for Unsupported ArgType");
   case AnyCharTy:
     Res = C.CharTy;
     break;
@@ -815,11 +892,41 @@ QualType ArgType::getRepresentativeType(ASTContext &C) const {
 }
 
 std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
-  std::string S = getRepresentativeType(C).getAsString(C.getPrintingPolicy());
+  std::string S;
+  if (K != UnsupportedTy)
+    S = getRepresentativeType(C).getAsString(C.getPrintingPolicy());
+
   std::string Alias;
   if (Name) {
     // Use a specific name for this type, e.g. "size_t".
     Alias = Name;
+  } else {
+    const char *Prefix = nullptr;
+    switch (TK) {
+    case TypeKind::IntN:
+      Prefix = "int";
+      break;
+    case TypeKind::UIntN:
+      Prefix = "uint";
+      break;
+    case TypeKind::FastIntN:
+      Prefix = "int_fast";
+      break;
+    case TypeKind::FastUIntN:
+      Prefix = "uint_fast";
+      break;
+    case TypeKind::DontCare:
+    case TypeKind::SizeT:
+    case TypeKind::PtrdiffT:
+      break;
+    }
+    if (Prefix) {
+      Alias = Prefix;
+      Alias += std::to_string(BitWidth);
+      Alias += "_t";
+    }
+  }
+  if (!Alias.empty()) {
     if (Ptr) {
       // If ArgType is actually a pointer to T, append an asterisk.
       Alias += (Alias[Alias.size() - 1] == '*') ? "*" : " *";
@@ -829,9 +936,11 @@ std::string ArgType::getRepresentativeTypeName(ASTContext &C) const {
       Alias.clear();
   }
 
-  if (!Alias.empty())
-    return std::string("'") + Alias + "' (aka '" + S + "')";
-  return std::string("'") + S + "'";
+  if (Alias.empty())
+    return std::string("'") + S + "'";
+
+  return std::string("'") + Alias + "'" +
+         (K == UnsupportedTy ? "" : " (aka '" + S + "')");
 }
 
 //===----------------------------------------------------------------------===//
@@ -847,7 +956,7 @@ analyze_format_string::OptionalAmount::getArgType(ASTContext &Ctx) const {
 // Methods on LengthModifier.
 //===----------------------------------------------------------------------===//
 
-const char *analyze_format_string::LengthModifier::toString() const {
+StringRef analyze_format_string::LengthModifier::toString() const {
   switch (kind) {
   case AsChar:
     return "hh";
@@ -875,6 +984,15 @@ const char *analyze_format_string::LengthModifier::toString() const {
     return "I64";
   case AsLongDouble:
     return "L";
+  case AsDecimal32:
+    return "H";
+  case AsDecimal64:
+    return "D";
+  case AsDecimal128:
+    return "DD";
+  case AsIntN:
+  case AsFastIntN:
+    return StringRef(Position, getLength());
   case AsAllocate:
     return "a";
   case AsMAllocate:
@@ -884,7 +1002,7 @@ const char *analyze_format_string::LengthModifier::toString() const {
   case None:
     return "";
   }
-  return nullptr;
+  llvm_unreachable("Invalid LengthModifier Kind!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1156,6 +1274,35 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
       return false;
     }
 
+  case LengthModifier::AsIntN:
+  case LengthModifier::AsFastIntN: {
+    if (!LO.C23)
+      return false;
+
+    TargetInfo::IntType TargetType =
+        LM.getKind() == LengthModifier::AsIntN
+            ? Target.getIntTypeByWidth(LM.getBitWidth(), /*IsSigned=*/true)
+            : Target.getLeastIntTypeByWidth(LM.getBitWidth(),
+                                            /*IsSigned=*/true);
+    if (TargetType == TargetInfo::NoInt)
+      return false;
+
+    switch (CS.getKind()) {
+    case ConversionSpecifier::bArg:
+    case ConversionSpecifier::BArg:
+    case ConversionSpecifier::dArg:
+    case ConversionSpecifier::iArg:
+    case ConversionSpecifier::oArg:
+    case ConversionSpecifier::uArg:
+    case ConversionSpecifier::xArg:
+    case ConversionSpecifier::XArg:
+    case ConversionSpecifier::nArg:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   case LengthModifier::AsAllocate:
     switch (CS.getKind()) {
     case ConversionSpecifier::sArg:
@@ -1202,6 +1349,23 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
     default:
       return false;
     }
+
+  case LengthModifier::AsDecimal32:
+  case LengthModifier::AsDecimal64:
+  case LengthModifier::AsDecimal128:
+    switch (CS.getKind()) {
+    case ConversionSpecifier::aArg:
+    case ConversionSpecifier::AArg:
+    case ConversionSpecifier::eArg:
+    case ConversionSpecifier::EArg:
+    case ConversionSpecifier::fArg:
+    case ConversionSpecifier::FArg:
+    case ConversionSpecifier::gArg:
+    case ConversionSpecifier::GArg:
+      return LO.C23;
+    default:
+      return false;
+    }
   }
   llvm_unreachable("Invalid LengthModifier Kind!");
 }
@@ -1217,6 +1381,11 @@ bool FormatSpecifier::hasStandardLengthModifier() const {
   case LengthModifier::AsSizeT:
   case LengthModifier::AsPtrDiff:
   case LengthModifier::AsLongDouble:
+  case LengthModifier::AsDecimal32:
+  case LengthModifier::AsDecimal64:
+  case LengthModifier::AsDecimal128:
+  case LengthModifier::AsIntN:
+  case LengthModifier::AsFastIntN:
     return true;
   case LengthModifier::AsAllocate:
   case LengthModifier::AsMAllocate:

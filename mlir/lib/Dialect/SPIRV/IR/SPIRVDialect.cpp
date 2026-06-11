@@ -173,7 +173,12 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
 
   // Check other allowed types.
   if (auto t = dyn_cast<FloatType>(type)) {
-    // TODO: All float types are allowed for now, but this should be fixed.
+    if (!ScalarType::isValid(t)) {
+      parser.emitError(typeLoc,
+                       "only 8/16/32/64-bit float type allowed but found ")
+          << type;
+      return Type();
+    }
   } else if (auto t = dyn_cast<IntegerType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
