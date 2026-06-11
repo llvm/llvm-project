@@ -2189,7 +2189,7 @@ void ModuleBitcodeWriter::writeDICompileUnit(const DICompileUnit *N,
   if (Lang.hasVersionedName())
     Record.back() ^= (uint64_t(1) << 63);
 
-  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(VE.getMetadataID(N->getFile()) + 1);
   Record.push_back(VE.getMetadataOrNullID(N->getRawProducer()));
   Record.push_back(N->isOptimized());
   Record.push_back(VE.getMetadataOrNullID(N->getRawFlags()));
@@ -2251,7 +2251,7 @@ void ModuleBitcodeWriter::writeDILexicalBlock(const DILexicalBlock *N,
                                               SmallVectorImpl<uint64_t> &Record,
                                               unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  Record.push_back(VE.getMetadataOrNullID(N->getScope()));
+  Record.push_back(VE.getMetadataID(N->getScope()) + 1);
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
   Record.push_back(N->getColumn());
@@ -2264,7 +2264,7 @@ void ModuleBitcodeWriter::writeDILexicalBlockFile(
     const DILexicalBlockFile *N, SmallVectorImpl<uint64_t> &Record,
     unsigned Abbrev) {
   Record.push_back(N->isDistinct());
-  Record.push_back(VE.getMetadataOrNullID(N->getScope()));
+  Record.push_back(VE.getMetadataID(N->getScope()) + 1);
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getDiscriminator());
 
@@ -2421,7 +2421,7 @@ void ModuleBitcodeWriter::writeDILocalVariable(
   //   HasAlignment flag is true and Record[8] contains alignment value.
   const uint64_t HasAlignmentFlag = 1 << 1;
   Record.push_back((uint64_t)N->isDistinct() | HasAlignmentFlag);
-  Record.push_back(VE.getMetadataOrNullID(N->getScope()));
+  Record.push_back(VE.getMetadataID(N->getScope()) + 1);
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
@@ -2440,7 +2440,7 @@ void ModuleBitcodeWriter::writeDILabel(
     unsigned Abbrev) {
   uint64_t IsArtificialFlag = uint64_t(N->isArtificial()) << 1;
   Record.push_back((uint64_t)N->isDistinct() | IsArtificialFlag);
-  Record.push_back(VE.getMetadataOrNullID(N->getScope()));
+  Record.push_back(VE.getMetadataID(N->getScope()) + 1);
   Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
   Record.push_back(VE.getMetadataOrNullID(N->getFile()));
   Record.push_back(N->getLine());
