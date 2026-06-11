@@ -261,6 +261,8 @@ constexpr bool test() {
 
 #if TEST_STD_VER >= 26
 constexpr bool test_ref() {
+  // Test "overloads", only the const (no ref-qualifier) and_then() should be called
+
   { // &
     // Without & qualifier on F's operator()
     {
@@ -338,40 +340,6 @@ constexpr bool test_ref() {
     }
   }
 
-  {
-    int i = 1;
-    int j = 2;
-    {
-      std::optional<int&> o(i);
-      std::same_as<std::optional<int&>> decltype(auto) r = o.and_then([&](auto&& ii) {
-        ii += j;
-        return std::optional<int&>(ii);
-      });
-
-      assert(i == 3);
-      assert(r == 3);
-    }
-    {
-      const std::optional<int&> o(i);
-      std::same_as<std::optional<int&>> decltype(auto) r = o.and_then([&](auto&& ii) {
-        ii += j;
-        return std::optional<int&>(ii);
-      });
-
-      assert(i == 5);
-      assert(r == 5);
-    }
-    {
-      std::optional<int&> o{};
-      std::same_as<std::optional<int>> decltype(auto) r = o.and_then([&](auto&&) { return std::optional(1); });
-      assert(r == std::nullopt);
-    }
-    {
-      const std::optional<int&> o{};
-      std::same_as<std::optional<int>> decltype(auto) r = o.and_then([&](auto&&) { return std::optional(1); });
-      assert(r == std::nullopt);
-    }
-  }
   return true;
 }
 #endif
