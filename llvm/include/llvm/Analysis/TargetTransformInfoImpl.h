@@ -475,7 +475,7 @@ public:
     return true;
   }
 
-  virtual bool isLegalLookupTableElementType(Type *Ty) const { return true; }
+  virtual unsigned getMinimumLookupTableEntryBitWidth() const { return 8; }
 
   virtual bool shouldBuildRelLookupTables() const { return false; }
 

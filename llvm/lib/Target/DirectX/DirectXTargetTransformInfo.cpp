@@ -45,8 +45,9 @@ bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
   }
 }
 
-bool DirectXTTIImpl::isLegalLookupTableElementType(Type *Ty) const {
-  // DXIL does not support i8, so switch lookup tables must not be narrowed to
-  // an i8 element type.
-  return !Ty->isIntegerTy(8);
+unsigned DirectXTTIImpl::getMinimumLookupTableEntryBitWidth() const {
+  // DXIL does not support i8, so switch lookup tables must not be narrowed
+  // below the minimum legal integer width. When native 16-bit types are
+  // enabled (-enable-16bit-types) the minimum is i16, otherwise it is i32.
+  return HasNativeLowPrecision ? 16 : 32;
 }

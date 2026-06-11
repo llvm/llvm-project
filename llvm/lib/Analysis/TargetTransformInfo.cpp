@@ -617,8 +617,8 @@ bool TargetTransformInfo::shouldBuildLookupTablesForConstant(
   return TTIImpl->shouldBuildLookupTablesForConstant(C);
 }
 
-bool TargetTransformInfo::isLegalLookupTableElementType(Type *Ty) const {
-  return TTIImpl->isLegalLookupTableElementType(Ty);
+unsigned TargetTransformInfo::getMinimumLookupTableEntryBitWidth() const {
+  return TTIImpl->getMinimumLookupTableEntryBitWidth();
 }
 
 bool TargetTransformInfo::shouldBuildRelLookupTables() const {

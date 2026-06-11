@@ -6979,14 +6979,12 @@ SwitchReplacement::SwitchReplacement(
         Range = Range.unionWith(cast<ConstantInt>(Value)->getValue());
     // TODO: handle sign extension as well?
     unsigned NeededBitWidth =
-        std::max(8u, unsigned(PowerOf2Ceil(Range.getActiveBits())));
+        std::max(TTI.getMinimumLookupTableEntryBitWidth(),
+                 unsigned(PowerOf2Ceil(Range.getActiveBits())));
     if (NeededBitWidth < IT->getBitWidth()) {
       IntegerType *DstTy = IntegerType::get(IT->getContext(), NeededBitWidth);
-      // Only narrow the table element type if the narrower type is legal on
-      // this target.
-      if (TTI.isLegalLookupTableElementType(DstTy))
-        for (Constant *&Value : TableContents)
-          Value = ConstantFoldCastInstruction(Instruction::Trunc, Value, DstTy);
+      for (Constant *&Value : TableContents)
+        Value = ConstantFoldCastInstruction(Instruction::Trunc, Value, DstTy);
     }
   }
 

@@ -1025,9 +1025,9 @@ public:
   /// containing this constant value for the target.
   LLVM_ABI bool shouldBuildLookupTablesForConstant(Constant *C) const;
 
-  /// Return true if \p Ty may be used as the element type of a switch lookup
-  /// table on this target.
-  LLVM_ABI bool isLegalLookupTableElementType(Type *Ty) const;
+  /// Return the minimum bit width to use for integer switch lookup table
+  /// elements on this target.
+  LLVM_ABI unsigned getMinimumLookupTableEntryBitWidth() const;
 
   /// Return true if lookup tables should be turned into relative lookup tables.
   LLVM_ABI bool shouldBuildRelLookupTables() const;
