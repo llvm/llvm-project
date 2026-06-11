@@ -155,6 +155,8 @@ if (COMPILER_RT_STANDALONE_BUILD)
 endif()
 
 construct_compiler_rt_default_triple()
+setup_compiler_rt_output_dirs()
+
 if ("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES ".*hf$")
   if (${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "^arm")
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "armhf")

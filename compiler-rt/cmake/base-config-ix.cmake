@@ -122,29 +122,33 @@ if(NOT DEFINED COMPILER_RT_OS_DIR)
   endif()
 endif()
 
-# TODO: Use common runtimes infrastructure for output and install paths
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT COMPILER_RT_TARGET_APPLE)
-  set(COMPILER_RT_OUTPUT_LIBRARY_DIR
-    ${COMPILER_RT_OUTPUT_DIR}/lib)
-  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" lib)
-  set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
-    "Path where built compiler-rt libraries should be installed.")
-else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT COMPILER_RT_TARGET_APPLE)
-  set(COMPILER_RT_OUTPUT_LIBRARY_DIR
-    ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
-  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "lib/${COMPILER_RT_OS_DIR}")
-  set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
-    "Path where built compiler-rt libraries should be installed.")
-endif()
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_BINDIR}")
-set(COMPILER_RT_INSTALL_BINARY_DIR "${default_install_path}" CACHE PATH
-  "Path where built compiler-rt executables should be installed.")
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_INCLUDEDIR}")
-set(COMPILER_RT_INSTALL_INCLUDE_DIR "${default_install_path}" CACHE PATH
-  "Path where compiler-rt headers should be installed.")
-extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_DATADIR}")
-set(COMPILER_RT_INSTALL_DATA_DIR "${default_install_path}" CACHE PATH
-  "Path where compiler-rt data files should be installed.")
+# This macro must be called after construct_compiler_rt_default_triple()
+# because it depends on COMPILER_RT_TARGET_APPLE.
+macro(setup_compiler_rt_output_dirs)
+  # TODO: Use common runtimes infrastructure for output and install paths
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT COMPILER_RT_TARGET_APPLE)
+    set(COMPILER_RT_OUTPUT_LIBRARY_DIR
+      ${COMPILER_RT_OUTPUT_DIR}/lib)
+    extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" lib)
+    set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
+      "Path where built compiler-rt libraries should be installed.")
+  else()
+    set(COMPILER_RT_OUTPUT_LIBRARY_DIR
+      ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
+    extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "lib/${COMPILER_RT_OS_DIR}")
+    set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
+      "Path where built compiler-rt libraries should be installed.")
+  endif()
+  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_BINDIR}")
+  set(COMPILER_RT_INSTALL_BINARY_DIR "${default_install_path}" CACHE PATH
+    "Path where built compiler-rt executables should be installed.")
+  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_INCLUDEDIR}")
+  set(COMPILER_RT_INSTALL_INCLUDE_DIR "${default_install_path}" CACHE PATH
+    "Path where compiler-rt headers should be installed.")
+  extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "${CMAKE_INSTALL_DATADIR}")
+  set(COMPILER_RT_INSTALL_DATA_DIR "${default_install_path}" CACHE PATH
+    "Path where compiler-rt data files should be installed.")
+endmacro()
 
 macro(detect_darwin_sdk)
   # On Darwin if /usr/include/c++ doesn't exist, the user probably has Xcode but
