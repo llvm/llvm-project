@@ -1045,6 +1045,10 @@ OpenMP Support
   ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 - Added support for ``local`` clause with declare_target directive when
   OpenMP >= 60.
+- Fixed the identity element used for ``reduction(* : x)`` over C++ class types
+  (e.g. ``std::complex``). The private copy is now initialized to the
+  multiplicative identity instead of being value-initialized, which previously
+  produced a wrong result (the product collapsed to the additive identity).
 
 SYCL Support
 ------------
