@@ -4476,6 +4476,120 @@ uint64_t test_vcvtd_n_u64_f64(float64_t a) {
   return (uint64_t)vcvtd_n_u64_f64(a, 64);
 }
 
+// LLVM-LABEL: @test_vcvt_s32_f32
+// CIR-LABEL: @vcvt_s32_f32
+int32x2_t test_vcvt_s32_f32(float32x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM:    [[VCVTZ_I:%.*]] = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> [[TMP2]])
+// LLVM:    ret <2 x i32> [[VCVTZ_I]]
+  return vcvt_s32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_s32_f32
+// CIR-LABEL: @vcvtq_s32_f32
+int32x4_t test_vcvtq_s32_f32(float32x4_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM:    [[VCVTZ_I:%.*]] = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> [[TMP2]])
+// LLVM:    ret <4 x i32> [[VCVTZ_I]]
+  return vcvtq_s32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvt_u32_f32
+// CIR-LABEL: @vcvt_u32_f32
+uint32x2_t test_vcvt_u32_f32(float32x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: <2 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x float> [[A]] to <2 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i32> [[TMP0]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <2 x float>
+// LLVM:    [[VCVTZ_I:%.*]] = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> [[TMP2]])
+// LLVM:    ret <2 x i32> [[VCVTZ_I]]
+  return vcvt_u32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_u32_f32
+// CIR-LABEL: @vcvtq_u32_f32
+uint32x4_t test_vcvtq_u32_f32(float32x4_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: <4 x float> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <4 x float> [[A]] to <4 x i32>
+// LLVM:    [[TMP1:%.*]] = bitcast <4 x i32> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <4 x float>
+// LLVM:    [[VCVTZ_I:%.*]] = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> [[TMP2]])
+// LLVM:    ret <4 x i32> [[VCVTZ_I]]
+  return vcvtq_u32_f32(a);
+}
+
+// LLVM-LABEL: @test_vcvt_s64_f64
+// CIR-LABEL: @vcvt_s64_f64
+int64x1_t test_vcvt_s64_f64(float64x1_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: <1 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
+// LLVM:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// LLVM:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
+// LLVM:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.fptosi.sat.v1i64.v1f64(<1 x double> [[TMP2]])
+// LLVM:    ret <1 x i64> [[VCVTZ_I]]
+  return vcvt_s64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_s64_f64
+// CIR-LABEL: @vcvtq_s64_f64
+int64x2_t test_vcvtq_s64_f64(float64x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptosi.sat
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVTZ_I:%.*]] = call <2 x i64> @llvm.fptosi.sat.v2i64.v2f64(<2 x double> [[TMP2]])
+// LLVM:    ret <2 x i64> [[VCVTZ_I]]
+  return vcvtq_s64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvt_u64_f64
+// CIR-LABEL: @vcvt_u64_f64
+uint64x1_t test_vcvt_u64_f64(float64x1_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: <1 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
+// LLVM:    [[__P0_ADDR_I_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// LLVM:    [[TMP1:%.*]] = bitcast <1 x i64> [[__P0_ADDR_I_SROA_0_0_VEC_INSERT]] to <8 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x double>
+// LLVM:    [[VCVTZ_I:%.*]] = call <1 x i64> @llvm.fptoui.sat.v1i64.v1f64(<1 x double> [[TMP2]])
+// LLVM:    ret <1 x i64> [[VCVTZ_I]]
+  return vcvt_u64_f64(a);
+}
+
+// LLVM-LABEL: @test_vcvtq_u64_f64
+// CIR-LABEL: @vcvtq_u64_f64
+uint64x2_t test_vcvtq_u64_f64(float64x2_t a) {
+// CIR:     cir.call_llvm_intrinsic "fptoui.sat
+
+// LLVM-SAME: <2 x double> {{.*}} [[A:%.*]])
+// LLVM:    [[TMP0:%.*]] = bitcast <2 x double> [[A]] to <2 x i64>
+// LLVM:    [[TMP1:%.*]] = bitcast <2 x i64> [[TMP0]] to <16 x i8>
+// LLVM:    [[TMP2:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x double>
+// LLVM:    [[VCVTZ_I:%.*]] = call <2 x i64> @llvm.fptoui.sat.v2i64.v2f64(<2 x double> [[TMP2]])
+// LLVM:    ret <2 x i64> [[VCVTZ_I]]
+  return vcvtq_u64_f64(a);
+}
+
 //===------------------------------------------------------===//
 // 2.1.3.2.3 Vector shift right and accumulate
 // https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#vector-shift-right-and-accumulate
