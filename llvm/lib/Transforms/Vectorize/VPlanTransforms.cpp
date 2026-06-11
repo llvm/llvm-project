@@ -1165,8 +1165,6 @@ static VPValue *optimizeLatchExitInductionUser(
   Type *TCTy = ResumeTC->getScalarType();
   VPValue *ExitCount = Builder.createSub(ResumeTC, Plan.getConstantInt(TCTy, 1),
                                          DebugLoc::getUnknown());
-  ExitCount = Builder.createScalarZExtOrTrunc(
-      ExitCount, StepVPV->getScalarType(), TCTy, DebugLoc::getUnknown());
   return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartIRV, ExitCount,
                                  StepVPV);
 }
