@@ -1416,7 +1416,7 @@ void SPIRVEmitIntrinsics::deduceOperandElementType(
   } else if (auto *Ref = dyn_cast<LoadInst>(I)) {
     KnownElemTy = I->getType();
     if (isUntypedPointerTy(KnownElemTy)) {
-      // A T** loaded back from its alloca comes out opaque, dropping a info.
+      // A T** loaded back from its alloca comes out opaque, dropping type info.
       // When the load is a pointer-to-pointer, type the alloca as that pointer.
       Type *LoadedElemTy = GR->findDeducedElementType(I);
       if (!LoadedElemTy || !isPointerTyOrWrapper(LoadedElemTy))
