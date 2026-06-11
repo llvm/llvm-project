@@ -111,8 +111,8 @@ protected:
 
 /// Non-owning proxy for a \a raw_ostream. Enables passing a stream into an
 /// API that takes ownership.
-class raw_ostream_proxy : public raw_ostream_proxy_adaptor<> {
-  LLVM_ABI_FOR_TEST void anchor() override;
+class LLVM_ABI raw_ostream_proxy : public raw_ostream_proxy_adaptor<> {
+  void anchor() override;
 
 public:
   raw_ostream_proxy(raw_ostream &OS) : raw_ostream_proxy_adaptor<>(OS) {}
@@ -120,8 +120,9 @@ public:
 
 /// Non-owning proxy for a \a raw_pwrite_stream. Enables passing a stream
 /// into an API that takes ownership.
-class raw_pwrite_stream_proxy : public raw_pwrite_stream_proxy_adaptor<> {
-  LLVM_ABI_FOR_TEST void anchor() override;
+class LLVM_ABI raw_pwrite_stream_proxy
+    : public raw_pwrite_stream_proxy_adaptor<> {
+  void anchor() override;
 
 public:
   raw_pwrite_stream_proxy(raw_pwrite_stream &OS)

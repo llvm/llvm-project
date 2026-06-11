@@ -172,19 +172,25 @@ struct FusionCandidate {
     for (BasicBlock *BB : L->blocks()) {
       if (BB->hasAddressTaken()) {
         invalidate();
-        reportInvalidCandidate(AddressTakenBB);
+        ++AddressTakenBB;
+        reportInvalidCandidate("AddressTakenBB",
+                               "Basic block has address taken");
         return;
       }
 
       for (Instruction &I : *BB) {
         if (I.mayThrow()) {
           invalidate();
-          reportInvalidCandidate(MayThrowException);
+          ++MayThrowException;
+          reportInvalidCandidate("MayThrowException",
+                                 "Loop may throw an exception");
           return;
         }
         if (I.isVolatile()) {
           invalidate();
-          reportInvalidCandidate(ContainsVolatileAccess);
+          ++ContainsVolatileAccess;
+          reportInvalidCandidate("ContainsVolatileAccess",
+                                 "Loop contains a volatile access");
           return;
         }
         // Atomic accesses impose ordering/synchronization constraints that the
@@ -192,7 +198,9 @@ struct FusionCandidate {
         // them across the fused body could be unsafe.
         if (I.isAtomic()) {
           invalidate();
-          reportInvalidCandidate(ContainsAtomicAccess);
+          ++ContainsAtomicAccess;
+          reportInvalidCandidate("ContainsAtomicAccess",
+                                 "Loop contains an atomic access");
           return;
         }
         if (I.mayWriteToMemory())
@@ -297,18 +305,23 @@ struct FusionCandidate {
     if (!SE.hasLoopInvariantBackedgeTakenCount(L)) {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName()
                         << " trip count not computable!\n");
-      return reportInvalidCandidate(UnknownTripCount);
+      ++UnknownTripCount;
+      return reportInvalidCandidate("UnknownTripCount",
+                                    "Loop has unknown trip count");
     }
 
     if (!L->isLoopSimplifyForm()) {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName()
                         << " is not in simplified form!\n");
-      return reportInvalidCandidate(NotSimplifiedForm);
+      ++NotSimplifiedForm;
+      return reportInvalidCandidate("NotSimplifiedForm",
+                                    "Loop is not in simplified form");
     }
 
     if (!L->isRotatedForm()) {
       LLVM_DEBUG(dbgs() << "Loop " << L->getName() << " is not rotated!\n");
-      return reportInvalidCandidate(NotRotated);
+      ++NotRotated;
+      return reportInvalidCandidate("NotRotated", "Candidate is not rotated");
     }
 
     return true;
@@ -327,19 +340,20 @@ private:
     Valid = false;
   }
 
-  bool reportInvalidCandidate(Statistic &Stat) const {
+  // Emit an analysis remark explaining why this loop cannot be fused. The
+  // remark is built from explicit strings so it does not depend on whether
+  // statistics are enabled. \p RemarkName is the -Rpass remark identifier and
+  // \p RemarkMsg the human-readable reason.
+  bool reportInvalidCandidate(StringRef RemarkName, StringRef RemarkMsg) const {
     using namespace ore;
     ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "InvalidCandidate",
                                         L->getStartLoc(), L->getHeader())
              << "Loop is not a candidate for fusion");
 
-#if LLVM_ENABLE_STATS
-    ++Stat;
-    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, Stat.getName(),
+    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, RemarkName,
                                         L->getStartLoc(), L->getHeader())
              << "[" << L->getHeader()->getParent()->getName() << "]: "
-             << "Loop is not a candidate for fusion: " << Stat.getDesc());
-#endif
+             << "Loop is not a candidate for fusion: " << RemarkMsg);
     return false;
   }
 };
@@ -759,8 +773,10 @@ private:
           LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical trip "
                                "counts and peeling is not supported for this "
                                "case. Not fusing.\n");
-          reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                     NonEqualTripCount);
+          ++NonEqualTripCount;
+          reportLoopFusion<OptimizationRemarkMissed>(
+              FC0, FC1, "NonEqualTripCount",
+              "Loop trip counts are not the same");
           continue;
         }
 
@@ -768,8 +784,10 @@ private:
             (FC0.GuardBranch && !FC1.GuardBranch)) {
           LLVM_DEBUG(dbgs() << "The one of candidate is guarded while the "
                                "another one is not. Not fusing.\n");
+          ++OnlySecondCandidateIsGuarded;
           reportLoopFusion<OptimizationRemarkMissed>(
-              FC0, FC1, OnlySecondCandidateIsGuarded);
+              FC0, FC1, "OnlySecondCandidateIsGuarded",
+              "The second candidate is guarded while the first one is not");
           continue;
         }
 
@@ -781,8 +799,10 @@ private:
               !haveIdenticalGuards(FC0, FC1)) {
             LLVM_DEBUG(dbgs() << "Fusion candidates do not have identical "
                                  "guards. Not Fusing.\n");
-            reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                       NonIdenticalGuards);
+            ++NonIdenticalGuards;
+            reportLoopFusion<OptimizationRemarkMissed>(
+                FC0, FC1, "NonIdenticalGuards",
+                "Candidates have different guards");
             continue;
           }
         }
@@ -795,8 +815,11 @@ private:
                                   &PDT, &DI)) {
             LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
                                  "instructions in exit block. Not fusing.\n");
-            reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                       NonEmptyExitBlock);
+            ++NonEmptyExitBlock;
+            reportLoopFusion<OptimizationRemarkMissed>(
+                FC0, FC1, "NonEmptyExitBlock",
+                "Candidate has a non-empty exit block with "
+                "instructions that cannot be moved");
             continue;
           }
 
@@ -806,8 +829,11 @@ private:
                   &DI)) {
             LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
                                  "instructions in guard block. Not fusing.\n");
-            reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                       NonEmptyGuardBlock);
+            ++NonEmptyGuardBlock;
+            reportLoopFusion<OptimizationRemarkMissed>(
+                FC0, FC1, "NonEmptyGuardBlock",
+                "Candidate has a non-empty guard block with "
+                "instructions that cannot be moved");
             continue;
           }
         }
@@ -816,8 +842,9 @@ private:
         // violate them.
         if (!dependencesAllowFusion(FC0, FC1)) {
           LLVM_DEBUG(dbgs() << "Memory dependencies do not allow fusion!\n");
-          reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                     InvalidDependencies);
+          ++InvalidDependencies;
+          reportLoopFusion<OptimizationRemarkMissed>(
+              FC0, FC1, "InvalidDependencies", "Dependencies prevent fusion");
           continue;
         }
 
@@ -840,8 +867,11 @@ private:
             LLVM_DEBUG(dbgs() << "Could not hoist/sink all instructions in "
                                  "Fusion Candidate Pre-header.\n"
                               << "Not Fusing.\n");
-            reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                       NonEmptyPreheader);
+            ++NonEmptyPreheader;
+            reportLoopFusion<OptimizationRemarkMissed>(
+                FC0, FC1, "NonEmptyPreheader",
+                "Loop has a non-empty preheader with instructions that "
+                "cannot be moved");
             continue;
           }
         }
@@ -850,8 +880,9 @@ private:
         LLVM_DEBUG(dbgs() << "\tFusion appears to be "
                           << (BeneficialToFuse ? "" : "un") << "profitable!\n");
         if (!BeneficialToFuse) {
-          reportLoopFusion<OptimizationRemarkMissed>(FC0, FC1,
-                                                     FusionNotBeneficial);
+          ++FusionNotBeneficial;
+          reportLoopFusion<OptimizationRemarkMissed>(
+              FC0, FC1, "FusionNotBeneficial", "Fusion is not beneficial");
           continue;
         }
         // All analysis has completed and has determined that fusion is legal
@@ -875,8 +906,9 @@ private:
         // Note this needs to be done *before* performFusion because
         // performFusion will change the original loops, making it not
         // possible to identify them after fusion is complete.
+        ++FuseCounter;
         reportLoopFusion<OptimizationRemark>((Peel ? FC0Copy : FC0), FC1,
-                                             FuseCounter);
+                                             "FuseCounter", "Loops fused");
 
         FusionCandidate FusedCand(performFusion((Peel ? FC0Copy : FC0), FC1),
                                   DT, &PDT, ORE, FC0Copy.PP);
@@ -1171,16 +1203,13 @@ private:
         }
     }
 
-    for (Instruction *WriteL1 : FC1.MemWrites) {
-      for (Instruction *WriteL0 : FC0.MemWrites)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1)) {
-          return false;
-        }
-      for (Instruction *ReadL0 : FC0.MemReads)
+    // Write-write and write-read pairs are already covered above; only the
+    // read-before-write pairs from FC0 reads to FC1 writes remain.
+    for (Instruction *ReadL0 : FC0.MemReads)
+      for (Instruction *WriteL1 : FC1.MemWrites)
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1)) {
           return false;
         }
-    }
 
     // Walk through all uses in FC1. For each use, find the reaching def. If the
     // def is located in FC0 then it is not safe to fuse.
@@ -1570,19 +1599,16 @@ private:
   ///       <Cand1 Preheader> and <Cand2 Preheader>: <Stat Description>
   template <typename RemarkKind>
   void reportLoopFusion(const FusionCandidate &FC0, const FusionCandidate &FC1,
-                        Statistic &Stat) {
+                        StringRef RemarkName, StringRef RemarkMsg) {
     assert(FC0.Preheader && FC1.Preheader &&
            "Expecting valid fusion candidates");
     using namespace ore;
-#if LLVM_ENABLE_STATS
-    ++Stat;
-    ORE.emit(RemarkKind(DEBUG_TYPE, Stat.getName(), FC0.L->getStartLoc(),
-                        FC0.Preheader)
-             << "[" << FC0.Preheader->getParent()->getName()
-             << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
-             << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
-             << ": " << Stat.getDesc());
-#endif
+    ORE.emit(
+        RemarkKind(DEBUG_TYPE, RemarkName, FC0.L->getStartLoc(), FC0.Preheader)
+        << "[" << FC0.Preheader->getParent()->getName()
+        << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName())) << " and "
+        << NV("Cand2", StringRef(FC1.Preheader->getName())) << ": "
+        << RemarkMsg);
   }
 
   /// Fuse two guarded fusion candidates, creating a new fused loop.

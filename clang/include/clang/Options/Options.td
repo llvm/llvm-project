@@ -2341,14 +2341,20 @@ defm assume_nothrow_exception_dtor: BoolFOption<"assume-nothrow-exception-dtor",
   LangOpts<"AssumeNothrowExceptionDtor">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume that exception objects' destructors are non-throwing">,
   NegFlag<SetFalse>>;
-def winx64_eh_unwindv2
-    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+def winx64_eh_unwind_EQ
+    : Joined<["-"], "fwinx64-eh-unwind=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Generate unwind v2 (epilog) information for x64 Windows">,
-      Values<"disabled,best-effort,required">,
-      NormalizedValues<["Disabled", "BestEffort", "Required"]>,
-      NormalizedValuesScope<"llvm::WinX64EHUnwindV2Mode">,
-      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwindV2">, "Disabled">;
+      HelpText<"Set x64 Windows unwind info version">,
+      Values<"v1,v2-best-effort,v2-required,v3">,
+      NormalizedValues<["V1", "V2BestEffort", "V2Required", "V3"]>,
+      NormalizedValuesScope<"llvm::WinX64EHUnwindMode">,
+      MarshallingInfoEnum<CodeGenOpts<"WinX64EHUnwind">, "Default">;
+// Legacy flag — driver only, not passed to cc1. The driver translates it.
+def winx64_eh_unwindv2_EQ
+    : Joined<["-"], "fwinx64-eh-unwindv2=">, Group<f_Group>,
+    Visibility<[ClangOption]>,
+      HelpText<"(Legacy) Generate unwind v2 (epilog) information for x64 Windows">,
+      Values<"disabled,best-effort,required">;
 def win_cfg_mechanism
     : Joined<["-"], "fwin-cfg-mechanism=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
@@ -4971,7 +4977,7 @@ defm raw_string_literals : BoolFOption<"raw-string-literals",
 def fzero_call_used_regs_EQ
     : Joined<["-"], "fzero-call-used-regs=">, Group<f_Group>,
     Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Clear call-used registers upon function return (AArch64/x86 only)">,
+      HelpText<"Clear call-used registers upon function return (AArch64/RISC-V/x86 only)">,
       Values<"skip,used-gpr-arg,used-gpr,used-arg,used,all-gpr-arg,all-gpr,all-arg,all">,
       NormalizedValues<["Skip", "UsedGPRArg", "UsedGPR", "UsedArg", "Used",
                         "AllGPRArg", "AllGPR", "AllArg", "All"]>,
@@ -5606,6 +5612,10 @@ def mrvv_vector_bits_EQ : Joined<["-"], "mrvv-vector-bits=">, Group<m_Group>,
       !eq(GlobalDocumentation.Program, "Flang") : "",
       true: " The value will be reflected in __riscv_v_fixed_vlen preprocessor define"),
     " (RISC-V only)")>;
+def mexperimental_mtune_syntax : Flag<["-"], "mexperimental-mtune-syntax">, Group<m_Group>,
+  HelpText<"Enable experimental syntax for the '-mtune' flag (RISC-V only)">;
+def mno_experimental_mtune_syntax : Flag<["-"], "mno-experimental-mtune-syntax">, Group<m_Group>,
+  HelpText<"Disable experimental syntax for the '-mtune' flag (RISC-V only)">;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/MIPSr6 only)">;
@@ -7316,8 +7326,12 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">, Visibility<[ClangOption, CLOption, FlangOption]>;
-def mapxf : Flag<["-"], "mapxf">, Group<m_x86_Features_Group>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Group<m_x86_Features_Group>;
+def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu","jmpabs"]>,
+            Group<m_x86_Features_Group>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu","jmpabs"]>,
+               Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
 def ffixed_edi : Flag<["-"], "ffixed-edi">, Group<m_Group>,
@@ -9318,6 +9332,8 @@ def _SLASH_QIntel_jcc_erratum : CLFlag<"QIntel-jcc-erratum">,
   Alias<mbranches_within_32B_boundaries>;
 def _SLASH_arm64EC : CLFlag<"arm64EC">,
   HelpText<"Set build target to arm64ec">;
+def _SLASH_pathmap : CLCompileJoined<"pathmap:">,
+  Alias<ffile_prefix_map_EQ>;
 def : CLFlag<"Qgather-">, Alias<mno_gather>,
       HelpText<"Disable generation of gather instructions in auto-vectorization(x86 only)">;
 def : CLFlag<"Qscatter-">, Alias<mno_scatter>,
