@@ -62,6 +62,15 @@ private:
 enum class PeriodState { Inactive, Active };
 
 /// Manages activate/deactivate state of time-window period instances.
+///
+/// Two activation granularities:
+///   - period-level: ejit_activate("cell", 3) → activates ALL arrays under "cell"
+///     at index 3 (fans out to registered arrays).
+///   - array-level:  ejit_activate_array("cell", &g_cellCfg, 3) → activates only
+///     g_cellCfg at index 3 (other arrays under "cell" unaffected).
+///
+/// isActive() returns true if ANY array under the period name at the given
+/// cellIdx is active (period-level semantics for JIT compile decision).
 class EJitRuntimeState {
 public:
 #ifdef EJIT_FREESTANDING
@@ -69,8 +78,14 @@ public:
 #else
   using MutexType = std::mutex;
 #endif
+  /// Period-level activation: activates all arrays registered under periodName.
   void activate(const std::string &periodName, uint8_t cellIdx);
   void deactivate(const std::string &periodName, uint8_t cellIdx);
+
+  /// Array-level activation: activates only the specific array.
+  void activateArray(void *arrayPtr, uint8_t cellIdx);
+  void deactivateArray(void *arrayPtr, uint8_t cellIdx);
+
   void activateAll(const std::string &periodName);
   void deactivateAll(const std::string &periodName);
   bool isActive(const std::string &periodName, uint8_t cellIdx) const;
@@ -83,7 +98,10 @@ private:
 #ifndef EJIT_FREESTANDING
   mutable MutexType mutex_;
 #endif
-  std::unordered_map<std::string, std::unordered_map<uint8_t, PeriodState>> states_;
+  /// Array-level state: (baseAddr, cellIdx) → Active/Inactive.
+  /// Period-level activate/deactivate fans out to all arrays under that period.
+  std::unordered_map<uintptr_t, std::unordered_map<uint8_t, PeriodState>>
+      arrayStates_;
 };
 
 } // namespace ejit

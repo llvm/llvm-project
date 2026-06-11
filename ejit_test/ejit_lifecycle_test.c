@@ -95,18 +95,63 @@ int main(int argc, char **argv) {
   T(rc == 0, "deactivate(cell, %u) returns %d", ci, rc);
   T(!ejit_is_active("cell", ci), "cell[%u] NOT active after deactivate", ci);
 
-  //===-- 4. ejit_activate_array: 仅激活指定数组 -----------------------------===//
-  printf("\n--- 4. activate_array(cellCfg, ci=%u) ---\n", ci);
+  //===-- 4. ejit_activate_array: 仅激活指定数组 (per-array granularity) ---===//
+  printf("\n--- 4. activate_array (per-array granularity) ---\n");
+
+  // 先全部失效，干净起点
+  ejit_deactivate_all("cell");
+
+  // 4a. 仅激活 cellCfg[ci]
   rc = ejit_activate_array("cell", g_cellCfg, ci);
   T(rc == 0, "activate_array(cell, &cellCfg, %u) returns %d", ci, rc);
-  T(ejit_is_active("cell", ci), "cell[%u] IS active after activate_array", ci);
+  // isActive 是 period 级语义：只要该 period 下有任一数组在 ci 活跃即返回 true
+  T(ejit_is_active("cell", ci), "cell[%u] IS active (cellCfg activated)", ci);
 
-  //===-- 5. ejit_deactivate_array: 仅失效指定数组 ---------------------------===//
-  printf("\n--- 5. deactivate_array(cellCfg, ci=%u) ---\n", ci);
+  // 4b. 仅激活 cellCfg 不会激活 cellPhy
+  //     验证：deactivate 仅 cellCfg → cellPhy 从未被激活 → isActive 应为 false
   rc = ejit_deactivate_array("cell", g_cellCfg, ci);
   T(rc == 0, "deactivate_array(cell, &cellCfg, %u) returns %d", ci, rc);
-  // 仅失效 cellCfg，cellPhy 应仍活跃（如果之前通过 activate 激活了）
-  // 但 is_active 是 period-level 的，这里不做 per-array 断言
+  T(!ejit_is_active("cell", ci),
+    "cell[%u] NOT active — only cellCfg was deactivated, cellPhy never activated", ci);
+
+  // 4c. 分别激活两个数组 → deactivate 其中一个 → 另一个仍活跃
+  rc = ejit_activate_array("cell", g_cellCfg, ci);
+  T(rc == 0, "activate_array(cell, &cellCfg, %u)", ci);
+  rc = ejit_activate_array("cell", g_cellPhy, ci);
+  T(rc == 0, "activate_array(cell, &cellPhy, %u)", ci);
+  T(ejit_is_active("cell", ci), "cell[%u] active (both arrays activated)", ci);
+
+  // 仅失效 cellCfg
+  rc = ejit_deactivate_array("cell", g_cellCfg, ci);
+  T(rc == 0, "deactivate_array(cell, &cellCfg, %u)", ci);
+  // cellPhy 仍在活跃，isActive 应仍为 true
+  T(ejit_is_active("cell", ci),
+    "cell[%u] still active — only cellCfg deactivated, cellPhy still active", ci);
+
+  // 再失效 cellPhy
+  rc = ejit_deactivate_array("cell", g_cellPhy, ci);
+  T(rc == 0, "deactivate_array(cell, &cellPhy, %u)", ci);
+  T(!ejit_is_active("cell", ci),
+    "cell[%u] NOT active — both arrays now deactivated", ci);
+
+  //===-- 5. ejit_activate vs ejit_activate_array: 粒度差异 ------------------===//
+  printf("\n--- 5. period vs array granularity ---\n");
+  ejit_deactivate_all("cell");
+
+  // 5a. ejit_activate 是 period 级：激活该名称下所有数组
+  rc = ejit_activate("cell", ci);
+  T(rc == 0, "activate(cell, %u) returns %d", ci, rc);
+  T(ejit_is_active("cell", ci), "cell[%u] active (period-level activate)", ci);
+  // deactivate 也是 period 级
+  ejit_deactivate("cell", ci);
+  T(!ejit_is_active("cell", ci), "cell[%u] NOT active (period-level deactivate)", ci);
+
+  // 5b. 对比: activate_array + 另一个数组未激活 → deactivate_array 后不应残留
+  ejit_activate_array("cell", g_cellCfg, ci);
+  // cellPhy[ci] 未被激活
+  ejit_deactivate_array("cell", g_cellCfg, ci);
+  T(!ejit_is_active("cell", ci),
+    "cell[%u] NOT active — only cellCfg was array-activated, then deactivated", ci);
 
   //===-- 6. ejit_activate_all / ejit_deactivate_all: 批量操作 --------------===//
   printf("\n--- 6. activate_all / deactivate_all ---\n");

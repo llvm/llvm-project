@@ -29,9 +29,14 @@ public:
   EJit(const Config &config = {});
   ~EJit();
 
-  // Lifecycle
+  // Lifecycle — period-level (fans out to all arrays under periodName)
   void activate(const std::string &periodName, uint8_t cellIdx);
   void deactivate(const std::string &periodName, uint8_t cellIdx);
+
+  // Lifecycle — array-level (single array only)
+  void activateArray(void *arrayPtr, uint8_t cellIdx);
+  void deactivateArray(void *arrayPtr, uint8_t cellIdx);
+
   void activateAll(const std::string &periodName);
   void deactivateAll(const std::string &periodName);
   bool isActive(const std::string &periodName, uint8_t cellIdx) const;

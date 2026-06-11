@@ -178,6 +178,14 @@ void EJit::deactivate(const std::string &periodName, uint8_t cellIdx) {
   runtimeState_->deactivate(periodName, cellIdx);
 }
 
+void EJit::activateArray(void *arrayPtr, uint8_t cellIdx) {
+  runtimeState_->activateArray(arrayPtr, cellIdx);
+}
+
+void EJit::deactivateArray(void *arrayPtr, uint8_t cellIdx) {
+  runtimeState_->deactivateArray(arrayPtr, cellIdx);
+}
+
 void EJit::activateAll(const std::string &periodName) {
   runtimeState_->activateAll(periodName);
 }

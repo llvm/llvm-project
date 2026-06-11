@@ -121,7 +121,8 @@ ejit_status_t ejit_activate_array(const char *periodName, void *arrayPtr,
     return EJIT_ERR_INVALID_PARAM;
   if (info->periodName != periodName)
     return EJIT_ERR_INVALID_PARAM;
-  gEJIT->activate(periodName, cellIdx);
+  // Array-level activation: only this specific array's instance.
+  gEJIT->activateArray(arrayPtr, cellIdx);
   return EJIT_OK;
 }
 
@@ -135,7 +136,9 @@ ejit_status_t ejit_deactivate_array(const char *periodName, void *arrayPtr,
     return EJIT_ERR_INVALID_PARAM;
   if (info->periodName != periodName)
     return EJIT_ERR_INVALID_PARAM;
-  gEJIT->deactivate(periodName, cellIdx);
+  // Array-level deactivation: only this specific array's instance.
+  gEJIT->deactivateArray(arrayPtr, cellIdx);
+  gEJIT->invalidateByPeriod(periodName, cellIdx);
   return EJIT_OK;
 }
 
