@@ -74,7 +74,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
@@ -84,7 +83,6 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cmath>
 using namespace llvm;
-using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "tailcallelim"
 
@@ -387,11 +385,27 @@ static bool isPseudoAssociative(Instruction *I) {
   return isa<ConstantInt>(I->getOperand(1));
 }
 
-// Find the base-case return value for function F: examine all
-// return instructions and pick return values that do not depend on a
-// recursive call to F. If there is exactly one distinct such value,
-// return it. If there are none or more than one distinct value, return
-// nullptr to indicate failure.
+// Return true if V is a recursive call to F or an instruction directly using
+// the result of one. A depth-1 check is enough here: the value feeding a
+// return either uses the recursive call as an immediate operand (the
+// accumulator instruction, or the PHI merging it with the base case), or it
+// is rejected by getReturnValue below as a non-constant anyway.
+static bool usesRecursiveCall(Value *V, Function &F) {
+  auto IsRecursiveCall = [&F](Value *V) {
+    auto *CI = dyn_cast<CallInst>(V);
+    return CI && CI->getCalledFunction() == &F;
+  };
+  if (IsRecursiveCall(V))
+    return true;
+  auto *I = dyn_cast<Instruction>(V);
+  return I && llvm::any_of(I->operands(), IsRecursiveCall);
+}
+
+// Find the base-case return value for function F: examine all return
+// instructions, skipping those whose return value depends on a recursive call
+// to F (that value differs for each iteration of the recursion). If the
+// remaining returns yield exactly one distinct constant, return it; otherwise
+// return nullptr to indicate failure.
 //
 // FIXME: There is a room for improvement here in the future, e.g., consider
 // non-constant values and multiple base cases -- e.g., we want to be able to
@@ -412,27 +426,16 @@ static Constant *getReturnValue(Function &F) {
       continue;
 
     Value *RV = RI->getReturnValue();
-    Constant *Candidate = nullptr;
+    if (usesRecursiveCall(RV, F))
+      continue;
 
-    if (match(RV, m_Constant(Candidate))) {
-      // Direct constant return.
-    } else if (auto *PN = dyn_cast<PHINode>(RV)) {
-      for (Value *Inc : PN->incoming_values())
-        if (match(Inc, m_Constant(Candidate)))
-          break;
-    } else if (match(RV,
-                     m_Select(m_Value(), m_Constant(Candidate), m_Value())) ||
-               match(RV,
-                     m_Select(m_Value(), m_Value(), m_Constant(Candidate)))) {
-      // Select with a constant arm.
-    }
-
-    if (!Candidate)
+    auto *C = dyn_cast<Constant>(RV);
+    if (!C)
       return nullptr;
 
     if (!BaseCaseVal)
-      BaseCaseVal = Candidate;
-    else if (BaseCaseVal != Candidate)
+      BaseCaseVal = C;
+    else if (BaseCaseVal != C)
       return nullptr;
   }
 
@@ -461,7 +464,9 @@ static Constant *canTransformAccumulatorRecursion(Instruction *I,
     if (I->getOperand(0) != CI)
       return nullptr;
 
-    AccInitVal = getReturnValue(*CI->getCalledFunction());
+    // findTRECandidate guarantees CI is a recursive call to its own
+    // function, so scan the enclosing function for the base-case return.
+    AccInitVal = getReturnValue(*CI->getFunction());
     if (!AccInitVal)
       return nullptr;
   } else {
