@@ -205,6 +205,11 @@ The LLVM Security Policy may be changed by majority vote of the LLVM Security Re
 What is considered a security issue?
 ====================================
 
+.. tip::
+   Litmus test: Could the attacker already include ``system("rm -rf ~/")`` in
+   the code that exploits the issue? If yes, it is **not** a security bug. If
+   no, it might be a security bug; see below.
+
 We define "security-sensitive" to mean that a discovered bug or vulnerability
 may require coordinated disclosure, and therefore should be reported to the LLVM
 Security Response group rather than publishing in the public bug tracker.
