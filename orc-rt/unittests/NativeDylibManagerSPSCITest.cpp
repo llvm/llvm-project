@@ -225,7 +225,8 @@ TEST_F(NativeDylibManagerSPSCITest, LookupMixedRequiredAndWeak) {
   std::future<Expected<Expected<std::vector<std::optional<void *>>>>>
       LookupResult;
   spsLookup(waitFor(LookupResult), Handle,
-            {{MANGLED("NativeDylibManagerTestFunc"), Req}, {MANGLED("no_such_symbol"), Weak}});
+            {{MANGLED("NativeDylibManagerTestFunc"), Req},
+             {MANGLED("no_such_symbol"), Weak}});
   auto Addrs = cantFail(cantFail(LookupResult.get()));
   ASSERT_EQ(Addrs.size(), 2U);
   ASSERT_TRUE(Addrs[0].has_value());

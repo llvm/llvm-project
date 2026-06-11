@@ -119,7 +119,8 @@ TEST(NativeDylibManagerTest, LookupSingleSymbol) {
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(*NDM, Handle, {{MANGLED("NativeDylibManagerTestFunc"), Req}});
+  auto Result =
+      syncLookup(*NDM, Handle, {{MANGLED("NativeDylibManagerTestFunc"), Req}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 1U);
   ASSERT_TRUE((*Result)[0].has_value());
@@ -193,9 +194,9 @@ TEST(NativeDylibManagerTest, LookupMixedRequiredAndWeak) {
 
   void *Handle = cantFail(syncLoad(*NDM, NDM_TEST_LIB_PATH));
 
-  auto Result = syncLookup(
-      *NDM, Handle,
-      {{MANGLED("NativeDylibManagerTestFunc"), Req}, {MANGLED("no_such_symbol"), Weak}});
+  auto Result = syncLookup(*NDM, Handle,
+                           {{MANGLED("NativeDylibManagerTestFunc"), Req},
+                            {MANGLED("no_such_symbol"), Weak}});
   ASSERT_TRUE(!!Result) << toString(Result.takeError());
   ASSERT_EQ(Result->size(), 2U);
   ASSERT_TRUE((*Result)[0].has_value());
