@@ -9406,51 +9406,6 @@ SDValue SystemZTargetLowering::combineINTRINSIC(
   return SDValue();
 }
 
-SDValue SystemZTargetLowering::combineMEMMOVE(
-    SDNode *N, DAGCombinerInfo &DCI) const {
-  SelectionDAG &DAG = DCI.DAG;
-
-  SDValue Chain = N->getOperand(0);
-  SDValue Dst = N->getOperand(1);
-  SDValue Src = N->getOperand(2);
-  unsigned Len = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
-
-  struct Address {
-    SDValue Addr;
-    Address(SDValue V) : Addr(V) {}
-    SDValue Base() {
-      if (Addr->getOpcode() == ISD::ADD &&
-          isa<ConstantSDNode>(Addr->getOperand(1)))
-        return Addr->getOperand(0);
-      return Addr;
-    }
-    uint64_t Offset() {
-      if (Addr->getOpcode() == ISD::ADD)
-        if (auto *Const = dyn_cast<ConstantSDNode>(Addr->getOperand(1)))
-          return Const->getZExtValue();
-      return 0;
-    }
-  };
-
-  Address DstAddr(Dst), SrcAddr(Src);
-  if (DstAddr.Base() == SrcAddr.Base()) {
-    assert(Len >= 16 && Len <= 256 &&
-           "Memmove of of unsupported constant length.");
-    if (DstAddr.Offset() <= SrcAddr.Offset()) {
-      SDValue LenAdj = DAG.getConstant(Len - 1, SDLoc(N), MVT::i64);
-      return DAG.getNode(SystemZISD::MVC, SDLoc(N), MVT::Other,
-                         { Chain, Dst, Src, LenAdj });
-    } else {
-      SDValue LenAdj = DAG.getConstant(Len - 1, SDLoc(N), MVT::i32);
-      Chain = DAG.getCopyToReg(Chain, SDLoc(N), SystemZ::R0L, LenAdj);
-      return DAG.getNode(SystemZISD::MVCRL, SDLoc(N), MVT::Other,
-                         { Chain, Dst, Src });
-    }
-  }
-
-  return SDValue();
-}
-
 SDValue SystemZTargetLowering::unwrapAddress(SDValue N) const {
   if (N->getOpcode() == SystemZISD::PCREL_WRAPPER)
     return N->getOperand(0);
@@ -9492,7 +9447,6 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UREM:               return combineIntDIVREM(N, DCI);
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_VOID:     return combineINTRINSIC(N, DCI);
-  case SystemZISD::MEMMOVE:     return combineMEMMOVE(N, DCI);
   }
 
   return SDValue();

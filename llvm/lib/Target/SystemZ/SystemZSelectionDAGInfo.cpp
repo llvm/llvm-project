@@ -100,9 +100,31 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemmove(
 
   if (auto *CSize = dyn_cast<ConstantSDNode>(Size))
     if (Subtarget.hasMiscellaneousExtensions3() &&
-        CSize->getZExtValue() > 0 && CSize->getZExtValue() <= 256)
+        CSize->getZExtValue() > 0 && CSize->getZExtValue() <= 256) {
+
+      // EXPERIMENT: On SPEC, only 1 case with common base (with or w/out
+      // LookThroughIntToPtr) :-/
+      const DataLayout &DataLt = DAG.getDataLayout();
+      const Value *DstV = dyn_cast_if_present<const Value *>(DstPtrInfo.V);
+      const Value *SrcV = dyn_cast_if_present<const Value *>(SrcPtrInfo.V);
+      if (DstV && SrcV) {
+        APInt DstOffset(64, 0);
+        const Value *DstBase =
+          DstV->stripAndAccumulateConstantOffsets(DataLt, DstOffset,
+          /* AllowNonInbounds */ true, /*AllowInvariantGroup=*/false,
+          /*ExternalAnalysis=*/nullptr, /*LookThroughIntToPtr=*/true);
+        APInt SrcOffset(64, 0);
+        const Value *SrcBase =
+          SrcV->stripAndAccumulateConstantOffsets(DataLt, SrcOffset,
+          /* AllowNonInbounds */ true, /*AllowInvariantGroup=*/false,
+          /*ExternalAnalysis=*/nullptr, /*LookThroughIntToPtr=*/true);
+        if (DstBase == SrcBase)
+          dbgs() << "COMMON BASE: " << DstOffset << " : " << SrcOffset << "\n";
+      }
+
       return DAG.getNode(SystemZISD::MEMMOVE, DL, MVT::Other,
                          {Chain, Dst, Src, Size});
+    }
 
   return SDValue();
 }
