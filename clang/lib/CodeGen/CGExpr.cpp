@@ -45,6 +45,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
@@ -6579,6 +6580,21 @@ static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   E = E->IgnoreParens();
 
+  // A WebAssembly funcref is an opaque reference type and llvm only accepts
+  // function pointers as the call target. To make an indirect call through a
+  // reference type, first use the llvm.wasm.funcref.to_ptr intrinsic to make a
+  // fake function pointer to it. The backend lowers the resulting indirect call
+  // to a table.set into a single element dummy table + call_indirect 0.
+  auto ConvertFuncrefToPtr = [&](llvm::Value *CalleePtr) -> llvm::Value * {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(CalleePtr->getType());
+        TET && TET->getName() == "wasm.funcref") {
+      llvm::Function *ToPtr =
+          CGM.getIntrinsic(llvm::Intrinsic::wasm_funcref_to_ptr);
+      return Builder.CreateCall(ToPtr, {CalleePtr});
+    }
+    return CalleePtr;
+  };
+
   // Look through function-to-pointer decay.
   if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
     if (ICE->getCastKind() == CK_FunctionToPointerDecay ||
@@ -6603,7 +6619,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
           GD = GlobalDecl(VD);
         }
         CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
-        CGCallee Callee(CalleeInfo, Result.first, Result.second);
+        CGCallee Callee(CalleeInfo, ConvertFuncrefToPtr(Result.first),
+                        Result.second);
         return Callee;
       }
     }
@@ -6647,7 +6664,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
 
   CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
   CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
-  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
+  CGCallee callee(calleeInfo, ConvertFuncrefToPtr(calleePtr), pointerAuth);
   return callee;
 }
 

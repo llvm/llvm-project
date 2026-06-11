@@ -85,9 +85,9 @@ fn_funcref_t get_null_from_fnptr() {
 // CHECK-NEXT:    store target("wasm.funcref") [[REF:%.*]], ptr [[REF_ADDR]], align 4
 // CHECK-NEXT:    store i32 [[X:%.*]], ptr [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load target("wasm.funcref"), ptr [[REF_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[X_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.wasm.funcref.to_ptr(target("wasm.funcref") [[TMP0]])
-// CHECK-NEXT:    [[CALL:%.*]] = call i32 [[TMP2]](i32 noundef [[TMP1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.wasm.funcref.to_ptr(target("wasm.funcref") [[TMP0]])
+// CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X_ADDR]], align 4
+// CHECK-NEXT:    [[CALL:%.*]] = call i32 [[TMP1]](i32 noundef [[TMP2]])
 // CHECK-NEXT:    ret i32 [[CALL]]
 //
 int call_fn(fn_funcref_t ref, int x) {

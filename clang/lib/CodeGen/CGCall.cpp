@@ -49,7 +49,6 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -5972,18 +5971,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   const CGCallee &ConcreteCallee = Callee.prepareConcreteCallee(*this);
   llvm::Value *CalleePtr = ConcreteCallee.getFunctionPointer();
-
-  // A WebAssembly funcref is an opaque reference type and llvm only accepts
-  // function pointers as the call target. To make an indirect call through a
-  // reference type, first use the llvm.wasm.funcref.to_ptr intrinsic to make a
-  // fake function pointer to it. The backend lowers the resulting indirect call
-  // to a table.set into a single element dummy table + call_indirect 0.
-  if (auto *TET = dyn_cast<llvm::TargetExtType>(CalleePtr->getType());
-      TET && TET->getName() == "wasm.funcref") {
-    llvm::Function *ToPtr =
-        CGM.getIntrinsic(llvm::Intrinsic::wasm_funcref_to_ptr);
-    CalleePtr = Builder.CreateCall(ToPtr, {CalleePtr});
-  }
 
   // If we're using inalloca, set up that argument.
   if (ArgMemory.isValid()) {
