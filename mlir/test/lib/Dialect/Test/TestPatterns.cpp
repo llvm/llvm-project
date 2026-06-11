@@ -14,9 +14,11 @@
 #include "mlir/Dialect/ControlFlow/Transforms/StructuralTypeConversions.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Visitors.h"
@@ -25,6 +27,7 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <cstdint>
 
@@ -2490,6 +2493,214 @@ struct TestFoldTypeConvertingOp
       signalPassFailure();
   }
 };
+
+class TestConvertBreakableLoopToSCFPass
+    : public PassWrapper<TestConvertBreakableLoopToSCFPass, OperationPass<>> {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestConvertBreakableLoopToSCFPass)
+
+  StringRef getArgument() const final {
+    return "test-convert-breakable-loop-to-scf";
+  }
+  StringRef getDescription() const final {
+    return "Convert test.breakable_loop operations to scf.loop operations";
+  }
+
+  void runOnOperation() override;
+
+  struct TargetInfo {
+    Operation *target;
+    int64_t depth;
+  };
+  using TargetMap = llvm::DenseMap<Operation *, SmallVector<TargetInfo>>;
+  using TokenMap = llvm::DenseMap<Operation *, Value>;
+
+private:
+  LogicalResult rewriteLoop(TestBreakableLoopOp loopOp,
+                            const TargetMap &terminatorTargets,
+                            TokenMap &loopTokens);
+  LogicalResult rewriteTerminator(Operation *terminator,
+                                  const TargetMap &terminatorTargets,
+                                  const TokenMap &loopTokens,
+                                  PatternRewriter &rewriter);
+};
+
+static void appendTerminatorTargets(
+    Operation *terminator,
+    SmallVectorImpl<TestConvertBreakableLoopToSCFPass::TargetInfo> &targets,
+    SmallVector<Operation *> potentialTargets) {
+  for (Operation *targetOp : potentialTargets) {
+    int64_t depth = 0;
+    for (Operation *currentOp = terminator->getParentOp(); currentOp;
+         currentOp = currentOp->getParentOp()) {
+      if (isa<TestBreakableLoopOp>(currentOp)) {
+        ++depth;
+        if (currentOp == targetOp) {
+          targets.push_back({targetOp, depth});
+          break;
+        }
+      }
+      if (!currentOp->mightHaveTrait<OpTrait::PropagateControlFlowBreak>())
+        break;
+    }
+  }
+}
+
+static bool isBreakableLoopTerminator(Operation *op) {
+  return isa<TestDynamicBreakOp, TestDynamicContinueOp>(op);
+}
+
+static OperandRange getTerminatorPayload(Operation *terminator) {
+  if (auto breakOp = dyn_cast<TestDynamicBreakOp>(terminator))
+    return breakOp.getArgs();
+  return cast<TestDynamicContinueOp>(terminator).getArgs();
+}
+
+static Value getTerminatorDepth(Operation *terminator) {
+  if (auto breakOp = dyn_cast<TestDynamicBreakOp>(terminator))
+    return breakOp.getDepth();
+  return cast<TestDynamicContinueOp>(terminator).getDepth();
+}
+
+static void createSCFTerminator(PatternRewriter &rewriter, Location loc,
+                                Operation *terminator, Value targetToken,
+                                ValueRange args) {
+  if (isa<TestDynamicBreakOp>(terminator)) {
+    scf::BreakOp::create(rewriter, loc, targetToken, args);
+    return;
+  }
+  scf::ContinueOp::create(rewriter, loc, targetToken, args);
+}
+
+static std::optional<Value>
+lookupToken(Operation *terminator, Operation *target,
+            const TestConvertBreakableLoopToSCFPass::TokenMap &loopTokens) {
+  auto it = loopTokens.find(target);
+  if (it != loopTokens.end())
+    return it->second;
+  terminator->emitOpError()
+      << "cannot convert because target loop has not been converted";
+  return std::nullopt;
+}
+
+LogicalResult TestConvertBreakableLoopToSCFPass::rewriteTerminator(
+    Operation *terminator, const TargetMap &terminatorTargets,
+    const TokenMap &loopTokens, PatternRewriter &rewriter) {
+  auto targetIt = terminatorTargets.find(terminator);
+  if (targetIt == terminatorTargets.end() || targetIt->second.empty())
+    return terminator->emitOpError()
+           << "cannot convert terminator without a target loop";
+
+  ArrayRef<TargetInfo> targets = targetIt->second;
+  Location loc = terminator->getLoc();
+  SmallVector<Value> args(getTerminatorPayload(terminator));
+
+  if (targets.size() == 1) {
+    std::optional<Value> token =
+        lookupToken(terminator, targets.front().target, loopTokens);
+    if (!token)
+      return failure();
+    rewriter.setInsertionPoint(terminator);
+    createSCFTerminator(rewriter, loc, terminator, *token, args);
+    rewriter.eraseOp(terminator);
+    return success();
+  }
+
+  rewriter.setInsertionPoint(terminator);
+  Value depth = getTerminatorDepth(terminator);
+  for (TargetInfo target : targets) {
+    std::optional<Value> token =
+        lookupToken(terminator, target.target, loopTokens);
+    if (!token)
+      return failure();
+
+    Value depthValue =
+        arith::ConstantIndexOp::create(rewriter, loc, target.depth);
+    Value isTarget = arith::CmpIOp::create(
+        rewriter, loc, arith::CmpIPredicate::eq, depth, depthValue);
+    auto ifOp = scf::IfOp::create(rewriter, loc, TypeRange{}, isTarget,
+                                  /*addThenBlock=*/true,
+                                  /*addElseBlock=*/false);
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(ifOp.thenBlock());
+      createSCFTerminator(rewriter, loc, terminator, *token, args);
+    }
+    rewriter.setInsertionPointAfter(ifOp);
+  }
+
+  // Dynamic depths are verified to be able to target any listed loop. If the
+  // value falls outside that set, selects an incompatible target, or otherwise
+  // has undefined behavior, the fallback may choose any valid target. Use the
+  // first compatible target to keep the generated IR deterministic.
+  std::optional<Value> fallbackToken =
+      lookupToken(terminator, targets.front().target, loopTokens);
+  if (!fallbackToken)
+    return failure();
+  createSCFTerminator(rewriter, loc, terminator, *fallbackToken, args);
+  rewriter.eraseOp(terminator);
+  return success();
+}
+
+LogicalResult TestConvertBreakableLoopToSCFPass::rewriteLoop(
+    TestBreakableLoopOp loopOp, const TargetMap &terminatorTargets,
+    TokenMap &loopTokens) {
+  PatternRewriter rewriter(loopOp.getContext());
+  rewriter.setInsertionPoint(loopOp);
+
+  auto scfLoop = scf::LoopOp::create(
+      rewriter, loopOp.getLoc(), loopOp.getResultTypes(), loopOp.getInitArgs());
+  scfLoop->setAttrs(loopOp->getAttrs());
+  scfLoop.getRegion().takeBody(loopOp.getBody());
+  scfLoop.getBody()->insertArgument(
+      /*index=*/0u, TokenType::get(loopOp.getContext()), loopOp.getLoc());
+  loopTokens[loopOp.getOperation()] = scfLoop.getControlToken();
+
+  SmallVector<Operation *> terminators;
+  scfLoop.getRegion().walk([&](Operation *op) {
+    if (!isBreakableLoopTerminator(op))
+      return;
+    if (op->getParentOfType<TestBreakableLoopOp>())
+      return;
+    terminators.push_back(op);
+  });
+
+  for (Operation *terminator : terminators)
+    if (failed(rewriteTerminator(terminator, terminatorTargets, loopTokens,
+                                 rewriter)))
+      return failure();
+
+  rewriter.replaceOp(loopOp, scfLoop.getResults());
+  return success();
+}
+
+void TestConvertBreakableLoopToSCFPass::runOnOperation() {
+  SmallVector<TestBreakableLoopOp> loops;
+  TargetMap terminatorTargets;
+  getOperation()->walk<WalkOrder::PreOrder>([&](Operation *op) {
+    if (auto loopOp = dyn_cast<TestBreakableLoopOp>(op)) {
+      loops.push_back(loopOp);
+      return;
+    }
+    if (auto breakOp = dyn_cast<TestDynamicBreakOp>(op)) {
+      appendTerminatorTargets(op, terminatorTargets[op],
+                              breakOp.getPotentialTargets());
+      return;
+    }
+    if (auto continueOp = dyn_cast<TestDynamicContinueOp>(op))
+      appendTerminatorTargets(op, terminatorTargets[op],
+                              continueOp.getPotentialTargets());
+  });
+
+  TokenMap loopTokens;
+  for (TestBreakableLoopOp loopOp : loops) {
+    if (failed(rewriteLoop(loopOp, terminatorTargets, loopTokens))) {
+      signalPassFailure();
+      return;
+    }
+  }
+}
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -2522,6 +2733,8 @@ void registerPatternsTestPass() {
   PassRegistration<TestSelectiveReplacementPatternDriver>();
 
   PassRegistration<TestFoldTypeConvertingOp>();
+
+  PassRegistration<TestConvertBreakableLoopToSCFPass>();
 }
 } // namespace test
 } // namespace mlir

@@ -2823,6 +2823,73 @@ def LoopBlockTerminatorOp : TEST_Op<"loop_block_term",
   }];
 }
 
+def TestBreakableLoopOp : TEST_Op<"breakable_loop", [
+    AutomaticAllocationScope,
+    RecursiveMemoryEffects,
+    PropagateControlFlowBreak,
+    SingleBlock,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+    HasBreakingControlFlowOpInterface,
+    HasNestedTerminator<["TestDynamicContinueOp", "TestDynamicBreakOp"]>
+  ]> {
+  let summary = "test loop with dynamically addressed break/continue";
+  let description = [{
+    Test dialect loop operation that models breaking control flow with
+    dynamically selected targets. Its terminators use an SSA index value to
+    count enclosing `test.breakable_loop` operations. A depth of one targets the
+    immediately enclosing test loop, a depth of two targets the next enclosing
+    test loop, and so on. A constant depth must identify a reachable target with
+    compatible payload types. A dynamic depth may evaluate to any reachable depth
+    with compatible payload types; evaluating to zero, to an incompatible target,
+    or to a depth greater than the number of reachable loops is undefined
+    behavior.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$initArgs);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    ::mlir::Block::BlockArgListType getRegionIterArgs() {
+      return getBody().getArguments();
+    }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasRegionVerifier = 1;
+}
+
+def TestDynamicBreakOp : TEST_Op<"dynamic_break", [
+    Terminator, RegionExitTerminatorOpInterface,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+      ["getMutableSuccessorOperands"]>
+  ]> {
+  let summary = "dynamically targeted break from test.breakable_loop";
+  let arguments = (ins Index:$depth, Variadic<AnyType>:$args);
+  let assemblyFormat = "$depth ($args^ `:` type($args))? attr-dict";
+  let extraClassDeclaration = [{
+    ::llvm::SmallVector<::mlir::Operation *>
+    getPotentialTargets();
+  }];
+  let hasVerifier = 1;
+}
+
+def TestDynamicContinueOp : TEST_Op<"dynamic_continue", [
+    Terminator, RegionExitTerminatorOpInterface,
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+      ["getMutableSuccessorOperands"]>
+  ]> {
+  let summary = "dynamically targeted continue of test.breakable_loop";
+  let arguments = (ins Index:$depth, Variadic<AnyType>:$args);
+  let assemblyFormat = "$depth ($args^ `:` type($args))? attr-dict";
+  let extraClassDeclaration = [{
+    ::llvm::SmallVector<::mlir::Operation *>
+    getPotentialTargets();
+  }];
+  let hasVerifier = 1;
+}
+
 def TestNoTerminatorOp : TEST_Op<"switch_with_no_break", [
     NoTerminator,
     DeclareOpInterfaceMethods<RegionBranchOpInterface>
