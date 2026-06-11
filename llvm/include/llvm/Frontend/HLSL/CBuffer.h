@@ -53,6 +53,7 @@ public:
   iterator begin() { return Mappings.begin(); }
   iterator end() { return Mappings.end(); }
 
+  LLVM_ABI void removeCBufferGlobalsFromUseList(Module &M);
   LLVM_ABI void eraseFromModule();
 };
 
