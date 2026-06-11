@@ -150,3 +150,17 @@ void va_arg_array_regression(int n, ...) {
   int *p = __builtin_va_arg(ap, int[4]); // expected-warning {{second argument to 'va_arg' is of array type 'int[4]'}}
   (void)p;
 }
+
+// FIXME: We miss the origins of void* after dereference, so we miss to warn here.
+void *void_pointer_dereference(void) {
+  int value;
+  void *bytes = &value;
+  return &*bytes;
+}
+
+// FIXME: Atomics are not modeled yet.
+int *atomic_pointer_declref(void) {
+  int value;
+  _Atomic(int *) p = &value;
+  return p;
+}
