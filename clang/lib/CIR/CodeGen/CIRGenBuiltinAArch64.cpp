@@ -895,11 +895,8 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vqshlq_n_v: {
     llvm::StringRef intrName =
         usgn ? "aarch64.neon.uqshl" : "aarch64.neon.sqshl";
-    return emitNeonCall(
-        cgf.cgm, cgf.getBuilder(),
-        {ty, usgn ? getSignChangedVectorType(cgf.getBuilder(), ty) : ty}, ops,
-        intrName, ty, loc, /*isConstrainedFPIntrinsic=*/false,
-        /*shift=*/1);
+    return emitNeonCall(cgf.cgm, cgf.getBuilder(), {ty, ty}, ops, intrName, ty,
+                        loc, false, /*shift=*/1);
   }
   case NEON::BI__builtin_neon_vqshlu_n_v:
   case NEON::BI__builtin_neon_vqshluq_n_v: {
