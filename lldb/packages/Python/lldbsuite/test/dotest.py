@@ -342,6 +342,9 @@ def parseOptionsAndInitTestdirs():
         configuration.triple.split("-")[0] if configuration.triple else platform_machine
     )
 
+    if args.arch:
+        configuration.arch = args.arch
+
     if args.categories_list:
         configuration.categories_list = set(
             test_categories.validate(args.categories_list, False)

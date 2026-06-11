@@ -41,6 +41,17 @@ class Builder:
             return ["TRIPLE=" + triple]
         return []
 
+    def getArchSpec(self):
+        """
+        Helper function to return the key-value string to specify the architecture
+        used for the make system.
+        """
+        arch = self.getArchitecture()
+        triple = self.getTriple()
+        if arch and triple and arch != triple.split("-")[0]:
+            return ["ARCH=" + arch]
+        return []
+
     def getArchCFlags(self):
         """Returns the ARCH_CFLAGS for the make system."""
         return []
@@ -293,6 +304,7 @@ class Builder:
             make_targets,
             self.getArchCFlags(),
             self.getTripleSpec(),
+            self.getArchSpec(),
             self.getToolchainSpec(compiler),
             self.getExtraMakeArgs(),
             self.getSDKRootSpec(),
