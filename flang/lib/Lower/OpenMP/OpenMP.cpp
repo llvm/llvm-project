@@ -53,6 +53,7 @@
 #include "mlir/Support/StateStack.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 
 using namespace Fortran::lower::omp;
@@ -812,9 +813,8 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
   auto genGroupprivateOp = [&](const semantics::Symbol &sym) -> mlir::Value {
     std::string globalName = converter.mangleName(sym);
     fir::GlobalOp global = module.lookupSymbol<fir::GlobalOp>(globalName);
-    if (!global) {
+    if (!global)
       return mlir::Value();
-    }
 
     // The device_type modifier was recorded on the symbol during semantic
     // analysis.
@@ -850,7 +850,7 @@ static void groupprivatizeVars(lower::AbstractConverter &converter,
 
   // For a COMMON block, the GroupprivateOp is generated for the block itself
   // instead of its members.
-  llvm::SetVector<const semantics::Symbol *> commonSyms;
+  llvm::SmallPtrSet<const semantics::Symbol *, 8> commonSyms;
 
   for (const semantics::Symbol *sym : groupprivateSyms) {
     mlir::Value symGroupprivateValue;
@@ -5537,7 +5537,7 @@ void Fortran::lower::genGroupprivateOp(lower::AbstractConverter &converter,
       globalInitialization(converter, firOpBuilder, sym, var, currentLocation);
   }
 
-  // The actual omp.groupprivate operation is created by groupprivatizeVars.
+  // The actual omp.groupprivate operations are created by groupprivatizeVars.
 }
 
 void Fortran::lower::genThreadprivateOp(lower::AbstractConverter &converter,

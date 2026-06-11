@@ -87,8 +87,8 @@ public:
     ompGroupprivateDeviceType_ = device;
   }
 
-  // \p dir selects which directive's DEVICE_TYPE value to print, since the
-  // clause can be carried by both DECLARE_TARGET and GROUPPRIVATE.
+  // \p dir indicates to which declarative directive the given clauses
+  // belong to.
   void printClauseSet(llvm::raw_ostream &os, const OmpClauseSet &clauses,
       llvm::omp::Directive dir,
       parser::CharBlock name = parser::CharBlock{}) const;
