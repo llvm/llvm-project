@@ -54445,8 +54445,12 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     if (!GVar)
       return SDValue();
 
+    if (!GVar->hasInitializer())
+      return SDValue();
+
     if (GVar->getName().ends_with(".x86.opt"))
       return SDValue();
+
 
     OptimizedConstantArrayInfo Info = optimizeGlobalConstantArray(GVar);
     if (!Info.Success)
