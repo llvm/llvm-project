@@ -87,6 +87,11 @@ Makes programs 10x faster by doing Special New Thing.
   and `ccc` agree for `void(ptr)` (x86_64, AArch64, RISC-V, ...) but is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
 
+* Assume bundles now only accept attributes that are actually handled.
+  Specifically, they are ``align``, ``cold``, ``dereferenceable``,
+  ``dereferenceable_or_null``, ``nonnull``, ``noundef`` and
+  ``separate_storage``.
+
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
 ### Changes to LLVM infrastructure
@@ -137,14 +142,17 @@ Makes programs 10x faster by doing Special New Thing.
 * ``ConstantFP`` now supports vector types and is the canonical form returned by
   ``ConstantVector::getSplat(C)`` when ``C`` is a scalar ``ConstantFP``.
 
-* ``DenseMap`` and ``DenseSet`` ``erase`` now invalidates all iterators and
-  references into the container, not just the iterator for the erased element.
-  Use the new ``remove_if`` member to erase matching elements in a single pass
-  instead of erasing while iterating.
+* ``DenseMap``, ``DenseSet``, ``StringMap``, and ``StringSet`` ``erase`` now
+  invalidates all iterators and references into the container, not just the
+  iterator for the erased element. Use the new ``remove_if`` member to erase
+  matching elements in a single pass instead of erasing while iterating.
 
 * ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
   refactored and no longer take a type. This API is also now precomputed in
   TableGen to improve compile-time.
+
+* ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
+  with ``APInt::sqrtFloor`` (floor of square root).
 
 ### Changes to building LLVM
 
@@ -243,6 +251,7 @@ Makes programs 10x faster by doing Special New Thing.
 * `-mcpu=sifive-870` has been renamed `-mcpu=sifive-p870-d`.
 * Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
 * Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
+* `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
 
 ### Changes to the WebAssembly Backend
 
@@ -257,6 +266,8 @@ Makes programs 10x faster by doing Special New Thing.
   in use. This matches the behaviour of Intel syntax and aids with
   compatibility when changing the default Clang syntax to the Intel syntax.
 
+* EGPR (R16-R31) now requires V3 unwind info on Windows x64. Using EGPR
+  without V3 unwind produces a fatal error.
 * Implemented Win64 APX ABI callee-saved registers: R30 and R31 are now
   treated as non-volatile in the Win64 calling convention when APX is
   available, per the Microsoft x64 calling convention specification.
@@ -265,6 +276,10 @@ Makes programs 10x faster by doing Special New Thing.
   register allocation, as the unwinder cannot restore APX extended
   registers across longjmp. A warning is emitted for large functions
   where this reservation may impact performance.
+
+* Added ``.seh_push2regs`` assembly directive for explicitly encoding a
+  two-register push in Windows x64 V3 unwind info. The directive takes two
+  register operands: ``.seh_push2regs %r12, %r13``.
 
 ### Changes to the OCaml bindings
 
@@ -313,6 +328,8 @@ Makes programs 10x faster by doing Special New Thing.
   prefixes, making it an alias of the existing `-check-prefixes` option.
 * Add `-mtune` option to `llc`.
 * Add `-mtune` option to `opt`.
+* Fixed `llvm-ar` to correctly handle the `N` count modifier on Windows for archive members whose names differ only
+  in case (e.g. `FOO.OBJ` and `foo.obj`). Previously, `-N 2` would fail with "not found" even when two matching members existed.
 
 ### Changes to LLDB
 

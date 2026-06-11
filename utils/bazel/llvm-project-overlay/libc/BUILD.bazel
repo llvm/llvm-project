@@ -30,6 +30,15 @@ package(
 
 licenses(["notice"])
 
+# Expose the libc/shared/* RPC headers so flang-rt's io-api-server.cpp can
+# include `<shared/rpc.h>` and `<shared/rpc_dispatch.h>` from a host build
+# without depending on the rest of the libc target graph.
+exports_files([
+    "shared/rpc.h",
+    "shared/rpc_dispatch.h",
+    "shared/rpc_util.h",
+])
+
 # A flag to pick which `mpfr` to use for math tests.
 # Usage: `--@llvm-project//libc:mpfr=<disable|external|system>`.
 # Flag documentation: https://bazel.build/extending/config
@@ -3573,6 +3582,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_acosbf16",
+    hdrs = ["src/__support/math/acosbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":__support_math_inv_trigf_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_acosf",
     hdrs = ["src/__support/math/acosf.h"],
     deps = [
@@ -5444,6 +5468,16 @@ libc_support_library(
     deps = [
         ":__support_fputil_fp_bits",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_isnanf128",
+    hdrs = ["src/__support/math/isnanf128.h"],
+    deps = [
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -9637,6 +9671,11 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "acosbf16",
+    additional_deps = [":__support_math_acosbf16"],
+)
+
+libc_math_function(
     name = "acosf",
     additional_deps = [":__support_math_acosf"],
 )
@@ -10072,6 +10111,13 @@ libc_math_function(
     name = "isnanf",
     additional_deps = [
         ":__support_math_isnanf",
+    ],
+)
+
+libc_math_function(
+    name = "isnanf128",
+    additional_deps = [
+        ":__support_math_isnanf128",
     ],
 )
 

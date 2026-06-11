@@ -442,12 +442,6 @@ struct ExactEqualsExpression {
 } // end anonymous namespace
 
 template <> struct llvm::DenseMapInfo<const Expression *> {
-  static const Expression *getEmptyKey() {
-    auto Val = static_cast<uintptr_t>(-1);
-    Val <<= PointerLikeTypeTraits<const Expression *>::NumLowBitsAvailable;
-    return reinterpret_cast<const Expression *>(Val);
-  }
-
   static unsigned getHashValue(const Expression *E) {
     return E->getComputedHash();
   }
@@ -457,16 +451,12 @@ template <> struct llvm::DenseMapInfo<const Expression *> {
   }
 
   static bool isEqual(const ExactEqualsExpression &LHS, const Expression *RHS) {
-    if (RHS == getEmptyKey())
-      return false;
     return LHS == *RHS;
   }
 
   static bool isEqual(const Expression *LHS, const Expression *RHS) {
     if (LHS == RHS)
       return true;
-    if (LHS == getEmptyKey() || RHS == getEmptyKey())
-      return false;
     // Compare hashes before equality.  This is *not* what the hashtable does,
     // since it is computing it modulo the number of buckets, whereas we are
     // using the full hash keyspace.  Since the hashes are precomputed, this
