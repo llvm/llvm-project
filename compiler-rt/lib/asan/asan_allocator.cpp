@@ -393,11 +393,9 @@ struct Allocator {
 
   void InitLinkerInitialized(const AllocatorOptions& options) {
     SetAllocatorMayReturnNull(options.may_return_null);
-    // Device-backed allocations use CombinedAllocator's device path. On
-    // SANITIZER_AMDHSA builds, enable it so InitMemFuncs() /
-    // AmdgpuDeviceAllocator::Init() run at startup.
-    allocator.InitLinkerInitialized(options.release_to_os_interval_ms, 0,
-                                    SANITIZER_AMDHSA);
+    // Device tier init is driven by DeviceBackend::kEnableDeviceBackend inside
+    // CombinedAllocator::InitLinkerInitialized (no separate ASan field).
+    allocator.InitLinkerInitialized(options.release_to_os_interval_ms);
     SharedInitCode(options);
     max_user_defined_malloc_size = common_flags()->max_allocation_size_mb
                                        ? common_flags()->max_allocation_size_mb
