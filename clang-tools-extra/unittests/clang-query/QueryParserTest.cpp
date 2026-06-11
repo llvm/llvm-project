@@ -70,7 +70,7 @@ TEST_F(QueryParserTest, Set) {
 
   Q = parse("set output");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("expected 'diag', 'print', 'detailed-ast' or 'dump', got ''",
+  EXPECT_EQ("expected 'diag', 'print', 'detailed-ast', 'dump' or 'json', got ''",
             cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("set bind-root true foo");
@@ -79,7 +79,7 @@ TEST_F(QueryParserTest, Set) {
 
   Q = parse("set output foo");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
-  EXPECT_EQ("expected 'diag', 'print', 'detailed-ast' or 'dump', got 'foo'",
+  EXPECT_EQ("expected 'diag', 'print', 'detailed-ast', 'dump' or 'json', got 'foo'",
             cast<InvalidQuery>(Q)->ErrStr);
 
   Q = parse("set output dump");
@@ -89,6 +89,10 @@ TEST_F(QueryParserTest, Set) {
   Q = parse("set output detailed-ast");
   ASSERT_TRUE(isa<SetExclusiveOutputQuery>(Q));
   EXPECT_EQ(&QuerySession::DetailedASTOutput, cast<SetExclusiveOutputQuery>(Q)->Var);
+
+  Q = parse("set output json");
+  ASSERT_TRUE(isa<SetExclusiveOutputQuery>(Q));
+  EXPECT_EQ(&QuerySession::JSONOutput, cast<SetExclusiveOutputQuery>(Q)->Var);
 
   Q = parse("enable output detailed-ast");
   ASSERT_TRUE(isa<EnableOutputQuery>(Q));
@@ -221,7 +225,7 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("output", Comps[0].DisplayText);
 
   Comps = QueryParser::complete("enable output ", 14, QS);
-  ASSERT_EQ(4u, Comps.size());
+  ASSERT_EQ(5u, Comps.size());
 
   EXPECT_EQ("diag ", Comps[0].TypedText);
   EXPECT_EQ("diag", Comps[0].DisplayText);
@@ -231,6 +235,8 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("detailed-ast", Comps[2].DisplayText);
   EXPECT_EQ("dump ", Comps[3].TypedText);
   EXPECT_EQ("dump", Comps[3].DisplayText);
+  EXPECT_EQ("json ", Comps[4].TypedText);
+  EXPECT_EQ("json", Comps[4].DisplayText);
 
   Comps = QueryParser::complete("set traversal ", 14, QS);
   ASSERT_EQ(2u, Comps.size());
