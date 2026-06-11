@@ -36,16 +36,14 @@ define dso_local void @const_disp_fold()  {
 ; CHECK-NEXT:    movq g_idx(%rip), %rcx
 ; CHECK-NEXT:    movzwl 536875250(%rcx,%rcx), %ecx
 ; CHECK-NEXT:    testl %eax, 536888780(,%rcx,4)
-; CHECK-NEXT:    je .LBB1_3
-; CHECK-NEXT:  # %bb.1: # %do.body.preheader
-; CHECK-NEXT:    movl $536875250, %edx # imm = 0x200010F2
+; CHECK-NEXT:    je .LBB1_2
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB1_2: # %do.body
+; CHECK-NEXT:  .LBB1_1: # %do.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testl %eax, 13534(%rdx,%rcx,4)
+; CHECK-NEXT:    testl %eax, 536888784(,%rcx,4)
 ; CHECK-NEXT:    leaq 1(%rcx), %rcx
-; CHECK-NEXT:    jne .LBB1_2
-; CHECK-NEXT:  .LBB1_3: # %if.end
+; CHECK-NEXT:    jne .LBB1_1
+; CHECK-NEXT:  .LBB1_2: # %if.end
 ; CHECK-NEXT:    movq %rcx, g_out(%rip)
 ; CHECK-NEXT:    retq
 entry:
