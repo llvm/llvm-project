@@ -191,6 +191,7 @@ C++ Language Changes
 --------------------
 
 - ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+- ``auto`` parameters are now available in all C++ language modes as an extension.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -400,6 +401,9 @@ Modified Compiler Flags
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
+- The `-fzero-call-used-regs` compiler flag is now allowed on RISC-V, only the
+  "skip", "used-gpr", "used-gpr-arg", "all-gpr" and "all-gpr-arg" options are
+  supported for the moment.
 
 - Slightly changed hash id generation to get the unique linkage symbols names 
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
@@ -733,7 +737,6 @@ Bug Fixes to C++ Support
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
-- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
@@ -1008,6 +1011,14 @@ Crash and bug fixes
 Sanitizers
 ----------
 - UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
+
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) now support
+  Version 4 of the Special Case List format, which introduces a transition
+  period for leading dot-slash (``./``) canonicalization in path matching.
+  Version 4 matches both canonicalized and non-canonicalized paths but emits a
+  warning for deprecated matches. Version 5 drops backward compatibility and
+  requires rules to match canonicalized paths (without leading ``./``).
+
 
 - Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
   suppression mappings (``--warning-suppression-mappings``) now recognize version

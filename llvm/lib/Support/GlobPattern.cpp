@@ -248,11 +248,9 @@ GlobPattern::SubGlobPattern::create(StringRef S, bool SlashAgnostic) {
       if (!BVOrErr)
         return BVOrErr.takeError();
       BitVector &BV = *BVOrErr;
-      if (SlashAgnostic) {
-        if (BV['\\'] || BV['/']) {
-          BV.set('\\');
-          BV.set('/');
-        }
+      if (SlashAgnostic && (BV['\\'] || BV['/'])) {
+        BV.set('\\');
+        BV.set('/');
       }
       if (Invert)
         BV.flip();

@@ -224,7 +224,7 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
     if (isa<math::ErfOp>(op))
       return replaceOp(ErfOp{}, ElementwiseKind::erf);
 
-    // sin, cos, tan only have the category (elementwise) form, but no
+    // The following ops only have the category (elementwise) form, but no
     // linalg.* named op equivalent.
     if (emitCategoryOp) {
       if (isa<math::SinOp>(op))
@@ -233,6 +233,24 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
         return replaceOp(nullptr, ElementwiseKind::cos);
       if (isa<math::TanOp>(op))
         return replaceOp(nullptr, ElementwiseKind::tan);
+      if (isa<math::AcosOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::acos);
+      if (isa<math::AcoshOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::acosh);
+      if (isa<math::AsinOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::asin);
+      if (isa<math::AsinhOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::asinh);
+      if (isa<math::AtanOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::atan);
+      if (isa<math::AtanhOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::atanh);
+      if (isa<math::Log10Op>(op))
+        return replaceOp(nullptr, ElementwiseKind::log10);
+      if (isa<math::Log1pOp>(op))
+        return replaceOp(nullptr, ElementwiseKind::log1p);
+      if (isa<math::Log2Op>(op))
+        return replaceOp(nullptr, ElementwiseKind::log2);
     }
 
     // At this point, we exhaustively checked the available unary named ops. The
