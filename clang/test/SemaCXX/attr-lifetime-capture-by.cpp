@@ -34,6 +34,8 @@ void unknown_param_name(const int& unknown, // expected-error {{parameter cannot
                         const int& s [[clang::lifetime_capture_by(unknown)]]); // expected-warning {{'lifetime_capture_by(unknown)' is deprecated; use 'lifetime_capture_by_unknown' instead}}
 void global_param_name(const int& global, // expected-error {{parameter cannot be named 'global' while using 'lifetime_capture_by(global)'}}
                        const int& s [[clang::lifetime_capture_by(global)]]); // expected-warning {{'lifetime_capture_by(global)' is deprecated; use 'lifetime_capture_by_global' instead}}
+void no_such_param(int i [[clang::lifetime_capture_by(no_such_param)]]); // expected-error {{'lifetime_capture_by' attribute argument 'no_such_param' is not a known function parameter; must be a function parameter, 'this', 'global' or 'unknown'}}
+void use_no_such_param() { no_such_param(0); }
 struct T {
   void member(
     const int &x [[clang::lifetime_capture_by(s)]],
