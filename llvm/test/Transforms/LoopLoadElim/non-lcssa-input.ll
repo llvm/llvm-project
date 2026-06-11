@@ -2,9 +2,10 @@
 
 ; LoopLoadElimination could call LoopVersioning on non-LCSSA loops.
 ; A direct exit-block use of %C then remained tied to the original loop,
-; which stopped dominating the shared exit after cloning. Forming LCSSA in
-; versionLoop() rewrites the branch through an exit PHI; Usage of raw %C and %C.exit is needed
-; to trigger the old buggy path.
+; which stopped dominating the shared exit after cloning. LoopLoadElimination
+; now forms LCSSA before versioning, which rewrites the branch through an exit
+; PHI. The raw %C use in %for.end (alongside the %C.exit PHI) is needed to
+; trigger the old buggy path.
 
 define void @non_lcssa_exit_use(ptr nocapture %a, i64 %n) {
 ; CHECK-LABEL: @non_lcssa_exit_use(

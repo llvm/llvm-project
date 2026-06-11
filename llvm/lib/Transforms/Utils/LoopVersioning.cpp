@@ -52,10 +52,10 @@ void LoopVersioning::versionLoop(
   assert(VersionedLoop->getUniqueExitBlock() && "No single exit block");
   assert(VersionedLoop->isLoopSimplifyForm() &&
          "Loop is not in loop-simplify form");
-
-  // Form LCSSA on the input loop before doing anything else.
-  if (!VersionedLoop->isLCSSAForm(*DT))
-    formLCSSARecursively(*VersionedLoop, *DT, LI, SE);
+  // Assert that the loop is in LCSSA form. This is a precondition of
+  // versioning.
+  assert(VersionedLoop->isRecursivelyLCSSAForm(*DT, *LI) &&
+         "Loop is not in LCSSA form");
 
   Value *MemRuntimeCheck;
   Value *SCEVRuntimeCheck;
@@ -296,6 +296,10 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
     if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
+      // Forming LCSSA is a precondition of versioning.
+      if (!L->isRecursivelyLCSSAForm(*DT, *LI))
+        formLCSSARecursively(*L, *DT, LI, SE);
+
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
                           LI, DT, SE);
       LVer.versionLoop();
