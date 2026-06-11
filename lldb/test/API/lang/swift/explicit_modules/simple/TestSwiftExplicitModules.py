@@ -44,6 +44,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         
     @skipEmbeddedSwift
     @swiftTest
+    @skipIfWindows
     @skipUnlessDarwin
     def test_import(self):
         """Test an implicit import inside an explicit build"""
