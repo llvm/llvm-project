@@ -618,7 +618,7 @@ void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
     collectRegionsConstants(*Region, GVNToConstant, NotSame);
 
   for (OutlinableRegion *Region : Regions) {
-    if (!containsNonUniformImmArgConstant(*Region, NotSame))
+    if (!containsIllegalNonUniformConstant(*Region, NotSame))
       continue;
     IgnoreGroup = true;
     return;
