@@ -131,6 +131,21 @@ define i16 @test_subvector_reduce_deinterleave_v8i16(<8 x i16> %a0) {
   ret i16 %8
 }
 
+define float @test_subvector_reduce_fadd_v4f32(<4 x float> %a0) {
+; CHECK-LABEL: define float @test_subvector_reduce_fadd_v4f32(
+; CHECK-SAME: <4 x float> [[A0:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call reassoc float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[A0]])
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %1 = shufflevector <4 x float> %a0, <4 x float> poison, <2 x i32> <i32 0, i32 1>
+  %2 = shufflevector <4 x float> %a0, <4 x float> poison, <2 x i32> <i32 2, i32 3>
+  %3 = fadd reassoc <2 x float> %1, %2
+  %4 = shufflevector <2 x float> %3, <2 x float> poison, <2 x i32> <i32 1, i32 poison>
+  %5 = fadd reassoc <2 x float> %3, %4
+  %6 = extractelement <2 x float> %5, i64 0
+  ret float %6
+}
+
 define i32 @test_multishuffle_accumulator_v8i32(<8 x i32> %a0) {
 ; CHECK-LABEL: define i32 @test_multishuffle_accumulator_v8i32(
 ; CHECK-SAME: <8 x i32> [[A0:%.*]]) #[[ATTR0]] {

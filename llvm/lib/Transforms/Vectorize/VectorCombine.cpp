@@ -3960,19 +3960,9 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   std::optional<Intrinsic::ID> CommonCallOp;
 
   if (auto *BO = dyn_cast<BinaryOperator>(VecOpEE)) {
-    switch (BO->getOpcode()) {
-    case Instruction::Add:
-    case Instruction::Mul:
-    case Instruction::Or:
-    case Instruction::And:
-    case Instruction::Xor:
-    case Instruction::FAdd:
-    case Instruction::FMul:
-      CommonBinOp = BO->getOpcode();
-      break;
-    default:
+    if (!getReductionForBinop(BO->getOpcode()))
       return false;
-    }
+    CommonBinOp = BO->getOpcode();
   } else if (auto *MMI = dyn_cast<MinMaxIntrinsic>(VecOpEE)) {
     CommonCallOp = MMI->getIntrinsicID();
   } else {
@@ -4073,9 +4063,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   // For FP reductions, require reassoc on every binop and collect FMF.
   for (Value *V : ChainPostorder) {
     auto *BinOp = dyn_cast<BinaryOperator>(V);
-    if (!BinOp || !CommonBinOp ||
-        (*CommonBinOp != Instruction::FAdd &&
-         *CommonBinOp != Instruction::FMul))
+    if (!BinOp || !BinOp->getType()->isFPOrFPVectorTy())
       continue;
     if (!BinOp->hasAllowReassoc())
       return false;
