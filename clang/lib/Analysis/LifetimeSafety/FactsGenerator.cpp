@@ -106,8 +106,6 @@ void FactsGenerator::run() {
   llvm::TimeTraceScope TimeProfile("FactGenerator");
   const CFG &Cfg = *AC.getCFG();
   llvm::SmallVector<Fact *> PlaceholderLoanFacts = issuePlaceholderLoans();
-  IsCMode = !AC.getASTContext().getLangOpts().CPlusPlus &&
-            !AC.getASTContext().getLangOpts().ObjC;
   // Iterate through the CFG blocks in reverse post-order to ensure that
   // initializations and destructions are processed in the correct sequence.
   for (const CFGBlock *Block : *AC.getAnalysis<PostOrderCFGView>()) {
@@ -353,11 +351,12 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
   switch (UO->getOpcode()) {
   case UO_AddrOf: {
     const Expr *SubExpr = UO->getSubExpr();
-    // In C, function addresses do not need lifetime tracking. Also skip
-    // address-of on void expressions: GNU C permits them, but void itself has
-    // no origins to track.
-    if (IsCMode && (SubExpr->getType()->isFunctionType() ||
-                    SubExpr->getType()->isVoidType()))
+    // Function addresses do not need lifetime tracking.
+    if (SubExpr->getType()->isFunctionType())
+      return;
+    // Skip address-of on void expressions: GNU C permits them, but void itself
+    // has no origins to track.
+    if (IsCMode && SubExpr->getType()->isVoidType())
       return;
     // The origin of an address-of expression (e.g., &x) is the origin of
     // its sub-expression (x). This fact will cause the dataflow analysis
@@ -404,7 +403,6 @@ void FactsGenerator::handleAssignment(const Expr *TargetExpr,
   }
   if (!LHSList)
     return;
-
   OriginList *RHSList = getOriginsList(*RHSExpr);
   // For operator= with reference parameters (e.g.,
   // `View& operator=(const View&)`), the RHS argument stays an lvalue,

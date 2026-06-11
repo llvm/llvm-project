@@ -29,7 +29,9 @@ class FactsGenerator : public ConstStmtVisitor<FactsGenerator> {
 
 public:
   FactsGenerator(FactManager &FactMgr, AnalysisDeclContext &AC)
-      : FactMgr(FactMgr), AC(AC) {}
+      : FactMgr(FactMgr), AC(AC),
+        IsCMode(!AC.getASTContext().getLangOpts().CPlusPlus &&
+                !AC.getASTContext().getLangOpts().ObjC) {}
 
   void run();
 
