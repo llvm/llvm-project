@@ -8120,15 +8120,11 @@ SDValue AArch64DAGToDAGISel::tryFoldCselToFMaxMin(SDNode &N) {
   if (CondCode == AArch64CC::GT || CondCode == AArch64CC::GE) {
     if (TVal == CmpLHS && FVal == CmpRHS)
       isMax = true;
-    else if (TVal == CmpRHS && FVal == CmpLHS)
-      isMax = false;
     else
       return SDValue();
   } else if (CondCode == AArch64CC::MI || CondCode == AArch64CC::LS) {
     if (TVal == CmpLHS && FVal == CmpRHS)
       isMax = false;
-    else if (TVal == CmpRHS && FVal == CmpLHS)
-      isMax = true;
     else
       return SDValue();
   } else {
