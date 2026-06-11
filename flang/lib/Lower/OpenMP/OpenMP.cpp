@@ -2592,6 +2592,18 @@ genMasterOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item);
 }
 
+static mlir::omp::DispatchOp
+genDispatchOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
+              semantics::SemanticsContext &semaCtx,
+              lower::pft::Evaluation &eval, mlir::Location loc,
+              const ConstructQueue &queue,
+              ConstructQueue::const_iterator item) {
+  return genOpWithBody<mlir::omp::DispatchOp>(
+      OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
+                        llvm::omp::Directive::OMPD_dispatch),
+      queue, item);
+}
+
 static mlir::omp::OrderedOp
 genOrderedOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
              semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
@@ -3939,6 +3951,9 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
   switch (dir) {
   case llvm::omp::Directive::OMPD_barrier:
     newOp = genBarrierOp(converter, symTable, semaCtx, eval, loc, queue, item);
+    break;
+  case llvm::omp::Directive::OMPD_dispatch:
+    newOp = genDispatchOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_distribute:
     newOp = genStandaloneDistribute(converter, symTable, stmtCtx, semaCtx, eval,
@@ -5312,9 +5327,21 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
-                   const parser::OpenMPDispatchConstruct &) {
-  if (!semaCtx.langOptions().OpenMPSimd)
-    TODO(converter.getCurrentLocation(), "OpenMPDispatchConstruct");
+                   const parser::OpenMPDispatchConstruct &dispatchConstruct) {
+  const parser::OmpDirectiveSpecification &beginSpec =
+      dispatchConstruct.BeginDir();
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  if (auto &endSpec = dispatchConstruct.EndDir())
+    clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
+
+  llvm::omp::Directive directive = beginSpec.DirId();
+  mlir::Location currentLocation = converter.genLocation(beginSpec.source);
+
+  ConstructQueue queue{
+      buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                          eval, beginSpec.source, directive, clauses)};
+  genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
+                 queue.begin());
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
