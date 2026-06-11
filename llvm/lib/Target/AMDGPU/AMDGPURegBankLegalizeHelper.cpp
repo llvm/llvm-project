@@ -1505,6 +1505,9 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerAbsToNegMax(MI);
   case AbsToS32:
     return lowerAbsToS32(MI);
+  case DeletePrefetch:
+    MI.eraseFromParent();
+    return true;
   }
 
   return true;
@@ -1561,6 +1564,8 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case SgprP5:
   case VgprP5:
     return LLT::pointer(5, 32);
+  case SgprP6:
+    return LLT::pointer(6, 32);
   case SgprP8:
     return LLT::pointer(8, 128);
   case SgprV2S16:
@@ -1712,6 +1717,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case SgprP4:
   case SgprP4Call_WF:
   case SgprP5:
+  case SgprP6:
   case SgprP8:
   case SgprPtr32:
   case SgprPtr64:
@@ -1830,6 +1836,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprP6:
     case SgprP8:
     case SgprV2S16:
     case SgprV2S32:
@@ -2042,6 +2049,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case SgprP3:
     case SgprP4:
     case SgprP5:
+    case SgprP6:
     case SgprP8:
     case SgprV2S16:
     case SgprV2S32:

@@ -79,6 +79,7 @@ enum UniformityLLTOpPredicateID {
   UniP3,
   UniP4,
   UniP5,
+  UniP6,
   UniP8,
   UniPtr32,
   UniPtr64,
@@ -183,6 +184,7 @@ enum RegBankLLTMappingApplyID {
   SgprP3,
   SgprP4,
   SgprP5,
+  SgprP6,
   SgprP8,
   SgprPtr32,
   SgprPtr64,
@@ -341,7 +343,8 @@ enum LoweringMethodID {
   InsVecEltTo32,
   AbsToNegMax,
   AbsToS32,
-  DynStackAlloc
+  DynStackAlloc,
+  DeletePrefetch
 };
 
 enum FastRulesTypes {

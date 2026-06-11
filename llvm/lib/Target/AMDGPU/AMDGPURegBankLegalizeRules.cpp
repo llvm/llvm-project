@@ -122,6 +122,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg) == LLT::pointer(4, 64) && MUI.isUniformAtDef(Reg);
   case UniP5:
     return MRI.getType(Reg) == LLT::pointer(5, 32) && MUI.isUniformAtDef(Reg);
+  case UniP6:
+    return MRI.getType(Reg) == LLT::pointer(6, 32) && MUI.isUniformAtDef(Reg);
   case UniP8:
     return MRI.getType(Reg) == LLT::pointer(8, 128) && MUI.isUniformAtDef(Reg);
   case UniPtr32:
@@ -1522,6 +1524,31 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_AMDGPU_S_BUFFER_PREFETCH})
       .Any({{}, {{}, {SgprV4S32_ReadFirstLane, Imm, SgprB32_ReadFirstLane}}});
+
+  Predicate IsDataPF([](const MachineInstr &MI) -> bool {
+    // prefetch cache type: 0 == instruction (I$) prefetch, 1 == data prefetch.
+    return MI.getOperand(3).getImm() != 0;
+  });
+
+  bool HasSMemPF = ST->hasSafeSmemPrefetch();
+  bool HasVMemPF = ST->hasVmemPrefInsts();
+  addRulesForGOpcs({G_PREFETCH})
+      // Safe smem prefetch keeps both data and instruction prefetch.
+      .Any({{UniPtr64}, {{}, {SgprPtr64}}}, HasSMemPF)
+      // Vmem prefetch keeps data prefetch only.
+      .Any({{{UniPtr64}, IsDataPF}, {{}, {SgprPtr64}}}, !HasSMemPF && HasVMemPF)
+      .Any({{{UniPtr64}, IsDataPF}, {{}, {}, DeletePrefetch}},
+           !HasSMemPF && !HasVMemPF)
+      .Any({{{UniPtr64}, !IsDataPF}, {{}, {}, DeletePrefetch}}, !HasSMemPF)
+
+      .Any({{{DivPtr64}, IsDataPF}, {{}, {VgprPtr64}}}, HasVMemPF)
+      .Any({{{DivPtr64}, IsDataPF}, {{}, {}, DeletePrefetch}}, !HasVMemPF)
+      .Any({{{DivPtr64}, !IsDataPF}, {{}, {}, DeletePrefetch}})
+
+      .Any({{P3}, {{}, {}, DeletePrefetch}})
+      .Any({{P5}, {{}, {}, DeletePrefetch}})
+      .Any({{UniP6}, {{}, {SgprP6}}}, HasSMemPF)
+      .Any({{UniP6}, {{}, {}, DeletePrefetch}}, !HasSMemPF);
 
   addRulesForGOpcs({G_FPEXT})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})
