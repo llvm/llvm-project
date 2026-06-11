@@ -3065,8 +3065,8 @@ static bool IsCudaGpuReductionsModule(const semantics::Scope &scope) {
 static bool IsCudaDeviceIntrinsicShadowedByGpuReductions(
     const parser::CharBlock &callSite, semantics::SemanticsContext &context,
     const Symbol *resolution) {
-  if (!resolution || !semantics::FindCUDADeviceContext(
-                         &context.FindScope(callSite))) {
+  if (!resolution ||
+      !semantics::FindCUDADeviceContext(&context.FindScope(callSite))) {
     return false;
   }
   const Symbol &ultimate{resolution->GetUltimate()};
