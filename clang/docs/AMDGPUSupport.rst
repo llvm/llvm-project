@@ -57,3 +57,10 @@ Predefined Macros
      - Defined if FP64 instruction is available (deprecated).
 
 Please note that the specific architecture and feature names will vary depending on the GPU. Also, some macros are deprecated and may be removed in future releases.
+
+
+Target-Specific Builtins
+========================
+
+Clang exposes AMDGPU hardware intrinsics as target-specific builtins with the
+``__builtin_amdgcn_`` prefix. These are documented in :doc:`AMDGPUBuiltinReference`.

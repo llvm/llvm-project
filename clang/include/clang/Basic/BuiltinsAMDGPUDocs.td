@@ -691,3 +691,42 @@ def DocTensorStoreFromLDS_GFX1250 : Documentation {
 Asynchronously copies a tensor from LDS into global memory.
 }];
 }
+
+//===----------------------------------------------------------------------===//
+// S-Buffer Load Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatSBufferLoad : DocumentationCategory<"S-Buffer Load Builtins"> {
+  let Content = [{
+These builtins lower to ``llvm.amdgcn.s.buffer.load`` and issue an
+``s_buffer_load`` when the byte offset is uniform across the wavefront.
+When the offset is divergent, the backend may lower to a ``buffer_load``.
+
+Unlike the ``__builtin_amdgcn_raw_buffer_load_*`` family, these builtins
+take the buffer resource as a 4-dword SGPR descriptor (``v4i32``) rather
+than ``__amdgpu_buffer_rsrc_t``.
+
+The return type selects the load width. Separate builtins are provided for
+each supported scalar and vector element type.
+}];
+}
+
+def DocSBufferLoad : Documentation {
+  let Category = DocCatSBufferLoad;
+  let Content = [{
+Loads data from a buffer using an SGPR buffer descriptor.
+
+- ``rsrc``: 4-dword buffer resource in SGPRs.
+- ``offset``: byte offset from the base of the buffer. May be variable; a
+  uniform offset enables ``s_buffer_load`` selection.
+- ``aux``: cache-policy and control flags. Must be a compile-time constant.
+  The encoding is target-dependent. Common fields include:
+
+  - Pre-GFX12: bit 0 = glc, bit 1 = slc, bit 2 = dlc (GFX10/GFX11), bit 3 =
+    swz, bit 4 = scc (GFX90a).
+  - GFX942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1.
+  - GFX12+: bits [0-2] = th, bits [3-4] = scope, bit 6 = swz.
+
+  The volatile bit is not permitted for this intrinsic.
+}];
+}

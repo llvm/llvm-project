@@ -31,6 +31,15 @@ using namespace llvm;
 
 namespace {
 
+static Value *emitAMDGPUSBufferLoadBuiltin(CodeGenFunction &CGF,
+                                           const CallExpr *E) {
+  llvm::Type *RetTy = CGF.ConvertType(E->getType());
+  Function *F = CGF.CGM.getIntrinsic(Intrinsic::amdgcn_s_buffer_load, RetTy);
+  return CGF.Builder.CreateCall(F, {CGF.EmitScalarExpr(E->getArg(0)),
+                                    CGF.EmitScalarExpr(E->getArg(1)),
+                                    CGF.EmitScalarExpr(E->getArg(2))});
+}
+
 // Has second type mangled argument.
 static Value *
 emitBinaryExpMaybeConstrainedFPBuiltin(CodeGenFunction &CGF, const CallExpr *E,
@@ -2161,6 +2170,30 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64:
     return emitBuiltinWithOneOverloadedType<5>(
         *this, E, Intrinsic::amdgcn_raw_ptr_buffer_atomic_fmax);
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v3i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v4i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v8i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v16i32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v3f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v4f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v8f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v16f32:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_i8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_u8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_i16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_u16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2i8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v3i8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v4i8:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_f16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v3f16:
+  case AMDGPU::BI__builtin_amdgcn_s_buffer_load_v4f16:
+    return emitAMDGPUSBufferLoadBuiltin(*this, E);
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);
