@@ -1568,6 +1568,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat);
 
+  // In non-IEEE mode, s_{min,max}_f* has _num_ semantics. In IEEE mode,
+  // without SALU _num_ instructions, uniform values must be computed with
+  // VALU v_*_num to quiet sNaN.
   auto ScalarNumIsSafe = [=](const MachineInstr &MI) {
     const SIMachineFunctionInfo *MFI =
         MI.getMF()->getInfo<SIMachineFunctionInfo>();
