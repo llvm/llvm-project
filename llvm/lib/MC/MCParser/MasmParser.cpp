@@ -1940,6 +1940,15 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     // identifier ':'   -> Label.
     Lex();
 
+    // MASM 'identifier ::' declares a global (public) label, equivalent to a
+    // plain label followed by a PUBLIC directive. Consume the second colon and
+    // remember to give the symbol global binding once it is created.
+    bool IsGlobalLabel = false;
+    if (getLexer().is(AsmToken::Colon)) {
+      Lex();
+      IsGlobalLabel = true;
+    }
+
     // Diagnose attempt to use '.' as a label.
     if (IDVal == ".")
       return Error(IDLoc, "invalid use of pseudo-symbol '.' as a label");
@@ -1983,8 +1992,12 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     }
 
     // Emit the label.
-    if (!getTargetParser().isParsingMSInlineAsm())
+    if (!getTargetParser().isParsingMSInlineAsm()) {
       Out.emitLabel(Sym, IDLoc);
+      // 'identifier ::' gives the label global (public) binding.
+      if (IsGlobalLabel)
+        Out.emitSymbolAttribute(Sym, MCSA_Global);
+    }
     return false;
   }
 
