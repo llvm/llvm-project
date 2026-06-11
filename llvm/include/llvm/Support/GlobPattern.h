@@ -93,7 +93,7 @@ private:
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
     LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat,
-                                                    bool SlashAgnostic = false);
+                                                    bool SlashAgnostic);
     /// \returns \p true if \p S matches this glob pattern
     LLVM_ABI bool match(StringRef S, bool SlashAgnostic) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
