@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #ifndef SANITIZER_ALLOCATOR_H
-#  error This file must be included inside sanitizer_allocator.h
+#  error This file must be included after sanitizer_allocator.h
 #endif
 
 #if SANITIZER_AMDHSA
@@ -20,6 +20,8 @@ static const DeviceAllocationType DAT_AMDGPU =
 
 class AmdgpuDeviceAllocator {
  public:
+  static constexpr bool kEnableDeviceBackend = true;
+
   static bool Init(bool allow_dlopen = false);
   static void* Allocate(uptr size, uptr alignment,
                         DeviceAllocationInfo* da_info);
@@ -99,8 +101,10 @@ struct AmdgpuAllocationInfo : public DeviceAllocationInfo {
   void* ptr;
 };
 
-template <class MapUnmapCallback>
-using DefaultDeviceAllocator =
-    DeviceAllocatorT<MapUnmapCallback, AmdgpuDeviceAllocator>;
+// AMDGPU device heap for CombinedAllocator's third template parameter:
+// DeviceAllocatorT<Primary, AmdgpuDeviceAllocator>.
+template <class PrimaryAllocator>
+using AmdgpuDeviceAllocatorT =
+    DeviceAllocatorT<PrimaryAllocator, AmdgpuDeviceAllocator>;
 
 #endif  // SANITIZER_AMDHSA

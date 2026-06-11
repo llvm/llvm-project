@@ -13,14 +13,18 @@
 #error This file must be included inside sanitizer_allocator.h
 #endif
 
-// This class implements a complete memory allocator by using two
-// internal allocators:
+// This class implements a complete memory allocator by using two internal
+// allocators:
 // PrimaryAllocator is efficient, but may not allocate some sizes (alignments).
 //  When allocating 2^x bytes it should return 2^x aligned chunk.
 // PrimaryAllocator is used via a local AllocatorCache.
 // SecondaryAllocator can allocate anything, but is not efficient.
+// DeviceAllocator as optional device heap tier: implemented as
+// DeviceAllocatorT<PrimaryAllocator, DeviceBackend>. Default:
+// DefaultDeviceAllocator<PrimaryAllocator>.
 template <class PrimaryAllocator,
-          class LargeMmapAllocatorPtrArray = DefaultLargeMmapAllocatorPtrArray>
+          class LargeMmapAllocatorPtrArray = DefaultLargeMmapAllocatorPtrArray,
+          class DeviceAllocator = DefaultDeviceAllocator<PrimaryAllocator>>
 class CombinedAllocator {
  public:
   using AllocatorCache = typename PrimaryAllocator::AllocatorCache;
@@ -28,22 +32,19 @@ class CombinedAllocator {
       LargeMmapAllocator<typename PrimaryAllocator::MapUnmapCallback,
                          LargeMmapAllocatorPtrArray,
                          typename PrimaryAllocator::AddressSpaceView>;
-  using DeviceAllocator =
-      DefaultDeviceAllocator<typename PrimaryAllocator::MapUnmapCallback>;
 
-  void InitLinkerInitialized(s32 release_to_os_interval_ms, uptr heap_start = 0,
-                             bool enable_device_allocator = false) {
+  void InitLinkerInitialized(s32 release_to_os_interval_ms,
+                             uptr heap_start = 0) {
     primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.InitLinkerInitialized();
-    device_.Init(enable_device_allocator, primary_.kMetadataSize);
+    device_.Init(primary_.kMetadataSize);
   }
 
-  void Init(s32 release_to_os_interval_ms, uptr heap_start = 0,
-            bool enable_device_allocator = false) {
+  void Init(s32 release_to_os_interval_ms, uptr heap_start = 0) {
     stats_.Init();
     primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.Init();
-    device_.Init(enable_device_allocator, primary_.kMetadataSize);
+    device_.Init(primary_.kMetadataSize);
   }
 
   void* Allocate(AllocatorCache* cache, uptr size, uptr alignment,
