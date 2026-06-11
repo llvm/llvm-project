@@ -49,3 +49,51 @@ v_pk_add_f64 v[4:7], 101.0, v[8:11]
 v_pk_add_f64 v[4:7], v[8:11], 101.0
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 // GFX1251: v_pk_add_f64 v[4:7], v[8:11], 0x40594000 ; encoding: [0x04,0x40,0x4b,0xcc,0x08,0xff,0x01,0x1a,0x00,0x40,0x59,0x40]
+
+v_pk_mul_f64 v[4:7], v[8:11], v[12:15]
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], v[8:11], v[12:15]  ; encoding: [0x04,0x40,0x3c,0xcc,0x08,0x19,0x02,0x1a]
+
+v_pk_mul_f64 v[4:7], v[8:11], v[12:15] neg_lo:[1,0] neg_hi:[1,0]
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], v[8:11], v[12:15] neg_lo:[1,0] neg_hi:[1,0] ; encoding: [0x04,0x41,0x3c,0xcc,0x08,0x19,0x02,0x3a]
+
+v_pk_mul_f64 v[4:7], v[8:11], v[12:15] neg_lo:[0,1] neg_hi:[0,1]
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], v[8:11], v[12:15] neg_lo:[0,1] neg_hi:[0,1] ; encoding: [0x04,0x42,0x3c,0xcc,0x08,0x19,0x02,0x5a]
+
+v_pk_mul_f64 v[4:7], v[8:11], v[12:15] clamp
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], v[8:11], v[12:15] clamp ; encoding: [0x04,0xc0,0x3c,0xcc,0x08,0x19,0x02,0x1a]
+
+v_pk_mul_f64 v[4:7], s[8:11], s[12:15]
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], s[8:11], s[12:15]  ; encoding: [0x04,0x40,0x3c,0xcc,0x08,0x18,0x00,0x1a]
+
+v_pk_mul_f64 v[4:7], v[8:11], s[12:15]
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], v[8:11], s[12:15]  ; encoding: [0x04,0x40,0x3c,0xcc,0x08,0x19,0x00,0x1a]
+
+v_pk_mul_f64 v[4:7], s[8:11], v[12:15]
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], s[8:11], v[12:15]  ; encoding: [0x04,0x40,0x3c,0xcc,0x08,0x18,0x02,0x1a]
+
+v_pk_mul_f64 v[4:7], v[8:11], null
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], v[8:11], null      ; encoding: [0x04,0x40,0x3c,0xcc,0x08,0xf9,0x00,0x1a]
+
+v_pk_mul_f64 v[4:7], v[8:11], 1.0
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], v[8:11], 1.0       ; encoding: [0x04,0x40,0x3c,0xcc,0x08,0xe5,0x01,0x1a]
+
+v_pk_mul_f64 v[4:7], 1.0, v[8:11]
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], 1.0, v[8:11]       ; encoding: [0x04,0x40,0x3c,0xcc,0xf2,0x10,0x02,0x1a]
+
+v_pk_mul_f64 v[4:7], 101.0, v[8:11]
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], 0x40594000, v[8:11] ; encoding: [0x04,0x40,0x3c,0xcc,0xff,0x10,0x02,0x1a,0x00,0x40,0x59,0x40]
+
+v_pk_mul_f64 v[4:7], v[8:11], 101.0
+// GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+// GFX1251: v_pk_mul_f64 v[4:7], v[8:11], 0x40594000 ; encoding: [0x04,0x40,0x3c,0xcc,0x08,0xff,0x01,0x1a,0x00,0x40,0x59,0x40]

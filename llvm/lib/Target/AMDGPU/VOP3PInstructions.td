@@ -1392,6 +1392,7 @@ let isCommutable = 1, isReMaterializable = 1 in {
   }
 
   let SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble] in {
+    defm V_PK_MUL_F64 : VOP3PInst<"v_pk_mul_f64", V_PK_VOP2_F64_Profile, any_fmul>;
     defm V_PK_ADD_F64 : VOP3PInst<"v_pk_add_f64", V_PK_VOP2_F64_Profile, any_fadd>;
   } // End SubtargetPredicate = HasPackedFP64Ops, SchedRW = [WriteDouble]
 } // End isCommutable = 1, isReMaterializable = 1
@@ -2692,6 +2693,7 @@ let PostEncoderMethod = "postEncodeVOP3<true, true, false>" in {
   defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
 }
 
+defm V_PK_MUL_F64      : VOP3P_Real_gfx1250<0x3c>;
 defm V_PK_ADD_F64      : VOP3P_Real_gfx1250<0x4b>;
 
 let AssemblerPredicate = isGFX1250Plus in
