@@ -225,4 +225,4 @@
 // RUN: %clang --target=x86_64-sie-ps5 %s -### 2>&1 | FileCheck --check-prefixes=CHECK-CLANG-TARGET-CPU %s
 
 // CHECK-CLANG-TARGET-CPU: {{ld(\.exe)?}}"
-// CHECK-CLANG-TARGET-CPU: "-plugin-opt=mcpu=znver2s"
+// CHECK-CLANG-TARGET-CPU: "-plugin-opt=mcpu=znver2"

@@ -179,9 +179,6 @@ void tools::PS4cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (StringRef Threads = getLTOParallelism(Args, D); !Threads.empty())
     AddLTOFlag(Twine("-threads=") + Threads);
 
-  std::string CPU = tools::x86::getX86TargetCPU(D, Args, TC.getTriple());
-  AddLTOFlag(Twine("mcpu=" + CPU));
-
   if (*LTOArgs)
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-lto-debug-options=") + LTOArgs));
@@ -373,6 +370,9 @@ void tools::PS5cpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (StringRef Jobs = getLTOParallelism(Args, D); !Jobs.empty())
     AddLTOFlag(Twine("jobs=") + Jobs);
+
+  std::string CPU = tools::x86::getX86TargetCPU(D, Args, TC.getTriple());
+  AddLTOFlag(Twine("mcpu=" + CPU));
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   TC.AddFilePathLibArgs(Args, CmdArgs);
