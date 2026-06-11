@@ -54431,6 +54431,11 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
           GA = MatchedGA;
           OldByteOffset = GA->getOffset() + C->getSExtValue();
         }
+      } else if (auto *C = dyn_cast<ConstantSDNode>(LHS)) {
+        if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(RHS)) {
+          GA = MatchedGA;
+          OldByteOffset = GA->getOffset() + C->getSExtValue();
+        }
       }
     } else if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(Ptr)) {
       GA = MatchedGA;
@@ -54448,9 +54453,15 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
     if (!GVar->hasInitializer())
       return SDValue();
 
-    if (GVar->getName().ends_with(".x86.opt"))
+    auto *CDA = dyn_cast<ConstantDataArray>(GVar->getInitializer());
+    if (!CDA)
       return SDValue();
 
+    // This prevents re-optimizing the new 4-element replacement global.
+    // Do not bail on ".x86.orig": remaining old-GV references must still be
+    // redirected to the replacement GV.
+    if (CDA->getNumElements() <= 4)
+      return SDValue();
 
     OptimizedConstantArrayInfo Info = optimizeGlobalConstantArray(GVar);
     if (!Info.Success)
@@ -54475,13 +54486,29 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     Module *M = GVar->getParent();
-    std::string NewName = (GVar->getName() + ".x86.opt").str();
 
-    GlobalVariable *NewGV = M->getGlobalVariable(NewName, true);
+    constexpr StringRef OrigSuffix = ".x86.orig";
+
+    std::string CurName = GVar->getName().str();
+    StringRef BaseNameRef(CurName);
+
+    while (BaseNameRef.ends_with(OrigSuffix))
+      BaseNameRef = BaseNameRef.drop_back(OrigSuffix.size());
+
+    std::string OldName = BaseNameRef.str();
+    std::string OrigName = OldName + OrigSuffix.str();
+
+    GlobalVariable *NewGV = M->getGlobalVariable(OldName, true);
+
+    if (NewGV == GVar) {
+      GVar->setName(OrigName);
+      NewGV = nullptr;
+    }
+
     if (!NewGV) {
       NewGV = new GlobalVariable(
           *M, Info.Ty,
-          /*isConstant=*/true, GlobalValue::PrivateLinkage, Info.Init, NewName,
+          /*isConstant=*/true, GlobalValue::PrivateLinkage, Info.Init, OldName,
           /*InsertBefore=*/nullptr, GVar->getThreadLocalMode(),
           GVar->getAddressSpace(),
           /*isExternallyInitialized=*/false);
@@ -54493,6 +54520,7 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
 
     SDLoc DLN(Ld);
     EVT PtrVT = Ptr.getValueType();
+
     markX86RepeatedConstReplaced(GVar);
 
     SDValue NewPtr = DAG.getGlobalAddress(NewGV, DLN, PtrVT, NewByteOffset);
