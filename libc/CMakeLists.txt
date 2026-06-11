@@ -142,6 +142,8 @@ option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
   "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
+option(LLVM_LIBC_ENABLE_MINOR_VARIANT
+  "Build LLVM libc minor variant archive" OFF)
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
