@@ -27,6 +27,7 @@
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"

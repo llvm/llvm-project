@@ -89,7 +89,6 @@ bool DXContainerPDB::runOnModule(Module &M) {
 
   StringRef DebugFileName;
   ArrayRef<char> ModuleHash;
-  const GlobalVariable *ILDB = nullptr;
   for (const GlobalVariable &GV : M.globals()) {
     if (GV.getSection() == PdbFileNameSectionName) {
       assert(DebugFileName.empty() && "Duplicate PDBNAME section");
@@ -98,9 +97,6 @@ bool DXContainerPDB::runOnModule(Module &M) {
       assert(ModuleHash.empty() && "Duplicate PBDHASH section");
       StringRef Data = getGlobalData(GV);
       ModuleHash = ArrayRef(Data.data(), Data.size());
-    } else if (GV.getSection() == "ILDB") {
-      assert(!ILDB && "Duplicate ILDB section");
-      ILDB = &GV;
     }
   }
 
