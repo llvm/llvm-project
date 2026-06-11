@@ -2104,8 +2104,8 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
                     "encoding=0x%08X, lsda=0x%08llX for funcStart=0x%llX\n",
             (uint64_t) pc, encoding, (uint64_t) lsda, (uint64_t) funcStart);
 
-    // For ARM64 PAuth_LR frames, start_ip should be the pacibsppc address
-    // (rangeStart). For all other cases, start_ip should be the function start.
+  // For ARM64 PAuth_LR frames, start_ip should be the pacibsppc address
+  // (rangeStart). For all other cases, start_ip should be the function start.
 #if defined(_LIBUNWIND_TARGET_AARCH64)
   if ((encoding & UNWIND_ARM64_MODE_MASK) == UNWIND_ARM64_MODE_FRAME_PAUTH_LR) {
     _info.start_ip = rangeStart;
