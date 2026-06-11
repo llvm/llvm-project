@@ -88,6 +88,7 @@ private:
     uint64_t From;
     uint64_t To;
     bool Mispred;
+    bool IsReturn;
   };
   friend raw_ostream &operator<<(raw_ostream &OS, const LBREntry &);
 
@@ -671,13 +672,14 @@ public:
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::LBREntry &L) {
-  OS << formatv("{0:x} -> {1:x}/{2}", L.From, L.To, L.Mispred ? 'M' : 'P');
+  OS << formatv("{0:x} -> {1:x}/{2}/{3}", L.From, L.To, L.Mispred ? 'M' : 'P',
+                L.IsReturn ? "RET" : "-");
   return OS;
 }
 
 inline raw_ostream &operator<<(raw_ostream &OS,
                                const DataAggregator::Trace &T) {
-  OS << formatv("T {0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
+  OS << formatv("{0:x-} {1:x-} {2:x-}", T.Branch, T.From, T.To);
   return OS;
 }
 

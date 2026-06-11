@@ -1292,7 +1292,10 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 }
 
 ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
+  /// perf script -F brstack entry format:
+  /// FROM/TO/EVENT/INTX/ABORT/CYCLES/TYPE/SPEC
   LBREntry Res;
+  // From
   ErrorOr<StringRef> FromStrRes = parseString('/');
   if (std::error_code EC = FromStrRes.getError())
     return EC;
@@ -1303,6 +1306,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
+  // To
   ErrorOr<StringRef> ToStrRes = parseString('/');
   if (std::error_code EC = ToStrRes.getError())
     return EC;
@@ -1313,10 +1317,11 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  ErrorOr<StringRef> MispredStrRes = parseString('/');
-  if (std::error_code EC = MispredStrRes.getError())
+  // Event: M: mispredicted, P: predicted, N: not taken
+  ErrorOr<StringRef> EventStrRes = parseString('/');
+  if (std::error_code EC = EventStrRes.getError())
     return EC;
-  StringRef MispredStr = MispredStrRes.get();
+  StringRef MispredStr = EventStrRes.get();
   // SPE brstack mispredicted flags might be up to two characters long:
   // 'PN' or 'MN'. Where 'N' optionally appears.
   bool ValidStrSize = opts::ArmSPE
@@ -1344,10 +1349,24 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     MispredWarning = false;
   }
 
+  // Transaction, abort, cycles
+  for (unsigned I = 0; I < 3; ++I) {
+    ErrorOr<StringRef> IgnoredStr = parseString('/');
+    if (std::error_code EC = IgnoredStr.getError())
+      return EC;
+  }
+
+  // Type: COND/UNCOND/IND/CALL/IND_CALL/RET
+  ErrorOr<StringRef> TypeStr = parseString('/');
+  if (std::error_code EC = TypeStr.getError())
+    return EC;
+  Res.IsReturn = TypeStr.get() == "RET";
+
+  // Branch speculation
   ErrorOr<StringRef> Rest = parseString(FieldSeparator, true);
   if (std::error_code EC = Rest.getError())
     return EC;
-  if (Rest.get().size() < 5) {
+  if (Rest.get().size() < 1) {
     reportError("expected rest of brstack entry");
     Diag << "Found: " << Rest.get() << "\n";
     return make_error_code(llvm::errc::io_error);
@@ -1791,6 +1810,7 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     TakenBranchInfo &Info = TraceMap[Trace{LBR.From, LBR.To, TraceTo}];
     ++Info.TakenCount;
     Info.MispredCount += LBR.Mispred;
+    Returns.emplace(LBR.From, LBR.IsReturn);
   }
   // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
   // and top-of-stack target) as basic samples for heatmap.
@@ -2468,8 +2488,11 @@ DataAggregator::writePreAggregatedFile(StringRef OutputFilename) const {
   if (EC)
     return EC;
 
-  for (const auto &[Trace, Info] : Traces)
-    OS << Trace << " " << Info << '\n';
+  for (const auto &[Trace, Info] : Traces) {
+    auto ReturnIt = Returns.find(Trace.Branch);
+    const bool IsRet = ReturnIt != Returns.end() && ReturnIt->second;
+    OS << (IsRet ? 'R' : 'T') << " " << Trace << " " << Info << '\n';
+  }
   if (!EventNames.empty())
     OS << formatv("E {0:$[,]}\n", EventNames.keys());
   for (const auto &[PC, Count] : BasicSamples)
