@@ -1657,11 +1657,9 @@ namespace {
       ExprResult Ret = inherited::TransformCXXDynamicCastExpr(E);
       if (Ret.isInvalid())
         return Ret;
-      if (const auto *DestDecl =
-              Ret.get()->getType()->getPointeeCXXRecordDecl()) {
+      if (auto *DestDecl = Ret.get()->getType()->getPointeeCXXRecordDecl()) {
         if (DestDecl->isEffectivelyFinal())
-          getSema().MarkVTableUsed(Ret.get()->getExprLoc(),
-                                   const_cast<CXXRecordDecl *>(DestDecl));
+          getSema().MarkVTableUsed(Ret.get()->getExprLoc(), DestDecl);
       }
       return Ret;
     }
