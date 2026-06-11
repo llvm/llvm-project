@@ -3928,8 +3928,11 @@ bool VectorCombine::foldShuffleFromReductions(Instruction &I) {
 }
 
 /// Try to fold a chain of shuffles and ops feeding extractelement(..., 0)
-/// into llvm.vector.reduce.* over the source vector(s), by tracking which
-/// source lanes contribute to the extracted lane. For example:
+/// into llvm.vector.reduce.*, by tracking which lanes contribute to the
+/// extracted lane and reducing the widest vector whose lanes each contribute
+/// once.
+///
+/// For example:
 ///
 ///   %lo = shufflevector <4 x i32> %a, poison, <2 x i32> <i32 0, i32 1>
 ///   %hi = shufflevector <4 x i32> %a, poison, <2 x i32> <i32 2, i32 3>
@@ -4067,99 +4070,124 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   bool IsIdempotent =
       CommonCallOp || (CommonBinOp && Instruction::isIdempotent(*CommonBinOp));
 
-  // Each output lane has a bitmask of contributing source lanes and a
-  // poison flag. Shuffles permute these records. Binops union them.
-  struct LaneInfo {
-    SmallDenseMap<Value *, APInt, 2> SrcElts;
-    bool IsPoison = false;
-  };
-  DenseMap<Value *, SmallVector<LaneInfo, 16>> Attr;
-  for (Value *Src : Sources) {
-    unsigned N = SrcSizes[Src];
-    auto &A = Attr[Src];
-    A.reserve(N);
-    for (unsigned i = 0; i < N; ++i) {
-      LaneInfo LI;
-      LI.SrcElts[Src] = APInt::getOneBitSet(N, i);
-      A.push_back(std::move(LI));
+  // For FP reductions, require reassoc on every binop and collect FMF.
+  for (Value *V : ChainPostorder) {
+    auto *BinOp = dyn_cast<BinaryOperator>(V);
+    if (!BinOp || !CommonBinOp ||
+        (*CommonBinOp != Instruction::FAdd &&
+         *CommonBinOp != Instruction::FMul))
+      continue;
+    if (!BinOp->hasAllowReassoc())
+      return false;
+    if (!IsFloatReduction) {
+      CommonFMF = BinOp->getFastMathFlags();
+      IsFloatReduction = true;
+    } else {
+      CommonFMF &= BinOp->getFastMathFlags();
     }
   }
 
-  // Postorder ensures each value's operands are already in Attr.
-  for (Value *V : ChainPostorder) {
+  // Top-down demanded elements. How many times does each lane of each chain
+  // value feed the extracted lane 0? Reverse postorder visits every use before
+  // its value. A binop forwards its demand to both operands and a shuffle
+  // follows its mask back to the source lane.
+  DenseMap<Value *, SmallVector<unsigned, 16>> Demand;
+  auto DemandOf = [&](Value *V) -> SmallVector<unsigned, 16> & {
+    auto &D = Demand[V];
+    if (D.empty())
+      D.assign(cast<FixedVectorType>(V->getType())->getNumElements(), 0);
+    return D;
+  };
+  DemandOf(VecOpEE)[0] = 1;
+  for (Value *V : reverse(ChainPostorder)) {
+    SmallVector<unsigned, 16> DV = Demand.lookup(V);
+    if (DV.empty())
+      continue;
     if (auto *SVI = dyn_cast<ShuffleVectorInst>(V)) {
-      const auto &In = Attr.at(SVI->getOperand(0));
-      auto &Out = Attr[V];
       ArrayRef<int> Mask = SVI->getShuffleMask();
-      Out.reserve(Mask.size());
-      for (int M : Mask) {
-        if (M < 0) {
-          LaneInfo LI;
-          LI.IsPoison = true;
-          Out.push_back(std::move(LI));
-        } else if ((unsigned)M >= In.size()) {
-          return false;
-        } else {
-          Out.push_back(In[M]);
-        }
-      }
+      auto &DS = DemandOf(SVI->getOperand(0));
+      for (unsigned i = 0, e = Mask.size(); i != e; ++i)
+        if (Mask[i] >= 0 && (unsigned)Mask[i] < DS.size())
+          DS[Mask[i]] += DV[i];
     } else {
       auto *U = cast<User>(V);
-      // For FP reductions, require reassoc on every binop and collect FMF.
-      if (auto *BinOp = dyn_cast<BinaryOperator>(V);
-          BinOp && (*CommonBinOp == Instruction::FAdd ||
-                    *CommonBinOp == Instruction::FMul)) {
-        if (!BinOp->hasAllowReassoc())
-          return false;
-        if (!IsFloatReduction) {
-          CommonFMF = BinOp->getFastMathFlags();
-          IsFloatReduction = true;
-        } else {
-          CommonFMF &= BinOp->getFastMathFlags();
-        }
-      }
-      const auto &L = Attr.at(U->getOperand(0));
-      const auto &R = Attr.at(U->getOperand(1));
-      if (L.size() != R.size())
-        return false;
-      auto &Out = Attr[V];
-      Out.reserve(L.size());
-      for (unsigned i = 0; i < L.size(); ++i) {
-        LaneInfo OutLI;
-        OutLI.IsPoison = L[i].IsPoison || R[i].IsPoison;
-        OutLI.SrcElts.insert(L[i].SrcElts.begin(), L[i].SrcElts.end());
-        for (auto &[RSrc, RMask] : R[i].SrcElts) {
-          auto [It, Inserted] = OutLI.SrcElts.try_emplace(RSrc, RMask);
-          if (!Inserted) {
-            // x op x != x for non-idempotent ops but poison lanes can be
-            // refined.
-            if (It->second.intersects(RMask) && !IsIdempotent &&
-                !OutLI.IsPoison)
-              return false;
-            It->second |= RMask;
-          }
-        }
-        Out.push_back(std::move(OutLI));
+      for (Value *Op : {U->getOperand(0), U->getOperand(1)}) {
+        auto &DOp = DemandOf(Op);
+        for (unsigned i = 0, e = DV.size(); i != e && i < DOp.size(); ++i)
+          DOp[i] += DV[i];
       }
     }
   }
 
-  // One partial reduce per source contributing to lane 0.
-  const LaneInfo &Lane0 = Attr.at(VecOpEE)[0];
+  // A vector is cleanly reducible if no demanded lane is counted more than once
+  // (idempotent ops tolerate duplicates).
+  auto Clean = [&](ArrayRef<unsigned> D) {
+    bool Any = false;
+    for (unsigned C : D) {
+      if (!C)
+        continue;
+      Any = true;
+      if (C > 1 && !IsIdempotent)
+        return false;
+    }
+    return Any;
+  };
+  auto LaneMask = [](ArrayRef<unsigned> D, unsigned N) {
+    APInt E(N, 0);
+    for (unsigned i = 0, e = D.size(); i != e; ++i)
+      if (D[i])
+        E.setBit(i);
+    return E;
+  };
 
   struct Partial {
     Value *Src;
     APInt Elts;
     unsigned SrcSize;
   };
+  // Reduce the leaf sources when they are cleanly demanded, otherwise the
+  // deepest intermediate whose lanes all feed the result.
   SmallVector<Partial, 2> Partials;
+  bool SourcesClean = true;
   for (Value *Src : Sources) {
-    auto It = Lane0.SrcElts.find(Src);
-    if (It == Lane0.SrcElts.end())
+    SmallVector<unsigned, 16> D = Demand.lookup(Src);
+    if (!Clean(D)) {
+      if (any_of(D, [](unsigned C) { return C; }))
+        SourcesClean = false;
       continue;
-    Partials.push_back({Src, It->second, SrcSizes[Src]});
+    }
+    Partials.push_back({Src, LaneMask(D, SrcSizes[Src]), SrcSizes[Src]});
+  }
+  // The deepest intermediate whose lanes all feed the result, each exactly once
+  // for non-idempotent ops.
+  Value *FullInter = nullptr;
+  for (Value *V : ChainPostorder) {
+    if (!isa<BinaryOperator>(V))
+      continue;
+    SmallVector<unsigned, 16> D = Demand.lookup(V);
+    if (!D.empty() && all_of(D, [&](unsigned C) {
+          return C >= 1 && (IsIdempotent || C == 1);
+        })) {
+      FullInter = V;
+      break;
+    }
+  }
+
+  // Multi-source chains also take the intermediate, since one reduce replaces
+  // the per-source reduces.
+  if (FullInter && (!SourcesClean || Partials.size() != 1)) {
+    unsigned N = cast<FixedVectorType>(FullInter->getType())->getNumElements();
+    Partials.clear();
+    Partials.push_back({FullInter, APInt::getAllOnes(N), N});
+  } else if (!SourcesClean) {
+    return false;
   }
   if (Partials.empty())
+    return false;
+
+  // A real reduction combines >1 lane of some source. Multiple single-lane
+  // would loop.
+  if (none_of(Partials, [](const Partial &P) { return P.Elts.popcount() > 1; }))
     return false;
 
   Intrinsic::ID ReducedOp =

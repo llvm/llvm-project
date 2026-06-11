@@ -188,10 +188,19 @@ define i16 @test_reduce_v8i16_ssa_aliased(<8 x i16> %a0) {
   ret i16 %8
 }
 
-define i16 @test_reduce_v6i16_xor_poison_refines(<6 x i16> %a0) {
-; CHECK-LABEL: define i16 @test_reduce_v6i16_xor_poison_refines(
+; Lane 0 is poison: the shuffle padding flows through the xor chain. Folding to
+; reduce.xor(%a0) would be a valid refinement, but a poison-producing chain isn't
+; a real reduction pattern, so it is left alone.
+define i16 @test_no_reduce_v6i16_xor_poison(<6 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_no_reduce_v6i16_xor_poison(
 ; CHECK-SAME: <6 x i16> [[A0:%.*]]) {
-; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.xor.v6i16(<6 x i16> [[A0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <6 x i16> [[A0]], <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <6 x i16> [[A0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <6 x i16> [[TMP2]], <6 x i16> poison, <6 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP4:%.*]] = xor <6 x i16> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <6 x i16> [[TMP4]], <6 x i16> poison, <6 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <6 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <6 x i16> [[TMP6]], i64 0
 ; CHECK-NEXT:    ret i16 [[TMP7]]
 ;
   %1 = shufflevector <6 x i16> %a0, <6 x i16> poison, <6 x i32> <i32 3, i32 4, i32 5, i32 poison, i32 poison, i32 poison>

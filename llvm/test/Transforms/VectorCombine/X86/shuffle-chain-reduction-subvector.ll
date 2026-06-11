@@ -170,17 +170,13 @@ define i32 @test_multisource_full_plus_scalar_v4i32(<4 x i32> %x, <4 x i32> %y) 
   ret i32 %e
 }
 
-define i16 @test_neg_overlapping_masks_v8i16(<8 x i16> %a0) {
-; CHECK-LABEL: define i16 @test_neg_overlapping_masks_v8i16(
+define i16 @test_overlapping_masks_v8i16(<8 x i16> %a0) {
+; CHECK-LABEL: define i16 @test_overlapping_masks_v8i16(
 ; CHECK-SAME: <8 x i16> [[A0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP3]], [[TMP8]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[TMP5]], <4 x i16> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP3]])
 ; CHECK-NEXT:    ret i16 [[TMP4]]
 ;
   %1 = shufflevector <8 x i16> %a0, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -194,17 +190,13 @@ define i16 @test_neg_overlapping_masks_v8i16(<8 x i16> %a0) {
   ret i16 %8
 }
 
-define i16 @test_neg_different_sources_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
-; CHECK-LABEL: define i16 @test_neg_different_sources_v8i16(
+define i16 @test_different_sources_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
+; CHECK-LABEL: define i16 @test_different_sources_v8i16(
 ; CHECK-SAME: <8 x i16> [[A0:%.*]], <8 x i16> [[A1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[A0]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i16> [[A1]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i16> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP3]], [[TMP8]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[TMP5]], <4 x i16> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[TMP3]])
 ; CHECK-NEXT:    ret i16 [[TMP4]]
 ;
   %1 = shufflevector <8 x i16> %a0, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
