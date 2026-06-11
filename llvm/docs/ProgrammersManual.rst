@@ -2375,7 +2375,7 @@ long, expensive to copy, etc.  ``StringMap`` is a specialized container designed
 cope with these issues.  It supports mapping an arbitrary range of bytes to an
 arbitrary other object.
 
-The ``StringMap`` implementation uses a linear-probed hash table, where the
+The ``StringMap`` implementation uses a quadratically-probed hash table, where the
 buckets store a pointer to the heap allocated entries (and some other stuff).
 The entries in the map must be heap allocated because the strings are variable
 length.  The string data (key) and the element object (value) are stored in the
@@ -2383,7 +2383,7 @@ same allocation with the string data immediately after the element object.
 This container guarantees the "``(char*)(&Value+1)``" points to the key string
 for a value.
 
-The ``StringMap`` is very fast for several reasons: linear probing is very cache
+The ``StringMap`` is very fast for several reasons: quadratic probing is very cache
 efficient for lookups, the hash value of strings in buckets is not recomputed
 when looking up an element, ``StringMap`` rarely has to touch the memory for
 unrelated objects when looking up a value (even when hash collisions happen),

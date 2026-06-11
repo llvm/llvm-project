@@ -1880,10 +1880,8 @@ PtrParts SplitPtrStructs::visitAtomicCmpXchgInst(AtomicCmpXchgInst &AI) {
 
   Value *Res = PoisonValue::get(AI.getType());
   Res = IRB.CreateInsertValue(Res, Call, 0);
-  if (!AI.isWeak()) {
-    Value *Succeeded = IRB.CreateICmpEQ(Call, AI.getCompareOperand());
-    Res = IRB.CreateInsertValue(Res, Succeeded, 1);
-  }
+  Value *Succeeded = IRB.CreateICmpEQ(Call, AI.getCompareOperand());
+  Res = IRB.CreateInsertValue(Res, Succeeded, 1);
   SplitUsers.insert(&AI);
   AI.replaceAllUsesWith(Res);
   return {nullptr, nullptr};

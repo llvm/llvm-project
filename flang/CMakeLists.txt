@@ -242,7 +242,7 @@ if (FLANG_STANDALONE_BUILD)
     add_custom_target(check-all DEPENDS check-flang )
   endif()
   if (LLVM_BUILD_DOCS)
-    add_custom_target(doxygen ALL)
+    add_custom_target(doxygen-flang ALL)
   endif()
 
 else()
