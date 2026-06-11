@@ -23,7 +23,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ; store at A[i].  The load at A[i-5] is 20 bytes behind:
 ;   20 % 16 = 4  -> misaligned, load straddles two pending vector stores
 ;   20 / 16 = 1  -> store still hot in store buffer
-; The new check should bail out and leave the four-wide chain scalar.
+; The check bails out at VF=4. Sub-chains at VF=2 are checked per-base:
+; {A[i+1],A[i+2]} has distance 24, 24%8=0 → safe, so it still vectorizes.
 ;
 define void @stlf_conflict_backward_misaligned(ptr noalias %A, i64 %n) {
 ; STLF-ON-LABEL: define void @stlf_conflict_backward_misaligned(
@@ -35,18 +36,18 @@ define void @stlf_conflict_backward_misaligned(ptr noalias %A, i64 %n) {
 ; STLF-ON-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 5
 ; STLF-ON-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; STLF-ON-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; STLF-ON-NEXT:    [[T3:%.*]] = add nsw i32 [[T]], 3
+; STLF-ON-NEXT:    [[T1:%.*]] = add nsw i32 [[T]], 1
 ; STLF-ON-NEXT:    [[T4:%.*]] = add nsw i32 [[T]], 4
-; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 2
+; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
 ; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
 ; STLF-ON-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
 ; STLF-ON-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
 ; STLF-ON-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
+; STLF-ON-NEXT:    store i32 [[T1]], ptr [[GEP0]], align 4
 ; STLF-ON-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[T]], i32 0
 ; STLF-ON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
-; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 2>
-; STLF-ON-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP0]], align 4
-; STLF-ON-NEXT:    store i32 [[T3]], ptr [[GEP1]], align 4
+; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 2, i32 3>
+; STLF-ON-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP1]], align 4
 ; STLF-ON-NEXT:    store i32 [[T4]], ptr [[GEP3]], align 4
 ; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
@@ -589,34 +590,62 @@ for.end:
 }
 
 ;
-; Test 9: Distance < VectorStoreBytes (load fully within previous vector
-; store).
+; Test 9: Motivating example — a[i] = a[i-1] + 1.
 ;
-; The backward load is only 1 element (4 bytes) before the stores; the entire
-; load lies inside the previous iteration's 16-byte vector store, so STLF
-; can forward.  The check's `Distance < VectorStoreBytes` early-continue path
-; catches this and allows vectorization.
+; Distance = 4 bytes (1 element) from chain base. VectorStoreBytes = 16
+; at VF=4. 4 % 16 = 4 → misaligned → STLF conflict. The full 4-wide
+; chain is rejected. Sub-chains that are individually misaligned are also
+; rejected; only sub-chains where the distance happens to be aligned to
+; the narrower vector store width survive.
 ;
-define void @stlf_no_conflict_within_prev_store(ptr noalias %A, i64 %n) {
-; CHECK-LABEL: define void @stlf_no_conflict_within_prev_store(
-; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 1
-; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret void
+define void @stlf_conflict_short_backward(ptr noalias %A, i64 %n) {
+; STLF-ON-LABEL: define void @stlf_conflict_short_backward(
+; STLF-ON-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; STLF-ON-NEXT:  [[ENTRY:.*]]:
+; STLF-ON-NEXT:    br label %[[FOR_BODY:.*]]
+; STLF-ON:       [[FOR_BODY]]:
+; STLF-ON-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; STLF-ON-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 1
+; STLF-ON-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
+; STLF-ON-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
+; STLF-ON-NEXT:    [[T1:%.*]] = add nsw i32 [[T]], 1
+; STLF-ON-NEXT:    [[T4:%.*]] = add nsw i32 [[T]], 4
+; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
+; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
+; STLF-ON-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; STLF-ON-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
+; STLF-ON-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
+; STLF-ON-NEXT:    store i32 [[T1]], ptr [[GEP0]], align 4
+; STLF-ON-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[T]], i32 0
+; STLF-ON-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <2 x i32> zeroinitializer
+; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 2, i32 3>
+; STLF-ON-NEXT:    store <2 x i32> [[TMP2]], ptr [[GEP1]], align 4
+; STLF-ON-NEXT:    store i32 [[T4]], ptr [[GEP3]], align 4
+; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
+; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; STLF-ON-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; STLF-ON:       [[FOR_END]]:
+; STLF-ON-NEXT:    ret void
+;
+; STLF-OFF-LABEL: define void @stlf_conflict_short_backward(
+; STLF-OFF-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; STLF-OFF-NEXT:  [[ENTRY:.*]]:
+; STLF-OFF-NEXT:    br label %[[FOR_BODY:.*]]
+; STLF-OFF:       [[FOR_BODY]]:
+; STLF-OFF-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; STLF-OFF-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 1
+; STLF-OFF-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
+; STLF-OFF-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
+; STLF-OFF-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; STLF-OFF-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i32 0
+; STLF-OFF-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; STLF-OFF-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
+; STLF-OFF-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; STLF-OFF-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
+; STLF-OFF-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
+; STLF-OFF-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
+; STLF-OFF:       [[FOR_END]]:
+; STLF-OFF-NEXT:    ret void
 ;
 entry:
   br label %for.body

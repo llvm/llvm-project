@@ -1905,11 +1905,10 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
 
   // Compute the smallest VF at which the store and load would be misaligned
   // and recent enough to still be in the store buffer. The predicate is
-  // shared with SLP via VectorizerParams::isStoreLoadForwardingConflict.
+  // shared with SLP via MemoryDepChecker::isStoreLoadForwardingConflict.
   for (uint64_t VF = 2 * TypeByteSize;
        VF <= MaxVFWithoutSLForwardIssuesPowerOf2; VF *= 2) {
-    if (VectorizerParams::isStoreLoadForwardingConflict(Distance, VF,
-                                                        TypeByteSize)) {
+    if (isStoreLoadForwardingConflict(Distance, VF, TypeByteSize)) {
       MaxVFWithoutSLForwardIssuesPowerOf2 = (VF >> 1);
       break;
     }

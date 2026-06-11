@@ -19,6 +19,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_SLPVECTORIZER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -182,6 +183,11 @@ private:
       ArrayRef<StoreInst *> Stores, slpvectorizer::BoUpSLP &R,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
           &Visited);
+
+  /// Cached STLF conflict decisions keyed by (first store in chain, VF).
+  /// Avoids re-walking the LAA dependence list when the same chain is retried
+  /// at multiple vector factors.
+  DenseMap<std::pair<const StoreInst *, unsigned>, bool> StlfConflictCache;
 
   /// The store instructions in a basic block organized by base pointer.
   StoreListMap Stores;
