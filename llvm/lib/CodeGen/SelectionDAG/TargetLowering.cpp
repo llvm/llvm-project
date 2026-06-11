@@ -7920,11 +7920,21 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   bool HasUMUL_LOHI = (Kind == MulExpansionKind::Always) ||
                       isOperationLegalOrCustom(ISD::UMUL_LOHI, HiLoVT);
 
-  if (!HasMULHU && !HasMULHS && !HasUMUL_LOHI && !HasSMUL_LOHI)
-    return false;
-
   unsigned OuterBitSize = VT.getScalarSizeInBits();
   unsigned InnerBitSize = HiLoVT.getScalarSizeInBits();
+
+  // Check if both operands are zero-extended.
+  bool BothZeroExtended = false;
+  if (isOperationLegalOrCustom(ISD::TRUNCATE, HiLoVT)) {
+    APInt HighMask = APInt::getHighBitsSet(OuterBitSize, InnerBitSize);
+    BothZeroExtended = DAG.MaskedValueIsZero(LHS, HighMask) &&
+                       DAG.MaskedValueIsZero(RHS, HighMask);
+  }
+
+
+  if (!HasMULHU && !HasMULHS && !HasUMUL_LOHI && !HasSMUL_LOHI &&
+      !BothZeroExtended)
+    return false;
 
   // LL, LH, RL, and RH must be either all NULL or all set to a value.
   assert((LL.getNode() && LH.getNode() && RL.getNode() && RH.getNode()) ||
@@ -7957,20 +7967,20 @@ bool TargetLowering::expandMUL_LOHI(unsigned Opcode, EVT VT, const SDLoc &dl,
   if (!LL.getNode())
     return false;
 
-  APInt HighMask = APInt::getHighBitsSet(OuterBitSize, InnerBitSize);
-  if (DAG.MaskedValueIsZero(LHS, HighMask) &&
-      DAG.MaskedValueIsZero(RHS, HighMask)) {
+  if (BothZeroExtended) {
     // The inputs are both zero-extended.
-    if (MakeMUL_LOHI(LL, RL, Lo, Hi, false)) {
-      Result.push_back(Lo);
-      Result.push_back(Hi);
-      if (Opcode != ISD::MUL) {
-        SDValue Zero = DAG.getConstant(0, dl, HiLoVT);
-        Result.push_back(Zero);
-        Result.push_back(Zero);
-      }
-      return true;
+    if (!MakeMUL_LOHI(LL, RL, Lo, Hi, false)) {
+      // Fallback to force expand if the target cannot do LOHI multiply.
+      forceExpandMultiply(DAG, dl, /*Signed=*/false, Lo, Hi, LL, RL);
     }
+    Result.push_back(Lo);
+    Result.push_back(Hi);
+    if (Opcode != ISD::MUL) {
+      SDValue Zero = DAG.getConstant(0, dl, HiLoVT);
+      Result.push_back(Zero);
+      Result.push_back(Zero);
+    }
+    return true;
   }
 
   if (!VT.isVector() && Opcode == ISD::MUL &&

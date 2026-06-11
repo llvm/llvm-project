@@ -159,45 +159,59 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC64-NEXT:    .register %g3, #scratch
 ; SPARC64-NEXT:  ! %bb.0: ! %start
 ; SPARC64-NEXT:    save %sp, -176, %sp
-; SPARC64-NEXT:    mov %i0, %l1
+; SPARC64-NEXT:    mov %i1, %i4
+; SPARC64-NEXT:    mov %i0, %l0
 ; SPARC64-NEXT:    mov %g0, %o0
 ; SPARC64-NEXT:    mov %i2, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i1, %o3
-; SPARC64-NEXT:    mov %o0, %i4
+; SPARC64-NEXT:    mov %o0, %i1
 ; SPARC64-NEXT:    mov %o1, %i5
 ; SPARC64-NEXT:    mov %g0, %o0
 ; SPARC64-NEXT:    mov %i0, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i3, %o3
-; SPARC64-NEXT:    mov %o0, %l0
-; SPARC64-NEXT:    add %o1, %i5, %i0
-; SPARC64-NEXT:    mov %g0, %o0
-; SPARC64-NEXT:    mov %i1, %o1
-; SPARC64-NEXT:    mov %g0, %o2
-; SPARC64-NEXT:    call __multi3
-; SPARC64-NEXT:    mov %i3, %o3
-; SPARC64-NEXT:    mov %g0, %i1
-; SPARC64-NEXT:    mov %g0, %i3
-; SPARC64-NEXT:    mov %g0, %i5
 ; SPARC64-NEXT:    mov %g0, %g2
 ; SPARC64-NEXT:    mov %g0, %g3
-; SPARC64-NEXT:    add %o0, %i0, %i0
-; SPARC64-NEXT:    cmp %i0, %o0
-; SPARC64-NEXT:    movrnz %l0, 1, %i3
-; SPARC64-NEXT:    movrnz %i2, 1, %i5
-; SPARC64-NEXT:    movrnz %l1, 1, %g2
-; SPARC64-NEXT:    movcs %xcc, 1, %i1
-; SPARC64-NEXT:    and %g2, %i5, %i2
-; SPARC64-NEXT:    or %i2, %i3, %i2
-; SPARC64-NEXT:    movrnz %i4, 1, %g3
+; SPARC64-NEXT:    mov %g0, %g4
+; SPARC64-NEXT:    mov %g0, %g5
+; SPARC64-NEXT:    mov %g0, %l1
+; SPARC64-NEXT:    add %o1, %i5, %i0
+; SPARC64-NEXT:    srl %i3, 0, %i5
+; SPARC64-NEXT:    srlx %i4, 32, %l2
+; SPARC64-NEXT:    mulx %l2, %i5, %l3
+; SPARC64-NEXT:    srl %i4, 0, %i4
+; SPARC64-NEXT:    mulx %i4, %i5, %i5
+; SPARC64-NEXT:    srlx %i5, 32, %l4
+; SPARC64-NEXT:    add %l3, %l4, %l3
+; SPARC64-NEXT:    srlx %l3, 32, %l4
+; SPARC64-NEXT:    srl %l3, 0, %l3
+; SPARC64-NEXT:    srlx %i3, 32, %i3
+; SPARC64-NEXT:    mulx %i4, %i3, %i4
+; SPARC64-NEXT:    add %i4, %l3, %i4
+; SPARC64-NEXT:    srlx %i4, 32, %l3
+; SPARC64-NEXT:    add %l4, %l3, %l3
+; SPARC64-NEXT:    mulx %l2, %i3, %i3
+; SPARC64-NEXT:    add %i3, %l3, %i3
+; SPARC64-NEXT:    add %i3, %i0, %i0
+; SPARC64-NEXT:    cmp %i0, %i3
+; SPARC64-NEXT:    movrnz %o0, 1, %g3
+; SPARC64-NEXT:    movcs %xcc, 1, %g2
+; SPARC64-NEXT:    movrnz %i2, 1, %g4
+; SPARC64-NEXT:    movrnz %l0, 1, %g5
+; SPARC64-NEXT:    and %g5, %g4, %i2
 ; SPARC64-NEXT:    or %i2, %g3, %i2
-; SPARC64-NEXT:    or %i2, %i1, %i1
-; SPARC64-NEXT:    srl %i1, 0, %i2
+; SPARC64-NEXT:    movrnz %i1, 1, %l1
+; SPARC64-NEXT:    or %i2, %l1, %i1
+; SPARC64-NEXT:    or %i1, %g2, %i2
+; SPARC64-NEXT:    sllx %i4, 32, %i1
+; SPARC64-NEXT:    srl %i5, 0, %i3
+; SPARC64-NEXT:    or %i3, %i1, %i1
+; SPARC64-NEXT:    srl %i2, 0, %i2
 ; SPARC64-NEXT:    ret
-; SPARC64-NEXT:    restore %g0, %o1, %o1
+; SPARC64-NEXT:    restore
 ;
 ; SPARC64-VIS3-LABEL: muloti_test:
 ; SPARC64-VIS3:         .register %g2, #scratch
