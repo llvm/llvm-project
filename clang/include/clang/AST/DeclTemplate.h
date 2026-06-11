@@ -2479,7 +2479,7 @@ class FriendTemplateDecl final
   void anchor() override;
 
 private:
-  unsigned NumTPLists : 31;
+  unsigned NumTPLists = 0;
   TemplateName Template;
 
   FriendTemplateDecl(DeclContext *DC, SourceLocation Loc, FriendUnion Friend,
