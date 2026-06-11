@@ -715,6 +715,7 @@ void DWARFRewriter::finalizeMainCUStrOffsets(
       StrOffstsWriter->finalizeSection(*CU, PartDIEBlder);
   }
 }
+
 void DWARFRewriter::mergePerBucketLocs(DIEBuilder &PartDIEBlder,
                                        ArrayRef<DWARFUnit *> SortedCUs,
                                        BucketLocAccumOffset &Accum) {
