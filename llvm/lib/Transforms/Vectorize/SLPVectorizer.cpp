@@ -25418,6 +25418,29 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       }))
     return std::nullopt;
 
+  // Reject modeling the duplicated source operand of an expanded binop as a
+  // copyable element. shl X, 1 is represented as add X, X, so the parent uses X
+  // on a second operand edge that stays a plain (gathered) operand. At schedule
+  // time that duplicated use is decremented against X's own ScheduleData, which
+  // calculateDependencies attributed to the copyable instead, so X's
+  // unscheduled-deps counter goes negative and trips the assertion. Only the
+  // values this bundle models as copyable that are the expanded binop source
+  // operand are checked, matched by value so the detection is unaffected by the
+  // parent node's operand reordering or reuse shuffle mask.
+  // TODO: investigate modeling such operands correctly.
+  if (S.areInstructionsWithCopyableElements() && EI.UserTE &&
+      EI.UserTE->hasState()) {
+    for (Value *V : VL) {
+      if (!S.isCopyableElement(V))
+        continue;
+      if (any_of(EI.UserTE->Scalars, [&](Value *PV) {
+            auto *I = dyn_cast<Instruction>(PV);
+            return I && EI.UserTE->isExpandedBinOp(I) && I->getOperand(0) == V;
+          }))
+        return std::nullopt;
+    }
+  }
+
   // Initialize the instruction bundle.
   Instruction *OldScheduleEnd = ScheduleEnd;
   LLVM_DEBUG(dbgs() << "SLP:  bundle: " << *S.getMainOp() << "\n");

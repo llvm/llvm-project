@@ -3695,8 +3695,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       case BundleAttr::Dereferenceable: {
         auto [Ptr, _, Count] = getAssumeDereferenceableInfo(OBU);
 
-        if (Count && *Count == 0)
+        if (!Count)
+          break;
+
+        if (*Count == 0 || isDereferenceableAndAlignedPointer(
+                               Ptr, Align(1), APInt(64, *Count),
+                               getSimplifyQuery().getWithInstruction(II)))
           return RemoveBundle();
+
         break;
       }
 

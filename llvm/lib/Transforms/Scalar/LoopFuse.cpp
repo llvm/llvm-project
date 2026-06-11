@@ -1203,16 +1203,13 @@ private:
         }
     }
 
-    for (Instruction *WriteL1 : FC1.MemWrites) {
-      for (Instruction *WriteL0 : FC0.MemWrites)
-        if (!dependencesAllowFusion(FC0, FC1, *WriteL0, *WriteL1)) {
-          return false;
-        }
-      for (Instruction *ReadL0 : FC0.MemReads)
+    // Write-write and write-read pairs are already covered above; only the
+    // read-before-write pairs from FC0 reads to FC1 writes remain.
+    for (Instruction *ReadL0 : FC0.MemReads)
+      for (Instruction *WriteL1 : FC1.MemWrites)
         if (!dependencesAllowFusion(FC0, FC1, *ReadL0, *WriteL1)) {
           return false;
         }
-    }
 
     // Walk through all uses in FC1. For each use, find the reaching def. If the
     // def is located in FC0 then it is not safe to fuse.
