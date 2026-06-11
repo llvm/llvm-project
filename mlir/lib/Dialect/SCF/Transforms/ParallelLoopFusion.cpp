@@ -821,7 +821,7 @@ computeCandidateInterchangePermutations(ParallelOp &firstPloop,
 
   SmallVector<bool> diffIVs(firstPloop.getNumLoops());
   std::transform(firstIVs.begin(), firstIVs.end(), secondIVs.begin(),
-                 diffIVs.begin(), std::not_equal_to());
+                 diffIVs.begin(), std::not_equal_to<LoopIV>());
 
   SmallVector<int64_t> indices;
   for (auto [idx, val] : enumerate(diffIVs))
