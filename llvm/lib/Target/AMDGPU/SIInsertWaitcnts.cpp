@@ -2778,6 +2778,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // waits on VA_VDST if the instruction it would precede is not a VALU
   // instruction, since hardware handles VALU->VGPR->VALU hazards in
   // expert scheduling mode.
+  // TODO: LDSDMA are marked as VALU but we need to treat them as vmem
   if (TII.isVALU(MI) && !SIInstrInfo::isLDSDMA(MI))
     Wait.set(AMDGPU::VA_VDST, ~0u);
 
@@ -2858,6 +2859,7 @@ bool SIInsertWaitcnts::generateWaitcnt(AMDGPU::Waitcnt Wait,
 
 std::optional<WaitEventType>
 SIInsertWaitcnts::getExpertSchedulingEventType(const MachineInstr &Inst) const {
+  // TODO: LDSDMA are marked as VALU but we need to treat them as vmem
   if (TII.isVALU(Inst) && !SIInstrInfo::isLDSDMA(Inst)) {
     // Core/Side-, DP-, XDL- and TRANS-MACC VALU instructions complete
     // out-of-order with respect to each other, so each of these classes
