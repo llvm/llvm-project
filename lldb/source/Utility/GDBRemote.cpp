@@ -24,19 +24,11 @@ StreamGDBRemote::StreamGDBRemote(uint32_t flags, ByteOrder byte_order)
 
 StreamGDBRemote::~StreamGDBRemote() = default;
 
-int StreamGDBRemote::PutEscapedBytes(llvm::StringRef str) {
-  return PutEscapedBytes(str.data(), str.size());
-}
-
-int StreamGDBRemote::PutEscapedBytes(const void *s, size_t src_len) {
+int StreamGDBRemote::PutEscapedBytes(llvm::ArrayRef<uint8_t> bytes) {
   int bytes_written = 0;
-  const uint8_t *src = static_cast<const uint8_t *>(s);
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
-  while (src_len) {
-    uint8_t byte = *src;
-    src++;
-    src_len--;
+  for (uint8_t byte : bytes) {
     if (byte == 0x23 || byte == 0x24 || byte == 0x7d || byte == 0x2a) {
       bytes_written += PutChar(0x7d);
       byte ^= 0x20;

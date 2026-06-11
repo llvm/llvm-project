@@ -6784,7 +6784,8 @@ llvm::Error ProcessGDBRemote::UpdateBreakpointSites(
   packet_dict.Dump(stream, false);
 
   StreamGDBRemote escaped_stream;
-  escaped_stream.PutEscapedBytes(stream.GetString());
+  escaped_stream.PutEscapedBytes(
+      llvm::arrayRefFromStringRef(stream.GetString()));
   llvm::Expected<StringExtractorGDBRemote> response =
       m_gdb_comm.SendPacketAndExpectResponse(escaped_stream.GetString(),
                                              GetInterruptTimeout());
