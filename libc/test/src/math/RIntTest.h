@@ -49,11 +49,11 @@ private:
 
 public:
   void testSpecialNumbers(RIntFunc func) {
-    ASSERT_FP_EQ_ALL_ROUNDING_1(inf, func(inf));
-    ASSERT_FP_EQ_ALL_ROUNDING_1(neg_inf, func(neg_inf));
-    ASSERT_FP_EQ_ALL_ROUNDING_1(nan, func(nan));
-    ASSERT_FP_EQ_ALL_ROUNDING_1(zero, func(zero));
-    ASSERT_FP_EQ_ALL_ROUNDING_1(neg_zero, func(neg_zero));
+    ASSERT_FP_EQ_ALL_ROUNDING(inf, func(inf));
+    ASSERT_FP_EQ_ALL_ROUNDING(neg_inf, func(neg_inf));
+    ASSERT_FP_EQ_ALL_ROUNDING(nan, func(nan));
+    ASSERT_FP_EQ_ALL_ROUNDING(zero, func(zero));
+    ASSERT_FP_EQ_ALL_ROUNDING(neg_zero, func(neg_zero));
   }
 
   void testRoundNumbers(RIntFunc func) {
