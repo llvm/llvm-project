@@ -66,6 +66,11 @@ public:
       if (ret == -EINTR)
         continue;
 
+      // the value pointed to by uaddr was not equal to the expected
+      // value val at the time of the call (EAGAIN or EWOULDBLOCK).
+      if (ret == -EAGAIN || ret == -EWOULDBLOCK)
+        return 0;
+
       if (ret < 0)
         return cpp::unexpected(-ret);
       return ret;
