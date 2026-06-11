@@ -4270,7 +4270,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       return DupQLane;
 
     SVETypeFlags TypeFlags(Builtin->TypeModifier);
-    auto *Pred = ConstantInt::getTrue(getSVEPredType(TypeFlags));
+    Constant *Pred = ConstantInt::getTrue(getSVEPredType(TypeFlags));
 
     // For svdupq_n_b* we need to add an additional 'cmpne' with '0'.
     F = CGM.getIntrinsic(NumOpnds == 2 ? Intrinsic::aarch64_sve_cmpne
