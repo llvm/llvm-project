@@ -43,9 +43,10 @@ LIBC_INLINE_VAR constexpr uint16_t HALF_MIN_NORMAL =
     FPBits::min_normal().uintval();
 LIBC_INLINE_VAR constexpr uint16_t HALF_MAX_NORMAL =
     FPBits::max_normal().uintval();
-LIBC_INLINE_VAR constexpr uint32_t HALF_HIDDEN_BIT =
-    uint32_t(1) << HALF_FRACTION_LEN;
-LIBC_INLINE_VAR constexpr int UINT32_BITS = 8 * static_cast<int>(sizeof(uint32_t));
+LIBC_INLINE_VAR constexpr uint32_t HALF_HIDDEN_BIT = uint32_t(1)
+                                                     << HALF_FRACTION_LEN;
+LIBC_INLINE_VAR constexpr int UINT32_BITS =
+    8 * static_cast<int>(sizeof(uint32_t));
 
 // Exact representation exponents for values stored as:
 //   x = significand * 2^exponent,
@@ -69,9 +70,8 @@ LIBC_INLINE_VAR constexpr int RSQRT_APPROX_INDEX_SHIFT =
 // Values are stored in Q29 fixed-point format.  The Newton step and exact
 // rounding below correct the seed before producing the final half result.
 LIBC_INLINE_VAR constexpr uint32_t RSQRT_APPROX[16] = {
-    0x2c905a6f, 0x2b459b19, 0x2a160d52, 0x28fe28a0,
-    0x27fb00f0, 0x270a2574, 0x262987b2, 0x25576878,
-    0x24924925, 0x23d8e025, 0x232a0fda, 0x2284df58,
+    0x2c905a6f, 0x2b459b19, 0x2a160d52, 0x28fe28a0, 0x27fb00f0, 0x270a2574,
+    0x262987b2, 0x25576878, 0x24924925, 0x23d8e025, 0x232a0fda, 0x2284df58,
     0x21e8748c, 0x21540f7b, 0x20c70664, 0x2040c289,
 };
 LIBC_INLINE_VAR constexpr int64_t ONE_OVER_SQRT2 = 0x16a09e60;
@@ -81,8 +81,7 @@ LIBC_INLINE constexpr int floor_log2(uint64_t x) {
 }
 
 LIBC_INLINE constexpr int64_t initial_approximation(uint32_t x_mant) {
-  return RSQRT_APPROX[(x_mant - HALF_HIDDEN_BIT) >>
-                      RSQRT_APPROX_INDEX_SHIFT];
+  return RSQRT_APPROX[(x_mant - HALF_HIDDEN_BIT) >> RSQRT_APPROX_INDEX_SHIFT];
 }
 
 LIBC_INLINE constexpr int64_t newton_raphson(uint32_t m, int64_t y) {
