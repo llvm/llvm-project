@@ -14,16 +14,19 @@
 define i32 @test_shl_const_accumulator(i32 %x) {
 ; CHECK-LABEL: define i32 @test_shl_const_accumulator(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[TAILRECURSE:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label %[[COMMON_RET:.*]], label %[[IF_END:.*]]
+; CHECK-NEXT:  [[TAILRECURSE:.*]]:
+; CHECK-NEXT:    br label %[[COMMON_RET:.*]]
 ; CHECK:       [[COMMON_RET]]:
-; CHECK-NEXT:    ret i32 7
+; CHECK-NEXT:    [[ADD:%.*]] = phi i32 [ 7, %[[TAILRECURSE]] ], [ [[ADD1:%.*]], %[[IF_END1:.*]] ]
+; CHECK-NEXT:    [[X_TR:%.*]] = phi i32 [ [[X]], %[[TAILRECURSE]] ], [ [[SUB:%.*]], %[[IF_END1]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X_TR]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label %[[IF_END:.*]], label %[[IF_END1]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @test_shl_const_accumulator(i32 [[SUB]])
-; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[ACCUMULATOR_TR]], 1
 ; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK:       [[IF_END1]]:
+; CHECK-NEXT:    [[SUB]] = add nsw i32 [[X_TR]], -1
+; CHECK-NEXT:    [[ADD1]] = shl i32 [[ADD]], 1
+; CHECK-NEXT:    br label %[[COMMON_RET]]
 ;
 entry:
   %cmp = icmp eq i32 %x, 1
@@ -48,16 +51,19 @@ if.end:
 define i32 @test_ashr_const_accumulator(i32 %x) {
 ; CHECK-LABEL: define i32 @test_ashr_const_accumulator(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[TAILRECURSE:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 1
-; CHECK-NEXT:    br i1 [[CMP]], label %[[COMMON_RET:.*]], label %[[IF_END:.*]]
+; CHECK-NEXT:  [[TAILRECURSE:.*]]:
+; CHECK-NEXT:    br label %[[TAILRECURSE1:.*]]
+; CHECK:       [[TAILRECURSE1]]:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi i32 [ 14, %[[TAILRECURSE]] ], [ [[SHR:%.*]], %[[IF_END:.*]] ]
+; CHECK-NEXT:    [[X_TR:%.*]] = phi i32 [ [[X]], %[[TAILRECURSE]] ], [ [[SUB:%.*]], %[[IF_END]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X_TR]], 1
+; CHECK-NEXT:    br i1 [[CMP]], label %[[COMMON_RET:.*]], label %[[IF_END]]
 ; CHECK:       [[COMMON_RET]]:
-; CHECK-NEXT:    ret i32 14
+; CHECK-NEXT:    ret i32 [[ACCUMULATOR_TR]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[X]], -1
-; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @test_ashr_const_accumulator(i32 [[SUB]])
-; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[ACCUMULATOR_TR]], 1
-; CHECK-NEXT:    ret i32 [[SHR]]
+; CHECK-NEXT:    [[SUB]] = add nsw i32 [[X_TR]], -1
+; CHECK-NEXT:    [[SHR]] = ashr i32 [[ACCUMULATOR_TR]], 1
+; CHECK-NEXT:    br label %[[TAILRECURSE1]]
 ;
 entry:
   %cmp = icmp eq i32 %x, 1
@@ -76,22 +82,25 @@ if.end:
 
 
 ; unsigned int f3(unsigned int x) {
-;     if (x <= 1) return 14;
+;     if (x <= 1) return 21;
 ;     return f3(x - 1) >> 1;
 ; }
 define i32 @test_lshr_const_unsigned(i32 %x) {
 ; CHECK-LABEL: define i32 @test_lshr_const_unsigned(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[TAILRECURSE:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X]], 2
-; CHECK-NEXT:    br i1 [[CMP]], label %[[COMMON_RET:.*]], label %[[IF_END:.*]]
+; CHECK-NEXT:  [[TAILRECURSE:.*]]:
+; CHECK-NEXT:    br label %[[TAILRECURSE1:.*]]
+; CHECK:       [[TAILRECURSE1]]:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi i32 [ 21, %[[TAILRECURSE]] ], [ [[SHR:%.*]], %[[IF_END:.*]] ]
+; CHECK-NEXT:    [[X_TR:%.*]] = phi i32 [ [[X]], %[[TAILRECURSE]] ], [ [[SUB:%.*]], %[[IF_END]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_TR]], 2
+; CHECK-NEXT:    br i1 [[CMP]], label %[[COMMON_RET:.*]], label %[[IF_END]]
 ; CHECK:       [[COMMON_RET]]:
-; CHECK-NEXT:    ret i32 21
+; CHECK-NEXT:    ret i32 [[ACCUMULATOR_TR]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X]], -1
-; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = tail call i32 @test_lshr_const_unsigned(i32 [[SUB]])
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ACCUMULATOR_TR]], 1
-; CHECK-NEXT:    ret i32 [[SHR]]
+; CHECK-NEXT:    [[SUB]] = add i32 [[X_TR]], -1
+; CHECK-NEXT:    [[SHR]] = lshr i32 [[ACCUMULATOR_TR]], 1
+; CHECK-NEXT:    br label %[[TAILRECURSE1]]
 ;
 entry:
   %cmp = icmp ult i32 %x, 2
