@@ -291,8 +291,8 @@ static bool scanSymbols(const IRSymtabFile &MemberSymtab,
                         StringMap<Symbol> &LinkerSymtab, bool IsLazy) {
   bool Extracted = !IsLazy;
   StringMap<Symbol> PendingSymbols;
-  for (unsigned I = 0; I != MemberSymtab.Mods.size(); ++I) {
-    for (const auto &IRSym : MemberSymtab.TheReader.module_symbols(I)) {
+  for (unsigned ModIdx = 0; ModIdx != MemberSymtab.Mods.size(); ++ModIdx) {
+    for (const auto &IRSym : MemberSymtab.TheReader.module_symbols(ModIdx)) {
       if (IRSym.isFormatSpecific() || !IRSym.isGlobal())
         continue;
 
@@ -367,7 +367,7 @@ static Expected<ResolvedInputs> resolveArchiveMembers(
       if (!sys::fs::exists(Desc.Value))
         return createStringError("input file not found: '" + Desc.Value + "'");
       if (sys::fs::is_directory(Desc.Value))
-        return createStringError("'" + Desc.Value + "': Is a directory");
+        return createStringError("'" + Desc.Value + "': is a directory");
       Filename = Desc.Value.str();
     }
 
@@ -439,9 +439,9 @@ static Expected<ResolvedInputs> resolveArchiveMembers(
   // Fixed-point loop to extract archive members. Each pass may resolve symbols
   // that unlock further members; iterate until no new member is extracted.
   SmallVector<std::unique_ptr<MemoryBuffer>> Resolved;
-  bool Extracted = true;
-  while (Extracted) {
-    Extracted = false;
+  bool KeepExtracting = true;
+  while (KeepExtracting) {
+    KeepExtracting = false;
     for (PendingInput &In : Inputs) {
       if (!In.Buffer)
         continue;
@@ -466,7 +466,7 @@ static Expected<ResolvedInputs> resolveArchiveMembers(
 
       if (!scanSymbols(In.Symtab, SymTab, In.IsLazy))
         continue;
-      Extracted = true;
+      KeepExtracting = true;
       Resolved.push_back(std::move(In.Buffer));
     }
   }
