@@ -2446,6 +2446,7 @@ def Tosa_TileOp : Tosa_InferShapedTypeOp<"tile", [Pure]> {
     LogicalResult getConstantMultiples(llvm::SmallVector<int64_t> &multiples);
   }];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 
