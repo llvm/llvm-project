@@ -230,9 +230,23 @@ static bool dontUseFastISelFor(const Function &Fn) {
   // Debug info on those is reliant on good Argument lowering, and FastISel is
   // not capable of lowering the entire function. Mixing the two selectors tend
   // to result in poor lowering of Arguments.
-  return any_of(Fn.args(), [](const Argument &Arg) {
-    return Arg.hasAttribute(Attribute::AttrKind::SwiftAsync);
-  });
+  if (any_of(Fn.args(), [](const Argument &Arg) {
+        return Arg.hasAttribute(Attribute::AttrKind::SwiftAsync);
+      }))
+    return true;
+
+  // Fall back to SelectionDAG for the whole function when the
+  // wasm_funcref_to_ptr intrinsic is present.
+  // TODO: implement FastISel for funcref calls
+  if (Fn.getParent()->getTargetTriple().isWasm()) {
+    for (const BasicBlock &BB : Fn)
+      for (const Instruction &I : BB)
+        if (const auto *II = dyn_cast<IntrinsicInst>(&I))
+          if (II->getIntrinsicID() == Intrinsic::wasm_funcref_to_ptr)
+            return true;
+  }
+
+  return false;
 }
 
 static bool maintainPGOProfile(const TargetMachine &TM,

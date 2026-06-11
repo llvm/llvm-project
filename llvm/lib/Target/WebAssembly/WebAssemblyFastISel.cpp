@@ -35,7 +35,6 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Operator.h"
 
 using namespace llvm;
@@ -936,15 +935,6 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
 
     Args.push_back(Reg);
   }
-
-  // A call through a funcref is expressed as a call through the pointer
-  // produced by llvm.wasm.funcref.to_ptr. We don't currently handle these in
-  // FastISel; bail out so the call is lowered by SelectionDAG.
-  //
-  // TODO: Handle this in FastISel.
-  if (const auto *Conv = dyn_cast<CallInst>(Call->getCalledOperand()))
-    if (Conv->getIntrinsicID() == Intrinsic::wasm_funcref_to_ptr)
-      return false;
 
   unsigned CalleeReg = 0;
   if (!IsDirect) {
