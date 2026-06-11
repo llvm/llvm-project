@@ -326,15 +326,15 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK:       [[PRED_LOAD_CONTINUE36]]:
 ; CHECK-NEXT:    [[TMP98:%.*]] = phi <4 x i32> [ [[TMP92]], %[[PRED_LOAD_CONTINUE34]] ], [ [[TMP97]], %[[PRED_LOAD_IF35]] ]
 ; CHECK-NEXT:    [[TMP99:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP26]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP102:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP50]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP105:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP74]], <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP108:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP98]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP100:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP99]])
 ; CHECK-NEXT:    [[TMP101]] = add i32 [[VEC_PHI]], [[TMP100]]
-; CHECK-NEXT:    [[TMP102:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP50]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP103:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP102]])
 ; CHECK-NEXT:    [[TMP104]] = add i32 [[VEC_PHI4]], [[TMP103]]
-; CHECK-NEXT:    [[TMP105:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[TMP74]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP106:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP105]])
 ; CHECK-NEXT:    [[TMP107]] = add i32 [[VEC_PHI5]], [[TMP106]]
-; CHECK-NEXT:    [[TMP108:%.*]] = select <4 x i1> [[TMP3]], <4 x i32> [[TMP98]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP109:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP108]])
 ; CHECK-NEXT:    [[TMP110]] = add i32 [[VEC_PHI6]], [[TMP109]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
@@ -562,15 +562,15 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK:       [[PRED_LOAD_CONTINUE38]]:
 ; CHECK-NEXT:    [[TMP106:%.*]] = phi <4 x i32> [ [[TMP100]], %[[PRED_LOAD_CONTINUE36]] ], [ [[TMP105]], %[[PRED_LOAD_IF37]] ]
 ; CHECK-NEXT:    [[TMP107:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP34]], <4 x i32> splat (i32 1)
+; CHECK-NEXT:    [[TMP110:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP58]], <4 x i32> splat (i32 1)
+; CHECK-NEXT:    [[TMP113:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP82]], <4 x i32> splat (i32 1)
+; CHECK-NEXT:    [[TMP116:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP106]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP108:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP107]])
 ; CHECK-NEXT:    [[TMP109]] = mul i32 [[VEC_PHI]], [[TMP108]]
-; CHECK-NEXT:    [[TMP110:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP58]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP111:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP110]])
 ; CHECK-NEXT:    [[TMP112]] = mul i32 [[VEC_PHI4]], [[TMP111]]
-; CHECK-NEXT:    [[TMP113:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP82]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP114:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP113]])
 ; CHECK-NEXT:    [[TMP115]] = mul i32 [[VEC_PHI5]], [[TMP114]]
-; CHECK-NEXT:    [[TMP116:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP106]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP117:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP116]])
 ; CHECK-NEXT:    [[TMP118]] = mul i32 [[VEC_PHI6]], [[TMP117]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16

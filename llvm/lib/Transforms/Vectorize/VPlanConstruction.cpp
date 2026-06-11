@@ -1184,7 +1184,7 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
              "inloop reductions must be unscaled");
       VPValue *CondOp = cast<VPInstruction>(CurrentLink)->getMask();
       auto *RedRecipe = new VPReductionRecipe(
-          Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
+          Kind, FMFs, CurrentLinkI, PreviousLink, VecOp,
           getReductionStyle(/*IsInLoop=*/true, PhiR->isOrdered(), 1),
           CurrentLinkI->getDebugLoc());
       // Append the recipe to the end of the VPBasicBlock because we need to
@@ -1197,6 +1197,19 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
         LinkVPBB->appendRecipe(RedRecipe);
 
       CurrentLink->replaceAllUsesWith(RedRecipe);
+
+      // Create the predicated select for reduction.
+      if (CondOp) {
+        VPBuilder Builder(RedRecipe);
+        VPValue *Identity = new VPIRValue(
+            getRecurrenceIdentity(Kind, PhiR->getScalarType(), FMFs));
+        auto *NewVecOp =
+            Builder.createSelect(CondOp, RedRecipe->getVecOp(), Identity,
+                                 RedRecipe->getDebugLoc(), "", FMFs);
+        // Update the VecOp to predicated VecOp.
+        RedRecipe->setOperand(1, NewVecOp);
+      }
+
       // Move any store recipes using the RedRecipe that appear before it in the
       // same block to just after the RedRecipe.
       for (VPUser *U : make_early_inc_range(RedRecipe->users())) {

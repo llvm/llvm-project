@@ -3239,15 +3239,13 @@ class LLVM_ABI_FOR_TEST VPReductionRecipe : public VPRecipeWithIRFlags {
 
   /// The recurrence kind for the reduction in question.
   RecurKind RdxKind;
-  /// Whether the reduction is conditional.
-  bool IsConditional = false;
   ReductionStyle Style;
 
 protected:
   VPReductionRecipe(const unsigned char SC, RecurKind RdxKind,
                     FastMathFlags FMFs, Instruction *I,
-                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
-                    ReductionStyle Style, DebugLoc DL)
+                    ArrayRef<VPValue *> Operands, ReductionStyle Style,
+                    DebugLoc DL)
       : VPRecipeWithIRFlags(SC, Operands, Operands[0]->getScalarType(), FMFs,
                             DL),
         RdxKind(RdxKind), Style(Style) {
@@ -3259,34 +3257,28 @@ protected:
                                 VPInstruction::ExplicitVectorLength);
                   }) &&
            "all incoming values must have the same type");
-    if (CondOp) {
-      assert(CondOp->getScalarType()->isIntegerTy(1) &&
-             "CondOp must be a bool");
-      IsConditional = true;
-      addOperand(CondOp);
-    }
     setUnderlyingValue(I);
   }
 
 public:
   VPReductionRecipe(RecurKind RdxKind, FastMathFlags FMFs, Instruction *I,
-                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    ReductionStyle Style, DebugLoc DL = DebugLoc::getUnknown())
+                    VPValue *ChainOp, VPValue *VecOp, ReductionStyle Style,
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(VPRecipeBase::VPReductionSC, RdxKind, FMFs, I,
-                          {ChainOp, VecOp}, CondOp, Style, DL) {}
+                          {ChainOp, VecOp}, Style, DL) {}
 
   VPReductionRecipe(const RecurKind RdxKind, FastMathFlags FMFs,
-                    VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    ReductionStyle Style, DebugLoc DL = DebugLoc::getUnknown())
+                    VPValue *ChainOp, VPValue *VecOp, ReductionStyle Style,
+                    DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(VPRecipeBase::VPReductionSC, RdxKind, FMFs, nullptr,
-                          {ChainOp, VecOp}, CondOp, Style, DL) {}
+                          {ChainOp, VecOp}, Style, DL) {}
 
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
     return new VPReductionRecipe(RdxKind, getFastMathFlagsOrNone(),
                                  getUnderlyingInstr(), getChainOp(), getVecOp(),
-                                 getCondOp(), Style, getDebugLoc());
+                                 Style, getDebugLoc());
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -3319,8 +3311,6 @@ public:
   RecurKind getRecurrenceKind() const { return RdxKind; }
   /// Return true if the in-loop reduction is ordered.
   bool isOrdered() const { return std::holds_alternative<RdxOrdered>(Style); };
-  /// Return true if the in-loop reduction is conditional.
-  bool isConditional() const { return IsConditional; };
   /// Returns true if the reduction outputs a vector with a scaled down VF.
   bool isPartialReduction() const { return getVFScaleFactor() > 1; }
   /// Returns true if the reduction is in-loop.
@@ -3332,10 +3322,6 @@ public:
   VPValue *getChainOp() const { return getOperand(0); }
   /// The VPValue of the vector value to be reduced.
   VPValue *getVecOp() const { return getOperand(1); }
-  /// The VPValue of the condition for the block.
-  VPValue *getCondOp() const {
-    return isConditional() ? getOperand(getNumOperands() - 1) : nullptr;
-  }
   /// Get the factor that the VF of this recipe's output should be scaled by, or
   /// 1 if it isn't scaled.
   unsigned getVFScaleFactor() const {
@@ -3356,15 +3342,25 @@ protected:
 /// vector length (EVL) into a scalar value, and adding the result to a chain.
 /// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
 class LLVM_ABI_FOR_TEST VPReductionEVLRecipe : public VPReductionRecipe {
+  /// Whether the reduction is conditional.
+  bool IsConditional = false;
+
 public:
   VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
                        DebugLoc DL = DebugLoc::getUnknown())
       : VPReductionRecipe(VPRecipeBase::VPReductionEVLSC, R.getRecurrenceKind(),
                           R.getFastMathFlagsOrNone(),
                           cast_or_null<Instruction>(R.getUnderlyingValue()),
-                          {R.getChainOp(), R.getVecOp(), &EVL}, CondOp,
+                          {R.getChainOp(), R.getVecOp(), &EVL},
                           getReductionStyle(/*InLoop=*/true, R.isOrdered(), 1),
-                          DL) {}
+                          DL) {
+    if (CondOp) {
+      assert(CondOp->getScalarType()->isIntegerTy(1) &&
+             "CondOp must be a bool");
+      IsConditional = true;
+      addOperand(CondOp);
+    }
+  }
 
   ~VPReductionEVLRecipe() override = default;
 
@@ -3377,8 +3373,16 @@ public:
   /// Generate the reduction in the loop
   void execute(VPTransformState &State) override;
 
+  /// Returns true if this reduction is conditional.
+  bool isConditional() const { return IsConditional; }
+
   /// The VPValue of the explicit vector length.
   VPValue *getEVL() const { return getOperand(2); }
+
+  /// The VPValue of the mask.
+  VPValue *getCondOp() const {
+    return isConditional() ? getOperand(3) : nullptr;
+  }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
@@ -3657,12 +3661,17 @@ public:
     return new VPExpressionRecipe(ExpressionType, NewExpressiondRecipes);
   }
 
+  /// Returns true if this expression is a multiply-accumulate pattern that
+  /// requires both operands to be predicated when conditional.
+  bool isMulAccPattern() const {
+    return ExpressionType == ExpressionTypes::MulAccReduction ||
+           ExpressionType == ExpressionTypes::ExtMulAccReduction ||
+           ExpressionType == ExpressionTypes::ExtNegatedMulAccReduction;
+  }
+
   /// Return the VPValue to use to infer the result type of the recipe.
   VPValue *getOperandOfResultType() const {
-    unsigned OpIdx =
-        cast<VPReductionRecipe>(ExpressionRecipes.back())->isConditional() ? 2
-                                                                           : 1;
-    return getOperand(getNumOperands() - OpIdx);
+    return getOperand(getNumOperands() - 1);
   }
 
   /// Insert the recipes of the expression back into the VPlan, directly before

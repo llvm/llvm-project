@@ -880,8 +880,8 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP9]], ptr align 8 [[TMP11]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
 ; TFA_INTERLEAVE-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP10]], ptr align 8 [[TMP12]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP13:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x double> [[TMP5]], <vscale x 2 x double> splat (double -0.000000e+00)
-; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP13]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP15:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK2]], <vscale x 2 x double> [[TMP6]], <vscale x 2 x double> splat (double -0.000000e+00)
+; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[VEC_PHI]], <vscale x 2 x double> [[TMP13]])
 ; TFA_INTERLEAVE-NEXT:    [[TMP16]] = call double @llvm.vector.reduce.fadd.nxv2f64(double [[TMP14]], <vscale x 2 x double> [[TMP15]])
 ; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP2]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX_NEXT]], [[TMP1]]
